@@ -1,4 +1,4 @@
-# AgentOps 🕵️
+# agentops 🕵️
 
 AI agents suck. We’re fixing that.
 
