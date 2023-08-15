@@ -48,7 +48,7 @@ Agent developers often work in the dark, with little to no visibility into agent
 |🔜 Agent workflow execution pricing | | | |
 
 ## Agent Arena 🥊
-[[coming soon]]
+(coming soon!)
 
 # Installation & Usage 📘
 
