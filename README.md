@@ -47,6 +47,9 @@ Agent developers often work in the dark, with little to no visibility into agent
 |🔜 Information context constraint testing | 🔜 Anti-agent roadblocks (i.e. Captchas) | | |
 |🔜 Agent workflow execution pricing | | | |
 
+## Agent Arena 🥊
+[[coming soon]]
+
 # Installation & Usage 📘
 
 To start using Agentops SDK, follow these steps:
