@@ -31,9 +31,8 @@ Agent developers often work in the dark, with little to no visibility into agent
 | Platform | Dashboard | Evals |
 |---|---|---|
 |✅ Python SDK | ✅ Multi-session and Cross-session metrics | 🚧 Evaluation playground + leaderboard |
-|🚧 Evaluation builder API | ✅ Custom event tag trackingx | 🔜 Agent scorecards |
+|🚧 Evaluation builder API | ✅ Custom event tag tracking | 🔜 Agent scorecards |
 |🔜 Javascript/Typescript SDK |  🚧 Session replays| 🔜 Custom eval metrics |
-| |  | |
 
 
 ## Debugging Roadmap 🧭
