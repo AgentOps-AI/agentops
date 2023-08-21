@@ -28,13 +28,23 @@ class Worker:
                 events = self.queue
                 self.queue = []
 
-                payload = {
-                    "events": events
-                }
+                payload = {"events": events}
 
-                HttpClient.post(f'{self.config.endpoint}/events',
-                                json.dumps(payload).encode("utf-8"),
-                                self.config.api_key)
+                HttpClient.post(
+                    f"{self.config.endpoint}/events",
+                    json.dumps(payload).encode("utf-8"),
+                    self.config.api_key,
+                )
+
+    def start_session(self, session: Session) -> None:
+        with self.lock:
+            payload = {"session": session.__dict__}
+
+            HttpClient.post(
+                f"{self.config.endpoint}/sessions",
+                json.dumps(payload).encode("utf-8"),
+                self.config.api_key,
+            )
 
     def end_session(self, session: Session) -> None:
         self.stop_flag.set()
@@ -42,13 +52,13 @@ class Worker:
         self.flush_queue()
 
         with self.lock:
-            payload = {
-                "session": session.__dict__
-            }
+            payload = {"session": session.__dict__}
 
-            HttpClient.post(f'{self.config.endpoint}/sessions',
-                            json.dumps(payload).encode("utf-8"),
-                            self.config.api_key)
+            HttpClient.post(
+                f"{self.config.endpoint}/sessions",
+                json.dumps(payload).encode("utf-8"),
+                self.config.api_key,
+            )
 
     def run(self) -> None:
         while not self.stop_flag.is_set():
