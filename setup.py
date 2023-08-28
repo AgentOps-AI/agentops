@@ -2,7 +2,6 @@ from setuptools import setup, find_packages
 
 setup(
     name='agentops',
-    version='0.1',
     version='{{VERSION_PLACEHOLDER}}',
     author='Alex Reibman',
     author_email='areibman@gmail.com',
