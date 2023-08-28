@@ -100,6 +100,7 @@ class AgentOps:
         """
         self.session = Session(str(uuid4()), tags)
         self.worker = Worker(self.config)
+        self.worker.start_session(self.session)
 
     def end_session(self, end_state: Optional[str] = None, rating: Optional[str] = None):
         """

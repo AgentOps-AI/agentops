@@ -7,6 +7,18 @@ from .event import Event, Session
 from typing import Dict
 
 
+def is_jsonable(x):
+    try:
+        json.dumps(x)
+        return True
+    except (TypeError, OverflowError):
+        return False
+
+
+def filter_unjsonable(d):
+    return {k: v for k, v in d.items() if is_jsonable(v)}
+
+
 class Worker:
     def __init__(self, config: Configuration) -> None:
         self.config = config
@@ -33,8 +45,20 @@ class Worker:
                 }
 
                 HttpClient.post(f'{self.config.endpoint}/events',
-                                json.dumps(payload).encode("utf-8"),
+                                json.dumps(filter_unjsonable(
+                                    payload)).encode("utf-8"),
                                 self.config.api_key)
+
+    def start_session(self, session: Session) -> None:
+        with self.lock:
+            payload = {
+                "session": session.__dict__
+            }
+
+            HttpClient.post(f'{self.config.endpoint}/sessions',
+                            json.dumps(filter_unjsonable(
+                                payload)).encode("utf-8"),
+                            self.config.api_key)
 
     def end_session(self, session: Session) -> None:
         self.stop_flag.set()
@@ -47,7 +71,8 @@ class Worker:
             }
 
             HttpClient.post(f'{self.config.endpoint}/sessions',
-                            json.dumps(payload).encode("utf-8"),
+                            json.dumps(filter_unjsonable(
+                                payload)).encode("utf-8"),
                             self.config.api_key)
 
     def run(self) -> None:
