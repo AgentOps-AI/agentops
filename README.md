@@ -7,7 +7,7 @@ Build your next agent with evals, observability, and replay analytics. Agentops 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 ## Latest Release 📦
-`version: 0.1`
+`version: 0.0.2`
 This is an alpha release for early testers.
 
 Agentops is still in closed beta. You can sign up for an API key [here](https://agentops.ai).
