@@ -10,7 +10,7 @@ Build your next agent with evals, observability, and replay analytics. Agentops 
 `version: 0.0.2`
 This is an alpha release for early testers.
 
-Agentops is still in closed beta. You can sign up for an API key [here](https://agentops.ai).
+Agentops is still in closed alpha. You can sign up for an API key [here](https://agentops.ai).
 
 # Quick Start
 
