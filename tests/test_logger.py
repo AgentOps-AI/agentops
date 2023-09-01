@@ -20,7 +20,6 @@ class TestLogger:
         self.config = Configuration(max_wait_time=5)
         self.client = AgentOps(api_key=self.api_key, config=self.config)
 
-
     def teardown_method(self):
         self.client.end_session(end_state="success")
 
@@ -37,7 +36,6 @@ class TestLogger:
         except Exception as e:
             pytest.fail(f"test_info failed with {e}")
 
-
         time.sleep(0.1)
 
         # Assert
@@ -45,7 +43,7 @@ class TestLogger:
         assert mock_req.last_request.headers['X-Agentops-Auth'] == self.api_key
         request_json = mock_req.last_request.json()
         assert request_json['events'][0]['event_type'] == f"{self.event_type}:INFO"
-        assert request_json['events'][0]['output'] == test_message
+        assert request_json['events'][0]['returns'] == test_message
 
     def test_error(self, mock_req):
         # Arrange
@@ -67,7 +65,7 @@ class TestLogger:
         assert mock_req.last_request.headers['X-Agentops-Auth'] == self.api_key
         request_json = mock_req.last_request.json()
         assert request_json['events'][0]['event_type'] == f"{self.event_type}:ERROR"
-        assert request_json['events'][0]['output'] == test_message
+        assert request_json['events'][0]['returns'] == test_message
 
     def test_warn(self, mock_req):
         # Arrange
@@ -89,4 +87,4 @@ class TestLogger:
         assert mock_req.last_request.headers['X-Agentops-Auth'] == self.api_key
         request_json = mock_req.last_request.json()
         assert request_json['events'][0]['event_type'] == f"{self.event_type}:WARNING"
-        assert request_json['events'][0]['output'] == test_message
+        assert request_json['events'][0]['returns'] == test_message

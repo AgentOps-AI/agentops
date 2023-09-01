@@ -107,7 +107,7 @@ class TestRecordAction:
         assert request_json['event']['event_type'] == self.event_type
         assert request_json['event']['params'] == {
             'args': [3, 4], 'kwargs': {}}
-        assert request_json['event']['output'] == 7
+        assert request_json['event']['returns'] == 7
         assert request_json['event']['result'] == 'SUCCESS'
         assert request_json['event']['tags'] == {'foo': 'bar'}
 
@@ -127,6 +127,6 @@ class TestRecordAction:
         request_json = mock_req.last_request.json()
         assert request_json['events'][0]['event_type'] == self.event_type
         assert request_json['events'][0]['params'] == {'x': 3, 'y': 4}
-        assert request_json['events'][0]['output'] == 7
+        assert request_json['events'][0]['returns'] == 7
         assert request_json['events'][0]['result'] == 'SUCCESS'
         assert request_json['events'][0]['tags'] == {'foo': 'bar'}

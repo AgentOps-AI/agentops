@@ -18,7 +18,7 @@ class Event:
     Args:
         event_type (str): Type of the event, e.g., "API Call". Required.
         params (str, optional): The parameters passed to the operation.
-        output (str, optional): The output of the operation.
+        returns (str, optional): The output of the operation.
         result (str, optional): Result of the operation, e.g., "success", "fail", "indeterminate".
         tags (Dict[str, str], optional): Tags that can be used for grouping or sorting later. e.g. {"llm": "GPT-4"}.
 
@@ -29,13 +29,13 @@ class Event:
 
     def __init__(self, event_type: str,
                  params: Optional[str] = None,
-                 output: Optional[str] = None,
+                 returns: Optional[str] = None,
                  result: Result = "Indeterminate",
                  tags: Optional[Dict[str, str]] = None
                  ):
         self.event_type = event_type
         self.params = params
-        self.output = output
+        self.returns = returns
         self.result = result
         self.tags = tags
         self.timestamp = get_ISO_time()

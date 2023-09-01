@@ -9,7 +9,6 @@ from .config import Configuration
 from .event import Session, Event
 from .worker import Worker
 from uuid import uuid4
-import json
 from typing import Optional, Dict
 import functools
 import inspect
@@ -65,12 +64,12 @@ class AgentOps:
                 arg_values.update(kwargs)
                 # TODO: Rename output to returns
                 try:
-                    output = func(*args, **kwargs)
+                    returns = func(*args, **kwargs)
 
                     # Record the event after the function call
                     self.record(Event(event_type=event_name,
                                       params=arg_values,
-                                      output=output,
+                                      returns=returns,
                                       result="SUCCESS",
                                       tags=tags))
 
@@ -78,14 +77,14 @@ class AgentOps:
                     # Record the event after the function call
                     self.record(Event(event_type=event_name,
                                       params=arg_values,
-                                      output=None,
+                                      returns=None,
                                       result='FAIL',
                                       tags=tags))
 
                     # Re-raise the exception
                     raise
 
-                return output
+                return returns
 
             return wrapper
 
