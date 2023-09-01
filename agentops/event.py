@@ -7,7 +7,6 @@ Classes:
 """
 from .helpers import get_ISO_time
 from typing import Optional, Dict
-from enum import Enum
 
 
 class EventState:
