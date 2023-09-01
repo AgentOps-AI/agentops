@@ -3,6 +3,7 @@ import requests_mock
 import time
 
 from agentops import AgentOps, Event, Configuration
+from agentops.event import EventState
 
 
 @pytest.fixture
@@ -41,7 +42,7 @@ class TestSessions:
         assert request_json['events'][0]['event_type'] == self.event_type
 
         # Act
-        end_state = "Success"
+        end_state = EventState.SUCCESS
         client.end_session(end_state)
         time.sleep(0.1)
 
@@ -70,8 +71,8 @@ class TestSessions:
         assert request_json['events'][0]['event_type'] == self.event_type
 
         # Act
-        end_state = "Success"
-        client.end_session()
+        end_state = EventState.SUCCESS
+        client.end_session(end_state)
         time.sleep(0.1)
 
         # Assert 3 requets, 1 for session init, 1 for event, 1 for end session
@@ -79,7 +80,7 @@ class TestSessions:
         assert mock_req.last_request.headers['X-Agentops-Auth'] == self.api_key
         request_json = mock_req.last_request.json()
         assert request_json['session']['rating'] == None
-        assert request_json['session']['end_state'] == None
+        assert request_json['session']['end_state'] == end_state
         assert request_json['session']['tags'] == tags
 
 
@@ -92,7 +93,7 @@ class TestRecordAction:
         self.client = AgentOps(self.api_key, config=self.config)
 
     def teardown_method(self):
-        self.client.end_session(end_state="success")
+        self.client.end_session(end_state=EventState.SUCCESS)
 
     def test_record_action_decorator(self, mock_req):
         @self.client.record_action(event_name=self.event_type, tags={'foo': 'bar'})
@@ -110,7 +111,7 @@ class TestRecordAction:
         assert request_json['event']['params'] == {
             'args': [3, 4], 'kwargs': {}}
         assert request_json['event']['returns'] == 7
-        assert request_json['event']['result'] == 'SUCCESS'
+        assert request_json['event']['result'] == EventState.SUCCESS
         assert request_json['event']['tags'] == {'foo': 'bar'}
 
     def test_record_action_decorator(self, mock_req):
@@ -130,5 +131,5 @@ class TestRecordAction:
         assert request_json['events'][0]['event_type'] == self.event_type
         assert request_json['events'][0]['params'] == {'x': 3, 'y': 4}
         assert request_json['events'][0]['returns'] == 7
-        assert request_json['events'][0]['result'] == 'SUCCESS'
+        assert request_json['events'][0]['result'] == EventState.SUCCESS
         assert request_json['events'][0]['tags'] == {'foo': 'bar'}

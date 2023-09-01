@@ -3,6 +3,7 @@ import requests_mock
 import time
 
 from agentops import AgentOps, Event, Configuration
+from agentops.event import EventState
 
 
 @pytest.fixture
@@ -13,6 +14,7 @@ def mock_req():
         m.post(url + '/sessions', text='ok')
         yield m
 
+
 class TestCanary:
     def setup_method(self):
         self.url = 'https://agentops-server-v2.fly.dev'
@@ -21,7 +23,7 @@ class TestCanary:
         self.client = AgentOps(api_key=self.api_key, config=self.config)
 
     def teardown_method(self):
-        self.client.end_session(end_state="success")
+        self.client.end_session(end_state=EventState.SUCCESS)
 
     def test_agent_ops_record(self, mock_req):
         # Arrange

@@ -2,6 +2,7 @@ import pytest
 import requests_mock
 import time
 from agentops import AgentOps, AgentOpsLogger, Configuration
+from agentops.event import EventState
 
 
 @pytest.fixture
@@ -21,7 +22,7 @@ class TestLogger:
         self.client = AgentOps(api_key=self.api_key, config=self.config)
 
     def teardown_method(self):
-        self.client.end_session(end_state="success")
+        self.client.end_session(end_state=EventState.SUCCESS)
 
     def test_info(self, mock_req):
         # Arrange

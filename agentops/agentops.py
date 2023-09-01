@@ -6,7 +6,7 @@ Classes:
 """
 
 from .config import Configuration
-from .event import Session, Event
+from .event import Session, Event, EventState
 from .worker import Worker
 from uuid import uuid4
 from typing import Optional, Dict
@@ -62,7 +62,6 @@ class AgentOps:
                 arg_names = list(func_args.keys())
                 arg_values = dict(zip(arg_names, args))
                 arg_values.update(kwargs)
-                # TODO: Rename output to returns
                 try:
                     returns = func(*args, **kwargs)
 
@@ -70,7 +69,7 @@ class AgentOps:
                     self.record(Event(event_type=event_name,
                                       params=arg_values,
                                       returns=returns,
-                                      result="SUCCESS",
+                                      result="Success",
                                       tags=tags))
 
                 except Exception as e:
@@ -78,7 +77,7 @@ class AgentOps:
                     self.record(Event(event_type=event_name,
                                       params=arg_values,
                                       returns=None,
-                                      result='FAIL',
+                                      result='Fail',
                                       tags=tags))
 
                     # Re-raise the exception
@@ -101,7 +100,7 @@ class AgentOps:
         self.worker = Worker(self.config)
         self.worker.start_session(self.session)
 
-    def end_session(self, end_state: Optional[str] = None, rating: Optional[str] = None):
+    def end_session(self, end_state: EventState = EventState.INDETERMINATE, rating: Optional[str] = None):
         """
         End the current session with the AgentOps service.
 
@@ -109,5 +108,10 @@ class AgentOps:
             end_state (str, optional): The final state of the session.
             rating (str, optional): The rating for the session.
         """
+        valid_results = set(vars(EventState).values())
+        if end_state not in valid_results:
+            raise ValueError(
+                f"end_state must be one of {EventState.__args__}. Provided: {end_state}")
+
         self.session.end_session(end_state, rating)
         self.worker.end_session(self.session)
