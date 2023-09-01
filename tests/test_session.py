@@ -27,25 +27,26 @@ class TestSessions:
         # Act
         client.record(Event(self.event_type))
 
-        # Assert
-        assert len(mock_req.request_history) == 0
+        # Assert the session has been initiated and the id has been created on backend.
+        assert len(mock_req.request_history) == 1
 
         # Act
         client.record(Event(self.event_type))
         time.sleep(0.1)
 
-        # Assert
-        assert len(mock_req.request_history) == 1
+        # Assert an event has been added
+        assert len(mock_req.request_history) == 2
         assert mock_req.last_request.headers['X-Agentops-Auth'] == self.api_key
         request_json = mock_req.last_request.json()
         assert request_json['events'][0]['event_type'] == self.event_type
 
         # Act
-        end_state = "Succeed"
+        end_state = "Success"
         client.end_session(end_state)
         time.sleep(0.1)
 
-        assert len(mock_req.request_history) == 2
+        # Since a session has ended, no more events should be recorded, but end_session should be called
+        assert len(mock_req.request_history) == 3
         assert mock_req.last_request.headers['X-Agentops-Auth'] == self.api_key
         request_json = mock_req.last_request.json()
         assert request_json['session']['rating'] == None
@@ -62,18 +63,19 @@ class TestSessions:
         client.record(Event(self.event_type))
         time.sleep(0.1)
 
-        # Assert
-        assert len(mock_req.request_history) == 1
+        # Assert 2 requests - 1 for session init, 1 for event
+        assert len(mock_req.request_history) == 2
         assert mock_req.last_request.headers['X-Agentops-Auth'] == self.api_key
         request_json = mock_req.last_request.json()
         assert request_json['events'][0]['event_type'] == self.event_type
 
         # Act
-        end_state = "Succeed"
+        end_state = "Success"
         client.end_session()
         time.sleep(0.1)
 
-        assert len(mock_req.request_history) == 2
+        # Assert 3 requets, 1 for session init, 1 for event, 1 for end session
+        assert len(mock_req.request_history) == 3
         assert mock_req.last_request.headers['X-Agentops-Auth'] == self.api_key
         request_json = mock_req.last_request.json()
         assert request_json['session']['rating'] == None
