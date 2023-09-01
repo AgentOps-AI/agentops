@@ -6,10 +6,9 @@ Classes:
 """
 
 from .config import Configuration
-from .event import Session, Event
+from .event import Session, Event, EventState
 from .worker import Worker
 from uuid import uuid4
-import json
 from typing import Optional, Dict
 import functools
 import inspect
@@ -63,29 +62,28 @@ class AgentOps:
                 arg_names = list(func_args.keys())
                 arg_values = dict(zip(arg_names, args))
                 arg_values.update(kwargs)
-
                 try:
-                    output = func(*args, **kwargs)
+                    returns = func(*args, **kwargs)
 
                     # Record the event after the function call
                     self.record(Event(event_type=event_name,
                                       params=arg_values,
-                                      output=output,
-                                      result="SUCCESS",
+                                      returns=returns,
+                                      result="Success",
                                       tags=tags))
 
                 except Exception as e:
                     # Record the event after the function call
                     self.record(Event(event_type=event_name,
                                       params=arg_values,
-                                      output=None,
-                                      result='FAIL',
+                                      returns=None,
+                                      result='Fail',
                                       tags=tags))
 
                     # Re-raise the exception
                     raise
 
-                return output
+                return returns
 
             return wrapper
 
@@ -102,7 +100,7 @@ class AgentOps:
         self.worker = Worker(self.config)
         self.worker.start_session(self.session)
 
-    def end_session(self, end_state: Optional[str] = None, rating: Optional[str] = None):
+    def end_session(self, end_state: EventState = EventState.INDETERMINATE, rating: Optional[str] = None):
         """
         End the current session with the AgentOps service.
 
@@ -110,5 +108,10 @@ class AgentOps:
             end_state (str, optional): The final state of the session.
             rating (str, optional): The rating for the session.
         """
+        valid_results = set(vars(EventState).values())
+        if end_state not in valid_results:
+            raise ValueError(
+                f"end_state must be one of {EventState.__args__}. Provided: {end_state}")
+
         self.session.end_session(end_state, rating)
         self.worker.end_session(self.session)

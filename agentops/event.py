@@ -1,6 +1,3 @@
-from .helpers import get_ISO_time
-from typing import Optional, Dict, Literal
-
 """
 AgentOps events.
 
@@ -8,6 +5,20 @@ Classes:
     Event: Represents discrete events to be recorded.
     Session: Represents a session of events, with a start and end state.
 """
+from .helpers import get_ISO_time
+from typing import Optional, Dict
+
+
+class EventState:
+    SUCCESS = "Success"
+    FAIL = "Fail"
+    INDETERMINATE = "Indeterminate"
+
+
+class SessionState:
+    SUCCESS = "Success"
+    FAIL = "Fail"
+    INDETERMINATE = "Indeterminate"
 
 
 class Event:
@@ -17,8 +28,8 @@ class Event:
     Args:
         event_type (str): Type of the event, e.g., "API Call". Required.
         params (str, optional): The parameters passed to the operation.
-        output (str, optional): The output of the operation.
-        result (str, optional): Result of the operation, e.g., "success", "fail", "indeterminate".
+        returns (str, optional): The output of the operation.
+        result (str, optional): Result of the operation, e.g., "Success", "Fail", "Indeterminate".
         tags (Dict[str, str], optional): Tags that can be used for grouping or sorting later. e.g. {"llm": "GPT-4"}.
 
 
@@ -28,13 +39,13 @@ class Event:
 
     def __init__(self, event_type: str,
                  params: Optional[str] = None,
-                 output: Optional[str] = None,
-                 result: Optional[str] = None,
+                 returns: Optional[str] = None,
+                 result: EventState = EventState.INDETERMINATE,
                  tags: Optional[Dict[str, str]] = None
                  ):
         self.event_type = event_type
         self.params = params
-        self.output = output
+        self.returns = returns
         self.result = result
         self.tags = tags
         self.timestamp = get_ISO_time()
@@ -61,7 +72,7 @@ class Session:
         self.init_timestamp = get_ISO_time()
         self.tags = tags
 
-    def end_session(self, end_state: Optional[str], rating: Optional[str] = None):
+    def end_session(self, end_state: SessionState = SessionState.INDETERMINATE, rating: Optional[str] = None):
         """
         End the session with a specified state and rating.
 
@@ -69,6 +80,10 @@ class Session:
             end_state (str, optional): The final state of the session. Suggested: "Success", "Fail", "Indeterminate"
             rating (str, optional): The rating for the session.
         """
+        valid_results = set(vars(SessionState).values())
+        if end_state not in valid_results:
+            raise ValueError(
+                f"end_state must be one of {valid_results}. Provided: {end_state}")
         self.end_state = end_state
         self.rating = rating
         self.end_timestamp = get_ISO_time()

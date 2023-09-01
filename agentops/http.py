@@ -69,7 +69,7 @@ class HttpClient:
                 JSON_HEADER["X-Agentops-Auth"] = api_key
 
             res = request_session.post(url, data=payload,
-                                           headers=JSON_HEADER, timeout=20)
+                                       headers=JSON_HEADER, timeout=20)
 
             result.parse(res)
         except requests.exceptions.Timeout:

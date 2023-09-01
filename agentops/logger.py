@@ -1,26 +1,27 @@
 import logging
 import re
 from .agentops import AgentOps
-from .event import Event
+from .event import Event, EventState
+
 
 class AgentOpsLogger():
     """
     A utility class for creating loggers and handlers configured to work with the AgentOps service.
-    
+
     This class provides two static methods for creating a logger or a handler that sends log 
     records to the AgentOps service. The logger and handler are configured with a specific 
     AgentOps client and name.
-    
+
     Example Usage:
-    
+
     >>> from agentops import AgentOps
     >>> client = AgentOps(...)
     >>> logger = AgentOpsLogger.get_agentops_logger(client, 'my_logger')
     >>> logger.info('This is an info log')
-    
+
     This will send an 'info' log to the AgentOps service.
     """
-    
+
     @staticmethod
     def get_agentops_logger(client: AgentOps, name: str, level=logging.DEBUG):
         """
@@ -40,7 +41,7 @@ class AgentOpsLogger():
         handler.setLevel(level)
         logger.addHandler(handler)
         return logger
-        
+
     @staticmethod
     def get_agentops_handler(client: AgentOps, name: str):
         """
@@ -103,9 +104,9 @@ class AgentOpsHandler(logging.Handler):
         log_entry = self.remove_color_codes(log_entry)
 
         if record.levelno == logging.ERROR:
-            result = "fail"
+            result = EventState.FAIL
         else:
-            result = "indeterminate"
+            result = EventState.INDETERMINATE
 
         self.client.record(
-            Event(f'{self.name}:{record.levelname}', output=log_entry, result=result))
+            Event(f'{self.name}:{record.levelname}', returns=log_entry, result=result))
