@@ -63,7 +63,7 @@ class AgentOps:
                 arg_names = list(func_args.keys())
                 arg_values = dict(zip(arg_names, args))
                 arg_values.update(kwargs)
-
+                # TODO: Rename output to returns
                 try:
                     output = func(*args, **kwargs)
 

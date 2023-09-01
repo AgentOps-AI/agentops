@@ -1,6 +1,3 @@
-from .helpers import get_ISO_time
-from typing import Optional, Dict, Literal
-
 """
 AgentOps events.
 
@@ -8,6 +5,10 @@ Classes:
     Event: Represents discrete events to be recorded.
     Session: Represents a session of events, with a start and end state.
 """
+from .helpers import get_ISO_time
+from typing import Optional, Dict, Literal
+
+Result = Literal["Success", "Fail", "Indeterminate"]
 
 
 class Event:
@@ -29,7 +30,7 @@ class Event:
     def __init__(self, event_type: str,
                  params: Optional[str] = None,
                  output: Optional[str] = None,
-                 result: Optional[str] = None,
+                 result: Result = "Indeterminate",
                  tags: Optional[Dict[str, str]] = None
                  ):
         self.event_type = event_type
@@ -61,7 +62,7 @@ class Session:
         self.init_timestamp = get_ISO_time()
         self.tags = tags
 
-    def end_session(self, end_state: Optional[str], rating: Optional[str] = None):
+    def end_session(self, end_state: Result = "Indeterminate", rating: Optional[str] = None):
         """
         End the session with a specified state and rating.
 
