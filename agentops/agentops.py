@@ -9,7 +9,7 @@ from .config import Configuration
 from .event import Session, Event, EventState
 from .worker import Worker
 from uuid import uuid4
-from typing import Optional, Dict
+from typing import Optional, List
 import functools
 import inspect
 
@@ -20,7 +20,7 @@ class AgentOps:
 
     Args:
         api_key (str): API Key for AgentOps services.
-        tags (Dict[str, str], optional): Tags for the sessions that can be used for grouping or sorting later (e.g. {"llm": "GPT-4"}).
+        tags (List[str], optional): Tags for the sessions that can be used for grouping or sorting later (e.g. []"GPT-4"}).
         config (Configuration, optional): A Configuration object for AgentOps services. If not provided, a default Configuration object will be used.
 
     Attributes:
@@ -28,7 +28,7 @@ class AgentOps:
         config (Configuration): A Configuration object for AgentOps services.
     """
 
-    def __init__(self, api_key: str, tags: Optional[Dict[str, str]] = None, config: Configuration = Configuration()):
+    def __init__(self, api_key: str, tags: Optional[List[str]] = None, config: Configuration = Configuration()):
         self.config: Configuration = config
         self.config.api_key = api_key
         self.start_session(tags)
@@ -48,12 +48,12 @@ class AgentOps:
             print("This event was not recorded because the previous session has been ended. Start a new session to record again")
             print(event.__dict__)
 
-    def record_action(self, event_name: str, tags: Optional[Dict[str, str]] = None):
+    def record_action(self, event_name: str, tags: Optional[List[str]] = None):
         """
         Decorator to record an event before and after a function call.
         Args:
             event_name (str): The name of the event to record.
-            tags (dict, optional): Any tags associated with the event. Defaults to None.
+            tags (List[str], optional): Any tags associated with the event. Defaults to None.
         """
         def decorator(func):
             @functools.wraps(func)
@@ -89,12 +89,12 @@ class AgentOps:
 
         return decorator
 
-    def start_session(self, tags: Optional[Dict[str, str]] = None):
+    def start_session(self, tags: Optional[List[str]] = None):
         """
         Start a new session for recording events.
 
         Args:
-            tags (Dict[str, str], optional): Tags that can be used for grouping or sorting later. Examples could be {"llm": "GPT-4"}.
+            tags (List[str], optional): Tags that can be used for grouping or sorting later. Examples could be ['GPT-4']}.
         """
         self.session = Session(str(uuid4()), tags)
         self.worker = Worker(self.config)
