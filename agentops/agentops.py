@@ -12,6 +12,7 @@ from uuid import uuid4
 from typing import Optional, Dict
 import functools
 import inspect
+import atexit
 
 
 class AgentOps:
@@ -32,6 +33,10 @@ class AgentOps:
         self.config: Configuration = config
         self.config.api_key = api_key
         self.start_session(tags)
+
+        # Store a reference to the instance
+        AgentOps._instance = self
+        atexit.register(self.cleanup)
 
     def record(self, event: Event):
         """
@@ -115,3 +120,8 @@ class AgentOps:
 
         self.session.end_session(end_state, rating)
         self.worker.end_session(self.session)
+
+    def cleanup(self):
+        # Only run cleanup function if session is created
+        if hasattr(self, "session"):
+            self.end_session(end_state=EventState.FAIL)

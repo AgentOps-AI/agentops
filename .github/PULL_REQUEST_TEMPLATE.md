@@ -1,11 +1,3 @@
----
-name: 📥 Pull Request
-about: Contribute to Agentops by submitting a pull request
-title: ''
-labels: 'pull request'
-assignees: ''
----
-
 ## 📥 Pull Request
 
 **📘 Description**
