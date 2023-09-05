@@ -20,7 +20,7 @@ class AgentOps:
 
     Args:
         api_key (str): API Key for AgentOps services.
-        tags (List[str], optional): Tags for the sessions that can be used for grouping or sorting later (e.g. []"GPT-4"}).
+        tags (List[str], optional): Tags for the sessions that can be used for grouping or sorting later (e.g. ["GPT-4"]).
         config (Configuration, optional): A Configuration object for AgentOps services. If not provided, a default Configuration object will be used.
 
     Attributes:
@@ -94,7 +94,7 @@ class AgentOps:
         Start a new session for recording events.
 
         Args:
-            tags (List[str], optional): Tags that can be used for grouping or sorting later. Examples could be ['GPT-4']}.
+            tags (List[str], optional): Tags that can be used for grouping or sorting later. Examples could be ["GPT-4"].
         """
         self.session = Session(str(uuid4()), tags)
         self.worker = Worker(self.config)

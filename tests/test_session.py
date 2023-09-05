@@ -56,7 +56,7 @@ class TestSessions:
 
     def test_tags(self, mock_req):
         # Arrange
-        tags = {'llm': 'GPT-4'}
+        tags = ['GPT-4']
         config = Configuration(max_wait_time=5)
         client = AgentOps(api_key=self.api_key, config=config, tags=tags)
 
