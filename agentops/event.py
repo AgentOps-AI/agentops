@@ -6,7 +6,7 @@ Classes:
     Session: Represents a session of events, with a start and end state.
 """
 from .helpers import get_ISO_time
-from typing import Optional, Dict
+from typing import Optional, List
 
 
 class EventState:
@@ -30,7 +30,7 @@ class Event:
         params (str, optional): The parameters passed to the operation.
         returns (str, optional): The output of the operation.
         result (str, optional): Result of the operation, e.g., "Success", "Fail", "Indeterminate".
-        tags (Dict[str, str], optional): Tags that can be used for grouping or sorting later. e.g. {"llm": "GPT-4"}.
+        tags (List[str], optional): Tags that can be used for grouping or sorting later. e.g. ["GPT-4"].
 
 
     Attributes:
@@ -41,7 +41,7 @@ class Event:
                  params: Optional[str] = None,
                  returns: Optional[str] = None,
                  result: EventState = EventState.INDETERMINATE,
-                 tags: Optional[Dict[str, str]] = None
+                 tags: Optional[List[str]] = None
                  ):
         self.event_type = event_type
         self.params = params
@@ -57,7 +57,7 @@ class Session:
 
     Args:
         session_id (str): The session id is used to record particular runs.
-        tags (Dict[str, str], optional): Tags that can be used for grouping or sorting later. Examples could be {"llm": "GPT-4"}.
+        tags (List[str], optional): Tags that can be used for grouping or sorting later. Examples could be ["GPT-4"].
 
     Attributes:
         init_timestamp (float): The timestamp for when the session started, represented as seconds since the epoch.
@@ -67,7 +67,7 @@ class Session:
 
     """
 
-    def __init__(self, session_id: str, tags: Optional[Dict[str, str]] = None):
+    def __init__(self, session_id: str, tags: Optional[List[str]] = None):
         self.session_id = session_id
         self.init_timestamp = get_ISO_time()
         self.tags = tags

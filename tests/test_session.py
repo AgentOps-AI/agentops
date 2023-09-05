@@ -56,7 +56,7 @@ class TestSessions:
 
     def test_tags(self, mock_req):
         # Arrange
-        tags = {'llm': 'GPT-4'}
+        tags = ['GPT-4']
         config = Configuration(max_wait_time=5)
         client = AgentOps(api_key=self.api_key, config=config, tags=tags)
 
@@ -96,7 +96,7 @@ class TestRecordAction:
         self.client.end_session(end_state=EventState.SUCCESS)
 
     def test_record_action_decorator(self, mock_req):
-        @self.client.record_action(event_name=self.event_type, tags={'foo': 'bar'})
+        @self.client.record_action(event_name=self.event_type, tags=['foo', 'bar'])
         def dummy_func(x, y):
             return x + y
 
@@ -112,11 +112,11 @@ class TestRecordAction:
             'args': [3, 4], 'kwargs': {}}
         assert request_json['event']['returns'] == 7
         assert request_json['event']['result'] == EventState.SUCCESS
-        assert request_json['event']['tags'] == {'foo': 'bar'}
+        assert request_json['event']['tags'] == ['foo', 'bar']
 
     def test_record_action_decorator(self, mock_req):
         # Arrange
-        @self.client.record_action(event_name=self.event_type, tags={'foo': 'bar'})
+        @self.client.record_action(event_name=self.event_type, tags=['foo', 'bar'])
         def dummy_func(x, y):
             return x + y
 
@@ -132,4 +132,4 @@ class TestRecordAction:
         assert request_json['events'][0]['params'] == {'x': 3, 'y': 4}
         assert request_json['events'][0]['returns'] == 7
         assert request_json['events'][0]['result'] == EventState.SUCCESS
-        assert request_json['events'][0]['tags'] == {'foo': 'bar'}
+        assert request_json['events'][0]['tags'] == ['foo', 'bar']
