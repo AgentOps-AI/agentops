@@ -1,15 +1,12 @@
 import json
 from enum import Enum
 from typing import Optional
-import requests
-from requests.adapters import Retry, HTTPAdapter
+import httpx
 
 JSON_HEADER = {
     "Content-Type": "application/json; charset=UTF-8",
     "Accept": "*/*"
 }
-
-retry_config = Retry(total=5, backoff_factor=0.1)
 
 
 class HttpStatus(Enum):
@@ -31,7 +28,7 @@ class Response:
         if not self.body:
             self.body = {}
 
-    def parse(self, res: requests.models.Response):
+    async def parse(self, res: httpx.Response):
         res_body = res.json()
         self.code = res.status_code
         self.status = self.get_status(self.code)
@@ -58,31 +55,27 @@ class Response:
 class HttpClient:
 
     @staticmethod
-    def post(url: str, payload: bytes, api_key: str = None, header=None) -> Response:
+    async def post(url: str, payload: bytes, api_key: str = None, header=None) -> Response:
         result = Response()
         try:
-            # Create request session with retries configured
-            request_session = requests.Session()
-            request_session.mount(url, HTTPAdapter(max_retries=retry_config))
-
             if api_key != None:
                 JSON_HEADER["X-Agentops-Auth"] = api_key
 
-            res = request_session.post(url, data=payload,
-                                       headers=JSON_HEADER, timeout=20)
+            res = await httpx.post(url, data=payload,
+                                   headers=JSON_HEADER, timeout=20)
 
-            result.parse(res)
-        except requests.exceptions.Timeout:
+            await result.parse(res)
+        except httpx.TimeoutException:
             result.code = 408
             result.status = HttpStatus.TIMEOUT
-        except requests.exceptions.HTTPError as e:
+        except httpx.HTTPStatusError as e:
             try:
-                result.parse(e.response)
+                await result.parse(e.response)
             except:
                 result = Response()
                 result.code = e.response.status_code
                 result.status = Response.get_status(e.response.status_code)
                 result.body = {'error': str(e)}
-        except requests.exceptions.RequestException as e:
+        except httpx.RequestError as e:
             result.body = {'error': str(e)}
         return result
