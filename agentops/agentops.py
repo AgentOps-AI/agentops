@@ -65,7 +65,12 @@ class AgentOps:
             def wrapper(*args, **kwargs):
                 func_args = inspect.signature(func).parameters
                 arg_names = list(func_args.keys())
-                arg_values = dict(zip(arg_names, args))
+                # Get default values
+                arg_values = {name: func_args[name].default
+                              for name in arg_names if func_args[name].default
+                              is not inspect._empty}
+                # Update with positional arguments
+                arg_values.update(dict(zip(arg_names, args)))
                 arg_values.update(kwargs)
                 try:
                     returns = func(*args, **kwargs)
