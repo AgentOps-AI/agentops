@@ -30,13 +30,13 @@ class AgentOps:
     """
 
     def __init__(self, api_key: str, tags: Optional[List[str]] = None, config: Configuration = Configuration()):
-        self.config: Configuration = config
-        self.config.api_key = api_key
-        self.start_session(tags)
-
         # Store a reference to the instance
         AgentOps._instance = self
         atexit.register(self.cleanup)
+
+        self.config: Configuration = config
+        self.config.api_key = api_key
+        self.start_session(tags)
 
     def record(self, event: Event):
         """

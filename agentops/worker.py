@@ -44,9 +44,10 @@ class Worker:
                     "events": events
                 }
 
+                serialized_payload = \
+                    json.dumps(filter_unjsonable(payload)).encode("utf-8")
                 HttpClient.post(f'{self.config.endpoint}/events',
-                                json.dumps(filter_unjsonable(
-                                    payload)).encode("utf-8"),
+                                serialized_payload,
                                 self.config.api_key)
 
     def start_session(self, session: Session) -> None:
@@ -54,10 +55,10 @@ class Worker:
             payload = {
                 "session": session.__dict__
             }
-
+            serialized_payload = \
+                json.dumps(filter_unjsonable(payload)).encode("utf-8")
             HttpClient.post(f'{self.config.endpoint}/sessions',
-                            json.dumps(filter_unjsonable(
-                                payload)).encode("utf-8"),
+                            serialized_payload,
                             self.config.api_key)
 
     def end_session(self, session: Session) -> None:
