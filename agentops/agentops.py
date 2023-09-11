@@ -75,6 +75,10 @@ class AgentOps:
                 try:
                     returns = func(*args, **kwargs)
 
+                    # If the function returns multiple values, record them all in the same event
+                    if isinstance(returns, tuple):
+                        returns = list(returns)
+
                     # Record the event after the function call
                     self.record(Event(event_type=event_name,
                                       params=arg_values,

@@ -15,8 +15,21 @@ def is_jsonable(x):
         return False
 
 
-def filter_unjsonable(d):
-    return {k: v for k, v in d.items() if is_jsonable(v)}
+def filter_unjsonable(d: dict) -> dict:
+    def filter_dict(obj):
+        if isinstance(obj, dict):
+            return {k: filter_dict(v) if is_jsonable(v) else "" for k, v in obj.items()}
+        elif isinstance(obj, list):
+            return [filter_dict(x) if isinstance(x, (dict, list)) else x for x in obj]
+        else:
+            return obj if is_jsonable(obj) else ""
+
+    return filter_dict(d)
+
+
+def safe_serialize(obj):
+    def default(o): return f"<<non-serializable: {type(o).__qualname__}>>"
+    return json.dumps(obj, default=default)
 
 
 class Worker:
@@ -45,7 +58,7 @@ class Worker:
                 }
 
                 serialized_payload = \
-                    json.dumps(filter_unjsonable(payload)).encode("utf-8")
+                    safe_serialize(payload).encode("utf-8")
                 HttpClient.post(f'{self.config.endpoint}/events',
                                 serialized_payload,
                                 self.config.api_key)
@@ -57,6 +70,7 @@ class Worker:
             }
             serialized_payload = \
                 json.dumps(filter_unjsonable(payload)).encode("utf-8")
+            print(f"{serialized_payload=}")
             HttpClient.post(f'{self.config.endpoint}/sessions',
                             serialized_payload,
                             self.config.api_key)
