@@ -2,8 +2,7 @@ import pytest
 import requests_mock
 import time
 
-from agentops import AgentOps, Event, Configuration
-from agentops.event import EventState
+from agentops import AgentOps, Event, Configuration, EventState
 
 
 @pytest.fixture
