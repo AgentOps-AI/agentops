@@ -30,13 +30,13 @@ class AgentOps:
     """
 
     def __init__(self, api_key: str, tags: Optional[List[str]] = None, config: Configuration = Configuration()):
-        self.config: Configuration = config
-        self.config.api_key = api_key
-        self.start_session(tags)
-
         # Store a reference to the instance
         AgentOps._instance = self
         atexit.register(self.cleanup)
+
+        self.config: Configuration = config
+        self.config.api_key = api_key
+        self.start_session(tags)
 
     def record(self, event: Event):
         """
@@ -65,10 +65,19 @@ class AgentOps:
             def wrapper(*args, **kwargs):
                 func_args = inspect.signature(func).parameters
                 arg_names = list(func_args.keys())
-                arg_values = dict(zip(arg_names, args))
+                # Get default values
+                arg_values = {name: func_args[name].default
+                              for name in arg_names if func_args[name].default
+                              is not inspect._empty}
+                # Update with positional arguments
+                arg_values.update(dict(zip(arg_names, args)))
                 arg_values.update(kwargs)
                 try:
                     returns = func(*args, **kwargs)
+
+                    # If the function returns multiple values, record them all in the same event
+                    if isinstance(returns, tuple):
+                        returns = list(returns)
 
                     # Record the event after the function call
                     self.record(Event(event_type=event_name,

@@ -3,7 +3,7 @@ import threading
 import time
 from .http import HttpClient
 from .config import Configuration
-from .event import Event, Session
+from .event import Session
 from typing import Dict
 
 
@@ -15,8 +15,21 @@ def is_jsonable(x):
         return False
 
 
-def filter_unjsonable(d):
-    return {k: v for k, v in d.items() if is_jsonable(v)}
+def filter_unjsonable(d: dict) -> dict:
+    def filter_dict(obj):
+        if isinstance(obj, dict):
+            return {k: filter_dict(v) if is_jsonable(v) else "" for k, v in obj.items()}
+        elif isinstance(obj, list):
+            return [filter_dict(x) if isinstance(x, (dict, list)) else x for x in obj]
+        else:
+            return obj if is_jsonable(obj) else ""
+
+    return filter_dict(d)
+
+
+def safe_serialize(obj):
+    def default(o): return f"<<non-serializable: {type(o).__qualname__}>>"
+    return json.dumps(obj, default=default)
 
 
 class Worker:
@@ -28,7 +41,7 @@ class Worker:
         self.thread = threading.Thread(target=self.run)
         self.thread.start()
 
-    def add_event(self, event: str) -> None:
+    def add_event(self, event: dict) -> None:
         with self.lock:
             self.queue.append(event)
             if len(self.queue) >= self.config.max_queue_size:
@@ -44,9 +57,10 @@ class Worker:
                     "events": events
                 }
 
+                serialized_payload = \
+                    safe_serialize(payload).encode("utf-8")
                 HttpClient.post(f'{self.config.endpoint}/events',
-                                json.dumps(filter_unjsonable(
-                                    payload)).encode("utf-8"),
+                                serialized_payload,
                                 self.config.api_key)
 
     def start_session(self, session: Session) -> None:
@@ -54,10 +68,11 @@ class Worker:
             payload = {
                 "session": session.__dict__
             }
-
+            serialized_payload = \
+                json.dumps(filter_unjsonable(payload)).encode("utf-8")
+            print(f"{serialized_payload=}")
             HttpClient.post(f'{self.config.endpoint}/sessions',
-                            json.dumps(filter_unjsonable(
-                                payload)).encode("utf-8"),
+                            serialized_payload,
                             self.config.api_key)
 
     def end_session(self, session: Session) -> None:

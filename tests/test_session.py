@@ -2,8 +2,7 @@ import pytest
 import requests_mock
 import time
 
-from agentops import AgentOps, Event, Configuration
-from agentops.event import EventState
+from agentops import AgentOps, Event, Configuration, EventState
 
 
 @pytest.fixture
@@ -97,31 +96,11 @@ class TestRecordAction:
 
     def test_record_action_decorator(self, mock_req):
         @self.client.record_action(event_name=self.event_type, tags=['foo', 'bar'])
-        def dummy_func(x, y):
+        def add_two(x, y):
             return x + y
 
         # Act
-        dummy_func(3, 4)
-
-        # Assert
-        assert len(mock_req.request_history) == 1
-        assert mock_req.last_request.headers['X-Agentops-Auth'] == self.api_key
-        request_json = mock_req.last_request.json()
-        assert request_json['event']['event_type'] == self.event_type
-        assert request_json['event']['params'] == {
-            'args': [3, 4], 'kwargs': {}}
-        assert request_json['event']['returns'] == 7
-        assert request_json['event']['result'] == EventState.SUCCESS
-        assert request_json['event']['tags'] == ['foo', 'bar']
-
-    def test_record_action_decorator(self, mock_req):
-        # Arrange
-        @self.client.record_action(event_name=self.event_type, tags=['foo', 'bar'])
-        def dummy_func(x, y):
-            return x + y
-
-        # Act
-        dummy_func(3, 4)
+        add_two(3, 4)
         time.sleep(0.1)
 
         # Assert
@@ -131,5 +110,25 @@ class TestRecordAction:
         assert request_json['events'][0]['event_type'] == self.event_type
         assert request_json['events'][0]['params'] == {'x': 3, 'y': 4}
         assert request_json['events'][0]['returns'] == 7
+        assert request_json['events'][0]['result'] == EventState.SUCCESS
+        assert request_json['events'][0]['tags'] == ['foo', 'bar']
+
+    def test_record_action_decorator_multiple(self, mock_req):
+        # Arrange
+        @self.client.record_action(event_name=self.event_type, tags=['foo', 'bar'])
+        def add_three(x, y, z=3):
+            return x + y + z
+
+        # Act
+        add_three(1, 2)
+        time.sleep(0.1)
+
+        # Assert
+        assert len(mock_req.request_history) == 1
+        assert mock_req.last_request.headers['X-Agentops-Auth'] == self.api_key
+        request_json = mock_req.last_request.json()
+        assert request_json['events'][0]['event_type'] == self.event_type
+        assert request_json['events'][0]['params'] == {'x': 1, 'y': 2, 'z': 3}
+        assert request_json['events'][0]['returns'] == 6
         assert request_json['events'][0]['result'] == EventState.SUCCESS
         assert request_json['events'][0]['tags'] == ['foo', 'bar']
