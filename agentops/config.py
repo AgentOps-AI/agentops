@@ -19,7 +19,7 @@ class Configuration:
         max_queue_size (int, optional): The maximum size of the event queue. Defaults to 100.
     """
 
-    def __init__(self, api_key: Optional[str] = None, endpoint: Optional[str] = 'https://agentops-server-v2.fly.dev',
+    def __init__(self, api_key: Optional[str] = None, endpoint: Optional[str] = 'http://localhost:8000',
                  max_wait_time: Optional[int] = 1000, max_queue_size: Optional[int] = 100):
         self._api_key: str | None = api_key
         self._endpoint = endpoint

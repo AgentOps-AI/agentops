@@ -3,7 +3,7 @@ import threading
 import time
 from .http import HttpClient
 from .config import Configuration
-from .event import Event, Session
+from .event import Session
 from typing import Dict
 
 
@@ -41,7 +41,7 @@ class Worker:
         self.thread = threading.Thread(target=self.run)
         self.thread.start()
 
-    def add_event(self, event: str) -> None:
+    def add_event(self, event: dict) -> None:
         with self.lock:
             self.queue.append(event)
             if len(self.queue) >= self.config.max_queue_size:
