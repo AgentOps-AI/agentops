@@ -70,7 +70,6 @@ class Worker:
             }
             serialized_payload = \
                 json.dumps(filter_unjsonable(payload)).encode("utf-8")
-            print(f"{serialized_payload=}")
             HttpClient.post(f'{self.config.endpoint}/sessions',
                             serialized_payload,
                             self.config.api_key)
