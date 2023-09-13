@@ -1,6 +1,6 @@
 import logging
 import re
-from .agentops import AgentOps
+from .agentops import Client
 from .event import Event, EventState
 
 
@@ -14,8 +14,8 @@ class AgentOpsLogger():
 
     Example Usage:
 
-    >>> from agentops import AgentOps
-    >>> client = AgentOps(...)
+    >>> from agentops import Client
+    >>> client = Client(...)
     >>> logger = AgentOpsLogger.get_agentops_logger(client, 'my_logger')
     >>> logger.info('This is an info log')
 
@@ -23,12 +23,12 @@ class AgentOpsLogger():
     """
 
     @staticmethod
-    def get_agentops_logger(client: AgentOps, name: str, level=logging.DEBUG):
+    def get_agentops_logger(client: Client, name: str, level=logging.DEBUG):
         """
         Create and return a logger with an AgentOpsHandler.
 
         Args:
-            client (AgentOps): The AgentOps client to which the logs will be sent.
+            client (Client): The AgentOps client to which the logs will be sent.
             name (str): The name for the logger and handler.
             level (int, optional): The minimum severity level to log. Defaults to logging.DEBUG.
 
@@ -43,12 +43,12 @@ class AgentOpsLogger():
         return logger
 
     @staticmethod
-    def get_agentops_handler(client: AgentOps, name: str):
+    def get_agentops_handler(client: Client, name: str):
         """
         Create and return an AgentOpsHandler.
 
         Args:
-            client (AgentOps): The AgentOps client to which the logs will be sent.
+            client (Client): The AgentOps client to which the logs will be sent.
             name (str): The name for the handler.
 
         Returns:
@@ -65,12 +65,12 @@ class AgentOpsHandler(logging.Handler):
     It also removes ANSI color codes from log messages before sending them.
     """
 
-    def __init__(self, client: AgentOps, name: str):
+    def __init__(self, client: Client, name: str):
         """
         Initialize the handler with a specific AgentOps client and name.
 
         Args:
-            client (AgentOps): The AgentOps client to which the logs will be sent.
+            client (Client): The AgentOps client to which the logs will be sent.
             name (str): The name for this handler.
         """
         super().__init__()

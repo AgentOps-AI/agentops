@@ -88,7 +88,8 @@ class Session:
         self.rating = rating
         self.end_timestamp = get_ISO_time()
 
-    def get_session_id(self) -> str:
+    @property
+    def session_id(self) -> str:
         """
         Get the session id.
 
@@ -97,7 +98,8 @@ class Session:
         """
         return self.session_id
 
-    def has_ended(self) -> str:
+    @property
+    def has_ended(self) -> bool:
         """
         Returns whether the session has been ended
 
