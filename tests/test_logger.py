@@ -1,8 +1,7 @@
 import pytest
 import requests_mock
 import time
-from agentops import AgentOps, AgentOpsLogger, Configuration
-from agentops.event import EventState
+from agentops import Client, AgentOpsLogger, SessionState
 
 
 @pytest.fixture
@@ -18,11 +17,10 @@ class TestLogger:
     def setup_method(self):
         self.url = 'https://agentops-server-v2.fly.dev'
         self.api_key = "random_api_key"
-        self.config = Configuration(max_wait_time=5)
-        self.client = AgentOps(api_key=self.api_key, config=self.config)
+        self.client = Client(api_key=self.api_key, max_wait_time=5)
 
     def teardown_method(self):
-        self.client.end_session(end_state=EventState.SUCCESS)
+        self.client.end_session(end_state=SessionState.SUCCESS)
 
     def test_info(self, mock_req):
         # Arrange

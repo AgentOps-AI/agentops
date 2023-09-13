@@ -1,4 +1,4 @@
-from .agentops import AgentOps
-from .event import Event, EventState, SessionState
-from .config import Configuration
+from .client import Client
+from .event import Event, EventState
+from .session import SessionState
 from .logger import AgentOpsLogger

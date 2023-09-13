@@ -3,7 +3,7 @@ import threading
 import time
 from .http import HttpClient
 from .config import Configuration
-from .event import Session
+from .session import Session
 from typing import Dict
 
 

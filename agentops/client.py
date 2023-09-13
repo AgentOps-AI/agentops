@@ -2,41 +2,67 @@
 AgentOps client module that provides a client class with public interfaces and configuration.
 
 Classes:
-    AgentOps: Provides methods to interact with the AgentOps service.
+    Client: Provides methods to interact with the AgentOps service.
 """
 
-from .config import Configuration
-from .event import Session, Event, EventState
+from .event import Event, EventState
+from .session import Session, SessionState
 from .worker import Worker
 from uuid import uuid4
 from typing import Optional, List
 import functools
 import inspect
 import atexit
+import signal
+import sys
+
+from .config import Configuration
 
 
-class AgentOps:
+class Client:
     """
     Client for AgentOps service.
 
     Args:
         api_key (str): API Key for AgentOps services.
         tags (List[str], optional): Tags for the sessions that can be used for grouping or sorting later (e.g. ["GPT-4"]).
-        config (Configuration, optional): A Configuration object for AgentOps services. If not provided, a default Configuration object will be used.
-
+        endpoint (str, optional): The endpoint for the AgentOps service. Defaults to 'https://agentops-server-v2.fly.dev'.
+        max_wait_time (int, optional): The maximum time to wait in milliseconds before flushing the queue. Defaults to 1000.
+        max_queue_size (int, optional): The maximum size of the event queue. Defaults to 100.
     Attributes:
         session (Session, optional): A Session is a grouping of events (e.g. a run of your agent).
-        config (Configuration): A Configuration object for AgentOps services.
     """
 
-    def __init__(self, api_key: str, tags: Optional[List[str]] = None, config: Configuration = Configuration()):
+    def __init__(self, api_key: str, tags: Optional[List[str]] = None,
+                 endpoint: Optional[str] = 'https://agentops-server-v2.fly.dev',
+                 max_wait_time: Optional[int] = 1000,
+                 max_queue_size: Optional[int] = 100):
+
+        # Create a worker config
+        self.config = Configuration(api_key, endpoint,
+                                    max_wait_time, max_queue_size)
+
         # Store a reference to the instance
-        AgentOps._instance = self
+        Client._instance = self
         atexit.register(self.cleanup)
 
-        self.config: Configuration = config
-        self.config.api_key = api_key
+        # Register signal handler for SIGINT (Ctrl+C) and SIGTERM
+        signal.signal(signal.SIGINT, self.signal_handler)
+        signal.signal(signal.SIGTERM, self.signal_handler)
+
         self.start_session(tags)
+
+    def signal_handler(self, signal, frame):
+        """
+        Signal handler for SIGINT (Ctrl+C) and SIGTERM. Ends the session and exits the program.
+
+        Args:
+            signal (int): The signal number.
+            frame: The current stack frame.
+        """
+        print('Signal SIGTERM or SIGINT detected. Ending session...')
+        self.end_session(end_state=EventState.FAIL)
+        sys.exit(0)
 
     def record(self, event: Event):
         """
@@ -46,12 +72,11 @@ class AgentOps:
             event (Event): The event to record.
         """
 
-        if not self.session.has_ended():
+        if not self.session.has_ended:
             self.worker.add_event(
-                {'session_id': self.session.get_session_id(), **event.__dict__})
+                {'session_id': self.session.session_id, **event.__dict__})
         else:
-            print("This event was not recorded because the previous session has been ended. Start a new session to record again")
-            print(event.__dict__)
+            print("This event was not recorded because the previous session has been ended. Start a new session to record again.")
 
     def record_action(self, event_name: str, tags: Optional[List[str]] = None):
         """
@@ -114,7 +139,7 @@ class AgentOps:
         self.worker = Worker(self.config)
         self.worker.start_session(self.session)
 
-    def end_session(self, end_state: EventState = EventState.INDETERMINATE, rating: Optional[str] = None):
+    def end_session(self, end_state: SessionState = SessionState.INDETERMINATE, rating: Optional[str] = None):
         """
         End the current session with the AgentOps service.
 
@@ -122,15 +147,17 @@ class AgentOps:
             end_state (str, optional): The final state of the session.
             rating (str, optional): The rating for the session.
         """
-        valid_results = set(vars(EventState).values())
+        valid_results = set(vars(SessionState).values())
         if end_state not in valid_results:
             raise ValueError(
-                f"end_state must be one of {EventState.__args__}. Provided: {end_state}")
-
-        self.session.end_session(end_state, rating)
-        self.worker.end_session(self.session)
+                f"end_state must be one of {SessionState}. Provided: {end_state}")
+        if not self.session.has_ended:
+            self.session.end_session(end_state, rating)
+            self.worker.end_session(self.session)
+        else:
+            print("Warning: The session has already been ended.")
 
     def cleanup(self):
         # Only run cleanup function if session is created
-        if hasattr(self, "session"):
-            self.end_session(end_state=EventState.FAIL)
+        if hasattr(self, "session") and not self.session.has_ended:
+            self.end_session(end_state=SessionState.FAIL)
