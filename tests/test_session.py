@@ -2,7 +2,7 @@ import pytest
 import requests_mock
 import time
 
-from agentops import Client, Event, Configuration, EventState
+from agentops import Client, Event, EventState
 
 
 @pytest.fixture
@@ -21,8 +21,7 @@ class TestSessions:
 
     def test_session(self, mock_req):
         # Arrange
-        config = Configuration(max_wait_time=5)
-        client = Client(api_key=self.api_key, config=config)
+        client = Client(api_key=self.api_key, max_wait_time=5)
 
         # Act
         client.record(Event(self.event_type))
@@ -56,8 +55,7 @@ class TestSessions:
     def test_tags(self, mock_req):
         # Arrange
         tags = ['GPT-4']
-        config = Configuration(max_wait_time=5)
-        client = Client(api_key=self.api_key, config=config, tags=tags)
+        client = Client(api_key=self.api_key, tags=tags, max_wait_time=5)
 
         # Act
         client.record(Event(self.event_type))
@@ -88,8 +86,7 @@ class TestRecordAction:
         self.url = 'https://agentops-server-v2.fly.dev'
         self.api_key = "random_api_key"
         self.event_type = 'test_event_type'
-        self.config = Configuration(max_wait_time=5)
-        self.client = Client(self.api_key, config=self.config)
+        self.client = Client(self.api_key, max_wait_time=5)
 
     def teardown_method(self):
         self.client.end_session(end_state=EventState.SUCCESS)

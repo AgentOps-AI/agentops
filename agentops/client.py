@@ -5,7 +5,6 @@ Classes:
     Client: Provides methods to interact with the AgentOps service.
 """
 
-from .config import Configuration
 from .event import Event, EventState
 from .session import Session, SessionState
 from .worker import Worker
@@ -17,6 +16,8 @@ import atexit
 import signal
 import sys
 
+from .config import Configuration
+
 
 class Client:
     """
@@ -25,14 +26,22 @@ class Client:
     Args:
         api_key (str): API Key for AgentOps services.
         tags (List[str], optional): Tags for the sessions that can be used for grouping or sorting later (e.g. ["GPT-4"]).
-        config (Configuration, optional): A Configuration object for AgentOps services. If not provided, a default Configuration object will be used.
-
+        endpoint (str, optional): The endpoint for the AgentOps service. Defaults to 'https://agentops-server-v2.fly.dev'.
+        max_wait_time (int, optional): The maximum time to wait in milliseconds before flushing the queue. Defaults to 1000.
+        max_queue_size (int, optional): The maximum size of the event queue. Defaults to 100.
     Attributes:
         session (Session, optional): A Session is a grouping of events (e.g. a run of your agent).
-        config (Configuration): A Configuration object for AgentOps services.
     """
 
-    def __init__(self, api_key: str, tags: Optional[List[str]] = None, config: Configuration = Configuration()):
+    def __init__(self, api_key: str, tags: Optional[List[str]] = None,
+                 endpoint: Optional[str] = 'https://agentops-server-v2.fly.dev',
+                 max_wait_time: Optional[int] = 1000,
+                 max_queue_size: Optional[int] = 100):
+
+        # Create a worker config
+        self.config = Configuration(api_key, endpoint,
+                                    max_wait_time, max_queue_size)
+
         # Store a reference to the instance
         Client._instance = self
         atexit.register(self.cleanup)
@@ -41,8 +50,6 @@ class Client:
         signal.signal(signal.SIGINT, self.signal_handler)
         signal.signal(signal.SIGTERM, self.signal_handler)
 
-        self.config: Configuration = config
-        self.config.api_key = api_key
         self.start_session(tags)
 
     def signal_handler(self, signal, frame):

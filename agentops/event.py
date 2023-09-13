@@ -3,7 +3,6 @@ AgentOps events.
 
 Classes:
     Event: Represents discrete events to be recorded.
-    Session: Represents a session of events, with a start and end state.
 """
 from .helpers import get_ISO_time
 from typing import Optional, List
