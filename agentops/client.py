@@ -6,7 +6,8 @@ Classes:
 """
 
 from .config import Configuration
-from .event import Session, Event, EventState, SessionState
+from .event import Event, EventState
+from .session import Session, SessionState
 from .worker import Worker
 from uuid import uuid4
 from typing import Optional, List

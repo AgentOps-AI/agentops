@@ -1,6 +1,6 @@
 import logging
 import re
-from .agentops import Client
+from .client import Client
 from .event import Event, EventState
 
 
