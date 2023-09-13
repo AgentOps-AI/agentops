@@ -89,16 +89,6 @@ class Session:
         self.end_timestamp = get_ISO_time()
 
     @property
-    def session_id(self) -> str:
-        """
-        Get the session id.
-
-        Returns:
-            str: The id of the session.
-        """
-        return self.session_id
-
-    @property
     def has_ended(self) -> bool:
         """
         Returns whether the session has been ended
