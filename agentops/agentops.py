@@ -68,7 +68,7 @@ class Client:
             self.worker.add_event(
                 {'session_id': self.session.session_id, **event.__dict__})
         else:
-            print("This event was not recorded because the previous session has been ended. Start a new session to record again")
+            print("This event was not recorded because the previous session has been ended. Start a new session to record again.")
 
     def record_action(self, event_name: str, tags: Optional[List[str]] = None):
         """
