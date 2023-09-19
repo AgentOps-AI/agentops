@@ -19,6 +19,12 @@ import sys
 from .config import Configuration
 
 
+class ActionType:
+    LLM = "llm"
+    API = "api"
+    ACTION = "action"
+
+
 class Client:
     """
     Client for AgentOps service.
@@ -76,9 +82,12 @@ class Client:
             self.worker.add_event(
                 {'session_id': self.session.session_id, **event.__dict__})
         else:
-            print("This event was not recorded because the previous session has been ended. Start a new session to record again.")
+            print("This event was not recorded because the previous session has been ended"
+                  " Start a new session to record again.")
 
-    def record_action(self, event_name: str, tags: Optional[List[str]] = None):
+    def record_action(self, event_name: str,
+                      event_type: ActionType = ActionType.ACTION,
+                      tags: Optional[List[str]] = None):
         """
         Decorator to record an event before and after a function call.
         Args:
@@ -108,7 +117,7 @@ class Client:
                     self.record(Event(event_type=event_name,
                                       params=arg_values,
                                       returns=returns,
-                                      result="Success",
+                                      result=EventState.SUCCESS,
                                       tags=tags))
 
                 except Exception as e:
@@ -116,7 +125,7 @@ class Client:
                     self.record(Event(event_type=event_name,
                                       params=arg_values,
                                       returns=None,
-                                      result='Fail',
+                                      result=EventState.FAIL,
                                       tags=tags))
 
                     # Re-raise the exception
@@ -133,13 +142,15 @@ class Client:
         Start a new session for recording events.
 
         Args:
-            tags (List[str], optional): Tags that can be used for grouping or sorting later. Examples could be ["GPT-4"].
+            tags (List[str], optional): Tags that can be used for grouping or sorting later.
+                Examples could be ["GPT-4"].
         """
         self.session = Session(str(uuid4()), tags)
         self.worker = Worker(self.config)
         self.worker.start_session(self.session)
 
-    def end_session(self, end_state: SessionState = SessionState.INDETERMINATE, rating: Optional[str] = None):
+    def end_session(self, end_state: SessionState = SessionState.INDETERMINATE,
+                    rating: Optional[str] = None):
         """
         End the current session with the AgentOps service.
 
