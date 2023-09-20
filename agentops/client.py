@@ -6,6 +6,7 @@ Classes:
 """
 
 from .event import Event, EventState
+from .helpers import Models, ActionType
 from .session import Session, SessionState
 from .worker import Worker
 from uuid import uuid4
@@ -17,12 +18,6 @@ import signal
 import sys
 
 from .config import Configuration
-
-
-class ActionType:
-    LLM = "llm"
-    API = "api"
-    ACTION = "action"
 
 
 class Client:
@@ -70,7 +65,9 @@ class Client:
         self.end_session(end_state=EventState.FAIL)
         sys.exit(0)
 
-    def record(self, event: Event):
+    def record(self, event: Event,
+               action_type: ActionType = ActionType.ACTION,
+               model: Optional[Models] = None):
         """
         Record an event with the AgentOps service.
 
@@ -86,12 +83,22 @@ class Client:
                   " Start a new session to record again.")
 
     def record_action(self, event_name: str,
-                      event_type: ActionType = ActionType.ACTION,
+                      action_type: ActionType = ActionType.ACTION,
+                      model: Optional[Models] = None,
+                      prompt: Optional[str] = None,
                       tags: Optional[List[str]] = None):
         """
         Decorator to record an event before and after a function call.
         Args:
             event_name (str): The name of the event to record.
+            action_type (ActionType, optional): The type of the event being recorded.
+                Events default to 'action'. Other options include 'api' and 'llm'.
+            model (Models, optional): The model used during the event if an LLM is used (i.e. GPT-4).
+                For models, see the types available in the Models enum. 
+                If a model is set but an action_type is not, the action_type will be coerced to 'llm'. 
+                Defaults to None.
+            prompt (str, optional): The prompt for an LLM call when an LLM is being used. This
+                becomes required when model is provided.
             tags (List[str], optional): Any tags associated with the event. Defaults to None.
         """
         def decorator(func):
@@ -113,11 +120,24 @@ class Client:
                     if isinstance(returns, tuple):
                         returns = list(returns)
 
+                    # 1) Coerce action type to 'llm' if model is set
+                    # 2) Throw error if no prompt is set. This is required for
+                    # calculating price
+                    action = action_type
+                    if bool(model):
+                        action = ActionType.LLM
+                        if not bool(prompt):
+                            raise ValueError(
+                                "Prompt is required when model is provided.")
+
                     # Record the event after the function call
                     self.record(Event(event_type=event_name,
                                       params=arg_values,
                                       returns=returns,
                                       result=EventState.SUCCESS,
+                                      action_type=action,
+                                      model=model,
+                                      prompt=prompt,
                                       tags=tags))
 
                 except Exception as e:
@@ -126,6 +146,9 @@ class Client:
                                       params=arg_values,
                                       returns=None,
                                       result=EventState.FAIL,
+                                      action_type=action,
+                                      model=model,
+                                      prompt=prompt,
                                       tags=tags))
 
                     # Re-raise the exception
@@ -143,7 +166,7 @@ class Client:
 
         Args:
             tags (List[str], optional): Tags that can be used for grouping or sorting later.
-                Examples could be ["GPT-4"].
+                e.g. ["test_run"].
         """
         self.session = Session(str(uuid4()), tags)
         self.worker = Worker(self.config)
