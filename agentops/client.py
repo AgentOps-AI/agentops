@@ -124,6 +124,12 @@ class Client:
                         raise ValueError(
                             "Prompt is required when model is provided.")
 
+                # Throw error if action type is 'llm' but no model is specified
+                if action == ActionType.LLM and not bool(model):
+                    raise ValueError(
+                        f"`model` is a required parameter if action_type is {ActionType.LLM}. " +
+                        f"Model can be set as: {list(Models)}")
+
                 try:
                     returns = func(*args, **kwargs)
 

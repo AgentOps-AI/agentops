@@ -129,3 +129,58 @@ class TestRecordAction:
         assert request_json['events'][0]['returns'] == 6
         assert request_json['events'][0]['result'] == EventState.SUCCESS
         assert request_json['events'][0]['tags'] == ['foo', 'bar']
+
+    def test_llm_call(self, mock_req):
+        # Arrange
+        prompt = 'prompt'
+
+        @self.client.record_action(event_name=self.event_type, prompt=prompt, action_type='llm', model='gpt-4')
+        def llm_call(prompt=prompt):
+            return 'output'
+
+        # Act
+        llm_call()
+        time.sleep(0.1)
+
+        # Assert
+        assert len(mock_req.request_history) == 1
+        request_json = mock_req.last_request.json()
+        assert request_json['events'][0]['action_type'] == 'llm'
+        assert request_json['events'][0]['prompt'] == prompt
+        assert request_json['events'][0]['returns'] == 'output'
+        assert request_json['events'][0]['result'] == EventState.SUCCESS
+
+    def test_llm_call_no_prompt(self, mock_req):
+        # Arrange
+        @self.client.record_action(event_name=self.event_type,
+                                   action_type='llm', model='gpt-4')
+        def llm_call():
+            return 'output'
+
+        # Act and Assert
+        with pytest.raises(ValueError):
+            llm_call()
+
+    def test_llm_call_no_model(self, mock_req):
+        # Arrange
+        prompt = 'prompt'
+
+        @self.client.record_action(event_name=self.event_type, action_type='llm')
+        def llm_call(prompt=prompt):
+            return 'output'
+
+        # Act and Assert
+        with pytest.raises(ValueError):
+            llm_call()
+
+    def test_llm_call_no_action_type(self, mock_req):
+        # Arrange
+        prompt = 'prompt'
+
+        @self.client.record_action(event_name=self.event_type, model='gpt-4')
+        def llm_call(prompt=prompt):
+            return 'output'
+
+        # Act and Assert
+        with pytest.raises(ValueError):
+            llm_call()
