@@ -51,7 +51,25 @@ class Client:
         signal.signal(signal.SIGINT, self.signal_handler)
         signal.signal(signal.SIGTERM, self.signal_handler)
 
+        # Override sys.excepthook
+        sys.excepthook = self.handle_exception
+
         self.start_session(tags)
+
+    def handle_exception(self, exc_type, exc_value, exc_traceback):
+        """
+        Handle uncaught exceptions before they result in program termination.
+
+        Args:
+            exc_type (Type[BaseException]): The type of the exception.
+            exc_value (BaseException): The exception instance.
+            exc_traceback (TracebackType): A traceback object encapsulating the call stack at the point where the exception originally occurred.
+        """
+        # Perform cleanup
+        self.cleanup()
+
+        # Then call the default excepthook to exit the program
+        sys.__excepthook__(exc_type, exc_value, exc_traceback)
 
     def signal_handler(self, signal, frame):
         """
@@ -85,10 +103,39 @@ class Client:
     def record_action(self, event_name: str,
                       action_type: ActionType = ActionType.ACTION,
                       model: Optional[Models] = None,
-                      prompt: Optional[str] = None,
                       tags: Optional[List[str]] = None):
         """
         Decorator to record an event before and after a function call.
+        Usage:
+            - Actions: Records function parameters and return statements of the
+                function being decorated. Specify the action_type = 'action'
+
+            - LLM Calls: Records prompt, model, and output of a function that
+                calls an LLM. Specify the action_type = 'llm'
+                Note: This requires that the function being decorated is passed a "prompt"
+                parameter when either defined or called. For example:
+                ```
+                # Decorate function definition
+                @ao_client.record_action(..., action_type='llm')
+                def openai_call(prompt):
+                    ...
+
+                openai_call(prompt='...')
+                ```
+                For decorated functions without the "prompt" params, this decorator
+                grants an overloaded "prompt" arg that automatically works. For example:
+
+                ```
+                # Decorate function definition
+                @ao_client.record_action(..., action_type='llm')
+                def openai_call(foo):
+                    ...
+
+                # This will work
+                openai_call(foo='...', prompt='...')
+                ```
+            - API Calls: Records input, headers, and response status for API calls.
+                TOOD: Currently not implemented, coming soon.
         Args:
             event_name (str): The name of the event to record.
             action_type (ActionType, optional): The type of the event being recorded.
@@ -97,8 +144,6 @@ class Client:
                 For models, see the types available in the Models enum. 
                 If a model is set but an action_type is not, the action_type will be coerced to 'llm'. 
                 Defaults to None.
-            prompt (str, optional): The prompt for an LLM call when an LLM is being used. This
-                becomes required when model is provided.
             tags (List[str], optional): Any tags associated with the event. Defaults to None.
         """
         def decorator(func):
@@ -114,6 +159,9 @@ class Client:
                 arg_values.update(dict(zip(arg_names, args)))
                 arg_values.update(kwargs)
 
+                # Get prompt from function arguments
+                prompt = arg_values.get('prompt')
+
                 # 1) Coerce action type to 'llm' if model is set
                 # 2) Throw error if no prompt is set. This is required for
                 # calculating price
@@ -127,8 +175,8 @@ class Client:
                 # Throw error if action type is 'llm' but no model is specified
                 if action == ActionType.LLM and not bool(model):
                     raise ValueError(
-                        f"`model` is a required parameter if action_type is {ActionType.LLM}. " +
-                        f"Model can be set as: {list(Models)}")
+                        f"`model` is a required parameter if `action_type` is set as {ActionType.LLM}. " +
+                        f"Model can be set as: {list([mod.value for mod in Models])}")
 
                 try:
                     returns = func(*args, **kwargs)

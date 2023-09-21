@@ -134,7 +134,7 @@ class TestRecordAction:
         # Arrange
         prompt = 'prompt'
 
-        @self.client.record_action(event_name=self.event_type, prompt=prompt, action_type='llm', model='gpt-4')
+        @self.client.record_action(event_name=self.event_type, action_type='llm', model='gpt-4')
         def llm_call(prompt=prompt):
             return 'output'
 
@@ -181,6 +181,13 @@ class TestRecordAction:
         def llm_call(prompt=prompt):
             return 'output'
 
-        # Act and Assert
-        with pytest.raises(ValueError):
-            llm_call()
+        llm_call()
+        time.sleep(0.1)
+
+        # Assert
+        assert len(mock_req.request_history) == 1
+        request_json = mock_req.last_request.json()
+        assert request_json['events'][0]['action_type'] == 'llm'
+        assert request_json['events'][0]['prompt'] == prompt
+        assert request_json['events'][0]['returns'] == 'output'
+        assert request_json['events'][0]['result'] == EventState.SUCCESS
