@@ -113,22 +113,23 @@ class Client:
                 # Update with positional arguments
                 arg_values.update(dict(zip(arg_names, args)))
                 arg_values.update(kwargs)
+
+                # 1) Coerce action type to 'llm' if model is set
+                # 2) Throw error if no prompt is set. This is required for
+                # calculating price
+                action = action_type
+                if bool(model):
+                    action = ActionType.LLM
+                    if not bool(prompt):
+                        raise ValueError(
+                            "Prompt is required when model is provided.")
+
                 try:
                     returns = func(*args, **kwargs)
 
                     # If the function returns multiple values, record them all in the same event
                     if isinstance(returns, tuple):
                         returns = list(returns)
-
-                    # 1) Coerce action type to 'llm' if model is set
-                    # 2) Throw error if no prompt is set. This is required for
-                    # calculating price
-                    action = action_type
-                    if bool(model):
-                        action = ActionType.LLM
-                        if not bool(prompt):
-                            raise ValueError(
-                                "Prompt is required when model is provided.")
 
                     # Record the event after the function call
                     self.record(Event(event_type=event_name,
