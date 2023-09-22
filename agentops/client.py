@@ -12,6 +12,7 @@ from .worker import Worker
 from uuid import uuid4
 from typing import Optional, List
 import functools
+import logging
 import inspect
 import atexit
 import signal
@@ -79,7 +80,7 @@ class Client:
             signal (int): The signal number.
             frame: The current stack frame.
         """
-        print('Signal SIGTERM or SIGINT detected. Ending session...')
+        logging.info('Signal SIGTERM or SIGINT detected. Ending session...')
         self.end_session(end_state=EventState.FAIL)
         sys.exit(0)
 
@@ -97,8 +98,8 @@ class Client:
             self.worker.add_event(
                 {'session_id': self.session.session_id, **event.__dict__})
         else:
-            print("This event was not recorded because the previous session has been ended"
-                  " Start a new session to record again.")
+            logging.info("This event was not recorded because the previous session has been ended" +
+                         " Start a new session to record again.")
 
     def record_action(self, event_name: str,
                       action_type: ActionType = ActionType.ACTION,
@@ -244,7 +245,7 @@ class Client:
             self.session.end_session(end_state, rating)
             self.worker.end_session(self.session)
         else:
-            print("Warning: The session has already been ended.")
+            logging.info("Warning: The session has already been ended.")
 
     def cleanup(self):
         # Only run cleanup function if session is created
