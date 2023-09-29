@@ -81,7 +81,7 @@ class Client:
             frame: The current stack frame.
         """
         logging.info('Signal SIGTERM or SIGINT detected. Ending session...')
-        self.end_session(end_state=EventState.FAIL)
+        self.end_session(end_state=SessionState.FAIL)
         sys.exit(0)
 
     def record(self, event: Event,
@@ -104,6 +104,7 @@ class Client:
     def record_action(self, event_name: str,
                       action_type: ActionType = ActionType.ACTION,
                       model: Optional[Models] = None,
+                      prompt_arg: Optional[str] = 'prompt',
                       tags: Optional[List[str]] = None):
         """
         Decorator to record an event before and after a function call.
@@ -161,7 +162,7 @@ class Client:
                 arg_values.update(kwargs)
 
                 # Get prompt from function arguments
-                prompt = arg_values.get('prompt')
+                prompt = arg_values.get(prompt_arg)
 
                 # 1) Coerce action type to 'llm' if model is set
                 # 2) Throw error if no prompt is set. This is required for
