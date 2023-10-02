@@ -85,9 +85,7 @@ class Client:
         self.end_session(end_state='Fail')
         sys.exit(0)
 
-    def record(self, event: Event,
-               action_type: ActionType = ActionType.ACTION,
-               model: Optional[Models] = None):
+    def record(self, event: Event):
         """
         Record an event with the AgentOps service.
 
