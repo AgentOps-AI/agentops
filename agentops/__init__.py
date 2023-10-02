@@ -1,5 +1,4 @@
 from .client import Client
-from .event import Event, EventState
-from .session import SessionState
+from .event import Event
 from .logger import AgentOpsLogger
 from .helpers import Models, ActionType

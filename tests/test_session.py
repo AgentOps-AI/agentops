@@ -2,7 +2,7 @@ import pytest
 import requests_mock
 import time
 
-from agentops import Client, Event, EventState
+from agentops import Client, Event
 
 
 @pytest.fixture
@@ -40,7 +40,7 @@ class TestSessions:
         assert request_json['events'][0]['event_type'] == self.event_type
 
         # Act
-        end_state = EventState.SUCCESS
+        end_state = 'Success'
         client.end_session(end_state)
         time.sleep(0.1)
 
@@ -68,7 +68,7 @@ class TestSessions:
         assert request_json['events'][0]['event_type'] == self.event_type
 
         # Act
-        end_state = EventState.SUCCESS
+        end_state = 'Success'
         client.end_session(end_state)
         time.sleep(0.1)
 
@@ -89,7 +89,7 @@ class TestRecordAction:
         self.client = Client(self.api_key, max_wait_time=5)
 
     def teardown_method(self):
-        self.client.end_session(end_state=EventState.SUCCESS)
+        self.client.end_session(end_state='Success')
 
     def test_record_action_decorator(self, mock_req):
         @self.client.record_action(event_name=self.event_type, tags=['foo', 'bar'])
@@ -107,7 +107,7 @@ class TestRecordAction:
         assert request_json['events'][0]['event_type'] == self.event_type
         assert request_json['events'][0]['params'] == {'x': 3, 'y': 4}
         assert request_json['events'][0]['returns'] == 7
-        assert request_json['events'][0]['result'] == EventState.SUCCESS
+        assert request_json['events'][0]['result'] == 'Success'
         assert request_json['events'][0]['tags'] == ['foo', 'bar']
 
     def test_record_action_decorator_multiple(self, mock_req):
@@ -127,7 +127,7 @@ class TestRecordAction:
         assert request_json['events'][0]['event_type'] == self.event_type
         assert request_json['events'][0]['params'] == {'x': 1, 'y': 2, 'z': 3}
         assert request_json['events'][0]['returns'] == 6
-        assert request_json['events'][0]['result'] == EventState.SUCCESS
+        assert request_json['events'][0]['result'] == 'Success'
         assert request_json['events'][0]['tags'] == ['foo', 'bar']
 
     def test_llm_call(self, mock_req):
@@ -148,7 +148,7 @@ class TestRecordAction:
         assert request_json['events'][0]['action_type'] == 'llm'
         assert request_json['events'][0]['prompt'] == prompt
         assert request_json['events'][0]['returns'] == 'output'
-        assert request_json['events'][0]['result'] == EventState.SUCCESS
+        assert request_json['events'][0]['result'] == 'Success'
 
     def test_llm_call_no_prompt(self, mock_req):
         # Arrange
@@ -190,4 +190,4 @@ class TestRecordAction:
         assert request_json['events'][0]['action_type'] == 'llm'
         assert request_json['events'][0]['prompt'] == prompt
         assert request_json['events'][0]['returns'] == 'output'
-        assert request_json['events'][0]['result'] == EventState.SUCCESS
+        assert request_json['events'][0]['result'] == 'Success'

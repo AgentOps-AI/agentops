@@ -5,12 +5,13 @@ Classes:
     Client: Provides methods to interact with the AgentOps service.
 """
 
-from .event import Event, EventState
-from .helpers import Models, ActionType
-from .session import Session, SessionState
+from .event import Event
+from .helpers import Models, ActionType, get_ISO_time
+from .session import Session
 from .worker import Worker
 from uuid import uuid4
 from typing import Optional, List
+from pydantic import Field
 import functools
 import logging
 import inspect
@@ -81,12 +82,10 @@ class Client:
             frame: The current stack frame.
         """
         logging.info('Signal SIGTERM or SIGINT detected. Ending session...')
-        self.end_session(end_state=EventState.FAIL)
+        self.end_session(end_state='Fail')
         sys.exit(0)
 
-    def record(self, event: Event,
-               action_type: ActionType = ActionType.ACTION,
-               model: Optional[Models] = None):
+    def record(self, event: Event):
         """
         Record an event with the AgentOps service.
 
@@ -150,6 +149,7 @@ class Client:
         def decorator(func):
             @functools.wraps(func)
             def wrapper(*args, **kwargs):
+                init_time = get_ISO_time()
                 func_args = inspect.signature(func).parameters
                 arg_names = list(func_args.keys())
                 # Get default values
@@ -190,10 +190,11 @@ class Client:
                     self.record(Event(event_type=event_name,
                                       params=arg_values,
                                       returns=returns,
-                                      result=EventState.SUCCESS,
+                                      result='Success',
                                       action_type=action,
                                       model=model,
                                       prompt=prompt,
+                                      init_timestamp=init_time,
                                       tags=tags))
 
                 except Exception as e:
@@ -201,10 +202,11 @@ class Client:
                     self.record(Event(event_type=event_name,
                                       params=arg_values,
                                       returns=None,
-                                      result=EventState.FAIL,
+                                      result='Fail',
                                       action_type=action,
                                       model=model,
                                       prompt=prompt,
+                                      init_timestamp=init_time,
                                       tags=tags))
 
                     # Re-raise the exception
@@ -228,7 +230,9 @@ class Client:
         self.worker = Worker(self.config)
         self.worker.start_session(self.session)
 
-    def end_session(self, end_state: SessionState = SessionState.INDETERMINATE,
+    def end_session(self, end_state: str = Field("Indeterminate",
+                                                 description="End state of the session",
+                                                 pattern="^(Success|Fail|Indeterminate)$"),
                     rating: Optional[str] = None):
         """
         End the current session with the AgentOps service.
@@ -237,10 +241,6 @@ class Client:
             end_state (str, optional): The final state of the session.
             rating (str, optional): The rating for the session.
         """
-        valid_results = set(vars(SessionState).values())
-        if end_state not in valid_results:
-            raise ValueError(
-                f"end_state must be one of {SessionState}. Provided: {end_state}")
         if not self.session.has_ended:
             self.session.end_session(end_state, rating)
             self.worker.end_session(self.session)
@@ -250,4 +250,4 @@ class Client:
     def cleanup(self):
         # Only run cleanup function if session is created
         if hasattr(self, "session") and not self.session.has_ended:
-            self.end_session(end_state=SessionState.FAIL)
+            self.end_session(end_state='Fail')
