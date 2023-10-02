@@ -5,7 +5,7 @@ Classes:
     Client: Provides methods to interact with the AgentOps service.
 """
 
-from .event import Event, EventState
+from .event import Event
 from .helpers import Models, ActionType
 from .session import Session, SessionState
 from .worker import Worker
@@ -81,7 +81,7 @@ class Client:
             frame: The current stack frame.
         """
         logging.info('Signal SIGTERM or SIGINT detected. Ending session...')
-        self.end_session(end_state=EventState.FAIL)
+        self.end_session(end_state='Fail')
         sys.exit(0)
 
     def record(self, event: Event,
@@ -190,7 +190,7 @@ class Client:
                     self.record(Event(event_type=event_name,
                                       params=arg_values,
                                       returns=returns,
-                                      result=EventState.SUCCESS,
+                                      result='Success',
                                       action_type=action,
                                       model=model,
                                       prompt=prompt,
@@ -201,7 +201,7 @@ class Client:
                     self.record(Event(event_type=event_name,
                                       params=arg_values,
                                       returns=None,
-                                      result=EventState.FAIL,
+                                      result='Fail',
                                       action_type=action,
                                       model=model,
                                       prompt=prompt,

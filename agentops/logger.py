@@ -1,7 +1,7 @@
 import logging
 import re
 from .client import Client
-from .event import Event, EventState
+from .event import Event
 
 
 class AgentOpsLogger():
@@ -104,9 +104,9 @@ class AgentOpsHandler(logging.Handler):
         log_entry = self.remove_color_codes(log_entry)
 
         if record.levelno == logging.ERROR:
-            result = EventState.FAIL
+            result = "Fail"
         else:
-            result = EventState.INDETERMINATE
+            result = 'Indeterminate'
 
         self.client.record(
             Event(f'{self.name}:{record.levelname}', returns=log_entry, result=result))
