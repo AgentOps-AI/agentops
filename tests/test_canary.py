@@ -2,7 +2,7 @@ import pytest
 import requests_mock
 import time
 
-from agentops import Client, Event, SessionState
+from agentops import Client, Event
 
 
 @pytest.fixture
@@ -21,7 +21,7 @@ class TestCanary:
         self.client = Client(api_key=self.api_key, max_wait_time=5)
 
     def teardown_method(self):
-        self.client.end_session(end_state=SessionState.SUCCESS)
+        self.client.end_session(end_state='Success')
 
     def test_agent_ops_record(self, mock_req):
         # Arrange
