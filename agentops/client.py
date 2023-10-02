@@ -6,7 +6,7 @@ Classes:
 """
 
 from .event import Event
-from .helpers import Models, ActionType
+from .helpers import Models, ActionType, get_ISO_time
 from .session import Session
 from .worker import Worker
 from uuid import uuid4
@@ -151,6 +151,7 @@ class Client:
         def decorator(func):
             @functools.wraps(func)
             def wrapper(*args, **kwargs):
+                init_time = get_ISO_time()
                 func_args = inspect.signature(func).parameters
                 arg_names = list(func_args.keys())
                 # Get default values
@@ -195,6 +196,7 @@ class Client:
                                       action_type=action,
                                       model=model,
                                       prompt=prompt,
+                                      init_timestamp=init_time,
                                       tags=tags))
 
                 except Exception as e:
@@ -206,6 +208,7 @@ class Client:
                                       action_type=action,
                                       model=model,
                                       prompt=prompt,
+                                      init_timestamp=init_time,
                                       tags=tags))
 
                     # Re-raise the exception
