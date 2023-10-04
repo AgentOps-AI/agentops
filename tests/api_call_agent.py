@@ -3,7 +3,7 @@ from openai import ChatCompletion
 
 import agentops
 
-ao_client = agentops.Client(api_key='31453e35-43d8-43e6-98f6-5753893b2f19',
+ao_client = agentops.Client(api_key='',
                             endpoint="http://localhost:8000",
                             tags=['mock tests'])
 
