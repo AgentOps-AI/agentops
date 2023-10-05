@@ -20,6 +20,7 @@ class LlmTracker:
 
     def __init__(self, client):
         self.client = client
+        self.event_stream = None
 
     def parse_and_record_event(self, api, result, kwargs, init_timestamp):
         if api == 'openai':
@@ -35,23 +36,46 @@ class LlmTracker:
             )
             self.client.record(event)
 
-    async def parse_and_record_chunks(self, api, result, kwargs, init_timestamp):
+    async def parse_and_record_async(self, api, result, kwargs, init_timestamp):
         if api == 'openai':
-            model = result.get('model')
-            choices = result['choices']
-            token = choices[0]['delta'].get('content')
-
             event = Event(
-                event_type='stream',
+                event_type=result.get('object'),
                 params=kwargs,
                 result='Success',
-                returns=token,
+                returns=result['choices'][0]['message']['content'],
                 action_type='llm',
-                model=model,
-                prompt='test prompt',
+                model=result['model'],
+                prompt=kwargs['messages'],
                 init_timestamp=init_timestamp
             )
             self.client.record(event)
+
+    def parse_and_record_chunks(self, api, result, kwargs, init_timestamp):
+        if api == 'openai':
+            model = result.get('model')
+            choices = result['choices']
+            token = choices[0]['delta'].get('content', '')
+            finish_reason = choices[0]['finish_reason']
+
+            if self.event_stream == None:
+                self.event_stream = Event(
+                    event_type='openai stream',
+                    params=kwargs,
+                    result='Success',
+                    returns={"finish_reason": None, "content": token},
+                    action_type='llm',
+                    model=model,
+                    prompt='test prompt',
+                    init_timestamp=init_timestamp
+                )
+            else:
+                self.event_stream.returns['content'] += token
+
+            # Finish reason is 'stop' or something else
+            if bool(finish_reason):
+                self.event_stream.returns['finish_reason'] = finish_reason
+                self.client.record(self.event_stream)
+                self.event_stream = None
 
     def _override_method(self, api, original_method):
         """
@@ -60,29 +84,48 @@ class LlmTracker:
         """
 
         if inspect.iscoroutinefunction(original_method):
-            # Handle async generator
+            # Handle async generator for streams
             @functools.wraps(original_method)
             async def async_method(*args, **kwargs):
                 init_timestamp = get_ISO_time()
                 async_result = await original_method(*args, **kwargs)
+                # Async non-stream
+                try:
+                    await self.parse_and_record_async(api, async_result,
+                                                      kwargs, init_timestamp)
+                    return async_result
+                # Async stream
+                except:
+                    async def generator():
+                        async for result in async_result:
+                            await self.parse_and_record_async(
+                                api, result, kwargs, init_timestamp)
+                            yield result
 
-                async def generator():
-                    async for result in async_result:
-                        await self.parse_and_record_chunks(
-                            api, result, kwargs, init_timestamp)
-                        yield result
-
-                return generator()
+                    return generator()
             return async_method
 
+        # Handle sync code
         else:
             @functools.wraps(original_method)
             def sync_method(*args, **kwargs):
                 init_timestamp = get_ISO_time()
                 result = original_method(*args, **kwargs)
-                self.parse_and_record_event(
-                    api, result, kwargs, init_timestamp)
-                return result
+                # Sync stream
+                try:
+                    self.parse_and_record_event(
+                        api, result, kwargs, init_timestamp)
+                    return result
+                # Sync non-stream
+                except:
+                    def generator():
+                        for res in result:
+                            print(res)
+                            self.parse_and_record_chunks(
+                                api, res, kwargs, init_timestamp)
+                            yield res
+
+                    return generator()
 
             return sync_method
 
