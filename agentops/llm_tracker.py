@@ -98,7 +98,7 @@ class LlmTracker:
                 except:
                     async def generator():
                         async for result in async_result:
-                            await self.parse_and_record_async(
+                            self.parse_and_record_chunks(
                                 api, result, kwargs, init_timestamp)
                             yield result
 
