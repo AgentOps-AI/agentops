@@ -2,7 +2,6 @@ import asyncio
 import functools
 import inspect
 from importlib import import_module
-
 from .event import Event
 from .helpers import get_ISO_time
 
@@ -36,20 +35,44 @@ class LlmTracker:
             )
             self.client.record(event)
 
+    async def parse_and_record_chunks(self, api, result, kwargs, init_timestamp):
+        if api == 'openai':
+            model = result.get('model')
+            choices = result['choices']
+            token = choices[0]['delta'].get('content')
+
+            event = Event(
+                event_type='stream',
+                params=kwargs,
+                result='Success',
+                returns=token,
+                action_type='llm',
+                model=model,
+                prompt='test prompt',
+                init_timestamp=init_timestamp
+            )
+            self.client.record(event)
+
     def _override_method(self, api, original_method):
         """
         Generate a new method (either async or sync) that overrides the original
         and records an event when called.
         """
+
         if inspect.iscoroutinefunction(original_method):
+            # Handle async generator
             @functools.wraps(original_method)
             async def async_method(*args, **kwargs):
                 init_timestamp = get_ISO_time()
-                result = await original_method(*args, **kwargs)
-                self.parse_and_record_event(
-                    api, result, kwargs, init_timestamp)
-                return result
+                async_result = await original_method(*args, **kwargs)
 
+                async def generator():
+                    async for result in async_result:
+                        await self.parse_and_record_chunks(
+                            api, result, kwargs, init_timestamp)
+                        yield result
+
+                return generator()
             return async_method
 
         else:
