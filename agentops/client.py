@@ -6,7 +6,7 @@ Classes:
 """
 
 from .event import Event
-from .helpers import Models, ActionType, get_ISO_time
+from .helpers import Models, get_ISO_time
 from .session import Session
 from .worker import Worker
 from uuid import uuid4
@@ -106,7 +106,9 @@ class Client:
                          " Start a new session to record again.")
 
     def record_action(self, event_name: str,
-                      action_type: ActionType = ActionType.ACTION,
+                      action_type: str = Field("action",
+                                               description="Type of action that the user is recording",
+                                               pattern="^(action|api|llm)$"),
                       model: Optional[Models] = None,
                       tags: Optional[List[str]] = None):
         """
@@ -143,7 +145,7 @@ class Client:
                 TOOD: Currently not implemented, coming soon.
         Args:
             event_name (str): The name of the event to record.
-            action_type (ActionType, optional): The type of the event being recorded.
+            action_type (str, optional): The type of the event being recorded.
                 Events default to 'action'. Other options include 'api' and 'llm'.
             model (Models, optional): The model used during the event if an LLM is used (i.e. GPT-4).
                 For models, see the types available in the Models enum. 
@@ -173,15 +175,15 @@ class Client:
                 # calculating price
                 action = action_type
                 if bool(model):
-                    action = ActionType.LLM
+                    action = 'llm'
                     if not bool(prompt):
                         raise ValueError(
                             "Prompt is required when model is provided.")
 
                 # Throw error if action type is 'llm' but no model is specified
-                if action == ActionType.LLM and not bool(model):
+                if action == 'llm' and not bool(model):
                     raise ValueError(
-                        f"`model` is a required parameter if `action_type` is set as {ActionType.LLM}. " +
+                        f"`model` is a required parameter if `action_type` is set as `llm`. " +
                         f"Model can be set as: {list([mod.value for mod in Models])}")
 
                 try:

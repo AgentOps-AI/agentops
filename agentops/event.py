@@ -4,7 +4,7 @@ AgentOps events.
 Classes:
     Event: Represents discrete events to be recorded.
 """
-from .helpers import get_ISO_time, ActionType, Models
+from .helpers import get_ISO_time, Models
 from typing import Optional, List
 from pydantic import Field
 
@@ -18,7 +18,7 @@ class Event:
         params (str, optional): The parameters passed to the operation.
         returns (str, optional): The output of the operation.
         result (str, optional): Result of the operation, e.g., "Success", "Fail", "Indeterminate". Defaults to "Indeterminate".
-        action_type (ActionType, optional): Type of action of the event e.g. 'action', 'llm', 'api'. Defaults to ActionType.ACTION.
+        action_type (str, optional): Type of action of the event e.g. 'action', 'llm', 'api'. Defaults to 'action'.
         model (Models, optional): The model used during the event if an LLM is used (i.e. GPT-4).
                 For models, see the types available in the Models enum. 
                 If a model is set but an action_type is not, the action_type will be coerced to 'llm'. 
@@ -33,7 +33,7 @@ class Event:
         params (str, optional): The parameters passed to the operation.
         returns (str, optional): The output of the operation.
         result (str): Result of the operation.
-        action_type (ActionType): Type of action of the event.
+        action_type (str): Type of action of the event.
         model (Models, optional): The model used during the event.
         prompt (str, optional): The input prompt for an LLM call.
         tags (List[str], optional): Tags associated with the event.
@@ -47,7 +47,9 @@ class Event:
                  result: str = Field("Indeterminate",
                                      description="Result of the operation",
                                      pattern="^(Success|Fail|Indeterminate)$"),
-                 action_type: Optional[ActionType] = ActionType.ACTION,
+                 action_type: Optional[str] = Field("action",
+                                                    description="Type of action that the user is recording",
+                                                    pattern="^(action|api|llm)$"),
                  model: Optional[Models] = None,
                  prompt: Optional[str] = None,
                  tags: Optional[List[str]] = None,

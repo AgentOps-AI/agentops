@@ -7,7 +7,7 @@ setup(
     author_email='areibman@gmail.com',
     packages=find_packages(),
     install_requires=[
-        'requests'
+        'requests', 'pydantic'
     ],
     extras_require={
         'dev': [
