@@ -2,11 +2,6 @@ import agentops
 import asyncio
 import openai
 
-
-# from wandb.integration.openai import autolog
-# autolog()
-
-
 ao_client = agentops.Client(api_key='',
                             tags=['mock tests'])
 
