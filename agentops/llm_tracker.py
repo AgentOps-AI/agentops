@@ -22,7 +22,7 @@ class LlmTracker:
         self.event_stream = None
 
     def _handle_response_openai(self, response, kwargs, init_timestamp):
-        def handle_stream_chunk(self, chunk, kwargs, init_timestamp):
+        def handle_stream_chunk(chunk):
             try:
                 model = chunk['model']
                 choices = chunk['choices']
@@ -56,8 +56,7 @@ class LlmTracker:
         if inspect.isasyncgen(response):
             async def generator():
                 async for chunk in response:
-                    handle_stream_chunk(
-                        chunk, kwargs, init_timestamp)
+                    handle_stream_chunk(chunk)
 
                     yield chunk
             return generator()
@@ -65,8 +64,7 @@ class LlmTracker:
         if inspect.isgenerator(response):
             def generator():
                 for chunk in response:
-                    handle_stream_chunk(
-                        chunk, kwargs, init_timestamp)
+                    handle_stream_chunk(chunk)
 
                     yield chunk
             return generator()
