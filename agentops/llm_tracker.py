@@ -28,7 +28,8 @@ class LlmTracker:
                 event_type=result.get('object'),
                 params=kwargs,
                 result='Success',
-                returns=result['choices'][0]['message']['content'],
+                returns={"content":
+                         result['choices'][0]['message']['content']},
                 action_type='llm',
                 model=result['model'],
                 prompt=kwargs['messages'],
@@ -42,7 +43,8 @@ class LlmTracker:
                 event_type=result.get('object'),
                 params=kwargs,
                 result='Success',
-                returns=result['choices'][0]['message']['content'],
+                returns={"content":
+                         result['choices'][0]['message']['content']},
                 action_type='llm',
                 model=result['model'],
                 prompt=kwargs['messages'],
