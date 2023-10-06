@@ -1,4 +1,3 @@
-import asyncio
 import functools
 import inspect
 from importlib import import_module
@@ -67,7 +66,7 @@ class LlmTracker:
                     returns={"finish_reason": None, "content": token},
                     action_type='llm',
                     model=model,
-                    prompt='test prompt',
+                    prompt=kwargs['messages'],
                     init_timestamp=init_timestamp
                 )
             else:
