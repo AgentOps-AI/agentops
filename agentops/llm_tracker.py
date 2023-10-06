@@ -120,7 +120,6 @@ class LlmTracker:
                 except:
                     def generator():
                         for res in result:
-                            print(res)
                             self.parse_and_record_chunks(
                                 api, res, kwargs, init_timestamp)
                             yield res
