@@ -6,7 +6,7 @@ Classes:
 """
 
 from .event import Event
-from .helpers import Models, get_ISO_time
+from .helpers import get_ISO_time
 from .session import Session
 from .worker import Worker
 from uuid import uuid4
@@ -105,52 +105,15 @@ class Client:
             logging.info("This event was not recorded because the previous session has been ended" +
                          " Start a new session to record again.")
 
-    def record_action(self, event_name: str,
-                      action_type: str = Field("action",
-                                               description="Type of action that the user is recording",
-                                               pattern="^(action|api|llm)$"),
-                      model: Optional[Models] = None,
-                      tags: Optional[List[str]] = None):
+    def record_action(self, event_name: str, tags: Optional[List[str]] = None):
         """
         Decorator to record an event before and after a function call.
         Usage:
             - Actions: Records function parameters and return statements of the
-                function being decorated. Specify the action_type = 'action'
-
-            - LLM Calls: Records prompt, model, and output of a function that
-                calls an LLM. Specify the action_type = 'llm'
-                Note: This requires that the function being decorated is passed a "prompt"
-                parameter when either defined or called. For example:
-                ```
-                # Decorate function definition
-                @ao_client.record_action(..., action_type='llm')
-                def openai_call(prompt):
-                    ...
-
-                openai_call(prompt='...')
-                ```
-                For decorated functions without the "prompt" params, this decorator
-                grants an overloaded "prompt" arg that automatically works. For example:
-
-                ```
-                # Decorate function definition
-                @ao_client.record_action(..., action_type='llm')
-                def openai_call(foo):
-                    ...
-
-                # This will work
-                openai_call(foo='...', prompt='...')
-                ```
-            - API Calls: Records input, headers, and response status for API calls.
-                TOOD: Currently not implemented, coming soon.
+                function being decorated. Additionally, timing information about
+                the action is recorded
         Args:
             event_name (str): The name of the event to record.
-            action_type (str, optional): The type of the event being recorded.
-                Events default to 'action'. Other options include 'api' and 'llm'.
-            model (Models, optional): The model used during the event if an LLM is used (i.e. GPT-4).
-                For models, see the types available in the Models enum. 
-                If a model is set but an action_type is not, the action_type will be coerced to 'llm'. 
-                Defaults to None.
             tags (List[str], optional): Any tags associated with the event. Defaults to None.
         """
         def decorator(func):
@@ -167,25 +130,6 @@ class Client:
                 arg_values.update(dict(zip(arg_names, args)))
                 arg_values.update(kwargs)
 
-                # Get prompt from function arguments
-                prompt = arg_values.get('prompt')
-
-                # 1) Coerce action type to 'llm' if model is set
-                # 2) Throw error if no prompt is set. This is required for
-                # calculating price
-                action = action_type
-                if bool(model):
-                    action = 'llm'
-                    if not bool(prompt):
-                        raise ValueError(
-                            "Prompt is required when model is provided.")
-
-                # Throw error if action type is 'llm' but no model is specified
-                if action == 'llm' and not bool(model):
-                    raise ValueError(
-                        f"`model` is a required parameter if `action_type` is set as `llm`. " +
-                        f"Model can be set as: {list([mod.value for mod in Models])}")
-
                 try:
                     returns = func(*args, **kwargs)
 
@@ -198,9 +142,7 @@ class Client:
                                       params=arg_values,
                                       returns=returns,
                                       result='Success',
-                                      action_type=action,
-                                      model=model,
-                                      prompt=prompt,
+                                      action_type='action',
                                       init_timestamp=init_time,
                                       tags=tags))
 
@@ -210,9 +152,7 @@ class Client:
                                       params=arg_values,
                                       returns=None,
                                       result='Fail',
-                                      action_type=action,
-                                      model=model,
-                                      prompt=prompt,
+                                      action_type='action',
                                       init_timestamp=init_time,
                                       tags=tags))
 
