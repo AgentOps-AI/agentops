@@ -49,26 +49,35 @@ Agent developers often work in the dark, with little to no visibility into agent
 ## Agent Arena 🥊
 (coming soon!)
 
+## Time travel debugging 🔮
+(coming soon!)
+
 # Installation & Usage 📘
 
-To start using Agentops SDK, follow these steps:
-
-1. Clone the GitHub repo:
-
 ```bash
-git clone https://github.com/AgentOps-AI/agentops.git
+pip install agentops
 ```
 
-2. Install the requirements:
+## Analytics in 3 lines of code:
 
-```bash
-pip install -e agentops/
+Initialize the AgentOps client, and automatically get analytics on every LLM call you make.
+
+```python python
+import openai # Make sure openai is imported before instantiating an AgentOps client.
+import agentops
+
+# Beginning of program's code (i.e. main.py, __init__.py)
+ao_client = agentops.Client(<INSERT YOUR API KEY HERE>)
+
+... 
+# End of program
+ao_client.end_session('Success')
 ```
 
-3. Integrate the SDK into your AI agent application. Refer to our [API documentation](http://docs.agentops.ai) for detailed instructions.
+Refer to our [API documentation](http://docs.agentops.ai) for detailed instructions.
 
 # Join the Revolution 🎉
 
-Is there a feature you'd like to see agenotps cover? Just raise it in the issues tab, and we'll work on adding it the roadmap.
+Is there a feature you'd like to see AgentOps cover? Just raise it in the issues tab, and we'll work on adding it to the roadmap.
 
-We're on a mission to improve AI agents, and we want you to be a part of it. Start building your next agent with agentops SDK today!
+We're on a mission to improve AI agents, and we want you to be a part of it. Start building your next agent with Agent SDK today!
