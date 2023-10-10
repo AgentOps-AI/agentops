@@ -39,12 +39,12 @@ Agent developers often work in the dark, with little to no visibility into agent
 
 | Performance testing | Environments | LAA (LLM augmented agents) specific tests | Reasoning and execution testing |
 |---|---|---|---|
-|🔜 Event latency analysis | 🔜 Non-stationary environment testing | 🔜 LLM non-deterministic function detection | 🔜 Infinite loops and recursive thought detection |
-|🔜 Regression testing | 🔜 Multi-modal environments | 🔜 Token limit overflow flags | 🔜 Faulty reasoning detection |
+|✅ Event latency analysis | 🔜 Non-stationary environment testing | 🔜 LLM non-deterministic function detection | 🔜 Infinite loops and recursive thought detection |
+|✅ Agent workflow execution pricing | 🔜 Multi-modal environments | 🔜 Token limit overflow flags | 🔜 Faulty reasoning detection |
 |🔜 Success validators (external) | 🔜 Execution containers | 🔜 Context limit overflow flags | 🔜 Generative code validators |
 |🔜 Agent controllers/skill tests | 🔜 Honeypot and prompt injection evaluation | 🔜 API bill tracking | 🔜 Error breakpoint analysis |
 |🔜 Information context constraint testing | 🔜 Anti-agent roadblocks (i.e. Captchas) | | |
-|🔜 Agent workflow execution pricing | | | |
+|🔜 Regression testing | | | |
 
 ## Agent Arena 🥊
 (coming soon!)
