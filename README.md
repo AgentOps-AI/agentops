@@ -2,7 +2,7 @@
 
 AI agents suck. We’re fixing that.
 
-Build your next agent with evals, observability, and replay analytics. Agentops is the toolkit for evaluating and developing robust and reliable AI agents.
+Build your next agent with evals, observability, and replay analytics. AgentOps is the toolkit for evaluating and developing robust and reliable AI agents.
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
@@ -35,9 +35,11 @@ ao_client.end_session('Success')
 Refer to our [API documentation](http://docs.agentops.ai) for detailed instructions.
 
 
-### Why Agentops? 🤔
+### Why AgentOps? 🤔
 
-Agent developers often work with little to no visibility into agent testing performance. This means their agents never leave the lab. We're changing that. The AgentOps SDK is the easiest way to evaluate, grade, and test agents. Our mission is to make sure your agents are ready for production.
+Agent developers often work with little to no visibility into agent testing performance. This means their agents never leave the lab. We're changing that. 
+
+AgentOps is the easiest way to evaluate, grade, and test agents. Our mission is to make sure your agents are ready for production.
 
 ## Evaluations Roadmap 🧭
 
