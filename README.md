@@ -1,4 +1,4 @@
-# agentops 🕵️
+# AgentOps 🕵️
 
 AI agents suck. We’re fixing that.
 
@@ -16,15 +16,28 @@ Agentops is still in closed alpha. You can sign up for an API key [here](https:/
 
 ```pip install agentops```
 
-And...
+### Analytics in 4 lines of code
+Initialize the AgentOps client, and automatically get analytics on every LLM call.
 
-```import agentops as ao```
+```python python
+import openai # Make sure openai is imported before instantiating an AgentOps client.
+import agentops
 
-Documentation: [http://docs.agentops.ai](http://docs.agentops.ai)
+# Beginning of program's code (i.e. main.py, __init__.py)
+ao_client = agentops.Client(<INSERT YOUR API KEY HERE>)
+
+... 
+# End of program
+ao_client.end_session('Success')
+# Woohoo You're done 🎉
+```
+
+Refer to our [API documentation](http://docs.agentops.ai) for detailed instructions.
+
 
 ### Why Agentops? 🤔
 
-Agent developers often work in the dark, with little to no visibility into agent testing performance. This means their agents never leave the lab. We're changing that. The agentops SDK is designed to become the gold standard for evaluating, grading, and testing agents. Our mission is to make sure your agents are ready for production.
+Agent developers often work with little to no visibility into agent testing performance. This means their agents never leave the lab. We're changing that. The AgentOps SDK is the easiest way to evaluate, grade, and test agents. Our mission is to make sure your agents are ready for production.
 
 ## Evaluations Roadmap 🧭
 
@@ -32,14 +45,14 @@ Agent developers often work in the dark, with little to no visibility into agent
 |---|---|---|
 |✅ Python SDK | ✅ Multi-session and Cross-session metrics | 🚧 Evaluation playground + leaderboard |
 |🚧 Evaluation builder API | ✅ Custom event tag tracking | 🔜 Agent scorecards |
-|🔜 Javascript/Typescript SDK |  🚧 Session replays| 🔜 Custom eval metrics |
+|🔜 Javascript/Typescript SDK | 🚧 Session replays| 🔜 Custom eval metrics |
 
 
 ## Debugging Roadmap 🧭
 
 | Performance testing | Environments | LAA (LLM augmented agents) specific tests | Reasoning and execution testing |
 |---|---|---|---|
-|✅ Event latency analysis | 🔜 Non-stationary environment testing | 🔜 LLM non-deterministic function detection | 🔜 Infinite loops and recursive thought detection |
+|✅ Event latency analysis | 🔜 Non-stationary environment testing | 🔜 LLM non-deterministic function detection | 🚧 Infinite loops and recursive thought detection |
 |✅ Agent workflow execution pricing | 🔜 Multi-modal environments | 🔜 Token limit overflow flags | 🔜 Faulty reasoning detection |
 |🔜 Success validators (external) | 🔜 Execution containers | 🔜 Context limit overflow flags | 🔜 Generative code validators |
 |🔜 Agent controllers/skill tests | 🔜 Honeypot and prompt injection evaluation | 🔜 API bill tracking | 🔜 Error breakpoint analysis |
@@ -57,24 +70,6 @@ Agent developers often work in the dark, with little to no visibility into agent
 ```bash
 pip install agentops
 ```
-
-## Analytics in 3 lines of code:
-
-Initialize the AgentOps client, and automatically get analytics on every LLM call you make.
-
-```python python
-import openai # Make sure openai is imported before instantiating an AgentOps client.
-import agentops
-
-# Beginning of program's code (i.e. main.py, __init__.py)
-ao_client = agentops.Client(<INSERT YOUR API KEY HERE>)
-
-... 
-# End of program
-ao_client.end_session('Success')
-```
-
-Refer to our [API documentation](http://docs.agentops.ai) for detailed instructions.
 
 # Join the Revolution 🎉
 
