@@ -4,15 +4,11 @@ AI agents suck. We’re fixing that.
 
 Build your next agent with evals, observability, and replay analytics. AgentOps is the toolkit for evaluating and developing robust and reliable AI agents.
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-
-## Latest Release 📦
-`version: 0.0.5`
-This is an alpha release for early testers.
-
 Agentops is still in closed alpha. You can sign up for an API key [here](https://forms.gle/mFAP4XEoaiKXb2Xh9).
 
-# Quick Start
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT) ![PyPI - Version](https://img.shields.io/pypi/v/agentops)
+
+## Quick Start ⌨️
 
 ```pip install agentops```
 
@@ -24,7 +20,7 @@ import openai # Make sure openai is imported before instantiating an AgentOps cl
 import agentops
 
 # Beginning of program's code (i.e. main.py, __init__.py)
-ao_client = agentops.Client(<INSERT YOUR API KEY HERE>)
+ao_client = agentops.Client(<api key>)
 
 ... 
 # End of program
@@ -34,12 +30,11 @@ ao_client.end_session('Success')
 
 Refer to our [API documentation](http://docs.agentops.ai) for detailed instructions.
 
+## Time travel debugging 🔮
+(coming soon!)
 
-### Why AgentOps? 🤔
-
-Agent developers often work with little to no visibility into agent testing performance. This means their agents never leave the lab. We're changing that. 
-
-AgentOps is the easiest way to evaluate, grade, and test agents. Our mission is to make sure your agents are ready for production.
+## Agent Arena 🥊
+(coming soon!)
 
 ## Evaluations Roadmap 🧭
 
@@ -61,20 +56,12 @@ AgentOps is the easiest way to evaluate, grade, and test agents. Our mission is 
 |🔜 Information context constraint testing | 🔜 Anti-agent roadblocks (i.e. Captchas) | | |
 |🔜 Regression testing | | | |
 
-## Agent Arena 🥊
-(coming soon!)
 
-## Time travel debugging 🔮
-(coming soon!)
 
-# Installation & Usage 📘
+### Why AgentOps? 🤔
 
-```bash
-pip install agentops
-```
+Our mission is to make sure your agents are ready for production.
 
-# Join the Revolution 🎉
+Agent developers often work with little to no visibility into agent testing performance. This means their agents never leave the lab. We're changing that. 
 
-Is there a feature you'd like to see AgentOps cover? Just raise it in the issues tab, and we'll work on adding it to the roadmap.
-
-We're on a mission to improve AI agents, and we want you to be a part of it. Start building your next agent with Agent SDK today!
+AgentOps is the easiest way to evaluate, grade, and test agents. Is there a feature you'd like to see AgentOps cover? Just raise it in the issues tab, and we'll work on adding it to the roadmap.
