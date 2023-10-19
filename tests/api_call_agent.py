@@ -7,7 +7,7 @@ ao_client = agentops.Client(api_key='',
                             endpoint="http://localhost:8000",
                             tags=['mock tests'])
 
-openai.api_key = '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'
+openai.api_key = ''
 
 message = [{"role": "user", "content": "Hello"},
            {"role": "assistant", "content": "Hi there!"}]
