@@ -20,9 +20,14 @@ import openai # Make sure openai is imported before instantiating an AgentOps cl
 import agentops
 
 # Beginning of program's code (i.e. main.py, __init__.py)
-ao_client = agentops.Client(<api key>)
+ao_client = agentops.Client(<INSERT YOUR API KEY HERE>)
 
-... 
+...
+# (optional: record specific functions)
+@ao_client.record_action('sample function being record')
+def sample_function(...):
+    ...
+
 # End of program
 ao_client.end_session('Success')
 # Woohoo You're done 🎉
