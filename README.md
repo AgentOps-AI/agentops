@@ -12,7 +12,7 @@ Agentops is still in closed alpha. You can sign up for an API key [here](https:/
 
 ```pip install agentops```
 
-### Analytics in 4 lines of code
+### Session replays in 3 lines of code
 Initialize the AgentOps client, and automatically get analytics on every LLM call.
 
 ```python python
