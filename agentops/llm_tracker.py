@@ -46,6 +46,8 @@ class LlmTracker:
 
                 if finish_reason:
                     self.event_stream.returns['finish_reason'] = finish_reason
+                    # Update end_timestamp
+                    self.event_stream.end_timestamp = get_ISO_time()
                     self.client.record(self.event_stream)
                     self.event_stream = None
             except:
