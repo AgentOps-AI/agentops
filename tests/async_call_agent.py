@@ -1,12 +1,13 @@
+
+import openai
 import agentops
 import asyncio
-import openai
+import os
 
 ao_client = agentops.Client(api_key='',
                             tags=['mock tests'])
 
-
-openai.api_key = '3'
+openai.api_key = os.environ['OPENAI_API_KEY']
 
 
 async def stream_achat():
