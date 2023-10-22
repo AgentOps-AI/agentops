@@ -1,6 +1,8 @@
 import pytest
 import requests_mock
 import time
+from datetime import datetime
+
 
 from agentops import Client, Event
 
@@ -130,64 +132,50 @@ class TestRecordAction:
         assert request_json['events'][0]['result'] == 'Success'
         assert request_json['events'][0]['tags'] == ['foo', 'bar']
 
-    def test_llm_call(self, mock_req):
+    @pytest.mark.asyncio
+    async def test_async_function_call(self, mock_req):
+
+        @self.client.record_action(self.event_type)
+        async def async_add(x, y):
+            time.sleep(0.1)
+            return x + y
+
+        # Act
+        result = await async_add(3, 4)
+        time.sleep(0.1)
+
+        # Assert
+        assert result == 7
+        # Assert
+        assert len(mock_req.request_history) == 1
+        assert mock_req.last_request.headers['X-Agentops-Auth'] == self.api_key
+        request_json = mock_req.last_request.json()
+        assert request_json['events'][0]['event_type'] == self.event_type
+        assert request_json['events'][0]['params'] == {'x': 3, 'y': 4}
+        assert request_json['events'][0]['returns'] == 7
+        assert request_json['events'][0]['result'] == 'Success'
+        init = datetime.fromisoformat(
+            request_json['events'][0]['init_timestamp'].replace('Z', '+00:00'))
+        end = datetime.fromisoformat(
+            request_json['events'][0]['end_timestamp'].replace('Z', '+00:00'))
+
+        assert (end - init).total_seconds() >= 0.1
+
+    def test_function_call(self, mock_req):
         # Arrange
         prompt = 'prompt'
 
-        @self.client.record_action(event_name=self.event_type, action_type='llm', model='gpt-4')
-        def llm_call(prompt=prompt):
+        @self.client.record_action(event_name=self.event_type)
+        def foo(prompt=prompt):
             return 'output'
 
         # Act
-        llm_call()
+        foo()
         time.sleep(0.1)
 
         # Assert
         assert len(mock_req.request_history) == 1
         request_json = mock_req.last_request.json()
-        assert request_json['events'][0]['action_type'] == 'llm'
-        assert request_json['events'][0]['prompt'] == prompt
-        assert request_json['events'][0]['returns'] == 'output'
-        assert request_json['events'][0]['result'] == 'Success'
-
-    def test_llm_call_no_prompt(self, mock_req):
-        # Arrange
-        @self.client.record_action(event_name=self.event_type,
-                                   action_type='llm', model='gpt-4')
-        def llm_call():
-            return 'output'
-
-        # Act and Assert
-        with pytest.raises(ValueError):
-            llm_call()
-
-    def test_llm_call_no_model(self, mock_req):
-        # Arrange
-        prompt = 'prompt'
-
-        @self.client.record_action(event_name=self.event_type, action_type='llm')
-        def llm_call(prompt=prompt):
-            return 'output'
-
-        # Act and Assert
-        with pytest.raises(ValueError):
-            llm_call()
-
-    def test_llm_call_no_action_type(self, mock_req):
-        # Arrange
-        prompt = 'prompt'
-
-        @self.client.record_action(event_name=self.event_type, model='gpt-4')
-        def llm_call(prompt=prompt):
-            return 'output'
-
-        llm_call()
-        time.sleep(0.1)
-
-        # Assert
-        assert len(mock_req.request_history) == 1
-        request_json = mock_req.last_request.json()
-        assert request_json['events'][0]['action_type'] == 'llm'
-        assert request_json['events'][0]['prompt'] == prompt
+        assert request_json['events'][0]['action_type'] == 'action'
         assert request_json['events'][0]['returns'] == 'output'
         assert request_json['events'][0]['result'] == 'Success'

@@ -116,54 +116,107 @@ class Client:
             event_name (str): The name of the event to record.
             tags (List[str], optional): Any tags associated with the event. Defaults to None.
         """
+
         def decorator(func):
-            @functools.wraps(func)
-            def wrapper(*args, **kwargs):
-                init_time = get_ISO_time()
-                func_args = inspect.signature(func).parameters
-                arg_names = list(func_args.keys())
-                # Get default values
-                arg_values = {name: func_args[name].default
-                              for name in arg_names if func_args[name].default
-                              is not inspect._empty}
-                # Update with positional arguments
-                arg_values.update(dict(zip(arg_names, args)))
-                arg_values.update(kwargs)
+            if inspect.iscoroutinefunction(func):
+                @functools.wraps(func)
+                async def async_wrapper(*args, **kwargs):
+                    return await self._record_event_async(func, event_name, tags, *args, **kwargs)
+            else:
+                @functools.wraps(func)
+                def sync_wrapper(*args, **kwargs):
+                    return self._record_event_sync(func, event_name, tags, *args, **kwargs)
 
-                try:
-                    returns = func(*args, **kwargs)
-
-                    # If the function returns multiple values, record them all in the same event
-                    if isinstance(returns, tuple):
-                        returns = list(returns)
-
-                    # Record the event after the function call
-                    self.record(Event(event_type=event_name,
-                                      params=arg_values,
-                                      returns=returns,
-                                      result='Success',
-                                      action_type='action',
-                                      init_timestamp=init_time,
-                                      tags=tags))
-
-                except Exception as e:
-                    # Record the event after the function call
-                    self.record(Event(event_type=event_name,
-                                      params=arg_values,
-                                      returns=None,
-                                      result='Fail',
-                                      action_type='action',
-                                      init_timestamp=init_time,
-                                      tags=tags))
-
-                    # Re-raise the exception
-                    raise
-
-                return returns
-
-            return wrapper
+            return async_wrapper if inspect.iscoroutinefunction(func) else sync_wrapper
 
         return decorator
+
+    def _record_event_sync(self, func, event_name, tags, *args, **kwargs):
+        init_time = get_ISO_time()
+        func_args = inspect.signature(func).parameters
+        arg_names = list(func_args.keys())
+        # Get default values
+        arg_values = {name: func_args[name].default
+                      for name in arg_names if func_args[name].default
+                      is not inspect._empty}
+        # Update with positional arguments
+        arg_values.update(dict(zip(arg_names, args)))
+        arg_values.update(kwargs)
+
+        try:
+            returns = func(*args, **kwargs)
+
+            # If the function returns multiple values, record them all in the same event
+            if isinstance(returns, tuple):
+                returns = list(returns)
+
+            # Record the event after the function call
+            self.record(Event(event_type=event_name,
+                              params=arg_values,
+                              returns=returns,
+                              result='Success',
+                              action_type='action',
+                              init_timestamp=init_time,
+                              tags=tags))
+
+        except Exception as e:
+            # Record the event after the function call
+            self.record(Event(event_type=event_name,
+                              params=arg_values,
+                              returns=None,
+                              result='Fail',
+                              action_type='action',
+                              init_timestamp=init_time,
+                              tags=tags))
+
+            # Re-raise the exception
+            raise
+
+        return returns
+
+    async def _record_event_async(self, func, event_name, tags, *args, **kwargs):
+        init_time = get_ISO_time()
+        func_args = inspect.signature(func).parameters
+        arg_names = list(func_args.keys())
+        # Get default values
+        arg_values = {name: func_args[name].default
+                      for name in arg_names if func_args[name].default
+                      is not inspect._empty}
+        # Update with positional arguments
+        arg_values.update(dict(zip(arg_names, args)))
+        arg_values.update(kwargs)
+
+        try:
+
+            returns = await func(*args, **kwargs)
+
+            # If the function returns multiple values, record them all in the same event
+            if isinstance(returns, tuple):
+                returns = list(returns)
+
+            # Record the event after the function call
+            self.record(Event(event_type=event_name,
+                              params=arg_values,
+                              returns=returns,
+                              result='Success',
+                              action_type='action',
+                              init_timestamp=init_time,
+                              tags=tags))
+
+        except Exception as e:
+            # Record the event after the function call
+            self.record(Event(event_type=event_name,
+                              params=arg_values,
+                              returns=None,
+                              result='Fail',
+                              action_type='action',
+                              init_timestamp=init_time,
+                              tags=tags))
+
+            # Re-raise the exception
+            raise
+
+        return returns
 
     def start_session(self, tags: Optional[List[str]] = None):
         """
