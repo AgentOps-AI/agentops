@@ -16,7 +16,6 @@ Agentops is still in closed alpha. You can sign up for an API key [here](https:/
 Initialize the AgentOps client, and automatically get analytics on every LLM call.
 
 ```python python
-import openai # Make sure openai is imported before instantiating an AgentOps client.
 import agentops
 
 # Beginning of program's code (i.e. main.py, __init__.py)
