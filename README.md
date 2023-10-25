@@ -2,7 +2,7 @@
 
 AI agents suck. We’re fixing that.
 
-Build your next agent with evals, observability, and replay analytics. AgentOps is the toolkit for evaluating and developing robust and reliable AI agents.
+Build your next agent with benchmarks, observability, and replay analytics. AgentOps is the toolkit for evaluating and developing robust and reliable AI agents.
 
 Agentops is still in closed alpha. You can sign up for an API key [here](https://forms.gle/mFAP4XEoaiKXb2Xh9).
 
@@ -51,7 +51,7 @@ Refer to our [API documentation](http://docs.agentops.ai) for detailed instructi
 
 ## Debugging Roadmap 🧭
 
-| Performance testing | Environments | LAA (LLM augmented agents) specific tests | Reasoning and execution testing |
+| Performance testing | Environments | LLM Testing | Reasoning and execution testing |
 |---|---|---|---|
 |✅ Event latency analysis | 🔜 Non-stationary environment testing | 🔜 LLM non-deterministic function detection | 🚧 Infinite loops and recursive thought detection |
 |✅ Agent workflow execution pricing | 🔜 Multi-modal environments | 🔜 Token limit overflow flags | 🔜 Faulty reasoning detection |
