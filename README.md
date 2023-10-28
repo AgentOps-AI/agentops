@@ -44,9 +44,9 @@ Refer to our [API documentation](http://docs.agentops.ai) for detailed instructi
 
 | Platform | Dashboard | Evals |
 |---|---|---|
-|✅ Python SDK | ✅ Multi-session and Cross-session metrics | 🚧 Evaluation playground + leaderboard |
+|✅ Python SDK | ✅ Multi-session and Cross-session metrics | ✅ Custom eval metrics |
 |🚧 Evaluation builder API | ✅ Custom event tag tracking | 🔜 Agent scorecards |
-|🔜 Javascript/Typescript SDK | 🚧 Session replays| 🔜 Custom eval metrics |
+|🔜 Javascript/Typescript SDK | ✅ Session replays| 🔜 Evaluation playground + leaderboard|
 
 
 ## Debugging Roadmap 🧭
