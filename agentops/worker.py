@@ -39,6 +39,7 @@ class Worker:
         self.lock = threading.Lock()
         self.stop_flag = threading.Event()
         self.thread = threading.Thread(target=self.run)
+        self.thread.daemon = True
         self.thread.start()
 
     def add_event(self, event: dict) -> None:
