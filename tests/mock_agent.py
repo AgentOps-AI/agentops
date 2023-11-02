@@ -9,8 +9,7 @@ load_dotenv()
 
 print('init')
 
-ao_client = agentops.Client(api_key=os.environ['AGENTOPS_API_KEY'],
-                            tags=['mock tests'])
+ao_client = agentops.Client(tags=['mock tests'])
 
 
 @ao_client.record_action('action')
@@ -63,8 +62,9 @@ async def main():
     except:
         pass
     print('End Session')
-    ao_client.end_session(end_state='Success')
+    # ao_client.end_session(end_state='Success')
 
 
 if __name__ == '__main__':
     asyncio.run(main())
+    print('done')
