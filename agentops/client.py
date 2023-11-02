@@ -12,6 +12,7 @@ from .worker import Worker
 from uuid import uuid4
 from typing import Optional, List
 from pydantic import Field
+from os import environ
 import functools
 import logging
 import inspect
@@ -28,7 +29,7 @@ class Client:
     Client for AgentOps service.
 
     Args:
-        api_key (str): API Key for AgentOps services.
+        api_key (str, optional): API Key for AgentOps services. If none provided, the API key will be read from the AGENTOPS_API_KEY environment variable.
         tags (List[str], optional): Tags for the sessions that can be used for grouping or sorting later (e.g. ["GPT-4"]).
         endpoint (str, optional): The endpoint for the AgentOps service. Defaults to 'https://agentops-server-v2.fly.dev'.
         max_wait_time (int, optional): The maximum time to wait in milliseconds before flushing the queue. Defaults to 1000.
@@ -37,10 +38,17 @@ class Client:
         session (Session, optional): A Session is a grouping of events (e.g. a run of your agent).
     """
 
-    def __init__(self, api_key: str, tags: Optional[List[str]] = None,
+    def __init__(self, api_key: Optional[str] = None, tags: Optional[List[str]] = None,
                  endpoint: Optional[str] = 'https://agentops-server-v2.fly.dev',
                  max_wait_time: Optional[int] = 1000,
                  max_queue_size: Optional[int] = 100):
+
+        # Get API key from env
+        if api_key is None:
+            api_key = environ.get('AGENTOPS_API_KEY')
+
+        if api_key is None:
+            print("AgentOps API key not provided. Session data will not be recorded.")
 
         # Create a worker config
         self.config = Configuration(api_key, endpoint,
