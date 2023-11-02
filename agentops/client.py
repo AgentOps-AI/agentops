@@ -163,7 +163,7 @@ class Client:
             # Record the event after the function call
             self.record(Event(event_type=event_name,
                               params=arg_values,
-                              returns=None,
+                              returns=str(e),
                               result='Fail',
                               action_type='action',
                               init_timestamp=init_time,
@@ -207,7 +207,7 @@ class Client:
             # Record the event after the function call
             self.record(Event(event_type=event_name,
                               params=arg_values,
-                              returns=None,
+                              returns=str(e),
                               result='Fail',
                               action_type='action',
                               init_timestamp=init_time,
