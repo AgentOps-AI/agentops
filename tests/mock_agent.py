@@ -62,7 +62,7 @@ async def main():
     except:
         pass
     print('End Session')
-    # ao_client.end_session(end_state='Success')
+    ao_client.end_session(end_state='Success')
 
 
 if __name__ == '__main__':
