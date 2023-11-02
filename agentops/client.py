@@ -29,7 +29,7 @@ class Client:
     Client for AgentOps service.
 
     Args:
-        api_key (str, optional): API Key for AgentOps services. If none provided, the API key will be read from the AGENTOPS_API_KEY environment variable.
+        api_key (str, optional): API Key for AgentOps services. If none is provided, key will be read from the AGENTOPS_API_KEY environment variable.
         tags (List[str], optional): Tags for the sessions that can be used for grouping or sorting later (e.g. ["GPT-4"]).
         endpoint (str, optional): The endpoint for the AgentOps service. Defaults to 'https://agentops-server-v2.fly.dev'.
         max_wait_time (int, optional): The maximum time to wait in milliseconds before flushing the queue. Defaults to 1000.
