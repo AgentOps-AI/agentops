@@ -54,7 +54,7 @@ Refer to our [API documentation](http://docs.agentops.ai) for detailed instructi
 | Performance testing | Environments | LLM Testing | Reasoning and execution testing |
 |---|---|---|---|
 |✅ Event latency analysis | 🔜 Non-stationary environment testing | 🔜 LLM non-deterministic function detection | 🚧 Infinite loops and recursive thought detection |
-|✅ Agent workflow execution pricing | 🔜 Multi-modal environments | 🔜 Token limit overflow flags | 🔜 Faulty reasoning detection |
+|✅ Agent workflow execution pricing | 🔜 Multi-modal environments | 🚧 Token limit overflow flags | 🔜 Faulty reasoning detection |
 |🚧 Success validators (external) | 🔜 Execution containers | 🔜 Context limit overflow flags | 🔜 Generative code validators |
 |🔜 Agent controllers/skill tests | 🔜 Honeypot and prompt injection evaluation | 🔜 API bill tracking | 🔜 Error breakpoint analysis |
 |🔜 Information context constraint testing | 🔜 Anti-agent roadblocks (i.e. Captchas) | | |
