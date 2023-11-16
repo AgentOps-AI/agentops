@@ -58,7 +58,7 @@ Refer to our [API documentation](http://docs.agentops.ai) for detailed instructi
 |🚧 Success validators (external) | 🔜 Execution containers | 🔜 Context limit overflow flags | 🔜 Generative code validators |
 |🔜 Agent controllers/skill tests | 🔜 Honeypot and prompt injection evaluation | 🔜 API bill tracking | 🔜 Error breakpoint analysis |
 |🔜 Information context constraint testing | 🔜 Anti-agent roadblocks (i.e. Captchas) | | |
-|🔜 Regression testing | | | |
+|🔜 Regression testing | Multi-agent framework visualization | | |
 
 
 
