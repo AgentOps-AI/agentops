@@ -8,11 +8,7 @@ from .helpers import get_ISO_time
 class LlmTracker:
     SUPPORTED_APIS = {
         'openai': (
-            "Edit.create",
-            "Completion.create",
             "ChatCompletion.create",
-            "Edit.acreate",
-            "Completion.acreate",
             "ChatCompletion.acreate",
         )
     }
