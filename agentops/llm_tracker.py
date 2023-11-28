@@ -1,16 +1,23 @@
 import functools
 import inspect
+import sys
 from importlib import import_module
 from .event import Event
-from .helpers import get_ISO_time
+from .helpers import get_ISO_time, compare_versions
 
 
 class LlmTracker:
     SUPPORTED_APIS = {
-        'openai': (
-            "ChatCompletion.create",
-            "ChatCompletion.acreate",
-        )
+        'openai': {
+            '1.0.0': (
+                "chat.completions.create",
+            ),
+            '0.0.0': 
+                (
+                "ChatCompletion.create",
+                "ChatCompletion.acreate",
+            ),
+        }
     }
 
     def __init__(self, client):
@@ -113,18 +120,35 @@ class LlmTracker:
         """
         Overrides key methods of the specified API to record events.
         """
-        if api not in self.SUPPORTED_APIS:
-            raise ValueError(f"Unsupported API: {api}")
+        if api in sys.modules:
+            if api not in self.SUPPORTED_APIS:
+                raise ValueError(f"Unsupported API: {api}")
+            
 
-        module = import_module(api)
+            module = import_module(api)
 
-        for method_path in self.SUPPORTED_APIS[api]:
-            method_parts = method_path.split(".")
-            original_method = functools.reduce(getattr, method_parts, module)
-            new_method = self._override_method(api, original_method)
+            if hasattr(module, '__version__'):
+                for version in self.SUPPORTED_APIS[api]:
+                    if compare_versions(module.__version__, version) >= 0:
+                        for method_path in self.SUPPORTED_APIS[api][version]:
+                            method_parts = method_path.split(".")
+                            original_method = functools.reduce(getattr, method_parts, module)
+                            new_method = self._override_method(api, original_method)
 
-            if len(method_parts) == 1:
-                setattr(module, method_parts[0], new_method)
+                            if len(method_parts) == 1:
+                                setattr(module, method_parts[0], new_method)
+                            else:
+                                parent = functools.reduce(getattr, method_parts[:-1], module)
+                                setattr(parent, method_parts[-1], new_method)
+                        break
             else:
-                parent = functools.reduce(getattr, method_parts[:-1], module)
-                setattr(parent, method_parts[-1], new_method)
+                for method_path in self.SUPPORTED_APIS[api]['0.0.0']:
+                    method_parts = method_path.split(".")
+                    original_method = functools.reduce(getattr, method_parts, module)
+                    new_method = self._override_method(api, original_method)
+
+                    if len(method_parts) == 1:
+                        setattr(module, method_parts[0], new_method)
+                    else:
+                        parent = functools.reduce(getattr, method_parts[:-1], module)
+                        setattr(parent, method_parts[-1], new_method)

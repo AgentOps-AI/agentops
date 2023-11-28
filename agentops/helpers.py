@@ -7,6 +7,28 @@ def get_ISO_time():
     return datetime.utcfromtimestamp(time.time()).isoformat(timespec='milliseconds') + 'Z'
 
 
+def compare_versions(version1, version2):
+    # Split the version strings into lists of integers
+    v1_components = list(map(int, version1.split(".")))
+    v2_components = list(map(int, version2.split(".")))
+
+    # Compare each component
+    for v1, v2 in zip(v1_components, v2_components):
+        if v1 < v2:
+            return -1
+        elif v1 > v2:
+            return 1
+
+    # If all components are equal, check the length of the version strings
+    if len(v1_components) < len(v2_components):
+        return -1
+    elif len(v1_components) > len(v2_components):
+        return 1
+
+    # Versions are equal
+    return 0
+
+
 class Models(Enum):
     GPT_3_5_TURBO = "gpt-3.5-turbo"
     GPT_3_5_TURBO_0301 = "gpt-3.5-turbo-0301"

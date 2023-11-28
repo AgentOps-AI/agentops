@@ -67,9 +67,8 @@ class Client:
 
         self.start_session(tags)
 
-        if 'openai' in sys.modules:
-            self.llm_tracker = LlmTracker(self)
-            self.llm_tracker.override_api('openai')
+        self.llm_tracker = LlmTracker(self)
+        self.llm_tracker.override_api('openai')
 
     def handle_exception(self, exc_type, exc_value, exc_traceback):
         """
