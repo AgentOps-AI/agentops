@@ -93,28 +93,39 @@ class LlmTracker:
 
             return response
 
-    def _override_method(self, api, original_method):
+    def _override_method(self, api, method_path, module):
         def handle_response(result, kwargs, init_timestamp):
             if api == "openai":
                 return self._handle_response_openai(
                     result, kwargs, init_timestamp)
             return result
 
-        if inspect.iscoroutinefunction(original_method):
-            @functools.wraps(original_method)
-            async def async_method(*args, **kwargs):
-                init_timestamp = get_ISO_time()
-                response = await original_method(*args, **kwargs)
-                return handle_response(response, kwargs, init_timestamp)
-            return async_method
+        def wrap_method(original_method):
+            if inspect.iscoroutinefunction(original_method):
+                @functools.wraps(original_method)
+                async def async_method(*args, **kwargs):
+                    init_timestamp = get_ISO_time()
+                    response = await original_method(*args, **kwargs)
+                    return handle_response(response, kwargs, init_timestamp)
+                return async_method
 
+            else:
+                @functools.wraps(original_method)
+                def sync_method(*args, **kwargs):
+                    init_timestamp = get_ISO_time()
+                    response = original_method(*args, **kwargs)
+                    return handle_response(response, kwargs, init_timestamp)
+                return sync_method
+            
+        method_parts = method_path.split(".")
+        original_method = functools.reduce(getattr, method_parts, module)
+        new_method = wrap_method(original_method)
+
+        if len(method_parts) == 1:
+            setattr(module, method_parts[0], new_method)
         else:
-            @functools.wraps(original_method)
-            def sync_method(*args, **kwargs):
-                init_timestamp = get_ISO_time()
-                response = original_method(*args, **kwargs)
-                return handle_response(response, kwargs, init_timestamp)
-            return sync_method
+            parent = functools.reduce(getattr, method_parts[:-1], module)
+            setattr(parent, method_parts[-1], new_method)
 
     def override_api(self, api):
         """
@@ -124,31 +135,14 @@ class LlmTracker:
             if api not in self.SUPPORTED_APIS:
                 raise ValueError(f"Unsupported API: {api}")
             
-
             module = import_module(api)
 
             if hasattr(module, '__version__'):
                 for version in self.SUPPORTED_APIS[api]:
                     if compare_versions(module.__version__, version) >= 0:
                         for method_path in self.SUPPORTED_APIS[api][version]:
-                            method_parts = method_path.split(".")
-                            original_method = functools.reduce(getattr, method_parts, module)
-                            new_method = self._override_method(api, original_method)
-
-                            if len(method_parts) == 1:
-                                setattr(module, method_parts[0], new_method)
-                            else:
-                                parent = functools.reduce(getattr, method_parts[:-1], module)
-                                setattr(parent, method_parts[-1], new_method)
+                            self._override_method(api, method_path, module)
                         break
             else:
                 for method_path in self.SUPPORTED_APIS[api]['0.0.0']:
-                    method_parts = method_path.split(".")
-                    original_method = functools.reduce(getattr, method_parts, module)
-                    new_method = self._override_method(api, original_method)
-
-                    if len(method_parts) == 1:
-                        setattr(module, method_parts[0], new_method)
-                    else:
-                        parent = functools.reduce(getattr, method_parts[:-1], module)
-                        setattr(parent, method_parts[-1], new_method)
+                    self._override_method(api, method_path, module)
