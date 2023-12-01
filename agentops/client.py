@@ -34,6 +34,7 @@ class Client:
         endpoint (str, optional): The endpoint for the AgentOps service. Defaults to 'https://agentops-server-v2.fly.dev'.
         max_wait_time (int, optional): The maximum time to wait in milliseconds before flushing the queue. Defaults to 1000.
         max_queue_size (int, optional): The maximum size of the event queue. Defaults to 100.
+        org_key (str, optional): The organization ID for the AgentOps service provider. Defaults to None.
     Attributes:
         session (Session, optional): A Session is a grouping of events (e.g. a run of your agent).
     """
@@ -41,14 +42,19 @@ class Client:
     def __init__(self, api_key: Optional[str] = None, tags: Optional[List[str]] = None,
                  endpoint: Optional[str] = 'https://agentops-server-v2.fly.dev',
                  max_wait_time: Optional[int] = 1000,
-                 max_queue_size: Optional[int] = 100):
+                 max_queue_size: Optional[int] = 100,
+                 org_key: Optional[str] = None):
 
         # Get API key from env
         if api_key is None:
             api_key = environ.get('AGENTOPS_API_KEY')
 
         if api_key is None:
-            print("AgentOps API key not provided. Session data will not be recorded.")
+            session_token = 'temp_'+str(uuid4())
+            temp_session_url = f"https://agentops.ai/session?={session_token}"
+            print("\033[92mAgentOps API key not provided.",
+                  "Temporary session data is accessible here:",
+                  "\033[4m" + temp_session_url + "\033[0m", "\033[0m")
 
         # Create a worker config
         self.config = Configuration(api_key, endpoint,

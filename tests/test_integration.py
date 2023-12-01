@@ -8,9 +8,9 @@ ao_client = Client()
 
 tools = [
     Tool(
-        name="mock",
+        name="movie getter",
         func=lambda x: 'Citizen Kane',
-        description="mock tool",
+        description="movie getter tool",
     ),
 ]
 

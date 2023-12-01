@@ -25,20 +25,9 @@ class Event:
                 Defaults to None.
         prompt (str, optional): The input prompt for an LLM call when an LLM is being used. Defaults to None.
         tags (List[str], optional): Tags that can be used for grouping or sorting later. e.g. ["my_tag"]. Defaults to None.
+        end_timestamp (float): The timestamp for when the event ended, represented as seconds since the epoch.
         init_timestamp (float, optional): The timestamp for when the event was initiated, represented as seconds since the epoch.
                 Defaults to the end timestamp.
-
-    Attributes:
-        event_type (str): Type of the event.
-        params (str, optional): The parameters passed to the operation.
-        returns (str, optional): The output of the operation.
-        result (str): Result of the operation.
-        action_type (str): Type of action of the event.
-        model (Models, optional): The model used during the event.
-        prompt (str, optional): The input prompt for an LLM call.
-        tags (List[str], optional): Tags associated with the event.
-        end_timestamp (float): The timestamp for when the event ended, represented as seconds since the epoch.
-        init_timestamp (float): The timestamp for when the event was initiated, represented as seconds since the epoch.
     """
 
     def __init__(self, event_type: str,
@@ -53,7 +42,8 @@ class Event:
                  model: Optional[Models] = None,
                  prompt: Optional[str] = None,
                  tags: Optional[List[str]] = None,
-                 init_timestamp: Optional[float] = None
+                 init_timestamp: Optional[float] = None,
+                 end_timestamp: Optional[float] = None
                  ):
         self.event_type = event_type
         self.params = params
@@ -63,5 +53,5 @@ class Event:
         self.action_type = action_type
         self.model = model
         self.prompt = prompt
-        self.end_timestamp = get_ISO_time()
-        self.init_timestamp = init_timestamp if init_timestamp else self.end_timestamp
+        self.end_timestamp = end_timestamp if end_timestamp is not None else get_ISO_time()
+        self.init_timestamp = init_timestamp if init_timestamp is not None else self.end_timestamp
