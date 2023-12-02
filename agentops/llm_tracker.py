@@ -2,8 +2,9 @@ import functools
 import inspect
 import sys
 from importlib import import_module
+from packaging.version import parse
 from .event import Event
-from .helpers import get_ISO_time, compare_versions
+from .helpers import get_ISO_time
 
 
 class LlmTracker:
@@ -12,7 +13,7 @@ class LlmTracker:
             '1.0.0': (
                 "chat.completions.create",
             ),
-            '0.0.0': 
+            '0.0.0':
                 (
                 "ChatCompletion.create",
                 "ChatCompletion.acreate",
@@ -116,7 +117,7 @@ class LlmTracker:
                     response = original_method(*args, **kwargs)
                     return handle_response(response, kwargs, init_timestamp)
                 return sync_method
-            
+
         method_parts = method_path.split(".")
         original_method = functools.reduce(getattr, method_parts, module)
         new_method = wrap_method(original_method)
@@ -134,12 +135,13 @@ class LlmTracker:
         if api in sys.modules:
             if api not in self.SUPPORTED_APIS:
                 raise ValueError(f"Unsupported API: {api}")
-            
+
             module = import_module(api)
 
             if hasattr(module, '__version__'):
-                for version in self.SUPPORTED_APIS[api]:
-                    if compare_versions(module.__version__, version) >= 0:
+                module_version = parse(module.__version__)
+                for version in sorted(self.SUPPORTED_APIS[api], key=parse, reverse=True):
+                    if module_version >= parse(version):
                         for method_path in self.SUPPORTED_APIS[api][version]:
                             self._override_method(api, method_path, module)
                         break
