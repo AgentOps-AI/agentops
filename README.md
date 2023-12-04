@@ -64,7 +64,7 @@ Refer to our [API documentation](http://docs.agentops.ai) for detailed instructi
 
 ### Why AgentOps? 🤔
 
-Our mission is to make sure your agents are ready for production.
+Our mission is to bring your agent from protype to production.
 
 Agent developers often work with little to no visibility into agent testing performance. This means their agents never leave the lab. We're changing that. 
 
