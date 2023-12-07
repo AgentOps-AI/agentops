@@ -116,7 +116,7 @@ class Client:
 
         if not self.session.has_ended:
             self.worker.add_event(
-                {'session_id': self.session.session_id, 'orgKey': self.org_key, **event.__dict__})
+                {'session_id': self.session.session_id, 'org_key': self.org_key, **event.__dict__})
         else:
             logging.info("This event was not recorded because the previous session has been ended" +
                          " Start a new session to record again.")
