@@ -30,6 +30,7 @@ class Client:
 
     Args:
         api_key (str, optional): API Key for AgentOps services. If none is provided, key will be read from the AGENTOPS_API_KEY environment variable.
+        org_key (str, optional): Allows sessions/events analytics to be tracked by the owners of the organization key.
         tags (List[str], optional): Tags for the sessions that can be used for grouping or sorting later (e.g. ["GPT-4"]).
         endpoint (str, optional): The endpoint for the AgentOps service. Defaults to 'https://agentops-server-v2.fly.dev'.
         max_wait_time (int, optional): The maximum time to wait in milliseconds before flushing the queue. Defaults to 1000.
@@ -38,7 +39,9 @@ class Client:
         session (Session, optional): A Session is a grouping of events (e.g. a run of your agent).
     """
 
-    def __init__(self, api_key: Optional[str] = None, tags: Optional[List[str]] = None,
+    def __init__(self, api_key: Optional[str] = None,
+                 org_key: Optional[str] = None,
+                 tags: Optional[List[str]] = None,
                  endpoint: Optional[str] = 'https://agentops-server-v2.fly.dev',
                  max_wait_time: Optional[int] = 1000,
                  max_queue_size: Optional[int] = 100):
@@ -49,6 +52,11 @@ class Client:
 
         if api_key is None:
             print("AgentOps API key not provided. Session data will not be recorded.")
+
+        if org_key is None:
+            org_key = environ.get('AGENTOPS_ORG_KEY')
+
+        self.org_key = org_key
 
         # Create a worker config
         self.config = Configuration(api_key, endpoint,
@@ -108,7 +116,7 @@ class Client:
 
         if not self.session.has_ended:
             self.worker.add_event(
-                {'session_id': self.session.session_id, **event.__dict__})
+                {'session_id': self.session.session_id, 'orgKey': self.org_key, **event.__dict__})
         else:
             logging.info("This event was not recorded because the previous session has been ended" +
                          " Start a new session to record again.")
