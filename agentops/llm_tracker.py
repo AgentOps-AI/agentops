@@ -27,7 +27,8 @@ class LlmTracker:
         self.override_openai_completion()
         self.override_openai_async_completion()
 
-    def _handle_response_openai(self, response, kwargs, init_timestamp):
+    def _handle_response_openai(self, response, kwargs, init_timestamp, v1=False):
+        """Handle responses for OpenAI versions <v1.0.0"""
         def handle_stream_chunk(chunk):
             try:
                 model = chunk['model']
@@ -77,15 +78,30 @@ class LlmTracker:
                     yield chunk
             return generator()
 
+        # OpenAI v1.0.0+ response:
+        if v1:
+            ...
+            # self.client.record(Event(
+            #     event_type=response.object,
+            #     params=kwargs,
+            #     result='Success',
+            #     returns={"content": response.choices[0].message},
+            #     action_type='llm',
+            #     model=response.model,
+            #     prompt=kwargs['messages'],
+            #     init_timestamp=init_timestamp
+            # ))
+            # Standard response
         else:
             try:
                 self.client.record(Event(
-                    event_type=response.object,
+                    event_type=response['object'],
                     params=kwargs,
                     result='Success',
-                    returns={"content": response.choices[0].message},
+                    returns={"content":
+                             response['choices'][0]['message']['content']},
                     action_type='llm',
-                    model=response.model,
+                    model=response['model'],
                     prompt=kwargs['messages'],
                     init_timestamp=init_timestamp
                 ))
