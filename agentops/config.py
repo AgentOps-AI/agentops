@@ -59,7 +59,7 @@ class Configuration:
         """
         return self._org_key
 
-    @api_key.setter
+    @org_key.setter
     def org_key(self, value: str):
         """
         Set the API Key for AgentOps services.

@@ -74,7 +74,8 @@ class Worker:
                 json.dumps(filter_unjsonable(payload)).encode("utf-8")
             HttpClient.post(f'{self.config.endpoint}/sessions',
                             serialized_payload,
-                            self.config.api_key)
+                            self.config.api_key,
+                            self.config.org_key)
 
     def end_session(self, session: Session) -> None:
         self.stop_flag.set()
