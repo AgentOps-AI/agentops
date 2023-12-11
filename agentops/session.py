@@ -23,11 +23,10 @@ class Session:
 
     """
 
-    def __init__(self, session_id: str, tags: Optional[List[str]] = None, org_key: Optional[str] = None):
+    def __init__(self, session_id: str, tags: Optional[List[str]] = None):
         self.session_id = session_id
         self.init_timestamp = get_ISO_time()
         self.tags = tags
-        self.org_key = org_key
 
     def end_session(self, end_state: str = "Indeterminate", rating: Optional[str] = None):
         """
