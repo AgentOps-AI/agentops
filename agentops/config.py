@@ -14,14 +14,17 @@ class Configuration:
 
     Args:
         api_key (str, optional): API Key for AgentOps services
+        org_key (str, optional): Allows sessions/events analytics to be tracked by the owners of the organization key.
         endpoint (str, optional): The endpoint for the AgentOps service. Defaults to 'https://agentops-server-v2.fly.dev'.
         max_wait_time (int, optional): The maximum time to wait in milliseconds before flushing the queue. Defaults to 1000.
         max_queue_size (int, optional): The maximum size of the event queue. Defaults to 100.
     """
 
-    def __init__(self, api_key: Optional[str] = None, endpoint: Optional[str] = 'https://agentops-server-v2.fly.dev',
+    def __init__(self, api_key: Optional[str] = None, org_key: Optional[str] = None,
+                 endpoint: Optional[str] = 'https://agentops-server-v2.fly.dev',
                  max_wait_time: Optional[int] = 1000, max_queue_size: Optional[int] = 100):
         self._api_key: str | None = api_key
+        self._org_key: str | None = org_key
         self._endpoint = endpoint
         self._max_wait_time = max_wait_time
         self._max_queue_size = max_queue_size
@@ -45,6 +48,26 @@ class Configuration:
             value (str): The new API Key.
         """
         self._api_key = value
+
+    @property
+    def org_key(self) -> str:
+        """
+        Get the API Key for AgentOps services.
+
+        Returns:
+            str: The API Key for AgentOps services.
+        """
+        return self._org_key
+
+    @org_key.setter
+    def org_key(self, value: str):
+        """
+        Set the API Key for AgentOps services.
+
+        Args:
+            value (str): The new API Key.
+        """
+        self._org_key = value
 
     @property
     def endpoint(self) -> str:
