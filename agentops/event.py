@@ -4,6 +4,8 @@ AgentOps events.
 Classes:
     Event: Represents discrete events to be recorded.
 """
+import json
+
 from .helpers import get_ISO_time, Models
 from typing import Optional, List
 from pydantic import Field
@@ -32,7 +34,7 @@ class Event:
         event_type (str): Type of the event.
         params (str, optional): The parameters passed to the operation.
         returns (str, optional): The output of the operation.
-        result (str): Result of the operation.
+        result (Result): Result of the operation as Enum Result.
         action_type (str): Type of action of the event.
         model (Models, optional): The model used during the event.
         prompt (str, optional): The input prompt for an LLM call.
@@ -65,3 +67,16 @@ class Event:
         self.prompt = prompt
         self.end_timestamp = get_ISO_time()
         self.init_timestamp = init_timestamp if init_timestamp else self.end_timestamp
+
+    def __str__(self):
+        return str({
+            "event_type": self.event_type,
+            "params": self.params,
+            "returns": self.returns,
+            "action_type": self.action_type,
+            "result": self.result,
+            "model": self.model,
+            "prompt": self.prompt,
+            "tags": self.tags,
+            "init_timestamp": self.init_timestamp
+        })
