@@ -13,9 +13,9 @@ from agentops.helpers import get_ISO_time
 
 class LangchainCallbackHandler(BaseCallbackHandler):
 
-    def __init__(self):
-        self.ao_client = AOClient()
-        self.ao_client.start_session()
+    def __init__(self, api_key: str, tags: [str] = None):
+        self.ao_client = AOClient(api_key=api_key)
+        self.ao_client.start_session(tags)
 
         # keypair <run_id: str, Event>
         self.events = {}
