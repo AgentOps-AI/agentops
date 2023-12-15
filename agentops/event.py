@@ -7,7 +7,6 @@ Classes:
 from .helpers import get_ISO_time, Models
 from typing import Optional, List
 from pydantic import Field
-from PIL import Image
 
 class Event:
     """
@@ -27,7 +26,7 @@ class Event:
         tags (List[str], optional): Tags that can be used for grouping or sorting later. e.g. ["my_tag"]. Defaults to None.
         init_timestamp (float, optional): The timestamp for when the event was initiated, represented as seconds since the epoch.
                 Defaults to the end timestamp.
-        screenshot: A screenshot of the webapage at the time of the event
+        screenshot (str, optional): A screenshot of the webapage at the time of the event. Base64 string
 
     Attributes:
         event_type (str): Type of the event.
@@ -55,7 +54,7 @@ class Event:
                  prompt: Optional[str] = None,
                  tags: Optional[List[str]] = None,
                  init_timestamp: Optional[float] = None,
-                 screenshot: Optional[Image.Image] = None
+                 screenshot: Optional[str] = None
                  ):
         self.event_type = event_type
         self.params = params
