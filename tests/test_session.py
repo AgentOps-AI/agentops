@@ -166,7 +166,11 @@ class TestRecordAction:
         prompt = 'prompt'
 
         @self.client.record_action(event_name=self.event_type)
+<<<<<<< Updated upstream
         def foo(prompt=prompt):
+=======
+        def llm_call(prompt=prompt):
+>>>>>>> Stashed changes
             return 'output'
 
         # Act
@@ -177,5 +181,28 @@ class TestRecordAction:
         assert len(mock_req.request_history) == 1
         request_json = mock_req.last_request.json()
         assert request_json['events'][0]['action_type'] == 'action'
+<<<<<<< Updated upstream
+=======
+        assert request_json['events'][0]['prompt'] == None
+        assert request_json['events'][0]['returns'] == 'output'
+        assert request_json['events'][0]['result'] == 'Success'
+
+    def test_llm_call_no_action_type(self, mock_req):
+        # Arrange
+        prompt = 'prompt'
+
+        @self.client.record_action(event_name=self.event_type)
+        def llm_call(prompt=prompt):
+            return 'output'
+
+        llm_call()
+        time.sleep(0.1)
+
+        # Assert
+        assert len(mock_req.request_history) == 1
+        request_json = mock_req.last_request.json()
+        assert request_json['events'][0]['action_type'] == 'action'
+        assert request_json['events'][0]['prompt'] == None
+>>>>>>> Stashed changes
         assert request_json['events'][0]['returns'] == 'output'
         assert request_json['events'][0]['result'] == 'Success'
