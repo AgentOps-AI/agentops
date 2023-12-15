@@ -27,10 +27,6 @@ class Session:
         self.session_id = session_id
         self.init_timestamp = get_ISO_time()
         self.tags = tags
-        self.video = None
-
-    def add_video_recording(self, video):
-        self.video = video
 
     def end_session(self, end_state: str = "Indeterminate", rating: Optional[str] = None):
         """
