@@ -245,19 +245,22 @@ class Client:
         self.worker.start_session(self.session)
 
     def end_session(self, end_state: str = Field("Indeterminate",
-                                                 description="End state of the session",
-                                                 pattern="^(Success|Fail|Indeterminate)$"),
-                    rating: Optional[str] = None):
+                                                description="End state of the session",
+                                                pattern="^(Success|Fail|Indeterminate)$"),
+                                                rating: Optional[str] = None,
+                                                video: Optional[str] = None):
         """
         End the current session with the AgentOps service.
 
         Args:
             end_state (str, optional): The final state of the session.
             rating (str, optional): The rating for the session.
+            video (str, optional): The video screen recording of the session
         """
         if not self.session.has_ended:
             self.session.end_session(end_state, rating)
             self.worker.end_session(self.session)
+            self.session.video = video
         else:
             logging.info("Warning: The session has already been ended.")
 
