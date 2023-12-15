@@ -26,7 +26,7 @@ class Event:
         tags (List[str], optional): Tags that can be used for grouping or sorting later. e.g. ["my_tag"]. Defaults to None.
         init_timestamp (float, optional): The timestamp for when the event was initiated, represented as seconds since the epoch.
                 Defaults to the end timestamp.
-        screenshot (str, optional): A screenshot of the webapage at the time of the event. Base64 string or URL. Defaults to None.
+        screenshot (str, optional): A screenshot of the webpage at the time of the event. Base64 string or URL. Defaults to None.
 
     Attributes:
         event_type (str): Type of the event.
