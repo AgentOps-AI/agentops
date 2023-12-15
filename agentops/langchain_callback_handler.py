@@ -49,3 +49,6 @@ class LangchainCallbackHandler(BaseCallbackHandler):
         self.events[run_id].end_timestamp = get_ISO_time()
         self.ao_client.record(self.events[run_id])
 
+    @property
+    def session_id(self):
+        return self.ao_client.session.session_id
