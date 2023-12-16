@@ -34,7 +34,7 @@ class Session:
         Sets a url to the video recording of the session.
 
         Args:
-            video (str): The of the video recording
+            video (str): The url of the video recording
         """
         self.video = video
 
