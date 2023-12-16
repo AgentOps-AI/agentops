@@ -27,6 +27,16 @@ class Session:
         self.session_id = session_id
         self.init_timestamp = get_ISO_time()
         self.tags = tags
+        self.video = None
+
+    def set_session_video(self, video: str):
+        """
+        Sets a url to the video recording of the session.
+
+        Args:
+            video (str): The of the video recording
+        """
+        self.video = video
 
     def end_session(self, end_state: str = "Indeterminate", rating: Optional[str] = None):
         """
