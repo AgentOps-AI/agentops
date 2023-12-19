@@ -71,7 +71,7 @@ class Client:
         # Override sys.excepthook
         sys.excepthook = self.handle_exception
 
-        self.start_session(tags)
+        self._start_session(tags)
 
         if 'openai' in sys.modules:
             self.llm_tracker = LlmTracker(self)
@@ -232,7 +232,7 @@ class Client:
 
         return returns
 
-    def start_session(self, tags: Optional[List[str]] = None):
+    def _start_session(self, tags: Optional[List[str]] = None):
         """
         Start a new session for recording events.
 
