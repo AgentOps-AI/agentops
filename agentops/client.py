@@ -71,7 +71,7 @@ class Client:
         # Override sys.excepthook
         sys.excepthook = self.handle_exception
 
-        self.start_session(tags)
+        self._start_session(tags)
 
         if 'openai' in sys.modules:
             self.llm_tracker = LlmTracker(self)
@@ -232,7 +232,7 @@ class Client:
 
         return returns
 
-    def start_session(self, tags: Optional[List[str]] = None):
+    def _start_session(self, tags: Optional[List[str]] = None):
         """
         Start a new session for recording events.
 
@@ -245,10 +245,10 @@ class Client:
         self.worker.start_session(self.session)
 
     def end_session(self, end_state: str = Field("Indeterminate",
-                                                description="End state of the session",
-                                                pattern="^(Success|Fail|Indeterminate)$"),
-                                                rating: Optional[str] = None,
-                                                video: Optional[str] = None):
+                                                 description="End state of the session",
+                                                 pattern="^(Success|Fail|Indeterminate)$"),
+                    rating: Optional[str] = None,
+                    video: Optional[str] = None):
         """
         End the current session with the AgentOps service.
 

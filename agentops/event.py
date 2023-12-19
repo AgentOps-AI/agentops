@@ -4,11 +4,10 @@ AgentOps events.
 Classes:
     Event: Represents discrete events to be recorded.
 """
-import json
-
 from .helpers import get_ISO_time, Models
 from typing import Optional, List
 from pydantic import Field
+
 
 class Event:
     """
