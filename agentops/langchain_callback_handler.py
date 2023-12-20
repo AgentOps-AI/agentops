@@ -38,10 +38,11 @@ class LangchainCallbackHandler(BaseCallbackHandler):
     ) -> Any:
         self.events[run_id] = Event(
             event_type="llm",
+            action_type='llm',
             tags=tags,
             model=kwargs['invocation_params']['model'],
             params={**kwargs, **metadata},
-            prompt="\n--\n".join(prompts),
+            prompt=prompts[0],
             init_timestamp=get_ISO_time()
         )
 
