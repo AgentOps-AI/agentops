@@ -9,13 +9,14 @@ from agentops import Client as AOClient
 from agentops import Event
 from tenacity import RetryCallState
 
-from langchain.callbacks.base import BaseCallbackHandler, ChainManagerMixin
+from langchain.callbacks.base import BaseCallbackHandler
 
 from agentops.helpers import get_ISO_time
 from typing import Any, Dict, List, Optional, Sequence
 
 
 class LangchainCallbackHandler(BaseCallbackHandler):
+    """Callback handler for Langchain agents."""
 
     def __init__(self, api_key: str, tags: List[str] = None):
         self.ao_client = AOClient(api_key=api_key, tags=tags)
