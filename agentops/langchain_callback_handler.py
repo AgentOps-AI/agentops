@@ -19,7 +19,7 @@ class LangchainCallbackHandler(BaseCallbackHandler):
     """Callback handler for Langchain agents."""
 
     def __init__(self, api_key: str, tags: List[str] = None):
-        self.ao_client = AOClient(api_key=api_key, tags=tags)
+        self.ao_client = AOClient(api_key=api_key, tags=tags, override=False)
 
         # keypair <run_id: str, Event>
         self.events: Dict[Any, Event] = {}
