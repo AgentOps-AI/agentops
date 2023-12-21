@@ -69,6 +69,9 @@ class LangchainCallbackHandler(BaseCallbackHandler):
     ) -> Any:
         self.events[run_id].end_timestamp = get_ISO_time()
         self.events[run_id].returns = response.generations[0][0].message.content
+        self.events[run_id].prompt_tokens = response.llm_output['token_usage']['prompt_tokens']
+        self.events[run_id].completion_tokens = response.llm_output['token_usage']['completion_tokens']
+
         if len(response.generations) > 0:
             self.events[run_id].result = "Success"
         else:
