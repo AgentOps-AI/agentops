@@ -58,8 +58,8 @@ class Event:
                  tags: Optional[List[str]] = None,
                  init_timestamp: Optional[float] = None,
                  screenshot: Optional[str] = None,
-                 prompt_tokens: Optional[int] = 0,
-                 completion_tokens: Optional[int] = 0
+                 prompt_tokens: Optional[int] = None,
+                 completion_tokens: Optional[int] = None
                  ):
         self.event_type = event_type
         self.params = params
