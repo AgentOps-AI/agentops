@@ -40,6 +40,8 @@ class Event:
         tags (List[str], optional): Tags associated with the event.
         end_timestamp (float): The timestamp for when the event ended, represented as seconds since the epoch.
         init_timestamp (float): The timestamp for when the event was initiated, represented as seconds since the epoch.
+        prompt_tokens (int, optional): The number of tokens in the prompt if the event is an LLM call
+        completion_tokens (int, optional): The number of tokens in the completion if the event is an LLM call
     """
 
     def __init__(self, event_type: str,
@@ -55,7 +57,9 @@ class Event:
                  prompt: Optional[str] = None,
                  tags: Optional[List[str]] = None,
                  init_timestamp: Optional[float] = None,
-                 screenshot: Optional[str] = None
+                 screenshot: Optional[str] = None,
+                 prompt_tokens: Optional[int] = 0,
+                 completion_tokens: Optional[int] = 0
                  ):
         self.event_type = event_type
         self.params = params
@@ -68,6 +72,8 @@ class Event:
         self.end_timestamp = get_ISO_time()
         self.init_timestamp = init_timestamp if init_timestamp else self.end_timestamp
         self.screenshot = screenshot
+        self.prompt_tokens = prompt_tokens
+        self.completion_tokens = completion_tokens
 
     def __str__(self):
         return str({
@@ -79,5 +85,7 @@ class Event:
             "model": self.model,
             "prompt": self.prompt,
             "tags": self.tags,
-            "init_timestamp": self.init_timestamp
+            "init_timestamp": self.init_timestamp,
+            "prompt_tokens": self.prompt_tokens,
+            "completion_tokens": self.completion_tokens,
         })
