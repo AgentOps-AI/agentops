@@ -35,6 +35,7 @@ class Client:
         endpoint (str, optional): The endpoint for the AgentOps service. Defaults to 'https://agentops-server-v2.fly.dev'.
         max_wait_time (int, optional): The maximum time to wait in milliseconds before flushing the queue. Defaults to 1000.
         max_queue_size (int, optional): The maximum size of the event queue. Defaults to 100.
+        override (bool): Whether to override and LLM calls to emit as events.
     Attributes:
         session (Session, optional): A Session is a grouping of events (e.g. a run of your agent).
     """
@@ -44,7 +45,8 @@ class Client:
                  tags: Optional[List[str]] = None,
                  endpoint: Optional[str] = 'https://agentops-server-v2.fly.dev',
                  max_wait_time: Optional[int] = 1000,
-                 max_queue_size: Optional[int] = 100):
+                 max_queue_size: Optional[int] = 100,
+                 override=True):
 
         # Get API key from env
         if api_key is None:
@@ -71,11 +73,12 @@ class Client:
         # Override sys.excepthook
         sys.excepthook = self.handle_exception
 
-        self.start_session(tags)
+        self._start_session(tags)
 
-        if 'openai' in sys.modules:
-            self.llm_tracker = LlmTracker(self)
-            self.llm_tracker.override_api('openai')
+        if override:
+            if 'openai' in sys.modules:
+                self.llm_tracker = LlmTracker(self)
+                self.llm_tracker.override_api('openai')
 
     def handle_exception(self, exc_type, exc_value, exc_traceback):
         """
@@ -232,7 +235,7 @@ class Client:
 
         return returns
 
-    def start_session(self, tags: Optional[List[str]] = None):
+    def _start_session(self, tags: Optional[List[str]] = None):
         """
         Start a new session for recording events.
 
@@ -245,10 +248,10 @@ class Client:
         self.worker.start_session(self.session)
 
     def end_session(self, end_state: str = Field("Indeterminate",
-                                                description="End state of the session",
-                                                pattern="^(Success|Fail|Indeterminate)$"),
-                                                rating: Optional[str] = None,
-                                                video: Optional[str] = None):
+                                                 description="End state of the session",
+                                                 pattern="^(Success|Fail|Indeterminate)$"),
+                    rating: Optional[str] = None,
+                    video: Optional[str] = None):
         """
         End the current session with the AgentOps service.
 

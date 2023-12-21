@@ -8,6 +8,7 @@ from .helpers import get_ISO_time, Models
 from typing import Optional, List
 from pydantic import Field
 
+
 class Event:
     """
     Represents a discrete event to be recorded.
@@ -32,13 +33,15 @@ class Event:
         event_type (str): Type of the event.
         params (str, optional): The parameters passed to the operation.
         returns (str, optional): The output of the operation.
-        result (str): Result of the operation.
+        result (Result): Result of the operation as Enum Result.
         action_type (str): Type of action of the event.
         model (Models, optional): The model used during the event.
         prompt (str, optional): The input prompt for an LLM call.
         tags (List[str], optional): Tags associated with the event.
         end_timestamp (float): The timestamp for when the event ended, represented as seconds since the epoch.
         init_timestamp (float): The timestamp for when the event was initiated, represented as seconds since the epoch.
+        prompt_tokens (int, optional): The number of tokens in the prompt if the event is an LLM call
+        completion_tokens (int, optional): The number of tokens in the completion if the event is an LLM call
     """
 
     def __init__(self, event_type: str,
@@ -54,7 +57,9 @@ class Event:
                  prompt: Optional[str] = None,
                  tags: Optional[List[str]] = None,
                  init_timestamp: Optional[float] = None,
-                 screenshot: Optional[str] = None
+                 screenshot: Optional[str] = None,
+                 prompt_tokens: Optional[int] = None,
+                 completion_tokens: Optional[int] = None
                  ):
         self.event_type = event_type
         self.params = params
@@ -67,3 +72,20 @@ class Event:
         self.end_timestamp = get_ISO_time()
         self.init_timestamp = init_timestamp if init_timestamp else self.end_timestamp
         self.screenshot = screenshot
+        self.prompt_tokens = prompt_tokens
+        self.completion_tokens = completion_tokens
+
+    def __str__(self):
+        return str({
+            "event_type": self.event_type,
+            "params": self.params,
+            "returns": self.returns,
+            "action_type": self.action_type,
+            "result": self.result,
+            "model": self.model,
+            "prompt": self.prompt,
+            "tags": self.tags,
+            "init_timestamp": self.init_timestamp,
+            "prompt_tokens": self.prompt_tokens,
+            "completion_tokens": self.completion_tokens,
+        })
