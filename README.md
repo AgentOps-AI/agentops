@@ -57,8 +57,8 @@ Refer to our [API documentation](http://docs.agentops.ai) for detailed instructi
 |✅ Agent workflow execution pricing | 🔜 Multi-modal environments | 🚧 Token limit overflow flags | 🔜 Faulty reasoning detection |
 |🚧 Success validators (external) | 🔜 Execution containers | 🔜 Context limit overflow flags | 🔜 Generative code validators |
 |🔜 Agent controllers/skill tests | 🔜 Honeypot and prompt injection evaluation | 🔜 API bill tracking | 🔜 Error breakpoint analysis |
-|🔜 Information context constraint testing | 🔜 Anti-agent roadblocks (i.e. Captchas) | | |
-|🔜 Regression testing | Multi-agent framework visualization | | |
+|🔜 Information context constraint testing | 🔜 Anti-agent roadblocks (i.e. Captchas) | 🔜 CI/CD integration checks | |
+|🔜 Regression testing | 🔜 Multi-agent framework visualization |  | |
 
 
 
