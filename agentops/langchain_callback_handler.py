@@ -45,7 +45,7 @@ class LangchainCallbackHandler(BaseCallbackHandler):
             action_type='llm',
             tags=tags,
             model=kwargs['invocation_params']['model'],
-            params={**kwargs, **metadata},
+            params={**kwargs, **({} if metadata is None else metadata)},
             prompt=prompts[0],
             init_timestamp=get_ISO_time()
         )
@@ -82,6 +82,7 @@ class LangchainCallbackHandler(BaseCallbackHandler):
             self.events[run_id].result = "Fail"
 
         self.ao_client.record(self.events[run_id])
+        print('llm ended and emitted')
 
     # Chain callbacks
     def on_chain_start(
@@ -99,7 +100,8 @@ class LangchainCallbackHandler(BaseCallbackHandler):
             event_type="chain",
             init_timestamp=get_ISO_time(),
             tags=tags,
-            params={**inputs, **kwargs, **metadata},
+            params={**inputs, **kwargs, **
+                    ({} if metadata is None else metadata)},
         )
 
     def on_chain_end(
@@ -148,7 +150,7 @@ class LangchainCallbackHandler(BaseCallbackHandler):
             event_type="tool",
             init_timestamp=get_ISO_time(),
             tags=tags,
-            params={**serialized, **metadata},
+            params={**serialized, **({} if metadata is None else metadata)},
         )
 
     def on_tool_end(
@@ -315,7 +317,7 @@ class AsyncLangchainCallbackHandler(AsyncCallbackHandler):
             action_type='llm',
             tags=tags,
             model=kwargs['invocation_params']['model'],
-            params={**kwargs, **metadata},
+            params={**kwargs,  **({} if metadata is None else metadata)},
             prompt=prompts[0],
             init_timestamp=get_ISO_time()
         )
@@ -370,7 +372,9 @@ class AsyncLangchainCallbackHandler(AsyncCallbackHandler):
             event_type="chain",
             init_timestamp=get_ISO_time(),
             tags=tags,
-            params={**inputs, **kwargs, **metadata},
+            params={**inputs,
+                    **kwargs,
+                    **({} if metadata is None else metadata)},
         )
 
     async def on_chain_end(
@@ -421,7 +425,7 @@ class AsyncLangchainCallbackHandler(AsyncCallbackHandler):
             event_type="tool",
             init_timestamp=get_ISO_time(),
             tags=tags,
-            params={**serialized, **metadata},
+            params={**serialized,  **({} if metadata is None else metadata)},
         )
 
     async def on_tool_end(
