@@ -57,7 +57,7 @@ class Event:
                  model: Optional[Models] = None,
                  prompt: Optional[str] = None,
                  tags: Optional[List[str]] = None,
-                 init_timestamp: Optional[float] = None,
+                 init_timestamp: Optional[str] = None,
                  screenshot: Optional[str] = None,
                  prompt_tokens: Optional[int] = None,
                  completion_tokens: Optional[int] = None
