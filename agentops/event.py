@@ -5,7 +5,7 @@ Classes:
     Event: Represents discrete events to be recorded.
 """
 from .helpers import get_ISO_time, Models
-from typing import Optional, List
+from typing import Optional, List, Dict, Any
 from pydantic import Field
 
 
@@ -15,7 +15,7 @@ class Event:
 
     Args:
         event_type (str): Type of the event, e.g., "API Call". Required.
-        params (str, optional): The parameters passed to the operation.
+        params (Optional[Dict[str, Any]], optional): The parameters passed to the operation.
         returns (str, optional): The output of the operation.
         result (str, optional): Result of the operation, e.g., "Success", "Fail", "Indeterminate". Defaults to "Indeterminate".
         action_type (str, optional): Type of action of the event e.g. 'action', 'llm', 'api', 'screenshot'. Defaults to 'action'.
@@ -25,28 +25,29 @@ class Event:
                 Defaults to None.
         prompt (str, optional): The input prompt for an LLM call when an LLM is being used. Defaults to None.
         tags (List[str], optional): Tags that can be used for grouping or sorting later. e.g. ["my_tag"]. Defaults to None.
-        init_timestamp (float, optional): The timestamp for when the event was initiated, represented as seconds since the epoch.
+        init_timestamp (str, optional): The timestamp for when the event was initiated, as a string in ISO 8601 format.
                 Defaults to the end timestamp.
+        end_timestamp (str, optional): The timestamp for when the event ended, as a string in ISO 8601 format.
         screenshot (str, optional): A screenshot of the webpage at the time of the event. Base64 string or URL. Defaults to None.
 
     Attributes:
         event_type (str): Type of the event.
-        params (str, optional): The parameters passed to the operation.
+        params (Optional[Dict[str, Any]], optional): The parameters passed to the operation.
         returns (str, optional): The output of the operation.
         result (Result): Result of the operation as Enum Result.
         action_type (str): Type of action of the event.
         model (Models, optional): The model used during the event.
         prompt (str, optional): The input prompt for an LLM call.
         tags (List[str], optional): Tags associated with the event.
-        end_timestamp (float): The timestamp for when the event ended, represented as seconds since the epoch.
-        init_timestamp (float): The timestamp for when the event was initiated, represented as seconds since the epoch.
+        end_timestamp (str): The timestamp for when the event ended, as a string in ISO 8601 format.
+        init_timestamp (str): The timestamp for when the event was initiated, as a string in ISO 8601 format.
         prompt_tokens (int, optional): The number of tokens in the prompt if the event is an LLM call
         completion_tokens (int, optional): The number of tokens in the completion if the event is an LLM call
     """
 
     def __init__(self, event_type: str,
-                 params: Optional[str] = None,
-                 returns: Optional[str] = None,
+                 params: Optional[Dict[str, Any]] = None,
+                 returns: Optional[Dict[str, Any]] = None,
                  result: str = Field("Indeterminate",
                                      description="Result of the operation",
                                      pattern="^(Success|Fail|Indeterminate)$"),
@@ -56,7 +57,7 @@ class Event:
                  model: Optional[Models] = None,
                  prompt: Optional[str] = None,
                  tags: Optional[List[str]] = None,
-                 init_timestamp: Optional[float] = None,
+                 init_timestamp: Optional[str] = None,
                  screenshot: Optional[str] = None,
                  prompt_tokens: Optional[int] = None,
                  completion_tokens: Optional[int] = None

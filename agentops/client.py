@@ -139,12 +139,12 @@ class Client:
                 @functools.wraps(func)
                 async def async_wrapper(*args, **kwargs):
                     return await self._record_event_async(func, event_name, tags, *args, **kwargs)
+                return async_wrapper
             else:
                 @functools.wraps(func)
                 def sync_wrapper(*args, **kwargs):
                     return self._record_event_sync(func, event_name, tags, *args, **kwargs)
-
-            return async_wrapper if inspect.iscoroutinefunction(func) else sync_wrapper
+                return sync_wrapper
 
         return decorator
 
