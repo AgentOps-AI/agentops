@@ -62,7 +62,8 @@ class Worker:
                     safe_serialize(payload).encode("utf-8")
                 HttpClient.post(f'{self.config.endpoint}/events',
                                 serialized_payload,
-                                self.config.api_key)
+                                self.config.api_key,
+                                self.config.org_key)
 
     def start_session(self, session: Session) -> None:
         with self.lock:
@@ -73,7 +74,8 @@ class Worker:
                 json.dumps(filter_unjsonable(payload)).encode("utf-8")
             HttpClient.post(f'{self.config.endpoint}/sessions',
                             serialized_payload,
-                            self.config.api_key)
+                            self.config.api_key,
+                            self.config.org_key)
 
     def end_session(self, session: Session) -> None:
         self.stop_flag.set()
@@ -88,7 +90,8 @@ class Worker:
             HttpClient.post(f'{self.config.endpoint}/sessions',
                             json.dumps(filter_unjsonable(
                                 payload)).encode("utf-8"),
-                            self.config.api_key)
+                            self.config.api_key,
+                            self.config.org_key)
 
     def run(self) -> None:
         while not self.stop_flag.is_set():

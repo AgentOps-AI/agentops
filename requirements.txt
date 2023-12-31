@@ -3,3 +3,4 @@ requests==2.31.0
 requests-mock==1.11.0
 pydantic==2.4.2
 packaging==23.1
+langchain==0.0.350

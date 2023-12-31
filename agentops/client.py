@@ -30,18 +30,23 @@ class Client:
 
     Args:
         api_key (str, optional): API Key for AgentOps services. If none is provided, key will be read from the AGENTOPS_API_KEY environment variable.
+        org_key (str, optional): Allows sessions/events analytics to be tracked by the owners of the organization key.
         tags (List[str], optional): Tags for the sessions that can be used for grouping or sorting later (e.g. ["GPT-4"]).
         endpoint (str, optional): The endpoint for the AgentOps service. Defaults to 'https://agentops-server-v2.fly.dev'.
         max_wait_time (int, optional): The maximum time to wait in milliseconds before flushing the queue. Defaults to 1000.
         max_queue_size (int, optional): The maximum size of the event queue. Defaults to 100.
+        override (bool): Whether to override and LLM calls to emit as events.
     Attributes:
         session (Session, optional): A Session is a grouping of events (e.g. a run of your agent).
     """
 
-    def __init__(self, api_key: Optional[str] = None, tags: Optional[List[str]] = None,
+    def __init__(self, api_key: Optional[str] = None,
+                 org_key: Optional[str] = None,
+                 tags: Optional[List[str]] = None,
                  endpoint: Optional[str] = 'https://agentops-server-v2.fly.dev',
                  max_wait_time: Optional[int] = 1000,
-                 max_queue_size: Optional[int] = 100):
+                 max_queue_size: Optional[int] = 100,
+                 override=True):
 
         # Get API key from env
         if api_key is None:
@@ -50,8 +55,11 @@ class Client:
         if api_key is None:
             print("AgentOps API key not provided. Session data will not be recorded.")
 
+        if org_key is None:
+            org_key = environ.get('AGENTOPS_ORG_KEY')
+
         # Create a worker config
-        self.config = Configuration(api_key, endpoint,
+        self.config = Configuration(api_key, org_key, endpoint,
                                     max_wait_time, max_queue_size)
 
         # Store a reference to the instance
@@ -65,10 +73,12 @@ class Client:
         # Override sys.excepthook
         sys.excepthook = self.handle_exception
 
-        self.start_session(tags)
+        self._start_session(tags)
 
-        self.llm_tracker = LlmTracker(self)
-        self.llm_tracker.override_api('openai')
+        if override:
+            if 'openai' in sys.modules:
+                self.llm_tracker = LlmTracker(self)
+                self.llm_tracker.override_api('openai')
 
     def handle_exception(self, exc_type, exc_value, exc_traceback):
         """
@@ -129,12 +139,12 @@ class Client:
                 @functools.wraps(func)
                 async def async_wrapper(*args, **kwargs):
                     return await self._record_event_async(func, event_name, tags, *args, **kwargs)
+                return async_wrapper
             else:
                 @functools.wraps(func)
                 def sync_wrapper(*args, **kwargs):
                     return self._record_event_sync(func, event_name, tags, *args, **kwargs)
-
-            return async_wrapper if inspect.iscoroutinefunction(func) else sync_wrapper
+                return sync_wrapper
 
         return decorator
 
@@ -225,7 +235,7 @@ class Client:
 
         return returns
 
-    def start_session(self, tags: Optional[List[str]] = None):
+    def _start_session(self, tags: Optional[List[str]] = None):
         """
         Start a new session for recording events.
 
@@ -240,17 +250,20 @@ class Client:
     def end_session(self, end_state: str = Field("Indeterminate",
                                                  description="End state of the session",
                                                  pattern="^(Success|Fail|Indeterminate)$"),
-                    rating: Optional[str] = None):
+                    rating: Optional[str] = None,
+                    video: Optional[str] = None):
         """
         End the current session with the AgentOps service.
 
         Args:
             end_state (str, optional): The final state of the session.
             rating (str, optional): The rating for the session.
+            video (str, optional): The video screen recording of the session
         """
         if not self.session.has_ended:
             self.session.end_session(end_state, rating)
             self.worker.end_session(self.session)
+            self.session.video = video
         else:
             logging.info("Warning: The session has already been ended.")
 
