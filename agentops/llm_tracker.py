@@ -24,10 +24,8 @@ class LlmTracker:
     def __init__(self, client):
         self.client = client
         self.event_stream = None
-        self.override_openai_completion()
-        self.override_openai_async_completion()
 
-    def _handle_response_openai(self, response, kwargs, init_timestamp, v1=False):
+    def _handle_response_openai(self, response, kwargs, init_timestamp):
         """Handle responses for OpenAI versions <v1.0.0"""
         def handle_stream_chunk(chunk):
             try:
@@ -78,38 +76,46 @@ class LlmTracker:
                     yield chunk
             return generator()
 
-        # OpenAI v1.0.0+ response:
-        if v1:
-            ...
-            # self.client.record(Event(
-            #     event_type=response.object,
-            #     params=kwargs,
-            #     result='Success',
-            #     returns={"content": response.choices[0].message},
-            #     action_type='llm',
-            #     model=response.model,
-            #     prompt=kwargs['messages'],
-            #     init_timestamp=init_timestamp
-            # ))
-            # Standard response
-        else:
+        # v0.0.0 responses are dicts
+        try:
+            self.client.record(Event(
+                event_type=response['object'],
+                params=kwargs,
+                result='Success',
+                returns={"content":
+                         response['choices'][0]['message']['content']},
+                action_type='llm',
+                model=response['model'],
+                prompt=kwargs['messages'],
+                init_timestamp=init_timestamp,
+                prompt_tokens=response.get('usage',
+                                           {}).get('prompt_tokens'),
+                completion_tokens=response.get('usage',
+                                               {}).get('completion_tokens')
+            ))
+        except:
+            # v1.0.0+ responses are objects
             try:
                 self.client.record(Event(
-                    event_type=response['object'],
+                    event_type=response.object,
                     params=kwargs,
                     result='Success',
-                    returns={"content":
-                             response['choices'][0]['message']['content']},
+                    returns={
+                        # TODO: Will need to make the completion the key for content, splat out the model dump
+                        "content": response.choices[0].message.model_dump()},
                     action_type='llm',
-                    model=response['model'],
+                    model=response.model,
                     prompt=kwargs['messages'],
-                    init_timestamp=init_timestamp
+                    init_timestamp=init_timestamp,
+                    prompt_tokens=response.usage.prompt_tokens,
+                    completion_tokens=response.usage.completion_tokens
                 ))
+                # Standard response
             except:
                 print(
                     f"Unable to parse response for LLM call {kwargs} - skipping upload to AgentOps")
 
-            return response
+        return response
 
     def _handle_async_response_openai(self, response, kwargs, init_timestamp):
         def handle_stream_chunk(chunk):
@@ -183,8 +189,7 @@ class LlmTracker:
     def _override_method(self, api, method_path, module):
         def handle_response(result, kwargs, init_timestamp):
             if api == "openai":
-                return self._handle_response_openai(
-                    result, kwargs, init_timestamp)
+                return self._handle_response_openai(result, kwargs, init_timestamp)
             return result
 
         def wrap_method(original_method):
@@ -224,10 +229,18 @@ class LlmTracker:
 
             module = import_module(api)
 
+            # If openai 1.0.0+ is specified, patch the completions methods
+            if api == 'openai':
+                module_version = parse(module.__version__)
+                if module_version >= parse('1.0.0'):
+                    self.override_openai_v1_completion()
+                    self.override_openai_v1_async_completion()
+
             if hasattr(module, '__version__'):
                 module_version = parse(module.__version__)
                 for version in sorted(self.SUPPORTED_APIS[api], key=parse, reverse=True):
                     if module_version >= parse(version):
+                        # Patch all methods in every API
                         for method_path in self.SUPPORTED_APIS[api][version]:
                             self._override_method(api, method_path, module)
                         break
@@ -235,7 +248,7 @@ class LlmTracker:
                 for method_path in self.SUPPORTED_APIS[api]['0.0.0']:
                     self._override_method(api, method_path, module)
 
-    def override_openai_completion(self):
+    def override_openai_v1_completion(self):
         from openai.resources.chat import completions
 
         # Store the original method
@@ -243,20 +256,17 @@ class LlmTracker:
 
         # Define the patched function
         def patched_function(*args, **kwargs):
-            print('patched function')
-            print(args)
-            print(kwargs)
+            init_timestamp = get_ISO_time()
             # Call the original function with its original arguments
             result = original_create(*args, **kwargs)
-            self._handle_response_openai(result, kwargs, get_ISO_time())
+            self._handle_response_openai(result, kwargs, init_timestamp)
 
-            # You can add additional logic here if needed
             return result
 
         # Override the original method with the patched one
         completions.Completions.create = patched_function
 
-    def override_openai_async_completion(self):
+    def override_openai_v1_async_completion(self):
         from openai.resources.chat import completions
 
         # Store the original method
