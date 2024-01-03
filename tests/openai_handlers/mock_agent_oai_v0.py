@@ -1,23 +1,15 @@
 
-<<<<<<< Updated upstream
 import openai
 import agentops
 import asyncio
 import os
-=======
-import agentops
-import asyncio
->>>>>>> Stashed changes
 
-ao_client = agentops.Client(api_key='',
-                            tags=['mock tests'])
+print('Running OpenAI <v1.0.0')
 
-<<<<<<< Updated upstream
+
+ao_client = agentops.Client(tags=['mock tests'])
+
 openai.api_key = os.environ['OPENAI_API_KEY']
-=======
-import openai
-openai.api_key = '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'
->>>>>>> Stashed changes
 
 
 async def stream_achat():
