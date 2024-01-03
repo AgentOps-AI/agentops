@@ -61,6 +61,42 @@ Refer to our [API documentation](http://docs.agentops.ai) for detailed instructi
 |🔜 Regression testing | 🔜 Multi-agent framework visualization |  | |
 
 
+## Callback handlers
+
+### Langchain
+AgentOps works seemlessly with applications built using Langchain. To use the handler, install Langchain as an optional dependency:
+```shell
+pip install agentops[langchain]
+```
+
+To use the handler, import and set
+
+```python
+import os
+from langchain.chat_models import ChatOpenAI
+from langchain.agents import initialize_agent, AgentType
+from agentops import LangchainCallbackHandler
+
+AGENTOPS_API_KEY = os.environ['AGENTOPS_API_KEY']
+handler = LangchainCallbackHandler(api_key=AGENTOPS_API_KEY, tags=['Langchain Example'])
+
+llm = ChatOpenAI(openai_api_key=OPENAI_API_KEY,
+                 callbacks=[handler],
+                 model='gpt-3.5-turbo')
+
+agent = initialize_agent(tools,
+                         llm,
+                         agent=AgentType.CHAT_ZERO_SHOT_REACT_DESCRIPTION,
+                         verbose=True,
+                         callbacks=[handler], # You must pass in a callback handler to record your agent
+                         handle_parsing_errors=True)
+```
+
+Check out the [Langchain Examples Notebook](./examples/langchain_examples.ipynb) for more details including Async handlers.
+
+### LlamaIndex 
+(Coming Soon)
+
 
 ### Why AgentOps? 🤔
 
