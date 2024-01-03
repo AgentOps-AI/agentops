@@ -27,7 +27,6 @@ dev = [
     "pytest==7.4.0",
     "requests_mock==1.11.0"
 ]
-[project.optional-dependencies]
 langchain = [
     "langchain==0.0.350"
 ]
