@@ -292,10 +292,11 @@ class LlmTracker:
 
             # If openai 1.0.0+ is specified, patch the completions methods
             if api == 'openai':
-                module_version = parse(module.__version__)
-                if module_version >= parse('1.0.0'):
-                    self.override_openai_v1_completion()
-                    self.override_openai_v1_async_completion()
+                if hasattr(module, '__version__'):
+                    module_version = parse(module.__version__)
+                    if module_version >= parse('1.0.0'):
+                        self.override_openai_v1_completion()
+                        self.override_openai_v1_async_completion()
 
             # Patch all methods in every API
             if hasattr(module, '__version__'):
