@@ -14,6 +14,7 @@ from typing import Optional, List
 from pydantic import Field
 from os import environ
 import functools
+import traceback
 import logging
 import inspect
 import atexit
@@ -89,24 +90,28 @@ class Client:
             exc_value (BaseException): The exception instance.
             exc_traceback (TracebackType): A traceback object encapsulating the call stack at the point where the exception originally occurred.
         """
-        # Perform cleanup
+        formatted_traceback = ''.join(traceback.format_exception(exc_type, exc_value,
+                                                                 exc_traceback))
+
+        # Perform cleanup)
         self.cleanup(
-            end_state_reason=f"{str(exc_value)}: {str(exc_traceback)}")
+            end_state_reason=f"{str(exc_value)}: {formatted_traceback}")
 
         # Then call the default excepthook to exit the program
         sys.__excepthook__(exc_type, exc_value, exc_traceback)
 
-    def signal_handler(self, signal, frame):
+    def signal_handler(self, signum, frame):
         """
         Signal handler for SIGINT (Ctrl+C) and SIGTERM. Ends the session and exits the program.
 
         Args:
-            signal (int): The signal number.
+            signum (int): The signal number.
             frame: The current stack frame.
         """
-        logging.info('Signal SIGTERM or SIGINT detected. Ending session...')
+        signal_name = 'SIGINT' if signum == signal.SIGINT else 'SIGTERM'
+        logging.info(f'Signal {signal_name} detected. Ending session...')
         self.end_session(end_state='Fail',
-                         end_state_reason='Signal SIGTERM or SIGINT detected')
+                         end_state_reason=f'Signal {signal_name} detected')
         sys.exit(0)
 
     def record(self, event: Event):
