@@ -19,7 +19,7 @@ classifiers = [
 ]
 dependencies = [
     "requests==2.31.0",
-    "pydantic==2.4.2",
+    "pydantic>=1.9.0",
     "packaging==23.1"
 ]
 [project.optional-dependencies]
