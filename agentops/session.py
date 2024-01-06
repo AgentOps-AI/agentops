@@ -5,6 +5,7 @@ from typing import Optional, List
 
 class SessionState(BaseModel):
     end_state: str = Field(..., pattern="^(Success|Fail|Indeterminate)$")
+    end_state_reason: Optional[str] = None
 
 
 class Session:
@@ -20,6 +21,7 @@ class Session:
         end_timestamp (float, optional): The timestamp for when the session ended, represented as seconds since the epoch. This is only set after end_session is called.
         end_state (str, optional): The final state of the session. Suggested: "Success", "Fail", "Indeterminate"
         rating (str, optional): The rating for the session.
+        end_state_reason (str, optional): The reason for ending the session.
 
     """
 
@@ -28,6 +30,7 @@ class Session:
         self.init_timestamp = get_ISO_time()
         self.tags = tags
         self.video = None
+        self.end_state_reason = None
 
     def set_session_video(self, video: str):
         """
@@ -38,17 +41,19 @@ class Session:
         """
         self.video = video
 
-    def end_session(self, end_state: str = "Indeterminate", rating: Optional[str] = None):
+    def end_session(self, end_state: str = "Indeterminate", rating: Optional[str] = None, end_state_reason: Optional[str] = None):
         """
-        End the session with a specified state and rating.
+        End the session with a specified state, rating, and reason.
 
         Args:
             end_state (str, optional): The final state of the session. Options: "Success", "Fail", "Indeterminate"
             rating (str, optional): The rating for the session.
+            end_state_reason (str, optional): The reason for ending the session. Provides context for why the session ended.
         """
-        SessionState(end_state=end_state)
+        SessionState(end_state=end_state, end_state_reason=end_state_reason)
         self.end_state = end_state
         self.rating = rating
+        self.end_state_reason = end_state_reason
         self.end_timestamp = get_ISO_time()
 
     @property
