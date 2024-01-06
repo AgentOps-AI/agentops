@@ -64,7 +64,7 @@ class Client:
 
         # Store a reference to the instance
         Client._instance = self
-        atexit.register(self.cleanup)
+        atexit.register(lambda: self.cleanup())
 
         # Register signal handler for SIGINT (Ctrl+C) and SIGTERM
         signal.signal(signal.SIGINT, self.signal_handler)
@@ -90,7 +90,8 @@ class Client:
             exc_traceback (TracebackType): A traceback object encapsulating the call stack at the point where the exception originally occurred.
         """
         # Perform cleanup
-        self.cleanup()
+        self.cleanup(
+            end_state_reason=f"{str(exc_value)}: {str(exc_traceback)}")
 
         # Then call the default excepthook to exit the program
         sys.__excepthook__(exc_type, exc_value, exc_traceback)
@@ -104,7 +105,8 @@ class Client:
             frame: The current stack frame.
         """
         logging.info('Signal SIGTERM or SIGINT detected. Ending session...')
-        self.end_session(end_state='Fail')
+        self.end_session(end_state='Fail',
+                         end_state_reason='Signal SIGTERM or SIGINT detected')
         sys.exit(0)
 
     def record(self, event: Event):
@@ -180,7 +182,7 @@ class Client:
             # Record the event after the function call
             self.record(Event(event_type=event_name,
                               params=arg_values,
-                              returns={f"{type(e).__name__}: {str(e)}"},
+                              returns={f"{type(e).__name__}": str(e)},
                               result='Fail',
                               action_type='action',
                               init_timestamp=init_time,
@@ -224,7 +226,7 @@ class Client:
             # Record the event after the function call
             self.record(Event(event_type=event_name,
                               params=arg_values,
-                              returns={f"{type(e).__name__}: {str(e)}"},
+                              returns={f"{type(e).__name__}": str(e)},
                               result='Fail',
                               action_type='action',
                               init_timestamp=init_time,
@@ -251,6 +253,7 @@ class Client:
                                                  description="End state of the session",
                                                  pattern="^(Success|Fail|Indeterminate)$"),
                     rating: Optional[str] = None,
+                    end_state_reason: Optional[str] = None,
                     video: Optional[str] = None):
         """
         End the current session with the AgentOps service.
@@ -258,16 +261,18 @@ class Client:
         Args:
             end_state (str, optional): The final state of the session.
             rating (str, optional): The rating for the session.
+            end_state_reason (str, optional): The reason for ending the session.
             video (str, optional): The video screen recording of the session
         """
         if not self.session.has_ended:
-            self.session.end_session(end_state, rating)
+            self.session.end_session(end_state, rating, end_state_reason)
             self.worker.end_session(self.session)
             self.session.video = video
         else:
             logging.info("Warning: The session has already been ended.")
 
-    def cleanup(self):
+    def cleanup(self, end_state_reason: Optional[str] = None):
         # Only run cleanup function if session is created
         if hasattr(self, "session") and not self.session.has_ended:
-            self.end_session(end_state='Fail')
+            self.end_session(end_state='Fail',
+                             end_state_reason=end_state_reason)
