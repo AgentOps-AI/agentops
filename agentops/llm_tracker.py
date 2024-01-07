@@ -289,20 +289,15 @@ class LlmTracker:
                 raise ValueError(f"Unsupported API: {api}")
 
             module = import_module(api)
-
-            # If openai 1.0.0+ is specified, patch the completions methods
             if api == 'openai':
+                # Patch openai v1.0.0+ methods
                 if hasattr(module, '__version__'):
                     module_version = parse(module.__version__)
                     if module_version >= parse('1.0.0'):
                         self.override_openai_v1_completion()
                         self.override_openai_v1_async_completion()
 
-            # Patch all methods in every API
-            if hasattr(module, '__version__'):
-                module_version = parse(module.__version__)
-                for version in sorted(self.SUPPORTED_APIS[api], key=parse, reverse=True):
-                    if module_version >= parse(version):
-                        for method_path in self.SUPPORTED_APIS[api][version]:
-                            self._override_method(api, method_path, module)
-                        break
+                # Patch openai <v1.0.0 methods
+                else:
+                    for method_path in self.SUPPORTED_APIS['openai']['0.0.0']:
+                        self._override_method(api, method_path, module)
