@@ -296,8 +296,8 @@ class LlmTracker:
                     if module_version >= parse('1.0.0'):
                         self.override_openai_v1_completion()
                         self.override_openai_v1_async_completion()
+                        return
 
                 # Patch openai <v1.0.0 methods
-                else:
-                    for method_path in self.SUPPORTED_APIS['openai']['0.0.0']:
-                        self._override_method(api, method_path, module)
+                for method_path in self.SUPPORTED_APIS['openai']['0.0.0']:
+                    self._override_method(api, method_path, module)

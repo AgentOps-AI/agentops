@@ -16,7 +16,7 @@ print('Running OpenAI v1.0.0+')
 
 
 # Assuming that instantiating agentops.Client will trigger the LlmTracker to override methods
-ao_client = agentops.Client(tags=['mock agent'])
+ao_client = agentops.Client(tags=['mock agent', openai.__version__])
 
 
 # Now the client.chat.completions.create should be the overridden method
