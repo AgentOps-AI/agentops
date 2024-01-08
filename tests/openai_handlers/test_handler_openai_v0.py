@@ -3,11 +3,14 @@ import openai
 import agentops
 import asyncio
 import os
+import pkg_resources
 
 print('Running OpenAI <v1.0.0')
 
 
-ao_client = agentops.Client(tags=['mock tests'])
+ao_client = agentops.Client(
+    tags=['mock tests', pkg_resources.get_distribution('openai').version]
+)
 
 openai.api_key = os.environ['OPENAI_API_KEY']
 
