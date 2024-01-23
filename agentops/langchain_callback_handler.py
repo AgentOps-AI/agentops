@@ -22,8 +22,19 @@ from typing import Any, Dict, List, Optional, Sequence
 class LangchainCallbackHandler(BaseCallbackHandler):
     """Callback handler for Langchain agents."""
 
-    def __init__(self, api_key: str, tags: List[str] = None):
-        self.ao_client = AOClient(api_key=api_key, tags=tags, override=False)
+    def __init__(self, api_key: str, org_key: Optional[str] = None,
+                 endpoint: Optional[str] = None, tags: Optional[List[str]] = None):
+
+        client_init_params = {
+            'api_key': api_key,
+            "org_key": org_key,
+            "endpoint": endpoint,
+            "tags": tags,
+            "override": False
+        }
+
+        self.ao_client = AOClient(
+            **{k: v for k, v in client_init_params.items() if v is not None})
 
         # keypair <run_id: str, Event>
         self.events: Dict[Any, Event] = {}
