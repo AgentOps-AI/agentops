@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "agentops"
-version = "0.0.14"
+version = "0.0.15"
 authors = [
   { name="Alex Reibman", email="areibman@gmail.com" },
   { name="Shawn Qiu", email="siyangqiu@gmail.com" }
@@ -20,7 +20,7 @@ classifiers = [
 dependencies = [
     "requests==2.31.0",
     "pydantic>=1.9.0",
-    "packaging==23.1"
+    "packaging>=23.1,<24.0"
 ]
 [project.optional-dependencies]
 dev = [
