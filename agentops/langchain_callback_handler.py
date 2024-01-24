@@ -87,9 +87,13 @@ class LangchainCallbackHandler(BaseCallbackHandler):
         **kwargs: Any,
     ) -> Any:
         self.events[run_id].end_timestamp = get_ISO_time()
-        self.events[run_id].returns = response.generations[0][0].message.content
-        self.events[run_id].prompt_tokens = response.llm_output['token_usage']['prompt_tokens']
-        self.events[run_id].completion_tokens = response.llm_output['token_usage']['completion_tokens']
+        self.events[run_id].returns = {
+            "content": response.generations[0][0].message.content,
+            "generations": response.generations
+        }
+        if response.llm_output is not None:
+            self.events[run_id].prompt_tokens = response.llm_output['token_usage']['prompt_tokens']
+            self.events[run_id].completion_tokens = response.llm_output['token_usage']['completion_tokens']
 
         if len(response.generations) > 0:
             self.events[run_id].result = "Success"
@@ -357,9 +361,13 @@ class AsyncLangchainCallbackHandler(AsyncCallbackHandler):
         **kwargs: Any,
     ) -> Any:
         self.events[run_id].end_timestamp = get_ISO_time()
-        self.events[run_id].returns = response.generations[0][0].message.content
-        self.events[run_id].prompt_tokens = response.llm_output['token_usage']['prompt_tokens']
-        self.events[run_id].completion_tokens = response.llm_output['token_usage']['completion_tokens']
+        self.events[run_id].returns = {
+            "content": response.generations[0][0].message.content,
+            "generations": response.generations
+        }
+        if response.llm_output is not None:
+            self.events[run_id].prompt_tokens = response.llm_output['token_usage']['prompt_tokens']
+            self.events[run_id].completion_tokens = response.llm_output['token_usage']['completion_tokens']
 
         if len(response.generations) > 0:
             self.events[run_id].result = "Success"

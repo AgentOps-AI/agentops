@@ -28,7 +28,13 @@ def filter_unjsonable(d: dict) -> dict:
 
 
 def safe_serialize(obj):
-    def default(o): return f"<<non-serializable: {type(o).__qualname__}>>"
+    def default(o):
+        if hasattr(o, 'model_dump_json'):
+            return o.model_dump_json()
+        elif hasattr(o, 'to_json'):
+            return o.to_json()
+        else:
+            return f"<<non-serializable: {type(o).__qualname__}>>"
     return json.dumps(obj, default=default)
 
 
