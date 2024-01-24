@@ -5,8 +5,7 @@ from langchain_core.agents import AgentFinish, AgentAction
 from langchain_core.outputs import LLMResult
 from langchain_core.documents import Document
 
-from langchain_core.messages import BaseMessage
-from langchain_core.outputs import ChatGenerationChunk, GenerationChunk, LLMResult
+from langchain_core.outputs import LLMResult
 
 
 from agentops import Client as AOClient
@@ -29,8 +28,17 @@ class LangchainCallbackHandler(BaseCallbackHandler):
                  max_queue_size: Optional[int] = None,
                  tags: Optional[List[str]] = None):
 
-        self.ao_client = AOClient(
-            **{k: v for k, v in locals().items() if v is not None})
+        client_params = {
+            'api_key': api_key,
+            'org_key': org_key,
+            'endpoint': endpoint,
+            'max_wait_time': max_wait_time,
+            'max_queue_size': max_queue_size,
+            'tags': tags
+        }
+
+        self.ao_client = AOClient(**{k: v for k, v in client_params.items()
+                                     if v is not None}, override=False)
 
         # keypair <run_id: str, Event>
         self.events: Dict[Any, Event] = {}
