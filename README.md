@@ -46,7 +46,7 @@ Refer to our [API documentation](http://docs.agentops.ai) for detailed instructi
 |---|---|---|
 |✅ Python SDK | ✅ Multi-session and Cross-session metrics | ✅ Custom eval metrics |
 |🚧 Evaluation builder API | ✅ Custom event tag tracking | 🔜 Agent scorecards |
-|🔜 Javascript/Typescript SDK | ✅ Session replays| 🔜 Evaluation playground + leaderboard|
+|✅ [Javascript/Typescript SDK](https://github.com/AgentOps-AI/agentops-node) | ✅ Session replays| 🔜 Evaluation playground + leaderboard|
 
 
 ## Debugging Roadmap 🧭
@@ -61,7 +61,7 @@ Refer to our [API documentation](http://docs.agentops.ai) for detailed instructi
 |🔜 Regression testing | 🔜 Multi-agent framework visualization |  | |
 
 
-## Callback handlers
+## Callback handlers ↩️
 
 ### Langchain
 AgentOps works seemlessly with applications built using Langchain. To use the handler, install Langchain as an optional dependency:
