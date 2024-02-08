@@ -5,8 +5,44 @@ Classes:
     Event: Represents discrete events to be recorded.
 """
 from .helpers import get_ISO_time, Models
-from typing import Optional, List, Dict, Any
+from typing import Optional, List, Dict, Any, TypedDict
 from pydantic import Field
+
+
+class ChatMLItem(TypedDict):
+    role: str
+    content: str
+
+
+class MessageItem(TypedDict):
+    content: str
+    role: str
+    function_call: Optional[str]
+    tool_calls: Optional[str]
+
+
+class ChoiceItem(TypedDict):
+    finish_reason: str
+    index: int
+    message: MessageItem
+
+
+class UsageItem(TypedDict):
+    completion_tokens: int
+    prompt_tokens: int
+    total_tokens: int
+
+
+class CompletionResponse(TypedDict):
+    id: str
+    choices: List[ChoiceItem]
+    model: str
+    type: str  # i.e. completion
+    system_fingerprint: Optional[str]
+    usage: Optional[UsageItem]
+
+
+ChatML = List[ChatMLItem]
 
 
 class Event:
@@ -24,7 +60,8 @@ class Event:
                                                     description="Type of action that the user is recording",
                                                     pattern="^(action|api|llm|screenshot)$"),
                  model: Optional[Models] = None,
-                 prompt: Optional[str] = None,
+                 prompt: Optional[str | ChatML] = None,
+                 completion: Optional[CompletionResponse] = None,
                  tags: Optional[List[str]] = None,
                  init_timestamp: Optional[str] = None,
                  screenshot: Optional[str] = None,
@@ -39,6 +76,7 @@ class Event:
         self.action_type = action_type
         self.model = model
         self.prompt = prompt
+        self.completion = completion
         self.end_timestamp = get_ISO_time()
         self.init_timestamp = init_timestamp if init_timestamp else self.end_timestamp
         self.screenshot = screenshot
@@ -54,6 +92,7 @@ class Event:
             "result": self.result,
             "model": self.model,
             "prompt": self.prompt,
+            "completion": self.completion,
             "tags": self.tags,
             "init_timestamp": self.init_timestamp,
             "prompt_tokens": self.prompt_tokens,
