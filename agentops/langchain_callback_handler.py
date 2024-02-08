@@ -437,7 +437,40 @@ class AsyncLangchainCallbackHandler(AsyncCallbackHandler):
         # keypair <run_id: str, Event>
         self.events: Dict[Any, Event] = {}
 
+    async def on_chat_model_start(
+        self,
+        serialized: Dict[str, Any],
+        messages: List[List[BaseMessage]],
+        *,
+        run_id: UUID,
+        parent_run_id: Optional[UUID] = None,
+        tags: Optional[List[str]] = None,
+        metadata: Optional[Dict[str, Any]] = None,
+        **kwargs: Any,
+    ) -> Any:
+        """Run when a chat model starts running.
+
+        **ATTENTION**: This method is called for chat models. If you're implementing
+            a handler for a non-chat model, you should use on_llm_start instead.
+        """
+        try:
+            prompt = [message_to_chatml(message) for
+                      message in messages[0]]
+        except:
+            prompt = ''
+
+        self.events[run_id] = Event(
+            event_type="llm",
+            action_type='llm',
+            tags=tags,
+            model=kwargs['invocation_params']['model'],
+            params={**kwargs, **({} if metadata is None else metadata)},
+            prompt=prompt,
+            init_timestamp=get_ISO_time()
+        )
+
     # LLM Callbacks
+
     async def on_llm_start(
         self,
         serialized: Dict[str, Any],
@@ -454,8 +487,8 @@ class AsyncLangchainCallbackHandler(AsyncCallbackHandler):
             action_type='llm',
             tags=tags,
             model=kwargs['invocation_params']['model'],
-            params={**kwargs,  **({} if metadata is None else metadata)},
-            prompt=prompts[0],
+            params={**kwargs, **({} if metadata is None else metadata)},
+            prompt=prompt_to_chatml(prompts[0]),
             init_timestamp=get_ISO_time()
         )
 
@@ -480,11 +513,11 @@ class AsyncLangchainCallbackHandler(AsyncCallbackHandler):
         parent_run_id: Optional[UUID] = None,
         **kwargs: Any,
     ) -> Any:
+        completion = get_completion_from_llmresponse(response)
+        self.events[run_id].completion = completion
         self.events[run_id].end_timestamp = get_ISO_time()
-        self.events[run_id].returns = {
-            "content": response.generations[0][0].message.content,
-            "generations": response.generations
-        }
+        self.events[run_id].returns = response.dict()
+
         if response.llm_output is not None:
             self.events[run_id].prompt_tokens = response.llm_output['token_usage']['prompt_tokens']
             self.events[run_id].completion_tokens = response.llm_output['token_usage']['completion_tokens']
