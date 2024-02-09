@@ -3,7 +3,7 @@ import inspect
 import sys
 from importlib import import_module
 from packaging.version import parse
-from .event import Event
+from .event import Event, CompletionResponse
 from .helpers import get_ISO_time
 
 
@@ -24,6 +24,18 @@ class LlmTracker:
     def __init__(self, client):
         self.client = client
         self.event_stream = None
+
+    @staticmethod
+    def _get_completion(response):
+        completion: CompletionResponse = {
+            "id": response.get('id'),
+            "choices": response.get('choices'),
+            "model": response.get('model'),
+            "type": response.get('object'),
+            "system_fingerprint": response.get('system_fingerprint'),
+            "usage": response.get('usage')
+        }
+        return completion
 
     def _handle_response_v0_openai(self, response, kwargs, init_timestamp):
         """Handle responses for OpenAI versions <v1.0.0"""
@@ -54,6 +66,7 @@ class LlmTracker:
                     if not self.event_stream.returns:
                         self.event_stream.returns = {}
                     self.event_stream.returns['finish_reason'] = finish_reason
+                    self.event_stream.completion = self._get_completion(chunk)
                     # Update end_timestamp
                     self.event_stream.end_timestamp = get_ISO_time()
                     self.client.record(self.event_stream)
@@ -90,6 +103,7 @@ class LlmTracker:
                 action_type='llm',
                 model=response['model'],
                 prompt=kwargs['messages'],
+                completion=self._get_completion(response),
                 init_timestamp=init_timestamp,
                 prompt_tokens=response.get('usage',
                                            {}).get('prompt_tokens'),
@@ -109,6 +123,7 @@ class LlmTracker:
                     action_type='llm',
                     model=response.model,
                     prompt=kwargs['messages'],
+                    completion=self._get_completion(response),
                     init_timestamp=init_timestamp,
                     prompt_tokens=response.usage.prompt_tokens,
                     completion_tokens=response.usage.completion_tokens
@@ -204,6 +219,7 @@ class LlmTracker:
                 action_type='llm',
                 model=response.model,
                 prompt=kwargs['messages'],
+                completion=self._get_completion(response),
                 init_timestamp=init_timestamp,
                 prompt_tokens=response.usage.prompt_tokens,
                 completion_tokens=response.usage.completion_tokens

@@ -4,7 +4,7 @@ AgentOps events.
 Classes:
     Event: Represents discrete events to be recorded.
 """
-from .helpers import get_ISO_time, Models
+from .helpers import get_ISO_time
 from typing import Optional, List, Dict, Any, TypedDict
 from pydantic import Field
 
@@ -59,7 +59,7 @@ class Event:
                  action_type: Optional[str] = Field("action",
                                                     description="Type of action that the user is recording",
                                                     pattern="^(action|api|llm|screenshot)$"),
-                 model: Optional[Models] = None,
+                 model: Optional[str] = None,
                  prompt: Optional[str | ChatML] = None,
                  completion: Optional[CompletionResponse] = None,
                  tags: Optional[List[str]] = None,
