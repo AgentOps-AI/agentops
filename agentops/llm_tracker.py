@@ -3,7 +3,8 @@ import inspect
 import sys
 from importlib import import_module
 from packaging.version import parse
-from .event import Event, CompletionResponse
+from typing import List, Optional
+from .event import Event, CompletionResponse, ChoiceItem, ToolCall, Function
 from .helpers import get_ISO_time
 
 
@@ -24,18 +25,6 @@ class LlmTracker:
     def __init__(self, client):
         self.client = client
         self.event_stream = None
-
-    @staticmethod
-    def _get_completion(response):
-        completion: CompletionResponse = {
-            "id": response.get('id'),
-            "choices": response.get('choices'),
-            "model": response.get('model'),
-            "type": response.get('object'),
-            "system_fingerprint": response.get('system_fingerprint'),
-            "usage": response.get('usage')
-        }
-        return completion
 
     def _handle_response_v0_openai(self, response, kwargs, init_timestamp):
         """Handle responses for OpenAI versions <v1.0.0"""
@@ -73,7 +62,7 @@ class LlmTracker:
                     self.event_stream = None
             except Exception as e:
                 print(
-                    f"Unable to parse a chunk for LLM call {kwargs} - skipping upload to AgentOps")
+                    f"Unable to parse a chunk for LLM call {kwargs} - skipping upload to AgentOps:", e)
 
         # if the response is a generator, decorate the generator
         if inspect.isasyncgen(response):
@@ -112,6 +101,7 @@ class LlmTracker:
             ))
         except:
             # v1.0.0+ responses are objects
+            print('sending')
             try:
                 self.client.record(Event(
                     event_type=response.object,
@@ -131,15 +121,51 @@ class LlmTracker:
                 # Standard response
             except Exception as e:
                 print(
-                    f"Unable to parse a chunk for LLM call {kwargs} - skipping upload to AgentOps")
+                    f"Unable to parse a chunk for LLM call {kwargs} - skipping upload to AgentOps:", e)
 
         return response
 
     def _handle_response_v1_openai(self, response, kwargs, init_timestamp):
         """Handle responses for OpenAI versions >v1.0.0"""
         from openai import Stream, AsyncStream
-        from openai.types.chat import ChatCompletionChunk
+        from openai.types.chat import ChatCompletionChunk, ChatCompletion, ChatCompletionMessageToolCall
         from openai.resources import AsyncCompletions
+
+        def _get_tool_call(tool_call: ChatCompletionMessageToolCall) -> ToolCall:
+            return {
+                "id": tool_call.id,
+                "function": {
+                    "name": tool_call.function.name,
+                    "arguments": tool_call.function.arguments,
+                },
+            }
+
+        def _get_completion(response: ChatCompletion):
+
+            choices: List[ChoiceItem] = []
+
+            for choice in response.choices:
+                tool_calls: Optional[List[ToolCall]] = [_get_tool_call(call)
+                                                        for call in choice.message.tool_calls] if choice.message.tool_calls else None
+                choice_item: ChoiceItem = {
+                    "finish_reason": choice.finish_reason,
+                    "index": choice.index,
+                    "message": {
+                        "content": choice.message.content,
+                        "role": choice.message.role,
+                        "tool_calls": tool_calls
+                    }
+                }
+                choices.append(choice_item)
+
+            completion: CompletionResponse = {
+                "id": response.id,
+                "choices": choices,
+                "model": response.model,
+                "type": response.object,
+                "system_fingerprint": response.system_fingerprint if response.system_fingerprint else None,
+            }
+            return completion
 
         def handle_stream_chunk(chunk: ChatCompletionChunk):
             try:
@@ -181,7 +207,7 @@ class LlmTracker:
                     self.event_stream = None
             except Exception as e:
                 print(
-                    f"Unable to parse a chunk for LLM call {kwargs} - skipping upload to AgentOps")
+                    f"Unable to parse a chunk for LLM call {kwargs} - skipping upload to AgentOps:", e)
 
         # if the response is a generator, decorate the generator
         if isinstance(response, Stream):
@@ -219,7 +245,7 @@ class LlmTracker:
                 action_type='llm',
                 model=response.model,
                 prompt=kwargs['messages'],
-                completion=self._get_completion(response),
+                completion=_get_completion(response),
                 init_timestamp=init_timestamp,
                 prompt_tokens=response.usage.prompt_tokens,
                 completion_tokens=response.usage.completion_tokens
@@ -227,12 +253,13 @@ class LlmTracker:
             # Standard response
         except Exception as e:
             print(
-                f"Unable to parse a chunk for LLM call {kwargs} - skipping upload to AgentOps")
+                f"Unable to parse a chunk for LLM call {kwargs} - skipping upload to AgentOps:", e)
 
         return response
 
     def override_openai_v1_completion(self):
         from openai.resources.chat import completions
+        from openai.types.chat import ChatCompletion
 
         # Store the original method
         original_create = completions.Completions.create
