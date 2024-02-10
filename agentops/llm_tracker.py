@@ -28,6 +28,42 @@ class LlmTracker:
 
     def _handle_response_v0_openai(self, response, kwargs, init_timestamp):
         """Handle responses for OpenAI versions <v1.0.0"""
+        from openai.openai_object import OpenAIObject
+
+        def _get_tool_call(tool_call) -> ToolCall:
+            return {
+                "id": tool_call.id,
+                "function": {
+                    "name": tool_call['function']['name'],
+                    "arguments": tool_call['function']['arguments']
+                },
+            }
+
+        def _get_completion(response: OpenAIObject):
+            choices: List[ChoiceItem] = []
+
+            for choice in response.choices:
+                tool_calls: Optional[List[ToolCall]] = [_get_tool_call(call)
+                                                        for call in choice['message'].get('tool_calls')] if choice['message'].get('tool_calls') else None
+                choice_item: ChoiceItem = {
+                    "finish_reason": choice.finish_reason,
+                    "index": choice.index,
+                    "message": {
+                        "content": choice.message.content,
+                        "role": choice.message.role,
+                        "tool_calls": tool_calls
+                    }
+                }
+                choices.append(choice_item)
+
+            completion: CompletionResponse = {
+                "id": response.id,
+                "choices": choices,
+                "model": response.model,
+                "type": response.object,
+                "system_fingerprint": response.system_fingerprint if response.system_fingerprint else None,
+            }
+            return completion
 
         def handle_stream_chunk(chunk):
             try:
@@ -55,7 +91,7 @@ class LlmTracker:
                     if not self.event_stream.returns:
                         self.event_stream.returns = {}
                     self.event_stream.returns['finish_reason'] = finish_reason
-                    self.event_stream.completion = self._get_completion(chunk)
+                    self.event_stream.completion = _get_completion(chunk)
                     # Update end_timestamp
                     self.event_stream.end_timestamp = get_ISO_time()
                     self.client.record(self.event_stream)
@@ -87,12 +123,12 @@ class LlmTracker:
                 event_type=response['object'],
                 params=kwargs,
                 result='Success',
-                returns={"content":
-                         response['choices'][0]['message']['content']},
+                # TODO: Return whole blob, create completion object
+                returns=response,
                 action_type='llm',
                 model=response['model'],
                 prompt=kwargs['messages'],
-                completion=self._get_completion(response),
+                completion=_get_completion(response),
                 init_timestamp=init_timestamp,
                 prompt_tokens=response.get('usage',
                                            {}).get('prompt_tokens'),
@@ -101,19 +137,16 @@ class LlmTracker:
             ))
         except:
             # v1.0.0+ responses are objects
-            print('sending')
             try:
                 self.client.record(Event(
                     event_type=response.object,
                     params=kwargs,
                     result='Success',
-                    returns={
-                        # TODO: Will need to make the completion the key for content, splat out the model dump
-                        "content": response.choices[0].message.model_dump()},
+                    returns=response,
                     action_type='llm',
                     model=response.model,
                     prompt=kwargs['messages'],
-                    completion=self._get_completion(response),
+                    completion=_get_completion(response),
                     init_timestamp=init_timestamp,
                     prompt_tokens=response.usage.prompt_tokens,
                     completion_tokens=response.usage.completion_tokens
@@ -182,6 +215,7 @@ class LlmTracker:
                         event_type='openai chat completion stream',
                         params=kwargs,
                         result='Success',
+                        # TODO: Return whole blob, create completion object
                         returns={"finish_reason": None,
                                  "content": token},
                         action_type='llm',
@@ -239,9 +273,7 @@ class LlmTracker:
                 event_type=response.object,
                 params=kwargs,
                 result='Success',
-                returns={
-                    # TODO: Will need to make the completion the key for content, splat out the model dump
-                    "content": response.choices[0].message.model_dump()},
+                returns=response,
                 action_type='llm',
                 model=response.model,
                 prompt=kwargs['messages'],
