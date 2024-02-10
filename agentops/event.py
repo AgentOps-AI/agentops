@@ -14,11 +14,20 @@ class ChatMLItem(TypedDict):
     content: str
 
 
+class Function(TypedDict):
+    arguments: str
+    name: str
+
+
+class ToolCall(TypedDict):
+    id: str
+    function: Function
+
+
 class MessageItem(TypedDict):
-    content: str
+    content: Optional[str]
     role: str
-    function_call: Optional[str]
-    tool_calls: Optional[str]
+    tool_calls: Optional[List[ToolCall]]
 
 
 class ChoiceItem(TypedDict):
@@ -27,19 +36,12 @@ class ChoiceItem(TypedDict):
     message: MessageItem
 
 
-class UsageItem(TypedDict):
-    completion_tokens: int
-    prompt_tokens: int
-    total_tokens: int
-
-
 class CompletionResponse(TypedDict):
     id: str
     choices: List[ChoiceItem]
     model: str
     type: str  # i.e. completion
     system_fingerprint: Optional[str]
-    usage: Optional[UsageItem]
 
 
 ChatML = List[ChatMLItem]
