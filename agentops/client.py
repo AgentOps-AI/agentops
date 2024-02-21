@@ -31,7 +31,6 @@ class Client:
 
     Args:
         api_key (str, optional): API Key for AgentOps services. If none is provided, key will be read from the AGENTOPS_API_KEY environment variable.
-        org_key (str, optional): Allows sessions/events analytics to be tracked by the owners of the organization key.
         tags (List[str], optional): Tags for the sessions that can be used for grouping or sorting later (e.g. ["GPT-4"]).
         endpoint (str, optional): The endpoint for the AgentOps service. Defaults to 'https://agentops-server-v2.fly.dev'.
         max_wait_time (int, optional): The maximum time to wait in milliseconds before flushing the queue. Defaults to 1000.
@@ -42,7 +41,6 @@ class Client:
     """
 
     def __init__(self, api_key: Optional[str] = None,
-                 org_key: Optional[str] = None,
                  tags: Optional[List[str]] = None,
                  endpoint: Optional[str] = 'https://agentops-server-v2.fly.dev',
                  max_wait_time: Optional[int] = 1000,
@@ -56,11 +54,8 @@ class Client:
         if api_key is None:
             print("AgentOps API key not provided. Session data will not be recorded.")
 
-        if org_key is None:
-            org_key = environ.get('AGENTOPS_ORG_KEY')
-
         # Create a worker config
-        self.config = Configuration(api_key, org_key, endpoint,
+        self.config = Configuration(api_key, endpoint,
                                     max_wait_time, max_queue_size)
 
         # Store a reference to the instance
