@@ -77,7 +77,10 @@ class Client:
         sys.excepthook = self.handle_exception
 
         if not bypass_new_session:
-            self._start_session(tags)
+            self.start_session(tags)
+        else:
+            self.session = None
+            self.worker = None
 
         if override:
             if 'openai' in sys.modules:
@@ -159,6 +162,9 @@ class Client:
         return decorator
 
     def add_tags(self, tags: List[str]):
+        if self.session is None:
+            return print("You must create a session before assigning tags")
+
         if self.session.tags is not None:
             self.session.tags.extend(tags)
         else:
@@ -168,7 +174,7 @@ class Client:
 
     def set_tags(self, tags: List[str]):
         if self.session is None:
-            raise Exception("You must create a session before assigning tags")
+            return print("You must create a session before assigning tags")
 
         self.session.tags = tags
         self.worker.update_session(self.session)
@@ -260,7 +266,7 @@ class Client:
 
         return returns
 
-    def _start_session(self, tags: Optional[List[str]] = None):
+    def start_session(self, tags: Optional[List[str]] = None):
         """
         Start a new session for recording events.
 
