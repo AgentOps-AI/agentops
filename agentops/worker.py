@@ -99,6 +99,18 @@ class Worker:
                             self.config.api_key,
                             self.config.org_key)
 
+    def update_session(self, session: Session) -> None:
+        with self.lock:
+            payload = {
+                "session": session.__dict__
+            }
+
+            HttpClient.post(f'{self.config.endpoint}/sessions',
+                            json.dumps(filter_unjsonable(
+                                payload)).encode("utf-8"),
+                            self.config.api_key,
+                            self.config.org_key)
+
     def run(self) -> None:
         while not self.stop_flag.is_set():
             time.sleep(self.config.max_wait_time / 1000)
