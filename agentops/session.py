@@ -1,11 +1,5 @@
 from .helpers import get_ISO_time
-from pydantic import BaseModel, Field
 from typing import Optional, List
-
-
-class SessionState(BaseModel):
-    end_state: str = Field(..., pattern="^(Success|Fail|Indeterminate)$")
-    end_state_reason: Optional[str] = None
 
 
 class Session:
@@ -26,6 +20,9 @@ class Session:
     """
 
     def __init__(self, session_id: str, tags: Optional[List[str]] = None):
+        self.end_timestamp = None
+        self.rating = None
+        self.end_state = None
         self.session_id = session_id
         self.init_timestamp = get_ISO_time()
         self.tags = tags
@@ -50,7 +47,6 @@ class Session:
             rating (str, optional): The rating for the session.
             end_state_reason (str, optional): The reason for ending the session. Provides context for why the session ended.
         """
-        SessionState(end_state=end_state, end_state_reason=end_state_reason)
         self.end_state = end_state
         self.rating = rating
         self.end_state_reason = end_state_reason

@@ -269,6 +269,9 @@ class Client:
             tags (List[str], optional): Tags that can be used for grouping or sorting later.
                 e.g. ["test_run"].
         """
+        if self.session is not None:
+            return print("Session already started. End this session before starting a new one.")
+
         self.session = Session(str(uuid4()), tags)
         self.worker = Worker(self.config)
         self.worker.start_session(self.session)
@@ -289,9 +292,10 @@ class Client:
             video (str, optional): The video screen recording of the session
         """
         if not self.session.has_ended:
+            self.session.video = video
             self.session.end_session(end_state, rating, end_state_reason)
             self.worker.end_session(self.session)
-            self.session.video = video
+            self.session = None
         else:
             logging.info("Warning: The session has already been ended.")
 
