@@ -153,6 +153,21 @@ class Client:
 
         return decorator
 
+    def add_tags(self, tags: List[str]):
+        if self.session.tags is not None:
+            self.session.tags.extend(tags)
+        else:
+            self.session.tags = tags
+
+        self.worker.update_session(self.session)
+
+    def set_tags(self, tags: List[str]):
+        if self.session is None:
+            raise Exception("You must create a session before assigning tags")
+
+        self.session.tags = tags
+        self.worker.update_session(self.session)
+
     def _record_event_sync(self, func, event_name, tags, *args, **kwargs):
         init_time = get_ISO_time()
         func_args = inspect.signature(func).parameters
