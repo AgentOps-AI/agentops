@@ -22,7 +22,6 @@ class LangchainCallbackHandler(BaseCallbackHandler):
     """Callback handler for Langchain agents."""
 
     def __init__(self, api_key: str,
-                 org_key: Optional[str] = None,
                  endpoint: Optional[str] = None,
                  max_wait_time: Optional[int] = None,
                  max_queue_size: Optional[int] = None,
@@ -30,7 +29,6 @@ class LangchainCallbackHandler(BaseCallbackHandler):
 
         client_params = {
             'api_key': api_key,
-            'org_key': org_key,
             'endpoint': endpoint,
             'max_wait_time': max_wait_time,
             'max_queue_size': max_queue_size,
@@ -312,7 +310,6 @@ class AsyncLangchainCallbackHandler(AsyncCallbackHandler):
     """Callback handler for Langchain agents."""
 
     def __init__(self, api_key: str,
-                 org_key: Optional[str] = None,
                  endpoint: Optional[str] = None,
                  max_wait_time: Optional[int] = None,
                  max_queue_size: Optional[int] = None,
@@ -320,7 +317,6 @@ class AsyncLangchainCallbackHandler(AsyncCallbackHandler):
 
         client_params = {
             'api_key': api_key,
-            'org_key': org_key,
             'endpoint': endpoint,
             'max_wait_time': max_wait_time,
             'max_queue_size': max_queue_size,

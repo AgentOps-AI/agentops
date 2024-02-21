@@ -57,7 +57,7 @@ class Response:
 class HttpClient:
 
     @staticmethod
-    def post(url: str, payload: bytes, api_key: Optional[str] = None, org_key: Optional[str] = None, header=None) -> Response:
+    def post(url: str, payload: bytes, api_key: Optional[str] = None, header=None) -> Response:
         result = Response()
         try:
             # Create request session with retries configured
@@ -66,9 +66,6 @@ class HttpClient:
 
             if api_key != None:
                 JSON_HEADER["X-Agentops-Auth"] = api_key
-
-            if org_key != None:
-                JSON_HEADER["X-Agentops-Org"] = org_key
 
             res = request_session.post(url, data=payload,
                                        headers=JSON_HEADER, timeout=20)
