@@ -38,7 +38,7 @@ class Client:
         max_queue_size (int, optional): The maximum size of the event queue. Defaults to 100.
         override (bool): Whether to override and LLM calls to emit as events.
     Attributes:
-        session (Session, optional): A Session is a grouping of events (e.g. a run of your agent).
+        _session (Session, optional): A Session is a grouping of events (e.g. a run of your agent).
     """
 
     def __init__(self, api_key: Optional[str] = None,
@@ -79,8 +79,9 @@ class Client:
         if not bypass_new_session:
             self.start_session(tags)
         else:
-            self.session = None
-            self.worker = None
+            self._session = None
+            self._worker = None
+            self._tags = tags
 
         if override:
             if 'openai' in sys.modules:
@@ -128,9 +129,9 @@ class Client:
             event (Event): The event to record.
         """
 
-        if not self.session.has_ended:
-            self.worker.add_event(
-                {'session_id': self.session.session_id, **event.__dict__})
+        if not self._session is None and not self._session.has_ended:
+            self._worker.add_event(
+                {'session_id': self._session.session_id, **event.__dict__})
         else:
             logging.info("This event was not recorded because the previous session has been ended" +
                          " Start a new session to record again.")
@@ -162,22 +163,24 @@ class Client:
         return decorator
 
     def add_tags(self, tags: List[str]):
-        if self.session is None:
+        if self._session is None:
             return print("You must create a session before assigning tags")
 
-        if self.session.tags is not None:
-            self.session.tags.extend(tags)
+        if self._tags is not None:
+            self._tags.extend(tags)
         else:
-            self.session.tags = tags
+            self._tags = tags
 
-        self.worker.update_session(self.session)
+        self._session.tags = self._tags
+        self._worker.update_session(self._session)
 
     def set_tags(self, tags: List[str]):
-        if self.session is None:
+        if self._session is None:
             return print("You must create a session before assigning tags")
 
-        self.session.tags = tags
-        self.worker.update_session(self.session)
+        self._tags = tags
+        self._session.tags = tags
+        self._worker.update_session(self._session)
 
     def _record_event_sync(self, func, event_name, tags, *args, **kwargs):
         init_time = get_ISO_time()
@@ -274,12 +277,14 @@ class Client:
             tags (List[str], optional): Tags that can be used for grouping or sorting later.
                 e.g. ["test_run"].
         """
-        if self.session is not None:
+        if self._session is not None:
             return print("Session already started. End this session before starting a new one.")
 
-        self.session = Session(str(uuid4()), tags)
-        self.worker = Worker(self.config)
-        self.worker.start_session(self.session)
+        self._session = Session(str(uuid4()), tags)
+        if self._tags:
+            self.set_tags(self._tags)
+        self._worker = Worker(self.config)
+        self._worker.start_session(self._session)
 
     def end_session(self, end_state: str = Field("Indeterminate",
                                                  description="End state of the session",
@@ -296,16 +301,16 @@ class Client:
             end_state_reason (str, optional): The reason for ending the session.
             video (str, optional): The video screen recording of the session
         """
-        if not self.session.has_ended:
-            self.session.video = video
-            self.session.end_session(end_state, rating, end_state_reason)
-            self.worker.end_session(self.session)
-            self.session = None
+        if not self._session.has_ended:
+            self._session.video = video
+            self._session.end_session(end_state, rating, end_state_reason)
+            self._worker.end_session(self._session)
+            self._session = None
         else:
             logging.info("Warning: The session has already been ended.")
 
     def cleanup(self, end_state_reason: Optional[str] = None):
         # Only run cleanup function if session is created
-        if hasattr(self, "session") and not self.session.has_ended:
+        if hasattr(self, "session") and not self._session.has_ended:
             self.end_session(end_state='Fail',
                              end_state_reason=end_state_reason)

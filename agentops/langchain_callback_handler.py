@@ -305,7 +305,7 @@ class LangchainCallbackHandler(BaseCallbackHandler):
 
     @property
     def session_id(self):
-        return self.ao_client.session.session_id
+        return self.ao_client._session.session_id
 
 
 class AsyncLangchainCallbackHandler(AsyncCallbackHandler):
@@ -596,4 +596,4 @@ class AsyncLangchainCallbackHandler(AsyncCallbackHandler):
 
     @property
     def session_id(self):
-        return self.ao_client.session.session_id
+        return self.ao_client._session.session_id
