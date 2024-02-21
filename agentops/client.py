@@ -47,7 +47,9 @@ class Client:
                  endpoint: Optional[str] = 'https://agentops-server-v2.fly.dev',
                  max_wait_time: Optional[int] = 1000,
                  max_queue_size: Optional[int] = 100,
-                 override=True):
+                 override=True,
+                 bypass_new_session=False
+                 ):
 
         # Get API key from env
         if api_key is None:
@@ -74,7 +76,8 @@ class Client:
         # Override sys.excepthook
         sys.excepthook = self.handle_exception
 
-        self._start_session(tags)
+        if not bypass_new_session:
+            self._start_session(tags)
 
         if override:
             if 'openai' in sys.modules:
