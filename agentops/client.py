@@ -275,9 +275,7 @@ class Client:
         if self._session is not None:
             return print("Session already started. End this session before starting a new one.")
 
-        self._session = Session(str(uuid4()), tags)
-        if self._tags:
-            self.set_tags(self._tags)
+        self._session = Session(str(uuid4()), tags or self._tags)
         self._worker = Worker(self.config)
         self._worker.start_session(self._session)
 
@@ -296,11 +294,13 @@ class Client:
             end_state_reason (str, optional): The reason for ending the session.
             video (str, optional): The video screen recording of the session
         """
+        if self._session is None:
+            return print("Session has already been ended.")
         if not self._session.has_ended:
             self._session.video = video
             self._session.end_session(end_state, rating, end_state_reason)
             self._worker.end_session(self._session)
-            self._session = None
+            # self._session = None
         else:
             logging.info("Warning: The session has already been ended.")
 
