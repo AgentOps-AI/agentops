@@ -129,7 +129,7 @@ class Client:
             event (Event): The event to record.
         """
 
-        if not self._session is None and not self._session.has_ended:
+        if not self._session is None:
             self._worker.add_event(
                 {'session_id': self._session.session_id, **event.__dict__})
         else:
@@ -301,16 +301,14 @@ class Client:
         """
         if self._session is None:
             return print("Session has already been ended.")
-        if not self._session.has_ended:
-            self._session.video = video
-            self._session.end_session(end_state, rating, end_state_reason)
-            self._worker.end_session(self._session)
-            # self._session = None
-        else:
-            logging.info("Warning: The session has already been ended.")
+
+        self._session.video = video
+        self._session.end_session(end_state, rating, end_state_reason)
+        self._worker.end_session(self._session)
+        # self._session = None
 
     def cleanup(self, end_state_reason: Optional[str] = None):
         # Only run cleanup function if session is created
-        if hasattr(self, "session") and not self._session.has_ended:
+        if hasattr(self, "session"):
             self.end_session(end_state='Fail',
                              end_state_reason=end_state_reason)
