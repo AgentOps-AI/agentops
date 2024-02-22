@@ -60,4 +60,4 @@ class Session:
         Returns:
             bool: Whether the session has been ended
         """
-        return hasattr(self, "end_state")
+        return self.end_state is not None
