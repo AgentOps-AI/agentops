@@ -71,10 +71,10 @@ class Client:
         # Override sys.excepthook
         sys.excepthook = self.handle_exception
 
+        self._session = None
         if not bypass_new_session:
             self.start_session(tags)
         else:
-            self._session = None
             self._worker = None
             self._tags = tags
 
