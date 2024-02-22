@@ -116,6 +116,26 @@ class Client:
                          end_state_reason=f'Signal {signal_name} detected')
         sys.exit(0)
 
+    def add_tags(self, tags: List[str]):
+        if self._session is None:
+            return print("You must create a session before assigning tags")
+
+        if self._tags is not None:
+            self._tags.extend(tags)
+        else:
+            self._tags = tags
+
+        self._session.tags = self._tags
+        self._worker.update_session(self._session)
+
+    def set_tags(self, tags: List[str]):
+        if self._session is None:
+            return print("You must create a session before assigning tags")
+
+        self._tags = tags
+        self._session.tags = tags
+        self._worker.update_session(self._session)
+
     def record(self, event: Event):
         """
         Record an event with the AgentOps service.
@@ -124,7 +144,7 @@ class Client:
             event (Event): The event to record.
         """
 
-        if not self._session is None:
+        if not self._session is None and not self._session.has_ended:
             self._worker.add_event(
                 {'session_id': self._session.session_id, **event.__dict__})
         else:
@@ -156,26 +176,6 @@ class Client:
                 return sync_wrapper
 
         return decorator
-
-    def add_tags(self, tags: List[str]):
-        if self._session is None:
-            return print("You must create a session before assigning tags")
-
-        if self._tags is not None:
-            self._tags.extend(tags)
-        else:
-            self._tags = tags
-
-        self._session.tags = self._tags
-        self._worker.update_session(self._session)
-
-    def set_tags(self, tags: List[str]):
-        if self._session is None:
-            return print("You must create a session before assigning tags")
-
-        self._tags = tags
-        self._session.tags = tags
-        self._worker.update_session(self._session)
 
     def _record_event_sync(self, func, event_name, tags, *args, **kwargs):
         init_time = get_ISO_time()
@@ -294,7 +294,7 @@ class Client:
             end_state_reason (str, optional): The reason for ending the session.
             video (str, optional): The video screen recording of the session
         """
-        if self._session is None:
+        if self._session is None or self._session.has_ended:
             return print("Session has already been ended.")
 
         self._session.video = video
