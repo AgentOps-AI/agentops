@@ -1,5 +1,6 @@
 from enum import Enum
 from typing import Optional
+import logging
 import requests
 from requests.adapters import Retry, HTTPAdapter
 
@@ -14,6 +15,7 @@ retry_config = Retry(total=5, backoff_factor=0.1)
 class HttpStatus(Enum):
     SUCCESS = 200
     INVALID_REQUEST = 400
+    INVALID_API_KEY = 401
     TIMEOUT = 408
     PAYLOAD_TOO_LARGE = 413
     TOO_MANY_REQUESTS = 429
@@ -47,6 +49,8 @@ class Response:
             return HttpStatus.PAYLOAD_TOO_LARGE
         elif code == 408:
             return HttpStatus.TIMEOUT
+        elif code == 401:
+            return HttpStatus.INVALID_API_KEY
         elif 400 <= code < 500:
             return HttpStatus.INVALID_REQUEST
         elif code >= 500:
@@ -74,6 +78,8 @@ class HttpClient:
         except requests.exceptions.Timeout:
             result.code = 408
             result.status = HttpStatus.TIMEOUT
+            logging.warn(
+                'AgentOps: Could not post data - connection timed out')
         except requests.exceptions.HTTPError as e:
             try:
                 result.parse(e.response)
@@ -84,4 +90,11 @@ class HttpClient:
                 result.body = {'error': str(e)}
         except requests.exceptions.RequestException as e:
             result.body = {'error': str(e)}
+
+        if result.code == 401:
+            logging.warn(
+                'AgentOps: Could not post data - API server rejected your API key')
+        if result.code == 400:
+            logging.warn(f'AgentOps: Could not post data - {result.body}')
+
         return result
