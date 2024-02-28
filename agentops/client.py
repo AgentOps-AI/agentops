@@ -42,79 +42,35 @@ class Client:
 
     def __init__(self, api_key: Optional[str] = None,
                  tags: Optional[List[str]] = None,
-                 endpoint: Optional[str] = 'https://agentops-server-v2.fly.dev',
+                 endpoint: Optional[str] = 'https://api.agentops.ai',
                  max_wait_time: Optional[int] = 1000,
                  max_queue_size: Optional[int] = 100,
                  override=True,
-                 bypass_new_session=False
+                 auto_start_session=True
                  ):
 
-        # Get API key from env
-        if api_key is None:
-            api_key = environ.get('AGENTOPS_API_KEY')
-
-        if api_key is None:
-            print("AgentOps API key not provided. Session data will not be recorded.")
-
-        # Create a worker config
-        self.config = Configuration(api_key, endpoint,
-                                    max_wait_time, max_queue_size)
-
-        # Store a reference to the instance
-        Client._instance = self
-        atexit.register(lambda: self.cleanup())
-
-        # Register signal handler for SIGINT (Ctrl+C) and SIGTERM
-        signal.signal(signal.SIGINT, self.signal_handler)
-        signal.signal(signal.SIGTERM, self.signal_handler)
-
-        # Override sys.excepthook
-        sys.excepthook = self.handle_exception
-
         self._session = None
-        if not bypass_new_session:
+        self._worker = None
+        self._tags = tags
+        self.config = None
+
+        if not api_key and not environ.get('AGENTOPS_API_KEY'):
+            return logging.warn("AgentOps: No API key provided. No data will be recorded.")
+
+        self.config = Configuration(api_key or environ.get('AGENTOPS_API_KEY'),
+                                    endpoint,
+                                    max_wait_time,
+                                    max_queue_size)
+
+        self._handle_unclean_exits()
+
+        if auto_start_session:
             self.start_session(tags)
-        else:
-            self._worker = None
-            self._tags = tags
 
         if override:
             if 'openai' in sys.modules:
                 self.llm_tracker = LlmTracker(self)
                 self.llm_tracker.override_api('openai')
-
-    def handle_exception(self, exc_type, exc_value, exc_traceback):
-        """
-        Handle uncaught exceptions before they result in program termination.
-
-        Args:
-            exc_type (Type[BaseException]): The type of the exception.
-            exc_value (BaseException): The exception instance.
-            exc_traceback (TracebackType): A traceback object encapsulating the call stack at the point where the exception originally occurred.
-        """
-        formatted_traceback = ''.join(traceback.format_exception(exc_type, exc_value,
-                                                                 exc_traceback))
-
-        # Perform cleanup)
-        self.cleanup(
-            end_state_reason=f"{str(exc_value)}: {formatted_traceback}")
-
-        # Then call the default excepthook to exit the program
-        sys.__excepthook__(exc_type, exc_value, exc_traceback)
-
-    def signal_handler(self, signum, frame):
-        """
-        Signal handler for SIGINT (Ctrl+C) and SIGTERM. Ends the session and exits the program.
-
-        Args:
-            signum (int): The signal number.
-            frame: The current stack frame.
-        """
-        signal_name = 'SIGINT' if signum == signal.SIGINT else 'SIGTERM'
-        logging.info(f'Signal {signal_name} detected. Ending session...')
-        self.end_session(end_state='Fail',
-                         end_state_reason=f'Signal {signal_name} detected')
-        sys.exit(0)
 
     def add_tags(self, tags: List[str]):
         if self._session is None:
@@ -148,10 +104,9 @@ class Client:
             self._worker.add_event(
                 {'session_id': self._session.session_id, **event.__dict__})
         else:
-            logging.info("This event was not recorded because the previous session has been ended" +
-                         " Start a new session to record again.")
+            logging.warn("AgentOps: Cannot record event - no current session")
 
-    def record_action(self, event_name: str, tags: Optional[List[str]] = None):
+    def record_function(self, event_name: str, tags: Optional[List[str]] = None):
         """
         Decorator to record an event before and after a function call.
         Usage:
@@ -264,7 +219,7 @@ class Client:
 
         return returns
 
-    def start_session(self, tags: Optional[List[str]] = None):
+    def start_session(self, tags: Optional[List[str]] = None, config: Optional[Configuration] = None):
         """
         Start a new session for recording events.
 
@@ -273,10 +228,13 @@ class Client:
                 e.g. ["test_run"].
         """
         if self._session is not None:
-            return print("Session already started. End this session before starting a new one.")
+            return logging.warn("AgentOps: Cannot start session - Session already started")
+
+        if not config and not self.config:
+            return logging.warn("AgentOps: Cannot start session - missing configuration")
 
         self._session = Session(str(uuid4()), tags or self._tags)
-        self._worker = Worker(self.config)
+        self._worker = Worker(config or self.config)
         self._worker.start_session(self._session)
 
     def end_session(self, end_state: str = Field("Indeterminate",
@@ -295,15 +253,55 @@ class Client:
             video (str, optional): The video screen recording of the session
         """
         if self._session is None or self._session.has_ended:
-            return print("Session has already been ended.")
+            return logging.warn("AgentOps: Cannot end session - no current session")
 
         self._session.video = video
         self._session.end_session(end_state, rating, end_state_reason)
         self._worker.end_session(self._session)
-        # self._session = None
+        self._session = None
+        self._worker = None
 
-    def cleanup(self, end_state_reason: Optional[str] = None):
-        # Only run cleanup function if session is created
-        if hasattr(self, "session"):
+    def _handle_unclean_exits(self):
+        def cleanup(end_state_reason: Optional[str] = None):
+            # Only run cleanup function if session is created
+            if self._session is not None:
+                self.end_session(end_state='Fail',
+                                 end_state_reason=end_state_reason)
+
+        def signal_handler(signum, frame):
+            """
+            Signal handler for SIGINT (Ctrl+C) and SIGTERM. Ends the session and exits the program.
+
+            Args:
+                signum (int): The signal number.
+                frame: The current stack frame.
+            """
+            signal_name = 'SIGINT' if signum == signal.SIGINT else 'SIGTERM'
+            logging.info(f'Signal {signal_name} detected. Ending session...')
             self.end_session(end_state='Fail',
-                             end_state_reason=end_state_reason)
+                             end_state_reason=f'Signal {signal_name} detected')
+            sys.exit(0)
+
+        def handle_exception(exc_type, exc_value, exc_traceback):
+            """
+            Handle uncaught exceptions before they result in program termination.
+
+            Args:
+                exc_type (Type[BaseException]): The type of the exception.
+                exc_value (BaseException): The exception instance.
+                exc_traceback (TracebackType): A traceback object encapsulating the call stack at the point where the exception originally occurred.
+            """
+            formatted_traceback = ''.join(traceback.format_exception(exc_type, exc_value,
+                                                                     exc_traceback))
+
+            # Perform cleanup
+            cleanup(
+                end_state_reason=f"{str(exc_value)}: {formatted_traceback}")
+
+            # Then call the default excepthook to exit the program
+            sys.__excepthook__(exc_type, exc_value, exc_traceback)
+
+        atexit.register(lambda: cleanup())
+        signal.signal(signal.SIGINT, signal_handler)
+        signal.signal(signal.SIGTERM, signal_handler)
+        sys.excepthook = handle_exception

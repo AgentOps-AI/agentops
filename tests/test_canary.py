@@ -8,7 +8,7 @@ from agentops import Client, Event
 @pytest.fixture
 def mock_req():
     with requests_mock.Mocker() as m:
-        url = 'https://agentops-server-v2.fly.dev'
+        url = 'https://api.agentops.ai'
         m.post(url + '/events', text='ok')
         m.post(url + '/sessions', text='ok')
         yield m
@@ -16,7 +16,7 @@ def mock_req():
 
 class TestCanary:
     def setup_method(self):
-        self.url = 'https://agentops-server-v2.fly.dev'
+        self.url = 'https://api.agentops.ai'
         self.api_key = "random_api_key"
         self.client = Client(api_key=self.api_key, max_wait_time=5)
 

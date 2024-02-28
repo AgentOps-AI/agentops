@@ -10,7 +10,7 @@ from agentops import Client, Event
 @pytest.fixture
 def mock_req():
     with requests_mock.Mocker() as m:
-        url = 'https://agentops-server-v2.fly.dev'
+        url = 'https://api.agentops.ai'
         m.post(url + '/events', text='ok')
         m.post(url + '/sessions', text='ok')
         yield m
@@ -85,7 +85,7 @@ class TestSessions:
 
 class TestRecordAction:
     def setup_method(self):
-        self.url = 'https://agentops-server-v2.fly.dev'
+        self.url = 'https://api.agentops.ai'
         self.api_key = "random_api_key"
         self.event_type = 'test_event_type'
         self.client = Client(self.api_key, max_wait_time=5)
@@ -93,8 +93,8 @@ class TestRecordAction:
     def teardown_method(self):
         self.client.end_session(end_state='Success')
 
-    def test_record_action_decorator(self, mock_req):
-        @self.client.record_action(event_name=self.event_type, tags=['foo', 'bar'])
+    def test_record_function_decorator(self, mock_req):
+        @self.client.record_function(event_name=self.event_type, tags=['foo', 'bar'])
         def add_two(x, y):
             return x + y
 
@@ -112,9 +112,9 @@ class TestRecordAction:
         assert request_json['events'][0]['result'] == 'Success'
         assert request_json['events'][0]['tags'] == ['foo', 'bar']
 
-    def test_record_action_decorator_multiple(self, mock_req):
+    def test_record_function_decorator_multiple(self, mock_req):
         # Arrange
-        @self.client.record_action(event_name=self.event_type, tags=['foo', 'bar'])
+        @self.client.record_function(event_name=self.event_type, tags=['foo', 'bar'])
         def add_three(x, y, z=3):
             return x + y + z
 
@@ -135,7 +135,7 @@ class TestRecordAction:
     @pytest.mark.asyncio
     async def test_async_function_call(self, mock_req):
 
-        @self.client.record_action(self.event_type)
+        @self.client.record_function(self.event_type)
         async def async_add(x, y):
             time.sleep(0.1)
             return x + y
@@ -165,7 +165,7 @@ class TestRecordAction:
         # Arrange
         prompt = 'prompt'
 
-        @self.client.record_action(event_name=self.event_type)
+        @self.client.record_function(event_name=self.event_type)
         def foo(prompt=prompt):
             return 'output'
 
@@ -185,7 +185,7 @@ class TestRecordAction:
         # Arrange
         prompt = 'prompt'
 
-        @self.client.record_action(event_name=self.event_type)
+        @self.client.record_function(event_name=self.event_type)
         def llm_call(prompt=prompt):
             return 'output'
 
