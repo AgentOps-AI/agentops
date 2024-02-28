@@ -4,32 +4,26 @@ AgentOps events.
 Classes:
     Event: Represents discrete events to be recorded.
 """
+from abc import ABC, abstractmethod
 from .helpers import get_ISO_time, Models
 from typing import Optional, List, Dict, Any
-from pydantic import Field
+from enum import EventType, Result, ActionType
 
-
-class Event:
+class Event(ABC):
     """
     Represents a discrete event to be recorded.
     """
 
-    def __init__(self, event_type: str,
+    def __init__(self, event_type: EventType = EventType.action,
                  params: Optional[Dict[str, Any]] = None,
                  returns: Optional[Dict[str, Any]] = None,
-                 result: str = Field("Indeterminate",
-                                     description="Result of the operation",
-                                     pattern="^(Success|Fail|Indeterminate)$"),
-                 action_type: Optional[str] = Field("action",
-                                                    description="Type of action that the user is recording",
-                                                    pattern="^(action|api|llm|screenshot|tool|error)$"),
+                 result: Result = Result.Indeterminate,
+                 action_type: ActionType = ActionType.action,
                  model: Optional[Models] = None,
                  prompt: Optional[str] = None,
                  tags: Optional[List[str]] = None,
                  init_timestamp: Optional[str] = None,
                  screenshot: Optional[str] = None,
-                 prompt_tokens: Optional[int] = None,
-                 completion_tokens: Optional[int] = None
                  ):
         self.event_type = event_type
         self.params = params
@@ -42,9 +36,9 @@ class Event:
         self.end_timestamp = get_ISO_time()
         self.init_timestamp = init_timestamp if init_timestamp else self.end_timestamp
         self.screenshot = screenshot
-        self.prompt_tokens = prompt_tokens
-        self.completion_tokens = completion_tokens
 
+
+    @abstractmethod
     def __str__(self):
         return str({
             "event_type": self.event_type,
