@@ -55,7 +55,7 @@ class Client:
         self.config = None
 
         if not api_key and not environ.get('AGENTOPS_API_KEY'):
-            return logging.warn("AgentOps: No API key provided. No data will be recorded.")
+            return logging.warn("AgentOps: No API key provided - no data will be recorded.")
 
         self.config = Configuration(api_key or environ.get('AGENTOPS_API_KEY'),
                                     endpoint,
