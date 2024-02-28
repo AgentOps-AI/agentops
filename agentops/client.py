@@ -30,10 +30,13 @@ class Client:
     Client for AgentOps service.
 
     Args:
-        api_key (str, optional): API Key for AgentOps services. If none is provided, key will be read from the AGENTOPS_API_KEY environment variable.
-        tags (List[str], optional): Tags for the sessions that can be used for grouping or sorting later (e.g. ["GPT-4"]).
-        endpoint (str, optional): The endpoint for the AgentOps service. Defaults to 'https://agentops-server-v2.fly.dev'.
-        max_wait_time (int, optional): The maximum time to wait in milliseconds before flushing the queue. Defaults to 1000.
+        api_key (str, optional): API Key for AgentOps services. If none is provided, key will 
+            be read from the AGENTOPS_API_KEY environment variable.
+        tags (List[str], optional): Tags for the sessions that can be used for grouping or 
+            sorting later (e.g. ["GPT-4"]).
+        endpoint (str, optional): The endpoint for the AgentOps service. Defaults to 'https://api.agentops.ai'.
+        max_wait_time (int, optional): The maximum time to wait in milliseconds before flushing the queue. 
+            Defaults to 1000.
         max_queue_size (int, optional): The maximum size of the event queue. Defaults to 100.
         override (bool): Whether to override and LLM calls to emit as events.
     Attributes:
@@ -274,7 +277,8 @@ class Client:
                 frame: The current stack frame.
             """
             signal_name = 'SIGINT' if signum == signal.SIGINT else 'SIGTERM'
-            logging.info(f'Signal {signal_name} detected. Ending session...')
+            logging.info(
+                f'AgentOps: {signal_name} detected. Ending session...')
             self.end_session(end_state='Fail',
                              end_state_reason=f'Signal {signal_name} detected')
             sys.exit(0)
@@ -286,7 +290,8 @@ class Client:
             Args:
                 exc_type (Type[BaseException]): The type of the exception.
                 exc_value (BaseException): The exception instance.
-                exc_traceback (TracebackType): A traceback object encapsulating the call stack at the point where the exception originally occurred.
+                exc_traceback (TracebackType): A traceback object encapsulating the call stack at the 
+                                               point where the exception originally occurred.
             """
             formatted_traceback = ''.join(traceback.format_exception(exc_type, exc_value,
                                                                      exc_traceback))
