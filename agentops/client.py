@@ -228,7 +228,7 @@ class Client:
                 e.g. ["test_run"].
         """
         if self._session is not None:
-            return logging.warn("AgentOps: Cannot start session - Session already started")
+            return logging.warn("AgentOps: Cannot start session - session already started")
 
         if not config and not self.config:
             return logging.warn("AgentOps: Cannot start session - missing configuration")
