@@ -5,6 +5,7 @@ from .http import HttpClient
 from .config import Configuration
 from .session import Session
 from typing import Dict
+from .helpers import safe_serialize
 
 
 def is_jsonable(x):
@@ -25,17 +26,6 @@ def filter_unjsonable(d: dict) -> dict:
             return obj if is_jsonable(obj) else ""
 
     return filter_dict(d)
-
-
-def safe_serialize(obj):
-    def default(o):
-        if hasattr(o, 'model_dump_json'):
-            return o.model_dump_json()
-        elif hasattr(o, 'to_json'):
-            return o.to_json()
-        else:
-            return f"<<non-serializable: {type(o).__qualname__}>>"
-    return json.dumps(obj, default=default)
 
 
 class Worker:

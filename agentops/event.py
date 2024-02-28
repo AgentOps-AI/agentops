@@ -29,7 +29,8 @@ class Event:
                  init_timestamp: Optional[str] = None,
                  screenshot: Optional[str] = None,
                  prompt_tokens: Optional[int] = None,
-                 completion_tokens: Optional[int] = None
+                 completion_tokens: Optional[int] = None,
+                 agent_id: Optional[str] = None
                  ):
         self.event_type = event_type
         self.params = params
@@ -44,6 +45,7 @@ class Event:
         self.screenshot = screenshot
         self.prompt_tokens = prompt_tokens
         self.completion_tokens = completion_tokens
+        self.agent_id = agent_id
 
     def __str__(self):
         return str({
@@ -59,4 +61,5 @@ class Event:
             "init_timestamp": self.init_timestamp,
             "prompt_tokens": self.prompt_tokens,
             "completion_tokens": self.completion_tokens,
+            "agent_id": self.agent_id
         })

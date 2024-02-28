@@ -4,7 +4,7 @@ AgentOps client module that provides a client class with public interfaces and c
 Classes:
     Client: Provides methods to interact with the AgentOps service.
 """
-
+from .agent import Agent
 from .event import Event
 from .helpers import get_ISO_time
 from .session import Session
@@ -36,6 +36,8 @@ class Client:
         max_wait_time (int, optional): The maximum time to wait in milliseconds before flushing the queue. Defaults to 1000.
         max_queue_size (int, optional): The maximum size of the event queue. Defaults to 100.
         override (bool): Whether to override and LLM calls to emit as events.
+        use_named_agents (bool): To use the AgentOps Agent class for agent specific reporting, this must be True.
+        bypass_new_session (bool): Do not create an AgentOps session on init. Must be manually created later.
     Attributes:
         _session (Session, optional): A Session is a grouping of events (e.g. a run of your agent).
     """
@@ -46,6 +48,7 @@ class Client:
                  max_wait_time: Optional[int] = 1000,
                  max_queue_size: Optional[int] = 100,
                  override=True,
+                 use_named_agents=False,
                  bypass_new_session=False
                  ):
 
@@ -78,7 +81,7 @@ class Client:
             self._worker = None
             self._tags = tags
 
-        if override:
+        if override and not use_named_agents:
             if 'openai' in sys.modules:
                 self.llm_tracker = LlmTracker(self)
                 self.llm_tracker.override_api('openai')
@@ -144,7 +147,7 @@ class Client:
             event (Event): The event to record.
         """
 
-        if not self._session is None and not self._session.has_ended:
+        if self._session is not None and not self._session.has_ended:
             self._worker.add_event(
                 {'session_id': self._session.session_id, **event.__dict__})
         else:
@@ -263,6 +266,11 @@ class Client:
             raise
 
         return returns
+
+    # TODO: allow the developer to select which LLM provider
+    def create_agent(self, name: str):
+        agent = Agent(self.config, self, name, self._session.session_id)
+        return agent
 
     def start_session(self, tags: Optional[List[str]] = None):
         """

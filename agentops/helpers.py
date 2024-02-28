@@ -26,3 +26,13 @@ class Models(Enum):
     GPT_4_32K_0314 = "gpt-4-32k-0314"
     GPT_4_0613 = "gpt-4-0613"
     TEXT_EMBEDDING_ADA_002 = "text-embedding-ada-002"
+
+def safe_serialize(obj):
+    def default(o):
+        if hasattr(o, 'model_dump_json'):
+            return o.model_dump_json()
+        elif hasattr(o, 'to_json'):
+            return o.to_json()
+        else:
+            return f"<<non-serializable: {type(o).__qualname__}>>"
+    return json.dumps(obj, default=default)

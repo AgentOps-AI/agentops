@@ -228,7 +228,7 @@ class LlmTracker:
             result = original_create(*args, **kwargs)
             return self._handle_response_v1_openai(result, kwargs, init_timestamp)
 
-      # Override the original method with the patched one
+        # Override the original method with the patched one
         completions.Completions.create = patched_function
 
     def override_openai_v1_async_completion(self):
