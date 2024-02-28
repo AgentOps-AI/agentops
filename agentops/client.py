@@ -73,24 +73,21 @@ class Client:
                 self.llm_tracker.override_api('openai')
 
     def add_tags(self, tags: List[str]):
-        if self._session is None:
-            return print("You must create a session before assigning tags")
-
         if self._tags is not None:
             self._tags.extend(tags)
         else:
             self._tags = tags
 
-        self._session.tags = self._tags
-        self._worker.update_session(self._session)
+        if self._session is not None:
+            self._session.tags = self._tags
+            self._worker.update_session(self._session)
 
     def set_tags(self, tags: List[str]):
-        if self._session is None:
-            return print("You must create a session before assigning tags")
-
         self._tags = tags
-        self._session.tags = tags
-        self._worker.update_session(self._session)
+
+        if self._session is not None:
+            self._session.tags = tags
+            self._worker.update_session(self._session)
 
     def record(self, event: Event):
         """
