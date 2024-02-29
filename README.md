@@ -1,13 +1,28 @@
-# AgentOps 🕵️
+<div align="center">
+  <img src="logo.png" style="margin: 15px; max-width: 300px" width="50%" alt="Logo">
+  <div>
+    <a href="https://docs.agentops.ai/introduction">Documentation</a> |
+    <a href="https://discord.gg/mKW3ZhN9p2">Discord</a>
+    <p><i>AI agents suck. We’re fixing that.</i></p>
+  </div>
+</div>
 
-AI agents suck. We’re fixing that.
 
 Build your next agent with benchmarks, observability, and replay analytics. AgentOps is the toolkit for evaluating and developing robust and reliable AI agents.
 
 AgentOps is open beta. You can sign up for AgentOps [here](https://app.agentops.ai).
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT) ![PyPI - Version](https://img.shields.io/pypi/v/agentops)
-
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT) ![PyPI - Version](https://img.shields.io/pypi/v/agentops) <a href="https://pepy.tech/project/agentops">
+  <img src="https://static.pepy.tech/badge/agentops/month"> <a href="https://twitter.com/agentopsai">
+    <img src="https://img.shields.io/badge/follow-%40agentops-1DA1F2?logo=twitter&style=social" alt="AgentOps Twitter" /> 
+  </a>
+<a href="https://discord.gg/mKW3ZhN9p2">
+    <img src="https://img.shields.io/badge/chat-on%20Discord-blueviolet" alt="Discord community channel" />
+  </a>
+  <a href="mailto:investor@agentops.ai"><img src="https://img.shields.io/website?color=%23f26522&down_message=Y%20Combinator&label=Not%20Backed%20By&logo=ycombinator&style=flat-square&up_message=Y%20Combinator&url=https%3A%2F%2Fwww.ycombinator.com"></a>
+<a href="https://github.com/agentops-ai/agentops/issues">
+    <img src="https://img.shields.io/github/commit-activity/m/agentops-ai/agentops" alt="git commit activity" />
+  </a>
 ## Quick Start ⌨️
 
 ```pip install agentops```
