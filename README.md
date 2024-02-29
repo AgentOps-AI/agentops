@@ -19,7 +19,7 @@ AgentOps is open beta. You can sign up for AgentOps [here](https://app.agentops.
 <a href="https://discord.gg/mKW3ZhN9p2">
     <img src="https://img.shields.io/badge/chat-on%20Discord-blueviolet" alt="Discord community channel" />
   </a>
-  <a href="https://youtu.be/dQw4w9WgXcQ"><img src="https://img.shields.io/website?color=%23f26522&down_message=Y%20Combinator&label=Not%20Backed%20By&logo=ycombinator&style=flat-square&up_message=Y%20Combinator&url=https%3A%2F%2Fwww.ycombinator.com"></a>
+  <a href="mailto:investor@agentops.ai"><img src="https://img.shields.io/website?color=%23f26522&down_message=Y%20Combinator&label=Not%20Backed%20By&logo=ycombinator&style=flat-square&up_message=Y%20Combinator&url=https%3A%2F%2Fwww.ycombinator.com"></a>
 <a href="https://github.com/agentops-ai/agentops/issues">
     <img src="https://img.shields.io/github/commit-activity/m/agentops-ai/agentops" alt="git commit activity" />
   </a>
