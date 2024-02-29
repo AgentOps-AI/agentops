@@ -1,5 +1,5 @@
 <div align="center">
-  <img src="logo.png" style="margin: 15px;" width="50%" alt="Logo">
+  <img src="logo.png" style="margin: 15px; max-width: 300px" width="50%" alt="Logo">
   <div>
     <a href="https://docs.agentops.ai/introduction">Documentation</a> |
     <a href="https://discord.gg/mKW3ZhN9p2">Discord</a>
