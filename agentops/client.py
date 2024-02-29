@@ -78,7 +78,8 @@ class Client:
 
         self._session = None
         if not bypass_new_session:
-            self.start_session(tags)
+            self._tags = tags
+            self.start_session()
         else:
             self._worker = None
             self._tags = tags
