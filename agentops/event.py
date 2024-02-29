@@ -9,7 +9,6 @@ from dataclasses import dataclass, field
 from typing import List, Optional
 from .helpers import get_ISO_time
 from .enums import EventType, Models
-from uuid import UUID
 
 
 @dataclass
