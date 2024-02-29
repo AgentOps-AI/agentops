@@ -1,14 +1,15 @@
-from . import Event
+from .event import Event
 from .http import HttpClient
-from .helpers import safe_serialize, get_ISO_time
+from .helpers import safe_serialize, get_ISO_time, Providers
 from openai.resources.chat.completions import Completions
 from openai import Stream, AsyncStream
 from openai.types.chat import ChatCompletionChunk
 from openai.resources import AsyncCompletions
+import openai
 
 
 class Agent:
-    def __init__(self, config, client, name: str, session_id: str):
+    def __init__(self, config, client, name: str, session_id: str, provider: Providers = Providers.OPEN_AI):
         self.config = config
         self.name = name
         self._session_id = session_id
@@ -17,7 +18,8 @@ class Agent:
 
         payload = {
             "name": name,
-            "session_id": session_id
+            "session_id": session_id,
+            "provider": provider
         }
 
         serialized_payload = \
@@ -29,13 +31,19 @@ class Agent:
         # TODO: when we have internal logs, track any non-200 response here
         self.id = res.body.get('id')
 
+        self.chat_completion_original = None
+        if provider == Providers.OPEN_AI:
+            self.chat_completion_original = openai.chat.completions.create
+        else:
+            raise Exception('Unknown LLM provider {}'.format(provider))
+
     def chat_completion(self, *args, **kwargs):
         init_timestamp = get_ISO_time()
 
         """Handle responses for OpenAI versions >v1.0.0"""
 
-        response = Completions.create(*args, **kwargs)
-        event_stream = None
+        response = self.chat_completion_original(*args, **kwargs)
+        # response = Completions.create(*args, **kwargs)
 
         def handle_stream_chunk(chunk: ChatCompletionChunk):
             try:
