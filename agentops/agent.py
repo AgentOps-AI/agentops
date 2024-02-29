@@ -1,7 +1,6 @@
 from .event import Event
 from .http import HttpClient
 from .helpers import safe_serialize, get_ISO_time, Providers
-from openai.resources.chat.completions import Completions
 from openai import Stream, AsyncStream
 from openai.types.chat import ChatCompletionChunk
 from openai.resources import AsyncCompletions
@@ -32,6 +31,7 @@ class Agent:
         self.id = res.body.get('id')
 
         self.chat_completion_original = None
+        self.async_chat_completion_original = None
         if provider == Providers.OPEN_AI:
             self.chat_completion_original = openai.chat.completions.create
         else:
@@ -45,53 +45,11 @@ class Agent:
         response = self.chat_completion_original(*args, **kwargs)
         # response = Completions.create(*args, **kwargs)
 
-        def handle_stream_chunk(chunk: ChatCompletionChunk):
-            try:
-                model = chunk.model
-                choices = chunk.choices
-                token = choices[0].delta.content
-                finish_reason = choices[0].finish_reason
-                function_call = choices[0].delta.function_call
-                tool_calls = choices[0].delta.tool_calls
-                role = choices[0].delta.role
-
-                if self.event_stream == None:
-                    self.event_stream = Event(
-                        event_type='openai chat completion stream',
-                        params=kwargs,
-                        result='Success',
-                        returns={"finish_reason": None,
-                                 "content": token},
-                        action_type='llm',
-                        model=model,
-                        prompt=kwargs["messages"],
-                        init_timestamp=init_timestamp
-                    )
-                else:
-                    if token == None:
-                        token = ''
-                    self.event_stream.returns['content'] += token
-
-                if finish_reason:
-                    if not self.event_stream.returns:
-                        self.event_stream.returns = {}
-                    self.event_stream.returns['finish_reason'] = finish_reason
-                    self.event_stream.returns['function_call'] = function_call
-                    self.event_stream.returns['tool_calls'] = tool_calls
-                    self.event_stream.returns['role'] = role
-                    # Update end_timestamp
-                    self.event_stream.end_timestamp = get_ISO_time()
-                    self.client.record(self.event_stream)
-                    self.event_stream = None
-            except Exception as e:
-                print(
-                    f"Unable to parse a chunk for LLM call {kwargs} - skipping upload to AgentOps")
-
         # if the response is a generator, decorate the generator
         if isinstance(response, Stream):
             def generator():
                 for chunk in response:
-                    handle_stream_chunk(chunk)
+                    self._handle_stream_chunk(chunk, init_timestamp, **kwargs)
                     yield chunk
 
             return generator()
@@ -100,7 +58,7 @@ class Agent:
         elif isinstance(response, AsyncStream):
             async def async_generator():
                 async for chunk in response:
-                    handle_stream_chunk(chunk)
+                    self._handle_stream_chunk(chunk, init_timestamp, **kwargs)
                     yield chunk
 
             return async_generator()
@@ -109,7 +67,7 @@ class Agent:
         elif isinstance(response, AsyncCompletions):
             async def async_generator():
                 async for chunk in response:
-                    handle_stream_chunk(chunk)
+                    self._handle_stream_chunk(chunk, init_timestamp, **kwargs)
                     yield chunk
 
             return async_generator()
@@ -137,3 +95,45 @@ class Agent:
                 f"Unable to parse a chunk for LLM call {kwargs} - skipping upload to AgentOps")
 
         return response
+
+    def _handle_stream_chunk(self, chunk: ChatCompletionChunk, init_timestamp, **kwargs) -> None:
+        try:
+            model = chunk.model
+            choices = chunk.choices
+            token = choices[0].delta.content
+            finish_reason = choices[0].finish_reason
+            function_call = choices[0].delta.function_call
+            tool_calls = choices[0].delta.tool_calls
+            role = choices[0].delta.role
+
+            if self.event_stream == None:
+                self.event_stream = Event(
+                    event_type='openai chat completion stream',
+                    params=kwargs,
+                    result='Success',
+                    returns={"finish_reason": None,
+                             "content": token},
+                    action_type='llm',
+                    model=model,
+                    prompt=kwargs["messages"],
+                    init_timestamp=init_timestamp
+                )
+            else:
+                if token == None:
+                    token = ''
+                self.event_stream.returns['content'] += token
+
+            if finish_reason:
+                if not self.event_stream.returns:
+                    self.event_stream.returns = {}
+                self.event_stream.returns['finish_reason'] = finish_reason
+                self.event_stream.returns['function_call'] = function_call
+                self.event_stream.returns['tool_calls'] = tool_calls
+                self.event_stream.returns['role'] = role
+                # Update end_timestamp
+                self.event_stream.end_timestamp = get_ISO_time()
+                self.client.record(self.event_stream)
+                self.event_stream = None
+        except Exception as e:
+            print(
+                f"Unable to parse a chunk for LLM call {kwargs} - skipping upload to AgentOps")
