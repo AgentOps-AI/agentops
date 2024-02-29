@@ -56,6 +56,7 @@ class Client:
         self._worker = None
         self._tags = tags
         self.config = None
+        self._uses_named_agents = use_named_agents
 
         if not api_key and not environ.get('AGENTOPS_API_KEY'):
             return logging.warn("AgentOps: No API key provided - no data will be recorded.")
@@ -223,7 +224,10 @@ class Client:
         return returns
 
     # TODO: allow the developer to select which LLM provider
-    def create_agent(self, name: str):
+    def create_agent(self, name: str) -> Agent:
+        if not self._uses_named_agents:
+            raise Exception("To use named agents, the AgentOps client must be initialized with the optional "
+                            "parameter: uses_named_agents=True")
         agent = Agent(self.config, self, name, self._session.session_id)
         return agent
 
