@@ -7,7 +7,7 @@ Classes:
 from abc import ABC, abstractmethod
 from .helpers import get_ISO_time
 from typing import Optional, List
-from enum import EventType
+from .enums import EventType
 
 
 class Event(ABC):
@@ -15,7 +15,7 @@ class Event(ABC):
     Represents a discrete event to be recorded.
     """
 
-    def __init__(self, event_type: EventType = EventType.action,
+    def __init__(self, event_type: EventType = EventType.ACTION,
                  tags: Optional[List[str]] = None,
                  init_timestamp: Optional[str] = None,
                  ):

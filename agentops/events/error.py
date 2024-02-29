@@ -4,7 +4,7 @@ from typing import Optional
 
 class ErrorEvent(Event):
     def __init__(self, error_type: Optional[str] = None, code: Optional[str] = None, details: Optional[str] = None, logs: Optional[str] = None, **kwargs):
-        super().__init__(event_type=EventType.error, **kwargs)
+        super().__init__(event_type=EventType.ERROR, **kwargs)
         self.error_type = error_type  # TODO: type is a reserved word
         self.code = code,
         self.details = details,

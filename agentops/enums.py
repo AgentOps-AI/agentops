@@ -5,6 +5,7 @@ class EventType(Enum):
     LLM = "llm"
     ACTION = "action"
     API = "api"
+    TOOL = "tool"
     ERROR = "error"
 
 
