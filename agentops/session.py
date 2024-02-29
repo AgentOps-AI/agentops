@@ -19,7 +19,7 @@ class Session:
 
     """
 
-    def __init__(self, session_id: str, tags: Optional[List[str]] = None):
+    def __init__(self, session_id: str, tags: Optional[List[str]] = None, host_env: Optional[dict] = None):
         self.end_timestamp = None
         self.rating = None
         self.end_state = None
@@ -28,6 +28,7 @@ class Session:
         self.tags = tags
         self.video = None
         self.end_state_reason = None
+        self.host_env = host_env
 
     def set_session_video(self, video: str):
         """
