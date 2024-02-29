@@ -4,8 +4,8 @@ from uuid import UUID
 
 
 class ToolEvent(Event):
-    def __init__(self, agent_id: UUID, name: Optional[str] = None, inputs: Optional[str] = None, outputs: Optional[str] = None, logs: Optional[str] = None, **kwargs):
-        super().__init__(event_type=EventType.tool, **kwargs)
+    def __init__(self, agent_id: Optional[UUID] = None, name: Optional[str] = None, inputs: Optional[str] = None, outputs: Optional[str] = None, logs: Optional[str] = None, **kwargs):
+        super().__init__(event_type=EventType.TOOL, **kwargs)
         self.agent_id = agent_id
         self.name = name
         self.inputs = inputs

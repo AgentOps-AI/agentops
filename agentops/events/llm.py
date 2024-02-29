@@ -1,5 +1,6 @@
-from ..event import Event, EventType, Models
+from ..event import Event
 from typing import Optional, Dict, Any
+from ..enums import EventType, Models
 
 
 class LLMEvent(Event):
@@ -9,7 +10,9 @@ class LLMEvent(Event):
                  prompt_tokens: Optional[int] = None,
                  completion_tokens: Optional[int] = None,
                  **kwargs):
-        super().__init__(event_type=EventType.llm, model=model, prompt=prompt, **kwargs)
+        super().__init__(event_type=EventType.LLM, **kwargs)
+        self.model = model
+        self.prompt = prompt
         self.prompt_tokens = prompt_tokens
         self.completion_tokens = completion_tokens
 
