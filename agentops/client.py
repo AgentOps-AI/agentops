@@ -9,6 +9,7 @@ from .event import Event
 from .helpers import get_ISO_time
 from .session import Session
 from .worker import Worker
+from .host_env import get_host_env
 from uuid import uuid4
 from typing import Optional, List
 from pydantic import Field
@@ -233,7 +234,8 @@ class Client:
         if not config and not self.config:
             return logging.warn("AgentOps: Cannot start session - missing configuration")
 
-        self._session = Session(str(uuid4()), tags or self._tags)
+        self._session = Session(
+            str(uuid4()), tags or self._tags, host_env=get_host_env())
         self._worker = Worker(config or self.config)
         self._worker.start_session(self._session)
 
