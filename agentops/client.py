@@ -101,11 +101,10 @@ class Client:
             event (Event): The event to record.
         """
 
-        if not self._session is None and not self._session.has_ended:
-            self._worker.add_event(
-                {'session_id': self._session.session_id, **event.__dict__})
+        if self._session is not None and not self._session.has_ended:
+            self._worker.add_event(event.__dict__)
         else:
-            logging.warn("AgentOps: Cannot record event - no current session")
+            logging.warning("AgentOps: Cannot record event - no current session")
 
     def record_function(self, event_name: str, tags: Optional[List[str]] = None):
         """
@@ -124,11 +123,13 @@ class Client:
                 @functools.wraps(func)
                 async def async_wrapper(*args, **kwargs):
                     return await self._record_event_async(func, event_name, tags, *args, **kwargs)
+
                 return async_wrapper
             else:
                 @functools.wraps(func)
                 def sync_wrapper(*args, **kwargs):
                     return self._record_event_sync(func, event_name, tags, *args, **kwargs)
+
                 return sync_wrapper
 
         return decorator
