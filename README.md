@@ -120,3 +120,7 @@ Our mission is to bring your agent from protype to production.
 Agent developers often work with little to no visibility into agent testing performance. This means their agents never leave the lab. We're changing that. 
 
 AgentOps is the easiest way to evaluate, grade, and test agents. Is there a feature you'd like to see AgentOps cover? Just raise it in the issues tab, and we'll work on adding it to the roadmap.
+
+### Disclaimer on Error Reporting
+
+_By implementing this SDK, you acknowledge and agree that the SDK may automatically send error reports to our servers. These reports are strictly limited to information relevant for identifying and resolving issues, such as error messages, stack traces (including file paths that may include your system username), and the SDK version. Our primary aim in collecting this data is to enhance the developer experience by identifying, diagnosing, and fixing issues more efficiently. No personal information or sensitive data will be transmitted as part of these reports without your explicit consent. For more information on our data handling practices, please refer to our privacy policy._
