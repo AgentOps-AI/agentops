@@ -5,6 +5,7 @@ from .http import HttpClient
 from .config import Configuration
 from .session import Session
 from typing import Dict
+import logging
 
 
 def is_jsonable(x):
@@ -47,6 +48,7 @@ class Worker:
         self.thread = threading.Thread(target=self.run)
         self.thread.daemon = True
         self.thread.start()
+        self._session: Session | None = None
 
     def add_event(self, event: dict) -> None:
         with self.lock:
@@ -61,6 +63,7 @@ class Worker:
                 self.queue = []
 
                 payload = {
+                    "session_id": self._session.session_id,
                     "events": events
                 }
 
@@ -71,6 +74,7 @@ class Worker:
                                 self.config.api_key)
 
     def start_session(self, session: Session) -> None:
+        self._session = session
         with self.lock:
             payload = {
                 "session": session.__dict__
@@ -85,6 +89,7 @@ class Worker:
         self.stop_flag.set()
         self.thread.join()
         self.flush_queue()
+        self._session = None
 
         with self.lock:
             payload = {
