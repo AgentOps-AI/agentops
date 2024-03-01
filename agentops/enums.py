@@ -2,11 +2,11 @@ from enum import Enum
 
 
 class EventType(Enum):
-    LLM = "llm"
-    ACTION = "action"
-    API = "api"
-    TOOL = "tool"
-    ERROR = "error"
+    LLM = "llms"
+    ACTION = "actions"
+    API = "apis"
+    TOOL = "tools"
+    ERROR = "errors"
 
 
 class Result(Enum):
