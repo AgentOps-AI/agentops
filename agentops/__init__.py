@@ -4,13 +4,3 @@ from .client import Client
 from .event import Event  # TODO: Don't expose? Since it's abstract?
 from .logger import AgentOpsLogger
 from .enums import Models, EventType  # TODO: Is EventType needed?
-
-# Import event classes
-from .events.action import ActionEvent
-from .events.error import ErrorEvent
-from .events.llm import LLMEvent
-from .events.tool import ToolEvent
-
-# TODO: Expose them at the package level?
-# __all__ = ['Client', 'Event', 'AgentOpsLogger', 'Models',
-#            'ActionEvent', 'ErrorEvent', 'LLMEvent', 'ToolEvent']
