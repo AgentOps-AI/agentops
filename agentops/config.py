@@ -13,16 +13,16 @@ class Configuration:
     Stores the configuration settings for AgentOps clients.
 
     Args:
-        api_key (str, optional): API Key for AgentOps services
-        endpoint (str, optional): The endpoint for the AgentOps service. Defaults to 'https://agentops-server-v2.fly.dev'.
+        api_key (str): API Key for AgentOps services
+        endpoint (str, optional): The endpoint for the AgentOps service. Defaults to 'https://api.agentops.ai'.
         max_wait_time (int, optional): The maximum time to wait in milliseconds before flushing the queue. Defaults to 1000.
         max_queue_size (int, optional): The maximum size of the event queue. Defaults to 100.
     """
 
-    def __init__(self, api_key: Optional[str] = None,
-                 endpoint: Optional[str] = 'https://agentops-server-v2.fly.dev',
+    def __init__(self, api_key: str,
+                 endpoint: Optional[str] = 'https://api.agentops.ai',
                  max_wait_time: Optional[int] = 1000, max_queue_size: Optional[int] = 100):
-        self._api_key: str | None = api_key
+        self._api_key: str = api_key
         self._endpoint = endpoint
         self._max_wait_time = max_wait_time
         self._max_queue_size = max_queue_size
@@ -46,7 +46,7 @@ class Configuration:
             value (str): The new API Key.
         """
         self._api_key = value
-        
+
     @property
     def endpoint(self) -> str:
         """
