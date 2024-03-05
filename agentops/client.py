@@ -22,11 +22,12 @@ import atexit
 import signal
 import sys
 
+from .developer_errors import ExceptionHandlerMeta
 from .config import Configuration
 from .llm_tracker import LlmTracker
 
 
-class Client:
+class Client(metaclass=ExceptionHandlerMeta):
     """
     Client for AgentOps service.
 
@@ -104,7 +105,8 @@ class Client:
         if self._session is not None and not self._session.has_ended:
             self._worker.add_event(event.__dict__)
         else:
-            logging.warning("AgentOps: Cannot record event - no current session")
+            logging.warning(
+                "AgentOps: Cannot record event - no current session")
 
     def record_function(self, event_name: str, tags: Optional[List[str]] = None):
         """
