@@ -1,8 +1,3 @@
-# TODO: Replace
-# Remove from Event and put in Sessions
-# Maybe send to custom /sessions endpoint
-
-
 import logging
 import re
 from .client import Client
@@ -13,8 +8,8 @@ class AgentOpsLogger():
     """
     A utility class for creating loggers and handlers configured to work with the AgentOps service.
 
-    This class provides two static methods for creating a logger or a handler that sends log
-    records to the AgentOps service. The logger and handler are configured with a specific
+    This class provides two static methods for creating a logger or a handler that sends log 
+    records to the AgentOps service. The logger and handler are configured with a specific 
     AgentOps client and name.
 
     Example Usage:
