@@ -1,6 +1,8 @@
 import logging
 import toml
 import traceback
+
+from .host_env import get_host_env
 from .http_client import HttpClient
 from .helpers import safe_serialize
 
@@ -11,22 +13,23 @@ class ExceptionHandlerMeta(type):
     def __new__(cls, name, bases, dct):
         # Wrap each method with the handle_exceptions decorator
         for method_name, method in dct.items():
-            if callable(method) and not method_name.startswith("__"):
+            if callable(method) and not method_name.startswith("__") or method_name == "__init__":
                 dct[method_name] = handle_exceptions(method)
 
         return super().__new__(cls, name, bases, dct)
 
     def send_exception_to_server(cls, exception, api_key):
-        """Class method to send exception to server. Assumes `api_key` is passed explicitly."""
+        """Class method to send exception to server."""
         if api_key:
             exception_type = type(exception).__name__
             exception_message = str(exception)
-            exception_traceback = traceback.format_exc()  # Get the full stack trace
+            exception_traceback = traceback.format_exc()
             developer_error = {
                 "sdk_version": read_version_from_pyproject(),
                 "type": exception_type,
                 "message": exception_message,
-                "stack_trace": exception_traceback
+                "stack_trace": exception_traceback,
+                "host_env": get_host_env()
             }
             HttpClient.post("https://api.agentops.ai/developer_errors",
                             safe_serialize(developer_error).encode("utf-8"),
