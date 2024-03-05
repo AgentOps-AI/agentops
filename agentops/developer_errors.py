@@ -13,7 +13,7 @@ class ExceptionHandlerMeta(type):
     def __new__(cls, name, bases, dct):
         # Wrap each method with the handle_exceptions decorator
         for method_name, method in dct.items():
-            if callable(method) and not method_name.startswith("__") or method_name == "__init__":
+            if (callable(method) and not method_name.startswith("__")) or method_name == "__init__":
                 dct[method_name] = handle_exceptions(method)
 
         return super().__new__(cls, name, bases, dct)
