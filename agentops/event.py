@@ -1,62 +1,65 @@
 """
 AgentOps events.
 
-Classes:
+Data Class:
     Event: Represents discrete events to be recorded.
 """
-from .helpers import get_ISO_time, Models
-from typing import Optional, List, Dict, Any
-from pydantic import Field
+
+from dataclasses import dataclass, field
+from typing import List, Optional
+from .helpers import get_ISO_time
+from .enums import EventType, Models
+from uuid import UUID
 
 
+@dataclass
 class Event:
-    """
-    Represents a discrete event to be recorded.
-    """
+    event_type: str  # EventType.ENUM.value
+    tags: Optional[List[str]] = None
+    init_timestamp: Optional[str] = field(default_factory=get_ISO_time)
+    end_timestamp: str = field(default_factory=get_ISO_time)
 
-    def __init__(self, event_type: str,
-                 params: Optional[Dict[str, Any]] = None,
-                 returns: Optional[Dict[str, Any]] = None,
-                 result: str = Field("Indeterminate",
-                                     description="Result of the operation",
-                                     pattern="^(Success|Fail|Indeterminate)$"),
-                 action_type: Optional[str] = Field("action",
-                                                    description="Type of action that the user is recording",
-                                                    pattern="^(action|api|llm|screenshot|tool|error)$"),
-                 model: Optional[Models] = None,
-                 prompt: Optional[str] = None,
-                 tags: Optional[List[str]] = None,
-                 init_timestamp: Optional[str] = None,
-                 screenshot: Optional[str] = None,
-                 prompt_tokens: Optional[int] = None,
-                 completion_tokens: Optional[int] = None
-                 ):
-        self.event_type = event_type
-        self.params = params
-        self.returns = returns
-        self.result = result
-        self.tags = tags
-        self.action_type = action_type
-        self.model = model
-        self.prompt = prompt
-        self.end_timestamp = get_ISO_time()
-        self.init_timestamp = init_timestamp if init_timestamp else self.end_timestamp
-        self.screenshot = screenshot
-        self.prompt_tokens = prompt_tokens
-        self.completion_tokens = completion_tokens
 
-    def __str__(self):
-        return str({
-            "event_type": self.event_type,
-            "params": self.params,
-            "returns": self.returns,
-            "action_type": self.action_type,
-            "result": self.result,
-            "model": self.model,
-            "prompt": self.prompt,
-            "tags": self.tags,
-            "screenshot": self.screenshot,
-            "init_timestamp": self.init_timestamp,
-            "prompt_tokens": self.prompt_tokens,
-            "completion_tokens": self.completion_tokens,
-        })
+@dataclass
+class ActionEvent(Event):
+    event_type: str = EventType.ACTION.value
+    # TODO: Should not be optional, but non-default argument 'agent_id' follows default argument error
+    agent_id: Optional[UUID] = None
+    action_type: Optional[str] = None
+    detail: Optional[str] = None
+    logs: Optional[str] = None
+    screenshot: Optional[str] = None
+
+    # May be needed if we keep Optional for agent_id
+    # def __post_init__(self):
+    #     if self.agent_id is None:
+    #         raise ValueError("agent_id is required for ActionEvent")
+
+
+@dataclass
+class ErrorEvent(Event):
+    event_type: str = EventType.ERROR.value
+    error_type: Optional[str] = None
+    code: Optional[str] = None
+    details: Optional[str] = None
+    logs: Optional[str] = None
+
+
+@dataclass
+class LLMEvent(Event):
+    event_type: str = EventType.LLM.value
+    thread_id: Optional[UUID] = None
+    model: Optional[Models] = None
+    prompt: Optional[str] = None
+    prompt_tokens: Optional[int] = None
+    completion_tokens: Optional[int] = None
+
+
+@dataclass
+class ToolEvent(Event):
+    event_type: str = EventType.TOOL.value
+    agent_id: Optional[UUID] = None
+    name: Optional[str] = None
+    inputs: Optional[str] = None
+    outputs: Optional[str] = None
+    logs: Optional[str] = None

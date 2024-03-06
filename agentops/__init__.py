@@ -1,4 +1,6 @@
+# agentops/__init__.py
+
 from .client import Client
-from .event import Event
+from .event import ActionEvent, ErrorEvent, LLMEvent, ToolEvent
 from .logger import AgentOpsLogger
-from .helpers import Models
+from .enums import Models
