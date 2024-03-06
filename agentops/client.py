@@ -230,17 +230,20 @@ class Client(metaclass=ExceptionHandlerMeta):
         Args:
             tags (List[str], optional): Tags that can be used for grouping or sorting later.
                 e.g. ["test_run"].
+            config: (Configuration, optional): Client configuration object
         """
         if self._session is not None:
-            return logging.warn("AgentOps: Cannot start session - session already started")
+            return logging.warning("AgentOps: Cannot start session - session already started")
 
         if not config and not self.config:
-            return logging.warn("AgentOps: Cannot start session - missing configuration")
+            return logging.warning("AgentOps: Cannot start session - missing configuration")
 
         self._session = Session(
             str(uuid4()), tags or self._tags, host_env=get_host_env())
         self._worker = Worker(config or self.config)
         self._worker.start_session(self._session)
+        logging.info('View info on this session at https://agentops.ai/dashboard?session_id={}'
+                     .format(self._session.session_id))
 
     def end_session(self, end_state: str = Field("Indeterminate",
                                                  description="End state of the session",
