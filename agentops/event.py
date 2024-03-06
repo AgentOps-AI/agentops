@@ -9,6 +9,7 @@ from dataclasses import dataclass, field
 from typing import List, Optional
 from .helpers import get_ISO_time
 from .enums import EventType, Models
+from uuid import UUID
 
 
 @dataclass
@@ -38,7 +39,6 @@ class ActionEvent(Event):
 @dataclass
 class ErrorEvent(Event):
     event_type: str = EventType.ERROR.value
-    # Note: 'type' is a reserved keyword in Python, hence 'error_type'
     error_type: Optional[str] = None
     code: Optional[str] = None
     details: Optional[str] = None

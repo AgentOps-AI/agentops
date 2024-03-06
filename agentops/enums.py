@@ -15,13 +15,6 @@ class Result(Enum):
     INDETERMINATE = "Indeterminate"
 
 
-class ActionType(Enum):
-    ACTION = "action"
-    LLM = "llm"
-    TOOL = "tool"
-    ERROR = "error"
-
-
 class Models(Enum):
     GPT_3_5_TURBO = "gpt-3.5-turbo"
     GPT_3_5_TURBO_0301 = "gpt-3.5-turbo-0301"
