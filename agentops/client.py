@@ -48,7 +48,7 @@ class Client(metaclass=MetaClient):
 
     def __init__(self, api_key: Optional[str] = None,
                  tags: Optional[List[str]] = None,
-                 endpoint: Optional[str] = 'https://api.agentops.ai',
+                 endpoint: Optional[str] = environ.get('AGENTOPS_API_ENDPOINT', 'https://api.agentops.ai'),
                  max_wait_time: Optional[int] = 1000,
                  max_queue_size: Optional[int] = 100,
                  override=True,
