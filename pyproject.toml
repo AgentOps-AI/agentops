@@ -7,7 +7,9 @@ name = "agentops"
 version = "0.0.20"
 authors = [
   { name="Alex Reibman", email="areibman@gmail.com" },
-  { name="Shawn Qiu", email="siyangqiu@gmail.com" }
+  { name="Shawn Qiu", email="siyangqiu@gmail.com" },
+  { name="Braelyn Boynton", email="bboynton97@gmail.com" },
+  { name="Howard Gil", email="howardbgil@gmail.com" }
 ]
 description = "Python SDK for developing AI agent evals and observability"
 readme = "README.md"

@@ -82,6 +82,19 @@ class Worker:
                             self.config.api_key,
                             self.config.org_key)
 
+    def create_agent(self, agent_id, name):
+        payload = {
+            "id": agent_id,
+            "name": name,
+            "session_id": self._session.session_id
+        }
+
+        serialized_payload = \
+            safe_serialize(payload).encode("utf-8")
+        HttpClient.post(f'{self.config.endpoint}/agents',
+                        serialized_payload,
+                        self.config.api_key)
+
     def run(self) -> None:
         while not self.stop_flag.is_set():
             time.sleep(self.config.max_wait_time / 1000)

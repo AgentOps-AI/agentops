@@ -3,8 +3,23 @@ import inspect
 import sys
 from importlib import import_module
 from packaging.version import parse
+import logging
 from .event import Event
 from .helpers import get_ISO_time
+
+
+def check_call_stack_for_agent_id(max_depth=5) -> str | None:
+    # only looks at the last 2 frames otherwise it will retrieve
+    # whatever agent class was used last
+    for frame_info in inspect.stack()[1:max_depth]:
+        # Get the locals from the current frame
+        local_vars = frame_info.frame.f_locals
+        for var in local_vars.values():
+            # Instead of checking if var is a class, check if it's an instance with the _is_ao_agent attribute
+            if hasattr(var, '_is_ao_agent') and getattr(var, '_is_ao_agent'):
+                logging.info('LLM call from agent named: ' + getattr(var, '_ao_agent_name'))
+                return getattr(var, '_ao_agent_id')
+    return None
 
 
 class LlmTracker:
@@ -36,8 +51,10 @@ class LlmTracker:
                 finish_reason = choices[0]['finish_reason']
 
                 if self.event_stream == None:
+                    agent_id = check_call_stack_for_agent_id()
                     self.event_stream = Event(
                         event_type='openai stream',
+                        agent_id=agent_id,
                         params=kwargs,
                         result='Success',
                         returns={"finish_reason": None,
@@ -59,7 +76,7 @@ class LlmTracker:
                     self.client.record(self.event_stream)
                     self.event_stream = None
             except Exception as e:
-                print(
+                logging.info(
                     f"Unable to parse a chunk for LLM call {kwargs} - skipping upload to AgentOps")
 
         # if the response is a generator, decorate the generator
@@ -81,6 +98,7 @@ class LlmTracker:
 
         # v0.0.0 responses are dicts
         try:
+            agent_id = check_call_stack_for_agent_id()
             self.client.record(Event(
                 event_type=response['object'],
                 params=kwargs,
@@ -137,8 +155,10 @@ class LlmTracker:
                 role = choices[0].delta.role
 
                 if self.event_stream == None:
+                    agent_id = check_call_stack_for_agent_id()
                     self.event_stream = Event(
                         event_type='openai chat completion stream',
+                        agent_id=agent_id,
                         params=kwargs,
                         result='Success',
                         returns={"finish_reason": None,
@@ -194,8 +214,10 @@ class LlmTracker:
 
         # v1.0.0+ responses are objects
         try:
+            agent_id = check_call_stack_for_agent_id()
             self.client.record(Event(
                 event_type=response.object,
+                agent_id=agent_id,
                 params=kwargs,
                 result='Success',
                 returns={
