@@ -135,7 +135,7 @@ class LlmTracker:
                 ))
                 # Standard response
             except Exception as e:
-                print(
+                logging.error(
                     f"Unable to parse a chunk for LLM call {kwargs} - skipping upload to AgentOps")
 
         return response
@@ -187,7 +187,7 @@ class LlmTracker:
                     self.client.record(self.event_stream)
                     self.event_stream = None
             except Exception as e:
-                print(
+                logging.error(
                     f"Unable to parse a chunk for LLM call {kwargs} - skipping upload to AgentOps")
 
         # if the response is a generator, decorate the generator
@@ -234,7 +234,7 @@ class LlmTracker:
             ))
             # Standard response
         except Exception as e:
-            print(
+            logging.error(
                 f"Unable to parse a chunk for LLM call {kwargs} - skipping upload to AgentOps")
 
         return response
