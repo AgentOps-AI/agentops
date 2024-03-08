@@ -8,13 +8,15 @@ from .event import Event
 from .helpers import get_ISO_time
 
 
-def check_call_stack_for_agent_id(max_depth=5) -> str | None:
+def check_call_stack_for_agent_id() -> str | None:
     # only looks at the last 2 frames otherwise it will retrieve
     # whatever agent class was used last
-    for frame_info in inspect.stack()[1:max_depth]:
+    for frame_info in inspect.stack():
         # Get the locals from the current frame
         local_vars = frame_info.frame.f_locals
         for var in local_vars.values():
+            if var == "__main__":
+                return
             # Instead of checking if var is a class, check if it's an instance with the _is_ao_agent attribute
             if hasattr(var, '_is_ao_agent') and getattr(var, '_is_ao_agent'):
                 logging.info('LLM call from agent named: ' + getattr(var, '_ao_agent_name'))
