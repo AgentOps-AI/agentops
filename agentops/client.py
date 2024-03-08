@@ -6,7 +6,7 @@ Classes:
 """
 
 from .event import Event
-from .helpers import get_ISO_time, singleton
+from .helpers import get_ISO_time, singleton, check_call_stack_for_agent_id
 from .session import Session
 from .worker import Worker
 from .host_env import get_host_env
@@ -104,6 +104,8 @@ class Client(metaclass=MetaClient):
             event (Event): The event to record.
         """
 
+        agent_id = check_call_stack_for_agent_id()
+        event.agent_id = agent_id
         if self._session is not None and not self._session.has_ended:
             self._worker.add_event(event.__dict__)
         else:
@@ -192,6 +194,7 @@ class Client(metaclass=MetaClient):
         # Update with positional arguments
         arg_values.update(dict(zip(arg_names, args)))
         arg_values.update(kwargs)
+        agent_id = check_call_stack_for_agent_id()
 
         try:
 
@@ -208,6 +211,7 @@ class Client(metaclass=MetaClient):
                               result='Success',
                               action_type='action',
                               init_timestamp=init_time,
+                              agent_id=agent_id,
                               tags=tags))
 
         except Exception as e:
@@ -217,6 +221,7 @@ class Client(metaclass=MetaClient):
                               returns={f"{type(e).__name__}": str(e)},
                               result='Fail',
                               action_type='action',
+                              agent_id=agent_id,
                               init_timestamp=init_time,
                               tags=tags))
 

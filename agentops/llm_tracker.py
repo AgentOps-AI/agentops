@@ -1,25 +1,10 @@
 import functools
-import inspect
 import sys
 from importlib import import_module
 from packaging.version import parse
 import logging
 from .event import Event
-from .helpers import get_ISO_time
-
-
-def check_call_stack_for_agent_id() -> str | None:
-    for frame_info in inspect.stack():
-        # Look through the call stack for the class that called the LLM
-        local_vars = frame_info.frame.f_locals
-        for var in local_vars.values():
-            # We stop looking up the stack at main because after that we see global variables
-            if var == "__main__":
-                return
-            if hasattr(var, '_is_ao_agent') and getattr(var, '_is_ao_agent'):
-                logging.debug('LLM call from agent named: ' + getattr(var, '_ao_agent_name'))
-                return getattr(var, '_ao_agent_id')
-    return None
+from .helpers import get_ISO_time, check_call_stack_for_agent_id
 
 
 class LlmTracker:
