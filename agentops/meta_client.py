@@ -7,7 +7,7 @@ from .http_client import HttpClient
 from .helpers import safe_serialize
 
 
-class ExceptionHandlerMeta(type):
+class MetaClient(type):
     """Metaclass to automatically decorate methods with exception handling and provide a shared exception handler."""
 
     def __new__(cls, name, bases, dct):

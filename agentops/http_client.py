@@ -92,12 +92,13 @@ class HttpClient:
             result.body = {'error': str(e)}
 
         if result.code == 401:
-            logging.warn(
+            logging.warning(
                 'AgentOps: Could not post data - API server rejected your API key')
         if result.code == 400:
-            logging.warn(f'AgentOps: Could not post data - {result.body}')
+            logging.warning(f'AgentOps: Could not post data - {result.body}')
         if result.code == 500:
-            logging.warn(
+            logging.warning(
                 f'AgentOps: Could not post data - internal server error')
+            print(result.body)
 
         return result

@@ -16,7 +16,7 @@ def get_cpu_details():
     return {
         "Physical cores": psutil.cpu_count(logical=False),
         "Total cores": psutil.cpu_count(logical=True),
-        "Max Frequency": f"{psutil.cpu_freq().max:.2f}Mhz",
+        # "Max Frequency": f"{psutil.cpu_freq().max:.2f}Mhz", # Fails right now
         "CPU Usage": f"{psutil.cpu_percent()}%"
     }
 

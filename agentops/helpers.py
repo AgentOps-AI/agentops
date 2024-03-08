@@ -4,6 +4,17 @@ import json
 from packaging.version import parse
 
 
+def singleton(class_):
+    instances = {}
+
+    def getinstance(*args, **kwargs):
+        if class_ not in instances:
+            instances[class_] = class_(*args, **kwargs)
+        return instances[class_]
+
+    return getinstance
+
+
 def get_ISO_time():
     """
     Get the current UTC time in ISO 8601 format with milliseconds precision, suffixed with 'Z' to denote UTC timezone.
@@ -42,4 +53,5 @@ def safe_serialize(obj):
             return o.to_json()
         else:
             return f"<<non-serializable: {type(o).__qualname__}>>"
+
     return json.dumps(obj, default=default)

@@ -6,7 +6,7 @@ Classes:
 """
 
 from .event import Event
-from .helpers import get_ISO_time
+from .helpers import get_ISO_time, singleton
 from .session import Session
 from .worker import Worker
 from .host_env import get_host_env
@@ -22,12 +22,13 @@ import atexit
 import signal
 import sys
 
-from .developer_errors import ExceptionHandlerMeta
+from .meta_client import MetaClient
 from .config import Configuration
 from .llm_tracker import LlmTracker
 
 
-class Client(metaclass=ExceptionHandlerMeta):
+@singleton
+class Client(metaclass=MetaClient):
     """
     Client for AgentOps service.
 
@@ -60,7 +61,8 @@ class Client(metaclass=ExceptionHandlerMeta):
         self.config = None
 
         if not api_key and not environ.get('AGENTOPS_API_KEY'):
-            return logging.warn("AgentOps: No API key provided - no data will be recorded.")
+            logging.warning("AgentOps: No API key provided - no data will be recorded.")
+            return
 
         self.config = Configuration(api_key or environ.get('AGENTOPS_API_KEY'),
                                     endpoint,
@@ -268,6 +270,9 @@ class Client(metaclass=ExceptionHandlerMeta):
         self._worker.end_session(self._session)
         self._session = None
         self._worker = None
+
+    def create_agent(self, agent_id: str, name: str):
+        self._worker.create_agent(agent_id, name)
 
     def _handle_unclean_exits(self):
         def cleanup(end_state_reason: Optional[str] = None):
