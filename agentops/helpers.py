@@ -1,7 +1,8 @@
 import time
 from datetime import datetime
 import json
-from packaging.version import parse
+import inspect
+import logging
 
 
 def singleton(class_):
@@ -55,3 +56,17 @@ def safe_serialize(obj):
             return f"<<non-serializable: {type(o).__qualname__}>>"
 
     return json.dumps(obj, default=default)
+
+
+def check_call_stack_for_agent_id() -> str | None:
+    for frame_info in inspect.stack():
+        # Look through the call stack for the class that called the LLM
+        local_vars = frame_info.frame.f_locals
+        for var in local_vars.values():
+            # We stop looking up the stack at main because after that we see global variables
+            if var == "__main__":
+                return
+            if hasattr(var, '_agent_ops_agent_id') and getattr(var, '_agent_ops_agent_id'):
+                logging.debug('LLM call from agent named: ' + getattr(var, '_agent_ops_agent_name'))
+                return getattr(var, '_agent_ops_agent_id')
+    return None
