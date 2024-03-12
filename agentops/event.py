@@ -16,6 +16,7 @@ from uuid import UUID
 class Event:
     event_type: str  # EventType.ENUM.value
     tags: Optional[List[str]] = None
+    params: Optional[str] = None  # TODO: We should add params to all tables in supabase, right now it's just LLMEvent
     init_timestamp: Optional[str] = field(default_factory=get_ISO_time)
     end_timestamp: str = field(default_factory=get_ISO_time)
 
@@ -48,9 +49,12 @@ class ErrorEvent(Event):
 @dataclass
 class LLMEvent(Event):
     event_type: str = EventType.LLM.value
+    params: Optional[str] = None
+    agent_id: Optional[UUID] = None
     thread_id: Optional[UUID] = None
-    model: Optional[Models] = None
     prompt: Optional[str] = None
+    completion: Optional[str] = None
+    model: Optional[Models] = None
     prompt_tokens: Optional[int] = None
     completion_tokens: Optional[int] = None
 
