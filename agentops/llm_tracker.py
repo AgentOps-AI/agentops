@@ -3,7 +3,7 @@ import sys
 from importlib import import_module
 from packaging.version import parse
 import logging
-from .event import Event
+from .event import LLMEvent
 from .helpers import get_ISO_time, check_call_stack_for_agent_id
 
 
@@ -36,18 +36,14 @@ class LlmTracker:
                 finish_reason = choices[0]['finish_reason']
 
                 if self.event_stream == None:
-                    agent_id = check_call_stack_for_agent_id()
-                    self.event_stream = Event(
-                        event_type='openai stream',
-                        agent_id=agent_id,
-                        params=kwargs,
-                        result='Success',
-                        returns={"finish_reason": None,
-                                 "content": token},
-                        action_type='llm',
-                        model=model,
+                    self.event_stream = LLMEvent(
+                        init_timestamp=init_timestamp,
+                        params=kwargs["invocation_params"],
+                        agent_id=check_call_stack_for_agent_id(),
                         prompt=kwargs["messages"],
-                        init_timestamp=init_timestamp
+                        completion={"finish_reason": None,
+                                    "content": token},
+                        model=model
                     )
                 else:
                     self.event_stream.returns['content'] += token
@@ -83,17 +79,14 @@ class LlmTracker:
 
         # v0.0.0 responses are dicts
         try:
-            agent_id = check_call_stack_for_agent_id()
-            self.client.record(Event(
-                event_type=response['object'],
-                params=kwargs,
-                result='Success',
-                returns={"content":
-                         response['choices'][0]['message']['content']},
-                action_type='llm',
-                model=response['model'],
-                prompt=kwargs['messages'],
+            self.client.record(LLMEvent(
                 init_timestamp=init_timestamp,
+                params=kwargs["invocation_params"],
+                agent_id=check_call_stack_for_agent_id(),
+                prompt=kwargs['messages'],
+                completion={"content":
+                            response['choices'][0]['message']['content']},
+                model=response['model'],
                 prompt_tokens=response.get('usage',
                                            {}).get('prompt_tokens'),
                 completion_tokens=response.get('usage',
@@ -102,17 +95,15 @@ class LlmTracker:
         except:
             # v1.0.0+ responses are objects
             try:
-                self.client.record(Event(
-                    event_type=response.object,
-                    params=kwargs,
-                    result='Success',
-                    returns={
-                        # TODO: Will need to make the completion the key for content, splat out the model dump
-                        "content": response.choices[0].message.model_dump()},
-                    action_type='llm',
-                    model=response.model,
-                    prompt=kwargs['messages'],
+                self.client.record(LLMEvent(
                     init_timestamp=init_timestamp,
+                    params=kwargs["invocation_params"],
+                    agent_id=check_call_stack_for_agent_id(),
+                    # TODO: Will need to make the completion the key for content, splat out the model dump
+                    prompt=kwargs['messages'],
+                    completion={
+                        "content": response.choices[0].message.model_dump()},
+                    model=response.model,
                     prompt_tokens=response.usage.prompt_tokens,
                     completion_tokens=response.usage.completion_tokens
                 ))
@@ -140,18 +131,14 @@ class LlmTracker:
                 role = choices[0].delta.role
 
                 if self.event_stream == None:
-                    agent_id = check_call_stack_for_agent_id()
-                    self.event_stream = Event(
-                        event_type='openai chat completion stream',
-                        agent_id=agent_id,
+                    self.event_stream = LLMEvent(
+                        init_timestamp=init_timestamp,
                         params=kwargs,
-                        result='Success',
-                        returns={"finish_reason": None,
-                                 "content": token},
-                        action_type='llm',
-                        model=model,
+                        agent_id=check_call_stack_for_agent_id(),
                         prompt=kwargs["messages"],
-                        init_timestamp=init_timestamp
+                        completion={"finish_reason": None,
+                                    "content": token},
+                        model=model
                     )
                 else:
                     if token == None:
@@ -199,19 +186,15 @@ class LlmTracker:
 
         # v1.0.0+ responses are objects
         try:
-            agent_id = check_call_stack_for_agent_id()
-            self.client.record(Event(
-                event_type=response.object,
-                agent_id=agent_id,
+            self.client.record(LLMEvent(
+                init_timestamp=init_timestamp,
                 params=kwargs,
-                result='Success',
-                returns={
+                agent_id=check_call_stack_for_agent_id(),
+                prompt=kwargs['messages'],
+                completion={
                     # TODO: Will need to make the completion the key for content, splat out the model dump
                     "content": response.choices[0].message.model_dump()},
-                action_type='llm',
                 model=response.model,
-                prompt=kwargs['messages'],
-                init_timestamp=init_timestamp,
                 prompt_tokens=response.usage.prompt_tokens,
                 completion_tokens=response.usage.completion_tokens
             ))
