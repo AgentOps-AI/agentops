@@ -16,7 +16,7 @@ if api in sys.modules:
             print('openai version: ', module_version)
 
 
-@ao_client.record_function('sample function being record')
+@ao_client.record_function('sample function being recorded')
 def call_openai():
     client = OpenAI()
 
