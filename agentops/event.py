@@ -40,6 +40,7 @@ class ActionEvent(Event):
 @dataclass
 class ErrorEvent(Event):
     event_type: str = EventType.ERROR.value
+    event_name: Optional[str] = None
     error_type: Optional[str] = None
     code: Optional[str] = None
     details: Optional[str] = None
