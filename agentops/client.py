@@ -170,6 +170,7 @@ class Client(metaclass=MetaClient):
             self.record(ErrorEvent(tags=tags,
                                    params=arg_values,
                                    init_timestamp=init_time,
+                                   event_name=event_name,
                                    details={f"{type(e).__name__}": str(e)}))
 
             # Re-raise the exception
@@ -210,6 +211,7 @@ class Client(metaclass=MetaClient):
             self.record(ErrorEvent(tags=tags,
                                    params=arg_values,
                                    init_timestamp=init_time,
+                                   event_name=event_name,
                                    details={f"{type(e).__name__}": str(e)}))
 
             # Re-raise the exception

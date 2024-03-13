@@ -8,6 +8,7 @@ import sys
 ao_client = agentops.Client()
 
 
+@ao_client.record_function('sample function being recorded')
 async def call_openai_async():
     client = AsyncOpenAI()  # Using the async client
 
