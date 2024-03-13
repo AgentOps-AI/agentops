@@ -2,7 +2,7 @@ import pytest
 import requests_mock
 import sys
 
-from agentops import Client, Event
+from agentops import Client
 
 
 @pytest.fixture

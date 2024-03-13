@@ -5,6 +5,7 @@ from packaging.version import parse
 import logging
 from .event import LLMEvent
 from .helpers import get_ISO_time, check_call_stack_for_agent_id
+import inspect
 
 
 class LlmTracker:
@@ -38,7 +39,7 @@ class LlmTracker:
                 if self.event_stream == None:
                     self.event_stream = LLMEvent(
                         init_timestamp=init_timestamp,
-                        params=kwargs["invocation_params"],
+                        params=kwargs,
                         agent_id=check_call_stack_for_agent_id(),
                         prompt=kwargs["messages"],
                         completion={"finish_reason": None,
@@ -57,8 +58,9 @@ class LlmTracker:
                     self.client.record(self.event_stream)
                     self.event_stream = None
             except Exception as e:
+                # TODO: This error is specific to only one path of failure. Should be more generic or have different logging for different paths
                 logging.warning(
-                    f"AgentOps Error: Unable to parse a chunk for LLM call {kwargs} - skipping upload to AgentOps")
+                    f"AgentOps: Unable to parse a chunk for LLM call {kwargs} - skipping upload to AgentOps")
 
         # if the response is a generator, decorate the generator
         if inspect.isasyncgen(response):
@@ -81,7 +83,7 @@ class LlmTracker:
         try:
             self.client.record(LLMEvent(
                 init_timestamp=init_timestamp,
-                params=kwargs["invocation_params"],
+                params=kwargs,
                 agent_id=check_call_stack_for_agent_id(),
                 prompt=kwargs['messages'],
                 completion={"content":
@@ -92,12 +94,14 @@ class LlmTracker:
                 completion_tokens=response.get('usage',
                                                {}).get('completion_tokens')
             ))
-        except:
+
+        except:  # NOTE: Execution should never reach here. Should remove if does not break anything
+
             # v1.0.0+ responses are objects
             try:
                 self.client.record(LLMEvent(
                     init_timestamp=init_timestamp,
-                    params=kwargs["invocation_params"],
+                    params=kwargs,
                     agent_id=check_call_stack_for_agent_id(),
                     # TODO: Will need to make the completion the key for content, splat out the model dump
                     prompt=kwargs['messages'],
@@ -107,10 +111,11 @@ class LlmTracker:
                     prompt_tokens=response.usage.prompt_tokens,
                     completion_tokens=response.usage.completion_tokens
                 ))
-                # Standard response
+            # Standard response
             except Exception as e:
+                # TODO: This error is specific to only one path of failure. Should be more generic or have different logging for different paths
                 logging.warning(
-                    f"AgentOps Error: Unable to parse a chunk for LLM call {kwargs} - skipping upload to AgentOps")
+                    f"AgentOps: Unable to parse a chunk for LLM call {kwargs} - skipping upload to AgentOps")
 
         return response
 
@@ -157,8 +162,9 @@ class LlmTracker:
                     self.client.record(self.event_stream)
                     self.event_stream = None
             except Exception as e:
+                # TODO: This error is specific to only one path of failure. Should be more generic or have different logging for different paths
                 logging.warning(
-                    f"AgentOps Error: Unable to parse a chunk for LLM call {kwargs} - skipping upload to AgentOps")
+                    f"AgentOps: Unable to parse a chunk for LLM call {kwargs} - skipping upload to AgentOps")
 
         # if the response is a generator, decorate the generator
         if isinstance(response, Stream):
@@ -200,8 +206,9 @@ class LlmTracker:
             ))
             # Standard response
         except Exception as e:
-            logging.error(
-                f"Unable to parse a chunk for LLM call {kwargs} - skipping upload to AgentOps")
+            # TODO: This error is specific to only one path of failure. Should be more generic or have different logging for different paths
+            logging.warning(
+                f"AgentOps: Unable to parse a chunk for LLM call {kwargs} - skipping upload to AgentOps")
 
         return response
 

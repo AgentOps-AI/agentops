@@ -27,7 +27,7 @@ class ActionEvent(Event):
     # TODO: Should not be optional, but non-default argument 'agent_id' follows default argument error
     agent_id: Optional[UUID] = None
     action_type: Optional[str] = None
-    detail: Optional[str] = None
+    details: Optional[str] = None
     logs: Optional[str] = None
     screenshot: Optional[str] = None
 
