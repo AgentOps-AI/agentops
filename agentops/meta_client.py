@@ -5,6 +5,7 @@ import traceback
 from .host_env import get_host_env
 from .http_client import HttpClient
 from .helpers import safe_serialize
+from importlib.metadata import version
 
 
 class MetaClient(type):
@@ -25,7 +26,7 @@ class MetaClient(type):
             exception_message = str(exception)
             exception_traceback = traceback.format_exc()
             developer_error = {
-                "sdk_version": read_version_from_pyproject(),
+                "sdk_version": get_agentops_version(),
                 "type": exception_type,
                 "message": exception_message,
                 "stack_trace": exception_traceback,
@@ -50,7 +51,10 @@ def handle_exceptions(method):
     return wrapper
 
 
-def read_version_from_pyproject():
-    with open("../pyproject.toml", "r") as pyproject_file:
-        pyproject_contents = toml.load(pyproject_file)
-    return pyproject_contents['project']['version']
+def get_agentops_version():
+    try:
+        pkg_version = version("agentops")
+        return pkg_version
+    except Exception as e:
+        print(f"Error reading package version: {e}")
+        return None

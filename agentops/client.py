@@ -5,7 +5,7 @@ Classes:
     Client: Provides methods to interact with the AgentOps service.
 """
 
-from .event import Event
+from .event import Event, ActionEvent, ErrorEvent
 from .helpers import get_ISO_time, singleton, check_call_stack_for_agent_id
 from .session import Session
 from .worker import Worker
@@ -104,8 +104,6 @@ class Client(metaclass=MetaClient):
             event (Event): The event to record.
         """
 
-        agent_id = check_call_stack_for_agent_id()
-        event.agent_id = agent_id
         if self._session is not None and not self._session.has_ended:
             self._worker.add_event(event.__dict__)
         else:
@@ -160,23 +158,19 @@ class Client(metaclass=MetaClient):
                 returns = list(returns)
 
             # Record the event after the function call
-            self.record(Event(event_type=event_name,
-                              params=arg_values,
-                              returns=returns,
-                              result='Success',
-                              action_type='action',
-                              init_timestamp=init_time,
-                              tags=tags))
+            self.record(ActionEvent(tags=tags,
+                                    params=arg_values,
+                                    init_timestamp=init_time,
+                                    action_type=event_name,
+                                    agent_id=check_call_stack_for_agent_id(),
+                                    details=returns))
 
         except Exception as e:
             # Record the event after the function call
-            self.record(Event(event_type=event_name,
-                              params=arg_values,
-                              returns={f"{type(e).__name__}": str(e)},
-                              result='Fail',
-                              action_type='action',
-                              init_timestamp=init_time,
-                              tags=tags))
+            self.record(ErrorEvent(tags=tags,
+                                   params=arg_values,
+                                   init_timestamp=init_time,
+                                   details={f"{type(e).__name__}": str(e)}))
 
             # Re-raise the exception
             raise
@@ -194,7 +188,6 @@ class Client(metaclass=MetaClient):
         # Update with positional arguments
         arg_values.update(dict(zip(arg_names, args)))
         arg_values.update(kwargs)
-        agent_id = check_call_stack_for_agent_id()
 
         try:
 
@@ -205,25 +198,19 @@ class Client(metaclass=MetaClient):
                 returns = list(returns)
 
             # Record the event after the function call
-            self.record(Event(event_type=event_name,
-                              params=arg_values,
-                              returns=returns,
-                              result='Success',
-                              action_type='action',
-                              init_timestamp=init_time,
-                              agent_id=agent_id,
-                              tags=tags))
+            self.record(ActionEvent(tags=tags,
+                                    params=arg_values,
+                                    init_timestamp=init_time,
+                                    agent_id=check_call_stack_for_agent_id(),
+                                    action_type=event_name,
+                                    details=returns))
 
         except Exception as e:
             # Record the event after the function call
-            self.record(Event(event_type=event_name,
-                              params=arg_values,
-                              returns={f"{type(e).__name__}": str(e)},
-                              result='Fail',
-                              action_type='action',
-                              agent_id=agent_id,
-                              init_timestamp=init_time,
-                              tags=tags))
+            self.record(ErrorEvent(tags=tags,
+                                   params=arg_values,
+                                   init_timestamp=init_time,
+                                   details={f"{type(e).__name__}": str(e)}))
 
             # Re-raise the exception
             raise
