@@ -11,7 +11,7 @@ def track_agent(name: str | None):
             original_init = obj.__init__
 
             def new_init(self, *args, **kwargs):
-                self._agent_ops_agent_id = str(uuid4())
+                self._agent_ops_agent_id = uuid4()
                 ao_client = Client()
                 ao_client.create_agent(self._agent_ops_agent_id, self._agent_ops_agent_name)
                 original_init(self, *args, **kwargs)
@@ -19,7 +19,7 @@ def track_agent(name: str | None):
             obj.__init__ = new_init
 
         elif isfunction(obj):
-            obj._agent_ops_agent_id = str(uuid4())
+            obj._agent_ops_agent_id = uuid4()
             ao_client = Client()
             ao_client.create_agent(obj._agent_ops_agent_id, obj._agent_ops_agent_name)
 

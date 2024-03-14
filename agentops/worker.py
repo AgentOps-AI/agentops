@@ -36,8 +36,7 @@ class Worker:
                     "events": events
                 }
 
-                serialized_payload = \
-                    safe_serialize(payload).encode("utf-8")
+                serialized_payload = safe_serialize(payload).encode("utf-8")
                 HttpClient.post(f'{self.config.endpoint}/events',
                                 serialized_payload,
                                 self.config.api_key)
@@ -48,8 +47,7 @@ class Worker:
             payload = {
                 "session": session.__dict__
             }
-            serialized_payload = \
-                json.dumps(filter_unjsonable(payload)).encode("utf-8")
+            serialized_payload = json.dumps(filter_unjsonable(payload)).encode("utf-8")
             HttpClient.post(f'{self.config.endpoint}/sessions',
                             serialized_payload,
                             self.config.api_key)

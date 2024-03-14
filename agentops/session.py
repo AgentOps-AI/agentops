@@ -1,5 +1,6 @@
 from .helpers import get_ISO_time
 from typing import Optional, List
+from uuid import UUID
 
 
 class Session:
@@ -7,7 +8,7 @@ class Session:
     Represents a session of events, with a start and end state.
 
     Args:
-        session_id (str): The session id is used to record particular runs.
+        session_id (UUID): The session id is used to record particular runs.
         tags (List[str], optional): Tags that can be used for grouping or sorting later. Examples could be ["GPT-4"].
 
     Attributes:
@@ -19,7 +20,7 @@ class Session:
 
     """
 
-    def __init__(self, session_id: str, tags: Optional[List[str]] = None, host_env: Optional[dict] = None):
+    def __init__(self, session_id: UUID, tags: Optional[List[str]] = None, host_env: Optional[dict] = None):
         self.end_timestamp = None
         self.rating = None
         self.end_state = None
