@@ -157,7 +157,6 @@ class Client(metaclass=MetaClient):
                             action_type=event_name)
 
         try:
-            self.record(event)  # REMOVE
             returns = func(*args, **kwargs)
 
             # If the function returns multiple values, record them all in the same event
@@ -165,6 +164,10 @@ class Client(metaclass=MetaClient):
                 returns = list(returns)
 
             event.returns = returns
+
+            # TODO: If we except this will never get called here
+            # the dev loses all the useful stuff they would need for debugging
+            # maybe we could have Error post the supplied event to supabase
             self.record(event)
 
         except Exception as e:
@@ -194,8 +197,6 @@ class Client(metaclass=MetaClient):
                             action_type=event_name)
 
         try:
-            self.record(event)  # REMOVE
-
             returns = await func(*args, **kwargs)
 
             # If the function returns multiple values, record them all in the same event
@@ -203,6 +204,10 @@ class Client(metaclass=MetaClient):
                 returns = list(returns)
 
             event.returns = returns
+
+            # TODO: If we except this will never get called here
+            # the dev loses all the useful stuff they would need for debugging
+            # maybe we could have Error post the supplied event to supabase
             self.record(event)
 
         except Exception as e:
