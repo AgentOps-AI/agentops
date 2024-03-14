@@ -6,6 +6,7 @@ Classes:
 """
 
 from typing import Optional
+from os import environ
 
 
 class Configuration:
@@ -20,7 +21,7 @@ class Configuration:
     """
 
     def __init__(self, api_key: str,
-                 endpoint: Optional[str] = 'https://api.agentops.ai',
+                 endpoint: Optional[str] = environ.get('AGENTOPS_API_ENDPOINT', 'https://api.agentops.ai'),
                  max_wait_time: Optional[int] = 1000, max_queue_size: Optional[int] = 100):
         self._api_key: str = api_key
         self._endpoint = endpoint

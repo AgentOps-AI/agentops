@@ -157,6 +157,7 @@ class Client(metaclass=MetaClient):
                             action_type=event_name)
 
         try:
+            self.record(event)  # REMOVE
             returns = func(*args, **kwargs)
 
             # If the function returns multiple values, record them all in the same event
@@ -193,6 +194,7 @@ class Client(metaclass=MetaClient):
                             action_type=event_name)
 
         try:
+            self.record(event)  # REMOVE
 
             returns = await func(*args, **kwargs)
 
