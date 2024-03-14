@@ -94,7 +94,7 @@ class TestRecordAction:
         self.client.end_session(end_state='Success')
 
     def test_record_function_decorator(self, mock_req):
-        @self.client.record_function(event_name=self.event_type, tags=['foo', 'bar'])
+        @self.client.record_function(event_name=self.event_type)
         def add_two(x, y):
             return x + y
 
@@ -114,7 +114,7 @@ class TestRecordAction:
 
     def test_record_function_decorator_multiple(self, mock_req):
         # Arrange
-        @self.client.record_function(event_name=self.event_type, tags=['foo', 'bar'])
+        @self.client.record_function(event_name=self.event_type)
         def add_three(x, y, z=3):
             return x + y + z
 

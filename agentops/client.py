@@ -5,7 +5,7 @@ Classes:
     Client: Provides methods to interact with the AgentOps service.
 """
 
-from .event import Event, ActionEvent, Error
+from .event import Event, ActionEvent, ErrorEvent
 from .helpers import get_ISO_time, singleton, check_call_stack_for_agent_id
 from .session import Session
 from .worker import Worker
@@ -110,7 +110,7 @@ class Client(metaclass=MetaClient):
             logging.warning(
                 "AgentOps: Cannot record event - no current session")
 
-    def record_function(self, event_name: str, tags: Optional[List[str]] = None):
+    def record_function(self, event_name: str):
         """
         Decorator to record an event before and after a function call.
         Usage:
@@ -119,26 +119,25 @@ class Client(metaclass=MetaClient):
                 the action is recorded
         Args:
             event_name (str): The name of the event to record.
-            tags (List[str], optional): Any tags associated with the event. Defaults to None.
         """
 
         def decorator(func):
             if inspect.iscoroutinefunction(func):
                 @functools.wraps(func)
                 async def async_wrapper(*args, **kwargs):
-                    return await self._record_event_async(func, event_name, tags, *args, **kwargs)
+                    return await self._record_event_async(func, event_name, *args, **kwargs)
 
                 return async_wrapper
             else:
                 @functools.wraps(func)
                 def sync_wrapper(*args, **kwargs):
-                    return self._record_event_sync(func, event_name, tags, *args, **kwargs)
+                    return self._record_event_sync(func, event_name, *args, **kwargs)
 
                 return sync_wrapper
 
         return decorator
 
-    def _record_event_sync(self, func, event_name, tags, *args, **kwargs):
+    def _record_event_sync(self, func, event_name, *args, **kwargs):
         init_time = get_ISO_time()
         func_args = inspect.signature(func).parameters
         arg_names = list(func_args.keys())
@@ -150,8 +149,7 @@ class Client(metaclass=MetaClient):
         arg_values.update(dict(zip(arg_names, args)))
         arg_values.update(kwargs)
 
-        event = ActionEvent(tags=tags,
-                            params=arg_values,
+        event = ActionEvent(params=arg_values,
                             init_timestamp=init_time,
                             agent_id=check_call_stack_for_agent_id(),
                             action_type=event_name)
@@ -164,20 +162,22 @@ class Client(metaclass=MetaClient):
                 returns = list(returns)
 
             event.returns = returns
+            event.end_timestamp = get_ISO_time()
             # TODO: If func excepts this will never get called
             # the dev loses all the useful stuff in ActionEvent they would need for debugging
             # we should either record earlier or have Error post the supplied event to supabase
             self.record(event)
 
         except Exception as e:
-            self.record(Error(event=event, details={f"{type(e).__name__}": str(e)}))
+            # TODO: add the stack trace
+            self.record(ErrorEvent(event=event, details={f"{type(e).__name__}": str(e)}))
 
             # Re-raise the exception
             raise
 
         return returns
 
-    async def _record_event_async(self, func, event_name, tags, *args, **kwargs):
+    async def _record_event_async(self, func, event_name, *args, **kwargs):
         init_time = get_ISO_time()
         func_args = inspect.signature(func).parameters
         arg_names = list(func_args.keys())
@@ -189,8 +189,7 @@ class Client(metaclass=MetaClient):
         arg_values.update(dict(zip(arg_names, args)))
         arg_values.update(kwargs)
 
-        event = ActionEvent(tags=tags,
-                            params=arg_values,
+        event = ActionEvent(params=arg_values,
                             init_timestamp=init_time,
                             agent_id=check_call_stack_for_agent_id(),
                             action_type=event_name)
@@ -202,14 +201,16 @@ class Client(metaclass=MetaClient):
             if isinstance(returns, tuple):
                 returns = list(returns)
 
+            event.returns = returns
+            event.end_timestamp = get_ISO_time()
             # TODO: If func excepts this will never get called
             # the dev loses all the useful stuff in ActionEvent they would need for debugging
             # we should either record earlier or have Error post the supplied event to supabase
-            event.returns = returns
             self.record(event)
 
         except Exception as e:
-            self.record(Error(event=event, details={f"{type(e).__name__}": str(e)}))
+            # TODO: add the stack trace
+            self.record(ErrorEvent(event=event, details={f"{type(e).__name__}": str(e)}))
 
             # Re-raise the exception
             raise
