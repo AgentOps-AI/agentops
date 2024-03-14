@@ -1,11 +1,11 @@
 import logging
-import toml
 import traceback
 
 from .host_env import get_host_env
 from .http_client import HttpClient
 from .helpers import safe_serialize
 from importlib.metadata import version
+from os import environ
 
 
 class MetaClient(type):
@@ -32,7 +32,9 @@ class MetaClient(type):
                 "stack_trace": exception_traceback,
                 "host_env": get_host_env()
             }
-            HttpClient.post("https://api.agentops.ai/developer_errors",
+
+            endpoint = environ.get('AGENTOPS_API_ENDPOINT', 'https://api.agentops.ai')  # TODO
+            HttpClient.post(endpoint+"/developer_errors",
                             safe_serialize(developer_error).encode("utf-8"),
                             api_key=api_key)
 
@@ -46,7 +48,7 @@ def handle_exceptions(method):
         except Exception as e:
             type(self).send_exception_to_server(e, self.config._api_key)
             logging.warning(f"AgentOps: Error: {e}")
-            # raise e
+            raise e
 
     return wrapper
 

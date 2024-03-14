@@ -70,7 +70,7 @@ class Error():
 
     def __init__(self, event: Event = None, **kwargs):
         self.event_type = "errors"  # Temporary to accomodate /events endpoint. Won't be necessary with /errors endpoint
-        self.timestamp = get_ISO_time()  # TODO: Evaluate if this is correct
+        self.timestamp = get_ISO_time()
         if event:
             self.trigger_event_id = event.id
             self.trigger_event_type = event.event_type
