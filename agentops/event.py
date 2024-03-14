@@ -61,16 +61,18 @@ class ToolEvent(Event):
 ####################
 @dataclass
 class Error():
-    trigger_event_id: Optional[UUID]
-    trigger_event_type: Optional[EventType]
+    trigger_event_id: Optional[UUID] = None
+    trigger_event_type: Optional[EventType] = None
     error_type: Optional[str] = None
     code: Optional[str] = None
     details: Optional[str] = None
     logs: Optional[str] = None
-    timestamp: str = field(default_factory=get_ISO_time)
 
-    def __init__(self, event: Event, **kwargs):
-        self.trigger_event_id = event.id
-        self.trigger_event_type = event.event_type
+    def __init__(self, event: Event = None, **kwargs):
+        self.event_type = "errors"  # Temporary to accomodate /events endpoint. Won't be necessary with /errors endpoint
+        self.timestamp = get_ISO_time()  # TODO: Evaluate if this is correct
+        if event:
+            self.trigger_event_id = event.id
+            self.trigger_event_type = event.event_type
         for key, value in kwargs.items():
             setattr(self, key, value)
