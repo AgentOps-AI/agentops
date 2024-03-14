@@ -164,10 +164,9 @@ class Client(metaclass=MetaClient):
                 returns = list(returns)
 
             event.returns = returns
-
-            # TODO: If we except this will never get called here
-            # the dev loses all the useful stuff they would need for debugging
-            # maybe we could have Error post the supplied event to supabase
+            # TODO: If func excepts this will never get called
+            # the dev loses all the useful stuff in ActionEvent they would need for debugging
+            # we should either record earlier or have Error post the supplied event to supabase
             self.record(event)
 
         except Exception as e:
@@ -203,11 +202,10 @@ class Client(metaclass=MetaClient):
             if isinstance(returns, tuple):
                 returns = list(returns)
 
+            # TODO: If func excepts this will never get called
+            # the dev loses all the useful stuff in ActionEvent they would need for debugging
+            # we should either record earlier or have Error post the supplied event to supabase
             event.returns = returns
-
-            # TODO: If we except this will never get called here
-            # the dev loses all the useful stuff they would need for debugging
-            # maybe we could have Error post the supplied event to supabase
             self.record(event)
 
         except Exception as e:
