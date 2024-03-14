@@ -5,7 +5,7 @@ Classes:
     Client: Provides methods to interact with the AgentOps service.
 """
 
-from .event import Event, ActionEvent, ErrorEvent
+from .event import ActionEvent, ErrorEvent, Event
 from .helpers import get_ISO_time, singleton, check_call_stack_for_agent_id
 from .session import Session
 from .worker import Worker
@@ -14,7 +14,6 @@ from uuid import uuid4
 from typing import Optional, List
 from pydantic import Field
 from os import environ
-import functools
 import traceback
 import logging
 import inspect
@@ -109,33 +108,6 @@ class Client(metaclass=MetaClient):
         else:
             logging.warning(
                 "AgentOps: Cannot record event - no current session")
-
-    def record_function(self, event_name: str):
-        """
-        Decorator to record an event before and after a function call.
-        Usage:
-            - Actions: Records function parameters and return statements of the
-                function being decorated. Additionally, timing information about
-                the action is recorded
-        Args:
-            event_name (str): The name of the event to record.
-        """
-
-        def decorator(func):
-            if inspect.iscoroutinefunction(func):
-                @functools.wraps(func)
-                async def async_wrapper(*args, **kwargs):
-                    return await self._record_event_async(func, event_name, *args, **kwargs)
-
-                return async_wrapper
-            else:
-                @functools.wraps(func)
-                def sync_wrapper(*args, **kwargs):
-                    return self._record_event_sync(func, event_name, *args, **kwargs)
-
-                return sync_wrapper
-
-        return decorator
 
     def _record_event_sync(self, func, event_name, *args, **kwargs):
         init_time = get_ISO_time()

@@ -1,5 +1,6 @@
 from openai import OpenAI
 import agentops
+from agentops import record_function
 from packaging.version import parse
 from importlib import import_module
 import sys
@@ -16,7 +17,7 @@ if api in sys.modules:
             print('openai version: ', module_version)
 
 
-@ao_client.record_function('sample function being recorded')
+@record_function('sample function being recorded')
 def call_openai():
     client = OpenAI()
 

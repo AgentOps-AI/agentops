@@ -38,7 +38,7 @@ ao_client = agentops.Client(<INSERT YOUR API KEY HERE>)
 
 ...
 # (optional: record specific functions)
-@ao_client.record_action('sample function being record')
+@record_function('sample function being record')
 def sample_function(...):
     ...
 

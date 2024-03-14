@@ -4,7 +4,7 @@ import time
 from datetime import datetime
 
 
-from agentops import Client, Event
+from agentops import Client, Event, record_function
 
 
 @pytest.fixture
@@ -94,7 +94,7 @@ class TestRecordAction:
         self.client.end_session(end_state='Success')
 
     def test_record_function_decorator(self, mock_req):
-        @self.client.record_function(event_name=self.event_type)
+        @record_function(event_name=self.event_type)
         def add_two(x, y):
             return x + y
 
@@ -114,7 +114,7 @@ class TestRecordAction:
 
     def test_record_function_decorator_multiple(self, mock_req):
         # Arrange
-        @self.client.record_function(event_name=self.event_type)
+        @record_function(event_name=self.event_type)
         def add_three(x, y, z=3):
             return x + y + z
 
@@ -135,7 +135,7 @@ class TestRecordAction:
     @pytest.mark.asyncio
     async def test_async_function_call(self, mock_req):
 
-        @self.client.record_function(self.event_type)
+        @record_function(self.event_type)
         async def async_add(x, y):
             time.sleep(0.1)
             return x + y
@@ -165,7 +165,7 @@ class TestRecordAction:
         # Arrange
         prompt = 'prompt'
 
-        @self.client.record_function(event_name=self.event_type)
+        @record_function(event_name=self.event_type)
         def foo(prompt=prompt):
             return 'output'
 
@@ -185,7 +185,7 @@ class TestRecordAction:
         # Arrange
         prompt = 'prompt'
 
-        @self.client.record_function(event_name=self.event_type)
+        @record_function(event_name=self.event_type)
         def llm_call(prompt=prompt):
             return 'output'
 
