@@ -29,6 +29,8 @@ class LlmTracker:
     def _handle_response_v0_openai(self, response, kwargs, init_timestamp):
         """Handle responses for OpenAI versions <v1.0.0"""
 
+        prompt = kwargs.pop("messages", None)  # pull prompt out for visibility
+
         def handle_stream_chunk(chunk):
             try:
                 model = chunk['model']
@@ -40,14 +42,16 @@ class LlmTracker:
                     self.event_stream = LLMEvent(
                         init_timestamp=init_timestamp,
                         params=kwargs,
+                        returns={"finish_reason": None,
+                                 "content": token},
                         agent_id=check_call_stack_for_agent_id(),
-                        prompt=kwargs["messages"],
-                        completion={"finish_reason": None,
-                                    "content": token},
+                        prompt=prompt,
+                        completion=token,
                         model=model
                     )
                 else:
                     self.event_stream.returns['content'] += token
+                    self.event_stream.completion += token
 
                 if finish_reason:
                     if not self.event_stream.returns:
@@ -84,10 +88,11 @@ class LlmTracker:
             self.client.record(LLMEvent(
                 init_timestamp=init_timestamp,
                 params=kwargs,
+                returns={"content":
+                         response['choices'][0]['message']['content']},
                 agent_id=check_call_stack_for_agent_id(),
-                prompt=kwargs['messages'],
-                completion={"content":
-                            response['choices'][0]['message']['content']},
+                prompt=prompt,
+                completion=response['choices'][0]['message']['content'],
                 model=response['model'],
                 prompt_tokens=response.get('usage',
                                            {}).get('prompt_tokens'),
@@ -102,11 +107,12 @@ class LlmTracker:
                 self.client.record(LLMEvent(
                     init_timestamp=init_timestamp,
                     params=kwargs,
+                    returns={
+                        "content": response.choices[0].message.model_dump()},
                     agent_id=check_call_stack_for_agent_id(),
                     # TODO: Will need to make the completion the key for content, splat out the model dump
-                    prompt=kwargs['messages'],
-                    completion={
-                        "content": response.choices[0].message.model_dump()},
+                    prompt=prompt,
+                    completion=response.choices[0].message.model_dump(),
                     model=response.model,
                     prompt_tokens=response.usage.prompt_tokens,
                     completion_tokens=response.usage.completion_tokens
@@ -125,6 +131,8 @@ class LlmTracker:
         from openai.types.chat import ChatCompletionChunk
         from openai.resources import AsyncCompletions
 
+        prompt = kwargs.pop("messages", None)  # pull prompt out for visibility
+
         def handle_stream_chunk(chunk: ChatCompletionChunk):
             try:
                 model = chunk.model
@@ -140,9 +148,9 @@ class LlmTracker:
                         init_timestamp=init_timestamp,
                         params=kwargs,
                         agent_id=check_call_stack_for_agent_id(),
-                        prompt=kwargs["messages"],
-                        completion={"finish_reason": None,
-                                    "content": token},
+                        prompt=prompt,
+                        returns={"finish_reason": None,
+                                 "content": token},
                         model=model
                     )
                 else:
@@ -195,11 +203,12 @@ class LlmTracker:
             self.client.record(LLMEvent(
                 init_timestamp=init_timestamp,
                 params=kwargs,
-                agent_id=check_call_stack_for_agent_id(),
-                prompt=kwargs['messages'],
-                completion={
+                returns={
                     # TODO: Will need to make the completion the key for content, splat out the model dump
                     "content": response.choices[0].message.model_dump()},
+                agent_id=check_call_stack_for_agent_id(),
+                prompt=prompt,
+                completion=response.choices[0].message.model_dump(),
                 model=response.model,
                 prompt_tokens=response.usage.prompt_tokens,
                 completion_tokens=response.usage.completion_tokens

@@ -5,7 +5,7 @@ Classes:
     Client: Provides methods to interact with the AgentOps service.
 """
 
-from .event import Event, ActionEvent, ErrorEvent
+from .event import Event, ActionEvent, Error
 from .helpers import get_ISO_time, singleton, check_call_stack_for_agent_id
 from .session import Session
 from .worker import Worker
@@ -150,6 +150,12 @@ class Client(metaclass=MetaClient):
         arg_values.update(dict(zip(arg_names, args)))
         arg_values.update(kwargs)
 
+        event = ActionEvent(tags=tags,
+                            params=arg_values,
+                            init_timestamp=init_time,
+                            agent_id=check_call_stack_for_agent_id(),
+                            action_type=event_name)
+
         try:
             returns = func(*args, **kwargs)
 
@@ -157,21 +163,11 @@ class Client(metaclass=MetaClient):
             if isinstance(returns, tuple):
                 returns = list(returns)
 
-            # Record the event after the function call
-            self.record(ActionEvent(tags=tags,
-                                    params=arg_values,
-                                    init_timestamp=init_time,
-                                    action_type=event_name,
-                                    agent_id=check_call_stack_for_agent_id(),
-                                    details=returns))
+            event.returns = returns
+            self.record(event)
 
         except Exception as e:
-            # Record the event after the function call
-            self.record(ErrorEvent(tags=tags,
-                                   params=arg_values,
-                                   init_timestamp=init_time,
-                                   event_name=event_name,
-                                   details={f"{type(e).__name__}": str(e)}))
+            self.record(Error(event=event, details={f"{type(e).__name__}": str(e)}))
 
             # Re-raise the exception
             raise
@@ -190,6 +186,12 @@ class Client(metaclass=MetaClient):
         arg_values.update(dict(zip(arg_names, args)))
         arg_values.update(kwargs)
 
+        event = ActionEvent(tags=tags,
+                            params=arg_values,
+                            init_timestamp=init_time,
+                            agent_id=check_call_stack_for_agent_id(),
+                            action_type=event_name)
+
         try:
 
             returns = await func(*args, **kwargs)
@@ -198,21 +200,11 @@ class Client(metaclass=MetaClient):
             if isinstance(returns, tuple):
                 returns = list(returns)
 
-            # Record the event after the function call
-            self.record(ActionEvent(tags=tags,
-                                    params=arg_values,
-                                    init_timestamp=init_time,
-                                    agent_id=check_call_stack_for_agent_id(),
-                                    action_type=event_name,
-                                    details=returns))
+            event.returns = returns
+            self.record(event)
 
         except Exception as e:
-            # Record the event after the function call
-            self.record(ErrorEvent(tags=tags,
-                                   params=arg_values,
-                                   init_timestamp=init_time,
-                                   event_name=event_name,
-                                   details={f"{type(e).__name__}": str(e)}))
+            self.record(Error(event=event, details={f"{type(e).__name__}": str(e)}))
 
             # Re-raise the exception
             raise

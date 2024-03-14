@@ -55,7 +55,17 @@ def safe_serialize(obj):
         else:
             return f"<<non-serializable: {type(o).__qualname__}>>"
 
-    return json.dumps(obj, default=default)
+    def remove_none_values(value):
+        """Recursively remove keys with None values from dictionaries."""
+        if isinstance(value, dict):
+            return {k: remove_none_values(v) for k, v in value.items() if v is not None}
+        elif isinstance(value, list):
+            return [remove_none_values(item) for item in value]
+        else:
+            return value
+
+    cleaned_obj = remove_none_values(obj)
+    return json.dumps(cleaned_obj, default=default)
 
 
 def check_call_stack_for_agent_id() -> str | None:

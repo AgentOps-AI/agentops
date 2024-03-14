@@ -6,7 +6,6 @@ class EventType(Enum):
     ACTION = "actions"
     API = "apis"
     TOOL = "tools"
-    ERROR = "errors"
 
 
 class Result(Enum):
