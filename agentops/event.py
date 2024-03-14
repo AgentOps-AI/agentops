@@ -15,7 +15,6 @@ from uuid import UUID, uuid4
 @dataclass
 class Event:
     event_type: str  # EventType.ENUM.value
-    tags: Optional[List[str]] = None
     params: Optional[str] = None
     returns: Optional[str] = None
     init_timestamp: Optional[str] = field(default_factory=get_ISO_time)
@@ -58,9 +57,9 @@ class ToolEvent(Event):
     logs: Optional[str] = None
 
 
-####################
+# Does not inherit from Event because error will (optionally) be linked to an ActionEvent, LLMEvent, etc that will have the details
 @dataclass
-class Error():
+class ErrorEvent():
     trigger_event_id: Optional[UUID] = None
     trigger_event_type: Optional[EventType] = None
     error_type: Optional[str] = None
@@ -69,7 +68,7 @@ class Error():
     logs: Optional[str] = None
 
     def __init__(self, event: Event = None, **kwargs):
-        self.event_type = "errors"  # Temporary to accomodate /events endpoint. Won't be necessary with /errors endpoint
+        self.event_type: str = EventType.ERROR.value
         self.timestamp = get_ISO_time()
         if event:
             self.trigger_event_id = event.id
