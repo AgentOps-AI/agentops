@@ -1,14 +1,12 @@
 from openai import AsyncOpenAI  # Assuming AsyncOpenAI is the async version of the client
 import asyncio
 import agentops
-from packaging.version import parse
-from importlib import import_module
-import sys
+from agentops import record_function
 
 ao_client = agentops.Client()
 
 
-@ao_client.record_function('sample function being recorded')
+@record_function('sample function being recorded')
 async def call_openai_async():
     client = AsyncOpenAI()  # Using the async client
 
