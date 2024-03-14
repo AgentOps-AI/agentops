@@ -9,7 +9,7 @@ from dataclasses import dataclass, field
 from typing import List, Optional
 from .helpers import get_ISO_time
 from .enums import EventType, Models
-from uuid import uuid4
+from uuid import UUID, uuid4
 
 
 @dataclass
@@ -20,18 +20,14 @@ class Event:
     returns: Optional[str] = None
     init_timestamp: Optional[str] = field(default_factory=get_ISO_time)
     end_timestamp: str = field(default_factory=get_ISO_time)
-    # TODO: instead of making this a str we can keep it as uuid4 and just handle it on serialization
-    # e.g. if isinstance(o, UUID): return str(o)
-    # we might have to do this bc when they start passing uuid4 it'll error unless they do str(uuid4())
-    # this is why i have to use lambda
-    id: str = field(default_factory=lambda: str(uuid4()))
+    id: UUID = field(default_factory=uuid4)
 
 
 @dataclass
 class ActionEvent(Event):
     event_type: str = EventType.ACTION.value
     # TODO: Should not be optional, but non-default argument 'agent_id' follows default argument error
-    agent_id: Optional[uuid4] = None
+    agent_id: Optional[UUID] = None
     action_type: Optional[str] = None
     logs: Optional[str] = None
     screenshot: Optional[str] = None
@@ -45,8 +41,8 @@ class ActionEvent(Event):
 @dataclass
 class LLMEvent(Event):
     event_type: str = EventType.LLM.value
-    agent_id: Optional[uuid4] = None
-    thread_id: Optional[uuid4] = None
+    agent_id: Optional[UUID] = None
+    thread_id: Optional[UUID] = None
     prompt: Optional[str] = None
     completion: Optional[str] = None
     model: Optional[Models] = None
@@ -57,7 +53,7 @@ class LLMEvent(Event):
 @dataclass
 class ToolEvent(Event):
     event_type: str = EventType.TOOL.value
-    agent_id: Optional[uuid4] = None
+    agent_id: Optional[UUID] = None
     name: Optional[str] = None
     logs: Optional[str] = None
 
@@ -65,7 +61,7 @@ class ToolEvent(Event):
 ####################
 @dataclass
 class Error():
-    trigger_event_id: Optional[uuid4]
+    trigger_event_id: Optional[UUID]
     trigger_event_type: Optional[EventType]
     error_type: Optional[str] = None
     code: Optional[str] = None

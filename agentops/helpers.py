@@ -3,6 +3,7 @@ from datetime import datetime
 import json
 import inspect
 import logging
+from uuid import UUID
 
 
 def singleton(class_):
@@ -37,18 +38,21 @@ def is_jsonable(x):
 def filter_unjsonable(d: dict) -> dict:
     def filter_dict(obj):
         if isinstance(obj, dict):
-            return {k: filter_dict(v) if is_jsonable(v) else "" for k, v in obj.items()}
+            # TODO: clean up this mess lol
+            return {k: filter_dict(v) if isinstance(v, (dict, list)) or is_jsonable(v) else str(v) if isinstance(v, UUID) else "" for k, v in obj.items()}
         elif isinstance(obj, list):
-            return [filter_dict(x) if isinstance(x, (dict, list)) else x for x in obj]
+            return [filter_dict(x) if isinstance(x, (dict, list)) or is_jsonable(x) else str(x) if isinstance(x, UUID) else "" for x in obj]
         else:
-            return obj if is_jsonable(obj) else ""
+            return obj if is_jsonable(obj) or isinstance(obj, UUID) else ""
 
     return filter_dict(d)
 
 
 def safe_serialize(obj):
     def default(o):
-        if hasattr(o, 'model_dump_json'):
+        if isinstance(o, UUID):
+            return str(o)
+        elif hasattr(o, 'model_dump_json'):
             return o.model_dump_json()
         elif hasattr(o, 'to_json'):
             return o.to_json()
