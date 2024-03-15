@@ -6,7 +6,7 @@ import logging
 from .event import LLMEvent
 from .helpers import get_ISO_time, check_call_stack_for_agent_id
 import inspect
-from .enums import PromptMessageFormat
+from .enums import LLMMessageFormat
 
 
 class LlmTracker:
@@ -30,7 +30,7 @@ class LlmTracker:
     def _handle_response_v0_openai(self, response, kwargs, init_timestamp):
         """Handle responses for OpenAI versions <v1.0.0"""
 
-        prompt_messages = {"messages": kwargs.pop("messages", [])}  # pull messages out for visibility
+        prompt_messages = kwargs.pop("messages")  # pull messages out for visibility
 
         def handle_stream_chunk(chunk):
             try:
@@ -47,7 +47,7 @@ class LlmTracker:
                                  "content": token},
                         agent_id=check_call_stack_for_agent_id(),
                         prompt_messages=prompt_messages,
-                        prompt_messages_format=PromptMessageFormat.CHATML,
+                        prompt_messages_format=LLMMessageFormat.CHATML,
                         completion=token,
                         model=model
                     )
@@ -94,7 +94,7 @@ class LlmTracker:
                          response['choices'][0]['message']['content']},
                 agent_id=check_call_stack_for_agent_id(),
                 prompt_messages=prompt_messages,
-                prompt_messages_format=PromptMessageFormat.CHATML,
+                prompt_messages_format=LLMMessageFormat.CHATML,
                 completion=response['choices'][0]['message']['content'],
                 model=response['model'],
                 prompt_tokens=response.get('usage',
@@ -115,7 +115,7 @@ class LlmTracker:
                     agent_id=check_call_stack_for_agent_id(),
                     # TODO: Will need to make the completion the key for content, splat out the model dump
                     prompt_messages=prompt_messages,
-                    prompt_messages_format=PromptMessageFormat.CHATML,
+                    prompt_messages_format=LLMMessageFormat.CHATML,
                     completion=response.choices[0].message.model_dump(),
                     model=response.model,
                     prompt_tokens=response.usage.prompt_tokens,
@@ -135,7 +135,7 @@ class LlmTracker:
         from openai.types.chat import ChatCompletionChunk
         from openai.resources import AsyncCompletions
 
-        prompt_messages = {"messages": kwargs.pop("messages", [])}  # pull messages out for visibility
+        prompt_messages = kwargs.pop("messages")  # pull messages out for visibility
 
         def handle_stream_chunk(chunk: ChatCompletionChunk):
             try:
@@ -153,7 +153,7 @@ class LlmTracker:
                         params=kwargs,
                         agent_id=check_call_stack_for_agent_id(),
                         prompt_messages=prompt_messages,
-                        prompt_messages_format=PromptMessageFormat.CHATML,
+                        prompt_messages_format=LLMMessageFormat.CHATML,
                         returns={"finish_reason": None,
                                  "content": token},
                         model=model
@@ -205,16 +205,24 @@ class LlmTracker:
 
         # v1.0.0+ responses are objects
         try:
+
+            import json
+            test = response.choices[0].message
+            json_string = json.dumps(test)
+            print(json_string)
+            test = response.choices[0].message.model_dump()
+            json_string = json.dumps(test)
+            print(json_string)
+
             self.client.record(LLMEvent(
                 init_timestamp=init_timestamp,
                 params=kwargs,
-                returns={
-                    # TODO: Will need to make the completion the key for content, splat out the model dump
-                    "content": response.choices[0].message.model_dump()},
+                returns=response,
                 agent_id=check_call_stack_for_agent_id(),
                 prompt_messages=prompt_messages,
-                prompt_messages_format=PromptMessageFormat.CHATML,
-                completion=response.choices[0].message.model_dump(),
+                prompt_messages_format=LLMMessageFormat.CHATML,
+                completion_message=response.choices[0].message.model_dump(),
+                completion_message_format=LLMMessageFormat.CHATML,
                 model=response.model,
                 prompt_tokens=response.usage.prompt_tokens,
                 completion_tokens=response.usage.completion_tokens
