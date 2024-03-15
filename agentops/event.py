@@ -44,7 +44,7 @@ class LLMEvent(Event):
     event_type: str = EventType.LLM.value
     agent_id: Optional[UUID] = None
     thread_id: Optional[UUID] = None
-    prompt_messages: str | object = None  # TODO: remove from serialization
+    prompt_messages: str | List = None  # TODO: remove from serialization
     prompt_messages_format: LLMMessageFormat = LLMMessageFormat.STRING  # TODO: remove from serialization
     # TODO: remove and just create it in __post_init__ so it can never be set by user?
     _formatted_prompt_messages: object = field(init=False, default=None)
@@ -57,38 +57,23 @@ class LLMEvent(Event):
     completion_tokens: Optional[int] = None
 
     def __post_init__(self):
-        # TODO can we just figure out if it's chatml so user doesn't have to pass anything?
+        # TODO should we just figure out if it's chatml so user doesn't have to pass anything?
         if self.prompt_messages_format == LLMMessageFormat.STRING:
             self._formatted_prompt_messages = {"type": "string", "string": self.prompt_messages}
         elif self.prompt_messages_format == LLMMessageFormat.CHATML:
-            # Check if prompt_messages is already a list (indicating direct messages without "messages" key)
-            if isinstance(self.prompt_messages, list):
-                # Direct list of messages, add under "messages" key
-                # [{'role': 'system', 'content': '...'}]
-                self._formatted_prompt_messages = {"type": "chatml", "messages": self.prompt_messages}
-            elif "messages" in self.prompt_messages:
-                # prompt_messages is a dict that includes a "messages" key
-                # {'messages': [{'role': 'system', 'content': '...'}]}
-                self._formatted_prompt_messages = {"type": "chatml", **self.prompt_messages}
-            else:
-                logging.error("AgentOps: invalid prompt_messages")
+            self._formatted_prompt_messages = {"type": "chatml", "messages": self.prompt_messages}
 
         if self.completion_message_format == LLMMessageFormat.STRING:
             self._formatted_completion_message = {"type": "string", "string": self.completion_message}
         elif self.completion_message_format == LLMMessageFormat.CHATML:
-            # Check if completion_message is already a list (indicating direct messages without "messages" key)
-            if "message" in self.completion_message:
-                # completion_message is a dict that includes a "messages" key
-                # {'message': {'role': 'assistant', 'content': '...'}}
-                self._formatted_completion_message = {"type": "chatml", **self.completion_message}
-            elif True:  # TODO
-                # Direct list of messages, add under "messages" key
-                # [{'role': 'system', 'content': '...'}]
-                self._formatted_completion_message = {"type": "chatml", "messages": self.completion_message}
-            else:
-                logging.error("AgentOps: invalid completion_message")
+            self._formatted_completion_message = {"type": "chatml", "message": self.completion_message}
 
-        print("\n\ncompletion:\n", self.completion, "\n\n")
+        # import pprint
+        # import json
+        # print("\n\_formatted_prompt_messages:\n")
+        # pprint(self._formatted_prompt_messages)
+        # print("\n\_formatted_completion_message:\n")
+        # json.dump(self._formatted_completion_message)
 
 
 @dataclass
