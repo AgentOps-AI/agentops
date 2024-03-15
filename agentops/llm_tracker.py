@@ -6,6 +6,7 @@ import logging
 from .event import LLMEvent
 from .helpers import get_ISO_time, check_call_stack_for_agent_id
 import inspect
+from .enums import PromptMessageFormat
 
 
 class LlmTracker:
@@ -29,7 +30,7 @@ class LlmTracker:
     def _handle_response_v0_openai(self, response, kwargs, init_timestamp):
         """Handle responses for OpenAI versions <v1.0.0"""
 
-        prompt = kwargs.pop("messages", None)  # pull prompt out for visibility
+        prompt_messages = {"messages": kwargs.pop("messages", [])}  # pull messages out for visibility
 
         def handle_stream_chunk(chunk):
             try:
@@ -45,7 +46,8 @@ class LlmTracker:
                         returns={"finish_reason": None,
                                  "content": token},
                         agent_id=check_call_stack_for_agent_id(),
-                        prompt=prompt,
+                        prompt_messages=prompt_messages,
+                        prompt_messages_format=PromptMessageFormat.CHATML,
                         completion=token,
                         model=model
                     )
@@ -64,7 +66,7 @@ class LlmTracker:
             except Exception as e:
                 # TODO: This error is specific to only one path of failure. Should be more generic or have different logging for different paths
                 logging.warning(
-                    f"AgentOps: Unable to parse a chunk for LLM call {kwargs} - skipping upload to AgentOps")
+                    f"AgentOps: Unable to parse a chunk for LLM call {prompt_messages} - skipping upload to AgentOps")
 
         # if the response is a generator, decorate the generator
         if inspect.isasyncgen(response):
@@ -91,7 +93,8 @@ class LlmTracker:
                 returns={"content":
                          response['choices'][0]['message']['content']},
                 agent_id=check_call_stack_for_agent_id(),
-                prompt=prompt,
+                prompt_messages=prompt_messages,
+                prompt_messages_format=PromptMessageFormat.CHATML,
                 completion=response['choices'][0]['message']['content'],
                 model=response['model'],
                 prompt_tokens=response.get('usage',
@@ -111,7 +114,8 @@ class LlmTracker:
                         "content": response.choices[0].message.model_dump()},
                     agent_id=check_call_stack_for_agent_id(),
                     # TODO: Will need to make the completion the key for content, splat out the model dump
-                    prompt=prompt,
+                    prompt_messages=prompt_messages,
+                    prompt_messages_format=PromptMessageFormat.CHATML,
                     completion=response.choices[0].message.model_dump(),
                     model=response.model,
                     prompt_tokens=response.usage.prompt_tokens,
@@ -121,7 +125,7 @@ class LlmTracker:
             except Exception as e:
                 # TODO: This error is specific to only one path of failure. Should be more generic or have different logging for different paths
                 logging.warning(
-                    f"AgentOps: Unable to parse a chunk for LLM call {kwargs} - skipping upload to AgentOps")
+                    f"AgentOps: Unable to parse a chunk for LLM call {prompt_messages} - skipping upload to AgentOps")
 
         return response
 
@@ -131,7 +135,7 @@ class LlmTracker:
         from openai.types.chat import ChatCompletionChunk
         from openai.resources import AsyncCompletions
 
-        prompt = kwargs.pop("messages", None)  # pull prompt out for visibility
+        prompt_messages = {"messages": kwargs.pop("messages", [])}  # pull messages out for visibility
 
         def handle_stream_chunk(chunk: ChatCompletionChunk):
             try:
@@ -148,7 +152,8 @@ class LlmTracker:
                         init_timestamp=init_timestamp,
                         params=kwargs,
                         agent_id=check_call_stack_for_agent_id(),
-                        prompt=prompt,
+                        prompt_messages=prompt_messages,
+                        prompt_messages_format=PromptMessageFormat.CHATML,
                         returns={"finish_reason": None,
                                  "content": token},
                         model=model
@@ -172,7 +177,7 @@ class LlmTracker:
             except Exception as e:
                 # TODO: This error is specific to only one path of failure. Should be more generic or have different logging for different paths
                 logging.warning(
-                    f"AgentOps: Unable to parse a chunk for LLM call {kwargs} - skipping upload to AgentOps")
+                    f"AgentOps: Unable to parse a chunk for LLM call {prompt_messages} - skipping upload to AgentOps")
 
         # if the response is a generator, decorate the generator
         if isinstance(response, Stream):
@@ -207,7 +212,8 @@ class LlmTracker:
                     # TODO: Will need to make the completion the key for content, splat out the model dump
                     "content": response.choices[0].message.model_dump()},
                 agent_id=check_call_stack_for_agent_id(),
-                prompt=prompt,
+                prompt_messages=prompt_messages,
+                prompt_messages_format=PromptMessageFormat.CHATML,
                 completion=response.choices[0].message.model_dump(),
                 model=response.model,
                 prompt_tokens=response.usage.prompt_tokens,
@@ -217,7 +223,7 @@ class LlmTracker:
         except Exception as e:
             # TODO: This error is specific to only one path of failure. Should be more generic or have different logging for different paths
             logging.warning(
-                f"AgentOps: Unable to parse a chunk for LLM call {kwargs} - skipping upload to AgentOps")
+                f"AgentOps: Unable to parse a chunk for LLM call {prompt_messages} - skipping upload to AgentOps")
 
         return response
 
