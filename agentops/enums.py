@@ -29,6 +29,6 @@ class Models(Enum):
     TEXT_EMBEDDING_ADA_002 = "text-embedding-ada-002"
 
 
-class PromptMessageFormat(Enum):
+class LLMMessageFormat(Enum):
     STRING = "string"
     CHATML = "chatml"
