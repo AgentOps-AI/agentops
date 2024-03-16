@@ -3,7 +3,7 @@ import sys
 from importlib import import_module
 from packaging.version import parse
 import logging
-from .event import LLMEvent
+from .event import LLMEvent, ErrorEvent
 from .helpers import get_ISO_time, check_call_stack_for_agent_id
 import inspect
 from .enums import LLMMessageFormat
@@ -26,39 +26,47 @@ class LlmTracker:
     def __init__(self, client):
         self.client = client
         self.completion = ""
+        self.llm_event: LLMEvent = None
 
     def _handle_response_v0_openai(self, response, kwargs, init_timestamp):
         """Handle responses for OpenAI versions <v1.0.0"""
 
-        from pprint import pprint
-        print("kwargs:")
-        pprint(kwargs)
+        self.completion = ""
+        self.llm_event = None
 
         def handle_stream_chunk(chunk):
-            print("chunk:")
-            pprint(chunk)
+            self.llm_event = LLMEvent(
+                init_timestamp=init_timestamp,
+                params=kwargs
+            )
+
             try:
                 model = chunk['model']
                 choices = chunk['choices']
                 token = choices[0]['delta'].get('content', '')
                 finish_reason = choices[0]['finish_reason']
-                self.completion += token
+                if token:
+                    self.completion += token
 
                 if finish_reason:
                     # TODO: handle case where finish_reason never gets a value? Do we record an LLMEvent in that case?
-                    self.client.record(LLMEvent(
-                        init_timestamp=init_timestamp,
-                        params=kwargs,
-                        agent_id=check_call_stack_for_agent_id(),
-                        prompt_messages=kwargs["messages"],
-                        prompt_messages_format=LLMMessageFormat.CHATML,
-                        completion_message={"role": "assistant", "content": self.completion},
-                        completion_message_format=LLMMessageFormat.CHATML,
-                        # TODO: cannot return response.model_dump() bc response is async generator
-                        returns={"finish_reason": finish_reason, "content": self.completion},
-                        model=model
-                    ))
+                    self.llm_event.agent_id = check_call_stack_for_agent_id()
+                    self.llm_event.prompt_messages = kwargs["messages"]
+                    self.llm_event.prompt_messages_format = LLMMessageFormat.CHATML
+                    self.llm_event.completion_message = {"role": "assistant", "content": self.completion}
+                    self.llm_event.completion_message_format = LLMMessageFormat.CHATML
+                    # TODO: cannot return response.model_dump() bc response is async generator
+                    self.llm_event.returns = {"finish_reason": finish_reason, "content": self.completion}
+                    self.llm_event.model = model
+                    self.llm_event.end_timestamp = get_ISO_time()
+                    self.llm_event.format_messages()
+
+                    self.client.record(self.llm_event)
+
+                    # self.llm_event = None
+                    # self.completion = ""
             except Exception as e:
+                self.client.record(ErrorEvent(trigger_event=self.llm_event, details={f"{type(e).__name__}": str(e)}))
                 # TODO: This error is specific to only one path of failure. Should be more generic or have different logging for different paths
                 logging.warning(
                     f"AgentOps: Unable to parse a chunk for LLM call {kwargs} - skipping upload to AgentOps")
@@ -80,24 +88,28 @@ class LlmTracker:
                     yield chunk
             return generator()
 
+        self.llm_event = LLMEvent(
+            init_timestamp=init_timestamp,
+            params=kwargs
+        )
         # v0.0.0 responses are dicts
         try:
-            print("\nresponse:")
-            pprint(response.model_dump())
+            self.llm_event.agent_id = check_call_stack_for_agent_id()
+            self.llm_event.prompt_messages = kwargs["messages"]
+            self.llm_event.prompt_messages_format = LLMMessageFormat.CHATML
+            # TODO: need to coerce this into chatml
+            self.llm_event.completion_message = response['choices'][0]['message']
+            self.llm_event.completion_message_format = LLMMessageFormat.CHATML
+            self.llm_event.returns = {"content": response['choices'][0]['message']['content']}
+            self.llm_event.model = response["model"]
+            self.llm_event.end_timestamp = get_ISO_time()
+            self.llm_event.format_messages()
 
-            self.client.record(LLMEvent(
-                init_timestamp=init_timestamp,
-                params=kwargs,
-                agent_id=check_call_stack_for_agent_id(),
-                prompt_messages=kwargs["messages"],
-                prompt_messages_format=LLMMessageFormat.CHATML,
-                # TODO: need to coerce this into chatml
-                completion_message=response['choices'][0]['message'],
-                completion_message_format=LLMMessageFormat.CHATML,
-                returns=response.model_dump(),
-                model=response["model"]
-            ))
+            self.client.record(self.llm_event)
+
+            # self.llm_event = None
         except Exception as e:
+            self.client.record(ErrorEvent(trigger_event=self.llm_event, details={f"{type(e).__name__}": str(e)}))
             # TODO: This error is specific to only one path of failure. Should be more generic or have different logging for different paths
             logging.warning(
                 f"AgentOps: Unable to parse a chunk for LLM call {kwargs} - skipping upload to AgentOps")
@@ -110,13 +122,16 @@ class LlmTracker:
         from openai.types.chat import ChatCompletionChunk
         from openai.resources import AsyncCompletions
 
-        from pprint import pprint
-        print("kwargs:")
-        pprint(kwargs)
-        print("\nresponse:")
-        pprint(response.model_dump())
+        self.completion = ""
+        self.llm_event = None
 
         def handle_stream_chunk(chunk: ChatCompletionChunk):
+
+            self.llm_event = LLMEvent(
+                init_timestamp=init_timestamp,
+                params=kwargs
+            )
+
             try:
                 model = chunk.model
                 choices = chunk.choices
@@ -125,39 +140,31 @@ class LlmTracker:
                 function_call = choices[0].delta.function_call
                 tool_calls = choices[0].delta.tool_calls
                 role = choices[0].delta.role
+                if token:
+                    self.completion += token
 
-                if self.event_stream == None:
-                    self.event_stream = LLMEvent(
-                        init_timestamp=init_timestamp,
-                        params=kwargs,
-                        agent_id=check_call_stack_for_agent_id(),
-                        prompt_messages=kwargs["messages"],
-                        prompt_messages_format=LLMMessageFormat.CHATML,
-                        completion_message=response.choices[0].message.model_dump(),
-                        completion_message_format=LLMMessageFormat.CHATML,
-                        returns=response.model_dump(),
-                        model=model
-                    )
-                else:
-                    if token == None:
-                        token = ''
-                    self.event_stream.returns['content'] += token
+                if finish_reason:
+                    # TODO: handle case where finish_reason never gets a value? Do we record an LLMEvent in that case?
+                    self.llm_event.agent_id = check_call_stack_for_agent_id()
+                    self.llm_event.prompt_messages = kwargs["messages"]
+                    self.llm_event.prompt_messages_format = LLMMessageFormat.CHATML
+                    self.llm_event.completion_message = {"role": "assistant", "content": self.completion}
+                    self.llm_event.completion_message_format = LLMMessageFormat.CHATML
+                    self.llm_event.returns = {"finish_reason": finish_reason, "content": self.completion,
+                                              "function_call": function_call, "tool_calls": tool_calls, "role": role}
+                    self.llm_event.model = model
+                    self.llm_event.end_timestamp = get_ISO_time()
+                    self.llm_event.format_messages()
 
-                # if finish_reason:
-                #     if not self.event_stream.returns:
-                #         self.event_stream.returns = {}
-                #     self.event_stream.returns['finish_reason'] = finish_reason
-                #     self.event_stream.returns['function_call'] = function_call
-                #     self.event_stream.returns['tool_calls'] = tool_calls
-                #     self.event_stream.returns['role'] = role
-                #     # Update end_timestamp
-                #     self.event_stream.end_timestamp = get_ISO_time()
-                #     self.client.record(self.event_stream)
-                #     self.event_stream = None
+                    self.client.record(self.llm_event)
+
+                    # self.llm_event = None
+                    # self.completion = ""
             except Exception as e:
+                self.client.record(ErrorEvent(trigger_event=self.llm_event, details={f"{type(e).__name__}": str(e)}))
                 # TODO: This error is specific to only one path of failure. Should be more generic or have different logging for different paths
                 logging.warning(
-                    f"AgentOps: Unable to parse a chunk for LLM call {prompt_messages} - skipping upload to AgentOps")
+                    f"AgentOps: Unable to parse a chunk for LLM call {kwargs} - skipping upload to AgentOps")
 
         # if the response is a generator, decorate the generator
         if isinstance(response, Stream):
@@ -183,21 +190,27 @@ class LlmTracker:
                     yield chunk
             return async_generator()
 
-          # v1.0.0+ responses are objects
+        self.llm_event = LLMEvent(
+            init_timestamp=init_timestamp,
+            params=kwargs
+        )
+        # v1.0.0+ responses are objects
         try:
-            self.client.record(LLMEvent(
-                init_timestamp=init_timestamp,
-                params=kwargs,
-                agent_id=check_call_stack_for_agent_id(),
-                prompt_messages=kwargs["messages"],
-                prompt_messages_format=LLMMessageFormat.CHATML,
-                completion_message=response.choices[0].message.model_dump(),
-                completion_message_format=LLMMessageFormat.CHATML,
-                returns=response.model_dump(),
-                model=response.model
-            ))
+            self.llm_event.agent_id = check_call_stack_for_agent_id()
+            self.llm_event.prompt_messages = kwargs["messages"]
+            self.llm_event.prompt_messages_format = LLMMessageFormat.CHATML
+            self.llm_event.completion_message = response.choices[0].message.model_dump()
+            self.llm_event.completion_message_format = LLMMessageFormat.CHATML
+            self.llm_event.returns = response.model_dump()
+            self.llm_event.model = response.model
+            self.llm_event.format_messages()
+
+            self.client.record(self.llm_event)
+
+            # self.llm_event = None
             # Standard response
         except Exception as e:
+            self.client.record(ErrorEvent(trigger_event=self.llm_event, details={f"{type(e).__name__}": str(e)}))
             # TODO: This error is specific to only one path of failure. Should be more generic or have different logging for different paths
             logging.warning(
                 f"AgentOps: Unable to parse a chunk for LLM call {kwargs} - skipping upload to AgentOps")

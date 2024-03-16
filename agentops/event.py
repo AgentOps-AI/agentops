@@ -56,24 +56,23 @@ class LLMEvent(Event):
     prompt_tokens: Optional[int] = None
     completion_tokens: Optional[int] = None
 
+    def format_messages(self):
+        if self.prompt_messages:
+            # TODO should we just figure out if it's chatml so user doesn't have to pass anything?
+            if self.prompt_messages_format == LLMMessageFormat.STRING:
+                self._formatted_prompt_messages = {"type": "string", "string": self.prompt_messages}
+            elif self.prompt_messages_format == LLMMessageFormat.CHATML:
+                self._formatted_prompt_messages = {"type": "chatml", "messages": self.prompt_messages}
+
+        if self.completion_message:
+            if self.completion_message_format == LLMMessageFormat.STRING:
+                self._formatted_completion_message = {"type": "string", "string": self.completion_message}
+            elif self.completion_message_format == LLMMessageFormat.CHATML:
+                self._formatted_completion_message = {"type": "chatml", "message": self.completion_message}
+
     def __post_init__(self):
-        # TODO should we just figure out if it's chatml so user doesn't have to pass anything?
-        if self.prompt_messages_format == LLMMessageFormat.STRING:
-            self._formatted_prompt_messages = {"type": "string", "string": self.prompt_messages}
-        elif self.prompt_messages_format == LLMMessageFormat.CHATML:
-            self._formatted_prompt_messages = {"type": "chatml", "messages": self.prompt_messages}
-
-        if self.completion_message_format == LLMMessageFormat.STRING:
-            self._formatted_completion_message = {"type": "string", "string": self.completion_message}
-        elif self.completion_message_format == LLMMessageFormat.CHATML:
-            self._formatted_completion_message = {"type": "chatml", "message": self.completion_message}
-
-        # import pprint
-        # import json
-        # print("\n\_formatted_prompt_messages:\n")
-        # pprint(self._formatted_prompt_messages)
-        # print("\n\_formatted_completion_message:\n")
-        # json.dump(self._formatted_completion_message)
+        # format if prompt/completion messages were passed when LLMEvent was created
+        self.format_messages()
 
 
 @dataclass
@@ -92,11 +91,10 @@ class ErrorEvent():
     code: Optional[str] = None
     details: Optional[str] = None
     logs: Optional[str] = None
-    # event_type: str = EventType.ERROR.value # TODO: don't expose this
-    event_type: str = field(init=False, default=EventType.ERROR.value)
     timestamp: str = field(default_factory=get_ISO_time)
 
     def __post_init__(self):
+        self.event_type = EventType.ERROR.value
         if self.trigger_event:
             self.trigger_event_id = self.trigger_event.id
             self.trigger_event_type = self.trigger_event.event_type
