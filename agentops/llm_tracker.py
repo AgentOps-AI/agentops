@@ -49,22 +49,17 @@ class LlmTracker:
                     self.completion += token
 
                 if finish_reason:
-                    # TODO: handle case where finish_reason never gets a value? Do we record an LLMEvent in that case?
                     self.llm_event.agent_id = check_call_stack_for_agent_id()
                     self.llm_event.prompt_messages = kwargs["messages"]
                     self.llm_event.prompt_messages_format = LLMMessageFormat.CHATML
                     self.llm_event.completion_message = {"role": "assistant", "content": self.completion}
                     self.llm_event.completion_message_format = LLMMessageFormat.CHATML
-                    # TODO: cannot return response.model_dump() bc response is async generator
                     self.llm_event.returns = {"finish_reason": finish_reason, "content": self.completion}
                     self.llm_event.model = model
                     self.llm_event.end_timestamp = get_ISO_time()
                     self.llm_event.format_messages()
 
                     self.client.record(self.llm_event)
-
-                    # self.llm_event = None
-                    # self.completion = ""
             except Exception as e:
                 self.client.record(ErrorEvent(trigger_event=self.llm_event, details={f"{type(e).__name__}": str(e)}))
                 # TODO: This error is specific to only one path of failure. Should be more generic or have different logging for different paths
@@ -97,7 +92,6 @@ class LlmTracker:
             self.llm_event.agent_id = check_call_stack_for_agent_id()
             self.llm_event.prompt_messages = kwargs["messages"]
             self.llm_event.prompt_messages_format = LLMMessageFormat.CHATML
-            # TODO: need to coerce this into chatml
             self.llm_event.completion_message = response['choices'][0]['message']
             self.llm_event.completion_message_format = LLMMessageFormat.CHATML
             self.llm_event.returns = {"content": response['choices'][0]['message']['content']}
@@ -106,8 +100,6 @@ class LlmTracker:
             self.llm_event.format_messages()
 
             self.client.record(self.llm_event)
-
-            # self.llm_event = None
         except Exception as e:
             self.client.record(ErrorEvent(trigger_event=self.llm_event, details={f"{type(e).__name__}": str(e)}))
             # TODO: This error is specific to only one path of failure. Should be more generic or have different logging for different paths
@@ -144,7 +136,6 @@ class LlmTracker:
                     self.completion += token
 
                 if finish_reason:
-                    # TODO: handle case where finish_reason never gets a value? Do we record an LLMEvent in that case?
                     self.llm_event.agent_id = check_call_stack_for_agent_id()
                     self.llm_event.prompt_messages = kwargs["messages"]
                     self.llm_event.prompt_messages_format = LLMMessageFormat.CHATML
@@ -157,9 +148,6 @@ class LlmTracker:
                     self.llm_event.format_messages()
 
                     self.client.record(self.llm_event)
-
-                    # self.llm_event = None
-                    # self.completion = ""
             except Exception as e:
                 self.client.record(ErrorEvent(trigger_event=self.llm_event, details={f"{type(e).__name__}": str(e)}))
                 # TODO: This error is specific to only one path of failure. Should be more generic or have different logging for different paths
@@ -206,9 +194,6 @@ class LlmTracker:
             self.llm_event.format_messages()
 
             self.client.record(self.llm_event)
-
-            # self.llm_event = None
-            # Standard response
         except Exception as e:
             self.client.record(ErrorEvent(trigger_event=self.llm_event, details={f"{type(e).__name__}": str(e)}))
             # TODO: This error is specific to only one path of failure. Should be more generic or have different logging for different paths
