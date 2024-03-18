@@ -27,7 +27,7 @@ def call_openai():
         model='gpt-3.5-turbo', messages=message, temperature=0.5)
 
     print(response)
-    raise ValueError("This is an intentional error for testing.")
+    # raise ValueError("This is an intentional error for testing.")
 
 
 call_openai()

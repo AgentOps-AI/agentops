@@ -28,7 +28,7 @@ async def call_openai_async():
     )
 
     print(response)
-    raise ValueError("This is an intentional error for testing.")
+    # raise ValueError("This is an intentional error for testing.")
 
 
 async def main():
