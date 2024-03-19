@@ -2,7 +2,7 @@
 AgentOps events.
 
 Data Class:
-    Event: Represents discrete events to be recorded.
+    Event: Repents discrete events to be recorded.
 """
 
 from dataclasses import dataclass, field
