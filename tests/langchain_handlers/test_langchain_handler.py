@@ -20,10 +20,27 @@ llm = ChatOpenAI(openai_api_key=OPENAI_API_KEY,
                  model='gpt-3.5-turbo')
 
 
+# @tool
+# def find_movie(genre, actor) -> str:
+#     """Find available movies"""
+#     # raise ValueError("This is an intentional error for testing.")
+#     if genre == 'drama':
+#         if actor == 'Zendaya':
+#             return 'Dune 2'
+#         else:
+#             return 'Citizen Kane'
+#     else:
+#         return 'Pineapple Express'
+
+
 @tool
-def find_movie(term) -> str:
+def find_movie(genre) -> str:
     """Find available movies"""
-    return 'Citizen Kane'
+    # raise ValueError("This is an intentional error for testing.")
+    if genre == 'drama':
+        return 'Dune 2'
+    else:
+        return 'Pineapple Express'
 
 
 tools = [find_movie]
@@ -39,4 +56,8 @@ agent = initialize_agent(tools,
                          handle_parsing_errors=True)
 
 
-agent.run("What movies are playing?", callbacks=[agentops_handler])
+agent.run("What comedies are playing?", callbacks=[agentops_handler])
+# agent.run("What dramas are playing?", callbacks=[agentops_handler])
+
+# agent.run("What dramas are playing starring zendaya?", callbacks=[agentops_handler])
+# agent.run("What movies are playing starring zendaya?", callbacks=[agentops_handler])
