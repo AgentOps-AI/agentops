@@ -1,9 +1,12 @@
+from pprint import pprint
+from functools import wraps
 import time
 from datetime import datetime
 import json
 import inspect
 import logging
 from uuid import UUID
+import os
 
 
 def singleton(class_):
@@ -84,3 +87,23 @@ def check_call_stack_for_agent_id() -> str | None:
                 logging.debug('LLM call from agent named: ' + getattr(var, '_agent_ops_agent_name'))
                 return getattr(var, '_agent_ops_agent_id')
     return None
+
+
+def debug_print_function_params(func):
+    @wraps(func)
+    def wrapper(self, *args, **kwargs):
+        if os.getenv('DEBUG_MODE') == 'Y':
+            print(f"\n{func.__name__} called with arguments:")
+
+            # Iterate through and print kwargs
+            for key, value in kwargs.items():
+                print(f"{key}: ", end="")
+                if isinstance(value, (dict, list, tuple, set)):
+                    pprint(value)
+                else:
+                    print(value)
+
+            print("\n")
+
+        return func(self, *args, **kwargs)
+    return wrapper

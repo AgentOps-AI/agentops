@@ -14,6 +14,8 @@ from agentops import Event, ActionEvent, LLMEvent, ToolEvent, ErrorEvent
 from agentops import LLMMessageFormat
 from agentops.helpers import get_ISO_time
 
+from .helpers import debug_print_function_params
+
 
 class LangchainCallbackHandler(BaseCallbackHandler):
     """Callback handler for Langchain agents."""
@@ -35,10 +37,10 @@ class LangchainCallbackHandler(BaseCallbackHandler):
         self.ao_client = AOClient(**{k: v for k, v in client_params.items()
                                      if v is not None}, override=False)
 
-        # keypair <run_id: str, ActionEvent>
+        # keypair <key, Event (abstract)> where key = <EVENT_TYPE>_run_id
         self.events: Dict[str, Event] = {}
 
-    # LLM Callbacks
+    @debug_print_function_params
     def on_llm_start(
         self,
         serialized: Dict[str, Any],
@@ -51,15 +53,6 @@ class LangchainCallbackHandler(BaseCallbackHandler):
         **kwargs: Any,
     ) -> Any:
         key = "llm_" + str(run_id)
-
-        import inspect
-        print(inspect.currentframe().f_code.co_name)
-        print("run_id: ", run_id)
-        print("parent_run_id: ", parent_run_id)
-
-        if run_id in self.events:
-            print("already an event at this run_id")
-
         self.events[key] = LLMEvent(
             # tags=tags, # TODO: Are these tags coming from langchain?
             params={**serialized, **kwargs, **({} if metadata is None else metadata)},
@@ -67,6 +60,7 @@ class LangchainCallbackHandler(BaseCallbackHandler):
             prompt_messages=prompts[0]
         )
 
+    @debug_print_function_params
     def on_llm_error(
             self,
             error: BaseException,
@@ -85,6 +79,7 @@ class LangchainCallbackHandler(BaseCallbackHandler):
         self.ao_client.record(llmEvent)
         self.ao_client.record(errorEvent)
 
+    @debug_print_function_params
     def on_llm_end(
         self,
         response: LLMResult,
@@ -119,7 +114,7 @@ class LangchainCallbackHandler(BaseCallbackHandler):
             )
             self.ao_client.record(errorEvent)
 
-    # Chain callbacks
+    @debug_print_function_params
     def on_chain_start(
         self,
         serialized: Dict[str, Any],
@@ -133,15 +128,6 @@ class LangchainCallbackHandler(BaseCallbackHandler):
     ) -> Any:
         key = "chain_" + str(run_id)
 
-        import inspect
-
-        print(inspect.currentframe().f_code.co_name)
-        print("run_id: ", run_id)
-        print("parent_run_id: ", parent_run_id)
-
-        if run_id in self.events:
-            print("already an event at this run_id")
-
         self.events[key] = ActionEvent(
             params={**serialized, **inputs, **kwargs, **
                     ({} if metadata is None else metadata)},
@@ -149,6 +135,7 @@ class LangchainCallbackHandler(BaseCallbackHandler):
             # tags=tags,
         )
 
+    @debug_print_function_params
     def on_chain_end(
         self,
         outputs: Dict[str, Any],
@@ -166,6 +153,7 @@ class LangchainCallbackHandler(BaseCallbackHandler):
 
         self.ao_client.record(actionEvent)
 
+    @debug_print_function_params
     def on_chain_error(
         self,
         error: BaseException,
@@ -182,7 +170,7 @@ class LangchainCallbackHandler(BaseCallbackHandler):
         errorEvent = ErrorEvent(trigger_event=actionEvent, details=str(error), timestamp=get_ISO_time())
         self.ao_client.record(errorEvent)
 
-    # Tool callbacks
+    @debug_print_function_params
     def on_tool_start(
         self,
         serialized: Dict[str, Any],
@@ -196,14 +184,6 @@ class LangchainCallbackHandler(BaseCallbackHandler):
     ) -> Any:
         key = "tool_" + str(run_id)
 
-        import inspect
-        print(inspect.currentframe().f_code.co_name)
-        print("run_id: ", run_id)
-        print("parent_run_id: ", parent_run_id)
-
-        if run_id in self.events:
-            print("already an event at this run_id")
-
         self.events[key] = ToolEvent(
             # tags=tags,
             # TODO: we use serialized here but kwargs in on_llm_start
@@ -212,6 +192,7 @@ class LangchainCallbackHandler(BaseCallbackHandler):
             # TODO: agent_id?
         )
 
+    @debug_print_function_params
     def on_tool_end(
             self,
             output: str,
@@ -233,6 +214,7 @@ class LangchainCallbackHandler(BaseCallbackHandler):
             errorEvent = ErrorEvent(trigger_event=toolEvent, details=output, timestamp=get_ISO_time())
             self.ao_client.record(errorEvent)
 
+    @debug_print_function_params
     def on_tool_error(
             self,
             error: BaseException,
@@ -250,7 +232,7 @@ class LangchainCallbackHandler(BaseCallbackHandler):
         errorEvent = ErrorEvent(trigger_event=toolEvent, details=str(error), timestamp=get_ISO_time())
         self.ao_client.record(errorEvent)
 
-    # Retriever callbacks
+    @debug_print_function_params
     def on_retriever_start(
             self,
             serialized: Dict[str, Any],
@@ -263,21 +245,13 @@ class LangchainCallbackHandler(BaseCallbackHandler):
             **kwargs: Any,
     ) -> None:
         key = "retreiver_" + str(run_id)
-
-        import inspect
-        print(inspect.currentframe().f_code.co_name)
-        print("run_id: ", run_id)
-        print("parent_run_id: ", parent_run_id)
-
-        if run_id in self.events:
-            print("already an event at this run_id")
-
         self.events[key] = ActionEvent(
             params={**serialized, **kwargs, "query": query, **({} if metadata is None else metadata)},
             action_type="retreiver"
             # tags=tags,
         )
 
+    @debug_print_function_params
     def on_retriever_end(
             self,
             documents: Sequence[Document],
@@ -296,6 +270,7 @@ class LangchainCallbackHandler(BaseCallbackHandler):
 
         self.ao_client.record(actionEvent)
 
+    @debug_print_function_params
     def on_retriever_error(
             self,
             error: BaseException,
@@ -314,7 +289,7 @@ class LangchainCallbackHandler(BaseCallbackHandler):
         errorEvent = ErrorEvent(trigger_event=actionEvent, details=str(error), timestamp=get_ISO_time())
         self.ao_client.record(errorEvent)
 
-    # Agent callbacks
+    @debug_print_function_params
     def on_agent_action(
         self,
         action: AgentAction,
@@ -325,16 +300,12 @@ class LangchainCallbackHandler(BaseCallbackHandler):
     ) -> Any:
         key = "agent_" + str(run_id)
 
-        import inspect
-        print(inspect.currentframe().f_code.co_name)
-        print("run_id: ", run_id)
-        print("parent_run_id: ", parent_run_id)
-
         self.events[key] = ActionEvent(
             params={"action": action, **kwargs},
             action_type="agent"
         )
 
+    @debug_print_function_params
     def on_agent_finish(
             self,
             finish: AgentFinish,
@@ -354,7 +325,7 @@ class LangchainCallbackHandler(BaseCallbackHandler):
         # TODO: Create a way for the end user to set this based on their conditions
         # self.ao_client.end_session("Success") #TODO: calling end_session here causes "No current session"
 
-    # Misc.
+    @debug_print_function_params
     def on_retry(
         self,
         retry_state: RetryCallState,
@@ -364,11 +335,6 @@ class LangchainCallbackHandler(BaseCallbackHandler):
         **kwargs: Any,
     ) -> Any:
         key = "retry_" + str(run_id)
-
-        import inspect
-        print(inspect.currentframe().f_code.co_name)
-        print("run_id: ", run_id)
-        print("parent_run_id: ", parent_run_id)
 
         actionEvent = ActionEvent(
             params={**kwargs},
