@@ -1,4 +1,4 @@
-from pprint import pprint
+from pprint import pprint, pformat
 from functools import wraps
 import time
 from datetime import datetime
@@ -88,22 +88,41 @@ def check_call_stack_for_agent_id() -> str | None:
                 return getattr(var, '_agent_ops_agent_id')
     return None
 
+# Function decorator that prints function name and its arguments to the console for debug purposes
+# Example output:
+    # <AGENTOPS_DEBUG_OUTPUT>
+    # on_llm_start called with arguments:
+    # run_id: UUID('5fda42fe-809b-4179-bad2-321d1a6090c7')
+    # parent_run_id: UUID('63f1c4da-3e9f-4033-94d0-b3ebed06668f')
+    # tags: []
+    # metadata: {}
+    # invocation_params: {'_type': 'openai-chat',
+    # 'model': 'gpt-3.5-turbo',
+    # 'model_name': 'gpt-3.5-turbo',
+    # 'n': 1,
+    # 'stop': ['Observation:'],
+    # 'stream': False,
+    # 'temperature': 0.7}
+    # options: {'stop': ['Observation:']}
+    # name: None
+    # batch_size: 1
+    # </AGENTOPS_DEBUG_OUTPUT>
+
+# regex to filter for just this:
+# <AGENTOPS_DEBUG_OUTPUT>([\s\S]*?)<\/AGENTOPS_DEBUG_OUTPUT>\n
+
 
 def debug_print_function_params(func):
     @wraps(func)
     def wrapper(self, *args, **kwargs):
         if os.getenv('DEBUG_MODE') == 'Y':
-            print(f"\n{func.__name__} called with arguments:")
+            print("\n<AGENTOPS_DEBUG_OUTPUT>")
+            print(f"{func.__name__} called with arguments:")
 
-            # Iterate through and print kwargs
             for key, value in kwargs.items():
-                print(f"{key}: ", end="")
-                if isinstance(value, (dict, list, tuple, set)):
-                    pprint(value)
-                else:
-                    print(value)
+                print(f"{key}: {pformat(value)}")
 
-            print("\n")
+            print("</AGENTOPS_DEBUG_OUTPUT>\n")
 
         return func(self, *args, **kwargs)
     return wrapper
