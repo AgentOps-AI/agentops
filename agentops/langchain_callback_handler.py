@@ -129,7 +129,10 @@ class LangchainCallbackHandler(BaseCallbackHandler):
         key = "chain_" + str(run_id)
 
         self.events[key] = ActionEvent(
-            params={**serialized, **inputs, **kwargs, **
+            params={**serialized,
+                    **inputs,
+                    **kwargs,
+                    **
                     ({} if metadata is None else metadata)},
             action_type="chain"
             # tags=tags,
@@ -246,7 +249,10 @@ class LangchainCallbackHandler(BaseCallbackHandler):
     ) -> None:
         key = "retreiver_" + str(run_id)
         self.events[key] = ActionEvent(
-            params={**serialized, **kwargs, "query": query, **({} if metadata is None else metadata)},
+            params={**serialized,
+                    **kwargs,
+                    "query": query,
+                    **({} if metadata is None else metadata)},
             action_type="retreiver"
             # tags=tags,
         )
@@ -369,10 +375,10 @@ class AsyncLangchainCallbackHandler(AsyncCallbackHandler):
         self.ao_client = AOClient(**{k: v for k, v in client_params.items()
                                      if v is not None}, override=False)
 
-        # keypair <run_id: str, ActionEvent>
-        self.events: Dict[Any, Event] = {}
+        # keypair <key, Event (abstract)> where key = <EVENT_TYPE>_run_id
+        self.events: Dict[str, Event] = {}
 
-    # LLM Callbacks
+    @debug_print_function_params
     async def on_llm_start(
         self,
         serialized: Dict[str, Any],
@@ -384,29 +390,34 @@ class AsyncLangchainCallbackHandler(AsyncCallbackHandler):
         metadata: Optional[Dict[str, Any]] = None,
         **kwargs: Any,
     ) -> Any:
+        key = "llm_" + str(run_id)
         self.events[key] = LLMEvent(
-            event_type="llm",
-            action_type='llm',
-            tags=tags,
+            # tags=tags, # TODO: Are these tags coming from langchain?
+            params={**serialized, **kwargs, **({} if metadata is None else metadata)},
             model=kwargs['invocation_params']['model'],
-            params={**kwargs,  **({} if metadata is None else metadata)},
-            prompt_messages=prompts[0],
-            init_timestamp=get_ISO_time()
+            prompt_messages=prompts[0]
         )
 
+    @debug_print_function_params
     async def on_llm_error(
             self,
             error: BaseException,
-            *,
+            *,  # TODO: What this
             run_id: UUID,
             parent_run_id: Optional[UUID] = None,
             **kwargs: Any,
     ) -> Any:
-        self.events[key].end_timestamp = get_ISO_time()
-        self.events[key].result = "Fail"
+        key = "llm_" + str(run_id)
+        llmEvent: LLMEvent = self.events[key]
+        errorEvent = ErrorEvent(
+            trigger_event=llmEvent,
+            details=str(error),  # TODO: do we need to str(error)
+            timestamp=get_ISO_time()
+        )
+        self.ao_client.record(llmEvent)
+        self.ao_client.record(errorEvent)
 
-        self.ao_client.record(self.events[key])
-
+    @debug_print_function_params
     async def on_llm_end(
         self,
         response: LLMResult,
@@ -415,23 +426,33 @@ class AsyncLangchainCallbackHandler(AsyncCallbackHandler):
         parent_run_id: Optional[UUID] = None,
         **kwargs: Any,
     ) -> Any:
-        self.events[key].end_timestamp = get_ISO_time()
-        self.events[key].returns = {
+        key = "llm_" + str(run_id)
+        llmEvent: LLMEvent = self.events[key]
+
+        llmEvent.end_timestamp = get_ISO_time()
+        llmEvent.returns = {
             "content": response.generations[0][0].message.content,
             "generations": response.generations
         }
+
         if response.llm_output is not None:
-            self.events[key].prompt_tokens = response.llm_output['token_usage']['prompt_tokens']
-            self.events[key].completion_tokens = response.llm_output['token_usage']['completion_tokens']
+            llmEvent.completion_message = response.generations[0][0].message.content  # TODO
+            llmEvent.completion_message_format = LLMMessageFormat.STRING  # TODO
+            llmEvent.prompt_tokens = response.llm_output['token_usage']['prompt_tokens']
+            llmEvent.completion_tokens = response.llm_output['token_usage']['completion_tokens']
+            llmEvent.format_messages()  # TODO: Find somewhere logical to call this on the user's behalf. They shouldn't call it
 
-        if len(response.generations) > 0:
-            self.events[key].result = "Success"
-        else:
-            self.events[key].result = "Fail"
+        self.ao_client.record(llmEvent)
 
-        self.ao_client.record(self.events[key])
+        if len(response.generations) == 0:
+            errorEvent = ErrorEvent(
+                trigger_event=self.events[key],
+                details="on_llm_end: No generations",  # TODO: more descriptive error
+                timestamp=get_ISO_time()
+            )
+            self.ao_client.record(errorEvent)
 
-    # Chain callbacks
+    @debug_print_function_params
     async def on_chain_start(
         self,
         serialized: Dict[str, Any],
@@ -443,15 +464,19 @@ class AsyncLangchainCallbackHandler(AsyncCallbackHandler):
         metadata: Optional[Dict[str, Any]] = None,
         **kwargs: Any,
     ) -> Any:
+        key = "chain_" + str(run_id)
+
         self.events[key] = ActionEvent(
-            event_type="chain",
-            init_timestamp=get_ISO_time(),
-            tags=tags,
-            params={**inputs,
+            params={**serialized,
+                    **inputs,
                     **kwargs,
-                    **({} if metadata is None else metadata)},
+                    **
+                    ({} if metadata is None else metadata)},
+            action_type="chain"
+            # tags=tags,
         )
 
+    @debug_print_function_params
     async def on_chain_end(
         self,
         outputs: Dict[str, Any],
@@ -460,12 +485,16 @@ class AsyncLangchainCallbackHandler(AsyncCallbackHandler):
         parent_run_id: Optional[UUID] = None,
         **kwargs: Any,
     ) -> Any:
-        self.events[key].end_timestamp = get_ISO_time()
-        self.events[key].result = "Success"
-        self.events[key].returns = outputs
+        key = "chain_" + str(run_id)
 
-        self.ao_client.record(self.events[key])
+        actionEvent: ActionEvent = self.events[key]
 
+        actionEvent.returns = outputs
+        actionEvent.end_timestamp = get_ISO_time()
+
+        self.ao_client.record(actionEvent)
+
+    @debug_print_function_params
     async def on_chain_error(
         self,
         error: BaseException,
@@ -474,13 +503,15 @@ class AsyncLangchainCallbackHandler(AsyncCallbackHandler):
         parent_run_id: Optional[UUID] = None,
         **kwargs: Any,
     ) -> Any:
-        self.events[key].end_timestamp = get_ISO_time()
-        self.events[key].result = "Fail"
-        self.events[key].returns = str(error)
+        key = "chain_" + str(run_id)
+        actionEvent: ActionEvent = self.events[key]
+        self.ao_client.record(actionEvent)
 
-        self.ao_client.record(self.events[key])
+        # TODO: do we need to str(error)
+        errorEvent = ErrorEvent(trigger_event=actionEvent, details=str(error), timestamp=get_ISO_time())
+        self.ao_client.record(errorEvent)
 
-    # Tool callbacks
+    @debug_print_function_params
     async def on_tool_start(
         self,
         serialized: Dict[str, Any],
@@ -492,14 +523,17 @@ class AsyncLangchainCallbackHandler(AsyncCallbackHandler):
         metadata: Optional[Dict[str, Any]] = None,
         **kwargs: Any,
     ) -> Any:
-        """Run when tool starts running."""
+        key = "tool_" + str(run_id)
+
         self.events[key] = ToolEvent(
-            event_type="tool",
-            init_timestamp=get_ISO_time(),
-            tags=tags,
-            params={**serialized,  **({} if metadata is None else metadata)},
+            # tags=tags,
+            # TODO: we use serialized here but kwargs in on_llm_start
+            params={**serialized, **({} if metadata is None else metadata)},
+            logs=input_str  # TODO: is this the right attribution?
+            # TODO: agent_id?
         )
 
+    @debug_print_function_params
     async def on_tool_end(
             self,
             output: str,
@@ -508,18 +542,20 @@ class AsyncLangchainCallbackHandler(AsyncCallbackHandler):
             parent_run_id: Optional[UUID] = None,
             **kwargs: Any,
     ) -> Any:
+        key = "tool_" + str(run_id)
+        toolEvent: ToolEvent = self.events[key]
+
+        toolEvent.end_timestamp = get_ISO_time()
+        toolEvent.returns = output
+        self.ao_client.record(toolEvent)
+
         # Tools are capable of failing `on_tool_end` quietly.
         # This is a workaround to make sure we can log it as an error.
         if kwargs.get('name') == '_Exception':
-            self.events[key].result = "Fail"
-        else:
-            self.events[key].result = "Success"
+            errorEvent = ErrorEvent(trigger_event=toolEvent, details=output, timestamp=get_ISO_time())
+            self.ao_client.record(errorEvent)
 
-        self.events[key].end_timestamp = get_ISO_time()
-        self.events[key].returns = output
-
-        self.ao_client.record(self.events[key])
-
+    @debug_print_function_params
     async def on_tool_error(
             self,
             error: BaseException,
@@ -528,13 +564,16 @@ class AsyncLangchainCallbackHandler(AsyncCallbackHandler):
             parent_run_id: Optional[UUID] = None,
             **kwargs: Any,
     ) -> Any:
-        self.events[key].end_timestamp = get_ISO_time()
-        self.events[key].result = "Fail"
-        self.events[key].returns = str(error)
+        key = "tool_" + str(run_id)
 
-        self.ao_client.record(self.events[key])
+        toolEvent: ToolEvent = self.events[key]
+        self.ao_client.record(toolEvent)
 
-    # Retriever callbacks
+        # TODO: do we need to str(error)
+        errorEvent = ErrorEvent(trigger_event=toolEvent, details=str(error), timestamp=get_ISO_time())
+        self.ao_client.record(errorEvent)
+
+    @debug_print_function_params
     async def on_retriever_start(
             self,
             serialized: Dict[str, Any],
@@ -546,11 +585,17 @@ class AsyncLangchainCallbackHandler(AsyncCallbackHandler):
             metadata: Optional[Dict[str, Any]] = None,
             **kwargs: Any,
     ) -> None:
+        key = "retreiver_" + str(run_id)
         self.events[key] = ActionEvent(
-            event_type="retriever",
-            init_timestamp=get_ISO_time()
+            params={**serialized,
+                    **kwargs,
+                    "query": query,
+                    **({} if metadata is None else metadata)},
+            action_type="retreiver"
+            # tags=tags,
         )
 
+    @debug_print_function_params
     async def on_retriever_end(
             self,
             documents: Sequence[Document],
@@ -560,11 +605,16 @@ class AsyncLangchainCallbackHandler(AsyncCallbackHandler):
             tags: Optional[List[str]] = None,
             **kwargs: Any,
     ) -> None:
-        self.events[key].end_timestamp = get_ISO_time()
-        self.events[key].result = "Success"
+        key = "retreiver_" + str(run_id)
 
-        self.ao_client.record(self.events[key])
+        actionEvent: ActionEvent = self.events[key]
 
+        actionEvent.logs = documents  # TODO: Adding this. Might want to add elsewhere e.g. params
+        actionEvent.end_timestamp = get_ISO_time()
+
+        self.ao_client.record(actionEvent)
+
+    @debug_print_function_params
     async def on_retriever_error(
             self,
             error: BaseException,
@@ -574,12 +624,16 @@ class AsyncLangchainCallbackHandler(AsyncCallbackHandler):
             tags: Optional[List[str]] = None,
             **kwargs: Any,
     ) -> None:
-        self.events[key].end_timestamp = get_ISO_time()
-        self.events[key].result = "Fail"
+        key = "retreiver_" + str(run_id)
 
-        self.ao_client.record(self.events[key])
+        actionEvent: ActionEvent = self.events[key]
+        self.ao_client.record(actionEvent)
 
-    # Agent callbacks
+        # TODO: do we need to str(error)
+        errorEvent = ErrorEvent(trigger_event=actionEvent, details=str(error), timestamp=get_ISO_time())
+        self.ao_client.record(errorEvent)
+
+    @debug_print_function_params
     async def on_agent_action(
         self,
         action: AgentAction,
@@ -588,13 +642,14 @@ class AsyncLangchainCallbackHandler(AsyncCallbackHandler):
         parent_run_id: Optional[UUID] = None,
         **kwargs: Any,
     ) -> Any:
-        """Run on agent action."""
+        key = "agent_" + str(run_id)
+
         self.events[key] = ActionEvent(
-            event_type="agent",
-            init_timestamp=get_ISO_time(),
-            params={**kwargs},
+            params={"action": action, **kwargs},
+            action_type="agent"
         )
 
+    @debug_print_function_params
     async def on_agent_finish(
             self,
             finish: AgentFinish,
@@ -603,17 +658,18 @@ class AsyncLangchainCallbackHandler(AsyncCallbackHandler):
             parent_run_id: Optional[UUID] = None,
             **kwargs: Any,
     ) -> Any:
-        """Run on agent finish."""
-        self.events[key].end_timestamp = get_ISO_time()
-        self.events[key].result = "Success"
-        self.events[key].returns = finish.to_json()
+        key = "agent_" + str(run_id)
 
-        self.ao_client.record(self.events[key])
+        actionEvent: ActionEvent = self.events[key]
+        actionEvent.returns = finish.to_json()
+        actionEvent.end_timestamp = get_ISO_time()
+
+        self.ao_client.record(actionEvent)
 
         # TODO: Create a way for the end user to set this based on their conditions
-        self.ao_client.end_session("Success")
+        # self.ao_client.end_session("Success") #TODO: calling end_session here causes "No current session"
 
-    # Misc.
+    @debug_print_function_params
     async def on_retry(
         self,
         retry_state: RetryCallState,
@@ -622,17 +678,16 @@ class AsyncLangchainCallbackHandler(AsyncCallbackHandler):
         parent_run_id: Optional[UUID] = None,
         **kwargs: Any,
     ) -> Any:
-        """Run on a retry event."""
-        event = ActionEvent(
-            event_type="retry",
-            init_timestamp=get_ISO_time(),
-            end_timestamp=get_ISO_time(),
+        key = "retry_" + str(run_id)
+
+        actionEvent = ActionEvent(
             params={**kwargs},
-            result="Indeterminate",
-            returns=retry_state
+            returns=retry_state,
+            action_type="retry",
+            # result="Indeterminate" # TODO: currently have no way of recording Indeterminate
         )
-        self.ao_client.record(event)
+        self.ao_client.record(actionEvent)
 
     @property
-    def session_id(self):
+    async def session_id(self):
         return self.ao_client._session.session_id
