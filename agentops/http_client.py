@@ -99,6 +99,5 @@ class HttpClient:
         if result.code == 500:
             logging.warning(
                 f'AgentOps: Could not post data - internal server error')
-            print(result.body)
 
         return result
