@@ -22,7 +22,7 @@ from .helpers import debug_print_function_params
 class LangchainCallbackHandler(BaseCallbackHandler):
     """Callback handler for Langchain agents."""
 
-    def __init__(self, api_key: str,
+    def __init__(self, api_key: Optional[str] = None,
                  endpoint: Optional[str] = None,
                  max_wait_time: Optional[int] = None,
                  max_queue_size: Optional[int] = None,
