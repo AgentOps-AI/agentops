@@ -1,12 +1,13 @@
-from typing import Dict, Any, List, Optional, Sequence
+from typing import Dict, Any, List, Optional, Sequence, Union
 from collections import defaultdict
 from uuid import UUID
 
 from langchain_core.agents import AgentFinish, AgentAction
 from langchain_core.outputs import LLMResult
 from langchain_core.documents import Document
-from langchain_core.outputs import LLMResult
+from langchain_core.outputs import ChatGenerationChunk, GenerationChunk, LLMResult
 from langchain.callbacks.base import BaseCallbackHandler, AsyncCallbackHandler
+from langchain_core.messages import BaseMessage
 
 from tenacity import RetryCallState
 
@@ -384,6 +385,33 @@ class AsyncLangchainCallbackHandler(AsyncCallbackHandler):
         )
 
     @debug_print_function_params
+    async def on_chat_model_start(
+        self,
+        serialized: Dict[str, Any],
+        messages: List[List[BaseMessage]],
+        *,
+        run_id: UUID,
+        parent_run_id: Optional[UUID] = None,
+        tags: Optional[List[str]] = None,
+        metadata: Optional[Dict[str, Any]] = None,
+        **kwargs: Any,
+    ) -> Any:
+        pass
+
+    @debug_print_function_params
+    async def on_llm_new_token(
+        self,
+        token: str,
+        *,
+        chunk: Optional[Union[GenerationChunk, ChatGenerationChunk]] = None,
+        run_id: UUID,
+        parent_run_id: Optional[UUID] = None,
+        tags: Optional[List[str]] = None,
+        **kwargs: Any,
+    ) -> None:
+        pass
+
+    @debug_print_function_params
     async def on_llm_error(
             self,
             error: BaseException,
@@ -630,6 +658,18 @@ class AsyncLangchainCallbackHandler(AsyncCallbackHandler):
 
         # TODO: Create a way for the end user to set this based on their conditions
         # self.ao_client.end_session("Success") #TODO: calling end_session here causes "No current session"
+
+    @debug_print_function_params
+    async def on_text(
+        self,
+        text: str,
+        *,
+        run_id: UUID,
+        parent_run_id: Optional[UUID] = None,
+        tags: Optional[List[str]] = None,
+        **kwargs: Any,
+    ) -> None:
+        pass
 
     @debug_print_function_params
     async def on_retry(
