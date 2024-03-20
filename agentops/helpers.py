@@ -80,7 +80,7 @@ def check_call_stack_for_agent_id() -> str | None:
             # We stop looking up the stack at main because after that we see global variables
             if var == "__main__":
                 return
-            if hasattr(var, '_agent_ops_agent_id') and getattr(var, '_agent_ops_agent_id'):
-                logging.debug('LLM call from agent named: ' + getattr(var, '_agent_ops_agent_name'))
-                return getattr(var, '_agent_ops_agent_id')
+            if hasattr(var, 'agent_ops_agent_id') and getattr(var, 'agent_ops_agent_id'):
+                logging.debug('LLM call from agent named: ' + getattr(var, 'agent_ops_agent_name'))
+                return getattr(var, 'agent_ops_agent_id')
     return None
