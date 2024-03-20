@@ -5,7 +5,8 @@ from inspect import isclass, isfunction
 
 def track_agent(name: str | None = None):
     def decorator(obj):
-        obj.agent_ops_agent_name = name or obj.__name__
+        if name:
+            obj.agent_ops_agent_name = name
 
         if isclass(obj):
             original_init = obj.__init__
