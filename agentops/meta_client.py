@@ -3,8 +3,8 @@ import traceback
 
 from .host_env import get_host_env
 from .http_client import HttpClient
-from .helpers import safe_serialize
-from importlib.metadata import version
+from .helpers import safe_serialize, get_agentops_version
+
 from os import environ
 
 
@@ -50,12 +50,3 @@ def handle_exceptions(method):
             raise e
 
     return wrapper
-
-
-def get_agentops_version():
-    try:
-        pkg_version = version("agentops")
-        return pkg_version
-    except Exception as e:
-        print(f"Error reading package version: {e}")
-        return None

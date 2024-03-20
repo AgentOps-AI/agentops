@@ -4,6 +4,7 @@ import json
 import inspect
 import logging
 from uuid import UUID
+from importlib.metadata import version
 
 
 def singleton(class_):
@@ -84,3 +85,11 @@ def check_call_stack_for_agent_id() -> str | None:
                 logging.debug('LLM call from agent named: ' + getattr(var, '_agent_ops_agent_name'))
                 return getattr(var, '_agent_ops_agent_id')
     return None
+
+def get_agentops_version():
+    try:
+        pkg_version = version("agentops")
+        return pkg_version
+    except Exception as e:
+        print(f"Error reading package version: {e}")
+        return None

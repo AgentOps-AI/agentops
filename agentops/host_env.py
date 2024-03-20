@@ -1,6 +1,13 @@
 import platform
 import psutil
 import socket
+from .helpers import get_agentops_version
+
+def get_sdk_details():
+    return {
+        "AgentOps SDK Version": get_agentops_version(),
+        "Python Version": platform.python_version(),
+    }
 
 
 def get_os_details():
@@ -48,6 +55,7 @@ def get_disk_details():
 
 def get_host_env():
     return {
+        "SDK": get_sdk_details(),
         "OS": get_os_details(),
         "CPU": get_cpu_details(),
         "RAM": get_ram_details(),
@@ -57,6 +65,7 @@ def get_host_env():
 
 if __name__ == "__main__":
     print("Gathering system information...")
+    print("SDK Details:", get_sdk_details())
     print("OS Details:", get_os_details())
     print("CPU Details:", get_cpu_details())
     print("RAM Details:", get_ram_details())
