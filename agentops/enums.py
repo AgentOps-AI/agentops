@@ -8,11 +8,11 @@ class EventType(Enum):
     TOOL = "tools"
     ERROR = "errors"
 
-
-class Result(Enum):
-    SUCCESS = "Success"
-    FAIL = "Fail"
-    INDETERMINATE = "Indeterminate"
+# TODO: Not used
+# class Result(Enum):
+#     SUCCESS = "Success"
+#     FAIL = "Fail"
+#     INDETERMINATE = "Indeterminate"
 
 
 class Models(Enum):
