@@ -236,10 +236,10 @@ class Client(metaclass=MetaClient):
         self._worker.create_agent(agent_id, name)
 
     def _handle_unclean_exits(self):
-        def cleanup(end_state_reason: Optional[str] = None):
+        def cleanup(end_state: Optional[str] = 'Fail', end_state_reason: Optional[str] = None):
             # Only run cleanup function if session is created
             if self._session is not None:
-                self.end_session(end_state='Fail',
+                self.end_session(end_state=end_state,
                                  end_state_reason=end_state_reason)
 
         def signal_handler(signum, frame):
@@ -270,14 +270,13 @@ class Client(metaclass=MetaClient):
             formatted_traceback = ''.join(traceback.format_exception(exc_type, exc_value,
                                                                      exc_traceback))
 
-            # Perform cleanup
-            cleanup(
-                end_state_reason=f"{str(exc_value)}: {formatted_traceback}")
+            self.end_session(end_state='Fail',
+                             end_state_reason=f"{str(exc_value)}: {formatted_traceback}")
 
             # Then call the default excepthook to exit the program
             sys.__excepthook__(exc_type, exc_value, exc_traceback)
 
-        atexit.register(lambda: cleanup())
+        atexit.register(lambda: cleanup(end_state="Success", end_state_reason="Process exited normally"))
         signal.signal(signal.SIGINT, signal_handler)
         signal.signal(signal.SIGTERM, signal_handler)
         sys.excepthook = handle_exception
