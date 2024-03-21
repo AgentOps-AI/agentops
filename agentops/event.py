@@ -10,7 +10,6 @@ from typing import List, Optional
 from .helpers import get_ISO_time
 from .enums import EventType, Models, LLMMessageFormat
 from uuid import UUID, uuid4
-import logging
 
 
 @dataclass
