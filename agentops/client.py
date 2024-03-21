@@ -213,7 +213,6 @@ class Client(metaclass=MetaClient):
     def end_session(self, end_state: str = Field("Indeterminate",
                                                  description="End state of the session",
                                                  pattern="^(Success|Fail|Indeterminate)$"),
-                    rating: Optional[str] = None,
                     end_state_reason: Optional[str] = None,
                     video: Optional[str] = None):
         """
@@ -221,7 +220,6 @@ class Client(metaclass=MetaClient):
 
         Args:
             end_state (str, optional): The final state of the session.
-            rating (str, optional): The rating for the session.
             end_state_reason (str, optional): The reason for ending the session.
             video (str, optional): The video screen recording of the session
         """
@@ -229,7 +227,7 @@ class Client(metaclass=MetaClient):
             return logging.warn("AgentOps: Cannot end session - no current session")
 
         self._session.video = video
-        self._session.end_session(end_state, rating, end_state_reason)
+        self._session.end_session(end_state, end_state_reason)
         self._worker.end_session(self._session)
         self._session = None
         self._worker = None
