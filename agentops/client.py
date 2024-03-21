@@ -227,7 +227,7 @@ class Client(metaclass=MetaClient):
             return logging.warn("AgentOps: Cannot end session - no current session")
 
         self._session.video = video
-        self._session.end_session(end_state, rating, end_state_reason)
+        self._session.end_session(end_state, end_state_reason)
         self._worker.end_session(self._session)
         self._session = None
         self._worker = None
