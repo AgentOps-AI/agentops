@@ -1,6 +1,5 @@
 import time
 from openai.resources.chat import completions
-import openai
 from openai import OpenAI, AsyncOpenAI
 import agentops
 import asyncio
@@ -15,8 +14,8 @@ async_client = AsyncOpenAI()
 print('Running OpenAI v1.0.0+')
 
 
-# Assuming that instantiating agentops.Client will trigger the LlmTracker to override methods
-ao_client = agentops.Client(tags=['mock agent', openai.__version__])
+# Assuming that initializing will trigger the LlmTracker to override methods
+agentops.init(tags=['mock agent', openai.__version__])
 
 
 # Now the client.chat.completions.create should be the overridden method
@@ -94,4 +93,4 @@ asyncio.run(test_async_chat_completion())
 print('Running async streaming test')
 asyncio.run(test_async_chat_completion_stream())
 
-ao_client.end_session('Success')
+agentops.end_session('Success')
