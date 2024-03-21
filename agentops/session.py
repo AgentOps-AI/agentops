@@ -15,14 +15,12 @@ class Session:
         init_timestamp (float): The timestamp for when the session started, represented as seconds since the epoch.
         end_timestamp (float, optional): The timestamp for when the session ended, represented as seconds since the epoch. This is only set after end_session is called.
         end_state (str, optional): The final state of the session. Suggested: "Success", "Fail", "Indeterminate"
-        rating (str, optional): The rating for the session.
         end_state_reason (str, optional): The reason for ending the session.
 
     """
 
     def __init__(self, session_id: UUID, tags: Optional[List[str]] = None, host_env: Optional[dict] = None):
         self.end_timestamp = None
-        self.rating = None
         self.end_state = None
         self.session_id = session_id
         self.init_timestamp = get_ISO_time()
@@ -40,7 +38,7 @@ class Session:
         """
         self.video = video
 
-    def end_session(self, end_state: str = "Indeterminate", rating: Optional[str] = None, end_state_reason: Optional[str] = None):
+    def end_session(self, end_state: str = "Indeterminate", end_state_reason: Optional[str] = None):
         """
         End the session with a specified state, rating, and reason.
 
@@ -50,7 +48,6 @@ class Session:
             end_state_reason (str, optional): The reason for ending the session. Provides context for why the session ended.
         """
         self.end_state = end_state
-        self.rating = rating
         self.end_state_reason = end_state_reason
         self.end_timestamp = get_ISO_time()
 

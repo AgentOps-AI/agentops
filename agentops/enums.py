@@ -8,12 +8,6 @@ class EventType(Enum):
     TOOL = "tools"
     ERROR = "errors"
 
-# TODO: Not used
-# class Result(Enum):
-#     SUCCESS = "Success"
-#     FAIL = "Fail"
-#     INDETERMINATE = "Indeterminate"
-
 
 class Models(Enum):
     GPT_3_5_TURBO = "gpt-3.5-turbo"

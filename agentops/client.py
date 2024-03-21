@@ -95,7 +95,7 @@ class Client(metaclass=MetaClient):
             self._session.tags = tags
             self._worker.update_session(self._session)
 
-    def record(self, event: Event):
+    def record(self, event: Event | ErrorEvent):
         """
         Record an event with the AgentOps service.
 
@@ -213,7 +213,6 @@ class Client(metaclass=MetaClient):
     def end_session(self, end_state: str = Field("Indeterminate",
                                                  description="End state of the session",
                                                  pattern="^(Success|Fail|Indeterminate)$"),
-                    rating: Optional[str] = None,
                     end_state_reason: Optional[str] = None,
                     video: Optional[str] = None):
         """
@@ -221,7 +220,6 @@ class Client(metaclass=MetaClient):
 
         Args:
             end_state (str, optional): The final state of the session.
-            rating (str, optional): The rating for the session.
             end_state_reason (str, optional): The reason for ending the session.
             video (str, optional): The video screen recording of the session
         """
@@ -229,7 +227,7 @@ class Client(metaclass=MetaClient):
             return logging.warning("AgentOps: Cannot end session - no current session")
 
         self._session.video = video
-        self._session.end_session(end_state, rating, end_state_reason)
+        self._session.end_session(end_state, end_state_reason)
         self._worker.end_session(self._session)
         self._session = None
         self._worker = None
@@ -238,10 +236,10 @@ class Client(metaclass=MetaClient):
         self._worker.create_agent(agent_id, name)
 
     def _handle_unclean_exits(self):
-        def cleanup(end_state_reason: Optional[str] = None):
+        def cleanup(end_state: Optional[str] = 'Fail', end_state_reason: Optional[str] = None):
             # Only run cleanup function if session is created
             if self._session is not None:
-                self.end_session(end_state='Fail',
+                self.end_session(end_state=end_state,
                                  end_state_reason=end_state_reason)
 
         def signal_handler(signum, frame):
@@ -272,14 +270,17 @@ class Client(metaclass=MetaClient):
             formatted_traceback = ''.join(traceback.format_exception(exc_type, exc_value,
                                                                      exc_traceback))
 
-            # Perform cleanup
-            cleanup(
-                end_state_reason=f"{str(exc_value)}: {formatted_traceback}")
+            self.end_session(end_state='Fail',
+                             end_state_reason=f"{str(exc_value)}: {formatted_traceback}")
 
             # Then call the default excepthook to exit the program
             sys.__excepthook__(exc_type, exc_value, exc_traceback)
 
-        atexit.register(lambda: cleanup())
+        atexit.register(lambda: cleanup(end_state="Success", end_state_reason="Process exited normally"))
         signal.signal(signal.SIGINT, signal_handler)
         signal.signal(signal.SIGTERM, signal_handler)
         sys.excepthook = handle_exception
+
+    @property
+    def current_session_id(self):
+        return self._session.session_id
