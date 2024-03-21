@@ -78,7 +78,7 @@ class HttpClient:
         except requests.exceptions.Timeout:
             result.code = 408
             result.status = HttpStatus.TIMEOUT
-            logging.warn(
+            logging.warning(
                 'AgentOps: Could not post data - connection timed out')
         except requests.exceptions.HTTPError as e:
             try:

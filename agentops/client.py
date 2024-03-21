@@ -224,7 +224,7 @@ class Client(metaclass=MetaClient):
             video (str, optional): The video screen recording of the session
         """
         if self._session is None or self._session.has_ended:
-            return logging.warn("AgentOps: Cannot end session - no current session")
+            return logging.warning("AgentOps: Cannot end session - no current session")
 
         self._session.video = video
         self._session.end_session(end_state, end_state_reason)

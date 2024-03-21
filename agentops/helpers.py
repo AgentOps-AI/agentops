@@ -84,12 +84,21 @@ def check_call_stack_for_agent_id() -> str | None:
             # We stop looking up the stack at main because after that we see global variables
             if var == "__main__":
                 return
-            if hasattr(var, '_agent_ops_agent_id') and getattr(var, '_agent_ops_agent_id'):
-                logging.debug('LLM call from agent named: ' + getattr(var, '_agent_ops_agent_name'))
-                return getattr(var, '_agent_ops_agent_id')
+            if hasattr(var, 'agent_ops_agent_id') and getattr(var, 'agent_ops_agent_id'):
+                logging.debug('LLM call from agent named: ' + getattr(var, 'agent_ops_agent_name'))
+                return getattr(var, 'agent_ops_agent_id')
     return None
 
-  
+
+def get_agentops_version():
+    try:
+        pkg_version = version("agentops")
+        return pkg_version
+    except Exception as e:
+        logging.warning(f"Error reading package version: {e}")
+        return None
+
+
 # Function decorator that prints function name and its arguments to the console for debug purposes
 # Example output:
     # <AGENTOPS_DEBUG_OUTPUT>
@@ -127,13 +136,3 @@ def debug_print_function_params(func):
 
         return func(self, *args, **kwargs)
     return wrapper
-
-  
-def get_agentops_version():
-    try:
-        pkg_version = version("agentops")
-        return pkg_version
-    except Exception as e:
-        print(f"Error reading package version: {e}")
-        return None
-
