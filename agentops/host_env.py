@@ -63,12 +63,3 @@ def get_host_env():
         "RAM": get_ram_details(),
         "Disk": get_disk_details(),
     }
-
-
-if __name__ == "__main__":
-    logging.debug("Gathering system information...")
-    logging.debug("SDK Details:", get_sdk_details())
-    logging.debug("OS Details:", get_os_details())
-    logging.debug("CPU Details:", get_cpu_details())
-    logging.debug("RAM Details:", get_ram_details())
-    logging.debug("Disk Details:", get_disk_details())
