@@ -29,9 +29,22 @@ class Events:
 class LangchainCallbackHandler(BaseCallbackHandler):
     """Callback handler for Langchain agents."""
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, api_key: Optional[str] = None,
+                 endpoint: Optional[str] = None,
+                 max_wait_time: Optional[int] = None,
+                 max_queue_size: Optional[int] = None,
+                 tags: Optional[List[str]] = None):
 
-        self.ao_client = AOClient(*args, **kwargs, override=False)
+        client_params = {
+            'api_key': api_key,
+            'endpoint': endpoint,
+            'max_wait_time': max_wait_time,
+            'max_queue_size': max_queue_size,
+            'tags': tags
+        }
+
+        self.ao_client = AOClient(**{k: v for k, v in client_params.items()
+                                     if v is not None}, override=False)
         self.agent_actions: Dict[UUID, List[ActionEvent]] = defaultdict(list)
         self.events = Events()
 
@@ -316,9 +329,22 @@ class LangchainCallbackHandler(BaseCallbackHandler):
 class AsyncLangchainCallbackHandler(AsyncCallbackHandler):
     """Callback handler for Langchain agents."""
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, api_key: Optional[str] = None,
+                 endpoint: Optional[str] = None,
+                 max_wait_time: Optional[int] = None,
+                 max_queue_size: Optional[int] = None,
+                 tags: Optional[List[str]] = None):
 
-        self.ao_client = AOClient(*args, **kwargs, override=False)
+        client_params = {
+            'api_key': api_key,
+            'endpoint': endpoint,
+            'max_wait_time': max_wait_time,
+            'max_queue_size': max_queue_size,
+            'tags': tags
+        }
+
+        self.ao_client = AOClient(**{k: v for k, v in client_params.items()
+                                     if v is not None}, override=False)
 
         self.events = Events()
         self.agent_actions: Dict[UUID, List[ActionEvent]] = defaultdict(list)
