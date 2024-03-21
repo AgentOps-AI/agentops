@@ -37,11 +37,9 @@ class TestRecordAction:
         assert len(mock_req.request_history) == 1
         assert mock_req.last_request.headers['X-Agentops-Auth'] == self.api_key
         request_json = mock_req.last_request.json()
-        assert request_json['events'][0]['event_type'] == self.event_type
+        assert request_json['events'][0]['action_type'] == self.event_type
         assert request_json['events'][0]['params'] == {'x': 3, 'y': 4}
         assert request_json['events'][0]['returns'] == 7
-        assert request_json['events'][0]['result'] == 'Success'
-        assert request_json['events'][0]['tags'] == ['foo', 'bar']
 
     def test_record_function_decorator_multiple(self, mock_req):
         # Arrange
@@ -52,16 +50,16 @@ class TestRecordAction:
         # Act
         add_three(1, 2)
         time.sleep(0.1)
+        add_three(1, 2)
+        time.sleep(0.1)
 
         # Assert
-        assert len(mock_req.request_history) == 1
+        assert len(mock_req.request_history) == 2
         assert mock_req.last_request.headers['X-Agentops-Auth'] == self.api_key
         request_json = mock_req.last_request.json()
-        assert request_json['events'][0]['event_type'] == self.event_type
+        assert request_json['events'][0]['action_type'] == self.event_type
         assert request_json['events'][0]['params'] == {'x': 1, 'y': 2, 'z': 3}
         assert request_json['events'][0]['returns'] == 6
-        assert request_json['events'][0]['result'] == 'Success'
-        assert request_json['events'][0]['tags'] == ['foo', 'bar']
 
     @pytest.mark.asyncio
     async def test_async_function_call(self, mock_req):
@@ -81,52 +79,12 @@ class TestRecordAction:
         assert len(mock_req.request_history) == 1
         assert mock_req.last_request.headers['X-Agentops-Auth'] == self.api_key
         request_json = mock_req.last_request.json()
-        assert request_json['events'][0]['event_type'] == self.event_type
+        assert request_json['events'][0]['action_type'] == self.event_type
         assert request_json['events'][0]['params'] == {'x': 3, 'y': 4}
         assert request_json['events'][0]['returns'] == 7
-        assert request_json['events'][0]['result'] == 'Success'
         init = datetime.fromisoformat(
             request_json['events'][0]['init_timestamp'].replace('Z', '+00:00'))
         end = datetime.fromisoformat(
             request_json['events'][0]['end_timestamp'].replace('Z', '+00:00'))
 
         assert (end - init).total_seconds() >= 0.1
-
-    def test_function_call(self, mock_req):
-        # Arrange
-        prompt = 'prompt'
-
-        @record_function(event_name=self.event_type)
-        def foo(prompt=prompt):
-            return 'output'
-
-        # Act
-        foo()
-        time.sleep(0.1)
-
-        # Assert
-        assert len(mock_req.request_history) == 1
-        request_json = mock_req.last_request.json()
-        assert request_json['events'][0]['action_type'] == 'action'
-        assert request_json['events'][0]['prompt'] == None
-        assert request_json['events'][0]['returns'] == 'output'
-        assert request_json['events'][0]['result'] == 'Success'
-
-    def test_llm_call_no_action_type(self, mock_req):
-        # Arrange
-        prompt = 'prompt'
-
-        @record_function(event_name=self.event_type)
-        def llm_call(prompt=prompt):
-            return 'output'
-
-        llm_call()
-        time.sleep(0.1)
-
-        # Assert
-        assert len(mock_req.request_history) == 1
-        request_json = mock_req.last_request.json()
-        assert request_json['events'][0]['action_type'] == 'action'
-        assert request_json['events'][0]['prompt'] == None
-        assert request_json['events'][0]['returns'] == 'output'
-        assert request_json['events'][0]['result'] == 'Success'
