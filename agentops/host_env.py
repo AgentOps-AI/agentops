@@ -2,7 +2,6 @@ import platform
 import psutil
 import socket
 from .helpers import get_agentops_version
-import logging
 
 
 def get_sdk_details():
