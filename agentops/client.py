@@ -213,7 +213,6 @@ class Client(metaclass=MetaClient):
     def end_session(self, end_state: str = Field("Indeterminate",
                                                  description="End state of the session",
                                                  pattern="^(Success|Fail|Indeterminate)$"),
-                    rating: Optional[str] = None,
                     end_state_reason: Optional[str] = None,
                     video: Optional[str] = None):
         """
@@ -221,7 +220,6 @@ class Client(metaclass=MetaClient):
 
         Args:
             end_state (str, optional): The final state of the session.
-            rating (str, optional): The rating for the session.
             end_state_reason (str, optional): The reason for ending the session.
             video (str, optional): The video screen recording of the session
         """
