@@ -16,7 +16,7 @@ import logging
 @dataclass
 class Event:
     event_type: str  # EventType.ENUM.value
-    params: Optional[str] = None
+    params: Optional[dict] = None
     returns: Optional[str] = None
     init_timestamp: Optional[str] = field(default_factory=get_ISO_time)
     end_timestamp: str = field(default_factory=get_ISO_time)
@@ -80,7 +80,7 @@ class ToolEvent(Event):
     event_type: str = EventType.TOOL.value
     agent_id: Optional[UUID] = None
     name: Optional[str] = None
-    logs: Optional[str] = None
+    logs: Optional[str | dict] = None
 
 
 # Does not inherit from Event because error will (optionally) be linked to an ActionEvent, LLMEvent, etc that will have the details

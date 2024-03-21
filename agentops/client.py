@@ -95,7 +95,7 @@ class Client(metaclass=MetaClient):
             self._session.tags = tags
             self._worker.update_session(self._session)
 
-    def record(self, event: Event):
+    def record(self, event: Event | ErrorEvent):
         """
         Record an event with the AgentOps service.
 
@@ -281,3 +281,7 @@ class Client(metaclass=MetaClient):
         signal.signal(signal.SIGINT, signal_handler)
         signal.signal(signal.SIGTERM, signal_handler)
         sys.excepthook = handle_exception
+
+    @property
+    def current_session_id(self):
+        return self._session.session_id
