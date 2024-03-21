@@ -1,7 +1,6 @@
 import agentops
 import time
 import asyncio
-import os
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -9,10 +8,9 @@ load_dotenv()
 
 print('init')
 
-ao_client = agentops.Client(tags=['mock tests'])
+agentops.init(tags=['mock tests'])
 
-
-@ao_client.record_action('action')
+@agentops.record_function('action')
 def sleep_func(sleep):
     time.sleep(sleep)
     print('sync sleep')
@@ -22,7 +20,7 @@ def sleep_func(sleep):
         ...
 
 
-@ao_client.record_action('async')
+@agentops.record_function('async')
 async def sleep_func_async(sleep):
     await asyncio.sleep(sleep)
     print('async sleep')
@@ -32,7 +30,7 @@ async def sleep_func_async(sleep):
         ...
 
 
-@ao_client.record_action('multi')
+@agentops.record_function('multi')
 def multi_event(sleep):
     sleep_func(1)
     time.sleep(sleep)
@@ -62,7 +60,7 @@ async def main():
     except:
         pass
     print('End Session')
-    ao_client.end_session(end_state='Success')
+    agentops.end_session(end_state='Success')
 
 
 if __name__ == '__main__':

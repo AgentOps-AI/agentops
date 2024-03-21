@@ -1,8 +1,8 @@
 import pytest
 import requests_mock
 import time
-
-from agentops import Client, Event
+import agentops
+from agentops import ActionEvent
 
 
 @pytest.fixture
@@ -18,17 +18,17 @@ class TestCanary:
     def setup_method(self):
         self.url = 'https://api.agentops.ai'
         self.api_key = "random_api_key"
-        self.client = Client(api_key=self.api_key, max_wait_time=5)
+        agentops.init(api_key=self.api_key, max_wait_time=5)
 
     def teardown_method(self):
-        self.client.end_session(end_state='Success')
+        agentops.end_session(end_state='Success')
 
     def test_agent_ops_record(self, mock_req):
         # Arrange
         event_type = 'test_event_type'
         # Act
 
-        self.client.record(Event(event_type))
+        agentops.record(ActionEvent(event_type))
         time.sleep(0.1)
 
         # Assert
