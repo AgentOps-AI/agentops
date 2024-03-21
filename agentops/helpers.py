@@ -89,6 +89,7 @@ def check_call_stack_for_agent_id() -> str | None:
                 return getattr(var, 'agent_ops_agent_id')
     return None
 
+
 def get_agentops_version():
     try:
         pkg_version = version("agentops")
@@ -97,7 +98,8 @@ def get_agentops_version():
         logging.warning(f"Error reading package version: {e}")
         return None
 
-# Function decorator that logs function name and its arguments to the console for debug purposes
+
+# Function decorator that prints function name and its arguments to the console for debug purposes
 # Example output:
     # <AGENTOPS_DEBUG_OUTPUT>
     # on_llm_start called with arguments:
@@ -119,7 +121,6 @@ def get_agentops_version():
 
 # regex to filter for just this:
 # <AGENTOPS_DEBUG_OUTPUT>([\s\S]*?)<\/AGENTOPS_DEBUG_OUTPUT>\n
-
 
 def debug_print_function_params(func):
     @wraps(func)
