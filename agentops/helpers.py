@@ -7,6 +7,7 @@ import inspect
 import logging
 from uuid import UUID
 import os
+from importlib.metadata import version
 
 
 def singleton(class_):
@@ -88,7 +89,15 @@ def check_call_stack_for_agent_id() -> str | None:
                 return getattr(var, 'agent_ops_agent_id')
     return None
 
-# Function decorator that prints function name and its arguments to the console for debug purposes
+def get_agentops_version():
+    try:
+        pkg_version = version("agentops")
+        return pkg_version
+    except Exception as e:
+        logging.warning(f"Error reading package version: {e}")
+        return None
+
+# Function decorator that logs function name and its arguments to the console for debug purposes
 # Example output:
     # <AGENTOPS_DEBUG_OUTPUT>
     # on_llm_start called with arguments:
