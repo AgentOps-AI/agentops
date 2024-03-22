@@ -8,11 +8,12 @@ from .event import Event, ActionEvent, LLMEvent, ToolEvent, ErrorEvent
 from .enums import Models, LLMMessageFormat
 from .decorators import record_function
 from pydantic import Field
+from os import environ
 
 
 def init(api_key: Optional[str] = None,
          tags: Optional[List[str]] = None,
-         endpoint: Optional[str] = None,
+         endpoint: Optional[str] = environ.get('AGENTOPS_API_ENDPOINT', 'https://api.agentops.ai'),
          max_wait_time: Optional[int] = 1000,
          max_queue_size: Optional[int] = 100,
          override=True,
@@ -23,10 +24,9 @@ def init(api_key: Optional[str] = None,
 def end_session(end_state: str = Field("Indeterminate",
                                        description="End state of the session",
                                        pattern="^(Success|Fail|Indeterminate)$"),
-                rating: Optional[str] = None,
                 end_state_reason: Optional[str] = None,
                 video: Optional[str] = None):
-    Client().end_session(end_state, rating, end_state_reason, video)
+    Client().end_session(end_state, end_state_reason, video)
 
 
 def start_session(tags: Optional[List[str]] = None, config: Optional[Configuration] = None):
