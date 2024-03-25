@@ -1,4 +1,5 @@
 # agentops/__init__.py
+from os import environ
 from typing import Optional, List
 
 from .client import Client
@@ -11,13 +12,21 @@ from pydantic import Field
 
 
 def init(api_key: Optional[str] = None,
+         parent_key: Optional[str] = None,
          tags: Optional[List[str]] = None,
          endpoint: Optional[str] = None,
          max_wait_time: Optional[int] = 1000,
          max_queue_size: Optional[int] = 100,
          override=True,
          auto_start_session=True):
-    Client(api_key, tags, endpoint, max_wait_time, max_queue_size, override, auto_start_session)
+
+    if not parent_key:
+        parent_key = environ.get('AGENTOPS_PARENT_KEY', None)
+
+    if not endpoint:
+        endpoint = environ.get('AGENTOPS_API_ENDPOINT', 'https://api.agentops.ai')
+
+    Client(api_key, parent_key, tags, endpoint, max_wait_time, max_queue_size, override, auto_start_session)
 
 
 def end_session(end_state: str = Field("Indeterminate",

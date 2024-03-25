@@ -21,12 +21,14 @@ class Configuration:
     """
 
     def __init__(self, api_key: str,
+                 parent_key: Optional[str],
                  endpoint: Optional[str] = environ.get('AGENTOPS_API_ENDPOINT', 'https://api.agentops.ai'),
                  max_wait_time: Optional[int] = 1000, max_queue_size: Optional[int] = 100):
         self._api_key: str = api_key
         self._endpoint = endpoint
         self._max_wait_time = max_wait_time
         self._max_queue_size = max_queue_size
+        self._parent_key: Optional[str] = parent_key
 
     @property
     def api_key(self) -> str:
@@ -107,3 +109,11 @@ class Configuration:
             value (int): The new maximum size of the event queue.
         """
         self._max_queue_size = value
+
+    @property
+    def parent_key(self):
+        return self._parent_key
+
+    @parent_key.setter
+    def parent_key(self, value: str):
+        self._parent_key = value
