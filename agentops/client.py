@@ -46,6 +46,7 @@ class Client(metaclass=MetaClient):
     """
 
     def __init__(self, api_key: Optional[str] = None,
+                 parent_key: Optional[str] = environ.get('AGENTOPS_PARENT_KEY', None),
                  tags: Optional[List[str]] = None,
                  endpoint: Optional[str] = environ.get('AGENTOPS_API_ENDPOINT', 'https://api.agentops.ai'),
                  max_wait_time: Optional[int] = 1000,
@@ -64,6 +65,7 @@ class Client(metaclass=MetaClient):
             return
 
         self.config = Configuration(api_key or environ.get('AGENTOPS_API_KEY'),
+                                    parent_key,
                                     endpoint,
                                     max_wait_time,
                                     max_queue_size)
@@ -71,7 +73,7 @@ class Client(metaclass=MetaClient):
         self._handle_unclean_exits()
 
         if auto_start_session:
-            self.start_session(tags)
+            self.start_session(tags, self.config)
 
         if override:
             if 'openai' in sys.modules:
