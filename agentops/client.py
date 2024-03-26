@@ -83,7 +83,7 @@ class Client(metaclass=MetaClient):
         self._handle_unclean_exits()
 
         if auto_start_session:
-            self.start_session(tags)
+            self.start_session(tags, self.config)
 
         if override:
             if 'openai' in sys.modules:
