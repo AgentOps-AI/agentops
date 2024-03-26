@@ -51,7 +51,7 @@ class LLMEvent(Event):
     completion_message_format: LLMMessageFormat = LLMMessageFormat.STRING  # TODO: remove from serialization
     # TODO: remove and just create it in __post_init__ so it can never be set by user?
     _formatted_completion_message: object = field(init=False, default=None)
-    model: Optional[Models] = None
+    model: Optional[Models | str] = None
     prompt_tokens: Optional[int] = None
     completion_tokens: Optional[int] = None
 
