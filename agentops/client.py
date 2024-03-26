@@ -45,10 +45,10 @@ class Client(metaclass=MetaClient):
         _session (Session, optional): A Session is a grouping of events (e.g. a run of your agent).
     """
 
-    def __init__(self, api_key: Optional[str] = environ.get('AGENTOPS_API_KEY', None),
-                 parent_key: Optional[str] = environ.get('AGENTOPS_PARENT_KEY', None),
+    def __init__(self, api_key: Optional[str] = None,
+                 parent_key: Optional[str] = None,
                  tags: Optional[List[str]] = None,
-                 endpoint: Optional[str] = environ.get('AGENTOPS_API_ENDPOINT', 'https://api.agentops.ai'),
+                 endpoint: Optional[str] = None,
                  max_wait_time: Optional[int] = 1000,
                  max_queue_size: Optional[int] = 100,
                  override=True,
