@@ -15,20 +15,18 @@ def record_function(event_name: str):
             event_name (str): The name of the event to record.
     """
 
-    ao_client = Client()
-
     def decorator(func):
 
         if inspect.iscoroutinefunction(func):
             @functools.wraps(func)
             async def async_wrapper(*args, **kwargs):
-                return await ao_client._record_event_async(func, event_name, *args, **kwargs)
+                return await Client()._record_event_async(func, event_name, *args, **kwargs)
 
             return async_wrapper
         else:
             @functools.wraps(func)
             def sync_wrapper(*args, **kwargs):
-                return ao_client._record_event_sync(func, event_name, *args, **kwargs)
+                return Client()._record_event_sync(func, event_name, *args, **kwargs)
 
             return sync_wrapper
 
