@@ -13,9 +13,9 @@ from os import environ
 
 
 def init(api_key: Optional[str] = None,
-         parent_key: Optional[str] = environ.get('AGENTOPS_PARENT_KEY', None),
+         parent_key: Optional[str] = None,
          tags: Optional[List[str]] = None,
-         endpoint: Optional[str] = environ.get('AGENTOPS_API_ENDPOINT', 'https://api.agentops.ai'),
+         endpoint: Optional[str] = None,
          max_wait_time: Optional[int] = 1000,
          max_queue_size: Optional[int] = 100,
          override=True,
