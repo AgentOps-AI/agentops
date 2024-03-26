@@ -45,7 +45,7 @@ class Client(metaclass=MetaClient):
         _session (Session, optional): A Session is a grouping of events (e.g. a run of your agent).
     """
 
-    def __init__(self, api_key: Optional[str] = None,
+    def __init__(self, api_key: Optional[str] = environ.get('AGENTOPS_API_KEY', None),
                  parent_key: Optional[str] = environ.get('AGENTOPS_PARENT_KEY', None),
                  tags: Optional[List[str]] = None,
                  endpoint: Optional[str] = environ.get('AGENTOPS_API_ENDPOINT', 'https://api.agentops.ai'),
@@ -60,11 +60,19 @@ class Client(metaclass=MetaClient):
         self._tags = tags
         self.config = None
 
+        # These handle the case where .init() is used with optionals, and one of these
+        # params are None, which is does not trigger the Optional default in the constructor
         if not api_key and not environ.get('AGENTOPS_API_KEY'):
             logging.warning("AgentOps: No API key provided - no data will be recorded.")
             return
 
-        self.config = Configuration(api_key or environ.get('AGENTOPS_API_KEY'),
+        if not parent_key:
+            parent_key = environ.get('AGENTOPS_PARENT_KEY', None)
+
+        if not endpoint:
+            endpoint = environ.get('AGENTOPS_API_ENDPOINT', 'https://api.agentops.ai')
+
+        self.config = Configuration(api_key,
                                     parent_key,
                                     endpoint,
                                     max_wait_time,
