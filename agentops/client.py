@@ -46,8 +46,9 @@ class Client(metaclass=MetaClient):
     """
 
     def __init__(self, api_key: Optional[str] = None,
+                 parent_key: Optional[str] = None,
                  tags: Optional[List[str]] = None,
-                 endpoint: Optional[str] = environ.get('AGENTOPS_API_ENDPOINT', 'https://api.agentops.ai'),
+                 endpoint: Optional[str] = None,
                  max_wait_time: Optional[int] = 1000,
                  max_queue_size: Optional[int] = 100,
                  override=True,
@@ -59,11 +60,22 @@ class Client(metaclass=MetaClient):
         self._tags = tags
         self.config = None
 
-        if not api_key and not environ.get('AGENTOPS_API_KEY'):
-            logging.warning("AgentOps: No API key provided - no data will be recorded.")
-            return
+        # These handle the case where .init() is used with optionals, and one of these
+        # params are None, which is does not trigger the Optional default in the constructor
+        if not api_key:
+            api_key = environ.get("AGENTOPS_API_KEY")
+            if not api_key:
+                logging.warning("AgentOps: No API key provided - no data will be recorded.")
+                return
 
-        self.config = Configuration(api_key or environ.get('AGENTOPS_API_KEY'),
+        if not parent_key:
+            parent_key = environ.get('AGENTOPS_PARENT_KEY', None)
+
+        if not endpoint:
+            endpoint = environ.get('AGENTOPS_API_ENDPOINT', 'https://api.agentops.ai')
+
+        self.config = Configuration(api_key,
+                                    parent_key,
                                     endpoint,
                                     max_wait_time,
                                     max_queue_size)
@@ -71,7 +83,7 @@ class Client(metaclass=MetaClient):
         self._handle_unclean_exits()
 
         if auto_start_session:
-            self.start_session(tags)
+            self.start_session(tags, self.config)
 
         if override:
             if 'openai' in sys.modules:
