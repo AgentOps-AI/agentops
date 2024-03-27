@@ -2,6 +2,9 @@ from openai import AsyncOpenAI  # Assuming AsyncOpenAI is the async version of t
 import asyncio
 import agentops
 from agentops import record_function
+from dotenv import load_dotenv
+
+load_dotenv()
 
 ao_client = agentops.Client()
 
