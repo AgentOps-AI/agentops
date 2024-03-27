@@ -62,9 +62,10 @@ class Client(metaclass=MetaClient):
 
         # These handle the case where .init() is used with optionals, and one of these
         # params are None, which is does not trigger the Optional default in the constructor
-        if not api_key and not environ.get('AGENTOPS_API_KEY'):
-            logging.warning("AgentOps: No API key provided - no data will be recorded.")
-            return
+        if not api_key:
+            api_key = environ.get("AGENTOPS_API_KEY")
+            if not api_key:
+                logging.warning("AgentOps: No API key provided - no data will be recorded.")
 
         if not parent_key:
             parent_key = environ.get('AGENTOPS_PARENT_KEY', None)
