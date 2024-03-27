@@ -230,7 +230,7 @@ class Client(metaclass=MetaClient):
         End the current session with the AgentOps service.
 
         Args:
-            end_state (str): The final state of the session.
+            end_state (str): The final state of the session. Options: Success, Fail, or Indeterminate.
             end_state_reason (str, optional): The reason for ending the session.
             video (str, optional): The video screen recording of the session
         """
@@ -290,7 +290,8 @@ class Client(metaclass=MetaClient):
             # Then call the default excepthook to exit the program
             sys.__excepthook__(exc_type, exc_value, exc_traceback)
 
-        atexit.register(lambda: cleanup(end_state="Indeterminate", end_state_reason="Process exited normally"))
+        atexit.register(lambda: cleanup(end_state="Indeterminate",
+                        end_state_reason="Process exited without calling end_session()"))
         signal.signal(signal.SIGINT, signal_handler)
         signal.signal(signal.SIGTERM, signal_handler)
         sys.excepthook = handle_exception
