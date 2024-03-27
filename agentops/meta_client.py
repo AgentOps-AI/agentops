@@ -45,7 +45,8 @@ def handle_exceptions(method):
         try:
             return method(self, *args, **kwargs)
         except Exception as e:
-            type(self).send_exception_to_server(e, self.config._api_key)
+            if self.config:
+                type(self).send_exception_to_server(e, self.config._api_key)
             logging.warning(f"AgentOps: Error: {e}")
             raise e
 

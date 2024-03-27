@@ -4,9 +4,8 @@ from typing import Optional, List
 
 from .client import Client
 from .config import Configuration
-from .event import ActionEvent, LLMEvent, ToolEvent, ErrorEvent, Event
 from .event import Event, ActionEvent, LLMEvent, ToolEvent, ErrorEvent
-from .enums import Models, LLMMessageFormat
+from .enums import Models
 from .decorators import record_function
 from pydantic import Field
 from os import environ

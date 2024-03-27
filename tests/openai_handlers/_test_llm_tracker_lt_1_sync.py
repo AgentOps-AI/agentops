@@ -5,8 +5,11 @@ from agentops import record_function
 from packaging.version import parse
 from importlib import import_module
 import sys
+from dotenv import load_dotenv
 
-ao_client = agentops.Client()
+load_dotenv()
+
+agentops.init()
 
 api = 'openai'
 if api in sys.modules:
@@ -32,4 +35,4 @@ def call_openai():
 
 call_openai()
 
-ao_client.end_session('Success')
+agentops.end_session('Success')

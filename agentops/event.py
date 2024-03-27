@@ -8,7 +8,7 @@ Data Class:
 from dataclasses import dataclass, field
 from typing import List, Optional
 from .helpers import get_ISO_time
-from .enums import EventType, Models, LLMMessageFormat
+from .enums import EventType, Models
 from uuid import UUID, uuid4
 
 
@@ -43,35 +43,11 @@ class LLMEvent(Event):
     event_type: str = EventType.LLM.value
     agent_id: Optional[UUID] = None
     thread_id: Optional[UUID] = None
-    prompt_messages: str | List = None  # TODO: remove from serialization
-    prompt_messages_format: LLMMessageFormat = LLMMessageFormat.STRING  # TODO: remove from serialization
-    # TODO: remove and just create it in __post_init__ so it can never be set by user?
-    _formatted_prompt_messages: object = field(init=False, default=None)
-    completion_message: str | object = None  # TODO: remove from serialization
-    completion_message_format: LLMMessageFormat = LLMMessageFormat.STRING  # TODO: remove from serialization
-    # TODO: remove and just create it in __post_init__ so it can never be set by user?
-    _formatted_completion_message: object = field(init=False, default=None)
+    prompt_message: str | List = None  # TODO
+    completion_message: str | object = None  # TODO
     model: Optional[Models | str] = None
     prompt_tokens: Optional[int] = None
     completion_tokens: Optional[int] = None
-
-    def format_messages(self):
-        if self.prompt_messages:
-            # TODO should we just figure out if it's chatml so user doesn't have to pass anything?
-            if self.prompt_messages_format == LLMMessageFormat.STRING:
-                self._formatted_prompt_messages = {"type": "string", "string": self.prompt_messages}
-            elif self.prompt_messages_format == LLMMessageFormat.CHATML:
-                self._formatted_prompt_messages = {"type": "chatml", "messages": self.prompt_messages}
-
-        if self.completion_message:
-            if self.completion_message_format == LLMMessageFormat.STRING:
-                self._formatted_completion_message = {"type": "string", "string": self.completion_message}
-            elif self.completion_message_format == LLMMessageFormat.CHATML:
-                self._formatted_completion_message = {"type": "chatml", "message": self.completion_message}
-
-    def __post_init__(self):
-        # format if prompt/completion messages were passed when LLMEvent was created
-        self.format_messages()
 
 
 @dataclass
@@ -81,8 +57,9 @@ class ToolEvent(Event):
     name: Optional[str] = None
     logs: Optional[str | dict] = None
 
-
 # Does not inherit from Event because error will (optionally) be linked to an ActionEvent, LLMEvent, etc that will have the details
+
+
 @dataclass
 class ErrorEvent():
     trigger_event: Optional[Event] = None  # TODO: remove from serialization?
