@@ -56,7 +56,7 @@ class Worker:
 
     def end_session(self, session: Session) -> None:
         self.stop_flag.set()
-        self.thread.join()
+        self.thread.join(timeout=1)
         self.flush_queue()
         self._session = None
 
