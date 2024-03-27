@@ -66,6 +66,7 @@ class Client(metaclass=MetaClient):
             api_key = environ.get("AGENTOPS_API_KEY")
             if not api_key:
                 logging.warning("AgentOps: No API key provided - no data will be recorded.")
+                return
 
         if not parent_key:
             parent_key = environ.get('AGENTOPS_PARENT_KEY', None)
