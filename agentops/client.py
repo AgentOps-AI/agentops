@@ -6,13 +6,13 @@ Classes:
 """
 
 from .event import ActionEvent, ErrorEvent, Event
+from .enums import EndState
 from .helpers import get_ISO_time, singleton, check_call_stack_for_agent_id
 from .session import Session
 from .worker import Worker
 from .host_env import get_host_env
 from uuid import uuid4
 from typing import Optional, List
-from pydantic import Field
 from os import environ
 import traceback
 import logging
@@ -222,21 +222,23 @@ class Client(metaclass=MetaClient):
         logging.info('View info on this session at https://agentops.ai/dashboard?session_id={}'
                      .format(self._session.session_id))
 
-    def end_session(self, end_state: str = Field("Indeterminate",
-                                                 description="End state of the session",
-                                                 pattern="^(Success|Fail|Indeterminate)$"),
+    def end_session(self,
+                    end_state: str,
                     end_state_reason: Optional[str] = None,
                     video: Optional[str] = None):
         """
         End the current session with the AgentOps service.
 
         Args:
-            end_state (str, optional): The final state of the session.
+            end_state (str): The final state of the session. Options: Success, Fail, or Indeterminate.
             end_state_reason (str, optional): The reason for ending the session.
             video (str, optional): The video screen recording of the session
         """
         if self._session is None or self._session.has_ended:
             return logging.warning("AgentOps: Cannot end session - no current session")
+
+        if not any(end_state == state.value for state in EndState):
+            return logging.warning("AgentOps: Invalid end_state. Please use one of the EndState enums")
 
         self._session.video = video
         self._session.end_session(end_state, end_state_reason)
@@ -288,7 +290,8 @@ class Client(metaclass=MetaClient):
             # Then call the default excepthook to exit the program
             sys.__excepthook__(exc_type, exc_value, exc_traceback)
 
-        atexit.register(lambda: cleanup(end_state="Success", end_state_reason="Process exited normally"))
+        atexit.register(lambda: cleanup(end_state="Indeterminate",
+                        end_state_reason="Process exited without calling end_session()"))
         signal.signal(signal.SIGINT, signal_handler)
         signal.signal(signal.SIGTERM, signal_handler)
         sys.excepthook = handle_exception
