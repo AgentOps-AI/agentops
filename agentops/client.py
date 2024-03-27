@@ -49,8 +49,8 @@ class Client(metaclass=MetaClient):
                  parent_key: Optional[str] = None,
                  tags: Optional[List[str]] = None,
                  endpoint: Optional[str] = None,
-                 max_wait_time: Optional[int] = 1000,
-                 max_queue_size: Optional[int] = 100,
+                 max_wait_time: Optional[int] = None,
+                 max_queue_size: Optional[int] = None,
                  override=True,
                  auto_start_session=True
                  ):
