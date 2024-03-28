@@ -7,6 +7,7 @@ Classes:
 
 from typing import Optional
 from os import environ
+import logging
 
 
 class Configuration:
@@ -14,17 +15,38 @@ class Configuration:
     Stores the configuration settings for AgentOps clients.
 
     Args:
-        api_key (str): API Key for AgentOps services
-        endpoint (str, optional): The endpoint for the AgentOps service. Defaults to 'https://api.agentops.ai'.
+
+    Client for AgentOps service.
+
+    Args:
+        api_key (str, optional): API Key for AgentOps services. If none is provided, key will 
+            be read from the AGENTOPS_API_KEY environment variable.
+        parent_key (str, optional): Organization key to give visibility of all user sessions the user's organization. If none is provided, key will 
+            be read from the AGENTOPS_PARENT_KEY environment variable.
+        endpoint (str, optional): The endpoint for the AgentOps service. If none is provided, key will 
+            be read from the AGENTOPS_API_ENDPOINT environment variable. Defaults to 'https://api.agentops.ai'.
         max_wait_time (int, optional): The maximum time to wait in milliseconds before flushing the queue. Defaults to 30000.
         max_queue_size (int, optional): The maximum size of the event queue. Defaults to 100.
     """
 
-    def __init__(self, api_key: str,
-                 parent_key: Optional[str],
-                 endpoint: Optional[str] = environ.get('AGENTOPS_API_ENDPOINT', 'https://api.agentops.ai'),
+    def __init__(self,
+                 api_key: Optional[str] = None,
+                 parent_key: Optional[str] = None,
+                 endpoint: Optional[str] = None,
                  max_wait_time: Optional[int] = None,
                  max_queue_size: Optional[int] = None):
+
+        if not api_key:
+            api_key = environ.get('AGENTOPS_API_KEY', None)
+            if not api_key:
+                raise ConfigurationError("AgentOps: No API key provided - no data will be recorded.")
+
+        if not parent_key:
+            parent_key = environ.get('AGENTOPS_PARENT_KEY', None)
+
+        if not endpoint:
+            endpoint = environ.get('AGENTOPS_API_ENDPOINT', 'https://api.agentops.ai')
+
         self._api_key: str = api_key
         self._endpoint = endpoint
         self._max_wait_time = max_wait_time or 30000
@@ -118,3 +140,11 @@ class Configuration:
     @parent_key.setter
     def parent_key(self, value: str):
         self._parent_key = value
+
+
+class ConfigurationError(Exception):
+    """Exception raised for errors related to Configuration"""
+
+    def __init__(self, message: str):
+        super().__init__(message)
+        logging.warning(message)
