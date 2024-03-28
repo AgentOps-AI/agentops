@@ -15,10 +15,6 @@ class Configuration:
     Stores the configuration settings for AgentOps clients.
 
     Args:
-
-    Client for AgentOps service.
-
-    Args:
         api_key (str, optional): API Key for AgentOps services. If none is provided, key will 
             be read from the AGENTOPS_API_KEY environment variable.
         parent_key (str, optional): Organization key to give visibility of all user sessions the user's organization. If none is provided, key will 
