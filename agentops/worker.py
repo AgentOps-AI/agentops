@@ -2,7 +2,7 @@ import json
 import threading
 import time
 from .http_client import HttpClient
-from .config import Configuration
+from .config import Configuration, ConfigurationError
 from .session import Session
 from .helpers import safe_serialize, filter_unjsonable
 from typing import Dict

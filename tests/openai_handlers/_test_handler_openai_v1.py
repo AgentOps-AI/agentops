@@ -1,4 +1,5 @@
 import time
+import openai
 from openai.resources.chat import completions
 from openai import OpenAI, AsyncOpenAI
 import agentops
