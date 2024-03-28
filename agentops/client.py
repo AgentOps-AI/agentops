@@ -39,7 +39,7 @@ class Client(metaclass=MetaClient):
         endpoint (str, optional): The endpoint for the AgentOps service. If none is provided, key will 
             be read from the AGENTOPS_API_ENDPOINT environment variable. Defaults to 'https://api.agentops.ai'.
         max_wait_time (int, optional): The maximum time to wait in milliseconds before flushing the queue. 
-            Defaults to 1000.
+            Defaults to 30,000 (30 seconds)
         max_queue_size (int, optional): The maximum size of the event queue. Defaults to 100.
         tags (List[str], optional): Tags for the sessions that can be used for grouping or 
             sorting later (e.g. ["GPT-4"]).
