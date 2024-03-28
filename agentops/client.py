@@ -13,7 +13,6 @@ from .worker import Worker
 from .host_env import get_host_env
 from uuid import uuid4
 from typing import Optional, List
-from os import environ
 import traceback
 import logging
 import inspect
@@ -22,7 +21,7 @@ import signal
 import sys
 
 from .meta_client import MetaClient
-from .config import Configuration
+from .config import Configuration, ConfigurationError
 from .llm_tracker import LlmTracker
 
 
@@ -32,25 +31,31 @@ class Client(metaclass=MetaClient):
     Client for AgentOps service.
 
     Args:
+
         api_key (str, optional): API Key for AgentOps services. If none is provided, key will 
             be read from the AGENTOPS_API_KEY environment variable.
+        parent_key (str, optional): Organization key to give visibility of all user sessions the user's organization. If none is provided, key will 
+            be read from the AGENTOPS_PARENT_KEY environment variable.
+        endpoint (str, optional): The endpoint for the AgentOps service. If none is provided, key will 
+            be read from the AGENTOPS_API_ENDPOINT environment variable. Defaults to 'https://api.agentops.ai'.
+        max_wait_time (int, optional): The maximum time to wait in milliseconds before flushing the queue. 
+            Defaults to 30,000 (30 seconds)
+        max_queue_size (int, optional): The maximum size of the event queue. Defaults to 100.
         tags (List[str], optional): Tags for the sessions that can be used for grouping or 
             sorting later (e.g. ["GPT-4"]).
-        endpoint (str, optional): The endpoint for the AgentOps service. Defaults to 'https://api.agentops.ai'.
-        max_wait_time (int, optional): The maximum time to wait in milliseconds before flushing the queue. 
-            Defaults to 1000.
-        max_queue_size (int, optional): The maximum size of the event queue. Defaults to 100.
         override (bool): Whether to override and LLM calls to emit as events.
+        auto_start_session (bool): Whether to start a session automatically when the client is created.
     Attributes:
         _session (Session, optional): A Session is a grouping of events (e.g. a run of your agent).
     """
 
-    def __init__(self, api_key: Optional[str] = None,
+    def __init__(self,
+                 api_key: Optional[str] = None,
                  parent_key: Optional[str] = None,
-                 tags: Optional[List[str]] = None,
                  endpoint: Optional[str] = None,
                  max_wait_time: Optional[int] = None,
                  max_queue_size: Optional[int] = None,
+                 tags: Optional[List[str]] = None,
                  override=True,
                  auto_start_session=True
                  ):
@@ -58,27 +63,15 @@ class Client(metaclass=MetaClient):
         self._session = None
         self._worker = None
         self._tags = tags
-        self.config = None
 
-        # These handle the case where .init() is used with optionals, and one of these
-        # params are None, which is does not trigger the Optional default in the constructor
-        if not api_key:
-            api_key = environ.get("AGENTOPS_API_KEY")
-            if not api_key:
-                logging.warning("AgentOps: No API key provided - no data will be recorded.")
-                return
-
-        if not parent_key:
-            parent_key = environ.get('AGENTOPS_PARENT_KEY', None)
-
-        if not endpoint:
-            endpoint = environ.get('AGENTOPS_API_ENDPOINT', 'https://api.agentops.ai')
-
-        self.config = Configuration(api_key,
-                                    parent_key,
-                                    endpoint,
-                                    max_wait_time,
-                                    max_queue_size)
+        try:
+            self.config = Configuration(api_key,
+                                        parent_key,
+                                        endpoint,
+                                        max_wait_time,
+                                        max_queue_size)
+        except ConfigurationError:
+            return
 
         self._handle_unclean_exits()
 
