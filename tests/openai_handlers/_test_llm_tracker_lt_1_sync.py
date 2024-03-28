@@ -1,4 +1,3 @@
-import openai
 from openai import ChatCompletion
 import agentops
 from agentops import record_function
@@ -20,19 +19,51 @@ if api in sys.modules:
             print('openai version: ', module_version)
 
 
-@record_function('sample function being recorded')
-def call_openai():
+@record_function('openai v0 sync no streaming')
+def call_openai_v0_sync_no_streaming():
+    chat_completion = ChatCompletion.create(
+        model='gpt-3.5-turbo',
+        messages=[
+            {
+                "role": "system",
+                "content": "You are an expert haiku writer"
+            },
+            {
+                "role": "user",
+                "content": "write me a haiku about devops"
+            }
+        ]
+    )
 
-    message = [{"role": "user", "content": "Hello"},
-               {"role": "assistant", "content": "Hi there!"}]
-
-    response = ChatCompletion.create(
-        model='gpt-3.5-turbo', messages=message, temperature=0.5)
-
-    print(response)
+    print(chat_completion)
     # raise ValueError("This is an intentional error for testing.")
 
 
-call_openai()
+@record_function('openai v0 sync with streaming')
+def call_openai_v0_sync_with_streaming():
+    chat_completion = ChatCompletion.create(
+        model='gpt-3.5-turbo',
+        messages=[
+            {
+                "role": "system",
+                "content": "You are an expert haiku writer"
+            },
+            {
+                "role": "user",
+                "content": "write me a haiku about devops"
+            }
+        ],
+        stream=True
+    )
+
+    for chunk in chat_completion:
+        print(chunk.choices[0])
+        chunk_message = chunk.choices[0].delta["content"]
+        print(chunk_message)
+    # raise ValueError("This is an intentional error for testing.")
+
+
+call_openai_v0_sync_no_streaming()
+call_openai_v0_sync_with_streaming()
 
 agentops.end_session('Success')

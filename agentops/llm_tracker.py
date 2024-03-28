@@ -40,6 +40,7 @@ class LlmTracker:
             )
 
             try:
+                # NOTE: prompt/completion usage not returned in response when streaming
                 model = chunk['model']
                 choices = chunk['choices']
                 token = choices[0]['delta'].get('content', '')
@@ -87,7 +88,9 @@ class LlmTracker:
         try:
             self.llm_event.agent_id = check_call_stack_for_agent_id()
             self.llm_event.prompt_message = kwargs["messages"]
-            self.llm_event.completion_message = response['choices'][0]['message']
+            self.llm_event.prompt_tokens = response['usage']['prompt_tokens']
+            self.llm_event.completion_message = response['choices'][0]['message']['content']
+            self.llm_event.completion_tokens = response['usage']['completion_tokens']
             self.llm_event.returns = {"content": response['choices'][0]['message']['content']}
             self.llm_event.model = response["model"]
             self.llm_event.end_timestamp = get_ISO_time()
@@ -118,6 +121,7 @@ class LlmTracker:
             )
 
             try:
+                # NOTE: prompt/completion usage not returned in response when streaming
                 model = chunk.model
                 choices = chunk.choices
                 token = choices[0].delta.content
@@ -176,7 +180,9 @@ class LlmTracker:
         try:
             self.llm_event.agent_id = check_call_stack_for_agent_id()
             self.llm_event.prompt_message = kwargs["messages"]
-            self.llm_event.completion_message = response.choices[0].message.model_dump()
+            self.llm_event.prompt_tokens = response.usage.prompt_tokens
+            self.llm_event.completion_message = response.choices[0].message.model_dump().get('content')
+            self.llm_event.completion_tokens = response.usage.completion_tokens
             self.llm_event.returns = response.model_dump()
             self.llm_event.model = response.model
 

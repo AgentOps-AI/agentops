@@ -1,4 +1,4 @@
-from openai import AsyncOpenAI  # Assuming AsyncOpenAI is the async version of the client
+from openai import AsyncOpenAI
 import asyncio
 import agentops
 from agentops import record_function
@@ -6,36 +6,59 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-ao_client = agentops.Client()
+agentops.init()
 
 
-@record_function('sample function being recorded')
-async def call_openai_async():
-    client = AsyncOpenAI()  # Using the async client
+@record_function('openai v1 async no streaming')
+async def call_openai_v1_async_no_streaming():
+    client = AsyncOpenAI()
 
-    response = await client.chat.completions.create(  # Await the async call
+    chat_completion = await client.chat.completions.create(
         model="gpt-3.5-turbo",
         messages=[
             {
                 "role": "system",
-                "content": "You will be provided with a piece of code, and your task is to explain it in a concise way."
+                "content": "You are an expert haiku writer"
             },
             {
                 "role": "user",
-                "content": "class Log:\n        def __init__(self, path):\n            dirname = os.path.dirname(path)\n            os.makedirs(dirname, exist_ok=True)\n            f = open(path, \"a+\")\n    \n            # Check that the file is newline-terminated\n            size = os.path.getsize(path)\n            if size > 0:\n                f.seek(size - 1)\n                end = f.read(1)\n                if end != \"\\n\":\n                    f.write(\"\\n\")\n            self.f = f\n            self.path = path\n    \n        def log(self, event):\n            event[\"_event_id\"] = str(uuid.uuid4())\n            json.dump(event, self.f)\n            self.f.write(\"\\n\")\n    \n        def state(self):\n            state = {\"complete\": set(), \"last\": None}\n            for line in open(self.path):\n                event = json.loads(line)\n                if event[\"type\"] == \"submit\" and event[\"success\"]:\n                    state[\"complete\"].add(event[\"id\"])\n                    state[\"last\"] = event\n            return state"
+                "content": "write me a haiku about devops"
             }
-        ],
-        temperature=0.7,
-        max_tokens=64,
-        top_p=1
+        ]
     )
 
-    print(response)
+    print(chat_completion)
+    # raise ValueError("This is an intentional error for testing.")
+
+
+@record_function('openai v1 async with streaming')
+async def call_openai_v1_async_streaming():
+    client = AsyncOpenAI()  # Using the async client
+
+    chat_completion = await client.chat.completions.create(
+        model="gpt-3.5-turbo",
+        messages=[
+            {
+                "role": "system",
+                "content": "You are an expert haiku writer"
+            },
+            {
+                "role": "user",
+                "content": "write me a haiku about devops"
+            }
+        ],
+        stream=True
+    )
+
+    async for chunk in chat_completion:
+        chunk_message = chunk.choices[0].delta.content
+        print(chunk_message)
     # raise ValueError("This is an intentional error for testing.")
 
 
 async def main():
-    await call_openai_async()
-    ao_client.end_session('Success')  # This would also need to be made async if it makes network calls
+    await call_openai_v1_async_no_streaming()
+    await call_openai_v1_async_streaming()
+    agentops.end_session('Success')  # This would also need to be made async if it makes network calls
 
 asyncio.run(main())
