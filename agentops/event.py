@@ -43,11 +43,11 @@ class LLMEvent(Event):
     event_type: str = EventType.LLM.value
     agent_id: Optional[UUID] = None
     thread_id: Optional[UUID] = None
-    prompt_message: str | List = None  # TODO
-    completion_message: str | object = None  # TODO
-    model: Optional[Models | str] = None
+    prompt_message: str | List = None
     prompt_tokens: Optional[int] = None
+    completion_message: str | object = None
     completion_tokens: Optional[int] = None
+    model: Optional[Models | str] = None
 
 
 @dataclass
