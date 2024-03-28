@@ -23,7 +23,8 @@ class Configuration:
     def __init__(self, api_key: str,
                  parent_key: Optional[str],
                  endpoint: Optional[str] = environ.get('AGENTOPS_API_ENDPOINT', 'https://api.agentops.ai'),
-                 max_wait_time: Optional[int] = None, max_queue_size: Optional[int] = None):
+                 max_wait_time: Optional[int] = None,
+                 max_queue_size: Optional[int] = None):
         self._api_key: str = api_key
         self._endpoint = endpoint
         self._max_wait_time = max_wait_time or 30000
