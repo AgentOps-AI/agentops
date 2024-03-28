@@ -16,18 +16,19 @@ class Configuration:
     Args:
         api_key (str): API Key for AgentOps services
         endpoint (str, optional): The endpoint for the AgentOps service. Defaults to 'https://api.agentops.ai'.
-        max_wait_time (int, optional): The maximum time to wait in milliseconds before flushing the queue. Defaults to 1000.
+        max_wait_time (int, optional): The maximum time to wait in milliseconds before flushing the queue. Defaults to 30000.
         max_queue_size (int, optional): The maximum size of the event queue. Defaults to 100.
     """
 
     def __init__(self, api_key: str,
                  parent_key: Optional[str],
                  endpoint: Optional[str] = environ.get('AGENTOPS_API_ENDPOINT', 'https://api.agentops.ai'),
-                 max_wait_time: Optional[int] = 1000, max_queue_size: Optional[int] = 100):
+                 max_wait_time: Optional[int] = None,
+                 max_queue_size: Optional[int] = None):
         self._api_key: str = api_key
         self._endpoint = endpoint
-        self._max_wait_time = max_wait_time
-        self._max_queue_size = max_queue_size
+        self._max_wait_time = max_wait_time or 30000
+        self._max_queue_size = max_queue_size or 100
         self._parent_key: Optional[str] = parent_key
 
     @property
