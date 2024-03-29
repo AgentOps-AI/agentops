@@ -66,11 +66,11 @@ class Client(metaclass=MetaClient):
         self._tags = tags
 
         try:
-            self.config = Configuration(api_key,
-                                        parent_key,
-                                        endpoint,
-                                        max_wait_time,
-                                        max_queue_size)
+            self.config = Configuration(api_key=api_key,
+                                        parent_key=parent_key,
+                                        endpoint=endpoint,
+                                        max_wait_time=max_wait_time,
+                                        max_queue_size=max_queue_size)
         except ConfigurationError:
             return
 
@@ -213,7 +213,7 @@ class Client(metaclass=MetaClient):
         self._session = Session(uuid4(), tags or self._tags, host_env=get_host_env())
         self._worker = Worker(config or self.config)
         self._worker.start_session(self._session)
-        logging.info('View info on this session at https://agentops.ai/dashboard?session_id={}'
+        logging.info('View info on this session at https://app.agentops.ai/dashboard?session_id={}'
                      .format(self._session.session_id))
 
     def end_session(self,
