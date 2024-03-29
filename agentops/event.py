@@ -76,9 +76,9 @@ class LLMEvent(Event):
 
     agent_id(UUID, optional): The unique identifier of the agent that triggered the event.
     thread_id(UUID, optional): The unique identifier of the contextual thread that a message pertains to.
-    prompt_message(str, list, optional): The message or messages that were used to prompt the LLM. Preferably in ChatML format which is more fully supported by AgentOps.
+    prompt(str, list, optional): The message or messages that were used to prompt the LLM. Preferably in ChatML format which is more fully supported by AgentOps.
     prompt_tokens(int, optional): The number of tokens in the prompt message.
-    completion_message(str, object, optional): The message or returned by the LLM. Preferably in ChatML format which is more fully supported by AgentOps.
+    completion(str, object, optional): The message or returned by the LLM. Preferably in ChatML format which is more fully supported by AgentOps.
     completion_tokens(int, optional): The number of tokens in the completion message.
     model(Models, str, optional): LLM model e.g. "gpt-4". Models defined in enums.Models are more fully supported by AgentOps e.g. extra features in dashboard.
 
@@ -87,9 +87,9 @@ class LLMEvent(Event):
     event_type: str = EventType.LLM.value
     agent_id: Optional[UUID] = None
     thread_id: Optional[UUID] = None
-    prompt_message: str | List = None
+    prompt: str | List = None
     prompt_tokens: Optional[int] = None
-    completion_message: str | object = None
+    completion: str | object = None
     completion_tokens: Optional[int] = None
     model: Optional[Models | str] = None
 
