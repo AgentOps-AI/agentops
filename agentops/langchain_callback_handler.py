@@ -65,7 +65,7 @@ class LangchainCallbackHandler(BaseCallbackHandler):
                     **({} if metadata is None else metadata),
                     **kwargs},  # TODO: params is inconsistent, in ToolEvent we put it in logs
             model=kwargs['invocation_params']['model'],
-            prompt_messages=prompts[0]
+            prompt=prompts[0]
             # tags=tags # TODO
         )
 
@@ -100,8 +100,8 @@ class LangchainCallbackHandler(BaseCallbackHandler):
         }
         llm_event.end_timestamp = get_ISO_time()
         if response.llm_output is not None:
-            llm_event.completion_message = response.generations[0][0].message.content  # TODO
-            llm_event.completion_message_format = LLMMessageFormat.STRING  # TODO
+            llm_event.completion = response.generations[0][0].message.content  # TODO
+            llm_event.completion_format = LLMMessageFormat.STRING  # TODO
             llm_event.prompt_tokens = response.llm_output['token_usage']['prompt_tokens']
             llm_event.completion_tokens = response.llm_output['token_usage']['completion_tokens']
             llm_event.format_messages()  # TODO: Find somewhere logical to call this on the user's behalf. They shouldn't call it
@@ -366,7 +366,7 @@ class AsyncLangchainCallbackHandler(AsyncCallbackHandler):
                     **({} if metadata is None else metadata),
                     **kwargs},  # TODO: params is inconsistent, in ToolEvent we put it in logs
             model=kwargs['invocation_params']['model'],
-            prompt_messages=prompts[0]
+            prompt=prompts[0]
         )
 
     @debug_print_function_params
@@ -427,8 +427,8 @@ class AsyncLangchainCallbackHandler(AsyncCallbackHandler):
         }
         llm_event.end_timestamp = get_ISO_time()
         if response.llm_output is not None:
-            llm_event.completion_message = response.generations[0][0].message.content  # TODO
-            llm_event.completion_message_format = LLMMessageFormat.STRING  # TODO
+            llm_event.completion = response.generations[0][0].message.content  # TODO
+            llm_event.completion_format = LLMMessageFormat.STRING  # TODO
             llm_event.prompt_tokens = response.llm_output['token_usage']['prompt_tokens']
             llm_event.completion_tokens = response.llm_output['token_usage']['completion_tokens']
             llm_event.format_messages()  # TODO: Find somewhere logical to call this on the user's behalf. They shouldn't call it

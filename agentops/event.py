@@ -43,31 +43,31 @@ class LLMEvent(Event):
     event_type: str = EventType.LLM.value
     agent_id: Optional[UUID] = None
     thread_id: Optional[UUID] = None
-    prompt_messages: str | List = None  # TODO: remove from serialization
-    prompt_messages_format: LLMMessageFormat = LLMMessageFormat.STRING  # TODO: remove from serialization
+    prompt: str | List = None  # TODO: remove from serialization
+    prompt_format: LLMMessageFormat = LLMMessageFormat.STRING  # TODO: remove from serialization
     # TODO: remove and just create it in __post_init__ so it can never be set by user?
-    _formatted_prompt_messages: object = field(init=False, default=None)
-    completion_message: str | object = None  # TODO: remove from serialization
-    completion_message_format: LLMMessageFormat = LLMMessageFormat.STRING  # TODO: remove from serialization
+    _formatted_prompt: object = field(init=False, default=None)
+    completion: str | object = None  # TODO: remove from serialization
+    completion_format: LLMMessageFormat = LLMMessageFormat.STRING  # TODO: remove from serialization
     # TODO: remove and just create it in __post_init__ so it can never be set by user?
-    _formatted_completion_message: object = field(init=False, default=None)
+    _formatted_completion: object = field(init=False, default=None)
     model: Optional[Models | str] = None
     prompt_tokens: Optional[int] = None
     completion_tokens: Optional[int] = None
 
     def format_messages(self):
-        if self.prompt_messages:
+        if self.prompt:
             # TODO should we just figure out if it's chatml so user doesn't have to pass anything?
-            if self.prompt_messages_format == LLMMessageFormat.STRING:
-                self._formatted_prompt_messages = {"type": "string", "string": self.prompt_messages}
-            elif self.prompt_messages_format == LLMMessageFormat.CHATML:
-                self._formatted_prompt_messages = {"type": "chatml", "messages": self.prompt_messages}
+            if self.prompt_format == LLMMessageFormat.STRING:
+                self._formatted_prompt = {"type": "string", "string": self.prompt}
+            elif self.prompt_format == LLMMessageFormat.CHATML:
+                self._formatted_prompt = {"type": "chatml", "messages": self.prompt}
 
-        if self.completion_message:
-            if self.completion_message_format == LLMMessageFormat.STRING:
-                self._formatted_completion_message = {"type": "string", "string": self.completion_message}
-            elif self.completion_message_format == LLMMessageFormat.CHATML:
-                self._formatted_completion_message = {"type": "chatml", "message": self.completion_message}
+        if self.completion:
+            if self.completion_format == LLMMessageFormat.STRING:
+                self._formatted_completion = {"type": "string", "string": self.completion}
+            elif self.completion_format == LLMMessageFormat.CHATML:
+                self._formatted_completion = {"type": "chatml", "message": self.completion}
 
     def __post_init__(self):
         # format if prompt/completion messages were passed when LLMEvent was created
