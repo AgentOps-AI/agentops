@@ -8,12 +8,33 @@ Data Class:
 from dataclasses import dataclass, field
 from typing import List, Optional
 from .helpers import get_ISO_time
-from .enums import EventType, Models, LLMMessageFormat
+from .enums import EventType, Models
 from uuid import UUID, uuid4
 
 
 @dataclass
 class Event:
+
+    """
+    Abstract base class for events that will be recorded. Should not be instantiated directly.
+
+    event_type(str): The type of event. Defined in enums.EventType. Some values are 'llm', 'action', 'api', 'tool', 'error'.
+    params(dict, optional): The parameters of the function containing the triggered event, e.g. {'x': 1} in example below
+    returns(str, optional): The return value of the function containing the triggered event, e.g. 2 in example below
+    init_timestamp(str): A timestamp indicating when the event began. Defaults to the time when this Event was instantiated.
+    end_timestamp(str): A timestamp indicating when the event ended. Defaults to the time when this Event was instantiated.
+    id(UUID): A unique identifier for the event. Defaults to a new UUID.
+
+    foo(x=1) {
+        ...
+        // params equals {'x': 1}
+        record(ActionEvent(params=**kwargs, ...))
+        ...
+        // returns equals 2
+        return x+1
+    }
+    """
+
     event_type: str  # EventType.ENUM.value
     params: Optional[dict] = None
     returns: Optional[str] = None
@@ -25,6 +46,15 @@ class Event:
 
 @dataclass
 class ActionEvent(Event):
+    """
+    For generic events
+
+    agent_id(UUID, optional): The unique identifier of the agent that triggered the event.
+    action_type(str, optional): High level name describing the action
+    logs(str, optional): For detailed information/logging related to the action
+    screenshot(str, optional): url to snapshot if agent interacts with UI
+    """
+
     event_type: str = EventType.ACTION.value
     # TODO: Should not be optional, but non-default argument 'agent_id' follows default argument error
     agent_id: Optional[UUID] = None
@@ -40,51 +70,63 @@ class ActionEvent(Event):
 
 @dataclass
 class LLMEvent(Event):
+
+    """
+    For recording calls to LLMs. AgentOps auto-instruments calls to the most popular LLMs e.g. GPT, Claude, Gemini, etc.
+
+    agent_id(UUID, optional): The unique identifier of the agent that triggered the event.
+    thread_id(UUID, optional): The unique identifier of the contextual thread that a message pertains to.
+    prompt_message(str, list, optional): The message or messages that were used to prompt the LLM. Preferably in ChatML format which is more fully supported by AgentOps.
+    prompt_tokens(int, optional): The number of tokens in the prompt message.
+    completion_message(str, object, optional): The message or returned by the LLM. Preferably in ChatML format which is more fully supported by AgentOps.
+    completion_tokens(int, optional): The number of tokens in the completion message.
+    model(Models, str, optional): LLM model e.g. "gpt-4". Models defined in enums.Models are more fully supported by AgentOps e.g. extra features in dashboard.
+
+    """
+
     event_type: str = EventType.LLM.value
     agent_id: Optional[UUID] = None
     thread_id: Optional[UUID] = None
-    prompt_messages: str | List = None  # TODO: remove from serialization
-    prompt_messages_format: LLMMessageFormat = LLMMessageFormat.STRING  # TODO: remove from serialization
-    # TODO: remove and just create it in __post_init__ so it can never be set by user?
-    _formatted_prompt_messages: object = field(init=False, default=None)
-    completion_message: str | object = None  # TODO: remove from serialization
-    completion_message_format: LLMMessageFormat = LLMMessageFormat.STRING  # TODO: remove from serialization
-    # TODO: remove and just create it in __post_init__ so it can never be set by user?
-    _formatted_completion_message: object = field(init=False, default=None)
-    model: Optional[Models | str] = None
+    prompt_message: str | List = None
     prompt_tokens: Optional[int] = None
+    completion_message: str | object = None
     completion_tokens: Optional[int] = None
-
-    def format_messages(self):
-        if self.prompt_messages:
-            # TODO should we just figure out if it's chatml so user doesn't have to pass anything?
-            if self.prompt_messages_format == LLMMessageFormat.STRING:
-                self._formatted_prompt_messages = {"type": "string", "string": self.prompt_messages}
-            elif self.prompt_messages_format == LLMMessageFormat.CHATML:
-                self._formatted_prompt_messages = {"type": "chatml", "messages": self.prompt_messages}
-
-        if self.completion_message:
-            if self.completion_message_format == LLMMessageFormat.STRING:
-                self._formatted_completion_message = {"type": "string", "string": self.completion_message}
-            elif self.completion_message_format == LLMMessageFormat.CHATML:
-                self._formatted_completion_message = {"type": "chatml", "message": self.completion_message}
-
-    def __post_init__(self):
-        # format if prompt/completion messages were passed when LLMEvent was created
-        self.format_messages()
+    model: Optional[Models | str] = None
 
 
 @dataclass
 class ToolEvent(Event):
+    """
+    For recording calls to tools e.g. searchWeb, fetchFromDB
+
+    agent_id(UUID, optional): The unique identifier of the agent that triggered the event.
+    name(str, optional): A name describing the tool or the actual function name if applicable e.g. searchWeb, fetchFromDB.
+    logs(str, dict, optional): For detailed information/logging related to the tool.
+
+    """
     event_type: str = EventType.TOOL.value
     agent_id: Optional[UUID] = None
     name: Optional[str] = None
     logs: Optional[str | dict] = None
 
-
 # Does not inherit from Event because error will (optionally) be linked to an ActionEvent, LLMEvent, etc that will have the details
+
+
 @dataclass
 class ErrorEvent():
+
+    """
+    For recording any errors e.g. ones related to agent execution
+
+    trigger_event(Event, optional): The event object that triggered the error if applicable.
+    error_type(str, optional): The type of error e.g. "ValueError".
+    code(str, optional): A code that can be used to identify the error e.g. 501.
+    details(str, optional): Detailed information about the error.
+    logs(str, optional): For detailed information/logging related to the error.
+    timestamp(str): A timestamp indicating when the error occurred. Defaults to the time when this ErrorEvent was instantiated.
+
+    """
+
     trigger_event: Optional[Event] = None  # TODO: remove from serialization?
     error_type: Optional[str] = None
     code: Optional[str] = None

@@ -23,11 +23,6 @@ class Models(Enum):
     TEXT_EMBEDDING_ADA_002 = "text-embedding-ada-002"
 
 
-class LLMMessageFormat(Enum):
-    STRING = "string"
-    CHATML = "chatml"
-
-
 class EndState(Enum):
     SUCCESS = "Success"
     FAIL = "Fail"

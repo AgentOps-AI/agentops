@@ -4,9 +4,11 @@ from agentops import record_function
 from packaging.version import parse
 from importlib import import_module
 import sys
+from dotenv import load_dotenv
 
+load_dotenv()
 
-ao_client = agentops.Client()
+agentops.init()
 
 api = 'openai'
 if api in sys.modules:
@@ -17,11 +19,31 @@ if api in sys.modules:
             print('openai version: ', module_version)
 
 
-@record_function('sample function being recorded')
-def call_openai():
+@record_function('openai v1 sync no streaming')
+def call_openai_v1_sync_no_streaming():
     client = OpenAI()
+    chat_completion = client.chat.completions.create(
+        model="gpt-3.5-turbo",
+        messages=[
+            {
+                "role": "system",
+                "content": "You are an expert haiku writer"
+            },
+            {
+                "role": "user",
+                "content": "write me a haiku about devops"
+            }
+        ]
+    )
 
-    response = client.chat.completions.create(
+    print(chat_completion)
+    # raise ValueError("This is an intentional error for testing.")
+
+
+@record_function('openai v1 sync with streaming')
+def call_openai_v1_sync_streaming():
+    client = OpenAI()
+    chat_completion = client.chat.completions.create(
         model="gpt-3.5-turbo",
         messages=[
             {
@@ -33,15 +55,17 @@ def call_openai():
                 "content": "write me a haiku about devops"
             }
         ],
-        temperature=0.7,
-        max_tokens=64,
-        top_p=1
+        stream=True
     )
 
-    print(response)
+    for chunk in chat_completion:
+        chunk_message = chunk.choices[0].delta.content
+        print(chunk_message)
+
     # raise ValueError("This is an intentional error for testing.")
 
 
-call_openai()
+call_openai_v1_sync_no_streaming()
+call_openai_v1_sync_streaming()
 
-ao_client.end_session('Success')
+agentops.end_session('Success')

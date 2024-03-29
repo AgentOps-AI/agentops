@@ -12,7 +12,6 @@ from tenacity import RetryCallState
 
 from agentops import Client as AOClient
 from agentops import ActionEvent, LLMEvent, ToolEvent, ErrorEvent
-from agentops import LLMMessageFormat
 from agentops.helpers import get_ISO_time
 
 from .helpers import debug_print_function_params
@@ -65,7 +64,7 @@ class LangchainCallbackHandler(BaseCallbackHandler):
                     **({} if metadata is None else metadata),
                     **kwargs},  # TODO: params is inconsistent, in ToolEvent we put it in logs
             model=kwargs['invocation_params']['model'],
-            prompt_messages=prompts[0]
+            prompt_message=prompts[0]
             # tags=tags # TODO
         )
 
@@ -101,16 +100,14 @@ class LangchainCallbackHandler(BaseCallbackHandler):
         llm_event.end_timestamp = get_ISO_time()
         if response.llm_output is not None:
             llm_event.completion_message = response.generations[0][0].message.content  # TODO
-            llm_event.completion_message_format = LLMMessageFormat.STRING  # TODO
             llm_event.prompt_tokens = response.llm_output['token_usage']['prompt_tokens']
             llm_event.completion_tokens = response.llm_output['token_usage']['completion_tokens']
-            llm_event.format_messages()  # TODO: Find somewhere logical to call this on the user's behalf. They shouldn't call it
         self.ao_client.record(llm_event)
 
         if len(response.generations) == 0:
             # TODO: more descriptive error
             error_event = ErrorEvent(trigger_event=self.events.llm[str(run_id)],
-                                    details="on_llm_end: No generations", timestamp=get_ISO_time())
+                                     details="on_llm_end: No generations", timestamp=get_ISO_time())
             self.ao_client.record(error_event)
 
     @debug_print_function_params
@@ -366,7 +363,7 @@ class AsyncLangchainCallbackHandler(AsyncCallbackHandler):
                     **({} if metadata is None else metadata),
                     **kwargs},  # TODO: params is inconsistent, in ToolEvent we put it in logs
             model=kwargs['invocation_params']['model'],
-            prompt_messages=prompts[0]
+            prompt_message=prompts[0]
         )
 
     @debug_print_function_params
@@ -428,16 +425,14 @@ class AsyncLangchainCallbackHandler(AsyncCallbackHandler):
         llm_event.end_timestamp = get_ISO_time()
         if response.llm_output is not None:
             llm_event.completion_message = response.generations[0][0].message.content  # TODO
-            llm_event.completion_message_format = LLMMessageFormat.STRING  # TODO
             llm_event.prompt_tokens = response.llm_output['token_usage']['prompt_tokens']
             llm_event.completion_tokens = response.llm_output['token_usage']['completion_tokens']
-            llm_event.format_messages()  # TODO: Find somewhere logical to call this on the user's behalf. They shouldn't call it
         self.ao_client.record(llm_event)
 
         if len(response.generations) == 0:
             # TODO: more descriptive error
             error_event = ErrorEvent(trigger_event=self.events.llm[str(run_id)],
-                                    details="on_llm_end: No generations", timestamp=get_ISO_time())
+                                     details="on_llm_end: No generations", timestamp=get_ISO_time())
             self.ao_client.record(error_event)
 
     @debug_print_function_params

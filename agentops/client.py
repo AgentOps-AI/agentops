@@ -47,6 +47,7 @@ class Client(metaclass=MetaClient):
         auto_start_session (bool): Whether to start a session automatically when the client is created.
     Attributes:
         _session (Session, optional): A Session is a grouping of events (e.g. a run of your agent).
+        _worker (Worker, optional): A Worker manages the event queue and sends session updates to the AgentOps api server
     """
 
     def __init__(self,
