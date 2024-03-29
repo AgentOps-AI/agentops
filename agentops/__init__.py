@@ -19,7 +19,14 @@ def init(api_key: Optional[str] = None,
          override=True,
          auto_start_session=True):
 
-    Client(api_key, parent_key, tags, endpoint, max_wait_time, max_queue_size, override, auto_start_session)
+    Client(api_key=api_key, 
+           parent_key=parent_key, 
+           tags=tags, 
+           endpoint=endpoint, 
+           max_wait_time=max_wait_time, 
+           max_queue_size=max_queue_size, 
+           override=override, 
+           auto_start_session=auto_start_session)
 
 
 def end_session(end_state: str,
