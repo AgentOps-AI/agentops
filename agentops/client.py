@@ -53,10 +53,10 @@ class Client(metaclass=MetaClient):
     def __init__(self,
                  api_key: Optional[str] = None,
                  parent_key: Optional[str] = None,
-                 tags: Optional[List[str]] = None,
                  endpoint: Optional[str] = None,
                  max_wait_time: Optional[int] = None,
                  max_queue_size: Optional[int] = None,
+                 tags: Optional[List[str]] = None,
                  override=True,
                  auto_start_session=True
                  ):
