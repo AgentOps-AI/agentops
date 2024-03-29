@@ -26,3 +26,9 @@ class Models(Enum):
 class LLMMessageFormat(Enum):
     STRING = "string"
     CHATML = "chatml"
+
+
+class EndState(Enum):
+    SUCCESS = "Success"
+    FAIL = "Fail"
+    INDETERMINATE = "Indeterminate"

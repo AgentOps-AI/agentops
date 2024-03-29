@@ -2,7 +2,7 @@ import json
 import threading
 import time
 from .http_client import HttpClient
-from .config import Configuration
+from .config import Configuration, ConfigurationError
 from .session import Session
 from .helpers import safe_serialize, filter_unjsonable
 from typing import Dict
@@ -56,7 +56,7 @@ class Worker:
 
     def end_session(self, session: Session) -> None:
         self.stop_flag.set()
-        self.thread.join()
+        self.thread.join(timeout=1)
         self.flush_queue()
         self._session = None
 
