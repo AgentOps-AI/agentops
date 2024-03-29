@@ -14,6 +14,27 @@ from uuid import UUID, uuid4
 
 @dataclass
 class Event:
+
+    """
+    Abstract base class for events that will be recorded. Should not be instantiated directly.
+
+    event_type(str): The type of event. Defined in enums.EventType. Some values are 'llm', 'action', 'api', 'tool', 'error'.
+    params(dict, optional): The parameters of the function containing the triggered event, e.g. {'x': 1} in example below
+    returns(str, optional): The return value of the function containing the triggered event, e.g. 2 in example below
+    init_timestamp(str): A timestamp indicating when the event began. Defaults to the time when this Event was instantiated.
+    end_timestamp(str): A timestamp indicating when the event ended. Defaults to the time when this Event was instantiated.
+    id(UUID): A unique identifier for the event. Defaults to a new UUID.
+
+    foo(x=1) {
+        ...
+        // params equals {'x': 1}
+        record(ActionEvent(params=**kwargs, ...))
+        ...
+        // returns equals 2
+        return x+1
+    }
+    """
+
     event_type: str  # EventType.ENUM.value
     params: Optional[dict] = None
     returns: Optional[str] = None
@@ -25,6 +46,15 @@ class Event:
 
 @dataclass
 class ActionEvent(Event):
+    """
+    For generic events
+
+    agent_id(UUID, optional): The unique identifier of the agent that triggered the event.
+    action_type(str, optional): High level name describing the action
+    logs(str, optional): For detailed information/logging related to the action
+    screenshot(str, optional): url to snapshot if agent interacts with UI
+    """
+
     event_type: str = EventType.ACTION.value
     # TODO: Should not be optional, but non-default argument 'agent_id' follows default argument error
     agent_id: Optional[UUID] = None
@@ -40,6 +70,20 @@ class ActionEvent(Event):
 
 @dataclass
 class LLMEvent(Event):
+
+    """
+    For recording calls to LLMs. AgentOps auto-instruments calls to the most popular LLMs e.g. GPT, Claude, Gemini, etc.
+
+    agent_id(UUID, optional): The unique identifier of the agent that triggered the event.
+    thread_id(UUID, optional): The unique identifier of the contextual thread that a message pertains to.
+    prompt_message(str, list, optional): The message or messages that were used to prompt the LLM. Preferably in ChatML format which is more fully supported by AgentOps.
+    prompt_tokens(int, optional): The number of tokens in the prompt message.
+    completion_message(str, object, optional): The message or returned by the LLM. Preferably in ChatML format which is more fully supported by AgentOps.
+    completion_tokens(int, optional): The number of tokens in the completion message.
+    model(Models, str, optional): LLM model e.g. "gpt-4". Models defined in enums.Models are more fully supported by AgentOps e.g. extra features in dashboard.
+
+    """
+
     event_type: str = EventType.LLM.value
     agent_id: Optional[UUID] = None
     thread_id: Optional[UUID] = None
@@ -52,6 +96,14 @@ class LLMEvent(Event):
 
 @dataclass
 class ToolEvent(Event):
+    """
+    For recording calls to tools e.g. searchWeb, fetchFromDB
+
+    agent_id(UUID, optional): The unique identifier of the agent that triggered the event.
+    name(str, optional): A name describing the tool or the actual function name if applicable e.g. searchWeb, fetchFromDB.
+    logs(str, dict, optional): For detailed information/logging related to the tool.
+
+    """
     event_type: str = EventType.TOOL.value
     agent_id: Optional[UUID] = None
     name: Optional[str] = None
@@ -62,6 +114,19 @@ class ToolEvent(Event):
 
 @dataclass
 class ErrorEvent():
+
+    """
+    For recording any errors e.g. ones related to agent execution
+
+    trigger_event(Event, optional): The event object that triggered the error if applicable.
+    error_type(str, optional): The type of error e.g. "ValueError".
+    code(str, optional): A code that can be used to identify the error e.g. 501.
+    details(str, optional): Detailed information about the error.
+    logs(str, optional): For detailed information/logging related to the error.
+    timestamp(str): A timestamp indicating when the error occurred. Defaults to the time when this ErrorEvent was instantiated.
+
+    """
+
     trigger_event: Optional[Event] = None  # TODO: remove from serialization?
     error_type: Optional[str] = None
     code: Optional[str] = None
