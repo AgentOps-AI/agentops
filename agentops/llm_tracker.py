@@ -6,7 +6,6 @@ import logging
 from .event import LLMEvent, ErrorEvent
 from .helpers import get_ISO_time, check_call_stack_for_agent_id
 import inspect
-from .enums import LLMMessageFormat
 
 
 class LlmTracker:
@@ -41,6 +40,7 @@ class LlmTracker:
             )
 
             try:
+                # NOTE: prompt/completion usage not returned in response when streaming
                 model = chunk['model']
                 choices = chunk['choices']
                 token = choices[0]['delta'].get('content', '')
@@ -50,14 +50,11 @@ class LlmTracker:
 
                 if finish_reason:
                     self.llm_event.agent_id = check_call_stack_for_agent_id()
-                    self.llm_event.prompt_messages = kwargs["messages"]
-                    self.llm_event.prompt_messages_format = LLMMessageFormat.CHATML
-                    self.llm_event.completion_message = {"role": "assistant", "content": self.completion}
-                    self.llm_event.completion_message_format = LLMMessageFormat.CHATML
+                    self.llm_event.prompt = kwargs["messages"]
+                    self.llm_event.completion = {"role": "assistant", "content": self.completion}
                     self.llm_event.returns = {"finish_reason": finish_reason, "content": self.completion}
                     self.llm_event.model = model
                     self.llm_event.end_timestamp = get_ISO_time()
-                    self.llm_event.format_messages()
 
                     self.client.record(self.llm_event)
             except Exception as e:
@@ -90,14 +87,13 @@ class LlmTracker:
         # v0.0.0 responses are dicts
         try:
             self.llm_event.agent_id = check_call_stack_for_agent_id()
-            self.llm_event.prompt_messages = kwargs["messages"]
-            self.llm_event.prompt_messages_format = LLMMessageFormat.CHATML
-            self.llm_event.completion_message = response['choices'][0]['message']
-            self.llm_event.completion_message_format = LLMMessageFormat.CHATML
+            self.llm_event.prompt = kwargs["messages"]
+            self.llm_event.prompt_tokens = response['usage']['prompt_tokens']
+            self.llm_event.completion = response['choices'][0]['message']['content']
+            self.llm_event.completion_tokens = response['usage']['completion_tokens']
             self.llm_event.returns = {"content": response['choices'][0]['message']['content']}
             self.llm_event.model = response["model"]
             self.llm_event.end_timestamp = get_ISO_time()
-            self.llm_event.format_messages()
 
             self.client.record(self.llm_event)
         except Exception as e:
@@ -125,6 +121,7 @@ class LlmTracker:
             )
 
             try:
+                # NOTE: prompt/completion usage not returned in response when streaming
                 model = chunk.model
                 choices = chunk.choices
                 token = choices[0].delta.content
@@ -137,15 +134,12 @@ class LlmTracker:
 
                 if finish_reason:
                     self.llm_event.agent_id = check_call_stack_for_agent_id()
-                    self.llm_event.prompt_messages = kwargs["messages"]
-                    self.llm_event.prompt_messages_format = LLMMessageFormat.CHATML
-                    self.llm_event.completion_message = {"role": "assistant", "content": self.completion}
-                    self.llm_event.completion_message_format = LLMMessageFormat.CHATML
+                    self.llm_event.prompt = kwargs["messages"]
+                    self.llm_event.completion = {"role": "assistant", "content": self.completion}
                     self.llm_event.returns = {"finish_reason": finish_reason, "content": self.completion,
                                               "function_call": function_call, "tool_calls": tool_calls, "role": role}
                     self.llm_event.model = model
                     self.llm_event.end_timestamp = get_ISO_time()
-                    self.llm_event.format_messages()
 
                     self.client.record(self.llm_event)
             except Exception as e:
@@ -185,13 +179,12 @@ class LlmTracker:
         # v1.0.0+ responses are objects
         try:
             self.llm_event.agent_id = check_call_stack_for_agent_id()
-            self.llm_event.prompt_messages = kwargs["messages"]
-            self.llm_event.prompt_messages_format = LLMMessageFormat.CHATML
-            self.llm_event.completion_message = response.choices[0].message.model_dump()
-            self.llm_event.completion_message_format = LLMMessageFormat.CHATML
+            self.llm_event.prompt = kwargs["messages"]
+            self.llm_event.prompt_tokens = response.usage.prompt_tokens
+            self.llm_event.completion = response.choices[0].message.model_dump().get('content')
+            self.llm_event.completion_tokens = response.usage.completion_tokens
             self.llm_event.returns = response.model_dump()
             self.llm_event.model = response.model
-            self.llm_event.format_messages()
 
             self.client.record(self.llm_event)
         except Exception as e:
