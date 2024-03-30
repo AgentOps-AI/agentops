@@ -8,7 +8,6 @@ from .event import ActionEvent, LLMEvent, ToolEvent, ErrorEvent, Event
 from .event import Event, ActionEvent, LLMEvent, ToolEvent, ErrorEvent
 from .enums import Models, LLMMessageFormat, EndState
 from .decorators import record_function
-from os import environ
 
 
 def init(api_key: Optional[str] = None,
