@@ -19,22 +19,11 @@ jobs:
 
     steps:
       - uses: actions/checkout@v2
-      - name: Set up Python ${{ matrix.python-version }}
+      - name: Set up Python
         uses: actions/setup-python@v2
         with:
-          python-version: ${{ matrix.python-version }}
-      - name: Install build system requirements
-        run: |
-          pip install setuptools wheel
-      - name: Install dependencies
-        run: |
-          pip install requests==2.31.0 psutil==5.9.8
-      - name: Install optional dependencies (dev)
-        run: |
-          pip install pytest==7.4.0 requests_mock==1.11.0
-      - name: Install testing dependencies
-        run: |
-          pip install requests_mock==1.12.1
-      - name: Run tests
-        run: |
-          PYTHONPATH=. pytest
+          python-version: '3.10' # Use a default Python version for running tox
+      - name: Install tox
+        run: pip install tox
+      - name: Run tests with tox
+        run: tox
