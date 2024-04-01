@@ -32,6 +32,9 @@ jobs:
       - name: Install optional dependencies (dev)
         run: |
           pip install pytest==7.4.0 requests_mock==1.11.0
+      - name: Install testing dependencies
+        run: |
+          pip install requests_mock==1.12.1
       - name: Run tests
         run: |
           PYTHONPATH=. pytest
