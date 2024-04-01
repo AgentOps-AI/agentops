@@ -97,7 +97,7 @@ class HttpClient:
 
         if result.code == 401:
             logging.warning(
-                'AgentOps: Could not post data - API server rejected your API key')
+                f'AgentOps: Could not post data - API server rejected your API key: {api_key}')
         if result.code == 400:
             logging.warning(f'AgentOps: Could not post data - {result.body}')
         if result.code == 500:

@@ -7,7 +7,6 @@ from .config import Configuration
 from .event import Event, ActionEvent, LLMEvent, ToolEvent, ErrorEvent
 from .enums import Models
 from .decorators import record_function
-from os import environ
 
 
 def init(api_key: Optional[str] = None,

@@ -110,6 +110,9 @@ class Client(metaclass=MetaClient):
         """
 
         if self._session is not None and not self._session.has_ended:
+            agent_id = check_call_stack_for_agent_id()
+            if agent_id:
+                event.agent_id = agent_id
             self._worker.add_event(event.__dict__)
         else:
             logging.warning(
