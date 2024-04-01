@@ -32,9 +32,6 @@ jobs:
       - name: Install optional dependencies (dev)
         run: |
           pip install pytest==7.4.0 requests_mock==1.11.0
-      - name: Install agentops
-        run: |
-          pip install -e agentops
       - name: Run tests
         run: |
-          pytest
+          PYTHONPATH=. pytest
