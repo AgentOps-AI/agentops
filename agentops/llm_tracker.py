@@ -122,7 +122,6 @@ class LlmTracker:
 
             try:
                 # NOTE: prompt/completion usage not returned in response when streaming
-                # NOTE: prompt/completion usage not returned in response when streaming
                 model = chunk.model
                 choices = chunk.choices
                 token = choices[0].delta.content

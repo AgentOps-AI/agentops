@@ -92,7 +92,6 @@ class LLMEvent(Event):
     completion: str | object = None
     completion_tokens: Optional[int] = None
     model: Optional[Models | str] = None
-    model: Optional[Models | str] = None
 
 
 @dataclass
