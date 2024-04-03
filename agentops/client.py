@@ -212,7 +212,11 @@ class Client(metaclass=MetaClient):
 
         self._session = Session(uuid4(), tags or self._tags, host_env=get_host_env())
         self._worker = Worker(config or self.config)
-        self._worker.start_session(self._session)
+        start_session_result = self._worker.start_session(self._session)
+        if not start_session_result:
+            self._session = None
+            return logging.warning("AgentOps: Cannot start session")
+
         logging.info('View info on this session at https://app.agentops.ai/drilldown?session_id={}'
                      .format(self._session.session_id))
 

@@ -49,10 +49,15 @@ class Worker:
                 "session": session.__dict__
             }
             serialized_payload = json.dumps(filter_unjsonable(payload)).encode("utf-8")
-            HttpClient.post(f'{self.config.endpoint}/sessions',
-                            serialized_payload,
-                            self.config.api_key,
-                            self.config.parent_key)
+            res = HttpClient.post(f'{self.config.endpoint}/sessions',
+                                  serialized_payload,
+                                  self.config.api_key,
+                                  self.config.parent_key)
+
+            if res.code != 200:
+                return False
+
+            return True
 
     def end_session(self, session: Session) -> None:
         self.stop_flag.set()
