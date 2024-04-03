@@ -7,6 +7,7 @@ from .config import Configuration
 from .event import Event, ActionEvent, LLMEvent, ToolEvent, ErrorEvent
 from .enums import Models
 from .decorators import record_function
+from .agent import track_agent
 
 
 def init(api_key: Optional[str] = None,
@@ -38,13 +39,13 @@ def init(api_key: Optional[str] = None,
         Attributes:
         """
 
-    Client(api_key=api_key, 
-           parent_key=parent_key, 
-           endpoint=endpoint, 
-           max_wait_time=max_wait_time, 
-           max_queue_size=max_queue_size, 
-           tags=tags, 
-           override=override, 
+    Client(api_key=api_key,
+           parent_key=parent_key,
+           endpoint=endpoint,
+           max_wait_time=max_wait_time,
+           max_queue_size=max_queue_size,
+           tags=tags,
+           override=override,
            auto_start_session=auto_start_session)
 
 
