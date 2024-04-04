@@ -7,7 +7,7 @@ Data Class:
 
 from dataclasses import dataclass, field
 from typing import List, Optional
-from .helpers import get_ISO_time
+from .helpers import get_ISO_time, check_call_stack_for_agent_id
 from .enums import EventType, Models
 from uuid import UUID, uuid4
 
@@ -23,6 +23,7 @@ class Event:
     returns(str, optional): The return value of the function containing the triggered event, e.g. 2 in example below
     init_timestamp(str): A timestamp indicating when the event began. Defaults to the time when this Event was instantiated.
     end_timestamp(str): A timestamp indicating when the event ended. Defaults to the time when this Event was instantiated.
+    agent_id(UUID, optional): The unique identifier of the agent that triggered the event.
     id(UUID): A unique identifier for the event. Defaults to a new UUID.
 
     foo(x=1) {
@@ -40,6 +41,7 @@ class Event:
     returns: Optional[str] = None
     init_timestamp: Optional[str] = field(default_factory=get_ISO_time)
     end_timestamp: str = field(default_factory=get_ISO_time)
+    agent_id: Optional[UUID] = field(default_factory=check_call_stack_for_agent_id)
     id: UUID = field(default_factory=uuid4)
     # TODO: has_been_recorded: bool = False
 
@@ -49,7 +51,6 @@ class ActionEvent(Event):
     """
     For generic events
 
-    agent_id(UUID, optional): The unique identifier of the agent that triggered the event.
     action_type(str, optional): High level name describing the action
     logs(str, optional): For detailed information/logging related to the action
     screenshot(str, optional): url to snapshot if agent interacts with UI
@@ -57,7 +58,6 @@ class ActionEvent(Event):
 
     event_type: str = EventType.ACTION.value
     # TODO: Should not be optional, but non-default argument 'agent_id' follows default argument error
-    agent_id: Optional[UUID] = None
     action_type: Optional[str] = None
     logs: Optional[str] = None
     screenshot: Optional[str] = None
@@ -74,7 +74,6 @@ class LLMEvent(Event):
     """
     For recording calls to LLMs. AgentOps auto-instruments calls to the most popular LLMs e.g. GPT, Claude, Gemini, etc.
 
-    agent_id(UUID, optional): The unique identifier of the agent that triggered the event.
     thread_id(UUID, optional): The unique identifier of the contextual thread that a message pertains to.
     prompt(str, list, optional): The message or messages that were used to prompt the LLM. Preferably in ChatML format which is more fully supported by AgentOps.
     prompt_tokens(int, optional): The number of tokens in the prompt message.
@@ -85,7 +84,6 @@ class LLMEvent(Event):
     """
 
     event_type: str = EventType.LLM.value
-    agent_id: Optional[UUID] = None
     thread_id: Optional[UUID] = None
     prompt: str | List = None
     prompt_tokens: Optional[int] = None
@@ -99,13 +97,11 @@ class ToolEvent(Event):
     """
     For recording calls to tools e.g. searchWeb, fetchFromDB
 
-    agent_id(UUID, optional): The unique identifier of the agent that triggered the event.
     name(str, optional): A name describing the tool or the actual function name if applicable e.g. searchWeb, fetchFromDB.
     logs(str, dict, optional): For detailed information/logging related to the tool.
 
     """
     event_type: str = EventType.TOOL.value
-    agent_id: Optional[UUID] = None
     name: Optional[str] = None
     logs: Optional[str | dict] = None
 
