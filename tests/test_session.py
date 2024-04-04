@@ -18,7 +18,7 @@ class TestSessions:
     def setup_method(self):
         self.api_key = "random_api_key"
         self.event_type = 'test_event_type'
-        agentops.init(api_key=self.api_key, max_wait_time=100, auto_start_session=False)
+        agentops.init(api_key=self.api_key, max_wait_time=200, auto_start_session=False)
 
     def test_session(self, mock_req):
         agentops.start_session()
