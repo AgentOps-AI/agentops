@@ -69,3 +69,11 @@ def add_tags(tags: List[str]):
 
 def set_tags(tags: List[str]):
     Client().set_tags(tags)
+
+
+def get_api_key() -> str:
+    return Client().api_key
+
+
+def set_parent_key(parent_key):
+    Client().set_parent_key(parent_key)
