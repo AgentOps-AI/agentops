@@ -303,8 +303,8 @@ class Client(metaclass=MetaClient):
         return self.config.api_key
 
     def set_parent_key(self, parent_key):
-        self.config.api_key = parent_key
-        self._worker.config = self.config
+        if self._worker:
+            self._worker.config.parent_key = parent_key
 
     @property
     def parent_key(self):
