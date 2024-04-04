@@ -89,7 +89,7 @@ class LlmTracker:
             self.llm_event.agent_id = check_call_stack_for_agent_id()
             self.llm_event.prompt = kwargs["messages"]
             self.llm_event.prompt_tokens = response['usage']['prompt_tokens']
-            self.llm_event.completion = response['choices'][0]['message']['content']
+            self.llm_event.completion = {"role": "assistant", "content": response['choices'][0]['message']['content']}
             self.llm_event.completion_tokens = response['usage']['completion_tokens']
             self.llm_event.returns = {"content": response['choices'][0]['message']['content']}
             self.llm_event.model = response["model"]
@@ -181,7 +181,7 @@ class LlmTracker:
             self.llm_event.agent_id = check_call_stack_for_agent_id()
             self.llm_event.prompt = kwargs["messages"]
             self.llm_event.prompt_tokens = response.usage.prompt_tokens
-            self.llm_event.completion = response.choices[0].message.model_dump().get('content')
+            self.llm_event.completion = response.choices[0].message.model_dump()
             self.llm_event.completion_tokens = response.usage.completion_tokens
             self.llm_event.returns = response.model_dump()
             self.llm_event.model = response.model
