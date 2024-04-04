@@ -28,7 +28,7 @@ class TestSessions:
 
         # We should have 1 requests (session start).
         assert len(mock_req.request_history) == 1
-        time.sleep(2)
+        time.sleep(0.15)
 
         # We should have 2 requests (session and 2 events combined into 1)
         print(mock_req.last_request.json())
@@ -39,7 +39,7 @@ class TestSessions:
 
         end_state = 'Success'
         agentops.end_session(end_state)
-        time.sleep(0.2)
+        time.sleep(0.15)
 
         # We should have 3 requests (additional end session)
         assert len(mock_req.request_history) == 3
@@ -55,7 +55,7 @@ class TestSessions:
 
         # Act
         agentops.record(ActionEvent(self.event_type))
-        time.sleep(0.2)
+        time.sleep(0.15)
 
         # Assert 2 requests - 1 for session init, 1 for event
         print(mock_req.last_request.json())
@@ -67,7 +67,7 @@ class TestSessions:
         # Act
         end_state = 'Success'
         agentops.end_session(end_state)
-        time.sleep(0.5)
+        time.sleep(0.15)
 
         # Assert 3 requets, 1 for session init, 1 for event, 1 for end session
         assert len(mock_req.request_history) == 3
