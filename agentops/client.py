@@ -241,7 +241,8 @@ class Client(metaclass=MetaClient):
         self._worker = None
 
     def create_agent(self, agent_id: str, name: str):
-        self._worker.create_agent(agent_id, name)
+        if self._worker:
+            self._worker.create_agent(agent_id, name)
 
     def _handle_unclean_exits(self):
         def cleanup(end_state: Optional[str] = 'Fail', end_state_reason: Optional[str] = None):
@@ -293,3 +294,15 @@ class Client(metaclass=MetaClient):
     @property
     def current_session_id(self):
         return self._session.session_id
+
+    @property
+    def api_key(self):
+        return self.config.api_key
+
+    def set_parent_key(self, parent_key):
+        if self._worker:
+            self._worker.config.parent_key = parent_key
+
+    @property
+    def parent_key(self):
+        return self.config.parent_key
