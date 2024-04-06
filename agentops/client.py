@@ -113,7 +113,7 @@ class Client(metaclass=MetaClient):
             self._worker.add_event(event.__dict__)
         else:
             logging.warning(
-                "AgentOps: Cannot record event - no current session")
+                "🖇 AgentOps: Cannot record event - no current session")
 
     def _record_event_sync(self, func, event_name, *args, **kwargs):
         init_time = get_ISO_time()
@@ -205,17 +205,17 @@ class Client(metaclass=MetaClient):
             config: (Configuration, optional): Client configuration object
         """
         if self._session is not None:
-            return logging.warning("AgentOps: Cannot start session - session already started")
+            return logging.warning("🖇 AgentOps: Cannot start session - session already started")
 
         if not config and not self.config:
-            return logging.warning("AgentOps: Cannot start session - missing configuration")
+            return logging.warning("🖇 AgentOps: Cannot start session - missing configuration")
 
         self._session = Session(uuid4(), tags or self._tags, host_env=get_host_env())
         self._worker = Worker(config or self.config)
         start_session_result = self._worker.start_session(self._session)
         if not start_session_result:
             self._session = None
-            return logging.warning("AgentOps: Cannot start session")
+            return logging.warning("🖇 AgentOps: Cannot start session")
 
         logging.info('View info on this session at https://app.agentops.ai/drilldown?session_id={}'
                      .format(self._session.session_id))
@@ -233,14 +233,15 @@ class Client(metaclass=MetaClient):
             video (str, optional): The video screen recording of the session
         """
         if self._session is None or self._session.has_ended:
-            return logging.warning("AgentOps: Cannot end session - no current session")
+            return logging.warning("🖇 AgentOps: Cannot end session - no current session")
 
         if not any(end_state == state.value for state in EndState):
-            return logging.warning("AgentOps: Invalid end_state. Please use one of the EndState enums")
+            return logging.warning("🖇 AgentOps: Invalid end_state. Please use one of the EndState enums")
 
         self._session.video = video
         self._session.end_session(end_state, end_state_reason)
-        self._worker.end_session(self._session)
+        token_cost = float(self._worker.end_session(self._session))
+        print('🖇 AgentOps: This run cost ${:.6f}'.format(token_cost))
         self._session = None
         self._worker = None
 
@@ -265,7 +266,7 @@ class Client(metaclass=MetaClient):
             """
             signal_name = 'SIGINT' if signum == signal.SIGINT else 'SIGTERM'
             logging.info(
-                f'AgentOps: {signal_name} detected. Ending session...')
+                f'🖇 AgentOps: {signal_name} detected. Ending session...')
             self.end_session(end_state='Fail',
                              end_state_reason=f'Signal {signal_name} detected')
             sys.exit(0)
