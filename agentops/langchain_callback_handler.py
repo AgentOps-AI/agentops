@@ -433,7 +433,6 @@ class AsyncLangchainCallbackHandler(AsyncCallbackHandler):
             # TODO: more descriptive error
             error_event = ErrorEvent(trigger_event=self.events.llm[str(run_id)],
                                      details="on_llm_end: No generations", timestamp=get_ISO_time())
-                                     details="on_llm_end: No generations", timestamp=get_ISO_time())
             self.ao_client.record(error_event)
 
     @debug_print_function_params
