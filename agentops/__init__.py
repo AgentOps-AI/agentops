@@ -59,7 +59,7 @@ def start_session(tags: Optional[List[str]] = None, config: Optional[Configurati
     Client().start_session(tags, config)
 
 
-def record(event: Event):
+def record(event: Event | ErrorEvent):
     Client().record(event)
 
 
