@@ -21,7 +21,8 @@ classifiers = [
 ]
 dependencies = [
     "requests==2.31.0",
-    "psutil==5.9.8"
+    "psutil==5.9.8",
+    "packaging==24.0"
 ]
 [project.optional-dependencies]
 dev = [
