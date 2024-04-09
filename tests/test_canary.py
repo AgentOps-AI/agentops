@@ -14,15 +14,11 @@ def mock_req():
         m.post(url + '/sessions', json={'status': 'success', 'token_cost': 5})
         yield m
 
-
 class TestCanary:
     def setup_method(self):
         self.url = 'https://api.agentops.ai'
         self.api_key = "random_api_key"
         agentops.init(api_key=self.api_key, max_wait_time=5, auto_start_session=False)
-
-    def teardown_method(self):
-        agentops.end_session(end_state='Success')
 
     def test_agent_ops_record(self, mock_req):
         # Arrange
@@ -38,3 +34,5 @@ class TestCanary:
         request_json = mock_req.last_request.json()
         assert mock_req.last_request.headers['X-Agentops-Auth'] == self.api_key
         assert request_json['events'][0]['event_type'] == event_type
+
+        agentops.end_session('Success')
