@@ -241,7 +241,7 @@ class Client(metaclass=MetaClient):
         self._session.video = video
         self._session.end_session(end_state, end_state_reason)
         token_cost = self._worker.end_session(self._session)
-        if token_cost is 'unknown':
+        if token_cost == 'unknown':
             print('🖇 AgentOps: Could not determine cost of run.')
         else:
             print('🖇 AgentOps: This run cost ${:.6f}'.format(float(token_cost)))
