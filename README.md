@@ -1,12 +1,27 @@
 <div align="center">
   <img src="logo.png" style="margin: 15px; max-width: 300px" width="50%" alt="Logo">
-  <div>
-    <a href="https://docs.agentops.ai/introduction">Documentation</a> |
-    <a href="https://discord.gg/mKW3ZhN9p2">Discord</a>
-    <p><i>AI agents suck. We’re fixing that.</i></p>
-  </div>
 </div>
+<p align="center">
+  <em>AI agents suck. We’re fixing that.</em>
+</p>
 
+<p align="center">
+    <a href="https://pypi.org/project/agentops/" target="_blank">
+        <img alt="Python" src="https://img.shields.io/badge/python-3670A0?style=for-the-badge&logo=python&logoColor=ffdd54" />
+        <img alt="Version" src="https://img.shields.io/pypi/v/agentops?style=for-the-badge&color=3670A0">
+    </a>
+</p>
+<p align="center">
+<a href="https://twitter.com/agentopsai/">🐦 Twitter</a>
+<span>&nbsp;&nbsp;•&nbsp;&nbsp;</span>
+<a href="https://discord.gg/JHPt4C7r">📢 Discord</a>
+<span>&nbsp;&nbsp;•&nbsp;&nbsp;</span>
+<a href="https://app.agentops.ai/?=gh">🖇️ AgentOps</a>
+<span>&nbsp;&nbsp;•&nbsp;&nbsp;</span>
+<a href="https://docs.agentops.ai/introduction">📙 Documentation</a>
+</p>
+
+# AgentOps
 
 Build your next agent with benchmarks, observability, and replay analytics. AgentOps is the toolkit for evaluating and developing robust and reliable AI agents.
 
