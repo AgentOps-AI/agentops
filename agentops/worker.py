@@ -59,7 +59,7 @@ class Worker:
 
             return True
 
-    def end_session(self, session: Session) -> None:
+    def end_session(self, session: Session) -> str:
         self.stop_flag.set()
         self.thread.join(timeout=1)
         self.flush_queue()
@@ -70,11 +70,13 @@ class Worker:
                 "session": session.__dict__
             }
 
-            HttpClient.post(f'{self.config.endpoint}/sessions',
+            res = HttpClient.post(f'{self.config.endpoint}/sessions',
                             json.dumps(filter_unjsonable(
                                 payload)).encode("utf-8"),
                             self.config.api_key,
                             self.config.parent_key)
+
+            return res.body.get('token_cost', "unknown")
 
     def update_session(self, session: Session) -> None:
         with self.lock:

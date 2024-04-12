@@ -61,7 +61,7 @@ class LlmTracker:
                 self.client.record(ErrorEvent(trigger_event=self.llm_event, details={f"{type(e).__name__}": str(e)}))
                 # TODO: This error is specific to only one path of failure. Should be more generic or have different logging for different paths
                 logging.warning(
-                    f"AgentOps: Unable to parse a chunk for LLM call {kwargs} - skipping upload to AgentOps")
+                    f"🖇 AgentOps: Unable to parse a chunk for LLM call {kwargs} - skipping upload to AgentOps")
 
         # if the response is a generator, decorate the generator
         if inspect.isasyncgen(response):
@@ -100,7 +100,7 @@ class LlmTracker:
             self.client.record(ErrorEvent(trigger_event=self.llm_event, details={f"{type(e).__name__}": str(e)}))
             # TODO: This error is specific to only one path of failure. Should be more generic or have different logging for different paths
             logging.warning(
-                f"AgentOps: Unable to parse a chunk for LLM call {kwargs} - skipping upload to AgentOps")
+                f"🖇 AgentOps: Unable to parse a chunk for LLM call {kwargs} - skipping upload to AgentOps")
 
         return response
 
@@ -146,7 +146,7 @@ class LlmTracker:
                 self.client.record(ErrorEvent(trigger_event=self.llm_event, details={f"{type(e).__name__}": str(e)}))
                 # TODO: This error is specific to only one path of failure. Should be more generic or have different logging for different paths
                 logging.warning(
-                    f"AgentOps: Unable to parse a chunk for LLM call {kwargs} - skipping upload to AgentOps")
+                    f"🖇 AgentOps: Unable to parse a chunk for LLM call {kwargs} - skipping upload to AgentOps")
 
         # if the response is a generator, decorate the generator
         if isinstance(response, Stream):
@@ -191,7 +191,7 @@ class LlmTracker:
             self.client.record(ErrorEvent(trigger_event=self.llm_event, details={f"{type(e).__name__}": str(e)}))
             # TODO: This error is specific to only one path of failure. Should be more generic or have different logging for different paths
             logging.warning(
-                f"AgentOps: Unable to parse a chunk for LLM call {kwargs} - skipping upload to AgentOps")
+                f"🖇 AgentOps: Unable to parse a chunk for LLM call {kwargs} - skipping upload to AgentOps")
 
         return response
 
