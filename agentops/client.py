@@ -43,7 +43,7 @@ class Client(metaclass=MetaClient):
         max_queue_size (int, optional): The maximum size of the event queue. Defaults to 100.
         tags (List[str], optional): Tags for the sessions that can be used for grouping or 
             sorting later (e.g. ["GPT-4"]).
-        override (bool): Whether to override LLM calls and emit LLMEvents.
+        override_llm_calls (bool): Whether to override LLM calls and emit LLMEvents.
         auto_start_session (bool): Whether to start a session automatically when the client is created.
     Attributes:
         _session (Session, optional): A Session is a grouping of events (e.g. a run of your agent).
@@ -57,7 +57,7 @@ class Client(metaclass=MetaClient):
                  max_wait_time: Optional[int] = None,
                  max_queue_size: Optional[int] = None,
                  tags: Optional[List[str]] = None,
-                 override=True,
+                 override_llm_calls=True,
                  auto_start_session=True
                  ):
 
@@ -79,11 +79,17 @@ class Client(metaclass=MetaClient):
         if auto_start_session:
             self.start_session(tags, self.config)
 
-        if override:
+        if override_llm_calls:
             self.llm_tracker = LlmTracker(self)
             self.llm_tracker.override_api()
 
     def add_tags(self, tags: List[str]):
+        """
+        Append to session tags at runtime. 
+
+        Args:
+            tags (List[str]): The list of tags to append.
+        """
         if self._tags is not None:
             self._tags.extend(tags)
         else:
@@ -94,6 +100,12 @@ class Client(metaclass=MetaClient):
             self._worker.update_session(self._session)
 
     def set_tags(self, tags: List[str]):
+        """
+        Replace session tags at runtime. 
+
+        Args:
+            tags (List[str]): The list of tags to set.
+        """
         self._tags = tags
 
         if self._session is not None:
@@ -306,7 +318,13 @@ class Client(metaclass=MetaClient):
     def api_key(self):
         return self.config.api_key
 
-    def set_parent_key(self, parent_key):
+    def set_parent_key(self, parent_key: str):
+        """
+        Set the parent API key which has visibility to projects it is parent to.
+
+        Args:
+            parent_key (str): The API key of the parent organization to set.
+        """
         if self._worker:
             self._worker.config.parent_key = parent_key
 

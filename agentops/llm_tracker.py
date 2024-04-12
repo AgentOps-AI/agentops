@@ -10,7 +10,7 @@ import inspect
 
 class LlmTracker:
     SUPPORTED_APIS = {
-        'litellm': {'1.34.1': ("openai_chat_completions.completion",)},
+        'litellm': {'1.34.1': ("openai_chat_completions.completion",)},  # TODO
         'openai': {
             '1.0.0': (
                 "chat.completions.create",
