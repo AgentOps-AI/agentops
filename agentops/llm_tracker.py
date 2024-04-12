@@ -212,6 +212,19 @@ class LlmTracker:
       # Override the original method with the patched one
         completions.Completions.create = patched_function
 
+    def override_litellm_completion(self):
+        import litellm
+
+        original_create = litellm.completion
+
+        def patched_function(*args, **kwargs):
+            init_timestamp = get_ISO_time()
+            result = original_create(*args, **kwargs)
+            # litellm calls openai completions for many models not just openai
+            return self._handle_response_v1_openai(result, kwargs, init_timestamp)
+
+        litellm.completion = patched_function
+
     def override_openai_v1_async_completion(self):
         from openai.resources.chat import completions
 
@@ -269,7 +282,8 @@ class LlmTracker:
             if api in sys.modules:
                 module = import_module(api)
                 if api == 'litellm':
-                    print("litellm found")
+                    self.override_litellm_completion()
+                    return
 
                 if api == 'openai':
                     # Patch openai v1.0.0+ methods
