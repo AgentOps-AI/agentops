@@ -10,6 +10,7 @@ import inspect
 
 class LlmTracker:
     SUPPORTED_APIS = {
+        'litellm': {'1.34.1': ("openai_chat_completions.completion",)},
         'openai': {
             '1.0.0': (
                 "chat.completions.create",
@@ -260,24 +261,25 @@ class LlmTracker:
             parent = functools.reduce(getattr, method_parts[:-1], module)
             setattr(parent, method_parts[-1], new_method)
 
-    def override_api(self, api):
+    def override_api(self):
         """
         Overrides key methods of the specified API to record events.
         """
-        if api in sys.modules:
-            if api not in self.SUPPORTED_APIS:
-                raise ValueError(f"Unsupported API: {api}")
+        for api in self.SUPPORTED_APIS:
+            if api in sys.modules:
+                module = import_module(api)
+                if api == 'litellm':
+                    print("litellm found")
 
-            module = import_module(api)
-            if api == 'openai':
-                # Patch openai v1.0.0+ methods
-                if hasattr(module, '__version__'):
-                    module_version = parse(module.__version__)
-                    if module_version >= parse('1.0.0'):
-                        self.override_openai_v1_completion()
-                        self.override_openai_v1_async_completion()
-                        return
+                if api == 'openai':
+                    # Patch openai v1.0.0+ methods
+                    if hasattr(module, '__version__'):
+                        module_version = parse(module.__version__)
+                        if module_version >= parse('1.0.0'):
+                            self.override_openai_v1_completion()
+                            self.override_openai_v1_async_completion()
+                            return
 
-                # Patch openai <v1.0.0 methods
-                for method_path in self.SUPPORTED_APIS['openai']['0.0.0']:
-                    self._override_method(api, method_path, module)
+                    # Patch openai <v1.0.0 methods
+                    for method_path in self.SUPPORTED_APIS['openai']['0.0.0']:
+                        self._override_method(api, method_path, module)

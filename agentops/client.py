@@ -43,7 +43,7 @@ class Client(metaclass=MetaClient):
         max_queue_size (int, optional): The maximum size of the event queue. Defaults to 100.
         tags (List[str], optional): Tags for the sessions that can be used for grouping or 
             sorting later (e.g. ["GPT-4"]).
-        override (bool): Whether to override and LLM calls to emit as events.
+        override (bool): Whether to override LLM calls and emit LLMEvents.
         auto_start_session (bool): Whether to start a session automatically when the client is created.
     Attributes:
         _session (Session, optional): A Session is a grouping of events (e.g. a run of your agent).
@@ -80,9 +80,8 @@ class Client(metaclass=MetaClient):
             self.start_session(tags, self.config)
 
         if override:
-            if 'openai' in sys.modules:
-                self.llm_tracker = LlmTracker(self)
-                self.llm_tracker.override_api('openai')
+            self.llm_tracker = LlmTracker(self)
+            self.llm_tracker.override_api()
 
     def add_tags(self, tags: List[str]):
         if self._tags is not None:
