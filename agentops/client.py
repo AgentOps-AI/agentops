@@ -19,6 +19,7 @@ import inspect
 import atexit
 import signal
 import sys
+import threading
 
 from .meta_client import MetaClient
 from .config import Configuration, ConfigurationError
@@ -293,11 +294,13 @@ class Client(metaclass=MetaClient):
             # Then call the default excepthook to exit the program
             sys.__excepthook__(exc_type, exc_value, exc_traceback)
 
-        atexit.register(lambda: cleanup(end_state="Indeterminate",
-                        end_state_reason="Process exited without calling end_session()"))
-        signal.signal(signal.SIGINT, signal_handler)
-        signal.signal(signal.SIGTERM, signal_handler)
-        sys.excepthook = handle_exception
+        # if main thread
+        if isinstance(threading.current_thread(), threading._MainThread):
+            atexit.register(lambda: cleanup(end_state="Indeterminate",
+                            end_state_reason="Process exited without calling end_session()"))
+            signal.signal(signal.SIGINT, signal_handler)
+            signal.signal(signal.SIGTERM, signal_handler)
+            sys.excepthook = handle_exception
 
     @property
     def current_session_id(self):
