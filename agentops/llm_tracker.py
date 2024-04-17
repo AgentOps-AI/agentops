@@ -6,6 +6,7 @@ import logging
 from .event import LLMEvent, ErrorEvent
 from .helpers import get_ISO_time, check_call_stack_for_agent_id
 import inspect
+from typing import Optional
 
 
 class LlmTracker:
@@ -25,7 +26,7 @@ class LlmTracker:
     def __init__(self, client):
         self.client = client
         self.completion = ""
-        self.llm_event: LLMEvent = None
+        self.llm_event: Optional[LLMEvent] = None
 
     def _handle_response_v0_openai(self, response, kwargs, init_timestamp):
         """Handle responses for OpenAI versions <v1.0.0"""
@@ -61,7 +62,8 @@ class LlmTracker:
                 self.client.record(ErrorEvent(trigger_event=self.llm_event, details={f"{type(e).__name__}": str(e)}))
                 # TODO: This error is specific to only one path of failure. Should be more generic or have different logging for different paths
                 logging.warning(
-                    f"🖇 AgentOps: Unable to parse a chunk for LLM call {kwargs} - skipping upload to AgentOps")
+                    "🖇 AgentOps: Unable to parse a chunk for LLM call %s - skipping upload to AgentOps",
+                    kwargs)
 
         # if the response is a generator, decorate the generator
         if inspect.isasyncgen(response):
@@ -100,7 +102,8 @@ class LlmTracker:
             self.client.record(ErrorEvent(trigger_event=self.llm_event, details={f"{type(e).__name__}": str(e)}))
             # TODO: This error is specific to only one path of failure. Should be more generic or have different logging for different paths
             logging.warning(
-                f"🖇 AgentOps: Unable to parse a chunk for LLM call {kwargs} - skipping upload to AgentOps")
+                "🖇 AgentOps: Unable to parse a chunk for LLM call %s - skipping upload to AgentOps", 
+                kwargs)
 
         return response
 
