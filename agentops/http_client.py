@@ -87,7 +87,7 @@ class HttpClient:
         except requests.exceptions.HTTPError as e:
             try:
                 result.parse(e.response)
-            except:
+            except Exception:
                 result = Response()
                 result.code = e.response.status_code
                 result.status = Response.get_status(e.response.status_code)
@@ -97,11 +97,11 @@ class HttpClient:
 
         if result.code == 401:
             logging.warning(
-                f'🖇 AgentOps: Could not post data - API server rejected your API key: {api_key}')
+                '🖇 AgentOps: Could not post data - API server rejected your API key: %s', api_key)
         if result.code == 400:
-            logging.warning(f'🖇 AgentOps: Could not post data - {result.body}')
+            logging.warning('🖇 AgentOps: Could not post data - %s', result.body)
         if result.code == 500:
             logging.warning(
-                f'🖇 AgentOps: Could not post data - internal server error')
+                '🖇 AgentOps: Could not post data - internal server error')
 
         return result
