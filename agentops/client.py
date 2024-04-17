@@ -31,7 +31,6 @@ class Client(metaclass=MetaClient):
     Client for AgentOps service.
 
     Args:
-
         api_key (str, optional): API Key for AgentOps services. If none is provided, key will 
             be read from the AGENTOPS_API_KEY environment variable.
         parent_key (str, optional): Organization key to give visibility of all user sessions the user's organization. If none is provided, key will 
@@ -45,6 +44,7 @@ class Client(metaclass=MetaClient):
             sorting later (e.g. ["GPT-4"]).
         override (bool): Whether to override and LLM calls to emit as events.
         auto_start_session (bool): Whether to start a session automatically when the client is created.
+    
     Attributes:
         _session (Session, optional): A Session is a grouping of events (e.g. a run of your agent).
         _worker (Worker, optional): A Worker manages the event queue and sends session updates to the AgentOps api server
@@ -61,9 +61,9 @@ class Client(metaclass=MetaClient):
                  auto_start_session=True
                  ):
 
-        self._session = None
-        self._worker = None
-        self._tags = tags
+        self._session: Optional[Session] = None
+        self._worker: Optional[Worker] = None
+        self._tags: Optional[List[str]] = tags
 
         try:
             self.config = Configuration(api_key=api_key,
@@ -90,14 +90,14 @@ class Client(metaclass=MetaClient):
         else:
             self._tags = tags
 
-        if self._session is not None:
+        if self._session is not None and self._worker is not None:
             self._session.tags = self._tags
             self._worker.update_session(self._session)
 
     def set_tags(self, tags: List[str]):
         self._tags = tags
 
-        if self._session is not None:
+        if self._session is not None and self._worker is not None:
             self._session.tags = tags
             self._worker.update_session(self._session)
 
@@ -109,7 +109,7 @@ class Client(metaclass=MetaClient):
             event (Event): The event to record.
         """
 
-        if self._session is not None and not self._session.has_ended:
+        if self._session is not None and not self._session.has_ended and self._worker is not None:
             self._worker.add_event(event.__dict__)
         else:
             logging.warning(
@@ -217,8 +217,8 @@ class Client(metaclass=MetaClient):
             self._session = None
             return logging.warning("🖇 AgentOps: Cannot start session")
 
-        logging.info('View info on this session at https://app.agentops.ai/drilldown?session_id={}'
-                     .format(self._session.session_id))
+        logging.info('View info on this session at https://app.agentops.ai/drilldown?session_id=%s'
+                     , self._session.session_id)
 
     def end_session(self,
                     end_state: str,
@@ -240,11 +240,11 @@ class Client(metaclass=MetaClient):
 
         self._session.video = video
         self._session.end_session(end_state, end_state_reason)
-        token_cost = self._worker.end_session(self._session)
+        token_cost = getattr(self._worker, 'end_session', 'unknown')
         if token_cost == 'unknown':
             print('🖇 AgentOps: Could not determine cost of run.')
         else:
-            print('🖇 AgentOps: This run cost ${:.6f}'.format(float(token_cost)))
+            print('🖇 AgentOps: This run cost $%.6f', float(token_cost))
         self._session = None
         self._worker = None
 
@@ -253,7 +253,7 @@ class Client(metaclass=MetaClient):
             self._worker.create_agent(agent_id, name)
 
     def _handle_unclean_exits(self):
-        def cleanup(end_state: Optional[str] = 'Fail', end_state_reason: Optional[str] = None):
+        def cleanup(end_state: str = 'Fail', end_state_reason: Optional[str] = None):
             # Only run cleanup function if session is created
             if self._session is not None:
                 self.end_session(end_state=end_state,
@@ -268,8 +268,7 @@ class Client(metaclass=MetaClient):
                 frame: The current stack frame.
             """
             signal_name = 'SIGINT' if signum == signal.SIGINT else 'SIGTERM'
-            logging.info(
-                f'🖇 AgentOps: {signal_name} detected. Ending session...')
+            logging.info('🖇 AgentOps: %s detected. Ending session...', signal_name)
             self.end_session(end_state='Fail',
                              end_state_reason=f'Signal {signal_name} detected')
             sys.exit(0)
