@@ -85,7 +85,7 @@ class LLMEvent(Event):
 
     event_type: str = EventType.LLM.value
     thread_id: Optional[UUID] = None
-    prompt: str | List = None
+    prompt: Optional[str | List] = None
     prompt_tokens: Optional[int] = None
     completion: str | object = None
     completion_tokens: Optional[int] = None
