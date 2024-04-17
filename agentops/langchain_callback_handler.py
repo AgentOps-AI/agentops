@@ -34,7 +34,7 @@ class LangchainCallbackHandler(BaseCallbackHandler):
                  max_queue_size: Optional[int] = None,
                  tags: Optional[List[str]] = None):
 
-        client_params = {
+        client_params: Dict[str, Any] = {
             'api_key': api_key,
             'endpoint': endpoint,
             'max_wait_time': max_wait_time,
@@ -332,7 +332,7 @@ class AsyncLangchainCallbackHandler(AsyncCallbackHandler):
                  max_queue_size: Optional[int] = None,
                  tags: Optional[List[str]] = None):
 
-        client_params = {
+        client_params: Dict[str, Any] = {
             'api_key': api_key,
             'endpoint': endpoint,
             'max_wait_time': max_wait_time,
