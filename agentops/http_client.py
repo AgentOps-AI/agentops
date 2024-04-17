@@ -28,9 +28,7 @@ class Response:
     def __init__(self, status: HttpStatus = HttpStatus.UNKNOWN, body: Optional[dict] = None):
         self.status: HttpStatus = status
         self.code: int = status.value
-        self.body = body
-        if not self.body:
-            self.body = {}
+        self.body = body if body else {}
 
     def parse(self, res: requests.models.Response):
         res_body = res.json()
