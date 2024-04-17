@@ -300,7 +300,7 @@ class Client(metaclass=MetaClient):
 
     @property
     def current_session_id(self):
-        return self._session.session_id
+        return getattr(self._session, 'session_id', None)
 
     @property
     def api_key(self):
