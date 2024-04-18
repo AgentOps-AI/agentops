@@ -19,6 +19,7 @@ import inspect
 import atexit
 import signal
 import sys
+import threading
 
 from .meta_client import MetaClient
 from .config import Configuration, ConfigurationError
@@ -44,6 +45,7 @@ class Client(metaclass=MetaClient):
             sorting later (e.g. ["GPT-4"]).
         override (bool): Whether to override and LLM calls to emit as events.
         auto_start_session (bool): Whether to start a session automatically when the client is created.
+        inherited_session_id (optional, str): Init Agentops with an existing Session
     
     Attributes:
         _session (Session, optional): A Session is a grouping of events (e.g. a run of your agent).
@@ -58,7 +60,8 @@ class Client(metaclass=MetaClient):
                  max_queue_size: Optional[int] = None,
                  tags: Optional[List[str]] = None,
                  override=True,
-                 auto_start_session=True
+                 auto_start_session=True,
+                 inherited_session_id: Optional[str] = None
                  ):
 
         self._session: Optional[Session] = None
@@ -77,7 +80,7 @@ class Client(metaclass=MetaClient):
         self._handle_unclean_exits()
 
         if auto_start_session:
-            self.start_session(tags, self.config)
+            self.start_session(tags, self.config, inherited_session_id)
 
         if override:
             if 'openai' in sys.modules:
@@ -195,7 +198,7 @@ class Client(metaclass=MetaClient):
 
         return returns
 
-    def start_session(self, tags: Optional[List[str]] = None, config: Optional[Configuration] = None):
+    def start_session(self, tags: Optional[List[str]] = None, config: Optional[Configuration] = None, inherited_session_id: Optional[str] = None):
         """
         Start a new session for recording events.
 
@@ -203,6 +206,7 @@ class Client(metaclass=MetaClient):
             tags (List[str], optional): Tags that can be used for grouping or sorting later.
                 e.g. ["test_run"].
             config: (Configuration, optional): Client configuration object
+            inherited_session_id (optional, str): assign session id to match existing Session
         """
         if self._session is not None:
             return logging.warning("🖇 AgentOps: Cannot start session - session already started")
@@ -210,7 +214,7 @@ class Client(metaclass=MetaClient):
         if not config and not self.config:
             return logging.warning("🖇 AgentOps: Cannot start session - missing configuration")
 
-        self._session = Session(uuid4(), tags or self._tags, host_env=get_host_env())
+        self._session = Session(inherited_session_id or uuid4(), tags or self._tags, host_env=get_host_env())
         self._worker = Worker(config or self.config)
         start_session_result = self._worker.start_session(self._session)
         if not start_session_result:
@@ -219,6 +223,8 @@ class Client(metaclass=MetaClient):
 
         logging.info('View info on this session at https://app.agentops.ai/drilldown?session_id=%s'
                      , self._session.session_id)
+
+        return self._session.session_id
 
     def end_session(self,
                     end_state: str,
@@ -296,15 +302,17 @@ class Client(metaclass=MetaClient):
             # Then call the default excepthook to exit the program
             sys.__excepthook__(exc_type, exc_value, exc_traceback)
 
-        atexit.register(lambda: cleanup(end_state="Indeterminate",
-                        end_state_reason="Process exited without calling end_session()"))
-        signal.signal(signal.SIGINT, signal_handler)
-        signal.signal(signal.SIGTERM, signal_handler)
-        sys.excepthook = handle_exception
+        # if main thread
+        if isinstance(threading.current_thread(), threading._MainThread):
+            atexit.register(lambda: cleanup(end_state="Indeterminate",
+                            end_state_reason="Process exited without calling end_session()"))
+            signal.signal(signal.SIGINT, signal_handler)
+            signal.signal(signal.SIGTERM, signal_handler)
+            sys.excepthook = handle_exception
 
     @property
     def current_session_id(self):
-        return getattr(self._session, 'session_id', None)
+        return self._session.session_id if self._session else None
 
     @property
     def api_key(self):
