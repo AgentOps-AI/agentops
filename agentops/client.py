@@ -237,10 +237,14 @@ class Client(metaclass=MetaClient):
 
         if not any(end_state == state.value for state in EndState):
             return logging.warning("🖇 AgentOps: Invalid end_state. Please use one of the EndState enums")
+        
+        if self._worker is None or self._worker._session is None:
+            return logging.warning("🖇 AgentOps: Cannot end session - no current worker or session")
 
         self._session.video = video
         self._session.end_session(end_state, end_state_reason)
-        token_cost = getattr(self._worker, 'end_session', 'unknown')
+        token_cost = self._worker.end_session(self._session)
+        
         if token_cost == 'unknown':
             print('🖇 AgentOps: Could not determine cost of run.')
         else:
