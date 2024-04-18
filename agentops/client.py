@@ -307,9 +307,7 @@ class Client(metaclass=MetaClient):
 
     @property
     def current_session_id(self):
-        if not self._session:
-            return None
-        return self._session.session_id
+        return self._session.session_id if self._session else None
 
     @property
     def api_key(self):
