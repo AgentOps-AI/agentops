@@ -63,7 +63,7 @@ def end_session(end_state: str,
 
 
 def start_session(tags: Optional[List[str]] = None, config: Optional[Configuration] = None, inherited_session_id: Optional[str] = None):
-    Client().start_session(tags, config, inherited_session_id)
+    return Client().start_session(tags, config, inherited_session_id)
 
 
 def record(event: Event | ErrorEvent):

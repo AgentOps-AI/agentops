@@ -224,6 +224,8 @@ class Client(metaclass=MetaClient):
         logging.info('View info on this session at https://app.agentops.ai/drilldown?session_id={}'
                      .format(self._session.session_id))
 
+        return self._session.session_id
+
     def end_session(self,
                     end_state: str,
                     end_state_reason: Optional[str] = None,
