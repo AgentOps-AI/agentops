@@ -5,6 +5,7 @@ from datetime import datetime
 import json
 import inspect
 import logging
+import traceback
 from uuid import UUID
 import os
 from importlib.metadata import version
@@ -29,6 +30,10 @@ def get_ISO_time():
         str: The current UTC time as a string in ISO 8601 format.
     """
     return datetime.utcfromtimestamp(time.time()).isoformat(timespec='milliseconds') + 'Z'
+
+def get_traceback():
+    """Returns the current traceback as a string."""
+    return traceback.format_exc()
 
 
 def is_jsonable(x):
