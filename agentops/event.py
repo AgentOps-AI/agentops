@@ -6,6 +6,7 @@ Data Class:
 """
 
 from dataclasses import dataclass, field
+import traceback
 from typing import List, Optional
 from .helpers import get_ISO_time, check_call_stack_for_agent_id
 from .enums import EventType, Models
@@ -127,7 +128,7 @@ class ErrorEvent():
     error_type: Optional[str] = None
     code: Optional[str] = None
     details: Optional[str] = None
-    logs: Optional[str] = None
+    logs: Optional[str] = traceback.format_exc()
     timestamp: str = field(default_factory=get_ISO_time)
 
     def __post_init__(self):
