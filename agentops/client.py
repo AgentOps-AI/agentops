@@ -150,7 +150,6 @@ class Client(metaclass=MetaClient):
             self.record(event)
 
         except Exception as e:
-            # TODO: add the stack trace
             self.record(ErrorEvent(trigger_event=event, exception=e))
 
             # Re-raise the exception
@@ -190,7 +189,6 @@ class Client(metaclass=MetaClient):
             self.record(event)
 
         except Exception as e:
-            # TODO: add the stack trace
             self.record(ErrorEvent(trigger_event=event, exception=e))
 
             # Re-raise the exception
