@@ -17,7 +17,9 @@ def init(api_key: Optional[str] = None,
          max_queue_size: Optional[int] = None,
          tags: Optional[List[str]] = None,
          override=True,
-         auto_start_session=True):
+         auto_start_session=True,
+         inherited_session_id: Optional[str] = None
+         ):
     """
         Initializes the AgentOps singleton pattern.
 
@@ -36,17 +38,22 @@ def init(api_key: Optional[str] = None,
                 sorting later (e.g. ["GPT-4"]).
             override (bool): Whether to override and LLM calls to emit as events.
             auto_start_session (bool): Whether to start a session automatically when the client is created.
+            inherited_session_id (optional, str): Init Agentops with an existing Session
         Attributes:
         """
 
-    Client(api_key=api_key,
-           parent_key=parent_key,
-           endpoint=endpoint,
-           max_wait_time=max_wait_time,
-           max_queue_size=max_queue_size,
-           tags=tags,
-           override=override,
-           auto_start_session=auto_start_session)
+    c = Client(api_key=api_key,
+               parent_key=parent_key,
+               endpoint=endpoint,
+               max_wait_time=max_wait_time,
+               max_queue_size=max_queue_size,
+               tags=tags,
+               override=override,
+               auto_start_session=auto_start_session,
+               inherited_session_id=inherited_session_id
+               )
+
+    return inherited_session_id or c.current_session_id
 
 
 def end_session(end_state: str,
@@ -55,8 +62,8 @@ def end_session(end_state: str,
     Client().end_session(end_state, end_state_reason, video)
 
 
-def start_session(tags: Optional[List[str]] = None, config: Optional[Configuration] = None):
-    Client().start_session(tags, config)
+def start_session(tags: Optional[List[str]] = None, config: Optional[Configuration] = None, inherited_session_id: Optional[str] = None):
+    return Client().start_session(tags, config, inherited_session_id)
 
 
 def record(event: Event | ErrorEvent):
