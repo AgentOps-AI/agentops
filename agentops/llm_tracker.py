@@ -186,8 +186,6 @@ class LlmTracker:
             self.llm_event.returns = response.model_dump()
             self.llm_event.model = response.model
 
-            raise ValueError("This is an intentional error for testing.")
-
             self.client.record(self.llm_event)
         except Exception as e:
             self.client.record(ErrorEvent(trigger_event=self.llm_event, exception=e))
