@@ -56,8 +56,6 @@ def safe_serialize(obj):
     def default(o):
         if isinstance(o, UUID):
             return str(o)
-        elif hasattr(o, 'to_dict'):
-            return o.to_dict()
         elif hasattr(o, 'model_dump_json'):
             return o.model_dump_json()
         elif hasattr(o, 'to_json'):

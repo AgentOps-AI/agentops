@@ -124,7 +124,7 @@ class ErrorEvent():
 
     """
 
-    trigger_event: Optional[Event] = None  # TODO: remove from serialization?
+    trigger_event: Optional[Event] = None
     exception: Optional[Exception] = None
     error_type: Optional[str] = None
     code: Optional[str] = None
@@ -137,17 +137,8 @@ class ErrorEvent():
         if self.trigger_event:
             self.trigger_event_id = self.trigger_event.id
             self.trigger_event_type = self.trigger_event.event_type
-            # TODO: remove self.trigger_event from serialization
+            self.trigger_event = None  # removes trigger_event from serialization
         if self.exception:
-            self.error_type = type(self.exception).__name__
-            self.details = str(self.exception)
-            # TODO: remove self.exception from serialization
-
-    def to_dict(self):
-        """
-        Serialize the dataclass to a dictionary excluding 'exception' and 'trigger_event'.
-        """
-        d = asdict(self)
-        d.pop('exception', None)  # Remove 'exception' from the dictionary
-        d.pop('trigger_event', None)  # Remove 'trigger_event' from the dictionary
-        return d
+            self.error_type = self.error_type or type(self.exception).__name__
+            self.details = self.details or str(self.exception)
+            self.exception = None  # removes exception from serialization
