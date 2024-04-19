@@ -80,7 +80,7 @@ class LangchainCallbackHandler(BaseCallbackHandler):
         llm_event: LLMEvent = self.events.llm[str(run_id)]
         self.ao_client.record(llm_event)
 
-        error_event = ErrorEvent(trigger_event=llm_event, details=str(error), timestamp=get_ISO_time())
+        error_event = ErrorEvent(trigger_event=llm_event, error_type=type(error).__name__, details=str(error), timestamp=get_ISO_time())
         self.ao_client.record(error_event)
 
     @debug_print_function_params
@@ -106,7 +106,7 @@ class LangchainCallbackHandler(BaseCallbackHandler):
 
         if len(response.generations) == 0:
             # TODO: more descriptive error
-            error_event = ErrorEvent(trigger_event=self.events.llm[str(run_id)],
+            error_event = ErrorEvent(trigger_event=self.events.llm[str(run_id)], error_type="NoGenerations",
                                      details="on_llm_end: No generations", timestamp=get_ISO_time())
             self.ao_client.record(error_event)
 
@@ -156,7 +156,7 @@ class LangchainCallbackHandler(BaseCallbackHandler):
         action_event: ActionEvent = self.events.chain[str(run_id)]
         self.ao_client.record(action_event)
 
-        error_event = ErrorEvent(trigger_event=action_event, details=str(error), timestamp=get_ISO_time())
+        error_event = ErrorEvent(trigger_event=action_event, error_type=type(error).__name__, details=str(error), timestamp=get_ISO_time())
         self.ao_client.record(error_event)
 
     @debug_print_function_params
@@ -199,7 +199,7 @@ class LangchainCallbackHandler(BaseCallbackHandler):
         # Tools are capable of failing `on_tool_end` quietly.
         # This is a workaround to make sure we can log it as an error.
         if kwargs.get('name') == '_Exception':
-            error_event = ErrorEvent(trigger_event=tool_event, details=output, timestamp=get_ISO_time())
+            error_event = ErrorEvent(trigger_event=tool_event, error_type="LangchainToolException", details=output, timestamp=get_ISO_time())
             self.ao_client.record(error_event)
 
     @debug_print_function_params
@@ -214,7 +214,7 @@ class LangchainCallbackHandler(BaseCallbackHandler):
         tool_event: ToolEvent = self.events.tool[str(run_id)]
         self.ao_client.record(tool_event)
 
-        error_event = ErrorEvent(trigger_event=tool_event, details=str(error), timestamp=get_ISO_time())
+        error_event = ErrorEvent(trigger_event=tool_event, error_type=type(error).__name__, details=str(error), timestamp=get_ISO_time())
         self.ao_client.record(error_event)
 
     @debug_print_function_params
@@ -265,7 +265,7 @@ class LangchainCallbackHandler(BaseCallbackHandler):
         action_event: ActionEvent = self.events.retriever[str(run_id)]
         self.ao_client.record(action_event)
 
-        error_event = ErrorEvent(trigger_event=action_event, details=str(error), timestamp=get_ISO_time())
+        error_event = ErrorEvent(trigger_event=action_event, error_type=type(error).__name__, details=str(error), timestamp=get_ISO_time())
         self.ao_client.record(error_event)
 
     @debug_print_function_params
@@ -405,7 +405,7 @@ class AsyncLangchainCallbackHandler(AsyncCallbackHandler):
         llm_event: LLMEvent = self.events.llm[str(run_id)]
         self.ao_client.record(llm_event)
 
-        error_event = ErrorEvent(trigger_event=llm_event, details=str(error), timestamp=get_ISO_time())
+        error_event = ErrorEvent(trigger_event=llm_event, error_type=type(error).__name__, details=str(error), timestamp=get_ISO_time())
         self.ao_client.record(error_event)
 
     @debug_print_function_params
@@ -431,7 +431,7 @@ class AsyncLangchainCallbackHandler(AsyncCallbackHandler):
 
         if len(response.generations) == 0:
             # TODO: more descriptive error
-            error_event = ErrorEvent(trigger_event=self.events.llm[str(run_id)],
+            error_event = ErrorEvent(trigger_event=self.events.llm[str(run_id)], error_type="NoGenerations"
                                      details="on_llm_end: No generations", timestamp=get_ISO_time())
             self.ao_client.record(error_event)
 
@@ -481,7 +481,7 @@ class AsyncLangchainCallbackHandler(AsyncCallbackHandler):
         action_event: ActionEvent = self.events.chain[str(run_id)]
         self.ao_client.record(action_event)
 
-        error_event = ErrorEvent(trigger_event=action_event, details=str(error), timestamp=get_ISO_time())
+        error_event = ErrorEvent(trigger_event=action_event, error_type=type(error).__name__, details=str(error), timestamp=get_ISO_time())
         self.ao_client.record(error_event)
 
     @debug_print_function_params
@@ -524,7 +524,7 @@ class AsyncLangchainCallbackHandler(AsyncCallbackHandler):
         # Tools are capable of failing `on_tool_end` quietly.
         # This is a workaround to make sure we can log it as an error.
         if kwargs.get('name') == '_Exception':
-            error_event = ErrorEvent(trigger_event=tool_event, details=output, timestamp=get_ISO_time())
+            error_event = ErrorEvent(trigger_event=tool_event, error_type="LangchainToolException" details=output, timestamp=get_ISO_time())
             self.ao_client.record(error_event)
 
     @debug_print_function_params
@@ -539,7 +539,7 @@ class AsyncLangchainCallbackHandler(AsyncCallbackHandler):
         tool_event: ToolEvent = self.events.tool[str(run_id)]
         self.ao_client.record(tool_event)
 
-        error_event = ErrorEvent(trigger_event=tool_event, details=str(error), timestamp=get_ISO_time())
+        error_event = ErrorEvent(trigger_event=tool_event, error_type=type(error).__name__, details=str(error), timestamp=get_ISO_time())
         self.ao_client.record(error_event)
 
     @debug_print_function_params
@@ -590,7 +590,7 @@ class AsyncLangchainCallbackHandler(AsyncCallbackHandler):
         action_event: ActionEvent = self.events.retriever[str(run_id)]
         self.ao_client.record(action_event)
 
-        error_event = ErrorEvent(trigger_event=action_event, details=str(error), timestamp=get_ISO_time())
+        error_event = ErrorEvent(trigger_event=action_event, error_type=type(error).__name__, details=str(error), timestamp=get_ISO_time())
         self.ao_client.record(error_event)
 
     @debug_print_function_params
