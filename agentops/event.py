@@ -116,6 +116,7 @@ class ErrorEvent():
     For recording any errors e.g. ones related to agent execution
 
     trigger_event(Event, optional): The event object that triggered the error if applicable.
+    exception(BaseException, optional): The thrown exception. We will automatically parse the error_type and details from this.
     error_type(str, optional): The type of error e.g. "ValueError".
     code(str, optional): A code that can be used to identify the error e.g. 501.
     details(str, optional): Detailed information about the error.
@@ -125,7 +126,7 @@ class ErrorEvent():
     """
 
     trigger_event: Optional[Event] = None
-    exception: Optional[Exception] = None
+    exception: Optional[BaseException] = None
     error_type: Optional[str] = None
     code: Optional[str] = None
     details: Optional[str] = None

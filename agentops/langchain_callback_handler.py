@@ -80,7 +80,7 @@ class LangchainCallbackHandler(BaseCallbackHandler):
         llm_event: LLMEvent = self.events.llm[str(run_id)]
         self.ao_client.record(llm_event)
 
-        error_event = ErrorEvent(trigger_event=llm_event, details=str(error), timestamp=get_ISO_time())
+        error_event = ErrorEvent(trigger_event=llm_event, exception=error)
         self.ao_client.record(error_event)
 
     @debug_print_function_params
@@ -156,7 +156,7 @@ class LangchainCallbackHandler(BaseCallbackHandler):
         action_event: ActionEvent = self.events.chain[str(run_id)]
         self.ao_client.record(action_event)
 
-        error_event = ErrorEvent(trigger_event=action_event, details=str(error), timestamp=get_ISO_time())
+        error_event = ErrorEvent(trigger_event=action_event, exception=error)
         self.ao_client.record(error_event)
 
     @debug_print_function_params
@@ -214,7 +214,7 @@ class LangchainCallbackHandler(BaseCallbackHandler):
         tool_event: ToolEvent = self.events.tool[str(run_id)]
         self.ao_client.record(tool_event)
 
-        error_event = ErrorEvent(trigger_event=tool_event, details=str(error), timestamp=get_ISO_time())
+        error_event = ErrorEvent(trigger_event=tool_event, exception=error)
         self.ao_client.record(error_event)
 
     @debug_print_function_params
@@ -265,7 +265,7 @@ class LangchainCallbackHandler(BaseCallbackHandler):
         action_event: ActionEvent = self.events.retriever[str(run_id)]
         self.ao_client.record(action_event)
 
-        error_event = ErrorEvent(trigger_event=action_event, details=str(error), timestamp=get_ISO_time())
+        error_event = ErrorEvent(trigger_event=action_event, exception=error)
         self.ao_client.record(error_event)
 
     @debug_print_function_params
@@ -405,7 +405,7 @@ class AsyncLangchainCallbackHandler(AsyncCallbackHandler):
         llm_event: LLMEvent = self.events.llm[str(run_id)]
         self.ao_client.record(llm_event)
 
-        error_event = ErrorEvent(trigger_event=llm_event, details=str(error), timestamp=get_ISO_time())
+        error_event = ErrorEvent(trigger_event=llm_event, exception=error)
         self.ao_client.record(error_event)
 
     @debug_print_function_params
@@ -481,7 +481,7 @@ class AsyncLangchainCallbackHandler(AsyncCallbackHandler):
         action_event: ActionEvent = self.events.chain[str(run_id)]
         self.ao_client.record(action_event)
 
-        error_event = ErrorEvent(trigger_event=action_event, details=str(error), timestamp=get_ISO_time())
+        error_event = ErrorEvent(trigger_event=action_event, exception=error)
         self.ao_client.record(error_event)
 
     @debug_print_function_params
@@ -539,7 +539,7 @@ class AsyncLangchainCallbackHandler(AsyncCallbackHandler):
         tool_event: ToolEvent = self.events.tool[str(run_id)]
         self.ao_client.record(tool_event)
 
-        error_event = ErrorEvent(trigger_event=tool_event, details=str(error), timestamp=get_ISO_time())
+        error_event = ErrorEvent(trigger_event=tool_event, exception=error)
         self.ao_client.record(error_event)
 
     @debug_print_function_params
@@ -590,7 +590,7 @@ class AsyncLangchainCallbackHandler(AsyncCallbackHandler):
         action_event: ActionEvent = self.events.retriever[str(run_id)]
         self.ao_client.record(action_event)
 
-        error_event = ErrorEvent(trigger_event=action_event, details=str(error), timestamp=get_ISO_time())
+        error_event = ErrorEvent(trigger_event=action_event, exception=error)
         self.ao_client.record(error_event)
 
     @debug_print_function_params
