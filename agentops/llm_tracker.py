@@ -214,6 +214,7 @@ class LlmTracker:
 
     def override_litellm_completion(self):
         import litellm
+        import sys
 
         original_create = litellm.completion
 
@@ -224,6 +225,9 @@ class LlmTracker:
             return self._handle_response_v1_openai(result, kwargs, init_timestamp)
 
         litellm.completion = patched_function
+        # TODO: Test. This does not do anything so far
+        # litellm.__dict__['completion'] = patched_function
+        # sys.modules['litellm'].__dict__['completion'] = patched_function
 
     def override_openai_v1_async_completion(self):
         from openai.resources.chat import completions
@@ -283,7 +287,6 @@ class LlmTracker:
                 module = import_module(api)
                 if api == 'litellm':
                     self.override_litellm_completion()
-                    return
 
                 if api == 'openai':
                     # Patch openai v1.0.0+ methods
@@ -292,8 +295,7 @@ class LlmTracker:
                         if module_version >= parse('1.0.0'):
                             self.override_openai_v1_completion()
                             self.override_openai_v1_async_completion()
-                            return
-
-                    # Patch openai <v1.0.0 methods
-                    for method_path in self.SUPPORTED_APIS['openai']['0.0.0']:
-                        self._override_method(api, method_path, module)
+                        else:
+                            # Patch openai <v1.0.0 methods
+                            for method_path in self.SUPPORTED_APIS['openai']['0.0.0']:
+                                self._override_method(api, method_path, module)
