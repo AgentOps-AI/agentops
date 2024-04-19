@@ -128,7 +128,7 @@ class ErrorEvent():
     error_type: Optional[str] = None
     code: Optional[str] = None
     details: Optional[str] = None
-    logs: Optional[str] = traceback.format_exc()
+    logs: Optional[str] = field(default_factory=traceback.format_exc())
     timestamp: str = field(default_factory=get_ISO_time)
 
     def __post_init__(self):
