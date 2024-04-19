@@ -97,7 +97,7 @@ class LlmTracker:
 
             self.client.record(self.llm_event)
         except Exception as e:
-            self.client.record(ErrorEvent(trigger_event=self.llm_event, error_type=type(e).__name__, details=str(e))
+            self.client.record(ErrorEvent(trigger_event=self.llm_event, error_type=type(e).__name__, details=str(e)))
             # TODO: This error is specific to only one path of failure. Should be more generic or have different logging for different paths
             logging.warning(
                 f"🖇 AgentOps: Unable to parse a chunk for LLM call {kwargs} - skipping upload to AgentOps")
@@ -143,7 +143,7 @@ class LlmTracker:
 
                     self.client.record(self.llm_event)
             except Exception as e:
-                self.client.record(ErrorEvent(trigger_event=self.llm_event, error_type=type(e).__name__, details=str(e))
+                self.client.record(ErrorEvent(trigger_event=self.llm_event, error_type=type(e).__name__, details=str(e)))
                 # TODO: This error is specific to only one path of failure. Should be more generic or have different logging for different paths
                 logging.warning(
                     f"🖇 AgentOps: Unable to parse a chunk for LLM call {kwargs} - skipping upload to AgentOps")
@@ -188,7 +188,7 @@ class LlmTracker:
 
             self.client.record(self.llm_event)
         except Exception as e:
-            self.client.record(ErrorEvent(trigger_event=self.llm_event, error_type=type(e).__name__, details=str(e))
+            self.client.record(ErrorEvent(trigger_event=self.llm_event, error_type=type(e).__name__, details=str(e)))
             # TODO: This error is specific to only one path of failure. Should be more generic or have different logging for different paths
             logging.warning(
                 f"🖇 AgentOps: Unable to parse a chunk for LLM call {kwargs} - skipping upload to AgentOps")
