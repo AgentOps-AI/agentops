@@ -4,7 +4,7 @@ import time
 from datetime import datetime
 import json
 import inspect
-import logging
+from .log_config import logger
 from uuid import UUID
 import os
 from importlib.metadata import version
@@ -85,7 +85,7 @@ def check_call_stack_for_agent_id() -> str | None:
             if var == "__main__":
                 return
             if hasattr(var, 'agent_ops_agent_id') and getattr(var, 'agent_ops_agent_id'):
-                logging.debug('LLM call from agent named: ' + getattr(var, 'agent_ops_agent_name'))
+                logger.debug('LLM call from agent named: ' + getattr(var, 'agent_ops_agent_name'))
                 return getattr(var, 'agent_ops_agent_id')
     return None
 
@@ -95,7 +95,7 @@ def get_agentops_version():
         pkg_version = version("agentops")
         return pkg_version
     except Exception as e:
-        logging.warning(f"Error reading package version: {e}")
+        logger.warning(f"Error reading package version: {e}")
         return None
 
 
