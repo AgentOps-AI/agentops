@@ -1,6 +1,6 @@
 from enum import Enum
 from typing import Optional
-import logging
+from .log_config import logger
 import requests
 from requests.adapters import Retry, HTTPAdapter
 
@@ -80,7 +80,7 @@ class HttpClient:
         except requests.exceptions.Timeout:
             result.code = 408
             result.status = HttpStatus.TIMEOUT
-            logging.warning(
+            logger.warning(
                 '🖇 AgentOps: Could not post data - connection timed out')
         except requests.exceptions.HTTPError as e:
             try:
@@ -94,12 +94,12 @@ class HttpClient:
             result.body = {'error': str(e)}
 
         if result.code == 401:
-            logging.warning(
-                '🖇 AgentOps: Could not post data - API server rejected your API key: %s', api_key)
+            logger.warning('🖇 AgentOps: Could not post data - API server rejected your API key: %s',
+                           api_key)
         if result.code == 400:
-            logging.warning('🖇 AgentOps: Could not post data - %s', result.body)
+            logger.warning('🖇 AgentOps: Could not post data - %s', result.body)
         if result.code == 500:
-            logging.warning(
+            logger.warning(
                 '🖇 AgentOps: Could not post data - internal server error')
 
         return result

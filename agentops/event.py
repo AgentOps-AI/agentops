@@ -5,11 +5,12 @@ Data Class:
     Event: Represents discrete events to be recorded.
 """
 
-from dataclasses import dataclass, field
+from dataclasses import asdict, dataclass, field
 from typing import Any, Dict, List, Optional, Sequence
 from .helpers import get_ISO_time, check_call_stack_for_agent_id
 from .enums import EventType, Models
 from uuid import UUID, uuid4
+import traceback
 
 
 @dataclass
@@ -115,6 +116,7 @@ class ErrorEvent():
     For recording any errors e.g. ones related to agent execution
 
     trigger_event(Event, optional): The event object that triggered the error if applicable.
+    exception(BaseException, optional): The thrown exception. We will automatically parse the error_type and details from this.
     error_type(str, optional): The type of error e.g. "ValueError".
     code(str, optional): A code that can be used to identify the error e.g. 501.
     details(str, optional): Detailed information about the error.
@@ -123,11 +125,12 @@ class ErrorEvent():
 
     """
 
-    trigger_event: Optional[Event] = None  # TODO: remove from serialization?
+    trigger_event: Optional[Event] = None
+    exception: Optional[BaseException] = None
     error_type: Optional[str] = None
     code: Optional[str] = None
     details: Optional[str | Dict[str, str]] = None
-    logs: Optional[str] = None
+    logs: Optional[str] = field(default_factory=traceback.format_exc)
     timestamp: str = field(default_factory=get_ISO_time)
 
     def __post_init__(self):
@@ -135,5 +138,8 @@ class ErrorEvent():
         if self.trigger_event:
             self.trigger_event_id = self.trigger_event.id
             self.trigger_event_type = self.trigger_event.event_type
-            # TODO: remove trigger_event from serialization
-            # e.g. field(repr=False, compare=False, hash=False, metadata={'serialize': False})
+            self.trigger_event = None  # removes trigger_event from serialization
+        if self.exception:
+            self.error_type = self.error_type or type(self.exception).__name__
+            self.details = self.details or str(self.exception)
+            self.exception = None  # removes exception from serialization

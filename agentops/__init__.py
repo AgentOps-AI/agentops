@@ -8,6 +8,7 @@ from .event import Event, ActionEvent, LLMEvent, ToolEvent, ErrorEvent
 from .enums import Models
 from .decorators import record_function
 from .agent import track_agent
+from .log_config import set_logging_level_info, set_logging_level_critial
 
 
 def init(api_key: Optional[str] = None,
@@ -41,7 +42,7 @@ def init(api_key: Optional[str] = None,
             inherited_session_id (optional, str): Init Agentops with an existing Session
         Attributes:
         """
-
+    set_logging_level_info()
     c = Client(api_key=api_key,
                parent_key=parent_key,
                endpoint=endpoint,
@@ -52,7 +53,7 @@ def init(api_key: Optional[str] = None,
                auto_start_session=auto_start_session,
                inherited_session_id=inherited_session_id
                )
-
+    
     return inherited_session_id or c.current_session_id
 
 
