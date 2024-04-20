@@ -7,7 +7,7 @@ Classes:
 
 from typing import Optional
 from os import environ
-import logging
+from .log_config import logger
 
 
 class Configuration:
@@ -143,4 +143,4 @@ class ConfigurationError(Exception):
 
     def __init__(self, message: str):
         super().__init__(message)
-        logging.warning(message)
+        logger.warning(message)
