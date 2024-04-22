@@ -90,6 +90,12 @@ Refer to our [API documentation](http://docs.agentops.ai) for detailed instructi
 |🔜 Information context constraint testing | 🔜 Anti-agent roadblocks (i.e. Captchas) | 🔜 CI/CD integration checks | |
 |🔜 Regression testing | 🔜 Multi-agent framework visualization | | |
 
+## Integrations
+
+### CrewAI 🛶
+
+Write Crew agents with observability with only 2 lines of code. [More information here.](https://docs.crewai.com/how-to/AgentOps-Observability/). Simply set an `AGENTOPS_API_KEY` in your environment, and your crews will automatically be set up with.
+
 ## Callback handlers ↩️
 
 ### Langchain
