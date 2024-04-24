@@ -47,6 +47,7 @@ class Client(metaclass=MetaClient):
         override (bool): Whether to override and LLM calls to emit as events.
         auto_start_session (bool): Whether to start a session automatically when the client is created.
         inherited_session_id (optional, str): Init Agentops with an existing Session
+        time_travel_hash (optional, str): A hash provided by the AgentOps Dashboard for breakpoint debugging agents
     Attributes:
         _session (Session, optional): A Session is a grouping of events (e.g. a run of your agent).
         _worker (Worker, optional): A Worker manages the event queue and sends session updates to the AgentOps api server
@@ -61,7 +62,8 @@ class Client(metaclass=MetaClient):
                  tags: Optional[List[str]] = None,
                  override=True,
                  auto_start_session=True,
-                 inherited_session_id: Optional[str] = None
+                 inherited_session_id: Optional[str] = None,
+                 time_travel_hash: Optional[str] = None
                  ):
 
         self._session = None

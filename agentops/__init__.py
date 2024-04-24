@@ -18,7 +18,8 @@ def init(api_key: Optional[str] = None,
          tags: Optional[List[str]] = None,
          override=True,
          auto_start_session=True,
-         inherited_session_id: Optional[str] = None
+         inherited_session_id: Optional[str] = None,
+         time_travel_hash: Optional[str] = None
          ):
     """
         Initializes the AgentOps singleton pattern.
@@ -39,6 +40,7 @@ def init(api_key: Optional[str] = None,
             override (bool): Whether to override and LLM calls to emit as events.
             auto_start_session (bool): Whether to start a session automatically when the client is created.
             inherited_session_id (optional, str): Init Agentops with an existing Session
+            time_travel_hash (optional, str): A hash provided by the AgentOps Dashboard for breakpoint debugging agents
         Attributes:
         """
 
@@ -50,7 +52,8 @@ def init(api_key: Optional[str] = None,
                tags=tags,
                override=override,
                auto_start_session=auto_start_session,
-               inherited_session_id=inherited_session_id
+               inherited_session_id=inherited_session_id,
+               time_travel_hash=time_travel_hash
                )
 
     return inherited_session_id or c.current_session_id
