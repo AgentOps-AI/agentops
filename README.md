@@ -93,7 +93,7 @@ Refer to our [API documentation](http://docs.agentops.ai) for detailed instructi
 ## Callback handlers ↩️
 
 ### Langchain
-AgentOps works seemlessly with applications built using Langchain. To use the handler, install Langchain as an optional dependency:
+AgentOps works seamlessly with applications built using Langchain. To use the handler, install Langchain as an optional dependency:
 ```shell
 pip install agentops[langchain]
 ```
