@@ -11,7 +11,7 @@ import inspect
 
 class LlmTracker:
     SUPPORTED_APIS = {
-        'litellm': {'1.0.0': ("openai_chat_completions.completion",)},  # TODO
+        'litellm': {'1.3.1': ("openai_chat_completions.completion",)},  # TODO
         'openai': {
             '1.0.0': (
                 "chat.completions.create",
@@ -298,11 +298,11 @@ class LlmTracker:
                 module = import_module(api)
                 if api == 'litellm':
                     module_version = version(api)
-                    if Version(module_version) >= parse('1.0.0'):
+                    if Version(module_version) >= parse('1.3.1'):
                         self.override_litellm_completion()
                         self.override_litellm_async_completion()
                     else:
-                        logging.warning(f'🖇 AgentOps: Only litetllm v1.0.0+ supported. v{module_version} found.')
+                        logging.warning(f'🖇 AgentOps: Only litetllm v1.3.1+ supported. v{module_version} found.')
                     return  # If using an abstraction like litellm, do not patch the underlying LLM APIs
 
                 if api == 'openai':
