@@ -1,8 +1,8 @@
 """
-AgentOps client module that provides a client class with public interfaces and configuration.
+    AgentOps client module that provides a client class with public interfaces and configuration.
 
-Classes:
-    Client: Provides methods to interact with the AgentOps service.
+    Classes:
+        Client: Provides methods to interact with the AgentOps service.
 """
 
 from .event import ActionEvent, ErrorEvent, Event
