@@ -302,7 +302,7 @@ class LlmTracker:
                         self.override_litellm_completion()
                         self.override_litellm_async_completion()
                     else:
-                        logging.warning(f'🖇 AgentOps: Only litetllm v1.3.1+ supported. v{module_version} found.')
+                        logging.warning(f'🖇 AgentOps: Only litellm>=1.3.1 supported. v{module_version} found.')
                     return  # If using an abstraction like litellm, do not patch the underlying LLM APIs
 
                 if api == 'openai':
