@@ -25,7 +25,7 @@
 
 Build your next agent with benchmarks, observability, and replay analytics. AgentOps is the toolkit for evaluating and developing robust and reliable AI agents.
 
-AgentOps is open beta. You can sign up for AgentOps [here](https://app.agentops.ai).
+You can sign up for AgentOps [here](https://app.agentops.ai).
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT) ![PyPI - Version](https://img.shields.io/pypi/v/agentops) <a href="https://pepy.tech/project/agentops">
   <img src="https://static.pepy.tech/badge/agentops/month"> <a href="https://twitter.com/agentopsai">
@@ -49,16 +49,16 @@ Initialize the AgentOps client, and automatically get analytics on every LLM cal
 import agentops
 
 # Beginning of program's code (i.e. main.py, __init__.py)
-ao_client = agentops.Client(<INSERT YOUR API KEY HERE>)
+agentops.init(<INSERT YOUR API KEY HERE>)
 
 ...
 # (optional: record specific functions)
-@record_function('sample function being record')
+@agentops.record_function('sample function being record')
 def sample_function(...):
     ...
 
 # End of program
-ao_client.end_session('Success')
+agentops.end_session('Success')
 # Woohoo You're done 🎉
 ```
 

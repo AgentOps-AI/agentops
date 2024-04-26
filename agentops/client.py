@@ -14,7 +14,7 @@ from .host_env import get_host_env
 from uuid import uuid4
 from typing import Optional, List
 import traceback
-import logging
+from .log_config import logger, set_logging_level_info
 import inspect
 import atexit
 import signal
@@ -115,7 +115,7 @@ class Client(metaclass=MetaClient):
         if self._session is not None and not self._session.has_ended:
             self._worker.add_event(event.__dict__)
         else:
-            logging.warning(
+            logger.warning(
                 "🖇 AgentOps: Cannot record event - no current session")
 
     def _record_event_sync(self, func, event_name, *args, **kwargs):
@@ -150,8 +150,7 @@ class Client(metaclass=MetaClient):
             self.record(event)
 
         except Exception as e:
-            # TODO: add the stack trace
-            self.record(ErrorEvent(trigger_event=event, details={f"{type(e).__name__}": str(e)}))
+            self.record(ErrorEvent(trigger_event=event, exception=e))
 
             # Re-raise the exception
             raise
@@ -190,8 +189,7 @@ class Client(metaclass=MetaClient):
             self.record(event)
 
         except Exception as e:
-            # TODO: add the stack trace
-            self.record(ErrorEvent(trigger_event=event, details={f"{type(e).__name__}": str(e)}))
+            self.record(ErrorEvent(trigger_event=event, exception=e))
 
             # Re-raise the exception
             raise
@@ -208,20 +206,22 @@ class Client(metaclass=MetaClient):
             config: (Configuration, optional): Client configuration object
             inherited_session_id (optional, str): assign session id to match existing Session
         """
+        set_logging_level_info()
+        
         if self._session is not None:
-            return logging.warning("🖇 AgentOps: Cannot start session - session already started")
+            return logger.warning("🖇 AgentOps: Cannot start session - session already started")
 
         if not config and not self.config:
-            return logging.warning("🖇 AgentOps: Cannot start session - missing configuration")
+            return logger.warning("🖇 AgentOps: Cannot start session - missing configuration")
 
         self._session = Session(inherited_session_id or uuid4(), tags or self._tags, host_env=get_host_env())
         self._worker = Worker(config or self.config)
         start_session_result = self._worker.start_session(self._session)
         if not start_session_result:
             self._session = None
-            return logging.warning("🖇 AgentOps: Cannot start session")
+            return logger.warning("🖇 AgentOps: Cannot start session")
 
-        logging.info('View info on this session at https://app.agentops.ai/drilldown?session_id={}'
+        logger.info('View info on this session at https://app.agentops.ai/drilldown?session_id={}'
                      .format(self._session.session_id))
 
         return self._session.session_id
@@ -239,10 +239,10 @@ class Client(metaclass=MetaClient):
             video (str, optional): The video screen recording of the session
         """
         if self._session is None or self._session.has_ended:
-            return logging.warning("🖇 AgentOps: Cannot end session - no current session")
+            return logger.warning("🖇 AgentOps: Cannot end session - no current session")
 
         if not any(end_state == state.value for state in EndState):
-            return logging.warning("🖇 AgentOps: Invalid end_state. Please use one of the EndState enums")
+            return logger.warning("🖇 AgentOps: Invalid end_state. Please use one of the EndState enums")
 
         self._session.video = video
         self._session.end_session(end_state, end_state_reason)
@@ -274,7 +274,7 @@ class Client(metaclass=MetaClient):
                 frame: The current stack frame.
             """
             signal_name = 'SIGINT' if signum == signal.SIGINT else 'SIGTERM'
-            logging.info(
+            logger.info(
                 f'🖇 AgentOps: {signal_name} detected. Ending session...')
             self.end_session(end_state='Fail',
                              end_state_reason=f'Signal {signal_name} detected')
