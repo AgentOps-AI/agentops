@@ -28,26 +28,27 @@ from .llm_tracker import LlmTracker
 @singleton
 class Client(metaclass=MetaClient):
     """
-    Client for AgentOps service.
+        Client for AgentOps service.
 
-    Args:
+        Args:
 
-        api_key (str, optional): API Key for AgentOps services. If none is provided, key will 
-            be read from the AGENTOPS_API_KEY environment variable.
-        parent_key (str, optional): Organization key to give visibility of all user sessions the user's organization. If none is provided, key will 
-            be read from the AGENTOPS_PARENT_KEY environment variable.
-        endpoint (str, optional): The endpoint for the AgentOps service. If none is provided, key will 
-            be read from the AGENTOPS_API_ENDPOINT environment variable. Defaults to 'https://api.agentops.ai'.
-        max_wait_time (int, optional): The maximum time to wait in milliseconds before flushing the queue. 
-            Defaults to 30,000 (30 seconds)
-        max_queue_size (int, optional): The maximum size of the event queue. Defaults to 100.
-        tags (List[str], optional): Tags for the sessions that can be used for grouping or 
-            sorting later (e.g. ["GPT-4"]).
-        override_llm_calls (bool): Whether to override LLM calls and emit LLMEvents.
-        auto_start_session (bool): Whether to start a session automatically when the client is created.
-    Attributes:
-        _session (Session, optional): A Session is a grouping of events (e.g. a run of your agent).
-        _worker (Worker, optional): A Worker manages the event queue and sends session updates to the AgentOps api server
+            api_key (str, optional): API Key for AgentOps services. If none is provided, key will 
+                be read from the AGENTOPS_API_KEY environment variable.
+            parent_key (str, optional): Organization key to give visibility of all user sessions the user's organization. If none is provided, key will 
+                be read from the AGENTOPS_PARENT_KEY environment variable.
+            endpoint (str, optional): The endpoint for the AgentOps service. If none is provided, key will 
+                be read from the AGENTOPS_API_ENDPOINT environment variable. Defaults to 'https://api.agentops.ai'.
+            max_wait_time (int, optional): The maximum time to wait in milliseconds before flushing the queue. 
+                Defaults to 30,000 (30 seconds)
+            max_queue_size (int, optional): The maximum size of the event queue. Defaults to 100.
+            tags (List[str], optional): Tags for the sessions that can be used for grouping or 
+                sorting later (e.g. ["GPT-4"]).
+            override (bool, optional): [Deprecated] Use `instrument_llm_calls` instead. Whether to instrument LLM calls and emit LLMEvents..
+            instrument_llm_calls (bool): Whether to instrument LLM calls and emit LLMEvents..
+            auto_start_session (bool): Whether to start a session automatically when the client is created.
+        Attributes:
+            _session (Session, optional): A Session is a grouping of events (e.g. a run of your agent).
+            _worker (Worker, optional): A Worker manages the event queue and sends session updates to the AgentOps api server
     """
 
     def __init__(self,
@@ -57,9 +58,15 @@ class Client(metaclass=MetaClient):
                  max_wait_time: Optional[int] = None,
                  max_queue_size: Optional[int] = None,
                  tags: Optional[List[str]] = None,
-                 override_llm_calls=True,
+                 override: Optional[bool] = None,  # Deprecated
+                 instrument_llm_calls=True,
                  auto_start_session=True
                  ):
+
+        if override is not None:
+            logging.warning("🖇 AgentOps: The 'override' parameter is deprecated. Use 'instrument_llm_calls' instead.",
+                            DeprecationWarning, stacklevel=2)
+            instrument_llm_calls = instrument_llm_calls or override
 
         self._session = None
         self._worker = None
@@ -79,16 +86,16 @@ class Client(metaclass=MetaClient):
         if auto_start_session:
             self.start_session(tags, self.config)
 
-        if override_llm_calls:
+        if instrument_llm_calls:
             self.llm_tracker = LlmTracker(self)
             self.llm_tracker.override_api()
 
     def add_tags(self, tags: List[str]):
         """
-        Append to session tags at runtime. 
+            Append to session tags at runtime. 
 
-        Args:
-            tags (List[str]): The list of tags to append.
+            Args:
+                tags (List[str]): The list of tags to append.
         """
         if self._tags is not None:
             self._tags.extend(tags)
@@ -101,10 +108,10 @@ class Client(metaclass=MetaClient):
 
     def set_tags(self, tags: List[str]):
         """
-        Replace session tags at runtime. 
+            Replace session tags at runtime. 
 
-        Args:
-            tags (List[str]): The list of tags to set.
+            Args:
+                tags (List[str]): The list of tags to set.
         """
         self._tags = tags
 
@@ -114,10 +121,10 @@ class Client(metaclass=MetaClient):
 
     def record(self, event: Event | ErrorEvent):
         """
-        Record an event with the AgentOps service.
+            Record an event with the AgentOps service.
 
-        Args:
-            event (Event): The event to record.
+            Args:
+                event (Event): The event to record.
         """
 
         if self._session is not None and not self._session.has_ended:
@@ -208,12 +215,12 @@ class Client(metaclass=MetaClient):
 
     def start_session(self, tags: Optional[List[str]] = None, config: Optional[Configuration] = None):
         """
-        Start a new session for recording events.
+            Start a new session for recording events.
 
-        Args:
-            tags (List[str], optional): Tags that can be used for grouping or sorting later.
-                e.g. ["test_run"].
-            config: (Configuration, optional): Client configuration object
+            Args:
+                tags (List[str], optional): Tags that can be used for grouping or sorting later.
+                    e.g. ["test_run"].
+                config: (Configuration, optional): Client configuration object
         """
         if self._session is not None:
             return logging.warning("🖇 AgentOps: Cannot start session - session already started")
@@ -236,12 +243,12 @@ class Client(metaclass=MetaClient):
                     end_state_reason: Optional[str] = None,
                     video: Optional[str] = None):
         """
-        End the current session with the AgentOps service.
+            End the current session with the AgentOps service.
 
-        Args:
-            end_state (str): The final state of the session. Options: Success, Fail, or Indeterminate.
-            end_state_reason (str, optional): The reason for ending the session.
-            video (str, optional): The video screen recording of the session
+            Args:
+                end_state (str): The final state of the session. Options: Success, Fail, or Indeterminate.
+                end_state_reason (str, optional): The reason for ending the session.
+                video (str, optional): The video screen recording of the session
         """
         if self._session is None or self._session.has_ended:
             return logging.warning("🖇 AgentOps: Cannot end session - no current session")
@@ -272,11 +279,11 @@ class Client(metaclass=MetaClient):
 
         def signal_handler(signum, frame):
             """
-            Signal handler for SIGINT (Ctrl+C) and SIGTERM. Ends the session and exits the program.
+                Signal handler for SIGINT (Ctrl+C) and SIGTERM. Ends the session and exits the program.
 
-            Args:
-                signum (int): The signal number.
-                frame: The current stack frame.
+                Args:
+                    signum (int): The signal number.
+                    frame: The current stack frame.
             """
             signal_name = 'SIGINT' if signum == signal.SIGINT else 'SIGTERM'
             logging.info(
@@ -287,13 +294,13 @@ class Client(metaclass=MetaClient):
 
         def handle_exception(exc_type, exc_value, exc_traceback):
             """
-            Handle uncaught exceptions before they result in program termination.
+                Handle uncaught exceptions before they result in program termination.
 
-            Args:
-                exc_type (Type[BaseException]): The type of the exception.
-                exc_value (BaseException): The exception instance.
-                exc_traceback (TracebackType): A traceback object encapsulating the call stack at the 
-                                               point where the exception originally occurred.
+                Args:
+                    exc_type (Type[BaseException]): The type of the exception.
+                    exc_value (BaseException): The exception instance.
+                    exc_traceback (TracebackType): A traceback object encapsulating the call stack at the 
+                                                point where the exception originally occurred.
             """
             formatted_traceback = ''.join(traceback.format_exception(exc_type, exc_value,
                                                                      exc_traceback))
@@ -320,10 +327,10 @@ class Client(metaclass=MetaClient):
 
     def set_parent_key(self, parent_key: str):
         """
-        Set the parent API key which has visibility to projects it is parent to.
+            Set the parent API key which has visibility to projects it is parent to.
 
-        Args:
-            parent_key (str): The API key of the parent organization to set.
+            Args:
+                parent_key (str): The API key of the parent organization to set.
         """
         if self._worker:
             self._worker.config.parent_key = parent_key

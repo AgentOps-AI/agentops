@@ -16,7 +16,8 @@ def init(api_key: Optional[str] = None,
          max_wait_time: Optional[int] = None,
          max_queue_size: Optional[int] = None,
          tags: Optional[List[str]] = None,
-         override_llm_calls=True,
+         override: Optional[bool] = None,  # Deprecated
+         instrument_llm_calls=True,
          auto_start_session=True):
     """
         Initializes the AgentOps singleton pattern.
@@ -34,10 +35,11 @@ def init(api_key: Optional[str] = None,
             max_queue_size (int, optional): The maximum size of the event queue. Defaults to 100.
             tags (List[str], optional): Tags for the sessions that can be used for grouping or
                 sorting later (e.g. ["GPT-4"]).
-            override_llm_calls (bool): Whether to override LLM calls and emit LLMEvents.
+            override (bool, optional): [Deprecated] Use `instrument_llm_calls` instead. Whether to instrument LLM calls and emit LLMEvents..
+            instrument_llm_calls (bool): Whether to instrument LLM calls and emit LLMEvents..
             auto_start_session (bool): Whether to start a session automatically when the client is created.
         Attributes:
-        """
+    """
 
     Client(api_key=api_key,
            parent_key=parent_key,
@@ -45,7 +47,8 @@ def init(api_key: Optional[str] = None,
            max_wait_time=max_wait_time,
            max_queue_size=max_queue_size,
            tags=tags,
-           override_llm_calls=override_llm_calls,
+           override=override,
+           instrument_llm_calls=instrument_llm_calls,
            auto_start_session=auto_start_session)
 
 
@@ -58,7 +61,7 @@ def end_session(end_state: str,
         Args:
             end_state (str): The final state of the session. Options: Success, Fail, or Indeterminate.
             end_state_reason (str, optional): The reason for ending the session.
-            video (str, optional): The video screen recording of the session
+            video (str, optional): URL to a video recording of the session
     """
     Client().end_session(end_state, end_state_reason, video)
 
