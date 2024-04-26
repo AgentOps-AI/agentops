@@ -3,7 +3,7 @@ import sys
 from importlib import import_module
 from importlib.metadata import version
 from packaging.version import Version, parse
-import logging
+from .log_config import logger
 from .event import LLMEvent, ErrorEvent
 from .helpers import get_ISO_time, check_call_stack_for_agent_id
 import inspect
@@ -11,7 +11,7 @@ import inspect
 
 class LlmTracker:
     SUPPORTED_APIS = {
-        'litellm': {'1.3.1': ("openai_chat_completions.completion",)},  # TODO
+        'litellm': {'1.3.1': ("openai_chat_completions.completion",)},
         'openai': {
             '1.0.0': (
                 "chat.completions.create",
@@ -60,9 +60,9 @@ class LlmTracker:
 
                     self.client.record(self.llm_event)
             except Exception as e:
-                self.client.record(ErrorEvent(trigger_event=self.llm_event, details={f"{type(e).__name__}": str(e)}))
-                # TODO: This error is specific to only one path of failure. Should be more generic or have different logging for different paths
-                logging.warning(
+                self.client.record(ErrorEvent(trigger_event=self.llm_event, exception=e))
+                # TODO: This error is specific to only one path of failure. Should be more generic or have different logger for different paths
+                logger.warning(
                     f"🖇 AgentOps: Unable to parse a chunk for LLM call {kwargs} - skipping upload to AgentOps")
 
         # if the response is a generator, decorate the generator
@@ -99,9 +99,9 @@ class LlmTracker:
 
             self.client.record(self.llm_event)
         except Exception as e:
-            self.client.record(ErrorEvent(trigger_event=self.llm_event, details={f"{type(e).__name__}": str(e)}))
-            # TODO: This error is specific to only one path of failure. Should be more generic or have different logging for different paths
-            logging.warning(
+            self.client.record(ErrorEvent(trigger_event=self.llm_event, exception=e))
+            # TODO: This error is specific to only one path of failure. Should be more generic or have different logger for different paths
+            logger.warning(
                 f"🖇 AgentOps: Unable to parse a chunk for LLM call {kwargs} - skipping upload to AgentOps")
 
         return response
@@ -145,9 +145,9 @@ class LlmTracker:
 
                     self.client.record(self.llm_event)
             except Exception as e:
-                self.client.record(ErrorEvent(trigger_event=self.llm_event, details={f"{type(e).__name__}": str(e)}))
-                # TODO: This error is specific to only one path of failure. Should be more generic or have different logging for different paths
-                logging.warning(
+                self.client.record(ErrorEvent(trigger_event=self.llm_event, exception=e))
+                # TODO: This error is specific to only one path of failure. Should be more generic or have different logger for different paths
+                logger.warning(
                     f"🖇 AgentOps: Unable to parse a chunk for LLM call {kwargs} - skipping upload to AgentOps")
 
         # if the response is a generator, decorate the generator
@@ -190,9 +190,9 @@ class LlmTracker:
 
             self.client.record(self.llm_event)
         except Exception as e:
-            self.client.record(ErrorEvent(trigger_event=self.llm_event, details={f"{type(e).__name__}": str(e)}))
-            # TODO: This error is specific to only one path of failure. Should be more generic or have different logging for different paths
-            logging.warning(
+            self.client.record(ErrorEvent(trigger_event=self.llm_event, exception=e))
+            # TODO: This error is specific to only one path of failure. Should be more generic or have different logger for different paths
+            logger.warning(
                 f"🖇 AgentOps: Unable to parse a chunk for LLM call {kwargs} - skipping upload to AgentOps")
 
         return response
@@ -302,7 +302,7 @@ class LlmTracker:
                         self.override_litellm_completion()
                         self.override_litellm_async_completion()
                     else:
-                        logging.warning(f'🖇 AgentOps: Only litellm>=1.3.1 supported. v{module_version} found.')
+                        logger.warning(f'🖇 AgentOps: Only litellm>=1.3.1 supported. v{module_version} found.')
                     return  # If using an abstraction like litellm, do not patch the underlying LLM APIs
 
                 if api == 'openai':

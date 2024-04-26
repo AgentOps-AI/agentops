@@ -8,6 +8,7 @@ from .event import Event, ActionEvent, LLMEvent, ToolEvent, ErrorEvent
 from .enums import Models
 from .decorators import record_function
 from .agent import track_agent
+from .log_config import set_logging_level_info, set_logging_level_critial
 
 
 def init(api_key: Optional[str] = None,
@@ -18,7 +19,9 @@ def init(api_key: Optional[str] = None,
          tags: Optional[List[str]] = None,
          override: Optional[bool] = None,  # Deprecated
          instrument_llm_calls=True,
-         auto_start_session=True):
+         auto_start_session=True,
+         inherited_session_id: Optional[str] = None
+         ):
     """
         Initializes the AgentOps singleton pattern.
 
@@ -38,18 +41,23 @@ def init(api_key: Optional[str] = None,
             override (bool, optional): [Deprecated] Use `instrument_llm_calls` instead. Whether to instrument LLM calls and emit LLMEvents..
             instrument_llm_calls (bool): Whether to instrument LLM calls and emit LLMEvents..
             auto_start_session (bool): Whether to start a session automatically when the client is created.
+            inherited_session_id (optional, str): Init Agentops with an existing Session
         Attributes:
     """
+    set_logging_level_info()
+    c = Client(api_key=api_key,
+               parent_key=parent_key,
+               endpoint=endpoint,
+               max_wait_time=max_wait_time,
+               max_queue_size=max_queue_size,
+               tags=tags,
+               override=override,
+               instrument_llm_calls=instrument_llm_calls,
+               auto_start_session=auto_start_session,
+               inherited_session_id=inherited_session_id
+               )
 
-    Client(api_key=api_key,
-           parent_key=parent_key,
-           endpoint=endpoint,
-           max_wait_time=max_wait_time,
-           max_queue_size=max_queue_size,
-           tags=tags,
-           override=override,
-           instrument_llm_calls=instrument_llm_calls,
-           auto_start_session=auto_start_session)
+    return inherited_session_id or c.current_session_id
 
 
 def end_session(end_state: str,
@@ -66,7 +74,7 @@ def end_session(end_state: str,
     Client().end_session(end_state, end_state_reason, video)
 
 
-def start_session(tags: Optional[List[str]] = None, config: Optional[Configuration] = None):
+def start_session(tags: Optional[List[str]] = None, config: Optional[Configuration] = None, inherited_session_id: Optional[str] = None):
     """
         Start a new session for recording events.
 
@@ -75,7 +83,7 @@ def start_session(tags: Optional[List[str]] = None, config: Optional[Configurati
                 e.g. ["test_run"].
             config: (Configuration, optional): Client configuration object
     """
-    Client().start_session(tags, config)
+    return Client().start_session(tags, config, inherited_session_id)
 
 
 def record(event: Event | ErrorEvent):

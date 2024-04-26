@@ -69,9 +69,32 @@ class TestSessions:
         agentops.end_session(end_state)
         time.sleep(0.15)
 
-        # Assert 3 requets, 1 for session init, 1 for event, 1 for end session
+        # Assert 3 requests, 1 for session init, 1 for event, 1 for end session
         assert len(mock_req.request_history) == 3
         assert mock_req.last_request.headers['X-Agentops-Auth'] == self.api_key
         request_json = mock_req.last_request.json()
         assert request_json['session']['end_state'] == end_state
         assert request_json['session']['tags'] == tags
+
+    def test_inherit_session_id(self, mock_req):
+        # Arrange
+        inherited_id = '4f72e834-ff26-4802-ba2d-62e7613446f1'
+        agentops.start_session(tags=['test'], config=self.config, inherited_session_id=inherited_id)
+
+        # Act
+        agentops.record(ActionEvent(self.event_type))
+        agentops.record(ActionEvent(self.event_type))
+        time.sleep(0.15)
+
+        # event session_id correct
+        request_json = mock_req.last_request.json()
+        assert request_json['session_id'] == inherited_id
+
+        # Act
+        end_state = 'Success'
+        agentops.end_session(end_state)
+        time.sleep(0.15)
+
+        # Assert session ended with correct id
+        request_json = mock_req.last_request.json()
+        assert request_json['session']['session_id'] == inherited_id

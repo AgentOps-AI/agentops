@@ -1,4 +1,4 @@
-import logging
+from .log_config import logger
 from uuid import uuid4
 from agentops import Client
 from inspect import isclass, isfunction
@@ -18,7 +18,7 @@ def track_agent(name: str | None = None):
                     self.agent_ops_agent_id = uuid4()
                     Client().create_agent(self.agent_ops_agent_id, self.agent_ops_agent_name)
                 except AttributeError as e:
-                    logging.error("AgentOps failed to track an agent. This often happens if agentops.init() was not "
+                    logger.warning("AgentOps failed to track an agent. This often happens if agentops.init() was not "
                                   "called before initializing an agent with the @track_agent decorator.")
                     raise e
 

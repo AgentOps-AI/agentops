@@ -14,11 +14,12 @@ from .host_env import get_host_env
 from uuid import uuid4
 from typing import Optional, List
 import traceback
-import logging
+from .log_config import logger, set_logging_level_info
 import inspect
 import atexit
 import signal
 import sys
+import threading
 
 from .meta_client import MetaClient
 from .config import Configuration, ConfigurationError
@@ -46,6 +47,7 @@ class Client(metaclass=MetaClient):
             override (bool, optional): [Deprecated] Use `instrument_llm_calls` instead. Whether to instrument LLM calls and emit LLMEvents..
             instrument_llm_calls (bool): Whether to instrument LLM calls and emit LLMEvents..
             auto_start_session (bool): Whether to start a session automatically when the client is created.
+            inherited_session_id (optional, str): Init Agentops with an existing Session
         Attributes:
             _session (Session, optional): A Session is a grouping of events (e.g. a run of your agent).
             _worker (Worker, optional): A Worker manages the event queue and sends session updates to the AgentOps api server
@@ -60,12 +62,13 @@ class Client(metaclass=MetaClient):
                  tags: Optional[List[str]] = None,
                  override: Optional[bool] = None,  # Deprecated
                  instrument_llm_calls=True,
-                 auto_start_session=True
+                 auto_start_session=True,
+                 inherited_session_id: Optional[str] = None
                  ):
 
         if override is not None:
-            logging.warning("🖇 AgentOps: The 'override' parameter is deprecated. Use 'instrument_llm_calls' instead.",
-                            DeprecationWarning, stacklevel=2)
+            logger.warning("🖇 AgentOps: The 'override' parameter is deprecated. Use 'instrument_llm_calls' instead.",
+                           DeprecationWarning, stacklevel=2)
             instrument_llm_calls = instrument_llm_calls or override
 
         self._session = None
@@ -84,7 +87,7 @@ class Client(metaclass=MetaClient):
         self._handle_unclean_exits()
 
         if auto_start_session:
-            self.start_session(tags, self.config)
+            self.start_session(tags, self.config, inherited_session_id)
 
         if instrument_llm_calls:
             self.llm_tracker = LlmTracker(self)
@@ -130,7 +133,7 @@ class Client(metaclass=MetaClient):
         if self._session is not None and not self._session.has_ended:
             self._worker.add_event(event.__dict__)
         else:
-            logging.warning(
+            logger.warning(
                 "🖇 AgentOps: Cannot record event - no current session")
 
     def _record_event_sync(self, func, event_name, *args, **kwargs):
@@ -165,8 +168,7 @@ class Client(metaclass=MetaClient):
             self.record(event)
 
         except Exception as e:
-            # TODO: add the stack trace
-            self.record(ErrorEvent(trigger_event=event, details={f"{type(e).__name__}": str(e)}))
+            self.record(ErrorEvent(trigger_event=event, exception=e))
 
             # Re-raise the exception
             raise
@@ -205,15 +207,14 @@ class Client(metaclass=MetaClient):
             self.record(event)
 
         except Exception as e:
-            # TODO: add the stack trace
-            self.record(ErrorEvent(trigger_event=event, details={f"{type(e).__name__}": str(e)}))
+            self.record(ErrorEvent(trigger_event=event, exception=e))
 
             # Re-raise the exception
             raise
 
         return returns
 
-    def start_session(self, tags: Optional[List[str]] = None, config: Optional[Configuration] = None):
+    def start_session(self, tags: Optional[List[str]] = None, config: Optional[Configuration] = None, inherited_session_id: Optional[str] = None):
         """
             Start a new session for recording events.
 
@@ -221,22 +222,27 @@ class Client(metaclass=MetaClient):
                 tags (List[str], optional): Tags that can be used for grouping or sorting later.
                     e.g. ["test_run"].
                 config: (Configuration, optional): Client configuration object
+                inherited_session_id (optional, str): assign session id to match existing Session
         """
+        set_logging_level_info()
+
         if self._session is not None:
-            return logging.warning("🖇 AgentOps: Cannot start session - session already started")
+            return logger.warning("🖇 AgentOps: Cannot start session - session already started")
 
         if not config and not self.config:
-            return logging.warning("🖇 AgentOps: Cannot start session - missing configuration")
+            return logger.warning("🖇 AgentOps: Cannot start session - missing configuration")
 
-        self._session = Session(uuid4(), tags or self._tags, host_env=get_host_env())
+        self._session = Session(inherited_session_id or uuid4(), tags or self._tags, host_env=get_host_env())
         self._worker = Worker(config or self.config)
         start_session_result = self._worker.start_session(self._session)
         if not start_session_result:
             self._session = None
-            return logging.warning("🖇 AgentOps: Cannot start session")
+            return logger.warning("🖇 AgentOps: Cannot start session")
 
-        logging.info('View info on this session at https://app.agentops.ai/drilldown?session_id={}'
-                     .format(self._session.session_id))
+        logger.info('View info on this session at https://app.agentops.ai/drilldown?session_id={}'
+                    .format(self._session.session_id))
+
+        return self._session.session_id
 
     def end_session(self,
                     end_state: str,
@@ -251,10 +257,10 @@ class Client(metaclass=MetaClient):
                 video (str, optional): The video screen recording of the session
         """
         if self._session is None or self._session.has_ended:
-            return logging.warning("🖇 AgentOps: Cannot end session - no current session")
+            return logger.warning("🖇 AgentOps: Cannot end session - no current session")
 
         if not any(end_state == state.value for state in EndState):
-            return logging.warning("🖇 AgentOps: Invalid end_state. Please use one of the EndState enums")
+            return logger.warning("🖇 AgentOps: Invalid end_state. Please use one of the EndState enums")
 
         self._session.video = video
         self._session.end_session(end_state, end_state_reason)
@@ -286,7 +292,7 @@ class Client(metaclass=MetaClient):
                     frame: The current stack frame.
             """
             signal_name = 'SIGINT' if signum == signal.SIGINT else 'SIGTERM'
-            logging.info(
+            logger.info(
                 f'🖇 AgentOps: {signal_name} detected. Ending session...')
             self.end_session(end_state='Fail',
                              end_state_reason=f'Signal {signal_name} detected')
@@ -311,15 +317,17 @@ class Client(metaclass=MetaClient):
             # Then call the default excepthook to exit the program
             sys.__excepthook__(exc_type, exc_value, exc_traceback)
 
-        atexit.register(lambda: cleanup(end_state="Indeterminate",
-                        end_state_reason="Process exited without calling end_session()"))
-        signal.signal(signal.SIGINT, signal_handler)
-        signal.signal(signal.SIGTERM, signal_handler)
-        sys.excepthook = handle_exception
+        # if main thread
+        if isinstance(threading.current_thread(), threading._MainThread):
+            atexit.register(lambda: cleanup(end_state="Indeterminate",
+                            end_state_reason="Process exited without calling end_session()"))
+            signal.signal(signal.SIGINT, signal_handler)
+            signal.signal(signal.SIGTERM, signal_handler)
+            sys.excepthook = handle_exception
 
     @property
     def current_session_id(self):
-        return self._session.session_id
+        return self._session.session_id if self._session else None
 
     @property
     def api_key(self):
