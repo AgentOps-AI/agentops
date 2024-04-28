@@ -33,16 +33,16 @@ class Client(metaclass=MetaClient):
 
         Args:
 
-            api_key (str, optional): API Key for AgentOps services. If none is provided, key will 
+            api_key (str, optional): API Key for AgentOps services. If none is provided, key will
                 be read from the AGENTOPS_API_KEY environment variable.
-            parent_key (str, optional): Organization key to give visibility of all user sessions the user's organization. If none is provided, key will 
+            parent_key (str, optional): Organization key to give visibility of all user sessions the user's organization. If none is provided, key will
                 be read from the AGENTOPS_PARENT_KEY environment variable.
-            endpoint (str, optional): The endpoint for the AgentOps service. If none is provided, key will 
+            endpoint (str, optional): The endpoint for the AgentOps service. If none is provided, key will
                 be read from the AGENTOPS_API_ENDPOINT environment variable. Defaults to 'https://api.agentops.ai'.
-            max_wait_time (int, optional): The maximum time to wait in milliseconds before flushing the queue. 
+            max_wait_time (int, optional): The maximum time to wait in milliseconds before flushing the queue.
                 Defaults to 30,000 (30 seconds)
             max_queue_size (int, optional): The maximum size of the event queue. Defaults to 100.
-            tags (List[str], optional): Tags for the sessions that can be used for grouping or 
+            tags (List[str], optional): Tags for the sessions that can be used for grouping or
                 sorting later (e.g. ["GPT-4"]).
             override (bool, optional): [Deprecated] Use `instrument_llm_calls` instead. Whether to instrument LLM calls and emit LLMEvents..
             instrument_llm_calls (bool): Whether to instrument LLM calls and emit LLMEvents..
@@ -95,7 +95,7 @@ class Client(metaclass=MetaClient):
 
     def add_tags(self, tags: List[str]):
         """
-            Append to session tags at runtime. 
+            Append to session tags at runtime.
 
             Args:
                 tags (List[str]): The list of tags to append.
@@ -111,7 +111,7 @@ class Client(metaclass=MetaClient):
 
     def set_tags(self, tags: List[str]):
         """
-            Replace session tags at runtime. 
+            Replace session tags at runtime.
 
             Args:
                 tags (List[str]): The list of tags to set.
@@ -268,7 +268,7 @@ class Client(metaclass=MetaClient):
         if token_cost == 'unknown':
             print('🖇 AgentOps: Could not determine cost of run.')
         else:
-            print('🖇 AgentOps: This run cost ${:.6f}'.format(float(token_cost)))
+            print('🖇 AgentOps: This run cost ${:.6f}'.format('0' if token_cost == 0 else '{:.6f}'.format(token_cost)))
         self._session = None
         self._worker = None
 
@@ -305,7 +305,7 @@ class Client(metaclass=MetaClient):
                 Args:
                     exc_type (Type[BaseException]): The type of the exception.
                     exc_value (BaseException): The exception instance.
-                    exc_traceback (TracebackType): A traceback object encapsulating the call stack at the 
+                    exc_traceback (TracebackType): A traceback object encapsulating the call stack at the
                                                 point where the exception originally occurred.
             """
             formatted_traceback = ''.join(traceback.format_exception(exc_type, exc_value,
