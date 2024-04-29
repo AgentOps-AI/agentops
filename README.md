@@ -21,6 +21,7 @@
 <a href="https://docs.agentops.ai/introduction">📙 Documentation</a>
 </p>
 
+
 # AgentOps
 
 Build your next agent with benchmarks, observability, and replay analytics. AgentOps is the toolkit for evaluating and developing robust and reliable AI agents.
@@ -38,6 +39,22 @@ You can sign up for AgentOps [here](https://app.agentops.ai).
 <a href="https://github.com/agentops-ai/agentops/issues">
     <img src="https://img.shields.io/github/commit-activity/m/agentops-ai/agentops" alt="git commit activity" />
   </a>
+
+<details open>
+  <summary>Agent Dashboard</summary>
+   <img src="https://github.com/AgentOps-AI/agentops/assets/14807319/158e082a-9a7d-49b7-9b41-51a49a1f7d3d" style="width: 90%;" alt="Agent Dashboard"/>
+</details>
+
+<details>
+  <summary>Session Analytics</summary>
+  <img src="https://github.com/AgentOps-AI/agentops/assets/14807319/d7228019-1488-40d3-852f-a61e998658ad" style="width: 90%;" alt="Session Analytics"/>
+</details>
+
+<details>
+   <summary>Session Replays</summary>
+   <img src="https://github.com/AgentOps-AI/agentops/assets/14807319/561d59f3-c441-4066-914b-f6cfe32a598c" style="width: 90%;" alt="Session Replays"/>
+</details>
+
 ## Quick Start ⌨️
 
 ```pip install agentops```
