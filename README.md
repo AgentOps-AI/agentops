@@ -94,7 +94,7 @@ Refer to our [API documentation](http://docs.agentops.ai) for detailed instructi
 
 ### CrewAI 🛶
 
-Write Crew agents with observability with only 2 lines of code. [More information here.](https://docs.crewai.com/how-to/AgentOps-Observability/). Simply set an `AGENTOPS_API_KEY` in your environment, and your crews will automatically be set up with.
+Write Crew agents with observability with only 2 lines of code. [More information here.](https://docs.crewai.com/how-to/AgentOps-Observability/). Simply set an `AGENTOPS_API_KEY` in your environment, and your crews will get automatic monitoring on the AgentOps dashboard.
 
 ## Callback handlers ↩️
 
