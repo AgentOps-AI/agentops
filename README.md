@@ -110,7 +110,7 @@ Refer to our [API documentation](http://docs.agentops.ai) for detailed instructi
 
 ### CrewAI 🛶
 
-Write Crew agents with observability with only 2 lines of code. Simply set an `AGENTOPS_API_KEY` in your environment, and your crews will get automatic monitoring on the AgentOps dashboard.
+Build Crew agents with observability with only 2 lines of code. Simply set an `AGENTOPS_API_KEY` in your environment, and your crews will get automatic monitoring on the AgentOps dashboard.
 
 AgentOps is officially supported on Crew's latest rc branch: `crewai==0.28.9rc1`
 
