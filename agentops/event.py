@@ -46,6 +46,29 @@ class Event:
     id: UUID = field(default_factory=uuid4)
     # TODO: has_been_recorded: bool = False
 
+    def __setitem__(self, key, value):
+        if key == 'event_type':
+            if not isinstance(value, str):
+                raise ValueError("event_type must be a string")
+        elif key == 'params':
+            if not isinstance(value, (dict, type(None))):
+                raise ValueError("params must be a dictionary")
+        elif key == 'returns':
+            if not isinstance(value, (str, type(None))):
+                raise ValueError("returns must be a string")
+        elif key == 'init_timestamp':
+            if not isinstance(value, (str,type(None))):
+                raise ValueError("init_timestamp must be a string")
+        elif key == 'end_timestamp':
+            if not isinstance(value, str):
+                raise ValueError("end_timestamp must be a string")
+        elif key == 'agent_id':
+            if not isinstance(value, (UUID, type(None))):
+                raise ValueError("agent_id must be a UUID")
+        elif key == 'id':
+            if not isinstance(value, UUID):
+                raise ValueError("id must be a UUID")
+
 
 @dataclass
 class ActionEvent(Event):
@@ -56,6 +79,7 @@ class ActionEvent(Event):
     logs(str, optional): For detailed information/logging related to the action
     screenshot(str, optional): url to snapshot if agent interacts with UI
     """
+
 
     event_type: str = EventType.ACTION.value
     # TODO: Should not be optional, but non-default argument 'agent_id' follows default argument error

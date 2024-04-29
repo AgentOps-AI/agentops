@@ -29,6 +29,32 @@ class Session:
         self.end_state_reason = None
         self.host_env = host_env
 
+    def __setitem__(self, key, value):
+        if key == 'end_timestamp':
+            if not isinstance(value, str):
+                raise ValueError("end_timestamp must be a string")
+        elif key == 'end_state':
+            if not isinstance(value, str):
+                raise ValueError("end_state must be a string")
+        elif key == 'session_id':
+            if not isinstance(value, UUID):
+                raise ValueError("session_id must be a UUID")
+        elif key == 'init_timestamp':
+            if not isinstance(value, str):
+                raise ValueError("init_timestamp must be a string")
+        elif key == 'tags':
+            if not isinstance(value, list) or not all(isinstance(item,str) for item in value):
+                raise ValueError("tags must be a list")
+        elif key == 'video':
+            if not isinstance(value, str):
+                raise ValueError("video must be a string")
+        elif key == 'end_state_reason':
+            if not isinstance(value, str):
+                raise ValueError("end_state_reason must be a string")
+        elif key == 'host_env':
+            if not isinstance(value, dict):
+                raise ValueError("host_env must be a dictionary")
+
     def set_session_video(self, video: str):
         """
         Sets a url to the video recording of the session.
