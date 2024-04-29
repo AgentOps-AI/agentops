@@ -15,11 +15,13 @@ from uuid import uuid4
 from typing import Optional, List
 import traceback
 from .log_config import logger, set_logging_level_info
+from decimal import *
 import inspect
 import atexit
 import signal
 import sys
 import threading
+
 
 from .meta_client import MetaClient
 from .config import Configuration, ConfigurationError
@@ -264,11 +266,13 @@ class Client(metaclass=MetaClient):
 
         self._session.video = video
         self._session.end_session(end_state, end_state_reason)
-        token_cost = self._worker.end_session(self._session)
+        getcontext().prec = 6
+        token_cost = Decimal(self._worker.end_session(self._session))
         if token_cost == 'unknown':
             print('🖇 AgentOps: Could not determine cost of run.')
         else:
-            print('🖇 AgentOps: This run cost ${}'.format('{:.2f}'.format(token_cost) if token_cost == 0 else '{:.6f}'.format(float(token_cost))))
+
+            print('🖇 AgentOps: This run cost ${}'.format('{:.2f}'.format(token_cost) if token_cost == 0 else '{:.6f}'.format(token_cost)))
         self._session = None
         self._worker = None
 
