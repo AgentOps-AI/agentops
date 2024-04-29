@@ -21,7 +21,6 @@
 <a href="https://docs.agentops.ai/introduction">📙 Documentation</a>
 </p>
 
-
 # AgentOps
 
 Build your next agent with benchmarks, observability, and replay analytics. AgentOps is the toolkit for evaluating and developing robust and reliable AI agents.
