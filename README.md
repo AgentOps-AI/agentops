@@ -61,7 +61,7 @@ You can sign up for AgentOps [here](https://app.agentops.ai).
 ### Session replays in 3 lines of code
 Initialize the AgentOps client, and automatically get analytics on every LLM call.
 
-```python python
+```python
 import agentops
 
 # Beginning of program's code (i.e. main.py, __init__.py)
@@ -121,7 +121,7 @@ AgentOps is officially supported on Crew's latest rc branch: `crewai==0.28.9rc1`
 ## Callback handlers ↩️
 
 ### Langchain
-AgentOps works seemlessly with applications built using Langchain. To use the handler, install Langchain as an optional dependency:
+AgentOps works seamlessly with applications built using Langchain. To use the handler, install Langchain as an optional dependency:
 ```shell
 pip install agentops[langchain]
 ```
@@ -157,7 +157,7 @@ Check out the [Langchain Examples Notebook](./examples/langchain_examples.ipynb)
 
 ### Why AgentOps? 🤔
 
-Our mission is to bring your agent from protype to production.
+Our mission is to bring your agent from prototype to production.
 
 Agent developers often work with little to no visibility into agent testing performance. This means their agents never leave the lab. We're changing that. 
 
