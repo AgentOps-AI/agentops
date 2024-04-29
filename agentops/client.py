@@ -268,7 +268,7 @@ class Client(metaclass=MetaClient):
         if token_cost == 'unknown':
             print('🖇 AgentOps: Could not determine cost of run.')
         else:
-            print('🖇 AgentOps: This run cost ${}'.format('{:.2f}'.format(token_cost) if token_cost == 0 else '{:.6f}'.format(token_cost)))
+            print('🖇 AgentOps: This run cost ${}'.format('{:.2f}'.format(token_cost) if token_cost == 0 else '{:.6f}'.format(float(token_cost))))
         self._session = None
         self._worker = None
 
