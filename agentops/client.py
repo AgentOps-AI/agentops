@@ -154,6 +154,7 @@ class Client(metaclass=MetaClient):
                             init_timestamp=init_time,
                             agent_id=check_call_stack_for_agent_id(),
                             action_type=event_name)
+        self.record(event)
 
         try:
             returns = func(*args, **kwargs)
@@ -273,7 +274,6 @@ class Client(metaclass=MetaClient):
         if token_cost == 'unknown':
             print('🖇 AgentOps: Could not determine cost of run.')
         else:
-
             print('🖇 AgentOps: This run cost ${}'.format('{:.2f}'.format(token_cost) if token_cost == 0 else '{:.6f}'.format(token_cost)))
         self._session = None
         self._worker = None

@@ -21,11 +21,20 @@ class Worker:
 
     def add_event(self, event: dict) -> None:
         with self.lock:
-            self.queue.append(event)
-            if len(self.queue) >= self.config.max_queue_size:
-                self.flush_queue()
+            found = False  # Flag to track if event is found and updated
+            for existing_event in self.queue:
+                if existing_event.get('id') == event.get('id'):
+                    existing_event.update(event)
+                    print('updated_event', existing_event)
+                    found = True
+                    break
+                if not found:
+                    self.queue.append(event)
+                    print('added_new_event', event)
+                if len(self.queue) >= self.config.max_queue_size:
+                    self.flush_queue()
 
-    def flush_queue(self) -> None:
+def flush_queue(self) -> None:
         with self.lock:
             if len(self.queue) > 0:
                 events = self.queue
