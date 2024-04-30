@@ -1,7 +1,8 @@
 import functools
 import sys
 from importlib import import_module
-from packaging.version import parse
+from importlib.metadata import version
+from packaging.version import Version, parse
 from .log_config import logger
 from .event import LLMEvent, ErrorEvent
 from .helpers import get_ISO_time, check_call_stack_for_agent_id
@@ -10,6 +11,7 @@ import inspect
 
 class LlmTracker:
     SUPPORTED_APIS = {
+        'litellm': {'1.3.1': ("openai_chat_completions.completion",)},
         'openai': {
             '1.0.0': (
                 "chat.completions.create",
@@ -201,7 +203,6 @@ class LlmTracker:
         # Store the original method
         original_create = completions.Completions.create
 
-        # Define the patched function
         def patched_function(*args, **kwargs):
             init_timestamp = get_ISO_time()
             # Call the original function with its original arguments
@@ -216,7 +217,6 @@ class LlmTracker:
 
         # Store the original method
         original_create = completions.AsyncCompletions.create
-        # Define the patched function
 
         async def patched_function(*args, **kwargs):
             # Call the original function with its original arguments
@@ -226,6 +226,34 @@ class LlmTracker:
 
         # Override the original method with the patched one
         completions.AsyncCompletions.create = patched_function
+
+    def override_litellm_completion(self):
+        import litellm
+
+        original_create = litellm.completion
+
+        def patched_function(*args, **kwargs):
+            init_timestamp = get_ISO_time()
+            result = original_create(*args, **kwargs)
+            # Note: litellm calls all LLM APIs using the OpenAI format
+            return self._handle_response_v1_openai(result, kwargs, init_timestamp)
+
+        litellm.completion = patched_function
+
+    def override_litellm_async_completion(self):
+        import litellm
+
+        original_create = litellm.acompletion
+
+        async def patched_function(*args, **kwargs):
+            # Call the original function with its original arguments
+            init_timestamp = get_ISO_time()
+            result = await original_create(*args, **kwargs)
+            # Note: litellm calls all LLM APIs using the OpenAI format
+            return self._handle_response_v1_openai(result, kwargs, init_timestamp)
+
+        # Override the original method with the patched one
+        litellm.acompletion = patched_function
 
     def _override_method(self, api, method_path, module):
         def handle_response(result, kwargs, init_timestamp):
@@ -260,24 +288,31 @@ class LlmTracker:
             parent = functools.reduce(getattr, method_parts[:-1], module)
             setattr(parent, method_parts[-1], new_method)
 
-    def override_api(self, api):
+    def override_api(self):
         """
         Overrides key methods of the specified API to record events.
         """
-        if api in sys.modules:
-            if api not in self.SUPPORTED_APIS:
-                raise ValueError(f"Unsupported API: {api}")
 
-            module = import_module(api)
-            if api == 'openai':
-                # Patch openai v1.0.0+ methods
-                if hasattr(module, '__version__'):
-                    module_version = parse(module.__version__)
-                    if module_version >= parse('1.0.0'):
-                        self.override_openai_v1_completion()
-                        self.override_openai_v1_async_completion()
-                        return
+        for api in self.SUPPORTED_APIS:
+            if api in sys.modules:
+                module = import_module(api)
+                if api == 'litellm':
+                    module_version = version(api)
+                    if Version(module_version) >= parse('1.3.1'):
+                        self.override_litellm_completion()
+                        self.override_litellm_async_completion()
+                    else:
+                        logger.warning(f'🖇 AgentOps: Only litellm>=1.3.1 supported. v{module_version} found.')
+                    return  # If using an abstraction like litellm, do not patch the underlying LLM APIs
 
-                # Patch openai <v1.0.0 methods
-                for method_path in self.SUPPORTED_APIS['openai']['0.0.0']:
-                    self._override_method(api, method_path, module)
+                if api == 'openai':
+                    # Patch openai v1.0.0+ methods
+                    if hasattr(module, '__version__'):
+                        module_version = parse(module.__version__)
+                        if module_version >= parse('1.0.0'):
+                            self.override_openai_v1_completion()
+                            self.override_openai_v1_async_completion()
+                        else:
+                            # Patch openai <v1.0.0 methods
+                            for method_path in self.SUPPORTED_APIS['openai']['0.0.0']:
+                                self._override_method(api, method_path, module)
