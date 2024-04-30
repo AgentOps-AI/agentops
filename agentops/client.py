@@ -15,7 +15,7 @@ from uuid import uuid4
 from typing import Optional, List
 import traceback
 from .log_config import logger, set_logging_level_info
-from decimal import *
+from decimal import Decimal
 import inspect
 import atexit
 import signal
@@ -266,7 +266,6 @@ class Client(metaclass=MetaClient):
 
         self._session.video = video
         self._session.end_session(end_state, end_state_reason)
-        getcontext().prec = 6
         token_cost = Decimal(self._worker.end_session(self._session))
         if token_cost == 'unknown':
             print('🖇 AgentOps: Could not determine cost of run.')
