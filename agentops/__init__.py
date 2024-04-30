@@ -20,7 +20,8 @@ def init(api_key: Optional[str] = None,
          override: Optional[bool] = None,  # Deprecated
          instrument_llm_calls=True,
          auto_start_session=True,
-         inherited_session_id: Optional[str] = None
+         inherited_session_id: Optional[str] = None,
+         env_data_opt_out: Optional[bool] = False
          ):
     """
         Initializes the AgentOps singleton pattern.
@@ -42,6 +43,7 @@ def init(api_key: Optional[str] = None,
             instrument_llm_calls (bool): Whether to instrument LLM calls and emit LLMEvents..
             auto_start_session (bool): Whether to start a session automatically when the client is created.
             inherited_session_id (optional, str): Init Agentops with an existing Session
+            env_data_opt_out (optional, bool): Opt out of AgentOps tracking environment data for debugging like storage, memory and CPU
         Attributes:
     """
     set_logging_level_info()
@@ -54,7 +56,8 @@ def init(api_key: Optional[str] = None,
                override=override,
                instrument_llm_calls=instrument_llm_calls,
                auto_start_session=auto_start_session,
-               inherited_session_id=inherited_session_id
+               inherited_session_id=inherited_session_id,
+               env_data_opt_out=env_data_opt_out
                )
 
     return inherited_session_id or c.current_session_id

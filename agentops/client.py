@@ -50,6 +50,7 @@ class Client(metaclass=MetaClient):
             instrument_llm_calls (bool): Whether to instrument LLM calls and emit LLMEvents..
             auto_start_session (bool): Whether to start a session automatically when the client is created.
             inherited_session_id (optional, str): Init Agentops with an existing Session
+            env_data_opt_out (optional, bool): Opt out of AgentOps tracking environment data for debugging like storage, memory and CPU
         Attributes:
             _session (Session, optional): A Session is a grouping of events (e.g. a run of your agent).
             _worker (Worker, optional): A Worker manages the event queue and sends session updates to the AgentOps api server
@@ -65,7 +66,8 @@ class Client(metaclass=MetaClient):
                  override: Optional[bool] = None,  # Deprecated
                  instrument_llm_calls=True,
                  auto_start_session=True,
-                 inherited_session_id: Optional[str] = None
+                 inherited_session_id: Optional[str] = None,
+                 env_data_opt_out: Optional[bool] = False
                  ):
 
         if override is not None:
@@ -76,6 +78,8 @@ class Client(metaclass=MetaClient):
         self._session = None
         self._worker = None
         self._tags = tags
+
+        self._env_data_opt_out = env_data_opt_out
 
         try:
             self.config = Configuration(api_key=api_key,
@@ -234,7 +238,7 @@ class Client(metaclass=MetaClient):
         if not config and not self.config:
             return logger.warning("🖇 AgentOps: Cannot start session - missing configuration")
 
-        self._session = Session(inherited_session_id or uuid4(), tags or self._tags, host_env=get_host_env())
+        self._session = Session(inherited_session_id or uuid4(), tags or self._tags, host_env=(get_host_env() if self._env_data_opt_out else None))
         self._worker = Worker(config or self.config)
         start_session_result = self._worker.start_session(self._session)
         if not start_session_result:
