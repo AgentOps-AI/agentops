@@ -266,9 +266,6 @@ class Client(metaclass=MetaClient):
             return logger.warning("🖇 AgentOps: Invalid end_state. Please use one of the EndState enums")
 
         self._session.video = video
-        event = ActionEvent(action_type='end_session', params={
-                            'end_state': end_state, 'end_state_reason': end_state_reason})
-        self._worker.add_event(event)
         self._session.end_session(end_state, end_state_reason)
         token_cost = Decimal(self._worker.end_session(self._session))
         if token_cost == 'unknown':
