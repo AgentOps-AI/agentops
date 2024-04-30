@@ -238,7 +238,7 @@ class Client(metaclass=MetaClient):
         if not config and not self.config:
             return logger.warning("🖇 AgentOps: Cannot start session - missing configuration")
 
-        self._session = Session(inherited_session_id or uuid4(), tags or self._tags, host_env=(get_host_env() if self._env_data_opt_out else None))
+        self._session = Session(inherited_session_id or uuid4(), tags or self._tags, host_env=get_host_env(self._env_data_opt_out))
         self._worker = Worker(config or self.config)
         start_session_result = self._worker.start_session(self._session)
         if not start_session_result:
