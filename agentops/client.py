@@ -150,6 +150,7 @@ class Client(metaclass=MetaClient):
         arg_values.update(dict(zip(arg_names, args)))
         arg_values.update(kwargs)
 
+
         event = ActionEvent(params=arg_values,
                             init_timestamp=init_time,
                             agent_id=check_call_stack_for_agent_id(),
@@ -194,7 +195,7 @@ class Client(metaclass=MetaClient):
                             init_timestamp=init_time,
                             agent_id=check_call_stack_for_agent_id(),
                             action_type=event_name)
-
+        self.record(event)
         try:
             returns = await func(*args, **kwargs)
 
