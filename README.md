@@ -41,17 +41,23 @@ You can sign up for AgentOps [here](https://app.agentops.ai).
 
 <details open>
   <summary>Agent Dashboard</summary>
+  <a href="https://app.agentops.ai?=gh">
    <img src="https://github.com/AgentOps-AI/agentops/assets/14807319/158e082a-9a7d-49b7-9b41-51a49a1f7d3d" style="width: 90%;" alt="Agent Dashboard"/>
+  </a>
 </details>
 
 <details>
   <summary>Session Analytics</summary>
-  <img src="https://github.com/AgentOps-AI/agentops/assets/14807319/d7228019-1488-40d3-852f-a61e998658ad" style="width: 90%;" alt="Session Analytics"/>
+  <a href="https://app.agentops.ai?=gh">
+    <img src="https://github.com/AgentOps-AI/agentops/assets/14807319/d7228019-1488-40d3-852f-a61e998658ad" style="width: 90%;" alt="Session Analytics"/>
+  </a>
 </details>
 
 <details>
-   <summary>Session Replays</summary>
-   <img src="https://github.com/AgentOps-AI/agentops/assets/14807319/561d59f3-c441-4066-914b-f6cfe32a598c" style="width: 90%;" alt="Session Replays"/>
+  <summary>Session Replays</summary>
+  <a href="https://app.agentops.ai?=gh">
+    <img src="https://github.com/AgentOps-AI/agentops/assets/14807319/561d59f3-c441-4066-914b-f6cfe32a598c" style="width: 90%;" alt="Session Replays"/>
+  </a>
 </details>
 
 ## Quick Start ⌨️
