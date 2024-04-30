@@ -1,5 +1,7 @@
 <div align="center">
-  <img src="logo.png" style="margin: 15px; max-width: 300px" width="50%" alt="Logo">
+  <a href="https://agentops.ai?ref=gh">
+    <img src="logo.png" style="margin: 15px; max-width: 300px" width="50%" alt="Logo">
+  </a>
 </div>
 <p align="center">
   <em>AI agents suck. We’re fixing that.</em>
@@ -16,56 +18,45 @@
 <span>&nbsp;&nbsp;•&nbsp;&nbsp;</span>
 <a href="https://discord.gg/JHPt4C7r">📢 Discord</a>
 <span>&nbsp;&nbsp;•&nbsp;&nbsp;</span>
-<a href="https://app.agentops.ai/?=gh">🖇️ AgentOps</a>
+<a href="https://app.agentops.ai/?ref=gh">🖇️ AgentOps</a>
 <span>&nbsp;&nbsp;•&nbsp;&nbsp;</span>
 <a href="https://docs.agentops.ai/introduction">📙 Documentation</a>
 </p>
 
 # AgentOps
 
-Build your next agent with benchmarks, observability, and replay analytics. AgentOps is the toolkit for evaluating and developing robust and reliable AI agents.
-
-You can sign up for AgentOps [here](https://app.agentops.ai).
-
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT) ![PyPI - Version](https://img.shields.io/pypi/v/agentops) <a href="https://pepy.tech/project/agentops">
   <img src="https://static.pepy.tech/badge/agentops/month"> <a href="https://twitter.com/agentopsai">
     <img src="https://img.shields.io/badge/follow-%40agentops-1DA1F2?logo=twitter&style=social" alt="AgentOps Twitter" /> 
   </a>
-<a href="https://discord.gg/mKW3ZhN9p2">
+  <a href="https://discord.gg/mKW3ZhN9p2">
     <img src="https://img.shields.io/badge/chat-on%20Discord-blueviolet" alt="Discord community channel" />
   </a>
-  <a href="mailto:investor@agentops.ai"><img src="https://img.shields.io/website?color=%23f26522&down_message=Y%20Combinator&label=Not%20Backed%20By&logo=ycombinator&style=flat-square&up_message=Y%20Combinator&url=https%3A%2F%2Fwww.ycombinator.com"></a>
-<a href="https://github.com/agentops-ai/agentops/issues">
+  <a href="mailto:investor@agentops.ai"><img src="https://img.shields.io/website?color=%23f26522&down_message=Y%20Combinator&label=Not%20Backed%20By&logo=ycombinator&style=flat-square&up_message=Y%20Combinator&url=https%3A%2F%2Fwww.ycombinator.com"/>
+  <a href="https://github.com/agentops-ai/agentops/issues">
     <img src="https://img.shields.io/github/commit-activity/m/agentops-ai/agentops" alt="git commit activity" />
   </a>
 
-<details open>
-  <summary>Agent Dashboard</summary>
-  <a href="https://app.agentops.ai?=gh">
-   <img src="https://github.com/AgentOps-AI/agentops/assets/14807319/158e082a-9a7d-49b7-9b41-51a49a1f7d3d" style="width: 90%;" alt="Agent Dashboard"/>
-  </a>
-</details>
 
-<details>
-  <summary>Session Analytics</summary>
-  <a href="https://app.agentops.ai?=gh">
-    <img src="https://github.com/AgentOps-AI/agentops/assets/14807319/d7228019-1488-40d3-852f-a61e998658ad" style="width: 90%;" alt="Session Analytics"/>
-  </a>
-</details>
+AgentOps helps developers build, evaluate, and monitor AI agents. Tools to build agents from prototype to production.
 
-<details>
-  <summary>Session Replays</summary>
-  <a href="https://app.agentops.ai?=gh">
-    <img src="https://github.com/AgentOps-AI/agentops/assets/14807319/561d59f3-c441-4066-914b-f6cfe32a598c" style="width: 90%;" alt="Session Replays"/>
-  </a>
-</details>
+
+|||
+|------------------------------------------|----------------------------------------------------|
+| 📊 **Replay Analytics and Debugging** | Step-by-step agent execution graphs |
+| 💸 **LLM Cost Management**   | Track spend with LLM foundation model providers |
+| 🧪 **Agent Benchmarking** | Test your agents against 1,000+ evals |
+| 🔐 **Compliance and Security**            | Detect common prompt injection and data exfiltration exploits |
+| 🤝 **Framework Integrations**            | Easily plugs in with frameworks like CrewAI and LangChain |
 
 ## Quick Start ⌨️
 
-```pip install agentops```
+```python
+pip install agentops
+```
 
 ### Session replays in 3 lines of code
-Initialize the AgentOps client, and automatically get analytics on every LLM call.
+Initialize the AgentOps client and automatically get analytics on every LLM call.
 
 ```python
 import agentops
@@ -84,7 +75,30 @@ agentops.end_session('Success')
 # Woohoo You're done 🎉
 ```
 
-Refer to our [API documentation](http://docs.agentops.ai) for detailed instructions.
+All your sessions are available on the [AgentOps dashboard](https://app.agentops.ai?ref=gh). Refer to our [API documentation](http://docs.agentops.ai) for detailed instructions.
+
+
+<details open>
+  <summary>Agent Dashboard</summary>
+  <a href="https://app.agentops.ai?ref=gh">
+   <img src="https://github.com/AgentOps-AI/agentops/assets/14807319/158e082a-9a7d-49b7-9b41-51a49a1f7d3d" style="width: 90%;" alt="Agent Dashboard"/>
+  </a>
+</details>
+
+<details>
+  <summary>Session Analytics</summary>
+  <a href="https://app.agentops.ai?ref=gh">
+    <img src="https://github.com/AgentOps-AI/agentops/assets/14807319/d7228019-1488-40d3-852f-a61e998658ad" style="width: 90%;" alt="Session Analytics"/>
+  </a>
+</details>
+
+<details>
+  <summary>Session Replays</summary>
+  <a href="https://app.agentops.ai?ref=gh">
+    <img src="https://github.com/AgentOps-AI/agentops/assets/14807319/561d59f3-c441-4066-914b-f6cfe32a598c" style="width: 90%;" alt="Session Replays"/>
+  </a>
+</details>
+
 
 ## Time travel debugging 🔮
 (coming soon!)
