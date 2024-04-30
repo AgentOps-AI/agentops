@@ -34,7 +34,7 @@ class Worker:
                 if len(self.queue) >= self.config.max_queue_size:
                     self.flush_queue()
 
-def flush_queue(self) -> None:
+    def flush_queue(self) -> None:
         with self.lock:
             if len(self.queue) > 0:
                 events = self.queue
