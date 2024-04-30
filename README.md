@@ -23,7 +23,7 @@
 <a href="https://docs.agentops.ai/introduction">📙 Documentation</a>
 </p>
 
-# AgentOps
+# AgentOps 🖇️
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT) ![PyPI - Version](https://img.shields.io/pypi/v/agentops) <a href="https://pepy.tech/project/agentops">
   <img src="https://static.pepy.tech/badge/agentops/month"> <a href="https://twitter.com/agentopsai">
@@ -99,34 +99,7 @@ All your sessions are available on the [AgentOps dashboard](https://app.agentops
   </a>
 </details>
 
-
-## Time travel debugging 🔮
-(coming soon!)
-
-## Agent Arena 🥊
-(coming soon!)
-
-## Evaluations Roadmap 🧭
-
-| Platform | Dashboard | Evals |
-|---|---|---|
-|✅ Python SDK | ✅ Multi-session and Cross-session metrics | ✅ Custom eval metrics |
-|🚧 Evaluation builder API | ✅ Custom event tag tracking | 🔜 Agent scorecards |
-|✅ [Javascript/Typescript SDK](https://github.com/AgentOps-AI/agentops-node) | ✅ Session replays| 🔜 Evaluation playground + leaderboard|
-
-
-## Debugging Roadmap 🧭
-
-| Performance testing | Environments | LLM Testing | Reasoning and execution testing |
-|---|---|---|---|
-|✅ Event latency analysis | 🔜 Non-stationary environment testing | 🔜 LLM non-deterministic function detection | 🚧 Infinite loops and recursive thought detection |
-|✅ Agent workflow execution pricing | 🔜 Multi-modal environments | 🚧 Token limit overflow flags | 🔜 Faulty reasoning detection |
-|🚧 Success validators (external) | 🔜 Execution containers | 🔜 Context limit overflow flags | 🔜 Generative code validators |
-|🔜 Agent controllers/skill tests | ✅ Honeypot and prompt injection detection ([PromptArmor](https://promptarmor.com)) | 🔜 API bill tracking | 🔜 Error breakpoint analysis |
-|🔜 Information context constraint testing | 🔜 Anti-agent roadblocks (i.e. Captchas) | 🔜 CI/CD integration checks | |
-|🔜 Regression testing | 🔜 Multi-agent framework visualization | | |
-
-## Integrations
+## Integrations 🦾
 
 ### CrewAI 🛶
 
@@ -138,9 +111,7 @@ AgentOps is officially supported on Crew's latest rc branch: `crewai==0.28.9rc1`
 * [Offical CrewAI documentation](https://docs.crewai.com/how-to/AgentOps-Observability)
 
 
-## Callback handlers ↩️
-
-### Langchain
+### Langchain 🦜🔗
 AgentOps works seamlessly with applications built using Langchain. To use the handler, install Langchain as an optional dependency:
 ```shell
 pip install agentops[langchain]
@@ -171,9 +142,36 @@ agent = initialize_agent(tools,
 
 Check out the [Langchain Examples Notebook](./examples/langchain_examples.ipynb) for more details including Async handlers.
 
-### LlamaIndex 
+### LlamaIndex 🦙
 (Coming Soon)
 
+
+
+## Time travel debugging 🔮
+(coming soon!)
+
+## Agent Arena 🥊
+(coming soon!)
+
+## Evaluations Roadmap 🧭
+
+| Platform | Dashboard | Evals |
+|---|---|---|
+|✅ Python SDK | ✅ Multi-session and Cross-session metrics | ✅ Custom eval metrics |
+|🚧 Evaluation builder API | ✅ Custom event tag tracking | 🔜 Agent scorecards |
+|✅ [Javascript/Typescript SDK](https://github.com/AgentOps-AI/agentops-node) | ✅ Session replays| 🔜 Evaluation playground + leaderboard|
+
+
+## Debugging Roadmap 🧭
+
+| Performance testing | Environments | LLM Testing | Reasoning and execution testing |
+|---|---|---|---|
+|✅ Event latency analysis | 🔜 Non-stationary environment testing | 🔜 LLM non-deterministic function detection | 🚧 Infinite loops and recursive thought detection |
+|✅ Agent workflow execution pricing | 🔜 Multi-modal environments | 🚧 Token limit overflow flags | 🔜 Faulty reasoning detection |
+|🚧 Success validators (external) | 🔜 Execution containers | 🔜 Context limit overflow flags | 🔜 Generative code validators |
+|🔜 Agent controllers/skill tests | ✅ Honeypot and prompt injection detection ([PromptArmor](https://promptarmor.com)) | 🔜 API bill tracking | 🔜 Error breakpoint analysis |
+|🔜 Information context constraint testing | 🔜 Anti-agent roadblocks (i.e. Captchas) | 🔜 CI/CD integration checks | |
+|🔜 Regression testing | 🔜 Multi-agent framework visualization | | |
 
 ### Why AgentOps? 🤔
 
