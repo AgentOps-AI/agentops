@@ -1,8 +1,8 @@
-import time
+from openai import OpenAI, AsyncOpenAI
 import openai
 from openai.resources.chat import completions
-from openai import OpenAI, AsyncOpenAI
 import agentops
+import time
 import asyncio
 from dotenv import load_dotenv
 load_dotenv()
@@ -59,8 +59,8 @@ for chunk in chat_completion:
     print(
         f"Message received {chunk_time:.2f} seconds after request: {chunk_message}")
 
-
 # # Test the async version of client.chat.completions.create
+
 
 async def test_async_chat_completion():
     return await async_client.chat.completions.create(
@@ -88,10 +88,10 @@ async def test_async_chat_completion_stream():
     async for chunk in chat_completion_stream:
         print(chunk)
 
-
 print('Running async tests')
 asyncio.run(test_async_chat_completion())
 print('Running async streaming test')
 asyncio.run(test_async_chat_completion_stream())
+
 
 agentops.end_session('Success')
