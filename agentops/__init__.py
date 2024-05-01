@@ -20,8 +20,7 @@ def init(api_key: Optional[str] = None,
          override: Optional[bool] = None,  # Deprecated
          instrument_llm_calls=True,
          auto_start_session=True,
-         inherited_session_id: Optional[str] = None,
-         env_data_opt_out: Optional[bool] = False
+         inherited_session_id: Optional[str] = None
          ):
     """
         Initializes the AgentOps singleton pattern.
