@@ -4,6 +4,7 @@
     Classes:
         Client: Provides methods to interact with the AgentOps service.
 """
+import os
 
 from .event import ActionEvent, ErrorEvent, Event
 from .enums import EndState
@@ -50,7 +51,6 @@ class Client(metaclass=MetaClient):
             instrument_llm_calls (bool): Whether to instrument LLM calls and emit LLMEvents..
             auto_start_session (bool): Whether to start a session automatically when the client is created.
             inherited_session_id (optional, str): Init Agentops with an existing Session
-            env_data_opt_out (optional, bool): Opt out of AgentOps tracking environment data for debugging like storage, memory and CPU
         Attributes:
             _session (Session, optional): A Session is a grouping of events (e.g. a run of your agent).
             _worker (Worker, optional): A Worker manages the event queue and sends session updates to the AgentOps api server
@@ -66,8 +66,7 @@ class Client(metaclass=MetaClient):
                  override: Optional[bool] = None,  # Deprecated
                  instrument_llm_calls=True,
                  auto_start_session=True,
-                 inherited_session_id: Optional[str] = None,
-                 env_data_opt_out: Optional[bool] = False
+                 inherited_session_id: Optional[str] = None
                  ):
 
         if override is not None:
@@ -79,7 +78,7 @@ class Client(metaclass=MetaClient):
         self._worker = None
         self._tags = tags
 
-        self._env_data_opt_out = env_data_opt_out
+        self._env_data_opt_out = os.getenv('AGENTOPS_ENV_DATA_OPT_OUT') and os.getenv('AGENTOPS_ENV_DATA_OPT_OUT').lower() == 'true'
 
         try:
             self.config = Configuration(api_key=api_key,
