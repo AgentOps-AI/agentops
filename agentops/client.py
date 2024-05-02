@@ -75,7 +75,6 @@ class Client(metaclass=MetaClient):
 
         self._session = None
         self._worker = None
-        self._tags = tags
 
         try:
             self.config = Configuration(api_key=api_key,
@@ -90,6 +89,8 @@ class Client(metaclass=MetaClient):
 
         if auto_start_session:
             self.start_session(tags, self.config, inherited_session_id)
+        else:
+            self._tags_for_future_session = tags
 
         if instrument_llm_calls:
             self.llm_tracker = LlmTracker(self)
@@ -102,13 +103,14 @@ class Client(metaclass=MetaClient):
             Args:
                 tags (List[str]): The list of tags to append.
         """
-        if self._tags is not None:
-            self._tags.extend(tags)
+        if self._session.tags is not None:
+            for tag in tags:
+                if tag not in self._session.tags:
+                    self._session.tags.append(tag)
         else:
-            self._tags = tags
+            self._session.tags = tags
 
         if self._session is not None:
-            self._session.tags = self._tags
             self._worker.update_session(self._session)
 
     def set_tags(self, tags: List[str]):
@@ -118,7 +120,7 @@ class Client(metaclass=MetaClient):
             Args:
                 tags (List[str]): The list of tags to set.
         """
-        self._tags = tags
+        self._tags_for_future_session = tags
 
         if self._session is not None:
             self._session.tags = tags
@@ -234,7 +236,7 @@ class Client(metaclass=MetaClient):
         if not config and not self.config:
             return logger.warning("🖇 AgentOps: Cannot start session - missing configuration")
 
-        self._session = Session(inherited_session_id or uuid4(), tags or self._tags, host_env=get_host_env())
+        self._session = Session(inherited_session_id or uuid4(), tags or self._tags_for_future_session, host_env=get_host_env())
         self._worker = Worker(config or self.config)
         start_session_result = self._worker.start_session(self._session)
         if not start_session_result:
