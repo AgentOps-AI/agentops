@@ -135,7 +135,8 @@ class Client(metaclass=MetaClient):
             Args:
                 event (Event): The event to record.
         """
-
+        if not event.end_timestamp or event.init_timestamp == event.end_timestamp:
+            event.end_timestamp = get_ISO_time()
         if self._session is not None and not self._session.has_ended:
             if isinstance(event, ErrorEvent):
                 if event.trigger_event:
