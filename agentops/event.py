@@ -135,10 +135,6 @@ class ErrorEvent():
 
     def __post_init__(self):
         self.event_type = EventType.ERROR.value
-        if self.trigger_event:
-            self.trigger_event_id = self.trigger_event.id
-            self.trigger_event_type = self.trigger_event.event_type
-            self.trigger_event = None  # removes trigger_event from serialization
         if self.exception:
             self.error_type = self.error_type or type(self.exception).__name__
             self.details = self.details or str(self.exception)
