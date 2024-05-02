@@ -170,9 +170,6 @@ class Client(metaclass=MetaClient):
 
             event.returns = returns
             event.end_timestamp = get_ISO_time()
-            # TODO: If func excepts this will never get called
-            # the dev loses all the useful stuff in ActionEvent they would need for debugging
-            # we should either record earlier or have Error post the supplied event to supabase
             self.record(event)
 
         except Exception as e:
@@ -209,9 +206,6 @@ class Client(metaclass=MetaClient):
 
             event.returns = returns
             event.end_timestamp = get_ISO_time()
-            # TODO: If func excepts this will never get called
-            # the dev loses all the useful stuff in ActionEvent they would need for debugging
-            # we should either record earlier or have Error post the supplied event to supabase
             self.record(event)
 
         except Exception as e:

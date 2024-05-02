@@ -124,23 +124,23 @@ class LlmTracker:
 
             try:
                 # NOTE: prompt/completion usage not returned in response when streaming
-                self.llm_event.agent_id = check_call_stack_for_agent_id()
-                self.llm_event = chunk.model
-                self.llm_event.prompt = kwargs["messages"]
+                model = chunk.model
                 choices = chunk.choices
                 token = choices[0].delta.content
                 finish_reason = choices[0].finish_reason
+                function_call = choices[0].delta.function_call
+                tool_calls = choices[0].delta.tool_calls
+                role = choices[0].delta.role
                 if token:
                     self.completion += token
 
                 if finish_reason:
+                    self.llm_event.agent_id = check_call_stack_for_agent_id()
+                    self.llm_event.prompt = kwargs["messages"]
                     self.llm_event.completion = {"role": "assistant", "content": self.completion}
-
-                    role = choices[0].delta.role
-                    function_call = choices[0].delta.function_call
-                    tool_calls = choices[0].delta.tool_calls
                     self.llm_event.returns = {"finish_reason": finish_reason, "content": self.completion,
                                               "function_call": function_call, "tool_calls": tool_calls, "role": role}
+                    self.llm_event.model = model
                     self.llm_event.end_timestamp = get_ISO_time()
 
                     self.client.record(self.llm_event)
@@ -182,12 +182,11 @@ class LlmTracker:
         try:
             self.llm_event.agent_id = check_call_stack_for_agent_id()
             self.llm_event.prompt = kwargs["messages"]
+            self.llm_event.prompt_tokens = response.usage.prompt_tokens
+            self.llm_event.completion = response.choices[0].message.model_dump()
+            self.llm_event.completion_tokens = response.usage.completion_tokens
             self.llm_event.returns = response.model_dump()
             self.llm_event.model = response.model
-            self.llm_event.completion = response.choices[0].message.model_dump()
-            self.llm_event.prompt_tokens = response.usage.prompt_tokens
-            self.llm_event.completion_tokens = response.usage.completion_tokens
-            self.llm_event.end_timestamp = get_ISO_time()
 
             self.client.record(self.llm_event)
         except Exception as e:
