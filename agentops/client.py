@@ -103,7 +103,9 @@ class Client(metaclass=MetaClient):
                 tags (List[str]): The list of tags to append.
         """
         if self._tags is not None:
-            self._tags.extend(tags)
+            for tag in tags:
+                if tag not in self._tags:
+                    self._tags.append(tag)
         else:
             self._tags = tags
 
