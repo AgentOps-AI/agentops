@@ -54,11 +54,17 @@ def get_disk_details():
     return disk_info
 
 
-def get_host_env():
-    return {
-        "SDK": get_sdk_details(),
-        "OS": get_os_details(),
-        "CPU": get_cpu_details(),
-        "RAM": get_ram_details(),
-        "Disk": get_disk_details(),
-    }
+def get_host_env(opt_out: bool = False):
+    if opt_out:
+        return {
+            "SDK": get_sdk_details(),
+            "OS": get_os_details()
+        }
+    else:
+        return {
+            "SDK": get_sdk_details(),
+            "OS": get_os_details(),
+            "CPU": get_cpu_details(),
+            "RAM": get_ram_details(),
+            "Disk": get_disk_details(),
+        }
