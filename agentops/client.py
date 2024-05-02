@@ -133,6 +133,12 @@ class Client(metaclass=MetaClient):
         """
 
         if self._session is not None and not self._session.has_ended:
+            if isinstance(event, ErrorEvent):
+                if event.trigger_event:
+                    event.trigger_event_id = event.trigger_event.id
+                    event.trigger_event_type = event.trigger_event.event_type
+                    self._worker.add_event(event.trigger_event.__dict__)
+                    event.trigger_event = None  # removes trigger_event from serialization
             self._worker.add_event(event.__dict__)
         else:
             logger.warning(
@@ -271,7 +277,8 @@ class Client(metaclass=MetaClient):
             print('🖇 AgentOps: Could not determine cost of run.')
         else:
 
-            print('🖇 AgentOps: This run cost ${}'.format('{:.2f}'.format(token_cost) if token_cost == 0 else '{:.6f}'.format(token_cost)))
+            print('🖇 AgentOps: This run cost ${}'.format('{:.2f}'.format(
+                token_cost) if token_cost == 0 else '{:.6f}'.format(token_cost)))
         self._session = None
         self._worker = None
 
