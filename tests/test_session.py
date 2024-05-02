@@ -48,6 +48,25 @@ class TestSessions:
         assert request_json['session']['end_state'] == end_state
         assert request_json['session']['tags'] == None
 
+    def test_add_tags(self, mock_req):
+        # Arrange
+        tags = ['GPT-4']
+        agentops.start_session(tags=tags, config=self.config)
+        agentops.add_tags(['test-tag', 'dupe-tag'])
+        agentops.add_tags(['dupe-tag'])
+
+        # Act
+        end_state = 'Success'
+        agentops.end_session(end_state)
+        time.sleep(0.15)
+
+        # Assert 3 requests, 1 for session init, 1 for event, 1 for end session
+        assert mock_req.last_request.headers['X-Agentops-Auth'] == self.api_key
+        request_json = mock_req.last_request.json()
+        assert request_json['session']['end_state'] == end_state
+        assert request_json['session']['tags'] == ['GPT-4', 'test-tag', 'dupe-tag']
+
+
     def test_tags(self, mock_req):
         # Arrange
         tags = ['GPT-4']
