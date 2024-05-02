@@ -27,12 +27,14 @@ class LlmTracker:
     def __init__(self, client):
         self.client = client
         self.completion = ""
+        self.full_response = ""
         self.llm_event: LLMEvent = None
 
     def _handle_response_v0_openai(self, response, kwargs, init_timestamp):
         """Handle responses for OpenAI versions <v1.0.0"""
 
         self.completion = ""
+        self.full_response = ""
         self.llm_event = None
 
         def handle_stream_chunk(chunk):
@@ -45,16 +47,20 @@ class LlmTracker:
                 # NOTE: prompt/completion usage not returned in response when streaming
                 model = chunk['model']
                 choices = chunk['choices']
+                full_response_chunk = choices[0]['delta']
                 token = choices[0]['delta'].get('content', '')
                 finish_reason = choices[0]['finish_reason']
                 if token:
                     self.completion += token
 
+                if full_response_chunk:
+                    self.full_response += full_response_chunk
+
                 if finish_reason:
                     self.llm_event.agent_id = check_call_stack_for_agent_id()
                     self.llm_event.prompt = kwargs["messages"]
                     self.llm_event.completion = {"role": "assistant", "content": self.completion}
-                    self.llm_event.returns = {"finish_reason": finish_reason, "content": self.completion}
+                    self.llm_event.returns = self.full_response
                     self.llm_event.model = model
                     self.llm_event.end_timestamp = get_ISO_time()
 
@@ -84,7 +90,8 @@ class LlmTracker:
 
         self.llm_event = LLMEvent(
             init_timestamp=init_timestamp,
-            params=kwargs
+            params=kwargs,
+            returns=response
         )
         # v0.0.0 responses are dicts
         try:
@@ -93,7 +100,6 @@ class LlmTracker:
             self.llm_event.prompt_tokens = response['usage']['prompt_tokens']
             self.llm_event.completion = {"role": "assistant", "content": response['choices'][0]['message']['content']}
             self.llm_event.completion_tokens = response['usage']['completion_tokens']
-            self.llm_event.returns = {"content": response['choices'][0]['message']['content']}
             self.llm_event.model = response["model"]
             self.llm_event.end_timestamp = get_ISO_time()
 
@@ -113,6 +119,7 @@ class LlmTracker:
         from openai.resources import AsyncCompletions
 
         self.completion = ""
+        self.full_response = ""
         self.llm_event = None
 
         def handle_stream_chunk(chunk: ChatCompletionChunk):
@@ -126,6 +133,7 @@ class LlmTracker:
                 # NOTE: prompt/completion usage not returned in response when streaming
                 model = chunk.model
                 choices = chunk.choices
+                full_response_chunk = choices[0].delta
                 token = choices[0].delta.content
                 finish_reason = choices[0].finish_reason
                 function_call = choices[0].delta.function_call
@@ -134,12 +142,16 @@ class LlmTracker:
                 if token:
                     self.completion += token
 
+                if full_response_chunk:
+                    self.full_response += full_response_chunk
+
                 if finish_reason:
                     self.llm_event.agent_id = check_call_stack_for_agent_id()
                     self.llm_event.prompt = kwargs["messages"]
-                    self.llm_event.completion = {"role": "assistant", "content": self.completion}
-                    self.llm_event.returns = {"finish_reason": finish_reason, "content": self.completion,
-                                              "function_call": function_call, "tool_calls": tool_calls, "role": role}
+
+                    self.llm_event.completion = {"role": "assistant", "content": self.completion,
+                                                 "function_call": function_call, "tool_calls": tool_calls, }
+                    self.llm_event.returns = self.full_response  # TODO: move. we always want this even if finish_reason is not present
                     self.llm_event.model = model
                     self.llm_event.end_timestamp = get_ISO_time()
 
