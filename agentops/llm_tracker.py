@@ -53,19 +53,20 @@ class LlmTracker:
                 self.llm_event.prompt = kwargs["messages"]
                 choices = chunk['choices']
 
-                token = choices[0]['delta'].get('content', '')
-                if token:
-                    self.completion += token
+                if choices[0]['delta'].get('content'):
+                    self.completion += choices[0].delta.content
+                    self.full_chat_completion_response.choices[0].delta.content = self.completion
 
-                if not self.full_chat_completion_response.choices[0].delta.role:
+                if choices[0]['delta'].get('role'):
                     self.role = choices[0]['delta'].get('role')
-                    if self.role is not None:
+                    if not self.full_chat_completion_response.choices[0].delta.role:
                         self.full_chat_completion_response.choices[0].delta.role = self.role
+
+                finish_reason = choices[0]['finish_reason']
+                self.full_chat_completion_response.choices[0]['finish_reason'] = finish_reason
 
                 # Keep setting the returns so we get as much of the response as possible before possibly excepting
                 self.llm_event.returns = self.full_chat_completion_response
-
-                finish_reason = choices[0]['finish_reason']
                 if finish_reason:
                     self.llm_event.completion = {"role": self.role, "content": self.completion}
                     self.llm_event.end_timestamp = get_ISO_time()
@@ -149,30 +150,32 @@ class LlmTracker:
                 self.llm_event.prompt = kwargs["messages"]
                 choices = chunk.choices
 
-                token = choices[0].delta.content
-                if token:
-                    self.completion += token
+                if choices[0].delta.content:
+                    self.completion += choices[0].delta.content
+                    self.full_chat_completion_response.choices[0].delta.content = self.completion
 
-                if not self.full_chat_completion_response.choices[0].delta.role:
-                    self.role = choices[0]['delta'].get('role')
-                    if self.role is not None:
+                if choices[0].delta.role:
+                    self.role = choices[0].delta.role
+                    if not self.full_chat_completion_response.choices[0].delta.role:
                         self.full_chat_completion_response.choices[0].delta.role = self.role
 
-                if not self.full_chat_completion_response.choices[0].delta.role:
-                    self.tool_calls = choices[0]['delta'].get('tool_calls')
-                    if self.tool_calls is not None:
+                if choices[0].delta.tool_calls:
+                    self.tool_calls = choices[0].delta.tool_calls
+                    if not self.full_chat_completion_response.choices[0].delta.tool_calls:
                         self.full_chat_completion_response.choices[0].delta.tool_calls = self.tool_calls
 
-                if not self.full_chat_completion_response.choices[0].delta.role:
-                    self.function_call = choices[0]['delta'].get('function_call')
-                    if self.function_call is not None:
+                if choices[0].delta.function_call:
+                    self.function_call = choices[0].delta.function_call
+                    if not self.full_chat_completion_response.choices[0].delta.function_call:
                         self.full_chat_completion_response.choices[0].delta.function_call = self.function_call
+
+                finish_reason = choices[0].finish_reason
+                self.full_chat_completion_response.choices[0].finish_reason = finish_reason
 
                 # Keep setting the returns so we get as much of the response as possible before possibly excepting
                 self.llm_event.returns = self.full_chat_completion_response
-
-                finish_reason = choices[0].finish_reason
                 if finish_reason:
+
                     self.llm_event.completion = {"role": self.role, "content": self.completion,
                                                  "function_call": self.function_call, "tool_calls": self.tool_calls}
                     self.llm_event.end_timestamp = get_ISO_time()
