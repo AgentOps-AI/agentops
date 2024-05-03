@@ -114,7 +114,6 @@ class Client(metaclass=MetaClient):
             self._session.tags = tags
 
         if self._session is not None and self._worker is not None:
-            self._session.tags = self._tags
             self._worker.update_session(self._session)
 
     def set_tags(self, tags: List[str]):
