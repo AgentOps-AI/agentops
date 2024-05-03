@@ -7,6 +7,7 @@ from .log_config import logger
 from .event import LLMEvent, ErrorEvent
 from .helpers import get_ISO_time, check_call_stack_for_agent_id
 import inspect
+import pprint
 
 
 class LlmTracker:
@@ -31,20 +32,17 @@ class LlmTracker:
         """Handle responses for OpenAI versions <v1.0.0"""
 
         self.completion = ""
-        self.full_chat_completion_response = None
-        self.llm_event = None
         self.role = None
 
+        self.llm_event = LLMEvent(
+            init_timestamp=init_timestamp,
+            params=kwargs
+        )
+
         def handle_stream_chunk(chunk):
-
             # We take the first ChatCompletionChunk and append data from all subsequent chunks to it to build one full chat completion
-            if self.full_chat_completion_response == None:
-                self.full_chat_completion_response = chunk
-
-            self.llm_event = LLMEvent(
-                init_timestamp=init_timestamp,
-                params=kwargs
-            )
+            if self.llm_event.returns == None:
+                self.llm_event.returns = chunk
 
             try:
                 # NOTE: prompt/completion usage not returned in response when streaming
@@ -55,18 +53,16 @@ class LlmTracker:
 
                 if choices[0]['delta'].get('content'):
                     self.completion += choices[0]['delta'].content
-                    self.full_chat_completion_response.choices[0]['delta']['content'] = self.completion
+                    self.llm_event.returns.choices[0]['delta']['content'] = self.completion
 
                 if choices[0]['delta'].get('role'):
                     self.role = choices[0]['delta'].get('role')
-                    if not self.full_chat_completion_response.choices[0]['delta']['role']:
-                        self.full_chat_completion_response.choices[0]['delta']['role'] = self.role
+                    if not self.llm_event.returns.choices[0]['delta']['role']:
+                        self.llm_event.returns.choices[0]['delta']['role'] = self.role
 
                 finish_reason = choices[0]['finish_reason']
-                self.full_chat_completion_response.choices[0]['finish_reason'] = finish_reason
+                self.llm_event.returns.choices[0]['finish_reason'] = finish_reason
 
-                # Keep setting the returns so we get as much of the response as possible before possibly excepting
-                self.llm_event.returns = self.full_chat_completion_response
                 if finish_reason:
                     self.llm_event.completion = {"role": self.role, "content": self.completion}
                     self.llm_event.end_timestamp = get_ISO_time()
@@ -74,9 +70,13 @@ class LlmTracker:
                     self.client.record(self.llm_event)
             except Exception as e:
                 self.client.record(ErrorEvent(trigger_event=self.llm_event, exception=e))
-                # TODO: This error is specific to only one path of failure. Should be more generic or have different logger for different paths
+                kwargs_str = pprint.pformat(kwargs)
+                chunk = pprint.pformat(chunk)
                 logger.warning(
-                    f"🖇 AgentOps: Unable to parse a chunk for LLM call {kwargs} - skipping upload to AgentOps")
+                    f"🖇 AgentOps: Unable to parse a chunk for LLM call. Skipping upload to AgentOps\n"
+                    f"chunk:\n {chunk}\n"
+                    f"kwargs:\n {kwargs_str}\n"
+                )
 
         # if the response is a generator, decorate the generator
         if inspect.isasyncgen(response):
@@ -113,9 +113,13 @@ class LlmTracker:
             self.client.record(self.llm_event)
         except Exception as e:
             self.client.record(ErrorEvent(trigger_event=self.llm_event, exception=e))
-            # TODO: This error is specific to only one path of failure. Should be more generic or have different logger for different paths
+            kwargs_str = pprint.pformat(kwargs)
+            response = pprint.pformat(response)
             logger.warning(
-                f"🖇 AgentOps: Unable to parse a chunk for LLM call {kwargs} - skipping upload to AgentOps")
+                f"🖇 AgentOps: Unable to parse response for LLM call. Skipping upload to AgentOps\n"
+                f"response:\n {response}\n"
+                f"kwargs:\n {kwargs_str}\n"
+            )
 
         return response
 
@@ -126,22 +130,19 @@ class LlmTracker:
         from openai.resources import AsyncCompletions
 
         self.completion = ""
-        self.full_chat_completion_response = None
-        self.llm_event = None
         self.role = None
         self.function_call = None
         self.tool_calls = None
 
+        self.llm_event = LLMEvent(
+            init_timestamp=init_timestamp,
+            params=kwargs
+        )
+
         def handle_stream_chunk(chunk: ChatCompletionChunk):
-
             # We take the first ChatCompletionChunk and append data from all subsequent chunks to it to build one full chat completion
-            if self.full_chat_completion_response == None:
-                self.full_chat_completion_response = chunk
-
-            self.llm_event = LLMEvent(
-                init_timestamp=init_timestamp,
-                params=kwargs
-            )
+            if self.llm_event.returns == None:
+                self.llm_event.returns = chunk
 
             try:
                 # NOTE: prompt/completion usage not returned in response when streaming
@@ -152,28 +153,25 @@ class LlmTracker:
 
                 if choices[0].delta.content:
                     self.completion += choices[0].delta.content
-                    self.full_chat_completion_response.choices[0].delta.content = self.completion
+                    self.llm_event.returns.choices[0].delta.content = self.completion
 
                 if choices[0].delta.role:
                     self.role = choices[0].delta.role
-                    if not self.full_chat_completion_response.choices[0].delta.role:
-                        self.full_chat_completion_response.choices[0].delta.role = self.role
+                    if not self.llm_event.returns.choices[0].delta.role:
+                        self.llm_event.returns.choices[0].delta.role = self.role
 
                 if choices[0].delta.tool_calls:
                     self.tool_calls = choices[0].delta.tool_calls
-                    if not self.full_chat_completion_response.choices[0].delta.tool_calls:
-                        self.full_chat_completion_response.choices[0].delta.tool_calls = self.tool_calls
+                    if not self.llm_event.returns.choices[0].delta.tool_calls:
+                        self.llm_event.returns.choices[0].delta.tool_calls = self.tool_calls
 
                 if choices[0].delta.function_call:
                     self.function_call = choices[0].delta.function_call
-                    if not self.full_chat_completion_response.choices[0].delta.function_call:
-                        self.full_chat_completion_response.choices[0].delta.function_call = self.function_call
+                    if not self.llm_event.returns.choices[0].delta.function_call:
+                        self.llm_event.returns.choices[0].delta.function_call = self.function_call
 
                 finish_reason = choices[0].finish_reason
-                self.full_chat_completion_response.choices[0].finish_reason = finish_reason
-
-                # Keep setting the returns so we get as much of the response as possible before possibly excepting
-                self.llm_event.returns = self.full_chat_completion_response
+                self.llm_event.returns.choices[0].finish_reason = finish_reason
                 if finish_reason:
 
                     self.llm_event.completion = {"role": self.role, "content": self.completion,
@@ -183,9 +181,13 @@ class LlmTracker:
                     self.client.record(self.llm_event)
             except Exception as e:
                 self.client.record(ErrorEvent(trigger_event=self.llm_event, exception=e))
-                # TODO: This error is specific to only one path of failure. Should be more generic or have different logger for different paths
+                kwargs_str = pprint.pformat(kwargs)
+                chunk = pprint.pformat(chunk)
                 logger.warning(
-                    f"🖇 AgentOps: Unable to parse a chunk for LLM call {kwargs} - skipping upload to AgentOps")
+                    f"🖇 AgentOps: Unable to parse a chunk for LLM call. Skipping upload to AgentOps\n"
+                    f"chunk:\n {chunk}\n"
+                    f"kwargs:\n {kwargs_str}\n"
+                )
 
         # if the response is a generator, decorate the generator
         if isinstance(response, Stream):
@@ -228,9 +230,13 @@ class LlmTracker:
             self.client.record(self.llm_event)
         except Exception as e:
             self.client.record(ErrorEvent(trigger_event=self.llm_event, exception=e))
-            # TODO: This error is specific to only one path of failure. Should be more generic or have different logger for different paths
+            kwargs_str = pprint.pformat(kwargs)
+            response = pprint.pformat(response)
             logger.warning(
-                f"🖇 AgentOps: Unable to parse a chunk for LLM call {kwargs} - skipping upload to AgentOps")
+                f"🖇 AgentOps: Unable to parse response for LLM call. Skipping upload to AgentOps\n"
+                f"response:\n {response}\n"
+                f"kwargs:\n {kwargs_str}\n"
+            )
 
         return response
 
