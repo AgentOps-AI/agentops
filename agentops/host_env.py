@@ -5,38 +5,51 @@ from .helpers import get_agentops_version
 
 
 def get_sdk_details():
-    return {
-        "AgentOps SDK Version": get_agentops_version(),
-        "Python Version": platform.python_version(),
-    }
+    try:
+        return {
+            "AgentOps SDK Version": get_agentops_version(),
+            "Python Version": platform.python_version(),
+        }
+    except:
+        return {}
 
 
 def get_os_details():
-    return {
-        "Hostname": socket.gethostname(),
-        "OS": platform.system(),
-        "OS Version": platform.version(),
-        "OS Release": platform.release()
-    }
+    try:
+        return {
+            "Hostname": socket.gethostname(),
+            "OS": platform.system(),
+            "OS Version": platform.version(),
+            "OS Release": platform.release()
+        }
+    except:
+        return {}
 
 
 def get_cpu_details():
-    return {
-        "Physical cores": psutil.cpu_count(logical=False),
-        "Total cores": psutil.cpu_count(logical=True),
-        # "Max Frequency": f"{psutil.cpu_freq().max:.2f}Mhz", # Fails right now
-        "CPU Usage": f"{psutil.cpu_percent()}%"
-    }
+    try:
+        return {
+            "Physical cores": psutil.cpu_count(logical=False),
+            "Total cores": psutil.cpu_count(logical=True),
+            # "Max Frequency": f"{psutil.cpu_freq().max:.2f}Mhz", # Fails right now
+            "CPU Usage": f"{psutil.cpu_percent()}%"
+        }
+    except:
+        return {}
 
 
 def get_ram_details():
-    ram_info = psutil.virtual_memory()
-    return {
-        "Total": f"{ram_info.total / (1024**3):.2f} GB",
-        "Available": f"{ram_info.available / (1024**3):.2f} GB",
-        "Used": f"{ram_info.used / (1024**3):.2f} GB",
-        "Percentage": f"{ram_info.percent}%"
-    }
+    try:
+        ram_info = psutil.virtual_memory()
+        return {
+            "Total": f"{ram_info.total / (1024 ** 3):.2f} GB",
+            "Available": f"{ram_info.available / (1024 ** 3):.2f} GB",
+            "Used": f"{ram_info.used / (1024 ** 3):.2f} GB",
+            "Percentage": f"{ram_info.percent}%"
+        }
+    except:
+        return {}
+
 
 
 def get_disk_details():
@@ -54,11 +67,17 @@ def get_disk_details():
     return disk_info
 
 
-def get_host_env():
-    return {
-        "SDK": get_sdk_details(),
-        "OS": get_os_details(),
-        "CPU": get_cpu_details(),
-        "RAM": get_ram_details(),
-        "Disk": get_disk_details(),
-    }
+def get_host_env(opt_out: bool = False):
+    if opt_out:
+        return {
+            "SDK": get_sdk_details(),
+            "OS": get_os_details()
+        }
+    else:
+        return {
+            "SDK": get_sdk_details(),
+            "OS": get_os_details(),
+            "CPU": get_cpu_details(),
+            "RAM": get_ram_details(),
+            "Disk": get_disk_details(),
+        }

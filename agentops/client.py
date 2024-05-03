@@ -1,10 +1,10 @@
 """
-AgentOps client module that provides a client class with public interfaces and configuration.
+    AgentOps client module that provides a client class with public interfaces and configuration.
 
-Classes:
-    Client: Provides methods to interact with the AgentOps service.
+    Classes:
+        Client: Provides methods to interact with the AgentOps service.
 """
-
+import os
 from .event import ActionEvent, ErrorEvent, Event
 from .enums import EndState
 from .helpers import get_ISO_time, singleton, check_call_stack_for_agent_id
@@ -15,11 +15,13 @@ from uuid import uuid4
 from typing import Optional, List
 import traceback
 from .log_config import logger, set_logging_level_info
+from decimal import Decimal
 import inspect
 import atexit
 import signal
 import sys
 import threading
+
 
 from .meta_client import MetaClient
 from .config import Configuration, ConfigurationError
@@ -29,27 +31,28 @@ from .llm_tracker import LlmTracker
 @singleton
 class Client(metaclass=MetaClient):
     """
-    Client for AgentOps service.
+        Client for AgentOps service.
 
-    Args:
-        api_key (str, optional): API Key for AgentOps services. If none is provided, key will 
-            be read from the AGENTOPS_API_KEY environment variable.
-        parent_key (str, optional): Organization key to give visibility of all user sessions the user's organization. If none is provided, key will 
-            be read from the AGENTOPS_PARENT_KEY environment variable.
-        endpoint (str, optional): The endpoint for the AgentOps service. If none is provided, key will 
-            be read from the AGENTOPS_API_ENDPOINT environment variable. Defaults to 'https://api.agentops.ai'.
-        max_wait_time (int, optional): The maximum time to wait in milliseconds before flushing the queue. 
-            Defaults to 30,000 (30 seconds)
-        max_queue_size (int, optional): The maximum size of the event queue. Defaults to 100.
-        tags (List[str], optional): Tags for the sessions that can be used for grouping or 
-            sorting later (e.g. ["GPT-4"]).
-        override (bool): Whether to override and LLM calls to emit as events.
-        auto_start_session (bool): Whether to start a session automatically when the client is created.
-        inherited_session_id (optional, str): Init Agentops with an existing Session
-    
-    Attributes:
-        _session (Session, optional): A Session is a grouping of events (e.g. a run of your agent).
-        _worker (Worker, optional): A Worker manages the event queue and sends session updates to the AgentOps api server
+        Args:
+
+            api_key (str, optional): API Key for AgentOps services. If none is provided, key will
+                be read from the AGENTOPS_API_KEY environment variable.
+            parent_key (str, optional): Organization key to give visibility of all user sessions the user's organization. If none is provided, key will
+                be read from the AGENTOPS_PARENT_KEY environment variable.
+            endpoint (str, optional): The endpoint for the AgentOps service. If none is provided, key will
+                be read from the AGENTOPS_API_ENDPOINT environment variable. Defaults to 'https://api.agentops.ai'.
+            max_wait_time (int, optional): The maximum time to wait in milliseconds before flushing the queue.
+                Defaults to 30,000 (30 seconds)
+            max_queue_size (int, optional): The maximum size of the event queue. Defaults to 100.
+            tags (List[str], optional): Tags for the sessions that can be used for grouping or
+                sorting later (e.g. ["GPT-4"]).
+            override (bool, optional): [Deprecated] Use `instrument_llm_calls` instead. Whether to instrument LLM calls and emit LLMEvents..
+            instrument_llm_calls (bool): Whether to instrument LLM calls and emit LLMEvents..
+            auto_start_session (bool): Whether to start a session automatically when the client is created.
+            inherited_session_id (optional, str): Init Agentops with an existing Session
+        Attributes:
+            _session (Session, optional): A Session is a grouping of events (e.g. a run of your agent).
+            _worker (Worker, optional): A Worker manages the event queue and sends session updates to the AgentOps api server
     """
 
     def __init__(self,
@@ -59,14 +62,22 @@ class Client(metaclass=MetaClient):
                  max_wait_time: Optional[int] = None,
                  max_queue_size: Optional[int] = None,
                  tags: Optional[List[str]] = None,
-                 override=True,
+                 override: Optional[bool] = None,  # Deprecated
+                 instrument_llm_calls=True,
                  auto_start_session=True,
                  inherited_session_id: Optional[str] = None
                  ):
 
+        if override is not None:
+            logger.warning("🖇 AgentOps: The 'override' parameter is deprecated. Use 'instrument_llm_calls' instead.",
+                           DeprecationWarning, stacklevel=2)
+            instrument_llm_calls = instrument_llm_calls or override
+
         self._session: Optional[Session] = None
         self._worker: Optional[Worker] = None
         self._tags: Optional[List[str]] = tags
+
+        self._env_data_opt_out = os.getenv('AGENTOPS_ENV_DATA_OPT_OUT') and os.getenv('AGENTOPS_ENV_DATA_OPT_OUT').lower() == 'true'
 
         try:
             self.config = Configuration(api_key=api_key,
@@ -81,24 +92,39 @@ class Client(metaclass=MetaClient):
 
         if auto_start_session:
             self.start_session(tags, self.config, inherited_session_id)
+        else:
+            self._tags_for_future_session = tags
 
-        if override:
-            if 'openai' in sys.modules:
-                self.llm_tracker = LlmTracker(self)
-                self.llm_tracker.override_api('openai')
+        if instrument_llm_calls:
+            self.llm_tracker = LlmTracker(self)
+            self.llm_tracker.override_api()
 
     def add_tags(self, tags: List[str]):
-        if self._tags is not None:
-            self._tags.extend(tags)
+        """
+            Append to session tags at runtime.
+
+            Args:
+                tags (List[str]): The list of tags to append.
+        """
+        if self._session.tags is not None:
+            for tag in tags:
+                if tag not in self._session.tags:
+                    self._session.tags.append(tag)
         else:
-            self._tags = tags
+            self._session.tags = tags
 
         if self._session is not None and self._worker is not None:
             self._session.tags = self._tags
             self._worker.update_session(self._session)
 
     def set_tags(self, tags: List[str]):
-        self._tags = tags
+        """
+            Replace session tags at runtime.
+
+            Args:
+                tags (List[str]): The list of tags to set.
+        """
+        self._tags_for_future_session = tags
 
         if self._session is not None and self._worker is not None:
             self._session.tags = tags
@@ -106,13 +132,20 @@ class Client(metaclass=MetaClient):
 
     def record(self, event: Event | ErrorEvent):
         """
-        Record an event with the AgentOps service.
+            Record an event with the AgentOps service.
 
-        Args:
-            event (Event): The event to record.
+            Args:
+                event (Event): The event to record.
         """
-
+        if not event.end_timestamp or event.init_timestamp == event.end_timestamp:
+            event.end_timestamp = get_ISO_time()
         if self._session is not None and not self._session.has_ended and self._worker is not None:
+            if isinstance(event, ErrorEvent):
+                if event.trigger_event:
+                    event.trigger_event_id = event.trigger_event.id
+                    event.trigger_event_type = event.trigger_event.event_type
+                    self._worker.add_event(event.trigger_event.__dict__)
+                    event.trigger_event = None  # removes trigger_event from serialization
             self._worker.add_event(event.__dict__)
         else:
             logger.warning(
@@ -144,9 +177,6 @@ class Client(metaclass=MetaClient):
 
             event.returns = returns
             event.end_timestamp = get_ISO_time()
-            # TODO: If func excepts this will never get called
-            # the dev loses all the useful stuff in ActionEvent they would need for debugging
-            # we should either record earlier or have Error post the supplied event to supabase
             self.record(event)
 
         except Exception as e:
@@ -183,9 +213,6 @@ class Client(metaclass=MetaClient):
 
             event.returns = returns
             event.end_timestamp = get_ISO_time()
-            # TODO: If func excepts this will never get called
-            # the dev loses all the useful stuff in ActionEvent they would need for debugging
-            # we should either record earlier or have Error post the supplied event to supabase
             self.record(event)
 
         except Exception as e:
@@ -198,23 +225,23 @@ class Client(metaclass=MetaClient):
 
     def start_session(self, tags: Optional[List[str]] = None, config: Optional[Configuration] = None, inherited_session_id: Optional[str] = None):
         """
-        Start a new session for recording events.
+            Start a new session for recording events.
 
-        Args:
-            tags (List[str], optional): Tags that can be used for grouping or sorting later.
-                e.g. ["test_run"].
-            config: (Configuration, optional): Client configuration object
-            inherited_session_id (optional, str): assign session id to match existing Session
+            Args:
+                tags (List[str], optional): Tags that can be used for grouping or sorting later.
+                    e.g. ["test_run"].
+                config: (Configuration, optional): Client configuration object
+                inherited_session_id (optional, str): assign session id to match existing Session
         """
         set_logging_level_info()
-        
+
         if self._session is not None:
             return logger.warning("🖇 AgentOps: Cannot start session - session already started")
 
         if not config and not self.config:
             return logger.warning("🖇 AgentOps: Cannot start session - missing configuration")
 
-        self._session = Session(inherited_session_id or uuid4(), tags or self._tags, host_env=get_host_env())
+        self._session = Session(inherited_session_id or uuid4(), tags or self._tags_for_future_session, host_env=get_host_env(self._env_data_opt_out))
         self._worker = Worker(config or self.config)
         start_session_result = self._worker.start_session(self._session)
         if not start_session_result:
@@ -231,12 +258,12 @@ class Client(metaclass=MetaClient):
                     end_state_reason: Optional[str] = None,
                     video: Optional[str] = None):
         """
-        End the current session with the AgentOps service.
+            End the current session with the AgentOps service.
 
-        Args:
-            end_state (str): The final state of the session. Options: Success, Fail, or Indeterminate.
-            end_state_reason (str, optional): The reason for ending the session.
-            video (str, optional): The video screen recording of the session
+            Args:
+                end_state (str): The final state of the session. Options: Success, Fail, or Indeterminate.
+                end_state_reason (str, optional): The reason for ending the session.
+                video (str, optional): The video screen recording of the session
         """
         if self._session is None or self._session.has_ended:
             return logger.warning("🖇 AgentOps: Cannot end session - no current session")
@@ -254,7 +281,9 @@ class Client(metaclass=MetaClient):
         if token_cost == 'unknown':
             print('🖇 AgentOps: Could not determine cost of run.')
         else:
-            print('🖇 AgentOps: This run cost $%.6f', float(token_cost))
+            token_cost_d = Decimal(token_cost)
+            print('🖇 AgentOps: This run cost ${}'.format('{:.2f}'.format(
+                token_cost_d) if token_cost_d == 0 else '{:.6f}'.format(token_cost_d)))
         self._session = None
         self._worker = None
 
@@ -271,11 +300,11 @@ class Client(metaclass=MetaClient):
 
         def signal_handler(signum, frame):
             """
-            Signal handler for SIGINT (Ctrl+C) and SIGTERM. Ends the session and exits the program.
+                Signal handler for SIGINT (Ctrl+C) and SIGTERM. Ends the session and exits the program.
 
-            Args:
-                signum (int): The signal number.
-                frame: The current stack frame.
+                Args:
+                    signum (int): The signal number.
+                    frame: The current stack frame.
             """
             signal_name = 'SIGINT' if signum == signal.SIGINT else 'SIGTERM'
             logger.info('🖇 AgentOps: %s detected. Ending session...', signal_name)
@@ -285,13 +314,13 @@ class Client(metaclass=MetaClient):
 
         def handle_exception(exc_type, exc_value, exc_traceback):
             """
-            Handle uncaught exceptions before they result in program termination.
+                Handle uncaught exceptions before they result in program termination.
 
-            Args:
-                exc_type (Type[BaseException]): The type of the exception.
-                exc_value (BaseException): The exception instance.
-                exc_traceback (TracebackType): A traceback object encapsulating the call stack at the 
-                                               point where the exception originally occurred.
+                Args:
+                    exc_type (Type[BaseException]): The type of the exception.
+                    exc_value (BaseException): The exception instance.
+                    exc_traceback (TracebackType): A traceback object encapsulating the call stack at the
+                                                point where the exception originally occurred.
             """
             formatted_traceback = ''.join(traceback.format_exception(exc_type, exc_value,
                                                                      exc_traceback))
@@ -318,7 +347,13 @@ class Client(metaclass=MetaClient):
     def api_key(self):
         return self.config.api_key
 
-    def set_parent_key(self, parent_key):
+    def set_parent_key(self, parent_key: str):
+        """
+            Set the parent API key which has visibility to projects it is parent to.
+
+            Args:
+                parent_key (str): The API key of the parent organization to set.
+        """
         if self._worker:
             self._worker.config.parent_key = parent_key
 
