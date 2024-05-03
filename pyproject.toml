@@ -13,7 +13,7 @@ authors = [
 ]
 description = "Python SDK for developing AI agent evals and observability"
 readme = "README.md"
-requires-python = ">=3.10"
+requires-python = ">=3.7"
 classifiers = [
     "Programming Language :: Python :: 3",
     "License :: OSI Approved :: MIT License",

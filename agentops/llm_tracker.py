@@ -7,6 +7,7 @@ from .log_config import logger
 from .event import LLMEvent, ErrorEvent
 from .helpers import get_ISO_time, check_call_stack_for_agent_id
 import inspect
+from typing import Optional
 import pprint
 
 original_create = None
@@ -29,6 +30,8 @@ class LlmTracker:
 
     def __init__(self, client):
         self.client = client
+        self.completion = ""
+        self.llm_event: Optional[LLMEvent] = None
 
     def _handle_response_v0_openai(self, response, kwargs, init_timestamp):
         """Handle responses for OpenAI versions <v1.0.0"""

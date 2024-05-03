@@ -1,6 +1,6 @@
 # agentops/__init__.py
 from os import environ
-from typing import Optional, List
+from typing import Optional, List, Union
 
 from .client import Client
 from .config import Configuration
@@ -87,7 +87,7 @@ def start_session(tags: Optional[List[str]] = None, config: Optional[Configurati
     return Client().start_session(tags, config, inherited_session_id)
 
 
-def record(event: Event | ErrorEvent):
+def record(event: Union[Event, ErrorEvent]):
     """
         Record an event with the AgentOps service.
 

@@ -2,10 +2,10 @@ import json
 import threading
 import time
 from .http_client import HttpClient
-from .config import Configuration, ConfigurationError
+from .config import Configuration
 from .session import Session
 from .helpers import safe_serialize, filter_unjsonable
-from typing import Dict
+from typing import Dict, Optional
 
 
 class Worker:
@@ -17,7 +17,7 @@ class Worker:
         self.thread = threading.Thread(target=self.run)
         self.thread.daemon = True
         self.thread.start()
-        self._session: Session | None = None
+        self._session: Optional[Session] = None
 
     def add_event(self, event: dict) -> None:
         with self.lock:
@@ -32,7 +32,7 @@ class Worker:
                 self.queue = []
 
                 payload = {
-                    "session_id": self._session.session_id,
+                    "session_id": getattr(self._session, "session_id", None),
                     "events": events
                 }
 
@@ -42,7 +42,7 @@ class Worker:
                                 self.config.api_key,
                                 self.config.parent_key)
 
-    def start_session(self, session: Session) -> None:
+    def start_session(self, session: Session) -> bool:
         self._session = session
         with self.lock:
             payload = {
@@ -94,7 +94,7 @@ class Worker:
         payload = {
             "id": agent_id,
             "name": name,
-            "session_id": self._session.session_id
+            "session_id": getattr(self._session, "session_id", None),
         }
 
         serialized_payload = \
