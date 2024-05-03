@@ -75,6 +75,7 @@ class Client(metaclass=MetaClient):
 
         self._session = None
         self._worker = None
+        self._tags_for_future_session = None
 
         self._env_data_opt_out = os.getenv('AGENTOPS_ENV_DATA_OPT_OUT') and os.getenv('AGENTOPS_ENV_DATA_OPT_OUT').lower() == 'true'
 
