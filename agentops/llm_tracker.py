@@ -9,6 +9,8 @@ from .helpers import get_ISO_time, check_call_stack_for_agent_id
 import inspect
 import pprint
 
+original_create = None
+original_create_async = None
 
 class LlmTracker:
     SUPPORTED_APIS = {
@@ -227,6 +229,7 @@ class LlmTracker:
         from openai.resources.chat import completions
 
         # Store the original method
+        global original_create
         original_create = completions.Completions.create
 
         def patched_function(*args, **kwargs):
@@ -242,12 +245,13 @@ class LlmTracker:
         from openai.resources.chat import completions
 
         # Store the original method
-        original_create = completions.AsyncCompletions.create
+        global original_create_async
+        original_create_async = completions.AsyncCompletions.create
 
         async def patched_function(*args, **kwargs):
             # Call the original function with its original arguments
             init_timestamp = get_ISO_time()
-            result = await original_create(*args, **kwargs)
+            result = await original_create_async(*args, **kwargs)
             return self._handle_response_v1_openai(result, kwargs, init_timestamp)
 
         # Override the original method with the patched one
@@ -342,3 +346,17 @@ class LlmTracker:
                             # Patch openai <v1.0.0 methods
                             for method_path in self.SUPPORTED_APIS['openai']['0.0.0']:
                                 self._override_method(api, method_path, module)
+
+    def stop_instrumenting(self):
+        self.undo_override_openai_v1_async_completion()
+        self.undo_override_openai_v1_completion()
+
+    def undo_override_openai_v1_completion(self):
+        global original_create
+        from openai.resources.chat import completions
+        completions.Completions.create = original_create
+
+    def undo_override_openai_v1_async_completion(self):
+        global original_create_async
+        from openai.resources.chat import completions
+        original_create_async = completions.AsyncCompletions.create
