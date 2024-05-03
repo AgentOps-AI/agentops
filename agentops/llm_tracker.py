@@ -33,8 +33,10 @@ class LlmTracker:
         self.completion = ""
         self.full_chat_completion_response = None
         self.llm_event = None
+        self.role = None
 
         def handle_stream_chunk(chunk):
+
             # We take the first ChatCompletionChunk and append data from all subsequent chunks to it to build one full chat completion
             if self.full_chat_completion_response == None:
                 self.full_chat_completion_response = chunk
@@ -56,16 +58,16 @@ class LlmTracker:
                     self.completion += token
 
                 if not self.full_chat_completion_response.choices[0].delta.role:
-                    role = choices[0]['delta'].get('role')
-                    if role is not None:
-                        self.full_chat_completion_response.choices[0].delta.role = role
+                    self.role = choices[0]['delta'].get('role')
+                    if self.role is not None:
+                        self.full_chat_completion_response.choices[0].delta.role = self.role
 
                 # Keep setting the returns so we get as much of the response as possible before possibly excepting
                 self.llm_event.returns = self.full_chat_completion_response
 
                 finish_reason = choices[0]['finish_reason']
                 if finish_reason:
-                    self.llm_event.completion = {"role": "assistant", "content": self.completion}
+                    self.llm_event.completion = {"role": self.role, "content": self.completion}
                     self.llm_event.end_timestamp = get_ISO_time()
 
                     self.client.record(self.llm_event)
@@ -123,10 +125,17 @@ class LlmTracker:
         from openai.resources import AsyncCompletions
 
         self.completion = ""
-        self.full_response = ""
+        self.full_chat_completion_response = None
         self.llm_event = None
+        self.role = None
+        self.function_call = None
+        self.tool_calls = None
 
         def handle_stream_chunk(chunk: ChatCompletionChunk):
+
+            # We take the first ChatCompletionChunk and append data from all subsequent chunks to it to build one full chat completion
+            if self.full_chat_completion_response == None:
+                self.full_chat_completion_response = chunk
 
             self.llm_event = LLMEvent(
                 init_timestamp=init_timestamp,
@@ -135,28 +144,37 @@ class LlmTracker:
 
             try:
                 # NOTE: prompt/completion usage not returned in response when streaming
-                model = chunk.model
+                self.llm_event.agent_id = check_call_stack_for_agent_id()
+                self.llm_event.model = chunk.model
+                self.llm_event.prompt = kwargs["messages"]
                 choices = chunk.choices
-                full_response_chunk = choices[0].delta
+
                 token = choices[0].delta.content
-                finish_reason = choices[0].finish_reason
-                function_call = choices[0].delta.function_call
-                tool_calls = choices[0].delta.tool_calls
-                role = choices[0].delta.role
                 if token:
                     self.completion += token
 
-                if full_response_chunk:
-                    self.full_response += full_response_chunk
+                if not self.full_chat_completion_response.choices[0].delta.role:
+                    self.role = choices[0]['delta'].get('role')
+                    if self.role is not None:
+                        self.full_chat_completion_response.choices[0].delta.role = self.role
 
+                if not self.full_chat_completion_response.choices[0].delta.role:
+                    self.tool_calls = choices[0]['delta'].get('tool_calls')
+                    if self.tool_calls is not None:
+                        self.full_chat_completion_response.choices[0].delta.tool_calls = self.tool_calls
+
+                if not self.full_chat_completion_response.choices[0].delta.role:
+                    self.function_call = choices[0]['delta'].get('function_call')
+                    if self.function_call is not None:
+                        self.full_chat_completion_response.choices[0].delta.function_call = self.function_call
+
+                # Keep setting the returns so we get as much of the response as possible before possibly excepting
+                self.llm_event.returns = self.full_chat_completion_response
+
+                finish_reason = choices[0].finish_reason
                 if finish_reason:
-                    self.llm_event.agent_id = check_call_stack_for_agent_id()
-                    self.llm_event.prompt = kwargs["messages"]
-
-                    self.llm_event.completion = {"role": "assistant", "content": self.completion,
-                                                 "function_call": function_call, "tool_calls": tool_calls, }
-                    self.llm_event.returns = self.full_response  # TODO: move. we always want this even if finish_reason is not present
-                    self.llm_event.model = model
+                    self.llm_event.completion = {"role": self.role, "content": self.completion,
+                                                 "function_call": self.function_call, "tool_calls": self.tool_calls}
                     self.llm_event.end_timestamp = get_ISO_time()
 
                     self.client.record(self.llm_event)
