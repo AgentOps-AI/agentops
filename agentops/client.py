@@ -75,6 +75,7 @@ class Client(metaclass=MetaClient):
 
         self._session = None
         self._worker = None
+        self._tags_for_future_session = None
 
         self._env_data_opt_out = os.getenv('AGENTOPS_ENV_DATA_OPT_OUT') and os.getenv('AGENTOPS_ENV_DATA_OPT_OUT').lower() == 'true'
 
@@ -135,8 +136,15 @@ class Client(metaclass=MetaClient):
             Args:
                 event (Event): The event to record.
         """
-
+        if not event.end_timestamp or event.init_timestamp == event.end_timestamp:
+            event.end_timestamp = get_ISO_time()
         if self._session is not None and not self._session.has_ended:
+            if isinstance(event, ErrorEvent):
+                if event.trigger_event:
+                    event.trigger_event_id = event.trigger_event.id
+                    event.trigger_event_type = event.trigger_event.event_type
+                    self._worker.add_event(event.trigger_event.__dict__)
+                    event.trigger_event = None  # removes trigger_event from serialization
             self._worker.add_event(event.__dict__)
         else:
             logger.warning(
@@ -168,9 +176,6 @@ class Client(metaclass=MetaClient):
 
             event.returns = returns
             event.end_timestamp = get_ISO_time()
-            # TODO: If func excepts this will never get called
-            # the dev loses all the useful stuff in ActionEvent they would need for debugging
-            # we should either record earlier or have Error post the supplied event to supabase
             self.record(event)
 
         except Exception as e:
@@ -207,9 +212,6 @@ class Client(metaclass=MetaClient):
 
             event.returns = returns
             event.end_timestamp = get_ISO_time()
-            # TODO: If func excepts this will never get called
-            # the dev loses all the useful stuff in ActionEvent they would need for debugging
-            # we should either record earlier or have Error post the supplied event to supabase
             self.record(event)
 
         except Exception as e:
@@ -270,12 +272,13 @@ class Client(metaclass=MetaClient):
 
         self._session.video = video
         self._session.end_session(end_state, end_state_reason)
-        token_cost = Decimal(self._worker.end_session(self._session))
+        token_cost = self._worker.end_session(self._session)
         if token_cost == 'unknown':
             print('🖇 AgentOps: Could not determine cost of run.')
         else:
-
-            print('🖇 AgentOps: This run cost ${}'.format('{:.2f}'.format(token_cost) if token_cost == 0 else '{:.6f}'.format(token_cost)))
+            token_cost_d = Decimal(token_cost)
+            print('🖇 AgentOps: This run cost ${}'.format('{:.2f}'.format(
+                token_cost_d) if token_cost_d == 0 else '{:.6f}'.format(token_cost_d)))
         self._session = None
         self._worker = None
 
