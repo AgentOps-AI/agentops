@@ -20,11 +20,9 @@ class TestEvents:
         self.config = agentops.Configuration(api_key=self.api_key, max_wait_time=50, max_queue_size=1)
 
     def test_record_timestamp(self, mock_req):
-        # agentops.init(api_key=self.api_key, max_wait_time=50, auto_start_session=False)
         agentops.init(api_key=self.api_key)
-        agentops.start_session(config=self.config)
 
-        event = ActionEvent(self.event_type)
+        event = ActionEvent()
         time.sleep(0.15)
         agentops.record(event)
 
