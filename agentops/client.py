@@ -75,6 +75,7 @@ class Client(metaclass=MetaClient):
 
         self._session = None
         self._worker = None
+        self._tags_for_future_session = None
 
         self._env_data_opt_out = os.getenv('AGENTOPS_ENV_DATA_OPT_OUT') and os.getenv('AGENTOPS_ENV_DATA_OPT_OUT').lower() == 'true'
 
@@ -135,7 +136,8 @@ class Client(metaclass=MetaClient):
             Args:
                 event (Event): The event to record.
         """
-
+        if not event.end_timestamp or event.init_timestamp == event.end_timestamp:
+            event.end_timestamp = get_ISO_time()
         if self._session is not None and not self._session.has_ended:
             if isinstance(event, ErrorEvent):
                 if event.trigger_event:
@@ -270,13 +272,13 @@ class Client(metaclass=MetaClient):
 
         self._session.video = video
         self._session.end_session(end_state, end_state_reason)
-        token_cost = Decimal(self._worker.end_session(self._session))
+        token_cost = self._worker.end_session(self._session)
         if token_cost == 'unknown':
             print('🖇 AgentOps: Could not determine cost of run.')
         else:
-
+            token_cost_d = Decimal(token_cost)
             print('🖇 AgentOps: This run cost ${}'.format('{:.2f}'.format(
-                token_cost) if token_cost == 0 else '{:.6f}'.format(token_cost)))
+                token_cost_d) if token_cost_d == 0 else '{:.6f}'.format(token_cost_d)))
         self._session = None
         self._worker = None
 
