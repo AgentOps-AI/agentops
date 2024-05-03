@@ -71,8 +71,6 @@ class LlmTracker:
                 kwargs_str = pprint.pformat(kwargs)
                 chunk = pprint.pformat(chunk)
                 logger.warning(
-                    "🖇 AgentOps: Unable to parse a chunk for LLM call %s - skipping upload to AgentOps",
-                    kwargs)
                     f"🖇 AgentOps: Unable to parse a chunk for LLM call. Skipping upload to AgentOps\n"
                     f"chunk:\n {chunk}\n"
                     f"kwargs:\n {kwargs_str}\n"
