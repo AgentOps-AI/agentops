@@ -12,7 +12,7 @@ from .session import Session
 from .worker import Worker
 from .host_env import get_host_env
 from uuid import uuid4
-from typing import Optional, List
+from typing import Optional, List, Union
 import traceback
 from .log_config import logger, set_logging_level_info
 from decimal import Decimal
@@ -130,7 +130,7 @@ class Client(metaclass=MetaClient):
             self._session.tags = tags
             self._worker.update_session(self._session)
 
-    def record(self, event: Event | ErrorEvent):
+    def record(self, event: Union[Event, ErrorEvent]):
         """
             Record an event with the AgentOps service.
 

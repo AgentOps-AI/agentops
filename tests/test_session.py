@@ -64,6 +64,7 @@ class TestSessions:
         assert mock_req.last_request.headers['X-Agentops-Auth'] == self.api_key
         request_json = mock_req.last_request.json()
         assert request_json['session']['end_state'] == end_state
+        print(request_json['session'])
         assert request_json['session']['tags'] == ['GPT-4', 'test-tag', 'dupe-tag']
 
 
