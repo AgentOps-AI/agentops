@@ -7,6 +7,7 @@ from .log_config import logger
 from .event import LLMEvent, ErrorEvent
 from .helpers import get_ISO_time, check_call_stack_for_agent_id
 import inspect
+from typing import Optional
 import pprint
 
 
@@ -27,6 +28,8 @@ class LlmTracker:
 
     def __init__(self, client):
         self.client = client
+        self.completion = ""
+        self.llm_event: Optional[LLMEvent] = None
 
     def _handle_response_v0_openai(self, response, kwargs, init_timestamp):
         """Handle responses for OpenAI versions <v1.0.0"""
@@ -68,6 +71,8 @@ class LlmTracker:
                 kwargs_str = pprint.pformat(kwargs)
                 chunk = pprint.pformat(chunk)
                 logger.warning(
+                    "🖇 AgentOps: Unable to parse a chunk for LLM call %s - skipping upload to AgentOps",
+                    kwargs)
                     f"🖇 AgentOps: Unable to parse a chunk for LLM call. Skipping upload to AgentOps\n"
                     f"chunk:\n {chunk}\n"
                     f"kwargs:\n {kwargs_str}\n"

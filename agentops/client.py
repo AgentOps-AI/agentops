@@ -73,9 +73,9 @@ class Client(metaclass=MetaClient):
                            DeprecationWarning, stacklevel=2)
             instrument_llm_calls = instrument_llm_calls or override
 
-        self._session = None
-        self._worker = None
-        self._tags_for_future_session = None
+        self._session: Optional[Session] = None
+        self._worker: Optional[Worker] = None
+        self._tags: Optional[List[str]] = tags
 
         self._env_data_opt_out = os.getenv('AGENTOPS_ENV_DATA_OPT_OUT') and os.getenv('AGENTOPS_ENV_DATA_OPT_OUT').lower() == 'true'
 
@@ -113,7 +113,8 @@ class Client(metaclass=MetaClient):
         else:
             self._session.tags = tags
 
-        if self._session is not None:
+        if self._session is not None and self._worker is not None:
+            self._session.tags = self._tags
             self._worker.update_session(self._session)
 
     def set_tags(self, tags: List[str]):
@@ -125,7 +126,7 @@ class Client(metaclass=MetaClient):
         """
         self._tags_for_future_session = tags
 
-        if self._session is not None:
+        if self._session is not None and self._worker is not None:
             self._session.tags = tags
             self._worker.update_session(self._session)
 
@@ -138,7 +139,7 @@ class Client(metaclass=MetaClient):
         """
         if not event.end_timestamp or event.init_timestamp == event.end_timestamp:
             event.end_timestamp = get_ISO_time()
-        if self._session is not None and not self._session.has_ended:
+        if self._session is not None and not self._session.has_ended and self._worker is not None:
             if isinstance(event, ErrorEvent):
                 if event.trigger_event:
                     event.trigger_event_id = event.trigger_event.id
@@ -247,8 +248,8 @@ class Client(metaclass=MetaClient):
             self._session = None
             return logger.warning("🖇 AgentOps: Cannot start session")
 
-        logger.info('View info on this session at https://app.agentops.ai/drilldown?session_id={}'
-                    .format(self._session.session_id))
+        logger.info('View info on this session at https://app.agentops.ai/drilldown?session_id=%s', 
+                    self._session.session_id)
 
         return self._session.session_id
 
@@ -269,10 +270,14 @@ class Client(metaclass=MetaClient):
 
         if not any(end_state == state.value for state in EndState):
             return logger.warning("🖇 AgentOps: Invalid end_state. Please use one of the EndState enums")
+        
+        if self._worker is None or self._worker._session is None:
+            return logger.warning("🖇 AgentOps: Cannot end session - no current worker or session")
 
         self._session.video = video
         self._session.end_session(end_state, end_state_reason)
         token_cost = self._worker.end_session(self._session)
+        
         if token_cost == 'unknown':
             print('🖇 AgentOps: Could not determine cost of run.')
         else:
@@ -287,7 +292,7 @@ class Client(metaclass=MetaClient):
             self._worker.create_agent(agent_id, name)
 
     def _handle_unclean_exits(self):
-        def cleanup(end_state: Optional[str] = 'Fail', end_state_reason: Optional[str] = None):
+        def cleanup(end_state: str = 'Fail', end_state_reason: Optional[str] = None):
             # Only run cleanup function if session is created
             if self._session is not None:
                 self.end_session(end_state=end_state,
@@ -302,8 +307,7 @@ class Client(metaclass=MetaClient):
                     frame: The current stack frame.
             """
             signal_name = 'SIGINT' if signum == signal.SIGINT else 'SIGTERM'
-            logger.info(
-                f'🖇 AgentOps: {signal_name} detected. Ending session...')
+            logger.info('🖇 AgentOps: %s detected. Ending session...', signal_name)
             self.end_session(end_state='Fail',
                              end_state_reason=f'Signal {signal_name} detected')
             sys.exit(0)

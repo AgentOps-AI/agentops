@@ -28,9 +28,7 @@ class Response:
     def __init__(self, status: HttpStatus = HttpStatus.UNKNOWN, body: Optional[dict] = None):
         self.status: HttpStatus = status
         self.code: int = status.value
-        self.body = body
-        if not self.body:
-            self.body = {}
+        self.body = body if body else {}
 
     def parse(self, res: requests.models.Response):
         res_body = res.json()
@@ -87,7 +85,7 @@ class HttpClient:
         except requests.exceptions.HTTPError as e:
             try:
                 result.parse(e.response)
-            except:
+            except Exception:
                 result = Response()
                 result.code = e.response.status_code
                 result.status = Response.get_status(e.response.status_code)
@@ -96,12 +94,12 @@ class HttpClient:
             result.body = {'error': str(e)}
 
         if result.code == 401:
-            logger.warning(
-                f'🖇 AgentOps: Could not post data - API server rejected your API key: {api_key}')
+            logger.warning('🖇 AgentOps: Could not post data - API server rejected your API key: %s',
+                           api_key)
         if result.code == 400:
-            logger.warning(f'🖇 AgentOps: Could not post data - {result.body}')
+            logger.warning('🖇 AgentOps: Could not post data - %s', result.body)
         if result.code == 500:
             logger.warning(
-                f'🖇 AgentOps: Could not post data - internal server error')
+                '🖇 AgentOps: Could not post data - internal server error')
 
         return result

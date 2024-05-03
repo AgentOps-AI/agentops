@@ -1,4 +1,4 @@
-from pprint import pprint, pformat
+from pprint import pformat
 from functools import wraps
 import time
 from datetime import datetime
@@ -76,16 +76,16 @@ def safe_serialize(obj):
     return json.dumps(cleaned_obj, default=default)
 
 
-def check_call_stack_for_agent_id() -> str | None:
+def check_call_stack_for_agent_id() -> UUID | None:
     for frame_info in inspect.stack():
         # Look through the call stack for the class that called the LLM
         local_vars = frame_info.frame.f_locals
         for var in local_vars.values():
             # We stop looking up the stack at main because after that we see global variables
             if var == "__main__":
-                return
+                return None
             if hasattr(var, 'agent_ops_agent_id') and getattr(var, 'agent_ops_agent_id'):
-                logger.debug('LLM call from agent named: ' + getattr(var, 'agent_ops_agent_name'))
+                logger.debug('LLM call from agent named: %s', getattr(var, 'agent_ops_agent_name'))
                 return getattr(var, 'agent_ops_agent_id')
     return None
 
@@ -95,7 +95,7 @@ def get_agentops_version():
         pkg_version = version("agentops")
         return pkg_version
     except Exception as e:
-        logger.warning(f"Error reading package version: {e}")
+        logger.warning('Error reading package version: %s', e)
         return None
 
 

@@ -15,7 +15,7 @@ def track_agent(name: str | None = None):
             def new_init(self, *args, **kwargs):
                 try:
                     original_init(self, *args, **kwargs)
-                    self.agent_ops_agent_id = uuid4()
+                    self.agent_ops_agent_id = str(uuid4())
                     Client().create_agent(self.agent_ops_agent_id, self.agent_ops_agent_name)
                 except AttributeError as e:
                     logger.warning("AgentOps failed to track an agent. This often happens if agentops.init() was not "
@@ -25,7 +25,7 @@ def track_agent(name: str | None = None):
             obj.__init__ = new_init
 
         elif isfunction(obj):
-            obj.agent_ops_agent_id = uuid4()
+            obj.agent_ops_agent_id = str(uuid4())
             Client().create_agent(obj.agent_ops_agent_id, obj.agent_ops_agent_name)
 
         else:
