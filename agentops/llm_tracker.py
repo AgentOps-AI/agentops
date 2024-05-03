@@ -54,13 +54,13 @@ class LlmTracker:
                 choices = chunk['choices']
 
                 if choices[0]['delta'].get('content'):
-                    self.completion += choices[0].delta.content
-                    self.full_chat_completion_response.choices[0].delta.content = self.completion
+                    self.completion += choices[0]['delta'].content
+                    self.full_chat_completion_response.choices[0]['delta']['content'] = self.completion
 
                 if choices[0]['delta'].get('role'):
                     self.role = choices[0]['delta'].get('role')
-                    if not self.full_chat_completion_response.choices[0].delta.role:
-                        self.full_chat_completion_response.choices[0].delta.role = self.role
+                    if not self.full_chat_completion_response.choices[0]['delta']['role']:
+                        self.full_chat_completion_response.choices[0]['delta']['role'] = self.role
 
                 finish_reason = choices[0]['finish_reason']
                 self.full_chat_completion_response.choices[0]['finish_reason'] = finish_reason
