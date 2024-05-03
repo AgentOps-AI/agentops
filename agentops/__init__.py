@@ -9,6 +9,7 @@ from .enums import Models
 from .decorators import record_function
 from .agent import track_agent
 from .log_config import set_logging_level_info, set_logging_level_critial
+from .langchain_callback_handler import LangchainCallbackHandler, AsyncLangchainCallbackHandler
 
 
 def init(api_key: Optional[str] = None,
@@ -128,3 +129,6 @@ def set_parent_key(parent_key):
             parent_key (str): The API key of the parent organization to set.
     """
     Client().set_parent_key(parent_key)
+
+def stop_instrumenting():
+    Client().stop_instrumenting()

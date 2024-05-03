@@ -136,7 +136,7 @@ class Client(metaclass=MetaClient):
             Args:
                 event (Event): The event to record.
         """
-        if not event.end_timestamp or event.init_timestamp == event.end_timestamp:
+        if isinstance(event, Event) and not event.end_timestamp or event.init_timestamp == event.end_timestamp:
             event.end_timestamp = get_ISO_time()
         if self._session is not None and not self._session.has_ended and self._worker is not None:
             if isinstance(event, ErrorEvent):
@@ -359,3 +359,6 @@ class Client(metaclass=MetaClient):
     @property
     def parent_key(self):
         return self.config.parent_key
+
+    def stop_instrumenting(self):
+        self.llm_tracker.stop_instrumenting()
