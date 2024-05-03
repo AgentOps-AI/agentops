@@ -31,40 +31,36 @@ class LlmTracker:
     def _handle_response_v0_openai(self, response, kwargs, init_timestamp):
         """Handle responses for OpenAI versions <v1.0.0"""
 
-        self.completion = ""
-        self.role = None
-
         self.llm_event = LLMEvent(
             init_timestamp=init_timestamp,
             params=kwargs
         )
 
         def handle_stream_chunk(chunk):
-            # We take the first ChatCompletionChunk and append data from all subsequent chunks to it to build one full chat completion
+            # We take the first ChatCompletionChunk and accumulate the deltas from all subsequent chunks to build one full chat completion
             if self.llm_event.returns == None:
                 self.llm_event.returns = chunk
+
+            accumulated_delta = self.llm_event.returns['choices'][0]['delta']
 
             try:
                 # NOTE: prompt/completion usage not returned in response when streaming
                 self.llm_event.agent_id = check_call_stack_for_agent_id()
                 self.llm_event.model = chunk['model']
                 self.llm_event.prompt = kwargs["messages"]
-                choices = chunk['choices']
+                choice = chunk['choices'][0]  # NOTE: We assume for completion only choices[0] is relevant
 
-                if choices[0]['delta'].get('content'):
-                    self.completion += choices[0]['delta'].content
-                    self.llm_event.returns.choices[0]['delta']['content'] = self.completion
+                if choice['delta'].get('content'):
+                    accumulated_delta['content'] += choice['delta'].content
 
-                if choices[0]['delta'].get('role'):
-                    self.role = choices[0]['delta'].get('role')
-                    if not self.llm_event.returns.choices[0]['delta']['role']:
-                        self.llm_event.returns.choices[0]['delta']['role'] = self.role
+                if choice['delta'].get('role'):
+                    accumulated_delta['role'] = choice['delta'].get('role')
 
-                finish_reason = choices[0]['finish_reason']
-                self.llm_event.returns.choices[0]['finish_reason'] = finish_reason
-
-                if finish_reason:
-                    self.llm_event.completion = {"role": self.role, "content": self.completion}
+                if choice['finish_reason']:
+                    # Streaming is done. Record LLMEvent
+                    self.llm_event.returns.choices[0]['finish_reason'] = choice['finish_reason']
+                    self.llm_event.completion = {
+                        "role": accumulated_delta['role'], "content": accumulated_delta['content']}
                     self.llm_event.end_timestamp = get_ISO_time()
 
                     self.client.record(self.llm_event)
