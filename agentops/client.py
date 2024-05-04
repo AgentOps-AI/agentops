@@ -76,6 +76,7 @@ class Client(metaclass=MetaClient):
         self._session: Optional[Session] = None
         self._worker: Optional[Worker] = None
         self._tags: Optional[List[str]] = tags
+        self._tags_for_future_session = None
 
         self._env_data_opt_out = os.getenv('AGENTOPS_ENV_DATA_OPT_OUT') and os.getenv('AGENTOPS_ENV_DATA_OPT_OUT').lower() == 'true'
 
@@ -136,8 +137,9 @@ class Client(metaclass=MetaClient):
             Args:
                 event (Event): The event to record.
         """
-        if isinstance(event, Event) and not event.end_timestamp or event.init_timestamp == event.end_timestamp:
-            event.end_timestamp = get_ISO_time()
+        if isinstance(event, Event):
+            if not event.end_timestamp or event.init_timestamp == event.end_timestamp:
+                event.end_timestamp = get_ISO_time()
         if self._session is not None and not self._session.has_ended and self._worker is not None:
             if isinstance(event, ErrorEvent):
                 if event.trigger_event:
