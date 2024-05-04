@@ -77,7 +77,8 @@ class Client(metaclass=MetaClient):
         self._worker = None
         self._tags_for_future_session = None
 
-        self._env_data_opt_out = os.getenv('AGENTOPS_ENV_DATA_OPT_OUT') and os.getenv('AGENTOPS_ENV_DATA_OPT_OUT').lower() == 'true'
+        self._env_data_opt_out = os.getenv('AGENTOPS_ENV_DATA_OPT_OUT') and os.getenv(
+            'AGENTOPS_ENV_DATA_OPT_OUT').lower() == 'true'
 
         try:
             self.config = Configuration(api_key=api_key,
@@ -136,19 +137,24 @@ class Client(metaclass=MetaClient):
             Args:
                 event (Event): The event to record.
         """
-        if not event.end_timestamp or event.init_timestamp == event.end_timestamp:
-            event.end_timestamp = get_ISO_time()
-        if self._session is not None and not self._session.has_ended:
+        if self._session is None or self._session.has_ended:
+            logger.warning("🖇 AgentOps: Cannot record event - no current session")
+            return
+
+        # Need to update end_timestamp for ErrorEvent so creating this event_local pointer
+        event_local = event.trigger_event if isinstance(event, ErrorEvent) else event
+        if event_local:  # ErrorEvent may not have a trigger_event set
+            if not event_local.end_timestamp or event_local.init_timestamp == event_local.end_timestamp:
+                event_local.end_timestamp = get_ISO_time()
+
             if isinstance(event, ErrorEvent):
-                if event.trigger_event:
-                    event.trigger_event_id = event.trigger_event.id
-                    event.trigger_event_type = event.trigger_event.event_type
-                    self._worker.add_event(event.trigger_event.__dict__)
-                    event.trigger_event = None  # removes trigger_event from serialization
-            self._worker.add_event(event.__dict__)
-        else:
-            logger.warning(
-                "🖇 AgentOps: Cannot record event - no current session")
+                # Extract trigger_event info from ErrorEvent and log trigger_event
+                event.trigger_event_id = event_local.id
+                event.trigger_event_type = event_local.event_type
+                self._worker.add_event(event_local.__dict__)
+                event.trigger_event = None  # removes trigger_event from serialization
+
+        self._worker.add_event(event.__dict__)
 
     def _record_event_sync(self, func, event_name, *args, **kwargs):
         init_time = get_ISO_time()
@@ -240,7 +246,8 @@ class Client(metaclass=MetaClient):
         if not config and not self.config:
             return logger.warning("🖇 AgentOps: Cannot start session - missing configuration")
 
-        self._session = Session(inherited_session_id or uuid4(), tags or self._tags_for_future_session, host_env=get_host_env(self._env_data_opt_out))
+        self._session = Session(inherited_session_id or uuid4(),
+                                tags or self._tags_for_future_session, host_env=get_host_env(self._env_data_opt_out))
         self._worker = Worker(config or self.config)
         start_session_result = self._worker.start_session(self._session)
         if not start_session_result:
