@@ -12,7 +12,7 @@ from .session import Session
 from .worker import Worker
 from .host_env import get_host_env
 from uuid import uuid4
-from typing import Optional, List
+from typing import Optional, List, Union
 import traceback
 from .log_config import logger, set_logging_level_info
 from decimal import Decimal
@@ -114,7 +114,6 @@ class Client(metaclass=MetaClient):
             self._session.tags = tags
 
         if self._session is not None and self._worker is not None:
-            self._session.tags = self._tags
             self._worker.update_session(self._session)
 
     def set_tags(self, tags: List[str]):
@@ -130,14 +129,14 @@ class Client(metaclass=MetaClient):
             self._session.tags = tags
             self._worker.update_session(self._session)
 
-    def record(self, event: Event | ErrorEvent):
+    def record(self, event: Union[Event, ErrorEvent]):
         """
             Record an event with the AgentOps service.
 
             Args:
                 event (Event): The event to record.
         """
-        if not event.end_timestamp or event.init_timestamp == event.end_timestamp:
+        if isinstance(event, Event) and not event.end_timestamp or event.init_timestamp == event.end_timestamp:
             event.end_timestamp = get_ISO_time()
         if self._session is not None and not self._session.has_ended and self._worker is not None:
             if isinstance(event, ErrorEvent):
@@ -360,3 +359,6 @@ class Client(metaclass=MetaClient):
     @property
     def parent_key(self):
         return self.config.parent_key
+
+    def stop_instrumenting(self):
+        self.llm_tracker.stop_instrumenting()

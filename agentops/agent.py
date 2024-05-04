@@ -1,10 +1,12 @@
+from typing import Union
+
 from .log_config import logger
 from uuid import uuid4
 from agentops import Client
 from inspect import isclass, isfunction
 
 
-def track_agent(name: str | None = None):
+def track_agent(name: Union[str, None] = None):
     def decorator(obj):
         if name:
             obj.agent_ops_agent_name = name

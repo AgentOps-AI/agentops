@@ -4,6 +4,8 @@ import time
 from datetime import datetime
 import json
 import inspect
+from typing import Union
+
 from .log_config import logger
 from uuid import UUID
 import os
@@ -76,7 +78,7 @@ def safe_serialize(obj):
     return json.dumps(cleaned_obj, default=default)
 
 
-def check_call_stack_for_agent_id() -> UUID | None:
+def check_call_stack_for_agent_id() -> Union[UUID, None]:
     for frame_info in inspect.stack():
         # Look through the call stack for the class that called the LLM
         local_vars = frame_info.frame.f_locals
