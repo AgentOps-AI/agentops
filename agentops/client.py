@@ -144,7 +144,7 @@ class Client(metaclass=MetaClient):
         # Need to update end_timestamp for ErrorEvent so creating this event_local pointer
         event_local = event.trigger_event if isinstance(event, ErrorEvent) else event
         if event_local:  # ErrorEvent may not have a trigger_event set
-            if not event_local.end_timestamp or event_local.init_timestamp == event_local.end_timestamp:
+            if event_local.init_timestamp == event_local.end_timestamp:
                 event_local.end_timestamp = get_ISO_time()
 
             if isinstance(event, ErrorEvent):
