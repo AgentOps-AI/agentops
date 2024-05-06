@@ -141,18 +141,18 @@ class Client(metaclass=MetaClient):
             logger.warning("🖇 AgentOps: Cannot record event - no current session")
             return
 
-        # Need to update end_timestamp for ErrorEvent so creating this event_local pointer
-        event_local = event.trigger_event if isinstance(event, ErrorEvent) else event
-        if event_local:  # ErrorEvent may not have a trigger_event set
-            if event_local.init_timestamp == event_local.end_timestamp:
-                event_local.end_timestamp = get_ISO_time()
+        if isinstance(event, Event):
+            if not event.end_timestamp or event.init_timestamp == event.end_timestamp:
+                event.end_timestamp = get_ISO_time()
+        elif isinstance(event, ErrorEvent):
+            if event.trigger_event:
+                if not event.trigger_event.end_timestamp or event.trigger_event.init_timestamp == event.trigger_event.end_timestamp:
+                    event.trigger_event.end_timestamp = get_ISO_time()
 
-            if isinstance(event, ErrorEvent):
-                # Extract trigger_event info from ErrorEvent and log trigger_event
-                event.trigger_event_id = event_local.id
-                event.trigger_event_type = event_local.event_type
-                self._worker.add_event(event_local.__dict__)
-                event.trigger_event = None  # removes trigger_event from serialization
+            event.trigger_event_id = event.trigger_event.id
+            event.trigger_event_type = event.trigger_event.event_type
+            self._worker.add_event(event.trigger_event.__dict__)
+            event.trigger_event = None  # removes trigger_event from serialization
 
         self._worker.add_event(event.__dict__)
 
