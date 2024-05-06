@@ -26,6 +26,12 @@ def get_model_from_kwargs(kwargs: any) -> str:
         return 'unknown_model'
 
 
+# def get_completion_from_response(response: LLMResult):
+#     if 'text' in response.generations[0][0]:
+#         return response.generations[0][0].text
+#     if ''
+#
+
 class Events:
     llm: Dict[str, LLMEvent] = {}
     tool: Dict[str, ToolEvent] = {}
@@ -103,12 +109,12 @@ class LangchainCallbackHandler(BaseCallbackHandler):
     ) -> Any:
         llm_event: LLMEvent = self.events.llm[str(run_id)]
         llm_event.returns = {
-            "content": response.generations[0][0].message.content,
+            "content": response.generations[0][0].text,
             "generations": response.generations
         }
         llm_event.end_timestamp = get_ISO_time()
         if response.llm_output is not None:
-            llm_event.completion = response.generations[0][0].message.content  # TODO
+            llm_event.completion = response.generations[0][0].text  # TODO
             llm_event.prompt_tokens = response.llm_output['token_usage']['prompt_tokens']
             llm_event.completion_tokens = response.llm_output['token_usage']['completion_tokens']
         self.ao_client.record(llm_event)
@@ -427,12 +433,12 @@ class AsyncLangchainCallbackHandler(AsyncCallbackHandler):
     ) -> Any:
         llm_event: LLMEvent = self.events.llm[str(run_id)]
         llm_event.returns = {
-            "content": response.generations[0][0].message.content,
+            "content": response.generations[0][0].text,
             "generations": response.generations
         }
         llm_event.end_timestamp = get_ISO_time()
         if response.llm_output is not None:
-            llm_event.completion = response.generations[0][0].message.content  # TODO
+            llm_event.completion = response.generations[0][0].text  # TODO
             llm_event.prompt_tokens = response.llm_output['token_usage']['prompt_tokens']
             llm_event.completion_tokens = response.llm_output['token_usage']['completion_tokens']
         self.ao_client.record(llm_event)

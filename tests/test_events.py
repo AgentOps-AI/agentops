@@ -5,14 +5,6 @@ import agentops
 from agentops import ActionEvent, ErrorEvent
 
 
-# @pytest.fixture
-# def mock_req():
-#     with requests_mock.Mocker() as m:
-#         url = 'https://api.agentops.ai'
-#         m.post(url + '/events', text='ok')
-#         m.post(url + '/sessions', json={'status': 'success', 'token_cost': 5})
-#         yield m
-
 class TestEvents:
     def setup_method(self):
         self.api_key = "random_api_key"
