@@ -21,15 +21,15 @@ class Session:
 
     def __init__(self, session_id: UUID, tags: Optional[List[str]] = None, host_env: Optional[dict] = None):
         self.end_timestamp = None
-        self.end_state = None
+        self.end_state: Optional[str] = None
         self.session_id = session_id
         self.init_timestamp = get_ISO_time()
         self.tags = tags
-        self.video = None
-        self.end_state_reason = None
+        self.video: Optional[str] = None
+        self.end_state_reason: Optional[str] = None
         self.host_env = host_env
 
-    def set_session_video(self, video: str):
+    def set_session_video(self, video: str) -> None:
         """
         Sets a url to the video recording of the session.
 
@@ -38,7 +38,7 @@ class Session:
         """
         self.video = video
 
-    def end_session(self, end_state: str = "Indeterminate", end_state_reason: Optional[str] = None):
+    def end_session(self, end_state: str = "Indeterminate", end_state_reason: Optional[str] = None) -> None:
         """
         End the session with a specified state, rating, and reason.
 
