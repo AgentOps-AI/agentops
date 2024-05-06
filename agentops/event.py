@@ -6,7 +6,7 @@ Data Class:
 """
 
 from dataclasses import asdict, dataclass, field
-from typing import List, Optional
+from typing import Any, Dict, List, Optional, Sequence, Union
 from .helpers import get_ISO_time, check_call_stack_for_agent_id
 from .enums import EventType, Models
 from uuid import UUID, uuid4
@@ -38,8 +38,8 @@ class Event:
     """
 
     event_type: str  # EventType.ENUM.value
-    params: Optional[dict] = None
-    returns: Optional[str] = None
+    params: Optional[Union[str, Dict[str, Any]]] = None
+    returns: Optional[Union[str, Dict[str, Any]]] = None
     init_timestamp: Optional[str] = field(default_factory=get_ISO_time)
     end_timestamp: str = field(default_factory=get_ISO_time)
     agent_id: Optional[UUID] = field(default_factory=check_call_stack_for_agent_id)
@@ -60,7 +60,7 @@ class ActionEvent(Event):
     event_type: str = EventType.ACTION.value
     # TODO: Should not be optional, but non-default argument 'agent_id' follows default argument error
     action_type: Optional[str] = None
-    logs: Optional[str] = None
+    logs: Optional[Union[str, Sequence[Any]]] = None
     screenshot: Optional[str] = None
 
     # May be needed if we keep Optional for agent_id
@@ -86,11 +86,11 @@ class LLMEvent(Event):
 
     event_type: str = EventType.LLM.value
     thread_id: Optional[UUID] = None
-    prompt: str | List = None
+    prompt: Optional[Union[str, List]] = None
     prompt_tokens: Optional[int] = None
-    completion: str | object = None
+    completion: Union[str, object] = None
     completion_tokens: Optional[int] = None
-    model: Optional[Models | str] = None
+    model: Optional[Union[Models, str]] = None
 
 
 @dataclass
@@ -104,7 +104,7 @@ class ToolEvent(Event):
     """
     event_type: str = EventType.TOOL.value
     name: Optional[str] = None
-    logs: Optional[str | dict] = None
+    logs: Optional[Union[str, dict]] = None
 
 # Does not inherit from Event because error will (optionally) be linked to an ActionEvent, LLMEvent, etc that will have the details
 
@@ -129,7 +129,7 @@ class ErrorEvent():
     exception: Optional[BaseException] = None
     error_type: Optional[str] = None
     code: Optional[str] = None
-    details: Optional[str] = None
+    details: Optional[Union[str, Dict[str, str]]] = None
     logs: Optional[str] = field(default_factory=traceback.format_exc)
     timestamp: str = field(default_factory=get_ISO_time)
 

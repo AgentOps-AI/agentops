@@ -1,6 +1,6 @@
 # agentops/__init__.py
 from os import environ
-from typing import Optional, List
+from typing import Optional, List, Union
 
 from .client import Client
 from .config import Configuration
@@ -9,6 +9,7 @@ from .enums import Models
 from .decorators import record_function
 from .agent import track_agent
 from .log_config import set_logging_level_info, set_logging_level_critial
+from .langchain_callback_handler import LangchainCallbackHandler, AsyncLangchainCallbackHandler
 
 
 def init(api_key: Optional[str] = None,
@@ -86,7 +87,7 @@ def start_session(tags: Optional[List[str]] = None, config: Optional[Configurati
     return Client().start_session(tags, config, inherited_session_id)
 
 
-def record(event: Event | ErrorEvent):
+def record(event: Union[Event, ErrorEvent]):
     """
         Record an event with the AgentOps service.
 
@@ -128,3 +129,6 @@ def set_parent_key(parent_key):
             parent_key (str): The API key of the parent organization to set.
     """
     Client().set_parent_key(parent_key)
+
+def stop_instrumenting():
+    Client().stop_instrumenting()
