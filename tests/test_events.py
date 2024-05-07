@@ -2,16 +2,8 @@ import time
 import requests_mock
 import pytest
 import agentops
-from agentops import ActionEvent
+from agentops import ActionEvent, ErrorEvent
 
-
-@pytest.fixture
-def mock_req():
-    with requests_mock.Mocker() as m:
-        url = 'https://api.agentops.ai'
-        m.post(url + '/events', text='ok')
-        m.post(url + '/sessions', json={'status': 'success', 'token_cost': 5})
-        yield m
 
 class TestEvents:
     def setup_method(self):
@@ -19,7 +11,7 @@ class TestEvents:
         self.event_type = 'test_event_type'
         self.config = agentops.Configuration(api_key=self.api_key, max_wait_time=50, max_queue_size=1)
 
-    def test_record_timestamp(self, mock_req):
+    def test_record_timestamp(self):
         agentops.init(api_key=self.api_key)
 
         event = ActionEvent()
@@ -27,3 +19,11 @@ class TestEvents:
         agentops.record(event)
 
         assert event.init_timestamp != event.end_timestamp
+
+    def test_record_error_event(self):
+        agentops.init(api_key=self.api_key)
+
+        event = ErrorEvent()
+        time.sleep(0.15)
+        agentops.record(event)
+

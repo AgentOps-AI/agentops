@@ -6,6 +6,7 @@ from .config import Configuration
 from .session import Session
 from .helpers import safe_serialize, filter_unjsonable
 from typing import Dict, Optional
+import os
 
 
 class Worker:
@@ -18,6 +19,7 @@ class Worker:
         self.thread.daemon = True
         self.thread.start()
         self._session: Optional[Session] = None
+        self._debug_mode = os.getenv('DEBUG_MODE') == 'Y'
 
     def add_event(self, event: dict) -> None:
         with self.lock:
@@ -41,6 +43,12 @@ class Worker:
                                 serialized_payload,
                                 self.config.api_key,
                                 self.config.parent_key)
+
+                if self._debug_mode:
+                    print("\n<AGENTOPS_DEBUG_OUTPUT>")
+                    print(f"Worker request to {self.config.endpoint}/events")
+                    print(serialized_payload)
+                    print("</AGENTOPS_DEBUG_OUTPUT>\n")
 
     def start_session(self, session: Session) -> bool:
         self._session = session
