@@ -25,16 +25,22 @@
 
 # AgentOps 🖇️
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT) ![PyPI - Version](https://img.shields.io/pypi/v/agentops) <a href="https://pepy.tech/project/agentops">
-<img src="https://static.pepy.tech/badge/agentops/month"> <a href="https://twitter.com/agentopsai">
-<img src="https://img.shields.io/badge/follow-%40agentops-1DA1F2?logo=twitter&style=social" alt="AgentOps Twitter" />
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+![PyPI - Version](https://img.shields.io/pypi/v/agentops)
+<a href="https://pepy.tech/project/agentops">
+  <img src="https://static.pepy.tech/badge/agentops/month">
+</a>
+<a href="https://twitter.com/agentopsai">
+  <img src="https://img.shields.io/badge/follow-%40agentops-1DA1F2?logo=twitter&style=social" alt="AgentOps Twitter"/>
 </a>
 <a href="https://discord.gg/mKW3ZhN9p2">
-<img src="https://img.shields.io/badge/chat-on%20Discord-blueviolet" alt="Discord community channel" />
+  <img src="https://img.shields.io/badge/chat-on%20Discord-blueviolet" alt="Discord community channel"/>
 </a>
-<a href="mailto:investor@agentops.ai"><img src="https://img.shields.io/website?color=%23f26522&down_message=Y%20Combinator&label=Not%20Backed%20By&logo=ycombinator&style=flat-square&up_message=Y%20Combinator&url=https%3A%2F%2Fwww.ycombinator.com"/>
+<a href="mailto:investor@agentops.ai">
+  <img src="https://img.shields.io/website?color=%23f26522&down_message=Y%20Combinator&label=Not%20Backed%20By&logo=ycombinator&style=flat-square&up_message=Y%20Combinator&url=https%3A%2F%2Fwww.ycombinator.com"/>
+</a>
 <a href="https://github.com/agentops-ai/agentops/issues">
-<img src="https://img.shields.io/github/commit-activity/m/agentops-ai/agentops" alt="git commit activity" />
+  <img src="https://img.shields.io/github/commit-activity/m/agentops-ai/agentops" alt="git commit activity"/>
 </a>
 
 AgentOps helps developers build, evaluate, and monitor AI agents. Tools to build agents from prototype to production.
@@ -49,7 +55,7 @@ AgentOps helps developers build, evaluate, and monitor AI agents. Tools to build
 
 ## Quick Start ⌨️
 
-```python
+```bash
 pip install agentops
 ```
 
@@ -102,6 +108,12 @@ All your sessions are available on the [AgentOps dashboard](https://app.agentops
 ### CrewAI 🛶
 
 Build Crew agents with observability with only 2 lines of code. Simply set an `AGENTOPS_API_KEY` in your environment, and your crews will get automatic monitoring on the AgentOps dashboard.
+
+AgentOps is integrated with CrewAI on a pre-release fork. Install crew with
+
+```bash
+pip install git+https://github.com/AgentOps-AI/crewAI.git@main
+```
 
 - [AgentOps integration example](https://docs.agentops.ai/v1/integrations/crewai)
 - [Official CrewAI documentation](https://docs.crewai.com/how-to/AgentOps-Observability)
