@@ -62,11 +62,6 @@ class ActionEvent(Event):
     logs: Optional[Union[str, Sequence[Any]]] = None
     screenshot: Optional[str] = None
 
-    # May be needed if we keep Optional for agent_id
-    # def __post_init__(self):
-    #     if self.agent_id is None:
-    #         raise ValueError("agent_id is required for ActionEvent")
-
 
 @dataclass
 class LLMEvent(Event):
