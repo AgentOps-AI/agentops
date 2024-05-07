@@ -1,6 +1,6 @@
 <div align="center">
   <a href="https://agentops.ai?ref=gh">
-    <img src="https://github.com/AgentOps-AI/agentops/blob/df22e9dffb7294fb977dc103a2ca3bcf8f04946f/logo.png" style="margin: 15px; max-width: 300px" width="50%" alt="Logo">
+    <img src="https://raw.githubusercontent.com/AgentOps-AI/agentops/e6002beaf277762fa2b9fa5240a1216b335d7e2c/logo.png" style="margin: 15px; max-width: 300px" width="50%" alt="Logo">
   </a>
 </div>
 <p align="center">
