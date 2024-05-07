@@ -38,13 +38,12 @@ class Event:
     """
 
     event_type: str  # EventType.ENUM.value
-    params: Optional[Union[str, Dict[str, Any]]] = None
-    returns: Optional[Union[str, Dict[str, Any]]] = None
-    init_timestamp: Optional[str] = field(default_factory=get_ISO_time)
-    end_timestamp: str = field(default_factory=get_ISO_time)
+    params: Optional[dict] = None
+    returns: Optional[str] = None
+    init_timestamp: str = field(default_factory=get_ISO_time)
+    end_timestamp: Optional[str] = None
     agent_id: Optional[UUID] = field(default_factory=check_call_stack_for_agent_id)
     id: UUID = field(default_factory=uuid4)
-    # TODO: has_been_recorded: bool = False
 
 
 @dataclass
