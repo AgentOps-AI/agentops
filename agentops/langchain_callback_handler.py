@@ -438,8 +438,8 @@ class AsyncLangchainCallbackHandler(AsyncCallbackHandler):
             "generations": response.generations
         }
         llm_event.end_timestamp = get_ISO_time()
+        llm_event.completion = response.generations[0][0].text
         if response.llm_output is not None:
-            llm_event.completion = response.generations[0][0].text  # TODO
             llm_event.prompt_tokens = response.llm_output['token_usage']['prompt_tokens']
             llm_event.completion_tokens = response.llm_output['token_usage']['completion_tokens']
         self.ao_client.record(llm_event)
