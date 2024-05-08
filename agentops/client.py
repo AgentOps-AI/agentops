@@ -108,15 +108,25 @@ class Client(metaclass=MetaClient):
             Args:
                 tags (List[str]): The list of tags to append.
         """
-        if self._session.tags is not None:
-            for tag in tags:
-                if tag not in self._session.tags:
-                    self._session.tags.append(tag)
-        else:
-            self._session.tags = tags
 
-        if self._session is not None and self._worker is not None:
-            self._worker.update_session(self._session)
+        if self._session:
+            if self._session.tags is not None:
+                for tag in tags:
+                    if tag not in self._session.tags:
+                        self._session.tags.append(tag)
+            else:
+                self._session.tags = tags
+
+            if self._session is not None and self._worker is not None:
+                self._worker.update_session(self._session)
+
+        else:
+            if self._tags_for_future_session:
+                for tag in tags:
+                    if tag not in self._session.tags:
+                        self._tags_for_future_session.append(tag)
+            else:
+                self._tags_for_future_session = tags
 
     def set_tags(self, tags: List[str]):
         """
