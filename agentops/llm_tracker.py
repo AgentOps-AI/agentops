@@ -13,6 +13,7 @@ import pprint
 original_create = None
 original_create_async = None
 
+
 class LlmTracker:
     SUPPORTED_APIS = {
         'litellm': {'1.3.1': ("openai_chat_completions.completion",)},
@@ -24,6 +25,11 @@ class LlmTracker:
                 (
                 "ChatCompletion.create",
                 "ChatCompletion.acreate",
+            ),
+        },
+        'cohere': {
+            '1.0.0': (
+                "chat",
             ),
         }
     }
@@ -95,13 +101,9 @@ class LlmTracker:
                     yield chunk
             return generator()
 
-        self.llm_event = LLMEvent(
-            init_timestamp=init_timestamp,
-            params=kwargs,
-            returns=response
-        )
         # v0.0.0 responses are dicts
         try:
+            self.llm_event.returns = response  # TODO: test
             self.llm_event.agent_id = check_call_stack_for_agent_id()
             self.llm_event.prompt = kwargs["messages"]
             self.llm_event.prompt_tokens = response['usage']['prompt_tokens']
@@ -201,10 +203,6 @@ class LlmTracker:
                     yield chunk
             return async_generator()
 
-        self.llm_event = LLMEvent(
-            init_timestamp=init_timestamp,
-            params=kwargs
-        )
         # v1.0.0+ responses are objects
         try:
             self.llm_event.returns = response.model_dump()
@@ -214,6 +212,103 @@ class LlmTracker:
             self.llm_event.completion = response.choices[0].message.model_dump()
             self.llm_event.completion_tokens = response.usage.completion_tokens
             self.llm_event.model = response.model
+
+            self.client.record(self.llm_event)
+        except Exception as e:
+            self.client.record(ErrorEvent(trigger_event=self.llm_event, exception=e))
+            kwargs_str = pprint.pformat(kwargs)
+            response = pprint.pformat(response)
+            logger.warning(
+                f"🖇 AgentOps: Unable to parse response for LLM call. Skipping upload to AgentOps\n"
+                f"response:\n {response}\n"
+                f"kwargs:\n {kwargs_str}\n"
+            )
+
+        return response
+
+    def _handle_response_cohere(self, response, kwargs, init_timestamp):
+        # TODO: """Handle responses for Cohere versions >vx.x.x"""
+        from cohere import NonStreamedChatResponse
+        self.llm_event = LLMEvent(
+            init_timestamp=init_timestamp,
+            params=kwargs
+        )
+
+        # def handle_stream_chunk(chunk: ChatCompletionChunk):
+        #     # NOTE: prompt/completion usage not returned in response when streaming
+        #     # We take the first ChatCompletionChunk and accumulate the deltas from all subsequent chunks to build one full chat completion
+        #     if self.llm_event.returns == None:
+        #         self.llm_event.returns = chunk
+
+        #     try:
+        #         accumulated_delta = self.llm_event.returns.choices[0].delta
+        #         self.llm_event.agent_id = check_call_stack_for_agent_id()
+        #         self.llm_event.model = chunk.model
+        #         self.llm_event.prompt = kwargs["messages"]
+        #         choice = chunk.choices[0]  # NOTE: We assume for completion only choices[0] is relevant
+
+        #         if choice.delta.content:
+        #             accumulated_delta.content += choice.delta.content
+
+        #         if choice.delta.role:
+        #             accumulated_delta.role = choice.delta.role
+
+        #         if choice.delta.tool_calls:
+        #             accumulated_delta.tool_calls = choice.delta.tool_calls
+
+        #         if choice.delta.function_call:
+        #             accumulated_delta.function_call = choice.delta.function_call
+
+        #         if choice.finish_reason:
+        #             # Streaming is done. Record LLMEvent
+        #             self.llm_event.returns.choices[0].finish_reason = choice.finish_reason
+        #             self.llm_event.completion = {"role": accumulated_delta.role, "content": accumulated_delta.content,
+        #                                          "function_call": accumulated_delta.function_call, "tool_calls": accumulated_delta.tool_calls}
+        #             self.llm_event.end_timestamp = get_ISO_time()
+
+        #             self.client.record(self.llm_event)
+        #     except Exception as e:
+        #         self.client.record(ErrorEvent(trigger_event=self.llm_event, exception=e))
+        #         kwargs_str = pprint.pformat(kwargs)
+        #         chunk = pprint.pformat(chunk)
+        #         logger.warning(
+        #             f"🖇 AgentOps: Unable to parse a chunk for LLM call. Skipping upload to AgentOps\n"
+        #             f"chunk:\n {chunk}\n"
+        #             f"kwargs:\n {kwargs_str}\n"
+        #         )
+
+        # # if the response is a generator, decorate the generator
+        # if isinstance(response, Stream):
+        #     def generator():
+        #         for chunk in response:
+        #             handle_stream_chunk(chunk)
+        #             yield chunk
+        #     return generator()
+
+        # # For asynchronous AsyncStream
+        # elif isinstance(response, AsyncStream):
+        #     async def async_generator():
+        #         async for chunk in response:
+        #             handle_stream_chunk(chunk)
+        #             yield chunk
+        #     return async_generator()
+
+        # # For async AsyncCompletion
+        # elif isinstance(response, AsyncCompletions):
+        #     async def async_generator():
+        #         async for chunk in response:
+        #             handle_stream_chunk(chunk)
+        #             yield chunk
+        #     return async_generator()
+
+        try:
+            self.llm_event.returns = response.dict()
+            self.llm_event.agent_id = check_call_stack_for_agent_id()
+            self.llm_event.prompt = kwargs["message"]  # TODO: Support messages as list
+            self.llm_event.prompt_tokens = response.meta.tokens.input_tokens
+            self.llm_event.completion = response.text
+            self.llm_event.completion_tokens = response.meta.tokens.output_tokens
+            self.llm_event.model = kwargs["model"]
 
             self.client.record(self.llm_event)
         except Exception as e:
@@ -288,6 +383,21 @@ class LlmTracker:
         # Override the original method with the patched one
         litellm.acompletion = patched_function
 
+    def override_cohere_chat(self):
+        import cohere
+
+        original_chat = cohere.Client.chat
+
+        def patched_function(*args, **kwargs):
+            # Call the original function with its original arguments
+            init_timestamp = get_ISO_time()
+            result = original_chat(*args, **kwargs)
+            # Note: litellm calls all LLM APIs using the OpenAI format
+            return self._handle_response_cohere(result, kwargs, init_timestamp)
+
+        # Override the original method with the patched one
+        cohere.Client.chat = patched_function
+
     def _override_method(self, api, method_path, module):
         def handle_response(result, kwargs, init_timestamp):
             if api == "openai":
@@ -349,6 +459,15 @@ class LlmTracker:
                             # Patch openai <v1.0.0 methods
                             for method_path in self.SUPPORTED_APIS['openai']['0.0.0']:
                                 self._override_method(api, method_path, module)
+
+                if api == 'cohere':
+                    # Patch openai v1.0.0+ methods
+                    if hasattr(module, '__version__'):
+                        module_version = parse(module.__version__)
+                        if True:
+                            self.override_cohere_chat()
+                    else:
+                        logger.warning(f'🖇 AgentOps: Only Cohere>=x.x.x supported. v{module_version} found.')
 
     def stop_instrumenting(self):
         self.undo_override_openai_v1_async_completion()
