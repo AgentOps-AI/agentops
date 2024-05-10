@@ -104,7 +104,7 @@ class LlmTracker:
 
         # v0.0.0 responses are dicts
         try:
-            self.llm_event.returns = response  # TODO: test
+            self.llm_event.returns = response
             self.llm_event.agent_id = check_call_stack_for_agent_id()
             self.llm_event.prompt = kwargs["messages"]
             self.llm_event.prompt_tokens = response['usage']['prompt_tokens']
