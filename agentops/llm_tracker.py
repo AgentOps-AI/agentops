@@ -13,6 +13,7 @@ import pprint
 original_create = None
 original_create_async = None
 
+
 class LlmTracker:
     SUPPORTED_APIS = {
         'litellm': {'1.3.1': ("openai_chat_completions.completion",)},
@@ -24,6 +25,12 @@ class LlmTracker:
                 (
                 "ChatCompletion.create",
                 "ChatCompletion.acreate",
+            ),
+        },
+        'cohere': {
+            '5.4.0': (
+                "chat",
+                "chat_stream"
             ),
         }
     }
@@ -95,13 +102,9 @@ class LlmTracker:
                     yield chunk
             return generator()
 
-        self.llm_event = LLMEvent(
-            init_timestamp=init_timestamp,
-            params=kwargs,
-            returns=response
-        )
         # v0.0.0 responses are dicts
         try:
+            self.llm_event.returns = response
             self.llm_event.agent_id = check_call_stack_for_agent_id()
             self.llm_event.prompt = kwargs["messages"]
             self.llm_event.prompt_tokens = response['usage']['prompt_tokens']
@@ -201,10 +204,6 @@ class LlmTracker:
                     yield chunk
             return async_generator()
 
-        self.llm_event = LLMEvent(
-            init_timestamp=init_timestamp,
-            params=kwargs
-        )
         # v1.0.0+ responses are objects
         try:
             self.llm_event.returns = response.model_dump()
@@ -214,6 +213,122 @@ class LlmTracker:
             self.llm_event.completion = response.choices[0].message.model_dump()
             self.llm_event.completion_tokens = response.usage.completion_tokens
             self.llm_event.model = response.model
+
+            self.client.record(self.llm_event)
+        except Exception as e:
+            self.client.record(ErrorEvent(trigger_event=self.llm_event, exception=e))
+            kwargs_str = pprint.pformat(kwargs)
+            response = pprint.pformat(response)
+            logger.warning(
+                f"🖇 AgentOps: Unable to parse response for LLM call. Skipping upload to AgentOps\n"
+                f"response:\n {response}\n"
+                f"kwargs:\n {kwargs_str}\n"
+            )
+
+        return response
+
+    def _handle_response_cohere(self, response, kwargs, init_timestamp):
+        # TODO: """Handle responses for Cohere versions >v5.4.0"""
+        from cohere.types.non_streamed_chat_response import NonStreamedChatResponse
+        from cohere.types.streamed_chat_response import (
+            StreamedChatResponse,
+            StreamedChatResponse_CitationGeneration,
+            StreamedChatResponse_SearchQueriesGeneration,
+            StreamedChatResponse_SearchResults,
+            StreamedChatResponse_StreamEnd,
+            StreamedChatResponse_StreamStart,
+            StreamedChatResponse_TextGeneration,
+            StreamedChatResponse_ToolCallsGeneration,
+        )
+        # from cohere.types.chat import ChatGenerationChunk
+
+        # NOTE: Cohere only returns one message and its role will be CHATBOT which we are coercing to "assistant"
+        self.llm_event = LLMEvent(
+            init_timestamp=init_timestamp,
+            params=kwargs
+        )
+
+        def handle_stream_chunk(chunk):
+
+            # We take the first chunk and accumulate the deltas from all subsequent chunks to build one full chat completion
+            if isinstance(chunk, StreamedChatResponse_StreamStart):
+                self.llm_event.returns = chunk
+                self.llm_event.agent_id = check_call_stack_for_agent_id()
+                self.llm_event.model = kwargs.get("model", "command-r-plus")
+                self.llm_event.prompt = kwargs["message"]
+                self.llm_event.completion = ""
+                return
+
+            try:
+                if isinstance(chunk, StreamedChatResponse_StreamEnd):
+                    # Streaming is done. Record LLMEvent
+                    # self.llm_event.returns.finish_reason = chunk.is_finished
+                    self.llm_event.completion = {
+                        "role": "assistant", "content": self.llm_event.completion}
+                    self.llm_event.end_timestamp = get_ISO_time()
+
+                    self.client.record(self.llm_event)
+
+                elif isinstance(chunk, StreamedChatResponse_TextGeneration):
+                    self.llm_event.completion += chunk.text
+                elif isinstance(chunk, StreamedChatResponse_ToolCallsGeneration):
+                    pass
+                elif isinstance(chunk, StreamedChatResponse_CitationGeneration):
+                    pass
+                elif isinstance(chunk, StreamedChatResponse_SearchQueriesGeneration):
+                    pass
+
+            except Exception as e:
+                self.client.record(ErrorEvent(trigger_event=self.llm_event, exception=e))
+                kwargs_str = pprint.pformat(kwargs)
+                chunk = pprint.pformat(chunk)
+                logger.warning(
+                    f"🖇 AgentOps: Unable to parse a chunk for LLM call. Skipping upload to AgentOps\n"
+                    f"chunk:\n {chunk}\n"
+                    f"kwargs:\n {kwargs_str}\n"
+                )
+
+        # NOTE: As of Cohere==5.x.x, async is not supported
+        # if the response is a generator, decorate the generator
+        if inspect.isasyncgen(response):
+            async def async_generator():
+                async for chunk in response:
+                    handle_stream_chunk(chunk)
+                    yield chunk
+            return async_generator()
+
+        elif inspect.isgenerator(response):
+            def generator():
+                for chunk in response:
+                    handle_stream_chunk(chunk)
+                    yield chunk
+            return generator()
+
+        # TODO: we should record if they pass a chat.connectors, because it means they intended to call a tool
+        # Not enough to record StreamedChatResponse_ToolCallsGeneration because the tool may have not gotten called
+
+        try:
+            self.llm_event.returns = response.dict()
+            self.llm_event.agent_id = check_call_stack_for_agent_id()
+            self.llm_event.prompt = []
+            if response.chat_history:
+                role_map = {
+                    "USER": "user",
+                    "CHATBOT": "assistant",
+                    "SYSTEM": "system"
+                }
+
+                for i in range(len(response.chat_history) - 1):
+                    message = response.chat_history[i]
+                    self.llm_event.prompt.append({"role": role_map.get(
+                        message.role, message.role), "content": message.message})
+
+                last_message = response.chat_history[-1]
+                self.llm_event.completion = {
+                    "role": role_map.get(last_message.role, last_message.role), "content": last_message.message}
+            self.llm_event.prompt_tokens = response.meta.tokens.input_tokens
+            self.llm_event.completion_tokens = response.meta.tokens.output_tokens
+            self.llm_event.model = kwargs.get("model", "command-r-plus")
 
             self.client.record(self.llm_event)
         except Exception as e:
@@ -288,6 +403,35 @@ class LlmTracker:
         # Override the original method with the patched one
         litellm.acompletion = patched_function
 
+    def override_cohere_chat(self):
+        import cohere
+        import cohere.types
+
+        original_chat = cohere.Client.chat
+
+        def patched_function(*args, **kwargs):
+            # Call the original function with its original arguments
+            init_timestamp = get_ISO_time()
+            result = original_chat(*args, **kwargs)
+            return self._handle_response_cohere(result, kwargs, init_timestamp)
+
+        # Override the original method with the patched one
+        cohere.Client.chat = patched_function
+
+    def override_cohere_chat_stream(self):
+        import cohere
+
+        original_chat = cohere.Client.chat_stream
+
+        def patched_function(*args, **kwargs):
+            # Call the original function with its original arguments
+            init_timestamp = get_ISO_time()
+            result = original_chat(*args, **kwargs)
+            return self._handle_response_cohere(result, kwargs, init_timestamp)
+
+        # Override the original method with the patched one
+        cohere.Client.chat_stream = patched_function
+
     def _override_method(self, api, method_path, module):
         def handle_response(result, kwargs, init_timestamp):
             if api == "openai":
@@ -331,11 +475,14 @@ class LlmTracker:
                 module = import_module(api)
                 if api == 'litellm':
                     module_version = version(api)
+                    if module_version is None:
+                        logger.warning(f'🖇 AgentOps: Cannot determine LiteLLM version. Only LiteLLM>=1.3.1 supported.')
+
                     if Version(module_version) >= parse('1.3.1'):
                         self.override_litellm_completion()
                         self.override_litellm_async_completion()
                     else:
-                        logger.warning(f'🖇 AgentOps: Only litellm>=1.3.1 supported. v{module_version} found.')
+                        logger.warning(f'🖇 AgentOps: Only LiteLLM>=1.3.1 supported. v{module_version} found.')
                     return  # If using an abstraction like litellm, do not patch the underlying LLM APIs
 
                 if api == 'openai':
@@ -349,6 +496,18 @@ class LlmTracker:
                             # Patch openai <v1.0.0 methods
                             for method_path in self.SUPPORTED_APIS['openai']['0.0.0']:
                                 self._override_method(api, method_path, module)
+
+                if api == 'cohere':
+                    # Patch cohere vx.x.x+ methods
+                    module_version = version(api)
+                    if module_version is None:
+                        logger.warning(f'🖇 AgentOps: Cannot determine Cohere version. Only Cohere>=5.4.0 supported.')
+
+                    if Version(module_version) >= parse('5.4.0'):
+                        self.override_cohere_chat()
+                        self.override_cohere_chat_stream()
+                    else:
+                        logger.warning(f'🖇 AgentOps: Only Cohere>=5.4.0 supported. v{module_version} found.')
 
     def stop_instrumenting(self):
         self.undo_override_openai_v1_async_completion()
