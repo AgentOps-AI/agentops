@@ -4,7 +4,7 @@ from importlib import import_module
 from importlib.metadata import version
 from packaging.version import Version, parse
 from .log_config import logger
-from .event import LLMEvent, ErrorEvent
+from .event import LLMEvent, ToolEvent, ErrorEvent
 from .helpers import get_ISO_time, check_call_stack_for_agent_id
 import inspect
 from typing import Optional
@@ -270,6 +270,12 @@ class LlmTracker:
 
                 elif isinstance(chunk, StreamedChatResponse_TextGeneration):
                     self.llm_event.completion += chunk.text
+                elif isinstance(chunk, StreamedChatResponse_ToolCallsGeneration):
+                    pass
+                elif isinstance(chunk, StreamedChatResponse_CitationGeneration):
+                    pass
+                elif isinstance(chunk, StreamedChatResponse_SearchQueriesGeneration):
+                    pass
 
             except Exception as e:
                 self.client.record(ErrorEvent(trigger_event=self.llm_event, exception=e))
