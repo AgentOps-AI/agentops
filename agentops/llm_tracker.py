@@ -253,7 +253,7 @@ class LlmTracker:
             if isinstance(chunk, StreamedChatResponse_StreamStart):
                 self.llm_event.returns = chunk
                 self.llm_event.agent_id = check_call_stack_for_agent_id()
-                self.llm_event.model = kwargs.get("model", "command")
+                self.llm_event.model = kwargs.get("model", "command-r-plus")
                 self.llm_event.prompt = kwargs["message"]
                 self.llm_event.completion = ""
                 return
@@ -297,18 +297,24 @@ class LlmTracker:
                     yield chunk
             return generator()
 
+        # TODO: we should record if they pass a chat.connectors, because it means they intended to call a tool
+        # Not enough to record StreamedChatResponse_ToolCallsGeneration because the tool may have not gotten called
+
         try:
             self.llm_event.returns = response.dict()
             self.llm_event.agent_id = check_call_stack_for_agent_id()
             self.llm_event.prompt = []
-            for message in response.chat_history:
-                # TODO: bug where message repeats
-                self.llm_event.prompt.append({"role": "assistant", "content": kwargs["message"]})
-            self.llm_event.prompt.append({"role": "assistant", "content": kwargs["message"]})
+            if response.chat_history:
+                for i in range(len(response.chat_history) - 1):
+                    message = response.chat_history[i]
+                    self.llm_event.prompt.append({"role": message.role, "content": message.message})
+
+                last_message = response.chat_history[-1]
+                self.llm_event.completion = {
+                    "role": response.chat_history[-1].role, "content": response.chat_history[-1].message}
             self.llm_event.prompt_tokens = response.meta.tokens.input_tokens
-            self.llm_event.completion = {"role": "assistant", "content": response.text}
             self.llm_event.completion_tokens = response.meta.tokens.output_tokens
-            self.llm_event.model = kwargs["model"]
+            self.llm_event.model = kwargs.get("model", "command-r-plus")
 
             self.client.record(self.llm_event)
         except Exception as e:
