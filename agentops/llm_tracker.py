@@ -4,7 +4,7 @@ from importlib import import_module
 from importlib.metadata import version
 from packaging.version import Version, parse
 from .log_config import logger
-from .event import LLMEvent, ToolEvent, ErrorEvent
+from .event import LLMEvent, ErrorEvent
 from .helpers import get_ISO_time, check_call_stack_for_agent_id
 import inspect
 from typing import Optional
@@ -28,8 +28,9 @@ class LlmTracker:
             ),
         },
         'cohere': {
-            '1.0.0': (
+            '5.4.0': (
                 "chat",
+                "chat_stream"
             ),
         }
     }
@@ -474,11 +475,14 @@ class LlmTracker:
                 module = import_module(api)
                 if api == 'litellm':
                     module_version = version(api)
+                    if module_version is None:
+                        logger.warning(f'🖇 AgentOps: Cannot determine LiteLLM version. Only LiteLLM>=1.3.1 supported.')
+
                     if Version(module_version) >= parse('1.3.1'):
                         self.override_litellm_completion()
                         self.override_litellm_async_completion()
                     else:
-                        logger.warning(f'🖇 AgentOps: Only litellm>=1.3.1 supported. v{module_version} found.')
+                        logger.warning(f'🖇 AgentOps: Only LiteLLM>=1.3.1 supported. v{module_version} found.')
                     return  # If using an abstraction like litellm, do not patch the underlying LLM APIs
 
                 if api == 'openai':
@@ -494,14 +498,16 @@ class LlmTracker:
                                 self._override_method(api, method_path, module)
 
                 if api == 'cohere':
-                    # Patch openai v1.0.0+ methods
-                    if hasattr(module, '__version__'):
-                        module_version = parse(module.__version__)
-                        if True:  # TODO: check version
-                            self.override_cohere_chat()
-                            self.override_cohere_chat_stream()
+                    # Patch cohere vx.x.x+ methods
+                    module_version = version(api)
+                    if module_version is None:
+                        logger.warning(f'🖇 AgentOps: Cannot determine Cohere version. Only Cohere>=5.4.0 supported.')
+
+                    if Version(module_version) >= parse('5.4.0'):
+                        self.override_cohere_chat()
+                        self.override_cohere_chat_stream()
                     else:
-                        logger.warning(f'🖇 AgentOps: Only Cohere>=x.x.x supported. v{module_version} found.')
+                        logger.warning(f'🖇 AgentOps: Only Cohere>=5.4.0 supported. v{module_version} found.')
 
     def stop_instrumenting(self):
         self.undo_override_openai_v1_async_completion()

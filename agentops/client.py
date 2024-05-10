@@ -255,7 +255,7 @@ class Client(metaclass=MetaClient):
             self._session = None
             return logger.warning("🖇 AgentOps: Cannot start session")
 
-        logger.info('View info on this session at https://app.agentops.ai/drilldown?session_id=%s', 
+        logger.info('View info on this session at https://app.agentops.ai/drilldown?session_id=%s',
                     self._session.session_id)
 
         return self._session.session_id
@@ -277,19 +277,19 @@ class Client(metaclass=MetaClient):
 
         if not any(end_state == state.value for state in EndState):
             return logger.warning("🖇 AgentOps: Invalid end_state. Please use one of the EndState enums")
-        
+
         if self._worker is None or self._worker._session is None:
             return logger.warning("🖇 AgentOps: Cannot end session - no current worker or session")
 
         self._session.video = video
         self._session.end_session(end_state, end_state_reason)
         token_cost = self._worker.end_session(self._session)
-        
+
         if token_cost == 'unknown':
             print('🖇 AgentOps: Could not determine cost of run.')
         else:
             token_cost_d = Decimal(token_cost)
-            print('🖇 AgentOps: This run cost ${}'.format('{:.2f}'.format(
+            print('\n🖇 AgentOps: This run cost ${}'.format('{:.2f}'.format(
                 token_cost_d) if token_cost_d == 0 else '{:.6f}'.format(token_cost_d)))
         self._session = None
         self._worker = None

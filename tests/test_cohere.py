@@ -15,23 +15,18 @@ chat = co.chat(
         },
     ],
     message="What year was he born?",
-    model="command"
+    model="command",
+    connectors=[{"id": "web-search"}]
 )
 
 print(chat)
 
-# import cohere
-# import agentops
-# from dotenv import load_dotenv
-# load_dotenv()
+stream = co.chat_stream(
+    message="Tell me a short story"
+)
 
-# agentops.init(endpoint='http://localhost:8000')
-# co = cohere.Client()
+for event in stream:
+    if event.event_type == "text-generation":
+        print(event.text, end='')
 
-# stream = co.chat_stream(
-#     message="Tell me a short story"
-# )
-
-# for event in stream:
-#     if event.event_type == "text-generation":
-#         print(event.text, end='')
+agentops.end_session('Success')
