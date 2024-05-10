@@ -163,40 +163,40 @@ pip install cohere
 ```
 
 ```python python
-  import cohere
-  import agentops
+import cohere
+import agentops
 
-  # Beginning of program's code (i.e. main.py, __init__.py)
-  agentops.init(<INSERT YOUR API KEY HERE>)
-  co = cohere.Client()
+# Beginning of program's code (i.e. main.py, __init__.py)
+agentops.init(<INSERT YOUR API KEY HERE>)
+co = cohere.Client()
 
-  chat = co.chat(
-      message="Is it pronounced ceaux-hear or co-hehray?"
-  )
+chat = co.chat(
+    message="Is it pronounced ceaux-hear or co-hehray?"
+)
 
-  print(chat)
+print(chat)
 
-  agentops.end_session('Success')
+agentops.end_session('Success')
 ```
 
 ```python python
-  import cohere
-  import agentops
+import cohere
+import agentops
 
-  # Beginning of program's code (i.e. main.py, __init__.py)
-  agentops.init(<INSERT YOUR API KEY HERE>)
-  
-  co = cohere.Client()
+# Beginning of program's code (i.e. main.py, __init__.py)
+agentops.init(<INSERT YOUR API KEY HERE>)
 
-  stream = co.chat_stream(
-      message="Write me a haiku about the synergies between Cohere and AgentOps"
-  )
+co = cohere.Client()
 
-  for event in stream:
-      if event.event_type == "text-generation":
-          print(event.text, end='')
+stream = co.chat_stream(
+    message="Write me a haiku about the synergies between Cohere and AgentOps"
+)
 
-  agentops.end_session('Success')
+for event in stream:
+    if event.event_type == "text-generation":
+        print(event.text, end='')
+
+agentops.end_session('Success')
 ```
 
 ### LlamaIndex 🦙

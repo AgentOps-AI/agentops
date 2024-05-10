@@ -3,7 +3,7 @@ import agentops
 from dotenv import load_dotenv
 load_dotenv()
 
-agentops.init(endpoint='http://localhost:8000')
+agentops.init()
 co = cohere.Client()
 
 chat = co.chat(
@@ -15,8 +15,6 @@ chat = co.chat(
         },
     ],
     message="What year was he born?",
-    model="command",
-    connectors=[{"id": "web-search"}]
 )
 
 print(chat)
