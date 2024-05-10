@@ -305,13 +305,20 @@ class LlmTracker:
             self.llm_event.agent_id = check_call_stack_for_agent_id()
             self.llm_event.prompt = []
             if response.chat_history:
+                role_map = {
+                    "USER": "user",
+                    "CHATBOT": "assistant",
+                    "SYSTEM": "system"
+                }
+
                 for i in range(len(response.chat_history) - 1):
                     message = response.chat_history[i]
-                    self.llm_event.prompt.append({"role": message.role, "content": message.message})
+                    self.llm_event.prompt.append({"role": role_map.get(
+                        message.role, message.role), "content": message.message})
 
                 last_message = response.chat_history[-1]
                 self.llm_event.completion = {
-                    "role": response.chat_history[-1].role, "content": response.chat_history[-1].message}
+                    "role": role_map.get(last_message.role, last_message.role), "content": last_message.message}
             self.llm_event.prompt_tokens = response.meta.tokens.input_tokens
             self.llm_event.completion_tokens = response.meta.tokens.output_tokens
             self.llm_event.model = kwargs.get("model", "command-r-plus")
