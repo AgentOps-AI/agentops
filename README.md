@@ -151,6 +151,54 @@ agent = initialize_agent(tools,
 
 Check out the [Langchain Examples Notebook](./examples/langchain_examples.ipynb) for more details including Async handlers.
 
+### Cohere 
+
+First class support for Cohere(>=5.4.0). This is a living integration, should you need any added functionality please message us on Discord!
+
+- [AgentOps integration example](https://docs.agentops.ai/v1/integrations/cohere)
+- [Official Cohere documentation](https://docs.cohere.com/reference/about)
+
+```bash
+pip install cohere
+```
+
+```python python
+  import cohere
+  import agentops
+
+  # Beginning of program's code (i.e. main.py, __init__.py)
+  agentops.init(<INSERT YOUR API KEY HERE>)
+  co = cohere.Client()
+
+  chat = co.chat(
+      message="Is it pronounced ceaux-hear or co-hehray?"
+  )
+
+  print(chat)
+
+  agentops.end_session('Success')
+```
+
+```python python
+  import cohere
+  import agentops
+
+  # Beginning of program's code (i.e. main.py, __init__.py)
+  agentops.init(<INSERT YOUR API KEY HERE>)
+  
+  co = cohere.Client()
+
+  stream = co.chat_stream(
+      message="Write me a haiku about the synergies between Cohere and AgentOps"
+  )
+
+  for event in stream:
+      if event.event_type == "text-generation":
+          print(event.text, end='')
+
+  agentops.end_session('Success')
+```
+
 ### LlamaIndex 🦙
 
 (Coming Soon)
