@@ -277,6 +277,8 @@ class LlmTracker:
                     pass
                 elif isinstance(chunk, StreamedChatResponse_SearchQueriesGeneration):
                     pass
+                elif isinstance(chunk, StreamedChatResponse_SearchResults):
+                    pass
 
             except Exception as e:
                 self.client.record(ErrorEvent(trigger_event=self.llm_event, exception=e))
