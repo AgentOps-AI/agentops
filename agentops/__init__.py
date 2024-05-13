@@ -9,8 +9,10 @@ from .enums import Models
 from .decorators import record_function
 from .agent import track_agent
 from .log_config import set_logging_level_info, set_logging_level_critial
-from .langchain_callback_handler import LangchainCallbackHandler, AsyncLangchainCallbackHandler
-
+try:
+    from .langchain_callback_handler import LangchainCallbackHandler, AsyncLangchainCallbackHandler
+except ModuleNotFoundError:
+    pass
 
 def init(api_key: Optional[str] = None,
          parent_key: Optional[str] = None,
