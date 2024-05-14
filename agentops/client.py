@@ -5,9 +5,11 @@
         Client: Provides methods to interact with the AgentOps service.
 """
 import os
+import uuid
+
 from .event import ActionEvent, ErrorEvent, Event
 from .enums import EndState
-from .helpers import get_ISO_time, singleton, check_call_stack_for_agent_id
+from .helpers import get_ISO_time, singleton, check_call_stack_for_agent_id, get_partner_frameworks
 from .session import Session
 from .worker import Worker
 from .host_env import get_host_env
@@ -37,8 +39,8 @@ class Client(metaclass=MetaClient):
 
             api_key (str, optional): API Key for AgentOps services. If none is provided, key will
                 be read from the AGENTOPS_API_KEY environment variable.
-            parent_key (str, optional): Organization key to give visibility of all user sessions the user's organization. If none is provided, key will
-                be read from the AGENTOPS_PARENT_KEY environment variable.
+            parent_key (str, optional): Organization key to give visibility of all user sessions the user's organization.
+                If none is provided, key will be read from the AGENTOPS_PARENT_KEY environment variable.
             endpoint (str, optional): The endpoint for the AgentOps service. If none is provided, key will
                 be read from the AGENTOPS_API_ENDPOINT environment variable. Defaults to 'https://api.agentops.ai'.
             max_wait_time (int, optional): The maximum time to wait in milliseconds before flushing the queue.
@@ -46,13 +48,15 @@ class Client(metaclass=MetaClient):
             max_queue_size (int, optional): The maximum size of the event queue. Defaults to 100.
             tags (List[str], optional): Tags for the sessions that can be used for grouping or
                 sorting later (e.g. ["GPT-4"]).
-            override (bool, optional): [Deprecated] Use `instrument_llm_calls` instead. Whether to instrument LLM calls and emit LLMEvents..
+            override (bool, optional): [Deprecated] Use `instrument_llm_calls` instead. Whether to instrument LLM calls
+                and emit LLMEvents.
             instrument_llm_calls (bool): Whether to instrument LLM calls and emit LLMEvents..
             auto_start_session (bool): Whether to start a session automatically when the client is created.
             inherited_session_id (optional, str): Init Agentops with an existing Session
         Attributes:
             _session (Session, optional): A Session is a grouping of events (e.g. a run of your agent).
-            _worker (Worker, optional): A Worker manages the event queue and sends session updates to the AgentOps api server
+            _worker (Worker, optional): A Worker manages the event queue and sends session updates to the AgentOps api
+                server
     """
 
     def __init__(self,
@@ -78,6 +82,7 @@ class Client(metaclass=MetaClient):
         self._tags: Optional[List[str]] = tags
         self._tags_for_future_session: Optional[List[str]] = None
 
+
         self._env_data_opt_out = os.getenv('AGENTOPS_ENV_DATA_OPT_OUT') and os.getenv(
             'AGENTOPS_ENV_DATA_OPT_OUT').lower() == 'true'
 
@@ -92,6 +97,8 @@ class Client(metaclass=MetaClient):
 
         self._handle_unclean_exits()
 
+        instrument_llm_calls, auto_start_session = self._check_for_partner_frameworks(instrument_llm_calls, auto_start_session)
+
         if auto_start_session:
             self.start_session(tags, self.config, inherited_session_id)
         else:
@@ -101,6 +108,19 @@ class Client(metaclass=MetaClient):
             self.llm_tracker = LlmTracker(self)
             self.llm_tracker.override_api()
 
+    def _check_for_partner_frameworks(self, instrument_llm_calls, auto_start_session) -> (bool, bool):
+        partner_frameworks = get_partner_frameworks()
+        for framework in partner_frameworks.keys():
+            if framework in sys.modules:
+                self.add_tags([framework])
+                if 'autogen':
+                    import autogen
+                    autogen.runtime_logging.start(logger_type="agentops")
+
+                return partner_frameworks[framework]
+
+        return instrument_llm_calls, auto_start_session
+
     def add_tags(self, tags: List[str]):
         """
             Append to session tags at runtime.
@@ -108,15 +128,25 @@ class Client(metaclass=MetaClient):
             Args:
                 tags (List[str]): The list of tags to append.
         """
-        if self._session.tags is not None:
-            for tag in tags:
-                if tag not in self._session.tags:
-                    self._session.tags.append(tag)
-        else:
-            self._session.tags = tags
 
-        if self._session is not None and self._worker is not None:
-            self._worker.update_session(self._session)
+        if self._session:
+            if self._session.tags is not None:
+                for tag in tags:
+                    if tag not in self._session.tags:
+                        self._session.tags.append(tag)
+            else:
+                self._session.tags = tags
+
+            if self._session is not None and self._worker is not None:
+                self._worker.update_session(self._session)
+
+        else:
+            if self._tags_for_future_session:
+                for tag in tags:
+                    if tag not in self._session.tags:
+                        self._tags_for_future_session.append(tag)
+            else:
+                self._tags_for_future_session = tags
 
     def set_tags(self, tags: List[str]):
         """
@@ -253,7 +283,7 @@ class Client(metaclass=MetaClient):
         start_session_result = self._worker.start_session(self._session)
         if not start_session_result:
             self._session = None
-            return logger.warning("🖇 AgentOps: Cannot start session")
+            return logger.warning("🖇 AgentOps: Cannot start session - No server response")
 
         logger.info('View info on this session at https://app.agentops.ai/drilldown?session_id=%s',
                     self._session.session_id)
@@ -294,9 +324,12 @@ class Client(metaclass=MetaClient):
         self._session = None
         self._worker = None
 
-    def create_agent(self, agent_id: str, name: str):
+    def create_agent(self, name: str, agent_id: Optional[str] = None) -> str:
+        if agent_id is None:
+            agent_id = str(uuid.uuid4())
         if self._worker:
             self._worker.create_agent(agent_id, name)
+            return agent_id
 
     def _handle_unclean_exits(self):
         def cleanup(end_state: str = 'Fail', end_state_reason: Optional[str] = None):

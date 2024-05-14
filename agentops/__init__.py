@@ -1,7 +1,5 @@
 # agentops/__init__.py
-from os import environ
 from typing import Optional, List, Union
-
 from .client import Client
 from .config import Configuration
 from .event import Event, ActionEvent, LLMEvent, ToolEvent, ErrorEvent
@@ -13,6 +11,7 @@ try:
     from .langchain_callback_handler import LangchainCallbackHandler, AsyncLangchainCallbackHandler
 except ModuleNotFoundError:
     pass
+
 
 def init(api_key: Optional[str] = None,
          parent_key: Optional[str] = None,
@@ -134,3 +133,7 @@ def set_parent_key(parent_key):
 
 def stop_instrumenting():
     Client().stop_instrumenting()
+
+
+def create_agent(name: str, agent_id: Optional[str] = None):
+    return Client().create_agent(name=name, agent_id=agent_id)
