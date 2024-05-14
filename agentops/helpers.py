@@ -12,6 +12,12 @@ import os
 from importlib.metadata import version
 
 
+PARTNER_FRAMEWORKS = {
+    # framework : instrument_llm_calls, auto_start_session
+    'autogen': (False, True)
+}
+
+
 def singleton(class_):
     instances = {}
 
@@ -138,3 +144,7 @@ def debug_print_function_params(func):
 
         return func(self, *args, **kwargs)
     return wrapper
+
+
+def get_partner_frameworks():
+    return PARTNER_FRAMEWORKS

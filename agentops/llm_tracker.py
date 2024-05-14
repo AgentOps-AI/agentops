@@ -362,4 +362,4 @@ class LlmTracker:
     def undo_override_openai_v1_async_completion(self):
         global original_create_async
         from openai.resources.chat import completions
-        original_create_async = completions.AsyncCompletions.create
+        completions.AsyncCompletions.create = original_create_async
