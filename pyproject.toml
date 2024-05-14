@@ -30,7 +30,7 @@ dev = [
     "requests_mock==1.11.0"
 ]
 langchain = [
-    "langchain=^1.19"
+    "langchain~=1.19"
 ]
 
 [project.urls]
