@@ -14,7 +14,8 @@ from importlib.metadata import version
 
 PARTNER_FRAMEWORKS = {
     # framework : instrument_llm_calls, auto_start_session
-    'autogen': (False, True)
+    'autogen': (False, True),
+    'crewai': (False, True)
 }
 
 
