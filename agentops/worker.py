@@ -7,7 +7,6 @@ from .config import Configuration
 from .session import Session
 from .helpers import safe_serialize, filter_unjsonable
 from typing import Dict, Optional
-import os
 
 
 class Worker:
@@ -42,8 +41,7 @@ class Worker:
                 serialized_payload = safe_serialize(payload).encode("utf-8")
                 HttpClient.post(f'{self.config.endpoint}/events',
                                 serialized_payload,
-                                self.config.api_key,
-                                self.config.parent_key)
+                                jwt_token=self.jwt_token)
 
                 logger.debug("\n<AGENTOPS_DEBUG_OUTPUT>")
                 logger.debug(f"Worker request to {self.config.endpoint}/events")
@@ -62,11 +60,14 @@ class Worker:
                                   self.config.api_key,
                                   self.config.parent_key)
 
+            logger.debug(res.body)
+
             if res.code != 200:
                 return False
             
-            logger.debug(res.body)
-            # res.body['token'] = res.body.pop('token')
+            self.jwt_token = res.body.get('jwt_token', None)
+            if self.jwt_token is None:
+                return False
 
             return True
 
@@ -81,11 +82,10 @@ class Worker:
                 "session": session.__dict__
             }
 
-            res = HttpClient.post(f'{self.config.endpoint}/sessions',
+            res = HttpClient.post(f'{self.config.endpoint}/v2/update_session',
                             json.dumps(filter_unjsonable(
                                 payload)).encode("utf-8"),
-                            self.config.api_key,
-                            self.config.parent_key)
+                            jwt_token=self.jwt_token)
 
             return res.body.get('token_cost', "unknown")
 
@@ -95,11 +95,10 @@ class Worker:
                 "session": session.__dict__
             }
 
-            HttpClient.post(f'{self.config.endpoint}/sessions',
+            res = HttpClient.post(f'{self.config.endpoint}/v2/update_session',
                             json.dumps(filter_unjsonable(
                                 payload)).encode("utf-8"),
-                            self.config.api_key,
-                            self.config.parent_key)
+                            jwt_token=self.jwt_token)
 
     def create_agent(self, agent_id, name):
         payload = {
@@ -112,8 +111,7 @@ class Worker:
             safe_serialize(payload).encode("utf-8")
         HttpClient.post(f'{self.config.endpoint}/agents',
                         serialized_payload,
-                        self.config.api_key,
-                        self.config.parent_key)
+                        jwt_token=self.jwt_token)
 
     def run(self) -> None:
         while not self.stop_flag.is_set():
