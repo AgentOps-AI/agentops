@@ -333,7 +333,7 @@ class Client(metaclass=MetaClient):
         if agent_id is None:
             agent_id = str(uuid.uuid4())
         if self._worker:
-            self._worker.create_agent(agent_id, name)
+            self._worker.create_agent(name=name, agent_id=agent_id)
             return agent_id
 
     def _handle_unclean_exits(self):
