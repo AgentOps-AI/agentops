@@ -16,7 +16,8 @@ from .host_env import get_host_env
 from uuid import uuid4
 from typing import Optional, List, Union
 import traceback
-from .log_config import logger, set_logging_level_info
+import logging
+from .log_config import logger, set_logging_level
 from decimal import Decimal
 import inspect
 import atexit
@@ -269,7 +270,12 @@ class Client(metaclass=MetaClient):
                 config: (Configuration, optional): Client configuration object
                 inherited_session_id (optional, str): assign session id to match existing Session
         """
-        set_logging_level_info()
+        if os.getenv('AGENTOPS_LOGGING_LEVEL') == 'DEBUG':
+            set_logging_level(logging.DEBUG)
+        elif os.getenv('AGENTOPS_LOGGING_LEVEL') == 'CRITICAL':
+            set_logging_level(logging.CRITICAL)
+        else:
+            set_logging_level(logging.INFO)
 
         if self._session is not None:
             return logger.warning("🖇 AgentOps: Cannot start session - session already started")
