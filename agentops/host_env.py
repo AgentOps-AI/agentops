@@ -134,22 +134,18 @@ def get_disk_details():
 def get_host_env(opt_out: bool = False):
     if opt_out:
         return {
-            "AgentOps SDK": get_agentops_details(),
-            "Python": get_python_details(),
+            "SDK": get_sdk_details(),
             "OS": get_os_details(),
-            "System Packages": get_sys_packages(),
             "Project Working Directory": get_current_directory(),
             "Virtual Environment": get_virtual_env()
         }
     else:
         return {
-            "AgentOps SDK": get_agentops_details(),
-            "Python": get_python_details(),
+            "SDK": get_sdk_details(),
             "OS": get_os_details(),
             "CPU": get_cpu_details(),
             "RAM": get_ram_details(),
             "Disk": get_disk_details(),
-            "System Packages": get_sys_packages(),
             "Installed Packages": get_installed_packages(),
             "Project Working Directory": get_current_directory(),
             "Virtual Environment": get_virtual_env()
