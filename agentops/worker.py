@@ -39,7 +39,7 @@ class Worker:
                 }
 
                 serialized_payload = safe_serialize(payload).encode("utf-8")
-                HttpClient.post(f'{self.config.endpoint}/events',
+                HttpClient.post(f'{self.config.endpoint}/v2/create_events',
                                 serialized_payload,
                                 jwt_token=self.jwt_token)
 
@@ -109,7 +109,7 @@ class Worker:
 
         serialized_payload = \
             safe_serialize(payload).encode("utf-8")
-        HttpClient.post(f'{self.config.endpoint}/agents',
+        HttpClient.post(f'{self.config.endpoint}/v2/create_agent',
                         serialized_payload,
                         jwt_token=self.jwt_token)
 
