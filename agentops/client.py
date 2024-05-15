@@ -117,10 +117,12 @@ class Client(metaclass=MetaClient):
                     try:
                         import autogen
                         autogen.runtime_logging.start(logger_type="agentops")
-                    except:
+                    except ImportError:
                         pass
+                    except Exception as e:
+                        logger.warning("🖇️ AgentOps: Failed to set up autogen logger with AgentOps. Error: " + e)
 
-                return partner_frameworks[framework]
+                    return partner_frameworks[framework]
 
         return instrument_llm_calls, auto_start_session
 
