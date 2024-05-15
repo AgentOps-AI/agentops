@@ -2,8 +2,11 @@
 from typing import Optional, List, Union
 from .client import Client
 from .config import Configuration
-from .event import Event, ErrorEvent
-from .log_config import set_logging_level_info
+from .event import Event, ActionEvent, LLMEvent, ToolEvent, ErrorEvent
+from .enums import Models
+from .decorators import record_function
+from .agent import track_agent
+from .log_config import set_logging_level_info, set_logging_level_critial
 try:
     from .langchain_callback_handler import LangchainCallbackHandler, AsyncLangchainCallbackHandler
 except ModuleNotFoundError:
