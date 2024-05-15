@@ -1,4 +1,5 @@
 import json
+from .log_config import logger
 import threading
 import time
 from .http_client import HttpClient
@@ -19,7 +20,7 @@ class Worker:
         self.thread.daemon = True
         self.thread.start()
         self._session: Optional[Session] = None
-        self._debug_mode = os.getenv('DEBUG_MODE') == 'Y'
+        self.jwt_token = None
 
     def add_event(self, event: dict) -> None:
         with self.lock:
@@ -44,11 +45,10 @@ class Worker:
                                 self.config.api_key,
                                 self.config.parent_key)
 
-                if self._debug_mode:
-                    print("\n<AGENTOPS_DEBUG_OUTPUT>")
-                    print(f"Worker request to {self.config.endpoint}/events")
-                    print(serialized_payload)
-                    print("</AGENTOPS_DEBUG_OUTPUT>\n")
+                logger.debug("\n<AGENTOPS_DEBUG_OUTPUT>")
+                logger.debug(f"Worker request to {self.config.endpoint}/events")
+                logger.debug(serialized_payload)
+                logger.debug("</AGENTOPS_DEBUG_OUTPUT>\n")
 
     def start_session(self, session: Session) -> bool:
         self._session = session
@@ -57,13 +57,16 @@ class Worker:
                 "session": session.__dict__
             }
             serialized_payload = json.dumps(filter_unjsonable(payload)).encode("utf-8")
-            res = HttpClient.post(f'{self.config.endpoint}/sessions',
+            res = HttpClient.post(f'{self.config.endpoint}/v2/create_session',
                                   serialized_payload,
                                   self.config.api_key,
                                   self.config.parent_key)
 
             if res.code != 200:
                 return False
+            
+            logger.debug(res.body)
+            # res.body['token'] = res.body.pop('token')
 
             return True
 

@@ -8,7 +8,7 @@ from .event import Event, ActionEvent, LLMEvent, ToolEvent, ErrorEvent
 from .enums import Models
 from .decorators import record_function
 from .agent import track_agent
-from .log_config import set_logging_level
+from .log_config import logger
 try:
     from .langchain_callback_handler import LangchainCallbackHandler, AsyncLangchainCallbackHandler
 except ModuleNotFoundError:
@@ -49,11 +49,11 @@ def init(api_key: Optional[str] = None,
         Attributes:
     """
     if os.getenv('AGENTOPS_LOGGING_LEVEL') == 'DEBUG':
-        set_logging_level(logging.DEBUG)
+        logger.setLevel(logging.DEBUG)
     elif os.getenv('AGENTOPS_LOGGING_LEVEL') == 'CRITICAL':
-        set_logging_level(logging.CRITICAL)
+        logger.setLevel(logging.CRITICAL)
     else:
-        set_logging_level(logging.INFO)
+        logger.setLevel(logging.INFO)
         
     c = Client(api_key=api_key,
                parent_key=parent_key,
