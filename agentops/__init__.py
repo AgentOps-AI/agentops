@@ -47,7 +47,6 @@ def init(api_key: Optional[str] = None,
         Attributes:
     """
     set_logging_level_info()
-
     c = Client(api_key=api_key,
                parent_key=parent_key,
                endpoint=endpoint,
@@ -131,7 +130,6 @@ def set_parent_key(parent_key):
             parent_key (str): The API key of the parent organization to set.
     """
     Client().set_parent_key(parent_key)
-
 
 def stop_instrumenting():
     Client().stop_instrumenting()
