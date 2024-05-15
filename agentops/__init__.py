@@ -2,11 +2,8 @@
 from typing import Optional, List, Union
 from .client import Client
 from .config import Configuration
-from .event import Event, ActionEvent, LLMEvent, ToolEvent, ErrorEvent
-from .enums import Models
-from .decorators import record_function
-from .agent import track_agent
-from .log_config import set_logging_level_info, set_logging_level_critial
+from .event import Event, ErrorEvent
+from .log_config import set_logging_level_info
 try:
     from .langchain_callback_handler import LangchainCallbackHandler, AsyncLangchainCallbackHandler
 except ModuleNotFoundError:
@@ -47,6 +44,7 @@ def init(api_key: Optional[str] = None,
         Attributes:
     """
     set_logging_level_info()
+
     c = Client(api_key=api_key,
                parent_key=parent_key,
                endpoint=endpoint,
@@ -130,6 +128,7 @@ def set_parent_key(parent_key):
             parent_key (str): The API key of the parent organization to set.
     """
     Client().set_parent_key(parent_key)
+
 
 def stop_instrumenting():
     Client().stop_instrumenting()
