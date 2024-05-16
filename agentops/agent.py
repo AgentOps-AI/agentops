@@ -18,7 +18,7 @@ def track_agent(name: Union[str, None] = None):
                 try:
                     original_init(self, *args, **kwargs)
                     self.agent_ops_agent_id = str(uuid4())
-                    Client().create_agent(self.agent_ops_agent_id, self.agent_ops_agent_name)
+                    Client().create_agent(name=self.agent_ops_agent_name, agent_id=self.agent_ops_agent_id)
                 except AttributeError as e:
                     logger.warning("Failed to track an agent. This often happens if agentops.init() was not "
                                   "called before initializing an agent with the @track_agent decorator.")
@@ -28,7 +28,7 @@ def track_agent(name: Union[str, None] = None):
 
         elif isfunction(obj):
             obj.agent_ops_agent_id = str(uuid4())
-            Client().create_agent(obj.agent_ops_agent_id, obj.agent_ops_agent_name)
+            Client().create_agent(name=obj.agent_ops_agent_name, agent_id=obj.agent_ops_agent_id)
 
         else:
             raise Exception("Invalid input, 'obj' must be a class or a function")
