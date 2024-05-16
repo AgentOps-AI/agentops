@@ -82,7 +82,7 @@ class LlmTracker:
                 kwargs_str = pprint.pformat(kwargs)
                 chunk = pprint.pformat(chunk)
                 logger.warning(
-                    f"Unable to parse a chunk for LLM call. Skipping upload to AgentOps\n"
+                    f"🖇 AgentOps: Unable to parse a chunk for LLM call. Skipping upload to AgentOps\n"
                     f"chunk:\n {chunk}\n"
                     f"kwargs:\n {kwargs_str}\n"
                 )
@@ -121,7 +121,7 @@ class LlmTracker:
             kwargs_str = pprint.pformat(kwargs)
             response = pprint.pformat(response)
             logger.warning(
-                f"Unable to parse response for LLM call. Skipping upload to AgentOps\n"
+                f"🖇 AgentOps: Unable to parse response for LLM call. Skipping upload to AgentOps\n"
                 f"response:\n {response}\n"
                 f"kwargs:\n {kwargs_str}\n"
             )
@@ -177,7 +177,7 @@ class LlmTracker:
                 kwargs_str = pprint.pformat(kwargs)
                 chunk = pprint.pformat(chunk)
                 logger.warning(
-                    f"Unable to parse a chunk for LLM call. Skipping upload to AgentOps\n"
+                    f"🖇 AgentOps: Unable to parse a chunk for LLM call. Skipping upload to AgentOps\n"
                     f"chunk:\n {chunk}\n"
                     f"kwargs:\n {kwargs_str}\n"
                 )
@@ -222,7 +222,7 @@ class LlmTracker:
             kwargs_str = pprint.pformat(kwargs)
             response = pprint.pformat(response)
             logger.warning(
-                f"Unable to parse response for LLM call. Skipping upload to AgentOps\n"
+                f"🖇 AgentOps: Unable to parse response for LLM call. Skipping upload to AgentOps\n"
                 f"response:\n {response}\n"
                 f"kwargs:\n {kwargs_str}\n"
             )
@@ -325,7 +325,7 @@ class LlmTracker:
                 kwargs_str = pprint.pformat(kwargs)
                 chunk = pprint.pformat(chunk)
                 logger.warning(
-                    f"Unable to parse a chunk for LLM call. Skipping upload to AgentOps\n"
+                    f"🖇 AgentOps: Unable to parse a chunk for LLM call. Skipping upload to AgentOps\n"
                     f"chunk:\n {chunk}\n"
                     f"kwargs:\n {kwargs_str}\n"
                 )
@@ -378,7 +378,7 @@ class LlmTracker:
             kwargs_str = pprint.pformat(kwargs)
             response = pprint.pformat(response)
             logger.warning(
-                f"Unable to parse response for LLM call. Skipping upload to AgentOps\n"
+                f"🖇 AgentOps: Unable to parse response for LLM call. Skipping upload to AgentOps\n"
                 f"response:\n {response}\n"
                 f"kwargs:\n {kwargs_str}\n"
             )
@@ -518,13 +518,13 @@ class LlmTracker:
                 if api == 'litellm':
                     module_version = version(api)
                     if module_version is None:
-                        logger.warning(f'Cannot determine LiteLLM version. Only LiteLLM>=1.3.1 supported.')
+                        logger.warning(f'🖇 AgentOps: Cannot determine LiteLLM version. Only LiteLLM>=1.3.1 supported.')
 
                     if Version(module_version) >= parse('1.3.1'):
                         self.override_litellm_completion()
                         self.override_litellm_async_completion()
                     else:
-                        logger.warning(f'Only LiteLLM>=1.3.1 supported. v{module_version} found.')
+                        logger.warning(f'🖇 AgentOps: Only LiteLLM>=1.3.1 supported. v{module_version} found.')
                     return  # If using an abstraction like litellm, do not patch the underlying LLM APIs
 
                 if api == 'openai':
@@ -543,13 +543,13 @@ class LlmTracker:
                     # Patch cohere v5.4.0+ methods
                     module_version = version(api)
                     if module_version is None:
-                        logger.warning(f'Cannot determine Cohere version. Only Cohere>=5.4.0 supported.')
+                        logger.warning(f'🖇 AgentOps: Cannot determine Cohere version. Only Cohere>=5.4.0 supported.')
 
                     if Version(module_version) >= parse('5.4.0'):
                         self.override_cohere_chat()
                         self.override_cohere_chat_stream()
                     else:
-                        logger.warning(f'Only Cohere>=5.4.0 supported. v{module_version} found.')
+                        logger.warning(f'🖇 AgentOps: Only Cohere>=5.4.0 supported. v{module_version} found.')
 
     def stop_instrumenting(self):
         self.undo_override_openai_v1_async_completion()

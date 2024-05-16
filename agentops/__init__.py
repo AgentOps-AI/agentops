@@ -1,6 +1,4 @@
 # agentops/__init__.py
-import os
-import logging
 from typing import Optional, List, Union
 from .client import Client
 from .config import Configuration
@@ -8,7 +6,7 @@ from .event import Event, ActionEvent, LLMEvent, ToolEvent, ErrorEvent
 from .enums import Models
 from .decorators import record_function
 from .agent import track_agent
-from .log_config import logger
+from .log_config import set_logging_level_info, set_logging_level_critial
 try:
     from .langchain_callback_handler import LangchainCallbackHandler, AsyncLangchainCallbackHandler
 except ModuleNotFoundError:
@@ -48,13 +46,7 @@ def init(api_key: Optional[str] = None,
             inherited_session_id (optional, str): Init Agentops with an existing Session
         Attributes:
     """
-    if os.getenv('AGENTOPS_LOGGING_LEVEL') == 'DEBUG':
-        logger.setLevel(logging.DEBUG)
-    elif os.getenv('AGENTOPS_LOGGING_LEVEL') == 'CRITICAL':
-        logger.setLevel(logging.CRITICAL)
-    else:
-        logger.setLevel(logging.INFO)
-        
+    set_logging_level_info()
     c = Client(api_key=api_key,
                parent_key=parent_key,
                endpoint=endpoint,

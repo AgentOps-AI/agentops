@@ -16,8 +16,7 @@ from .host_env import get_host_env
 from uuid import uuid4
 from typing import Optional, List, Union
 import traceback
-import logging
-from .log_config import logger
+from .log_config import logger, set_logging_level_info
 from decimal import Decimal
 import inspect
 import atexit
@@ -74,7 +73,7 @@ class Client(metaclass=MetaClient):
                  ):
 
         if override is not None:
-            logger.warning("The 'override' parameter is deprecated. Use 'instrument_llm_calls' instead.",
+            logger.warning("🖇 AgentOps: The 'override' parameter is deprecated. Use 'instrument_llm_calls' instead.",
                            DeprecationWarning, stacklevel=2)
             instrument_llm_calls = instrument_llm_calls or override
 
@@ -175,7 +174,7 @@ class Client(metaclass=MetaClient):
                 event (Event): The event to record.
         """
         if self._session is None or self._session.has_ended:
-            logger.warning("Cannot record event - no current session")
+            logger.warning("🖇 AgentOps: Cannot record event - no current session")
             return
 
         if isinstance(event, Event):
@@ -275,18 +274,13 @@ class Client(metaclass=MetaClient):
                 config: (Configuration, optional): Client configuration object
                 inherited_session_id (optional, str): assign session id to match existing Session
         """
-        if os.getenv('AGENTOPS_LOGGING_LEVEL') == 'DEBUG':
-            logger.setLevel(logging.DEBUG)
-        elif os.getenv('AGENTOPS_LOGGING_LEVEL') == 'CRITICAL':
-            logger.setLevel(logging.CRITICAL)
-        else:
-            logger.setLevel(logging.INFO)
+        set_logging_level_info()
 
         if self._session is not None:
-            return logger.warning("Cannot start session - session already started")
+            return logger.warning("🖇 AgentOps: Cannot start session - session already started")
 
         if not config and not self.config:
-            return logger.warning("Cannot start session - missing configuration")
+            return logger.warning("🖇 AgentOps: Cannot start session - missing configuration")
 
         self._session = Session(inherited_session_id or uuid4(),
                                 tags or self._tags_for_future_session, host_env=get_host_env(self._env_data_opt_out))
@@ -294,9 +288,9 @@ class Client(metaclass=MetaClient):
         start_session_result = self._worker.start_session(self._session)
         if not start_session_result:
             self._session = None
-            return logger.warning("Cannot start session - No server response")
+            return logger.warning("🖇 AgentOps: Cannot start session - No server response")
 
-        logger.info('\x1b[34mView info on this session at https://app.agentops.ai/drilldown?session_id=%s\x1b[0m',
+        logger.info('View info on this session at https://app.agentops.ai/drilldown?session_id=%s',
                     self._session.session_id)
 
         return self._session.session_id
@@ -314,23 +308,23 @@ class Client(metaclass=MetaClient):
                 video (str, optional): The video screen recording of the session
         """
         if self._session is None or self._session.has_ended:
-            return logger.warning("Cannot end session - no current session")
+            return logger.warning("🖇 AgentOps: Cannot end session - no current session")
 
         if not any(end_state == state.value for state in EndState):
-            return logger.warning("Invalid end_state. Please use one of the EndState enums")
+            return logger.warning("🖇 AgentOps: Invalid end_state. Please use one of the EndState enums")
 
         if self._worker is None or self._worker._session is None:
-            return logger.warning("Cannot end session - no current worker or session")
+            return logger.warning("🖇 AgentOps: Cannot end session - no current worker or session")
 
         self._session.video = video
         self._session.end_session(end_state, end_state_reason)
         token_cost = self._worker.end_session(self._session)
 
         if token_cost == 'unknown':
-            print('Could not determine cost of run.')
+            print('🖇 AgentOps: Could not determine cost of run.')
         else:
             token_cost_d = Decimal(token_cost)
-            print('\nThis run cost ${}'.format('{:.2f}'.format(
+            print('\n🖇 AgentOps: This run cost ${}'.format('{:.2f}'.format(
                 token_cost_d) if token_cost_d == 0 else '{:.6f}'.format(token_cost_d)))
         self._session = None
         self._worker = None
@@ -358,7 +352,7 @@ class Client(metaclass=MetaClient):
                     frame: The current stack frame.
             """
             signal_name = 'SIGINT' if signum == signal.SIGINT else 'SIGTERM'
-            logger.info('%s detected. Ending session...', signal_name)
+            logger.info('🖇 AgentOps: %s detected. Ending session...', signal_name)
             self.end_session(end_state='Fail',
                              end_state_reason=f'Signal {signal_name} detected')
             sys.exit(0)
