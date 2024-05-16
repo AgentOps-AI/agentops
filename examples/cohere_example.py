@@ -3,7 +3,7 @@ import agentops
 from dotenv import load_dotenv
 load_dotenv()
 
-agentops.init(tags=["cohere"])
+agentops.init(tags=["cohere", "agentops-demo"])
 co = cohere.Client()
 
 stream = co.chat_stream(
@@ -17,9 +17,9 @@ for event in stream:
         response += event.text
         print(event.text, end='')
     elif event.event_type == "stream-end":
+        print("\n")
         print(event)
-
-print("\n")
+        print("\n")
 
 stream = co.chat_stream(
     chat_history=[
@@ -39,8 +39,8 @@ for event in stream:
         response += event.text
         print(event.text, end='')
     elif event.event_type == "stream-end":
+        print("\n")
         print(event)
-
-print("\n")
+        print("\n")
 
 agentops.end_session('Success')
