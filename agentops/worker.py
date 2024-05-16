@@ -1,5 +1,4 @@
 import json
-from .log_config import logger
 import threading
 import time
 from .http_client import HttpClient
@@ -7,6 +6,7 @@ from .config import Configuration
 from .session import Session
 from .helpers import safe_serialize, filter_unjsonable
 from typing import Dict, Optional
+import os
 
 
 class Worker:
@@ -19,7 +19,7 @@ class Worker:
         self.thread.daemon = True
         self.thread.start()
         self._session: Optional[Session] = None
-        self.jwt = None
+        self._debug_mode = os.getenv('DEBUG_MODE') == 'Y'
 
     def add_event(self, event: dict) -> None:
         with self.lock:
@@ -39,14 +39,16 @@ class Worker:
                 }
 
                 serialized_payload = safe_serialize(payload).encode("utf-8")
-                HttpClient.post(f'{self.config.endpoint}/v2/create_events',
+                HttpClient.post(f'{self.config.endpoint}/events',
                                 serialized_payload,
-                                jwt_token=self.jwt)
+                                self.config.api_key,
+                                self.config.parent_key)
 
-                logger.debug("\n<AGENTOPS_DEBUG_OUTPUT>")
-                logger.debug(f"Worker request to {self.config.endpoint}/events")
-                logger.debug(serialized_payload)
-                logger.debug("</AGENTOPS_DEBUG_OUTPUT>\n")
+                if self._debug_mode:
+                    print("\n<AGENTOPS_DEBUG_OUTPUT>")
+                    print(f"Worker request to {self.config.endpoint}/events")
+                    print(serialized_payload)
+                    print("</AGENTOPS_DEBUG_OUTPUT>\n")
 
     def start_session(self, session: Session) -> bool:
         self._session = session
@@ -55,18 +57,12 @@ class Worker:
                 "session": session.__dict__
             }
             serialized_payload = json.dumps(filter_unjsonable(payload)).encode("utf-8")
-            res = HttpClient.post(f'{self.config.endpoint}/v2/create_session',
+            res = HttpClient.post(f'{self.config.endpoint}/sessions',
                                   serialized_payload,
                                   self.config.api_key,
                                   self.config.parent_key)
 
-            logger.debug(res.body)
-
             if res.code != 200:
-                return False
-            
-            self.jwt = res.body.get('jwt', None)
-            if self.jwt is None:
                 return False
 
             return True
@@ -82,11 +78,12 @@ class Worker:
                 "session": session.__dict__
             }
 
-            res = HttpClient.post(f'{self.config.endpoint}/v2/update_session',
+            res = HttpClient.post(f'{self.config.endpoint}/sessions',
                             json.dumps(filter_unjsonable(
                                 payload)).encode("utf-8"),
-                            jwt_token=self.jwt)
-            logger.debug(res.body)
+                            self.config.api_key,
+                            self.config.parent_key)
+
             return res.body.get('token_cost', "unknown")
 
     def update_session(self, session: Session) -> None:
@@ -95,10 +92,11 @@ class Worker:
                 "session": session.__dict__
             }
 
-            res = HttpClient.post(f'{self.config.endpoint}/v2/update_session',
+            HttpClient.post(f'{self.config.endpoint}/sessions',
                             json.dumps(filter_unjsonable(
                                 payload)).encode("utf-8"),
-                            jwt_token=self.jwt)
+                            self.config.api_key,
+                            self.config.parent_key)
 
     def create_agent(self, agent_id, name):
         payload = {
@@ -109,9 +107,10 @@ class Worker:
 
         serialized_payload = \
             safe_serialize(payload).encode("utf-8")
-        HttpClient.post(f'{self.config.endpoint}/v2/create_agent',
+        HttpClient.post(f'{self.config.endpoint}/agents',
                         serialized_payload,
-                        jwt_token=self.jwt)
+                        self.config.api_key,
+                        self.config.parent_key)
 
     def run(self) -> None:
         while not self.stop_flag.is_set():

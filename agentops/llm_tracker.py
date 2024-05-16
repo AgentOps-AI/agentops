@@ -4,11 +4,13 @@ from importlib import import_module
 from importlib.metadata import version
 from packaging.version import Version, parse
 from .log_config import logger
-from .event import LLMEvent, ErrorEvent
+from .event import LLMEvent, ActionEvent, ToolEvent, ErrorEvent
 from .helpers import get_ISO_time, check_call_stack_for_agent_id
 import inspect
 from typing import Optional
 import pprint
+from pydantic import BaseModel as UncheckedBaseModel, Field
+
 
 original_create = None
 original_create_async = None
@@ -248,6 +250,8 @@ class LlmTracker:
             params=kwargs
         )
 
+        self.action_events = {}
+
         def handle_stream_chunk(chunk):
 
             # We take the first chunk and accumulate the deltas from all subsequent chunks to build one full chat completion
@@ -261,8 +265,21 @@ class LlmTracker:
 
             try:
                 if isinstance(chunk, StreamedChatResponse_StreamEnd):
-                    # Streaming is done. Record LLMEvent
-                    # self.llm_event.returns.finish_reason = chunk.is_finished
+                    search_results = chunk.response.search_results
+
+                    for result in search_results:
+                        query = result.search_query
+                        if query.generation_id in self.action_events:
+                            action_event = self.action_events[query.generation_id]
+                            result_dict = result.dict()
+                            del result_dict["search_query"]
+                            action_event.returns = result_dict
+                            action_event.end_timestamp = get_ISO_time()
+
+                    # Print the created ActionEvents
+                    for key, action_event in self.action_events.items():
+                        self.client.record(action_event)
+
                     self.llm_event.completion = {
                         "role": "assistant", "content": self.llm_event.completion}
                     self.llm_event.end_timestamp = get_ISO_time()
@@ -276,7 +293,11 @@ class LlmTracker:
                 elif isinstance(chunk, StreamedChatResponse_CitationGeneration):
                     pass
                 elif isinstance(chunk, StreamedChatResponse_SearchQueriesGeneration):
-                    pass
+                    for query in chunk.search_queries:
+                        self.action_events[query.generation_id] = ActionEvent(
+                            action_type="search_query",
+                            init_timestamp=get_ISO_time(),
+                            params=query.text)
                 elif isinstance(chunk, StreamedChatResponse_SearchResults):
                     pass
 
