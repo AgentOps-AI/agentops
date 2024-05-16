@@ -16,9 +16,9 @@ for event in stream:
     if event.event_type == "text-generation":
         response += event.text
         print(event.text, end='')
+    elif event.event_type == "stream-end":
+        print(event)
 
-print("\n")
-print(stream)
 print("\n")
 
 stream = co.chat_stream(
@@ -38,10 +38,9 @@ for event in stream:
     if event.event_type == "text-generation":
         response += event.text
         print(event.text, end='')
+    elif event.event_type == "stream-end":
+        print(event)
 
 print("\n")
-print(stream)
-print("\n")
-
 
 agentops.end_session('Success')
