@@ -265,33 +265,46 @@ class LlmTracker:
 
             try:
                 if isinstance(chunk, StreamedChatResponse_StreamEnd):
-                    search_results = chunk.response.search_results
+                    # StreamedChatResponse_TextGeneration = LLMEvent
+                    self.llm_event.completion = {
+                        "role": "assistant", "content": chunk.response.text}
+                    self.llm_event.end_timestamp = get_ISO_time()
+                    self.client.record(self.llm_event)
 
-                    for result in search_results:
-                        query = result.search_query
+                    # StreamedChatResponse_SearchResults = ActionEvent
+                    search_results = chunk.response.search_results
+                    for search_result in search_results:
+                        query = search_result.search_query
                         if query.generation_id in self.action_events:
                             action_event = self.action_events[query.generation_id]
-                            result_dict = result.dict()
-                            del result_dict["search_query"]
-                            action_event.returns = result_dict
+                            search_result_dict = search_result.dict()
+                            del search_result_dict["search_query"]
+                            action_event.returns = search_result_dict
                             action_event.end_timestamp = get_ISO_time()
 
-                    # Print the created ActionEvents
+                    # StreamedChatResponse_CitationGeneration = ActionEvent
+                    citations = chunk.response.citations
+                    for citation in citations:
+                        citation_id = f"{citation.start}.{citation.end}"
+                        if citation_id in self.action_events:
+                            action_event = self.action_events[citation_id]
+                            citation_dict = citation.dict()
+                            action_event.returns = citation_dict
+                            action_event.end_timestamp = get_ISO_time()
+
                     for key, action_event in self.action_events.items():
                         self.client.record(action_event)
-
-                    self.llm_event.completion = {
-                        "role": "assistant", "content": self.llm_event.completion}
-                    self.llm_event.end_timestamp = get_ISO_time()
-
-                    self.client.record(self.llm_event)
 
                 elif isinstance(chunk, StreamedChatResponse_TextGeneration):
                     self.llm_event.completion += chunk.text
                 elif isinstance(chunk, StreamedChatResponse_ToolCallsGeneration):
                     pass
                 elif isinstance(chunk, StreamedChatResponse_CitationGeneration):
-                    pass
+                    for citation in chunk.citations:
+                        self.action_events[f"{citation.start}.{citation.end}"] = ActionEvent(
+                            action_type="citation",
+                            init_timestamp=get_ISO_time(),
+                            params=citation.text)
                 elif isinstance(chunk, StreamedChatResponse_SearchQueriesGeneration):
                     for query in chunk.search_queries:
                         self.action_events[query.generation_id] = ActionEvent(

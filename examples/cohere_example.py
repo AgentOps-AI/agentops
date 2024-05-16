@@ -3,16 +3,17 @@ import agentops
 from dotenv import load_dotenv
 load_dotenv()
 
-agentops.init()
-# co = cohere.Client()
+agentops.init(tags=["cohere"])
+co = cohere.Client()
 
-# stream = co.chat_stream(
-#     message="Write me a haiku about the synergies between Cohere and AgentOps"
-# )
+stream = co.chat_stream(
+    message="What three lines do I need to add to my code to integrate AgentOps?",
+    connectors=[{"id": "web-search", "options": {"site": "https://docs.agentops.ai/v1/quickstart"}}]
+)
 
-# for event in stream:
-#     if event.event_type == "text-generation":
-#         print(event.text, end='')
+for event in stream:
+    if event.event_type == "text-generation":
+        print(event.text, end='')
 
 
 # chat = co.chat(
