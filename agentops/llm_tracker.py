@@ -228,7 +228,7 @@ class LlmTracker:
         return response
 
     def _handle_response_cohere(self, response, kwargs, init_timestamp):
-        # TODO: """Handle responses for Cohere versions >v5.4.0"""
+        """Handle responses for Cohere versions >v5.4.0"""
         from cohere.types.non_streamed_chat_response import NonStreamedChatResponse
         from cohere.types.streamed_chat_response import (
             StreamedChatResponse,
