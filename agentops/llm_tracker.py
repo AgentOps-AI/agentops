@@ -9,8 +9,6 @@ from .helpers import get_ISO_time, check_call_stack_for_agent_id
 import inspect
 from typing import Optional
 import pprint
-from pydantic import BaseModel as UncheckedBaseModel, Field
-
 
 original_create = None
 original_create_async = None
