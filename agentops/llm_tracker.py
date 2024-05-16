@@ -283,12 +283,18 @@ class LlmTracker:
                             action_event.end_timestamp = get_ISO_time()
 
                     # StreamedChatResponse_CitationGeneration = ActionEvent
+                    documents = {doc['id']: doc for doc in chunk.response.documents}
                     citations = chunk.response.citations
                     for citation in citations:
                         citation_id = f"{citation.start}.{citation.end}"
                         if citation_id in self.action_events:
                             action_event = self.action_events[citation_id]
                             citation_dict = citation.dict()
+                            # Replace document_ids with the actual documents
+                            citation_dict['documents'] = [documents[doc_id]
+                                                          for doc_id in citation_dict['document_ids'] if doc_id in documents]
+                            del citation_dict['document_ids']
+
                             action_event.returns = citation_dict
                             action_event.end_timestamp = get_ISO_time()
 
