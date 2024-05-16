@@ -296,7 +296,7 @@ class Client(metaclass=MetaClient):
             self._session = None
             return logger.warning("Cannot start session - No server response")
 
-        logger.info('View info on this session at https://app.agentops.ai/drilldown?session_id=%s',
+        logger.info('\x1b[34mView info on this session at https://app.agentops.ai/drilldown?session_id=%s\x1b[0m',
                     self._session.session_id)
 
         return self._session.session_id
