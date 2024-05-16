@@ -65,7 +65,7 @@ class Worker:
             if res.code != 200:
                 return False
             
-            self.jwt_token = res.body.get('jwt_token', None)
+            self.jwt_token = res.body.get('token', None)
             if self.jwt_token is None:
                 return False
 
@@ -86,7 +86,7 @@ class Worker:
                             json.dumps(filter_unjsonable(
                                 payload)).encode("utf-8"),
                             jwt_token=self.jwt_token)
-
+            logger.debug(res.body)
             return res.body.get('token_cost', "unknown")
 
     def update_session(self, session: Session) -> None:

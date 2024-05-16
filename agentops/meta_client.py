@@ -33,7 +33,7 @@ class MetaClient(type):
                 "host_env": get_host_env()
             }
 
-            HttpClient.post("https://api.agentops.ai/developer_errors",
+            HttpClient.post("https://api.agentops.ai/v2/developer_errors",
                             safe_serialize(developer_error).encode("utf-8"),
                             api_key=api_key)
 
