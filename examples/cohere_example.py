@@ -1,9 +1,9 @@
 import cohere
-import agentops
+import agentops  # just
 from dotenv import load_dotenv
 load_dotenv()
 
-agentops.init(tags=["cohere", "agentops-demo"])
+agentops.init(tags=["cohere", "agentops-demo"])  # three
 co = cohere.Client()
 
 stream = co.chat_stream(
@@ -43,4 +43,4 @@ for event in stream:
         print(event)
         print("\n")
 
-agentops.end_session('Success')
+agentops.end_session('Success')  # lines
