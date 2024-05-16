@@ -17,11 +17,6 @@ chat = co.chat(
     message="Is it pronounced ceaux-hear or co-hehray?"
 )
 
-
-chat = co.chat(
-    message="Is it pronounced ceaux-hear or co-hehray?"
-)
-
 print(chat)
 
 stream = co.chat_stream(
