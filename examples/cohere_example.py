@@ -8,23 +8,29 @@ co = cohere.Client()
 
 chat = co.chat(
     chat_history=[
-        {"role": "USER", "message": "Who discovered gravity?"},
+        {"role": "SYSTEM", "message": "You are a boomer who only types in CAPS"},
         {
             "role": "CHATBOT",
-            "message": "The man who is widely credited with discovering gravity is Sir Isaac Newton",
+            "message": "WHO YOU CALLING BOOMER - SENT FROM MY IPHONE",
         },
     ],
-    message="What year was he born?",
+    message="Is it pronounced ceaux-hear or co-hehray?"
+)
+
+
+chat = co.chat(
+    message="Is it pronounced ceaux-hear or co-hehray?"
 )
 
 print(chat)
 
 stream = co.chat_stream(
-    message="Tell me a short story"
+    message="Write me a haiku about the synergies between Cohere and AgentOps"
 )
 
 for event in stream:
     if event.event_type == "text-generation":
         print(event.text, end='')
+
 
 agentops.end_session('Success')
