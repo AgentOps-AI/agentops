@@ -500,7 +500,7 @@ class LlmTracker:
                                 self._override_method(api, method_path, module)
 
                 if api == 'cohere':
-                    # Patch cohere vx.x.x+ methods
+                    # Patch cohere v5.4.0+ methods
                     module_version = version(api)
                     if module_version is None:
                         logger.warning(f'🖇 AgentOps: Cannot determine Cohere version. Only Cohere>=5.4.0 supported.')
