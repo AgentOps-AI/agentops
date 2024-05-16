@@ -59,8 +59,8 @@ class Response:
 class HttpClient:
 
     @staticmethod
-    def post(url: str, payload: bytes, api_key: Optional[str] = None, parent_key: Optional[str] = None,
-             header=None) -> Response:
+    def post(url: str, payload: bytes, api_key: Optional[str] = None, parent_key: Optional[str] = None, 
+             jwt_token: Optional[str] = None, header=None) -> Response:
         result = Response()
         try:
             # Create request session with retries configured
@@ -68,10 +68,13 @@ class HttpClient:
             request_session.mount(url, HTTPAdapter(max_retries=retry_config))
 
             if api_key is not None:
-                JSON_HEADER["X-Agentops-Auth"] = api_key
+                JSON_HEADER["X-Agentops-Api-Key"] = api_key
 
             if parent_key is not None:
                 JSON_HEADER["X-Agentops-Parent-Key"] = parent_key
+                
+            if jwt_token is not None:
+                JSON_HEADER["Authorization"] = f"Bearer {jwt_token}"
 
             res = request_session.post(url, data=payload,
                                        headers=JSON_HEADER, timeout=20)
@@ -81,7 +84,7 @@ class HttpClient:
             result.code = 408
             result.status = HttpStatus.TIMEOUT
             logger.warning(
-                '🖇 AgentOps: Could not post data - connection timed out')
+                'Could not post data - connection timed out')
         except requests.exceptions.HTTPError as e:
             try:
                 result.parse(e.response)
@@ -94,12 +97,12 @@ class HttpClient:
             result.body = {'error': str(e)}
 
         if result.code == 401:
-            logger.warning('🖇 AgentOps: Could not post data - API server rejected your API key: %s',
+            logger.warning('Could not post data - API server rejected your API key: %s',
                            api_key)
         if result.code == 400:
-            logger.warning('🖇 AgentOps: Could not post data - %s', result.body)
+            logger.warning('Could not post data - %s', result.body)
         if result.code == 500:
             logger.warning(
-                '🖇 AgentOps: Could not post data - internal server error')
+                'Could not post data - internal server error')
 
         return result
