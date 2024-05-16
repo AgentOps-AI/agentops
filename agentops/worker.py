@@ -19,7 +19,7 @@ class Worker:
         self.thread.daemon = True
         self.thread.start()
         self._session: Optional[Session] = None
-        self.jwt_token = None
+        self.jwt = None
 
     def add_event(self, event: dict) -> None:
         with self.lock:
@@ -41,7 +41,7 @@ class Worker:
                 serialized_payload = safe_serialize(payload).encode("utf-8")
                 HttpClient.post(f'{self.config.endpoint}/v2/create_events',
                                 serialized_payload,
-                                jwt_token=self.jwt_token)
+                                jwt_token=self.jwt)
 
                 logger.debug("\n<AGENTOPS_DEBUG_OUTPUT>")
                 logger.debug(f"Worker request to {self.config.endpoint}/events")
@@ -65,8 +65,8 @@ class Worker:
             if res.code != 200:
                 return False
             
-            self.jwt_token = res.body.get('token', None)
-            if self.jwt_token is None:
+            self.jwt = res.body.get('jwt', None)
+            if self.jwt is None:
                 return False
 
             return True
@@ -85,7 +85,7 @@ class Worker:
             res = HttpClient.post(f'{self.config.endpoint}/v2/update_session',
                             json.dumps(filter_unjsonable(
                                 payload)).encode("utf-8"),
-                            jwt_token=self.jwt_token)
+                            jwt_token=self.jwt)
             logger.debug(res.body)
             return res.body.get('token_cost', "unknown")
 
@@ -98,7 +98,7 @@ class Worker:
             res = HttpClient.post(f'{self.config.endpoint}/v2/update_session',
                             json.dumps(filter_unjsonable(
                                 payload)).encode("utf-8"),
-                            jwt_token=self.jwt_token)
+                            jwt_token=self.jwt)
 
     def create_agent(self, agent_id, name):
         payload = {
@@ -111,7 +111,7 @@ class Worker:
             safe_serialize(payload).encode("utf-8")
         HttpClient.post(f'{self.config.endpoint}/v2/create_agent',
                         serialized_payload,
-                        jwt_token=self.jwt_token)
+                        jwt_token=self.jwt)
 
     def run(self) -> None:
         while not self.stop_flag.is_set():
