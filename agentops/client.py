@@ -120,7 +120,7 @@ class Client(metaclass=MetaClient):
                     except ImportError:
                         pass
                     except Exception as e:
-                        logger.warning("🖇️ AgentOps: Failed to set up autogen logger with AgentOps. Error: " + e)
+                        logger.warning(f"🖇️ AgentOps: Failed to set up autogen logger with AgentOps. Error: {e}")
 
                     return partner_frameworks[framework]
 
@@ -326,6 +326,10 @@ class Client(metaclass=MetaClient):
             token_cost_d = Decimal(token_cost)
             print('\n🖇 AgentOps: This run cost ${}'.format('{:.2f}'.format(
                 token_cost_d) if token_cost_d == 0 else '{:.6f}'.format(token_cost_d)))
+
+        logger.info('View info on this session at https://app.agentops.ai/drilldown?session_id=%s',
+                    self._session.session_id)
+
         self._session = None
         self._worker = None
 
