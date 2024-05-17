@@ -36,9 +36,6 @@
 <a href="https://discord.gg/mKW3ZhN9p2">
   <img src="https://img.shields.io/badge/chat-on%20Discord-blueviolet" alt="Discord community channel"/>
 </a>
-<a href="mailto:investor@agentops.ai">
-  <img src="https://img.shields.io/website?color=%23f26522&down_message=Y%20Combinator&label=Not%20Backed%20By&logo=ycombinator&style=flat-square&up_message=Y%20Combinator&url=https%3A%2F%2Fwww.ycombinator.com"/>
-</a>
 <a href="https://github.com/agentops-ai/agentops/issues">
   <img src="https://img.shields.io/github/commit-activity/m/agentops-ai/agentops" alt="git commit activity"/>
 </a>
@@ -122,6 +119,9 @@ pip install git+https://github.com/AgentOps-AI/crewAI.git@main
 
 AgentOps works seamlessly with applications built using Langchain. To use the handler, install Langchain as an optional dependency:
 
+<details>
+  <summary>Installation</summary>
+  
 ```shell
 pip install agentops[langchain]
 ```
@@ -151,13 +151,18 @@ agent = initialize_agent(tools,
 
 Check out the [Langchain Examples Notebook](./examples/langchain_examples.ipynb) for more details including Async handlers.
 
-### Cohere 
+</details>
+
+### Cohere ⌨️
 
 First class support for Cohere(>=5.4.0). This is a living integration, should you need any added functionality please message us on Discord!
 
 - [AgentOps integration example](https://docs.agentops.ai/v1/integrations/cohere)
 - [Official Cohere documentation](https://docs.cohere.com/reference/about)
 
+<details>
+  <summary>Installation</summary>
+  
 ```bash
 pip install cohere
 ```
@@ -198,6 +203,8 @@ for event in stream:
 
 agentops.end_session('Success')
 ```
+</details>
+
 
 ### LlamaIndex 🦙
 
