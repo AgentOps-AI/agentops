@@ -120,7 +120,7 @@ class Client(metaclass=MetaClient):
                     except ImportError:
                         pass
                     except Exception as e:
-                        logger.warning(f"🖇️ AgentOps: Failed to set up autogen logger with AgentOps. Error: {e}")
+                        logger.warning(f"🖇️ AgentOps: Failed to set up AutoGen logger with AgentOps. Error: {e}")
 
                     return partner_frameworks[framework]
 
@@ -290,7 +290,7 @@ class Client(metaclass=MetaClient):
             self._session = None
             return logger.warning("🖇 AgentOps: Cannot start session - No server response")
 
-        logger.info('View info on this session at https://app.agentops.ai/drilldown?session_id=%s',
+        logger.info('Session Replay: https://app.agentops.ai/drilldown?session_id=%s',
                     self._session.session_id)
 
         return self._session.session_id
@@ -324,10 +324,10 @@ class Client(metaclass=MetaClient):
             print('🖇 AgentOps: Could not determine cost of run.')
         else:
             token_cost_d = Decimal(token_cost)
-            print('\n🖇 AgentOps: This run cost ${}'.format('{:.2f}'.format(
+            print('\n🖇 AgentOps: This run\'s cost ${}'.format('{:.2f}'.format(
                 token_cost_d) if token_cost_d == 0 else '{:.6f}'.format(token_cost_d)))
 
-        logger.info('View info on this session at https://app.agentops.ai/drilldown?session_id=%s',
+        logger.info('Session Replay: https://app.agentops.ai/drilldown?session_id=%s',
                     self._session.session_id)
 
         self._session = None
