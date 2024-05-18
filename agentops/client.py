@@ -290,8 +290,7 @@ class Client(metaclass=MetaClient):
             self._session = None
             return logger.warning("🖇 AgentOps: Cannot start session - No server response")
 
-        logger.info('Session Replay: https://app.agentops.ai/drilldown?session_id=%s',
-                    self._session.session_id)
+        logger.info(f'Session Replay: https://app.agentops.ai/drilldown?session_id={self._session.session_id}')
 
         return self._session.session_id
 
@@ -327,8 +326,7 @@ class Client(metaclass=MetaClient):
             print('\n🖇 AgentOps: This run\'s cost ${}'.format('{:.2f}'.format(
                 token_cost_d) if token_cost_d == 0 else '{:.6f}'.format(token_cost_d)))
 
-        logger.info('Session Replay: https://app.agentops.ai/drilldown?session_id=%s',
-                    self._session.session_id)
+        logger.info(f'Session Replay: https://app.agentops.ai/drilldown?session_id={self._session.session_id}')
 
         self._session = None
         self._worker = None
