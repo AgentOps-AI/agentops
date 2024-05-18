@@ -1,4 +1,5 @@
 import json
+from .log_config import logger
 import threading
 import time
 from .http_client import HttpClient
@@ -6,7 +7,6 @@ from .config import Configuration
 from .session import Session
 from .helpers import safe_serialize, filter_unjsonable
 from typing import Dict, Optional
-import os
 
 
 class Worker:
@@ -43,11 +43,10 @@ class Worker:
                                 serialized_payload,
                                 jwt_token=self.jwt)
 
-                if self._debug_mode:
-                    print("\n<AGENTOPS_DEBUG_OUTPUT>")
-                    print(f"Worker request to {self.config.endpoint}/events")
-                    print(serialized_payload)
-                    print("</AGENTOPS_DEBUG_OUTPUT>\n")
+                logger.debug("\n<AGENTOPS_DEBUG_OUTPUT>")
+                logger.debug(f"Worker request to {self.config.endpoint}/events")
+                logger.debug(serialized_payload)
+                logger.debug("</AGENTOPS_DEBUG_OUTPUT>\n")
 
     def start_session(self, session: Session) -> bool:
         self._session = session
