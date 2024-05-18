@@ -37,12 +37,13 @@ class Event:
     }
     """
 
-    event_type: str  # EventType.ENUM.value
+    event_type: EventType
     params: Optional[dict] = None
-    returns: Optional[str] = None
+    returns: Optional[str | List[str]] = None
     init_timestamp: str = field(default_factory=get_ISO_time)
     end_timestamp: Optional[str] = None
-    agent_id: Optional[UUID] = field(default_factory=check_call_stack_for_agent_id)
+    agent_id: Optional[UUID] = field(
+        default_factory=check_call_stack_for_agent_id)
     id: UUID = field(default_factory=uuid4)
 
 
@@ -120,6 +121,8 @@ class ErrorEvent():
     """
 
     trigger_event: Optional[Event] = None
+    trigger_event_id: Optional[UUID] = None
+    trigger_event_type: Optional[EventType] = None
     exception: Optional[BaseException] = None
     error_type: Optional[str] = None
     code: Optional[str] = None

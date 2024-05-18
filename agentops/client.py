@@ -5,7 +5,6 @@
         Client: Provides methods to interact with the AgentOps service.
 """
 import os
-import uuid
 
 from .event import ActionEvent, ErrorEvent, Event
 from .enums import EndState
@@ -13,7 +12,7 @@ from .helpers import get_ISO_time, singleton, check_call_stack_for_agent_id, get
 from .session import Session
 from .worker import Worker
 from .host_env import get_host_env
-from uuid import uuid4
+from uuid import UUID, uuid4
 from typing import Optional, List, Union
 import traceback
 from .log_config import logger, set_logging_level_info
@@ -82,8 +81,8 @@ class Client(metaclass=MetaClient):
         self._tags: Optional[List[str]] = tags
         self._tags_for_future_session: Optional[List[str]] = None
 
-        self._env_data_opt_out = os.getenv('AGENTOPS_ENV_DATA_OPT_OUT') and os.getenv(
-            'AGENTOPS_ENV_DATA_OPT_OUT').lower() == 'true'
+        self._env_data_opt_out = os.environ.get(
+            'AGENTOPS_ENV_DATA_OPT_OUT', 'False').lower() == 'true'
 
         try:
             self.config = Configuration(api_key=api_key,
@@ -91,6 +90,11 @@ class Client(metaclass=MetaClient):
                                         endpoint=endpoint,
                                         max_wait_time=max_wait_time,
                                         max_queue_size=max_queue_size)
+
+            if inherited_session_id is not None:
+                # Check if inherited_session_id is valid
+                UUID(inherited_session_id)
+
         except ConfigurationError:
             return
 
@@ -108,7 +112,7 @@ class Client(metaclass=MetaClient):
             self.llm_tracker = LlmTracker(self)
             self.llm_tracker.override_api()
 
-    def _check_for_partner_frameworks(self, instrument_llm_calls, auto_start_session) -> (bool, bool):
+    def _check_for_partner_frameworks(self, instrument_llm_calls, auto_start_session) -> tuple[bool, bool]:
         partner_frameworks = get_partner_frameworks()
         for framework in partner_frameworks.keys():
             if framework in sys.modules:
@@ -120,7 +124,8 @@ class Client(metaclass=MetaClient):
                     except ImportError:
                         pass
                     except Exception as e:
-                        logger.warning("🖇️ AgentOps: Failed to set up autogen logger with AgentOps. Error: " + e)
+                        logger.warning(
+                            "🖇️ AgentOps: Failed to set up autogen logger with AgentOps. Error: " + e)
 
                     return partner_frameworks[framework]
 
@@ -148,7 +153,7 @@ class Client(metaclass=MetaClient):
         else:
             if self._tags_for_future_session:
                 for tag in tags:
-                    if tag not in self._session.tags:
+                    if tag not in self._tags_for_future_session:
                         self._tags_for_future_session.append(tag)
             else:
                 self._tags_for_future_session = tags
@@ -174,7 +179,8 @@ class Client(metaclass=MetaClient):
                 event (Event): The event to record.
         """
         if self._session is None or self._session.has_ended:
-            logger.warning("🖇 AgentOps: Cannot record event - no current session")
+            logger.warning(
+                "🖇 AgentOps: Cannot record event - no current session")
             return
 
         if isinstance(event, Event):
@@ -185,10 +191,10 @@ class Client(metaclass=MetaClient):
                 if not event.trigger_event.end_timestamp or event.trigger_event.init_timestamp == event.trigger_event.end_timestamp:
                     event.trigger_event.end_timestamp = get_ISO_time()
 
-            event.trigger_event_id = event.trigger_event.id
-            event.trigger_event_type = event.trigger_event.event_type
-            self._worker.add_event(event.trigger_event.__dict__)
-            event.trigger_event = None  # removes trigger_event from serialization
+                event.trigger_event_id = event.trigger_event.id
+                event.trigger_event_type = event.trigger_event.event_type
+                self._worker.add_event(event.trigger_event.__dict__)
+                event.trigger_event = None  # removes trigger_event from serialization
 
         self._worker.add_event(event.__dict__)
 
@@ -282,8 +288,12 @@ class Client(metaclass=MetaClient):
         if not config and not self.config:
             return logger.warning("🖇 AgentOps: Cannot start session - missing configuration")
 
-        self._session = Session(inherited_session_id or uuid4(),
-                                tags or self._tags_for_future_session, host_env=get_host_env(self._env_data_opt_out))
+        session_id = UUID(
+            inherited_session_id) if inherited_session_id is not None else uuid4()
+
+        self._session = Session(session_id=session_id,
+                                tags=tags or self._tags_for_future_session,
+                                host_env=get_host_env(self._env_data_opt_out))
         self._worker = Worker(config or self.config)
         start_session_result = self._worker.start_session(self._session)
         if not start_session_result:
@@ -329,9 +339,9 @@ class Client(metaclass=MetaClient):
         self._session = None
         self._worker = None
 
-    def create_agent(self, name: str, agent_id: Optional[str] = None) -> str:
+    def create_agent(self, name: str, agent_id: Optional[str] = None):
         if agent_id is None:
-            agent_id = str(uuid.uuid4())
+            agent_id = str(uuid4())
         if self._worker:
             self._worker.create_agent(name=name, agent_id=agent_id)
             return agent_id
@@ -352,7 +362,8 @@ class Client(metaclass=MetaClient):
                     frame: The current stack frame.
             """
             signal_name = 'SIGINT' if signum == signal.SIGINT else 'SIGTERM'
-            logger.info('🖇 AgentOps: %s detected. Ending session...', signal_name)
+            logger.info(
+                '🖇 AgentOps: %s detected. Ending session...', signal_name)
             self.end_session(end_state='Fail',
                              end_state_reason=f'Signal {signal_name} detected')
             sys.exit(0)
@@ -377,7 +388,7 @@ class Client(metaclass=MetaClient):
             sys.__excepthook__(exc_type, exc_value, exc_traceback)
 
         # if main thread
-        if isinstance(threading.current_thread(), threading._MainThread):
+        if threading.current_thread() is threading.main_thread():
             atexit.register(lambda: cleanup(end_state="Indeterminate",
                             end_state_reason="Process exited without calling end_session()"))
             signal.signal(signal.SIGINT, signal_handler)
