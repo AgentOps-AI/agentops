@@ -83,7 +83,6 @@ class Client(metaclass=MetaClient):
         self._tags: Optional[List[str]] = tags
         self._tags_for_future_session: Optional[List[str]] = None
 
-
         self._env_data_opt_out = os.getenv('AGENTOPS_ENV_DATA_OPT_OUT') and os.getenv(
             'AGENTOPS_ENV_DATA_OPT_OUT').lower() == 'true'
 
@@ -98,7 +97,8 @@ class Client(metaclass=MetaClient):
 
         self._handle_unclean_exits()
 
-        instrument_llm_calls, auto_start_session = self._check_for_partner_frameworks(instrument_llm_calls, auto_start_session)
+        instrument_llm_calls, auto_start_session = self._check_for_partner_frameworks(
+            instrument_llm_calls, auto_start_session)
 
         if auto_start_session:
             self.start_session(tags, self.config, inherited_session_id)
@@ -114,11 +114,16 @@ class Client(metaclass=MetaClient):
         for framework in partner_frameworks.keys():
             if framework in sys.modules:
                 self.add_tags([framework])
-                if 'autogen':
-                    import autogen
-                    autogen.runtime_logging.start(logger_type="agentops")
+                if framework == 'autogen':
+                    try:
+                        import autogen
+                        autogen.runtime_logging.start(logger_type="agentops")
+                    except ImportError:
+                        pass
+                    except Exception as e:
+                        logger.warning("🖇️ AgentOps: Failed to set up autogen logger with AgentOps. Error: " + e)
 
-                return partner_frameworks[framework]
+                    return partner_frameworks[framework]
 
         return instrument_llm_calls, auto_start_session
 
@@ -334,7 +339,7 @@ class Client(metaclass=MetaClient):
         if agent_id is None:
             agent_id = str(uuid.uuid4())
         if self._worker:
-            self._worker.create_agent(agent_id, name)
+            self._worker.create_agent(name=name, agent_id=agent_id)
             return agent_id
 
     def _handle_unclean_exits(self):
@@ -408,4 +413,5 @@ class Client(metaclass=MetaClient):
         return self.config.parent_key
 
     def stop_instrumenting(self):
-        self.llm_tracker.stop_instrumenting()
+        if self.llm_tracker:
+            self.llm_tracker.stop_instrumenting()
