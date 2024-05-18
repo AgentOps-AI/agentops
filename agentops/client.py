@@ -111,11 +111,15 @@ class Client(metaclass=MetaClient):
         for framework in partner_frameworks.keys():
             if framework in sys.modules:
                 self.add_tags([framework])
-                if 'autogen':
-                    import autogen
-                    autogen.runtime_logging.start(logger_type="agentops")
-
-                    return partner_frameworks[framework]
+                if framework == 'autogen':
+                    try:
+                        import autogen
+                        autogen.runtime_logging.start(logger_type="agentops")
+                    except ImportError:
+                        pass
+                    except Exception as e:
+                        logger.warning(
+                            "Failed to set up autogen logger with AgentOps. Error: " + e)
 
         return instrument_llm_calls, auto_start_session
 
