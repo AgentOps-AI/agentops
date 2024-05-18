@@ -5,13 +5,19 @@ import agentops
 from agentops import record_function
 from datetime import datetime
 
+
 @pytest.fixture
 def mock_req():
     with requests_mock.Mocker() as m:
         url = 'https://api.agentops.ai'
-        m.post(url + '/events', text='ok')
-        m.post(url + '/sessions', json={'status': 'success', 'token_cost': 5})
+        m.post(url + '/v2/create_events', text='ok')
+        m.post(url + '/v2/create_session', json={'status': 'success',
+               'jwt': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c'})
+        m.post(url + '/v2/update_session',
+               json={'status': 'success', 'token_cost': 5})
+        m.post(url + '/v2/developer_errors', text='ok')
         yield m
+
 
 class TestRecordAction:
     def setup_method(self):
@@ -33,7 +39,7 @@ class TestRecordAction:
 
         # Assert
         assert len(mock_req.request_history) == 2
-        assert mock_req.last_request.headers['X-Agentops-Auth'] == self.api_key
+        assert mock_req.last_request.headers['X-Agentops-Api-Key'] == self.api_key
         request_json = mock_req.last_request.json()
         assert request_json['events'][0]['action_type'] == self.event_type
         assert request_json['events'][0]['params'] == {'x': 3, 'y': 4}
@@ -57,7 +63,7 @@ class TestRecordAction:
 
         # Assert
         assert len(mock_req.request_history) == 3
-        assert mock_req.last_request.headers['X-Agentops-Auth'] == self.api_key
+        assert mock_req.last_request.headers['X-Agentops-Api-Key'] == self.api_key
         request_json = mock_req.last_request.json()
         assert request_json['events'][0]['action_type'] == self.event_type
         assert request_json['events'][0]['params'] == {'x': 1, 'y': 2, 'z': 3}
@@ -82,7 +88,7 @@ class TestRecordAction:
         assert result == 7
         # Assert
         assert len(mock_req.request_history) == 2
-        assert mock_req.last_request.headers['X-Agentops-Auth'] == self.api_key
+        assert mock_req.last_request.headers['X-Agentops-Api-Key'] == self.api_key
         request_json = mock_req.last_request.json()
         assert request_json['events'][0]['action_type'] == self.event_type
         assert request_json['events'][0]['params'] == {'x': 3, 'y': 4}
