@@ -35,13 +35,15 @@ class Configuration:
         if not api_key:
             api_key = environ.get('AGENTOPS_API_KEY', None)
             if not api_key:
-                raise ConfigurationError("🖇 AgentOps: No API key provided - no data will be recorded.")
+                raise ConfigurationError(
+                    "No API key provided - no data will be recorded.")
 
         if not parent_key:
             parent_key = environ.get('AGENTOPS_PARENT_KEY', None)
 
         if not endpoint:
-            endpoint = environ.get('AGENTOPS_API_ENDPOINT', 'https://api.agentops.ai')
+            endpoint = environ.get(
+                'AGENTOPS_API_ENDPOINT', 'https://api.agentops.ai')
 
         self._api_key: str = api_key
         self._endpoint = endpoint
