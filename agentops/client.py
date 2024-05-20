@@ -118,7 +118,7 @@ class Client(metaclass=MetaClient):
                     except ImportError:
                         pass
                     except Exception as e:
-                        logger.warning(f"🖇️ AgentOps: Failed to set up AutoGen logger with AgentOps. Error: {e}")
+                        logger.warning(f"Failed to set up AutoGen logger with AgentOps. Error: {e}")
 
                     return partner_frameworks[framework]
 
