@@ -121,8 +121,6 @@ class ErrorEvent():
     """
 
     trigger_event: Optional[Event] = None
-    trigger_event_id: Optional[UUID] = None
-    trigger_event_type: Optional[EventType] = None
     exception: Optional[BaseException] = None
     error_type: Optional[str] = None
     code: Optional[str] = None
