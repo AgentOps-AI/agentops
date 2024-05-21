@@ -84,7 +84,7 @@ class HttpClient:
             result.code = 408
             result.status = HttpStatus.TIMEOUT
             logger.warning(
-                '🖇 AgentOps: Could not post data - connection timed out')
+                'Could not post data - connection timed out')
         except requests.exceptions.HTTPError as e:
             try:
                 result.parse(e.response)
@@ -97,12 +97,12 @@ class HttpClient:
             result.body = {'error': str(e)}
 
         if result.code == 401:
-            logger.warning('🖇 AgentOps: Could not post data - API server rejected your API key: %s',
+            logger.warning('Could not post data - API server rejected your API key: %s',
                            api_key)
         if result.code == 400:
-            logger.warning('🖇 AgentOps: Could not post data - %s', result.body)
+            logger.warning('Could not post data - %s', result.body)
         if result.code == 500:
             logger.warning(
-                '🖇 AgentOps: Could not post data - internal server error')
+                'Could not post data - internal server error')
 
         return result
