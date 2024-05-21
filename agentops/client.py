@@ -116,7 +116,8 @@ class Client(metaclass=MetaClient):
                 if framework == 'autogen':
                     try:
                         import autogen
-                        from .logger.agentops_logger import AgentOpsLogger
+                        from .logger.agentops_logger import AgentOpsLogger  # TODO: move?
+                        # TODO: can we pass it like this without it being a singleton?
                         autogen.runtime_logging.start(logger=AgentOpsLogger())
                     except ImportError:
                         pass
