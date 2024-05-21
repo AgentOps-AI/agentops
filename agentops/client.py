@@ -294,9 +294,6 @@ class Client(metaclass=MetaClient):
         session_id = UUID(
             inherited_session_id) if inherited_session_id is not None else uuid4()
 
-        session_id = UUID(
-            inherited_session_id) if inherited_session_id is not None else uuid4()
-
         self._session = Session(session_id=session_id,
                                 tags=tags or self._tags_for_future_session,
                                 host_env=get_host_env(self._env_data_opt_out))
