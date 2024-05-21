@@ -1,0 +1,79 @@
+---
+title: Cohere
+description: "AgentOps's support for Cohere(>=5.4.0) is first class like Jack Harlow. This is a living integration, should you need any added functionality please message us on Discord!"
+---
+
+## Install the SDK
+
+```bash bash
+pip install agentops
+```
+
+## Get an API key
+
+Retrieve an API Key from your [settings](https://app.agentops.ai/settings/projects) page.
+
+API keys are tied to individual projects.<br></br>
+A Default Project has been created for you, so just click <span style={{ padding: "5px 10px", backgroundColor: "black", color: "white", borderRadius: "5px"}}>Copy API Key</span>
+
+{/* TODO: Install Tailwind for this stuff */}
+
+<div
+  style={{ backgroundColor: "#f0f0f0", padding: "20px", borderRadius: "10px" }}
+>
+  <img height="200" src="/images/api-keys.png" />
+</div>
+
+
+## Using AgentOps with Cohere
+
+### Requires cohere>=5.4.0
+
+#### Session replays in 3 lines of code
+
+Initialize the AgentOps client and automatically get analytics on every LLM call.
+
+```python python
+import cohere
+import agentops
+
+# Beginning of program's code (i.e. main.py, __init__.py)
+agentops.init(<INSERT YOUR API KEY HERE>)
+
+co = cohere.Client()
+
+chat = co.chat(
+    message="Is it pronounced ceaux-hear or co-hehray?"
+)
+
+print(chat)
+
+agentops.end_session('Success')
+```
+
+```python python
+import cohere
+import agentops
+
+# Beginning of program's code (i.e. main.py, __init__.py)
+agentops.init(<INSERT YOUR API KEY HERE>)
+
+co = cohere.Client()
+
+stream = co.chat_stream(
+    message="Write me a haiku about the synergies between Cohere and AgentOps"
+)
+
+for event in stream:
+    if event.event_type == "text-generation":
+        print(event.text, end='')
+
+agentops.end_session('Success')
+```
+
+### Explanation
+When openai has been imported, instantiating the AgentOps client will automatically
+instrument chat completions. You will be able to see all of your sessions on the AgentOps
+dashboard along with the full LLM chat histories, cost, token counts, etc.
+
+For more features see our Details section.
