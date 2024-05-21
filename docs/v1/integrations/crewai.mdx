@@ -1,0 +1,46 @@
+---
+title: 'CrewAI'
+description: 'Using CrewAI with AgentOps'
+---
+
+## Overview
+[CrewAI](https://crewai.io) is a framework for easily building multi-agent applications.
+
+AgentOps and CrewAI teamed up to make monitoring Crew agents dead simple.
+
+## Setup
+
+> 🚨 NOTE: At this time, Crew with AgentOps integration is in pre-release. In the interim, an official fork has been
+made available. After official support is released, this fork will be deprecated and developers will
+be encouraged to use the core Crew SDK.
+
+**Install crew from the AgentOps Fork:**
+
+`pip install git+https://github.com/AgentOps-AI/crewAI.git@main`
+
+
+## Using Crew
+Crew has comprehensive [documentation](https://docs.crewai.com) available as well as a great [Crew Quickstart](https://docs.crewai.com/how-to/Creating-a-Crew-and-kick-it-off/).
+
+
+## Adding AgentOps to Crew agents
+
+Create a user API key here: https://app.agentops.ai/account
+
+Add your API key to your environment variables
+
+```
+AGENTOPS_API_KEY=<YOUR_AGENTOPS_API_KEY>
+```
+
+Before calling the constructor `Crew()` in your script, include these lines:
+
+```python
+import agentops
+agentops.init()
+```
+
+### Crew + AgentOps Examples
+- [Job Posting](https://github.com/Agentops-AI/crewAI-examples/tree/main/job-posting)
+- [Markdown Validator](https://github.com/Agentops-AI/crewAI-examples/tree/main/markdown_validator)
+- [Instagram Post](https://github.com/Agentops-AI/crewAI-examples/tree/main/instagram_post)
