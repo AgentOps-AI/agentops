@@ -116,8 +116,8 @@ class Client(metaclass=MetaClient):
                 if framework == 'autogen':
                     try:
                         import autogen
-                        config = dict(filename="agentops_logger.py")
-                        autogen.runtime_logging.start(logger_type="file", config=config)
+                        from .logger.agentops_logger import AgentOpsLogger
+                        autogen.runtime_logging.start(logger=AgentOpsLogger())
                     except ImportError:
                         pass
                     except Exception as e:
