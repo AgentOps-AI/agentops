@@ -48,10 +48,11 @@ def handle_exceptions(method):
         try:
             return method(self, *args, **kwargs)
         except Exception as e:
-            logger.warning(f"🖇 AgentOps: Error: {e}")
+            logger.warning(f"Error: {e}")
             config = getattr(self, 'config', None)
             if config is not None:
-                type(self).send_exception_to_server(e, self.config._api_key, self._session)
+                type(self).send_exception_to_server(
+                    e, self.config._api_key, self._session)
             raise e
 
     return wrapper
