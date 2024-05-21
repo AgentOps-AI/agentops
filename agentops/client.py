@@ -23,6 +23,7 @@ import atexit
 import signal
 import sys
 import threading
+import logging
 
 
 from .meta_client import MetaClient
@@ -82,7 +83,6 @@ class Client(metaclass=MetaClient):
         self._tags: Optional[List[str]] = tags
         self._tags_for_future_session: Optional[List[str]] = None
 
-
         self._env_data_opt_out = os.getenv('AGENTOPS_ENV_DATA_OPT_OUT') and os.getenv(
             'AGENTOPS_ENV_DATA_OPT_OUT').lower() == 'true'
 
@@ -97,7 +97,8 @@ class Client(metaclass=MetaClient):
 
         self._handle_unclean_exits()
 
-        instrument_llm_calls, auto_start_session = self._check_for_partner_frameworks(instrument_llm_calls, auto_start_session)
+        instrument_llm_calls, auto_start_session = self._check_for_partner_frameworks(
+            instrument_llm_calls, auto_start_session)
 
         if auto_start_session:
             self.start_session(tags, self.config, inherited_session_id)
@@ -113,11 +114,18 @@ class Client(metaclass=MetaClient):
         for framework in partner_frameworks.keys():
             if framework in sys.modules:
                 self.add_tags([framework])
-                if 'autogen':
-                    import autogen
-                    autogen.runtime_logging.start(logger_type="agentops")
+                if framework == 'autogen':
+                    try:
+                        import autogen
+                        from .partners.autogen_logger import AgentOpsLogger  # TODO: move?
+                        # TODO: can we pass it like this without it being a singleton?
+                        autogen.runtime_logging.start(logger=AgentOpsLogger())
+                    except ImportError:
+                        pass
+                    except Exception as e:
+                        logger.warning(f"🖇️ AgentOps: Failed to set up AutoGen logger with AgentOps. Error: {e}")
 
-                return partner_frameworks[framework]
+                    return partner_frameworks[framework]
 
         return instrument_llm_calls, auto_start_session
 
@@ -285,8 +293,7 @@ class Client(metaclass=MetaClient):
             self._session = None
             return logger.warning("🖇 AgentOps: Cannot start session - No server response")
 
-        logger.info('View info on this session at https://app.agentops.ai/drilldown?session_id=%s',
-                    self._session.session_id)
+        logger.info(f'Session Replay: https://app.agentops.ai/drilldown?session_id={self._session.session_id}')
 
         return self._session.session_id
 
@@ -316,11 +323,14 @@ class Client(metaclass=MetaClient):
         token_cost = self._worker.end_session(self._session)
 
         if token_cost == 'unknown':
-            print('🖇 AgentOps: Could not determine cost of run.')
+            logging.warning('Could not determine cost of run.')
         else:
             token_cost_d = Decimal(token_cost)
-            print('\n🖇 AgentOps: This run cost ${}'.format('{:.2f}'.format(
+            logging.info('This run\'s cost ${}'.format('{:.2f}'.format(
                 token_cost_d) if token_cost_d == 0 else '{:.6f}'.format(token_cost_d)))
+
+        logger.info(f'Session Replay: https://app.agentops.ai/drilldown?session_id={self._session.session_id}')
+
         self._session = None
         self._worker = None
 
@@ -328,7 +338,7 @@ class Client(metaclass=MetaClient):
         if agent_id is None:
             agent_id = str(uuid.uuid4())
         if self._worker:
-            self._worker.create_agent(agent_id, name)
+            self._worker.create_agent(name=name, agent_id=agent_id)
             return agent_id
 
     def _handle_unclean_exits(self):
@@ -347,7 +357,7 @@ class Client(metaclass=MetaClient):
                     frame: The current stack frame.
             """
             signal_name = 'SIGINT' if signum == signal.SIGINT else 'SIGTERM'
-            logger.info('🖇 AgentOps: %s detected. Ending session...', signal_name)
+            logging.info('%s detected. Ending session...', signal_name)
             self.end_session(end_state='Fail',
                              end_state_reason=f'Signal {signal_name} detected')
             sys.exit(0)
@@ -402,4 +412,5 @@ class Client(metaclass=MetaClient):
         return self.config.parent_key
 
     def stop_instrumenting(self):
-        self.llm_tracker.stop_instrumenting()
+        if self.llm_tracker:
+            self.llm_tracker.stop_instrumenting()

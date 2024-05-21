@@ -19,7 +19,7 @@ class MetaClient(type):
 
         return super().__new__(cls, name, bases, dct)
 
-    def send_exception_to_server(cls, exception, api_key):
+    def send_exception_to_server(cls, exception, api_key, session):
         """Class method to send exception to server."""
         if api_key:
             exception_type = type(exception).__name__
@@ -32,6 +32,9 @@ class MetaClient(type):
                 "stack_trace": exception_traceback,
                 "host_env": get_host_env()
             }
+
+            if session:
+                developer_error["session_id"] = session.session_id
 
             HttpClient.post("https://api.agentops.ai/developer_errors",
                             safe_serialize(developer_error).encode("utf-8"),
@@ -48,7 +51,7 @@ def handle_exceptions(method):
             logger.warning(f"🖇 AgentOps: Error: {e}")
             config = getattr(self, 'config', None)
             if config is not None:
-                type(self).send_exception_to_server(e, self.config._api_key)
+                type(self).send_exception_to_server(e, self.config._api_key, self._session)
             raise e
 
     return wrapper

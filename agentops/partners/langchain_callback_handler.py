@@ -13,7 +13,6 @@ from tenacity import RetryCallState
 from agentops import Client as AOClient
 from agentops import ActionEvent, LLMEvent, ToolEvent, ErrorEvent
 from agentops.helpers import get_ISO_time
-import logging
 
 from .helpers import debug_print_function_params
 
@@ -26,12 +25,6 @@ def get_model_from_kwargs(kwargs: any) -> str:
     else:
         return 'unknown_model'
 
-
-# def get_completion_from_response(response: LLMResult):
-#     if 'text' in response.generations[0][0]:
-#         return response.generations[0][0].text
-#     if ''
-#
 
 class Events:
     llm: Dict[str, LLMEvent] = {}
@@ -49,9 +42,6 @@ class LangchainCallbackHandler(BaseCallbackHandler):
                  max_wait_time: Optional[int] = None,
                  max_queue_size: Optional[int] = None,
                  tags: Optional[List[str]] = None):
-
-        logging.warning('🚨Importing the Langchain Callback Handler from here is deprecated. Please import with '
-                        '`from agentops.partners import LangchainCallbackHandler`')
 
         client_params: Dict[str, Any] = {
             'api_key': api_key,
