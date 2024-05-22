@@ -51,7 +51,7 @@
         "v1/details/tracking-agents",
         "v1/details/tracking-llm-calls",
         "v1/details/more-models-with-litellm",
-        "v1/details/environmental-variables"
+        "v1/details/environment-variables"
       ]
     },
     {
