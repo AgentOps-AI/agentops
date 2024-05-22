@@ -17,8 +17,8 @@ agentops.init(<INSERT YOUR API KEY HERE>)
 ```
 </CodeGroup>
 
-When openai has been imported, instantiating the AgentOps client will automatically
-instrument chat completions. You will be able to see all of your sessions on the AgentOps
+When the `openai`, `litellm`, or `cohere` packages have been imported, instantiating the AgentOps client will automatically
+instrument them, meaning you will be able to see all of your sessions on the AgentOps
 dashboard along with the full LLM chat histories, cost, token counts, etc.
 
 
@@ -99,9 +99,9 @@ That's all you need to get started! Check out the documentation below to see how
 
 <CardGroup cols={2}>
   <Card
-    title="Recording Events"
+    title="Examples and Video Guides"
     icon="square-code"
-    href="/v1/details/recording-events"
+    href="/v1/examples"
   >
     Record all of your other events the way AgentOps intends.
   </Card>
