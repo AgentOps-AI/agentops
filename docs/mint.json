@@ -50,22 +50,18 @@
         "v1/details/recording-events",
         "v1/details/tracking-agents",
         "v1/details/tracking-llm-calls",
-        "v1/details/more-models-with-litellm"
+        "v1/details/more-models-with-litellm",
+        "v1/details/environmental-variables"
       ]
     },
     {
       "group": "Integrations",
-      "pages": ["v1/integrations/crewai", "v1/integrations/cohere"]
-    },{
-      "group": "Other Info",
       "pages": [
-        "v1/details/host-env"
+        "v1/integrations/crewai",
+        "v1/integrations/cohere"
       ]
     },
     {
-      "group": "Integrations",
-      "pages": ["v1/integrations/crewai"]
-    },{
       "group": "Other Info",
       "pages": [
         "v1/details/host-env"

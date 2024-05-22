@@ -1,0 +1,19 @@
+---
+title: "Environmental Variables"
+description: "Environmental Variables that AgentOps will look for"
+---
+
+### Sample .env file
+
+```.env
+# API KEY for using AgentOps. Find this in your settings page
+AGENTOPS_API_KEY=<YOUR API KEY>
+# Secondary API Key for simultaneously recording to a second project
+AGENTOPS_PARENT_KEY=<YOUR PARENT KEY>
+# The AgentOps API endpoint. Defaults to https://api.agentops.ai
+AGENTOPS_API_ENDPOINT=https://api.agentops.ai
+# Logging level. <DEBUG, INFO, CRITICAL>
+AGENTOPS_LOGGING_LEVEL=INFO
+# Whether to opt out of recording environment data. <FALSE, TRUE>
+AGENTOPS_ENV_DATA_OPT_OUT=FALSE
+```
