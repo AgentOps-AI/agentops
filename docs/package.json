@@ -1,0 +1,6 @@
+{
+  "dependencies": {
+    "mintlify": "^3.0.78",
+    "posthog-js": "^1.130.2"
+  }
+}
