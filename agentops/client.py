@@ -329,6 +329,7 @@ class Client(metaclass=MetaClient):
                 end_state_reason (str, optional): The reason for ending the session.
                 video (str, optional): The video screen recording of the session
         """
+
         if self._session is None or self._session.has_ended:
             return logger.warning("Cannot end session - no current session")
 

@@ -49,6 +49,7 @@ class Worker:
                 logger.debug("</AGENTOPS_DEBUG_OUTPUT>\n")
 
     def reauthorize_jwt(self, session: Session) -> bool:
+        self._session = session
         with self.lock:
             payload = {
                 "session_id": session.session_id

@@ -11,7 +11,9 @@ def mock_req():
         url = 'https://api.agentops.ai'
         m.post(url + '/v2/create_events', text='ok')
         m.post(url + '/v2/create_session', json={'status': 'success',
-               'jwt': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c'})
+               'jwt': 'some_jwt'})
+        m.post(url + '/v2/reauthorize_jwt', json={'status': 'success',
+               'jwt': 'some_jwt'})
         m.post(url + '/v2/update_session',
                json={'status': 'success', 'token_cost': 5})
         m.post(url + '/v2/developer_errors', text='ok')
@@ -27,6 +29,7 @@ class TestSessions:
 
     def test_session(self, mock_req):
         agentops.start_session(config=self.config)
+        print(self.config.api_key)
 
         agentops.record(ActionEvent(self.event_type))
         agentops.record(ActionEvent(self.event_type))
@@ -36,9 +39,8 @@ class TestSessions:
         time.sleep(0.15)
 
         # We should have 2 requests (session and 2 events combined into 1)
-        print(mock_req.last_request.json())
         assert len(mock_req.request_history) == 2
-        assert mock_req.last_request.headers['X-Agentops-Api-Key'] == self.api_key
+        assert mock_req.last_request.headers['Authorization'] == f"Bearer some_jwt"
         request_json = mock_req.last_request.json()
         assert request_json['events'][0]['event_type'] == self.event_type
 
@@ -48,7 +50,7 @@ class TestSessions:
 
         # We should have 3 requests (additional end session)
         assert len(mock_req.request_history) == 3
-        assert mock_req.last_request.headers['X-Agentops-Api-Key'] == self.api_key
+        assert mock_req.last_request.headers['Authorization'] == f"Bearer some_jwt"
         request_json = mock_req.last_request.json()
         assert request_json['session']['end_state'] == end_state
         assert request_json['session']['tags'] == None
@@ -107,11 +109,7 @@ class TestSessions:
             tags=['test'], config=self.config, inherited_session_id=inherited_id)
 
         # Act
-        agentops.record(ActionEvent(self.event_type))
-        agentops.record(ActionEvent(self.event_type))
-        time.sleep(0.15)
-
-        # event session_id correct
+        # session_id correct
         request_json = mock_req.last_request.json()
         assert request_json['session_id'] == inherited_id
 
