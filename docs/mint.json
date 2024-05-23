@@ -1,0 +1,81 @@
+{
+  "$schema": "https://mintlify.com/schema.json",
+  "name": "AgentOps",
+  "logo": {
+    "dark": "/logo/dark.svg",
+    "light": "/logo/light.svg"
+  },
+  "favicon": "/favicon.png",
+  "colors": {
+    "primary": "#9563FF",
+    "light": "#AE87FF",
+    "dark": "#0D001D",
+    "background": {
+      "dark": "#090014"
+    },
+    "anchors": {
+      "from": "#FF7F57",
+      "to": "#9563FF"
+    }
+  },
+  "topbarLinks": [
+    {
+      "name": "Support",
+      "url": "mailto:alex@agentops.ai"
+    }
+  ],
+  "topbarCtaButton": {
+    "name": "Dashboard",
+    "url": "https://app.agentops.ai"
+  },
+  "navigation": [
+    {
+      "group": "Getting Started",
+      "pages": [
+        "v1/introduction",
+        "v1/installation",
+        "v1/quickstart",
+        "v1/examples"
+      ]
+    },
+    {
+      "group": "Details",
+      "pages": [
+        "v1/details/core-concepts",
+        "v1/details/sdk-reference",
+        "v1/details/sessions",
+        "v1/details/events",
+        "v1/details/tags",
+        "v1/details/decorators",
+        "v1/details/recording-events",
+        "v1/details/tracking-agents",
+        "v1/details/tracking-llm-calls",
+        "v1/details/more-models-with-litellm",
+        "v1/details/environment-variables"
+      ]
+    },
+    {
+      "group": "Integrations",
+      "pages": [
+        "v1/integrations/crewai",
+        "v1/integrations/cohere"
+      ]
+    },
+    {
+      "group": "Other Info",
+      "pages": [
+        "v1/details/host-env"
+      ]
+    }
+  ],
+  "footerSocials": {
+    "twitter": "https://twitter.com/agentopsai",
+    "github": "https://github.com/AgentOps-AI"
+  },
+  "analytics": {
+    "posthog": {
+      "apiKey": "phc_BrY3H11IViWSoUJ0QFfjBx7kEwIJMT0PjBEXZQmddW",
+      "apiHost": "https://us.i.posthog.com"
+    }
+  }
+}

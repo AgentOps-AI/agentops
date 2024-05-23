@@ -1,0 +1,28 @@
+---
+title: "Tracking LLM Calls"
+description: "Tracking LLM Calls using the AgentOps SDK"
+---
+
+### How it works
+
+When the AgentOps SDK detects the `openai`, `litellm`, or `cohere` as installed modules, it will automatically
+start tracking their usage. No further work is required from you! 😊
+
+### Not working? 
+
+Try these steps:
+1. Make sure you have the latest version of the AgentOps SDK installed. We are constantly updating it to support new LLM libraries and releases.
+2. Make sure you are calling `agentops.init()` *after* importing the LLM module but *before* you are calling the LLM method.
+3. Make sure the `instrument_llm_calls` parameter of `agentops.init()` is set to `True` (default).
+
+Still not working? Please let us know! You can find us on [Discord](https://discord.gg/DR2abmETjZ),
+ [GitHub](https://github.com/AgentOps-AI/agentops), 
+ or email us at [engineering@agentops.ai](mailto:engineering@agentops.ai).
+
+To get started, just follow the quick start guide.
+
+<CardGroup cols={2}>
+  <Card title="Quick Start" icon="code" href="/v0/quickstart">
+    Get started with AgentOps in under 5 minutes
+  </Card>
+</CardGroup>

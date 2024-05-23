@@ -1,0 +1,111 @@
+---
+title: "Quickstart"
+description: "Start using AgentOps with just 3 lines of code"
+---
+
+<CodeGroup>
+```python python
+import openai
+import agentops
+
+# Beginning of program's code (i.e. main.py, __init__.py)
+
+agentops.init(<INSERT YOUR API KEY HERE>)
+
+# Woohoo! You're on your way 🎉
+
+```
+</CodeGroup>
+
+When the `openai`, `litellm`, or `cohere` packages have been imported, instantiating the AgentOps client will automatically
+instrument them, meaning you will be able to see all of your sessions on the AgentOps
+dashboard along with the full LLM chat histories, cost, token counts, etc.
+
+
+## Decorate Functions
+  You can instrument other functions inside your code with the handy `@record_function`
+  decorator, which will record an `action_type`, the parameters, and the returns. You
+  will see these function calls alongside your LLM calls from instantiating the AgentOps client.
+  ```python python
+  # (record specific functions)
+  @agentops.record_function('sample function being record')
+  def sample_function(...):
+    ...
+```
+
+## Track Agents
+  If you use specific named agents within your system, you can tie all downstream [Events](/v1/details/events) to a
+  Named Agent with the `@track_agent` decorator.
+  ```python python
+  # (track a named agent)
+  @agentops.track_agent(name='my-expert-agent')
+  class sample_agent(...):
+    ...
+```
+
+## Ending Your Session
+
+  Finally, you should end your session by calling `.end_session()` with whether your session 
+  was successful or not `(Success|Fail)`. We suggest setting session state depending on how 
+  your agent exits or whether your agent succeeded or not. You can also specify a end state reason,
+  such as user interrupted, ran to completion, or unhandled exception.
+  ```python python
+  # End of program
+  agentops.end_session('Success')
+  # Woohoo! You're done 🎉
+  ```
+
+## Check out your dashboard
+  Run your agent and then visit [`app.agentops.ai`](https://app.agentops.ai). 
+  From the "Session Drill-Down" you should be able to see all of your OpenAI calls! 
+
+## Example Code
+
+Here is the complete code from the sections above
+
+```python python
+import openai
+import agentops
+
+# Beginning of program's code (i.e. main.py, __init__.py)
+agentops.init(<INSERT YOUR API KEY HERE>)
+
+# (record specific functions)
+@agentops.record_function('sample function being record')
+def sample_function(...):
+  ...
+
+# (track a named agent)
+@agentops.track_agent(name='my-expert-agent')
+class sample_agent(...):
+  ...
+
+# End of program
+agentops.end_session('Success')
+# Woohoo! You're done 🎉
+```
+
+<Card
+  title="Simple Code Example"
+  icon="square-code"
+  href="https://github.com/AgentOps-AI/agentops-py/blob/main/examples/openai-gpt.ipynb"
+>
+  Jupyter Notebook with sample code that you can run!
+</Card>
+
+That's all you need to get started! Check out the documentation below to see how you can record other events. AgentOps is a lot more powerful this way!
+
+## Explore our more advanced functionality!
+
+<CardGroup cols={2}>
+  <Card
+    title="Examples and Video Guides"
+    icon="square-code"
+    href="/v1/examples"
+  >
+    Record all of your other events the way AgentOps intends.
+  </Card>
+  <Card title="Tracking Agents" icon="robot" href="/v1/details/tracking-agents">
+    Associate Events with specific named agents.
+  </Card>
+</CardGroup>
