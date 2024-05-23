@@ -31,12 +31,7 @@
   "navigation": [
     {
       "group": "Getting Started",
-      "pages": [
-        "v1/introduction",
-        "v1/installation",
-        "v1/quickstart",
-        "v1/examples"
-      ]
+      "pages": ["v1/introduction", "v1/quickstart", "v1/examples"]
     },
     {
       "group": "Details",

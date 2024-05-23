@@ -1,28 +1,71 @@
 ---
 title: "Quickstart"
-description: "Start using AgentOps with just 3 lines of code"
+description: "Start using AgentOps with just 2 lines of code"
 ---
 
-<CodeGroup>
-```python python
-import openai
-import agentops
+<Steps>
+  <Step title="Install the SDK">
+    <CodeGroup>
+      ```bash pip 
+      pip install agentops
+      ```
+      ```bash poetry
+      poetry add agentops
+      ```
+    </CodeGroup>
+    <Check>[Give us a star](https://github.com/AgentOps-AI/agentops) on GitHub while you're at it (you may be our 1,000th 😊)</Check>
+  </Step>
+  <Step title="Add 2 lines of code">
+    <CodeGroup>
+      ```python python
+      # IMPORTANT: Must be after 'import openai' or 'from crewai import Agent' etc
+      import agentops
 
-# Beginning of program's code (i.e. main.py, __init__.py)
+      # Beginning of program's code (i.e. main.py, __init__.py)
+      agentops.init(<INSERT YOUR API KEY HERE>)
+      ```
+    </CodeGroup>
+    <Check>Just these two lines and you have magically tracked LLM calls!</Check>
+    <Tip>
+      After the `openai`, `litellm`, or `cohere` packages have been imported, importing + instantiating the AgentOps client
+      will automatically instrument them, meaning you will be able to see all of your sessions on the AgentOps
+      DEBUGashboard along with the full LLM chat histories, cost, token counts, etc.
+    </Tip>
 
-agentops.init(<INSERT YOUR API KEY HERE>)
+  </Step>
+  <Step title="Get an API key">
+    Retrieve an API Key from the Settings > [Projects & API Keys](https://app.agentops.ai/settings/projects) page.
+    <div/>{/* Intentionally blank div for newline */}
+    Set this API Key in your [environment variables](/v1/details/environment-variables)
 
-# Woohoo! You're on your way 🎉
+    <Frame type="glass" caption="Settings > Projects & API Keys">
+      <img height="200" src="/images/api-keys.png" />
+    </Frame>
 
-```
-</CodeGroup>
+    <Info>
+    API keys are tied to individual projects.<br></br>
+    A Default Project has been created for you, so just click Copy API Key
+    </Info>
+    {/* TODO: Install Tailwind for this stuff */}
+  </Step>
+  <Step title="Run your agent">
+    Execute your program and visit [app.agentops.ai/drilldown](https://app.agentops.ai/drilldown) to observe your Agent! 🕵️
 
-When the `openai`, `litellm`, or `cohere` packages have been imported, instantiating the AgentOps client will automatically
-instrument them, meaning you will be able to see all of your sessions on the AgentOps
-dashboard along with the full LLM chat histories, cost, token counts, etc.
+    <Tip>After your run, AgentOps prints a clickable url to console linking directly to your session in the Dashboard</Tip> 
+     <div/>{/* Intentionally blank div for newline */}
+
+     <Frame type="glass" caption="Clickable link to session">
+        <img height="200" src="/images/link-to-session.gif" />
+    </Frame>
+  </Step>
+</Steps>
 
 
-## Decorate Functions
+## More basic functionality
+
+<CardGroup cols={1}>
+
+<Card icon="code" title="Decorate Functions">
   You can instrument other functions inside your code with the handy `@record_function`
   decorator, which will record an `action_type`, the parameters, and the returns. You
   will see these function calls alongside your LLM calls from instantiating the AgentOps client.
@@ -33,7 +76,8 @@ dashboard along with the full LLM chat histories, cost, token counts, etc.
     ...
 ```
 
-## Track Agents
+</Card>
+<Card icon="robot" title="Track Agents">
   If you use specific named agents within your system, you can tie all downstream [Events](/v1/details/events) to a
   Named Agent with the `@track_agent` decorator.
   ```python python
@@ -43,8 +87,8 @@ dashboard along with the full LLM chat histories, cost, token counts, etc.
     ...
 ```
 
-## Ending Your Session
-
+</Card>
+<Card icon="stop" title="Ending Your Session">
   Finally, you should end your session by calling `.end_session()` with whether your session 
   was successful or not `(Success|Fail)`. We suggest setting session state depending on how 
   your agent exits or whether your agent succeeded or not. You can also specify a end state reason,
@@ -52,12 +96,10 @@ dashboard along with the full LLM chat histories, cost, token counts, etc.
   ```python python
   # End of program
   agentops.end_session('Success')
-  # Woohoo! You're done 🎉
   ```
+</Card>
+</CardGroup>
 
-## Check out your dashboard
-  Run your agent and then visit [`app.agentops.ai`](https://app.agentops.ai). 
-  From the "Session Drill-Down" you should be able to see all of your OpenAI calls! 
 
 ## Example Code
 
@@ -82,7 +124,6 @@ class sample_agent(...):
 
 # End of program
 agentops.end_session('Success')
-# Woohoo! You're done 🎉
 ```
 
 <Card
@@ -93,7 +134,9 @@ agentops.end_session('Success')
   Jupyter Notebook with sample code that you can run!
 </Card>
 
-That's all you need to get started! Check out the documentation below to see how you can record other events. AgentOps is a lot more powerful this way!
+<Check>
+  That's all you need to get started! Check out the documentation below to see how you can record other events. AgentOps is a lot more powerful this way!
+</Check>
 
 ## Explore our more advanced functionality!
 
