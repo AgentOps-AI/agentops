@@ -119,8 +119,7 @@ class Client(metaclass=MetaClient):
                 if framework == 'autogen':
                     try:
                         import autogen
-                        from .partners.autogen_logger import AutogenLogger  # TODO: move?
-                        # TODO: can we pass it like this without it being a singleton?
+                        from .partners.autogen_logger import AutogenLogger
                         autogen.runtime_logging.start(logger=AutogenLogger())
                     except ImportError:
                         pass
