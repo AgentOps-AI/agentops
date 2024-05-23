@@ -312,8 +312,8 @@ class Client(metaclass=MetaClient):
             self._session = None
             return logger.warning("Cannot start session - server rejected session")
 
-        logger.info(f'\x1b[34mSession Replay: https://app.agentops.ai/drilldown?session_id={
-                    self._session.session_id}\x1b[0m')
+        logger.info(
+            f'\x1b[34mSession Replay: https://app.agentops.ai/drilldown?session_id={self._session.session_id}\x1b[0m')
 
         return self._session.session_id
 
@@ -350,8 +350,8 @@ class Client(metaclass=MetaClient):
             logger.info('This run\'s cost ${}'.format('{:.2f}'.format(
                 token_cost_d) if token_cost_d == 0 else '{:.6f}'.format(token_cost_d)))
 
-        logger.info(f'\x1b[34mSession Replay: https://app.agentops.ai/drilldown?session_id={
-                    self._session.session_id}\x1b[0m')
+        logger.info(
+            f'\x1b[34mSession Replay: https://app.agentops.ai/drilldown?session_id={self._session.session_id}\x1b[0m')
 
         self._session = None
         self._worker = None
