@@ -38,7 +38,7 @@ description: "Start using AgentOps with just 2 lines of code"
     <div/>{/* Intentionally blank div for newline */}
     Set this API Key in your [environment variables](/v1/details/environment-variables)
 
-    <Frame type="glass" caption="Settings > Projects & API Keys ">
+    <Frame type="glass" caption="Settings > Projects & API Keys">
       <img height="200" src="/images/api-keys.png" />
     </Frame>
 
@@ -49,18 +49,23 @@ description: "Start using AgentOps with just 2 lines of code"
     {/* TODO: Install Tailwind for this stuff */}
   </Step>
   <Step title="Run your agent">
-    Run your agent and then visit [`app.agentops.ai`](https://app.agentops.ai)
-    Run your agent and then visit [`app.agentops.ai`](https://app.agentops.ai). 
-    From the "Session Drill-Down" you should be able to see all of your OpenAI calls! 
+    Execute your program and visit [app.agentops.ai/drilldown](https://app.agentops.ai/drilldown) to observe your Agent! 🕵️
+
+    <Tip>After your run, AgentOps prints a clickable url to console linking directly to your session in the Dashboard</Tip> 
+     <div/>{/* Intentionally blank div for newline */}
+
+     <Frame type="glass" caption="Clickable link to session">
+        <img height="200" src="/images/link-to-session.gif" />
+    </Frame>
   </Step>
 </Steps>
 
 
-## Finishing up on the basic functionality
+## More basic functionality
 
-<AccordionGroup>
+<CardGroup cols={1}>
 
-<Accordion icon="code" title="Decorate Functions">
+<Card icon="code" title="Decorate Functions">
   You can instrument other functions inside your code with the handy `@record_function`
   decorator, which will record an `action_type`, the parameters, and the returns. You
   will see these function calls alongside your LLM calls from instantiating the AgentOps client.
@@ -71,8 +76,8 @@ description: "Start using AgentOps with just 2 lines of code"
     ...
 ```
 
-</Accordion>
-<Accordion icon="robot" title="Track Agents">
+</Card>
+<Card icon="robot" title="Track Agents">
   If you use specific named agents within your system, you can tie all downstream [Events](/v1/details/events) to a
   Named Agent with the `@track_agent` decorator.
   ```python python
@@ -82,8 +87,8 @@ description: "Start using AgentOps with just 2 lines of code"
     ...
 ```
 
-</Accordion>
-<Accordion icon="stop" title="Ending Your Session">
+</Card>
+<Card icon="stop" title="Ending Your Session">
   Finally, you should end your session by calling `.end_session()` with whether your session 
   was successful or not `(Success|Fail)`. We suggest setting session state depending on how 
   your agent exits or whether your agent succeeded or not. You can also specify a end state reason,
@@ -91,10 +96,9 @@ description: "Start using AgentOps with just 2 lines of code"
   ```python python
   # End of program
   agentops.end_session('Success')
-  # Woohoo! You're done 🎉
   ```
-</Accordion>
-</AccordionGroup>
+</Card>
+</CardGroup>
 
 
 ## Example Code
@@ -130,7 +134,9 @@ agentops.end_session('Success')
   Jupyter Notebook with sample code that you can run!
 </Card>
 
-That's all you need to get started! Check out the documentation below to see how you can record other events. AgentOps is a lot more powerful this way!
+<Check>
+  That's all you need to get started! Check out the documentation below to see how you can record other events. AgentOps is a lot more powerful this way!
+</Check>
 
 ## Explore our more advanced functionality!
 
