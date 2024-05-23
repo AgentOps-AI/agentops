@@ -14,7 +14,7 @@ from agentops import Client as AOClient
 from agentops import ActionEvent, LLMEvent, ToolEvent, ErrorEvent
 from agentops.helpers import get_ISO_time
 
-from .helpers import debug_print_function_params
+from ..helpers import debug_print_function_params
 
 
 def get_model_from_kwargs(kwargs: any) -> str:
