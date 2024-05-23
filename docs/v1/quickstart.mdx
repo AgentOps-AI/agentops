@@ -13,78 +13,47 @@ description: "Start using AgentOps with just 2 lines of code"
       poetry add agentops
       ```
     </CodeGroup>
+    <Check>[Give us a star](https://github.com/AgentOps-AI/agentops) on GitHub while you're at it (you may be our 1,000th 😊)</Check>
   </Step>
   <Step title="Add 2 lines of code">
-    These are instructions or content that only pertain to the second step.
+    <CodeGroup>
+      ```python python
+      # IMPORTANT: Must be after 'import openai' or 'from crewai import Agent' etc
+      import agentops
+
+      # Beginning of program's code (i.e. main.py, __init__.py)
+      agentops.init(<INSERT YOUR API KEY HERE>)
+      ```
+    </CodeGroup>
+    <Check>Just these two lines and you have magically tracked LLM calls!</Check>
+    <Tip>
+      After the `openai`, `litellm`, or `cohere` packages have been imported, importing + instantiating the AgentOps client
+      will automatically instrument them, meaning you will be able to see all of your sessions on the AgentOps
+      DEBUGashboard along with the full LLM chat histories, cost, token counts, etc.
+    </Tip>
+
   </Step>
   <Step title="Get an API key">
     Retrieve an API Key from the Settings > [Projects & API Keys](https://app.agentops.ai/settings/projects) page.
-
-    API keys are tied to individual projects.<br></br>
-    A Default Project has been created for you, so just click <span style={{ padding: "5px 10px", backgroundColor: "black", color: "white", borderRadius: "5px"}}>Copy API Key</span>
-
-    {/* TODO: Install Tailwind for this stuff */}
-
+    <div/>{/* Intentionally blank div for newline */}
+    Set this API Key in your [environment variables](/v1/details/environment-variables)
 
     <Frame type="glass" caption="Settings > Projects & API Keys ">
       <img height="200" src="/images/api-keys.png" />
     </Frame>
 
+    <Info>
+    API keys are tied to individual projects.<br></br>
+    A Default Project has been created for you, so just click Copy API Key
+    </Info>
+    {/* TODO: Install Tailwind for this stuff */}
+  </Step>
+  <Step title="Run your agent">
+    Run your agent and then visit [`app.agentops.ai`](https://app.agentops.ai)
+    Run your agent and then visit [`app.agentops.ai`](https://app.agentops.ai). 
+    From the "Session Drill-Down" you should be able to see all of your OpenAI calls! 
   </Step>
 </Steps>
-
-
-
-
-
-
-
-
-
-
-### Install the SDK
-
-<CodeGroup>
-```bash pip 
-pip install agentops
-```
-```bash poetry
-poetry add agentops
-```
-</CodeGroup>
-
-### Add 2 lines of code = magically tracked LLM calls
-
-<CodeGroup>
-```python python
-import openai
-import agentops
-
-# Beginning of program's code (i.e. main.py, __init__.py)
-
-agentops.init(<INSERT YOUR API KEY HERE>)
-```
-</CodeGroup>
-
-When the `openai`, `litellm`, or `cohere` packages have been imported, instantiating the AgentOps client will automatically
-instrument them, meaning you will be able to see all of your sessions on the AgentOps
-dashboard along with the full LLM chat histories, cost, token counts, etc.
-
-
-## Get an API key
-
-Retrieve an API Key from the Settings > [Projects & API Keys](https://app.agentops.ai/settings/projects) page.
-
-API keys are tied to individual projects.<br></br>
-A Default Project has been created for you, so just click <span style={{ padding: "5px 10px", backgroundColor: "black", color: "white", borderRadius: "5px"}}>Copy API Key</span>
-
-{/* TODO: Install Tailwind for this stuff */}
-
-<div
-  style={{ backgroundColor: "#f0f0f0", padding: "20px", borderRadius: "10px" }}
->
-  <img height="200" src="/images/api-keys.png" />
-</div>
 
 
 ## Finishing up on the basic functionality
@@ -125,11 +94,8 @@ A Default Project has been created for you, so just click <span style={{ padding
   # Woohoo! You're done 🎉
   ```
 </Accordion>
-<Accordion icon="browser" title="Check out your dashboard">
-  Run your agent and then visit [`app.agentops.ai`](https://app.agentops.ai). 
-  From the "Session Drill-Down" you should be able to see all of your OpenAI calls! 
-</Accordion>
 </AccordionGroup>
+
 
 ## Example Code
 
@@ -154,7 +120,6 @@ class sample_agent(...):
 
 # End of program
 agentops.end_session('Success')
-# Woohoo! You're done 🎉
 ```
 
 <Card
