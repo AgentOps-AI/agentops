@@ -1,7 +1,20 @@
 ---
 title: "Quickstart"
-description: "Start using AgentOps with just 3 lines of code"
+description: "Build your next agent with evals, observability, and replays. Start using AgentOps with just 2 lines of code"
 ---
+
+### Install the SDK
+
+<CodeGroup>
+```bash pip 
+pip install agentops
+```
+```bash poetry
+poetry add agentops
+```
+</CodeGroup>
+
+### Add 2 lines of code = magically tracked LLM calls
 
 <CodeGroup>
 ```python python
@@ -11,9 +24,6 @@ import agentops
 # Beginning of program's code (i.e. main.py, __init__.py)
 
 agentops.init(<INSERT YOUR API KEY HERE>)
-
-# Woohoo! You're on your way 🎉
-
 ```
 </CodeGroup>
 
@@ -22,7 +32,27 @@ instrument them, meaning you will be able to see all of your sessions on the Age
 dashboard along with the full LLM chat histories, cost, token counts, etc.
 
 
-## Decorate Functions
+## Get an API key
+
+Retrieve an API Key from the Settings > [Projects & API Keys](https://app.agentops.ai/settings/projects) page.
+
+API keys are tied to individual projects.<br></br>
+A Default Project has been created for you, so just click <span style={{ padding: "5px 10px", backgroundColor: "black", color: "white", borderRadius: "5px"}}>Copy API Key</span>
+
+{/* TODO: Install Tailwind for this stuff */}
+
+<div
+  style={{ backgroundColor: "#f0f0f0", padding: "20px", borderRadius: "10px" }}
+>
+  <img height="200" src="/images/api-keys.png" />
+</div>
+
+
+## Finishing up on the basic functionality
+
+<AccordionGroup>
+
+<Accordion icon="code" title="Decorate Functions">
   You can instrument other functions inside your code with the handy `@record_function`
   decorator, which will record an `action_type`, the parameters, and the returns. You
   will see these function calls alongside your LLM calls from instantiating the AgentOps client.
@@ -33,7 +63,8 @@ dashboard along with the full LLM chat histories, cost, token counts, etc.
     ...
 ```
 
-## Track Agents
+</Accordion>
+<Accordion icon="robot" title="Track Agents">
   If you use specific named agents within your system, you can tie all downstream [Events](/v1/details/events) to a
   Named Agent with the `@track_agent` decorator.
   ```python python
@@ -43,8 +74,8 @@ dashboard along with the full LLM chat histories, cost, token counts, etc.
     ...
 ```
 
-## Ending Your Session
-
+</Accordion>
+<Accordion icon="stop" title="Ending Your Session">
   Finally, you should end your session by calling `.end_session()` with whether your session 
   was successful or not `(Success|Fail)`. We suggest setting session state depending on how 
   your agent exits or whether your agent succeeded or not. You can also specify a end state reason,
@@ -54,10 +85,12 @@ dashboard along with the full LLM chat histories, cost, token counts, etc.
   agentops.end_session('Success')
   # Woohoo! You're done 🎉
   ```
-
-## Check out your dashboard
+</Accordion>
+<Accordion icon="browser" title="Check out your dashboard">
   Run your agent and then visit [`app.agentops.ai`](https://app.agentops.ai). 
   From the "Session Drill-Down" you should be able to see all of your OpenAI calls! 
+</Accordion>
+</AccordionGroup>
 
 ## Example Code
 
