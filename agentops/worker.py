@@ -48,6 +48,27 @@ class Worker:
                 logger.debug(serialized_payload)
                 logger.debug("</AGENTOPS_DEBUG_OUTPUT>\n")
 
+    def reauthorize_jwt(self, session: Session) -> bool:
+        with self.lock:
+            payload = {
+                "session_id": session.session_id
+            }
+            serialized_payload = json.dumps(filter_unjsonable(payload)).encode("utf-8")
+            res = HttpClient.post(f'{self.config.endpoint}/v2/reauthorize_jwt',
+                                  serialized_payload,
+                                  self.config.api_key)
+
+            logger.debug(res.body)
+
+            if res.code != 200:
+                return False
+
+            self.jwt = res.body.get('jwt', None)
+            if self.jwt is None:
+                return False
+
+            return True
+
     def start_session(self, session: Session) -> bool:
         self._session = session
         with self.lock:
@@ -64,7 +85,7 @@ class Worker:
 
             if res.code != 200:
                 return False
-            
+
             self.jwt = res.body.get('jwt', None)
             if self.jwt is None:
                 return False
@@ -83,9 +104,8 @@ class Worker:
             }
 
             res = HttpClient.post(f'{self.config.endpoint}/v2/update_session',
-                            json.dumps(filter_unjsonable(
-                                payload)).encode("utf-8"),
-                            jwt_token=self.jwt)
+                                  json.dumps(filter_unjsonable(payload)).encode("utf-8"),
+                                  jwt_token=self.jwt)
             logger.debug(res.body)
             return res.body.get('token_cost', "unknown")
 
@@ -96,9 +116,8 @@ class Worker:
             }
 
             res = HttpClient.post(f'{self.config.endpoint}/v2/update_session',
-                            json.dumps(filter_unjsonable(
-                                payload)).encode("utf-8"),
-                            jwt_token=self.jwt)
+                                  json.dumps(filter_unjsonable(payload)).encode("utf-8"),
+                                  jwt_token=self.jwt)
 
     def create_agent(self, agent_id, name):
         payload = {

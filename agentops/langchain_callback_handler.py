@@ -122,7 +122,8 @@ class LangchainCallbackHandler(BaseCallbackHandler):
 
         if len(response.generations) == 0:
             # TODO: more descriptive error
-            error_event = ErrorEvent(trigger_event=self.events.llm[str(run_id)], error_type="NoGenerations", details="on_llm_end: No generations")
+            error_event = ErrorEvent(trigger_event=self.events.llm[str(run_id)],
+                                     error_type="NoGenerations", details="on_llm_end: No generations")
             self.ao_client.record(error_event)
 
     @debug_print_function_params
@@ -214,7 +215,8 @@ class LangchainCallbackHandler(BaseCallbackHandler):
         # Tools are capable of failing `on_tool_end` quietly.
         # This is a workaround to make sure we can log it as an error.
         if kwargs.get('name') == '_Exception':
-            error_event = ErrorEvent(trigger_event=tool_event, error_type="LangchainToolException", details=output)
+            error_event = ErrorEvent(
+                trigger_event=tool_event, error_type="LangchainToolException", details=output)
             self.ao_client.record(error_event)
 
     @debug_print_function_params
@@ -263,7 +265,8 @@ class LangchainCallbackHandler(BaseCallbackHandler):
             **kwargs: Any,
     ) -> None:
         action_event: ActionEvent = self.events.retriever[str(run_id)]
-        action_event.logs = documents  # TODO: Adding this. Might want to add elsewhere e.g. params
+        # TODO: Adding this. Might want to add elsewhere e.g. params
+        action_event.logs = documents
         action_event.end_timestamp = get_ISO_time()
         self.ao_client.record(action_event)
 
@@ -446,7 +449,8 @@ class AsyncLangchainCallbackHandler(AsyncCallbackHandler):
 
         if len(response.generations) == 0:
             # TODO: more descriptive error
-            error_event = ErrorEvent(trigger_event=self.events.llm[str(run_id)], error_type="NoGenerations", details="on_llm_end: No generations")
+            error_event = ErrorEvent(trigger_event=self.events.llm[str(
+                run_id)], error_type="NoGenerations", details="on_llm_end: No generations")
             self.ao_client.record(error_event)
 
     @debug_print_function_params
@@ -538,7 +542,8 @@ class AsyncLangchainCallbackHandler(AsyncCallbackHandler):
         # Tools are capable of failing `on_tool_end` quietly.
         # This is a workaround to make sure we can log it as an error.
         if kwargs.get('name') == '_Exception':
-            error_event = ErrorEvent(trigger_event=tool_event, error_type="LangchainToolException", details=output)
+            error_event = ErrorEvent(
+                trigger_event=tool_event, error_type="LangchainToolException", details=output)
             self.ao_client.record(error_event)
 
     @debug_print_function_params
@@ -587,7 +592,8 @@ class AsyncLangchainCallbackHandler(AsyncCallbackHandler):
             **kwargs: Any,
     ) -> None:
         action_event: ActionEvent = self.events.retriever[str(run_id)]
-        action_event.logs = documents  # TODO: Adding this. Might want to add elsewhere e.g. params
+        # TODO: Adding this. Might want to add elsewhere e.g. params
+        action_event.logs = documents
         action_event.end_timestamp = get_ISO_time()
         self.ao_client.record(action_event)
 
