@@ -23,12 +23,12 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 lock = threading.Lock()
 
-__all__ = ("AgentOpsLogger",)
+__all__ = ("AutogenLogger",)
 
 F = TypeVar("F", bound=Callable[..., Any])
 
 
-class AgentOpsLogger(BaseLogger):
+class AutogenLogger(BaseLogger):
     agent_store: [{"agentops_id": str, "autogen_id": str}] = []
 
     def start(self) -> str:
@@ -72,6 +72,7 @@ class AgentOpsLogger(BaseLogger):
         event = ActionEvent(action_type=name)
         agentops_id = self._get_agentops_id_from_agent(str(id(source)))
         event.agent_id = agentops_id
+        event.params = kwargs
         agentops.record(event)
 
     def log_function_use(
