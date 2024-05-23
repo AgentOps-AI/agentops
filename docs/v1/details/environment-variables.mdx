@@ -1,6 +1,7 @@
 ---
 title: "Environment Variables"
 description: "Environment Variables that AgentOps will look for"
+mode: "wide"
 ---
 
 ### Sample .env file
@@ -8,12 +9,16 @@ description: "Environment Variables that AgentOps will look for"
 ```python .env
 # API KEY for using AgentOps. Find this in your settings page
 AGENTOPS_API_KEY=<YOUR API KEY>
-# Secondary API Key for simultaneously recording to a second project
+
+##########################################################
+# Only copy the following if you're going to override them
+
+# (OPTIONAL) Secondary API Key for simultaneously recording to a second project
 AGENTOPS_PARENT_KEY=<YOUR PARENT KEY>
-# The AgentOps API endpoint. Defaults to https://api.agentops.ai
+# (OPTIONAL) The AgentOps API endpoint. Defaults to https://api.agentops.ai
 AGENTOPS_API_ENDPOINT=https://api.agentops.ai
-# Logging level. <DEBUG, INFO, CRITICAL>
+# (OPTIONAL) Logging level. <DEBUG, INFO, CRITICAL>
 AGENTOPS_LOGGING_LEVEL=INFO
-# Whether to opt out of recording environment data. <FALSE, TRUE>
+# (OPTIONAL) Whether to opt out of recording environment data. <FALSE, TRUE>
 AGENTOPS_ENV_DATA_OPT_OUT=FALSE
 ```
