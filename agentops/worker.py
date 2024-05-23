@@ -41,7 +41,7 @@ class Worker:
                 serialized_payload = safe_serialize(payload).encode("utf-8")
                 HttpClient.post(f'{self.config.endpoint}/v2/create_events',
                                 serialized_payload,
-                                jwt_token=self.jwt)
+                                jwt=self.jwt)
 
                 logger.debug("\n<AGENTOPS_DEBUG_OUTPUT>")
                 logger.debug(f"Worker request to {self.config.endpoint}/events")
@@ -106,7 +106,7 @@ class Worker:
 
             res = HttpClient.post(f'{self.config.endpoint}/v2/update_session',
                                   json.dumps(filter_unjsonable(payload)).encode("utf-8"),
-                                  jwt_token=self.jwt)
+                                  jwt=self.jwt)
             logger.debug(res.body)
             return res.body.get('token_cost', "unknown")
 
@@ -118,7 +118,7 @@ class Worker:
 
             res = HttpClient.post(f'{self.config.endpoint}/v2/update_session',
                                   json.dumps(filter_unjsonable(payload)).encode("utf-8"),
-                                  jwt_token=self.jwt)
+                                  jwt=self.jwt)
 
     def create_agent(self, agent_id, name):
         payload = {
@@ -131,7 +131,7 @@ class Worker:
             safe_serialize(payload).encode("utf-8")
         HttpClient.post(f'{self.config.endpoint}/v2/create_agent',
                         serialized_payload,
-                        jwt_token=self.jwt)
+                        jwt=self.jwt)
 
     def run(self) -> None:
         while not self.stop_flag.is_set():

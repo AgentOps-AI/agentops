@@ -60,7 +60,7 @@ class HttpClient:
 
     @staticmethod
     def post(url: str, payload: bytes, api_key: Optional[str] = None, parent_key: Optional[str] = None,
-             jwt_token: Optional[str] = None, header=None) -> Response:
+             jwt: Optional[str] = None, header=None) -> Response:
         result = Response()
         try:
             # Create request session with retries configured
@@ -73,8 +73,8 @@ class HttpClient:
             if parent_key is not None:
                 JSON_HEADER["X-Agentops-Parent-Key"] = parent_key
 
-            if jwt_token is not None:
-                JSON_HEADER["Authorization"] = f"Bearer {jwt_token}"
+            if jwt is not None:
+                JSON_HEADER["Authorization"] = f"Bearer {jwt}"
 
             res = request_session.post(url, data=payload,
                                        headers=JSON_HEADER, timeout=20)
