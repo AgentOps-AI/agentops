@@ -2,6 +2,7 @@
 title: "Quickstart"
 description: "Start using AgentOps with just 2 lines of code"
 ---
+import SupportedModels from '/snippets/supported-models.mdx'
 
 <Steps>
   <Step title="Install the SDK">
@@ -27,15 +28,11 @@ description: "Start using AgentOps with just 2 lines of code"
     </CodeGroup>
     <Check>Just these two lines and you have magically tracked LLM calls!</Check>
     <Tip>
-      After the `openai`, `litellm`, or `cohere` packages have been imported, importing + instantiating the AgentOps client
-      will automatically instrument them, meaning you will be able to see all of your sessions on the AgentOps
-      DEBUGashboard along with the full LLM chat histories, cost, token counts, etc.
+      After the `openai`, `cohere`, or `litellm` packages have been imported, importing + instantiating the AgentOps client
+      will automatically instrument them, meaning you will be able to see all of your sessions on the AgentOps Dashboard
+      along with the full LLM chat histories, cost, token counts, etc.
     </Tip>
-    <Note>
-      At the time of writing, AgentOps offers first class support for `openai` and `cohere` models. However we support many
-      more models such as Llama, Mistral, Claude, and Gemini via LiteLLM. Visit our [LiteLLM docs](/v1/integrations/litellm) to learn more.
-    </Note>
-
+    <SupportedModels />
   </Step>
   <Step title="Get an API key">
     Retrieve an API Key from the Settings > [Projects & API Keys](https://app.agentops.ai/settings/projects) page.
