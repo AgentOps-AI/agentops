@@ -38,33 +38,32 @@
       ]
     },
     {
-      "group": "Details",
+      "group": "Concepts",
       "pages": [
-        "v1/details/core-concepts",
-        "v1/details/sdk-reference",
-        "v1/details/sessions",
-        "v1/details/events",
-        "v1/details/tags",
-        "v1/details/decorators",
-        "v1/details/recording-events",
-        "v1/details/tracking-agents",
-        "v1/details/tracking-llm-calls",
-        "v1/details/more-models-with-litellm",
-        "v1/details/environment-variables"
+        "v1/concepts/core-concepts",
+        "v1/concepts/decorators",
+        "v1/concepts/sessions",
+        "v1/concepts/events",
+        "v1/concepts/tags"
+      ]
+    },
+    {
+      "group": "Usage",
+      "pages": [
+        "v1/usage/sdk-reference",
+        "v1/usage/environment-variables",
+        "v1/usage/tracking-llm-calls",
+        "v1/usage/tracking-agents",
+        "v1/usage/recording-events"
       ]
     },
     {
       "group": "Integrations",
-      "pages": [
-        "v1/integrations/crewai",
-        "v1/integrations/cohere"
-      ]
+      "pages": ["v1/integrations/crewai", "v1/integrations/cohere", "v1/usage/more-models-with-litellm"]
     },
     {
       "group": "Other Info",
-      "pages": [
-        "v1/details/host-env"
-      ]
+      "pages": ["v1/concepts/host-env"]
     }
   ],
   "footerSocials": {
