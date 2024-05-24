@@ -15,35 +15,37 @@ class Configuration:
     Stores the configuration settings for AgentOps clients.
 
     Args:
-        api_key (str, optional): API Key for AgentOps services. If none is provided, key will 
+        api_key (str, optional): API Key for AgentOps services. If none is provided, key will
             be read from the AGENTOPS_API_KEY environment variable.
-        parent_key (str, optional): Organization key to give visibility of all user sessions the user's organization. If none is provided, key will 
+        parent_key (str, optional): Organization key to give visibility of all user sessions the user's organization. If none is provided, key will
             be read from the AGENTOPS_PARENT_KEY environment variable.
-        endpoint (str, optional): The endpoint for the AgentOps service. If none is provided, key will 
+        endpoint (str, optional): The endpoint for the AgentOps service. If none is provided, key will
             be read from the AGENTOPS_API_ENDPOINT environment variable. Defaults to 'https://api.agentops.ai'.
         max_wait_time (int, optional): The maximum time to wait in milliseconds before flushing the queue. Defaults to 5000.
         max_queue_size (int, optional): The maximum size of the event queue. Defaults to 100.
     """
 
-    def __init__(self,
-                 api_key: Optional[str] = None,
-                 parent_key: Optional[str] = None,
-                 endpoint: Optional[str] = None,
-                 max_wait_time: Optional[int] = None,
-                 max_queue_size: Optional[int] = None):
+    def __init__(
+        self,
+        api_key: Optional[str] = None,
+        parent_key: Optional[str] = None,
+        endpoint: Optional[str] = None,
+        max_wait_time: Optional[int] = None,
+        max_queue_size: Optional[int] = None,
+    ):
 
         if not api_key:
-            api_key = environ.get('AGENTOPS_API_KEY', None)
+            api_key = environ.get("AGENTOPS_API_KEY", None)
             if not api_key:
                 raise ConfigurationError(
-                    "No API key provided - no data will be recorded.")
+                    "No API key provided - no data will be recorded."
+                )
 
         if not parent_key:
-            parent_key = environ.get('AGENTOPS_PARENT_KEY', None)
+            parent_key = environ.get("AGENTOPS_PARENT_KEY", None)
 
         if not endpoint:
-            endpoint = environ.get(
-                'AGENTOPS_API_ENDPOINT', 'https://api.agentops.ai')
+            endpoint = environ.get("AGENTOPS_API_ENDPOINT", "https://api.agentops.ai")
 
         self._api_key: str = api_key
         self._endpoint = endpoint

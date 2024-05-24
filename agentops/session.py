@@ -19,7 +19,12 @@ class Session:
 
     """
 
-    def __init__(self, session_id: UUID, tags: Optional[List[str]] = None, host_env: Optional[dict] = None):
+    def __init__(
+        self,
+        session_id: UUID,
+        tags: Optional[List[str]] = None,
+        host_env: Optional[dict] = None,
+    ):
         self.end_timestamp = None
         self.end_state: Optional[str] = None
         self.session_id = session_id
@@ -38,7 +43,9 @@ class Session:
         """
         self.video = video
 
-    def end_session(self, end_state: str = "Indeterminate", end_state_reason: Optional[str] = None) -> None:
+    def end_session(
+        self, end_state: str = "Indeterminate", end_state_reason: Optional[str] = None
+    ) -> None:
         """
         End the session with a specified state, rating, and reason.
 

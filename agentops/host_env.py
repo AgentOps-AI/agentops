@@ -12,7 +12,7 @@ def get_sdk_details():
         return {
             "AgentOps SDK Version": get_agentops_version(),
             "Python Version": platform.python_version(),
-            "System Packages": get_sys_packages()
+            "System Packages": get_sys_packages(),
         }
     except:
         return {}
@@ -20,18 +20,14 @@ def get_sdk_details():
 
 def get_python_details():
     try:
-        return {
-            "Python Version": platform.python_version()
-        }
+        return {"Python Version": platform.python_version()}
     except:
         return {}
 
 
 def get_agentops_details():
     try:
-        return {
-            "AgentOps SDK Version": get_agentops_version()
-        }
+        return {"AgentOps SDK Version": get_agentops_version()}
     except:
         return {}
 
@@ -55,7 +51,10 @@ def get_installed_packages():
         return {
             # TODO: test
             # TODO: add to opt out
-            "Installed Packages": {dist.metadata['Name']: dist.version for dist in importlib.metadata.distributions()}
+            "Installed Packages": {
+                dist.metadata["Name"]: dist.version
+                for dist in importlib.metadata.distributions()
+            }
         }
     except:
         return {}
@@ -63,18 +62,14 @@ def get_installed_packages():
 
 def get_current_directory():
     try:
-        return {
-            "Project Working Directory": os.getcwd()
-        }
+        return {"Project Working Directory": os.getcwd()}
     except:
         return {}
 
 
 def get_virtual_env():
     try:
-        return {
-            "Virtual Environment": os.environ.get('VIRTUAL_ENV', None)
-        }
+        return {"Virtual Environment": os.environ.get("VIRTUAL_ENV", None)}
     except:
         return {}
 
@@ -85,7 +80,7 @@ def get_os_details():
             "Hostname": socket.gethostname(),
             "OS": platform.system(),
             "OS Version": platform.version(),
-            "OS Release": platform.release()
+            "OS Release": platform.release(),
         }
     except:
         return {}
@@ -97,7 +92,7 @@ def get_cpu_details():
             "Physical cores": psutil.cpu_count(logical=False),
             "Total cores": psutil.cpu_count(logical=True),
             # "Max Frequency": f"{psutil.cpu_freq().max:.2f}Mhz", # Fails right now
-            "CPU Usage": f"{psutil.cpu_percent()}%"
+            "CPU Usage": f"{psutil.cpu_percent()}%",
         }
     except:
         return {}
@@ -110,7 +105,7 @@ def get_ram_details():
             "Total": f"{ram_info.total / (1024 ** 3):.2f} GB",
             "Available": f"{ram_info.available / (1024 ** 3):.2f} GB",
             "Used": f"{ram_info.used / (1024 ** 3):.2f} GB",
-            "Percentage": f"{ram_info.percent}%"
+            "Percentage": f"{ram_info.percent}%",
         }
     except:
         return {}
@@ -126,7 +121,7 @@ def get_disk_details():
             "Total": f"{usage.total / (1024**3):.2f} GB",
             "Used": f"{usage.used / (1024**3):.2f} GB",
             "Free": f"{usage.free / (1024**3):.2f} GB",
-            "Percentage": f"{usage.percent}%"
+            "Percentage": f"{usage.percent}%",
         }
     return disk_info
 
@@ -137,7 +132,7 @@ def get_host_env(opt_out: bool = False):
             "SDK": get_sdk_details(),
             "OS": get_os_details(),
             "Project Working Directory": get_current_directory(),
-            "Virtual Environment": get_virtual_env()
+            "Virtual Environment": get_virtual_env(),
         }
     else:
         return {
@@ -148,5 +143,5 @@ def get_host_env(opt_out: bool = False):
             "Disk": get_disk_details(),
             "Installed Packages": get_installed_packages(),
             "Project Working Directory": get_current_directory(),
-            "Virtual Environment": get_virtual_env()
+            "Virtual Environment": get_virtual_env(),
         }

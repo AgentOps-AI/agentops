@@ -51,24 +51,32 @@ class AutogenLogger(BaseLogger):
         cost: float,
         start_time: str,
     ) -> None:
-        """ Records an LLMEvent to AgentOps session """
+        """Records an LLMEvent to AgentOps session"""
         end_time = get_current_ts()
 
-        completion = response.choices[len(response.choices)-1]
+        completion = response.choices[len(response.choices) - 1]
 
-        llm_event = LLMEvent(prompt=request['messages'], completion=completion.message, model=response.model)
+        llm_event = LLMEvent(
+            prompt=request["messages"],
+            completion=completion.message,
+            model=response.model,
+        )
         llm_event.init_timestamp = start_time
         llm_event.end_timestamp = end_time
         llm_event.agent_id = self._get_agentops_id_from_agent(str(id(agent)))
         agentops.record(llm_event)
 
     def log_new_agent(self, agent: ConversableAgent, init_args: Dict[str, Any]) -> None:
-        """ Calls agentops.create_agent """
+        """Calls agentops.create_agent"""
         ao_agent_id = agentops.create_agent(agent.name, str(uuid4()))
-        self.agent_store.append({'agentops_id': ao_agent_id, 'autogen_id': str(id(agent))})
+        self.agent_store.append(
+            {"agentops_id": ao_agent_id, "autogen_id": str(id(agent))}
+        )
 
-    def log_event(self, source: Union[str, Agent], name: str, **kwargs: Dict[str, Any]) -> None:
-        """ Records an ActionEvent to AgentOps session """
+    def log_event(
+        self, source: Union[str, Agent], name: str, **kwargs: Dict[str, Any]
+    ) -> None:
+        """Records an ActionEvent to AgentOps session"""
         event = ActionEvent(action_type=name)
         agentops_id = self._get_agentops_id_from_agent(str(id(source)))
         event.agent_id = agentops_id
@@ -76,30 +84,37 @@ class AutogenLogger(BaseLogger):
         agentops.record(event)
 
     def log_function_use(
-            self, source: Union[str, Agent], function: F, args: Dict[str, Any], returns: any
+        self, source: Union[str, Agent], function: F, args: Dict[str, Any], returns: any
     ):
-        """ Records a ToolEvent to AgentOps session """
+        """Records a ToolEvent to AgentOps session"""
         event = ToolEvent()
         agentops_id = self._get_agentops_id_from_agent(str(id(source)))
         event.agent_id = agentops_id
         event.function = function  # TODO: this is not a parameter
         event.params = args
         event.returns = returns
-        event.name = getattr(function, '_name')
+        event.name = getattr(function, "_name")
         agentops.record(event)
 
-    def log_new_wrapper(self, wrapper: OpenAIWrapper, init_args: Dict[str, Union[LLMConfig, List[LLMConfig]]]) -> None:
+    def log_new_wrapper(
+        self,
+        wrapper: OpenAIWrapper,
+        init_args: Dict[str, Union[LLMConfig, List[LLMConfig]]],
+    ) -> None:
         pass
 
     def log_new_client(
-        self, client: Union[AzureOpenAI, OpenAI], wrapper: OpenAIWrapper, init_args: Dict[str, Any]
+        self,
+        client: Union[AzureOpenAI, OpenAI],
+        wrapper: OpenAIWrapper,
+        init_args: Dict[str, Any],
     ) -> None:
         pass
 
     def stop(self) -> None:
-        """ Ends AgentOps session """
+        """Ends AgentOps session"""
         agentops.end_session(end_state=EndState.INDETERMINATE.value)
 
     def get_connection(self) -> None:
-        """ Method intentionally left blank """
+        """Method intentionally left blank"""
         pass
