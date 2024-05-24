@@ -2,8 +2,8 @@
   "$schema": "https://mintlify.com/schema.json",
   "name": "AgentOps",
   "logo": {
-    "dark": "/logo/dark.svg",
-    "light": "/logo/light.svg"
+    "dark": "https://raw.githubusercontent.com/AgentOps-AI/agentops/35d5682866921a9e28d8ef66ae3c3b3d92d8fa6b/img/logo.png",
+    "light": "https://raw.githubusercontent.com/AgentOps-AI/agentops/35d5682866921a9e28d8ef66ae3c3b3d92d8fa6b/img/logo.png"
   },
   "favicon": "/favicon.png",
   "colors": {
@@ -31,7 +31,11 @@
   "navigation": [
     {
       "group": "Getting Started",
-      "pages": ["v1/introduction", "v1/quickstart", "v1/examples"]
+      "pages": [
+        "v1/introduction",
+        "v1/quickstart",
+        "v1/examples"
+      ]
     },
     {
       "group": "Details",
