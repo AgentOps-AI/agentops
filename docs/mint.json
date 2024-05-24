@@ -55,7 +55,7 @@
     },
     {
       "group": "Integrations",
-      "pages": ["v1/integrations/crewai", "v1/integrations/cohere", "v1/usage/more-models-with-litellm"]
+      "pages": ["v1/integrations/crewai", "v1/integrations/cohere", "v1/integrations/litellm"]
     },
     {
       "group": "Other Info",
