@@ -56,7 +56,7 @@ def init(api_key: Optional[str] = None,
         "WARNING": logging.WARNING,
         "DEBUG": logging.DEBUG
     }
-    logging.basicConfig(level=log_levels.get(logging_level or "INFO", "INFO"))
+    logger.setLevel(log_levels.get(logging_level or "INFO", "INFO"))
 
     c = Client(api_key=api_key,
                parent_key=parent_key,

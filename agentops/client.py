@@ -286,8 +286,7 @@ class Client(metaclass=MetaClient):
             "WARNING": logging.WARNING,
             "DEBUG": logging.DEBUG
         }
-        logging.basicConfig(level=log_levels.get(
-            logging_level or "INFO", "INFO"))
+        logger.setLevel(log_levels.get(logging_level or "INFO", "INFO"))
 
         if self._session is not None:
             return logger.warning("Cannot start session - session already started")
