@@ -18,16 +18,36 @@
       "to": "#9563FF"
     }
   },
-  "topbarLinks": [
+  "topbarCtaButton": {
+    "name": "Your Dashboard",
+    "url": "https://app.agentops.ai"
+  },
+  "topAnchor": {
+    "name": "Docs",
+    "icon": "lines-leaning"
+  },
+  "anchors": [
     {
-      "name": "Support",
+      "name": "Your Dashboard",
+      "icon": "chart-tree-map",
+      "url": "https://app.agentops.ai"
+    },
+    {
+      "name": "Discord",
+      "icon": "discord",
+      "url": "https://discord.gg/UgJyyxx7uc"
+    },
+    {
+      "name": "GitHub",
+      "icon": "github",
+      "url": "https://github.com/AgentOps-AI"
+    },
+    {
+      "name": "Call my Agent (Support)",
+      "icon": "headset",
       "url": "mailto:alex@agentops.ai"
     }
   ],
-  "topbarCtaButton": {
-    "name": "Dashboard",
-    "url": "https://app.agentops.ai"
-  },
   "navigation": [
     {
       "group": "Getting Started",
@@ -59,7 +79,11 @@
     },
     {
       "group": "Integrations",
-      "pages": ["v1/integrations/crewai", "v1/integrations/cohere", "v1/integrations/litellm"]
+      "pages": [
+        "v1/integrations/crewai",
+        "v1/integrations/cohere",
+        "v1/integrations/litellm"
+      ]
     },
     {
       "group": "Other Info",
