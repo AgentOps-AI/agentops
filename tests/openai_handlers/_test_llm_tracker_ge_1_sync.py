@@ -10,52 +10,40 @@ load_dotenv()
 
 agentops.init()
 
-api = 'openai'
+api = "openai"
 if api in sys.modules:
     module = import_module(api)
-    if api == 'openai':
-        if hasattr(module, '__version__'):
+    if api == "openai":
+        if hasattr(module, "__version__"):
             module_version = parse(module.__version__)
-            print('openai version: ', module_version)
+            print("openai version: ", module_version)
 
 
-@record_function('openai v1 sync no streaming')
+@record_function("openai v1 sync no streaming")
 def call_openai_v1_sync_no_streaming():
     client = OpenAI()
     chat_completion = client.chat.completions.create(
         model="gpt-3.5-turbo",
         messages=[
-            {
-                "role": "system",
-                "content": "You are an expert haiku writer"
-            },
-            {
-                "role": "user",
-                "content": "write me a haiku about devops"
-            }
-        ]
+            {"role": "system", "content": "You are an expert haiku writer"},
+            {"role": "user", "content": "write me a haiku about devops"},
+        ],
     )
 
     print(chat_completion)
     # raise ValueError("This is an intentional error for testing.")
 
 
-@record_function('openai v1 sync with streaming')
+@record_function("openai v1 sync with streaming")
 def call_openai_v1_sync_streaming():
     client = OpenAI()
     chat_completion = client.chat.completions.create(
         model="gpt-3.5-turbo",
         messages=[
-            {
-                "role": "system",
-                "content": "You are an expert haiku writer"
-            },
-            {
-                "role": "user",
-                "content": "write me a haiku about devops"
-            }
+            {"role": "system", "content": "You are an expert haiku writer"},
+            {"role": "user", "content": "write me a haiku about devops"},
         ],
-        stream=True
+        stream=True,
     )
 
     for chunk in chat_completion:
@@ -68,4 +56,4 @@ def call_openai_v1_sync_streaming():
 call_openai_v1_sync_no_streaming()
 call_openai_v1_sync_streaming()
 
-agentops.end_session('Success')
+agentops.end_session("Success")

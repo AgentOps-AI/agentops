@@ -5,6 +5,7 @@ import agentops
 import time
 import asyncio
 from dotenv import load_dotenv
+
 load_dotenv()
 client = OpenAI()
 
@@ -12,15 +13,15 @@ client = OpenAI()
 async_client = AsyncOpenAI()
 
 
-print('Running OpenAI v1.0.0+')
+print("Running OpenAI v1.0.0+")
 
 
 # Assuming that initializing will trigger the LlmTracker to override methods
-agentops.init(tags=['mock agent', openai.__version__])
+agentops.init(tags=["mock agent", openai.__version__])
 
 
 # Now the client.chat.completions.create should be the overridden method
-print('Chat completion')
+print("Chat completion")
 chat_completion = client.chat.completions.create(
     messages=[
         {
@@ -32,7 +33,7 @@ chat_completion = client.chat.completions.create(
 )
 
 # test streaming
-print('Chat completion streaming')
+print("Chat completion streaming")
 chat_completion = client.chat.completions.create(
     messages=[
         {
@@ -41,7 +42,7 @@ chat_completion = client.chat.completions.create(
         }
     ],
     model="gpt-3.5-turbo",
-    stream=True
+    stream=True,
 )
 start_time = time.time()
 
@@ -56,8 +57,7 @@ for chunk in chat_completion:
     chunk_message = chunk.choices[0].delta.content  # extract the message
     collected_messages.append(chunk_message)  # save the message
     # print the delay and text
-    print(
-        f"Message received {chunk_time:.2f} seconds after request: {chunk_message}")
+    print(f"Message received {chunk_time:.2f} seconds after request: {chunk_message}")
 
 # # Test the async version of client.chat.completions.create
 
@@ -83,15 +83,16 @@ async def test_async_chat_completion_stream():
             }
         ],
         model="gpt-3.5-turbo",
-        stream=True
+        stream=True,
     )
     async for chunk in chat_completion_stream:
         print(chunk)
 
-print('Running async tests')
+
+print("Running async tests")
 asyncio.run(test_async_chat_completion())
-print('Running async streaming test')
+print("Running async streaming test")
 asyncio.run(test_async_chat_completion_stream())
 
 
-agentops.end_session('Success')
+agentops.end_session("Success")

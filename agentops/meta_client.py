@@ -14,7 +14,9 @@ class MetaClient(type):
     def __new__(cls, name, bases, dct):
         # Wrap each method with the handle_exceptions decorator
         for method_name, method in dct.items():
-            if (callable(method) and not method_name.startswith("__")) or method_name == "__init__":
+            if (
+                callable(method) and not method_name.startswith("__")
+            ) or method_name == "__init__":
                 dct[method_name] = handle_exceptions(method)
 
         return super().__new__(cls, name, bases, dct)
@@ -30,15 +32,17 @@ class MetaClient(type):
                 "type": exception_type,
                 "message": exception_message,
                 "stack_trace": exception_traceback,
-                "host_env": get_host_env()
+                "host_env": get_host_env(),
             }
 
             if session:
                 developer_error["session_id"] = session.session_id
 
-            HttpClient.post("https://api.agentops.ai/v2/developer_errors",
-                            safe_serialize(developer_error).encode("utf-8"),
-                            api_key=api_key)
+            HttpClient.post(
+                "https://api.agentops.ai/v2/developer_errors",
+                safe_serialize(developer_error).encode("utf-8"),
+                api_key=api_key,
+            )
 
 
 def handle_exceptions(method):
@@ -49,10 +53,11 @@ def handle_exceptions(method):
             return method(self, *args, **kwargs)
         except Exception as e:
             logger.warning(f"Error: {e}")
-            config = getattr(self, 'config', None)
+            config = getattr(self, "config", None)
             if config is not None:
                 type(self).send_exception_to_server(
-                    e, self.config._api_key, self._session)
+                    e, self.config._api_key, self._session
+                )
             raise e
 
     return wrapper

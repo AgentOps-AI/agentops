@@ -15,7 +15,6 @@ import traceback
 
 @dataclass
 class Event:
-
     """
     Abstract base class for events that will be recorded. Should not be instantiated directly.
 
@@ -42,8 +41,7 @@ class Event:
     returns: Optional[str | List[str]] = None
     init_timestamp: str = field(default_factory=get_ISO_time)
     end_timestamp: Optional[str] = None
-    agent_id: Optional[UUID] = field(
-        default_factory=check_call_stack_for_agent_id)
+    agent_id: Optional[UUID] = field(default_factory=check_call_stack_for_agent_id)
     id: UUID = field(default_factory=uuid4)
 
 
@@ -66,7 +64,6 @@ class ActionEvent(Event):
 
 @dataclass
 class LLMEvent(Event):
-
     """
     For recording calls to LLMs. AgentOps auto-instruments calls to the most popular LLMs e.g. GPT, Claude, Gemini, etc.
 
@@ -97,16 +94,17 @@ class ToolEvent(Event):
     logs(str, dict, optional): For detailed information/logging related to the tool.
 
     """
+
     event_type: str = EventType.TOOL.value
     name: Optional[str] = None
     logs: Optional[Union[str, dict]] = None
+
 
 # Does not inherit from Event because error will (optionally) be linked to an ActionEvent, LLMEvent, etc that will have the details
 
 
 @dataclass
-class ErrorEvent():
-
+class ErrorEvent:
     """
     For recording any errors e.g. ones related to agent execution
 
