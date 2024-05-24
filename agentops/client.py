@@ -278,12 +278,15 @@ class Client(metaclass=MetaClient):
                 config: (Configuration, optional): Client configuration object
                 inherited_session_id (optional, str): assign session id to match existing Session
         """
-        if os.getenv('AGENTOPS_LOGGING_LEVEL') == 'DEBUG':
-            logger.setLevel(logging.DEBUG)
-        elif os.getenv('AGENTOPS_LOGGING_LEVEL') == 'CRITICAL':
-            logger.setLevel(logging.CRITICAL)
-        else:
-            logger.setLevel(logging.INFO)
+        logging_level = os.getenv('AGENTOPS_LOGGING_LEVEL')
+        log_levels = {
+            "CRITICAL": logging.CRITICAL,
+            "ERROR": logging.ERROR,
+            "INFO": logging.INFO,
+            "WARNING": logging.WARNING,
+            "DEBUG": logging.DEBUG
+        }
+        logger.setLevel(log_levels.get(logging_level or "INFO", "INFO"))
 
         if self._session is not None:
             return logger.warning("Cannot start session - session already started")
@@ -298,12 +301,19 @@ class Client(metaclass=MetaClient):
                                 tags=tags or self._tags_for_future_session,
                                 host_env=get_host_env(self._env_data_opt_out))
         self._worker = Worker(config or self.config)
-        start_session_result = self._worker.start_session(self._session)
+
+        start_session_result = False
+        if inherited_session_id is not None:
+            start_session_result = self._worker.reauthorize_jwt(self._session)
+        else:
+            start_session_result = self._worker.start_session(self._session)
+
         if not start_session_result:
             self._session = None
-            return logger.warning("Cannot start session - No server response")
+            return logger.warning("Cannot start session - server rejected session")
 
-        logger.info(f'\x1b[34mSession Replay: https://app.agentops.ai/drilldown?session_id={self._session.session_id}\x1b[0m')
+        logger.info(
+            f'\x1b[34mSession Replay: https://app.agentops.ai/drilldown?session_id={self._session.session_id}\x1b[0m')
 
         return self._session.session_id
 
@@ -319,6 +329,7 @@ class Client(metaclass=MetaClient):
                 end_state_reason (str, optional): The reason for ending the session.
                 video (str, optional): The video screen recording of the session
         """
+
         if self._session is None or self._session.has_ended:
             return logger.warning("Cannot end session - no current session")
 
@@ -339,7 +350,8 @@ class Client(metaclass=MetaClient):
             logger.info('This run\'s cost ${}'.format('{:.2f}'.format(
                 token_cost_d) if token_cost_d == 0 else '{:.6f}'.format(token_cost_d)))
 
-        logger.info(f'\x1b[34mSession Replay: https://app.agentops.ai/drilldown?session_id={self._session.session_id}\x1b[0m')
+        logger.info(
+            f'\x1b[34mSession Replay: https://app.agentops.ai/drilldown?session_id={self._session.session_id}\x1b[0m')
 
         self._session = None
         self._worker = None

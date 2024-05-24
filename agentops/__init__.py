@@ -48,12 +48,15 @@ def init(api_key: Optional[str] = None,
             inherited_session_id (optional, str): Init Agentops with an existing Session
         Attributes:
     """
-    if os.getenv('AGENTOPS_LOGGING_LEVEL') == 'DEBUG':
-        logger.setLevel(logging.DEBUG)
-    elif os.getenv('AGENTOPS_LOGGING_LEVEL') == 'CRITICAL':
-        logger.setLevel(logging.CRITICAL)
-    else:
-        logger.setLevel(logging.INFO)
+    logging_level = os.getenv('AGENTOPS_LOGGING_LEVEL')
+    log_levels = {
+        "CRITICAL": logging.CRITICAL,
+        "ERROR": logging.ERROR,
+        "INFO": logging.INFO,
+        "WARNING": logging.WARNING,
+        "DEBUG": logging.DEBUG
+    }
+    logger.setLevel(log_levels.get(logging_level or "INFO", "INFO"))
 
     c = Client(api_key=api_key,
                parent_key=parent_key,

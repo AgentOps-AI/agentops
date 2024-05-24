@@ -36,7 +36,7 @@ class MetaClient(type):
             if session:
                 developer_error["session_id"] = session.session_id
 
-            HttpClient.post("https://api.agentops.ai/developer_errors",
+            HttpClient.post("https://api.agentops.ai/v2/developer_errors",
                             safe_serialize(developer_error).encode("utf-8"),
                             api_key=api_key)
 

@@ -1,7 +1,5 @@
 import pytest
 import requests_mock
-import sys
-
 from agentops import Client
 
 
@@ -9,8 +7,12 @@ from agentops import Client
 def mock_req():
     with requests_mock.Mocker() as m:
         url = 'https://api.agentops.ai'
-        m.post(url + '/events', text='ok')
-        m.post(url + '/sessions', json={'status': 'success', 'token_cost': 5})
+        m.post(url + '/v2/create_events', text='ok')
+        m.post(url + '/v2/create_session', json={'status': 'success',
+               'jwt': 'some_jwt'})
+        m.post(url + '/v2/update_session',
+               json={'status': 'success', 'token_cost': 5})
+        m.post(url + '/v2/developer_errors', text='ok')
         yield m
 
 

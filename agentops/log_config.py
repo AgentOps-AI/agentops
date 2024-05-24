@@ -1,18 +1,19 @@
 import logging
+from sys import prefix
 
 
 class AgentOpsFormatter(logging.Formatter):
     blue = "\x1b[34m"
     bold_red = "\x1b[31;1m"
     reset = "\x1b[0m"
-    format = "🖇 AgentOps: %(message)s"
+    prefix = "🖇 AgentOps: %(message)s"
 
     FORMATS = {
-        logging.DEBUG: "(DEBUG) " + format,
-        logging.INFO: format,
-        logging.WARNING: format,
-        logging.ERROR: format,
-        logging.CRITICAL: bold_red + format + reset,
+        logging.DEBUG: f"(DEBUG) {prefix}",
+        logging.INFO: f"{prefix}",
+        logging.WARNING: f"{prefix}",
+        logging.ERROR: f"{bold_red}{prefix}{reset}",
+        logging.CRITICAL: f"{bold_red}{prefix}{reset}",
     }
 
     def format(self, record):

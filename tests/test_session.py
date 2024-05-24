@@ -9,8 +9,14 @@ from agentops import ActionEvent
 def mock_req():
     with requests_mock.Mocker() as m:
         url = 'https://api.agentops.ai'
-        m.post(url + '/events', text='ok')
-        m.post(url + '/sessions', json={'status': 'success', 'token_cost': 5})
+        m.post(url + '/v2/create_events', text='ok')
+        m.post(url + '/v2/create_session', json={'status': 'success',
+               'jwt': 'some_jwt'})
+        m.post(url + '/v2/reauthorize_jwt', json={'status': 'success',
+               'jwt': 'some_jwt'})
+        m.post(url + '/v2/update_session',
+               json={'status': 'success', 'token_cost': 5})
+        m.post(url + '/v2/developer_errors', text='ok')
         yield m
 
 
@@ -18,10 +24,12 @@ class TestSessions:
     def setup_method(self):
         self.api_key = "random_api_key"
         self.event_type = 'test_event_type'
-        self.config = agentops.Configuration(api_key=self.api_key, max_wait_time=50)
+        self.config = agentops.Configuration(
+            api_key=self.api_key, max_wait_time=50)
 
     def test_session(self, mock_req):
         agentops.start_session(config=self.config)
+        print(self.config.api_key)
 
         agentops.record(ActionEvent(self.event_type))
         agentops.record(ActionEvent(self.event_type))
@@ -31,9 +39,8 @@ class TestSessions:
         time.sleep(0.15)
 
         # We should have 2 requests (session and 2 events combined into 1)
-        print(mock_req.last_request.json())
         assert len(mock_req.request_history) == 2
-        assert mock_req.last_request.headers['X-Agentops-Auth'] == self.api_key
+        assert mock_req.last_request.headers['Authorization'] == f"Bearer some_jwt"
         request_json = mock_req.last_request.json()
         assert request_json['events'][0]['event_type'] == self.event_type
 
@@ -43,7 +50,7 @@ class TestSessions:
 
         # We should have 3 requests (additional end session)
         assert len(mock_req.request_history) == 3
-        assert mock_req.last_request.headers['X-Agentops-Auth'] == self.api_key
+        assert mock_req.last_request.headers['Authorization'] == f"Bearer some_jwt"
         request_json = mock_req.last_request.json()
         assert request_json['session']['end_state'] == end_state
         assert request_json['session']['tags'] == None
@@ -61,11 +68,11 @@ class TestSessions:
         time.sleep(0.15)
 
         # Assert 3 requests, 1 for session init, 1 for event, 1 for end session
-        assert mock_req.last_request.headers['X-Agentops-Auth'] == self.api_key
+        assert mock_req.last_request.headers['X-Agentops-Api-Key'] == self.api_key
         request_json = mock_req.last_request.json()
         assert request_json['session']['end_state'] == end_state
-        assert request_json['session']['tags'] == ['GPT-4', 'test-tag', 'dupe-tag']
-
+        assert request_json['session']['tags'] == [
+            'GPT-4', 'test-tag', 'dupe-tag']
 
     def test_tags(self, mock_req):
         # Arrange
@@ -79,7 +86,7 @@ class TestSessions:
         # Assert 2 requests - 1 for session init, 1 for event
         print(mock_req.last_request.json())
         assert len(mock_req.request_history) == 2
-        assert mock_req.last_request.headers['X-Agentops-Auth'] == self.api_key
+        assert mock_req.last_request.headers['X-Agentops-Api-Key'] == self.api_key
         request_json = mock_req.last_request.json()
         assert request_json['events'][0]['event_type'] == self.event_type
 
@@ -90,7 +97,7 @@ class TestSessions:
 
         # Assert 3 requests, 1 for session init, 1 for event, 1 for end session
         assert len(mock_req.request_history) == 3
-        assert mock_req.last_request.headers['X-Agentops-Auth'] == self.api_key
+        assert mock_req.last_request.headers['X-Agentops-Api-Key'] == self.api_key
         request_json = mock_req.last_request.json()
         assert request_json['session']['end_state'] == end_state
         assert request_json['session']['tags'] == tags
@@ -98,14 +105,11 @@ class TestSessions:
     def test_inherit_session_id(self, mock_req):
         # Arrange
         inherited_id = '4f72e834-ff26-4802-ba2d-62e7613446f1'
-        agentops.start_session(tags=['test'], config=self.config, inherited_session_id=inherited_id)
+        agentops.start_session(
+            tags=['test'], config=self.config, inherited_session_id=inherited_id)
 
         # Act
-        agentops.record(ActionEvent(self.event_type))
-        agentops.record(ActionEvent(self.event_type))
-        time.sleep(0.15)
-
-        # event session_id correct
+        # session_id correct
         request_json = mock_req.last_request.json()
         assert request_json['session_id'] == inherited_id
 
