@@ -90,6 +90,7 @@
   ],
   "footerSocials": {
     "twitter": "https://twitter.com/agentopsai",
+    "discord": "https://discord.gg/UgJyyxx7uc",
     "github": "https://github.com/AgentOps-AI"
   },
   "analytics": {
@@ -97,5 +98,10 @@
       "apiKey": "phc_BrY3H11IViWSoUJ0QFfjBx7kEwIJMT0PjBEXZQmddW",
       "apiHost": "https://us.i.posthog.com"
     }
+  },
+  "feedback": {
+    "thumbsRating": true,
+    "suggestEdit": true,
+    "raiseIssue": true
   }
 }
