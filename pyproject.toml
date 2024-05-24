@@ -36,3 +36,6 @@ langchain = [
 [project.urls]
 Homepage = "https://github.com/AgentOps-AI/agentops"
 Issues = "https://github.com/AgentOps-AI/agentops/issues"
+
+[tool.autopep8]
+max_line_length = 120
