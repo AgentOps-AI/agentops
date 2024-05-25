@@ -45,7 +45,7 @@ import SupportedModels from '/snippets/supported-models.mdx'
     API keys are tied to individual projects.<br></br>
     A Default Project has been created for you, so just click Copy API Key
     </Info>
-    Set this API Key in your [environment variables](/v1/details/environment-variables)
+    Set this API Key in your [environment variables](/v1/usage/environment-variables)
     ```python .env
     AGENTOPS_API_KEY=<YOUR API KEY>
     ```
@@ -80,7 +80,7 @@ import SupportedModels from '/snippets/supported-models.mdx'
 
 </Card>
 <Card icon="robot" title="Track Agents">
-  If you use specific named agents within your system, you can tie all downstream [Events](/v1/details/events) to a
+  If you use specific named agents within your system, you can tie all downstream [Events](/v1/concepts/events) to a
   Named Agent with the `@track_agent` decorator.
   ```python python
   # (track a named agent)
@@ -150,7 +150,7 @@ agentops.end_session('Success')
   >
     Record all of your other events the way AgentOps intends.
   </Card>
-  <Card title="Tracking Agents" icon="robot" href="/v1/details/tracking-agents">
+  <Card title="Tracking Agents" icon="robot" href="/v1/usage/tracking-agents">
     Associate Events with specific named agents.
   </Card>
 </CardGroup>

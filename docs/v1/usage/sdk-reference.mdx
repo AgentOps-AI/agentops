@@ -34,12 +34,12 @@ The first element of AgentOps is always calling .init()
 
 ### `start_session()`
 
-Start a new [Session](https://docs.agentops.ai/v1/details/sessions) for recording events.
+Start a new [Session](/v1/concepts/sessions) for recording events.
 
 **Parameters**:
 
 - `tags` (List[str], optional): Tags for the session.
-- `config` ([Configuration](https://docs.agentops.ai/v1/details/sdk-reference#configuration), optional): Client configuration object.
+- `config` ([Configuration](#configuration), optional): Client configuration object.
 - `inherited_session_id` (str, optional): Session ID to continue from an existing session.
 
 **Returns**:
@@ -112,8 +112,8 @@ Set the parent API key which has visibility over projects it is a parent of.
 
 ### `stop_instrumenting()`
 
-Stop instrumenting LLM calls. This is typically used by agent frameworks (i.e. [CrewAI](https://docs.agentops.ai/v1/integrations/crewai),
-[autogen](https://docs.agentops.ai/v1/integrations/autogen)) to stop using the AgentOps auto instrumentation of LLM libraries like OpenAI. This
+Stop instrumenting LLM calls. This is typically used by agent frameworks (i.e. [CrewAI](/v1/integrations/crewai),
+[autogen](/v1/integrations/autogen)) to stop using the AgentOps auto instrumentation of LLM libraries like OpenAI. This
 allows these frameworks to use their own instrumenting or callback handler.
 
 
@@ -147,7 +147,7 @@ Stores the configuration settings for AgentOps clients.
 
 ### `LangchainCallbackHandler`
 
-[Reference](https://docs.agentops.ai/v1/details/langchain-callback-handler)
+[Reference](/v1/usage/langchain-callback-handler)
 
 This callback handler is intended to be used as an option in place of AgentOps auto-instrumenting. This is only useful
 when using Langchain as your LLM calling library.
