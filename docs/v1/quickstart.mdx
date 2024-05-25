@@ -19,10 +19,11 @@ import SupportedModels from '/snippets/supported-models.mdx'
   <Step title="Add 2 lines of code">
     <CodeGroup>
       ```python python
-      # IMPORTANT: Must be after 'import openai' or 'from crewai import Agent' etc
       import agentops
 
       # Beginning of program's code (i.e. main.py, __init__.py)
+      # IMPORTANT: Must be before any OpenAI, Cohere, Crew, etc constructors are called
+      # e.g. before client = OpenAI(...)
       agentops.init(<INSERT YOUR API KEY HERE>)
       ```
     </CodeGroup>
@@ -34,11 +35,8 @@ import SupportedModels from '/snippets/supported-models.mdx'
     </Tip>
     <SupportedModels />
   </Step>
-  <Step title="Get an API key">
+  <Step title="Set your API key">
     Retrieve an API Key from your Settings > [Projects & API Keys](https://app.agentops.ai/settings/projects) page.
-    <div/>{/* Intentionally blank div for newline */}
-    Set this API Key in your [environment variables](/v1/details/environment-variables)
-
     <Frame type="glass" caption="Settings > Projects & API Keys">
       <img height="200" src="/images/api-keys.png" />
     </Frame>
@@ -47,7 +45,10 @@ import SupportedModels from '/snippets/supported-models.mdx'
     API keys are tied to individual projects.<br></br>
     A Default Project has been created for you, so just click Copy API Key
     </Info>
-    {/* TODO: Install Tailwind for this stuff */}
+    Set this API Key in your [environment variables](/v1/details/environment-variables)
+    ```python .env
+    AGENTOPS_API_KEY=<YOUR API KEY>
+    ```
   </Step>
   <Step title="Run your agent">
     Execute your program and visit [app.agentops.ai/drilldown](https://app.agentops.ai/drilldown) to observe your Agent! 🕵️
