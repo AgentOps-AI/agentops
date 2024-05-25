@@ -14,25 +14,31 @@ Tags belong to [Sessions](/v1/details/tags), but can be assigned in multiple way
 
 Passing tags into the `init` function will assign these tags to the `Session`
 
-```python
+<CodeGroup>
+```python python
 agentops.init(tags=['test tag'])
 ```
+</CodeGroup>
 
 ## `set_tags([str])`
 
 This will override any existing tags on the session and set them to the value passed into the function.
 
-```python
+<CodeGroup>
+```python python
 agentops.set_tags(['test new tag'])
 ```
+</CodeGroup>
 
 ## `add_tags([str])`
 
 This will append an array of tags to the Session's existing tags
 
-```python
+<CodeGroup>
+```python python
 agentops.add_tags(['appended tag'])
 ```
+</CodeGroup>
 
 # Sorting by tags
 

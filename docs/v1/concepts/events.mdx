@@ -29,13 +29,15 @@ The `ActionEvent` is a generic event for recording events that do not fit into t
 An action event can be used the [same way as other events](./recording-events.mdx) but also with the `record_function`
 decorator.
 
-```python
+<CodeGroup>
+```python python
 from agentops import record_function
 
 @record_function()
 def some_action(params):
     return "some response"
 ```
+</CodeGroup>
 
 This decorator will record an `ActionEvent` with the params and returns of the function as well as execution time.
 
@@ -65,7 +67,8 @@ The ToolEvent class is for recording calls to tools e.g. searchWeb, fetchFromDB.
 
 The tool event should be created previous to running the tool in order to track the execution time.
 
-```python
+<CodeGroup>
+```python python
 from agentops import ToolEvent, record
 def scrape_website(url: str):
     tool_event = ToolEvent(name='scrape_website', params={'url':url}) # the start timestamp is set when the obj is created
@@ -73,6 +76,7 @@ def scrape_website(url: str):
     tool_event.returns = result # set result
     record(tool_event)
 ```
+</CodeGroup>
 
 ## ErrorEvent
 
@@ -88,7 +92,8 @@ in execution, up to the developer.
 | logs          | str   | None                                             | "Error occurred at line 10" | Logs related to the error                 |
 | timestamp     | str   | A timestamp when the ErrorEvent was instantiated | "2023-03-15T18:59:13Z"      | Timestamp when the ErrorEvent was created |
 
-```python
+<CodeGroup>
+```python python
 from agentops import ToolEvent, record, ErrorEvent
 def scrape_website(url: str):
     tool_event = ToolEvent(name='scrape_website', params={'url':url}) # the start timestamp is set when the obj is created
@@ -99,3 +104,4 @@ def scrape_website(url: str):
         record(ErrorEvent(message=e, trigger_event=tool_event))
     record(tool_event)
 ```
+</CodeGroup>
