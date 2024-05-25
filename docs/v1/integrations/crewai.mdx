@@ -17,70 +17,72 @@ Crew has comprehensive [documentation](https://docs.crewai.com) available as wel
 <Steps>
 	<Step title="Install the AgentOps SDK">
 		<CodeGroup>
-		```bash pip 
-		pip install agentops
-		```
-		```bash poetry
-		poetry add agentops
-		```
+			```bash pip 
+			pip install agentops
+			```
+			```bash poetry
+			poetry add agentops
+			```
 		</CodeGroup>
-		<Check>[Give us a star](https://github.com/AgentOps-AI/agentops) on GitHub while you're at it (you may be our 1,000th 😊)</Check>
+		<Check>
+			[Give us a star](https://github.com/AgentOps-AI/agentops) on GitHub while you're at it (you may be our 1,000th 😊)
+		</Check>
 	</Step>
 	<Step title="Install Crew from the AgentOps fork">
 		<Warning>
-		At this time, Crew with AgentOps integration is in pre-release. In the interim, an official fork has been
-		made available. After official support is released, this fork will be deprecated and developers will
-		be encouraged to use the core Crew SDK.
+			At this time, Crew with AgentOps integration is in pre-release. In the interim, an official fork has been
+			made available. After official support is released, this fork will be deprecated and developers will
+			be encouraged to use the core Crew SDK.
 		</Warning>
 		<CodeGroup>
-		```bash pip 
-		pip install git+https://github.com/AgentOps-AI/crewAI.git@main
-		```
-		```bash poetry
-		poetry add git+https://github.com/AgentOps-AI/crewAI.git@main
-		```
+			```bash pip 
+			pip install git+https://github.com/AgentOps-AI/crewAI.git@main
+			```
+			```bash poetry
+			poetry add git+https://github.com/AgentOps-AI/crewAI.git@main
+			```
 		</CodeGroup>
 	</Step>
-	<Step title="Add 2 lines of code">
-		Before calling the `Crew()` constructor in your code, add these 2 lines:
-
+	<Step title="Add 3 lines of code">
+		1. Before calling the `Crew()` constructor in your code, call `agentops.init()`
+		2. At the end of your Crew run, call `agentops.end_session("Success")`
 		<CodeGroup>
-		```python python
-		import agentops
+			```python python
+			import agentops
 
-		# Beginning of program's code (i.e. main.py, __init__.py)
-		# IMPORTANT: Must be before calling the `Crew()` constructor
-		agentops.init(<INSERT YOUR API KEY HERE>)
-		```
+			# Beginning of program (i.e. main.py, __init__.py)
+			# IMPORTANT: Must be before calling the `Crew()` constructor
+			agentops.init(<INSERT YOUR API KEY HERE>)
+			...
+			# End of program (e.g. main.py)
+			agentops.end_session("Success") # Success|Fail|Indeterminate
+			```
 		</CodeGroup>
 	</Step>
-  <Step title="Set your API key">
-	Retrieve an API Key from your Settings > [Projects & API Keys](https://app.agentops.ai/settings/projects) page.
-	<Frame type="glass" caption="Settings > Projects & API Keys">
-	<img height="200" src="/images/api-keys.png" />
-	</Frame>
-
-	<Info>
-	API keys are tied to individual projects.<br></br>
-	A Default Project has been created for you, so just click Copy API Key
-	</Info>
-	Set this API Key in your [environment variables](/v1/details/environment-variables)
-	```python .env
-	AGENTOPS_API_KEY=<YOUR API KEY>
-	```
-  </Step>
+	<Step title="Set your API key">
+		Retrieve an API Key from your Settings > [Projects & API Keys](https://app.agentops.ai/settings/projects) page.
+		<Frame type="glass" caption="Settings > Projects & API Keys">
+			<img height="200" src="/images/api-keys.png" />
+		</Frame>
+		<Info>
+			API keys are tied to individual projects.<br></br>
+			A Default Project has been created for you, so just click Copy API Key
+		</Info>
+		Set this API Key in your [environment variables](/v1/details/environment-variables)
+		```python .env
+		AGENTOPS_API_KEY=<YOUR API KEY>
+		```
+	</Step>
     <Step title="Run your crew">
-    Execute your program and visit [app.agentops.ai/drilldown](https://app.agentops.ai/drilldown) to observe your Crew! 🕵️
-
-    <Tip>
-		After your run, AgentOps prints a clickable url to console linking directly to your session in the Dashboard
-	</Tip> 
-     <div/>{/* Intentionally blank div for newline */}
-
-     <Frame type="glass" caption="Clickable link to session">
-        <img height="200" src="/images/link-to-session.gif" />
-    </Frame>
-  </Step>
+		Execute your program and visit [app.agentops.ai/drilldown](https://app.agentops.ai/drilldown) to observe your Crew! 🕵️
+		<Tip>
+			After your run, AgentOps prints a clickable url to console linking directly to your session in the Dashboard
+		</Tip> 
+		<div/>{/* Intentionally blank div for newline */}
+		<Frame type="glass" caption="Clickable link to session">
+			<img height="200" src="/images/link-to-session.gif" />
+		</Frame>
+	</Step>
 </Steps>
 
 ## Crew + AgentOps Examples

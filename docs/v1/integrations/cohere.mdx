@@ -1,36 +1,70 @@
 ---
 title: Cohere
-description: "AgentOps's support for Cohere(>=5.4.0) is first class. This is a living integration, should you need any added functionality please message us on Discord!"
+description: "AgentOps provides first class support for Cohere(>=5.4.0) models"
 ---
 
-## Install the SDK
+<Note>
+This is a living integration. Should you need any added functionality message us on [Discord](https://discord.gg/UgJyyxx7uc)!
+</Note>
 
-<CodeGroup>
-```bash pip 
-pip install agentops
-```
-```bash poetry
-poetry add agentops
-```
-</CodeGroup>
+<Steps>
+  <Step title="Install the SDK">
+    <CodeGroup>
+      ```bash pip 
+      pip install agentops
+      ```
+      ```bash poetry
+      poetry add agentops
+      ```
+    </CodeGroup>
+    <Check>[Give us a star](https://github.com/AgentOps-AI/agentops) on GitHub while you're at it (you may be our 1,000th 😊)</Check>
+  </Step>
+  <Step title="Add 3 lines of code">
+    <CodeGroup>
+      ```python python
+      import agentops
 
-## Get an API key
+      # Beginning of program (i.e. main.py, __init__.py)
+      # IMPORTANT: Must be before any OpenAI, Cohere, Crew, etc constructors are called
+      # e.g. before client = OpenAI(...)
+      agentops.init(<INSERT YOUR API KEY HERE>)
+      ```
+    </CodeGroup>
+    <Warning>Requires Cohere>=5.4.0</Warning>
+  </Step>
+  <Step title="Set your API key">
+    Retrieve an API Key from your Settings > [Projects & API Keys](https://app.agentops.ai/settings/projects) page.
+    <Frame type="glass" caption="Settings > Projects & API Keys">
+      <img height="200" src="/images/api-keys.png" />
+    </Frame>
 
-Retrieve an API Key from the Settings > [Projects & API Keys](https://app.agentops.ai/settings/projects) page.
+    <Info>
+    API keys are tied to individual projects.<br></br>
+    A Default Project has been created for you, so just click Copy API Key
+    </Info>
+    Set this API Key in your [environment variables](/v1/details/environment-variables)
+    ```python .env
+    AGENTOPS_API_KEY=<YOUR API KEY>
+    ```
+  </Step>
+  <Step title="Run your agent">
+    Execute your program and visit [app.agentops.ai/drilldown](https://app.agentops.ai/drilldown) to observe your Agent! 🕵️
 
-API keys are tied to individual projects.<br></br>
-A Default Project has been created for you, so just click <span style={{ padding: "5px 10px", backgroundColor: "black", color: "white", borderRadius: "5px"}}>Copy API Key</span>
+    <Tip>After your run, AgentOps prints a clickable url to console linking directly to your session in the Dashboard</Tip> 
+     <div/>{/* Intentionally blank div for newline */}
 
-{/* TODO: Install Tailwind for this stuff */}
-
-<div
-  style={{ backgroundColor: "#f0f0f0", padding: "20px", borderRadius: "10px" }}
->
-  <img height="200" src="/images/api-keys.png" />
-</div>
+     <Frame type="glass" caption="Clickable link to session">
+        <img height="200" src="/images/link-to-session.gif" />
+    </Frame>
+  </Step>
+</Steps>
 
 
-## Using AgentOps with Cohere
+
+
+
+
+
 
 <div style={{ color: "#880000" }}>Requires cohere>=5.4.0</div>
 
@@ -40,7 +74,7 @@ Initialize the AgentOps client and automatically get analytics on every LLM call
 import cohere
 import agentops
 
-# Beginning of program's code (i.e. main.py, __init__.py)
+# Beginning of program (i.e. main.py, __init__.py)
 agentops.init(<INSERT YOUR API KEY HERE>)
 
 co = cohere.Client()
@@ -58,7 +92,7 @@ agentops.end_session('Success')
 import cohere
 import agentops
 
-# Beginning of program's code (i.e. main.py, __init__.py)
+# Beginning of program (i.e. main.py, __init__.py)
 agentops.init(<INSERT YOUR API KEY HERE>)
 
 co = cohere.Client()
