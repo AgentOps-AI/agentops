@@ -1,82 +1,116 @@
 ---
 title: Cohere
-description: "AgentOps's support for Cohere(>=5.4.0) is first class. This is a living integration, should you need any added functionality please message us on Discord!"
+description: "AgentOps provides first class support for Cohere"
 ---
 
-## Install the SDK
+<Note>
+This is a living integration. Should you need any added functionality message us on [Discord](https://discord.gg/UgJyyxx7uc)!
+</Note>
+
+<Card title="Cohere" icon="hill-rockslide" href="https://www.loom.com/share/679d65cc06f148299e8dffc459d053ab">
+    First class support for Command-R-Plus
+    ![thumbnail](https://cdn.loom.com/sessions/thumbnails/679d65cc06f148299e8dffc459d053ab-with-play.gif)
+</Card>
+
+<Steps>
+  <Step title="Install the AgentOps SDK">
+    <CodeGroup>
+      ```bash pip 
+      pip install agentops
+      ```
+      ```bash poetry
+      poetry add agentops
+      ```
+    </CodeGroup>
+    <Check>[Give us a star](https://github.com/AgentOps-AI/agentops) on GitHub while you're at it (you may be our 1,000th 😊)</Check>
+  </Step>
+	<Step title="Add 3 lines of code">
+		<CodeGroup>
+			```python python
+			import agentops
+
+			# Beginning of program (i.e. main.py, __init__.py)
+			# IMPORTANT: Must be before calling `co = cohere.Client()`
+			agentops.init(<INSERT YOUR API KEY HERE>)
+      co = cohere.Client()
+			...
+			# End of program (e.g. main.py)
+			agentops.end_session("Success") # Success|Fail|Indeterminate
+			```
+		</CodeGroup>
+    <Warning>
+      Requires cohere>=5.4.0
+    </Warning>
+    <Check>
+      Instantiating the AgentOps client will automatically instrument Cohere, meaning you will be able to see all
+      of your sessions on the AgentOps Dashboard along with the full LLM chat histories, cost, token counts, etc.
+    </Check>
+    <Tip>
+      For more features see our [Usage](/v1/usage) section.
+    </Tip>
+	</Step>
+	<Step title="Set your API key">
+		Retrieve an API Key from your Settings > [Projects & API Keys](https://app.agentops.ai/settings/projects) page.
+		<Frame type="glass" caption="Settings > Projects & API Keys">
+			<img height="200" src="/images/api-keys.png" />
+		</Frame>
+		<Info>
+			API keys are tied to individual projects.<br></br>
+			A Default Project has been created for you, so just click Copy API Key
+		</Info>
+		Set this API Key in your [environment variables](/v1/usage/environment-variables)
+		```python .env
+		AGENTOPS_API_KEY=<YOUR API KEY>
+		```
+	</Step>
+    <Step title="Run your crew">
+		Execute your program and visit [app.agentops.ai/drilldown](https://app.agentops.ai/drilldown) to observe your Agents! 🕵️
+		<Tip>
+			After your run, AgentOps prints a clickable url to console linking directly to your session in the Dashboard
+		</Tip> 
+		<div/>{/* Intentionally blank div for newline */}
+		<Frame type="glass" caption="Clickable link to session">
+			<img height="200" src="/images/link-to-session.gif" />
+		</Frame>
+	</Step>
+</Steps>
+
+## Full Examples
 
 <CodeGroup>
-```bash pip 
-pip install agentops
-```
-```bash poetry
-poetry add agentops
-```
+  ```python chat()
+  import cohere
+  import agentops
+
+  agentops.init(<INSERT YOUR API KEY HERE>)
+
+  co = cohere.Client()
+
+  chat = co.chat(
+      message="Is it pronounced ceaux-hear or co-hehray?"
+  )
+
+  print(chat)
+
+  agentops.end_session('Success')
+  ```
+
+  ```python chat_stream()
+  import cohere
+  import agentops
+
+  agentops.init(<INSERT YOUR API KEY HERE>)
+
+  co = cohere.Client()
+
+  stream = co.chat_stream(
+      message="Write me a haiku about the synergies between Cohere and AgentOps"
+  )
+
+  for event in stream:
+      if event.event_type == "text-generation":
+          print(event.text, end='')
+
+  agentops.end_session('Success')
+  ```
 </CodeGroup>
-
-## Get an API key
-
-Retrieve an API Key from the Settings > [Projects & API Keys](https://app.agentops.ai/settings/projects) page.
-
-API keys are tied to individual projects.<br></br>
-A Default Project has been created for you, so just click <span style={{ padding: "5px 10px", backgroundColor: "black", color: "white", borderRadius: "5px"}}>Copy API Key</span>
-
-{/* TODO: Install Tailwind for this stuff */}
-
-<div
-  style={{ backgroundColor: "#f0f0f0", padding: "20px", borderRadius: "10px" }}
->
-  <img height="200" src="/images/api-keys.png" />
-</div>
-
-
-## Using AgentOps with Cohere
-
-<div style={{ color: "#880000" }}>Requires cohere>=5.4.0</div>
-
-Initialize the AgentOps client and automatically get analytics on every LLM call.
-
-```python python
-import cohere
-import agentops
-
-# Beginning of program's code (i.e. main.py, __init__.py)
-agentops.init(<INSERT YOUR API KEY HERE>)
-
-co = cohere.Client()
-
-chat = co.chat(
-    message="Is it pronounced ceaux-hear or co-hehray?"
-)
-
-print(chat)
-
-agentops.end_session('Success')
-```
-
-```python python
-import cohere
-import agentops
-
-# Beginning of program's code (i.e. main.py, __init__.py)
-agentops.init(<INSERT YOUR API KEY HERE>)
-
-co = cohere.Client()
-
-stream = co.chat_stream(
-    message="Write me a haiku about the synergies between Cohere and AgentOps"
-)
-
-for event in stream:
-    if event.event_type == "text-generation":
-        print(event.text, end='')
-
-agentops.end_session('Success')
-```
-
-### Explanation
-When openai has been imported, instantiating the AgentOps client will automatically
-instrument chat completions. You will be able to see all of your sessions on the AgentOps
-dashboard along with the full LLM chat histories, cost, token counts, etc.
-
-For more features see our Details section.
