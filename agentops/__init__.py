@@ -30,6 +30,7 @@ def init(
     instrument_llm_calls=True,
     auto_start_session=True,
     inherited_session_id: Optional[str] = None,
+    skip_auto_end_session: Optional[bool] = False,
 ):
     """
     Initializes the AgentOps singleton pattern.
@@ -51,6 +52,7 @@ def init(
         instrument_llm_calls (bool): Whether to instrument LLM calls and emit LLMEvents..
         auto_start_session (bool): Whether to start a session automatically when the client is created.
         inherited_session_id (optional, str): Init Agentops with an existing Session
+        skip_auto_end_session (optional, bool): Don't automatically end session based on your framework's decision making
     Attributes:
     """
     logging_level = os.getenv("AGENTOPS_LOGGING_LEVEL")
@@ -74,13 +76,17 @@ def init(
         instrument_llm_calls=instrument_llm_calls,
         auto_start_session=auto_start_session,
         inherited_session_id=inherited_session_id,
+        skip_auto_end_session=skip_auto_end_session,
     )
 
     return inherited_session_id or c.current_session_id
 
 
 def end_session(
-    end_state: str, end_state_reason: Optional[str] = None, video: Optional[str] = None
+    end_state: str,
+    end_state_reason: Optional[str] = None,
+    video: Optional[str] = None,
+    is_auto_end: Optional[bool] = False,
 ):
     """
     End the current session with the AgentOps service.
@@ -89,8 +95,14 @@ def end_session(
         end_state (str): The final state of the session. Options: Success, Fail, or Indeterminate.
         end_state_reason (str, optional): The reason for ending the session.
         video (str, optional): URL to a video recording of the session
+        is_auto_end (bool, optional): is this an automatic use of end_session and should be skipped with bypass_auto_end_session
     """
-    Client().end_session(end_state, end_state_reason, video)
+    Client().end_session(
+        end_state=end_state,
+        end_state_reason=end_state_reason,
+        video=video,
+        is_auto_end=is_auto_end,
+    )
 
 
 def start_session(
