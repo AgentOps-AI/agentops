@@ -32,6 +32,7 @@ from .log_config import logger
 from .meta_client import MetaClient
 from .config import Configuration, ConfigurationError
 from .llm_tracker import LlmTracker
+from termcolor import colored
 
 
 @singleton
@@ -352,7 +353,10 @@ class Client(metaclass=MetaClient):
             return logger.warning("Cannot start session - server rejected session")
 
         logger.info(
-            f"\x1b[34mSession Replay: https://app.agentops.ai/drilldown?session_id={self._session.session_id}\x1b[0m"
+            colored(
+                f"\x1b[34mSession Replay: https://app.agentops.ai/drilldown?session_id={self._session.session_id}\x1b[0m",
+                "blue",
+            )
         )
 
         return self._session.session_id
@@ -400,7 +404,10 @@ class Client(metaclass=MetaClient):
             )
 
         logger.info(
-            f"\x1b[34mSession Replay: https://app.agentops.ai/drilldown?session_id={self._session.session_id}\x1b[0m"
+            colored(
+                f"\x1b[34mSession Replay: https://app.agentops.ai/drilldown?session_id={self._session.session_id}\x1b[0m",
+                "blue",
+            )
         )
 
         self._session = None
