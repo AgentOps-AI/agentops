@@ -38,7 +38,7 @@ class Event:
 
     event_type: EventType
     params: Optional[dict] = None
-    returns: Optional[str | List[str]] = None
+    returns: Optional[Union[str, List[str]]] = None
     init_timestamp: str = field(default_factory=get_ISO_time)
     end_timestamp: Optional[str] = None
     agent_id: Optional[UUID] = field(default_factory=check_call_stack_for_agent_id)
