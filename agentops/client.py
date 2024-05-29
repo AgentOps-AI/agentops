@@ -377,7 +377,7 @@ class Client(metaclass=MetaClient):
             is_auto_end (bool, optional): is this an automatic use of end_session and should be skipped with bypass_auto_end_session
         """
 
-        if self.config.skip_auto_end_session:
+        if is_auto_end and self.config.skip_auto_end_session:
             return
 
         if self._session is None or self._session.has_ended:
