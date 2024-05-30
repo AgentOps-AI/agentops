@@ -7,27 +7,49 @@
   },
   "favicon": "/favicon.png",
   "colors": {
-    "primary": "#9563FF",
-    "light": "#AE87FF",
-    "dark": "#0D001D",
+    "primary": "#a9bed4",
+    "light": "#D1E5F7",
+    "dark": "#2b3033",
     "background": {
-      "dark": "#090014"
+      "light": "#f5faff",
+      "dark": "#18191a"
     },
     "anchors": {
-      "from": "#FF7F57",
-      "to": "#9563FF"
+      "from": "#D1E5F7",
+      "to": "#a9bed4"
+      
     }
   },
-  "topbarLinks": [
+  "topbarCtaButton": {
+    "name": "Your Dashboard",
+    "url": "https://app.agentops.ai"
+  },
+  "topAnchor": {
+    "name": "Docs",
+    "icon": "lines-leaning"
+  },
+  "anchors": [
     {
-      "name": "Support",
+      "name": "Your Dashboard",
+      "icon": "chart-tree-map",
+      "url": "https://app.agentops.ai"
+    },
+    {
+      "name": "Discord",
+      "icon": "discord",
+      "url": "https://discord.gg/UgJyyxx7uc"
+    },
+    {
+      "name": "GitHub",
+      "icon": "github",
+      "url": "https://github.com/AgentOps-AI"
+    },
+    {
+      "name": "Call my Agent (Support)",
+      "icon": "headset",
       "url": "mailto:alex@agentops.ai"
     }
   ],
-  "topbarCtaButton": {
-    "name": "Dashboard",
-    "url": "https://app.agentops.ai"
-  },
   "navigation": [
     {
       "group": "Getting Started",
@@ -38,37 +60,42 @@
       ]
     },
     {
-      "group": "Details",
+      "group": "Concepts",
       "pages": [
-        "v1/details/core-concepts",
-        "v1/details/sdk-reference",
-        "v1/details/sessions",
-        "v1/details/events",
-        "v1/details/tags",
-        "v1/details/decorators",
-        "v1/details/recording-events",
-        "v1/details/tracking-agents",
-        "v1/details/tracking-llm-calls",
-        "v1/details/more-models-with-litellm",
-        "v1/details/environment-variables"
+        "v1/concepts/core-concepts",
+        "v1/concepts/decorators",
+        "v1/concepts/sessions",
+        "v1/concepts/events",
+        "v1/concepts/tags"
+      ]
+    },
+    {
+      "group": "Usage",
+      "pages": [
+        "v1/usage/sdk-reference",
+        "v1/usage/environment-variables",
+        "v1/usage/tracking-llm-calls",
+        "v1/usage/tracking-agents",
+        "v1/usage/recording-events"
       ]
     },
     {
       "group": "Integrations",
       "pages": [
         "v1/integrations/crewai",
-        "v1/integrations/cohere"
+        "v1/integrations/autogen",
+        "v1/integrations/cohere",
+        "v1/integrations/litellm"
       ]
     },
     {
       "group": "Other Info",
-      "pages": [
-        "v1/details/host-env"
-      ]
+      "pages": ["v1/concepts/host-env"]
     }
   ],
   "footerSocials": {
     "twitter": "https://twitter.com/agentopsai",
+    "discord": "https://discord.gg/UgJyyxx7uc",
     "github": "https://github.com/AgentOps-AI"
   },
   "analytics": {
@@ -76,5 +103,10 @@
       "apiKey": "phc_BrY3H11IViWSoUJ0QFfjBx7kEwIJMT0PjBEXZQmddW",
       "apiHost": "https://us.i.posthog.com"
     }
+  },
+  "feedback": {
+    "thumbsRating": true,
+    "suggestEdit": true,
+    "raiseIssue": true
   }
 }
