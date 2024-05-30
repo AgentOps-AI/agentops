@@ -34,11 +34,11 @@ Optionally, sessions may include:
 When you call `agentops.init()`, a session is automatically started.
 Calling `agentops.init(auto_start_session=False)` will initialize the AgentOps SDK but not start a session.
 
-To start a session later, call `agentops.start_session()` [(reference)](https://docs.agentops.ai/v1/details/sdk-reference#start-session)
+To start a session later, call `agentops.start_session()` [(reference)](/v1/usage/sdk-reference/#start-session)
 
 ## Ending a Session
 If a process ends without any call to agentops, it will show in the dashboard as `Indeterminate`.
-To end with a state, call `agentops.end_session()` [(reference)](https://docs.agentops.ai/v1/details/sdk-reference#end-session)
+To end with a state, call `agentops.end_session()` [(reference)](/v1/usage/sdk-reference/#end-session)
 
 ## Inherited Sessions
 When working with multiple agents running in different processes, it's possible to initialize AgentOps or start a session
@@ -49,7 +49,8 @@ with an existing session_id.
 
 You can retrieve the current session_id by assigning the returned value from `init()` or `start_session()`
 
-```python
+<CodeGroup>
+```python python
 import agentops
 session_id = agentops.init()
 # pass session_id to the other process
@@ -58,6 +59,7 @@ session_id = agentops.init()
 session_id = retrieve_session_id()
 agentops.init(inherited_session_id=<id>)
 ```
+</CodeGroup>
 
 Both processes will now contribute data to the same session.
 
@@ -67,4 +69,4 @@ _More info for the curious_
 Under the hood, `agentops.init()` sets up a `Client` object with various configuration options like your API key, worker thread options
 for when to send out batches of events, etc. Whenever you start a new session, these configuration options will automatically
 be applied. You can also apply different configuration options when you start a new session by passing in a
-[Configuration](https://docs.agentops.ai/v1/details/sdk-reference#configuration) object.
+[Configuration](/v1/usage/sdk-reference/#configuration) object.
