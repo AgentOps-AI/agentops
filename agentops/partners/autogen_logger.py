@@ -31,6 +31,9 @@ F = TypeVar("F", bound=Callable[..., Any])
 class AutogenLogger(BaseLogger):
     agent_store: [{"agentops_id": str, "autogen_id": str}] = []
 
+    def __init__(self):
+        agentops.add_tags(["autogen"])
+
     def start(self) -> str:
         pass
 

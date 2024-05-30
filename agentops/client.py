@@ -161,6 +161,11 @@ class Client(metaclass=MetaClient):
             tags (List[str]): The list of tags to append.
         """
 
+        # if a string and not a list of strings
+        if not (isinstance(tags, list) and all(isinstance(item, str) for item in tags)):
+            if isinstance(tags, str):  # if it's a single string
+                tags = [tags]  # make it a list
+
         if self._session:
             if self._session.tags is not None:
                 for tag in tags:
