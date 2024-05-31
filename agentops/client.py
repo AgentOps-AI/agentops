@@ -32,6 +32,7 @@ from .log_config import logger
 from .meta_client import MetaClient
 from .config import Configuration, ConfigurationError
 from .llm_tracker import LlmTracker
+from termcolor import colored
 
 
 @singleton
@@ -57,6 +58,7 @@ class Client(metaclass=MetaClient):
         instrument_llm_calls (bool): Whether to instrument LLM calls and emit LLMEvents..
         auto_start_session (bool): Whether to start a session automatically when the client is created.
         inherited_session_id (optional, str): Init Agentops with an existing Session
+        skip_auto_end_session (optional, bool): Don't automatically end session based on your framework's decision making
     Attributes:
         _session (Session, optional): A Session is a grouping of events (e.g. a run of your agent).
         _worker (Worker, optional): A Worker manages the event queue and sends session updates to the AgentOps api
@@ -75,6 +77,7 @@ class Client(metaclass=MetaClient):
         instrument_llm_calls=True,
         auto_start_session=True,
         inherited_session_id: Optional[str] = None,
+        skip_auto_end_session: Optional[bool] = False,
     ):
 
         if override is not None:
@@ -101,6 +104,7 @@ class Client(metaclass=MetaClient):
                 endpoint=endpoint,
                 max_wait_time=max_wait_time,
                 max_queue_size=max_queue_size,
+                skip_auto_end_session=skip_auto_end_session,
             )
 
             if inherited_session_id is not None:
@@ -156,6 +160,11 @@ class Client(metaclass=MetaClient):
         Args:
             tags (List[str]): The list of tags to append.
         """
+
+        # if a string and not a list of strings
+        if not (isinstance(tags, list) and all(isinstance(item, str) for item in tags)):
+            if isinstance(tags, str):  # if it's a single string
+                tags = [tags]  # make it a list
 
         if self._session:
             if self._session.tags is not None:
@@ -352,7 +361,10 @@ class Client(metaclass=MetaClient):
             return logger.warning("Cannot start session - server rejected session")
 
         logger.info(
-            f"\x1b[34mSession Replay: https://app.agentops.ai/drilldown?session_id={self._session.session_id}\x1b[0m"
+            colored(
+                f"\x1b[34mSession Replay: https://app.agentops.ai/drilldown?session_id={self._session.session_id}\x1b[0m",
+                "blue",
+            )
         )
 
         return self._session.session_id
@@ -362,6 +374,7 @@ class Client(metaclass=MetaClient):
         end_state: str,
         end_state_reason: Optional[str] = None,
         video: Optional[str] = None,
+        is_auto_end: Optional[bool] = None,
     ):
         """
         End the current session with the AgentOps service.
@@ -370,7 +383,11 @@ class Client(metaclass=MetaClient):
             end_state (str): The final state of the session. Options: Success, Fail, or Indeterminate.
             end_state_reason (str, optional): The reason for ending the session.
             video (str, optional): The video screen recording of the session
+            is_auto_end (bool, optional): is this an automatic use of end_session and should be skipped with skip_auto_end_session
         """
+
+        if is_auto_end and self.config.skip_auto_end_session:
+            return
 
         if self._session is None or self._session.has_ended:
             return logger.warning("Cannot end session - no current session")
@@ -400,7 +417,10 @@ class Client(metaclass=MetaClient):
             )
 
         logger.info(
-            f"\x1b[34mSession Replay: https://app.agentops.ai/drilldown?session_id={self._session.session_id}\x1b[0m"
+            colored(
+                f"\x1b[34mSession Replay: https://app.agentops.ai/drilldown?session_id={self._session.session_id}\x1b[0m",
+                "blue",
+            )
         )
 
         self._session = None

@@ -92,6 +92,14 @@ Crew has comprehensive [documentation](https://docs.crewai.com) available as wel
 	</Step>
 </Steps>
 
+## Special Considerations with Crew
+The Crew framework is capable of determining when all tasks have been accomplished and to halt execution. AgentOps will automatically end your active session
+when this determination is made. If you don't want your AgentOps session to end at this time, add an optional parameter to your `agentops.init()` call.
+
+```python
+agentops.init(skip_auto_end_session=True)
+```
+
 ## Crew + AgentOps Examples
 
 <CardGroup cols={3}>

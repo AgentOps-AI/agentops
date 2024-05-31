@@ -32,6 +32,7 @@ class Configuration:
         endpoint: Optional[str] = None,
         max_wait_time: Optional[int] = None,
         max_queue_size: Optional[int] = None,
+        skip_auto_end_session: Optional[bool] = False,
     ):
 
         if not api_key:
@@ -52,6 +53,7 @@ class Configuration:
         self._max_wait_time = max_wait_time or 5000
         self._max_queue_size = max_queue_size or 100
         self._parent_key: Optional[str] = parent_key
+        self._skip_auto_end_session: Optional[bool] = skip_auto_end_session
 
     @property
     def api_key(self) -> str:
@@ -136,6 +138,10 @@ class Configuration:
     @property
     def parent_key(self):
         return self._parent_key
+
+    @property
+    def skip_auto_end_session(self):
+        return self._skip_auto_end_session
 
     @parent_key.setter
     def parent_key(self, value: str):

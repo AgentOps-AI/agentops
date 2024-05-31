@@ -106,8 +106,6 @@ class LangchainCallbackHandler(BaseCallbackHandler):
         **kwargs: Any,
     ) -> Any:
         llm_event: LLMEvent = self.events.llm[str(run_id)]
-        self.ao_client.record(llm_event)
-
         error_event = ErrorEvent(trigger_event=llm_event, exception=error)
         self.ao_client.record(error_event)
 
@@ -135,8 +133,6 @@ class LangchainCallbackHandler(BaseCallbackHandler):
                 "completion_tokens"
             ]
 
-        self.ao_client.record(llm_event)
-
         if len(response.generations) == 0:
             # TODO: more descriptive error
             error_event = ErrorEvent(
@@ -145,6 +141,8 @@ class LangchainCallbackHandler(BaseCallbackHandler):
                 details="on_llm_end: No generations",
             )
             self.ao_client.record(error_event)
+        else:
+            self.ao_client.record(llm_event)
 
     @debug_print_function_params
     def on_chain_start(
@@ -192,8 +190,6 @@ class LangchainCallbackHandler(BaseCallbackHandler):
         **kwargs: Any,
     ) -> Any:
         action_event: ActionEvent = self.events.chain[str(run_id)]
-        self.ao_client.record(action_event)
-
         error_event = ErrorEvent(trigger_event=action_event, exception=error)
         self.ao_client.record(error_event)
 
@@ -234,7 +230,6 @@ class LangchainCallbackHandler(BaseCallbackHandler):
         tool_event: ToolEvent = self.events.tool[str(run_id)]
         tool_event.end_timestamp = get_ISO_time()
         tool_event.returns = output
-        self.ao_client.record(tool_event)
 
         # Tools are capable of failing `on_tool_end` quietly.
         # This is a workaround to make sure we can log it as an error.
@@ -256,8 +251,6 @@ class LangchainCallbackHandler(BaseCallbackHandler):
         **kwargs: Any,
     ) -> Any:
         tool_event: ToolEvent = self.events.tool[str(run_id)]
-        self.ao_client.record(tool_event)
-
         error_event = ErrorEvent(trigger_event=tool_event, exception=error)
         self.ao_client.record(error_event)
 
@@ -311,8 +304,6 @@ class LangchainCallbackHandler(BaseCallbackHandler):
         **kwargs: Any,
     ) -> None:
         action_event: ActionEvent = self.events.retriever[str(run_id)]
-        self.ao_client.record(action_event)
-
         error_event = ErrorEvent(trigger_event=action_event, exception=error)
         self.ao_client.record(error_event)
 
@@ -455,8 +446,6 @@ class AsyncLangchainCallbackHandler(AsyncCallbackHandler):
         **kwargs: Any,
     ) -> Any:
         llm_event: LLMEvent = self.events.llm[str(run_id)]
-        self.ao_client.record(llm_event)
-
         error_event = ErrorEvent(trigger_event=llm_event, exception=error)
         self.ao_client.record(error_event)
 
@@ -483,16 +472,17 @@ class AsyncLangchainCallbackHandler(AsyncCallbackHandler):
             llm_event.completion_tokens = response.llm_output["token_usage"][
                 "completion_tokens"
             ]
-        self.ao_client.record(llm_event)
 
         if len(response.generations) == 0:
             # TODO: more descriptive error
             error_event = ErrorEvent(
-                trigger_event=self.events.llm[str(run_id)],
+                trigger_event=llm_event,
                 error_type="NoGenerations",
                 details="on_llm_end: No generations",
             )
             self.ao_client.record(error_event)
+        else:
+            self.ao_client.record(llm_event)
 
     @debug_print_function_params
     async def on_chain_start(
@@ -540,8 +530,6 @@ class AsyncLangchainCallbackHandler(AsyncCallbackHandler):
         **kwargs: Any,
     ) -> Any:
         action_event: ActionEvent = self.events.chain[str(run_id)]
-        self.ao_client.record(action_event)
-
         error_event = ErrorEvent(trigger_event=action_event, exception=error)
         self.ao_client.record(error_event)
 
@@ -582,7 +570,6 @@ class AsyncLangchainCallbackHandler(AsyncCallbackHandler):
         tool_event: ToolEvent = self.events.tool[str(run_id)]
         tool_event.end_timestamp = get_ISO_time()
         tool_event.returns = output
-        self.ao_client.record(tool_event)
 
         # Tools are capable of failing `on_tool_end` quietly.
         # This is a workaround to make sure we can log it as an error.
@@ -593,6 +580,8 @@ class AsyncLangchainCallbackHandler(AsyncCallbackHandler):
                 details=output,
             )
             self.ao_client.record(error_event)
+        else:
+            self.ao_client.record(tool_event)
 
     @debug_print_function_params
     async def on_tool_error(
@@ -604,8 +593,6 @@ class AsyncLangchainCallbackHandler(AsyncCallbackHandler):
         **kwargs: Any,
     ) -> Any:
         tool_event: ToolEvent = self.events.tool[str(run_id)]
-        self.ao_client.record(tool_event)
-
         error_event = ErrorEvent(trigger_event=tool_event, exception=error)
         self.ao_client.record(error_event)
 
@@ -659,8 +646,6 @@ class AsyncLangchainCallbackHandler(AsyncCallbackHandler):
         **kwargs: Any,
     ) -> None:
         action_event: ActionEvent = self.events.retriever[str(run_id)]
-        self.ao_client.record(action_event)
-
         error_event = ErrorEvent(trigger_event=action_event, exception=error)
         self.ao_client.record(error_event)
 

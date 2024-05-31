@@ -9,7 +9,7 @@ assignees: ''
 ## 🚀 Feature Request
 
 **💡 Got a brilliant idea?**
-Briefly describe your feature suggestion. We're all about improving agent observablity and performance.
+Briefly describe your feature suggestion. We're all about improving agent observability and performance.
 
 **🤔 Is your feature request related to a problem?**
 If your feature request is related to a problem you're facing, describe it here. The more we understand your struggle, the better we can address it.
