@@ -32,7 +32,7 @@ class AutogenLogger(BaseLogger):
     agent_store: [{"agentops_id": str, "autogen_id": str}] = []
 
     def __init__(self):
-        agentops.add_tags(["autogen"])
+        pass
 
     def start(self) -> str:
         pass
