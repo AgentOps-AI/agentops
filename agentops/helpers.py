@@ -85,19 +85,29 @@ def safe_serialize(obj):
             return o.model_dump_json()
         elif hasattr(o, "to_json"):
             return o.to_json()
+        elif hasattr(o, "json"):
+            return o.json()
+        elif hasattr(o, "to_dict"):
+            return o.to_dict()
+        elif hasattr(o, "dict"):
+            return o.dict()
         else:
             return f"<<non-serializable: {type(o).__qualname__}>>"
 
-    def remove_none_values(value):
-        """Recursively remove keys with None values from dictionaries."""
+    def remove_unwanted_items(value):
+        """Recursively remove unwanted items from dictionaries."""
         if isinstance(value, dict):
-            return {k: remove_none_values(v) for k, v in value.items() if v is not None}
+            return {
+                k: remove_unwanted_items(v)
+                for k, v in value.items()
+                if v is not None and v is not ... and k != "self"
+            }
         elif isinstance(value, list):
-            return [remove_none_values(item) for item in value]
+            return [remove_unwanted_items(item) for item in value]
         else:
             return value
 
-    cleaned_obj = remove_none_values(obj)
+    cleaned_obj = remove_unwanted_items(obj)
     return json.dumps(cleaned_obj, default=default)
 
 
