@@ -97,6 +97,8 @@ class Client(metaclass=MetaClient):
             os.environ.get("AGENTOPS_ENV_DATA_OPT_OUT", "False").lower() == "true"
         )
 
+        self.config = None
+
         try:
             self.config = Configuration(
                 api_key=api_key,
@@ -142,6 +144,7 @@ class Client(metaclass=MetaClient):
                         from .partners.autogen_logger import AutogenLogger
 
                         autogen.runtime_logging.start(logger=AutogenLogger())
+                        self.add_tags(["autogen"])
                     except ImportError:
                         pass
                     except Exception as e:
