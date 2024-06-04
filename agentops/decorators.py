@@ -1,7 +1,7 @@
 from .client import Client
-from .event import Event
 import inspect
 import functools
+from .log_config import logger
 
 
 def record_function(event_name: str):
@@ -16,12 +16,19 @@ def record_function(event_name: str):
     """
 
     def decorator(func):
-
         if inspect.iscoroutinefunction(func):
 
             @functools.wraps(func)
             async def async_wrapper(*args, **kwargs):
-                return await Client()._record_event_async(
+                client = Client()
+                if (
+                    client._session is None
+                    or client._session.has_ended
+                    or client._worker is None
+                ):
+                    logger.warning("Cannot record event - no current session")
+                    return func(*args, **kwargs)
+                return await client._record_event_async(
                     func, event_name, *args, **kwargs
                 )
 
@@ -30,7 +37,15 @@ def record_function(event_name: str):
 
             @functools.wraps(func)
             def sync_wrapper(*args, **kwargs):
-                return Client()._record_event_sync(func, event_name, *args, **kwargs)
+                client = Client()
+                if (
+                    client._session is None
+                    or client._session.has_ended
+                    or client._worker is None
+                ):
+                    logger.warning("Cannot record event - no current session")
+                    return func(*args, **kwargs)
+                return client._record_event_sync(func, event_name, *args, **kwargs)
 
             return sync_wrapper
 
