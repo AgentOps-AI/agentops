@@ -232,10 +232,6 @@ class Client(metaclass=MetaClient):
         self._worker.add_event(event.__dict__)
 
     def _record_event_sync(self, func, event_name, *args, **kwargs):
-        if self._session is None or self._session.has_ended or self._worker is None:
-            logger.warning("Cannot record event - no current session")
-            return func(*args, **kwargs)
-
         init_time = get_ISO_time()
         func_args = inspect.signature(func).parameters
         arg_names = list(func_args.keys())
@@ -282,10 +278,6 @@ class Client(metaclass=MetaClient):
         return returns
 
     async def _record_event_async(self, func, event_name, *args, **kwargs):
-        if self._session is None or self._session.has_ended or self._worker is None:
-            logger.warning("Cannot record event - no current session")
-            return func(*args, **kwargs)
-
         init_time = get_ISO_time()
         func_args = inspect.signature(func).parameters
         arg_names = list(func_args.keys())
