@@ -33,6 +33,7 @@ from .meta_client import MetaClient
 from .config import Configuration, ConfigurationError
 from .llm_tracker import LlmTracker
 from termcolor import colored
+from typing import Tuple
 
 
 @singleton
@@ -133,7 +134,7 @@ class Client(metaclass=MetaClient):
 
     def _check_for_partner_frameworks(
         self, instrument_llm_calls, auto_start_session
-    ) -> tuple[bool, bool]:
+    ) -> Tuple[bool, bool]:
         partner_frameworks = get_partner_frameworks()
         for framework in partner_frameworks.keys():
             if framework in sys.modules:
