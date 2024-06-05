@@ -95,7 +95,7 @@ def safe_serialize(obj):
             return f"<<non-serializable: {type(o).__qualname__}>>"
 
     def remove_unwanted_items(value):
-        """Recursively remove unwanted items from dictionaries."""
+        """Recursively remove self key and None/... values from dictionaries so they aren't serialized"""
         if isinstance(value, dict):
             return {
                 k: remove_unwanted_items(v)

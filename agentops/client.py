@@ -262,8 +262,6 @@ class Client(metaclass=MetaClient):
 
             event.returns = returns
 
-            # NOTE: Will likely remove in future since this is tightly coupled. Adding it to see how useful we find it for now
-            # TODO: check if screenshot is the url string we expect it to be? And not e.g. "True"
             if hasattr(returns, "screenshot"):
                 event.screenshot = returns.screenshot
 
