@@ -1,5 +1,4 @@
 from .client import Client
-from .event import Event
 import inspect
 import functools
 
@@ -16,7 +15,6 @@ def record_function(event_name: str):
     """
 
     def decorator(func):
-
         if inspect.iscoroutinefunction(func):
 
             @functools.wraps(func)
