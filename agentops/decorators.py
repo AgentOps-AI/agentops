@@ -1,7 +1,6 @@
 from .client import Client
 import inspect
 import functools
-from .log_config import logger
 
 
 def record_function(event_name: str):
