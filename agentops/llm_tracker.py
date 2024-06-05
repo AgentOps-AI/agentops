@@ -434,6 +434,8 @@ class LlmTracker:
         self.llm_event.prompt_tokens = 0
         self.llm_event.completion_tokens = 0
 
+        return response
+
     def override_openai_v1_completion(self):
         from openai.resources.chat import completions
 
