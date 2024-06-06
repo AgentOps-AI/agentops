@@ -33,6 +33,7 @@ from .meta_client import MetaClient
 from .config import Configuration, ConfigurationError
 from .llm_tracker import LlmTracker
 from termcolor import colored
+from typing import Tuple
 
 
 @singleton
@@ -75,7 +76,7 @@ class Client(metaclass=MetaClient):
         tags: Optional[List[str]] = None,
         override: Optional[bool] = None,  # Deprecated
         instrument_llm_calls=True,
-        auto_start_session=True,
+        auto_start_session=False,
         inherited_session_id: Optional[str] = None,
         skip_auto_end_session: Optional[bool] = False,
     ):
@@ -133,7 +134,7 @@ class Client(metaclass=MetaClient):
 
     def _check_for_partner_frameworks(
         self, instrument_llm_calls, auto_start_session
-    ) -> tuple[bool, bool]:
+    ) -> Tuple[bool, bool]:
         partner_frameworks = get_partner_frameworks()
         for framework in partner_frameworks.keys():
             if framework in sys.modules:
@@ -260,6 +261,10 @@ class Client(metaclass=MetaClient):
                 returns = list(returns)
 
             event.returns = returns
+
+            if hasattr(returns, "screenshot"):
+                event.screenshot = returns.screenshot
+
             event.end_timestamp = get_ISO_time()
             self.record(event)
 
@@ -300,6 +305,12 @@ class Client(metaclass=MetaClient):
                 returns = list(returns)
 
             event.returns = returns
+
+            # NOTE: Will likely remove in future since this is tightly coupled. Adding it to see how useful we find it for now
+            # TODO: check if screenshot is the url string we expect it to be? And not e.g. "True"
+            if hasattr(returns, "screenshot"):
+                event.screenshot = returns.screenshot
+
             event.end_timestamp = get_ISO_time()
             self.record(event)
 
