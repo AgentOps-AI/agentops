@@ -1,14 +1,17 @@
 import functools
+import inspect
+import pprint
 import sys
 from importlib import import_module
 from importlib.metadata import version
-from packaging.version import Version, parse
-from .log_config import logger
-from .event import LLMEvent, ActionEvent, ToolEvent, ErrorEvent
-from .helpers import get_ISO_time, check_call_stack_for_agent_id
-import inspect
 from typing import Optional
-import pprint
+
+from packaging.version import Version, parse
+from tokencost import count_message_tokens, count_string_tokens
+
+from .event import ActionEvent, ErrorEvent, LLMEvent, ToolEvent
+from .helpers import check_call_stack_for_agent_id, get_ISO_time
+from .log_config import logger
 
 original_create = None
 original_create_async = None
@@ -135,9 +138,9 @@ class LlmTracker:
 
     def _handle_response_v1_openai(self, response, kwargs, init_timestamp):
         """Handle responses for OpenAI versions >v1.0.0"""
-        from openai import Stream, AsyncStream
-        from openai.types.chat import ChatCompletionChunk
+        from openai import AsyncStream, Stream
         from openai.resources import AsyncCompletions
+        from openai.types.chat import ChatCompletionChunk
 
         self.llm_event = LLMEvent(init_timestamp=init_timestamp, params=kwargs)
 
@@ -152,9 +155,9 @@ class LlmTracker:
                 self.llm_event.agent_id = check_call_stack_for_agent_id()
                 self.llm_event.model = chunk.model
                 self.llm_event.prompt = kwargs["messages"]
-                choice = chunk.choices[
-                    0
-                ]  # NOTE: We assume for completion only choices[0] is relevant
+
+                # NOTE: We assume for completion only choices[0] is relevant
+                choice = chunk.choices[0]
 
                 if choice.delta.content:
                     accumulated_delta.content += choice.delta.content
@@ -262,7 +265,6 @@ class LlmTracker:
         )
 
         # from cohere.types.chat import ChatGenerationChunk
-
         # NOTE: Cohere only returns one message and its role will be CHATBOT which we are coercing to "assistant"
         self.llm_event = LLMEvent(init_timestamp=init_timestamp, params=kwargs)
 
@@ -421,19 +423,46 @@ class LlmTracker:
     def _handle_response_ollama(self, response, kwargs, init_timestamp):
         self.llm_event = LLMEvent(init_timestamp=init_timestamp, params=kwargs)
 
+        def handle_stream_chunk(chunk: dict):
+            message = chunk.get("message", {"role": None, "content": ""})
+
+            if chunk.get("done"):
+                self.llm_event.completion["content"] += message.get("content")
+                self.llm_event.end_timestamp = get_ISO_time()
+                self.llm_event.model = chunk.get('model')
+                self.llm_event.returns = chunk
+                self.llm_event.returns["message"] = self.llm_event.completion
+                self.llm_event.prompt = kwargs["messages"]
+                self.llm_event.agent_id = check_call_stack_for_agent_id()
+                self.client.record(self.llm_event)
+
+            if self.llm_event.completion is None:
+                self.llm_event.completion = message
+            else:
+                self.llm_event.completion["content"] += message.get("content")
+
+        if inspect.isgenerator(response):
+            def generator():
+                for chunk in response:
+                    handle_stream_chunk(chunk)
+                    yield chunk
+
+            return generator()
+
         self.llm_event.end_timestamp = get_ISO_time()
 
         self.llm_event.model = response["model"]
         self.llm_event.returns = response
         self.llm_event.agent_id = check_call_stack_for_agent_id()
         self.llm_event.prompt = kwargs["messages"]
-        self.completion = response["message"]
+        self.llm_event.completion = response["message"]
 
         # ollama doesn't return the tokens
         # still looking at how to find this
         self.llm_event.prompt_tokens = 0
         self.llm_event.completion_tokens = 0
 
+        self.client.record(self.llm_event)
         return response
 
     def override_openai_v1_completion(self):
