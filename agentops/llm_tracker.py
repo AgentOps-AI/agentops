@@ -429,7 +429,7 @@ class LlmTracker:
             if chunk.get("done"):
                 self.llm_event.completion["content"] += message.get("content")
                 self.llm_event.end_timestamp = get_ISO_time()
-                self.llm_event.model = chunk.get('model')
+                self.llm_event.model = chunk.get("model")
                 self.llm_event.returns = chunk
                 self.llm_event.returns["message"] = self.llm_event.completion
                 self.llm_event.prompt = kwargs["messages"]
@@ -442,6 +442,7 @@ class LlmTracker:
                 self.llm_event.completion["content"] += message.get("content")
 
         if inspect.isgenerator(response):
+
             def generator():
                 for chunk in response:
                     handle_stream_chunk(chunk)
@@ -462,6 +463,7 @@ class LlmTracker:
         self.llm_event.prompt_tokens = 0
         self.llm_event.completion_tokens = 0
 
+        # import ipdb; ipdb.set_trace()
         self.client.record(self.llm_event)
         return response
 
@@ -568,6 +570,34 @@ class LlmTracker:
         # Override the original method with the patched one
         ollama.chat = patched_function
 
+    def override_ollama_chat_client(self):
+        from ollama import Client
+
+        original_chat = Client.chat
+
+        def patched_function(*args, **kwargs):
+            # Call the original function with its original arguments
+            init_timestamp = get_ISO_time()
+            result = original_chat(*args, **kwargs)
+            return self._handle_response_ollama(result, kwargs, init_timestamp)
+
+        # Override the original method with the patched one
+        Client.chat = patched_function
+
+    def override_ollama_chat_async_client(self):
+        from ollama import AsyncClient
+
+        original_chat = AsyncClient.chat
+
+        async def patched_function(*args, **kwargs):
+            # Call the original function with its original arguments
+            init_timestamp = get_ISO_time()
+            result = await original_chat(*args, **kwargs)
+            return self._handle_response_ollama(result, kwargs, init_timestamp)
+
+        # Override the original method with the patched one
+        AsyncClient.chat = patched_function
+
     def _override_method(self, api, method_path, module):
         def handle_response(result, kwargs, init_timestamp):
             if api == "openai":
@@ -662,6 +692,8 @@ class LlmTracker:
                     module_version = version(api)
 
                     self.override_ollama_chat()
+                    self.override_ollama_chat_client()
+                    self.override_ollama_chat_async_client()
 
     def stop_instrumenting(self):
         self.undo_override_openai_v1_async_completion()
