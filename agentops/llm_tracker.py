@@ -7,9 +7,9 @@ from importlib.metadata import version
 from typing import Optional
 
 from packaging.version import Version, parse
-from tokencost import count_message_tokens, count_string_tokens
+from tokencost import count_message_tokens
 
-from .event import ActionEvent, ErrorEvent, LLMEvent, ToolEvent
+from .event import ActionEvent, ErrorEvent, LLMEvent
 from .helpers import check_call_stack_for_agent_id, get_ISO_time
 from .log_config import logger
 
@@ -434,6 +434,17 @@ class LlmTracker:
                 self.llm_event.returns["message"] = self.llm_event.completion
                 self.llm_event.prompt = kwargs["messages"]
                 self.llm_event.agent_id = check_call_stack_for_agent_id()
+                self.llm_event.prompt_tokens = count_message_tokens(
+                    self.llm_event.prompt,
+                    model=f'ollama/{self.llm_event.model}'
+                )
+
+                # count_message_tokens expect list of messages
+                self.llm_event.completion_tokens = count_message_tokens(
+                    messages=[self.llm_event.completion],
+                    model=f'ollama/{self.llm_event.model}'
+                )
+
                 self.client.record(self.llm_event)
 
             if self.llm_event.completion is None:
@@ -458,12 +469,15 @@ class LlmTracker:
         self.llm_event.prompt = kwargs["messages"]
         self.llm_event.completion = response["message"]
 
-        # ollama doesn't return the tokens
-        # still looking at how to find this
-        self.llm_event.prompt_tokens = 0
-        self.llm_event.completion_tokens = 0
+        self.llm_event.prompt_tokens = count_message_tokens(
+            kwargs["messages"], model=f'ollama/{response["model"]}')
+        
+        # count_message_tokens expect list of messages
+        self.llm_event.completion_tokens = count_message_tokens(
+            messages=[response["message"]], 
+            model=f'ollama/{response["model"]}'
+        )
 
-        # import ipdb; ipdb.set_trace()
         self.client.record(self.llm_event)
         return response
 
