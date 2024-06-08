@@ -244,3 +244,9 @@ Our mission is to bring your agent from prototype to production.
 Agent developers often work with little to no visibility into agent testing performance. This means their agents never leave the lab. We're changing that.
 
 AgentOps is the easiest way to evaluate, grade, and test agents. Is there a feature you'd like to see AgentOps cover? Just raise it in the issues tab, and we'll work on adding it to the roadmap.
+
+## Star History
+
+[![Star History Chart](## Star History
+
+[![Star History Chart](https://api.star-history.com/svg?repos=AgentOps-AI/agentops&type=Date)](https://star-history.com/#AgentOps-AI/agentops&Date))
