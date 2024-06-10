@@ -27,6 +27,9 @@ class LlmTracker:
         "cohere": {
             "5.4.0": ("chat", "chat_stream"),
         },
+        "ollama": {
+            "0.1.0": ("Client.chat", "AsyncClient.chat"),
+        }
     }
 
     def __init__(self, client):
@@ -40,9 +43,7 @@ class LlmTracker:
         self.llm_event = LLMEvent(init_timestamp=init_timestamp, params=kwargs)
 
         def handle_stream_chunk(chunk):
-            # NOTE: prompt/completion usage not returned in response when streaming
-            # We take the first ChatCompletionChunk and accumulate the deltas from all subsequent chunks to build one full chat completion
-            if self.llm_event.returns == None:
+            if self.llm_event.returns is None:
                 self.llm_event.returns = chunk
 
             try:
@@ -50,19 +51,16 @@ class LlmTracker:
                 self.llm_event.agent_id = check_call_stack_for_agent_id()
                 self.llm_event.model = chunk["model"]
                 self.llm_event.prompt = kwargs["messages"]
-                choice = chunk["choices"][
-                    0
-                ]  # NOTE: We assume for completion only choices[0] is relevant
+                choice = chunk["choices"][0]
 
                 if choice["delta"].get("content"):
-                    accumulated_delta["content"] += choice["delta"].content
+                    accumulated_delta["content"] += choice["delta"]["content"]
 
                 if choice["delta"].get("role"):
-                    accumulated_delta["role"] = choice["delta"].get("role")
+                    accumulated_delta["role"] = choice["delta"]["role"]
 
                 if choice["finish_reason"]:
-                    # Streaming is done. Record LLMEvent
-                    self.llm_event.returns.choices[0]["finish_reason"] = choice[
+                    self.llm_event.returns["choices"][0]["finish_reason"] = choice[
                         "finish_reason"
                     ]
                     self.llm_event.completion = {
@@ -70,7 +68,6 @@ class LlmTracker:
                         "content": accumulated_delta["content"],
                     }
                     self.llm_event.end_timestamp = get_ISO_time()
-
                     self.client.record(self.llm_event)
             except Exception as e:
                 self.client.record(
@@ -84,13 +81,11 @@ class LlmTracker:
                     f"kwargs:\n {kwargs_str}\n"
                 )
 
-        # if the response is a generator, decorate the generator
         if inspect.isasyncgen(response):
 
             async def async_generator():
                 async for chunk in response:
                     handle_stream_chunk(chunk)
-
                     yield chunk
 
             return async_generator()
@@ -100,12 +95,10 @@ class LlmTracker:
             def generator():
                 for chunk in response:
                     handle_stream_chunk(chunk)
-
                     yield chunk
 
             return generator()
 
-        # v0.0.0 responses are dicts
         try:
             self.llm_event.returns = response
             self.llm_event.agent_id = check_call_stack_for_agent_id()
@@ -118,7 +111,6 @@ class LlmTracker:
             self.llm_event.completion_tokens = response["usage"]["completion_tokens"]
             self.llm_event.model = response["model"]
             self.llm_event.end_timestamp = get_ISO_time()
-
             self.client.record(self.llm_event)
         except Exception as e:
             self.client.record(ErrorEvent(trigger_event=self.llm_event, exception=e))
@@ -141,9 +133,7 @@ class LlmTracker:
         self.llm_event = LLMEvent(init_timestamp=init_timestamp, params=kwargs)
 
         def handle_stream_chunk(chunk: ChatCompletionChunk):
-            # NOTE: prompt/completion usage not returned in response when streaming
-            # We take the first ChatCompletionChunk and accumulate the deltas from all subsequent chunks to build one full chat completion
-            if self.llm_event.returns == None:
+            if self.llm_event.returns is None:
                 self.llm_event.returns = chunk
 
             try:
@@ -151,9 +141,7 @@ class LlmTracker:
                 self.llm_event.agent_id = check_call_stack_for_agent_id()
                 self.llm_event.model = chunk.model
                 self.llm_event.prompt = kwargs["messages"]
-                choice = chunk.choices[
-                    0
-                ]  # NOTE: We assume for completion only choices[0] is relevant
+                choice = chunk.choices[0]
 
                 if choice.delta.content:
                     accumulated_delta.content += choice.delta.content
@@ -168,7 +156,6 @@ class LlmTracker:
                     accumulated_delta.function_call = choice.delta.function_call
 
                 if choice.finish_reason:
-                    # Streaming is done. Record LLMEvent
                     self.llm_event.returns.choices[0].finish_reason = (
                         choice.finish_reason
                     )
@@ -179,7 +166,6 @@ class LlmTracker:
                         "tool_calls": accumulated_delta.tool_calls,
                     }
                     self.llm_event.end_timestamp = get_ISO_time()
-
                     self.client.record(self.llm_event)
             except Exception as e:
                 self.client.record(
@@ -193,7 +179,6 @@ class LlmTracker:
                     f"kwargs:\n {kwargs_str}\n"
                 )
 
-        # if the response is a generator, decorate the generator
         if isinstance(response, Stream):
 
             def generator():
@@ -203,7 +188,6 @@ class LlmTracker:
 
             return generator()
 
-        # For asynchronous AsyncStream
         elif isinstance(response, AsyncStream):
 
             async def async_generator():
@@ -213,7 +197,6 @@ class LlmTracker:
 
             return async_generator()
 
-        # For async AsyncCompletion
         elif isinstance(response, AsyncCompletions):
 
             async def async_generator():
@@ -223,7 +206,6 @@ class LlmTracker:
 
             return async_generator()
 
-        # v1.0.0+ responses are objects
         try:
             self.llm_event.returns = response.model_dump()
             self.llm_event.agent_id = check_call_stack_for_agent_id()
@@ -232,7 +214,6 @@ class LlmTracker:
             self.llm_event.completion = response.choices[0].message.model_dump()
             self.llm_event.completion_tokens = response.usage.completion_tokens
             self.llm_event.model = response.model
-
             self.client.record(self.llm_event)
         except Exception as e:
             self.client.record(ErrorEvent(trigger_event=self.llm_event, exception=e))
@@ -260,16 +241,10 @@ class LlmTracker:
             StreamedChatResponse_ToolCallsGeneration,
         )
 
-        # from cohere.types.chat import ChatGenerationChunk
-
-        # NOTE: Cohere only returns one message and its role will be CHATBOT which we are coercing to "assistant"
         self.llm_event = LLMEvent(init_timestamp=init_timestamp, params=kwargs)
-
         self.action_events = {}
 
         def handle_stream_chunk(chunk):
-
-            # We take the first chunk and accumulate the deltas from all subsequent chunks to build one full chat completion
             if isinstance(chunk, StreamedChatResponse_StreamStart):
                 self.llm_event.returns = chunk
                 self.llm_event.agent_id = check_call_stack_for_agent_id()
@@ -280,7 +255,6 @@ class LlmTracker:
 
             try:
                 if isinstance(chunk, StreamedChatResponse_StreamEnd):
-                    # StreamedChatResponse_TextGeneration = LLMEvent
                     self.llm_event.completion = {
                         "role": "assistant",
                         "content": chunk.response.text,
@@ -288,7 +262,6 @@ class LlmTracker:
                     self.llm_event.end_timestamp = get_ISO_time()
                     self.client.record(self.llm_event)
 
-                    # StreamedChatResponse_SearchResults = ActionEvent
                     search_results = chunk.response.search_results
                     for search_result in search_results:
                         query = search_result.search_query
@@ -299,7 +272,6 @@ class LlmTracker:
                             action_event.returns = search_result_dict
                             action_event.end_timestamp = get_ISO_time()
 
-                    # StreamedChatResponse_CitationGeneration = ActionEvent
                     documents = {doc["id"]: doc for doc in chunk.response.documents}
                     citations = chunk.response.citations
                     for citation in citations:
@@ -307,14 +279,12 @@ class LlmTracker:
                         if citation_id in self.action_events:
                             action_event = self.action_events[citation_id]
                             citation_dict = citation.dict()
-                            # Replace document_ids with the actual documents
                             citation_dict["documents"] = [
                                 documents[doc_id]
                                 for doc_id in citation_dict["document_ids"]
                                 if doc_id in documents
                             ]
                             del citation_dict["document_ids"]
-
                             action_event.returns = citation_dict
                             action_event.end_timestamp = get_ISO_time()
 
@@ -356,8 +326,6 @@ class LlmTracker:
                     f"kwargs:\n {kwargs_str}\n"
                 )
 
-        # NOTE: As of Cohere==5.x.x, async is not supported
-        # if the response is a generator, decorate the generator
         if inspect.isasyncgen(response):
 
             async def async_generator():
@@ -375,9 +343,6 @@ class LlmTracker:
                     yield chunk
 
             return generator()
-
-        # TODO: we should record if they pass a chat.connectors, because it means they intended to call a tool
-        # Not enough to record StreamedChatResponse_ToolCallsGeneration because the tool may have not gotten called
 
         try:
             self.llm_event.returns = response.dict()
@@ -403,7 +368,6 @@ class LlmTracker:
             self.llm_event.prompt_tokens = response.meta.tokens.input_tokens
             self.llm_event.completion_tokens = response.meta.tokens.output_tokens
             self.llm_event.model = kwargs.get("model", "command-r-plus")
-
             self.client.record(self.llm_event)
         except Exception as e:
             self.client.record(ErrorEvent(trigger_event=self.llm_event, exception=e))
@@ -417,36 +381,59 @@ class LlmTracker:
 
         return response
 
+    def _handle_response_ollama(self, response, kwargs, init_timestamp):
+        """Handle responses for Ollama"""
+        self.llm_event = LLMEvent(init_timestamp=init_timestamp, params=kwargs)
+
+        try:
+            self.llm_event.returns = response
+            self.llm_event.agent_id = check_call_stack_for_agent_id()
+            self.llm_event.prompt = kwargs["messages"]
+            self.llm_event.completion = {
+                "role": response["message"]["role"],
+                "content": response["message"]["content"],
+            }
+            self.llm_event.prompt_tokens = response.get("prompt_eval_count", 0)
+            self.llm_event.completion_tokens = response.get("eval_count", 0)
+            self.llm_event.model = response["model"]
+            self.llm_event.end_timestamp = get_ISO_time()
+            self.client.record(self.llm_event)
+        except Exception as e:
+            self.client.record(ErrorEvent(trigger_event=self.llm_event, exception=e))
+            kwargs_str = pprint.pformat(kwargs)
+            response_str = pprint.pformat(response)
+            logger.warning(
+                f"Unable to parse response for LLM call. Skipping upload to AgentOps\n"
+                f"response:\n {response_str}\n"
+                f"kwargs:\n {kwargs_str}\n"
+            )
+
+        return response
+
     def override_openai_v1_completion(self):
         from openai.resources.chat import completions
 
-        # Store the original method
         global original_create
         original_create = completions.Completions.create
 
         def patched_function(*args, **kwargs):
             init_timestamp = get_ISO_time()
-            # Call the original function with its original arguments
             result = original_create(*args, **kwargs)
             return self._handle_response_v1_openai(result, kwargs, init_timestamp)
 
-        # Override the original method with the patched one
         completions.Completions.create = patched_function
 
     def override_openai_v1_async_completion(self):
         from openai.resources.chat import completions
 
-        # Store the original method
         global original_create_async
         original_create_async = completions.AsyncCompletions.create
 
         async def patched_function(*args, **kwargs):
-            # Call the original function with its original arguments
             init_timestamp = get_ISO_time()
             result = await original_create_async(*args, **kwargs)
             return self._handle_response_v1_openai(result, kwargs, init_timestamp)
 
-        # Override the original method with the patched one
         completions.AsyncCompletions.create = patched_function
 
     def override_litellm_completion(self):
@@ -457,7 +444,6 @@ class LlmTracker:
         def patched_function(*args, **kwargs):
             init_timestamp = get_ISO_time()
             result = original_create(*args, **kwargs)
-            # Note: litellm calls all LLM APIs using the OpenAI format
             return self._handle_response_v1_openai(result, kwargs, init_timestamp)
 
         litellm.completion = patched_function
@@ -468,28 +454,22 @@ class LlmTracker:
         original_create = litellm.acompletion
 
         async def patched_function(*args, **kwargs):
-            # Call the original function with its original arguments
             init_timestamp = get_ISO_time()
             result = await original_create(*args, **kwargs)
-            # Note: litellm calls all LLM APIs using the OpenAI format
             return self._handle_response_v1_openai(result, kwargs, init_timestamp)
 
-        # Override the original method with the patched one
         litellm.acompletion = patched_function
 
     def override_cohere_chat(self):
         import cohere
-        import cohere.types
 
         original_chat = cohere.Client.chat
 
         def patched_function(*args, **kwargs):
-            # Call the original function with its original arguments
             init_timestamp = get_ISO_time()
             result = original_chat(*args, **kwargs)
             return self._handle_response_cohere(result, kwargs, init_timestamp)
 
-        # Override the original method with the patched one
         cohere.Client.chat = patched_function
 
     def override_cohere_chat_stream(self):
@@ -498,13 +478,35 @@ class LlmTracker:
         original_chat = cohere.Client.chat_stream
 
         def patched_function(*args, **kwargs):
-            # Call the original function with its original arguments
             init_timestamp = get_ISO_time()
             result = original_chat(*args, **kwargs)
             return self._handle_response_cohere(result, kwargs, init_timestamp)
 
-        # Override the original method with the patched one
         cohere.Client.chat_stream = patched_function
+
+    def override_ollama_sync_chat(self):
+        from ollama import Client as OllamaClient
+
+        original_chat = OllamaClient.chat
+
+        def patched_function(*args, **kwargs):
+            init_timestamp = get_ISO_time()
+            result = original_chat(*args, **kwargs)
+            return self._handle_response_ollama(result, kwargs, init_timestamp)
+
+        OllamaClient.chat = patched_function
+
+    def override_ollama_async_chat(self):
+        from ollama import AsyncClient as OllamaAsyncClient
+
+        original_chat = OllamaAsyncClient.chat
+
+        async def patched_function(*args, **kwargs):
+            init_timestamp = get_ISO_time()
+            result = await original_chat(*args, **kwargs)
+            return self._handle_response_ollama(result, kwargs, init_timestamp)
+
+        OllamaAsyncClient.chat = patched_function
 
     def _override_method(self, api, method_path, module):
         def handle_response(result, kwargs, init_timestamp):
@@ -544,10 +546,6 @@ class LlmTracker:
             setattr(parent, method_parts[-1], new_method)
 
     def override_api(self):
-        """
-        Overrides key methods of the specified API to record events.
-        """
-
         for api in self.SUPPORTED_APIS:
             if api in sys.modules:
                 module = import_module(api)
@@ -565,22 +563,19 @@ class LlmTracker:
                         logger.warning(
                             f"Only LiteLLM>=1.3.1 supported. v{module_version} found."
                         )
-                    return  # If using an abstraction like litellm, do not patch the underlying LLM APIs
+                    return
 
                 if api == "openai":
-                    # Patch openai v1.0.0+ methods
                     if hasattr(module, "__version__"):
                         module_version = parse(module.__version__)
                         if module_version >= parse("1.0.0"):
                             self.override_openai_v1_completion()
                             self.override_openai_v1_async_completion()
                         else:
-                            # Patch openai <v1.0.0 methods
                             for method_path in self.SUPPORTED_APIS["openai"]["0.0.0"]:
                                 self._override_method(api, method_path, module)
 
                 if api == "cohere":
-                    # Patch cohere v5.4.0+ methods
                     module_version = version(api)
                     if module_version is None:
                         logger.warning(
@@ -593,6 +588,21 @@ class LlmTracker:
                     else:
                         logger.warning(
                             f"Only Cohere>=5.4.0 supported. v{module_version} found."
+                        )
+
+                if api == "ollama":
+                    module_version = version(api)
+                    if module_version is None:
+                        logger.warning(
+                            f"Cannot determine Ollama version. Only Ollama>=0.1.0 supported."
+                        )
+
+                    if Version(module_version) >= parse("0.1.0"):
+                        self.override_ollama_sync_chat()
+                        self.override_ollama_async_chat()
+                    else:
+                        logger.warning(
+                            f"Only Ollama>=0.1.0 supported. v{module_version} found."
                         )
 
     def stop_instrumenting(self):

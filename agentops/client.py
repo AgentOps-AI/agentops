@@ -15,7 +15,7 @@ import traceback
 import logging
 from decimal import Decimal
 from uuid import UUID, uuid4
-from typing import Optional, List, Union
+from typing import Optional, List, Union, Tuple
 
 from .event import ActionEvent, ErrorEvent, Event
 from .enums import EndState
@@ -32,8 +32,7 @@ from .log_config import logger
 from .meta_client import MetaClient
 from .config import Configuration, ConfigurationError
 from .llm_tracker import LlmTracker
-from termcolor import colored
-from typing import Tuple
+
 
 
 @singleton
