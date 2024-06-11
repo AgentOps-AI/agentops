@@ -557,11 +557,11 @@ class Client(metaclass=MetaClient):
     def _update_session(self, session: Session):
         self._sessions[
             self._sessions.index(
-                next(
+                [
                     sess
                     for sess in self._sessions
-                    if sess.session_id == "your_specific_session_id"
-                )
+                    if sess.session_id == session.session_id
+                ][0]
             )
         ] = session
 
