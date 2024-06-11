@@ -21,39 +21,51 @@ def mock_req():
         yield m
 
 
-class TestSessions:
+class TestSingleSessions:
     def setup_method(self):
         self.api_key = "random_api_key"
         self.event_type = "test_event_type"
-        self.config = agentops.Configuration(api_key=self.api_key, max_wait_time=50)
+        self.config = agentops.ClientConfiguration(
+            api_key=self.api_key, max_wait_time=50
+        )
 
-    def test_session(self, mock_req):
-        agentops.start_session(config=self.config)
-        print(self.config.api_key)
+    def test_two_sessions(self, mock_req):
+        session_id_1 = agentops.start_session(config=self.config)
+        session_id_2 = agentops.start_session(config=self.config)
 
-        agentops.record(ActionEvent(self.event_type))
-        agentops.record(ActionEvent(self.event_type))
+        assert len(agentops.Client().current_session_ids) == 2
+        assert agentops.Client().current_session_ids == [
+            str(session_id_1),
+            str(session_id_2),
+        ]
 
-        # We should have 1 requests (session start).
-        assert len(mock_req.request_history) == 1
-        time.sleep(0.15)
-
-        # We should have 2 requests (session and 2 events combined into 1)
+        # We should have 2 requests (session starts).
         assert len(mock_req.request_history) == 2
+
+        agentops.record(ActionEvent(self.event_type), session_id=session_id_1)
+        agentops.record(ActionEvent(self.event_type), session_id=session_id_2)
+
+        time.sleep(1.5)
+
+        # We should have 4 requests (2 sessions and 2 events each in their own request)
+        assert len(mock_req.request_history) == 4
         assert mock_req.last_request.headers["Authorization"] == f"Bearer some_jwt"
         request_json = mock_req.last_request.json()
         assert request_json["events"][0]["event_type"] == self.event_type
+        assert request_json["session_id"] in [session_id_1, session_id_2]
 
         end_state = "Success"
-        agentops.end_session(end_state)
-        time.sleep(0.15)
+        agentops.end_session(end_state, session_id=session_id_1)
+        agentops.end_session(end_state, session_id=session_id_2)
+        time.sleep(1.5)
 
-        # We should have 3 requests (additional end session)
-        assert len(mock_req.request_history) == 3
+        # We should have 6 requests (2 additional end sessions)
+        history = mock_req.request_history
+        assert len(mock_req.request_history) == 6
         assert mock_req.last_request.headers["Authorization"] == f"Bearer some_jwt"
         request_json = mock_req.last_request.json()
         assert request_json["session"]["end_state"] == end_state
-        assert request_json["session"]["tags"] == None
+        assert request_json["session"]["tags"] is None
 
     def test_add_tags(self, mock_req):
         # Arrange
@@ -83,7 +95,6 @@ class TestSessions:
         time.sleep(0.15)
 
         # Assert 2 requests - 1 for session init, 1 for event
-        print(mock_req.last_request.json())
         assert len(mock_req.request_history) == 2
         assert mock_req.last_request.headers["X-Agentops-Api-Key"] == self.api_key
         request_json = mock_req.last_request.json()
@@ -121,3 +132,12 @@ class TestSessions:
         # Assert session ended with correct id
         request_json = mock_req.last_request.json()
         assert request_json["session"]["session_id"] == inherited_id
+
+
+class TestMultiSessions:
+    def setup_method(self):
+        self.api_key = "random_api_key"
+        self.event_type = "test_event_type"
+        self.config = agentops.ClientConfiguration(
+            api_key=self.api_key, max_wait_time=50
+        )

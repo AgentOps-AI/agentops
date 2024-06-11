@@ -1,8 +1,9 @@
 """
-AgentOps configuration.
+AgentOps Client configuration.
 
 Classes:
-    Configuration: Stores the configuration settings for AgentOps clients.
+    ClientConfiguration: Stores the configuration settings for AgentOps clients.
+    AgentOpsConfiguration: This is a class to store the configuration settings for initializing AgentOps
 """
 
 from typing import Optional
@@ -10,7 +11,7 @@ from os import environ
 from .log_config import logger
 
 
-class Configuration:
+class ClientConfiguration:
     """
     Stores the configuration settings for AgentOps clients.
 

@@ -21,7 +21,7 @@ from .event import ActionEvent, ErrorEvent, Event
 from .enums import EndState
 from .helpers import (
     get_ISO_time,
-    singleton,
+    conditional_singleton,
     check_call_stack_for_agent_id,
     get_partner_frameworks,
 )
@@ -30,13 +30,13 @@ from .worker import Worker
 from .host_env import get_host_env
 from .log_config import logger
 from .meta_client import MetaClient
-from .config import Configuration, ConfigurationError
+from .config import ClientConfiguration, ConfigurationError
 from .llm_tracker import LlmTracker
 from termcolor import colored
 from typing import Tuple
 
 
-@singleton
+@conditional_singleton
 class Client(metaclass=MetaClient):
     """
     Client for AgentOps service.
@@ -89,7 +89,7 @@ class Client(metaclass=MetaClient):
             )
             instrument_llm_calls = instrument_llm_calls or override
 
-        self._session: Optional[Session] = None
+        self._sessions: Optional[List[Session]] = []
         self._worker: Optional[Worker] = None
         self._tags: Optional[List[str]] = tags
         self._tags_for_future_session: Optional[List[str]] = None
@@ -101,7 +101,7 @@ class Client(metaclass=MetaClient):
         self.config = None
 
         try:
-            self.config = Configuration(
+            self.config = ClientConfiguration(
                 api_key=api_key,
                 parent_key=parent_key,
                 endpoint=endpoint,
@@ -157,7 +157,7 @@ class Client(metaclass=MetaClient):
 
         return instrument_llm_calls, auto_start_session
 
-    def add_tags(self, tags: List[str]):
+    def add_tags(self, tags: List[str], session_id: Optional[str] = None) -> None:
         """
         Append to session tags at runtime.
 
@@ -170,18 +170,7 @@ class Client(metaclass=MetaClient):
             if isinstance(tags, str):  # if it's a single string
                 tags = [tags]  # make it a list
 
-        if self._session:
-            if self._session.tags is not None:
-                for tag in tags:
-                    if tag not in self._session.tags:
-                        self._session.tags.append(tag)
-            else:
-                self._session.tags = tags
-
-            if self._session is not None and self._worker is not None:
-                self._worker.update_session(self._session)
-
-        else:
+        if len(self._sessions) == 0:
             if self._tags_for_future_session:
                 for tag in tags:
                     if tag not in self._tags_for_future_session:
@@ -189,7 +178,23 @@ class Client(metaclass=MetaClient):
             else:
                 self._tags_for_future_session = tags
 
-    def set_tags(self, tags: List[str]):
+            return
+
+        session = self._safe_get_session(session_id)
+
+        if session.tags is not None:
+            for tag in tags:
+                if tag not in session.tags:
+                    session.tags.append(tag)
+        else:
+            session.tags = tags
+
+        if self._worker is not None:
+            self._worker.update_session(session)
+
+        self._update_session(session)
+
+    def set_tags(self, tags: List[str], session_id: Optional[str] = None) -> None:
         """
         Replace session tags at runtime.
 
@@ -198,18 +203,26 @@ class Client(metaclass=MetaClient):
         """
         self._tags_for_future_session = tags
 
-        if self._session is not None and self._worker is not None:
-            self._session.tags = tags
-            self._worker.update_session(self._session)
+        session = self._safe_get_session(session_id)
 
-    def record(self, event: Union[Event, ErrorEvent]):
+        if session is not None and self._worker is not None:
+            session.tags = tags
+            self._worker.update_session(session)
+            self._update_session(session)
+
+    def record(
+        self, event: Union[Event, ErrorEvent], session_id: Optional[str] = None
+    ) -> None:
         """
         Record an event with the AgentOps service.
 
         Args:
             event (Event): The event to record.
         """
-        if self._session is None or self._session.has_ended or self._worker is None:
+
+        session = self._safe_get_session(session_id)
+
+        if session is None or self._worker is None:
             logger.warning("Cannot record event - no current session")
             return
 
@@ -227,10 +240,10 @@ class Client(metaclass=MetaClient):
 
                 event.trigger_event_id = event.trigger_event.id
                 event.trigger_event_type = event.trigger_event.event_type
-                self._worker.add_event(event.trigger_event.__dict__)
+                self._worker.add_event(event.trigger_event.__dict__, session_id)
                 event.trigger_event = None  # removes trigger_event from serialization
 
-        self._worker.add_event(event.__dict__)
+        self._worker.add_event(event.__dict__, session_id)
 
     def _record_event_sync(self, func, event_name, *args, **kwargs):
         init_time = get_ISO_time()
@@ -325,9 +338,9 @@ class Client(metaclass=MetaClient):
     def start_session(
         self,
         tags: Optional[List[str]] = None,
-        config: Optional[Configuration] = None,
+        config: Optional[ClientConfiguration] = None,
         inherited_session_id: Optional[str] = None,
-    ):
+    ) -> Union[str, None]:
         """
         Start a new session for recording events.
 
@@ -347,9 +360,6 @@ class Client(metaclass=MetaClient):
         }
         logger.setLevel(log_levels.get(logging_level or "INFO", "INFO"))
 
-        if self._session is not None:
-            return logger.warning("Cannot start session - session already started")
-
         if not config and not self.config:
             return logger.warning("Cannot start session - missing configuration")
 
@@ -357,31 +367,33 @@ class Client(metaclass=MetaClient):
             UUID(inherited_session_id) if inherited_session_id is not None else uuid4()
         )
 
-        self._session = Session(
+        session = Session(
             session_id=session_id,
             tags=tags or self._tags_for_future_session,
             host_env=get_host_env(self._env_data_opt_out),
         )
+
         self._worker = Worker(config or self.config)
 
         start_session_result = False
         if inherited_session_id is not None:
-            start_session_result = self._worker.reauthorize_jwt(self._session)
+            start_session_result = self._worker.reauthorize_jwt(session)
         else:
-            start_session_result = self._worker.start_session(self._session)
+            start_session_result = self._worker.start_session(session)
 
         if not start_session_result:
-            self._session = None
+            self._sessions = []
             return logger.warning("Cannot start session - server rejected session")
 
         logger.info(
             colored(
-                f"\x1b[34mSession Replay: https://app.agentops.ai/drilldown?session_id={self._session.session_id}\x1b[0m",
+                f"\x1b[34mSession Replay: https://app.agentops.ai/drilldown?session_id={session.session_id}\x1b[0m",
                 "blue",
             )
         )
 
-        return self._session.session_id
+        self._sessions.append(session)
+        return str(session.session_id)
 
     def end_session(
         self,
@@ -389,6 +401,7 @@ class Client(metaclass=MetaClient):
         end_state_reason: Optional[str] = None,
         video: Optional[str] = None,
         is_auto_end: Optional[bool] = None,
+        session_id: Optional[str] = None,
     ):
         """
         End the current session with the AgentOps service.
@@ -400,23 +413,31 @@ class Client(metaclass=MetaClient):
             is_auto_end (bool, optional): is this an automatic use of end_session and should be skipped with skip_auto_end_session
         """
 
+        session = self._safe_get_session(session_id)
+
+        if session is None:
+            return logger.warning("Cannot end session - no current session")
+
+        session.end_state = end_state
+        session.end_state_reason = end_state_reason
+
         if is_auto_end and self.config.skip_auto_end_session:
             return
-
-        if self._session is None or self._session.has_ended:
-            return logger.warning("Cannot end session - no current session")
 
         if not any(end_state == state.value for state in EndState):
             return logger.warning(
                 "Invalid end_state. Please use one of the EndState enums"
             )
 
-        if self._worker is None or self._worker._session is None:
-            return logger.warning("Cannot end session - no current worker or session")
+        if self._worker is None:
+            return logger.warning("Cannot end session - no current worker")
 
-        self._session.video = video
-        self._session.end_session(end_state, end_state_reason)
-        token_cost = self._worker.end_session(self._session)
+        session.video = video
+
+        if not session.end_timestamp:
+            session.end_timestamp = get_ISO_time()
+
+        token_cost = self._worker.end_session(session)
 
         if token_cost == "unknown":
             logger.info("Could not determine cost of run.")
@@ -432,13 +453,12 @@ class Client(metaclass=MetaClient):
 
         logger.info(
             colored(
-                f"\x1b[34mSession Replay: https://app.agentops.ai/drilldown?session_id={self._session.session_id}\x1b[0m",
+                f"\x1b[34mSession Replay: https://app.agentops.ai/drilldown?session_id={session.session_id}\x1b[0m",
                 "blue",
             )
         )
 
-        self._session = None
-        self._worker = None
+        self._sessions.remove(session)
 
     def create_agent(self, name: str, agent_id: Optional[str] = None):
         if agent_id is None:
@@ -449,9 +469,12 @@ class Client(metaclass=MetaClient):
 
     def _handle_unclean_exits(self):
         def cleanup(end_state: str = "Fail", end_state_reason: Optional[str] = None):
-            # Only run cleanup function if session is created
-            if self._session is not None:
-                self.end_session(end_state=end_state, end_state_reason=end_state_reason)
+            for session in self._sessions:
+                self.end_session(
+                    end_state=end_state,
+                    end_state_reason=end_state_reason,
+                    session_id=str(session.session_id),
+                )
 
         def signal_handler(signum, frame):
             """
@@ -482,10 +505,12 @@ class Client(metaclass=MetaClient):
                 traceback.format_exception(exc_type, exc_value, exc_traceback)
             )
 
-            self.end_session(
-                end_state="Fail",
-                end_state_reason=f"{str(exc_value)}: {formatted_traceback}",
-            )
+            for session in self._sessions:
+                self.end_session(
+                    end_state="Fail",
+                    end_state_reason=f"{str(exc_value)}: {formatted_traceback}",
+                    session_id=str(session.session_id),
+                )
 
             # Then call the default excepthook to exit the program
             sys.__excepthook__(exc_type, exc_value, exc_traceback)
@@ -503,8 +528,8 @@ class Client(metaclass=MetaClient):
             sys.excepthook = handle_exception
 
     @property
-    def current_session_id(self):
-        return self._session.session_id if self._session else None
+    def current_session_ids(self) -> List[str]:
+        return [str(s.session_id) for s in self._sessions]
 
     @property
     def api_key(self):
@@ -527,3 +552,32 @@ class Client(metaclass=MetaClient):
     def stop_instrumenting(self):
         if self.llm_tracker:
             self.llm_tracker.stop_instrumenting()
+
+    # replaces the session currently stored with a specific session_id, with a new session
+    def _update_session(self, session: Session):
+        self._sessions[
+            self._sessions.index(
+                next(
+                    sess
+                    for sess in self._sessions
+                    if sess.session_id == "your_specific_session_id"
+                )
+            )
+        ] = session
+
+    def _safe_get_session(self, session_id: Optional[str] = None) -> Session:
+        session = None
+        if len(self._sessions) == 1:
+            session = self._sessions[0]
+
+        elif len(self._sessions) > 1:
+            if session_id is None:
+                raise ValueError(
+                    "You must provide a session_id when more that one session exists"
+                )
+
+            session = [
+                sess for sess in self._sessions if str(sess.session_id) == session_id
+            ][0]
+
+        return session

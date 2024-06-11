@@ -1,3 +1,4 @@
+import agentops
 from .client import Client
 import inspect
 import functools
@@ -33,3 +34,12 @@ def record_function(event_name: str):
             return sync_wrapper
 
     return decorator
+
+
+def track_route(function):
+    @functools.wraps(function)
+    def wrapped_route(*args, **kwargs):
+        client = agentops.create_client()
+        return function(ao_client=client, *args, **kwargs)
+
+    return wrapped_route

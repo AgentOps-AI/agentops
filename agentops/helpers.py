@@ -30,6 +30,21 @@ def singleton(class_):
     return getinstance
 
 
+def conditional_singleton(class_):
+    instances = {}
+
+    def getinstance(*args, **kwargs):
+        use_singleton = kwargs.pop("use_singleton", True)
+        if use_singleton:
+            if class_ not in instances:
+                instances[class_] = class_(*args, **kwargs)
+            return instances[class_]
+        else:
+            return class_(*args, **kwargs)
+
+    return getinstance
+
+
 def get_ISO_time():
     """
     Get the current UTC time in ISO 8601 format with milliseconds precision, suffixed with 'Z' to denote UTC timezone.

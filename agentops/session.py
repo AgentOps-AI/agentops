@@ -47,6 +47,7 @@ class Session:
         self, end_state: str = "Indeterminate", end_state_reason: Optional[str] = None
     ) -> None:
         """
+        DEPRECATED
         End the session with a specified state, rating, and reason.
 
         Args:
@@ -54,16 +55,6 @@ class Session:
             rating (str, optional): The rating for the session.
             end_state_reason (str, optional): The reason for ending the session. Provides context for why the session ended.
         """
-        self.end_state = end_state
-        self.end_state_reason = end_state_reason
-        self.end_timestamp = get_ISO_time()
-
-    @property
-    def has_ended(self) -> bool:
-        """
-        Returns whether the session has been ended
-
-        Returns:
-            bool: Whether the session has been ended
-        """
-        return self.end_state is not None
+        raise DeprecationWarning(
+            "This function has been deprecated and will be removed. Please use agentops.end_session() and pass in the session_id parameter."
+        )
