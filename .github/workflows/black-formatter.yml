@@ -22,4 +22,4 @@ jobs:
         pip install "black[jupyter]"
 
     - name: Run Black
-      run: black --check .
+      run: black --diff --check .
