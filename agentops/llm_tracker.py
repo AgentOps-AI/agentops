@@ -7,12 +7,12 @@ from importlib.metadata import version
 from typing import Optional
 
 from packaging.version import Version, parse
-from tokencost import count_message_tokens
 
 from .event import ActionEvent, ErrorEvent, LLMEvent
 from .helpers import check_call_stack_for_agent_id, get_ISO_time
 from .log_config import logger
 
+original_func = {}
 original_create = None
 original_create_async = None
 
@@ -429,22 +429,11 @@ class LlmTracker:
             if chunk.get("done"):
                 self.llm_event.completion["content"] += message.get("content")
                 self.llm_event.end_timestamp = get_ISO_time()
-                self.llm_event.model = chunk.get("model")
+                self.llm_event.model = f'ollama/{chunk.get("model")}'
                 self.llm_event.returns = chunk
                 self.llm_event.returns["message"] = self.llm_event.completion
                 self.llm_event.prompt = kwargs["messages"]
                 self.llm_event.agent_id = check_call_stack_for_agent_id()
-                self.llm_event.prompt_tokens = count_message_tokens(
-                    self.llm_event.prompt,
-                    model=f'ollama/{self.llm_event.model}'
-                )
-
-                # count_message_tokens expect list of messages
-                self.llm_event.completion_tokens = count_message_tokens(
-                    messages=[self.llm_event.completion],
-                    model=f'ollama/{self.llm_event.model}'
-                )
-
                 self.client.record(self.llm_event)
 
             if self.llm_event.completion is None:
@@ -463,20 +452,11 @@ class LlmTracker:
 
         self.llm_event.end_timestamp = get_ISO_time()
 
-        self.llm_event.model = response["model"]
+        self.llm_event.model = f'ollama/{response["model"]}'
         self.llm_event.returns = response
         self.llm_event.agent_id = check_call_stack_for_agent_id()
         self.llm_event.prompt = kwargs["messages"]
         self.llm_event.completion = response["message"]
-
-        self.llm_event.prompt_tokens = count_message_tokens(
-            kwargs["messages"], model=f'ollama/{response["model"]}')
-        
-        # count_message_tokens expect list of messages
-        self.llm_event.completion_tokens = count_message_tokens(
-            messages=[response["message"]], 
-            model=f'ollama/{response["model"]}'
-        )
 
         self.client.record(self.llm_event)
         return response
@@ -573,12 +553,12 @@ class LlmTracker:
     def override_ollama_chat(self):
         import ollama
 
-        original_chat = ollama.chat
+        original_func['ollama.chat'] = ollama.chat
 
         def patched_function(*args, **kwargs):
             # Call the original function with its original arguments
             init_timestamp = get_ISO_time()
-            result = original_chat(*args, **kwargs)
+            result = original_func['ollama.chat'](*args, **kwargs)
             return self._handle_response_ollama(result, kwargs, init_timestamp)
 
         # Override the original method with the patched one
@@ -587,12 +567,12 @@ class LlmTracker:
     def override_ollama_chat_client(self):
         from ollama import Client
 
-        original_chat = Client.chat
+        original_func['ollama.Client.chat'] = Client.chat
 
         def patched_function(*args, **kwargs):
             # Call the original function with its original arguments
             init_timestamp = get_ISO_time()
-            result = original_chat(*args, **kwargs)
+            result = original_func['ollama.Client.chat'](*args, **kwargs)
             return self._handle_response_ollama(result, kwargs, init_timestamp)
 
         # Override the original method with the patched one
@@ -601,12 +581,11 @@ class LlmTracker:
     def override_ollama_chat_async_client(self):
         from ollama import AsyncClient
 
-        original_chat = AsyncClient.chat
-
+        original_func['ollama.AsyncClient.chat'] = AsyncClient.chat
         async def patched_function(*args, **kwargs):
             # Call the original function with its original arguments
             init_timestamp = get_ISO_time()
-            result = await original_chat(*args, **kwargs)
+            result = await original_func['ollama.AsyncClient.chat'](*args, **kwargs)
             return self._handle_response_ollama(result, kwargs, init_timestamp)
 
         # Override the original method with the patched one
@@ -724,3 +703,10 @@ class LlmTracker:
         from openai.resources.chat import completions
 
         completions.AsyncCompletions.create = original_create_async
+
+    def undo_override_ollama(self):
+        import ollama
+
+        ollama.chat = original_func['ollama.chat']
+        ollama.Client.chat = original_func['ollama.Client.chat']
+        ollama.AsyncClient.chat = original_func['ollama.AsyncClient.chat']
