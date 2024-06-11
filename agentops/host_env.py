@@ -2,6 +2,7 @@ import platform
 import psutil
 import socket
 from .helpers import get_agentops_version
+from .log_config import logger
 import importlib.metadata
 import os
 import sys
@@ -115,14 +116,19 @@ def get_disk_details():
     partitions = psutil.disk_partitions()
     disk_info = {}
     for partition in partitions:
-        usage = psutil.disk_usage(partition.mountpoint)
-        disk_info[partition.device] = {
-            "Mountpoint": partition.mountpoint,
-            "Total": f"{usage.total / (1024**3):.2f} GB",
-            "Used": f"{usage.used / (1024**3):.2f} GB",
-            "Free": f"{usage.free / (1024**3):.2f} GB",
-            "Percentage": f"{usage.percent}%",
-        }
+        try:
+            usage = psutil.disk_usage(partition.mountpoint)
+            disk_info[partition.device] = {
+                "Mountpoint": partition.mountpoint,
+                "Total": f"{usage.total / (1024**3):.2f} GB",
+                "Used": f"{usage.used / (1024**3):.2f} GB",
+                "Free": f"{usage.free / (1024**3):.2f} GB",
+                "Percentage": f"{usage.percent}%",
+            }
+        except OSError as inaccessible:
+            # Skip inaccessible partitions, such as removable drives with no media
+            logger.debug("Mountpoint %s inaccessible: %s", partition.mountpoint, inaccessible)
+
     return disk_info
 
 
