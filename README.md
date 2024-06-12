@@ -115,6 +115,12 @@ pip install git+https://github.com/AgentOps-AI/crewAI.git@main
 - [AgentOps integration example](https://docs.agentops.ai/v1/integrations/crewai)
 - [Official CrewAI documentation](https://docs.crewai.com/how-to/AgentOps-Observability)
 
+### AutoGen 🤖
+With only two lines of code, add full observability and monitoring to Autogen agents. Set an `AGENTOPS_API_KEY` in your environment and call `agentops.init()`
+
+- [Autogen Observability Example](https://microsoft.github.io/autogen/docs/notebooks/agentchat_agentops)
+- [Autogen - AgentOps Documentation](https://microsoft.github.io/autogen/docs/ecosystem/agentops)
+
 ### Langchain 🦜🔗
 
 AgentOps works seamlessly with applications built using Langchain. To use the handler, install Langchain as an optional dependency:

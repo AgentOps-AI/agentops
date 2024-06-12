@@ -3,6 +3,81 @@ title: Autogen
 description: "AgentOps provides first class support for Autogen"
 ---
 
-<Note>
-Documentation for this integration is coming soon.
-</Note>
+AgentOps and Autogen teamed up to make monitoring Autogen agents dead simple.
+
+Autogen has comprehensive [documentation](https://microsoft.github.io/autogen/docs) available as well as a great [quickstart](https://microsoft.github.io/autogen/docs/Getting-Started).
+
+## Adding AgentOps to Autogen agents
+
+<Steps>
+	<Step title="Install the AgentOps SDK">
+		<CodeGroup>
+			```bash pip
+			pip install agentops
+			```
+			```bash poetry
+			poetry add agentops
+			```
+		</CodeGroup>
+		<Check>
+			[Give us a star](https://github.com/AgentOps-AI/agentops) on GitHub while you're at it (you may be our 1,000th 😊)
+		</Check>
+	</Step>
+	<Step title="Install Autogen">
+		<CodeGroup>
+			```bash pip
+			pip install pyautogen
+			```
+			```bash poetry
+			poetry add pyautogen
+			```
+		</CodeGroup>
+	</Step>
+	<Step title="Add 3 lines of code">
+		1. Before setting up anything in Autogen, call `agentops.init()`
+		2. At the end of your agent run, call `agentops.end_session("Success")`
+		<CodeGroup>
+			```python python
+			import agentops
+
+			# Beginning of program (i.e. main.py, __init__.py)
+			# IMPORTANT: Must be before using any autogen setup
+			agentops.init(<INSERT YOUR API KEY HERE>)
+			...
+			# End of program (e.g. main.py)
+			agentops.end_session("Success") # Success|Fail|Indeterminate
+			```
+		</CodeGroup>
+		<Check>
+			Instantiating the AgentOps client will automatically instrument Autogen, meaning you will be able to see all
+			of your sessions on the AgentOps Dashboard along with the full LLM chat histories, cost, token counts, etc.
+		</Check>
+		<Tip>
+			For more features see our [Usage](/v1/usage) section.
+		</Tip>
+	</Step>
+	<Step title="Set your API key">
+		Retrieve an API Key from your Settings > [Projects & API Keys](https://app.agentops.ai/settings/projects) page.
+		<Frame type="glass" caption="Settings > Projects & API Keys">
+			<img height="200" src="/images/api-keys.png" />
+		</Frame>
+		<Info>
+			API keys are tied to individual projects.<br></br>
+			A Default Project has been created for you, so just click Copy API Key
+		</Info>
+		Set this API Key in your [environment variables](/v1/usage/environment-variables)
+		```python .env
+		AGENTOPS_API_KEY=<YOUR API KEY>
+		```
+	</Step>
+    <Step title="Run your agent">
+		Execute your program and visit [app.agentops.ai/drilldown](https://app.agentops.ai/drilldown) to observe your Autogen Agent! 🕵️
+		<Tip>
+			After your run, AgentOps prints a clickable url to console linking directly to your session in the Dashboard
+		</Tip>
+		<div/>{/* Intentionally blank div for newline */}
+		<Frame type="glass" caption="Clickable link to session">
+			<img height="200" src="https://github.com/AgentOps-AI/agentops/blob/cf67191f13e0e2a09446a61b7393e1810b3eee95/docs/images/link-to-session.gif?raw=true" />
+		</Frame>
+	</Step>
+</Steps>
