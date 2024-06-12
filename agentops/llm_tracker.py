@@ -13,7 +13,6 @@ import pprint
 original_create = None
 original_create_async = None
 
-
 class LlmTracker:
     SUPPORTED_APIS = {
         "litellm": {"1.3.1": ("openai_chat_completions.completion",)},
@@ -27,6 +26,9 @@ class LlmTracker:
         "cohere": {
             "5.4.0": ("chat", "chat_stream"),
         },
+        "ollama": {
+            "0.1.0": ("chat", "async_chat"),
+        }
     }
 
     def __init__(self, client):
@@ -260,8 +262,6 @@ class LlmTracker:
             StreamedChatResponse_ToolCallsGeneration,
         )
 
-        # from cohere.types.chat import ChatGenerationChunk
-
         # NOTE: Cohere only returns one message and its role will be CHATBOT which we are coercing to "assistant"
         self.llm_event = LLMEvent(init_timestamp=init_timestamp, params=kwargs)
 
@@ -375,9 +375,6 @@ class LlmTracker:
                     yield chunk
 
             return generator()
-
-        # TODO: we should record if they pass a chat.connectors, because it means they intended to call a tool
-        # Not enough to record StreamedChatResponse_ToolCallsGeneration because the tool may have not gotten called
 
         try:
             self.llm_event.returns = response.dict()

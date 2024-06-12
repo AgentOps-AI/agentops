@@ -35,7 +35,6 @@ from .llm_tracker import LlmTracker
 from termcolor import colored
 from typing import Tuple
 
-
 @singleton
 class Client(metaclass=MetaClient):
     """
@@ -56,9 +55,9 @@ class Client(metaclass=MetaClient):
             sorting later (e.g. ["GPT-4"]).
         override (bool, optional): [Deprecated] Use `instrument_llm_calls` instead. Whether to instrument LLM calls
             and emit LLMEvents.
-        instrument_llm_calls (bool): Whether to instrument LLM calls and emit LLMEvents..
+        instrument_llm_calls (bool): Whether to instrument LLM calls and emit LLMEvents.
         auto_start_session (bool): Whether to start a session automatically when the client is created.
-        inherited_session_id (optional, str): Init Agentops with an existing Session
+        inherited_session_id (optional, str): Init AgentOps with an existing Session
         skip_auto_end_session (optional, bool): Don't automatically end session based on your framework's decision making
     Attributes:
         _session (Session, optional): A Session is a grouping of events (e.g. a run of your agent).
