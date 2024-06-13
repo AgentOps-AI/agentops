@@ -18,6 +18,19 @@ try:
 except ModuleNotFoundError:
     pass
 
+is_initialized = False
+
+
+def noop(*args, **kwargs):
+    return
+
+
+def check_init(child_function, *args, **kwargs):
+    if is_initialized:
+        return child_function(*args, **kwargs)
+    else:
+        return noop
+
 
 def init(
     api_key: Optional[str] = None,
@@ -79,6 +92,9 @@ def init(
         skip_auto_end_session=skip_auto_end_session,
     )
 
+    global is_initialized
+    is_initialized = True
+
     return inherited_session_id or c.current_session_id
 
 
@@ -105,6 +121,7 @@ def end_session(
     )
 
 
+@check_init
 def start_session(
     tags: Optional[List[str]] = None,
     config: Optional[Configuration] = None,
@@ -121,6 +138,7 @@ def start_session(
     return Client().start_session(tags, config, inherited_session_id)
 
 
+@check_init
 def record(event: Union[Event, ErrorEvent]):
     """
     Record an event with the AgentOps service.
@@ -131,6 +149,7 @@ def record(event: Union[Event, ErrorEvent]):
     Client().record(event)
 
 
+@check_init
 def add_tags(tags: List[str]):
     """
     Append to session tags at runtime.
@@ -141,6 +160,7 @@ def add_tags(tags: List[str]):
     Client().add_tags(tags)
 
 
+@check_init
 def set_tags(tags: List[str]):
     """
     Replace session tags at runtime.
@@ -169,5 +189,6 @@ def stop_instrumenting():
     Client().stop_instrumenting()
 
 
+@check_init
 def create_agent(name: str, agent_id: Optional[str] = None):
     return Client().create_agent(name=name, agent_id=agent_id)

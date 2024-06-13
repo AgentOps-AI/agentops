@@ -26,10 +26,10 @@ class TestSessions:
         self.api_key = "random_api_key"
         self.event_type = "test_event_type"
         self.config = agentops.Configuration(api_key=self.api_key, max_wait_time=50)
+        agentops.init(api_key=self.api_key)
 
     def test_session(self, mock_req):
         agentops.start_session(config=self.config)
-        print(self.config.api_key)
 
         agentops.record(ActionEvent(self.event_type))
         agentops.record(ActionEvent(self.event_type))
