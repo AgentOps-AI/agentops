@@ -1,4 +1,5 @@
 # agentops/__init__.py
+import functools
 import os
 import logging
 from typing import Optional, List, Union
@@ -20,6 +21,23 @@ try:
 except ModuleNotFoundError:
     pass
 
+is_initialized = False
+
+
+def noop(*args, **kwargs):
+    return
+
+
+def check_init(child_function):
+    @functools.wraps(child_function)
+    def wrapper(*args, **kwargs):
+        if is_initialized:
+            return child_function(*args, **kwargs)
+        else:
+            return noop(*args, **kwargs)
+
+    return wrapper
+
 
 def init(
     api_key: Optional[str] = None,
@@ -28,7 +46,6 @@ def init(
     max_wait_time: Optional[int] = None,
     max_queue_size: Optional[int] = None,
     tags: Optional[List[str]] = None,
-    override: Optional[bool] = None,  # Deprecated
     instrument_llm_calls=True,
     auto_start_session=True,
     inherited_session_id: Optional[str] = None,
@@ -50,7 +67,6 @@ def init(
         max_queue_size (int, optional): The maximum size of the event queue. Defaults to 100.
         tags (List[str], optional): Tags for the sessions that can be used for grouping or
             sorting later (e.g. ["GPT-4"]).
-        override (bool, optional): [Deprecated] Use `instrument_llm_calls` instead. Whether to instrument LLM calls and emit LLMEvents.
         instrument_llm_calls (bool): Whether to instrument LLM calls and emit LLMEvents..
         auto_start_session (bool): Whether to start a session automatically when the client is created.
         inherited_session_id (optional, str): Init Agentops with an existing Session
@@ -74,7 +90,6 @@ def init(
         max_wait_time=max_wait_time,
         max_queue_size=max_queue_size,
         tags=tags,
-        override=override,
         instrument_llm_calls=instrument_llm_calls,
         auto_start_session=auto_start_session,
         inherited_session_id=inherited_session_id,
@@ -87,6 +102,11 @@ def init(
         return c.current_session_ids[0]
     else:
         return None
+
+    global is_initialized
+    is_initialized = True
+
+    return inherited_session_id or c.current_session_id
 
 
 def end_session(
@@ -129,9 +149,19 @@ def start_session(
         config: (Configuration, optional): Client configuration object,
         inherited_session_id: (str, optional): Set the session ID to inherit from another client
     """
-    return Client().start_session(tags, config, inherited_session_id)
+
+    try:
+        sess_result = Client().start_session(tags, config, inherited_session_id)
+
+        global is_initialized
+        is_initialized = True
+
+        return sess_result
+    except Exception:
+        pass
 
 
+@check_init
 def record(event: Union[Event, ErrorEvent], session_id: Optional[str] = None):
     """
     Record an event with the AgentOps service.
@@ -143,6 +173,7 @@ def record(event: Union[Event, ErrorEvent], session_id: Optional[str] = None):
     Client().record(event, session_id)
 
 
+@check_init
 def add_tags(tags: List[str], session_id: Optional[str] = None):
     """
     Append to session tags at runtime.
@@ -153,7 +184,7 @@ def add_tags(tags: List[str], session_id: Optional[str] = None):
     """
     Client().add_tags(tags, session_id)
 
-
+@check_init
 def set_tags(tags: List[str], session_id: Optional[str] = None):
     """
     Replace session tags at runtime.
@@ -183,5 +214,6 @@ def stop_instrumenting():
     Client().stop_instrumenting()
 
 
+@check_init
 def create_agent(name: str, agent_id: Optional[str] = None):
     return Client().create_agent(name=name, agent_id=agent_id)
