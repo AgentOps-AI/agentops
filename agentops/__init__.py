@@ -1,4 +1,5 @@
 # agentops/__init__.py
+import functools
 import os
 import logging
 from typing import Optional, List, Union
@@ -25,11 +26,15 @@ def noop(*args, **kwargs):
     return
 
 
-def check_init(child_function, *args, **kwargs):
-    if is_initialized:
-        return child_function(*args, **kwargs)
-    else:
-        return noop
+def check_init(child_function):
+    @functools.wraps(child_function)
+    def wrapper(*args, **kwargs):
+        if is_initialized:
+            return child_function(*args, **kwargs)
+        else:
+            return noop(*args, **kwargs)
+
+    return wrapper
 
 
 def init(
@@ -138,7 +143,7 @@ def start_session(
     return Client().start_session(tags, config, inherited_session_id)
 
 
-@check_init
+# @check_init
 def record(event: Union[Event, ErrorEvent]):
     """
     Record an event with the AgentOps service.
@@ -149,7 +154,7 @@ def record(event: Union[Event, ErrorEvent]):
     Client().record(event)
 
 
-@check_init
+# @check_init
 def add_tags(tags: List[str]):
     """
     Append to session tags at runtime.
@@ -160,7 +165,7 @@ def add_tags(tags: List[str]):
     Client().add_tags(tags)
 
 
-@check_init
+# @check_init
 def set_tags(tags: List[str]):
     """
     Replace session tags at runtime.
@@ -189,6 +194,6 @@ def stop_instrumenting():
     Client().stop_instrumenting()
 
 
-@check_init
+# @check_init
 def create_agent(name: str, agent_id: Optional[str] = None):
     return Client().create_agent(name=name, agent_id=agent_id)
