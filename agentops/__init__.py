@@ -83,7 +83,7 @@ def init(
 
     if inherited_session_id:
         return inherited_session_id
-    elif len(c.current_session_ids) is 1:
+    elif len(c.current_session_ids) == 1:
         return c.current_session_ids[0]
     else:
         return None

@@ -115,6 +115,7 @@ class Client(metaclass=MetaClient):
                 UUID(inherited_session_id)
 
         except ConfigurationError:
+            logger.warning("Failed to setup client Configuration")
             return
 
         self._handle_unclean_exits()
@@ -361,7 +362,9 @@ class Client(metaclass=MetaClient):
         logger.setLevel(log_levels.get(logging_level or "INFO", "INFO"))
 
         if not config and not self.config:
-            return logger.warning("Cannot start session - missing configuration")
+            return logger.warning(
+                "Cannot start session - missing configuration - did you call init()?"
+            )
 
         session_id = (
             UUID(inherited_session_id) if inherited_session_id is not None else uuid4()
@@ -439,7 +442,7 @@ class Client(metaclass=MetaClient):
 
         token_cost = self._worker.end_session(session)
 
-        if token_cost == "unknown":
+        if token_cost == "unknown" or token_cost is None:
             logger.info("Could not determine cost of run.")
         else:
             token_cost_d = Decimal(token_cost)

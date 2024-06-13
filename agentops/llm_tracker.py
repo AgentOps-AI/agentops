@@ -34,10 +34,14 @@ class LlmTracker:
         self.completion = ""
         self.llm_event: Optional[LLMEvent] = None
 
-    def _handle_response_v0_openai(self, response, kwargs, init_timestamp):
+    def _handle_response_v0_openai(
+        self, response, kwargs, init_timestamp, session_id: Optional[str] = None
+    ):
         """Handle responses for OpenAI versions <v1.0.0"""
 
         self.llm_event = LLMEvent(init_timestamp=init_timestamp, params=kwargs)
+        if session_id is not None:
+            self.llm_event.session_id = session_id
 
         def handle_stream_chunk(chunk):
             # NOTE: prompt/completion usage not returned in response when streaming
@@ -71,7 +75,7 @@ class LlmTracker:
                     }
                     self.llm_event.end_timestamp = get_ISO_time()
 
-                    self.client.record(self.llm_event)
+                    self.client.record(self.llm_event, session_id=session_id)
             except Exception as e:
                 self.client.record(
                     ErrorEvent(trigger_event=self.llm_event, exception=e)
@@ -119,7 +123,7 @@ class LlmTracker:
             self.llm_event.model = response["model"]
             self.llm_event.end_timestamp = get_ISO_time()
 
-            self.client.record(self.llm_event)
+            self.client.record(self.llm_event, session_id=session_id)
         except Exception as e:
             self.client.record(ErrorEvent(trigger_event=self.llm_event, exception=e))
             kwargs_str = pprint.pformat(kwargs)
@@ -132,13 +136,17 @@ class LlmTracker:
 
         return response
 
-    def _handle_response_v1_openai(self, response, kwargs, init_timestamp):
+    def _handle_response_v1_openai(
+        self, response, kwargs, init_timestamp, session_id: Optional[str] = None
+    ):
         """Handle responses for OpenAI versions >v1.0.0"""
         from openai import Stream, AsyncStream
         from openai.types.chat import ChatCompletionChunk
         from openai.resources import AsyncCompletions
 
         self.llm_event = LLMEvent(init_timestamp=init_timestamp, params=kwargs)
+        if session_id is not None:
+            self.llm_event.session_id = session_id
 
         def handle_stream_chunk(chunk: ChatCompletionChunk):
             # NOTE: prompt/completion usage not returned in response when streaming
@@ -180,7 +188,7 @@ class LlmTracker:
                     }
                     self.llm_event.end_timestamp = get_ISO_time()
 
-                    self.client.record(self.llm_event)
+                    self.client.record(self.llm_event, session_id=session_id)
             except Exception as e:
                 self.client.record(
                     ErrorEvent(trigger_event=self.llm_event, exception=e)
@@ -233,7 +241,7 @@ class LlmTracker:
             self.llm_event.completion_tokens = response.usage.completion_tokens
             self.llm_event.model = response.model
 
-            self.client.record(self.llm_event)
+            self.client.record(self.llm_event, session_id=session_id)
         except Exception as e:
             self.client.record(ErrorEvent(trigger_event=self.llm_event, exception=e))
             kwargs_str = pprint.pformat(kwargs)
@@ -246,7 +254,9 @@ class LlmTracker:
 
         return response
 
-    def _handle_response_cohere(self, response, kwargs, init_timestamp):
+    def _handle_response_cohere(
+        self, response, kwargs, init_timestamp, session_id: Optional[str] = None
+    ):
         """Handle responses for Cohere versions >v5.4.0"""
         from cohere.types.non_streamed_chat_response import NonStreamedChatResponse
         from cohere.types.streamed_chat_response import (
@@ -264,6 +274,8 @@ class LlmTracker:
 
         # NOTE: Cohere only returns one message and its role will be CHATBOT which we are coercing to "assistant"
         self.llm_event = LLMEvent(init_timestamp=init_timestamp, params=kwargs)
+        if session_id is not None:
+            self.llm_event.session_id = session_id
 
         self.action_events = {}
 
@@ -286,7 +298,7 @@ class LlmTracker:
                         "content": chunk.response.text,
                     }
                     self.llm_event.end_timestamp = get_ISO_time()
-                    self.client.record(self.llm_event)
+                    self.client.record(self.llm_event, session_id=session_id)
 
                     # StreamedChatResponse_SearchResults = ActionEvent
                     search_results = chunk.response.search_results
@@ -404,7 +416,7 @@ class LlmTracker:
             self.llm_event.completion_tokens = response.meta.tokens.output_tokens
             self.llm_event.model = kwargs.get("model", "command-r-plus")
 
-            self.client.record(self.llm_event)
+            self.client.record(self.llm_event, session_id=session_id)
         except Exception as e:
             self.client.record(ErrorEvent(trigger_event=self.llm_event, exception=e))
             kwargs_str = pprint.pformat(kwargs)
@@ -426,9 +438,13 @@ class LlmTracker:
 
         def patched_function(*args, **kwargs):
             init_timestamp = get_ISO_time()
+            session_id = kwargs.get("session_id", None)
+            del kwargs["session_id"]
             # Call the original function with its original arguments
             result = original_create(*args, **kwargs)
-            return self._handle_response_v1_openai(result, kwargs, init_timestamp)
+            return self._handle_response_v1_openai(
+                result, kwargs, init_timestamp, session_id=session_id
+            )
 
         # Override the original method with the patched one
         completions.Completions.create = patched_function
@@ -443,8 +459,12 @@ class LlmTracker:
         async def patched_function(*args, **kwargs):
             # Call the original function with its original arguments
             init_timestamp = get_ISO_time()
+            session_id = kwargs.get("session_id", None)
+            del kwargs["session_id"]
             result = await original_create_async(*args, **kwargs)
-            return self._handle_response_v1_openai(result, kwargs, init_timestamp)
+            return self._handle_response_v1_openai(
+                result, kwargs, init_timestamp, session_id=session_id
+            )
 
         # Override the original method with the patched one
         completions.AsyncCompletions.create = patched_function
@@ -456,9 +476,13 @@ class LlmTracker:
 
         def patched_function(*args, **kwargs):
             init_timestamp = get_ISO_time()
+            session_id = kwargs.get("session_id", None)
+            del kwargs["session_id"]
             result = original_create(*args, **kwargs)
             # Note: litellm calls all LLM APIs using the OpenAI format
-            return self._handle_response_v1_openai(result, kwargs, init_timestamp)
+            return self._handle_response_v1_openai(
+                result, kwargs, init_timestamp, session_id=session_id
+            )
 
         litellm.completion = patched_function
 
@@ -470,9 +494,13 @@ class LlmTracker:
         async def patched_function(*args, **kwargs):
             # Call the original function with its original arguments
             init_timestamp = get_ISO_time()
+            session_id = kwargs.get("session_id", None)
+            del kwargs["session_id"]
             result = await original_create(*args, **kwargs)
             # Note: litellm calls all LLM APIs using the OpenAI format
-            return self._handle_response_v1_openai(result, kwargs, init_timestamp)
+            return self._handle_response_v1_openai(
+                result, kwargs, init_timestamp, session_id=session_id
+            )
 
         # Override the original method with the patched one
         litellm.acompletion = patched_function
@@ -486,8 +514,12 @@ class LlmTracker:
         def patched_function(*args, **kwargs):
             # Call the original function with its original arguments
             init_timestamp = get_ISO_time()
+            session_id = kwargs.get("session_id", None)
+            del kwargs["session_id"]
             result = original_chat(*args, **kwargs)
-            return self._handle_response_cohere(result, kwargs, init_timestamp)
+            return self._handle_response_cohere(
+                result, kwargs, init_timestamp, session_id=session_id
+            )
 
         # Override the original method with the patched one
         cohere.Client.chat = patched_function
