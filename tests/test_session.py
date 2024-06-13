@@ -29,7 +29,6 @@ class TestSessions:
 
     def test_session(self, mock_req):
         agentops.start_session(config=self.config)
-        print(self.config.api_key)
 
         agentops.record(ActionEvent(self.event_type))
         agentops.record(ActionEvent(self.event_type))
