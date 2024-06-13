@@ -126,7 +126,6 @@ def end_session(
     )
 
 
-@check_init
 def start_session(
     tags: Optional[List[str]] = None,
     config: Optional[Configuration] = None,
@@ -140,7 +139,16 @@ def start_session(
             e.g. ["test_run"].
         config: (Configuration, optional): Client configuration object
     """
-    return Client().start_session(tags, config, inherited_session_id)
+
+    try:
+        sess_result = Client().start_session(tags, config, inherited_session_id)
+
+        global is_initialized
+        is_initialized = True
+
+        return sess_result
+    except Exception:
+        pass
 
 
 @check_init
