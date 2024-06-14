@@ -681,12 +681,16 @@ class LlmTracker:
                         )
 
                 if api == "ollama":
-                    logger.warning("ollama support is still in dev stage.")
                     module_version = version(api)
 
-                    self.override_ollama_chat()
-                    self.override_ollama_chat_client()
-                    self.override_ollama_chat_async_client()
+                    if Version(module_version) >= parse("0.0.1"):
+                        self.override_ollama_chat()
+                        self.override_ollama_chat_client()
+                        self.override_ollama_chat_async_client()
+                    else:
+                        logger.warning(
+                            f"Only Ollama>=0.0.1 supported. v{module_version} found."
+                        )
 
     def stop_instrumenting(self):
         self.undo_override_openai_v1_async_completion()
