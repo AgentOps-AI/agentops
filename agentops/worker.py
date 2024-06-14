@@ -39,7 +39,6 @@ class Worker:
                 self.flush_queue()
 
     def flush_queue(self) -> None:
-        print("flushing queue")
         with self.lock:
             queue_copy = copy.deepcopy(self.queue)  # Copy the current items
 
@@ -53,8 +52,6 @@ class Worker:
                         payload = {
                             "events": queue_session.events,
                         }
-
-                        print(payload)
 
                         serialized_payload = safe_serialize(payload).encode("utf-8")
                         HttpClient.post(
@@ -88,9 +85,7 @@ class Worker:
             return jwt
 
     def start_session(self, session: Session) -> bool:
-        print(f"adding {str(session.session_id)} to queue")
         self.queue[str(session.session_id)] = QueueSession()
-        print(self.queue)
         with self.lock:
             payload = {"session": session.__dict__}
             serialized_payload = json.dumps(filter_unjsonable(payload)).encode("utf-8")
