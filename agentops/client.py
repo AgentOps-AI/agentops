@@ -418,7 +418,7 @@ class Client(metaclass=MetaClient):
         self._session.end_session(end_state, end_state_reason)
         token_cost = self._worker.end_session(self._session)
 
-        if token_cost == "unknown":
+        if token_cost is None or token_cost == "unknown":
             logger.info("Could not determine cost of run.")
         else:
             token_cost_d = Decimal(token_cost)
