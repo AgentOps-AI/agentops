@@ -48,7 +48,7 @@ AgentOps helps developers build, evaluate, and monitor AI agents. Tools to build
 | 💸 **LLM Cost Management**            | Track spend with LLM foundation model providers               |
 | 🧪 **Agent Benchmarking**             | Test your agents against 1,000+ evals                         |
 | 🔐 **Compliance and Security**        | Detect common prompt injection and data exfiltration exploits |
-| 🤝 **Framework Integrations**         | Easily plugs in with frameworks like CrewAI and LangChain     |
+| 🤝 **Framework Integrations**         | Native Integrations with CrewAI, AutoGen, & LangChain         |
 
 ## Quick Start ⌨️
 
