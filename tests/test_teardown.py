@@ -29,4 +29,10 @@ class TestSessions:
     def test_can_stop_with_no_instrumentation(self):
         non_instrumented = Client(self.api_key, instrument_llm_calls=False,
                                   allow_multiple_instances=True)
+        assert non_instrumented.llm_tracker is None
         non_instrumented.stop_instrumenting()
+
+    def test_initializes_llm_tracker_when_enabled(self):
+        instrumented = Client(self.api_key, instrument_llm_calls=True,
+                              allow_multiple_instances=True)
+        assert instrumented.llm_tracker is not None
