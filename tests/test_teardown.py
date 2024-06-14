@@ -20,8 +20,13 @@ class TestSessions:
     def setup_method(self):
         self.api_key = "random_api_key"
         self.event_type = "test_event_type"
-        self.client = Client(self.api_key)
+        self.client = Client(self.api_key, allow_multiple_instances=False)
 
     def test_exit(self):
         # Tests should not hang.
         ...
+
+    def test_can_stop_with_no_instrumentation(self):
+        non_instrumented = Client(self.api_key, instrument_llm_calls=False,
+                                  allow_multiple_instances=True)
+        non_instrumented.stop_instrumenting()
