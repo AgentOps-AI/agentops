@@ -241,10 +241,10 @@ class Client(metaclass=MetaClient):
 
                 event.trigger_event_id = event.trigger_event.id
                 event.trigger_event_type = event.trigger_event.event_type
-                self._worker.add_event(event.trigger_event.__dict__, session_id)
+                self._worker.add_event(event.trigger_event.__dict__, session.session_id)
                 event.trigger_event = None  # removes trigger_event from serialization
 
-        self._worker.add_event(event.__dict__, session_id)
+        self._worker.add_event(event.__dict__, session.session_id)
 
     def _record_event_sync(self, func, event_name, *args, **kwargs):
         init_time = get_ISO_time()
@@ -376,7 +376,8 @@ class Client(metaclass=MetaClient):
             host_env=get_host_env(self._env_data_opt_out),
         )
 
-        self._worker = Worker(config or self.config)
+        if not self._worker:
+            self._worker = Worker(config or self.config)
 
         start_session_result = False
         if inherited_session_id is not None:

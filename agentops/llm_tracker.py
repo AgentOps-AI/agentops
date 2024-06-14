@@ -78,7 +78,8 @@ class LlmTracker:
                     self.client.record(self.llm_event, session_id=session_id)
             except Exception as e:
                 self.client.record(
-                    ErrorEvent(trigger_event=self.llm_event, exception=e)
+                    ErrorEvent(trigger_event=self.llm_event, exception=e),
+                    session_id=session_id,
                 )
                 kwargs_str = pprint.pformat(kwargs)
                 chunk = pprint.pformat(chunk)
@@ -125,7 +126,10 @@ class LlmTracker:
 
             self.client.record(self.llm_event, session_id=session_id)
         except Exception as e:
-            self.client.record(ErrorEvent(trigger_event=self.llm_event, exception=e))
+            self.client.record(
+                ErrorEvent(trigger_event=self.llm_event, exception=e),
+                session_id=session_id,
+            )
             kwargs_str = pprint.pformat(kwargs)
             response = pprint.pformat(response)
             logger.warning(
@@ -191,7 +195,8 @@ class LlmTracker:
                     self.client.record(self.llm_event, session_id=session_id)
             except Exception as e:
                 self.client.record(
-                    ErrorEvent(trigger_event=self.llm_event, exception=e)
+                    ErrorEvent(trigger_event=self.llm_event, exception=e),
+                    session_id=session_id,
                 )
                 kwargs_str = pprint.pformat(kwargs)
                 chunk = pprint.pformat(chunk)
@@ -243,7 +248,10 @@ class LlmTracker:
 
             self.client.record(self.llm_event, session_id=session_id)
         except Exception as e:
-            self.client.record(ErrorEvent(trigger_event=self.llm_event, exception=e))
+            self.client.record(
+                ErrorEvent(trigger_event=self.llm_event, exception=e),
+                session_id=session_id,
+            )
             kwargs_str = pprint.pformat(kwargs)
             response = pprint.pformat(response)
             logger.warning(
@@ -331,7 +339,7 @@ class LlmTracker:
                             action_event.end_timestamp = get_ISO_time()
 
                     for key, action_event in self.action_events.items():
-                        self.client.record(action_event)
+                        self.client.record(action_event, session_id=session_id)
 
                 elif isinstance(chunk, StreamedChatResponse_TextGeneration):
                     self.llm_event.completion += chunk.text
@@ -358,7 +366,8 @@ class LlmTracker:
 
             except Exception as e:
                 self.client.record(
-                    ErrorEvent(trigger_event=self.llm_event, exception=e)
+                    ErrorEvent(trigger_event=self.llm_event, exception=e),
+                    session_id=session_id,
                 )
                 kwargs_str = pprint.pformat(kwargs)
                 chunk = pprint.pformat(chunk)
@@ -418,7 +427,10 @@ class LlmTracker:
 
             self.client.record(self.llm_event, session_id=session_id)
         except Exception as e:
-            self.client.record(ErrorEvent(trigger_event=self.llm_event, exception=e))
+            self.client.record(
+                ErrorEvent(trigger_event=self.llm_event, exception=e),
+                session_id=session_id,
+            )
             kwargs_str = pprint.pformat(kwargs)
             response = pprint.pformat(response)
             logger.warning(

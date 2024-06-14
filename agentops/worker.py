@@ -1,4 +1,6 @@
 import json
+from uuid import UUID
+
 from .log_config import logger
 import threading
 import time
@@ -6,47 +8,59 @@ from .http_client import HttpClient
 from .config import ClientConfiguration
 from .session import Session
 from .helpers import safe_serialize, filter_unjsonable
-from typing import Dict, Optional, List
+from typing import Dict, Optional, List, Union
+import copy
+
+
+class QueueSession:
+    events: List[Dict] = []
+    jwt: str = None
 
 
 class Worker:
     def __init__(self, config: ClientConfiguration) -> None:
         self.config = config
-        self.queue: Dict[str, List[Dict]] = {}
+        self.queue: Dict[str, QueueSession] = {}
         self.lock = threading.Lock()
         self.stop_flag = threading.Event()
         self.thread = threading.Thread(target=self.run)
         self.thread.daemon = True
         self.thread.start()
-        self.jwt = None
 
-    def add_event(self, event: dict, session_id: str) -> None:
+    def add_event(self, event: dict, session_id: Union[str, UUID]) -> None:
+        session_id = str(session_id)
         with self.lock:
             if session_id in self.queue.keys():
-                self.queue[session_id].append(event)
+                self.queue[session_id].events.append(event)
             else:
-                self.queue[session_id] = [event]
+                self.queue[session_id].events = [event]
 
-            if len(self.queue[session_id]) >= self.config.max_queue_size:
+            if len(self.queue[session_id].events) >= self.config.max_queue_size:
                 self.flush_queue()
 
     def flush_queue(self) -> None:
+        print("flushing queue")
         with self.lock:
-            queue_copy = dict(self.queue)  # Copy the current items
-            self.queue.clear()
+            queue_copy = copy.deepcopy(self.queue)  # Copy the current items
+
+            # clear events from queue
+            for session_id in self.queue.keys():
+                self.queue[session_id].events = []
+
             if len(queue_copy.keys()) > 0:
-                for session_id, events in queue_copy.items():
-                    if len(queue_copy[session_id]) > 0:
+                for session_id, queue_session in queue_copy.items():
+                    if len(queue_copy[session_id].events) > 0:
                         payload = {
-                            "session_id": session_id,
-                            "events": events,
+                            "events": queue_session.events,
                         }
+
+                        print(payload)
 
                         serialized_payload = safe_serialize(payload).encode("utf-8")
                         HttpClient.post(
                             f"{self.config.endpoint}/v2/create_events",
                             serialized_payload,
-                            jwt=self.jwt,
+                            jwt=queue_session.jwt,
                         )
 
                         logger.debug("\n<AGENTOPS_DEBUG_OUTPUT>")
@@ -54,7 +68,7 @@ class Worker:
                         logger.debug(serialized_payload)
                         logger.debug("</AGENTOPS_DEBUG_OUTPUT>\n")
 
-    def reauthorize_jwt(self, session: Session) -> bool:
+    def reauthorize_jwt(self, session: Session) -> Union[str, None]:
         with self.lock:
             payload = {"session_id": session.session_id}
             serialized_payload = json.dumps(filter_unjsonable(payload)).encode("utf-8")
@@ -67,16 +81,16 @@ class Worker:
             logger.debug(res.body)
 
             if res.code != 200:
-                return False
+                return None
 
-            self.jwt = res.body.get("jwt", None)
-            if self.jwt is None:
-                return False
-
-            return True
+            jwt = res.body.get("jwt", None)
+            self.queue[str(session.session_id)].jwt = jwt
+            return jwt
 
     def start_session(self, session: Session) -> bool:
-        self._session = session
+        print(f"adding {str(session.session_id)} to queue")
+        self.queue[str(session.session_id)] = QueueSession()
+        print(self.queue)
         with self.lock:
             payload = {"session": session.__dict__}
             serialized_payload = json.dumps(filter_unjsonable(payload)).encode("utf-8")
@@ -92,8 +106,9 @@ class Worker:
             if res.code != 200:
                 return False
 
-            self.jwt = res.body.get("jwt", None)
-            if self.jwt is None:
+            jwt = res.body.get("jwt", None)
+            self.queue[str(session.session_id)].jwt = jwt
+            if jwt is None:
                 return False
 
             return True
@@ -109,7 +124,7 @@ class Worker:
             res = HttpClient.post(
                 f"{self.config.endpoint}/v2/update_session",
                 json.dumps(filter_unjsonable(payload)).encode("utf-8"),
-                jwt=self.jwt,
+                jwt=self.queue[str(session.session_id)].jwt,
             )
             logger.debug(res.body)
             return res.body.get("token_cost", "unknown")
