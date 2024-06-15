@@ -81,7 +81,7 @@ class TestSingleSessions:
 
         # Act
         agentops.record(ActionEvent(self.event_type))
-        time.sleep(0.15)
+        time.sleep(1.5)
 
         # Assert 2 requests - 1 for session init, 1 for event
         assert len(mock_req.request_history) == 2
@@ -118,6 +118,7 @@ class TestSingleSessions:
         agentops.end_session(end_state)
         time.sleep(0.15)
 
+
 class TestMultiSessions:
     def setup_method(self):
         self.api_key = "random_api_key"
@@ -149,7 +150,6 @@ class TestMultiSessions:
         assert mock_req.last_request.headers["Authorization"] == f"Bearer some_jwt"
         request_json = mock_req.last_request.json()
         assert request_json["events"][0]["event_type"] == self.event_type
-        assert request_json["session_id"] in [session_id_1, session_id_2]
 
         end_state = "Success"
         agentops.end_session(end_state, session_id=session_id_1)

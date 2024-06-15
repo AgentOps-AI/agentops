@@ -24,6 +24,7 @@ from .helpers import (
     conditional_singleton,
     check_call_stack_for_agent_id,
     get_partner_frameworks,
+    singleton,
 )
 from .session import Session
 from .worker import Worker
@@ -36,7 +37,7 @@ from termcolor import colored
 from typing import Tuple
 
 
-@conditional_singleton
+@singleton
 class Client(metaclass=MetaClient):
     """
     Client for AgentOps service.
@@ -248,6 +249,8 @@ class Client(metaclass=MetaClient):
 
     def _record_event_sync(self, func, event_name, *args, **kwargs):
         init_time = get_ISO_time()
+        session_id = kwargs.get("session_id", None)
+        del kwargs["session_id"]
         func_args = inspect.signature(func).parameters
         arg_names = list(func_args.keys())
         # Get default values
@@ -280,7 +283,7 @@ class Client(metaclass=MetaClient):
                 event.screenshot = returns.screenshot
 
             event.end_timestamp = get_ISO_time()
-            self.record(event)
+            self.record(event, session_id)
 
         except Exception as e:
             self.record(ErrorEvent(trigger_event=event, exception=e))
@@ -292,6 +295,8 @@ class Client(metaclass=MetaClient):
 
     async def _record_event_async(self, func, event_name, *args, **kwargs):
         init_time = get_ISO_time()
+        session_id = kwargs.get("session_id", None)
+        del kwargs["session_id"]
         func_args = inspect.signature(func).parameters
         arg_names = list(func_args.keys())
         # Get default values
@@ -326,7 +331,7 @@ class Client(metaclass=MetaClient):
                 event.screenshot = returns.screenshot
 
             event.end_timestamp = get_ISO_time()
-            self.record(event)
+            self.record(event, session_id=session_id)
 
         except Exception as e:
             self.record(ErrorEvent(trigger_event=event, exception=e))

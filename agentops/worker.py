@@ -122,16 +122,18 @@ class Worker:
                 jwt=self.queue[str(session.session_id)].jwt,
             )
             logger.debug(res.body)
+            del self.queue[str(session.session_id)]
             return res.body.get("token_cost", "unknown")
 
     def update_session(self, session: Session) -> None:
         with self.lock:
             payload = {"session": session.__dict__}
+            jwt = self.queue[str(session.session_id)].jwt
 
             res = HttpClient.post(
                 f"{self.config.endpoint}/v2/update_session",
                 json.dumps(filter_unjsonable(payload)).encode("utf-8"),
-                jwt=self.jwt,
+                jwt=jwt,
             )
 
     def create_agent(self, agent_id, name, session_id: str):

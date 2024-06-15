@@ -2,6 +2,7 @@ import agentops
 from .client import Client
 import inspect
 import functools
+from typing import Optional
 
 
 def record_function(event_name: str):
@@ -19,17 +20,20 @@ def record_function(event_name: str):
         if inspect.iscoroutinefunction(func):
 
             @functools.wraps(func)
-            async def async_wrapper(*args, **kwargs):
+            async def async_wrapper(*args, session_id: Optional[str] = None, **kwargs):
                 return await Client()._record_event_async(
-                    func, event_name, *args, **kwargs
+                    func, event_name, *args, session_id=session_id, **kwargs
                 )
 
             return async_wrapper
         else:
 
             @functools.wraps(func)
-            def sync_wrapper(*args, **kwargs):
-                return Client()._record_event_sync(func, event_name, *args, **kwargs)
+            def sync_wrapper(*args, session_id: Optional[str] = None, **kwargs):
+                print(session_id)
+                return Client()._record_event_sync(
+                    func, event_name, *args, session_id=session_id, **kwargs
+                )
 
             return sync_wrapper
 

@@ -27,7 +27,7 @@ class TestRecordAction:
         agentops.init(self.api_key, max_wait_time=5, auto_start_session=False)
 
     def test_record_function_decorator(self, mock_req):
-        agentops.start_session()
+        session_id = agentops.start_session()
 
         @record_function(event_name=self.event_type)
         def add_two(x, y):
@@ -45,10 +45,10 @@ class TestRecordAction:
         assert request_json["events"][0]["params"] == {"x": 3, "y": 4}
         assert request_json["events"][0]["returns"] == 7
 
-        agentops.end_session(end_state="Success")
+        agentops.end_session(end_state="Success", session_id=session_id)
 
     def test_record_function_decorator_multiple(self, mock_req):
-        agentops.start_session()
+        session_id = agentops.start_session()
 
         # Arrange
         @record_function(event_name=self.event_type)
@@ -56,9 +56,9 @@ class TestRecordAction:
             return x + y + z
 
         # Act
-        add_three(1, 2)
+        add_three(1, 2, session_id=session_id)
         time.sleep(0.1)
-        add_three(1, 2)
+        add_three(1, 2, session_id=session_id)
         time.sleep(0.1)
 
         # Assert
@@ -69,11 +69,11 @@ class TestRecordAction:
         assert request_json["events"][0]["params"] == {"x": 1, "y": 2, "z": 3}
         assert request_json["events"][0]["returns"] == 6
 
-        agentops.end_session(end_state="Success")
+        agentops.end_session(end_state="Success", session_id=session_id)
 
     @pytest.mark.asyncio
     async def test_async_function_call(self, mock_req):
-        agentops.start_session()
+        session_id = agentops.start_session()
 
         @record_function(self.event_type)
         async def async_add(x, y):
@@ -81,12 +81,13 @@ class TestRecordAction:
             return x + y
 
         # Act
-        result = await async_add(3, 4)
+        result = await async_add(3, 4, session_id=session_id)
         time.sleep(0.1)
 
         # Assert
         assert result == 7
         # Assert
+        print(mock_req.request_history)
         assert len(mock_req.request_history) == 2
         assert mock_req.last_request.headers["X-Agentops-Api-Key"] == self.api_key
         request_json = mock_req.last_request.json()
@@ -102,4 +103,4 @@ class TestRecordAction:
 
         assert (end - init).total_seconds() >= 0.1
 
-        agentops.end_session(end_state="Success")
+        agentops.end_session(end_state="Success", session_id=session_id)
