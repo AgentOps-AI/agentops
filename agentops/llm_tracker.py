@@ -696,6 +696,7 @@ class LlmTracker:
     def stop_instrumenting(self):
         self.undo_override_openai_v1_async_completion()
         self.undo_override_openai_v1_completion()
+        self.undo_override_ollama()
 
     def undo_override_openai_v1_completion(self):
         global original_create
