@@ -30,7 +30,7 @@ class LlmTracker:
         "cohere": {
             "5.4.0": ("chat", "chat_stream"),
         },
-        "ollama": {},
+        "ollama": {"0.0.1": ("chat", "Client.chat", "AsyncClient.chat")},
     }
 
     def __init__(self, client):
@@ -553,12 +553,12 @@ class LlmTracker:
     def override_ollama_chat(self):
         import ollama
 
-        original_func['ollama.chat'] = ollama.chat
+        original_func["ollama.chat"] = ollama.chat
 
         def patched_function(*args, **kwargs):
             # Call the original function with its original arguments
             init_timestamp = get_ISO_time()
-            result = original_func['ollama.chat'](*args, **kwargs)
+            result = original_func["ollama.chat"](*args, **kwargs)
             return self._handle_response_ollama(result, kwargs, init_timestamp)
 
         # Override the original method with the patched one
@@ -567,12 +567,12 @@ class LlmTracker:
     def override_ollama_chat_client(self):
         from ollama import Client
 
-        original_func['ollama.Client.chat'] = Client.chat
+        original_func["ollama.Client.chat"] = Client.chat
 
         def patched_function(*args, **kwargs):
             # Call the original function with its original arguments
             init_timestamp = get_ISO_time()
-            result = original_func['ollama.Client.chat'](*args, **kwargs)
+            result = original_func["ollama.Client.chat"](*args, **kwargs)
             return self._handle_response_ollama(result, kwargs, init_timestamp)
 
         # Override the original method with the patched one
@@ -581,11 +581,12 @@ class LlmTracker:
     def override_ollama_chat_async_client(self):
         from ollama import AsyncClient
 
-        original_func['ollama.AsyncClient.chat'] = AsyncClient.chat
+        original_func["ollama.AsyncClient.chat"] = AsyncClient.chat
+
         async def patched_function(*args, **kwargs):
             # Call the original function with its original arguments
             init_timestamp = get_ISO_time()
-            result = await original_func['ollama.AsyncClient.chat'](*args, **kwargs)
+            result = await original_func["ollama.AsyncClient.chat"](*args, **kwargs)
             return self._handle_response_ollama(result, kwargs, init_timestamp)
 
         # Override the original method with the patched one
@@ -711,6 +712,6 @@ class LlmTracker:
     def undo_override_ollama(self):
         import ollama
 
-        ollama.chat = original_func['ollama.chat']
-        ollama.Client.chat = original_func['ollama.Client.chat']
-        ollama.AsyncClient.chat = original_func['ollama.AsyncClient.chat']
+        ollama.chat = original_func["ollama.chat"]
+        ollama.Client.chat = original_func["ollama.Client.chat"]
+        ollama.AsyncClient.chat = original_func["ollama.AsyncClient.chat"]
