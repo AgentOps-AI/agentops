@@ -127,7 +127,9 @@ def get_disk_details():
             }
         except OSError as inaccessible:
             # Skip inaccessible partitions, such as removable drives with no media
-            logger.debug("Mountpoint %s inaccessible: %s", partition.mountpoint, inaccessible)
+            logger.debug(
+                "Mountpoint %s inaccessible: %s", partition.mountpoint, inaccessible
+            )
 
     return disk_info
 
