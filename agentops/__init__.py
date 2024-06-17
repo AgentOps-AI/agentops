@@ -135,6 +135,10 @@ def end_session(
     )
 
 
+def end_all_sessions() -> None:
+    return Client().end_all_sessions()
+
+
 def start_session(
     tags: Optional[List[str]] = None,
     config: Optional[ClientConfiguration] = None,
@@ -183,6 +187,7 @@ def add_tags(tags: List[str], session_id: Optional[str] = None):
         session_id (str, optional): which session to add tags to if using multiple concurrent sessions
     """
     Client().add_tags(tags, session_id)
+
 
 @check_init
 def set_tags(tags: List[str], session_id: Optional[str] = None):

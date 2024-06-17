@@ -153,3 +153,6 @@ class Worker:
             time.sleep(self.config.max_wait_time / 1000)
             if self.queue:
                 self.flush_queue()
+
+    def end_all_sessions(self) -> None:
+        self.queue.clear()

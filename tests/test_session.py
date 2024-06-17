@@ -56,6 +56,8 @@ class TestSingleSessions:
         assert request_json["session"]["end_state"] == end_state
         assert request_json["session"]["tags"] == None
 
+        agentops.end_all_sessions()
+
     def test_add_tags(self, mock_req):
         # Arrange
         tags = ["GPT-4"]
@@ -73,6 +75,8 @@ class TestSingleSessions:
         request_json = mock_req.last_request.json()
         assert request_json["session"]["end_state"] == end_state
         assert request_json["session"]["tags"] == ["GPT-4", "test-tag", "dupe-tag"]
+
+        agentops.end_all_sessions()
 
     def test_tags(self, mock_req):
         # Arrange
@@ -101,6 +105,8 @@ class TestSingleSessions:
         assert request_json["session"]["end_state"] == end_state
         assert request_json["session"]["tags"] == tags
 
+        agentops.end_all_sessions()
+
     def test_inherit_session_id(self, mock_req):
         # Arrange
         inherited_id = "4f72e834-ff26-4802-ba2d-62e7613446f1"
@@ -117,6 +123,8 @@ class TestSingleSessions:
         end_state = "Success"
         agentops.end_session(end_state)
         time.sleep(0.15)
+
+        agentops.end_all_sessions()
 
 
 class TestMultiSessions:

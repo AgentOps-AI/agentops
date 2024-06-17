@@ -590,3 +590,6 @@ class Client(metaclass=MetaClient):
             ][0]
 
         return session
+
+    def end_all_sessions(self):
+        self._worker.end_all_sessions()
