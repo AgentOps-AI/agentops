@@ -186,12 +186,12 @@ def set_tags(tags: List[str]):
 
 @check_init
 def record_function(event_name: str):
-    return record_function(event_name)
+    return decorators.record_function(event_name)
 
 
 @check_init
 def track_agent(name: Union[str, None] = None):
-    return track_agent(name)
+    return agent.track_agent(name)
 
 
 def get_api_key() -> str:
