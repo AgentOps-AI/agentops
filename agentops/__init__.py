@@ -12,6 +12,7 @@ from .enums import Models
 from .decorators import record_function, track_route
 from .agent import track_agent
 from .log_config import logger
+from .session import Session
 
 try:
     from .partners.langchain_callback_handler import (
@@ -91,22 +92,21 @@ def init(
         max_queue_size=max_queue_size,
         tags=tags,
         instrument_llm_calls=instrument_llm_calls,
-        auto_start_session=auto_start_session,
+        auto_start_session=False,
         inherited_session_id=inherited_session_id,
         skip_auto_end_session=skip_auto_end_session,
     )
 
-    if inherited_session_id:
-        return inherited_session_id
-    elif len(c.current_session_ids) == 1:
-        return c.current_session_ids[0]
-    else:
-        return None
+    session = None
+    if auto_start_session:
+        session = c.start_session(
+            tags=tags, config=c.config, inherited_session_id=inherited_session_id
+        )
 
     global is_initialized
     is_initialized = True
 
-    return inherited_session_id or c.current_session_id
+    return session
 
 
 def end_session(
@@ -131,7 +131,6 @@ def end_session(
         end_state_reason=end_state_reason,
         video=video,
         is_auto_end=is_auto_end,
-        session_id=session_id,
     )
 
 
@@ -143,7 +142,7 @@ def start_session(
     tags: Optional[List[str]] = None,
     config: Optional[ClientConfiguration] = None,
     inherited_session_id: Optional[str] = None,
-) -> Union[str, None]:
+) -> Union[Session, None]:
     """
     Start a new session for recording events.
 
@@ -166,19 +165,18 @@ def start_session(
 
 
 @check_init
-def record(event: Union[Event, ErrorEvent], session_id: Optional[str] = None):
+def record(event: Union[Event, ErrorEvent]):
     """
     Record an event with the AgentOps service.
 
     Args:
         event (Event): The event to record.
-        session_id (str, optional): the session to attribute the event to if using multiple concurrent sessions.
     """
-    Client().record(event, session_id)
+    Client().record(event)
 
 
 @check_init
-def add_tags(tags: List[str], session_id: Optional[str] = None):
+def add_tags(tags: List[str]):
     """
     Append to session tags at runtime.
 
@@ -186,11 +184,11 @@ def add_tags(tags: List[str], session_id: Optional[str] = None):
         tags (List[str]): The list of tags to append.
         session_id (str, optional): which session to add tags to if using multiple concurrent sessions
     """
-    Client().add_tags(tags, session_id)
+    Client().add_tags(tags)
 
 
 @check_init
-def set_tags(tags: List[str], session_id: Optional[str] = None):
+def set_tags(tags: List[str]):
     """
     Replace session tags at runtime.
 
@@ -198,7 +196,7 @@ def set_tags(tags: List[str], session_id: Optional[str] = None):
         tags (List[str]): The list of tags to set.
         session_id (str, optional): which session to set tags on if using multiple concurrent sessions
     """
-    Client().set_tags(tags, session_id)
+    Client().set_tags(tags)
 
 
 def get_api_key() -> str:

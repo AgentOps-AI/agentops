@@ -110,7 +110,7 @@ class TestSingleSessions:
         # Act
         # session_id correct
         request_json = mock_req.last_request.json()
-        assert request_json["session_id"] == inherited_id
+        assert request_json["session"]["session_id"] == inherited_id
 
         # Act
         end_state = "Success"
@@ -129,20 +129,20 @@ class TestMultiSessions:
         )
 
     def test_two_sessions(self, mock_req):
-        session_id_1 = agentops.start_session(config=self.config)
-        session_id_2 = agentops.start_session(config=self.config)
+        session_1 = agentops.start_session(config=self.config)
+        session_2 = agentops.start_session(config=self.config)
 
         assert len(agentops.Client().current_session_ids) == 2
         assert agentops.Client().current_session_ids == [
-            str(session_id_1),
-            str(session_id_2),
+            str(session_1.session_id),
+            str(session_2.session_id),
         ]
 
         # We should have 2 requests (session starts).
         assert len(mock_req.request_history) == 2
 
-        agentops.record(ActionEvent(self.event_type), session_id=session_id_1)
-        agentops.record(ActionEvent(self.event_type), session_id=session_id_2)
+        session_1.record(ActionEvent(self.event_type))
+        session_2.record(ActionEvent(self.event_type))
 
         time.sleep(1.5)
 
@@ -153,8 +153,9 @@ class TestMultiSessions:
         assert request_json["events"][0]["event_type"] == self.event_type
 
         end_state = "Success"
-        agentops.end_session(end_state, session_id=session_id_1)
-        agentops.end_session(end_state, session_id=session_id_2)
+
+        session_1.end_session(end_state)
+        session_2.end_session(end_state)
         time.sleep(1.5)
 
         # We should have 6 requests (2 additional end sessions)
@@ -169,24 +170,28 @@ class TestMultiSessions:
         session_1_tags = ["session-1"]
         session_2_tags = ["session-2"]
 
-        session_1_id = agentops.start_session(tags=session_1_tags, config=self.config)
-        session_2_id = agentops.start_session(tags=session_2_tags, config=self.config)
+        session_1 = agentops.start_session(tags=session_1_tags, config=self.config)
+        session_2 = agentops.start_session(tags=session_2_tags, config=self.config)
 
-        agentops.add_tags(["session-1-added", "session-1-added-2"], session_1_id)
-        agentops.add_tags(["session-2-added"], session_2_id)
+        session_1.add_tags(["session-1-added", "session-1-added-2"])
+        session_2.add_tags(["session-2-added"])
 
         # Act
         end_state = "Success"
-        agentops.end_session(end_state, session_id=session_1_id)
-        agentops.end_session(end_state, session_id=session_2_id)
+        session_1.end_session(end_state)
+        session_2.end_session(end_state)
         time.sleep(0.15)
 
         # Assert 3 requests, 1 for session init, 1 for event, 1 for end session
         req1 = mock_req.request_history[-1].json()
         req2 = mock_req.request_history[-2].json()
 
-        session_1_req = req1 if req1["session"]["session_id"] == session_1_id else req2
-        session_2_req = req2 if req2["session"]["session_id"] == session_2_id else req1
+        session_1_req = (
+            req1 if req1["session"]["session_id"] == session_1.session_id else req2
+        )
+        session_2_req = (
+            req2 if req2["session"]["session_id"] == session_2.session_id else req1
+        )
 
         assert session_1_req["session"]["end_state"] == end_state
         assert session_2_req["session"]["end_state"] == end_state

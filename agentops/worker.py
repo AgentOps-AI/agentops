@@ -7,7 +7,6 @@ import threading
 import time
 from .http_client import HttpClient
 from .config import ClientConfiguration
-from .session import Session
 from .helpers import safe_serialize, filter_unjsonable
 from typing import Dict, Optional, List, Union
 import copy
@@ -65,77 +64,6 @@ class Worker:
                         logger.debug(f"Worker request to {self.config.endpoint}/events")
                         logger.debug(serialized_payload)
                         logger.debug("</AGENTOPS_DEBUG_OUTPUT>\n")
-
-    def reauthorize_jwt(self, session: Session) -> Union[str, None]:
-        with self.lock:
-            payload = {"session_id": session.session_id}
-            serialized_payload = json.dumps(filter_unjsonable(payload)).encode("utf-8")
-            res = HttpClient.post(
-                f"{self.config.endpoint}/v2/reauthorize_jwt",
-                serialized_payload,
-                self.config.api_key,
-            )
-
-            logger.debug(res.body)
-
-            if res.code != 200:
-                return None
-
-            jwt = res.body.get("jwt", None)
-            self.queue[str(session.session_id)].jwt = jwt
-            return jwt
-
-    def start_session(self, session: Session) -> bool:
-        self.queue[str(session.session_id)] = QueueSession()
-        with self.lock:
-            payload = {"session": session.__dict__}
-            serialized_payload = json.dumps(filter_unjsonable(payload)).encode("utf-8")
-            res = HttpClient.post(
-                f"{self.config.endpoint}/v2/create_session",
-                serialized_payload,
-                self.config.api_key,
-                self.config.parent_key,
-            )
-
-            logger.debug(res.body)
-
-            if res.code != 200:
-                return False
-
-            jwt = res.body.get("jwt", None)
-            self.queue[str(session.session_id)].jwt = jwt
-            if jwt is None:
-                return False
-
-            return True
-
-    def end_session(self, session: Session) -> str:
-        self.stop_flag.set()
-        self.thread.join(timeout=1)
-        self.flush_queue()
-
-        with self.lock:
-            payload = {"session": session.__dict__}
-
-            res = HttpClient.post(
-                f"{self.config.endpoint}/v2/update_session",
-                json.dumps(filter_unjsonable(payload)).encode("utf-8"),
-                jwt=self.queue[str(session.session_id)].jwt,
-            )
-            logger.debug(res.body)
-            del self.queue[str(session.session_id)]
-            return res.body.get("token_cost", "unknown")
-
-    def update_session(self, session: Session) -> None:
-        with self.lock:
-            payload = {"session": session.__dict__}
-            jwt = self.queue[str(session.session_id)].jwt
-
-            res = HttpClient.post(
-                f"{self.config.endpoint}/v2/update_session",
-                json.dumps(filter_unjsonable(payload)).encode("utf-8"),
-                jwt=jwt,
-            )
 
     def create_agent(self, agent_id, name, session_id: str):
         payload = {

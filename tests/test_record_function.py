@@ -27,7 +27,7 @@ class TestRecordAction:
         agentops.init(self.api_key, max_wait_time=5, auto_start_session=False)
 
     def test_record_function_decorator(self, mock_req):
-        session_id = agentops.start_session()
+        agentops.start_session()
 
         @record_function(event_name=self.event_type)
         def add_two(x, y):
@@ -45,10 +45,10 @@ class TestRecordAction:
         assert request_json["events"][0]["params"] == {"x": 3, "y": 4}
         assert request_json["events"][0]["returns"] == 7
 
-        agentops.end_session(end_state="Success", session_id=session_id)
+        agentops.end_session(end_state="Success")
 
     def test_record_function_decorator_multiple(self, mock_req):
-        session_id = agentops.start_session()
+        session = agentops.start_session()
 
         # Arrange
         @record_function(event_name=self.event_type)
@@ -56,9 +56,9 @@ class TestRecordAction:
             return x + y + z
 
         # Act
-        add_three(1, 2, session_id=session_id)
+        add_three(1, 2, session_id=session.session_id)
         time.sleep(0.1)
-        add_three(1, 2, session_id=session_id)
+        add_three(1, 2, session_id=session.session_id)
         time.sleep(0.1)
 
         # Assert
@@ -69,11 +69,11 @@ class TestRecordAction:
         assert request_json["events"][0]["params"] == {"x": 1, "y": 2, "z": 3}
         assert request_json["events"][0]["returns"] == 6
 
-        agentops.end_session(end_state="Success", session_id=session_id)
+        agentops.end_session(end_state="Success")
 
     @pytest.mark.asyncio
     async def test_async_function_call(self, mock_req):
-        session_id = agentops.start_session()
+        session = agentops.start_session()
 
         @record_function(self.event_type)
         async def async_add(x, y):
@@ -81,7 +81,7 @@ class TestRecordAction:
             return x + y
 
         # Act
-        result = await async_add(3, 4, session_id=session_id)
+        result = await async_add(3, 4, session=session)
         time.sleep(0.1)
 
         # Assert
@@ -94,6 +94,7 @@ class TestRecordAction:
         assert request_json["events"][0]["action_type"] == self.event_type
         assert request_json["events"][0]["params"] == {"x": 3, "y": 4}
         assert request_json["events"][0]["returns"] == 7
+
         init = datetime.fromisoformat(
             request_json["events"][0]["init_timestamp"].replace("Z", "+00:00")
         )
@@ -103,4 +104,34 @@ class TestRecordAction:
 
         assert (end - init).total_seconds() >= 0.1
 
-        agentops.end_session(end_state="Success", session_id=session_id)
+        agentops.end_session(end_state="Success")
+
+    def test_multiple_sessions(self):
+        session_1 = agentops.start_session()
+        session_2 = agentops.start_session()
+
+        # Arrange
+        @record_function(event_name=self.event_type)
+        def add_three(x, y, z=3):
+            return x + y + z
+
+        # Act
+        add_three(1, 2, session_id=session_1.session_id)
+        time.sleep(0.1)
+        add_three(1, 2, session_id=session_1.session_id)
+        time.sleep(0.1)
+
+        add_three(1, 2, session_id=session_2.session_id)
+        time.sleep(0.1)
+        add_three(1, 2, session_id=session_2.session_id)
+        time.sleep(0.1)
+
+        # Assert
+        assert len(mock_req.request_history) == 3
+        assert mock_req.last_request.headers["X-Agentops-Api-Key"] == self.api_key
+        request_json = mock_req.last_request.json()
+        assert request_json["events"][0]["action_type"] == self.event_type
+        assert request_json["events"][0]["params"] == {"x": 1, "y": 2, "z": 3}
+        assert request_json["events"][0]["returns"] == 6
+
+        agentops.end_session(end_state="Success")
