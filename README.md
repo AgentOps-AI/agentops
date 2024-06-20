@@ -1,6 +1,6 @@
 <div align="center">
   <a href="https://agentops.ai?ref=gh">
-    <img src="https://github.com/AgentOps-AI/agentops/raw/446d3da561b2335e02e89a687a2f200db9e00391/docs/images/external/logo/banner-badge.svg" alt="Logo">
+    <img src="docs/images/external/logo/banner-badge.png" style="max-width: 500px" width="50%" alt="Logo">
   </a>
 </div>
 <p align="center">
