@@ -184,6 +184,16 @@ def set_tags(tags: List[str]):
     Client().set_tags(tags)
 
 
+@check_init
+def record_function(event_name: str):
+    return decorators.record_function(event_name)
+
+
+@check_init
+def track_agent(name: Union[str, None] = None):
+    return agent.track_agent(name)
+
+
 def get_api_key() -> str:
     return Client().api_key
 
