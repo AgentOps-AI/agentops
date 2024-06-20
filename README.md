@@ -245,14 +245,20 @@ agentops.end_session('Success')
 
 ### Why AgentOps? 🤔
 
-Our mission is to bring your agent from prototype to production.
+Without the right tools, AI agents are slow, expensive, and unreliable. Our mission is to bring your agent from prototype to production. Here's why AgentOps stands out:
 
-Agent developers often work with little to no visibility into agent testing performance. This means their agents never leave the lab. We're changing that.
+- **Comprehensive Observability**: Track your AI agents' performance, user interactions, and API usage.
+- **Real-Time Monitoring**: Get instant insights with session replays, metrics, and live monitoring tools.
+- **Cost Control**: Monitor and manage your spend on LLM and API calls.
+- **Failure Detection**: Quickly identify and respond to agent failures and multi-agent interaction issues.
+- **Tool Usage Statistics**: Understand how your agents utilize external tools with detailed analytics.
+- **Session-Wide Metrics**: Gain a holistic view of your agents' sessions with comprehensive statistics.
 
-AgentOps is the easiest way to evaluate, grade, and test agents. Is there a feature you'd like to see AgentOps cover? Just raise it in the issues tab, and we'll work on adding it to the roadmap.
+AgentOps is designed to make agent observability, testing, and monitoring easy.
+
 
 ## Star History
 
-[![Star History Chart](## Star History
+Check out our growth in the community:
 
-[![Star History Chart](https://api.star-history.com/svg?repos=AgentOps-AI/agentops&type=Date)](https://star-history.com/#AgentOps-AI/agentops&Date))
+<img src="https://api.star-history.com/svg?repos=AgentOps-AI/agentops&type=Date" style="max-width: 500px" width="50%" alt="Logo">
