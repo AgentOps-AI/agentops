@@ -1,6 +1,6 @@
 <div align="center">
   <a href="https://agentops.ai?ref=gh">
-    <img src="https://raw.githubusercontent.com/AgentOps-AI/agentops/35d5682866921a9e28d8ef66ae3c3b3d92d8fa6b/img/logo.png" style="margin: 15px; max-width: 300px" width="50%" alt="Logo">
+    <img src="docs/images/external/logo/banner-badge.png" style="max-width: 500px" width="50%" alt="Logo">
   </a>
 </div>
 <p align="center">
@@ -82,21 +82,21 @@ All your sessions are available on the [AgentOps dashboard](https://app.agentops
 <details open>
   <summary>Agent Dashboard</summary>
   <a href="https://app.agentops.ai?ref=gh">
-   <img src="https://github.com/AgentOps-AI/agentops/assets/14807319/158e082a-9a7d-49b7-9b41-51a49a1f7d3d" style="width: 90%;" alt="Agent Dashboard"/>
+   <img src="docs/images/external/app_screenshots/overview.png" style="width: 90%;" alt="Agent Dashboard"/>
   </a>
 </details>
 
 <details>
   <summary>Session Analytics</summary>
   <a href="https://app.agentops.ai?ref=gh">
-    <img src="https://github.com/AgentOps-AI/agentops/assets/14807319/d7228019-1488-40d3-852f-a61e998658ad" style="width: 90%;" alt="Session Analytics"/>
+    <img src="docs/images/external/app_screenshots/session-overview.png" style="width: 90%;" alt="Session Analytics"/>
   </a>
 </details>
 
 <details>
   <summary>Session Replays</summary>
   <a href="https://app.agentops.ai?ref=gh">
-    <img src="https://github.com/AgentOps-AI/agentops/assets/14807319/561d59f3-c441-4066-914b-f6cfe32a598c" style="width: 90%;" alt="Session Replays"/>
+    <img src="docs/images/external/app_screenshots/session-replay.png" style="width: 90%;" alt="Session Replays"/>
   </a>
 </details>
 
@@ -245,8 +245,20 @@ agentops.end_session('Success')
 
 ### Why AgentOps? 🤔
 
-Our mission is to bring your agent from prototype to production.
+Without the right tools, AI agents are slow, expensive, and unreliable. Our mission is to bring your agent from prototype to production. Here's why AgentOps stands out:
 
-Agent developers often work with little to no visibility into agent testing performance. This means their agents never leave the lab. We're changing that.
+- **Comprehensive Observability**: Track your AI agents' performance, user interactions, and API usage.
+- **Real-Time Monitoring**: Get instant insights with session replays, metrics, and live monitoring tools.
+- **Cost Control**: Monitor and manage your spend on LLM and API calls.
+- **Failure Detection**: Quickly identify and respond to agent failures and multi-agent interaction issues.
+- **Tool Usage Statistics**: Understand how your agents utilize external tools with detailed analytics.
+- **Session-Wide Metrics**: Gain a holistic view of your agents' sessions with comprehensive statistics.
 
-AgentOps is the easiest way to evaluate, grade, and test agents. Is there a feature you'd like to see AgentOps cover? Just raise it in the issues tab, and we'll work on adding it to the roadmap.
+AgentOps is designed to make agent observability, testing, and monitoring easy.
+
+
+## Star History
+
+Check out our growth in the community:
+
+<img src="https://api.star-history.com/svg?repos=AgentOps-AI/agentops&type=Date" style="max-width: 500px" width="50%" alt="Logo">
