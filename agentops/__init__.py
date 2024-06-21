@@ -194,7 +194,6 @@ def set_tags(tags: List[str]):
 
     Args:
         tags (List[str]): The list of tags to set.
-        session_id (str, optional): which session to set tags on if using multiple concurrent sessions
     """
     Client().set_tags(tags)
 

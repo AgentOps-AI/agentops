@@ -18,9 +18,10 @@ PARTNER_FRAMEWORKS = {
     "crewai": (False, True),
 }
 
+instances = {}
+
 
 def singleton(class_):
-    instances = {}
 
     def getinstance(*args, **kwargs):
         if class_ not in instances:
@@ -31,7 +32,6 @@ def singleton(class_):
 
 
 def conditional_singleton(class_):
-    instances = {}
 
     def getinstance(*args, **kwargs):
         use_singleton = kwargs.pop("use_singleton", True)
@@ -43,6 +43,11 @@ def conditional_singleton(class_):
             return class_(*args, **kwargs)
 
     return getinstance
+
+
+def clear_singletons():
+    global instances
+    instances = {}
 
 
 def get_ISO_time():

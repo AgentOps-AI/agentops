@@ -4,6 +4,14 @@ import time
 import agentops
 from agentops import record_function
 from datetime import datetime
+from agentops.helpers import clear_singletons
+
+
+@pytest.fixture(autouse=True)
+def setup_teardown():
+    clear_singletons()
+    yield
+    agentops.end_all_sessions()  # teardown part
 
 
 @pytest.fixture
@@ -56,9 +64,9 @@ class TestRecordAction:
             return x + y + z
 
         # Act
-        add_three(1, 2, session_id=session.session_id)
+        add_three(1, 2, session=session)
         time.sleep(0.1)
-        add_three(1, 2, session_id=session.session_id)
+        add_three(1, 2, session=session)
         time.sleep(0.1)
 
         # Assert
@@ -106,7 +114,7 @@ class TestRecordAction:
 
         agentops.end_session(end_state="Success")
 
-    def test_multiple_sessions(self):
+    def test_multiple_sessions(self, mock_req):
         session_1 = agentops.start_session()
         session_2 = agentops.start_session()
 
@@ -116,22 +124,23 @@ class TestRecordAction:
             return x + y + z
 
         # Act
-        add_three(1, 2, session_id=session_1.session_id)
+        add_three(1, 2, session=session_1)
         time.sleep(0.1)
-        add_three(1, 2, session_id=session_1.session_id)
+        add_three(1, 2, session=session_1)
         time.sleep(0.1)
 
-        add_three(1, 2, session_id=session_2.session_id)
+        add_three(1, 2, session=session_2)
         time.sleep(0.1)
-        add_three(1, 2, session_id=session_2.session_id)
+        add_three(1, 2, session=session_2)
         time.sleep(0.1)
 
         # Assert
-        assert len(mock_req.request_history) == 3
+        assert len(mock_req.request_history) == 6
         assert mock_req.last_request.headers["X-Agentops-Api-Key"] == self.api_key
         request_json = mock_req.last_request.json()
         assert request_json["events"][0]["action_type"] == self.event_type
         assert request_json["events"][0]["params"] == {"x": 1, "y": 2, "z": 3}
         assert request_json["events"][0]["returns"] == 6
 
-        agentops.end_session(end_state="Success")
+        session_1.end_session(end_state="Success")
+        session_2.end_session(end_state="Success")

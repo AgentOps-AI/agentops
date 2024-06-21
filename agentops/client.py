@@ -24,6 +24,7 @@ from .helpers import (
     check_call_stack_for_agent_id,
     get_partner_frameworks,
     singleton,
+    conditional_singleton,
 )
 from .session import Session
 from .host_env import get_host_env
@@ -35,7 +36,7 @@ from termcolor import colored
 from typing import Tuple
 
 
-@singleton
+@conditional_singleton
 class Client(metaclass=MetaClient):
     """
     Client for AgentOps service.
@@ -216,7 +217,7 @@ class Client(metaclass=MetaClient):
     def _record_event_sync(self, func, event_name, *args, **kwargs):
         init_time = get_ISO_time()
         session: Union[Session, None] = kwargs.get("session", None)
-        if session:
+        if "session" in kwargs.keys():
             del kwargs["session"]
         func_args = inspect.signature(func).parameters
         arg_names = list(func_args.keys())
@@ -550,7 +551,7 @@ class Client(metaclass=MetaClient):
 
         elif len(self._sessions) > 1:
             raise ValueError(
-                "If multiple sessions exit, you must use session.function()"
+                "If multiple sessions exist, you must use session.function()"
             )
 
         return session
