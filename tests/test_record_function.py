@@ -81,7 +81,7 @@ class TestRecordAction:
 
     @pytest.mark.asyncio
     async def test_async_function_call(self, mock_req):
-        session = agentops.start_session()
+        agentops.start_session()
 
         @record_function(self.event_type)
         async def async_add(x, y):
@@ -89,13 +89,12 @@ class TestRecordAction:
             return x + y
 
         # Act
-        result = await async_add(3, 4, session=session)
+        result = await async_add(3, 4)
         time.sleep(0.1)
 
         # Assert
         assert result == 7
         # Assert
-        print(mock_req.request_history)
         assert len(mock_req.request_history) == 2
         assert mock_req.last_request.headers["X-Agentops-Api-Key"] == self.api_key
         request_json = mock_req.last_request.json()

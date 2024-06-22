@@ -2,7 +2,7 @@ import pytest
 import requests_mock
 import time
 import agentops
-from agentops import ActionEvent
+from agentops import ActionEvent, Client
 from agentops.helpers import clear_singletons
 
 
@@ -140,6 +140,26 @@ class TestSingleSessions:
 
         request_json = mock_req.last_request.json()
         assert request_json["session"]["tags"] == ["pre-session-tag"]
+
+    def test_no_config_doesnt_start_session(self, mock_req):
+        session = agentops.start_session()
+        assert session is None
+
+    def test_safe_get_session_no_session(self, mock_req):
+        with pytest.raises(ValueError):
+            session = Client()._safe_get_session()
+
+    def test_safe_get_session_with_session(self, mock_req):
+        agentops.start_session(config=self.config)
+        session = Client()._safe_get_session()
+        assert session is not None
+
+    def test_safe_get_session_with_multiple_sessions(self, mock_req):
+        agentops.start_session(config=self.config)
+        agentops.start_session(config=self.config)
+
+        with pytest.raises(ValueError):
+            session = Client()._safe_get_session()
 
 
 class TestMultiSessions:

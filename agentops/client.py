@@ -272,7 +272,7 @@ class Client(metaclass=MetaClient):
     async def _record_event_async(self, func, event_name, *args, **kwargs):
         init_time = get_ISO_time()
         session: Union[Session, None] = kwargs.get("session", None)
-        if session:
+        if "session" in kwargs.keys():
             del kwargs["session"]
         func_args = inspect.signature(func).parameters
         arg_names = list(func_args.keys())
