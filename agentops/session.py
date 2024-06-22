@@ -8,7 +8,7 @@ from .log_config import logger
 from .config import ClientConfiguration
 from .helpers import get_ISO_time, filter_unjsonable, safe_serialize
 from typing import Optional, List, Union
-from uuid import UUID
+from uuid import UUID, uuid4
 
 from .http_client import HttpClient
 from .worker import Worker
@@ -224,3 +224,19 @@ class Session:
             time.sleep(self.config.max_wait_time / 1000)
             if self.queue:
                 self.flush_queue()
+
+    def create_agent(self, name, agent_id):
+        if agent_id is None:
+            agent_id = str(uuid4())
+
+        payload = {
+            "id": agent_id,
+            "name": name,
+        }
+
+        serialized_payload = safe_serialize(payload).encode("utf-8")
+        HttpClient.post(
+            f"{self.config.endpoint}/v2/create_agent", serialized_payload, jwt=self.jwt
+        )
+
+        return agent_id

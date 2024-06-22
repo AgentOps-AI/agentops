@@ -65,18 +65,6 @@ class Worker:
                         logger.debug(serialized_payload)
                         logger.debug("</AGENTOPS_DEBUG_OUTPUT>\n")
 
-    def create_agent(self, agent_id, name, session_id: str):
-        payload = {
-            "id": agent_id,
-            "name": name,
-            "session_id": session_id,
-        }
-
-        serialized_payload = safe_serialize(payload).encode("utf-8")
-        HttpClient.post(
-            f"{self.config.endpoint}/v2/create_agent", serialized_payload, jwt=self.jwt
-        )
-
     def run(self) -> None:
         while not self.stop_flag.is_set():
             time.sleep(self.config.max_wait_time / 1000)

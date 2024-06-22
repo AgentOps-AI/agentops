@@ -175,7 +175,6 @@ def record(event: Union[Event, ErrorEvent]):
     Client().record(event)
 
 
-@check_init
 def add_tags(tags: List[str]):
     """
     Append to session tags at runtime.
@@ -187,7 +186,6 @@ def add_tags(tags: List[str]):
     Client().add_tags(tags)
 
 
-@check_init
 def set_tags(tags: List[str]):
     """
     Replace session tags at runtime.

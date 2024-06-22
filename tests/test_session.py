@@ -127,6 +127,20 @@ class TestSingleSessions:
 
         agentops.end_all_sessions()
 
+    def test_add_tags_before_session(self, mock_req):
+        agentops.add_tags(["pre-session-tag"])
+        agentops.start_session(config=self.config)
+
+        request_json = mock_req.last_request.json()
+        assert request_json["session"]["tags"] == ["pre-session-tag"]
+
+    def test_set_tags_before_session(self, mock_req):
+        agentops.set_tags(["pre-session-tag"])
+        agentops.start_session(config=self.config)
+
+        request_json = mock_req.last_request.json()
+        assert request_json["session"]["tags"] == ["pre-session-tag"]
+
 
 class TestMultiSessions:
     def setup_method(self):

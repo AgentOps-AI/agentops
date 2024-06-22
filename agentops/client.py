@@ -25,7 +25,9 @@ from .helpers import (
     get_partner_frameworks,
     singleton,
     conditional_singleton,
+    safe_serialize,
 )
+from .http_client import HttpClient
 from .session import Session
 from .host_env import get_host_env
 from .log_config import logger
@@ -193,10 +195,12 @@ class Client(metaclass=MetaClient):
         Args:
             tags (List[str]): The list of tags to set.
         """
-        self._tags_for_future_session = tags
 
-        session = self._safe_get_session()
-        session.set_tags(tags=tags)
+        try:
+            session = self._safe_get_session()
+            session.set_tags(tags=tags)
+        except ValueError:
+            self._tags_for_future_session = tags
 
     def record(self, event: Union[Event, ErrorEvent]) -> None:
         """
@@ -433,12 +437,34 @@ class Client(metaclass=MetaClient):
 
         self._sessions.remove(session)
 
-    def create_agent(self, name: str, agent_id: Optional[str] = None):
+    def create_agent(
+        self,
+        name: str,
+        agent_id: Optional[str] = None,
+        session: Optional[Session] = None,
+    ):
         if agent_id is None:
             agent_id = str(uuid4())
-        if self._worker:
-            self._worker.create_agent(name=name, agent_id=agent_id)
-            return agent_id
+
+        # if a session is passed in, use multi-session logic
+        if session:
+            return session.create_agent(name=name, agent_id=agent_id)
+        else:
+            # if no session passed, assume single session
+            session = self._safe_get_session()
+            payload = {
+                "id": agent_id,
+                "name": name,
+            }
+
+            serialized_payload = safe_serialize(payload).encode("utf-8")
+            HttpClient.post(
+                f"{self.config.endpoint}/v2/create_agent",
+                serialized_payload,
+                jwt=session.jwt,
+            )
+
+        return agent_id
 
     def _handle_unclean_exits(self):
         def cleanup(end_state: str = "Fail", end_state_reason: Optional[str] = None):
