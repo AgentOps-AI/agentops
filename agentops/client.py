@@ -1,8 +1,8 @@
 """
-    AgentOps client module that provides a client class with public interfaces and configuration.
+AgentOps client module that provides a client class with public interfaces and configuration.
 
-    Classes:
-        Client: Provides methods to interact with the AgentOps service.
+Classes:
+    Client: Provides methods to interact with the AgentOps service.
 """
 
 import os
@@ -80,7 +80,6 @@ class Client(metaclass=MetaClient):
         inherited_session_id: Optional[str] = None,
         skip_auto_end_session: Optional[bool] = False,
     ):
-
         if override is not None:
             logger.warning(
                 "The 'override' parameter is deprecated. Use 'instrument_llm_calls' instead.",
@@ -439,6 +438,7 @@ class Client(metaclass=MetaClient):
 
         self._session = None
         self._worker = None
+        return token_cost_d
 
     def create_agent(self, name: str, agent_id: Optional[str] = None):
         if agent_id is None:
