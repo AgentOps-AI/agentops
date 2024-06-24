@@ -9,7 +9,7 @@ from .client import Client
 from .config import ClientConfiguration
 from .event import Event, ActionEvent, LLMEvent, ToolEvent, ErrorEvent
 from .enums import Models
-from .decorators import record_function, track_route
+from .decorators import record_function
 from .agent import track_agent
 from .log_config import logger
 from .session import Session
