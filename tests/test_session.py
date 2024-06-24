@@ -127,6 +127,34 @@ class TestSingleSessions:
 
         agentops.end_all_sessions()
 
+    def test_add_tags_with_string(self, mock_req):
+        agentops.start_session(config=self.config)
+        agentops.add_tags("wrong-type-tags")
+
+        request_json = mock_req.last_request.json()
+        assert request_json["session"]["tags"] == ["wrong-type-tags"]
+
+    def test_session_add_tags_with_string(self, mock_req):
+        session = agentops.start_session(config=self.config)
+        session.add_tags("wrong-type-tags")
+
+        request_json = mock_req.last_request.json()
+        assert request_json["session"]["tags"] == ["wrong-type-tags"]
+
+    def test_set_tags_with_string(self, mock_req):
+        agentops.start_session(config=self.config)
+        agentops.set_tags("wrong-type-tags")
+
+        request_json = mock_req.last_request.json()
+        assert request_json["session"]["tags"] == ["wrong-type-tags"]
+
+    def test_session_set_tags_with_string(self, mock_req):
+        session = agentops.start_session(config=self.config)
+        session.set_tags("wrong-type-tags")
+
+        request_json = mock_req.last_request.json()
+        assert request_json["session"]["tags"] == ["wrong-type-tags"]
+
     def test_add_tags_before_session(self, mock_req):
         agentops.add_tags(["pre-session-tag"])
         agentops.start_session(config=self.config)

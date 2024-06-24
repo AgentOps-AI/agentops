@@ -103,9 +103,12 @@ class Session:
             if isinstance(tags, str):  # if it's a single string
                 tags = [tags]  # make it a list
 
-        for tag in tags:
-            if tag not in self.tags:
-                self.tags.append(tag)
+        if self.tags is None:
+            self.tags = tags
+        else:
+            for tag in tags:
+                if tag not in self.tags:
+                    self.tags.append(tag)
 
         self._update_session()
 
