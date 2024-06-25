@@ -3,6 +3,23 @@ title: "Quickstart"
 description: "Start using AgentOps with just 2 lines of code"
 ---
 import SupportedModels from '/snippets/supported-models.mdx'
+import { useEffect, useState } from 'react';
+
+function GitHubStars() {
+  const [stars, setStars] = useState(null);
+
+  useEffect(() => {
+    async function fetchStars() {
+      const response = await fetch('https://api.github.com/repos/AgentOps-AI/agentops');
+      const data = await response.json();
+      const stars = Math.ceil(data.stargazers_count / 1000) * 1000;
+      setStars(stars.toLocaleString());
+    }
+    fetchStars();
+  }, []);
+
+  return stars ? `${stars}th` : '2,000th';
+}
 
 <Steps>
   <Step title="Install the AgentOps SDK">
@@ -14,7 +31,7 @@ import SupportedModels from '/snippets/supported-models.mdx'
       poetry add agentops
       ```
     </CodeGroup>
-    <Check>[Give us a star](https://github.com/AgentOps-AI/agentops) on GitHub while you're at it (you may be our 1,000th 😊)</Check>
+    <Check>[Give us a star](https://github.com/AgentOps-AI/agentops) on GitHub while you're at it (you may be our 2,000th 😊)</Check>
   </Step>
   <Step title="Add 2 lines of code">
     <CodeGroup>
