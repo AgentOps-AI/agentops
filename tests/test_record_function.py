@@ -5,6 +5,9 @@ import agentops
 from agentops import record_function
 from datetime import datetime
 from agentops.helpers import clear_singletons
+import contextlib
+
+jwts = ["some_jwt", "some_jwt2", "some_jwt3"]
 
 
 @pytest.fixture(autouse=True)
@@ -14,16 +17,25 @@ def setup_teardown():
     agentops.end_all_sessions()  # teardown part
 
 
-@pytest.fixture
+@contextlib.contextmanager
+@pytest.fixture(autouse=True)
 def mock_req():
     with requests_mock.Mocker() as m:
         url = "https://api.agentops.ai"
         m.post(url + "/v2/create_events", text="ok")
-        m.post(
-            url + "/v2/create_session", json={"status": "success", "jwt": "some_jwt"}
-        )
+
+        # Use iter to create an iterator that can return the jwt values
+        jwt_tokens = iter(jwts)
+
+        # Use an inner function to change the response for each request
+        def create_session_response(request, context):
+            context.status_code = 200
+            return {"status": "success", "jwt": next(jwt_tokens)}
+
+        m.post(url + "/v2/create_session", json=create_session_response)
         m.post(url + "/v2/update_session", json={"status": "success", "token_cost": 5})
         m.post(url + "/v2/developer_errors", text="ok")
+
         yield m
 
 
@@ -56,7 +68,7 @@ class TestRecordAction:
         agentops.end_session(end_state="Success")
 
     def test_record_function_decorator_multiple(self, mock_req):
-        session = agentops.start_session()
+        agentops.start_session()
 
         # Arrange
         @record_function(event_name=self.event_type)
@@ -64,9 +76,9 @@ class TestRecordAction:
             return x + y + z
 
         # Act
-        add_three(1, 2, session=session)
+        add_three(1, 2)
         time.sleep(0.1)
-        add_three(1, 2, session=session)
+        add_three(1, 2)
         time.sleep(0.1)
 
         # Assert
@@ -125,21 +137,33 @@ class TestRecordAction:
         # Act
         add_three(1, 2, session=session_1)
         time.sleep(0.1)
-        add_three(1, 2, session=session_1)
-        time.sleep(0.1)
-
-        add_three(1, 2, session=session_2)
-        time.sleep(0.1)
         add_three(1, 2, session=session_2)
         time.sleep(0.1)
 
         # Assert
-        assert len(mock_req.request_history) == 6
-        assert mock_req.last_request.headers["X-Agentops-Api-Key"] == self.api_key
+        assert len(mock_req.request_history) == 4
+
         request_json = mock_req.last_request.json()
+        assert mock_req.last_request.headers["X-Agentops-Api-Key"] == self.api_key
+        assert mock_req.last_request.headers["Authorization"] == f"Bearer some_jwt2"
         assert request_json["events"][0]["action_type"] == self.event_type
         assert request_json["events"][0]["params"] == {"x": 1, "y": 2, "z": 3}
         assert request_json["events"][0]["returns"] == 6
+
+        second_last_request_json = mock_req.request_history[-2].json()
+        assert (
+            mock_req.request_history[-2].headers["X-Agentops-Api-Key"] == self.api_key
+        )
+        assert (
+            mock_req.request_history[-2].headers["Authorization"] == f"Bearer some_jwt"
+        )
+        assert second_last_request_json["events"][0]["action_type"] == self.event_type
+        assert second_last_request_json["events"][0]["params"] == {
+            "x": 1,
+            "y": 2,
+            "z": 3,
+        }
+        assert second_last_request_json["events"][0]["returns"] == 6
 
         session_1.end_session(end_state="Success")
         session_2.end_session(end_state="Success")
