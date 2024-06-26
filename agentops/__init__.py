@@ -5,10 +5,7 @@ import logging
 from typing import Optional, List, Union
 from .client import Client
 from .config import Configuration
-from .event import Event, ActionEvent, LLMEvent, ToolEvent, ErrorEvent
-from .enums import Models
-from .decorators import record_function
-from .agent import track_agent
+from .event import Event, ErrorEvent
 from .log_config import logger
 
 try:
@@ -118,7 +115,7 @@ def end_session(
         video (str, optional): URL to a video recording of the session
         is_auto_end (bool, optional): is this an automatic use of end_session and should be skipped with bypass_auto_end_session
     """
-    return Client().end_session(
+    Client().end_session(
         end_state=end_state,
         end_state_reason=end_state_reason,
         video=video,
