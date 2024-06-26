@@ -118,7 +118,7 @@ def end_session(
         video (str, optional): URL to a video recording of the session
         is_auto_end (bool, optional): is this an automatic use of end_session and should be skipped with bypass_auto_end_session
     """
-    Client().end_session(
+    return Client().end_session(
         end_state=end_state,
         end_state_reason=end_state_reason,
         video=video,
