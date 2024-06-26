@@ -397,6 +397,9 @@ class Client(metaclass=MetaClient):
             end_state_reason (str, optional): The reason for ending the session.
             video (str, optional): The video screen recording of the session
             is_auto_end (bool, optional): is this an automatic use of end_session and should be skipped with skip_auto_end_session
+
+        Returns:
+            Decimal: The token cost of the session. Returns 0 if the cost is unknown.
         """
 
         if is_auto_end and self.config.skip_auto_end_session:
