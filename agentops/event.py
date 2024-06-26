@@ -5,10 +5,10 @@ Data Class:
     Event: Represents discrete events to be recorded.
 """
 
-from dataclasses import asdict, dataclass, field
+from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional, Sequence, Union
 from .helpers import get_ISO_time, check_call_stack_for_agent_id
-from .enums import EventType, Models
+from .enums import EventType
 from uuid import UUID, uuid4
 import traceback
 
@@ -72,7 +72,7 @@ class LLMEvent(Event):
     prompt_tokens(int, optional): The number of tokens in the prompt message.
     completion(str, object, optional): The message or returned by the LLM. Preferably in ChatML format which is more fully supported by AgentOps.
     completion_tokens(int, optional): The number of tokens in the completion message.
-    model(Models, str, optional): LLM model e.g. "gpt-4". Models defined in enums.Models are more fully supported by AgentOps e.g. extra features in dashboard.
+    model(str, optional): LLM model e.g. "gpt-4".
 
     """
 
@@ -82,7 +82,7 @@ class LLMEvent(Event):
     prompt_tokens: Optional[int] = None
     completion: Union[str, object] = None
     completion_tokens: Optional[int] = None
-    model: Optional[Union[Models, str]] = None
+    model: Optional[str] = None
 
 
 @dataclass
