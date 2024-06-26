@@ -82,7 +82,7 @@ class LLMEvent(Event):
     prompt_tokens: Optional[int] = None
     completion: Union[str, object] = None
     completion_tokens: Optional[int] = None
-    model: Optional[Union[Models, str]] = None
+    model: Optional[str] = None
 
 
 @dataclass
