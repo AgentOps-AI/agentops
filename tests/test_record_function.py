@@ -125,7 +125,7 @@ class TestRecordAction:
 
         agentops.end_session(end_state="Success")
 
-    def test_multiple_sessions(self, mock_req):
+    def test_multiple_sessions_sync(self, mock_req):
         session_1 = agentops.start_session()
         session_2 = agentops.start_session()
 
@@ -138,6 +138,51 @@ class TestRecordAction:
         add_three(1, 2, session=session_1)
         time.sleep(0.1)
         add_three(1, 2, session=session_2)
+        time.sleep(0.1)
+
+        # Assert
+        assert len(mock_req.request_history) == 4
+
+        request_json = mock_req.last_request.json()
+        assert mock_req.last_request.headers["X-Agentops-Api-Key"] == self.api_key
+        assert mock_req.last_request.headers["Authorization"] == f"Bearer some_jwt2"
+        assert request_json["events"][0]["action_type"] == self.event_type
+        assert request_json["events"][0]["params"] == {"x": 1, "y": 2, "z": 3}
+        assert request_json["events"][0]["returns"] == 6
+
+        second_last_request_json = mock_req.request_history[-2].json()
+        assert (
+            mock_req.request_history[-2].headers["X-Agentops-Api-Key"] == self.api_key
+        )
+        assert (
+            mock_req.request_history[-2].headers["Authorization"] == f"Bearer some_jwt"
+        )
+        assert second_last_request_json["events"][0]["action_type"] == self.event_type
+        assert second_last_request_json["events"][0]["params"] == {
+            "x": 1,
+            "y": 2,
+            "z": 3,
+        }
+        assert second_last_request_json["events"][0]["returns"] == 6
+
+        session_1.end_session(end_state="Success")
+        session_2.end_session(end_state="Success")
+
+    @pytest.mark.asyncio
+    async def test_multiple_sessions_async(self, mock_req):
+        session_1 = agentops.start_session()
+        session_2 = agentops.start_session()
+
+        # Arrange
+        @record_function(self.event_type)
+        async def async_add(x, y):
+            time.sleep(0.1)
+            return x + y
+
+        # Act
+        await async_add(1, 2, session=session_1)
+        time.sleep(0.1)
+        await async_add(1, 2, session=session_2)
         time.sleep(0.1)
 
         # Assert
