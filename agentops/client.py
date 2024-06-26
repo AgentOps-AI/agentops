@@ -388,7 +388,7 @@ class Client(metaclass=MetaClient):
         end_state_reason: Optional[str] = None,
         video: Optional[str] = None,
         is_auto_end: Optional[bool] = None,
-    ):
+    ) -> Decimal:
         """
         End the current session with the AgentOps service.
 
@@ -419,6 +419,7 @@ class Client(metaclass=MetaClient):
 
         if token_cost is None or token_cost == "unknown":
             logger.info("Could not determine cost of run.")
+            token_cost_d = Decimal(0)
         else:
             token_cost_d = Decimal(token_cost)
             logger.info(
