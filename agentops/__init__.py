@@ -118,7 +118,7 @@ def end_session(
         video (str, optional): URL to a video recording of the session
         is_auto_end (bool, optional): is this an automatic use of end_session and should be skipped with bypass_auto_end_session
     """
-    Client().end_session(
+    return Client().end_session(
         end_state=end_state,
         end_state_reason=end_state_reason,
         video=video,
@@ -182,16 +182,6 @@ def set_tags(tags: List[str]):
         tags (List[str]): The list of tags to set.
     """
     Client().set_tags(tags)
-
-
-@check_init
-def record_function(event_name: str):
-    return decorators.record_function(event_name)
-
-
-@check_init
-def track_agent(name: Union[str, None] = None):
-    return agent.track_agent(name)
 
 
 def get_api_key() -> str:
