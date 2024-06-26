@@ -223,6 +223,11 @@ class Client(metaclass=MetaClient):
         session: Union[Session, None] = kwargs.get("session", None)
         if "session" in kwargs.keys():
             del kwargs["session"]
+        if session is None:
+            if len(Client().current_session_ids) > 1:
+                raise ValueError(
+                    "If multiple sessions exists, `session` is a required parameter in the function decorated by @record_function"
+                )
         func_args = inspect.signature(func).parameters
         arg_names = list(func_args.keys())
         # Get default values
@@ -274,6 +279,11 @@ class Client(metaclass=MetaClient):
         session: Union[Session, None] = kwargs.get("session", None)
         if "session" in kwargs.keys():
             del kwargs["session"]
+        if session is None:
+            if len(Client().current_session_ids) > 1:
+                raise ValueError(
+                    "If multiple sessions exists, `session` is a required parameter in the function decorated by @record_function"
+                )
         func_args = inspect.signature(func).parameters
         arg_names = list(func_args.keys())
         # Get default values

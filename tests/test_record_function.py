@@ -211,3 +211,17 @@ class TestRecordAction:
 
         session_1.end_session(end_state="Success")
         session_2.end_session(end_state="Success")
+
+    def test_require_session_if_multiple(self):
+        session_1 = agentops.start_session()
+        session_2 = agentops.start_session()
+
+        # Arrange
+        @record_function(self.event_type)
+        def add_two(x, y):
+            time.sleep(0.1)
+            return x + y
+
+        with pytest.raises(ValueError):
+            # Act
+            add_two(1, 2)
