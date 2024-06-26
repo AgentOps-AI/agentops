@@ -225,9 +225,16 @@ class TestMultiSessions:
         end_state = "Success"
 
         session_1.end_session(end_state)
-        session_2.end_session(end_state)
         time.sleep(1.5)
 
+        # We should have 6 requests (2 additional end sessions)
+        assert len(mock_req.request_history) == 5
+        assert mock_req.last_request.headers["Authorization"] == f"Bearer some_jwt"
+        request_json = mock_req.last_request.json()
+        assert request_json["session"]["end_state"] == end_state
+        assert request_json["session"]["tags"] is None
+
+        session_2.end_session(end_state)
         # We should have 6 requests (2 additional end sessions)
         assert len(mock_req.request_history) == 6
         assert mock_req.last_request.headers["Authorization"] == f"Bearer some_jwt"
