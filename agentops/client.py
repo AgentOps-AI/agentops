@@ -1,8 +1,8 @@
 """
-    AgentOps client module that provides a client class with public interfaces and configuration.
+AgentOps client module that provides a client class with public interfaces and configuration.
 
-    Classes:
-        Client: Provides methods to interact with the AgentOps service.
+Classes:
+    Client: Provides methods to interact with the AgentOps service.
 """
 
 import os
@@ -80,7 +80,6 @@ class Client(metaclass=MetaClient):
         inherited_session_id: Optional[str] = None,
         skip_auto_end_session: Optional[bool] = False,
     ):
-
         if override is not None:
             logger.warning(
                 "The 'override' parameter is deprecated. Use 'instrument_llm_calls' instead.",
@@ -389,7 +388,7 @@ class Client(metaclass=MetaClient):
         end_state_reason: Optional[str] = None,
         video: Optional[str] = None,
         is_auto_end: Optional[bool] = None,
-    ):
+    ) -> Decimal:
         """
         End the current session with the AgentOps service.
 
@@ -398,6 +397,9 @@ class Client(metaclass=MetaClient):
             end_state_reason (str, optional): The reason for ending the session.
             video (str, optional): The video screen recording of the session
             is_auto_end (bool, optional): is this an automatic use of end_session and should be skipped with skip_auto_end_session
+
+        Returns:
+            Decimal: The token cost of the session. Returns 0 if the cost is unknown.
         """
 
         if is_auto_end and self.config.skip_auto_end_session:
@@ -420,6 +422,7 @@ class Client(metaclass=MetaClient):
 
         if token_cost is None or token_cost == "unknown":
             logger.info("Could not determine cost of run.")
+            token_cost_d = Decimal(0)
         else:
             token_cost_d = Decimal(token_cost)
             logger.info(
@@ -439,6 +442,7 @@ class Client(metaclass=MetaClient):
 
         self._session = None
         self._worker = None
+        return token_cost_d
 
     def create_agent(self, name: str, agent_id: Optional[str] = None):
         if agent_id is None:
