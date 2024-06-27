@@ -72,7 +72,7 @@ class Session:
     ) -> str:
         self.end_timestamp = get_ISO_time()
         self.end_state = end_state
-        self.end_state_reason = self.end_state_reason
+        self.end_state_reason = end_state_reason
 
         self.stop_flag.set()
         self.thread.join(timeout=1)

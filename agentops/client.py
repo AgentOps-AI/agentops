@@ -479,10 +479,11 @@ class Client(metaclass=MetaClient):
     def _handle_unclean_exits(self):
         def cleanup(end_state: str = "Fail", end_state_reason: Optional[str] = None):
             for session in self._sessions:
-                session.end_session(
-                    end_state=end_state,
-                    end_state_reason=end_state_reason,
-                )
+                if session.end_state is None:
+                    session.end_session(
+                        end_state=end_state,
+                        end_state_reason=end_state_reason,
+                    )
 
         def signal_handler(signum, frame):
             """
