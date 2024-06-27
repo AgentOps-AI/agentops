@@ -25,7 +25,7 @@ Crew has comprehensive [documentation](https://docs.crewai.com) available as wel
 			```
 		</CodeGroup>
 		<Check>
-			[Give us a star](https://github.com/AgentOps-AI/agentops) on GitHub while you're at it (you may be our 1,000th 😊)
+			[Give us a star](https://github.com/AgentOps-AI/agentops) on GitHub while you're at it (you may be our <span id="stars-text">2,000th</span> 😊)
 		</Check>
 	</Step>
 	<Step title="Install Crew from the AgentOps fork">
@@ -107,3 +107,20 @@ agentops.init(skip_auto_end_session=True)
 	<Card title="Instagram Post" icon="instagram" href="https://github.com/Agentops-AI/crewAI-examples/tree/main/instagram_post" />
     <Card title="Markdown Validator" icon="markdown" href="https://github.com/Agentops-AI/crewAI-examples/tree/main/markdown_validator" />
 </CardGroup>
+
+<script>
+  {window.addEventListener('load', function() {
+    fetch("https://api.github.com/repos/AgentOps-AI/agentops")
+      .then((response) => response.json())
+      .then((data) => {
+        const stars = Math.ceil(data.stargazers_count / 1000) * 1000;
+        const dataContainer = document.getElementById("stars-text");
+        dataContainer.innerHTML = `${stars.toLocaleString()}th`;
+
+      })
+      .catch((error) => {
+        console.error("Error:", error);
+        document.getElementById("stars-text").textContent = 'Error loading data.';
+      });
+  })}
+</script>
