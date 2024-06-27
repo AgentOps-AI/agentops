@@ -212,6 +212,35 @@ agentops.end_session('Success')
 </details>
 
 
+### LiteLLM
+
+AgentOps provides support for LiteLLM(>=1.3.1), allowing you to call 100+ LLMs using the same Input/Output Format. 
+
+- [AgentOps integration example](https://docs.agentops.ai/v1/integrations/litellm)
+- [Official LiteLLM documentation](https://docs.litellm.ai/docs/providers)
+
+<details>
+  <summary>Installation</summary>
+  
+```bash
+pip install litellm
+```
+
+```python python
+# Do not use LiteLLM like this
+# from litellm import completion
+# ...
+# response = completion(model="claude-3", messages=messages)
+
+# Use LiteLLM like this
+import litellm
+...
+response = litellm.completion(model="claude-3", messages=messages)
+# or
+response = await litellm.acompletion(model="claude-3", messages=messages)
+```
+</details>
+
 ### LlamaIndex 🦙
 
 (Coming Soon)
