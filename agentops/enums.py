@@ -8,6 +8,7 @@ class EventType(Enum):
     TOOL = "tools"
     ERROR = "errors"
 
+
 class EndState(Enum):
     SUCCESS = "Success"
     FAIL = "Fail"

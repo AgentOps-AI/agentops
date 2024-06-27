@@ -72,7 +72,7 @@ class LLMEvent(Event):
     prompt_tokens(int, optional): The number of tokens in the prompt message.
     completion(str, object, optional): The message or returned by the LLM. Preferably in ChatML format which is more fully supported by AgentOps.
     completion_tokens(int, optional): The number of tokens in the completion message.
-    model(str, optional): LLM model e.g. "gpt-4".
+    model(str, optional): LLM model e.g. "gpt-4", "gpt-3.5-turbo".
 
     """
 
