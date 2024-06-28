@@ -374,7 +374,10 @@ class LlmTracker:
                             action_event.end_timestamp = get_ISO_time()
 
                     for key, action_event in self.action_events.items():
-                        self.client.record(action_event, session_id=session_id)
+                        if session is not None:
+                            session.record(action_event)
+                        else:
+                            self.client.record(action_event)
 
                 elif isinstance(chunk, StreamedChatResponse_TextGeneration):
                     self.llm_event.completion += chunk.text
@@ -400,10 +403,14 @@ class LlmTracker:
                     pass
 
             except Exception as e:
-                self.client.record(
-                    ErrorEvent(trigger_event=self.llm_event, exception=e),
-                    session_id=session_id,
-                )
+                if session is not None:
+                    session.record(
+                        ErrorEvent(trigger_event=self.llm_event, exception=e)
+                    )
+                else:
+                    self.client.record(
+                        ErrorEvent(trigger_event=self.llm_event, exception=e)
+                    )
                 kwargs_str = pprint.pformat(kwargs)
                 chunk = pprint.pformat(chunk)
                 logger.warning(
@@ -460,12 +467,17 @@ class LlmTracker:
             self.llm_event.completion_tokens = response.meta.tokens.output_tokens
             self.llm_event.model = kwargs.get("model", "command-r-plus")
 
-            self.client.record(self.llm_event, session_id=session_id)
+            if session is not None:
+                session.record(self.llm_event)
+            else:
+                self.client.record(self.llm_event)
         except Exception as e:
-            self.client.record(
-                ErrorEvent(trigger_event=self.llm_event, exception=e),
-                session_id=session_id,
-            )
+            if session:
+                session.record(ErrorEvent(trigger_event=self.llm_event, exception=e))
+            else:
+                self.client.record(
+                    ErrorEvent(trigger_event=self.llm_event, exception=e)
+                )
             kwargs_str = pprint.pformat(kwargs)
             response = pprint.pformat(response)
             logger.warning(
@@ -476,7 +488,9 @@ class LlmTracker:
 
         return response
 
-    def _handle_response_ollama(self, response, kwargs, init_timestamp):
+    def _handle_response_ollama(
+        self, response, kwargs, init_timestamp, session: Optional[Session] = None
+    ) -> None:
         self.llm_event = LLMEvent(init_timestamp=init_timestamp, params=kwargs)
 
         def handle_stream_chunk(chunk: dict):
@@ -514,7 +528,10 @@ class LlmTracker:
         self.llm_event.prompt = kwargs["messages"]
         self.llm_event.completion = response["message"]
 
-        self.client.record(self.llm_event)
+        if session is not None:
+            session.record(self.llm_event)
+        else:
+            self.client.record(self.llm_event)
         return response
 
     def override_openai_v1_completion(self):
@@ -527,7 +544,8 @@ class LlmTracker:
         def patched_function(*args, **kwargs):
             init_timestamp = get_ISO_time()
             session = kwargs.get("session", None)
-            del kwargs["session"]
+            if "session" in kwargs.keys():
+                del kwargs["session"]
             # Call the original function with its original arguments
             result = original_create(*args, **kwargs)
             return self._handle_response_v1_openai(
@@ -548,7 +566,8 @@ class LlmTracker:
             # Call the original function with its original arguments
             init_timestamp = get_ISO_time()
             session = kwargs.get("session", None)
-            del kwargs["session"]
+            if "session" in kwargs.keys():
+                del kwargs["session"]
             result = await original_create_async(*args, **kwargs)
             return self._handle_response_v1_openai(
                 result, kwargs, init_timestamp, session=session
@@ -565,7 +584,8 @@ class LlmTracker:
         def patched_function(*args, **kwargs):
             init_timestamp = get_ISO_time()
             session = kwargs.get("session", None)
-            del kwargs["session"]
+            if "session" in kwargs.keys():
+                del kwargs["session"]
             result = original_create(*args, **kwargs)
             # Note: litellm calls all LLM APIs using the OpenAI format
             return self._handle_response_v1_openai(
@@ -583,7 +603,8 @@ class LlmTracker:
             # Call the original function with its original arguments
             init_timestamp = get_ISO_time()
             session = kwargs.get("session", None)
-            del kwargs["session"]
+            if "session" in kwargs.keys():
+                del kwargs["session"]
             result = await original_create(*args, **kwargs)
             # Note: litellm calls all LLM APIs using the OpenAI format
             return self._handle_response_v1_openai(
@@ -603,7 +624,8 @@ class LlmTracker:
             # Call the original function with its original arguments
             init_timestamp = get_ISO_time()
             session = kwargs.get("session", None)
-            del kwargs["session"]
+            if "session" in kwargs.keys():
+                del kwargs["session"]
             result = original_chat(*args, **kwargs)
             return self._handle_response_cohere(
                 result, kwargs, init_timestamp, session=session
@@ -635,7 +657,9 @@ class LlmTracker:
             # Call the original function with its original arguments
             init_timestamp = get_ISO_time()
             result = original_func["ollama.chat"](*args, **kwargs)
-            return self._handle_response_ollama(result, kwargs, init_timestamp)
+            return self._handle_response_ollama(
+                result, kwargs, init_timestamp, session=kwargs.get("session", None)
+            )
 
         # Override the original method with the patched one
         ollama.chat = patched_function

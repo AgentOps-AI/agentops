@@ -210,6 +210,8 @@ class Session:
                     "events": queue_copy,
                 }
 
+                print(queue_copy)
+
                 serialized_payload = safe_serialize(payload).encode("utf-8")
                 HttpClient.post(
                     f"{self.config.endpoint}/v2/create_events",
