@@ -1,0 +1,110 @@
+---
+title: Langchain
+description: "AgentOps provides first class support for Lanchain applications"
+---
+
+AgentOps works seamlessly with applications built using Langchain.
+
+## Adding AgentOps to Langchain applications
+
+<Steps>
+	<Step title="Install the AgentOps SDK and the additional Langchain dependency">
+		<CodeGroup>
+			```bash pip
+			pip install agentops
+			pip install agentops[langchain]
+			```
+			```bash poetry
+			poetry add agentops
+			poetry add agentops[langchain]
+			```
+		</CodeGroup>
+		<Check>
+			[Give us a star](https://github.com/AgentOps-AI/agentops) on GitHub while you're at it (you may be our 2,000th 😊)
+		</Check>
+	</Step>
+	<Step title="Set up your import statements">
+		Import the following Langchain and AgentOps dependencies
+		<CodeGroup>
+			```python python
+			import os
+			from langchain.chat_models import ChatOpenAI
+			from langchain.agents import initialize_agent, AgentType
+			from agentops.langchain_callback_handler import LangchainCallbackHandler
+			```
+		</CodeGroup>
+		<Tip>
+			For more features see our [Usage](/v1/usage) section.
+		</Tip>
+	</Step>
+	<Step title="Set up your Langchain handler to make the calls">
+		Set up your Langchain agent with the AgentOps callback handler and AgentOps will automatically record your Langchain sessions.
+		<CodeGroup>
+			```python python
+			handler = LangchainCallbackHandler(api_key=AGENTOPS_API_KEY, tags=['Langchain Example'])
+
+			llm = ChatOpenAI(openai_api_key=OPENAI_API_KEY,
+				callbacks=[handler],
+				model='gpt-3.5-turbo')
+
+			agent = initialize_agent(tools,
+				llm,
+				agent=AgentType.CHAT_ZERO_SHOT_REACT_DESCRIPTION,
+				verbose=True,
+				callbacks=[handler], # You must pass in a callback handler to record your agent
+				handle_parsing_errors=True)
+			```
+		</CodeGroup>
+		<Tip>
+			Note that you don't need to set up a separate agentops.init() call, as the Langchain callback handler will automatically initialize the AgentOps client for you.
+		</Tip>
+	</Step>
+	<Step title="Set your API key">
+		Retrieve an API Key from your Settings > [Projects & API Keys](https://app.agentops.ai/settings/projects) page.
+		<Frame type="glass" caption="Settings > Projects & API Keys">
+			<img height="200" src="/images/api-keys.png" />
+		</Frame>
+		<Info>
+			API keys are tied to individual projects.<br></br>
+			A Default Project has been created for you, so just click Copy API Key
+		</Info>
+		Set this API Key in your [environment variables](/v1/usage/environment-variables)
+		```python .env
+		AGENTOPS_API_KEY=<YOUR API KEY>
+		```
+	</Step>
+    <Step title="Run your agent">
+		Execute your program and visit [app.agentops.ai/drilldown](https://app.agentops.ai/drilldown) to observe your Langchain Agent! 🕵️
+		<Tip>
+			After your run, AgentOps prints a clickable url to console linking directly to your session in the Dashboard
+		</Tip>
+		<div/>{/* Intentionally blank div for newline */}
+		<Frame type="glass" caption="Clickable link to session">
+			<img height="200" src="https://github.com/AgentOps-AI/agentops/blob/cf67191f13e0e2a09446a61b7393e1810b3eee95/docs/images/link-to-session.gif?raw=true" />
+		</Frame>
+	</Step>
+</Steps>
+
+## Full Examples
+
+<CodeGroup>
+	```python python
+	import os
+	from langchain.chat_models import ChatOpenAI
+	from langchain.agents import initialize_agent, AgentType
+	from agentops.langchain_callback_handler import LangchainCallbackHandler
+
+	handler = LangchainCallbackHandler(api_key=AGENTOPS_API_KEY, tags=['Langchain Example'])
+
+	llm = ChatOpenAI(openai_api_key=OPENAI_API_KEY,
+		callbacks=[handler],
+		model='gpt-3.5-turbo')
+
+	agent = initialize_agent(tools,
+		llm,
+		agent=AgentType.CHAT_ZERO_SHOT_REACT_DESCRIPTION,
+		verbose=True,
+		callbacks=[handler], # You must pass in a callback handler to record your agent
+		handle_parsing_errors=True)
+	```
+</CodeGroup>
