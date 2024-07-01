@@ -8,7 +8,6 @@ from uuid import UUID
 from .client import Client
 from .config import ClientConfiguration
 from .event import Event, ActionEvent, LLMEvent, ToolEvent, ErrorEvent
-from .enums import Models
 from .decorators import record_function
 from .agent import track_agent
 from .log_config import logger
@@ -194,16 +193,6 @@ def set_tags(tags: List[str]):
         tags (List[str]): The list of tags to set.
     """
     Client().set_tags(tags)
-
-
-@check_init
-def record_function(event_name: str):
-    return decorators.record_function(event_name)
-
-
-@check_init
-def track_agent(name: Union[str, None] = None):
-    return agent.track_agent(name)
 
 
 def get_api_key() -> str:

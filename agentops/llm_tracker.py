@@ -811,8 +811,9 @@ class LlmTracker:
         completions.AsyncCompletions.create = original_create_async
 
     def undo_override_ollama(self):
-        import ollama
+        if "ollama" in sys.modules:
+            import ollama
 
-        ollama.chat = original_func["ollama.chat"]
-        ollama.Client.chat = original_func["ollama.Client.chat"]
-        ollama.AsyncClient.chat = original_func["ollama.AsyncClient.chat"]
+            ollama.chat = original_func["ollama.chat"]
+            ollama.Client.chat = original_func["ollama.Client.chat"]
+            ollama.AsyncClient.chat = original_func["ollama.AsyncClient.chat"]
