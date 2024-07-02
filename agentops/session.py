@@ -11,7 +11,6 @@ from typing import Optional, List, Union
 from uuid import UUID, uuid4
 
 from .http_client import HttpClient
-from .worker import Worker
 
 
 class Session:
@@ -45,7 +44,6 @@ class Session:
         self.video: Optional[str] = None
         self.end_state_reason: Optional[str] = None
         self.host_env = host_env
-        self._worker = Worker(config)
         self.config = config
         self.jwt = None
         self.lock = threading.Lock()
@@ -210,8 +208,6 @@ class Session:
                     "events": queue_copy,
                 }
 
-                print(queue_copy)
-
                 serialized_payload = safe_serialize(payload).encode("utf-8")
                 HttpClient.post(
                     f"{self.config.endpoint}/v2/create_events",
@@ -220,7 +216,7 @@ class Session:
                 )
 
                 logger.debug("\n<AGENTOPS_DEBUG_OUTPUT>")
-                logger.debug(f"Worker request to {self.config.endpoint}/events")
+                logger.debug(f"Session request to {self.config.endpoint}/events")
                 logger.debug(serialized_payload)
                 logger.debug("</AGENTOPS_DEBUG_OUTPUT>\n")
 

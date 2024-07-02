@@ -64,8 +64,6 @@ class Client(metaclass=MetaClient):
         skip_auto_end_session (optional, bool): Don't automatically end session based on your framework's decision making
     Attributes:
         _session (Session, optional): A Session is a grouping of events (e.g. a run of your agent).
-        _worker (Worker, optional): A Worker manages the event queue and sends session updates to the AgentOps api
-            server
     """
 
     def __init__(
@@ -219,7 +217,7 @@ class Client(metaclass=MetaClient):
 
     def _record_event_sync(self, func, event_name, *args, **kwargs):
         init_time = get_ISO_time()
-        session: Union[Session, None] = kwargs.get("session", None)
+        session: Optional[Session] = kwargs.get("session", None)
         if "session" in kwargs.keys():
             del kwargs["session"]
         if session is None:
@@ -554,8 +552,7 @@ class Client(metaclass=MetaClient):
         Args:
             parent_key (str): The API key of the parent organization to set.
         """
-        if self._worker:
-            self._worker.config.parent_key = parent_key
+        self.config.parent_key = parent_key
 
     @property
     def parent_key(self):

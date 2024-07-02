@@ -133,6 +133,8 @@ def end_session(
     )
 
 
+# Mostly used for unit testing -
+# prevents unexpected sessions on new tests
 def end_all_sessions() -> None:
     return Client().end_all_sessions()
 
