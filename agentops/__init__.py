@@ -50,7 +50,7 @@ def init(
     auto_start_session=True,
     inherited_session_id: Optional[str] = None,
     skip_auto_end_session: Optional[bool] = False,
-) -> Union[str, None]:
+) -> Union[Session, None]:
     """
     Initializes the AgentOps singleton pattern.
 

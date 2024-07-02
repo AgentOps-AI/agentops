@@ -50,13 +50,13 @@ class Session:
         self.queue = []
 
         self.stop_flag = threading.Event()
-        self.thread = threading.Thread(target=self.run)
+        self.thread = threading.Thread(target=self._run)
         self.thread.daemon = True
         self.thread.start()
 
         self._start_session()
 
-    def set_session_video(self, video: str) -> None:
+    def set_video(self, video: str) -> None:
         """
         Sets a url to the video recording of the session.
 
@@ -74,7 +74,7 @@ class Session:
 
         self.stop_flag.set()
         self.thread.join(timeout=1)
-        self.flush_queue()
+        self._flush_queue()
 
         with self.lock:
             payload = {"session": self.__dict__}
@@ -136,16 +136,16 @@ class Session:
                 potato.record(event)
                 event.trigger_event = None  # removes trigger_event from serialization
 
-        potato.add_event(event.__dict__)
+        potato._add_event(event.__dict__)
 
-    def add_event(self, event: dict) -> None:
+    def _add_event(self, event: dict) -> None:
         with self.lock:
             self.queue.append(event)
 
             if len(self.queue) >= self.config.max_queue_size:
-                self.flush_queue()
+                self._flush_queue()
 
-    def reauthorize_jwt(self) -> Union[str, None]:
+    def _reauthorize_jwt(self) -> Union[str, None]:
         with self.lock:
             payload = {"session_id": self.session_id}
             serialized_payload = json.dumps(filter_unjsonable(payload)).encode("utf-8")
@@ -198,7 +198,7 @@ class Session:
                 jwt=self.jwt,
             )
 
-    def flush_queue(self) -> None:
+    def _flush_queue(self) -> None:
         with self.lock:
             queue_copy = copy.deepcopy(self.queue)  # Copy the current items
             self.queue = []
@@ -220,11 +220,11 @@ class Session:
                 logger.debug(serialized_payload)
                 logger.debug("</AGENTOPS_DEBUG_OUTPUT>\n")
 
-    def run(self) -> None:
+    def _run(self) -> None:
         while not self.stop_flag.is_set():
             time.sleep(self.config.max_wait_time / 1000)
             if self.queue:
-                self.flush_queue()
+                self._flush_queue()
 
     def create_agent(self, name, agent_id):
         if agent_id is None:
