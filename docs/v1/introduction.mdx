@@ -4,23 +4,32 @@ description: "Build your next agent with evals, observability, and replays"
 mode: "wide"
 ---
 
-<Check>[Give us a star](https://github.com/AgentOps-AI/agentops) on GitHub if you find AgentOps helpful (you may be our 1,000th 😊)</Check>
+<Check>[Give us a star](https://github.com/AgentOps-AI/agentops) on GitHub if you find AgentOps helpful (you may be our 2,000th 😊)</Check>
 
-# AgentOps is your new terminal
+# AgentOps solves what Terminal can't
 
-<Card title="Terminals suck" icon="trash" iconType="solid" color="#d6483e">
-	- • Lose track of what your agents did in between executions
-	- • Parsing through terminal output searching for LLM completions
-	- • Printing "tool called"
-</Card>
-<Card title="AgentOps doesn't" icon="face-smile-halo" iconType="regular" color="#2bd600">
-	- • Visual dashboard so you can see what your agents did in human-readable format
-	- • LLM calls are magically recorded - prompt, completion, timestamps for each - with one line of code
-	- • Agents and their events (including tool calls) are recorded with one more line of code
-	- • Errors are magically associated to its causal event
-	- • Record any other events to your session with two more lines of code
-	- • Tons of other useful data if you're developing with supported agent frameworks: SDK version
-</Card>
+<CardGroup cols={2}>
+	<Card title="Terminal CAN'T..." icon="trash" iconType="solid" color="#d6483e">
+		- • Track agents across executions
+		- • Parse out LLM completions from output logs
+		- • Give you insight into what your agents did
+	</Card>
+	<Card title="AgentOps does it all and more..." icon="face-smile-halo" iconType="regular" color="#2bd600">
+		- • Record LLM prompts, completions, & timestamps
+		- • Log events, calls, and any other agent activity
+		- • Link agent errors back to their causal event
+	</Card>
+</CardGroup>
+
+And we do it all in just two lines of code...
+<CodeGroup>
+	```python python
+	import agentops
+	agentops.init(<INSERT YOUR API KEY HERE>)
+	```
+</CodeGroup>
+... that logs everything back to your AgentOps Dashboard.
+
 
 ## The AgentOps Dashboard
 
