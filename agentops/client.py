@@ -588,7 +588,7 @@ class Client(metaclass=MetaClient):
 
         elif len(self._sessions) > 1:
             raise ValueError(
-                "If multiple sessions exist, you must use session.function()"
+                "If multiple sessions exist, you must use session.function(). Example: session.add_tags(...) instead of agentops.add_tags(...)"
             )
 
         return session

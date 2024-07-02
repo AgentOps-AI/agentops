@@ -32,6 +32,45 @@ Optionally, sessions may include:
 - **Host Environment**: Automatically gathers basic information about the system on which the session ran.
 - **Video**: If applicable, an optional video recording of the session.
 
+### Session Management
+AgentOps can exist in one of two states:
+<CardGroup cols={2}>
+	<Card title="Single Session" icon="hand-point-up" iconType="solid" color="#2bd600">
+		- • Only one session exists at a time. All agent usage is synchronous.
+		- • Use cases: Scripting, development, local machine use (browser extensions, web client, etc)
+	</Card>
+	<Card title="Multi-Session" icon="hand-peace" iconType="solid" color="#2bd600">
+		- • REST server
+		- • Asynchronous agents
+	</Card>
+</CardGroup>
+
+By default, AgentOps operates in single-session mode. All of the [base SDK functions](/v1/usage/sdk-reference) work as expected.
+
+<Note>Under the hood, when you only have one session at a time, AgentOps can use functions like `agentops.add_tags(...)` and know that you want to perform the function on the one and only active session.</Note>
+
+As soon as you create a second session, AgentOps enters **Multi-Session Mode**. As long as more than one session is active, the [base SDK functions](/v1/usage/sdk-reference) will no longer work.
+
+If multiple sessions exist, you are expected to call the function on the relevant session. Ex
+<CodeGroup>
+```python single session
+import agentops
+agentops.start_session()
+agentops.end_session(end_state='Success')
+```
+
+```python multi-session
+import agentops
+session_1 = agentops.start_session()
+session_2 = agentops.start_session()
+
+session_1.end_session(end_state='Success')
+session_2.end_session(end_state='Failure')
+```
+</CodeGroup>
+
+For more documentation on using multiple concurrent sessions, please see [Sessions](/v1/concepts/sessions) and [FastAPI Example](/v1/examples/fastapi).
+
 ### LLMs, Tools, and Actions (Events)
 
 Within AgentOps, **LLMs**, **Tools**, and **Actions** are categorized as **Events**, executed by Agents. Agents primarily initiate LLM calls, potentially leading to API/Tool calls, while Actions encompass any other significant procedures, such as executing functions, taking screenshots, etc.
