@@ -76,7 +76,8 @@
         "v1/usage/environment-variables",
         "v1/usage/tracking-llm-calls",
         "v1/usage/tracking-agents",
-        "v1/usage/recording-events"
+        "v1/usage/recording-events",
+        "v1/usage/multiple-sessions"
       ]
     },
     {

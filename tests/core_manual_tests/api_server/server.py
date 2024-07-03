@@ -18,7 +18,7 @@ def completion():
     session = agentops.start_session(tags=["api-server-test"])
 
     messages = [{"role": "user", "content": "Hello"}]
-    response = openai.chat.completions.create(
+    response = session.patch(openai.chat.completions.create)(
         model="gpt-3.5-turbo",
         messages=messages,
         temperature=0.5,

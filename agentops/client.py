@@ -19,6 +19,7 @@ from typing import Optional, List, Union
 
 from .event import ActionEvent, ErrorEvent, Event
 from .enums import EndState
+from .exceptions import NoSessionException, MultiSessionException
 from .helpers import (
     get_ISO_time,
     check_call_stack_for_agent_id,
@@ -584,10 +585,10 @@ class Client(metaclass=MetaClient):
             session = self._sessions[0]
 
         if len(self._sessions) == 0:
-            raise ValueError("No session exists")
+            raise NoSessionException("No session exists")
 
         elif len(self._sessions) > 1:
-            raise ValueError(
+            raise MultiSessionException(
                 "If multiple sessions exist, you must use session.function(). Example: session.add_tags(...) instead "
                 "of agentops.add_tags(...). More info: "
                 "https://docs.agentops.ai/v1/concepts/core-concepts#session-management"
