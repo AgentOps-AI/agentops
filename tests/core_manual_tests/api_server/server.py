@@ -22,7 +22,6 @@ def completion():
         model="gpt-3.5-turbo",
         messages=messages,
         temperature=0.5,
-        session=session,  # <-- add the agentops session to the create function
     )
 
     session.record(

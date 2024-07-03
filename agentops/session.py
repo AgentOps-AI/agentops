@@ -1,4 +1,5 @@
 import copy
+import functools
 import json
 import threading
 import time
@@ -241,3 +242,11 @@ class Session:
         )
 
         return agent_id
+
+    def patch(self, func):
+        @functools.wraps(func)
+        def wrapper(*args, **kwargs):
+            kwargs["session"] = self
+            return func(*args, **kwargs)
+
+        return wrapper
