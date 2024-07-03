@@ -60,7 +60,7 @@ import SupportedModels from '/snippets/supported-models.mdx'
     </Frame>
   </Step>
 </Steps>
-<Check>[Give us a star](https://github.com/AgentOps-AI/agentops) on GitHub if you found AgentOps helpful (you may be our 2,000th 😊)</Check>
+<Check>[Give us a star](https://github.com/AgentOps-AI/agentops) if you liked AgentOps! (you may be our <span id="stars-text">2,000th</span> 😊)</Check>
 
 ## More basic functionality
 
@@ -153,3 +153,20 @@ agentops.end_session('Success')
     Associate Events with specific named agents.
   </Card>
 </CardGroup>
+
+<script>
+  {window.addEventListener('load', function() {
+    fetch("https://api.github.com/repos/AgentOps-AI/agentops")
+      .then((response) => response.json())
+      .then((data) => {
+        const stars = Math.ceil(data.stargazers_count / 1000) * 1000;
+        const dataContainer = document.getElementById("stars-text");
+        dataContainer.innerHTML = `${stars.toLocaleString()}th`;
+
+      })
+      .catch((error) => {
+        console.error("Error:", error);
+        document.getElementById("stars-text").textContent = 'Error loading data.';
+      });
+  })}
+</script>

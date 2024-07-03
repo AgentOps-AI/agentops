@@ -22,7 +22,7 @@ This is a living integration. Should you need any added functionality message us
       poetry add agentops
       ```
     </CodeGroup>
-    <Check>[Give us a star](https://github.com/AgentOps-AI/agentops) on GitHub while you're at it (you may be our 2,000th 😊)</Check>
+    <Check>[Give us a star](https://github.com/AgentOps-AI/agentops) on GitHub while you're at it (you may be our <span id="stars-text">2,000th</span> 😊)</Check>
   </Step>
 	<Step title="Add 3 lines of code">
 		<CodeGroup>
@@ -114,3 +114,20 @@ This is a living integration. Should you need any added functionality message us
   agentops.end_session('Success')
   ```
 </CodeGroup>
+
+<script>
+  {window.addEventListener('load', function() {
+    fetch("https://api.github.com/repos/AgentOps-AI/agentops")
+      .then((response) => response.json())
+      .then((data) => {
+        const stars = Math.ceil(data.stargazers_count / 1000) * 1000;
+        const dataContainer = document.getElementById("stars-text");
+        dataContainer.innerHTML = `${stars.toLocaleString()}th`;
+
+      })
+      .catch((error) => {
+        console.error("Error:", error);
+        document.getElementById("stars-text").textContent = 'Error loading data.';
+      });
+  })}
+</script>
