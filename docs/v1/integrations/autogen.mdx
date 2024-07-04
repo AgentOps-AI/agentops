@@ -34,18 +34,20 @@ Autogen has comprehensive [documentation](https://microsoft.github.io/autogen/do
 	<Step title="Add 3 lines of code">
 		1. Before setting up anything in Autogen, call `agentops.init()`
 		2. At the end of your agent run, call `agentops.end_session("Success")`
-		<CodeGroup>
-			```python python
-			import agentops
+		<div className="adjust-api-key">
+			<CodeGroup>
+				```python python
+				import agentops
 
-			# Beginning of program (i.e. main.py, __init__.py)
-			# IMPORTANT: Must be before using any autogen setup
-			agentops.init(<INSERT YOUR API KEY HERE>)
-			...
-			# End of program (e.g. main.py)
-			agentops.end_session("Success") # Success|Fail|Indeterminate
-			```
-		</CodeGroup>
+				# Beginning of program (i.e. main.py, __init__.py)
+				# IMPORTANT: Must be before using any autogen setup
+				agentops.init(<INSERT YOUR API KEY HERE>)
+				...
+				# End of program (e.g. main.py)
+				agentops.end_session("Success") # Success|Fail|Indeterminate
+				```
+			</CodeGroup>
+		</div>
 		<Check>
 			Instantiating the AgentOps client will automatically instrument Autogen, meaning you will be able to see all
 			of your sessions on the AgentOps Dashboard along with the full LLM chat histories, cost, token counts, etc.
@@ -63,10 +65,12 @@ Autogen has comprehensive [documentation](https://microsoft.github.io/autogen/do
 			API keys are tied to individual projects.<br></br>
 			A Default Project has been created for you, so just click Copy API Key
 		</Info>
-		Set this API Key in your [environment variables](/v1/usage/environment-variables)
-		```python .env
-		AGENTOPS_API_KEY=<YOUR API KEY>
-		```
+		<div className="adjust-api-key">
+			Set this API Key in your [environment variables](/v1/usage/environment-variables)
+			```python .env
+			AGENTOPS_API_KEY=<YOUR API KEY>
+			```
+		</div>
 	</Step>
     <Step title="Run your agent">
 		Execute your program and visit [app.agentops.ai/drilldown](https://app.agentops.ai/drilldown) to observe your Autogen Agent! 🕵️

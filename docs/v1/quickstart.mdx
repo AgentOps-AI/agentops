@@ -16,16 +16,18 @@ import SupportedModels from '/snippets/supported-models.mdx'
     </CodeGroup>
   </Step>
   <Step title="Add 2 lines of code">
-    <CodeGroup>
-      ```python python
-      import agentops
+    <div className="adjust-api-key">
+      <CodeGroup>
+        ```python python
+        import agentops
 
-      # Beginning of program (i.e. main.py, __init__.py)
-      # IMPORTANT: Must be before any OpenAI, Cohere, Crew, etc constructors are called
-      # e.g. before client = OpenAI(...)
-      agentops.init(<INSERT YOUR API KEY HERE>)
-      ```
-    </CodeGroup>
+        # Beginning of program (i.e. main.py, __init__.py)
+        # IMPORTANT: Must be before any OpenAI, Cohere, Crew, etc constructors are called
+        # e.g. before client = OpenAI(...)
+        agentops.init(<INSERT YOUR API KEY HERE>)
+        ```
+      </CodeGroup>
+    </div>
     <Check>Just these two lines and you have magically tracked LLM calls!</Check>
     <Tip>
       After the `openai`, `cohere`, or `litellm` packages have been imported, importing + instantiating the AgentOps client
@@ -45,9 +47,11 @@ import SupportedModels from '/snippets/supported-models.mdx'
     A Default Project has been created for you, so just click Copy API Key
     </Info>
     Set this API Key in your [environment variables](/v1/usage/environment-variables)
-    ```python .env
-    AGENTOPS_API_KEY=<YOUR API KEY>
-    ```
+    <div className="adjust-api-key">
+      ```python .env
+      AGENTOPS_API_KEY=<YOUR API KEY>
+      ```
+    </div>
   </Step>
   <Step title="Run your agent">
     Execute your program and visit [app.agentops.ai/drilldown](https://app.agentops.ai/drilldown) to observe your Agent! 🕵️
@@ -106,6 +110,7 @@ import SupportedModels from '/snippets/supported-models.mdx'
 
 Here is the complete code from the sections above
 
+<div className="adjust-api-key">
 ```python python
 import openai
 import agentops
@@ -126,6 +131,7 @@ class sample_agent(...):
 # End of program
 agentops.end_session('Success')
 ```
+</div>
 
 <Card
   title="Simple Code Example"

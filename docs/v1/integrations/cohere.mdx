@@ -25,19 +25,21 @@ This is a living integration. Should you need any added functionality message us
     <Check>[Give us a star](https://github.com/AgentOps-AI/agentops) on GitHub while you're at it (you may be our <span id="stars-text">2,000th</span> 😊)</Check>
   </Step>
 	<Step title="Add 3 lines of code">
-		<CodeGroup>
-			```python python
-			import agentops
+		<div className="adjust-api-key">
+      <CodeGroup>
+        ```python python
+        import agentops
 
-			# Beginning of program (i.e. main.py, __init__.py)
-			# IMPORTANT: Must be before calling `co = cohere.Client()`
-			agentops.init(<INSERT YOUR API KEY HERE>)
-      co = cohere.Client()
-			...
-			# End of program (e.g. main.py)
-			agentops.end_session("Success") # Success|Fail|Indeterminate
-			```
-		</CodeGroup>
+        # Beginning of program (i.e. main.py, __init__.py)
+        # IMPORTANT: Must be before calling `co = cohere.Client()`
+        agentops.init(<INSERT YOUR API KEY HERE>)
+        co = cohere.Client()
+        ...
+        # End of program (e.g. main.py)
+        agentops.end_session("Success") # Success|Fail|Indeterminate
+        ```
+      </CodeGroup>
+		</div>
     <Warning>
       Requires cohere>=5.4.0
     </Warning>
@@ -59,9 +61,11 @@ This is a living integration. Should you need any added functionality message us
 			A Default Project has been created for you, so just click Copy API Key
 		</Info>
 		Set this API Key in your [environment variables](/v1/usage/environment-variables)
-		```python .env
-		AGENTOPS_API_KEY=<YOUR API KEY>
-		```
+    <div className="adjust-api-key">
+      ```python .env
+      AGENTOPS_API_KEY=<YOUR API KEY>
+			```
+		</div>
 	</Step>
     <Step title="Run your Agent">
 		Execute your program and visit [app.agentops.ai/drilldown](https://app.agentops.ai/drilldown) to observe your Agents! 🕵️
@@ -77,43 +81,45 @@ This is a living integration. Should you need any added functionality message us
 
 ## Full Examples
 
-<CodeGroup>
-  ```python chat()
-  import cohere
-  import agentops
+<div className="adjust-api-key">
+  <CodeGroup>
+    ```python chat()
+    import cohere
+    import agentops
 
-  agentops.init(<INSERT YOUR API KEY HERE>)
+    agentops.init(<INSERT YOUR API KEY HERE>)
 
-  co = cohere.Client()
+    co = cohere.Client()
 
-  chat = co.chat(
-      message="Is it pronounced ceaux-hear or co-hehray?"
-  )
+    chat = co.chat(
+        message="Is it pronounced ceaux-hear or co-hehray?"
+    )
 
-  print(chat)
+    print(chat)
 
-  agentops.end_session('Success')
-  ```
+    agentops.end_session('Success')
+    ```
 
-  ```python chat_stream()
-  import cohere
-  import agentops
+    ```python chat_stream()
+    import cohere
+    import agentops
 
-  agentops.init(<INSERT YOUR API KEY HERE>)
+    agentops.init(<INSERT YOUR API KEY HERE>)
 
-  co = cohere.Client()
+    co = cohere.Client()
 
-  stream = co.chat_stream(
-      message="Write me a haiku about the synergies between Cohere and AgentOps"
-  )
+    stream = co.chat_stream(
+        message="Write me a haiku about the synergies between Cohere and AgentOps"
+    )
 
-  for event in stream:
-      if event.event_type == "text-generation":
-          print(event.text, end='')
+    for event in stream:
+        if event.event_type == "text-generation":
+            print(event.text, end='')
 
-  agentops.end_session('Success')
-  ```
-</CodeGroup>
+    agentops.end_session('Success')
+    ```
+  </CodeGroup>
+</div>
 
 <script type="module" src="/scripts/github_stars.js"></script>
 <script type="module" src="/scripts/adjust_api_dynamically.js"></script>

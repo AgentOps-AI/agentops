@@ -44,18 +44,20 @@ Crew has comprehensive [documentation](https://docs.crewai.com) available as wel
 	<Step title="Add 3 lines of code">
 		1. Before calling the `Crew()` constructor in your code, call `agentops.init()`
 		2. At the end of your Crew run, call `agentops.end_session("Success")`
-		<CodeGroup>
-			```python python
-			import agentops
+		<div className="adjust-api-key">
+			<CodeGroup>
+				```python python
+				import agentops
 
-			# Beginning of program (i.e. main.py, __init__.py)
-			# IMPORTANT: Must be before calling the `Crew()` constructor
-			agentops.init(<INSERT YOUR API KEY HERE>)
-			...
-			# End of program (e.g. main.py)
-			agentops.end_session("Success") # Success|Fail|Indeterminate
-			```
-		</CodeGroup>
+				# Beginning of program (i.e. main.py, __init__.py)
+				# IMPORTANT: Must be before calling the `Crew()` constructor
+				agentops.init(<INSERT YOUR API KEY HERE>)
+				...
+				# End of program (e.g. main.py)
+				agentops.end_session("Success") # Success|Fail|Indeterminate
+				```
+			</CodeGroup>
+		</div>
 		<Check>
 			Instantiating the AgentOps client will automatically instrument Crew, meaning you will be able to see all
 			of your sessions on the AgentOps Dashboard along with the full LLM chat histories, cost, token counts, etc.
@@ -73,10 +75,12 @@ Crew has comprehensive [documentation](https://docs.crewai.com) available as wel
 			API keys are tied to individual projects.<br></br>
 			A Default Project has been created for you, so just click Copy API Key
 		</Info>
-		Set this API Key in your [environment variables](/v1/usage/environment-variables)
-		```python .env
-		AGENTOPS_API_KEY=<YOUR API KEY>
-		```
+		<div className="adjust-api-key">
+			Set this API Key in your [environment variables](/v1/usage/environment-variables)
+			```python .env
+			AGENTOPS_API_KEY=<YOUR API KEY>
+			```
+		</div>
 	</Step>
     <Step title="Run your crew">
 		Execute your program and visit [app.agentops.ai/drilldown](https://app.agentops.ai/drilldown) to observe your Crew! 🕵️

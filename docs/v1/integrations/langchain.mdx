@@ -37,22 +37,24 @@ AgentOps works seamlessly with applications built using Langchain.
 	</Step>
 	<Step title="Set up your Langchain handler to make the calls">
 		Set up your Langchain agent with the AgentOps callback handler and AgentOps will automatically record your Langchain sessions.
-		<CodeGroup>
-			```python python
-			handler = LangchainCallbackHandler(api_key=AGENTOPS_API_KEY, tags=['Langchain Example'])
+		<div className="adjust-api-key">
+			<CodeGroup>
+				```python python
+				handler = LangchainCallbackHandler(api_key=AGENTOPS_API_KEY, tags=['Langchain Example'])
 
-			llm = ChatOpenAI(openai_api_key=OPENAI_API_KEY,
-				callbacks=[handler],
-				model='gpt-3.5-turbo')
+				llm = ChatOpenAI(openai_api_key=OPENAI_API_KEY,
+					callbacks=[handler],
+					model='gpt-3.5-turbo')
 
-			agent = initialize_agent(tools,
-				llm,
-				agent=AgentType.CHAT_ZERO_SHOT_REACT_DESCRIPTION,
-				verbose=True,
-				callbacks=[handler], # You must pass in a callback handler to record your agent
-				handle_parsing_errors=True)
-			```
-		</CodeGroup>
+				agent = initialize_agent(tools,
+					llm,
+					agent=AgentType.CHAT_ZERO_SHOT_REACT_DESCRIPTION,
+					verbose=True,
+					callbacks=[handler], # You must pass in a callback handler to record your agent
+					handle_parsing_errors=True)
+				```
+			</CodeGroup>
+		</div>
 		<Tip>
 			Note that you don't need to set up a separate agentops.init() call, as the Langchain callback handler will automatically initialize the AgentOps client for you.
 		</Tip>
@@ -67,9 +69,11 @@ AgentOps works seamlessly with applications built using Langchain.
 			A Default Project has been created for you, so just click Copy API Key
 		</Info>
 		Set this API Key in your [environment variables](/v1/usage/environment-variables)
-		```python .env
-		AGENTOPS_API_KEY=<YOUR API KEY>
-		```
+		<div className="adjust-api-key">
+			```python .env
+			AGENTOPS_API_KEY=<YOUR API KEY>
+			```
+		</div>
 	</Step>
     <Step title="Run your agent">
 		Execute your program and visit [app.agentops.ai/drilldown](https://app.agentops.ai/drilldown) to observe your Langchain Agent! 🕵️
