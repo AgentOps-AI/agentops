@@ -3,8 +3,10 @@ function updateStars() {
     .then((response) => response.json())
     .then((data) => {
       const stars = Math.ceil(data.stargazers_count / 100) * 100 + 100;
-      const dataContainer = document.getElementById("stars-text");
-      dataContainer.innerHTML = `${stars.toLocaleString()}th`;
+      setTimeout(() => {
+        const dataContainer = document.getElementById("stars-text");
+        dataContainer.innerHTML = `${stars.toLocaleString()}th`;
+      }, 50);
     })
     .catch((error) => {
       // console.error("Github Stars pull error:", error);
@@ -16,11 +18,12 @@ function addNewEventListeners() {
     document.querySelectorAll('li, a').forEach(element => {
       element.addEventListener('click', updateStars);
     });
-  }, 100);
+  }, 50);
 }
 
 window.addEventListener('load', function() {
   updateStars();
+  addNewEventListeners();
   const observer = new MutationObserver(addNewEventListeners);
   observer.observe(document.body, { childList: true, subtree: true });
 });
