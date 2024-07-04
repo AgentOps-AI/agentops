@@ -13,7 +13,6 @@ function updateStars() {
 
 window.addEventListener('load', function() {
   updateStars();
-  document.querySelectorAll('li, a').forEach(item => {
-    item.addEventListener('click', updateStars);
-  });
+  const observer = new MutationObserver(updateStars);
+  observer.observe(document.body, { childList: true, subtree: true });
 });
