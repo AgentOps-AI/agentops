@@ -23,7 +23,6 @@ function addNewEventListeners() {
 
 window.addEventListener('load', function() {
   updateStars();
-  addNewEventListeners();
   const observer = new MutationObserver(addNewEventListeners);
   observer.observe(document.body, { childList: true, subtree: true });
 });
