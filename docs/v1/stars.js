@@ -11,8 +11,16 @@ function updateStars() {
     });
 }
 
+function addNewEventListeners() {
+  setTimeout(() => {
+    document.querySelectorAll('li, a').forEach(element => {
+      element.addEventListener('click', updateStars);
+    });
+  }, 100);
+}
+
 window.addEventListener('load', function() {
   updateStars();
-  const observer = new MutationObserver(updateStars);
+  const observer = new MutationObserver(addNewEventListeners);
   observer.observe(document.body, { childList: true, subtree: true });
 });
