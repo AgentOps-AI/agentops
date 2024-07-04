@@ -9,6 +9,5 @@ window.addEventListener('load', function() {
     })
     .catch((error) => {
       console.error("Error:", error);
-      document.getElementById("stars-text").textContent = 'Error loading data.';
     });
 })
