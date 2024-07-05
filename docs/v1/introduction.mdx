@@ -4,9 +4,13 @@ description: "Build your next agent with evals, observability, and replays"
 mode: "wide"
 ---
 
+import DynamicDashboard from '/snippets/dynamic-dashboard.mdx'
+import APIKeyWarning from '/snippets/api-key-warning.mdx'
+import APIKeyButton from '/snippets/api-key-button.mdx'
+
 <Check>[Give us a star](https://github.com/AgentOps-AI/agentops) on GitHub if you find AgentOps helpful (you may be our <span id="stars-text">2,000th</span> 😊)</Check>
 
-# AgentOps solves what Terminal can't
+# AgentOps solves what Terminal can't...
 
 <CardGroup cols={2}>
 	<Card title="Terminal CAN'T..." icon="trash" iconType="solid" color="#d6483e">
@@ -21,7 +25,10 @@ mode: "wide"
 	</Card>
 </CardGroup>
 
-And we do it all in just two lines of code...
+# in 2 lines of code...
+
+<APIKeyWarning />
+
 <div className="adjust-api-key">
 	<CodeGroup>
 		```python python
@@ -30,15 +37,19 @@ And we do it all in just two lines of code...
 		```
 	</CodeGroup>
 </div>
-... that logs everything back to your AgentOps Dashboard.
 
-## The AgentOps Dashboard
+<APIKeyButton />
+
+
+# ... that logs it all in your Dashboard.
+
+{/* ## The AgentOps Dashboard
 
 With just two lines of code, you can free yourself from the chains of the terminal and instead visualize your agents' behavior
 in your AgentOps Dashboard. After setting up AgentOps, each execution of your program is recorded as a session and the above
 data is automatically recorded for you.
 
-The examples below were captured with two lines of code.
+The examples below were captured with two lines of code. */}
 
 ### Session Drilldown
 Here you will find a list of all of your previously recorded sessions and useful data about each such as total execution time.
@@ -71,3 +82,4 @@ View a meta-analysis of all of your sessions in a single view.
 
 <script type="module" src="/scripts/github_stars.js"></script>
 <script type="module" src="/scripts/adjust_api_dynamically.js"></script>
+<link rel="stylesheet" type="text/css" href="/styles/button.css" />

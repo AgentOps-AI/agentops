@@ -57,6 +57,10 @@ function addAPIEventListeners() { // would change to button
 }
 
 window.addEventListener('load', function() {
+  const actionButtons = document.querySelectorAll('.action-button');
+  actionButtons.forEach(button => {
+    button.addEventListener('click', adjustAPIKey);
+  });
   // addAPIEventListeners();
   // const apiObserver = new MutationObserver(addAPIEventListeners);
   // apiObserver.observe(document.body, { childList: true, subtree: true });

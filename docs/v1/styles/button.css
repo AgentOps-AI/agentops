@@ -1,0 +1,26 @@
+/* header {
+  color: blue;
+} */
+
+button.action-button {
+  background-color: #0b430d; /* Darker green background */
+  border: none; /* Remove borders */
+  color: #E0E0E0; /* Light gray text */
+  padding: 0em 0.8em; /* Some padding */
+  text-align: center; /* Centered text */
+  text-decoration: none; /* Remove underline */
+  display: inline-block; /* Get the element to line up correctly */
+  font-size: 1em; /* Increase font size */
+  margin: 0.8em 2em; /* Add some margin */
+  cursor: pointer; /* Add a pointer cursor on hover */
+  border-radius: 0.4em; /* Rounded corners */
+  transition: background-color 0.3s ease; /* Animate background color changes */
+  font-weight: bold; /* Make text bold */
+  display: block; /* Make the button a block element */
+  margin-left: auto; /* Center the button horizontally */
+  margin-right: auto; /* Center the button horizontally */
+}
+
+button.action-button:hover {
+  background-color: #28832e; /* Even darker green on hover */
+}
