@@ -1,71 +1,48 @@
 ---
 title: "Introduction"
-description: "Build your next agent with evals, observability, and replays"
+description: "Find where your agents went wrong."
 mode: "wide"
 ---
 
-<Check>[Give us a star](https://github.com/AgentOps-AI/agentops) on GitHub if you find AgentOps helpful (you may be our <span id="stars-text">2,000th</span> 😊)</Check>
+import GithubStars from '/snippets/github-stars.mdx'
+import OpenaiCard from '/snippets/openai-card.mdx'
+import CrewaiCard from '/snippets/crewai-card.mdx'
+import ClaudeCard from '/snippets/claude-card.mdx'
 
-# AgentOps solves what Terminal can't
+## Your AI is Flying Blind
 
 <CardGroup cols={2}>
-	<Card title="Terminal CAN'T..." icon="trash" iconType="solid" color="#d6483e">
-		- • Track agents across executions
-		- • Parse out LLM completions from output logs
-		- • Give you insight into what your agents did
+	<OpenaiCard/>
+	<Card title="... with a 50% error rate." icon="bug" iconType="light" color="#d6483e">
+		<p></p>
 	</Card>
-	<Card title="AgentOps does it all and more..." icon="face-smile-halo" iconType="regular" color="#2bd600">
-		- • Record LLM prompts, completions, & timestamps
-		- • Log events, calls, and any other agent activity
-		- • Link agent errors back to their causal event
+	<CrewaiCard/>
+	<Card title="... and hallucinates 20% of the time." icon="face-spiral-eyes" iconType="light" color="#d6483e">
+		<p></p>
+	</Card>
+	<ClaudeCard/>
+	<Card title="... but I can't see its decision steps." icon="eye-slash" iconType="light" color="#d6483e">
+		<p></p>
 	</Card>
 </CardGroup>
 
-And we do it all in just two lines of code...
+## Get insights into every choice...
+
+<Frame type="glass" caption="LLM Call Analytics Stream">
+  <img height="200" src="https://github.com/AgentOps-AI/agentops/blob/doc-dynamic-updates/docs/v1/img/chart-waterfall.png?raw=true" />
+</Frame>
+
+## .. with 2 lines of code.
+
 <CodeGroup>
 	```python python
 	import agentops
 	agentops.init(<INSERT YOUR API KEY HERE>)
 	```
 </CodeGroup>
-... that logs everything back to your AgentOps Dashboard.
 
-## The AgentOps Dashboard
-
-With just two lines of code, you can free yourself from the chains of the terminal and instead visualize your agents' behavior
-in your AgentOps Dashboard. After setting up AgentOps, each execution of your program is recorded as a session and the above
-data is automatically recorded for you.
-
-The examples below were captured with two lines of code.
-
-### Session Drilldown
-Here you will find a list of all of your previously recorded sessions and useful data about each such as total execution time.
-You also get helpful debugging info such as any SDK versions you were on if you're building on a supported agent framework like Crew or AutoGen.
-LLM calls are presented as a familiar chat history view, and charts give you a breakdown of the types of events that were called and how long they took.
-
-<Frame type="glass" caption="Session Summary">
-  <img height="200" src="https://github.com/AgentOps-AI/agentops/blob/cf67191f13e0e2a09446a61b7393e1810b3eee95/docs/images/session-summary.gif?raw=true" />
-</Frame>
-
-Find any past sessions from your Session Drawer.
-<Frame type="glass" caption="Session Drawer">
-  <img height="250" src="https://github.com/AgentOps-AI/agentops/blob/cf67191f13e0e2a09446a61b7393e1810b3eee95/docs/images/session-drawer.gif?raw=true" />
-</Frame>
-
-Most powerful of all is the Session Waterfall. On the left, a time visualization of all your LLM calls, Action events, Tool calls, and Errors.
-On the right, specific details about the event you've selected on the waterfall. For instance the exact prompt and completion for a given LLM call.
-Most of which has been automatically recorded for you.
-
-<Frame type="glass" caption="Session Waterfall">
-  <img height="200" src="https://github.com/AgentOps-AI/agentops/blob/cf67191f13e0e2a09446a61b7393e1810b3eee95/docs/images/session-waterfall.gif?raw=true" />
-</Frame>
-
-
-### Session Overview
-View a meta-analysis of all of your sessions in a single view.
-<Frame type="glass" caption="Session Overview">
-  <img height="200" src="https://github.com/AgentOps-AI/agentops/blob/cf67191f13e0e2a09446a61b7393e1810b3eee95/docs/images/overview.png?raw=true" />
-</Frame>
+<GithubStars />
 
 <script type="module" src="/scripts/github_stars.js"></script>
 <script type="module" src="/scripts/adjust_api_dynamically.js"></script>
+<script type="css" src="/styles/intro.css"></script>
