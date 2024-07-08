@@ -26,11 +26,9 @@ import SupportedModels from '/snippets/supported-models.mdx'
       agentops.init(<INSERT YOUR API KEY HERE>)
       ```
     </CodeGroup>
-    <Check>Just these two lines and you have magically tracked LLM calls!</Check>
     <Tip>
-      After the `openai`, `cohere`, or `litellm` packages have been imported, importing + instantiating the AgentOps client
-      will automatically instrument them, meaning you will be able to see all of your sessions on the AgentOps Dashboard
-      along with the full LLM chat histories, cost, token counts, etc.
+      Importing and starting AgentOps client automatically logs all of your LLM calls to your dashboard
+      along with the full chat history, cost, token count, etc.
     </Tip>
     <SupportedModels />
   </Step>
@@ -155,4 +153,4 @@ agentops.end_session('Success')
 </CardGroup>
 
 <script type="module" src="/scripts/github_stars.js"></script>
-<script type="module" src="/scripts/adjust_api_dynamically.js"></script>
+<script type="module" src="/scripts/scroll-img-fadein-animation.js"></script>
