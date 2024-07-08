@@ -3,6 +3,7 @@ import requests_mock
 import time
 import agentops
 from agentops import ActionEvent, Client
+from agentops.exceptions import NoSessionException, MultiSessionException
 from agentops.helpers import clear_singletons
 
 
@@ -174,7 +175,7 @@ class TestSingleSessions:
         assert session is None
 
     def test_safe_get_session_no_session(self, mock_req):
-        with pytest.raises(ValueError):
+        with pytest.raises(NoSessionException):
             session = Client()._safe_get_session()
 
     def test_safe_get_session_with_session(self, mock_req):
@@ -186,7 +187,7 @@ class TestSingleSessions:
         agentops.start_session(config=self.config)
         agentops.start_session(config=self.config)
 
-        with pytest.raises(ValueError):
+        with pytest.raises(MultiSessionException):
             session = Client()._safe_get_session()
 
 

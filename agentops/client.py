@@ -197,7 +197,7 @@ class Client(metaclass=MetaClient):
         try:
             session = self._safe_get_session()
             session.set_tags(tags=tags)
-        except ValueError:
+        except NoSessionException:
             self._tags_for_future_session = tags
 
     def record(self, event: Union[Event, ErrorEvent]) -> None:
