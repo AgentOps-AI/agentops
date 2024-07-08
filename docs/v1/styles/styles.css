@@ -1,14 +1,34 @@
 .intro-row {
 	display: flex;
 	flex-direction: row;
-	justify-content: space-between;
-	gap: 1%;
+	gap: 2%;
+  justify-content: space-between;
+  margin: 0% 0% 1% 0%;
 }
 
 .intro-row > * {
   border: 1px solid rgb(44, 44, 44);
   border-radius: 8px;
-  padding: 0% 2%;
+  padding: 0% 3%;
+  flex: 1;
+}
+
+.intro-card-container {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  
+}
+
+.intro-icon-img {
+  width: 60%;
+  height: auto;
+}
+
+.intro-card-text {
+  font-size: 1.0rem;
+  flex: 0 0 88%;
+  text-align: left;
 }
 
 .intro-col-card-1 {
