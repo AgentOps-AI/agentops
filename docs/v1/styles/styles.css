@@ -31,6 +31,24 @@
   text-align: left;
 }
 
+.resolved-stamp {
+  opacity: 0;
+  
+}
+
+@keyframes scrolled {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.resolved-stamp.scrolled {
+  animation: scrolled 0.5s forwards;
+}
+
 .intro-col-card-1 {
   display: inline;
 	flex: 0 0 20%;
