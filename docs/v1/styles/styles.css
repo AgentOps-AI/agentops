@@ -17,12 +17,12 @@
   display: flex;
   flex-direction: row;
   align-items: center;
-  
 }
 
 .intro-icon-img {
   width: 60%;
   height: auto;
+  border-radius: 6px;
 }
 
 .intro-card-text {
