@@ -1,3 +1,6 @@
+// NOTE: The copy button is copying the old non-displayed API key, need to add a click listener and set
+// the new textContent to be copied
+
 function adjustAPIKey() {
   // uncomment if you'd like to see this without delay, purely for testing
   // const apiKey = "BOOGLYWOOGLY";
@@ -23,14 +26,18 @@ function adjustAPIKey() {
 }
 
 function patternFindAndAdjust(apiKey) {
-  const elementsWithPatterns = Array.from(document.getElementsByClassName("adjust-api-key"));
+  const targetClasses = document.querySelectorAll(".adjust-api-key");
+  const codeElements = [];
+  targetClasses.forEach(element => {
+    codeElements.push(element.querySelector('code'));
+  });
 
   const apiKeyPattern = /AGENTOPS_API_KEY/g;
   const tokenOperatorPattern1 = /<span class="token operator">&lt;<\/span>YOUR API KEY<span class="token operator">&gt;<\/span>/g;
   const tokenOperatorPattern2 = /<span class="token operator">&lt;<\/span>INSERT YOUR API KEY HERE<span class="token operator">&gt;<\/span>/g;
 
   // Process the collected elements
-  elementsWithPatterns.forEach(element => {
+  codeElements.forEach(element => {
     console.log(element.textContent)
     const containsApiKeyPattern = element.textContent.includes("AGENTOPS_API_KEY");
     const containsTokenOperatorPattern1 = element.textContent.includes("<YOUR API KEY>");
