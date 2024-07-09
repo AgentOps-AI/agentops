@@ -26,18 +26,16 @@ Crew has comprehensive [documentation](https://docs.crewai.com) available as wel
 		</CodeGroup>
 		<Check>[Give us a star](https://github.com/AgentOps-AI/agentops) on GitHub while you're at it (you may be our <span id="stars-text">2,000th</span> 😊)</Check>
 	</Step>
-	<Step title="Install Crew from the AgentOps fork">
+	<Step title="Install Crew with AgentOps">
 		<Warning>
-			At this time, Crew with AgentOps integration is in pre-release. In the interim, an official fork has been
-			made available. After official support is released, this fork will be deprecated and developers will
-			be encouraged to use the core Crew SDK.
+			Crew and AgentOps have an official partnership, adding first-class agent observability to all Crew runs.
 		</Warning>
 		<CodeGroup>
 			```bash pip 
-			pip install git+https://github.com/AgentOps-AI/crewAI.git@main
+			pip install 'crewai[agentops]'
 			```
 			```bash poetry
-			poetry add git+https://github.com/AgentOps-AI/crewAI.git@main
+			poetry add 'crewai[agentops]'
 			```
 		</CodeGroup>
 	</Step>
