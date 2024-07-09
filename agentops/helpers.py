@@ -23,7 +23,8 @@ def singleton(class_):
     instances = {}
 
     def getinstance(*args, **kwargs):
-        if class_ not in instances:
+        allow_multiple_instances = kwargs.pop("allow_multiple_instances", False)
+        if allow_multiple_instances or class_ not in instances:
             instances[class_] = class_(*args, **kwargs)
         return instances[class_]
 

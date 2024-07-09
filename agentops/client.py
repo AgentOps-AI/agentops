@@ -97,6 +97,7 @@ class Client(metaclass=MetaClient):
             os.environ.get("AGENTOPS_ENV_DATA_OPT_OUT", "False").lower() == "true"
         )
 
+        self.llm_tracker = None
         self.config = None
 
         try:
