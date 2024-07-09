@@ -142,6 +142,17 @@ response = session.patch(openai.chat.completions.create)(
 )
 ```
 
+If you're using the create function multiple times, you can create a new function with the same method.
+
+```python
+observed_create = session.patch(openai.chat.completions.create)
+obs_response = observed_create(
+    model="gpt-3.5-turbo",
+    messages=messages,
+    temperature=0.5,
+)
+```
+
 Alternatively, you can include the session object as a keyword parameter in the completion call.
 
 ```python

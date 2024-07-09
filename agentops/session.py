@@ -119,7 +119,7 @@ class Session:
         self.tags = tags
         self._update_session()
 
-    def record(potato, event: Union[Event, ErrorEvent]):
+    def record(self, event: Union[Event, ErrorEvent]):
         if isinstance(event, Event):
             if not event.end_timestamp or event.init_timestamp == event.end_timestamp:
                 event.end_timestamp = get_ISO_time()
@@ -134,10 +134,10 @@ class Session:
 
                 event.trigger_event_id = event.trigger_event.id
                 event.trigger_event_type = event.trigger_event.event_type
-                potato.record(event)
+                self.record(event)
                 event.trigger_event = None  # removes trigger_event from serialization
 
-        potato._add_event(event.__dict__)
+        self._add_event(event.__dict__)
 
     def _add_event(self, event: dict) -> None:
         with self.lock:

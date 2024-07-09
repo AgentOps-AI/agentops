@@ -3,7 +3,6 @@ import functools
 import os
 import logging
 from typing import Optional, List, Union
-from uuid import UUID
 
 from .client import Client
 from .config import ClientConfiguration
@@ -67,10 +66,10 @@ def init(
         max_queue_size (int, optional): The maximum size of the event queue. Defaults to 100.
         tags (List[str], optional): Tags for the sessions that can be used for grouping or
             sorting later (e.g. ["GPT-4"]).
-        instrument_llm_calls (bool): Whether to instrument LLM calls and emit LLMEvents..
+        instrument_llm_calls (bool): Whether to instrument LLM calls and emit LLMEvents.
         auto_start_session (bool): Whether to start a session automatically when the client is created.
         inherited_session_id (optional, str): Init Agentops with an existing Session
-        skip_auto_end_session (optional, bool): Don't automatically end session based on your framework's decision making
+        skip_auto_end_session (optional, bool): Don't automatically end session based on your framework's decision-making
     Attributes:
     """
     logging_level = os.getenv("AGENTOPS_LOGGING_LEVEL")
@@ -113,7 +112,6 @@ def end_session(
     end_state_reason: Optional[str] = None,
     video: Optional[str] = None,
     is_auto_end: Optional[bool] = False,
-    session_id: Optional[str] = None,
 ):
     """
     End the current session with the AgentOps service.
@@ -123,7 +121,6 @@ def end_session(
         end_state_reason (str, optional): The reason for ending the session.
         video (str, optional): URL to a video recording of the session
         is_auto_end (bool, optional): is this an automatic use of end_session and should be skipped with bypass_auto_end_session
-        session_id (str, optional): the session to end, if using multiple concurrent sessions
     """
     Client().end_session(
         end_state=end_state,
@@ -182,7 +179,6 @@ def add_tags(tags: List[str]):
 
     Args:
         tags (List[str]): The list of tags to append.
-        session_id (str, optional): which session to add tags to if using multiple concurrent sessions
     """
     Client().add_tags(tags)
 
@@ -203,7 +199,7 @@ def get_api_key() -> str:
 
 def set_parent_key(parent_key):
     """
-    Set the parent API key which has visibility to projects it is parent to.
+    Set the parent API key which has visibility to projects it is parented to.
 
     Args:
         parent_key (str): The API key of the parent organization to set.

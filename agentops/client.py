@@ -19,21 +19,18 @@ from typing import Optional, List, Union
 
 from .event import ActionEvent, ErrorEvent, Event
 from .enums import EndState
-from .exceptions import NoSessionException, MultiSessionException
+from .exceptions import NoSessionException, MultiSessionException, ConfigurationError
 from .helpers import (
     get_ISO_time,
     check_call_stack_for_agent_id,
     get_partner_frameworks,
-    singleton,
     conditional_singleton,
-    safe_serialize,
 )
-from .http_client import HttpClient
 from .session import Session
 from .host_env import get_host_env
 from .log_config import logger
 from .meta_client import MetaClient
-from .config import ClientConfiguration, ConfigurationError
+from .config import ClientConfiguration
 from .llm_tracker import LlmTracker
 from termcolor import colored
 from typing import Tuple
@@ -465,17 +462,7 @@ class Client(metaclass=MetaClient):
         else:
             # if no session passed, assume single session
             session = self._safe_get_session()
-            payload = {
-                "id": agent_id,
-                "name": name,
-            }
-
-            serialized_payload = safe_serialize(payload).encode("utf-8")
-            HttpClient.post(
-                f"{self.config.endpoint}/v2/create_agent",
-                serialized_payload,
-                jwt=session.jwt,
-            )
+            session.create_agent(name=name, agent_id=agent_id)
 
         return agent_id
 
