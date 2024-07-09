@@ -19,9 +19,7 @@ AgentOps works seamlessly with applications built using Langchain.
 			poetry add agentops[langchain]
 			```
 		</CodeGroup>
-		<Check>
-			[Give us a star](https://github.com/AgentOps-AI/agentops) on GitHub while you're at it (you may be our 2,000th 😊)
-		</Check>
+		<Check>[Give us a star](https://github.com/AgentOps-AI/agentops) on GitHub while you're at it (you may be our <span id="stars-text">2,000th</span> 😊)</Check>
 	</Step>
 	<Step title="Set up your import statements">
 		Import the following Langchain and AgentOps dependencies
@@ -87,7 +85,7 @@ AgentOps works seamlessly with applications built using Langchain.
 
 ## Full Examples
 
-<CodeGroup>
+<CodeGroup className="adjust-api-key">
 	```python python
 	import os
 	from langchain.chat_models import ChatOpenAI
@@ -108,3 +106,6 @@ AgentOps works seamlessly with applications built using Langchain.
 		handle_parsing_errors=True)
 	```
 </CodeGroup>
+
+<script type="module" src="/scripts/github_stars.js"></script>
+<script type="module" src="/scripts/adjust_api_dynamically.js"></script>

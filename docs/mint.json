@@ -2,8 +2,8 @@
   "$schema": "https://mintlify.com/schema.json",
   "name": "AgentOps",
   "logo": {
-    "dark": "https://raw.githubusercontent.com/AgentOps-AI/agentops/35d5682866921a9e28d8ef66ae3c3b3d92d8fa6b/img/logo.png",
-    "light": "https://raw.githubusercontent.com/AgentOps-AI/agentops/35d5682866921a9e28d8ef66ae3c3b3d92d8fa6b/img/logo.png"
+    "dark": "/images/external/logo/banner-badge-docs-resized-white.png",
+    "light": "/images/external/logo/banner-badge-docs-resized-black.png"
   },
   "favicon": "/favicon.png",
   "colors": {
