@@ -206,11 +206,6 @@ class Client(metaclass=MetaClient):
         """
 
         session = self._safe_get_session()
-
-        if session is None:
-            logger.warning("Cannot record event - no current session")
-            return
-
         session.record(event)
 
     def _record_event_sync(self, func, event_name, *args, **kwargs):
@@ -402,10 +397,6 @@ class Client(metaclass=MetaClient):
         """
 
         session = self._safe_get_session()
-
-        if session is None:
-            return logger.warning("Cannot end session - no current session")
-
         session.end_state = end_state
         session.end_state_reason = end_state_reason
 

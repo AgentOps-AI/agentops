@@ -21,13 +21,39 @@ agentops.start_session()
 agentops.end_session(end_state='Success')
 ```
 
-```python multi-session
+```python multi-session script
 import agentops
 session_1 = agentops.start_session()
 session_2 = agentops.start_session()
 
 session_1.end_session(end_state='Success')
 session_2.end_session(end_state='Failure')
+```
+
+```python multi-session endpoint
+@app.get("/completion")
+def completion():
+
+    session = agentops.start_session()
+
+    messages = [{"role": "user", "content": "Hello"}]
+    response = session.patch(openai.chat.completions.create)(
+        model="gpt-3.5-turbo",
+        messages=messages,
+        temperature=0.5,
+    )
+
+    session.record(
+        ActionEvent(
+            action_type="Agent says hello",
+            params=messages,
+            returns=str(response.choices[0].message.content),
+        ),
+    )
+
+    session.end_session(end_state="Success")
+
+    return {"response": response}
 ```
 </CodeGroup>
 
@@ -121,8 +147,14 @@ session.record(Event(...))
 ```
 
 ### Examples
-- [Two Session Script](https://github.com/AgentOps-AI/agentops/blob/main/examples/multi_session_llm.py)
-- [REST API](/v1/examples/fastapi)
+<CardGroup cols={2}>
+	<Card title="Two Session Script" icon="scroll" iconType="solid" color="green" href="https://github.com/AgentOps-AI/agentops/blob/main/examples/multi_session_llm.py">
+        Create two sessions and perform functions on each
+	</Card>
+	<Card title="REST API" icon="computer" iconType="regular" color="purple" href="/v1/examples/fastapi">
+        Create a REST server with fast-api and manage sessions
+	</Card>
+</CardGroup>
 
 # Assigning LLM Calls
 When we have multiple active sessions, it's impossible for AgentOps to know which session a particular LLM call belongs to without a little help.
@@ -153,23 +185,36 @@ obs_response = observed_create(
 )
 ```
 
-Alternatively, you can include the session object as a keyword parameter in the completion call.
+[//]: # (Alternatively, you can include the session object as a keyword parameter in the completion call.)
 
-```python
-import agentops
-import openai
+[//]: # ()
+[//]: # (```python)
 
-session = agentops.start_session()
-messages = [{"role": "user", "content": "Hello"}]
-response = openai.chat.completions.create(
-    model="gpt-3.5-turbo",
-    messages=messages,
-    temperature=0.5,
-    session=session
-)
-```
+[//]: # (import agentops)
 
-<Warning>Passing `session` as a keyword parameter is functional, but will likely show an Unexpected Argument warning.</Warning>
+[//]: # (import openai)
+
+[//]: # ()
+[//]: # (session = agentops.start_session&#40;&#41;)
+
+[//]: # (messages = [{"role": "user", "content": "Hello"}])
+
+[//]: # (response = openai.chat.completions.create&#40;)
+
+[//]: # (    model="gpt-3.5-turbo",)
+
+[//]: # (    messages=messages,)
+
+[//]: # (    temperature=0.5,)
+
+[//]: # (    session=session)
+
+[//]: # (&#41;)
+
+[//]: # (```)
+
+[//]: # ()
+[//]: # (<Warning>Passing `session` as a keyword parameter is functional, but will likely show an Unexpected Argument warning.</Warning>)
 
 If you make an LLM completion call without one of these methods while you currently have more than one active session, a `MultiSessionException` will be raised.
 

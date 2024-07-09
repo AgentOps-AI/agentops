@@ -90,11 +90,12 @@ def init(
         max_queue_size=max_queue_size,
         tags=tags,
         instrument_llm_calls=instrument_llm_calls,
-        auto_start_session=False,
+        auto_start_session=False,  # handled below
         inherited_session_id=inherited_session_id,
         skip_auto_end_session=skip_auto_end_session,
     )
 
+    # handle auto_start_session here so we can get the session object to return rather than client above
     session = None
     if auto_start_session:
         session = c.start_session(
