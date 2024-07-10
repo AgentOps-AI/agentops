@@ -13,7 +13,7 @@ import sys
 import threading
 import traceback
 import logging
-from decimal import Decimal
+from decimal import Decimal, ROUND_HALF_UP
 from uuid import UUID, uuid4
 from typing import Optional, List, Union
 
@@ -429,7 +429,7 @@ class Client(metaclass=MetaClient):
                 "This run's cost ${}".format(
                     "{:.2f}".format(token_cost_d)
                     if token_cost_d == 0
-                    else "{:.6f}".format(token_cost_d)
+                    else "{:.6f}".format(token_cost_d.quantize(Decimal('0.000001'), rounding=ROUND_HALF_UP))
                 )
             )
 
