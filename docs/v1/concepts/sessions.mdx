@@ -9,13 +9,11 @@ The AgentOps dashboard provides detailed insights at the session level, includin
 
 **There must be an active session in order to use AgentOps.**
 
-Only one session can be active a single time.
-
 ---
 
 ## `Session`
 
-#### Properties
+### Properties
 
 Sessions possess the following attributes:
 - **ID**: A unique identifier for the session.
@@ -30,15 +28,41 @@ Optionally, sessions may include:
 - **Host Environment**: Automatically gathers basic information about the system on which the session ran.
 - **Video**: If applicable, an optional video recording of the session.
 
+### Methods
+#### `end_session`
+**Params**
+- **end_state** (str, enum): Success|Failure|Indeterminate
+- **end_state_reason** (optional, str): additional notes on end state
+
+**Returns** (str): Total cost of session in USD
+
+#### `record`
+**Params**
+- **event** ([Event](/v1/concepts/events#event-class)): The Event to record as part of the session
+
+
+#### `add_tags`
+**Params**
+- **tags** (List[str]): a list of tags to assign to append to the current tags
+
+#### `set_tags`
+**Params**
+- **tags** (List[str]): a list of tags to assign to append to set
+
+_Note: Overrides any current tags_
+
+
 ## Starting a Session
 When you call `agentops.init()`, a session is automatically started.
 Calling `agentops.init(auto_start_session=False)` will initialize the AgentOps SDK but not start a session.
 
 To start a session later, call `agentops.start_session()` [(reference)](/v1/usage/sdk-reference/#start-session)
 
+Both `agentops.init()` and `agentops.start_session()` works as a factory pattern and returns a `Session` object. The above methods can all be called on this session object.
+
 ## Ending a Session
 If a process ends without any call to agentops, it will show in the dashboard as `Indeterminate`.
-To end with a state, call `agentops.end_session()` [(reference)](/v1/usage/sdk-reference/#end-session)
+To end with a state, call either `agentops.end_session(...)` [(reference)](/v1/usage/sdk-reference/#end-session) if only one session is in use. Otherwise use `session.end_session(...)`
 
 ## Inherited Sessions
 When working with multiple agents running in different processes, it's possible to initialize AgentOps or start a session
@@ -52,11 +76,11 @@ You can retrieve the current session_id by assigning the returned value from `in
 <CodeGroup>
 ```python python
 import agentops
-session_id = agentops.init()
-# pass session_id to the other process
+session = agentops.init()
+# pass session.session_id to the other process
 
 # -- other process --
-session_id = retrieve_session_id()
+session_id = retrieve_session_id() # <-- your function
 agentops.init(inherited_session_id=<id>)
 ```
 </CodeGroup>

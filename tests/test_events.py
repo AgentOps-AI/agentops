@@ -3,6 +3,14 @@ import requests_mock
 import pytest
 import agentops
 from agentops import ActionEvent, ErrorEvent
+from agentops.helpers import clear_singletons
+
+
+@pytest.fixture(autouse=True)
+def setup_teardown():
+    clear_singletons()
+    yield
+    agentops.end_all_sessions()  # teardown part
 
 
 @pytest.fixture
@@ -22,7 +30,7 @@ class TestEvents:
     def setup_method(self):
         self.api_key = "random_api_key"
         self.event_type = "test_event_type"
-        self.config = agentops.Configuration(
+        self.config = agentops.ClientConfiguration(
             api_key=self.api_key, max_wait_time=50, max_queue_size=1
         )
 

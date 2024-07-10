@@ -1,16 +1,17 @@
 """
-AgentOps configuration.
+AgentOps Client configuration.
 
 Classes:
-    Configuration: Stores the configuration settings for AgentOps clients.
+    ClientConfiguration: Stores the configuration settings for AgentOps clients.
 """
 
 from typing import Optional
 from os import environ
-from .log_config import logger
+
+from .exceptions import ConfigurationError
 
 
-class Configuration:
+class ClientConfiguration:
     """
     Stores the configuration settings for AgentOps clients.
 
@@ -146,11 +147,3 @@ class Configuration:
     @parent_key.setter
     def parent_key(self, value: str):
         self._parent_key = value
-
-
-class ConfigurationError(Exception):
-    """Exception raised for errors related to Configuration"""
-
-    def __init__(self, message: str):
-        super().__init__(message)
-        logger.warning(message)

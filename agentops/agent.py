@@ -18,8 +18,15 @@ def track_agent(name: Union[str, None] = None):
                 try:
                     original_init(self, *args, **kwargs)
                     self.agent_ops_agent_id = str(uuid4())
+
+                    session = kwargs.get("session", None)
+                    if session is not None:
+                        self.agent_ops_session_id = session.session_id
+
                     Client().create_agent(
-                        name=self.agent_ops_agent_name, agent_id=self.agent_ops_agent_id
+                        name=self.agent_ops_agent_name,
+                        agent_id=self.agent_ops_agent_id,
+                        session=session,
                     )
                 except AttributeError as e:
                     logger.warning(
