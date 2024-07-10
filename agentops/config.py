@@ -3,7 +3,6 @@ AgentOps Client configuration.
 
 Classes:
     ClientConfiguration: Stores the configuration settings for AgentOps clients.
-    AgentOpsConfiguration: This is a class to store the configuration settings for initializing AgentOps
 """
 
 from typing import Optional

@@ -80,19 +80,12 @@ class LlmTracker:
                     }
                     self.llm_event.end_timestamp = get_ISO_time()
 
-                    if session:
-                        session.record(self.llm_event)
-                    else:
-                        self.client.record(self.llm_event)
+                    self._safe_record(session, self.llm_event)
             except Exception as e:
-                if session:
-                    session.record(
-                        ErrorEvent(trigger_event=self.llm_event, exception=e),
-                    )
-                else:
-                    self.client.record(
-                        ErrorEvent(trigger_event=self.llm_event, exception=e),
-                    )
+                self._safe_record(
+                    session, ErrorEvent(trigger_event=self.llm_event, exception=e)
+                )
+
                 kwargs_str = pprint.pformat(kwargs)
                 chunk = pprint.pformat(chunk)
                 logger.warning(
@@ -136,19 +129,12 @@ class LlmTracker:
             self.llm_event.model = response["model"]
             self.llm_event.end_timestamp = get_ISO_time()
 
-            if session:
-                session.record(self.llm_event)
-            else:
-                self.client.record(self.llm_event)
+            self._safe_record(session, self.llm_event)
         except Exception as e:
-            if session:
-                session.record(
-                    ErrorEvent(trigger_event=self.llm_event, exception=e),
-                )
-            else:
-                self.client.record(
-                    ErrorEvent(trigger_event=self.llm_event, exception=e),
-                )
+            self._safe_record(
+                session, ErrorEvent(trigger_event=self.llm_event, exception=e)
+            )
+
             kwargs_str = pprint.pformat(kwargs)
             response = pprint.pformat(response)
             logger.warning(
@@ -211,19 +197,12 @@ class LlmTracker:
                     }
                     self.llm_event.end_timestamp = get_ISO_time()
 
-                    if session:
-                        session.record(self.llm_event)
-                    else:
-                        self.client.record(self.llm_event)
+                    self._safe_record(session, self.llm_event)
             except Exception as e:
-                if session:
-                    session.record(
-                        ErrorEvent(trigger_event=self.llm_event, exception=e),
-                    )
-                else:
-                    self.client.record(
-                        ErrorEvent(trigger_event=self.llm_event, exception=e),
-                    )
+                self._safe_record(
+                    session, ErrorEvent(trigger_event=self.llm_event, exception=e)
+                )
+
                 kwargs_str = pprint.pformat(kwargs)
                 chunk = pprint.pformat(chunk)
                 logger.warning(
@@ -272,19 +251,12 @@ class LlmTracker:
             self.llm_event.completion_tokens = response.usage.completion_tokens
             self.llm_event.model = response.model
 
-            if session:
-                session.record(self.llm_event)
-            else:
-                self.client.record(self.llm_event)
+            self._safe_record(session, self.llm_event)
         except Exception as e:
-            if session:
-                session.record(
-                    ErrorEvent(trigger_event=self.llm_event, exception=e),
-                )
-            else:
-                self.client.record(
-                    ErrorEvent(trigger_event=self.llm_event, exception=e),
-                )
+            self._safe_record(
+                session, ErrorEvent(trigger_event=self.llm_event, exception=e)
+            )
+
             kwargs_str = pprint.pformat(kwargs)
             response = pprint.pformat(response)
             logger.warning(
@@ -338,10 +310,7 @@ class LlmTracker:
                         "content": chunk.response.text,
                     }
                     self.llm_event.end_timestamp = get_ISO_time()
-                    if session is not None:
-                        session.record(self.llm_event)
-                    else:
-                        self.client.record(self.llm_event)
+                    self._safe_record(session, self.llm_event)
 
                     # StreamedChatResponse_SearchResults = ActionEvent
                     search_results = chunk.response.search_results
@@ -374,10 +343,7 @@ class LlmTracker:
                             action_event.end_timestamp = get_ISO_time()
 
                     for key, action_event in self.action_events.items():
-                        if session is not None:
-                            session.record(action_event)
-                        else:
-                            self.client.record(action_event)
+                        self._safe_record(session, action_event)
 
                 elif isinstance(chunk, StreamedChatResponse_TextGeneration):
                     self.llm_event.completion += chunk.text
@@ -403,14 +369,10 @@ class LlmTracker:
                     pass
 
             except Exception as e:
-                if session is not None:
-                    session.record(
-                        ErrorEvent(trigger_event=self.llm_event, exception=e)
-                    )
-                else:
-                    self.client.record(
-                        ErrorEvent(trigger_event=self.llm_event, exception=e)
-                    )
+                self._safe_record(
+                    session, ErrorEvent(trigger_event=self.llm_event, exception=e)
+                )
+
                 kwargs_str = pprint.pformat(kwargs)
                 chunk = pprint.pformat(chunk)
                 logger.warning(
@@ -467,17 +429,11 @@ class LlmTracker:
             self.llm_event.completion_tokens = response.meta.tokens.output_tokens
             self.llm_event.model = kwargs.get("model", "command-r-plus")
 
-            if session is not None:
-                session.record(self.llm_event)
-            else:
-                self.client.record(self.llm_event)
+            self._safe_record(session, self.llm_event)
         except Exception as e:
-            if session:
-                session.record(ErrorEvent(trigger_event=self.llm_event, exception=e))
-            else:
-                self.client.record(
-                    ErrorEvent(trigger_event=self.llm_event, exception=e)
-                )
+            self._safe_record(
+                session, ErrorEvent(trigger_event=self.llm_event, exception=e)
+            )
             kwargs_str = pprint.pformat(kwargs)
             response = pprint.pformat(response)
             logger.warning(
@@ -528,10 +484,7 @@ class LlmTracker:
         self.llm_event.prompt = kwargs["messages"]
         self.llm_event.completion = response["message"]
 
-        if session is not None:
-            session.record(self.llm_event)
-        else:
-            self.client.record(self.llm_event)
+        self._safe_record(session, self.llm_event)
         return response
 
     def override_openai_v1_completion(self):
@@ -817,3 +770,9 @@ class LlmTracker:
             ollama.chat = original_func["ollama.chat"]
             ollama.Client.chat = original_func["ollama.Client.chat"]
             ollama.AsyncClient.chat = original_func["ollama.AsyncClient.chat"]
+
+    def _safe_record(self, session, event):
+        if session is not None:
+            session.record(event)
+        else:
+            self.client.record(event)

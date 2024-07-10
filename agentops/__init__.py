@@ -69,7 +69,7 @@ def init(
         instrument_llm_calls (bool): Whether to instrument LLM calls and emit LLMEvents.
         auto_start_session (bool): Whether to start a session automatically when the client is created.
         inherited_session_id (optional, str): Init Agentops with an existing Session
-        skip_auto_end_session (optional, bool): Don't automatically end session based on your framework's decision-making
+        skip_auto_end_session (optional, bool): Don't automatically end session based on your framework's decision-making (i.e. Crew determining when tasks are complete and ending the session)
     Attributes:
     """
     logging_level = os.getenv("AGENTOPS_LOGGING_LEVEL")
@@ -200,7 +200,7 @@ def get_api_key() -> str:
 
 def set_parent_key(parent_key):
     """
-    Set the parent API key which has visibility to projects it is parented to.
+    Set the parent API key so another organization can view data.
 
     Args:
         parent_key (str): The API key of the parent organization to set.

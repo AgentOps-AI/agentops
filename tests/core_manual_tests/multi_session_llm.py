@@ -4,7 +4,7 @@ from dotenv import load_dotenv
 from agentops import ActionEvent
 
 load_dotenv()
-agentops.init(auto_start_session=False, endpoint="http://localhost:8000")
+agentops.init(auto_start_session=False)
 openai = OpenAI()
 
 session_1 = agentops.start_session(tags=["multi-session-test-1"])
