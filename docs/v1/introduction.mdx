@@ -10,9 +10,19 @@ import CrewaiCard from '/snippets/crewai-card.mdx'
 import ClaudeCard from '/snippets/claude-card.mdx'
 
 ## AI makes mistakes
-Are you watching closely?
+Are you watching closely enough?
 
-<div className='unminted-cards'>
+<div className='terminal-border'>
+  <div className='terminal-container'>
+		<div className='cursor-bar'>
+			<p>></p><p className="empty-space">M</p><span id="python-terminal"></span><p id="toggle-empty-space" className="off">M</p><img id="inline-code-img" src="https://github.com/AgentOps-AI/agentops/blob/3c03341f5129f9f494ca64ed4e8d03b9a0575db4/docs/images/docs-icons/chat.png?raw=true"/><p id="barely-space" className="off">l</p><span id="terminal-command"></span><p id="cursor">_</p>
+		</div>
+		<div id='terminal-content'>
+		</div>
+  </div>
+</div>
+
+{/* <div className='unminted-cards'>
 	<div className='intro-row'>
 		<div className='intro-card-container'>
 			<img className = 'intro-icon-img' src="https://github.com/AgentOps-AI/agentops/blob/3c03341f5129f9f494ca64ed4e8d03b9a0575db4/docs/images/docs-icons/chat.png?raw=true" />
@@ -44,9 +54,9 @@ Are you watching closely?
 		</div>
 	</div>
 	<img className="resolved-stamp" src="https://github.com/AgentOps-AI/agentops/blob/d4b8b4eafa005a5455758dc5ddf1d33ed2f0fcc9/docs/v1/img/docs-icons/stamp.png?raw=true"/>
-</div>
+</div> */}
 
-### Use AgentOps to perfect AI
+### Use AgentOps to get full visibility
 
 <span className="animated-code">
 <CodeGroup>
@@ -56,28 +66,30 @@ Are you watching closely?
 </CodeGroup>
 </span>
 
-AgentOps is the cleanest way to log and analyze LLM calls.
+### ... and reveal how it works
 
-### .. all with 2 lines of code.
+Your dashboard logs each step of the AI's decision. By seeing where things went wrong, you can easily fix them.
 
+<Frame type="glass" caption="LLM Call Analytics Stream">
+  <img height="200" src="https://github.com/AgentOps-AI/agentops/blob/doc-dynamic-updates/docs/v1/img/chart-waterfall.png?raw=true" />
+</Frame>
+
+<GithubStars />
+
+### Add 2 lines of code...
+
+<span className="animated-code">
 <CodeGroup>
 	```python python
 	import agentops
 	agentops.init(<INSERT YOUR API KEY HERE>)
 	```
 </CodeGroup>
+</span>
 
-<GithubStars />
 
-## Dashboard
-
-Finally, your dashboard logs each step of the AI's decision. By seeing where things went wrong, you can easily fix them.
-
-<Frame type="glass" caption="LLM Call Analytics Stream">
-  <img height="200" src="https://github.com/AgentOps-AI/agentops/blob/doc-dynamic-updates/docs/v1/img/chart-waterfall.png?raw=true" />
-</Frame>
-
-READY TO GET STARTED? QUICKSTART
+## Ready to Get Started?
+QUICKSTART
 
 <script type="module" src="/scripts/github_stars.js"></script>
 <script type="module" src="/scripts/scroll-img-fadein-animation.js"></script>

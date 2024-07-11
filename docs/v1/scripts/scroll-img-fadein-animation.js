@@ -1,6 +1,125 @@
+function typeInTerminalText() {
+  const pythonTerminal = document.getElementById("python-terminal");
+  const terminalCommand = document.getElementById("terminal-command");
+  const textsAndElementTargets = [
+    {
+      text: "python",
+      target: pythonTerminal,
+      nextTarget: {
+        text: "openai_job_post_agent.py",
+        target: terminalCommand
+      }
+    },
+    {
+      text: "python",
+      target: pythonTerminal,
+      nextTarget: {
+        text: "crew_subreddit_finder_agent.py",
+        target: terminalCommand
+      }
+    },
+    {
+      text: "python",
+      target: pythonTerminal,
+      nextTarget: {
+        text: "claude_email_reply_agent.py",
+        target: terminalCommand
+      }
+    }
+  ]
+  const toggleEmptySpace = document.getElementById("toggle-empty-space");
+  const inlineCodeImg = document.getElementById("inline-code-img");
+  const barelySpace = document.getElementById("barely-space");
+  const cursor = document.getElementById("cursor");
+  const terminalContentDiv = document.getElementById("terminal-content");
+  const terminalContentTexts = [
+    [
+      "<p style='color: green;'>Successfully posted 32 jobs</p>",
+      "<p style='color: red;'>Failed to post 36 jobs</p>",
+      "<p>0 errors logged</p>",
+      "<p>0 insight into failures</p>",
+      "<p>0 additional information</p>"
+    ],
+    [
+      "<p style='color: green;'>Found 18 relevant subreddits</p>",
+      "<p style='color: red;'>But 47 irrelevant ones</p>",
+      "<p>0 errors logged</p>",
+      "<p>0 hallucination reasons</p>",
+      "<p>0 additional information</p>"
+    ],
+    [
+      "<p style='color: green'>10 perfectly polite emails</p>",
+      "<p style='color: red;'>3 uses of $%&#[redacted]</p>",
+      "<p>0 errors logged</p>",
+      "<p>0 hallucination reasons</p>",
+      "<p>0 additional information</p>"
+    ]
+  ]
+  const imagesSrcs = [
+    "https://github.com/AgentOps-AI/agentops/blob/3c03341f5129f9f494ca64ed4e8d03b9a0575db4/docs/images/docs-icons/chat.png?raw=true",
+    "https://github.com/AgentOps-AI/agentops/blob/388a8a94603393cd2aa15e1adcd56e7f435839f9/docs/images/docs-icons/crew.png?raw=true",
+    "https://github.com/AgentOps-AI/agentops/blob/3c03341f5129f9f494ca64ed4e8d03b9a0575db4/docs/images/docs-icons/claude.png?raw=true"
+  ]
+  let increment = 0;
+  let contentIncrement = 0;
+
+  function addToTerminal(terminalContentDiv, texts) {
+    let increment = 0;
+    const interval = setInterval(() => {
+      terminalContentDiv.innerHTML += texts[increment];
+      increment++;
+      if (increment === texts.length) {
+        clearInterval(interval);
+        cursor.classList.remove("off");
+        setTimeout(() => {
+          terminalContentDiv.innerHTML = null;
+          pythonTerminal.textContent = "";
+          terminalCommand.textContent = "";
+          inlineCodeImg.classList.remove("on");
+          barelySpace.classList.add("off");
+          contentIncrement = (contentIncrement + 1) % 3;
+        }, 5000);
+      }
+    }, 900);
+  }
+
+  function typewriterEffect(text, target, nextTarget = null) {
+    let i = 0;
+    const interval = setInterval(() => {
+      if (i < text.length) {
+        target.textContent += text[i];
+        i++;
+      } else {
+        toggleEmptySpace.classList.remove("off");
+        inlineCodeImg.classList.add("on");
+        barelySpace.classList.remove("off");
+        clearInterval(interval);
+        if (nextTarget) {
+          setTimeout(() => {
+            typewriterEffect(nextTarget.text, nextTarget.target);
+          }, 20);
+        } else {
+          cursor.classList.add("off");
+        }
+      }
+    }, 20);
+  }
+
+  typewriterEffect(textsAndElementTargets[contentIncrement].text, textsAndElementTargets[contentIncrement].target, textsAndElementTargets[contentIncrement].nextTarget);
+  addToTerminal(terminalContentDiv, terminalContentTexts[contentIncrement]);
+
+  setInterval(() => {
+    inlineCodeImg.src = imagesSrcs[contentIncrement];
+    typewriterEffect(textsAndElementTargets[contentIncrement].text, textsAndElementTargets[contentIncrement].target, textsAndElementTargets[contentIncrement].nextTarget);
+    addToTerminal(terminalContentDiv, terminalContentTexts[contentIncrement]);
+  }, 11000);
+}
+
 function typeInPipText(target) {
   const codeTextFirstPart = "pip install agentops\n\n";
-  let codeFirstIndex = 0;
+  const codeTextSecondPartComplete = "[▇ ▇ ▇ ▇ ▇ ▇ ▇ ▇ ▇ ▇ ▇ ▇ ▇ ▇ ▇ ▇ ▇] 100% <span style='color: green;'>√</span>";
+  const LLMCostCodeText = "\n<span style='font-weight: bold;'>AgentOps:</span> This LLM run cost <span style='color: red;'>$0.26270</span> <span style='color: green;'>√</span>";
+  const dashboardText = "\nSee dashboard for full replay: <a href='usage/dashboard-info' style='color: #0088D4; text-decoration: underline;'>https://app.agentops.ai/drilldown?session=SESSION_ID</a> <span style='color: green;'>√</span>";
   let codeSecondIndex = 0;
   target.textContent += "[                                 ]   0%";
   const progressBar = "[                                 ]   0%";
@@ -10,7 +129,7 @@ function typeInPipText(target) {
   const codeTypewriterIntervalSecondPart = setInterval(() => {
     if (target.textContent.includes("99%")) {
       clearInterval(codeTypewriterIntervalSecondPart);
-      target.innerHTML = codeTextFirstPart + "[▇ ▇ ▇ ▇ ▇ ▇ ▇ ▇ ▇ ▇ ▇ ▇ ▇ ▇ ▇ ▇ ▇] 100% <span style='color: green;'>√</span>";
+      target.innerHTML = codeTextFirstPart + codeTextSecondPartComplete;
       return;
     }
     if (codeSecondIndex < progressBarLength) {
@@ -44,15 +163,54 @@ function typeInPipText(target) {
         target.innerHTML += "          <span style='color: green;'>√</span>"
         clearInterval(dotInterval);
         setTimeout(() => {
-          target.innerHTML += "\n<span style='font-weight: bold;'>AgentOps:</span> This LLM run cost <span style='color: red;'>$0.26270</span> <span style='color: green;'>√</span>"
+          target.innerHTML += LLMCostCodeText;
           setTimeout(() => {
-            target.innerHTML += "\nSee dashboard for full replay: <a href='#dashboard' style='color: #0088D4; text-decoration: underline;'>https://app.agentops.ai/drilldown?session=SESSION_ID</a> <span style='color: green;'>√</span>"
+            target.innerHTML += dashboardText;
           }, 800);
         }, 800);
       }
     }, 200);
 
   }, 1200);
+}
+
+function typeInGithubPushText(target) {
+  const codeTextSecondPart = "<span id='text-to-replace'>\nPushing to prod...</span>";
+  const codeTextReplaceSecondPart = "\nPushed to prod <span style='color: green;'>√</span>";
+  const codeTextThirdPart = "\n<span style='color: green;'>+2 ■</span><span style='color: #343941'>■■■■</span>";
+  const monitoringOnText = "<span class='text-to-alternate'>\n\nEvents logged to dashboard <span style='color: #13C75D;'>⬤</span></span>";
+  const monitoringBlinkText = "<span class='text-to-alternate'>\n\nEvents logged to dashboard <span style='color: #0C883F;'>⬤</span></span>";
+
+  const animateGithubPushText = setTimeout(() => {
+    target.innerHTML += codeTextSecondPart;
+    setTimeout(() => {
+      const textToReplaceElement = document.getElementById('text-to-replace');
+      if (textToReplaceElement) {
+        textToReplaceElement.remove();
+      }
+      target.innerHTML += codeTextReplaceSecondPart;
+      setTimeout(() => {
+        target.innerHTML += codeTextThirdPart;
+        setTimeout(() => {
+          target.innerHTML += monitoringBlinkText;
+          const monitoringOnInterval = setInterval(() => {
+            const monitoringOnTextElement = document.querySelector('.text-to-alternate');
+            if (monitoringOnTextElement) {
+              monitoringOnTextElement.remove();
+            }
+            target.innerHTML += monitoringOnText;
+            setTimeout(() => {
+              const monitoringBlinkTextElement = document.querySelector('.text-to-alternate');
+              if (monitoringBlinkTextElement) {
+                monitoringBlinkTextElement.remove();
+              }
+              target.innerHTML += monitoringBlinkText;
+            }, 800);
+          }, 1600);
+        }, 800);
+      }, 800);
+    }, 1200);
+  }, 300);
 }
 
 function fadeInIntroRowTexts(preloaded=false) {
@@ -83,7 +241,13 @@ function addIntroEventListeners() {
   setTimeout(() => {
     document.querySelectorAll('li, a').forEach(element => {
       element.addEventListener('click', () => {
+        // Clear all intervals on click
+        const highestIntervalId = setInterval(() => {}, 1000);
+        for (let i = 0; i < highestIntervalId; i++) {
+          clearInterval(i);
+        }
         setTimeout(() => {
+          loadTerminalText();
           loadIntro(true);
           fadeInIntroRowTexts(true);
         }, 50);
@@ -92,36 +256,94 @@ function addIntroEventListeners() {
   }, 100);
 }
 
-function loadIntro(preloaded = false) {
-  const targetSpan = document.querySelector('.animated-code');
+function loadTerminalText() {
+  setInterval(() => {
+    const cursor = document.getElementById("cursor");
+    if (cursor.style.opacity === "0") {
+      cursor.style.opacity = "1";
+    } else {
+      cursor.style.opacity = "0";
+    }
+  }, 800);
+  setTimeout(() => {
+    typeInTerminalText();
+  }, 1000);
+}
 
-  if (!targetSpan) {
+function loadIntro(preloaded = false) {
+  const targetSpans = document.querySelectorAll('.animated-code');
+  const targetSpansArray = Array.from(targetSpans);
+
+  if (!targetSpans) {
     return;
   }
   
-  const codeElement = targetSpan.querySelector('code');
+  const codeElementsArray = [];
+  targetSpansArray.forEach(targetSpan => {
+    const codeElement = targetSpan.querySelector('code');
+    console.log(codeElement);
+    codeElementsArray.push(codeElement);
+  });
   
   if (preloaded) {
-    codeElement.innerHTML = "pip install agentops\n\n[▇ ▇ ▇ ▇ ▇ ▇ ▇ ▇ ▇ ▇ ▇ ▇ ▇ ▇ ▇ ▇ ▇] 100% <span style='color: green;'>√</span>\n\nObserving . . . . .          <span style='color: green;'>√</span>\n<span style='font-weight: bold;'>AgentOps:</span> This LLM run cost <span style='color: red;'>$0.26270</span> <span style='color: green;'>√</span>\nSee dashboard for full replay: <a href='#dashboard' style='color: #0088D4; text-decoration: underline;'>https://app.agentops.ai/drilldown?session=SESSION_ID</a> <span style='color: green;'>√</span>";
+    codeElementsArray[0].innerHTML = "pip install agentops\n\n[▇ ▇ ▇ ▇ ▇ ▇ ▇ ▇ ▇ ▇ ▇ ▇ ▇ ▇ ▇ ▇ ▇] 100% <span style='color: green;'>√</span>\n\nObserving . . . . .          <span style='color: green;'>√</span>\n<span style='font-weight: bold;'>AgentOps:</span> This LLM run cost <span style='color: red;'>$0.26270</span> <span style='color: green;'>√</span>\nSee dashboard for full replay: <a href='usage/dashboard-info' style='color: #0088D4; text-decoration: underline;'>https://app.agentops.ai/drilldown?session=SESSION_ID</a> <span style='color: green;'>√</span>";
+    codeElementsArray[1].innerHTML = "import agentops\nagentops.init(<INSERT YOUR API KEY HERE>)\n\nPushed to prod <span style='color: green;'>√</span>\n\n<span style='color: green;'>+2 ■</span><span style='color: #343941'>■■■■</span>\n<span class='text-to-alternate'>Events logged to dashboard <span style='color: #13C75D;'>⬤</span></span>";
+    const monitoringOnInterval = setInterval(() => {
+      const monitoringOnTextElement = document.querySelector('.text-to-alternate');
+      if (monitoringOnTextElement) {
+        monitoringOnTextElement.remove();
+      }
+      codeElementsArray[1].innerHTML += "<span class='text-to-alternate'>Events logged to dashboard <span style='color: #13C75D;'>⬤</span></span>";
+      setTimeout(() => {
+        const monitoringBlinkTextElement = document.querySelector('.text-to-alternate');
+        if (monitoringBlinkTextElement) {
+          monitoringBlinkTextElement.remove();
+        }
+        codeElementsArray[1].innerHTML += "<span class='text-to-alternate'>Events logged to dashboard <span style='color: #0C883F;'>⬤</span></span>";
+      }, 800);
+    }, 1600);
   }
 
-  let animationTriggered = preloaded; // Flag to track if the animation has been triggered
+  let pipAnimationTriggered = preloaded; // Flag to track if the animation has been triggered
+  let githubPushAnimationTriggered = preloaded; // Flag to track if the animation has been triggered
 
-  window.addEventListener('scroll', () => {
-    if (animationTriggered) return; // Exit if the animation has already been triggered
+  function handlePipIntersection(entries, observer) {
+    entries.forEach(entry => {
+      if (entry.isIntersecting && !pipAnimationTriggered) {
+        pipAnimationTriggered = true; // Set the flag to true to prevent re-triggering
+        setTimeout(() => {
+          typeInPipText(codeElementsArray[0]);
+        }, 500);
+        observer.unobserve(entry.target); // Stop observing the element
+      }
+    });
+  }
 
-    if (window.scrollY > 110 || document.documentElement.scrollTop > 110 || document.documentElement.scrollBottom < 12000) { // Adjust the scroll position threshold as needed
-      animationTriggered = true; // Set the flag to true to prevent re-triggering
-      setTimeout(() => {
-        if (!preloaded) {
-          typeInPipText(codeElement);
-        }
-      }, 500);
-    }
+  function handleGithubPushIntersection(entries, observer) {
+    entries.forEach(entry => {
+      if (entry.isIntersecting && !githubPushAnimationTriggered) {
+        githubPushAnimationTriggered = true; // Set the flag to true to prevent re-triggering
+        typeInGithubPushText(codeElementsArray[1]);
+        observer.unobserve(entry.target); // Stop observing the element
+      }
+    });
+  }
+
+  const pipObserver = new IntersectionObserver(handlePipIntersection, {
+    root: document, // Use the document start as the root
+    threshold: 0.3 // Trigger when 10% of the element is visible
   });
+  const githubPushObserver = new IntersectionObserver(handleGithubPushIntersection, {
+    root: document, // Use the document start as the root
+    threshold: 0.5 // Trigger when 10% of the element is visible
+  });
+
+  pipObserver.observe(codeElementsArray[0]);
+  githubPushObserver.observe(codeElementsArray[1]);
 }
 
 window.addEventListener('load', function() {
+  loadTerminalText();
   loadIntro();
   fadeInIntroRowTexts();
   const observer = new MutationObserver(addIntroEventListeners);

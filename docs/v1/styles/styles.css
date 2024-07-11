@@ -1,3 +1,81 @@
+.terminal-border {
+  border: 4px solid #D1E6ED;
+  background-color: #D1E6ED;
+  padding: 5px;
+  width: 80%;
+  margin-left: auto;
+  margin-right: auto;
+  border-radius: 16px;
+  padding: 0;
+  box-shadow: 2px 8px 8px rgba(0, 0, 0, 0.15);
+}
+
+.terminal-container {
+  border: 8px solid black;
+  border-radius: 12px;
+  background-color: #262626;
+  height: 16em;
+  font-family: var(--font-jetbrains-mono), ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  padding: 0em 0 0 1em;
+  font-size: 1.2em;
+  color: white;
+}
+
+#terminal-content {
+  display: flex;
+  flex-direction: column;
+  justify-content: left;
+  gap: 0;
+}
+
+#terminal-content > * {
+  margin: 0;
+  padding: 0;
+}
+
+.cursor-bar {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  font-weight: bold;
+}
+
+#inline-code-img {
+  width: 1.2em;
+  height: auto;
+  opacity: 0;
+  display: none;
+  margin: 0;
+  padding: 0;
+  border-radius: 6px;
+}
+
+#inline-code-img.on {
+  opacity: 1;
+  display: flex;
+}
+
+.empty-space {
+  opacity: 0;
+  display: flex;
+}
+
+#toggle-empty-space {
+  opacity: 0;
+  display: flex;
+}
+
+.off {
+  display: none !important;
+}
+
+#barely-space {
+  opacity: 0;
+  font-size: 0.5em;
+  display: flex;
+}
+
+
 .unminted-cards {
   position: relative;
   overflow: hidden;
