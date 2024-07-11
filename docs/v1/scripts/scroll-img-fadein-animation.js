@@ -109,6 +109,13 @@ function typeInTerminalText() {
   addToTerminal(terminalContentDiv, terminalContentTexts[contentIncrement]);
 
   setInterval(() => {
+    // this is to catch timeout bugginess with Mint
+    terminalContentDiv.innerHTML = null;
+    pythonTerminal.textContent = "";
+    terminalCommand.textContent = "";
+    inlineCodeImg.classList.remove("on");
+    barelySpace.classList.add("off");
+
     inlineCodeImg.src = imagesSrcs[contentIncrement];
     typewriterEffect(textsAndElementTargets[contentIncrement].text, textsAndElementTargets[contentIncrement].target, textsAndElementTargets[contentIncrement].nextTarget);
     addToTerminal(terminalContentDiv, terminalContentTexts[contentIncrement]);
@@ -331,11 +338,11 @@ function loadIntro(preloaded = false) {
 
   const pipObserver = new IntersectionObserver(handlePipIntersection, {
     root: document, // Use the document start as the root
-    threshold: 0.3 // Trigger when 10% of the element is visible
+    threshold: 0.8 // Trigger when 10% of the element is visible
   });
   const githubPushObserver = new IntersectionObserver(handleGithubPushIntersection, {
     root: document, // Use the document start as the root
-    threshold: 0.5 // Trigger when 10% of the element is visible
+    threshold: 0.6 // Trigger when 10% of the element is visible
   });
 
   pipObserver.observe(codeElementsArray[0]);
