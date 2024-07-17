@@ -23,12 +23,13 @@ dependencies = [
     "requests==2.31.0",
     "psutil==5.9.8",
     "packaging==23.2",
-    "termcolor==2.4.0"
+    "termcolor==2.4.0",
 ]
 [project.optional-dependencies]
 dev = [
     "pytest==7.4.0",
-    "requests_mock==1.11.0"
+    "requests_mock==1.11.0",
+    "tach==0.6.9",
 ]
 langchain = [
     "langchain~=1.19"
