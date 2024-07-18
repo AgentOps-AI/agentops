@@ -96,8 +96,9 @@ def init(
     )
 
     # handle auto_start_session here so we can get the session object to return rather than client above
+    # if the client automatically starts a session from a partner framework don't start a second
     session = None
-    if auto_start_session:
+    if auto_start_session and len(c.current_session_ids) == 0:
         session = c.start_session(
             tags=tags, config=c.config, inherited_session_id=inherited_session_id
         )
