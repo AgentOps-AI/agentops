@@ -18,6 +18,16 @@ from ..helpers import debug_print_function_params
 import os
 from ..log_config import logger
 import logging
+from importlib.metadata import version, PackageNotFoundError
+
+
+def get_langchain_version() -> Union[1, 2]:
+    try:
+        version_str = version('langchain')
+        minor_version = int(version_str.split('.')[1])
+        return minor_version
+    except PackageNotFoundError:
+        return "Package not found"
 
 
 def get_model_from_kwargs(kwargs: any) -> str:
@@ -68,7 +78,7 @@ class LangchainCallbackHandler(BaseCallbackHandler):
         }
 
         self.ao_client = AOClient(
-            **{k: v for k, v in client_params.items() if v is not None}, override=False
+            **{k: v for k, v in client_params.items() if v is not None}, instrument_llm_calls=False
         )
         self.agent_actions: Dict[UUID, List[ActionEvent]] = defaultdict(list)
         self.events = Events()
@@ -357,7 +367,11 @@ class LangchainCallbackHandler(BaseCallbackHandler):
 
     @property
     def session_id(self):
-        return self.ao_client.current_session_id
+        raise DeprecationWarning('session_id is deprecated in favor of current_session_ids')
+
+    @property
+    def current_session_ids(self):
+        return self.ao_client.current_session_ids
 
 
 class AsyncLangchainCallbackHandler(AsyncCallbackHandler):

@@ -138,7 +138,7 @@ To use the handler, import and set
 import os
 from langchain.chat_models import ChatOpenAI
 from langchain.agents import initialize_agent, AgentType
-from agentops.langchain_callback_handler import LangchainCallbackHandler
+from agentops.partners.langchain_callback_handler import LangchainCallbackHandler
 
 AGENTOPS_API_KEY = os.environ['AGENTOPS_API_KEY']
 handler = LangchainCallbackHandler(api_key=AGENTOPS_API_KEY, tags=['Langchain Example'])
