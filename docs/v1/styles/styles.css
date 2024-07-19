@@ -99,6 +99,8 @@
   width: 30%;
 }
 
+/* API key button spacing */
+
 .api-key-button {
   position: absolute;
   background-color: #7046E0;
@@ -123,4 +125,20 @@
 .api-key-button.pattern0 {
   margin-top: 4em; /* Set distance from the top of the div */
   margin-left: 1.9em;
+}
+
+/* Discord CTA styling */
+.discord-cta-div {
+  display: flex;
+  margin: 0 auto;
+  align-items: center;
+  justify-content: center;
+  background-color: rgba(114, 137, 218, 0.6);
+  color: white;
+  border: 3px solid rgba(88, 100, 242, 0.8);
+  padding: 0.2em 1em;
+  border-radius: 8px;
+  margin-bottom: 1em;
+  width: 80%;
+  font-size: 1.1em;
 }
