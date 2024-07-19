@@ -34,25 +34,19 @@ function typeInTerminalText() {
   const terminalContentDiv = document.getElementById("terminal-content");
   const terminalContentTexts = [
     [
-      "<p style='color: green;'>Successfully posted 32 jobs</p>",
-      "<p style='color: red;'>Failed to post 36 jobs</p>",
-      "<p>0 errors logged</p>",
-      "<p>0 insight into failures</p>",
-      "<p>0 additional information</p>"
+      "<p style='color: green;'>Successfully posted 32 jobs ✅</p>",
+      "<p style='color: red;'>Failed to post 36 jobs ❌</p>",
+      "<p>0 errors logged 📝</p>",
     ],
     [
-      "<p style='color: green;'>Found 18 relevant subreddits</p>",
-      "<p style='color: red;'>But 47 irrelevant ones</p>",
-      "<p>0 errors logged</p>",
-      "<p>0 hallucination reasons</p>",
-      "<p>0 additional information</p>"
+      "<p style='color: green;'>Found 18 relevant subreddits 🎯</p>",
+      "<p style='color: red;'>But 47 irrelevant ones 💩</p>",
+      "<p>0 hallucinations logged 😵‍💫</p>",
     ],
     [
-      "<p style='color: green'>10 perfectly polite emails</p>",
-      "<p style='color: red;'>3 uses of $%&#[redacted]</p>",
-      "<p>0 errors logged</p>",
-      "<p>0 hallucination reasons</p>",
-      "<p>0 additional information</p>"
+      "<p style='color: green'>10 perfectly polite emails 🧑‍💼</p>",
+      "<p style='color: red;'>3 uses of [$%&# - redacted] 🤬</p>",
+      "<p>0 additional insight 🤔</p>"
     ]
   ]
   const imagesSrcs = [
@@ -78,9 +72,9 @@ function typeInTerminalText() {
           inlineCodeImg.classList.remove("on");
           barelySpace.classList.add("off");
           contentIncrement = (contentIncrement + 1) % 3;
-        }, 5000);
+        }, 4000);
       }
-    }, 900);
+    }, 1200);
   }
 
   function typewriterEffect(text, target, nextTarget = null) {
@@ -119,7 +113,7 @@ function typeInTerminalText() {
     inlineCodeImg.src = imagesSrcs[contentIncrement];
     typewriterEffect(textsAndElementTargets[contentIncrement].text, textsAndElementTargets[contentIncrement].target, textsAndElementTargets[contentIncrement].nextTarget);
     addToTerminal(terminalContentDiv, terminalContentTexts[contentIncrement]);
-  }, 11000);
+  }, 10000);
 }
 
 function typeInPipText(target) {

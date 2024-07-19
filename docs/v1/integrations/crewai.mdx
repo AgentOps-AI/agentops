@@ -3,6 +3,9 @@ title: 'CrewAI'
 description: '[CrewAI](https://crewai.io) is a framework for easily building multi-agent applications.'
 ---
 
+import CodeTooltip from '/snippets/add-code-tooltip.mdx'
+import EnvTooltip from '/snippets/add-env-tooltip.mdx'
+
 AgentOps and CrewAI teamed up to make monitoring Crew agents dead simple.
 
 <Card title="Crew.ai + AgentOps" icon="ship" href="https://www.loom.com/share/cfcaaef8d4a14cc7a974843bda1076bf">
@@ -42,43 +45,29 @@ Crew has comprehensive [documentation](https://docs.crewai.com) available as wel
 		</CodeGroup>
 	</Step>
 	<Step title="Add 3 lines of code">
-		1. Before calling the `Crew()` constructor in your code, call `agentops.init()`
-		2. At the end of your Crew run, call `agentops.end_session("Success")`
-		<CodeGroup>
-			```python python
-			import agentops
-
-			# Beginning of program (i.e. main.py, __init__.py)
-			# IMPORTANT: Must be before calling the `Crew()` constructor
-			agentops.init(<INSERT YOUR API KEY HERE>)
-			...
-			# End of program (e.g. main.py)
-			agentops.end_session("Success") # Success|Fail|Indeterminate
-			```
-		</CodeGroup>
-		<Check>
-			Instantiating the AgentOps client will automatically instrument Crew, meaning you will be able to see all
-			of your sessions on the AgentOps Dashboard along with the full LLM chat histories, cost, token counts, etc.
-		</Check>
-		<Tip>
-			For more features see our [Usage](/v1/usage) section.
-		</Tip>
+		<CodeTooltip/>
+		<span className="api-key-container">
+			<CodeGroup>
+				```python python
+				import agentops
+				agentops.init(<INSERT YOUR API KEY HERE>)
+				...
+				# MUST END SESSION at end of program (e.g. main.py)
+				agentops.end_session("Success") # Success|Fail|Indeterminate
+				```
+			</CodeGroup>
+		</span>
+		<EnvTooltip />
+    <span className="api-key-container">
+      <CodeGroup>
+        ```python .env
+        AGENTOPS_API_KEY=<YOUR API KEY>
+        ```
+      </CodeGroup>
+      Read more about [environment variables](/v1/usage/environment-variables)
+    </span>
 	</Step>
-	<Step title="Set your API key">
-		Retrieve an API Key from your Settings > [Projects & API Keys](https://app.agentops.ai/settings/projects) page.
-		<Frame type="glass" caption="Settings > Projects & API Keys">
-			<img height="200" src="/images/api-keys.png" />
-		</Frame>
-		<Info>
-			API keys are tied to individual projects.<br></br>
-			A Default Project has been created for you, so just click Copy API Key
-		</Info>
-		Set this API Key in your [environment variables](/v1/usage/environment-variables)
-		```python .env
-		AGENTOPS_API_KEY=<YOUR API KEY>
-		```
-	</Step>
-    <Step title="Run your crew">
+	<Step title="Run your crew">
 		Execute your program and visit [app.agentops.ai/drilldown](https://app.agentops.ai/drilldown) to observe your Crew! 🕵️
 		<Tip>
 			After your run, AgentOps prints a clickable url to console linking directly to your session in the Dashboard
@@ -107,4 +96,6 @@ agentops.init(skip_auto_end_session=True)
 </CardGroup>
 
 <script type="module" src="/scripts/github_stars.js"></script>
+<script type="module" src="/scripts/link_to_api_button.js"></script>
 <script type="module" src="/scripts/scroll-img-fadein-animation.js"></script>
+<script type="module" src="/scripts/button_heartbeat_animation.js"></script>

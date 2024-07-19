@@ -24,7 +24,14 @@ import ClaudeCard from '/snippets/claude-card.mdx'
 
 AI's biggest problem is that it flies blind... but how can you fix what you can't even see? 👀
 
-## Use AgentOps for 100% visibility
+## Let's give you full visibility
+#### AgentOps logs each step of the AI's decision and helps you understand where it went wrong.
+
+<Frame type="glass" caption="LLM Call Analytics Stream">
+  <img height="200" src="https://github.com/AgentOps-AI/agentops/blob/doc-dynamic-updates/docs/v1/img/chart-waterfall.png?raw=true" />
+</Frame>
+
+## Use AgentOps
 
 <span className="animated-code">
 <CodeGroup>
@@ -34,31 +41,32 @@ AI's biggest problem is that it flies blind... but how can you fix what you can'
 </CodeGroup>
 </span>
 
-### ... and reveal how it works
+### 🤯 In just 2 lines of code!
 
-Your dashboard logs each step of the AI's decision. By seeing where things went wrong, you can easily fix them.
-
-<Frame type="glass" caption="LLM Call Analytics Stream">
-  <img height="200" src="https://github.com/AgentOps-AI/agentops/blob/doc-dynamic-updates/docs/v1/img/chart-waterfall.png?raw=true" />
-</Frame>
-
-### Add 2 lines of code...
-
-<span className="animated-code">
-<CodeGroup>
-	```python python
-	import agentops
-	agentops.init(<INSERT YOUR API KEY HERE>)
-	```
-</CodeGroup>
+<span className="animated-code api-key-container">
+	<CodeGroup>
+		```python python
+		import agentops
+		agentops.init(<INSERT YOUR API KEY HERE>)
+		```
+	</CodeGroup>
 </span>
-
-
-## Ready to Get Started?
-QUICKSTART
 
 <GithubStars />
 
+## Ready to See Everything?
+{/* Discord join prompt */}
+
+<a href="/v1/quickstart" class="heartbeat-button">
+  <span>Get Started</span>
+</a>
+
+<Tip>
+	For more features see our [Usage](/v1/usage) section.
+</Tip>
+
 <script type="module" src="/scripts/github_stars.js"></script>
+<script type="module" src="/scripts/link_to_api_button.js"></script>
 <script type="module" src="/scripts/scroll-img-fadein-animation.js"></script>
+<script type="module" src="/scripts/button_heartbeat_animation.js"></script>
 <script type="css" src="/styles/intro.css"></script>

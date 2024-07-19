@@ -1,3 +1,5 @@
+/* Terminal hero animation styling */
+
 .terminal-border {
   border: 4px solid #D1E6ED;
   background-color: #D1E6ED;
@@ -75,131 +77,50 @@
   display: flex;
 }
 
+/* Heart rate monitor animations */
 
-.unminted-cards {
+.heartbeat-button {
   position: relative;
+  padding: 0.4em 1.4em;
+  font-size: 1.6em;
+  font-weight: bold;
+  border: none;
+  color: white;
+  background: #7046E0;
+  cursor: pointer;
   overflow: hidden;
+  border-radius: 8px;
   display: flex;
-  flex-direction: column;
   justify-content: center;
   align-items: center;
+  margin: 0 auto;
+  box-shadow: 0 4px 6px rgba(112, 70, 224, 0.5); /* Purple shaded box shadow */
+  z-index: 2;
+  width: 30%;
 }
 
-.intro-row {
-  width: 87%;
-	display: flex;
-	flex-direction: row;
-	gap: 3%;
-  justify-content: space-between;
-  margin: 0% 0% 1% 0%;
-  border: 1px solid rgb(224, 224, 224);
-  border-radius: 8px;
-  padding: 0% 3%;
-  color: #000;
-  background-color: #fff;
-}
-
-.intro-row:is(.dark *) {
-  color: #fff;
-  background-color: transparent;
-  border: 1px solid rgb(44, 44, 44);
-}
-
-.intro-card-container {
-  display: flex;
-  flex-direction: row;
-  align-items: center;
-  flex: 1;
-}
-
-.intro-icon-img {
-  width: 70%;
-  height: auto;
-  border-radius: 6px;
-}
-
-.intro-card-text {
-  font-size: 1.0rem;
-  flex: 0 0 88%;
-  text-align: left;
-}
-
-.trailing {
+.api-key-button {
+  position: absolute;
+  background-color: #7046E0;
+  border: none;
+  color: white;
+  padding: 0.3em 0.8em;
+  font-size: 0.95em;
   font-weight: bold;
-  flex: 0 0 70%;
-  opacity: 0;
+  border-radius: 4px;
 }
 
-.trailing.loaded {
-  animation: loaded 0.8s forwards;
+.api-key-button.pattern2 {
+  margin-top: 2.5em; /* Set distance from the top of the div */
+  margin-left: 24.8em;
 }
 
-.trailing.preloaded {
-  opacity: 1 !important;
+.api-key-button.pattern1 {
+  margin-top: 0.9em; /* Set distance from the top of the div */
+  margin-left: 19.2em;
 }
 
-.trailing-img {
-  opacity: 0;
-  width: 40%;
-  height: auto;
-}
-
-.trailing-img.loaded {
-  animation: loaded 0.8s forwards;
-}
-
-.trailing-img.preloaded {
-  opacity: 1 !important;
-}
-
-@keyframes typewriter {
-  from { width: 0; }
-  to { width: 100%; }
-}
-
-@keyframes loaded {
-  from { opacity: 0; }
-  to { opacity: 1; }
-}
-
-@keyframes blink-caret {
-  from, to { border-color: transparent; }
-  50% { border-color: orange; }
-}
-
-.resolved-stamp {
-  display: block;
-  opacity: 0;
-  width: 40%;
-  height: auto;
-  transform: translate(100%, -105%) rotate(60deg);
-  pointer-events: none;
-  margin-bottom: -42%;
-  z-index: 100;
-}
-
-@keyframes scrolled {
-  from {
-    opacity: 0;
-  }
-  to {
-    opacity: 1;
-  }
-}
-
-.resolved-stamp.scrolled {
-  animation: scrolled 0.6s forwards;
-}
-
-.animated-code {
-  /* opacity: 0; */
-  opacity: 1;
-}
-
-.animated-code.scrolled {
-  animation: scrolled 0.6s forwards;
-}
-
-.animated-code.preloaded {
-  opacity: 1;
+.api-key-button.pattern0 {
+  margin-top: 4em; /* Set distance from the top of the div */
+  margin-left: 1.9em;
 }
