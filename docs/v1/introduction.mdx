@@ -1,71 +1,65 @@
 ---
 title: "Introduction"
-description: "Build your next agent with evals, observability, and replays"
+description: "Find where your agents went wrong."
 mode: "wide"
 ---
 
-<Check>[Give us a star](https://github.com/AgentOps-AI/agentops) on GitHub if you find AgentOps helpful (you may be our <span id="stars-text">2,000th</span> 😊)</Check>
+import GithubStars from '/snippets/github-stars.mdx'
+import DiscordCTA from '/snippets/discord-cta.mdx'
 
-# AgentOps solves what Terminal can't
+## AI makes mistakes...
+#### .. but your terminal can't detect them
 
-<CardGroup cols={2}>
-	<Card title="Terminal CAN'T..." icon="trash" iconType="solid" color="#d6483e">
-		- • Track agents across executions
-		- • Parse out LLM completions from output logs
-		- • Give you insight into what your agents did
-	</Card>
-	<Card title="AgentOps does it all and more..." icon="face-smile-halo" iconType="regular" color="#2bd600">
-		- • Record LLM prompts, completions, & timestamps
-		- • Log events, calls, and any other agent activity
-		- • Link agent errors back to their causal event
-	</Card>
-</CardGroup>
+<div className='terminal-border'>
+  <div className='terminal-container'>
+		<div className='cursor-bar'>
+			<p>></p><p className="empty-space">M</p><span id="python-terminal"></span><p id="toggle-empty-space" className="off">M</p><img id="inline-code-img" src="https://github.com/AgentOps-AI/agentops/blob/3c03341f5129f9f494ca64ed4e8d03b9a0575db4/docs/images/docs-icons/chat.png?raw=true"/><p id="barely-space" className="off">l</p><span id="terminal-command"></span><p id="cursor">_</p>
+		</div>
+		<div id='terminal-content'>
+		</div>
+  </div>
+</div>
 
-And we do it all in just two lines of code...
+AI's biggest problem is that it flies blind... but how can you fix what you can't even see? 👀
+
+## Let's give you full visibility
+#### AgentOps logs each step of the AI's decision and helps you understand where it went wrong.
+
+<Frame type="glass" caption="LLM Call Analytics Stream">
+  <img height="200" src="https://github.com/AgentOps-AI/agentops/blob/c1d3903113679fbc794ae699593f5756c55599d1/docs/v1/img/chart-waterfall.png?raw=true" />
+</Frame>
+
+## Install AgentOps
+
+<span className="animated-code">
 <CodeGroup>
 	```python python
-	import agentops
-	agentops.init(<INSERT YOUR API KEY HERE>)
+	pip install agentops
 	```
 </CodeGroup>
-... that logs everything back to your AgentOps Dashboard.
+</span>
 
-## The AgentOps Dashboard
+### 🤯 And use it with just 2 lines of code!
 
-With just two lines of code, you can free yourself from the chains of the terminal and instead visualize your agents' behavior
-in your AgentOps Dashboard. After setting up AgentOps, each execution of your program is recorded as a session and the above
-data is automatically recorded for you.
+<span className="animated-code api-key-container">
+	<CodeGroup>
+		```python python
+		import agentops
+		agentops.init(<INSERT YOUR API KEY HERE>)
+		```
+	</CodeGroup>
+</span>
 
-The examples below were captured with two lines of code.
+<GithubStars />
 
-### Session Drilldown
-Here you will find a list of all of your previously recorded sessions and useful data about each such as total execution time.
-You also get helpful debugging info such as any SDK versions you were on if you're building on a supported agent framework like Crew or AutoGen.
-LLM calls are presented as a familiar chat history view, and charts give you a breakdown of the types of events that were called and how long they took.
+<a href="/v1/quickstart" class="heartbeat-button">
+  <span>Get Started</span>
+</a>
 
-<Frame type="glass" caption="Session Summary">
-  <img height="200" src="https://github.com/AgentOps-AI/agentops/blob/cf67191f13e0e2a09446a61b7393e1810b3eee95/docs/images/session-summary.gif?raw=true" />
-</Frame>
-
-Find any past sessions from your Session Drawer.
-<Frame type="glass" caption="Session Drawer">
-  <img height="250" src="https://github.com/AgentOps-AI/agentops/blob/cf67191f13e0e2a09446a61b7393e1810b3eee95/docs/images/session-drawer.gif?raw=true" />
-</Frame>
-
-Most powerful of all is the Session Waterfall. On the left, a time visualization of all your LLM calls, Action events, Tool calls, and Errors.
-On the right, specific details about the event you've selected on the waterfall. For instance the exact prompt and completion for a given LLM call.
-Most of which has been automatically recorded for you.
-
-<Frame type="glass" caption="Session Waterfall">
-  <img height="200" src="https://github.com/AgentOps-AI/agentops/blob/cf67191f13e0e2a09446a61b7393e1810b3eee95/docs/images/session-waterfall.gif?raw=true" />
-</Frame>
-
-
-### Session Overview
-View a meta-analysis of all of your sessions in a single view.
-<Frame type="glass" caption="Session Overview">
-  <img height="200" src="https://github.com/AgentOps-AI/agentops/blob/cf67191f13e0e2a09446a61b7393e1810b3eee95/docs/images/overview.png?raw=true" />
-</Frame>
+<DiscordCTA />
 
 <script type="module" src="/scripts/github_stars.js"></script>
-<script type="module" src="/scripts/adjust_api_dynamically.js"></script>
+<script type="module" src="/scripts/link_to_api_button.js"></script>
+<script type="module" src="/scripts/scroll-img-fadein-animation.js"></script>
+<script type="module" src="/scripts/button_heartbeat_animation.js"></script>
+<script type="css" src="/styles/styles.css"></script>

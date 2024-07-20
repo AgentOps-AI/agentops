@@ -52,9 +52,14 @@
   ],
   "navigation": [
     {
+      "group": "",
+      "pages": [
+        "v1/introduction"
+      ]
+    },
+    {
       "group": "Getting Started",
       "pages": [
-        "v1/introduction",
         "v1/quickstart",
         "v1/examples"
       ]
@@ -72,6 +77,7 @@
     {
       "group": "Usage",
       "pages": [
+        "v1/usage/dashboard-info",
         "v1/usage/sdk-reference",
         "v1/usage/environment-variables",
         "v1/usage/tracking-llm-calls",
