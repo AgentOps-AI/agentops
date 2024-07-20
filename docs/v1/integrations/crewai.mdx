@@ -6,14 +6,14 @@ description: '[CrewAI](https://crewai.io) is a framework for easily building mul
 import CodeTooltip from '/snippets/add-code-tooltip.mdx'
 import EnvTooltip from '/snippets/add-env-tooltip.mdx'
 
-AgentOps and CrewAI teamed up to make monitoring Crew agents dead simple.
+AgentOps and CrewAI teamed up to make monitoring Crew agents dead simple. Crew and AgentOps have a first class partnership, adding agent observability to all Crew runs with 3 lines of code.
 
 <Card title="Crew.ai + AgentOps" icon="ship" href="https://www.loom.com/share/cfcaaef8d4a14cc7a974843bda1076bf">
 	CrewAI multi-agent framework with AgentOps support
 	![thumbnail](https://cdn.loom.com/sessions/thumbnails/cfcaaef8d4a14cc7a974843bda1076bf-1713568618224-with-play.gif)
 </Card>
 
-Crew has comprehensive [documentation](https://docs.crewai.com) available as well as a great [quickstart](https://docs.crewai.com/how-to/Creating-a-Crew-and-kick-it-off/).
+Crew has comprehensive [documentation](https://docs.crewai.com) available as well as a great [quickstart](https://docs.crewai.com/how-to/Creating-a-Crew-and-kick-it-off/) guide.
 
 ## Adding AgentOps to Crew agents
 
@@ -29,18 +29,13 @@ Crew has comprehensive [documentation](https://docs.crewai.com) available as wel
 		</CodeGroup>
 		<Check>[Give us a star](https://github.com/AgentOps-AI/agentops) on GitHub while you're at it (you may be our <span id="stars-text">2,000th</span> 😊)</Check>
 	</Step>
-	<Step title="Install Crew from the AgentOps fork">
-		<Warning>
-			At this time, Crew with AgentOps integration is in pre-release. In the interim, an official fork has been
-			made available. After official support is released, this fork will be deprecated and developers will
-			be encouraged to use the core Crew SDK.
-		</Warning>
+	<Step title="Install Crew with AgentOps">
 		<CodeGroup>
 			```bash pip 
-			pip install git+https://github.com/AgentOps-AI/crewAI.git@main
+			pip install 'crewai[agentops]'
 			```
 			```bash poetry
-			poetry add git+https://github.com/AgentOps-AI/crewAI.git@main
+			poetry add 'crewai[agentops]'
 			```
 		</CodeGroup>
 	</Step>
@@ -100,3 +95,4 @@ agentops.init(skip_auto_end_session=True)
 <script type="module" src="/scripts/scroll-img-fadein-animation.js"></script>
 <script type="module" src="/scripts/button_heartbeat_animation.js"></script>
 <script type="css" src="/styles/styles.css"></script>
+<script type="module" src="/scripts/adjust_api_dynamically.js"></script>
