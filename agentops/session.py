@@ -217,7 +217,9 @@ class Session:
                 )
 
                 logger.debug("\n<AGENTOPS_DEBUG_OUTPUT>")
-                logger.debug(f"Session request to {self.config.endpoint}/events")
+                logger.debug(
+                    f"Session request to {self.config.endpoint}/v2/create_events"
+                )
                 logger.debug(serialized_payload)
                 logger.debug("</AGENTOPS_DEBUG_OUTPUT>\n")
 
