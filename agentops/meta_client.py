@@ -56,7 +56,7 @@ def handle_exceptions(method):
             config = getattr(self, "config", None)
             if config is not None:
                 session = None
-                if len(self._sessions > 0):
+                if len(self._sessions) > 0:
                     session = self._sessions[0]
                 type(self).send_exception_to_server(e, self.config._api_key, session)
             raise e

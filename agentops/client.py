@@ -588,13 +588,6 @@ class Client(metaclass=MetaClient):
             # all the calls to _safe_get_session come from Client()
 
         elif len(self._sessions) > 1:
-            # raise MultiSessionException(
-            #     "If multiple sessions exist, you must use session.function(). Example: session.add_tags(...) instead "
-            #     "of agentops.add_tags(...). More info: "
-            #     "https://docs.agentops.ai/v1/concepts/core-concepts#session-management"
-            # )
-            # Instead of raising an error i just make this a log.
-
             logger.warning(
                 "If multiple sessions exist, you must use session.function(). Example: session.add_tags(...) instead "
                 "of agentops.add_tags(...). More info: "
