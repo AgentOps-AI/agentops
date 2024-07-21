@@ -34,9 +34,7 @@ from .config import ClientConfiguration
 from .llm_tracker import LlmTracker
 from termcolor import colored
 from typing import Tuple
-from .state import (
-    is_initialized,
-)
+from .state import get_state, set_state
 
 
 @conditional_singleton
@@ -196,15 +194,14 @@ class Client(metaclass=MetaClient):
             tags (List[str]): The list of tags to set.
         """
 
-        try:
-            session = self._safe_get_session()
+        session = self._safe_get_session()
 
-            if session is None:
-                return
-
-            session.set_tags(tags=tags)
-        except NoSessionException:
+        if session is None:
             self._tags_for_future_session = tags
+            return
+
+        session.set_tags(tags=tags)
+
 
     def record(self, event: Union[Event, ErrorEvent]) -> None:
         """
@@ -216,6 +213,7 @@ class Client(metaclass=MetaClient):
 
         session = self._safe_get_session()
         if session is None:
+            logger.error("Could not record event. No session.")
             return
         session.record(event)
 
@@ -582,8 +580,8 @@ class Client(metaclass=MetaClient):
             session = self._sessions[0]
 
         if len(self._sessions) == 0:
-            if is_initialized:
-                raise NoSessionException("No session exists")
+            if get_state('is_initialized'):
+                return None
             # We're getting here for many paths bc we call _safe_get_session a lot
             # we could wrap this whole thing in a "if is_initialized" but we would return None
             # and then all the calling functions would have to do "if session is not None"
