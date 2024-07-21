@@ -66,18 +66,18 @@ class Client(metaclass=MetaClient):
     """
 
     def __init__(
-            self,
-            api_key: Optional[str] = None,
-            parent_key: Optional[str] = None,
-            endpoint: Optional[str] = None,
-            max_wait_time: Optional[int] = None,
-            max_queue_size: Optional[int] = None,
-            tags: Optional[List[str]] = None,
-            override: Optional[bool] = None,  # Deprecated
-            instrument_llm_calls=True,
-            auto_start_session=False,
-            inherited_session_id: Optional[str] = None,
-            skip_auto_end_session: Optional[bool] = False,
+        self,
+        api_key: Optional[str] = None,
+        parent_key: Optional[str] = None,
+        endpoint: Optional[str] = None,
+        max_wait_time: Optional[int] = None,
+        max_queue_size: Optional[int] = None,
+        tags: Optional[List[str]] = None,
+        override: Optional[bool] = None,  # Deprecated
+        instrument_llm_calls=True,
+        auto_start_session=False,
+        inherited_session_id: Optional[str] = None,
+        skip_auto_end_session: Optional[bool] = False,
     ):
         if override is not None:
             logger.warning(
@@ -92,7 +92,7 @@ class Client(metaclass=MetaClient):
         self._tags_for_future_session: Optional[List[str]] = None
 
         self._env_data_opt_out = (
-                os.environ.get("AGENTOPS_ENV_DATA_OPT_OUT", "False").lower() == "true"
+            os.environ.get("AGENTOPS_ENV_DATA_OPT_OUT", "False").lower() == "true"
         )
 
         self.config = None
@@ -131,7 +131,7 @@ class Client(metaclass=MetaClient):
             self.llm_tracker.override_api()
 
     def _check_for_partner_frameworks(
-            self, instrument_llm_calls, auto_start_session
+        self, instrument_llm_calls, auto_start_session
     ) -> Tuple[bool, bool]:
         partner_frameworks = get_partner_frameworks()
         for framework in partner_frameworks.keys():
@@ -201,7 +201,6 @@ class Client(metaclass=MetaClient):
             return
 
         session.set_tags(tags=tags)
-
 
     def record(self, event: Union[Event, ErrorEvent]) -> None:
         """
@@ -332,10 +331,10 @@ class Client(metaclass=MetaClient):
         return returns
 
     def start_session(
-            self,
-            tags: Optional[List[str]] = None,
-            config: Optional[ClientConfiguration] = None,
-            inherited_session_id: Optional[str] = None,
+        self,
+        tags: Optional[List[str]] = None,
+        config: Optional[ClientConfiguration] = None,
+        inherited_session_id: Optional[str] = None,
     ) -> Union[Session, None]:
         """
         Start a new session for recording events.
@@ -386,11 +385,11 @@ class Client(metaclass=MetaClient):
         return session
 
     def end_session(
-            self,
-            end_state: str,
-            end_state_reason: Optional[str] = None,
-            video: Optional[str] = None,
-            is_auto_end: Optional[bool] = None,
+        self,
+        end_state: str,
+        end_state_reason: Optional[str] = None,
+        video: Optional[str] = None,
+        is_auto_end: Optional[bool] = None,
     ) -> Optional[Decimal]:
         """
         End the current session with the AgentOps service.
@@ -454,10 +453,10 @@ class Client(metaclass=MetaClient):
         return token_cost_d
 
     def create_agent(
-            self,
-            name: str,
-            agent_id: Optional[str] = None,
-            session: Optional[Session] = None,
+        self,
+        name: str,
+        agent_id: Optional[str] = None,
+        session: Optional[Session] = None,
     ):
         if agent_id is None:
             agent_id = str(uuid4())
@@ -580,7 +579,7 @@ class Client(metaclass=MetaClient):
             session = self._sessions[0]
 
         if len(self._sessions) == 0:
-            if get_state('is_initialized'):
+            if get_state("is_initialized"):
                 return None
             # We're getting here for many paths bc we call _safe_get_session a lot
             # we could wrap this whole thing in a "if is_initialized" but we would return None
@@ -599,7 +598,8 @@ class Client(metaclass=MetaClient):
             logger.warning(
                 "If multiple sessions exist, you must use session.function(). Example: session.add_tags(...) instead "
                 "of agentops.add_tags(...). More info: "
-                "https://docs.agentops.ai/v1/concepts/core-concepts#session-management")
+                "https://docs.agentops.ai/v1/concepts/core-concepts#session-management"
+            )
 
             return
 

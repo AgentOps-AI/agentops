@@ -19,7 +19,7 @@ def track_agent(name: Union[str, None] = None):
                 try:
                     original_init(self, *args, **kwargs)
 
-                    if not get_state('is_initialized'):
+                    if not get_state("is_initialized"):
                         return
 
                     self.agent_ops_agent_id = str(uuid4())

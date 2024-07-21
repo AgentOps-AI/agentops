@@ -58,11 +58,7 @@ def handle_exceptions(method):
                 session = None
                 if len(self._sessions > 0):
                     session = self._sessions[0]
-                type(self).send_exception_to_server(
-                    e,
-                    self.config._api_key,
-                    session
-                )
+                type(self).send_exception_to_server(e, self.config._api_key, session)
             raise e
 
     return wrapper

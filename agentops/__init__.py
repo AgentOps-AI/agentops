@@ -30,7 +30,7 @@ def noop(*args, **kwargs):
 def check_init(child_function):
     @functools.wraps(child_function)
     def wrapper(*args, **kwargs):
-        if get_state('is_initialized'):  # is initialized in state.py is not working
+        if get_state("is_initialized"):  # is initialized in state.py is not working
             return child_function(*args, **kwargs)
         else:
             return noop(*args, **kwargs)
@@ -103,7 +103,7 @@ def init(
             tags=tags, config=c.config, inherited_session_id=inherited_session_id
         )
 
-    set_state('is_initialized', True)
+    set_state("is_initialized", True)
 
     return session
 
@@ -155,7 +155,7 @@ def start_session(
     try:
         sess_result = Client().start_session(tags, config, inherited_session_id)
 
-        set_state('is_initialized', True)
+        set_state("is_initialized", True)
 
         return sess_result
     except Exception:
