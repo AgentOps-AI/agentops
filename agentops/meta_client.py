@@ -58,7 +58,9 @@ def handle_exceptions(method):
                 type(self).send_exception_to_server(
                     e,
                     self.config._api_key,
-                    self._sessions[0],  # TODO: find which session caused exception
+                    self._sessions[
+                        0
+                    ],  # TODO: find which session caused exception # TODO: Currently crashing on this line. we need to check if there's even a session to begin with
                 )
             raise e
 

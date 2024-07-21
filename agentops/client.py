@@ -34,6 +34,9 @@ from .config import ClientConfiguration
 from .llm_tracker import LlmTracker
 from termcolor import colored
 from typing import Tuple
+from .state import (
+    is_initialized,
+)
 
 
 @conditional_singleton
@@ -179,6 +182,10 @@ class Client(metaclass=MetaClient):
 
         session = self._safe_get_session()
 
+        # TODO: refactor. maybe move this
+        if session is None:
+            return
+
         session.add_tags(tags=tags)
 
         self._update_session(session)
@@ -193,6 +200,10 @@ class Client(metaclass=MetaClient):
 
         try:
             session = self._safe_get_session()
+
+            if session is None:
+                return
+
             session.set_tags(tags=tags)
         except NoSessionException:
             self._tags_for_future_session = tags
@@ -206,6 +217,8 @@ class Client(metaclass=MetaClient):
         """
 
         session = self._safe_get_session()
+        if session is None:
+            return
         session.record(event)
 
     def _record_event_sync(self, func, event_name, *args, **kwargs):
@@ -397,6 +410,8 @@ class Client(metaclass=MetaClient):
         """
 
         session = self._safe_get_session()
+        if session is None:
+            return
         session.end_state = end_state
         session.end_state_reason = end_state_reason
 
@@ -424,7 +439,11 @@ class Client(metaclass=MetaClient):
                 "This run's cost ${}".format(
                     "{:.2f}".format(token_cost_d)
                     if token_cost_d == 0
-                    else "{:.6f}".format(token_cost_d.quantize(Decimal('0.000001'), rounding=ROUND_HALF_UP))
+                    else "{:.6f}".format(
+                        token_cost_d.quantize(
+                            Decimal("0.000001"), rounding=ROUND_HALF_UP
+                        )
+                    )
                 )
             )
 
@@ -453,6 +472,8 @@ class Client(metaclass=MetaClient):
         else:
             # if no session passed, assume single session
             session = self._safe_get_session()
+            if session is None:
+                return
             session.create_agent(name=name, agent_id=agent_id)
 
         return agent_id
@@ -563,7 +584,13 @@ class Client(metaclass=MetaClient):
             session = self._sessions[0]
 
         if len(self._sessions) == 0:
-            raise NoSessionException("No session exists")
+            if is_initialized:
+                raise NoSessionException("No session exists")
+            # We're getting here for many paths bc we call _safe_get_session a lot
+            # we could wrap this whole thing in a "if is_initialized" but we would return None
+            # and then all the calling functions would have to do "if session is not None"
+            # i think the real fix is not even creating a Client() if is_initialized is False if possible
+            # all the calls to _safe_get_session come from Client()
 
         elif len(self._sessions) > 1:
             raise MultiSessionException(

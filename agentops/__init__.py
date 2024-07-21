@@ -11,6 +11,14 @@ from .decorators import record_function
 from .agent import track_agent
 from .log_config import logger
 from .session import Session
+from .state import (
+    is_initialized,
+)  # sketch, Python's own docs say not to do this but this is the only way Python will accept it
+
+# https://docs.python.org/3/faq/programming.html#how-do-i-share-global-variables-across-modules
+# Stackoverflow (this might not be applicable bc you can't un-init): Don't use a from import unless the variable is intended to be a constant. from shared_stuff import a would create a new a variable initialized to whatever shared_stuff.a referred to at the time of the import, and this new a variable would not be affected by assignments to shared_stuff.a.
+# https://stackoverflow.com/questions/15959534/visibility-of-global-variables-in-imported-modules
+
 
 try:
     from .partners.langchain_callback_handler import (
@@ -19,8 +27,6 @@ try:
     )
 except ModuleNotFoundError:
     pass
-
-is_initialized = False
 
 
 def noop(*args, **kwargs):
@@ -103,7 +109,6 @@ def init(
             tags=tags, config=c.config, inherited_session_id=inherited_session_id
         )
 
-    global is_initialized
     is_initialized = True
 
     return session
@@ -155,8 +160,6 @@ def start_session(
 
     try:
         sess_result = Client().start_session(tags, config, inherited_session_id)
-
-        global is_initialized
         is_initialized = True
 
         return sess_result
