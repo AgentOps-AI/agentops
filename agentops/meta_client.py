@@ -55,12 +55,13 @@ def handle_exceptions(method):
             logger.warning(f"Error: {e}")
             config = getattr(self, "config", None)
             if config is not None:
+                session = None
+                if len(self._sessions > 0):
+                    session = self._sessions[0]
                 type(self).send_exception_to_server(
                     e,
                     self.config._api_key,
-                    self._sessions[
-                        0
-                    ],  # TODO: find which session caused exception # TODO: Currently crashing on this line. we need to check if there's even a session to begin with
+                    session
                 )
             raise e
 
