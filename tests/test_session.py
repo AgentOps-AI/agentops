@@ -175,8 +175,8 @@ class TestSingleSessions:
         assert session is None
 
     def test_safe_get_session_no_session(self, mock_req):
-        with pytest.raises(NoSessionException):
-            session = Client()._safe_get_session()
+        session = Client()._safe_get_session()
+        assert session is None
 
     def test_safe_get_session_with_session(self, mock_req):
         agentops.start_session(config=self.config)
@@ -187,8 +187,8 @@ class TestSingleSessions:
         agentops.start_session(config=self.config)
         agentops.start_session(config=self.config)
 
-        with pytest.raises(MultiSessionException):
-            session = Client()._safe_get_session()
+        session = Client()._safe_get_session()
+        assert session is None
 
 
 class TestMultiSessions:
