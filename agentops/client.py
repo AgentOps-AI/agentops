@@ -581,17 +581,13 @@ class Client(metaclass=MetaClient):
         if len(self._sessions) == 0:
             if get_state("is_initialized"):
                 return None
-            # We're getting here for many paths bc we call _safe_get_session a lot
-            # we could wrap this whole thing in a "if is_initialized" but we would return None
-            # and then all the calling functions would have to do "if session is not None"
-            # i think the real fix is not even creating a Client() if is_initialized is False if possible
-            # all the calls to _safe_get_session come from Client()
 
         elif len(self._sessions) > 1:
+            calling_function = inspect.stack()[
+                2
+            ].function  # Using index 2 because we have a wrapper at index 1
             logger.warning(
-                "If multiple sessions exist, you must use session.function(). Example: session.add_tags(...) instead "
-                "of agentops.add_tags(...). More info: "
-                "https://docs.agentops.ai/v1/concepts/core-concepts#session-management"
+                f"Multiple sessions detected. You must use session.{calling_function}(). More info: https://docs.agentops.ai/v1/concepts/core-concepts#session-management"
             )
 
             return
