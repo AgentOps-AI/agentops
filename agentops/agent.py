@@ -19,7 +19,7 @@ def track_agent(name: Union[str, None] = None):
                 try:
                     original_init(self, *args, **kwargs)
 
-                    if not get_state("is_initialized"):
+                    if not Client().is_initialized:
                         return
 
                     self.agent_ops_agent_id = str(uuid4())
@@ -38,7 +38,7 @@ def track_agent(name: Union[str, None] = None):
                         "Failed to track an agent. This often happens if agentops.init() was not "
                         "called before initializing an agent with the @track_agent decorator."
                     )
-                    raise e
+                    original_init(self, *args, **kwargs)
 
             obj.__init__ = new_init
 

@@ -11,7 +11,6 @@ from .decorators import record_function
 from .agent import track_agent
 from .log_config import logger
 from .session import Session
-from .state import get_state, set_state
 
 
 try:
@@ -21,21 +20,6 @@ try:
     )
 except ModuleNotFoundError:
     pass
-
-
-def noop(*args, **kwargs):
-    return
-
-
-def check_init(child_function):
-    @functools.wraps(child_function)
-    def wrapper(*args, **kwargs):
-        if get_state("is_initialized"):  # is initialized in state.py is not working
-            return child_function(*args, **kwargs)
-        else:
-            return noop(*args, **kwargs)
-
-    return wrapper
 
 
 def init(
@@ -82,7 +66,7 @@ def init(
     }
     logger.setLevel(log_levels.get(logging_level or "INFO", "INFO"))
 
-    c = Client(
+    Client().configure(
         api_key=api_key,
         parent_key=parent_key,
         endpoint=endpoint,
@@ -90,22 +74,12 @@ def init(
         max_queue_size=max_queue_size,
         tags=tags,
         instrument_llm_calls=instrument_llm_calls,
-        auto_start_session=False,  # handled below
+        auto_start_session=auto_start_session,
         inherited_session_id=inherited_session_id,
         skip_auto_end_session=skip_auto_end_session,
     )
 
-    # handle auto_start_session here so we can get the session object to return rather than client above
-    # if the client automatically starts a session from a partner framework don't start a second
-    session = None
-    if auto_start_session and len(c.current_session_ids) == 0:
-        session = c.start_session(
-            tags=tags, config=c.config, inherited_session_id=inherited_session_id
-        )
-
-    set_state("is_initialized", True)
-
-    return session
+    return Client().start()
 
 
 def end_session(
@@ -151,18 +125,10 @@ def start_session(
         config: (Configuration, optional): Client configuration object,
         inherited_session_id: (str, optional): Set the session ID to inherit from another client
     """
-
-    try:
-        sess_result = Client().start_session(tags, config, inherited_session_id)
-
-        set_state("is_initialized", True)
-
-        return sess_result
-    except Exception:
-        pass
+    if Client().is_initialized:
+        return Client().start_session(tags, config, inherited_session_id)
 
 
-@check_init
 def record(event: Union[Event, ErrorEvent]):
     """
     Record an event with the AgentOps service.
@@ -170,7 +136,8 @@ def record(event: Union[Event, ErrorEvent]):
     Args:
         event (Event): The event to record.
     """
-    Client().record(event)
+    if Client().is_initialized:
+        Client().record(event)
 
 
 def add_tags(tags: List[str]):
@@ -197,6 +164,10 @@ def get_api_key() -> str:
     return Client().api_key
 
 
+def set_api_key(api_key: str) -> None:
+    Client().configure(api_key=api_key)
+
+
 def set_parent_key(parent_key):
     """
     Set the parent API key so another organization can view data.
@@ -211,6 +182,6 @@ def stop_instrumenting():
     Client().stop_instrumenting()
 
 
-@check_init
 def create_agent(name: str, agent_id: Optional[str] = None):
-    return Client().create_agent(name=name, agent_id=agent_id)
+    if Client().is_initialized:
+        return Client().create_agent(name=name, agent_id=agent_id)

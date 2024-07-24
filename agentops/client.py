@@ -87,6 +87,30 @@ class Client(metaclass=MetaClient):
             )
             instrument_llm_calls = instrument_llm_calls or override
 
+        try:
+            if inherited_session_id is not None:
+                UUID(inherited_session_id)
+
+        except ValueError:
+            logger.warning(f"Invalid session id: {inherited_session_id}")
+
+        try:
+            if api_key is not None:
+                UUID(api_key)
+        except ValueError:
+            logger.warning(f"API Key is invalid: {api_key}")
+
+        self.api_key = api_key
+        self.parent_key = parent_key
+        self.endpoint = endpoint
+        self.max_wait_time = max_wait_time
+        self.max_queue_size = max_queue_size
+        self.skip_auto_end_session = skip_auto_end_session
+        self.tags = tags
+        self.instrument_llm_calls = instrument_llm_calls
+        self.auto_start_session = auto_start_session
+        self.inherited_session_id = inherited_session_id
+
         self._sessions: Optional[List[Session]] = []
         self._tags: Optional[List[str]] = tags
         self._tags_for_future_session: Optional[List[str]] = None
@@ -95,24 +119,62 @@ class Client(metaclass=MetaClient):
             os.environ.get("AGENTOPS_ENV_DATA_OPT_OUT", "False").lower() == "true"
         )
 
-        self.config = None
+        self._is_initizalized = False
 
-        try:
-            self.config = ClientConfiguration(
-                api_key=api_key,
-                parent_key=parent_key,
-                endpoint=endpoint,
-                max_wait_time=max_wait_time,
-                max_queue_size=max_queue_size,
-                skip_auto_end_session=skip_auto_end_session,
-            )
+    def configure(
+        self,
+        api_key: Optional[str] = None,
+        parent_key: Optional[str] = None,
+        endpoint: Optional[str] = None,
+        max_wait_time: Optional[int] = None,
+        max_queue_size: Optional[int] = None,
+        tags: Optional[List[str]] = None,
+        instrument_llm_calls: Optional[bool] = None,
+        auto_start_session: Optional[bool] = None,
+        inherited_session_id: Optional[str] = None,
+        skip_auto_end_session: Optional[bool] = None,
+    ):
+        if api_key is not None:
+            try:
+                UUID(api_key)
+                self.api_key = api_key
+            except ValueError:
+                logger.warning(f"API Key is invalid: {api_key}")
 
-            if inherited_session_id is not None:
-                # Check if inherited_session_id is valid
+        if parent_key is not None:
+            self.parent_key = parent_key
+
+        if endpoint is not None:
+            self.endpoint = endpoint
+
+        if max_wait_time is not None:
+            self.max_wait_time = max_wait_time
+
+        if max_queue_size is not None:
+            self.max_queue_size = max_queue_size
+
+        if tags is not None:
+            self.tags = tags
+
+        if instrument_llm_calls is not None:
+            self.instrument_llm_calls = instrument_llm_calls
+
+        if auto_start_session is not None:
+            self.auto_start_session = auto_start_session
+
+        if inherited_session_id is not None:
+            try:
                 UUID(inherited_session_id)
+                self.inherited_session_id = inherited_session_id
+            except ValueError:
+                logger.warning(f"Invalid session id: {inherited_session_id}")
 
-        except ConfigurationError:
-            logger.warning("Failed to setup client Configuration")
+        if skip_auto_end_session is not None:
+            self.skip_auto_end_session = skip_auto_end_session
+
+    def start(self):
+        if self.api_key is None:
+            logger.warning("API Key is missing")
             return
 
         self._handle_unclean_exits()
@@ -121,14 +183,24 @@ class Client(metaclass=MetaClient):
             instrument_llm_calls, auto_start_session
         )
 
+        session = None
         if auto_start_session:
-            self.start_session(tags, self.config, inherited_session_id)
+            session = self.start_session(
+                self.tags, self.config, self.inherited_session_id
+            )
         else:
-            self._tags_for_future_session = tags
+            self._tags_for_future_session = self.tags
 
         if instrument_llm_calls:
             self.llm_tracker = LlmTracker(self)
             self.llm_tracker.override_api()
+
+        self._is_initizalized = True
+        return session
+
+    @property
+    def is_initialized(self) -> bool:
+        return self._is_initizalized
 
     def _check_for_partner_frameworks(
         self, instrument_llm_calls, auto_start_session
@@ -217,6 +289,9 @@ class Client(metaclass=MetaClient):
         session.record(event)
 
     def _record_event_sync(self, func, event_name, *args, **kwargs):
+        if self._is_initizalized is False:
+            return
+
         init_time = get_ISO_time()
         session: Optional[Session] = kwargs.get("session", None)
         if "session" in kwargs.keys():
@@ -273,6 +348,9 @@ class Client(metaclass=MetaClient):
         return returns
 
     async def _record_event_async(self, func, event_name, *args, **kwargs):
+        if self._is_initizalized is False:
+            return
+
         init_time = get_ISO_time()
         session: Union[Session, None] = kwargs.get("session", None)
         if "session" in kwargs.keys():
@@ -333,7 +411,6 @@ class Client(metaclass=MetaClient):
     def start_session(
         self,
         tags: Optional[List[str]] = None,
-        config: Optional[ClientConfiguration] = None,
         inherited_session_id: Optional[str] = None,
     ) -> Union[Session, None]:
         """
@@ -345,16 +422,6 @@ class Client(metaclass=MetaClient):
             config: (Configuration, optional): Client configuration object
             inherited_session_id (optional, str): assign session id to match existing Session
         """
-        logging_level = os.getenv("AGENTOPS_LOGGING_LEVEL")
-        log_levels = {
-            "CRITICAL": logging.CRITICAL,
-            "ERROR": logging.ERROR,
-            "INFO": logging.INFO,
-            "WARNING": logging.WARNING,
-            "DEBUG": logging.DEBUG,
-        }
-        logger.setLevel(log_levels.get(logging_level or "INFO", "INFO"))
-
         if not config and not self.config:
             return logger.warning(
                 "Cannot start session - missing configuration - did you call init()?"
