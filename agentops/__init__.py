@@ -1,11 +1,10 @@
 # agentops/__init__.py
-import functools
 import os
 import logging
 from typing import Optional, List, Union
+from uuid import UUID
 
 from .client import Client
-from .config import ClientConfiguration
 from .event import Event, ActionEvent, LLMEvent, ToolEvent, ErrorEvent
 from .decorators import record_function
 from .agent import track_agent
@@ -72,12 +71,20 @@ def init(
         endpoint=endpoint,
         max_wait_time=max_wait_time,
         max_queue_size=max_queue_size,
-        tags=tags,
+        default_tags=tags,
         instrument_llm_calls=instrument_llm_calls,
         auto_start_session=auto_start_session,
-        inherited_session_id=inherited_session_id,
         skip_auto_end_session=skip_auto_end_session,
     )
+
+    if inherited_session_id is not None:
+        try:
+            UUID(inherited_session_id)
+            Client().configure(auto_start_session=False)
+            Client().start()
+            return Client().start_session(inherited_session_id=inherited_session_id)
+        except ValueError:
+            logger.warning(f"Invalid session id: {inherited_session_id}")
 
     return Client().start()
 
@@ -113,7 +120,6 @@ def end_all_sessions() -> None:
 
 def start_session(
     tags: Optional[List[str]] = None,
-    config: Optional[ClientConfiguration] = None,
     inherited_session_id: Optional[str] = None,
 ) -> Union[Session, None]:
     """
@@ -122,11 +128,10 @@ def start_session(
     Args:
         tags (List[str], optional): Tags that can be used for grouping or sorting later.
             e.g. ["test_run"].
-        config: (Configuration, optional): Client configuration object,
         inherited_session_id: (str, optional): Set the session ID to inherit from another client
     """
     if Client().is_initialized:
-        return Client().start_session(tags, config, inherited_session_id)
+        return Client().start_session(tags, inherited_session_id)
 
 
 def record(event: Union[Event, ErrorEvent]):
@@ -147,7 +152,8 @@ def add_tags(tags: List[str]):
     Args:
         tags (List[str]): The list of tags to append.
     """
-    Client().add_tags(tags)
+    if Client().has_sessions:
+        Client().add_tags(tags)
 
 
 def set_tags(tags: List[str]):
@@ -157,7 +163,8 @@ def set_tags(tags: List[str]):
     Args:
         tags (List[str]): The list of tags to set.
     """
-    Client().set_tags(tags)
+    if Client().has_sessions:
+        Client().set_tags(tags)
 
 
 def get_api_key() -> str:

@@ -3,6 +3,7 @@ import threading
 import time
 from typing import Dict, Optional
 
+from .config import Configuration
 from .log_config import logger
 from .http_client import HttpClient
 from .session import Session
@@ -12,17 +13,9 @@ from .helpers import safe_serialize, filter_unjsonable
 class Worker:
     def __init__(
         self,
-        endpoint: str,
-        api_key: str,
-        parent_key: str,
-        max_wait_time: int,
-        max_queue_size: int,
+        config: Configuration
     ) -> None:
-        self.api_key: str = api_key
-        self.parent_key: str = parent_key
-        self.endpoint: str = endpoint
-        self.max_wait_time = max_wait_time
-        self.max_queue_size = max_queue_size
+        self.config = config
         self.queue: list[Dict] = []
         self.lock = threading.Lock()
         self.stop_flag = threading.Event()
@@ -35,7 +28,7 @@ class Worker:
         with self.lock:
             event["session_id"] = session_id
             self.queue.append(event)
-            if len(self.queue) >= self.max_queue_size:
+            if len(self.queue) >= self.config.max_queue_size:
                 self.flush_queue()
 
     def flush_queue(self) -> None:
@@ -50,7 +43,7 @@ class Worker:
 
                 serialized_payload = safe_serialize(payload).encode("utf-8")
                 HttpClient.post(
-                    f"{self.endpoint}/v2/create_events",
+                    f"{self.config.endpoint}/v2/create_events",
                     serialized_payload,
                     jwt=self.jwt,
                 )
@@ -66,9 +59,9 @@ class Worker:
             payload = {"session_id": session.session_id}
             serialized_payload = json.dumps(filter_unjsonable(payload)).encode("utf-8")
             res = HttpClient.post(
-                f"{self.endpoint}/v2/reauthorize_jwt",
+                f"{self.config.endpoint}/v2/reauthorize_jwt",
                 serialized_payload,
-                self.api_key,
+                self.config.api_key,
             )
 
             logger.debug(res.body)
@@ -88,10 +81,10 @@ class Worker:
             payload = {"session": session.__dict__}
             serialized_payload = json.dumps(filter_unjsonable(payload)).encode("utf-8")
             res = HttpClient.post(
-                f"{self.endpoint}/v2/create_session",
+                f"{self.config.endpoint}/v2/create_session",
                 serialized_payload,
-                self.api_key,
-                self.parent_key,
+                self.config.api_key,
+                self.config.parent_key,
             )
 
             logger.debug(res.body)
@@ -115,7 +108,7 @@ class Worker:
             payload = {"session": session.__dict__}
 
             res = HttpClient.post(
-                f"{self.endpoint}/v2/update_session",
+                f"{self.config.endpoint}/v2/update_session",
                 json.dumps(filter_unjsonable(payload)).encode("utf-8"),
                 jwt=self.jwt,
             )
@@ -127,7 +120,7 @@ class Worker:
             payload = {"session": session.__dict__}
 
             res = HttpClient.post(
-                f"{self.endpoint}/v2/update_session",
+                f"{self.config.endpoint}/v2/update_session",
                 json.dumps(filter_unjsonable(payload)).encode("utf-8"),
                 jwt=self.jwt,
             )
@@ -141,11 +134,11 @@ class Worker:
 
         serialized_payload = safe_serialize(payload).encode("utf-8")
         HttpClient.post(
-            f"{self.endpoint}/v2/create_agent", serialized_payload, jwt=self.jwt
+            f"{self.config.endpoint}/v2/create_agent", serialized_payload, jwt=self.jwt
         )
 
     def run(self) -> None:
         while not self.stop_flag.is_set():
-            time.sleep(self.max_wait_time / 1000)
+            time.sleep(self.config.max_wait_time / 1000)
             if self.queue:
                 self.flush_queue()

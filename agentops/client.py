@@ -5,21 +5,18 @@ Classes:
     Client: Provides methods to interact with the AgentOps service.
 """
 
-import os
 import inspect
 import atexit
 import signal
 import sys
 import threading
 import traceback
-import logging
 from decimal import Decimal, ROUND_HALF_UP
 from uuid import UUID, uuid4
 from typing import Optional, List, Union
 
 from .event import ActionEvent, ErrorEvent, Event
 from .enums import EndState
-from .exceptions import NoSessionException, MultiSessionException, ConfigurationError
 from .helpers import (
     get_ISO_time,
     check_call_stack_for_agent_id,
@@ -31,11 +28,10 @@ from .worker import Worker
 from .host_env import get_host_env
 from .log_config import logger
 from .meta_client import MetaClient
-from .config import ClientConfiguration
+from .config import Configuration
 from .llm_tracker import LlmTracker
 from termcolor import colored
 from typing import Tuple
-from .state import get_state, set_state
 
 
 @conditional_singleton
@@ -73,40 +69,31 @@ class Client(metaclass=MetaClient):
         endpoint: Optional[str] = None,
         max_wait_time: Optional[int] = None,
         max_queue_size: Optional[int] = None,
-        tags: Optional[List[str]] = None,
+        default_tags: Optional[List[str]] = None,
         instrument_llm_calls=True,
         auto_start_session=True,
         skip_auto_end_session: Optional[bool] = False,
     ):
-        try:
-            if inherited_session_id is not None:
-                UUID(inherited_session_id)
-
-        except ValueError:
-            logger.warning(f"Invalid session id: {inherited_session_id}")
-
         try:
             if api_key is not None:
                 UUID(api_key)
         except ValueError:
             logger.warning(f"API Key is invalid: {api_key}")
 
-        self.api_key = api_key
-        self.parent_key = parent_key
-        self.endpoint = endpoint
-        self.max_wait_time = max_wait_time
-        self.max_queue_size = max_queue_size
-        self.skip_auto_end_session = skip_auto_end_session
-        self.tags = tags
-        self.instrument_llm_calls = instrument_llm_calls
-        self.auto_start_session = auto_start_session
-
-        self._worker: Optional[Worker] = None
-        self._sessions: Optional[List[Session]] = []
-        self._tags: Optional[List[str]] = tags
-        self._env_data_opt_out = (
-            os.environ.get("AGENTOPS_ENV_DATA_OPT_OUT", "False").lower() == "true"
+        self._config = Configuration(
+            api_key=api_key,
+            parent_key=parent_key,
+            endpoint=endpoint,
+            max_wait_time=max_wait_time,
+            max_queue_size=max_queue_size,
+            default_tags=default_tags,
+            instrument_llm_calls=instrument_llm_calls,
+            auto_start_session=auto_start_session,
+            skip_auto_end_session=skip_auto_end_session,
         )
+        
+        self._worker: Optional[Worker] = None
+        self._sessions: List[Session] = []
 
     def configure(
         self,
@@ -115,45 +102,46 @@ class Client(metaclass=MetaClient):
         endpoint: Optional[str] = None,
         max_wait_time: Optional[int] = None,
         max_queue_size: Optional[int] = None,
-        tags: Optional[List[str]] = None,
+        default_tags: Optional[List[str]] = None,
         instrument_llm_calls: Optional[bool] = None,
         auto_start_session: Optional[bool] = None,
         skip_auto_end_session: Optional[bool] = None,
     ):
+        if len(self._sessions) > 0:
+            logger.warning(f"{len(self._sessions)} session(s) in progress. Configuration is locked until there are no more sessions running")
+            return
+
         if api_key is not None:
             try:
                 UUID(api_key)
-                self.api_key = api_key
+                self._config.api_key = api_key
             except ValueError:
                 logger.warning(f"API Key is invalid: {api_key}")
 
         if parent_key is not None:
-            self.parent_key = parent_key
+            try:
+                UUID(parent_key)
+                self._config.parent_key = parent_key
+            except ValueError:
+                logger.warning(f"Parent Key is invalid: {parent_key}")
 
         if endpoint is not None:
-            self.endpoint = endpoint
+            self._config.endpoint = endpoint
 
         if max_wait_time is not None:
-            self.max_wait_time = max_wait_time
+            self._config.max_wait_time = max_wait_time
 
         if max_queue_size is not None:
-            self.max_queue_size = max_queue_size
+            self._config.max_queue_size = max_queue_size
 
-        if tags is not None:
-            self.tags = tags
+        if default_tags is not None:
+            self._config.default_tags = default_tags
 
         if instrument_llm_calls is not None:
-            self.instrument_llm_calls = instrument_llm_calls
+            self._config.instrument_llm_calls = instrument_llm_calls
 
         if auto_start_session is not None:
-            self.auto_start_session = auto_start_session
-
-        if inherited_session_id is not None:
-            try:
-                UUID(inherited_session_id)
-                self.inherited_session_id = inherited_session_id
-            except ValueError:
-                logger.warning(f"Invalid session id: {inherited_session_id}")
+            self._config.auto_start_session = auto_start_session
 
         if skip_auto_end_session is not None:
             self.skip_auto_end_session = skip_auto_end_session
@@ -166,28 +154,22 @@ class Client(metaclass=MetaClient):
         self._handle_unclean_exits()
 
         instrument_llm_calls, auto_start_session = self._check_for_partner_frameworks(
-            instrument_llm_calls, auto_start_session
+            self._config.instrument_llm_calls, self._config.auto_start_session
         )
 
         session = None
         if auto_start_session:
-            session = self.start_session(
-                self.tags, self.config, self.inherited_session_id
-            )
-        else:
-            self._tags_for_future_session = self.tags
+            session = self.start_session()
 
         if instrument_llm_calls:
             self.llm_tracker = LlmTracker(self)
             self.llm_tracker.override_api()
 
-        self._worker = Worker()
+        self._worker = Worker(self._config)
 
         return session
 
-    @property
-    def is_initialized(self) -> bool:
-        return self.worker is not None
+
 
     def _check_for_partner_frameworks(
         self, instrument_llm_calls, auto_start_session
@@ -227,16 +209,6 @@ class Client(metaclass=MetaClient):
             if isinstance(tags, str):  # if it's a single string
                 tags = [tags]  # make it a list
 
-        if len(self._sessions) == 0:
-            if self._tags_for_future_session:
-                for tag in tags:
-                    if tag not in self._tags_for_future_session:
-                        self._tags_for_future_session.append(tag)
-            else:
-                self._tags_for_future_session = tags
-
-            return
-
         session = self._safe_get_session()
         if session is None:
             return
@@ -256,7 +228,6 @@ class Client(metaclass=MetaClient):
         session = self._safe_get_session()
 
         if session is None:
-            self._tags_for_future_session = tags
             return
 
         session.set_tags(tags=tags)
@@ -276,7 +247,7 @@ class Client(metaclass=MetaClient):
         session.record(event)
 
     def _record_event_sync(self, func, event_name, *args, **kwargs):
-        if self.is_initizalized is False:
+        if self.is_initialized is False:
             return
 
         init_time = get_ISO_time()
@@ -409,7 +380,7 @@ class Client(metaclass=MetaClient):
             config: (Configuration, optional): Client configuration object
             inherited_session_id (optional, str): assign session id to match existing Session
         """
-        if not config and not self.config:
+        if not config and not self._config:
             return logger.warning(
                 "Cannot start session - missing configuration - did you call init()?"
             )
@@ -422,7 +393,7 @@ class Client(metaclass=MetaClient):
             session_id=session_id,
             tags=tags or self._tags_for_future_session,
             host_env=get_host_env(self._env_data_opt_out),
-            config=config or self.config,
+            config=self._config,
         )
 
         if not session:
@@ -464,7 +435,7 @@ class Client(metaclass=MetaClient):
         session.end_state = end_state
         session.end_state_reason = end_state_reason
 
-        if is_auto_end and self.config.skip_auto_end_session:
+        if is_auto_end and self._config.skip_auto_end_session:
             return
 
         if not any(end_state == state.value for state in EndState):
@@ -592,7 +563,7 @@ class Client(metaclass=MetaClient):
 
     @property
     def api_key(self):
-        return self.config.api_key
+        return self.api_key
 
     def set_parent_key(self, parent_key: str):
         """
@@ -601,11 +572,11 @@ class Client(metaclass=MetaClient):
         Args:
             parent_key (str): The API key of the parent organization to set.
         """
-        self.config.parent_key = parent_key
+        self._config.parent_key = parent_key
 
     @property
     def parent_key(self):
-        return self.config.parent_key
+        return self._config.parent_key
 
     def stop_instrumenting(self):
         if self.llm_tracker:
@@ -653,3 +624,12 @@ class Client(metaclass=MetaClient):
             s.end_session()
 
         self._sessions.clear()
+
+
+    @property
+    def is_initialized(self) -> bool:
+        return self._worker is not None
+
+    @property
+    def has_sessions(self) -> bool:
+        return len(self._sessions) > 0
