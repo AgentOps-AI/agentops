@@ -23,8 +23,8 @@ from importlib.metadata import version, PackageNotFoundError
 
 def get_langchain_version() -> Union[1, 2]:
     try:
-        version_str = version('langchain')
-        minor_version = int(version_str.split('.')[1])
+        version_str = version("langchain")
+        minor_version = int(version_str.split(".")[1])
         return minor_version
     except PackageNotFoundError:
         return "Package not found"
@@ -78,7 +78,8 @@ class LangchainCallbackHandler(BaseCallbackHandler):
         }
 
         self.ao_client = AOClient(
-            **{k: v for k, v in client_params.items() if v is not None}, instrument_llm_calls=False
+            **{k: v for k, v in client_params.items() if v is not None},
+            instrument_llm_calls=False,
         )
         self.agent_actions: Dict[UUID, List[ActionEvent]] = defaultdict(list)
         self.events = Events()
@@ -166,15 +167,22 @@ class LangchainCallbackHandler(BaseCallbackHandler):
         metadata: Optional[Dict[str, Any]] = None,
         **kwargs: Any,
     ) -> Any:
-        self.events.chain[str(run_id)] = ActionEvent(
-            params={
-                **serialized,
-                **inputs,
-                **({} if metadata is None else metadata),
-                **kwargs,
-            },
-            action_type="chain",
-        )
+        print(self.events)
+        print(str(run_id))
+        run_id_2 = run_id
+        try:
+            self.events.chain[str(run_id)] = ActionEvent(
+                params={
+                    **serialized,
+                    **inputs,
+                    **({} if metadata is None else metadata),
+                    **kwargs,
+                },
+                action_type="chain",
+            )
+        except Exception as e:
+            print(e)
+        print("added")
 
     @debug_print_function_params
     def on_chain_end(
@@ -216,6 +224,8 @@ class LangchainCallbackHandler(BaseCallbackHandler):
         inputs: Optional[Dict[str, Any]] = None,
         **kwargs: Any,
     ) -> Any:
+        print(self.events)
+        print(str(run_id))
         self.events.tool[str(run_id)] = ToolEvent(
             params=input_str if inputs is None else inputs,
             name=serialized["name"],
@@ -367,7 +377,9 @@ class LangchainCallbackHandler(BaseCallbackHandler):
 
     @property
     def session_id(self):
-        raise DeprecationWarning('session_id is deprecated in favor of current_session_ids')
+        raise DeprecationWarning(
+            "session_id is deprecated in favor of current_session_ids"
+        )
 
     @property
     def current_session_ids(self):
