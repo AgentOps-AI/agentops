@@ -27,6 +27,7 @@ from .helpers import (
     conditional_singleton,
 )
 from .session import Session
+from .worker import Worker
 from .host_env import get_host_env
 from .log_config import logger
 from .meta_client import MetaClient
@@ -73,20 +74,10 @@ class Client(metaclass=MetaClient):
         max_wait_time: Optional[int] = None,
         max_queue_size: Optional[int] = None,
         tags: Optional[List[str]] = None,
-        override: Optional[bool] = None,  # Deprecated
         instrument_llm_calls=True,
-        auto_start_session=False,
-        inherited_session_id: Optional[str] = None,
+        auto_start_session=True,
         skip_auto_end_session: Optional[bool] = False,
     ):
-        if override is not None:
-            logger.warning(
-                "The 'override' parameter is deprecated. Use 'instrument_llm_calls' instead.",
-                DeprecationWarning,
-                stacklevel=2,
-            )
-            instrument_llm_calls = instrument_llm_calls or override
-
         try:
             if inherited_session_id is not None:
                 UUID(inherited_session_id)
@@ -109,17 +100,13 @@ class Client(metaclass=MetaClient):
         self.tags = tags
         self.instrument_llm_calls = instrument_llm_calls
         self.auto_start_session = auto_start_session
-        self.inherited_session_id = inherited_session_id
 
+        self._worker: Optional[Worker] = None
         self._sessions: Optional[List[Session]] = []
         self._tags: Optional[List[str]] = tags
-        self._tags_for_future_session: Optional[List[str]] = None
-
         self._env_data_opt_out = (
             os.environ.get("AGENTOPS_ENV_DATA_OPT_OUT", "False").lower() == "true"
         )
-
-        self._is_initizalized = False
 
     def configure(
         self,
@@ -131,7 +118,6 @@ class Client(metaclass=MetaClient):
         tags: Optional[List[str]] = None,
         instrument_llm_calls: Optional[bool] = None,
         auto_start_session: Optional[bool] = None,
-        inherited_session_id: Optional[str] = None,
         skip_auto_end_session: Optional[bool] = None,
     ):
         if api_key is not None:
@@ -195,12 +181,13 @@ class Client(metaclass=MetaClient):
             self.llm_tracker = LlmTracker(self)
             self.llm_tracker.override_api()
 
-        self._is_initizalized = True
+        self._worker = Worker()
+
         return session
 
     @property
     def is_initialized(self) -> bool:
-        return self._is_initizalized
+        return self.worker is not None
 
     def _check_for_partner_frameworks(
         self, instrument_llm_calls, auto_start_session
@@ -289,7 +276,7 @@ class Client(metaclass=MetaClient):
         session.record(event)
 
     def _record_event_sync(self, func, event_name, *args, **kwargs):
-        if self._is_initizalized is False:
+        if self.is_initizalized is False:
             return
 
         init_time = get_ISO_time()
