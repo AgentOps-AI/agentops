@@ -11,6 +11,8 @@ from .decorators import record_function
 from .agent import track_agent
 from .log_config import logger
 from .session import Session
+from .state import get_state, set_state
+
 
 try:
     from .partners.langchain_callback_handler import (
@@ -20,8 +22,6 @@ try:
 except ModuleNotFoundError:
     pass
 
-is_initialized = False
-
 
 def noop(*args, **kwargs):
     return
@@ -30,7 +30,7 @@ def noop(*args, **kwargs):
 def check_init(child_function):
     @functools.wraps(child_function)
     def wrapper(*args, **kwargs):
-        if is_initialized:
+        if get_state("is_initialized"):  # is initialized in state.py is not working
             return child_function(*args, **kwargs)
         else:
             return noop(*args, **kwargs)
@@ -103,8 +103,7 @@ def init(
             tags=tags, config=c.config, inherited_session_id=inherited_session_id
         )
 
-    global is_initialized
-    is_initialized = True
+    set_state("is_initialized", True)
 
     return session
 
@@ -156,8 +155,7 @@ def start_session(
     try:
         sess_result = Client().start_session(tags, config, inherited_session_id)
 
-        global is_initialized
-        is_initialized = True
+        set_state("is_initialized", True)
 
         return sess_result
     except Exception:
