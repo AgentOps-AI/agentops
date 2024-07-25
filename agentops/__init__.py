@@ -56,6 +56,10 @@ def init(
             (i.e. Crew determining when tasks are complete and ending the session)
     Attributes:
     """
+    if Client().is_initialized:
+        logger.warning("AgentOps has already been initialized")
+        return
+
     logging_level = os.getenv("AGENTOPS_LOGGING_LEVEL", "INFO")
     log_levels = {
         "CRITICAL": logging.CRITICAL,
