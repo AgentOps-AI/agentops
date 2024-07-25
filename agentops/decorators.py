@@ -24,19 +24,67 @@ def record_function(event_name: str):
 
             @functools.wraps(func)
             async def async_wrapper(*args, session: Optional[Session] = None, **kwargs):
-                return await Client()._record_event_async(
-                    func, event_name, *args, session=session, **kwargs
+                init_time = get_ISO_time()
+                if "session" in kwargs.keys():
+                    del kwargs["session"]
+                if session is None:
+                    if len(Client().current_session_ids) > 1:
+                        raise ValueError(
+                            "If multiple sessions exists, `session` is a required parameter in the function decorated by @record_function"
+                        )
+                func_args = inspect.signature(func).parameters
+                arg_names = list(func_args.keys())
+                # Get default values
+                arg_values = {
+                    name: func_args[name].default
+                    for name in arg_names
+                    if func_args[name].default is not inspect._empty
+                }
+                # Update with positional arguments
+                arg_values.update(dict(zip(arg_names, args)))
+                arg_values.update(kwargs)
+
+                event = ActionEvent(
+                    params=arg_values,
+                    init_timestamp=init_time,
+                    agent_id=check_call_stack_for_agent_id(),
+                    action_type=event_name,
                 )
+
+                try:
+                    returns = await func(*args, **kwargs)
+
+                    # If the function returns multiple values, record them all in the same event
+                    if isinstance(returns, tuple):
+                        returns = list(returns)
+
+                    event.returns = returns
+
+                    # NOTE: Will likely remove in future since this is tightly coupled. Adding it to see how useful we find it for now
+                    # TODO: check if screenshot is the url string we expect it to be? And not e.g. "True"
+                    if hasattr(returns, "screenshot"):
+                        event.screenshot = returns.screenshot  # type: ignore
+
+                    event.end_timestamp = get_ISO_time()
+
+                    if session:
+                        session.record(event)
+                    else:
+                        Client().record(event)
+
+                except Exception as e:
+                    Client().record(ErrorEvent(trigger_event=event, exception=e))
+
+                    # Re-raise the exception
+                    raise
+
+                return returns
 
             return async_wrapper
         else:
 
             @functools.wraps(func)
             def sync_wrapper(*args, session: Optional[Session] = None, **kwargs):
-                # return Client()._record_event_sync(
-                #     func, event_name, *args, session=session, **kwargs
-                # )
-
                 init_time = get_ISO_time()
                 if "session" in kwargs.keys():
                     del kwargs["session"]

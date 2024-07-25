@@ -211,132 +211,14 @@ class Client(metaclass=MetaClient):
         Args:
             event (Event): The event to record.
         """
+        if not self.is_initialized:
+            return
 
         session = self._safe_get_session()
         if session is None:
             logger.error("Could not record event. No session.")
             return
         session.record(event)
-
-    def _record_event_sync(self, func, event_name, *args, **kwargs):
-        if self.is_initialized is False:
-            return
-
-        init_time = get_ISO_time()
-        session: Optional[Session] = kwargs.get("session", None)
-        if "session" in kwargs.keys():
-            del kwargs["session"]
-        if session is None:
-            if len(Client().current_session_ids) > 1:
-                raise ValueError(
-                    "If multiple sessions exists, `session` is a required parameter in the function decorated by @record_function"
-                )
-        func_args = inspect.signature(func).parameters
-        arg_names = list(func_args.keys())
-        # Get default values
-        arg_values = {
-            name: func_args[name].default
-            for name in arg_names
-            if func_args[name].default is not inspect._empty
-        }
-        # Update with positional arguments
-        arg_values.update(dict(zip(arg_names, args)))
-        arg_values.update(kwargs)
-
-        event = ActionEvent(
-            params=arg_values,
-            init_timestamp=init_time,
-            agent_id=check_call_stack_for_agent_id(),
-            action_type=event_name,
-        )
-
-        try:
-            returns = func(*args, **kwargs)
-
-            # If the function returns multiple values, record them all in the same event
-            if isinstance(returns, tuple):
-                returns = list(returns)
-
-            event.returns = returns
-
-            if hasattr(returns, "screenshot"):
-                event.screenshot = returns.screenshot  # type: ignore
-
-            event.end_timestamp = get_ISO_time()
-
-            if session:
-                session.record(event)
-            else:
-                self.record(event)
-
-        except Exception as e:
-            self.record(ErrorEvent(trigger_event=event, exception=e))
-
-            # Re-raise the exception
-            raise
-
-        return returns
-
-    async def _record_event_async(self, func, event_name, *args, **kwargs):
-        if self.is_initialized is False:
-            return
-
-        init_time = get_ISO_time()
-        session: Union[Session, None] = kwargs.get("session", None)
-        if "session" in kwargs.keys():
-            del kwargs["session"]
-        if session is None:
-            if len(Client().current_session_ids) > 1:
-                raise ValueError(
-                    "If multiple sessions exists, `session` is a required parameter in the function decorated by @record_function"
-                )
-        func_args = inspect.signature(func).parameters
-        arg_names = list(func_args.keys())
-        # Get default values
-        arg_values = {
-            name: func_args[name].default
-            for name in arg_names
-            if func_args[name].default is not inspect._empty
-        }
-        # Update with positional arguments
-        arg_values.update(dict(zip(arg_names, args)))
-        arg_values.update(kwargs)
-
-        event = ActionEvent(
-            params=arg_values,
-            init_timestamp=init_time,
-            agent_id=check_call_stack_for_agent_id(),
-            action_type=event_name,
-        )
-
-        try:
-            returns = await func(*args, **kwargs)
-
-            # If the function returns multiple values, record them all in the same event
-            if isinstance(returns, tuple):
-                returns = list(returns)
-
-            event.returns = returns
-
-            # NOTE: Will likely remove in future since this is tightly coupled. Adding it to see how useful we find it for now
-            # TODO: check if screenshot is the url string we expect it to be? And not e.g. "True"
-            if hasattr(returns, "screenshot"):
-                event.screenshot = returns.screenshot  # type: ignore
-
-            event.end_timestamp = get_ISO_time()
-
-            if session:
-                session.record(event)
-            else:
-                self.record(event)
-
-        except Exception as e:
-            self.record(ErrorEvent(trigger_event=event, exception=e))
-
-            # Re-raise the exception
-            raise
-
-        return returns
 
     def start_session(
         self,
