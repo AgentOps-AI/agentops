@@ -36,7 +36,6 @@ class Configuration:
             except ValueError:
                 logger.warning(f"Parent Key is invalid: {parent_key}")
 
-        # Check if default_tags is actually a list. If it is a single string, convert it to a list
         if isinstance(default_tags, str):
             default_tags = [default_tags]
         if not isinstance(default_tags, list):
