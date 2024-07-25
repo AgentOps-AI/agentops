@@ -260,7 +260,7 @@ class Client(metaclass=MetaClient):
             event.returns = returns
 
             if hasattr(returns, "screenshot"):
-                event.screenshot = returns.screenshot
+                event.screenshot = returns.screenshot  # type: ignore
 
             event.end_timestamp = get_ISO_time()
 
@@ -321,7 +321,7 @@ class Client(metaclass=MetaClient):
             # NOTE: Will likely remove in future since this is tightly coupled. Adding it to see how useful we find it for now
             # TODO: check if screenshot is the url string we expect it to be? And not e.g. "True"
             if hasattr(returns, "screenshot"):
-                event.screenshot = returns.screenshot
+                event.screenshot = returns.screenshot  # type: ignore
 
             event.end_timestamp = get_ISO_time()
 
@@ -498,15 +498,6 @@ class Client(metaclass=MetaClient):
     @property
     def api_key(self):
         return self._config.api_key
-
-    def set_parent_key(self, parent_key: str):
-        """
-        Set the parent API key which has visibility to projects it is parent to.
-
-        Args:
-            parent_key (str): The API key of the parent organization to set.
-        """
-        self._config.parent_key = parent_key
 
     @property
     def parent_key(self):

@@ -100,6 +100,30 @@ def init(
     return Client().initialize()
 
 
+def configure(
+    api_key: Optional[str] = None,
+    parent_key: Optional[str] = None,
+    endpoint: Optional[str] = None,
+    max_wait_time: Optional[int] = None,
+    max_queue_size: Optional[int] = None,
+    default_tags: Optional[List[str]] = None,
+    instrument_llm_calls: Optional[bool] = None,
+    auto_start_session: Optional[bool] = None,
+    skip_auto_end_session: Optional[bool] = None,
+):
+    Client().configure(
+        api_key=api_key,
+        parent_key=parent_key,
+        endpoint=endpoint,
+        max_wait_time=max_wait_time,
+        max_queue_size=max_queue_size,
+        default_tags=default_tags,
+        instrument_llm_calls=instrument_llm_calls,
+        auto_start_session=auto_start_session,
+        skip_auto_end_session=skip_auto_end_session,
+    )
+
+
 def end_session(
     end_state: str,
     end_state_reason: Optional[str] = None,
@@ -178,16 +202,6 @@ def set_tags(tags: List[str]):
         Client().set_tags(tags)
 
 
-def set_default_tags(tags: List[str]):
-    """
-    Replace default_tags at runtime.
-
-    Args:
-        tags (List[str]): The list of tags to set.
-    """
-    Client().configure(default_tags=tags)
-
-
 def get_api_key() -> Union[str, None]:
     return Client().api_key
 
@@ -196,14 +210,14 @@ def set_api_key(api_key: str) -> None:
     Client().configure(api_key=api_key)
 
 
-def set_parent_key(parent_key):
+def set_parent_key(parent_key: str):
     """
     Set the parent API key so another organization can view data.
 
     Args:
         parent_key (str): The API key of the parent organization to set.
     """
-    Client().set_parent_key(parent_key)
+    Client().configure(parent_key=parent_key)
 
 
 def stop_instrumenting():

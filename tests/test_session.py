@@ -166,7 +166,7 @@ class TestSingleSessions:
         assert request_json["session"]["tags"] == ["wrong-type-tags"]
 
     def test_set_tags_before_session(self, mock_req):
-        agentops.set_default_tags(["pre-session-tag"])
+        agentops.configure(default_tags=["pre-session-tag"])
         agentops.start_session()
 
         request_json = mock_req.last_request.json()
