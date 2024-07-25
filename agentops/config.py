@@ -19,6 +19,14 @@ class Configuration:
         skip_auto_end_session: Optional[bool] = None,
         env_data_opt_out: Optional[bool] = None,
     ):
+        # Check if default_tags is actually a list. If it is a single string, convert it to a list
+        if isinstance(default_tags, str):
+            default_tags = [default_tags]
+        if not isinstance(default_tags, list):
+            logger.warning(
+                "default_tags is not a list - default tags will be not set. Please pass a List to default_tags"
+            )
+
         self.api_key: Optional[str] = None
         self.parent_key: Optional[str] = None
         self.endpoint: str = (
