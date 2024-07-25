@@ -1,4 +1,4 @@
-# yaml-language-server: $schema=https://raw.githubusercontent.com/gauge-sh/tach/v0.6.9/public/tach-yml-schema.json
+# yaml-language-server: $schema=https://raw.githubusercontent.com/gauge-sh/tach/v0.8.2/public/tach-yml-schema.json
 modules:
   - path: agentops
     depends_on:
@@ -16,6 +16,7 @@ modules:
       - agentops.log_config
   - path: agentops.client
     depends_on:
+      - agentops
       - agentops.config
       - agentops.enums
       - agentops.event
@@ -85,6 +86,11 @@ modules:
       - agentops.helpers
       - agentops.http_client
       - agentops.log_config
+  - path: <root>
+    depends_on:
+      - agentops
+      - agentops.enums
+      - agentops.helpers
 exclude:
   - .*__pycache__
   - .*egg-info
