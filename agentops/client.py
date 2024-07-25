@@ -13,14 +13,11 @@ import threading
 import traceback
 from decimal import Decimal
 from uuid import UUID, uuid4
-from typing import Optional, List, Union
+from typing import Optional, List, Union, Tuple
 from termcolor import colored
-from typing import Tuple
 
-from .event import ActionEvent, ErrorEvent, Event
+from .event import Event, ErrorEvent
 from .helpers import (
-    get_ISO_time,
-    check_call_stack_for_agent_id,
     get_partner_frameworks,
     conditional_singleton,
 )
@@ -35,32 +32,6 @@ from .llm_tracker import LlmTracker
 
 @conditional_singleton
 class Client(metaclass=MetaClient):
-    """
-    Client for AgentOps service.
-
-    Args:
-
-        api_key (str, optional): API Key for AgentOps services. If none is provided, key will
-            be read from the AGENTOPS_API_KEY environment variable.
-        parent_key (str, optional): Organization key to give visibility of all user sessions the user's organization.
-            If none is provided, key will be read from the AGENTOPS_PARENT_KEY environment variable.
-        endpoint (str, optional): The endpoint for the AgentOps service. If none is provided, key will
-            be read from the AGENTOPS_API_ENDPOINT environment variable. Defaults to 'https://api.agentops.ai'.
-        max_wait_time (int, optional): The maximum time to wait in milliseconds before flushing the queue.
-            Defaults to 30,000 (30 seconds)
-        max_queue_size (int, optional): The maximum size of the event queue. Defaults to 100.
-        tags (List[str], optional): Tags for the sessions that can be used for grouping or
-            sorting later (e.g. ["GPT-4"]).
-        override (bool, optional): [Deprecated] Use `instrument_llm_calls` instead. Whether to instrument LLM calls
-            and emit LLMEvents.
-        instrument_llm_calls (bool): Whether to instrument LLM calls and emit LLMEvents.
-        auto_start_session (bool): Whether to start a session automatically when the client is created.
-        inherited_session_id (optional, str): Init Agentops with an existing Session
-        skip_auto_end_session (optional, bool): Don't automatically end session based on your framework's decision making
-    Attributes:
-        _session (Session, optional): A Session is a grouping of events (e.g. a run of your agent).
-    """
-
     def __init__(self):
         self._config = Configuration()
         self._worker: Optional[Worker] = None
@@ -373,18 +344,6 @@ class Client(metaclass=MetaClient):
             signal.signal(signal.SIGTERM, signal_handler)
             sys.excepthook = handle_exception
 
-    @property
-    def current_session_ids(self) -> List[str]:
-        return [str(s.session_id) for s in self._sessions]
-
-    @property
-    def api_key(self):
-        return self._config.api_key
-
-    @property
-    def parent_key(self):
-        return self._config.parent_key
-
     def stop_instrumenting(self):
         if self._llm_tracker:
             self._llm_tracker.stop_instrumenting()
@@ -402,17 +361,8 @@ class Client(metaclass=MetaClient):
         ] = session
 
     def _safe_get_session(self) -> Optional[Session]:
-        for session in self._sessions:
-            if session.end_state is not None:
-                self._sessions.remove(session)
-
-        session = None
         if len(self._sessions) == 1:
-            session = self._sessions[0]
-
-        if len(self._sessions) == 0:
-            if self.is_initialized:
-                return None
+            return self._sessions[0]
 
         elif len(self._sessions) > 1:
             calling_function = inspect.stack()[
@@ -421,10 +371,9 @@ class Client(metaclass=MetaClient):
             logger.warning(
                 f"Multiple sessions detected. You must use session.{calling_function}(). More info: https://docs.agentops.ai/v1/concepts/core-concepts#session-management"
             )
-
             return
 
-        return session
+        return None
 
     def end_all_sessions(self):
         for s in self._sessions:
@@ -443,3 +392,19 @@ class Client(metaclass=MetaClient):
     @property
     def has_multi_session(self) -> bool:
         return len(self._sessions) > 1
+
+    @property
+    def session_count(self) -> int:
+        return len(self._sessions)
+
+    @property
+    def current_session_ids(self) -> List[str]:
+        return [str(s.session_id) for s in self._sessions]
+
+    @property
+    def api_key(self):
+        return self._config.api_key
+
+    @property
+    def parent_key(self):
+        return self._config.parent_key
