@@ -127,6 +127,22 @@ def configure(
     )
 
 
+def start_session(
+    tags: Optional[List[str]] = None,
+    inherited_session_id: Optional[str] = None,
+) -> Union[Session, None]:
+    """
+    Start a new session for recording events.
+
+    Args:
+        tags (List[str], optional): Tags that can be used for grouping or sorting later.
+            e.g. ["test_run"].
+        inherited_session_id: (str, optional): Set the session ID to inherit from another client
+    """
+    if Client().is_initialized:
+        return Client().start_session(tags, inherited_session_id)
+
+
 def end_session(
     end_state: str,
     end_state_reason: Optional[str] = None,
@@ -150,20 +166,8 @@ def end_session(
     )
 
 
-def start_session(
-    tags: Optional[List[str]] = None,
-    inherited_session_id: Optional[str] = None,
-) -> Union[Session, None]:
-    """
-    Start a new session for recording events.
-
-    Args:
-        tags (List[str], optional): Tags that can be used for grouping or sorting later.
-            e.g. ["test_run"].
-        inherited_session_id: (str, optional): Set the session ID to inherit from another client
-    """
-    if Client().is_initialized:
-        return Client().start_session(tags, inherited_session_id)
+def set_logging_level(level):
+    logger.setLevel(level)
 
 
 def record(event: Union[Event, ErrorEvent]):
