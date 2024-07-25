@@ -34,6 +34,7 @@ from .config import ClientConfiguration
 from .llm_tracker import LlmTracker
 from termcolor import colored
 from typing import Tuple
+from .state import get_state, set_state
 
 
 @conditional_singleton
@@ -178,6 +179,8 @@ class Client(metaclass=MetaClient):
             return
 
         session = self._safe_get_session()
+        if session is None:
+            return
 
         session.add_tags(tags=tags)
 
@@ -191,11 +194,13 @@ class Client(metaclass=MetaClient):
             tags (List[str]): The list of tags to set.
         """
 
-        try:
-            session = self._safe_get_session()
-            session.set_tags(tags=tags)
-        except NoSessionException:
+        session = self._safe_get_session()
+
+        if session is None:
             self._tags_for_future_session = tags
+            return
+
+        session.set_tags(tags=tags)
 
     def record(self, event: Union[Event, ErrorEvent]) -> None:
         """
@@ -206,6 +211,9 @@ class Client(metaclass=MetaClient):
         """
 
         session = self._safe_get_session()
+        if session is None:
+            logger.error("Could not record event. No session.")
+            return
         session.record(event)
 
     def _record_event_sync(self, func, event_name, *args, **kwargs):
@@ -382,7 +390,7 @@ class Client(metaclass=MetaClient):
         end_state_reason: Optional[str] = None,
         video: Optional[str] = None,
         is_auto_end: Optional[bool] = None,
-    ) -> Decimal:
+    ) -> Optional[Decimal]:
         """
         End the current session with the AgentOps service.
 
@@ -397,6 +405,8 @@ class Client(metaclass=MetaClient):
         """
 
         session = self._safe_get_session()
+        if session is None:
+            return
         session.end_state = end_state
         session.end_state_reason = end_state_reason
 
@@ -424,7 +434,11 @@ class Client(metaclass=MetaClient):
                 "This run's cost ${}".format(
                     "{:.2f}".format(token_cost_d)
                     if token_cost_d == 0
-                    else "{:.6f}".format(token_cost_d.quantize(Decimal('0.000001'), rounding=ROUND_HALF_UP))
+                    else "{:.6f}".format(
+                        token_cost_d.quantize(
+                            Decimal("0.000001"), rounding=ROUND_HALF_UP
+                        )
+                    )
                 )
             )
 
@@ -453,6 +467,8 @@ class Client(metaclass=MetaClient):
         else:
             # if no session passed, assume single session
             session = self._safe_get_session()
+            if session is None:
+                return
             session.create_agent(name=name, agent_id=agent_id)
 
         return agent_id
@@ -553,7 +569,7 @@ class Client(metaclass=MetaClient):
             )
         ] = session
 
-    def _safe_get_session(self) -> Session:
+    def _safe_get_session(self) -> Optional[Session]:
         for s in self._sessions:
             if s.end_state is not None:
                 self._sessions.remove(s)
@@ -563,14 +579,18 @@ class Client(metaclass=MetaClient):
             session = self._sessions[0]
 
         if len(self._sessions) == 0:
-            raise NoSessionException("No session exists")
+            if get_state("is_initialized"):
+                return None
 
         elif len(self._sessions) > 1:
-            raise MultiSessionException(
-                "If multiple sessions exist, you must use session.function(). Example: session.add_tags(...) instead "
-                "of agentops.add_tags(...). More info: "
-                "https://docs.agentops.ai/v1/concepts/core-concepts#session-management"
+            calling_function = inspect.stack()[
+                2
+            ].function  # Using index 2 because we have a wrapper at index 1
+            logger.warning(
+                f"Multiple sessions detected. You must use session.{calling_function}(). More info: https://docs.agentops.ai/v1/concepts/core-concepts#session-management"
             )
+
+            return
 
         return session
 
