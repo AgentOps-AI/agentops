@@ -158,8 +158,9 @@ class TestSingleSessions:
 
     def test_session_set_tags_with_string(self, mock_req):
         session = agentops.start_session()
-        if session is not None:
-            session.set_tags("wrong-type-tags")
+        assert session is not None
+
+        session.set_tags("wrong-type-tags")
 
         request_json = mock_req.last_request.json()
         assert request_json["session"]["tags"] == ["wrong-type-tags"]
