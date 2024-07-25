@@ -6,8 +6,7 @@ from uuid import UUID
 
 from .client import Client
 from .event import Event, ActionEvent, LLMEvent, ToolEvent, ErrorEvent
-from .decorators import record_function
-from .agent import track_agent
+from .decorators import record_function, track_agent
 from .log_config import logger
 from .session import Session
 
