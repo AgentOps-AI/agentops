@@ -29,10 +29,10 @@ def init(
     max_queue_size: Optional[int] = None,
     tags: Optional[List[str]] = None,  # Deprecated
     default_tags: Optional[List[str]] = None,
-    instrument_llm_calls=True,
-    auto_start_session=True,
+    instrument_llm_calls: Optional[bool] = None,
+    auto_start_session: Optional[bool] = None,
     inherited_session_id: Optional[str] = None,
-    skip_auto_end_session: Optional[bool] = False,
+    skip_auto_end_session: Optional[bool] = None,
 ) -> Union[Session, None]:
     """
     Initializes the AgentOps singleton pattern.
@@ -147,12 +147,6 @@ def end_session(
     )
 
 
-# Mostly used for unit testing -
-# prevents unexpected sessions on new tests
-def end_all_sessions() -> None:
-    return Client().end_all_sessions()
-
-
 def start_session(
     tags: Optional[List[str]] = None,
     inherited_session_id: Optional[str] = None,
@@ -227,3 +221,9 @@ def stop_instrumenting():
 def create_agent(name: str, agent_id: Optional[str] = None):
     if Client().is_initialized and Client().has_session:
         return Client().create_agent(name=name, agent_id=agent_id)
+
+
+# Mostly used for unit testing -
+# prevents unexpected sessions on new tests
+def end_all_sessions() -> None:
+    return Client().end_all_sessions()
