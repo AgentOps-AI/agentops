@@ -11,21 +11,20 @@ import signal
 import sys
 import threading
 import traceback
-from decimal import Decimal, ROUND_HALF_UP
+from decimal import Decimal
 from uuid import UUID, uuid4
 from typing import Optional, List, Union
 from termcolor import colored
 from typing import Tuple
 
 from .event import ActionEvent, ErrorEvent, Event
-from .enums import EndState
 from .helpers import (
     get_ISO_time,
     check_call_stack_for_agent_id,
     get_partner_frameworks,
     conditional_singleton,
 )
-from .session import Session
+from .session import Session, active_sessions
 from .worker import Worker
 from .host_env import get_host_env
 from .log_config import logger
@@ -66,7 +65,7 @@ class Client(metaclass=MetaClient):
         self._config = Configuration()
         self._worker: Optional[Worker] = None
         self._llm_tracker: Optional[LlmTracker] = None
-        self._sessions: List[Session] = []
+        self._sessions: List[Session] = active_sessions
 
     def configure(
         self,

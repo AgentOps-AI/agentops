@@ -126,6 +126,8 @@ class Session:
             )
         )
 
+        active_sessions.remove(self)
+
         return token_cost_d
 
     def add_tags(self, tags: List[str]) -> None:
@@ -291,3 +293,6 @@ class Session:
             return func(*args, **kwargs)
 
         return wrapper
+
+
+active_sessions: List[Session] = []

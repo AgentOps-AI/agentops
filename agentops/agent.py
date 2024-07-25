@@ -5,6 +5,7 @@ from inspect import isclass, isfunction
 from .client import Client
 from .log_config import logger
 
+
 def track_agent(name: Union[str, None] = None):
     def decorator(obj):
         if name:
@@ -41,9 +42,9 @@ def track_agent(name: Union[str, None] = None):
             obj.__init__ = new_init
 
         elif isfunction(obj):
-            obj.agent_ops_agent_id = str(uuid4())
+            obj.agent_ops_agent_id = str(uuid4())  # type: ignore
             Client().create_agent(
-                name=obj.agent_ops_agent_name, agent_id=obj.agent_ops_agent_id
+                name=obj.agent_ops_agent_name, agent_id=obj.agent_ops_agent_id  # type: ignore
             )
 
         else:
