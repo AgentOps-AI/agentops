@@ -57,7 +57,7 @@ class Session:
         self.thread.daemon = True
         self.thread.start()
 
-        self._start_session()
+        self._running = self._start_session()
 
     def set_video(self, video: str) -> None:
         """
@@ -74,6 +74,8 @@ class Session:
         end_state_reason: Optional[str] = None,
         video: Optional[str] = None,
     ) -> Union[Decimal, None]:
+        if not self._running:
+            return logger.warning("Session was not successfully created")
 
         if not any(end_state == state.value for state in EndState):
             return logger.warning(
@@ -137,6 +139,8 @@ class Session:
         Args:
             tags (List[str]): The list of tags to append.
         """
+        if not self._running:
+            return
 
         # if a string and not a list of strings
         if not (isinstance(tags, list) and all(isinstance(item, str) for item in tags)):
@@ -153,6 +157,8 @@ class Session:
         self._update_session()
 
     def set_tags(self, tags):
+        if not self._running:
+            return
         if not (isinstance(tags, list) and all(isinstance(item, str) for item in tags)):
             if isinstance(tags, str):  # if it's a single string
                 tags = [tags]  # make it a list
@@ -161,6 +167,8 @@ class Session:
         self._update_session()
 
     def record(self, event: Union[Event, ErrorEvent]):
+        if not self._running:
+            return
         if isinstance(event, Event):
             if not event.end_timestamp or event.init_timestamp == event.end_timestamp:
                 event.end_timestamp = get_ISO_time()
@@ -231,6 +239,8 @@ class Session:
             return True
 
     def _update_session(self) -> None:
+        if not self._running:
+            return
         with self.lock:
             payload = {"session": self.__dict__}
 
@@ -241,6 +251,8 @@ class Session:
             )
 
     def _flush_queue(self) -> None:
+        if not self._running:
+            return
         with self.lock:
             queue_copy = copy.deepcopy(self.queue)  # Copy the current items
             self.queue = []
@@ -271,6 +283,8 @@ class Session:
                 self._flush_queue()
 
     def create_agent(self, name, agent_id):
+        if not self._running:
+            return
         if agent_id is None:
             agent_id = str(uuid4())
 
