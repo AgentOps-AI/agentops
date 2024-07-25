@@ -3,14 +3,16 @@ import functools
 import json
 import threading
 import time
-
-from .event import ErrorEvent, Event
-from .log_config import logger
-from .config import ClientConfiguration
-from .helpers import get_ISO_time, filter_unjsonable, safe_serialize
+from decimal import ROUND_HALF_UP, Decimal
+from termcolor import colored
 from typing import Optional, List, Union
 from uuid import UUID, uuid4
 
+from .enums import EndState
+from .event import ErrorEvent, Event
+from .log_config import logger
+from .config import Configuration
+from .helpers import get_ISO_time, filter_unjsonable, safe_serialize
 from .http_client import HttpClient
 
 
@@ -33,9 +35,9 @@ class Session:
     def __init__(
         self,
         session_id: UUID,
+        config: Configuration,
         tags: Optional[List[str]] = None,
         host_env: Optional[dict] = None,
-        config: Optional[ClientConfiguration] = None,
     ):
         self.end_timestamp = None
         self.end_state: Optional[str] = None
@@ -67,11 +69,22 @@ class Session:
         self.video = video
 
     def end_session(
-        self, end_state: str = "Indeterminate", end_state_reason: Optional[str] = None
-    ) -> str:
+        self,
+        end_state: str = "Indeterminate",
+        end_state_reason: Optional[str] = None,
+        video: Optional[str] = None,
+    ) -> Union[Decimal, None]:
+
+        if not any(end_state == state.value for state in EndState):
+            return logger.warning(
+                "Invalid end_state. Please use one of the EndState enums"
+            )
+
         self.end_timestamp = get_ISO_time()
         self.end_state = end_state
         self.end_state_reason = end_state_reason
+        if video is not None:
+            self.video = video
 
         self.stop_flag.set()
         self.thread.join(timeout=1)
@@ -85,9 +98,35 @@ class Session:
                 json.dumps(filter_unjsonable(payload)).encode("utf-8"),
                 jwt=self.jwt,
             )
-            logger.debug(res.body)
-            self.queue = []
-            return res.body.get("token_cost", "unknown")
+
+        logger.debug(res.body)
+        token_cost = res.body.get("token_cost", "unknown")
+
+        if token_cost == "unknown" or token_cost is None:
+            logger.info("Could not determine cost of run.")
+            token_cost_d = Decimal(0)
+        else:
+            token_cost_d = Decimal(token_cost)
+            logger.info(
+                "This run's cost ${}".format(
+                    "{:.2f}".format(token_cost_d)
+                    if token_cost_d == 0
+                    else "{:.6f}".format(
+                        token_cost_d.quantize(
+                            Decimal("0.000001"), rounding=ROUND_HALF_UP
+                        )
+                    )
+                )
+            )
+
+        logger.info(
+            colored(
+                f"\x1b[34mSession Replay: https://app.agentops.ai/drilldown?session_id={self.session_id}\x1b[0m",
+                "blue",
+            )
+        )
+
+        return token_cost_d
 
     def add_tags(self, tags: List[str]) -> None:
         """

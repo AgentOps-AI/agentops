@@ -14,6 +14,8 @@ import traceback
 from decimal import Decimal, ROUND_HALF_UP
 from uuid import UUID, uuid4
 from typing import Optional, List, Union
+from termcolor import colored
+from typing import Tuple
 
 from .event import ActionEvent, ErrorEvent, Event
 from .enums import EndState
@@ -30,8 +32,6 @@ from .log_config import logger
 from .meta_client import MetaClient
 from .config import Configuration
 from .llm_tracker import LlmTracker
-from termcolor import colored
-from typing import Tuple
 
 
 @conditional_singleton
@@ -54,7 +54,7 @@ class Client(metaclass=MetaClient):
             sorting later (e.g. ["GPT-4"]).
         override (bool, optional): [Deprecated] Use `instrument_llm_calls` instead. Whether to instrument LLM calls
             and emit LLMEvents.
-        instrument_llm_calls (bool): Whether to instrument LLM calls and emit LLMEvents..
+        instrument_llm_calls (bool): Whether to instrument LLM calls and emit LLMEvents.
         auto_start_session (bool): Whether to start a session automatically when the client is created.
         inherited_session_id (optional, str): Init Agentops with an existing Session
         skip_auto_end_session (optional, bool): Don't automatically end session based on your framework's decision making
@@ -62,37 +62,10 @@ class Client(metaclass=MetaClient):
         _session (Session, optional): A Session is a grouping of events (e.g. a run of your agent).
     """
 
-    def __init__(
-        self,
-        api_key: Optional[str] = None,
-        parent_key: Optional[str] = None,
-        endpoint: Optional[str] = None,
-        max_wait_time: Optional[int] = None,
-        max_queue_size: Optional[int] = None,
-        default_tags: Optional[List[str]] = None,
-        instrument_llm_calls=True,
-        auto_start_session=True,
-        skip_auto_end_session: Optional[bool] = False,
-    ):
-        try:
-            if api_key is not None:
-                UUID(api_key)
-        except ValueError:
-            logger.warning(f"API Key is invalid: {api_key}")
-
-        self._config = Configuration(
-            api_key=api_key,
-            parent_key=parent_key,
-            endpoint=endpoint,
-            max_wait_time=max_wait_time,
-            max_queue_size=max_queue_size,
-            default_tags=default_tags,
-            instrument_llm_calls=instrument_llm_calls,
-            auto_start_session=auto_start_session,
-            skip_auto_end_session=skip_auto_end_session,
-        )
-        
+    def __init__(self):
+        self._config = Configuration()
         self._worker: Optional[Worker] = None
+        self._llm_tracker: Optional[LlmTracker] = None
         self._sessions: List[Session] = []
 
     def configure(
@@ -108,7 +81,9 @@ class Client(metaclass=MetaClient):
         skip_auto_end_session: Optional[bool] = None,
     ):
         if len(self._sessions) > 0:
-            logger.warning(f"{len(self._sessions)} session(s) in progress. Configuration is locked until there are no more sessions running")
+            logger.warning(
+                f"{len(self._sessions)} session(s) in progress. Configuration is locked until there are no more sessions running"
+            )
             return
 
         if api_key is not None:
@@ -146,9 +121,9 @@ class Client(metaclass=MetaClient):
         if skip_auto_end_session is not None:
             self.skip_auto_end_session = skip_auto_end_session
 
-    def start(self):
+    def initialize(self) -> Union[Session, None]:
         if self.api_key is None:
-            logger.warning("API Key is missing")
+            logger.warning("Could not initialize AgentOps client - API Key is missing")
             return
 
         self._handle_unclean_exits()
@@ -162,14 +137,12 @@ class Client(metaclass=MetaClient):
             session = self.start_session()
 
         if instrument_llm_calls:
-            self.llm_tracker = LlmTracker(self)
-            self.llm_tracker.override_api()
+            self._llm_tracker = LlmTracker(self)
+            self._llm_tracker.override_api()
 
         self._worker = Worker(self._config)
 
         return session
-
-
 
     def _check_for_partner_frameworks(
         self, instrument_llm_calls, auto_start_session
@@ -229,8 +202,8 @@ class Client(metaclass=MetaClient):
 
         if session is None:
             return
-
-        session.set_tags(tags=tags)
+        if self.has_session:
+            session.set_tags(tags=tags)
 
     def record(self, event: Union[Event, ErrorEvent]) -> None:
         """
@@ -306,7 +279,7 @@ class Client(metaclass=MetaClient):
         return returns
 
     async def _record_event_async(self, func, event_name, *args, **kwargs):
-        if self._is_initizalized is False:
+        if self.is_initialized is False:
             return
 
         init_time = get_ISO_time()
@@ -380,10 +353,8 @@ class Client(metaclass=MetaClient):
             config: (Configuration, optional): Client configuration object
             inherited_session_id (optional, str): assign session id to match existing Session
         """
-        if not config and not self._config:
-            return logger.warning(
-                "Cannot start session - missing configuration - did you call init()?"
-            )
+        if not self.is_initialized:
+            return
 
         session_id = (
             UUID(inherited_session_id) if inherited_session_id is not None else uuid4()
@@ -391,8 +362,8 @@ class Client(metaclass=MetaClient):
 
         session = Session(
             session_id=session_id,
-            tags=tags or self._tags_for_future_session,
-            host_env=get_host_env(self._env_data_opt_out),
+            tags=tags or self._config.default_tags,
+            host_env=get_host_env(self._config.env_data_opt_out),
             config=self._config,
         )
 
@@ -429,53 +400,18 @@ class Client(metaclass=MetaClient):
             Decimal: The token cost of the session. Returns 0 if the cost is unknown.
         """
 
-        session = self._safe_get_session()
-        if session is None:
+        if not self.has_session:
             return
-        session.end_state = end_state
-        session.end_state_reason = end_state_reason
-
         if is_auto_end and self._config.skip_auto_end_session:
             return
 
-        if not any(end_state == state.value for state in EndState):
-            return logger.warning(
-                "Invalid end_state. Please use one of the EndState enums"
-            )
-
-        session.video = video
-
-        if not session.end_timestamp:
-            session.end_timestamp = get_ISO_time()
-
-        token_cost = session.end_session(end_state=end_state)
-
-        if token_cost == "unknown" or token_cost is None:
-            logger.info("Could not determine cost of run.")
-            token_cost_d = Decimal(0)
-        else:
-            token_cost_d = Decimal(token_cost)
-            logger.info(
-                "This run's cost ${}".format(
-                    "{:.2f}".format(token_cost_d)
-                    if token_cost_d == 0
-                    else "{:.6f}".format(
-                        token_cost_d.quantize(
-                            Decimal("0.000001"), rounding=ROUND_HALF_UP
-                        )
-                    )
-                )
-            )
-
-        logger.info(
-            colored(
-                f"\x1b[34mSession Replay: https://app.agentops.ai/drilldown?session_id={session.session_id}\x1b[0m",
-                "blue",
-            )
+        session = self._sessions[0]
+        token_cost = session.end_session(
+            end_state=end_state, end_state_reason=end_state_reason, video=video
         )
-
         self._sessions.remove(session)
-        return token_cost_d
+
+        return token_cost
 
     def create_agent(
         self,
@@ -579,8 +515,8 @@ class Client(metaclass=MetaClient):
         return self._config.parent_key
 
     def stop_instrumenting(self):
-        if self.llm_tracker:
-            self.llm_tracker.stop_instrumenting()
+        if self._llm_tracker:
+            self._llm_tracker.stop_instrumenting()
 
     # replaces the session currently stored with a specific session_id, with a new session
     def _update_session(self, session: Session):
@@ -595,16 +531,16 @@ class Client(metaclass=MetaClient):
         ] = session
 
     def _safe_get_session(self) -> Optional[Session]:
-        for s in self._sessions:
-            if s.end_state is not None:
-                self._sessions.remove(s)
+        for session in self._sessions:
+            if session.end_state is not None:
+                self._sessions.remove(session)
 
         session = None
         if len(self._sessions) == 1:
             session = self._sessions[0]
 
         if len(self._sessions) == 0:
-            if get_state("is_initialized"):
+            if self.is_initialized:
                 return None
 
         elif len(self._sessions) > 1:
@@ -625,11 +561,14 @@ class Client(metaclass=MetaClient):
 
         self._sessions.clear()
 
-
     @property
     def is_initialized(self) -> bool:
         return self._worker is not None
 
     @property
-    def has_sessions(self) -> bool:
-        return len(self._sessions) > 0
+    def has_session(self) -> bool:
+        return len(self._sessions) == 1
+
+    @property
+    def has_multi_session(self) -> bool:
+        return len(self._sessions) > 1

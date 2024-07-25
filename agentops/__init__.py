@@ -55,7 +55,7 @@ def init(
         skip_auto_end_session (optional, bool): Don't automatically end session based on your framework's decision-making (i.e. Crew determining when tasks are complete and ending the session)
     Attributes:
     """
-    logging_level = os.getenv("AGENTOPS_LOGGING_LEVEL")
+    logging_level = os.getenv("AGENTOPS_LOGGING_LEVEL", "INFO")
     log_levels = {
         "CRITICAL": logging.CRITICAL,
         "ERROR": logging.ERROR,
@@ -63,7 +63,7 @@ def init(
         "WARNING": logging.WARNING,
         "DEBUG": logging.DEBUG,
     }
-    logger.setLevel(log_levels.get(logging_level or "INFO", "INFO"))
+    logger.setLevel(log_levels.get(logging_level, "INFO"))
 
     Client().configure(
         api_key=api_key,
@@ -81,12 +81,12 @@ def init(
         try:
             UUID(inherited_session_id)
             Client().configure(auto_start_session=False)
-            Client().start()
+            Client().initialize()
             return Client().start_session(inherited_session_id=inherited_session_id)
         except ValueError:
             logger.warning(f"Invalid session id: {inherited_session_id}")
 
-    return Client().start()
+    return Client().initialize()
 
 
 def end_session(
@@ -141,7 +141,7 @@ def record(event: Union[Event, ErrorEvent]):
     Args:
         event (Event): The event to record.
     """
-    if Client().is_initialized:
+    if Client().is_initialized and Client().has_session:
         Client().record(event)
 
 
@@ -152,7 +152,7 @@ def add_tags(tags: List[str]):
     Args:
         tags (List[str]): The list of tags to append.
     """
-    if Client().has_sessions:
+    if Client().has_session:
         Client().add_tags(tags)
 
 
@@ -163,7 +163,7 @@ def set_tags(tags: List[str]):
     Args:
         tags (List[str]): The list of tags to set.
     """
-    if Client().has_sessions:
+    if Client().has_session:
         Client().set_tags(tags)
 
 
@@ -190,5 +190,5 @@ def stop_instrumenting():
 
 
 def create_agent(name: str, agent_id: Optional[str] = None):
-    if Client().is_initialized:
+    if Client().is_initialized and Client().has_session:
         return Client().create_agent(name=name, agent_id=agent_id)
