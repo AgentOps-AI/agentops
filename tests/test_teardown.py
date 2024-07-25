@@ -18,9 +18,10 @@ def mock_req():
 
 class TestSessions:
     def setup_method(self):
-        self.api_key = "random_api_key"
+        self.api_key = "11111111-1111-4111-8111-111111111111"
         self.event_type = "test_event_type"
-        self.client = Client(self.api_key)
+        Client().configure(api_key=self.api_key)
+        Client().initialize()
 
     def test_exit(self):
         # Tests should not hang.

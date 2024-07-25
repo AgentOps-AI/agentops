@@ -118,7 +118,7 @@ class Client(metaclass=MetaClient):
             self._config.auto_start_session = auto_start_session
 
         if skip_auto_end_session is not None:
-            self.skip_auto_end_session = skip_auto_end_session
+            self._config.skip_auto_end_session = skip_auto_end_session
 
     def initialize(self) -> Union[Session, None]:
         if self.api_key is None:
@@ -408,7 +408,6 @@ class Client(metaclass=MetaClient):
         token_cost = session.end_session(
             end_state=end_state, end_state_reason=end_state_reason, video=video
         )
-        self._sessions.remove(session)
 
         return token_cost
 
@@ -498,7 +497,7 @@ class Client(metaclass=MetaClient):
 
     @property
     def api_key(self):
-        return self.api_key
+        return self._config.api_key
 
     def set_parent_key(self, parent_key: str):
         """

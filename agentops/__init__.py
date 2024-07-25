@@ -27,7 +27,8 @@ def init(
     endpoint: Optional[str] = None,
     max_wait_time: Optional[int] = None,
     max_queue_size: Optional[int] = None,
-    tags: Optional[List[str]] = None,
+    tags: Optional[List[str]] = None,  # Deprecated
+    default_tags: Optional[List[str]] = None,
     instrument_llm_calls=True,
     auto_start_session=True,
     inherited_session_id: Optional[str] = None,
@@ -47,12 +48,13 @@ def init(
         max_wait_time (int, optional): The maximum time to wait in milliseconds before flushing the queue.
             Defaults to 30,000 (30 seconds)
         max_queue_size (int, optional): The maximum size of the event queue. Defaults to 100.
-        tags (List[str], optional): Tags for the sessions that can be used for grouping or
-            sorting later (e.g. ["GPT-4"]).
+        tags (List[str], optional): [Deprecated] Use `default_tags` instead.
+        default_tags (List[str], optional): Default tags for the sessions that can be used for grouping or sorting later (e.g. ["GPT-4"]).
         instrument_llm_calls (bool): Whether to instrument LLM calls and emit LLMEvents.
         auto_start_session (bool): Whether to start a session automatically when the client is created.
         inherited_session_id (optional, str): Init Agentops with an existing Session
-        skip_auto_end_session (optional, bool): Don't automatically end session based on your framework's decision-making (i.e. Crew determining when tasks are complete and ending the session)
+        skip_auto_end_session (optional, bool): Don't automatically end session based on your framework's decision-making
+            (i.e. Crew determining when tasks are complete and ending the session)
     Attributes:
     """
     logging_level = os.getenv("AGENTOPS_LOGGING_LEVEL", "INFO")
@@ -65,13 +67,22 @@ def init(
     }
     logger.setLevel(log_levels.get(logging_level, "INFO"))
 
+    if tags is not None:
+        logger.warning(
+            "The 'tags' parameter is deprecated. Use 'default_tags' instead",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        if default_tags is None:
+            default_tags = tags
+
     Client().configure(
         api_key=api_key,
         parent_key=parent_key,
         endpoint=endpoint,
         max_wait_time=max_wait_time,
         max_queue_size=max_queue_size,
-        default_tags=tags,
+        default_tags=default_tags,
         instrument_llm_calls=instrument_llm_calls,
         auto_start_session=auto_start_session,
         skip_auto_end_session=skip_auto_end_session,
@@ -141,7 +152,7 @@ def record(event: Union[Event, ErrorEvent]):
     Args:
         event (Event): The event to record.
     """
-    if Client().is_initialized and Client().has_session:
+    if Client().has_session:
         Client().record(event)
 
 
@@ -167,7 +178,17 @@ def set_tags(tags: List[str]):
         Client().set_tags(tags)
 
 
-def get_api_key() -> str:
+def set_default_tags(tags: List[str]):
+    """
+    Replace default_tags at runtime.
+
+    Args:
+        tags (List[str]): The list of tags to set.
+    """
+    Client().configure(default_tags=tags)
+
+
+def get_api_key() -> Union[str, None]:
     return Client().api_key
 
 
