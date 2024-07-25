@@ -226,6 +226,17 @@ def create_agent(name: str, agent_id: Optional[str] = None):
         return Client().create_agent(name=name, agent_id=agent_id)
 
 
+def get_session(session_id: str):
+    """
+    Get an active (not ended) session from the AgentOps service
+
+    Args:
+        session_id (str): the session id for the session to be retreived
+    """
+    if Client().has_sessions:
+        return Client().get_session(session_id)
+
+
 # Mostly used for unit testing -
 # prevents unexpected sessions on new tests
 def end_all_sessions() -> None:

@@ -375,6 +375,17 @@ class Client(metaclass=MetaClient):
 
         return None
 
+    def get_session(self, session_id: str):
+        """
+        Get an active (not ended) session from the AgentOps service
+
+        Args:
+            session_id (str): the session id for the session to be retreived
+        """
+        for session in self._sessions:
+            if session.session_id == session_id:
+                return session
+
     def end_all_sessions(self):
         for s in self._sessions:
             s.end_session()
@@ -390,7 +401,11 @@ class Client(metaclass=MetaClient):
         return len(self._sessions) == 1
 
     @property
-    def has_multi_session(self) -> bool:
+    def has_sessions(self) -> bool:
+        return len(self._sessions) > 0
+
+    @property
+    def is_multi_session(self) -> bool:
         return len(self._sessions) > 1
 
     @property
