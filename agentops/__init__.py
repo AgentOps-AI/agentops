@@ -166,10 +166,6 @@ def end_session(
     )
 
 
-def set_logging_level(level):
-    logger.setLevel(level)
-
-
 def record(event: Union[Event, ErrorEvent]):
     """
     Record an event with the AgentOps service.
