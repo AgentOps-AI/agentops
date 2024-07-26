@@ -89,7 +89,7 @@ class HttpClient:
         except requests.exceptions.Timeout:
             result.code = 408
             result.status = HttpStatus.TIMEOUT
-            logger.warning("Could not post data - connection timed out")
+            logger.warning("Could not reach API server - connection timed out")
         except requests.exceptions.HTTPError as e:
             try:
                 result.parse(e.response)
@@ -98,16 +98,21 @@ class HttpClient:
                 result.code = e.response.status_code
                 result.status = Response.get_status(e.response.status_code)
                 result.body = {"error": str(e)}
+                logger.warning(f"HTTPError: {e}")
         except requests.exceptions.RequestException as e:
             result.body = {"error": str(e)}
+            logger.warning(f"RequestException: {e}")
 
         if result.code == 401:
             logger.warning(
-                "Could not post data - API server rejected your API key: %s", api_key
+                "API server: invalid API key: %s", api_key
             )
         if result.code == 400:
-            logger.warning("Could not post data - %s", result.body)
+            if "message" in result.body:
+                logger.warning(f"API server: {result.body["message"]}")
+            else:
+                logger.warning("API server: - %s", result.body)
         if result.code == 500:
-            logger.warning("Could not post data - internal server error")
+            logger.warning("API server: - internal server error")
 
         return result

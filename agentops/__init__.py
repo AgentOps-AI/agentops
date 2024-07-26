@@ -1,5 +1,6 @@
 # agentops/__init__.py
 import os
+import sys
 import logging
 from typing import Optional, List, Union
 from uuid import UUID
@@ -18,21 +19,13 @@ try:
 except ModuleNotFoundError:
     pass
 
-try:
-    import autogen
-
+if "autogen" in sys.modules:
     Client().configure(auto_start_session=False)
     Client().add_default_tags(["autogen"])
-except ModuleNotFoundError:
-    pass
 
-try:
-    import crewai
-
+if "crewai" in sys.modules:
     Client().configure(auto_start_session=False)
     Client().add_default_tags(["crewai"])
-except ModuleNotFoundError:
-    pass
 
 
 def init(
@@ -155,10 +148,9 @@ def start_session(
         inherited_session_id: (str, optional): Set the session ID to inherit from another client
     """
     if not Client().is_initialized:
-        logger.warning(
+        return logger.warning(
             "AgentOps has not been initialized yet. Please call agentops.init() before starting a session"
         )
-        return
 
     return Client().start_session(tags, inherited_session_id)
 
@@ -176,15 +168,14 @@ def end_session(
         end_state (str): The final state of the session. Options: Success, Fail, or Indeterminate.
         end_state_reason (str, optional): The reason for ending the session.
         video (str, optional): URL to a video recording of the session
-        is_auto_end (bool, optional): is this an automatic use of end_session and should be skipped with bypass_auto_end_session
     """
     if Client().is_multi_session:
-        logger.warning(
-            "Multiple sessions detected. You must use session.record() instead of agentops.record()"
+        return logger.warning(
+            "Multiple sessions detected. You must use session.end_session() instead of agentops.end_session()"
         )
 
     if not Client().has_sessions:
-        logger.warning("No sessions detected")
+        return logger.warning("Could not end session - no session to end")
 
     Client().end_session(
         end_state=end_state,
@@ -202,13 +193,13 @@ def record(event: Union[Event, ErrorEvent]):
         event (Event): The event to record.
     """
     if Client().is_multi_session:
-        logger.warning(
+        return logger.warning(
             "Multiple sessions detected. You must use session.record() instead of agentops.record()"
         )
 
     if not Client().has_sessions:
-        logger.warning(
-            "No sessions detected. Create a session by calling agentops.start_session()"
+        return logger.warning(
+            "Could not record event - no sessions detected. Create a session by calling agentops.start_session()"
         )
 
     Client().record(event)
@@ -222,13 +213,13 @@ def add_tags(tags: List[str]):
         tags (List[str]): The list of tags to append.
     """
     if Client().is_multi_session:
-        logger.warning(
+        return logger.warning(
             "Multiple sessions detected. You must use session.add_tags() instead of agentops.add_tags()"
         )
 
     if not Client().has_sessions:
-        logger.warning(
-            "No sessions detected. Create a session by calling agentops.start_session()"
+        return logger.warning(
+            "Could not add tags to session - no sessions detected. Create a session by calling agentops.start_session()"
         )
 
     Client().add_tags(tags)
@@ -242,13 +233,13 @@ def set_tags(tags: List[str]):
         tags (List[str]): The list of tags to set.
     """
     if Client().is_multi_session:
-        logger.warning(
+        return logger.warning(
             "Multiple sessions detected. You must use session.set_tags() instead of agentops.set_tags()"
         )
 
     if not Client().has_sessions:
-        logger.warning(
-            "No sessions detected. Create a session by calling agentops.start_session()"
+        return logger.warning(
+            "Could not set tags on session - no sessions detected. Create a session by calling agentops.start_session()"
         )
 
     Client().set_tags(tags)
@@ -279,13 +270,13 @@ def stop_instrumenting():
 
 def create_agent(name: str, agent_id: Optional[str] = None):
     if Client().is_multi_session:
-        logger.warning(
+        return logger.warning(
             "Multiple sessions detected. You must use session.create_agent() instead of agentops.create_agent()"
         )
 
     if not Client().has_sessions:
-        logger.warning(
-            "No sessions detected. Create a session by calling agentops.start_session()"
+        return logger.warning(
+            "Could not create agent - no sessions detected. Create a session by calling agentops.start_session()"
         )
 
     return Client().create_agent(name=name, agent_id=agent_id)

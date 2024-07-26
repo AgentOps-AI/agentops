@@ -18,7 +18,6 @@ from termcolor import colored
 
 from .event import Event, ErrorEvent
 from .helpers import (
-    get_partner_frameworks,
     conditional_singleton,
 )
 from .session import Session, active_sessions
@@ -80,7 +79,7 @@ class Client(metaclass=MetaClient):
             self._config.max_queue_size = max_queue_size
 
         if default_tags is not None:
-            self._config.default_tags = default_tags
+            self._config.default_tags.update(default_tags)
 
         if instrument_llm_calls is not None:
             self._config.instrument_llm_calls = instrument_llm_calls
@@ -99,15 +98,15 @@ class Client(metaclass=MetaClient):
         self._handle_unclean_exits()
         self._initialize_partner_framework()
 
-        session = None
-        if self._config.auto_start_session:
-            session = self.start_session()
+        self._worker = Worker(self._config)  # This sets Client() to initialized state
 
         if self._config.instrument_llm_calls:
             self._llm_tracker = LlmTracker(self)
             self._llm_tracker.override_api()
 
-        self._worker = Worker(self._config)
+        session = None
+        if self._config.auto_start_session:
+            session = self.start_session()
 
         return session
 
@@ -215,8 +214,8 @@ class Client(metaclass=MetaClient):
             config=self._config,
         )
 
-        if not session:
-            return logger.warning("Cannot start session - server rejected session")
+        if not session.running:
+            return logger.error("Could not create session")
 
         logger.info(
             colored(
