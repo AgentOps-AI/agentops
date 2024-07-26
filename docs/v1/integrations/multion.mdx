@@ -20,7 +20,7 @@ You can view several example notebooks [here](https://github.com/AgentOps-AI/age
 	<Step title="Install the AgentOps SDK">
 		<CodeGroup>
 			```bash pip
-			pip install agentops
+			pip install -U agentops
 			```
 			```bash poetry
 			poetry add agentops
@@ -30,7 +30,7 @@ You can view several example notebooks [here](https://github.com/AgentOps-AI/age
 	<Step title="Install MultiOn">
 		<CodeGroup>
 			```bash pip
-			pip install multion
+			pip install -U multion
 			```
 			```bash poetry
 			poetry add multion
@@ -46,6 +46,7 @@ You can view several example notebooks [here](https://github.com/AgentOps-AI/age
 		<span className="api-key-container">
 			<CodeGroup>
 				```python python
+					import os
 					import agentops
 					import multion
 					from multion.client import MultiOn
@@ -60,9 +61,14 @@ You can view several example notebooks [here](https://github.com/AgentOps-AI/age
 						agentops_api_key=os.environ["AGENTOPS_API_KEY"],
 					)
 
-					url = "https://www.agentops.ai/"
-					cmd = "what three things do i get with agentops"
-					create_session_response = multion.sessions.create(url=url)
+					browse_response = multion.browse(
+						cmd="what three things do i get with agentops",
+						url="https://www.agentops.ai/",
+						max_steps=4,
+						include_screenshot=True
+					)
+
+					print(browse_response.message)
 					```
 			</CodeGroup>
 		</span>
