@@ -159,11 +159,10 @@ def track_agent(name: Union[str, None] = None):
                     original_init(self, *args, **kwargs)
 
                     if not Client().is_initialized:
-                        logger.warning(
+                        return logger.warning(
                             f"Failed to track an agent {name} because agentops.init() was not "
                             "called before initializing the agent with the @track_agent decorator."
                         )
-                        return
 
                     self.agent_ops_agent_id = str(uuid4())
 

@@ -8,6 +8,7 @@ from termcolor import colored
 from typing import Optional, List, Union
 from uuid import UUID, uuid4
 
+from .exceptions import ApiServerException
 from .enums import EndState
 from .event import ErrorEvent, Event
 from .log_config import logger
@@ -101,12 +102,14 @@ class Session:
 
         with self.lock:
             payload = {"session": self.__dict__}
-
-            res = HttpClient.post(
-                f"{self.config.endpoint}/v2/update_session",
-                json.dumps(filter_unjsonable(payload)).encode("utf-8"),
-                jwt=self.jwt,
-            )
+            try:
+                res = HttpClient.post(
+                    f"{self.config.endpoint}/v2/update_session",
+                    json.dumps(filter_unjsonable(payload)).encode("utf-8"),
+                    jwt=self.jwt,
+                )
+            except ApiServerException as e:
+                return logger.error(f"Could not end session - {e}")
 
         logger.debug(res.body)
         token_cost = res.body.get("token_cost", "unknown")
@@ -212,12 +215,16 @@ class Session:
         with self.lock:
             payload = {"session": self.__dict__}
             serialized_payload = json.dumps(filter_unjsonable(payload)).encode("utf-8")
-            res = HttpClient.post(
-                f"{self.config.endpoint}/v2/create_session",
-                serialized_payload,
-                self.config.api_key,
-                self.config.parent_key,
-            )
+
+            try:
+                res = HttpClient.post(
+                    f"{self.config.endpoint}/v2/create_session",
+                    serialized_payload,
+                    self.config.api_key,
+                    self.config.parent_key,
+                )
+            except ApiServerException as e:
+                return logger.error(f"Could not start session - {e}")
 
             logger.debug(res.body)
 
@@ -237,11 +244,14 @@ class Session:
         with self.lock:
             payload = {"session": self.__dict__}
 
-            res = HttpClient.post(
-                f"{self.config.endpoint}/v2/update_session",
-                json.dumps(filter_unjsonable(payload)).encode("utf-8"),
-                jwt=self.jwt,
-            )
+            try:
+                res = HttpClient.post(
+                    f"{self.config.endpoint}/v2/update_session",
+                    json.dumps(filter_unjsonable(payload)).encode("utf-8"),
+                    jwt=self.jwt,
+                )
+            except ApiServerException as e:
+                return logger.error(f"Could not update session - {e}")
 
     def _flush_queue(self) -> None:
         if not self.running:
@@ -256,11 +266,14 @@ class Session:
                 }
 
                 serialized_payload = safe_serialize(payload).encode("utf-8")
-                HttpClient.post(
-                    f"{self.config.endpoint}/v2/create_events",
-                    serialized_payload,
-                    jwt=self.jwt,
-                )
+                try:
+                    HttpClient.post(
+                        f"{self.config.endpoint}/v2/create_events",
+                        serialized_payload,
+                        jwt=self.jwt,
+                    )
+                except ApiServerException as e:
+                    return logger.error(f"Could not post events - {e}")
 
                 logger.debug("\n<AGENTOPS_DEBUG_OUTPUT>")
                 logger.debug(
@@ -287,9 +300,14 @@ class Session:
         }
 
         serialized_payload = safe_serialize(payload).encode("utf-8")
-        HttpClient.post(
-            f"{self.config.endpoint}/v2/create_agent", serialized_payload, jwt=self.jwt
-        )
+        try:
+            HttpClient.post(
+                f"{self.config.endpoint}/v2/create_agent",
+                serialized_payload,
+                jwt=self.jwt,
+            )
+        except ApiServerException as e:
+            return logger.error(f"Could not create agent - {e}")
 
         return agent_id
 

@@ -11,9 +11,6 @@ class NoSessionException(Exception):
         super().__init__(message)
 
 
-class ConfigurationError(Exception):
-    """Exception raised for errors related to Configuration"""
-
-    def __init__(self, message: str):
+class ApiServerException(Exception):
+    def __init__(self, message):
         super().__init__(message)
-        logger.warning(message)

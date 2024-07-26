@@ -1,8 +1,10 @@
 from enum import Enum
 from typing import Optional
-from .log_config import logger
-import requests
 from requests.adapters import Retry, HTTPAdapter
+import requests
+
+from .exceptions import ApiServerException
+from .log_config import logger
 
 JSON_HEADER = {"Content-Type": "application/json; charset=UTF-8", "Accept": "*/*"}
 
@@ -89,7 +91,7 @@ class HttpClient:
         except requests.exceptions.Timeout:
             result.code = 408
             result.status = HttpStatus.TIMEOUT
-            logger.warning("Could not reach API server - connection timed out")
+            raise ApiServerException("Could not reach API server - connection timed out")
         except requests.exceptions.HTTPError as e:
             try:
                 result.parse(e.response)
@@ -98,21 +100,19 @@ class HttpClient:
                 result.code = e.response.status_code
                 result.status = Response.get_status(e.response.status_code)
                 result.body = {"error": str(e)}
-                logger.warning(f"HTTPError: {e}")
+                raise ApiServerException(f"HTTPError: {e}")
         except requests.exceptions.RequestException as e:
             result.body = {"error": str(e)}
-            logger.warning(f"RequestException: {e}")
+            raise ApiServerException(f"RequestException: {e}")
 
         if result.code == 401:
-            logger.warning(
-                "API server: invalid API key: %s", api_key
-            )
+            raise ApiServerException(f"API server: invalid API key: {api_key}")
         if result.code == 400:
             if "message" in result.body:
-                logger.warning(f"API server: {result.body["message"]}")
+                raise ApiServerException(f"API server: {result.body["message"]}")
             else:
-                logger.warning("API server: - %s", result.body)
+                raise ApiServerException(f"API server: {result.body}")
         if result.code == 500:
-            logger.warning("API server: - internal server error")
+            raise ApiServerException("API server: - internal server error")
 
         return result

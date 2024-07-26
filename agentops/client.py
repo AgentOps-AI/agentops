@@ -50,10 +50,9 @@ class Client(metaclass=MetaClient):
         skip_auto_end_session: Optional[bool] = None,
     ):
         if len(self._sessions) > 0:
-            logger.warning(
+            return logger.warning(
                 f"{len(self._sessions)} session(s) in progress. Configuration is locked until there are no more sessions running"
             )
-            return
 
         if api_key is not None:
             try:
@@ -92,8 +91,9 @@ class Client(metaclass=MetaClient):
 
     def initialize(self) -> Union[Session, None]:
         if self.api_key is None:
-            logger.warning("Could not initialize AgentOps client - API Key is missing")
-            return
+            return logger.warning(
+                "Could not initialize AgentOps client - API Key is missing"
+            )
 
         self._handle_unclean_exits()
         self._initialize_partner_framework()
@@ -178,8 +178,7 @@ class Client(metaclass=MetaClient):
 
         session = self._safe_get_session()
         if session is None:
-            logger.error("Could not record event. No session.")
-            return
+            return logger.error("Could not record event. No session.")
         session.record(event)
 
     def start_session(
@@ -215,7 +214,7 @@ class Client(metaclass=MetaClient):
         )
 
         if not session.running:
-            return logger.error("Could not create session")
+            return
 
         logger.info(
             colored(

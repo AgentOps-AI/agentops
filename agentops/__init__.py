@@ -65,8 +65,7 @@ def init(
     Attributes:
     """
     if Client().is_initialized:
-        logger.warning("AgentOps has already been initialized")
-        return
+        return logger.warning("AgentOps has already been initialized")
 
     logging_level = os.getenv("AGENTOPS_LOGGING_LEVEL", "INFO")
     log_levels = {
@@ -106,7 +105,7 @@ def init(
             Client().initialize()
             return Client().start_session(inherited_session_id=inherited_session_id)
         except ValueError:
-            logger.warning(f"Invalid session id: {inherited_session_id}")
+            return logger.warning(f"Invalid session id: {inherited_session_id}")
 
     return Client().initialize()
 
@@ -175,7 +174,7 @@ def end_session(
         )
 
     if not Client().has_sessions:
-        return logger.warning("Could not end session - no session to end")
+        return logger.warning("Could not end session - no sessions detected")
 
     Client().end_session(
         end_state=end_state,
