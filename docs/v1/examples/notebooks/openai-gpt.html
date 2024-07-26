@@ -1,0 +1,108 @@
+<div id="212799f5255f3513" class="cell markdown" data-collapsed="false">
+<h1 id="agentops-basic-monitoring">AgentOps Basic Monitoring</h1>
+<p>This is an example of how to use the AgentOps library for basic Agent
+monitoring with OpenAI's GPT</p>
+</div>
+<div id="c51dcbda80eb8c53" class="cell code" data-collapsed="false">
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> openai <span class="im">import</span> OpenAI</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> agentops</span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> os</span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> dotenv <span class="im">import</span> load_dotenv</span></code></pre></div>
+</div>
+<div id="33bb35b82e9a8f71" class="cell markdown" data-collapsed="false">
+<p>Next, we'll grab our two API keys. You can use dotenv like below or
+however else you like to load environment variables</p>
+</div>
+<div id="cbc5d13679e269dc" class="cell code" data-collapsed="false">
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>load_dotenv()</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>OPENAI_API_KEY <span class="op">=</span> os.getenv(<span class="st">&quot;OPENAI_API_KEY&quot;</span>) <span class="kw">or</span> <span class="st">&quot;&lt;your_openai_key&gt;&quot;</span></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>AGENTOPS_API_KEY <span class="op">=</span> os.getenv(<span class="st">&quot;AGENTOPS_API_KEY&quot;</span>) <span class="kw">or</span> <span class="st">&quot;&lt;your_agentops_key&gt;&quot;</span></span></code></pre></div>
+</div>
+<div id="82fdff21ff00ef37" class="cell markdown" data-collapsed="false">
+<p>The AgentOps library is designed to be a plug-and-play replacement
+for the OpenAI Client, maximizing use with minimal install effort.</p>
+</div>
+<div id="5d424a02e30ce7f4" class="cell code" data-collapsed="false">
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>openai <span class="op">=</span> OpenAI(api_key<span class="op">=</span>OPENAI_API_KEY)</span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>agentops.init(AGENTOPS_API_KEY, tags<span class="op">=</span>[<span class="st">&quot;openai-gpt-notebook&quot;</span>])</span></code></pre></div>
+</div>
+<div id="c77f4f920c07e3e6" class="cell markdown" data-collapsed="false">
+<p>Now just use OpenAI as you would normally!</p>
+</div>
+<div id="ca7011cf1ba076c9" class="cell markdown" data-collapsed="false">
+<h2 id="single-session-with-chatcompletion">Single Session with
+ChatCompletion</h2>
+</div>
+<div id="2704d6d625efa77f" class="cell code" data-collapsed="false">
+<div class="sourceCode" id="cb4"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a>message <span class="op">=</span> ({<span class="st">&quot;role&quot;</span>: <span class="st">&quot;user&quot;</span>, <span class="st">&quot;content&quot;</span>: <span class="st">&quot;Write a 12 word poem about secret agents.&quot;</span>},)</span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>res <span class="op">=</span> openai.chat.completions.create(</span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>    model<span class="op">=</span><span class="st">&quot;gpt-3.5-turbo&quot;</span>, messages<span class="op">=</span>message, temperature<span class="op">=</span><span class="fl">0.5</span>, stream<span class="op">=</span><span class="va">True</span></span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div>
+</div>
+<div id="ce4965fc1614b5fe" class="cell markdown" data-collapsed="false">
+<p>Make sure to end your session with a <code>Result</code>
+(Success|Fail|Indeterminate) for better tracking</p>
+</div>
+<div id="537abd77cd0e0d25" class="cell code" data-collapsed="false">
+<div class="sourceCode" id="cb5"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a>agentops.end_session(<span class="st">&quot;Success&quot;</span>)</span></code></pre></div>
+</div>
+<div id="dd69580627842705" class="cell markdown" data-collapsed="false">
+<p>Now if you check the AgentOps dashboard, you should see information
+related to this run!</p>
+</div>
+<div id="b824bb935c7b7f80" class="cell markdown" data-collapsed="false">
+<h1 id="events">Events</h1>
+<p>Additionally, you can track custom events via AgentOps. Let's start a
+new session and record some events</p>
+</div>
+<div id="544c8f1bdb8c6e4b" class="cell code" data-collapsed="false">
+<div class="sourceCode" id="cb6"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Create new session</span></span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a>agentops.start_session(tags<span class="op">=</span>[<span class="st">&quot;openai-gpt-notebook-events&quot;</span>])</span></code></pre></div>
+</div>
+<div id="e94f1b56" class="cell markdown">
+<p>The easiest way to record actions is through the use of AgentOp's
+decorators</p>
+</div>
+<div id="b45754a57148eed1" class="cell code" data-collapsed="false">
+<div class="sourceCode" id="cb7"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> agentops <span class="im">import</span> record_function</span>
+<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-4"><a href="#cb7-4" aria-hidden="true" tabindex="-1"></a><span class="at">@record_function</span>(<span class="st">&quot;add numbers&quot;</span>)</span>
+<span id="cb7-5"><a href="#cb7-5" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> add(x, y):</span>
+<span id="cb7-6"><a href="#cb7-6" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> x <span class="op">+</span> y</span>
+<span id="cb7-7"><a href="#cb7-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-8"><a href="#cb7-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-9"><a href="#cb7-9" aria-hidden="true" tabindex="-1"></a>add(<span class="dv">2</span>, <span class="dv">4</span>)</span></code></pre></div>
+</div>
+<div id="1e3cc512" class="cell markdown">
+<p>We can also manually craft an event exactly the way we want</p>
+</div>
+<div id="2ac84c35" class="cell code">
+<div class="sourceCode" id="cb8"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> agentops <span class="im">import</span> ActionEvent</span>
+<span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-3"><a href="#cb8-3" aria-hidden="true" tabindex="-1"></a>message <span class="op">=</span> ({<span class="st">&quot;role&quot;</span>: <span class="st">&quot;user&quot;</span>, <span class="st">&quot;content&quot;</span>: <span class="st">&quot;Hello&quot;</span>},)</span>
+<span id="cb8-4"><a href="#cb8-4" aria-hidden="true" tabindex="-1"></a>response <span class="op">=</span> openai.chat.completions.create(</span>
+<span id="cb8-5"><a href="#cb8-5" aria-hidden="true" tabindex="-1"></a>    model<span class="op">=</span><span class="st">&quot;gpt-3.5-turbo&quot;</span>, messages<span class="op">=</span>message, temperature<span class="op">=</span><span class="fl">0.5</span></span>
+<span id="cb8-6"><a href="#cb8-6" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb8-7"><a href="#cb8-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-8"><a href="#cb8-8" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> <span class="st">&quot;hello&quot;</span> <span class="kw">in</span> <span class="bu">str</span>(response.choices[<span class="dv">0</span>].message.content).lower():</span>
+<span id="cb8-9"><a href="#cb8-9" aria-hidden="true" tabindex="-1"></a>    agentops.record(</span>
+<span id="cb8-10"><a href="#cb8-10" aria-hidden="true" tabindex="-1"></a>        ActionEvent(</span>
+<span id="cb8-11"><a href="#cb8-11" aria-hidden="true" tabindex="-1"></a>            action_type<span class="op">=</span><span class="st">&quot;Agent says hello&quot;</span>,</span>
+<span id="cb8-12"><a href="#cb8-12" aria-hidden="true" tabindex="-1"></a>            params<span class="op">=</span><span class="bu">str</span>(message),</span>
+<span id="cb8-13"><a href="#cb8-13" aria-hidden="true" tabindex="-1"></a>            returns<span class="op">=</span><span class="bu">str</span>(response.choices[<span class="dv">0</span>].message.content),</span>
+<span id="cb8-14"><a href="#cb8-14" aria-hidden="true" tabindex="-1"></a>        )</span>
+<span id="cb8-15"><a href="#cb8-15" aria-hidden="true" tabindex="-1"></a>    )</span></code></pre></div>
+</div>
+<div id="4ca2b49fc06adddb" class="cell code" data-collapsed="false">
+<div class="sourceCode" id="cb9"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a>agentops.end_session(<span class="st">&quot;Success&quot;</span>)</span></code></pre></div>
+</div>

@@ -1,0 +1,102 @@
+<div id="dc8cfd2cfa8a594b" class="cell markdown" data-collapsed="false">
+<h1 id="recording-events">Recording Events</h1>
+<p>AgentOps has a number of different <a
+href="https://docs.agentops.ai/v1/details/events">Event Types</a></p>
+<p>AgentOps automatically instruments your LLM Calls from OpenAI,
+LiteLLM, and Cohere. Just make sure their SDKs are imported before
+initializing AgentOps like we see below</p>
+</div>
+<div id="168ecd05cc123de0" class="cell code" data-collapsed="false">
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> agentops</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> openai</span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="co"># Create new session</span></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>agentops.init()</span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a><span class="co"># Optionally, we can add tags to the session</span></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a><span class="co"># agentops.init(tags=[&#39;Hello Tracker&#39;])</span></span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a>message <span class="op">=</span> ({<span class="st">&quot;role&quot;</span>: <span class="st">&quot;user&quot;</span>, <span class="st">&quot;content&quot;</span>: <span class="st">&quot;Hello&quot;</span>},)</span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a>response <span class="op">=</span> openai.chat.completions.create(</span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a>    model<span class="op">=</span><span class="st">&quot;gpt-3.5-turbo&quot;</span>, messages<span class="op">=</span>message, temperature<span class="op">=</span><span class="fl">0.5</span></span>
+<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div>
+</div>
+<div id="95a6047d" class="cell markdown">
+<p>Click the AgentOps link above to see your session!</p>
+</div>
+<div id="c6d06ee8c66dad17" class="cell markdown" data-collapsed="false">
+<h2 id="action-event">Action Event</h2>
+<p>AgentOps allows you to record other actions. The easiest way to
+record actions is through the use of AgentOp's decorators</p>
+</div>
+<div id="b460318317adc624" class="cell code" data-collapsed="false">
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> agentops <span class="im">import</span> record_function</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a><span class="at">@record_function</span>(<span class="st">&quot;add numbers&quot;</span>)</span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> add(x, y):</span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> x <span class="op">+</span> y</span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a>add(<span class="dv">2</span>, <span class="dv">4</span>)</span></code></pre></div>
+</div>
+<div id="9068a4cdd328f652" class="cell markdown" data-collapsed="false">
+<p>We can also manually craft an event exactly the way we want by
+creating and recording an <code>ActionEvent</code></p>
+</div>
+<div id="b62ad88921ff26f2" class="cell code" data-collapsed="false">
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> agentops <span class="im">import</span> ActionEvent</span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>agentops.record(</span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>    ActionEvent(</span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a>        action_type<span class="op">=</span><span class="st">&quot;Agent says hello&quot;</span>, params<span class="op">=</span>{<span class="st">&quot;message&quot;</span>: <span class="st">&quot;Hi&quot;</span>}, returns<span class="op">=</span><span class="st">&quot;Hi Back!&quot;</span></span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a>    )</span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div>
+</div>
+<div id="f7c947d815f581e7" class="cell markdown" data-collapsed="false">
+<h2 id="tool-event">Tool Event</h2>
+<p>Agents use tools. These tools are useful to track with information
+such as name, end status, runtime, etc. To record tool usage, you can
+create and record a <code>ToolEvent</code> similar to above.</p>
+</div>
+<div id="5d387a071a1c70cf" class="cell code" data-collapsed="false">
+<div class="sourceCode" id="cb4"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> agentops <span class="im">import</span> ToolEvent, record</span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> scrape_website(url: <span class="bu">str</span>):</span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a>    tool_event <span class="op">=</span> ToolEvent(</span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a>        name<span class="op">=</span><span class="st">&quot;scrape_website&quot;</span>, params<span class="op">=</span>{<span class="st">&quot;url&quot;</span>: url}</span>
+<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a>    )  <span class="co"># the start timestamp is set when the obj is created</span></span>
+<span id="cb4-8"><a href="#cb4-8" aria-hidden="true" tabindex="-1"></a>    result <span class="op">=</span> integration.scrape_website(data)  <span class="co"># perform tool logic</span></span>
+<span id="cb4-9"><a href="#cb4-9" aria-hidden="true" tabindex="-1"></a>    tool_event.returns <span class="op">=</span> result</span>
+<span id="cb4-10"><a href="#cb4-10" aria-hidden="true" tabindex="-1"></a>    record(tool_event)</span></code></pre></div>
+</div>
+<div id="968d1503dd0aae9a" class="cell markdown" data-collapsed="false">
+<h2 id="error-events">Error Events</h2>
+<p>Error events can be used alone or in reference to another event. Lets
+add a catch block to the code above</p>
+</div>
+<div id="eb23c1325298e22f" class="cell code" data-collapsed="false">
+<div class="sourceCode" id="cb5"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> agentops <span class="im">import</span> ToolEvent, record, ErrorEvent</span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> scrape_website(url: <span class="bu">str</span>):</span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a>    tool_event <span class="op">=</span> ToolEvent(</span>
+<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a>        name<span class="op">=</span><span class="st">&quot;scrape_website&quot;</span>, params<span class="op">=</span>{<span class="st">&quot;url&quot;</span>: url}</span>
+<span id="cb5-7"><a href="#cb5-7" aria-hidden="true" tabindex="-1"></a>    )  <span class="co"># the start timestamp is set when the obj is created</span></span>
+<span id="cb5-8"><a href="#cb5-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-9"><a href="#cb5-9" aria-hidden="true" tabindex="-1"></a>    <span class="cf">try</span>:</span>
+<span id="cb5-10"><a href="#cb5-10" aria-hidden="true" tabindex="-1"></a>        <span class="dv">1</span> <span class="op">/</span> <span class="dv">0</span>  <span class="co"># Ooops! Something went wrong</span></span>
+<span id="cb5-11"><a href="#cb5-11" aria-hidden="true" tabindex="-1"></a>    <span class="cf">except</span> <span class="pp">Exception</span> <span class="im">as</span> e:</span>
+<span id="cb5-12"><a href="#cb5-12" aria-hidden="true" tabindex="-1"></a>        record(ErrorEvent(exception<span class="op">=</span>e, trigger_event<span class="op">=</span>tool_event))</span>
+<span id="cb5-13"><a href="#cb5-13" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-14"><a href="#cb5-14" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-15"><a href="#cb5-15" aria-hidden="true" tabindex="-1"></a>scrape_website(<span class="st">&quot;https://app.agentops.ai&quot;</span>)</span>
+<span id="cb5-16"><a href="#cb5-16" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-17"><a href="#cb5-17" aria-hidden="true" tabindex="-1"></a>agentops.end_session(<span class="st">&quot;Success&quot;</span>)</span></code></pre></div>
+</div>
