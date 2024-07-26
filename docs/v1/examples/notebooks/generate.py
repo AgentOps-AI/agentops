@@ -34,4 +34,12 @@ def convert_notebooks_to_html(source_dir: str, target_dir: str):
 
 
 # Example usage:
-convert_notebooks_to_html("../../../../examples", "./")
+try:
+    convert_notebooks_to_html("../../../../examples", "./")
+except FileNotFoundError:
+    try:
+        convert_notebooks_to_html("docs/v1/examples", "./")
+    except FileNotFoundError:
+        print(
+            "Could not find notebooks folder. Run this script from project root or at the script location."
+        )
