@@ -171,7 +171,7 @@ def end_session(
     """
     if Client().is_multi_session:
         return logger.warning(
-            "Multiple sessions detected. You must use session.end_session() instead of agentops.end_session()"
+            "Could not end session - multiple sessions detected. You must use session.end_session() instead of agentops.end_session()"
         )
 
     if not Client().has_sessions:
@@ -194,7 +194,7 @@ def record(event: Union[Event, ErrorEvent]):
     """
     if Client().is_multi_session:
         return logger.warning(
-            "Multiple sessions detected. You must use session.record() instead of agentops.record()"
+            "Could not record event - multiple sessions detected. You must use session.record() instead of agentops.record()"
         )
 
     if not Client().has_sessions:
@@ -214,7 +214,7 @@ def add_tags(tags: List[str]):
     """
     if Client().is_multi_session:
         return logger.warning(
-            "Multiple sessions detected. You must use session.add_tags() instead of agentops.add_tags()"
+            "Could not add tags to session - multiple sessions detected. You must use session.add_tags() instead of agentops.add_tags()"
         )
 
     if not Client().has_sessions:
@@ -234,7 +234,7 @@ def set_tags(tags: List[str]):
     """
     if Client().is_multi_session:
         return logger.warning(
-            "Multiple sessions detected. You must use session.set_tags() instead of agentops.set_tags()"
+            "Could not set tags on session - multiple sessions detected. You must use session.set_tags() instead of agentops.set_tags()"
         )
 
     if not Client().has_sessions:
@@ -271,7 +271,7 @@ def stop_instrumenting():
 def create_agent(name: str, agent_id: Optional[str] = None):
     if Client().is_multi_session:
         return logger.warning(
-            "Multiple sessions detected. You must use session.create_agent() instead of agentops.create_agent()"
+            "Could not create agent - multiple sessions detected. You must use session.create_agent() instead of agentops.create_agent()"
         )
 
     if not Client().has_sessions:
