@@ -139,8 +139,13 @@ def start_session(
             e.g. ["test_run"].
         inherited_session_id: (str, optional): Set the session ID to inherit from another client
     """
-    if Client().is_initialized:
-        return Client().start_session(tags, inherited_session_id)
+    if not Client().is_initialized:
+        logger.warning(
+            "AgentOps has not been initialized yet. Please call agentops.init() before starting a session"
+        )
+        return
+
+    return Client().start_session(tags, inherited_session_id)
 
 
 def end_session(
@@ -158,6 +163,14 @@ def end_session(
         video (str, optional): URL to a video recording of the session
         is_auto_end (bool, optional): is this an automatic use of end_session and should be skipped with bypass_auto_end_session
     """
+    if Client().is_multi_session:
+        logger.warning(
+            "Multiple sessions detected. You must use session.record() instead of agentops.record()"
+        )
+
+    if not Client().has_sessions:
+        logger.warning("No sessions detected")
+
     Client().end_session(
         end_state=end_state,
         end_state_reason=end_state_reason,
@@ -173,8 +186,17 @@ def record(event: Union[Event, ErrorEvent]):
     Args:
         event (Event): The event to record.
     """
-    if Client().has_session:
-        Client().record(event)
+    if Client().is_multi_session:
+        logger.warning(
+            "Multiple sessions detected. You must use session.record() instead of agentops.record()"
+        )
+
+    if not Client().has_sessions:
+        logger.warning(
+            "No sessions detected. Create a session by calling agentops.start_session()"
+        )
+
+    Client().record(event)
 
 
 def add_tags(tags: List[str]):
@@ -184,8 +206,17 @@ def add_tags(tags: List[str]):
     Args:
         tags (List[str]): The list of tags to append.
     """
-    if Client().has_session:
-        Client().add_tags(tags)
+    if Client().is_multi_session:
+        logger.warning(
+            "Multiple sessions detected. You must use session.add_tags() instead of agentops.add_tags()"
+        )
+
+    if not Client().has_sessions:
+        logger.warning(
+            "No sessions detected. Create a session by calling agentops.start_session()"
+        )
+
+    Client().add_tags(tags)
 
 
 def set_tags(tags: List[str]):
@@ -195,8 +226,17 @@ def set_tags(tags: List[str]):
     Args:
         tags (List[str]): The list of tags to set.
     """
-    if Client().has_session:
-        Client().set_tags(tags)
+    if Client().is_multi_session:
+        logger.warning(
+            "Multiple sessions detected. You must use session.set_tags() instead of agentops.set_tags()"
+        )
+
+    if not Client().has_sessions:
+        logger.warning(
+            "No sessions detected. Create a session by calling agentops.start_session()"
+        )
+
+    Client().set_tags(tags)
 
 
 def get_api_key() -> Union[str, None]:
@@ -218,12 +258,22 @@ def set_parent_key(parent_key: str):
 
 
 def stop_instrumenting():
-    Client().stop_instrumenting()
+    if Client().is_initialized:
+        Client().stop_instrumenting()
 
 
 def create_agent(name: str, agent_id: Optional[str] = None):
-    if Client().is_initialized and Client().has_session:
-        return Client().create_agent(name=name, agent_id=agent_id)
+    if Client().is_multi_session:
+        logger.warning(
+            "Multiple sessions detected. You must use session.create_agent() instead of agentops.create_agent()"
+        )
+
+    if not Client().has_sessions:
+        logger.warning(
+            "No sessions detected. Create a session by calling agentops.start_session()"
+        )
+
+    return Client().create_agent(name=name, agent_id=agent_id)
 
 
 def get_session(session_id: str):
@@ -233,8 +283,7 @@ def get_session(session_id: str):
     Args:
         session_id (str): the session id for the session to be retreived
     """
-    if Client().has_sessions:
-        return Client().get_session(session_id)
+    return Client().get_session(session_id)
 
 
 # Mostly used for unit testing -

@@ -75,7 +75,7 @@ class Session:
         video: Optional[str] = None,
     ) -> Union[Decimal, None]:
         if not self._running:
-            return logger.warning("Session was not successfully created")
+            return
 
         if not any(end_state == state.value for state in EndState):
             return logger.warning(
