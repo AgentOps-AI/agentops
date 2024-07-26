@@ -34,7 +34,7 @@ class LlmTracker:
         "ollama": {"0.0.1": ("chat", "Client.chat", "AsyncClient.chat")},
         "groq": {
             "0.9.0": ("Client.chat", "AsyncClient.chat"),
-        }
+        },
     }
 
     def __init__(self, client):
@@ -489,7 +489,7 @@ class LlmTracker:
 
         self._safe_record(session, self.llm_event)
         return response
-    
+
     def _handle_response_groq(
         self, response, kwargs, init_timestamp, session: Optional[Session] = None
     ):
@@ -611,7 +611,6 @@ class LlmTracker:
             )
 
         return response
-
 
     def override_openai_v1_completion(self):
         from openai.resources.chat import completions
@@ -770,7 +769,7 @@ class LlmTracker:
 
         # Override the original method with the patched one
         AsyncClient.chat = patched_function
-    
+
     def override_groq_chat(self):
         from groq.resources.chat import completions
 
@@ -904,7 +903,7 @@ class LlmTracker:
                         logger.warning(
                             f"Only Ollama>=0.0.1 supported. v{module_version} found."
                         )
-                
+
                 if api == "groq":
                     module_version = version(api)
 
