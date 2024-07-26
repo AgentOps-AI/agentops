@@ -1,13 +1,7 @@
 import os
-
-# import subprocess
-import pypandoc
+import subprocess
 
 # Before generating, `brew install pandoc`
-
-
-import pypandoc
-import os
 
 
 def convert_notebooks_to_html(source_dir: str, target_dir: str):
@@ -22,17 +16,22 @@ def convert_notebooks_to_html(source_dir: str, target_dir: str):
             source_file = os.path.join(source_dir, filename)
             # Construct target file path
             html_target_file = os.path.join(
-                target_dir, filename.rsplit(".", 1)[0] + ".html"
+                target_dir, filename[:-6] + ".html"
+            )  # remove '.ipynb' and add '.html'
+
+            # Convert notebook to HTML using pandoc
+            subprocess.check_call(
+                [
+                    "pandoc",
+                    source_file,
+                    "-s",
+                    "-o",
+                    html_target_file,
+                    "-c",
+                    "https://app.agentops.ai/notebook_styles.css",
+                ]
             )
 
-            # Convert notebook to html_format
-            output = pypandoc.convert_file(
-                source_file,
-                "html",
-                outputfile=html_target_file,
-                extra_args=["-c", "template/notebook_styles.css"],
-            )
-            assert output == ""
 
-
+# Example usage:
 convert_notebooks_to_html("../../../../examples", "./")
