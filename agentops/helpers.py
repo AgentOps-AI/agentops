@@ -11,13 +11,6 @@ from uuid import UUID
 import os
 from importlib.metadata import version
 
-
-PARTNER_FRAMEWORKS = {
-    # framework : instrument_llm_calls, auto_start_session
-    "autogen": (False, True),
-    "crewai": (False, True),
-}
-
 ao_instances = {}
 
 
@@ -195,7 +188,3 @@ def debug_print_function_params(func):
         return func(self, *args, **kwargs)
 
     return wrapper
-
-
-def get_partner_frameworks():
-    return PARTNER_FRAMEWORKS

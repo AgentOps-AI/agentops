@@ -97,16 +97,13 @@ class Client(metaclass=MetaClient):
             return
 
         self._handle_unclean_exits()
-
-        instrument_llm_calls, auto_start_session = self._check_for_partner_frameworks(
-            self._config.instrument_llm_calls, self._config.auto_start_session
-        )
+        self._initialize_partner_framework()
 
         session = None
-        if auto_start_session:
+        if self._config.auto_start_session:
             session = self.start_session()
 
-        if instrument_llm_calls:
+        if self._config.instrument_llm_calls:
             self._llm_tracker = LlmTracker(self)
             self._llm_tracker.override_api()
 
@@ -114,30 +111,16 @@ class Client(metaclass=MetaClient):
 
         return session
 
-    def _check_for_partner_frameworks(
-        self, instrument_llm_calls, auto_start_session
-    ) -> Tuple[bool, bool]:
-        partner_frameworks = get_partner_frameworks()
-        for framework in partner_frameworks.keys():
-            if framework in sys.modules:
-                self.add_tags([framework])
-                if framework == "autogen":
-                    try:
-                        import autogen
-                        from .partners.autogen_logger import AutogenLogger
+    def _initialize_partner_framework(self) -> None:
+        try:
+            import autogen
+            from .partners.autogen_logger import AutogenLogger
 
-                        autogen.runtime_logging.start(logger=AutogenLogger())
-                        self.add_tags(["autogen"])
-                    except ImportError:
-                        pass
-                    except Exception as e:
-                        logger.warning(
-                            f"Failed to set up AutoGen logger with AgentOps. Error: {e}"
-                        )
-
-                    return partner_frameworks[framework]
-
-        return instrument_llm_calls, auto_start_session
+            autogen.runtime_logging.start(logger=AutogenLogger())
+        except ImportError:
+            pass
+        except Exception as e:
+            logger.warning(f"Failed to set up AutoGen logger with AgentOps. Error: {e}")
 
     def add_tags(self, tags: List[str]) -> None:
         """
@@ -174,6 +157,15 @@ class Client(metaclass=MetaClient):
             return
         if self.has_session:
             session.set_tags(tags=tags)
+
+    def add_default_tags(self, tags: List[str]) -> None:
+        """
+        Append default tags at runtime.
+
+        Args:
+            tags (List[str]): The list of tags to set.
+        """
+        self._config.default_tags.update(tags)
 
     def record(self, event: Union[Event, ErrorEvent]) -> None:
         """
@@ -212,9 +204,13 @@ class Client(metaclass=MetaClient):
             UUID(inherited_session_id) if inherited_session_id is not None else uuid4()
         )
 
+        session_tags = self._config.default_tags.copy()
+        if tags is not None:
+            session_tags.update(tags)
+
         session = Session(
             session_id=session_id,
-            tags=tags or self._config.default_tags,
+            tags=list(session_tags),
             host_env=get_host_env(self._config.env_data_opt_out),
             config=self._config,
         )

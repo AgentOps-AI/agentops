@@ -43,6 +43,9 @@ class Configuration:
                 "default_tags is not a list - default tags will be not set. Please pass a List to default_tags"
             )
 
+        if default_tags is None:
+            default_tags = []
+
         self.api_key: Optional[str] = api_key
         self.parent_key: Optional[str] = parent_key
         self.endpoint: str = (
@@ -52,7 +55,7 @@ class Configuration:
         )
         self.max_wait_time: int = max_wait_time or 5000
         self.max_queue_size: int = max_queue_size or 100
-        self.default_tags: List[str] = default_tags or []
+        self.default_tags: set[str] = set(default_tags)
         self.instrument_llm_calls: bool = instrument_llm_calls or True
         self.auto_start_session: bool = auto_start_session or True
         self.skip_auto_end_session: bool = skip_auto_end_session or False

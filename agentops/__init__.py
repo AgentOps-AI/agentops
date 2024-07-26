@@ -10,12 +10,27 @@ from .decorators import record_function, track_agent
 from .log_config import logger
 from .session import Session
 
-
 try:
     from .partners.langchain_callback_handler import (
         LangchainCallbackHandler,
         AsyncLangchainCallbackHandler,
     )
+except ModuleNotFoundError:
+    pass
+
+try:
+    import autogen
+
+    Client().configure(auto_start_session=False)
+    Client().add_default_tags(["autogen"])
+except ModuleNotFoundError:
+    pass
+
+try:
+    import crewai
+
+    Client().configure(auto_start_session=False)
+    Client().add_default_tags(["crewai"])
 except ModuleNotFoundError:
     pass
 
