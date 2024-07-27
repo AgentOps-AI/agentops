@@ -106,7 +106,7 @@ class HttpClient:
             raise ApiServerException(f"RequestException: {e}")
 
         if result.code == 401:
-            raise ApiServerException(f"API server: invalid API key: {api_key}")
+            raise ApiServerException(f"API server: invalid API key: {api_key}. Find your API key at https://app.agentops.ai/settings/projects")
         if result.code == 400:
             if "message" in result.body:
                 raise ApiServerException(f"API server: {result.body["message"]}")

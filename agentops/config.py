@@ -26,7 +26,9 @@ class Configuration:
                 UUID(api_key)
                 self.api_key = api_key
             except ValueError:
-                logger.warning(f"API Key is invalid: {api_key}")
+                logger.warning(
+                    f"API Key is invalid: {api_key}. Find your API key at https://app.agentops.ai/settings/projects"
+                )
 
         parent_key = parent_key or os.environ.get("AGENTOPS_PARENT_KEY")
         if parent_key is not None:
