@@ -1,0 +1,36 @@
+name: Check Generated Files
+
+on: push
+
+jobs:
+  check-diff:
+    runs-on: ubuntu-latest
+    steps:
+
+    - name: Checkout repository
+      uses: actions/checkout@v2
+
+    - name: Setup Python
+      uses: actions/setup-python@v2
+      with:
+        python-version: '3.11'
+
+    - name: Install Dependencies
+      if: always()
+      run: |
+        python -m pip install --upgrade pip
+        # Install your project dependencies here if necessary
+
+    - name: Run generate script
+      if: always()
+      run: python docs/v1/examples/notebooks/generate.py
+
+    - name: Check for differences
+      if: always()
+      run: |
+        if [[ `git status --porcelain` ]]; then
+          echo "Notebooks have been changed without being regenerated. Please run `python docs/v1/examples/notebooks/generate.py`."
+          exit 1
+        else
+          echo "No changes were detected. Notebooks up to date 💅🏻"
+        fi

@@ -60,6 +60,7 @@ function typeInTerminalText() {
   function addToTerminal(terminalContentDiv, texts) {
     let increment = 0;
     const interval = setInterval(() => {
+      if (!terminalContentDiv) return
       terminalContentDiv.innerHTML += texts[increment];
       increment++;
       if (increment === texts.length) {
@@ -67,7 +68,7 @@ function typeInTerminalText() {
         cursor.classList.remove("off");
         setTimeout(() => {
           terminalContentDiv.innerHTML = null;
-          pythonTerminal.textContent = "";
+          if (pythonTerminal) pythonTerminal.textContent = "";
           terminalCommand.textContent = "";
           inlineCodeImg.classList.remove("on");
           barelySpace.classList.add("off");
@@ -80,6 +81,7 @@ function typeInTerminalText() {
   function typewriterEffect(text, target, nextTarget = null) {
     let i = 0;
     const interval = setInterval(() => {
+      if (!target) return
       if (i < text.length) {
         target.textContent += text[i];
         i++;
@@ -104,11 +106,11 @@ function typeInTerminalText() {
 
   setInterval(() => {
     // this is to catch timeout bugginess with Mint
-    terminalContentDiv.innerHTML = null;
-    pythonTerminal.textContent = "";
-    terminalCommand.textContent = "";
-    inlineCodeImg.classList.remove("on");
-    barelySpace.classList.add("off");
+    if (terminalContentDiv) terminalContentDiv.innerHTML = null;
+    if (pythonTerminal) pythonTerminal.textContent = "";
+    if (terminalCommand) terminalCommand.textContent = "";
+    if (inlineCodeImg) inlineCodeImg.classList.remove("on");
+    if (barelySpace) barelySpace.classList.add("off");
 
     inlineCodeImg.src = imagesSrcs[contentIncrement];
     typewriterEffect(textsAndElementTargets[contentIncrement].text, textsAndElementTargets[contentIncrement].target, textsAndElementTargets[contentIncrement].nextTarget);
@@ -260,6 +262,7 @@ function addIntroEventListeners() {
 function loadTerminalText() {
   setInterval(() => {
     const cursor = document.getElementById("cursor");
+    if (!cursor) return
     if (cursor.style.opacity === "0") {
       cursor.style.opacity = "1";
     } else {

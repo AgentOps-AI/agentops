@@ -5,6 +5,7 @@ function updateStars() {
       const stars = Math.ceil(data.stargazers_count / 100) * 100 + 100;
       setTimeout(() => {
         const dataContainer = document.getElementById("stars-text");
+        if (!dataContainer) return
         dataContainer.innerHTML = `${stars.toLocaleString()}th`;
       }, 50);
     })
