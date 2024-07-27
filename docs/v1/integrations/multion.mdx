@@ -17,16 +17,6 @@ You can view several example notebooks [here](https://github.com/AgentOps-AI/age
 ## Adding AgentOps to MultiOn agents
 
 <Steps>
-	<Step title="Install the AgentOps SDK">
-		<CodeGroup>
-			```bash pip
-			pip install -U agentops
-			```
-			```bash poetry
-			poetry add agentops
-			```
-		</CodeGroup>
-	</Step>
 	<Step title="Install MultiOn">
 		<CodeGroup>
 			```bash pip
@@ -41,32 +31,26 @@ You can view several example notebooks [here](https://github.com/AgentOps-AI/age
 		* Create an [AgentOps API key](https://app.agentops.ai/settings/projects)
 		* Create a [MultiOn API key](https://app.multion.ai/api-keys)
 	</Step>
-	<Step title="Init AgentOps and MultiOn">
+	<Step title="Create a MultiOn client with an AgentOps key">
 		<CodeTooltip/>
 		<span className="api-key-container">
 			<CodeGroup>
 				```python python
-					import os
-					import agentops
-					import multion
-					from multion.client import MultiOn
+				import multion
+				from multion.client import MultiOn
+				
+				# Initialize MultiOn with both a MultiOn API key and an AgentOps API key
+				multion = MultiOn(
+					api_key=<INSERT YOUR MULTION API KEY HERE>,
+					agentops_api_key=<INSERT YOUR AGENTOPS API KEY HERE>
+				)
 
-					# Define your API keys
-					os.environ["AGENTOPS_API_KEY"] = "agentops_key"
-					os.environ["MULTION_API_KEY"] = "multion_key"
-
-					# Initialize MultiOn with both a MultiOn API key and an AgentOps API key
-					multion = MultiOn(
-						api_key=os.environ["MULTION_API_KEY"],
-						agentops_api_key=os.environ["AGENTOPS_API_KEY"],
-					)
-
-					browse_response = multion.browse(
-						cmd="what three things do i get with agentops",
-						url="https://www.agentops.ai/",
-						max_steps=4,
-						include_screenshot=True
-					)
+				browse_response = multion.browse(
+					cmd="what three things do i get with agentops",
+					url="https://www.agentops.ai/",
+					max_steps=4,
+					include_screenshot=True
+				)
 
 					print(browse_response.message)
 					```
