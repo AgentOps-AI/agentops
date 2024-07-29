@@ -96,7 +96,7 @@ class Client(metaclass=MetaClient):
         )
 
         self.llm_tracker = None
-        
+
         self.config = None
         try:
             self.config = ClientConfiguration(
