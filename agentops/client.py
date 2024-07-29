@@ -33,6 +33,7 @@ from .llm_tracker import LlmTracker
 class Client(metaclass=MetaClient):
     def __init__(self):
         self._config = Configuration()
+        self.pre_init_messages: List[str] = []
         self._worker: Optional[Worker] = None
         self._llm_tracker: Optional[LlmTracker] = None
         self._sessions: List[Session] = active_sessions
@@ -103,6 +104,9 @@ class Client(metaclass=MetaClient):
         self._initialize_partner_framework()
 
         self._worker = Worker(self._config)  # This sets Client() to initialized state
+
+        for message in Client().pre_init_messages:
+            logger.warning(message)
 
         if self._config.instrument_llm_calls:
             self._llm_tracker = LlmTracker(self)

@@ -1,4 +1,6 @@
 import logging
+import os
+import re
 from sys import prefix
 
 
@@ -23,12 +25,33 @@ class AgentOpsFormatter(logging.Formatter):
 
 
 logger = logging.getLogger("agentops")
-logger.setLevel(logging.ERROR)
+logger.setLevel(logging.CRITICAL)
 
-handler = logging.StreamHandler()
-handler.setLevel(logging.DEBUG)
-handler.setFormatter(AgentOpsFormatter())
-logger.addHandler(handler)
+# Streaming Handler
+stream_handler = logging.StreamHandler()
+stream_handler.setLevel(logging.DEBUG)
+stream_handler.setFormatter(AgentOpsFormatter())
+logger.addHandler(stream_handler)
+
+
+# File Handler
+class ScrubColorFormatter(logging.Formatter):
+    def format(self, record):
+        # Remove ANSI escape codes from the message
+        record.msg = ANSI_ESCAPE_PATTERN.sub("", record.msg)
+        return super().format(record)
+
+
+ANSI_ESCAPE_PATTERN = re.compile(r"\x1b\[[0-9;]*m")
+log_to_file = os.environ.get("AGENTOPS_LOG_FILE", True)
+if log_to_file:
+    file_handler = logging.FileHandler("agentops.log", mode="w")
+    file_handler.setLevel(logging.DEBUG)
+    formatter = ScrubColorFormatter("%(asctime)s - %(levelname)s - %(message)s")
+    file_handler.setFormatter(formatter)
+    file_handler.setFormatter(formatter)
+    logger.addHandler(file_handler)
+
 
 # for handler in logger.handlers:
 #     print(f"Handler: {handler}")
