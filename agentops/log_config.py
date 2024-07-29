@@ -25,6 +25,7 @@ class AgentOpsFormatter(logging.Formatter):
 
 
 logger = logging.getLogger("agentops")
+logger.propagate = False
 logger.setLevel(logging.CRITICAL)
 
 # Streaming Handler
@@ -43,7 +44,7 @@ class ScrubColorFormatter(logging.Formatter):
 
 
 ANSI_ESCAPE_PATTERN = re.compile(r"\x1b\[[0-9;]*m")
-log_to_file = os.environ.get("AGENTOPS_LOG_FILE", True)
+log_to_file = os.environ.get("AGENTOPS_LOGGING_TO_FILE", "True").lower() == "true"
 if log_to_file:
     file_handler = logging.FileHandler("agentops.log", mode="w")
     file_handler.setLevel(logging.DEBUG)
