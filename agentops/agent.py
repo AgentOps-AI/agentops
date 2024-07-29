@@ -24,6 +24,10 @@ def track_agent(name: Union[str, None] = None):
 
                     self.agent_ops_agent_id = str(uuid4())
 
+                    kwarg_name = kwargs.get("agentops_name", None)
+                    if name is not None:
+                        self.agent_ops_agent_name = kwarg_name
+
                     session = kwargs.get("session", None)
                     if session is not None:
                         self.agent_ops_session_id = session.session_id
