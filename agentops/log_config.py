@@ -23,9 +23,15 @@ class AgentOpsFormatter(logging.Formatter):
 
 
 logger = logging.getLogger("agentops")
-logger.setLevel(logging.CRITICAL)
+logger.setLevel(logging.ERROR)
 
 handler = logging.StreamHandler()
 handler.setLevel(logging.DEBUG)
 handler.setFormatter(AgentOpsFormatter())
 logger.addHandler(handler)
+
+# for handler in logger.handlers:
+#     print(f"Handler: {handler}")
+#     print(f"  - Level: {handler.level}")
+#     print(f"  - Formatter: {handler.formatter}")
+#     print(f"  - Handler Type: {type(handler).__name__}")

@@ -47,7 +47,7 @@ class Session:
         self.end_state: Optional[str] = None
         self.session_id = session_id
         self.init_timestamp = get_ISO_time()
-        self.tags: set[str] = set(tags)
+        self.tags: List[str] = tags
         self.video: Optional[str] = None
         self.end_state_reason: Optional[str] = None
         self.host_env = host_env
@@ -152,14 +152,28 @@ class Session:
         if not self.running:
             return
 
-        self.tags.update(tags)
+        if not (isinstance(tags, list) and all(isinstance(item, str) for item in tags)):
+            if isinstance(tags, str):
+                tags = [tags]
+
+        if self.tags is None:
+            self.tags = tags
+        else:
+            for tag in tags:
+                if tag not in self.tags:
+                    self.tags.append(tag)
+
         self._update_session()
 
     def set_tags(self, tags):
         if not self.running:
             return
 
-        self.tags = set(tags)
+        if not (isinstance(tags, list) and all(isinstance(item, str) for item in tags)):
+            if isinstance(tags, str):
+                tags = [tags]
+
+        self.tags = tags
         self._update_session()
 
     def record(self, event: Union[Event, ErrorEvent]):

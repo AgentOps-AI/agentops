@@ -171,6 +171,7 @@ def end_session(
     if Client().is_multi_session:
         return logger.warning(
             "Could not end session - multiple sessions detected. You must use session.end_session() instead of agentops.end_session()"
+            + " More info: https://docs.agentops.ai/v1/concepts/core-concepts#session-management"
         )
 
     if not Client().has_sessions:
@@ -194,6 +195,7 @@ def record(event: Union[Event, ErrorEvent]):
     if Client().is_multi_session:
         return logger.warning(
             "Could not record event - multiple sessions detected. You must use session.record() instead of agentops.record()"
+            + " More info: https://docs.agentops.ai/v1/concepts/core-concepts#session-management"
         )
 
     if not Client().has_sessions:
@@ -214,6 +216,7 @@ def add_tags(tags: List[str]):
     if Client().is_multi_session:
         return logger.warning(
             "Could not add tags to session - multiple sessions detected. You must use session.add_tags() instead of agentops.add_tags()"
+            + " More info: https://docs.agentops.ai/v1/concepts/core-concepts#session-management"
         )
 
     if not Client().has_sessions:
@@ -234,6 +237,7 @@ def set_tags(tags: List[str]):
     if Client().is_multi_session:
         return logger.warning(
             "Could not set tags on session - multiple sessions detected. You must use session.set_tags() instead of agentops.set_tags()"
+            + " More info: https://docs.agentops.ai/v1/concepts/core-concepts#session-management"
         )
 
     if not Client().has_sessions:
@@ -271,6 +275,7 @@ def create_agent(name: str, agent_id: Optional[str] = None):
     if Client().is_multi_session:
         return logger.warning(
             "Could not create agent - multiple sessions detected. You must use session.create_agent() instead of agentops.create_agent()"
+            + " More info: https://docs.agentops.ai/v1/concepts/core-concepts#session-management"
         )
 
     if not Client().has_sessions:

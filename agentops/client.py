@@ -59,7 +59,10 @@ class Client(metaclass=MetaClient):
                 UUID(api_key)
                 self._config.api_key = api_key
             except ValueError:
-                logger.warning(f"API Key is invalid: {api_key}")
+                logger.error(
+                    f"API Key is invalid: {{{api_key}}}. "
+                    + "\n\t    Find your API key at https://app.agentops.ai/settings/projects"
+                )
 
         if parent_key is not None:
             try:
@@ -90,9 +93,10 @@ class Client(metaclass=MetaClient):
             self._config.skip_auto_end_session = skip_auto_end_session
 
     def initialize(self) -> Union[Session, None]:
-        if self.api_key is None:
-            return logger.warning(
-                "Could not initialize AgentOps client - API Key is missing"
+        if self._config.api_key is None:
+            return logger.error(
+                "Could not initialize AgentOps client - API Key is missing."
+                + "\n\t    Find your API key at https://app.agentops.ai/settings/projects"
             )
 
         self._handle_unclean_exits()
@@ -154,7 +158,7 @@ class Client(metaclass=MetaClient):
 
         if session is None:
             return
-        if self.has_session:
+        else:
             session.set_tags(tags=tags)
 
     def add_default_tags(self, tags: List[str]) -> None:
@@ -245,13 +249,12 @@ class Client(metaclass=MetaClient):
         Returns:
             Decimal: The token cost of the session. Returns 0 if the cost is unknown.
         """
-
-        if not self.has_session:
+        session = self._safe_get_session()
+        if session is None:
             return
         if is_auto_end and self._config.skip_auto_end_session:
             return
 
-        session = self._sessions[0]
         token_cost = session.end_session(
             end_state=end_state, end_state_reason=end_state_reason, video=video
         )
@@ -389,10 +392,6 @@ class Client(metaclass=MetaClient):
     @property
     def is_initialized(self) -> bool:
         return self._worker is not None
-
-    @property
-    def has_session(self) -> bool:
-        return len(self._sessions) == 1
 
     @property
     def has_sessions(self) -> bool:

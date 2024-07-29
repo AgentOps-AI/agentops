@@ -20,24 +20,6 @@ class Configuration:
         env_data_opt_out: Optional[bool] = None,
     ):
 
-        api_key = api_key or os.environ.get("AGENTOPS_API_KEY")
-        if api_key is not None:
-            try:
-                UUID(api_key)
-                self.api_key = api_key
-            except ValueError:
-                logger.warning(
-                    f"API Key is invalid: {api_key}. Find your API key at https://app.agentops.ai/settings/projects"
-                )
-
-        parent_key = parent_key or os.environ.get("AGENTOPS_PARENT_KEY")
-        if parent_key is not None:
-            try:
-                UUID(parent_key)
-                self.parent_key = parent_key
-            except ValueError:
-                logger.warning(f"Parent Key is invalid: {parent_key}")
-
         if isinstance(default_tags, str):
             default_tags = [default_tags]
         if not isinstance(default_tags, list):
@@ -48,8 +30,8 @@ class Configuration:
         if default_tags is None:
             default_tags = []
 
-        self.api_key: Optional[str] = api_key
-        self.parent_key: Optional[str] = parent_key
+        self.api_key = None
+        self.parent_key = None
         self.endpoint: str = (
             endpoint
             or os.environ.get("AGENTOPS_API_ENDPOINT")
@@ -65,3 +47,21 @@ class Configuration:
             env_data_opt_out
             or os.environ.get("AGENTOPS_ENV_DATA_OPT_OUT", "False").lower() == "true"
         )
+
+        api_key = api_key or os.environ.get("AGENTOPS_API_KEY")
+        if api_key is not None:
+            try:
+                UUID(api_key)
+                self.api_key = api_key
+            except ValueError:
+                logger.error(
+                    f"API Key is invalid: {{{api_key}}}. "
+                    + "\n\t    Find your API key at https://app.agentops.ai/settings/projects"
+                )
+        parent_key = parent_key or os.environ.get("AGENTOPS_PARENT_KEY")
+        if parent_key is not None:
+            try:
+                UUID(parent_key)
+                self.parent_key = parent_key
+            except ValueError:
+                logger.warning(f"Parent Key is invalid: {parent_key}")
