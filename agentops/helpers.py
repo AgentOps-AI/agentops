@@ -1,6 +1,6 @@
 from pprint import pformat
 from functools import wraps
-from datetime import datetime, UTC, timezone
+from datetime import datetime, timezone
 import json
 import inspect
 from typing import Union
