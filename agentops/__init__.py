@@ -85,9 +85,10 @@ def init(
 
     if inherited_session_id is not None:
         if auto_start_session == False:
-            return Client().add_pre_init_warning(
+            Client().add_pre_init_warning(
                 "auto_start_session is set to False - inherited_session_id will not be used to automatically start a session"
             )
+            return Client().initialize()
 
         Client().configure(auto_start_session=False)
         Client().initialize()

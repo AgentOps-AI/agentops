@@ -371,14 +371,13 @@ class Client(metaclass=MetaClient):
         if len(self._sessions) == 1:
             return self._sessions[0]
 
-        elif len(self._sessions) > 1:
+        if len(self._sessions) > 1:
             calling_function = inspect.stack()[
                 2
             ].function  # Using index 2 because we have a wrapper at index 1
-            logger.warning(
+            return logger.warning(
                 f"Multiple sessions detected. You must use session.{calling_function}(). More info: https://docs.agentops.ai/v1/concepts/core-concepts#session-management"
             )
-            return
 
         return None
 
