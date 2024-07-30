@@ -40,14 +40,11 @@ class Session:
         tags: Optional[List[str]] = None,
         host_env: Optional[dict] = None,
     ):
-        if tags is None:
-            tags = []
-
         self.end_timestamp = None
         self.end_state: Optional[str] = None
         self.session_id = session_id
         self.init_timestamp = get_ISO_time()
-        self.tags: List[str] = tags
+        self.tags: List[str] = tags or []
         self.video: Optional[str] = None
         self.end_state_reason: Optional[str] = None
         self.host_env = host_env

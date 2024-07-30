@@ -358,7 +358,7 @@ class Client(metaclass=MetaClient):
             sys.excepthook = handle_exception
 
     def stop_instrumenting(self):
-        if self._llm_tracker:
+        if self._llm_tracker is not None:
             self._llm_tracker.stop_instrumenting()
 
     def add_pre_init_warning(self, message: str):
