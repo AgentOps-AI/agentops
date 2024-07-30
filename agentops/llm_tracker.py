@@ -35,6 +35,9 @@ class LlmTracker:
         "groq": {
             "0.9.0": ("Client.chat", "AsyncClient.chat"),
         },
+        "anthropic": {
+            "0.0.1": ("completions.create",),
+        },
     }
 
     def __init__(self, client):
@@ -612,6 +615,32 @@ class LlmTracker:
 
         return response
 
+    def _handle_response_anthropic(
+        self, response, kwargs, init_timestamp, session=None
+    ):
+        # Lazy import of Anthropic package
+        from anthropic import Anthropic, HUMAN_PROMPT, AI_PROMPT
+
+        self.llm_event = LLMEvent(init_timestamp=init_timestamp, params=kwargs)
+        if session is not None:
+            self.llm_event.session_id = session.session_id
+
+        try:
+            self.llm_event.returns = response.dict()
+            self.llm_event.agent_id = check_call_stack_for_agent_id()
+            self.llm_event.prompt = kwargs.get("prompt", "")
+            self.llm_event.completion = response.completion
+            self.llm_event.model = response.model
+            self.llm_event.end_timestamp = get_ISO_time()
+
+            self._safe_record(session, self.llm_event)
+        except Exception as e:
+            self._safe_record(
+                session, ErrorEvent(trigger_event=self.llm_event, exception=e)
+            )
+
+        return response
+
     def override_openai_v1_completion(self):
         from openai.resources.chat import completions
 
@@ -803,6 +832,23 @@ class LlmTracker:
         # Override the original method with the patched one
         completions.AsyncCompletions.create = patched_function
 
+    def override_anthropic_completion(self):
+        # Lazy import of Anthropic package
+        from anthropic import Anthropic
+
+        original_completion = Anthropic().completions.create
+
+        def patched_function(*args, **kwargs):
+            init_timestamp = get_ISO_time()
+            session = kwargs.pop("session", None)
+            result = original_completion(*args, **kwargs)
+            return self._handle_response_anthropic(
+                result, kwargs, init_timestamp, session=session
+            )
+
+        # Override the original method with the patched one
+        Anthropic().completions.create = patched_function
+
     def _override_method(self, api, method_path, module):
         def handle_response(result, kwargs, init_timestamp):
             if api == "openai":
@@ -914,6 +960,21 @@ class LlmTracker:
                         logger.warning(
                             f"Only Groq>=0.9.0 supported. v{module_version} found."
                         )
+
+                if api in sys.modules:
+                    module = import_module(api)
+                    if api == "anthropic":
+                        module_version = version(api)
+                        if module_version is None:
+                            logger.warning(
+                                f"Cannot determine Anthropic version. Only Anthropic>=0.0.1 supported."
+                            )
+                        if Version(module_version) >= parse("0.0.1"):
+                            self.override_anthropic_completion()
+                        else:
+                            logger.warning(
+                                f"Only Anthropic>=0.0.1 supported. v{module_version} found."
+                            )
 
     def stop_instrumenting(self):
         self.undo_override_openai_v1_async_completion()
