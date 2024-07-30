@@ -217,7 +217,6 @@ class Client(metaclass=MetaClient):
         if inherited_session_id is not None:
             try:
                 session_id = UUID(inherited_session_id)
-                return Client().start_session(inherited_session_id=inherited_session_id)
             except ValueError:
                 return logger.warning(f"Invalid session id: {inherited_session_id}")
         else:
@@ -234,7 +233,7 @@ class Client(metaclass=MetaClient):
             config=self._config,
         )
 
-        if not session.running:
+        if not session.is_running:
             return logger.error("Failed to start session")
 
         logger.info(
