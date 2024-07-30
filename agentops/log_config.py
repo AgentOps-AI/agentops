@@ -1,25 +1,24 @@
 import logging
 import os
 import re
-from sys import prefix
 
 
 class AgentOpsLogFormatter(logging.Formatter):
     blue = "\x1b[34m"
     bold_red = "\x1b[31;1m"
     reset = "\x1b[0m"
-    prefix = "🖇 AgentOps: %(message)s"
+    prefix = "🖇 AgentOps: "
 
     FORMATS = {
-        logging.DEBUG: f"(DEBUG) {prefix}",
-        logging.INFO: f"{prefix}",
-        logging.WARNING: f"{prefix}",
-        logging.ERROR: f"{bold_red}{prefix}{reset}",
-        logging.CRITICAL: f"{bold_red}{prefix}{reset}",
+        logging.DEBUG: f"(DEBUG) {prefix}%(message)s",
+        logging.INFO: f"{prefix}%(message)s",
+        logging.WARNING: f"{prefix}%(message)s",
+        logging.ERROR: f"{bold_red}{prefix}%(message)s{reset}",
+        logging.CRITICAL: f"{bold_red}{prefix}%(message)s{reset}",
     }
 
     def format(self, record):
-        log_fmt = self.FORMATS.get(record.levelno)
+        log_fmt = self.FORMATS.get(record.levelno, self.FORMATS[logging.INFO])
         formatter = logging.Formatter(log_fmt)
         return formatter.format(record)
 
@@ -52,10 +51,3 @@ if log_to_file:
     file_handler.setFormatter(formatter)
     file_handler.setFormatter(formatter)
     logger.addHandler(file_handler)
-
-
-# for handler in logger.handlers:
-#     print(f"Handler: {handler}")
-#     print(f"  - Level: {handler.level}")
-#     print(f"  - Formatter: {handler.formatter}")
-#     print(f"  - Handler Type: {type(handler).__name__}")

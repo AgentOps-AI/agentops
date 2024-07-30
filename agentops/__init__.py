@@ -78,11 +78,7 @@ def init(
     logger.setLevel(log_levels.get(logging_level, "INFO"))
 
     if tags is not None:
-        logger.warning(
-            "The 'tags' parameter is deprecated. Use 'default_tags' instead",
-            DeprecationWarning,
-            stacklevel=2,
-        )
+        logger.warning("The 'tags' parameter is deprecated. Use 'default_tags' instead")
         if default_tags is None:
             default_tags = tags
 
