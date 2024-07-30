@@ -7,6 +7,8 @@ Classes:
 
 import inspect
 import atexit
+import logging
+import os
 import signal
 import sys
 import threading
@@ -31,11 +33,21 @@ from .llm_tracker import LlmTracker
 @conditional_singleton
 class Client(metaclass=MetaClient):
     def __init__(self):
-        self._config = Configuration()
-        self.pre_init_messages: List[str] = []
+        self._pre_init_messages: List[str] = []
         self._initialized: bool = False
         self._llm_tracker: Optional[LlmTracker] = None
         self._sessions: List[Session] = active_sessions
+        self._config = Configuration()
+
+        self.configure(
+            api_key=os.environ.get("AGENTOPS_API_KEY"),
+            parent_key=os.environ.get("AGENTOPS_PARENT_KEY"),
+            endpoint=os.environ.get("AGENTOPS_API_ENDPOINT"),
+            env_data_opt_out=os.environ.get(
+                "AGENTOPS_ENV_DATA_OPT_OUT", "False"
+            ).lower()
+            == "true",
+        )
 
     def configure(
         self,
@@ -48,51 +60,41 @@ class Client(metaclass=MetaClient):
         instrument_llm_calls: Optional[bool] = None,
         auto_start_session: Optional[bool] = None,
         skip_auto_end_session: Optional[bool] = None,
+        env_data_opt_out: Optional[bool] = None,
     ):
-        if len(self._sessions) > 0:
+        if self.has_sessions:
             return logger.warning(
                 f"{len(self._sessions)} session(s) in progress. Configuration is locked until there are no more sessions running"
             )
 
-        if api_key is not None:
-            try:
-                UUID(api_key)
-                self._config.api_key = api_key
-            except ValueError:
-                logger.error(
-                    f"API Key is invalid: {{{api_key}}}. "
-                    + "\n\t    Find your API key at https://app.agentops.ai/settings/projects"
-                )
-
-        if parent_key is not None:
-            try:
-                UUID(parent_key)
-                self._config.parent_key = parent_key
-            except ValueError:
-                logger.warning(f"Parent Key is invalid: {parent_key}")
-
-        if endpoint is not None:
-            self._config.endpoint = endpoint
-
-        if max_wait_time is not None:
-            self._config.max_wait_time = max_wait_time
-
-        if max_queue_size is not None:
-            self._config.max_queue_size = max_queue_size
-
-        if default_tags is not None:
-            self._config.default_tags.update(default_tags)
-
-        if instrument_llm_calls is not None:
-            self._config.instrument_llm_calls = instrument_llm_calls
-
-        if auto_start_session is not None:
-            self._config.auto_start_session = auto_start_session
-
-        if skip_auto_end_session is not None:
-            self._config.skip_auto_end_session = skip_auto_end_session
+        self._config.configure(
+            self,
+            api_key=api_key,
+            parent_key=parent_key,
+            endpoint=endpoint,
+            max_wait_time=max_wait_time,
+            max_queue_size=max_queue_size,
+            default_tags=default_tags,
+            instrument_llm_calls=instrument_llm_calls,
+            auto_start_session=auto_start_session,
+            skip_auto_end_session=skip_auto_end_session,
+            env_data_opt_out=env_data_opt_out,
+        )
 
     def initialize(self) -> Union[Session, None]:
+        logging_level = os.getenv("AGENTOPS_LOGGING_LEVEL", "INFO")
+        log_levels = {
+            "CRITICAL": logging.CRITICAL,
+            "ERROR": logging.ERROR,
+            "INFO": logging.INFO,
+            "WARNING": logging.WARNING,
+            "DEBUG": logging.DEBUG,
+        }
+        logger.setLevel(log_levels.get(logging_level, "INFO"))
+
+        for message in Client()._pre_init_messages:
+            logger.warning(message)
+
         if self._config.api_key is None:
             return logger.error(
                 "Could not initialize AgentOps client - API Key is missing."
@@ -103,9 +105,6 @@ class Client(metaclass=MetaClient):
         self._initialize_partner_framework()
 
         self._initialized = True
-
-        for message in Client().pre_init_messages:
-            logger.warning(message)
 
         if self._config.instrument_llm_calls:
             self._llm_tracker = LlmTracker(self)
@@ -205,9 +204,14 @@ class Client(metaclass=MetaClient):
         if not self.is_initialized:
             return
 
-        session_id = (
-            UUID(inherited_session_id) if inherited_session_id is not None else uuid4()
-        )
+        if inherited_session_id is not None:
+            try:
+                session_id = UUID(inherited_session_id)
+                return Client().start_session(inherited_session_id=inherited_session_id)
+            except ValueError:
+                return logger.warning(f"Invalid session id: {inherited_session_id}")
+        else:
+            session_id = uuid4()
 
         session_tags = self._config.default_tags.copy()
         if tags is not None:
@@ -221,7 +225,7 @@ class Client(metaclass=MetaClient):
         )
 
         if not session.running:
-            return
+            return logger.error("Failed to start session")
 
         logger.info(
             colored(
@@ -347,6 +351,9 @@ class Client(metaclass=MetaClient):
     def stop_instrumenting(self):
         if self._llm_tracker:
             self._llm_tracker.stop_instrumenting()
+
+    def add_pre_init_warning(self, message: str):
+        self._pre_init_messages.append(message)
 
     # replaces the session currently stored with a specific session_id, with a new session
     def _update_session(self, session: Session):

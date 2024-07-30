@@ -159,7 +159,7 @@ def track_agent(name: Union[str, None] = None):
                     original_init(self, *args, **kwargs)
 
                     if not Client().is_initialized:
-                        Client().pre_init_messages.append(
+                        Client().add_pre_init_warning(
                             f"Failed to track an agent {name} because agentops.init() was not "
                             + "called before initializing the agent with the @track_agent decorator."
                         )
@@ -176,7 +176,7 @@ def track_agent(name: Union[str, None] = None):
                         session=session,
                     )
                 except AttributeError as e:
-                    Client().pre_init_messages.append(
+                    Client().add_pre_init_warning(
                         f"Failed to track an agent {name} because agentops.init() was not "
                         + "called before initializing the agent with the @track_agent decorator."
                     )

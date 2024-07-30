@@ -1,9 +1,6 @@
 # agentops/__init__.py
-import os
 import sys
-import logging
 from typing import Optional, List, Union
-from uuid import UUID
 
 from .client import Client
 from .event import Event, ActionEvent, LLMEvent, ToolEvent, ErrorEvent
@@ -20,11 +17,11 @@ except ModuleNotFoundError:
     pass
 
 if "autogen" in sys.modules:
-    Client().configure(auto_start_session=False)
+    Client().configure(instrument_llm_calls=False)
     Client().add_default_tags(["autogen"])
 
 if "crewai" in sys.modules:
-    Client().configure(auto_start_session=False)
+    Client().configure(instrument_llm_calls=False)
     Client().add_default_tags(["crewai"])
 
 
@@ -67,18 +64,10 @@ def init(
     if Client().is_initialized:
         return logger.warning("AgentOps has already been initialized")
 
-    logging_level = os.getenv("AGENTOPS_LOGGING_LEVEL", "INFO")
-    log_levels = {
-        "CRITICAL": logging.CRITICAL,
-        "ERROR": logging.ERROR,
-        "INFO": logging.INFO,
-        "WARNING": logging.WARNING,
-        "DEBUG": logging.DEBUG,
-    }
-    logger.setLevel(log_levels.get(logging_level, "INFO"))
-
     if tags is not None:
-        logger.warning("The 'tags' parameter is deprecated. Use 'default_tags' instead")
+        Client().add_pre_init_warning(
+            "The 'tags' parameter is deprecated. Use 'default_tags' instead"
+        )
         if default_tags is None:
             default_tags = tags
 
@@ -95,13 +84,14 @@ def init(
     )
 
     if inherited_session_id is not None:
-        try:
-            UUID(inherited_session_id)
-            Client().configure(auto_start_session=False)
-            Client().initialize()
-            return Client().start_session(inherited_session_id=inherited_session_id)
-        except ValueError:
-            return logger.warning(f"Invalid session id: {inherited_session_id}")
+        if auto_start_session == False:
+            return Client().add_pre_init_warning(
+                "auto_start_session is set to False - inherited_session_id will not be used to automatically start a session"
+            )
+
+        Client().configure(auto_start_session=False)
+        Client().initialize()
+        return Client().start_session(inherited_session_id=inherited_session_id)
 
     return Client().initialize()
 
