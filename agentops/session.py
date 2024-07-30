@@ -193,7 +193,7 @@ class Session:
 
                 event.trigger_event_id = event.trigger_event.id
                 event.trigger_event_type = event.trigger_event.event_type
-                self.record(event)
+                self._add_event(event.trigger_event.__dict__)
                 event.trigger_event = None  # removes trigger_event from serialization
 
         self._add_event(event.__dict__)

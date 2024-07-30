@@ -61,7 +61,7 @@
       "group": "Getting Started",
       "pages": [
         "v1/quickstart",
-        "v1/examples"
+        "v1/examples/examples"
       ]
     },
     {
@@ -93,7 +93,8 @@
         "v1/integrations/autogen",
         "v1/integrations/langchain",
         "v1/integrations/cohere",
-        "v1/integrations/litellm"
+        "v1/integrations/litellm",
+        "v1/integrations/multion"
       ]
     },
     {
