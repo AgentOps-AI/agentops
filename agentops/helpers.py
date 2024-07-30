@@ -1,7 +1,6 @@
 from pprint import pformat
 from functools import wraps
-import time
-from datetime import datetime, UTC
+from datetime import datetime, UTC, timezone
 import json
 import inspect
 from typing import Union
@@ -49,7 +48,7 @@ def get_ISO_time():
     Returns:
         str: The current UTC time as a string in ISO 8601 format.
     """
-    return datetime.now(UTC).isoformat()
+    return datetime.now(timezone.utc).isoformat()
 
 
 def is_jsonable(x):
