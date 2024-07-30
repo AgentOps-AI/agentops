@@ -30,7 +30,7 @@ def record_function(event_name: str):
                 if "session" in kwargs.keys():
                     del kwargs["session"]
                 if session is None:
-                    if len(Client().current_session_ids) > 1:
+                    if Client().is_multi_session:
                         raise ValueError(
                             "If multiple sessions exists, `session` is a required parameter in the function decorated by @record_function"
                         )
@@ -91,7 +91,7 @@ def record_function(event_name: str):
                 if "session" in kwargs.keys():
                     del kwargs["session"]
                 if session is None:
-                    if len(Client().current_session_ids) > 1:
+                    if Client().is_multi_session:
                         raise ValueError(
                             "If multiple sessions exists, `session` is a required parameter in the function decorated by @record_function"
                         )
