@@ -60,13 +60,12 @@ def init(
             (i.e. Crew determining when tasks are complete and ending the session)
     Attributes:
     """
+    Client().unsuppress_logs()
     if Client().is_initialized:
         return logger.warning("AgentOps has already been initialized")
 
     if tags is not None:
-        Client().add_pre_init_warning(
-            "The 'tags' parameter is deprecated. Use 'default_tags' instead"
-        )
+        logger.warning("The 'tags' parameter is deprecated. Use 'default_tags' instead")
         if default_tags is None:
             default_tags = tags
 
@@ -147,6 +146,8 @@ def start_session(
             e.g. ["test_run"].
         inherited_session_id: (str, optional): Set the session ID to inherit from another client
     """
+    Client().unsuppress_logs()
+
     if not Client().is_initialized:
         return logger.warning(
             "AgentOps has not been initialized yet. Please call agentops.init() before starting a session"
@@ -169,6 +170,8 @@ def end_session(
         end_state_reason (str, optional): The reason for ending the session.
         video (str, optional): URL to a video recording of the session
     """
+    Client().unsuppress_logs()
+
     if Client().is_multi_session:
         return logger.warning(
             "Could not end session - multiple sessions detected. You must use session.end_session() instead of agentops.end_session()"
@@ -193,6 +196,8 @@ def record(event: Union[Event, ErrorEvent]):
     Args:
         event (Event): The event to record.
     """
+    Client().unsuppress_logs()
+
     if Client().is_multi_session:
         return logger.warning(
             "Could not record event - multiple sessions detected. You must use session.record() instead of agentops.record()"
@@ -294,6 +299,8 @@ def get_session(session_id: str):
     Args:
         session_id (str): the session id for the session to be retreived
     """
+    Client().unsuppress_logs()
+
     return Client().get_session(session_id)
 
 

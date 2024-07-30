@@ -24,7 +24,7 @@ from .helpers import (
 )
 from .session import Session, active_sessions
 from .host_env import get_host_env
-from .log_config import logger, unsuppress_logs
+from .log_config import logger
 from .meta_client import MetaClient
 from .config import Configuration
 from .llm_tracker import LlmTracker
@@ -82,10 +82,7 @@ class Client(metaclass=MetaClient):
         )
 
     def initialize(self) -> Union[Session, None]:
-        unsuppress_logs()
-
-        for message in Client()._pre_init_messages:
-            logger.warning(message)
+        self.unsuppress_logs()
 
         if self._config.api_key is None:
             return logger.error(
@@ -403,6 +400,20 @@ class Client(metaclass=MetaClient):
         for session in self._sessions:
             if session.session_id == session_id:
                 return session
+
+    def unsuppress_logs(self):
+        logging_level = os.getenv("AGENTOPS_LOGGING_LEVEL", "INFO")
+        log_levels = {
+            "CRITICAL": logging.CRITICAL,
+            "ERROR": logging.ERROR,
+            "INFO": logging.INFO,
+            "WARNING": logging.WARNING,
+            "DEBUG": logging.DEBUG,
+        }
+        logger.setLevel(log_levels.get(logging_level, "INFO"))
+
+        for message in self._pre_init_messages:
+            logger.warning(message)
 
     def end_all_sessions(self):
         for s in self._sessions:
