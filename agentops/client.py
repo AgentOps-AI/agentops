@@ -21,7 +21,6 @@ from .helpers import (
     conditional_singleton,
 )
 from .session import Session, active_sessions
-from .worker import Worker
 from .host_env import get_host_env
 from .log_config import logger
 from .meta_client import MetaClient
@@ -34,7 +33,7 @@ class Client(metaclass=MetaClient):
     def __init__(self):
         self._config = Configuration()
         self.pre_init_messages: List[str] = []
-        self._worker: Optional[Worker] = None
+        self._initialized: bool = False
         self._llm_tracker: Optional[LlmTracker] = None
         self._sessions: List[Session] = active_sessions
 
@@ -103,7 +102,7 @@ class Client(metaclass=MetaClient):
         self._handle_unclean_exits()
         self._initialize_partner_framework()
 
-        self._worker = Worker(self._config)  # This sets Client() to initialized state
+        self._initialized = True
 
         for message in Client().pre_init_messages:
             logger.warning(message)
@@ -395,7 +394,7 @@ class Client(metaclass=MetaClient):
 
     @property
     def is_initialized(self) -> bool:
-        return self._worker is not None
+        return self._initialized
 
     @property
     def has_sessions(self) -> bool:
