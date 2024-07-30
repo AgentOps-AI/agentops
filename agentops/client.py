@@ -134,6 +134,8 @@ class Client(metaclass=MetaClient):
         Args:
             tags (List[str]): The list of tags to append.
         """
+        if not self.is_initialized:
+            return
 
         # if a string and not a list of strings
         if not (isinstance(tags, list) and all(isinstance(item, str) for item in tags)):
@@ -142,7 +144,9 @@ class Client(metaclass=MetaClient):
 
         session = self._safe_get_session()
         if session is None:
-            return
+            return logger.warning(
+                "Could not add tags. Start a session by calling agentops.start_session()."
+            )
 
         session.add_tags(tags=tags)
 
@@ -155,11 +159,15 @@ class Client(metaclass=MetaClient):
         Args:
             tags (List[str]): The list of tags to set.
         """
+        if not self.is_initialized:
+            return
 
         session = self._safe_get_session()
 
         if session is None:
-            return
+            return logger.warning(
+                "Could not set tags. Start a session by calling agentops.start_session()."
+            )
         else:
             session.set_tags(tags=tags)
 
@@ -184,7 +192,9 @@ class Client(metaclass=MetaClient):
 
         session = self._safe_get_session()
         if session is None:
-            return logger.error("Could not record event. No session.")
+            return logger.error(
+                "Could not record event. Start a session by calling agentops.start_session()."
+            )
         session.record(event)
 
     def start_session(

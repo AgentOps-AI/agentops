@@ -4,7 +4,6 @@ from requests.adapters import Retry, HTTPAdapter
 import requests
 
 from .exceptions import ApiServerException
-from .log_config import logger
 
 JSON_HEADER = {"Content-Type": "application/json; charset=UTF-8", "Accept": "*/*"}
 
