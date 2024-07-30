@@ -50,7 +50,6 @@ modules:
   - path: agentops.http_client
     depends_on:
       - path: agentops.exceptions
-      - path: agentops.log_config
   - path: agentops.langchain_callback_handler
     depends_on: []
   - path: agentops.llm_tracker
@@ -75,6 +74,7 @@ modules:
       - path: agentops.log_config
   - path: agentops.session
     depends_on:
+      - path: agentops.client
       - path: agentops.config
       - path: agentops.enums
       - path: agentops.event

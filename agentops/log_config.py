@@ -51,3 +51,15 @@ if log_to_file:
     file_handler.setFormatter(formatter)
     file_handler.setFormatter(formatter)
     logger.addHandler(file_handler)
+
+
+def unsuppress_logs():
+    logging_level = os.getenv("AGENTOPS_LOGGING_LEVEL", "INFO")
+    log_levels = {
+        "CRITICAL": logging.CRITICAL,
+        "ERROR": logging.ERROR,
+        "INFO": logging.INFO,
+        "WARNING": logging.WARNING,
+        "DEBUG": logging.DEBUG,
+    }
+    logger.setLevel(log_levels.get(logging_level, "INFO"))

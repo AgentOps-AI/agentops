@@ -42,7 +42,6 @@ def init(
     Initializes the AgentOps singleton pattern.
 
     Args:
-
         api_key (str, optional): API Key for AgentOps services. If none is provided, key will
             be read from the AGENTOPS_API_KEY environment variable.
         parent_key (str, optional): Organization key to give visibility of all user sessions the user's organization. If none is provided, key will
@@ -108,6 +107,21 @@ def configure(
     auto_start_session: Optional[bool] = None,
     skip_auto_end_session: Optional[bool] = None,
 ):
+    """
+    Configure the AgentOps Client
+
+    Args:
+        api_key (str, optional): API Key for AgentOps services.
+        parent_key (str, optional): Organization key to give visibility of all user sessions the user's organization.
+        endpoint (str, optional): The endpoint for the AgentOps service.
+        max_wait_time (int, optional): The maximum time to wait in milliseconds before flushing the queue.
+        max_queue_size (int, optional): The maximum size of the event queue
+        default_tags (List[str], optional): Default tags for the sessions that can be used for grouping or sorting later (e.g. ["GPT-4"]).
+        instrument_llm_calls (bool, optional): Whether to instrument LLM calls and emit LLMEvents.
+        auto_start_session (bool, optional): Whether to start a session automatically when the client is created.
+        skip_auto_end_session (bool, optional): Don't automatically end session based on your framework's decision-making
+            (i.e. Crew determining when tasks are complete and ending the session)
+    """
     Client().configure(
         api_key=api_key,
         parent_key=parent_key,

@@ -90,7 +90,9 @@ class HttpClient:
         except requests.exceptions.Timeout:
             result.code = 408
             result.status = HttpStatus.TIMEOUT
-            raise ApiServerException("Could not reach API server - connection timed out")
+            raise ApiServerException(
+                "Could not reach API server - connection timed out"
+            )
         except requests.exceptions.HTTPError as e:
             try:
                 result.parse(e.response)
@@ -105,10 +107,12 @@ class HttpClient:
             raise ApiServerException(f"RequestException: {e}")
 
         if result.code == 401:
-            raise ApiServerException(f"API server: invalid API key: {api_key}. Find your API key at https://app.agentops.ai/settings/projects")
+            raise ApiServerException(
+                f"API server: invalid API key: {api_key}. Find your API key at https://app.agentops.ai/settings/projects"
+            )
         if result.code == 400:
             if "message" in result.body:
-                raise ApiServerException(f"API server: {result.body["message"]}")
+                raise ApiServerException(f"API server: {result.body['message']}")
             else:
                 raise ApiServerException(f"API server: {result.body}")
         if result.code == 500:

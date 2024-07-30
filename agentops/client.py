@@ -24,7 +24,7 @@ from .helpers import (
 )
 from .session import Session, active_sessions
 from .host_env import get_host_env
-from .log_config import logger
+from .log_config import logger, unsuppress_logs
 from .meta_client import MetaClient
 from .config import Configuration
 from .llm_tracker import LlmTracker
@@ -82,15 +82,7 @@ class Client(metaclass=MetaClient):
         )
 
     def initialize(self) -> Union[Session, None]:
-        logging_level = os.getenv("AGENTOPS_LOGGING_LEVEL", "INFO")
-        log_levels = {
-            "CRITICAL": logging.CRITICAL,
-            "ERROR": logging.ERROR,
-            "INFO": logging.INFO,
-            "WARNING": logging.WARNING,
-            "DEBUG": logging.DEBUG,
-        }
-        logger.setLevel(log_levels.get(logging_level, "INFO"))
+        unsuppress_logs()
 
         for message in Client()._pre_init_messages:
             logger.warning(message)
@@ -179,6 +171,15 @@ class Client(metaclass=MetaClient):
             tags (List[str]): The list of tags to set.
         """
         self._config.default_tags.update(tags)
+
+    def get_default_tags(self) -> List[str]:
+        """
+        Append default tags at runtime.
+
+        Args:
+            tags (List[str]): The list of tags to set.
+        """
+        return list(self._config.default_tags)
 
     def record(self, event: Union[Event, ErrorEvent]) -> None:
         """
@@ -377,6 +378,8 @@ class Client(metaclass=MetaClient):
         ] = session
 
     def _safe_get_session(self) -> Optional[Session]:
+        if not self.is_initialized:
+            return None
         if len(self._sessions) == 1:
             return self._sessions[0]
 
