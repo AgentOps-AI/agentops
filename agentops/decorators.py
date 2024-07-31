@@ -156,6 +156,11 @@ def track_agent(name: Union[str, None] = None):
 
             def new_init(self, *args, **kwargs):
                 try:
+                    kwarg_name = kwargs.get("agentops_name", None)
+                    if kwarg_name is not None:
+                        self.agent_ops_agent_name = kwarg_name
+                        del kwargs["agentops_name"]
+
                     original_init(self, *args, **kwargs)
 
                     if not Client().is_initialized:
