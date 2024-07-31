@@ -1,6 +1,7 @@
 import json
 import yaml
 from .http_client import HttpClient
+from .exceptions import ApiServerException
 import os
 from .helpers import singleton
 from os import environ
@@ -53,6 +54,8 @@ def fetch_time_travel_id(ttd_id):
             json.dump(prompt_to_returns_map, file, indent=4)
 
         set_time_travel_active_state("on")
+    except ApiServerException as e:
+        manage_time_travel_state(activated=False, error=e)
     except Exception as e:
         manage_time_travel_state(activated=False, error=e)
 
