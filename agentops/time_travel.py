@@ -53,7 +53,7 @@ def fetch_time_travel_id(ttd_id):
         with open("agentops_time_travel.json", "w") as file:
             json.dump(prompt_to_returns_map, file, indent=4)
 
-        set_time_travel_active_state("on")
+        set_time_travel_active_state(True)
     except ApiServerException as e:
         manage_time_travel_state(activated=False, error=e)
     except Exception as e:
@@ -94,7 +94,7 @@ def check_time_travel_active():
     return False
 
 
-def set_time_travel_active_state(active_setting):
+def set_time_travel_active_state(is_active: bool):
     config_path = ".agentops_time_travel.yaml"
     try:
         with open(config_path, "r") as config_file:
@@ -102,7 +102,7 @@ def set_time_travel_active_state(active_setting):
     except FileNotFoundError:
         config = {}
 
-    config["Time_Travel_Debugging_Active"] = True if active_setting == "on" else False
+    config["Time_Travel_Debugging_Active"] = is_active
 
     with open(config_path, "w") as config_file:
         try:
@@ -113,7 +113,7 @@ def set_time_travel_active_state(active_setting):
             )
             return
 
-        if active_setting == "on":
+        if is_active:
             manage_time_travel_state(activated=True)
             print("AgentOps: Time Travel Activated")
         else:
@@ -135,4 +135,4 @@ def manage_time_travel_state(activated=False, error=None):
     else:
         reset_terminal()
         if error is not None:
-            print(f"Deactivating Time Travel. Error with configuration: {error}")
+            print(f"🖇 Deactivating Time Travel. Error with configuration: {error}")
