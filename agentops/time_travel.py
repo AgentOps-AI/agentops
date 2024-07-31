@@ -5,8 +5,7 @@ import os
 from .helpers import singleton
 from dotenv import load_dotenv
 from .log_config import logger
-
-load_dotenv()
+from os import environ
 
 
 @singleton
@@ -34,7 +33,7 @@ class TimeTravel:
 
 def fetch_time_travel_id(ttd_id):
     try:
-        endpoint = "http://localhost:8000"
+        endpoint = environ.get("AGENTOPS_API_ENDPOINT", "https://api.agentops.ai")
         payload = json.dumps({"ttd_id": ttd_id}).encode("utf-8")
         ttd_res = HttpClient.post(f"{endpoint}/v2/get_ttd", payload)
         if ttd_res.code != 200:
@@ -81,25 +80,15 @@ def fetch_prompt_override_from_time_travel_cache(kwargs):
 
 
 def check_time_travel_active():
-    try:
-        script_dir = os.path.dirname(os.path.abspath(__file__))
-        parent_dir = os.path.dirname(script_dir)
-        config_file_path = os.path.join(parent_dir, "agentops_time_travel.yaml")
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    parent_dir = os.path.dirname(script_dir)
+    config_file_path = os.path.join(parent_dir, "agentops_time_travel.yaml")
 
-        with open(config_file_path, "r") as config_file:
-            config = yaml.safe_load(config_file)
-            if config.get("Time_Travel_Debugging_Active", True):
-                # TODO: Find a way to only set background for cache hits or duration relevant to time travel.
-                # May not be possible. Right now we will set the background color multiple times which is benign
-                # but still not ideal
-                manage_time_travel_state(activated=True)
-                return True
-    except FileNotFoundError:
-        logger.error(
-            "Time travel debugging failed -- Could not find agentops_time_travel.yaml"
-        )
-    except Exception as e:
-        pass
+    with open(config_file_path, "r") as config_file:
+        config = yaml.safe_load(config_file)
+        if config.get("Time_Travel_Debugging_Active", True):
+            manage_time_travel_state(activated=True)
+            return True
 
     return False
 
@@ -131,18 +120,18 @@ def set_time_travel_active_state(active_setting):
             print("🖇 AgentOps: Time Travel Deactivated")
 
 
-def set_background_color_truecolor(r, g, b):
+def add_time_travel_terminal_indicator():
     print(f"🖇️ ⏰ | ", end="")
 
 
-def reset_terminal_background_color():
+def reset_terminal():
     print("\033[0m", end="")
 
 
 def manage_time_travel_state(activated=False, error=None):
     if activated:
-        set_background_color_truecolor(147, 243, 250)  # lightblue
+        add_time_travel_terminal_indicator()
     else:
-        reset_terminal_background_color()
+        reset_terminal()
         if error is not None:
             print(f"Deactivating Time Travel. Error with configuration: {error}")
