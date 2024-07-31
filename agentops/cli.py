@@ -7,7 +7,7 @@ def main():
     subparsers = parser.add_subparsers(dest="command")
 
     timetravel_parser = subparsers.add_parser(
-        "timetravel", help="Time Travel Debugging commands"
+        "timetravel", help="Time Travel Debugging commands", aliases=["tt"]
     )
     timetravel_parser.add_argument(
         "branch_name",
@@ -28,7 +28,7 @@ def main():
 
     args = parser.parse_args()
 
-    if args.command == "timetravel":
+    if args.command in ["timetravel", "tt"]:
         if args.branch_name:
             fetch_time_travel_id(args.branch_name)
         if args.on:

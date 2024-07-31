@@ -3,8 +3,6 @@ import yaml
 from .http_client import HttpClient
 import os
 from .helpers import singleton
-from dotenv import load_dotenv
-from .log_config import logger
 from os import environ
 
 
@@ -82,7 +80,7 @@ def fetch_prompt_override_from_time_travel_cache(kwargs):
 def check_time_travel_active():
     script_dir = os.path.dirname(os.path.abspath(__file__))
     parent_dir = os.path.dirname(script_dir)
-    config_file_path = os.path.join(parent_dir, "agentops_time_travel.yaml")
+    config_file_path = os.path.join(parent_dir, ".agentops_time_travel.yaml")
 
     with open(config_file_path, "r") as config_file:
         config = yaml.safe_load(config_file)
@@ -94,7 +92,7 @@ def check_time_travel_active():
 
 
 def set_time_travel_active_state(active_setting):
-    config_path = "agentops_time_travel.yaml"
+    config_path = ".agentops_time_travel.yaml"
     try:
         with open(config_path, "r") as config_file:
             config = yaml.safe_load(config_file) or {}
