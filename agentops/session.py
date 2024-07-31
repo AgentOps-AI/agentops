@@ -3,14 +3,17 @@ import functools
 import json
 import threading
 import time
-
-from .event import ErrorEvent, Event
-from .log_config import logger
-from .config import ClientConfiguration
-from .helpers import get_ISO_time, filter_unjsonable, safe_serialize
+from decimal import ROUND_HALF_UP, Decimal
+from termcolor import colored
 from typing import Optional, List, Union
 from uuid import UUID, uuid4
 
+from .exceptions import ApiServerException
+from .enums import EndState
+from .event import ErrorEvent, Event
+from .log_config import logger
+from .config import Configuration
+from .helpers import get_ISO_time, filter_unjsonable, safe_serialize
 from .http_client import HttpClient
 
 
@@ -33,15 +36,15 @@ class Session:
     def __init__(
         self,
         session_id: UUID,
+        config: Configuration,
         tags: Optional[List[str]] = None,
         host_env: Optional[dict] = None,
-        config: Optional[ClientConfiguration] = None,
     ):
         self.end_timestamp = None
         self.end_state: Optional[str] = None
         self.session_id = session_id
         self.init_timestamp = get_ISO_time()
-        self.tags = tags
+        self.tags: List[str] = tags or []
         self.video: Optional[str] = None
         self.end_state_reason: Optional[str] = None
         self.host_env = host_env
@@ -55,7 +58,10 @@ class Session:
         self.thread.daemon = True
         self.thread.start()
 
-        self._start_session()
+        self.is_running = self._start_session()
+        if self.is_running == False:
+            self.stop_flag.set()
+            self.thread.join(timeout=1)
 
     def set_video(self, video: str) -> None:
         """
@@ -67,11 +73,25 @@ class Session:
         self.video = video
 
     def end_session(
-        self, end_state: str = "Indeterminate", end_state_reason: Optional[str] = None
-    ) -> str:
+        self,
+        end_state: str = "Indeterminate",
+        end_state_reason: Optional[str] = None,
+        video: Optional[str] = None,
+    ) -> Union[Decimal, None]:
+
+        if not self.is_running:
+            return
+
+        if not any(end_state == state.value for state in EndState):
+            return logger.warning(
+                "Invalid end_state. Please use one of the EndState enums"
+            )
+
         self.end_timestamp = get_ISO_time()
         self.end_state = end_state
         self.end_state_reason = end_state_reason
+        if video is not None:
+            self.video = video
 
         self.stop_flag.set()
         self.thread.join(timeout=1)
@@ -79,15 +99,45 @@ class Session:
 
         with self.lock:
             payload = {"session": self.__dict__}
+            try:
+                res = HttpClient.post(
+                    f"{self.config.endpoint}/v2/update_session",
+                    json.dumps(filter_unjsonable(payload)).encode("utf-8"),
+                    jwt=self.jwt,
+                )
+            except ApiServerException as e:
+                return logger.error(f"Could not end session - {e}")
 
-            res = HttpClient.post(
-                f"{self.config.endpoint}/v2/update_session",
-                json.dumps(filter_unjsonable(payload)).encode("utf-8"),
-                jwt=self.jwt,
+        logger.debug(res.body)
+        token_cost = res.body.get("token_cost", "unknown")
+
+        if token_cost == "unknown" or token_cost is None:
+            logger.info("Could not determine cost of run.")
+            token_cost_d = Decimal(0)
+        else:
+            token_cost_d = Decimal(token_cost)
+            logger.info(
+                "This run's cost ${}".format(
+                    "{:.2f}".format(token_cost_d)
+                    if token_cost_d == 0
+                    else "{:.6f}".format(
+                        token_cost_d.quantize(
+                            Decimal("0.000001"), rounding=ROUND_HALF_UP
+                        )
+                    )
+                )
             )
-            logger.debug(res.body)
-            self.queue = []
-            return res.body.get("token_cost", "unknown")
+
+        logger.info(
+            colored(
+                f"\x1b[34mSession Replay: https://app.agentops.ai/drilldown?session_id={self.session_id}\x1b[0m",
+                "blue",
+            )
+        )
+
+        active_sessions.remove(self)
+
+        return token_cost_d
 
     def add_tags(self, tags: List[str]) -> None:
         """
@@ -96,11 +146,12 @@ class Session:
         Args:
             tags (List[str]): The list of tags to append.
         """
+        if not self.is_running:
+            return
 
-        # if a string and not a list of strings
         if not (isinstance(tags, list) and all(isinstance(item, str) for item in tags)):
-            if isinstance(tags, str):  # if it's a single string
-                tags = [tags]  # make it a list
+            if isinstance(tags, str):
+                tags = [tags]
 
         if self.tags is None:
             self.tags = tags
@@ -112,14 +163,19 @@ class Session:
         self._update_session()
 
     def set_tags(self, tags):
+        if not self.is_running:
+            return
+
         if not (isinstance(tags, list) and all(isinstance(item, str) for item in tags)):
-            if isinstance(tags, str):  # if it's a single string
-                tags = [tags]  # make it a list
+            if isinstance(tags, str):
+                tags = [tags]
 
         self.tags = tags
         self._update_session()
 
     def record(self, event: Union[Event, ErrorEvent]):
+        if not self.is_running:
+            return
         if isinstance(event, Event):
             if not event.end_timestamp or event.init_timestamp == event.end_timestamp:
                 event.end_timestamp = get_ISO_time()
@@ -170,12 +226,16 @@ class Session:
         with self.lock:
             payload = {"session": self.__dict__}
             serialized_payload = json.dumps(filter_unjsonable(payload)).encode("utf-8")
-            res = HttpClient.post(
-                f"{self.config.endpoint}/v2/create_session",
-                serialized_payload,
-                self.config.api_key,
-                self.config.parent_key,
-            )
+
+            try:
+                res = HttpClient.post(
+                    f"{self.config.endpoint}/v2/create_session",
+                    serialized_payload,
+                    self.config.api_key,
+                    self.config.parent_key,
+                )
+            except ApiServerException as e:
+                return logger.error(f"Could not start session - {e}")
 
             logger.debug(res.body)
 
@@ -190,16 +250,23 @@ class Session:
             return True
 
     def _update_session(self) -> None:
+        if not self.is_running:
+            return
         with self.lock:
             payload = {"session": self.__dict__}
 
-            res = HttpClient.post(
-                f"{self.config.endpoint}/v2/update_session",
-                json.dumps(filter_unjsonable(payload)).encode("utf-8"),
-                jwt=self.jwt,
-            )
+            try:
+                res = HttpClient.post(
+                    f"{self.config.endpoint}/v2/update_session",
+                    json.dumps(filter_unjsonable(payload)).encode("utf-8"),
+                    jwt=self.jwt,
+                )
+            except ApiServerException as e:
+                return logger.error(f"Could not update session - {e}")
 
     def _flush_queue(self) -> None:
+        if not self.is_running:
+            return
         with self.lock:
             queue_copy = copy.deepcopy(self.queue)  # Copy the current items
             self.queue = []
@@ -210,11 +277,14 @@ class Session:
                 }
 
                 serialized_payload = safe_serialize(payload).encode("utf-8")
-                HttpClient.post(
-                    f"{self.config.endpoint}/v2/create_events",
-                    serialized_payload,
-                    jwt=self.jwt,
-                )
+                try:
+                    HttpClient.post(
+                        f"{self.config.endpoint}/v2/create_events",
+                        serialized_payload,
+                        jwt=self.jwt,
+                    )
+                except ApiServerException as e:
+                    return logger.error(f"Could not post events - {e}")
 
                 logger.debug("\n<AGENTOPS_DEBUG_OUTPUT>")
                 logger.debug(
@@ -230,6 +300,8 @@ class Session:
                 self._flush_queue()
 
     def create_agent(self, name, agent_id):
+        if not self.is_running:
+            return
         if agent_id is None:
             agent_id = str(uuid4())
 
@@ -239,9 +311,14 @@ class Session:
         }
 
         serialized_payload = safe_serialize(payload).encode("utf-8")
-        HttpClient.post(
-            f"{self.config.endpoint}/v2/create_agent", serialized_payload, jwt=self.jwt
-        )
+        try:
+            HttpClient.post(
+                f"{self.config.endpoint}/v2/create_agent",
+                serialized_payload,
+                jwt=self.jwt,
+            )
+        except ApiServerException as e:
+            return logger.error(f"Could not create agent - {e}")
 
         return agent_id
 
@@ -252,3 +329,6 @@ class Session:
             return func(*args, **kwargs)
 
         return wrapper
+
+
+active_sessions: List[Session] = []
