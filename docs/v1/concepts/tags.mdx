@@ -8,15 +8,18 @@ Ex: `paid-user`, `v3`, `recruiter-agent`'
 
 # How to use Tags
 
-Tags belong to [Sessions](/v1/concepts/tags), but can be assigned in multiple ways.
+There are two types: `tags` and `default tags`.
+
+Tags belong to [Sessions](/v1/concepts/sessions) and are a fantastic way to organize your Sessions. When a session is created, `default_tags` 
+are automatically assigned to the session alongside any tags that are passed in. 
 
 ## On `init()`
 
-Passing tags into the `init` function will assign these tags to the `Session`
+Passing `default_tags` into the `init` function will assign these tags to the all subsequent Sessions.
 
 <CodeGroup>
 ```python python
-agentops.init(tags=['test tag'])
+agentops.init(default_tags=['test tag'])
 ```
 </CodeGroup>
 
@@ -32,7 +35,7 @@ agentops.set_tags(['test new tag'])
 
 ## `add_tags([str])`
 
-This will append an array of tags to the Session's existing tags
+This will append an array of tags to the session's existing tags.
 
 <CodeGroup>
 ```python python
