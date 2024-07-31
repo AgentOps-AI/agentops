@@ -5,156 +5,116 @@ Classes:
     Client: Provides methods to interact with the AgentOps service.
 """
 
-import os
 import inspect
 import atexit
+import logging
+import os
 import signal
 import sys
 import threading
 import traceback
-import logging
-from decimal import Decimal, ROUND_HALF_UP
+from decimal import Decimal
 from uuid import UUID, uuid4
-from typing import Optional, List, Union
+from typing import Optional, List, Union, Tuple
+from termcolor import colored
 
-from .event import ActionEvent, ErrorEvent, Event
-from .enums import EndState
-from .exceptions import NoSessionException, MultiSessionException, ConfigurationError
+from .event import Event, ErrorEvent
 from .helpers import (
-    get_ISO_time,
-    check_call_stack_for_agent_id,
-    get_partner_frameworks,
     conditional_singleton,
 )
-from .session import Session
+from .session import Session, active_sessions
 from .host_env import get_host_env
 from .log_config import logger
 from .meta_client import MetaClient
-from .config import ClientConfiguration
+from .config import Configuration
 from .llm_tracker import LlmTracker
-from termcolor import colored
-from typing import Tuple
-from .state import get_state, set_state
 
 
 @conditional_singleton
 class Client(metaclass=MetaClient):
-    """
-    Client for AgentOps service.
+    def __init__(self):
+        self._pre_init_messages: List[str] = []
+        self._initialized: bool = False
+        self._llm_tracker: Optional[LlmTracker] = None
+        self._sessions: List[Session] = active_sessions
+        self._config = Configuration()
 
-    Args:
+        self.configure(
+            api_key=os.environ.get("AGENTOPS_API_KEY"),
+            parent_key=os.environ.get("AGENTOPS_PARENT_KEY"),
+            endpoint=os.environ.get("AGENTOPS_API_ENDPOINT"),
+            env_data_opt_out=os.environ.get(
+                "AGENTOPS_ENV_DATA_OPT_OUT", "False"
+            ).lower()
+            == "true",
+        )
 
-        api_key (str, optional): API Key for AgentOps services. If none is provided, key will
-            be read from the AGENTOPS_API_KEY environment variable.
-        parent_key (str, optional): Organization key to give visibility of all user sessions the user's organization.
-            If none is provided, key will be read from the AGENTOPS_PARENT_KEY environment variable.
-        endpoint (str, optional): The endpoint for the AgentOps service. If none is provided, key will
-            be read from the AGENTOPS_API_ENDPOINT environment variable. Defaults to 'https://api.agentops.ai'.
-        max_wait_time (int, optional): The maximum time to wait in milliseconds before flushing the queue.
-            Defaults to 30,000 (30 seconds)
-        max_queue_size (int, optional): The maximum size of the event queue. Defaults to 100.
-        tags (List[str], optional): Tags for the sessions that can be used for grouping or
-            sorting later (e.g. ["GPT-4"]).
-        override (bool, optional): [Deprecated] Use `instrument_llm_calls` instead. Whether to instrument LLM calls
-            and emit LLMEvents.
-        instrument_llm_calls (bool): Whether to instrument LLM calls and emit LLMEvents..
-        auto_start_session (bool): Whether to start a session automatically when the client is created.
-        inherited_session_id (optional, str): Init Agentops with an existing Session
-        skip_auto_end_session (optional, bool): Don't automatically end session based on your framework's decision making
-    Attributes:
-        _session (Session, optional): A Session is a grouping of events (e.g. a run of your agent).
-    """
-
-    def __init__(
+    def configure(
         self,
         api_key: Optional[str] = None,
         parent_key: Optional[str] = None,
         endpoint: Optional[str] = None,
         max_wait_time: Optional[int] = None,
         max_queue_size: Optional[int] = None,
-        tags: Optional[List[str]] = None,
-        override: Optional[bool] = None,  # Deprecated
-        instrument_llm_calls=True,
-        auto_start_session=False,
-        inherited_session_id: Optional[str] = None,
-        skip_auto_end_session: Optional[bool] = False,
+        default_tags: Optional[List[str]] = None,
+        instrument_llm_calls: Optional[bool] = None,
+        auto_start_session: Optional[bool] = None,
+        skip_auto_end_session: Optional[bool] = None,
+        env_data_opt_out: Optional[bool] = None,
     ):
-        if override is not None:
-            logger.warning(
-                "The 'override' parameter is deprecated. Use 'instrument_llm_calls' instead.",
-                DeprecationWarning,
-                stacklevel=2,
+        if self.has_sessions:
+            return logger.warning(
+                f"{len(self._sessions)} session(s) in progress. Configuration is locked until there are no more sessions running"
             )
-            instrument_llm_calls = instrument_llm_calls or override
 
-        self._sessions: Optional[List[Session]] = []
-        self._tags: Optional[List[str]] = tags
-        self._tags_for_future_session: Optional[List[str]] = None
-
-        self._env_data_opt_out = (
-            os.environ.get("AGENTOPS_ENV_DATA_OPT_OUT", "False").lower() == "true"
+        self._config.configure(
+            self,
+            api_key=api_key,
+            parent_key=parent_key,
+            endpoint=endpoint,
+            max_wait_time=max_wait_time,
+            max_queue_size=max_queue_size,
+            default_tags=default_tags,
+            instrument_llm_calls=instrument_llm_calls,
+            auto_start_session=auto_start_session,
+            skip_auto_end_session=skip_auto_end_session,
+            env_data_opt_out=env_data_opt_out,
         )
 
-        self.llm_tracker = None
+    def initialize(self) -> Union[Session, None]:
+        self.unsuppress_logs()
 
-        self.config = None
-        try:
-            self.config = ClientConfiguration(
-                api_key=api_key,
-                parent_key=parent_key,
-                endpoint=endpoint,
-                max_wait_time=max_wait_time,
-                max_queue_size=max_queue_size,
-                skip_auto_end_session=skip_auto_end_session,
+        if self._config.api_key is None:
+            return logger.error(
+                "Could not initialize AgentOps client - API Key is missing."
+                + "\n\t    Find your API key at https://app.agentops.ai/settings/projects"
             )
-
-            if inherited_session_id is not None:
-                # Check if inherited_session_id is valid
-                UUID(inherited_session_id)
-
-        except ConfigurationError:
-            logger.warning("Failed to setup client Configuration")
-            return
 
         self._handle_unclean_exits()
+        self._initialize_partner_framework()
 
-        instrument_llm_calls, auto_start_session = self._check_for_partner_frameworks(
-            instrument_llm_calls, auto_start_session
-        )
+        self._initialized = True
 
-        if auto_start_session:
-            self.start_session(tags, self.config, inherited_session_id)
-        else:
-            self._tags_for_future_session = tags
+        if self._config.instrument_llm_calls:
+            self._llm_tracker = LlmTracker(self)
+            self._llm_tracker.override_api()
 
-        if instrument_llm_calls:
-            self.llm_tracker = LlmTracker(self)
-            self.llm_tracker.override_api()
+        session = None
+        if self._config.auto_start_session:
+            session = self.start_session()
 
-    def _check_for_partner_frameworks(
-        self, instrument_llm_calls, auto_start_session
-    ) -> Tuple[bool, bool]:
-        partner_frameworks = get_partner_frameworks()
-        for framework in partner_frameworks.keys():
-            if framework in sys.modules:
-                self.add_tags([framework])
-                if framework == "autogen":
-                    try:
-                        import autogen
-                        from .partners.autogen_logger import AutogenLogger
+        return session
 
-                        autogen.runtime_logging.start(logger=AutogenLogger())
-                        self.add_tags(["autogen"])
-                    except ImportError:
-                        pass
-                    except Exception as e:
-                        logger.warning(
-                            f"Failed to set up AutoGen logger with AgentOps. Error: {e}"
-                        )
+    def _initialize_partner_framework(self) -> None:
+        try:
+            import autogen
+            from .partners.autogen_logger import AutogenLogger
 
-                    return partner_frameworks[framework]
-
-        return instrument_llm_calls, auto_start_session
+            autogen.runtime_logging.start(logger=AutogenLogger())
+        except ImportError:
+            pass
+        except Exception as e:
+            logger.warning(f"Failed to set up AutoGen logger with AgentOps. Error: {e}")
 
     def add_tags(self, tags: List[str]) -> None:
         """
@@ -163,25 +123,19 @@ class Client(metaclass=MetaClient):
         Args:
             tags (List[str]): The list of tags to append.
         """
+        if not self.is_initialized:
+            return
 
         # if a string and not a list of strings
         if not (isinstance(tags, list) and all(isinstance(item, str) for item in tags)):
             if isinstance(tags, str):  # if it's a single string
                 tags = [tags]  # make it a list
 
-        if len(self._sessions) == 0:
-            if self._tags_for_future_session:
-                for tag in tags:
-                    if tag not in self._tags_for_future_session:
-                        self._tags_for_future_session.append(tag)
-            else:
-                self._tags_for_future_session = tags
-
-            return
-
         session = self._safe_get_session()
         if session is None:
-            return
+            return logger.warning(
+                "Could not add tags. Start a session by calling agentops.start_session()."
+            )
 
         session.add_tags(tags=tags)
 
@@ -194,14 +148,35 @@ class Client(metaclass=MetaClient):
         Args:
             tags (List[str]): The list of tags to set.
         """
+        if not self.is_initialized:
+            return
 
         session = self._safe_get_session()
 
         if session is None:
-            self._tags_for_future_session = tags
-            return
+            return logger.warning(
+                "Could not set tags. Start a session by calling agentops.start_session()."
+            )
+        else:
+            session.set_tags(tags=tags)
 
-        session.set_tags(tags=tags)
+    def add_default_tags(self, tags: List[str]) -> None:
+        """
+        Append default tags at runtime.
+
+        Args:
+            tags (List[str]): The list of tags to set.
+        """
+        self._config.default_tags.update(tags)
+
+    def get_default_tags(self) -> List[str]:
+        """
+        Append default tags at runtime.
+
+        Args:
+            tags (List[str]): The list of tags to set.
+        """
+        return list(self._config.default_tags)
 
     def record(self, event: Union[Event, ErrorEvent]) -> None:
         """
@@ -210,131 +185,19 @@ class Client(metaclass=MetaClient):
         Args:
             event (Event): The event to record.
         """
+        if not self.is_initialized:
+            return
 
         session = self._safe_get_session()
         if session is None:
-            logger.error("Could not record event. No session.")
-            return
+            return logger.error(
+                "Could not record event. Start a session by calling agentops.start_session()."
+            )
         session.record(event)
-
-    def _record_event_sync(self, func, event_name, *args, **kwargs):
-        init_time = get_ISO_time()
-        session: Optional[Session] = kwargs.get("session", None)
-        if "session" in kwargs.keys():
-            del kwargs["session"]
-        if session is None:
-            if len(Client().current_session_ids) > 1:
-                raise ValueError(
-                    "If multiple sessions exists, `session` is a required parameter in the function decorated by @record_function"
-                )
-        func_args = inspect.signature(func).parameters
-        arg_names = list(func_args.keys())
-        # Get default values
-        arg_values = {
-            name: func_args[name].default
-            for name in arg_names
-            if func_args[name].default is not inspect._empty
-        }
-        # Update with positional arguments
-        arg_values.update(dict(zip(arg_names, args)))
-        arg_values.update(kwargs)
-
-        event = ActionEvent(
-            params=arg_values,
-            init_timestamp=init_time,
-            agent_id=check_call_stack_for_agent_id(),
-            action_type=event_name,
-        )
-
-        try:
-            returns = func(*args, **kwargs)
-
-            # If the function returns multiple values, record them all in the same event
-            if isinstance(returns, tuple):
-                returns = list(returns)
-
-            event.returns = returns
-
-            if hasattr(returns, "screenshot"):
-                event.screenshot = returns.screenshot
-
-            event.end_timestamp = get_ISO_time()
-
-            if session:
-                session.record(event)
-            else:
-                self.record(event)
-
-        except Exception as e:
-            self.record(ErrorEvent(trigger_event=event, exception=e))
-
-            # Re-raise the exception
-            raise
-
-        return returns
-
-    async def _record_event_async(self, func, event_name, *args, **kwargs):
-        init_time = get_ISO_time()
-        session: Union[Session, None] = kwargs.get("session", None)
-        if "session" in kwargs.keys():
-            del kwargs["session"]
-        if session is None:
-            if len(Client().current_session_ids) > 1:
-                raise ValueError(
-                    "If multiple sessions exists, `session` is a required parameter in the function decorated by @record_function"
-                )
-        func_args = inspect.signature(func).parameters
-        arg_names = list(func_args.keys())
-        # Get default values
-        arg_values = {
-            name: func_args[name].default
-            for name in arg_names
-            if func_args[name].default is not inspect._empty
-        }
-        # Update with positional arguments
-        arg_values.update(dict(zip(arg_names, args)))
-        arg_values.update(kwargs)
-
-        event = ActionEvent(
-            params=arg_values,
-            init_timestamp=init_time,
-            agent_id=check_call_stack_for_agent_id(),
-            action_type=event_name,
-        )
-
-        try:
-            returns = await func(*args, **kwargs)
-
-            # If the function returns multiple values, record them all in the same event
-            if isinstance(returns, tuple):
-                returns = list(returns)
-
-            event.returns = returns
-
-            # NOTE: Will likely remove in future since this is tightly coupled. Adding it to see how useful we find it for now
-            # TODO: check if screenshot is the url string we expect it to be? And not e.g. "True"
-            if hasattr(returns, "screenshot"):
-                event.screenshot = returns.screenshot
-
-            event.end_timestamp = get_ISO_time()
-
-            if session:
-                session.record(event)
-            else:
-                self.record(event)
-
-        except Exception as e:
-            self.record(ErrorEvent(trigger_event=event, exception=e))
-
-            # Re-raise the exception
-            raise
-
-        return returns
 
     def start_session(
         self,
         tags: Optional[List[str]] = None,
-        config: Optional[ClientConfiguration] = None,
         inherited_session_id: Optional[str] = None,
     ) -> Union[Session, None]:
         """
@@ -346,34 +209,30 @@ class Client(metaclass=MetaClient):
             config: (Configuration, optional): Client configuration object
             inherited_session_id (optional, str): assign session id to match existing Session
         """
-        logging_level = os.getenv("AGENTOPS_LOGGING_LEVEL")
-        log_levels = {
-            "CRITICAL": logging.CRITICAL,
-            "ERROR": logging.ERROR,
-            "INFO": logging.INFO,
-            "WARNING": logging.WARNING,
-            "DEBUG": logging.DEBUG,
-        }
-        logger.setLevel(log_levels.get(logging_level or "INFO", "INFO"))
+        if not self.is_initialized:
+            return
 
-        if not config and not self.config:
-            return logger.warning(
-                "Cannot start session - missing configuration - did you call init()?"
-            )
+        if inherited_session_id is not None:
+            try:
+                session_id = UUID(inherited_session_id)
+            except ValueError:
+                return logger.warning(f"Invalid session id: {inherited_session_id}")
+        else:
+            session_id = uuid4()
 
-        session_id = (
-            UUID(inherited_session_id) if inherited_session_id is not None else uuid4()
-        )
+        session_tags = self._config.default_tags.copy()
+        if tags is not None:
+            session_tags.update(tags)
 
         session = Session(
             session_id=session_id,
-            tags=tags or self._tags_for_future_session,
-            host_env=get_host_env(self._env_data_opt_out),
-            config=config or self.config,
+            tags=list(session_tags),
+            host_env=get_host_env(self._config.env_data_opt_out),
+            config=self._config,
         )
 
-        if not session:
-            return logger.warning("Cannot start session - server rejected session")
+        if not session.is_running:
+            return logger.error("Failed to start session")
 
         logger.info(
             colored(
@@ -404,54 +263,17 @@ class Client(metaclass=MetaClient):
         Returns:
             Decimal: The token cost of the session. Returns 0 if the cost is unknown.
         """
-
         session = self._safe_get_session()
         if session is None:
             return
-        session.end_state = end_state
-        session.end_state_reason = end_state_reason
-
-        if is_auto_end and self.config.skip_auto_end_session:
+        if is_auto_end and self._config.skip_auto_end_session:
             return
 
-        if not any(end_state == state.value for state in EndState):
-            return logger.warning(
-                "Invalid end_state. Please use one of the EndState enums"
-            )
-
-        session.video = video
-
-        if not session.end_timestamp:
-            session.end_timestamp = get_ISO_time()
-
-        token_cost = session.end_session(end_state=end_state)
-
-        if token_cost == "unknown" or token_cost is None:
-            logger.info("Could not determine cost of run.")
-            token_cost_d = Decimal(0)
-        else:
-            token_cost_d = Decimal(token_cost)
-            logger.info(
-                "This run's cost ${}".format(
-                    "{:.2f}".format(token_cost_d)
-                    if token_cost_d == 0
-                    else "{:.6f}".format(
-                        token_cost_d.quantize(
-                            Decimal("0.000001"), rounding=ROUND_HALF_UP
-                        )
-                    )
-                )
-            )
-
-        logger.info(
-            colored(
-                f"\x1b[34mSession Replay: https://app.agentops.ai/drilldown?session_id={session.session_id}\x1b[0m",
-                "blue",
-            )
+        token_cost = session.end_session(
+            end_state=end_state, end_state_reason=end_state_reason, video=video
         )
 
-        self._sessions.remove(session)
-        return token_cost_d
+        return token_cost
 
     def create_agent(
         self,
@@ -533,30 +355,12 @@ class Client(metaclass=MetaClient):
             signal.signal(signal.SIGTERM, signal_handler)
             sys.excepthook = handle_exception
 
-    @property
-    def current_session_ids(self) -> List[str]:
-        return [str(s.session_id) for s in self._sessions]
-
-    @property
-    def api_key(self):
-        return self.config.api_key
-
-    def set_parent_key(self, parent_key: str):
-        """
-        Set the parent API key which has visibility to projects it is parent to.
-
-        Args:
-            parent_key (str): The API key of the parent organization to set.
-        """
-        self.config.parent_key = parent_key
-
-    @property
-    def parent_key(self):
-        return self.config.parent_key
-
     def stop_instrumenting(self):
-        if self.llm_tracker:
-            self.llm_tracker.stop_instrumenting()
+        if self._llm_tracker is not None:
+            self._llm_tracker.stop_instrumenting()
+
+    def add_pre_init_warning(self, message: str):
+        self._pre_init_messages.append(message)
 
     # replaces the session currently stored with a specific session_id, with a new session
     def _update_session(self, session: Session):
@@ -571,32 +375,76 @@ class Client(metaclass=MetaClient):
         ] = session
 
     def _safe_get_session(self) -> Optional[Session]:
-        for s in self._sessions:
-            if s.end_state is not None:
-                self._sessions.remove(s)
-
-        session = None
+        if not self.is_initialized:
+            return None
         if len(self._sessions) == 1:
-            session = self._sessions[0]
+            return self._sessions[0]
 
-        if len(self._sessions) == 0:
-            if get_state("is_initialized"):
-                return None
-
-        elif len(self._sessions) > 1:
+        if len(self._sessions) > 1:
             calling_function = inspect.stack()[
                 2
             ].function  # Using index 2 because we have a wrapper at index 1
-            logger.warning(
+            return logger.warning(
                 f"Multiple sessions detected. You must use session.{calling_function}(). More info: https://docs.agentops.ai/v1/concepts/core-concepts#session-management"
             )
 
-            return
+        return None
 
-        return session
+    def get_session(self, session_id: str):
+        """
+        Get an active (not ended) session from the AgentOps service
+
+        Args:
+            session_id (str): the session id for the session to be retreived
+        """
+        for session in self._sessions:
+            if session.session_id == session_id:
+                return session
+
+    def unsuppress_logs(self):
+        logging_level = os.getenv("AGENTOPS_LOGGING_LEVEL", "INFO")
+        log_levels = {
+            "CRITICAL": logging.CRITICAL,
+            "ERROR": logging.ERROR,
+            "INFO": logging.INFO,
+            "WARNING": logging.WARNING,
+            "DEBUG": logging.DEBUG,
+        }
+        logger.setLevel(log_levels.get(logging_level, "INFO"))
+
+        for message in self._pre_init_messages:
+            logger.warning(message)
 
     def end_all_sessions(self):
         for s in self._sessions:
             s.end_session()
 
         self._sessions.clear()
+
+    @property
+    def is_initialized(self) -> bool:
+        return self._initialized
+
+    @property
+    def has_sessions(self) -> bool:
+        return len(self._sessions) > 0
+
+    @property
+    def is_multi_session(self) -> bool:
+        return len(self._sessions) > 1
+
+    @property
+    def session_count(self) -> int:
+        return len(self._sessions)
+
+    @property
+    def current_session_ids(self) -> List[str]:
+        return [str(s.session_id) for s in self._sessions]
+
+    @property
+    def api_key(self):
+        return self._config.api_key
+
+    @property
+    def parent_key(self):
+        return self._config.parent_key

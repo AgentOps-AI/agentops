@@ -42,7 +42,7 @@ def mock_req():
 class TestRecordAction:
     def setup_method(self):
         self.url = "https://api.agentops.ai"
-        self.api_key = "random_api_key"
+        self.api_key = "11111111-1111-4111-8111-111111111111"
         self.event_type = "test_event_type"
         agentops.init(self.api_key, max_wait_time=5, auto_start_session=False)
 
@@ -114,12 +114,8 @@ class TestRecordAction:
         assert request_json["events"][0]["params"] == {"x": 3, "y": 4}
         assert request_json["events"][0]["returns"] == 7
 
-        init = datetime.fromisoformat(
-            request_json["events"][0]["init_timestamp"].replace("Z", "+00:00")
-        )
-        end = datetime.fromisoformat(
-            request_json["events"][0]["end_timestamp"].replace("Z", "+00:00")
-        )
+        init = datetime.fromisoformat(request_json["events"][0]["init_timestamp"])
+        end = datetime.fromisoformat(request_json["events"][0]["end_timestamp"])
 
         assert (end - init).total_seconds() >= 0.1
 
@@ -128,6 +124,8 @@ class TestRecordAction:
     def test_multiple_sessions_sync(self, mock_req):
         session_1 = agentops.start_session()
         session_2 = agentops.start_session()
+        assert session_1 is not None
+        assert session_2 is not None
 
         # Arrange
         @record_function(event_name=self.event_type)
@@ -172,6 +170,8 @@ class TestRecordAction:
     async def test_multiple_sessions_async(self, mock_req):
         session_1 = agentops.start_session()
         session_2 = agentops.start_session()
+        assert session_1 is not None
+        assert session_2 is not None
 
         # Arrange
         @record_function(self.event_type)
