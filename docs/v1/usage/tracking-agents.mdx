@@ -19,9 +19,9 @@ class MyAgent:
     ...
 ```
 
-Alternatively, to name an agent in runtime, the `@track_agent` decorator also allows for an additional keyword argument in the class constructor. Using the above example, you can create an agent with a dynamic name with:
+Alternatively, to name an agent in runtime, the `@track_agent` decorator creates an additional keyword argument in the class constructor. Using the above example, you can create an agent with a dynamic name with:
 ```python
-research_agent = MyAgent(name='ResearchAgent')
+research_agent = MyAgent(agentops_name='ResearchAgent')
 ```
 
 `trackagent.name` is optional. <br></br>
