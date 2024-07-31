@@ -1,96 +1,91 @@
-# yaml-language-server: $schema=https://raw.githubusercontent.com/gauge-sh/tach/v0.8.2/public/tach-yml-schema.json
+# yaml-language-server: $schema=https://raw.githubusercontent.com/gauge-sh/tach/v0.9.0/public/tach-yml-schema.json
 modules:
   - path: agentops
     depends_on:
-      - agentops.agent
-      - agentops.client
-      - agentops.config
-      - agentops.decorators
-      - agentops.event
-      - agentops.log_config
-      - agentops.partners
-      - agentops.session
+      - path: agentops.client
+      - path: agentops.decorators
+      - path: agentops.event
+      - path: agentops.log_config
+      - path: agentops.partners
+      - path: agentops.session
   - path: agentops.agent
-    depends_on:
-      - agentops
-      - agentops.log_config
+    depends_on: []
   - path: agentops.client
     depends_on:
-      - agentops
-      - agentops.config
-      - agentops.enums
-      - agentops.event
-      - agentops.exceptions
-      - agentops.helpers
-      - agentops.host_env
-      - agentops.llm_tracker
-      - agentops.log_config
-      - agentops.meta_client
-      - agentops.partners
-      - agentops.session
+      - path: agentops.config
+      - path: agentops.event
+      - path: agentops.helpers
+      - path: agentops.host_env
+      - path: agentops.llm_tracker
+      - path: agentops.log_config
+      - path: agentops.meta_client
+      - path: agentops.partners
+      - path: agentops.session
   - path: agentops.config
     depends_on:
-      - agentops.exceptions
+      - path: agentops.log_config
   - path: agentops.decorators
     depends_on:
-      - agentops
-      - agentops.client
-      - agentops.session
+      - path: agentops.client
+      - path: agentops.event
+      - path: agentops.helpers
+      - path: agentops.log_config
+      - path: agentops.session
   - path: agentops.enums
     depends_on: []
   - path: agentops.event
     depends_on:
-      - agentops.enums
-      - agentops.helpers
+      - path: agentops.enums
+      - path: agentops.helpers
   - path: agentops.exceptions
     depends_on:
-      - agentops.log_config
+      - path: agentops.log_config
   - path: agentops.helpers
     depends_on:
-      - agentops.log_config
+      - path: agentops.log_config
   - path: agentops.host_env
     depends_on:
-      - agentops.helpers
-      - agentops.log_config
+      - path: agentops.helpers
+      - path: agentops.log_config
   - path: agentops.http_client
     depends_on:
-      - agentops.log_config
+      - path: agentops.exceptions
   - path: agentops.langchain_callback_handler
-    depends_on:
-      - agentops
-      - agentops.helpers
+    depends_on: []
   - path: agentops.llm_tracker
     depends_on:
-      - agentops.event
-      - agentops.helpers
-      - agentops.log_config
-      - agentops.session
+      - path: agentops.event
+      - path: agentops.helpers
+      - path: agentops.log_config
+      - path: agentops.session
   - path: agentops.log_config
     depends_on: []
   - path: agentops.meta_client
     depends_on:
-      - agentops.helpers
-      - agentops.host_env
-      - agentops.http_client
-      - agentops.log_config
+      - path: agentops.helpers
+      - path: agentops.host_env
+      - path: agentops.http_client
+      - path: agentops.log_config
   - path: agentops.partners
     depends_on:
-      - agentops
-      - agentops.enums
-      - agentops.helpers
-      - agentops.log_config
+      - path: agentops
+      - path: agentops.enums
+      - path: agentops.helpers
+      - path: agentops.log_config
   - path: agentops.session
     depends_on:
-      - agentops.config
-      - agentops.event
-      - agentops.helpers
-      - agentops.http_client
-      - agentops.log_config
+      - path: agentops.client
+      - path: agentops.config
+      - path: agentops.enums
+      - path: agentops.event
+      - path: agentops.exceptions
+      - path: agentops.helpers
+      - path: agentops.http_client
+      - path: agentops.log_config
   - path: <root>
     depends_on:
-      - agentops
-      - agentops.enums
-      - agentops.helpers
+      - path: agentops
+      - path: agentops.helpers
 exclude:
   - .*__pycache__
   - .*egg-info
@@ -98,4 +93,5 @@ exclude:
   - examples
   - tests
   - venv
-source_root: .
+source_roots:
+  - .
