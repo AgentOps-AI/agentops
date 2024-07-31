@@ -7,6 +7,151 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes" />
   <title>multi_agent_example</title>
   <style>
+    html {
+      color: #1a1a1a;
+      background-color: #fdfdfd;
+    }
+    body {
+      margin: 0 auto;
+      max-width: 36em;
+      padding-left: 50px;
+      padding-right: 50px;
+      padding-top: 50px;
+      padding-bottom: 50px;
+      hyphens: auto;
+      overflow-wrap: break-word;
+      text-rendering: optimizeLegibility;
+      font-kerning: normal;
+    }
+    @media (max-width: 600px) {
+      body {
+        font-size: 0.9em;
+        padding: 12px;
+      }
+      h1 {
+        font-size: 1.8em;
+      }
+    }
+    @media print {
+      html {
+        background-color: white;
+      }
+      body {
+        background-color: transparent;
+        color: black;
+        font-size: 12pt;
+      }
+      p, h2, h3 {
+        orphans: 3;
+        widows: 3;
+      }
+      h2, h3, h4 {
+        page-break-after: avoid;
+      }
+    }
+    p {
+      margin: 1em 0;
+    }
+    a {
+      color: #1a1a1a;
+    }
+    a:visited {
+      color: #1a1a1a;
+    }
+    img {
+      max-width: 100%;
+    }
+    svg {
+      height: auto;
+      max-width: 100%;
+    }
+    h1, h2, h3, h4, h5, h6 {
+      margin-top: 1.4em;
+    }
+    h5, h6 {
+      font-size: 1em;
+      font-style: italic;
+    }
+    h6 {
+      font-weight: normal;
+    }
+    ol, ul {
+      padding-left: 1.7em;
+      margin-top: 1em;
+    }
+    li > ol, li > ul {
+      margin-top: 0;
+    }
+    blockquote {
+      margin: 1em 0 1em 1.7em;
+      padding-left: 1em;
+      border-left: 2px solid #e6e6e6;
+      color: #606060;
+    }
+    code {
+      font-family: Menlo, Monaco, Consolas, 'Lucida Console', monospace;
+      font-size: 85%;
+      margin: 0;
+      hyphens: manual;
+    }
+    pre {
+      margin: 1em 0;
+      overflow: auto;
+    }
+    pre code {
+      padding: 0;
+      overflow: visible;
+      overflow-wrap: normal;
+    }
+    .sourceCode {
+     background-color: transparent;
+     overflow: visible;
+    }
+    hr {
+      background-color: #1a1a1a;
+      border: none;
+      height: 1px;
+      margin: 1em 0;
+    }
+    table {
+      margin: 1em 0;
+      border-collapse: collapse;
+      width: 100%;
+      overflow-x: auto;
+      display: block;
+      font-variant-numeric: lining-nums tabular-nums;
+    }
+    table caption {
+      margin-bottom: 0.75em;
+    }
+    tbody {
+      margin-top: 0.5em;
+      border-top: 1px solid #1a1a1a;
+      border-bottom: 1px solid #1a1a1a;
+    }
+    th {
+      border-top: 1px solid #1a1a1a;
+      padding: 0.25em 0.5em 0.25em 0.5em;
+    }
+    td {
+      padding: 0.125em 0.5em 0.25em 0.5em;
+    }
+    header {
+      margin-bottom: 4em;
+      text-align: center;
+    }
+    #TOC li {
+      list-style: none;
+    }
+    #TOC ul {
+      padding-left: 1.3em;
+    }
+    #TOC > ul {
+      padding-left: 0;
+    }
+    #TOC a:not(:hover) {
+      text-decoration: none;
+    }
     code{white-space: pre-wrap;}
     span.smallcaps{font-variant: small-caps;}
     div.columns{display: flex; gap: min(4vw, 1.5em);}
@@ -87,15 +232,16 @@
     code span.vs { color: #4070a0; } /* VerbatimString */
     code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warning */
   </style>
-  <link rel="stylesheet" href="https://app.agentops.ai/notebook_styles.css" />
 </head>
 <body>
-<div id="a2e266428cefc683" class="cell markdown" data-collapsed="false">
+<div id="a2e266428cefc683" class="cell markdown" data-collapsed="false"
+data-jupyter="{&quot;outputs_hidden&quot;:false}">
 <h1 id="multi-agent-support">Multi-Agent Support</h1>
 <p>This is an example implementation of tracking events from two
 separate agents</p>
 </div>
-<div id="7c566fac57d3b6ce" class="cell code" data-collapsed="false">
+<div id="7c566fac57d3b6ce" class="cell code" data-collapsed="false"
+data-jupyter="{&quot;outputs_hidden&quot;:false}">
 <div class="sourceCode" id="cb1"><pre
 class="sourceCode python"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> agentops</span>
 <span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> agentops.agent <span class="im">import</span> track_agent</span>
@@ -106,7 +252,8 @@ class="sourceCode python"><code class="sourceCode python"><span id="cb1-1"><a hr
 <span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> IPython.display <span class="im">import</span> display, Markdown</span></code></pre></div>
 </div>
-<div id="9f8c52496c04693" class="cell code" data-collapsed="false">
+<div id="9f8c52496c04693" class="cell code" data-collapsed="false"
+data-jupyter="{&quot;outputs_hidden&quot;:false}">
 <div class="sourceCode" id="cb2"><pre
 class="sourceCode python"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>load_dotenv()</span>
 <span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>OPENAI_API_KEY <span class="op">=</span> os.getenv(<span class="st">&quot;OPENAI_API_KEY&quot;</span>, <span class="st">&quot;&lt;your_openai_key&gt;&quot;</span>)</span>
@@ -115,15 +262,18 @@ class="sourceCode python"><code class="sourceCode python"><span id="cb2-1"><a hr
 <span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>    level<span class="op">=</span>logging.DEBUG</span>
 <span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>)  <span class="co"># this will let us see that calls are assigned to an agent</span></span></code></pre></div>
 </div>
-<div id="af062552554d60ce" class="cell code" data-collapsed="false">
+<div id="af062552554d60ce" class="cell code" data-collapsed="false"
+data-jupyter="{&quot;outputs_hidden&quot;:false}">
 <div class="sourceCode" id="cb3"><pre
 class="sourceCode python"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>agentops.init(AGENTOPS_API_KEY, tags<span class="op">=</span>[<span class="st">&quot;multi-agent-notebook&quot;</span>])</span>
 <span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>openai_client <span class="op">=</span> OpenAI(api_key<span class="op">=</span>OPENAI_API_KEY)</span></code></pre></div>
 </div>
-<div id="95d212546aaf1f82" class="cell markdown" data-collapsed="false">
+<div id="95d212546aaf1f82" class="cell markdown" data-collapsed="false"
+data-jupyter="{&quot;outputs_hidden&quot;:false}">
 <p>Now lets create a few agents!</p>
 </div>
-<div id="727e3cc26ce3ec3" class="cell code" data-collapsed="false">
+<div id="727e3cc26ce3ec3" class="cell code" data-collapsed="false"
+data-jupyter="{&quot;outputs_hidden&quot;:false}">
 <div class="sourceCode" id="cb4"><pre
 class="sourceCode python"><code class="sourceCode python"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="at">@track_agent</span>(name<span class="op">=</span><span class="st">&quot;qa&quot;</span>)</span>
 <span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a><span class="kw">class</span> QaAgent:</span>
@@ -158,53 +308,66 @@ class="sourceCode python"><code class="sourceCode python"><span id="cb4-1"><a hr
 <span id="cb4-31"><a href="#cb4-31" aria-hidden="true" tabindex="-1"></a>        )</span>
 <span id="cb4-32"><a href="#cb4-32" aria-hidden="true" tabindex="-1"></a>        <span class="cf">return</span> res.choices[<span class="dv">0</span>].message.content</span></code></pre></div>
 </div>
-<div id="79b75d65de738522" class="cell code" data-collapsed="false">
+<div id="79b75d65de738522" class="cell code" data-collapsed="false"
+data-jupyter="{&quot;outputs_hidden&quot;:false}">
 <div class="sourceCode" id="cb5"><pre
 class="sourceCode python"><code class="sourceCode python"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a>qa <span class="op">=</span> QaAgent()</span>
 <span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>engineer <span class="op">=</span> EngineerAgent()</span></code></pre></div>
 </div>
-<div id="69dd3af9206308cc" class="cell markdown" data-collapsed="false">
+<div id="69dd3af9206308cc" class="cell markdown" data-collapsed="false"
+data-jupyter="{&quot;outputs_hidden&quot;:false}">
 <p>Now we have our agents and we tagged them with the
 <code>@track_agent</code> decorator. Any LLM calls that go through this
 class will now be tagged as agent calls in AgentOps.</p>
 <p>Lets use these agents!</p>
 </div>
-<div id="830b86dac47dceb3" class="cell code" data-collapsed="false">
+<div id="ae979350-470d-438d-a187-6dbaa0080b8c" class="cell code">
 <div class="sourceCode" id="cb6"><pre
-class="sourceCode python"><code class="sourceCode python"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a>display(Markdown(<span class="st">&quot;```python</span><span class="ch">\n</span><span class="st">&quot;</span> <span class="op">+</span> generated_func <span class="op">+</span> <span class="st">&quot;</span><span class="ch">\n</span><span class="st">```&quot;</span>))</span></code></pre></div>
+class="sourceCode python"><code class="sourceCode python"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a>generated_func <span class="op">=</span> engineer.completion(<span class="st">&quot;python function to test prime number&quot;</span>)</span></code></pre></div>
 </div>
-<div id="63c9d0d457aee91a" class="cell code" data-collapsed="false">
+<div id="830b86dac47dceb3" class="cell code" data-collapsed="false"
+data-jupyter="{&quot;outputs_hidden&quot;:false}">
 <div class="sourceCode" id="cb7"><pre
-class="sourceCode python"><code class="sourceCode python"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a>generated_test <span class="op">=</span> qa.completion(</span>
-<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a>    <span class="st">&quot;Write a python unit test that test the following function: </span><span class="ch">\n</span><span class="st"> &quot;</span> <span class="op">+</span> generated_func</span>
-<span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div>
+class="sourceCode python"><code class="sourceCode python"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a>display(Markdown(<span class="st">&quot;```python</span><span class="ch">\n</span><span class="st">&quot;</span> <span class="op">+</span> generated_func <span class="op">+</span> <span class="st">&quot;</span><span class="ch">\n</span><span class="st">```&quot;</span>))</span></code></pre></div>
 </div>
-<div id="a88ffcbd2015d422" class="cell code" data-collapsed="false">
+<div id="63c9d0d457aee91a" class="cell code" data-collapsed="false"
+data-jupyter="{&quot;outputs_hidden&quot;:false}">
 <div class="sourceCode" id="cb8"><pre
-class="sourceCode python"><code class="sourceCode python"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a>display(Markdown(<span class="st">&quot;```python</span><span class="ch">\n</span><span class="st">&quot;</span> <span class="op">+</span> generated_test <span class="op">+</span> <span class="st">&quot;</span><span class="ch">\n</span><span class="st">```&quot;</span>))</span></code></pre></div>
+class="sourceCode python"><code class="sourceCode python"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a>generated_test <span class="op">=</span> qa.completion(</span>
+<span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a>    <span class="st">&quot;Write a python unit test that test the following function: </span><span class="ch">\n</span><span class="st"> &quot;</span> <span class="op">+</span> generated_func</span>
+<span id="cb8-3"><a href="#cb8-3" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div>
 </div>
-<div id="1bd312ed049a5511" class="cell markdown" data-collapsed="false">
+<div id="a88ffcbd2015d422" class="cell code" data-collapsed="false"
+data-jupyter="{&quot;outputs_hidden&quot;:false}">
+<div class="sourceCode" id="cb9"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a>display(Markdown(<span class="st">&quot;```python</span><span class="ch">\n</span><span class="st">&quot;</span> <span class="op">+</span> generated_test <span class="op">+</span> <span class="st">&quot;</span><span class="ch">\n</span><span class="st">```&quot;</span>))</span></code></pre></div>
+</div>
+<div id="1bd312ed049a5511" class="cell markdown" data-collapsed="false"
+data-jupyter="{&quot;outputs_hidden&quot;:false}">
 <p>Perfect! It generated the code as expected, and in the DEBUG logs,
 you can see that the calls were made by agents named "engineer" and
 "qa"!</p>
 </div>
-<div id="cbd0817a31756397" class="cell markdown" data-collapsed="false">
+<div id="cbd0817a31756397" class="cell markdown" data-collapsed="false"
+data-jupyter="{&quot;outputs_hidden&quot;:false}">
 <p>Lets verify one more thing! If we make an LLM call outside of the
 context of a tracked agent, we want to make sure it gets assigned to the
 Default Agent.</p>
 </div>
-<div id="122e923cb07fd5f4" class="cell code" data-collapsed="false">
-<div class="sourceCode" id="cb9"><pre
-class="sourceCode python"><code class="sourceCode python"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a>res <span class="op">=</span> openai_client.chat.completions.create(</span>
-<span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a>    model<span class="op">=</span><span class="st">&quot;gpt-3.5-turbo&quot;</span>,</span>
-<span id="cb9-3"><a href="#cb9-3" aria-hidden="true" tabindex="-1"></a>    messages<span class="op">=</span>[</span>
-<span id="cb9-4"><a href="#cb9-4" aria-hidden="true" tabindex="-1"></a>        {<span class="st">&quot;role&quot;</span>: <span class="st">&quot;system&quot;</span>, <span class="st">&quot;content&quot;</span>: <span class="st">&quot;You are not a tracked agent&quot;</span>},</span>
-<span id="cb9-5"><a href="#cb9-5" aria-hidden="true" tabindex="-1"></a>        {<span class="st">&quot;role&quot;</span>: <span class="st">&quot;user&quot;</span>, <span class="st">&quot;content&quot;</span>: <span class="st">&quot;Say hello&quot;</span>},</span>
-<span id="cb9-6"><a href="#cb9-6" aria-hidden="true" tabindex="-1"></a>    ],</span>
-<span id="cb9-7"><a href="#cb9-7" aria-hidden="true" tabindex="-1"></a>)</span>
-<span id="cb9-8"><a href="#cb9-8" aria-hidden="true" tabindex="-1"></a>res.choices[<span class="dv">0</span>].message.content</span></code></pre></div>
+<div id="122e923cb07fd5f4" class="cell code" data-collapsed="false"
+data-jupyter="{&quot;outputs_hidden&quot;:false}">
+<div class="sourceCode" id="cb10"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a>res <span class="op">=</span> openai_client.chat.completions.create(</span>
+<span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a>    model<span class="op">=</span><span class="st">&quot;gpt-3.5-turbo&quot;</span>,</span>
+<span id="cb10-3"><a href="#cb10-3" aria-hidden="true" tabindex="-1"></a>    messages<span class="op">=</span>[</span>
+<span id="cb10-4"><a href="#cb10-4" aria-hidden="true" tabindex="-1"></a>        {<span class="st">&quot;role&quot;</span>: <span class="st">&quot;system&quot;</span>, <span class="st">&quot;content&quot;</span>: <span class="st">&quot;You are not a tracked agent&quot;</span>},</span>
+<span id="cb10-5"><a href="#cb10-5" aria-hidden="true" tabindex="-1"></a>        {<span class="st">&quot;role&quot;</span>: <span class="st">&quot;user&quot;</span>, <span class="st">&quot;content&quot;</span>: <span class="st">&quot;Say hello&quot;</span>},</span>
+<span id="cb10-6"><a href="#cb10-6" aria-hidden="true" tabindex="-1"></a>    ],</span>
+<span id="cb10-7"><a href="#cb10-7" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb10-8"><a href="#cb10-8" aria-hidden="true" tabindex="-1"></a>res.choices[<span class="dv">0</span>].message.content</span></code></pre></div>
 </div>
-<div id="a30909020c6a1ada" class="cell markdown" data-collapsed="false">
+<div id="a30909020c6a1ada" class="cell markdown" data-collapsed="false"
+data-jupyter="{&quot;outputs_hidden&quot;:false}">
 <p>You'll notice that we didn't log an agent name, so the AgentOps
 backend will assign it to the Default Agent for the session!</p>
 </div>
