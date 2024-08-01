@@ -162,3 +162,6 @@ cython_debug/
 .vscode/
 .benchmarks/
 .DS_Store
+
+agentops_time_travel.json
+.agentops_time_travel.yaml
