@@ -158,7 +158,7 @@ def check_agentops_update():
         parts = line.split()
         if len(parts) > 0 and parts[0] == "agentops":
             logger.warning(
-                f" WARNING: {parts[0]} is out of date. Please update with the command: 'pip install --upgrade {parts[0]}'"
+                f" WARNING: {parts[0]} is out of date. Please update with the command: 'pip install --upgrade agentops'"
             )
 
 
