@@ -1,14 +1,9 @@
-import os
-import json
 import unittest
 from unittest.mock import patch, mock_open, Mock
 
-from agentops.exceptions import ApiServerException
 from agentops.time_travel import (
     TimeTravel,
     check_time_travel_active,
-    fetch_prompt_override_from_time_travel_cache,
-    fetch_time_travel_id,
 )
 
 
