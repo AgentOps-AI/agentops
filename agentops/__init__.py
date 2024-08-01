@@ -5,6 +5,7 @@ from typing import Optional, List, Union
 from .client import Client
 from .event import Event, ActionEvent, LLMEvent, ToolEvent, ErrorEvent
 from .decorators import record_function, track_agent
+from .helpers import check_agentops_update
 from .log_config import logger
 from .session import Session
 
@@ -61,6 +62,8 @@ def init(
     Attributes:
     """
     Client().unsuppress_logs()
+    check_agentops_update()
+
     if Client().is_initialized:
         return logger.warning("AgentOps has already been initialized")
 
