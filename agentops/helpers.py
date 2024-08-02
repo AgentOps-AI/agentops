@@ -8,6 +8,7 @@ from typing import Union
 from .log_config import logger
 from uuid import UUID
 from importlib.metadata import version
+import subprocess
 
 ao_instances = {}
 
@@ -146,6 +147,19 @@ def get_agentops_version():
     except Exception as e:
         logger.warning("Error reading package version: %s", e)
         return None
+
+
+def check_agentops_update():
+    result = subprocess.run(
+        ["pip", "list", "--outdated"], capture_output=True, text=True
+    )
+    lines = result.stdout.splitlines()[2:]  # Skip the header lines
+    for line in lines:
+        parts = line.split()
+        if len(parts) > 0 and parts[0] == "agentops":
+            logger.warning(
+                f" WARNING: {parts[0]} is out of date. Please update with the command: 'pip install --upgrade agentops'"
+            )
 
 
 # Function decorator that prints function name and its arguments to the console for debug purposes
