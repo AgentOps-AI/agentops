@@ -65,7 +65,9 @@ def init(
     check_agentops_update()
 
     if Client().is_initialized:
-        return logger.warning("AgentOps has already been initialized")
+        return logger.warning(
+            "AgentOps has already been initialized. If you are trying to start a session, call agentops.start_session() instead."
+        )
 
     if tags is not None:
         logger.warning("The 'tags' parameter is deprecated. Use 'default_tags' instead")
