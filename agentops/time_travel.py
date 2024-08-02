@@ -85,11 +85,14 @@ def check_time_travel_active():
     parent_dir = os.path.dirname(script_dir)
     config_file_path = os.path.join(parent_dir, ".agentops_time_travel.yaml")
 
-    with open(config_file_path, "r") as config_file:
-        config = yaml.safe_load(config_file)
-        if config.get("Time_Travel_Debugging_Active", True):
-            manage_time_travel_state(activated=True)
-            return True
+    try:
+        with open(config_file_path, "r") as config_file:
+            config = yaml.safe_load(config_file)
+            if config.get("Time_Travel_Debugging_Active", True):
+                manage_time_travel_state(activated=True)
+                return True
+    except FileNotFoundError:
+        return False
 
     return False
 
