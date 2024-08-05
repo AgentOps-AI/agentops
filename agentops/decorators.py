@@ -39,7 +39,7 @@ def record_action(event_name: str):
                 if session is None:
                     if Client().is_multi_session:
                         raise ValueError(
-                            "If multiple sessions exists, `session` is a required parameter in the function decorated by @record_function"
+                            "If multiple sessions exists, `session` is a required parameter in the function decorated by @record_action"
                         )
                 func_args = inspect.signature(func).parameters
                 arg_names = list(func_args.keys())
@@ -100,7 +100,7 @@ def record_action(event_name: str):
                 if session is None:
                     if Client().is_multi_session:
                         raise ValueError(
-                            "If multiple sessions exists, `session` is a required parameter in the function decorated by @record_function"
+                            "If multiple sessions exists, `session` is a required parameter in the function decorated by @record_action"
                         )
                 func_args = inspect.signature(func).parameters
                 arg_names = list(func_args.keys())
