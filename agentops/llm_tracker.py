@@ -684,7 +684,7 @@ class LlmTracker:
 
         # if the response is a generator, decorate the generator
         if isinstance(response, Stream):
-            
+
             def generator():
                 for chunk in response:
                     handle_stream_chunk(chunk)
@@ -692,7 +692,7 @@ class LlmTracker:
 
             return generator()
 
-         # For asynchronous AsyncStream
+        # For asynchronous AsyncStream
         if isinstance(response, AsyncStream):
 
             async def async_generator():
