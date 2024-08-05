@@ -30,16 +30,25 @@ def mock_req():
         yield m
 
 
+class TestNonInitializedSessions:
+    def setup_method(self):
+        self.api_key = "11111111-1111-4111-8111-111111111111"
+        self.event_type = "test_event_type"
+
+    def test_non_initialized_doesnt_start_session(self, mock_req):
+        agentops.set_api_key(self.api_key)
+        session = agentops.start_session()
+        assert session is None
+
+
 class TestSingleSessions:
     def setup_method(self):
-        self.api_key = "random_api_key"
+        self.api_key = "11111111-1111-4111-8111-111111111111"
         self.event_type = "test_event_type"
-        self.config = agentops.ClientConfiguration(
-            api_key=self.api_key, max_wait_time=50
-        )
+        agentops.init(api_key=self.api_key, max_wait_time=50, auto_start_session=False)
 
     def test_session(self, mock_req):
-        agentops.start_session(config=self.config)
+        agentops.start_session()
 
         agentops.record(ActionEvent(self.event_type))
         agentops.record(ActionEvent(self.event_type))
@@ -63,14 +72,14 @@ class TestSingleSessions:
         assert mock_req.last_request.headers["Authorization"] == f"Bearer some_jwt"
         request_json = mock_req.last_request.json()
         assert request_json["session"]["end_state"] == end_state
-        assert request_json["session"]["tags"] == None
+        assert len(request_json["session"]["tags"]) == 0
 
         agentops.end_all_sessions()
 
     def test_add_tags(self, mock_req):
         # Arrange
         tags = ["GPT-4"]
-        agentops.start_session(tags=tags, config=self.config)
+        agentops.start_session(tags=tags)
         agentops.add_tags(["test-tag", "dupe-tag"])
         agentops.add_tags(["dupe-tag"])
 
@@ -90,7 +99,7 @@ class TestSingleSessions:
     def test_tags(self, mock_req):
         # Arrange
         tags = ["GPT-4"]
-        agentops.start_session(tags=tags, config=self.config)
+        agentops.start_session(tags=tags)
 
         # Act
         agentops.record(ActionEvent(self.event_type))
@@ -112,9 +121,7 @@ class TestSingleSessions:
     def test_inherit_session_id(self, mock_req):
         # Arrange
         inherited_id = "4f72e834-ff26-4802-ba2d-62e7613446f1"
-        agentops.start_session(
-            tags=["test"], config=self.config, inherited_session_id=inherited_id
-        )
+        agentops.start_session(tags=["test"], inherited_session_id=inherited_id)
 
         # Act
         # session_id correct
@@ -129,63 +136,54 @@ class TestSingleSessions:
         agentops.end_all_sessions()
 
     def test_add_tags_with_string(self, mock_req):
-        agentops.start_session(config=self.config)
+        agentops.start_session()
         agentops.add_tags("wrong-type-tags")
 
         request_json = mock_req.last_request.json()
         assert request_json["session"]["tags"] == ["wrong-type-tags"]
 
     def test_session_add_tags_with_string(self, mock_req):
-        session = agentops.start_session(config=self.config)
+        session = agentops.start_session()
         session.add_tags("wrong-type-tags")
 
         request_json = mock_req.last_request.json()
         assert request_json["session"]["tags"] == ["wrong-type-tags"]
 
     def test_set_tags_with_string(self, mock_req):
-        agentops.start_session(config=self.config)
+        agentops.start_session()
         agentops.set_tags("wrong-type-tags")
 
         request_json = mock_req.last_request.json()
         assert request_json["session"]["tags"] == ["wrong-type-tags"]
 
     def test_session_set_tags_with_string(self, mock_req):
-        session = agentops.start_session(config=self.config)
+        session = agentops.start_session()
+        assert session is not None
+
         session.set_tags("wrong-type-tags")
 
         request_json = mock_req.last_request.json()
         assert request_json["session"]["tags"] == ["wrong-type-tags"]
 
-    def test_add_tags_before_session(self, mock_req):
-        agentops.add_tags(["pre-session-tag"])
-        agentops.start_session(config=self.config)
-
-        request_json = mock_req.last_request.json()
-        assert request_json["session"]["tags"] == ["pre-session-tag"]
-
     def test_set_tags_before_session(self, mock_req):
-        agentops.set_tags(["pre-session-tag"])
-        agentops.start_session(config=self.config)
+        agentops.configure(default_tags=["pre-session-tag"])
+        agentops.start_session()
 
         request_json = mock_req.last_request.json()
         assert request_json["session"]["tags"] == ["pre-session-tag"]
-
-    def test_no_config_doesnt_start_session(self, mock_req):
-        session = agentops.start_session()
-        assert session is None
 
     def test_safe_get_session_no_session(self, mock_req):
         session = Client()._safe_get_session()
         assert session is None
 
     def test_safe_get_session_with_session(self, mock_req):
-        agentops.start_session(config=self.config)
+        agentops.start_session()
         session = Client()._safe_get_session()
         assert session is not None
 
     def test_safe_get_session_with_multiple_sessions(self, mock_req):
-        agentops.start_session(config=self.config)
-        agentops.start_session(config=self.config)
+        agentops.start_session()
+        agentops.start_session()
 
         session = Client()._safe_get_session()
         assert session is None
@@ -193,15 +191,15 @@ class TestSingleSessions:
 
 class TestMultiSessions:
     def setup_method(self):
-        self.api_key = "random_api_key"
+        self.api_key = "11111111-1111-4111-8111-111111111111"
         self.event_type = "test_event_type"
-        self.config = agentops.ClientConfiguration(
-            api_key=self.api_key, max_wait_time=50
-        )
+        agentops.init(api_key=self.api_key, max_wait_time=50, auto_start_session=False)
 
     def test_two_sessions(self, mock_req):
-        session_1 = agentops.start_session(config=self.config)
-        session_2 = agentops.start_session(config=self.config)
+        session_1 = agentops.start_session()
+        session_2 = agentops.start_session()
+        assert session_1 is not None
+        assert session_2 is not None
 
         assert len(agentops.Client().current_session_ids) == 2
         assert agentops.Client().current_session_ids == [
@@ -233,7 +231,7 @@ class TestMultiSessions:
         assert mock_req.last_request.headers["Authorization"] == f"Bearer some_jwt"
         request_json = mock_req.last_request.json()
         assert request_json["session"]["end_state"] == end_state
-        assert request_json["session"]["tags"] is None
+        assert len(request_json["session"]["tags"]) == 0
 
         session_2.end_session(end_state)
         # We should have 6 requests (2 additional end sessions)
@@ -241,15 +239,17 @@ class TestMultiSessions:
         assert mock_req.last_request.headers["Authorization"] == f"Bearer some_jwt"
         request_json = mock_req.last_request.json()
         assert request_json["session"]["end_state"] == end_state
-        assert request_json["session"]["tags"] is None
+        assert len(request_json["session"]["tags"]) == 0
 
     def test_add_tags(self, mock_req):
         # Arrange
         session_1_tags = ["session-1"]
         session_2_tags = ["session-2"]
 
-        session_1 = agentops.start_session(tags=session_1_tags, config=self.config)
-        session_2 = agentops.start_session(tags=session_2_tags, config=self.config)
+        session_1 = agentops.start_session(tags=session_1_tags)
+        session_2 = agentops.start_session(tags=session_2_tags)
+        assert session_1 is not None
+        assert session_2 is not None
 
         session_1.add_tags(["session-1-added", "session-1-added-2"])
         session_2.add_tags(["session-2-added"])

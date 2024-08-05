@@ -1,149 +1,74 @@
-"""
-AgentOps Client configuration.
+from typing import List, Optional
+from uuid import UUID
 
-Classes:
-    ClientConfiguration: Stores the configuration settings for AgentOps clients.
-"""
-
-from typing import Optional
-from os import environ
-
-from .exceptions import ConfigurationError
+from .log_config import logger
 
 
-class ClientConfiguration:
-    """
-    Stores the configuration settings for AgentOps clients.
+class Configuration:
+    def __init__(self):
+        self.api_key: Optional[str] = None
+        self.parent_key: Optional[str] = None
+        self.endpoint: str = "https://api.agentops.ai"
+        self.max_wait_time: int = 5000
+        self.max_queue_size: int = 100
+        self.default_tags: set[str] = set()
+        self.instrument_llm_calls: bool = True
+        self.auto_start_session: bool = True
+        self.skip_auto_end_session: bool = False
+        self.env_data_opt_out: bool = False
 
-    Args:
-        api_key (str, optional): API Key for AgentOps services. If none is provided, key will
-            be read from the AGENTOPS_API_KEY environment variable.
-        parent_key (str, optional): Organization key to give visibility of all user sessions the user's organization. If none is provided, key will
-            be read from the AGENTOPS_PARENT_KEY environment variable.
-        endpoint (str, optional): The endpoint for the AgentOps service. If none is provided, key will
-            be read from the AGENTOPS_API_ENDPOINT environment variable. Defaults to 'https://api.agentops.ai'.
-        max_wait_time (int, optional): The maximum time to wait in milliseconds before flushing the queue. Defaults to 5000.
-        max_queue_size (int, optional): The maximum size of the event queue. Defaults to 100.
-    """
-
-    def __init__(
+    def configure(
         self,
+        client,
         api_key: Optional[str] = None,
         parent_key: Optional[str] = None,
         endpoint: Optional[str] = None,
         max_wait_time: Optional[int] = None,
         max_queue_size: Optional[int] = None,
-        skip_auto_end_session: Optional[bool] = False,
+        default_tags: Optional[List[str]] = None,
+        instrument_llm_calls: Optional[bool] = None,
+        auto_start_session: Optional[bool] = None,
+        skip_auto_end_session: Optional[bool] = None,
+        env_data_opt_out: Optional[bool] = None,
     ):
+        if api_key is not None:
+            try:
+                UUID(api_key)
+                self.api_key = api_key
+            except ValueError:
+                message = f"API Key is invalid: {{{api_key}}}.\n\t    Find your API key at https://app.agentops.ai/settings/projects"
+                client.add_pre_init_warning(message)
+                logger.error(message)
 
-        if not api_key:
-            api_key = environ.get("AGENTOPS_API_KEY", None)
-            if not api_key:
-                raise ConfigurationError(
-                    "No API key provided - no data will be recorded."
-                )
+        if parent_key is not None:
+            try:
+                UUID(parent_key)
+                self.parent_key = parent_key
+            except ValueError:
+                message = f"Parent Key is invalid: {parent_key}"
+                client.add_pre_init_warning(message)
+                logger.warning(message)
 
-        if not parent_key:
-            parent_key = environ.get("AGENTOPS_PARENT_KEY", None)
+        if endpoint is not None:
+            self.endpoint = endpoint
 
-        if not endpoint:
-            endpoint = environ.get("AGENTOPS_API_ENDPOINT", "https://api.agentops.ai")
+        if max_wait_time is not None:
+            self.max_wait_time = max_wait_time
 
-        self._api_key: str = api_key
-        self._endpoint = endpoint
-        self._max_wait_time = max_wait_time or 5000
-        self._max_queue_size = max_queue_size or 100
-        self._parent_key: Optional[str] = parent_key
-        self._skip_auto_end_session: Optional[bool] = skip_auto_end_session
+        if max_queue_size is not None:
+            self.max_queue_size = max_queue_size
 
-    @property
-    def api_key(self) -> str:
-        """
-        Get the API Key for AgentOps services.
+        if default_tags is not None:
+            self.default_tags.update(default_tags)
 
-        Returns:
-            str: The API Key for AgentOps services.
-        """
-        return self._api_key
+        if instrument_llm_calls is not None:
+            self.instrument_llm_calls = instrument_llm_calls
 
-    @api_key.setter
-    def api_key(self, value: str):
-        """
-        Set the API Key for AgentOps services.
+        if auto_start_session is not None:
+            self.auto_start_session = auto_start_session
 
-        Args:
-            value (str): The new API Key.
-        """
-        self._api_key = value
+        if skip_auto_end_session is not None:
+            self.skip_auto_end_session = skip_auto_end_session
 
-    @property
-    def endpoint(self) -> str:
-        """
-        Get the endpoint for the AgentOps service.
-
-        Returns:
-            str: The endpoint for the AgentOps service.
-        """
-        return self._endpoint  # type: ignore
-
-    @endpoint.setter
-    def endpoint(self, value: str):
-        """
-        Set the endpoint for the AgentOps service.
-
-        Args:
-            value (str): The new endpoint.
-        """
-        self._endpoint = value
-
-    @property
-    def max_wait_time(self) -> int:
-        """
-        Get the maximum wait time for the AgentOps service.
-
-        Returns:
-            int: The maximum wait time.
-        """
-        return self._max_wait_time
-
-    @max_wait_time.setter
-    def max_wait_time(self, value: int):
-        """
-        Set the maximum wait time for the AgentOps service.
-
-        Args:
-            value (int): The new maximum wait time.
-        """
-        self._max_wait_time = value
-
-    @property
-    def max_queue_size(self) -> int:
-        """
-        Get the maximum size of the event queue.
-
-        Returns:
-            int: The maximum size of the event queue.
-        """
-        return self._max_queue_size
-
-    @max_queue_size.setter
-    def max_queue_size(self, value: int):
-        """
-        Set the maximum size of the event queue.
-
-        Args:
-            value (int): The new maximum size of the event queue.
-        """
-        self._max_queue_size = value
-
-    @property
-    def parent_key(self):
-        return self._parent_key
-
-    @property
-    def skip_auto_end_session(self):
-        return self._skip_auto_end_session
-
-    @parent_key.setter
-    def parent_key(self, value: str):
-        self._parent_key = value
+        if env_data_opt_out is not None:
+            self.env_data_opt_out = env_data_opt_out
