@@ -2,7 +2,7 @@ import pytest
 import requests_mock
 import time
 import agentops
-from agentops.decorators import record_tool
+from agentops import record_tool
 from datetime import datetime
 
 from agentops.helpers import clear_singletons

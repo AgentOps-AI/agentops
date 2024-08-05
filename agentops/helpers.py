@@ -4,7 +4,8 @@ from datetime import datetime, timezone
 import json
 import inspect
 from typing import Union
-import requests
+import http.client
+import json
 from importlib.metadata import version, PackageNotFoundError
 
 from .log_config import logger
@@ -152,10 +153,15 @@ def get_agentops_version():
 
 
 def check_agentops_update():
-    response = requests.get("https://pypi.org/pypi/agentops/json")
+    # using http.client to avoid this call being caught by requests_mock on tests
+    conn = http.client.HTTPSConnection("pypi.org")
+    conn.request("GET", "/pypi/agentops/json")
+    response = conn.getresponse()
+    data = response.read().decode()
+    json_data = json.loads(data)
 
-    if response.status_code == 200:
-        latest_version = response.json()["info"]["version"]
+    if response.status == 200:
+        latest_version = json_data["info"]["version"]
 
         try:
             current_version = version("agentops")
