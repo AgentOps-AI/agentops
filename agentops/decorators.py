@@ -11,6 +11,13 @@ from .log_config import logger
 
 
 def record_function(event_name: str):
+    logger.warning(
+        "DEPRECATION WARNING: record_function has been replaced with record_action and will be removed in the next minor version. Also see: record_tool"
+    )
+    return record_action(event_name)
+
+
+def record_action(event_name: str):
     """
     Decorator to record an event before and after a function call.
     Usage:

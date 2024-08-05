@@ -64,13 +64,20 @@ Initialize the AgentOps client and automatically get analytics on every LLM call
 import agentops
 
 # Beginning of program's code (i.e. main.py, __init__.py)
-agentops.init(<INSERT YOUR API KEY HERE>)
+agentops.init( < INSERT
+YOUR
+API
+KEY
+HERE >)
 
 ...
+
+
 # (optional: record specific functions)
-@agentops.record_function('sample function being record')
+@agentops.record_action('sample function being record')
 def sample_function(...):
     ...
+
 
 # End of program
 agentops.end_session('Success')
