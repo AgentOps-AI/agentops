@@ -36,7 +36,7 @@ class LlmTracker:
             "0.9.0": ("Client.chat", "AsyncClient.chat"),
         },
         "anthropic": {
-            "0.0.1": ("completions.create",),
+            "0.32.0": ("completions.create",),
         },
     }
 
@@ -616,20 +616,101 @@ class LlmTracker:
         return response
 
     def _handle_response_anthropic(
-        self, response, kwargs, init_timestamp, session=None
+        self, response, kwargs, init_timestamp, session: Optional[Session] = None
     ):
-        # Lazy import of Anthropic package
-        from anthropic import Anthropic, HUMAN_PROMPT, AI_PROMPT
+        """Handle responses for Anthropic"""
+        from anthropic import Stream, AsyncStream
+        from anthropic.resources import AsyncMessages
+        from anthropic.types import (
+            Message,
+            RawContentBlockDeltaEvent,
+            RawContentBlockStartEvent,
+            RawContentBlockStopEvent,
+            RawMessageDeltaEvent,
+            RawMessageStartEvent,
+            RawMessageStopEvent,
+        )
 
         self.llm_event = LLMEvent(init_timestamp=init_timestamp, params=kwargs)
         if session is not None:
             self.llm_event.session_id = session.session_id
 
+        def handle_stream_chunk(chunk: Message):
+            if self.llm_event.returns == None:
+                self.llm_event.returns = chunk
+
+            try:
+                accumulated_delta = ""
+                self.llm_event.agent_id = check_call_stack_for_agent_id()
+                self.llm_event.prompt = kwargs["messages"]
+
+                if isinstance(chunk, RawMessageStartEvent):
+                    self.llm_event.model = chunk.message.model
+                    self.llm_event.prompt_tokens = chunk.content
+                elif isinstance(chunk, RawContentBlockStartEvent):
+                    accumulated_delta += chunk.content_block.text
+                elif isinstance(chunk, RawContentBlockDeltaEvent):
+                    accumulated_delta += chunk.delta.text
+                elif isinstance(chunk, RawContentBlockStopEvent):
+                    pass
+                elif isinstance(chunk, RawMessageDeltaEvent):
+                    self.llm_event.completion_tokens += chunk.usage.output_tokens
+                elif isinstance(chunk, RawMessageStopEvent):
+                    self.llm_event.completion = accumulated_delta
+                    self.llm_event.end_timestamp = get_ISO_time()
+                    self._safe_record(session, self.llm_event)
+
+            except Exception as e:
+                self._safe_record(
+                    session, ErrorEvent(trigger_event=self.llm_event, exception=e)
+                )
+
+                kwargs_str = pprint.pformat(kwargs)
+                chunk = pprint.pformat(chunk)
+                logger.warning(
+                    f"Unable to parse a chunk for LLM call. Skipping upload to AgentOps\n"
+                    f"chunk:\n {chunk}\n"
+                    f"kwargs:\n {kwargs_str}\n"
+                )
+
+        # if the response is a generator, decorate the generator
+        if isinstance(response, Stream):
+            
+            def generator():
+                for chunk in response:
+                    handle_stream_chunk(chunk)
+                    yield chunk
+
+            return generator()
+
+         # For asynchronous AsyncStream
+        if isinstance(response, AsyncStream):
+
+            async def async_generator():
+                async for chunk in response:
+                    handle_stream_chunk(chunk)
+                    yield chunk
+
+            return async_generator()
+
+        # For async AsyncMessages
+        if isinstance(response, AsyncMessages):
+
+            async def async_generator():
+                async for chunk in response:
+                    handle_stream_chunk(chunk)
+                    yield chunk
+
+            return async_generator()
+
+        # Handle object responses
         try:
-            self.llm_event.returns = response.dict()
+            self.llm_event.returns = response.model_dump()
             self.llm_event.agent_id = check_call_stack_for_agent_id()
-            self.llm_event.prompt = kwargs.get("prompt", "")
-            self.llm_event.completion = response.completion
+            self.llm_event.prompt = kwargs["messages"]
+            self.llm_event.prompt_tokens = response.usage.input_tokens
+            self.llm_event.completion = response.content[0].text
+            self.llm_event.completion_tokens = response.usage.output_tokens
             self.llm_event.model = response.model
             self.llm_event.end_timestamp = get_ISO_time()
 
@@ -637,6 +718,13 @@ class LlmTracker:
         except Exception as e:
             self._safe_record(
                 session, ErrorEvent(trigger_event=self.llm_event, exception=e)
+            )
+            kwargs_str = pprint.pformat(kwargs)
+            response = pprint.pformat(response)
+            logger.warning(
+                f"Unable to parse response for LLM call. Skipping upload to AgentOps\n"
+                f"response:\n {response}\n"
+                f"kwargs:\n {kwargs_str}\n"
             )
 
         return response
@@ -832,22 +920,47 @@ class LlmTracker:
         # Override the original method with the patched one
         completions.AsyncCompletions.create = patched_function
 
-    def override_anthropic_completion(self):
-        # Lazy import of Anthropic package
-        from anthropic import Anthropic
+    def override_anthropic_sync_completion(self):
+        from anthropic.resources import messages
 
-        original_completion = Anthropic().completions.create
+        # Store the original method
+        global original_create
+        original_create = messages.Messages.create
 
         def patched_function(*args, **kwargs):
             init_timestamp = get_ISO_time()
-            session = kwargs.pop("session", None)
-            result = original_completion(*args, **kwargs)
+            session = kwargs.get("session", None)
+            if "session" in kwargs.keys():
+                del kwargs["session"]
+            # Call the original function with its original arguments
+            result = original_create(*args, **kwargs)
             return self._handle_response_anthropic(
                 result, kwargs, init_timestamp, session=session
             )
 
         # Override the original method with the patched one
-        Anthropic().completions.create = patched_function
+        messages.Messages.create = patched_function
+
+    def override_anthropic_async_completion(self):
+        from anthropic.resources import messages
+
+        # Store the original method
+        global original_create_async
+        original_create_async = messages.AsyncMessages.create
+
+        async def patched_function(*args, **kwargs):
+            # Call the original function with its original arguments
+            init_timestamp = get_ISO_time()
+            session = kwargs.get("session", None)
+            if "session" in kwargs.keys():
+                del kwargs["session"]
+            result = await original_create_async(*args, **kwargs)
+            return self._handle_response_anthropic(
+                result, kwargs, init_timestamp, session=session
+            )
+
+        # Override the original method with the patched one
+        messages.AsyncMessages.create = patched_function
 
     def _override_method(self, api, method_path, module):
         def handle_response(result, kwargs, init_timestamp):
@@ -961,20 +1074,21 @@ class LlmTracker:
                             f"Only Groq>=0.9.0 supported. v{module_version} found."
                         )
 
-                if api in sys.modules:
-                    module = import_module(api)
-                    if api == "anthropic":
-                        module_version = version(api)
-                        if module_version is None:
-                            logger.warning(
-                                f"Cannot determine Anthropic version. Only Anthropic>=0.0.1 supported."
-                            )
-                        if Version(module_version) >= parse("0.0.1"):
-                            self.override_anthropic_completion()
-                        else:
-                            logger.warning(
-                                f"Only Anthropic>=0.0.1 supported. v{module_version} found."
-                            )
+                if api == "anthropic":
+                    module_version = version(api)
+
+                    if module_version is None:
+                        logger.warning(
+                            f"Cannot determine Anthropic version. Only Anthropic>=0.0.1 supported."
+                        )
+
+                    if Version(module_version) >= parse("0.32.0"):
+                        self.override_anthropic_sync_completion()
+                        self.override_anthropic_async_completion()
+                    else:
+                        logger.warning(
+                            f"Only Anthropic>=0.0.1 supported. v{module_version} found."
+                        )
 
     def stop_instrumenting(self):
         self.undo_override_openai_v1_async_completion()
@@ -1000,6 +1114,18 @@ class LlmTracker:
             ollama.chat = original_func["ollama.chat"]
             ollama.Client.chat = original_func["ollama.Client.chat"]
             ollama.AsyncClient.chat = original_func["ollama.AsyncClient.chat"]
+
+    def undo_override_anthropic_completion(self):
+        global original_create
+        from anthropic.resources import messages
+
+        messages.Messages.create = original_create
+
+    def undo_override_anthropic_async_completion(self):
+        global original_create_async
+        from anthropic.resources import messages
+
+        messages.AsyncMessages.create = original_create_async
 
     def _safe_record(self, session, event):
         if session is not None:
