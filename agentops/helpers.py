@@ -4,6 +4,8 @@ from datetime import datetime, timezone
 import json
 import inspect
 from typing import Union
+import requests
+from importlib.metadata import version, PackageNotFoundError
 
 from .log_config import logger
 from uuid import UUID
@@ -150,15 +152,19 @@ def get_agentops_version():
 
 
 def check_agentops_update():
-    result = subprocess.run(
-        ["pip", "list", "--outdated"], capture_output=True, text=True
-    )
-    lines = result.stdout.splitlines()[2:]  # Skip the header lines
-    for line in lines:
-        parts = line.split()
-        if len(parts) > 0 and parts[0] == "agentops":
+    response = requests.get("https://pypi.org/pypi/agentops/json")
+
+    if response.status_code == 200:
+        latest_version = response.json()["info"]["version"]
+
+        try:
+            current_version = version("agentops")
+        except PackageNotFoundError:
+            return None
+
+        if not latest_version == current_version:
             logger.warning(
-                f" WARNING: {parts[0]} is out of date. Please update with the command: 'pip install --upgrade agentops'"
+                f" WARNING: agentops is out of date. Please update with the command: 'pip install --upgrade agentops'"
             )
 
 
