@@ -1,0 +1,79 @@
+---
+title: MultiOn
+description: "AgentOps provides first class support for MultiOn agents"
+---
+
+import CodeTooltip from '/snippets/add-code-tooltip.mdx'
+import EnvTooltip from '/snippets/add-env-tooltip.mdx'
+
+AgentOps and [MultiOn](https://www.multion.ai) have collaborated to simplify the monitoring of autonomous browser agents.
+
+You can view several example notebooks [here](https://github.com/AgentOps-AI/agentops/tree/main/examples/multion):
+* [Sample web browser agent using only MultiOn](https://github.com/AgentOps-AI/agentops/blob/main/examples/multion/Autonomous_web_browsing.ipynb)
+* [Combining a MultiOn agent with other LLMs calls](https://github.com/AgentOps-AI/agentops/blob/main/examples/multion/Autonomous_web_browsing.ipynb)
+* [Step-by-step tracking of browse events](https://github.com/AgentOps-AI/agentops/blob/main/examples/multion/Step_by_step_web_browsing.ipynb)
+* [Collecting data from a web page using the retrieve API](https://github.com/AgentOps-AI/agentops/blob/main/examples/multion/Webpage_data_retrieval.ipynb)
+
+## Adding AgentOps to MultiOn agents
+
+<Steps>
+	<Step title="Install MultiOn">
+		<CodeGroup>
+			```bash pip
+			pip install -U multion
+			```
+			```bash poetry
+			poetry add multion
+			```
+		</CodeGroup>
+	</Step>
+	<Step title="Create your API keys">
+		* Create an [AgentOps API key](https://app.agentops.ai/settings/projects)
+		* Create a [MultiOn API key](https://app.multion.ai/api-keys)
+	</Step>
+	<Step title="Create a MultiOn client with an AgentOps key">
+		<CodeTooltip/>
+		<span className="api-key-container">
+			<CodeGroup>
+				```python python
+				import multion
+				from multion.client import MultiOn
+				
+				# Initialize MultiOn with both a MultiOn API key and an AgentOps API key
+				multion = MultiOn(
+					api_key=<INSERT YOUR MULTION API KEY HERE>,
+					agentops_api_key=<INSERT YOUR AGENTOPS API KEY HERE>
+				)
+
+				browse_response = multion.browse(
+					cmd="what three things do i get with agentops",
+					url="https://www.agentops.ai/",
+					max_steps=4,
+					include_screenshot=True
+				)
+
+					print(browse_response.message)
+					```
+			</CodeGroup>
+		</span>
+		
+		<EnvTooltip />
+	</Step>
+	<Step title="Run your agent">
+		Execute your program and visit [app.agentops.ai/drilldown](https://app.agentops.ai/drilldown) to observe your MultiOn Agent! 🕵️
+		<Tip>
+			After your run, AgentOps prints a clickable url to console linking directly to your session in the Dashboard
+		</Tip>
+		<div/>{/* Intentionally blank div for newline */}
+		<Frame type="glass" caption="Clickable link to session">
+			<img height="200" src="https://github.com/AgentOps-AI/agentops/blob/main/docs/images/agentops-multion-browse.gif?raw=true" />
+		</Frame>
+	</Step>
+</Steps>
+
+<script type="module" src="/scripts/github_stars.js"></script>
+<script type="module" src="/scripts/link_to_api_button.js"></script>
+<script type="module" src="/scripts/scroll-img-fadein-animation.js"></script>
+<script type="module" src="/scripts/button_heartbeat_animation.js"></script>
+<script type="css" src="/styles/styles.css"></script>
+<script type="module" src="/scripts/adjust_api_dynamically.js"></script>

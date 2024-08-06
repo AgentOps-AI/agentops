@@ -1,22 +1,16 @@
 from pprint import pformat
 from functools import wraps
-import time
-from datetime import datetime
+from datetime import datetime, timezone
 import json
 import inspect
 from typing import Union
+import requests
+from importlib.metadata import version, PackageNotFoundError
 
 from .log_config import logger
 from uuid import UUID
-import os
 from importlib.metadata import version
-
-
-PARTNER_FRAMEWORKS = {
-    # framework : instrument_llm_calls, auto_start_session
-    "autogen": (False, True),
-    "crewai": (False, True),
-}
+import subprocess
 
 ao_instances = {}
 
@@ -52,14 +46,12 @@ def clear_singletons():
 
 def get_ISO_time():
     """
-    Get the current UTC time in ISO 8601 format with milliseconds precision, suffixed with 'Z' to denote UTC timezone.
+    Get the current UTC time in ISO 8601 format with milliseconds precision in UTC timezone.
 
     Returns:
         str: The current UTC time as a string in ISO 8601 format.
     """
-    return (
-        datetime.utcfromtimestamp(time.time()).isoformat(timespec="milliseconds") + "Z"
-    )
+    return datetime.now(timezone.utc).isoformat()
 
 
 def is_jsonable(x):
@@ -159,6 +151,23 @@ def get_agentops_version():
         return None
 
 
+def check_agentops_update():
+    response = requests.get("https://pypi.org/pypi/agentops/json")
+
+    if response.status_code == 200:
+        latest_version = response.json()["info"]["version"]
+
+        try:
+            current_version = version("agentops")
+        except PackageNotFoundError:
+            return None
+
+        if not latest_version == current_version:
+            logger.warning(
+                f" WARNING: agentops is out of date. Please update with the command: 'pip install --upgrade agentops'"
+            )
+
+
 # Function decorator that prints function name and its arguments to the console for debug purposes
 # Example output:
 # <AGENTOPS_DEBUG_OUTPUT>
@@ -197,7 +206,3 @@ def debug_print_function_params(func):
         return func(self, *args, **kwargs)
 
     return wrapper
-
-
-def get_partner_frameworks():
-    return PARTNER_FRAMEWORKS

@@ -1,90 +1,13 @@
-# yaml-language-server: $schema=https://raw.githubusercontent.com/gauge-sh/tach/v0.6.9/public/tach-yml-schema.json
+# yaml-language-server: $schema=https://raw.githubusercontent.com/gauge-sh/tach/v0.9.2/public/tach-yml-schema.json
 modules:
   - path: agentops
     depends_on:
-      - agentops.agent
-      - agentops.client
-      - agentops.config
-      - agentops.decorators
-      - agentops.event
-      - agentops.log_config
-      - agentops.partners
-      - agentops.session
-  - path: agentops.agent
-    depends_on:
-      - agentops
-      - agentops.log_config
-  - path: agentops.client
-    depends_on:
-      - agentops.config
-      - agentops.enums
-      - agentops.event
-      - agentops.exceptions
-      - agentops.helpers
-      - agentops.host_env
-      - agentops.llm_tracker
-      - agentops.log_config
-      - agentops.meta_client
-      - agentops.partners
-      - agentops.session
-  - path: agentops.config
-    depends_on:
-      - agentops.exceptions
-  - path: agentops.decorators
-    depends_on:
-      - agentops
-      - agentops.client
-      - agentops.session
+      - path: agentops.enums
+      - path: agentops.log_config
   - path: agentops.enums
     depends_on: []
-  - path: agentops.event
-    depends_on:
-      - agentops.enums
-      - agentops.helpers
-  - path: agentops.exceptions
-    depends_on:
-      - agentops.log_config
-  - path: agentops.helpers
-    depends_on:
-      - agentops.log_config
-  - path: agentops.host_env
-    depends_on:
-      - agentops.helpers
-      - agentops.log_config
-  - path: agentops.http_client
-    depends_on:
-      - agentops.log_config
-  - path: agentops.langchain_callback_handler
-    depends_on:
-      - agentops
-      - agentops.helpers
-  - path: agentops.llm_tracker
-    depends_on:
-      - agentops.event
-      - agentops.helpers
-      - agentops.log_config
-      - agentops.session
   - path: agentops.log_config
     depends_on: []
-  - path: agentops.meta_client
-    depends_on:
-      - agentops.helpers
-      - agentops.host_env
-      - agentops.http_client
-      - agentops.log_config
-  - path: agentops.partners
-    depends_on:
-      - agentops
-      - agentops.enums
-      - agentops.helpers
-      - agentops.log_config
-  - path: agentops.session
-    depends_on:
-      - agentops.config
-      - agentops.event
-      - agentops.helpers
-      - agentops.http_client
-      - agentops.log_config
 exclude:
   - .*__pycache__
   - .*egg-info
@@ -92,4 +15,5 @@ exclude:
   - examples
   - tests
   - venv
-source_root: .
+source_roots:
+  - .

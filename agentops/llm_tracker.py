@@ -12,6 +12,15 @@ from .session import Session
 from .event import ActionEvent, ErrorEvent, LLMEvent
 from .helpers import check_call_stack_for_agent_id, get_ISO_time
 from .log_config import logger
+from .event import LLMEvent, ActionEvent, ToolEvent, ErrorEvent
+from .helpers import get_ISO_time, check_call_stack_for_agent_id
+import inspect
+from typing import Optional
+import pprint
+from .time_travel import (
+    fetch_completion_override_from_time_travel_cache,
+    # fetch_prompt_override_from_time_travel_cache,
+)
 
 original_func = {}
 original_create = None
@@ -32,6 +41,9 @@ class LlmTracker:
             "5.4.0": ("chat", "chat_stream"),
         },
         "ollama": {"0.0.1": ("chat", "Client.chat", "AsyncClient.chat")},
+        "groq": {
+            "0.9.0": ("Client.chat", "AsyncClient.chat"),
+        },
     }
 
     def __init__(self, client):
@@ -243,7 +255,7 @@ class LlmTracker:
 
         # v1.0.0+ responses are objects
         try:
-            self.llm_event.returns = response.model_dump()
+            self.llm_event.returns = response
             self.llm_event.agent_id = check_call_stack_for_agent_id()
             self.llm_event.prompt = kwargs["messages"]
             self.llm_event.prompt_tokens = response.usage.prompt_tokens
@@ -405,7 +417,7 @@ class LlmTracker:
         # Not enough to record StreamedChatResponse_ToolCallsGeneration because the tool may have not gotten called
 
         try:
-            self.llm_event.returns = response.dict()
+            self.llm_event.returns = response
             self.llm_event.agent_id = check_call_stack_for_agent_id()
             self.llm_event.prompt = []
             if response.chat_history:
@@ -487,8 +499,131 @@ class LlmTracker:
         self._safe_record(session, self.llm_event)
         return response
 
+    def _handle_response_groq(
+        self, response, kwargs, init_timestamp, session: Optional[Session] = None
+    ):
+        """Handle responses for OpenAI versions >v1.0.0"""
+        from groq import AsyncStream, Stream
+        from groq.resources.chat import AsyncCompletions
+        from groq.types.chat import ChatCompletionChunk
+
+        self.llm_event = LLMEvent(init_timestamp=init_timestamp, params=kwargs)
+        if session is not None:
+            self.llm_event.session_id = session.session_id
+
+        def handle_stream_chunk(chunk: ChatCompletionChunk):
+            # NOTE: prompt/completion usage not returned in response when streaming
+            # We take the first ChatCompletionChunk and accumulate the deltas from all subsequent chunks to build one full chat completion
+            if self.llm_event.returns == None:
+                self.llm_event.returns = chunk
+
+            try:
+                accumulated_delta = self.llm_event.returns.choices[0].delta
+                self.llm_event.agent_id = check_call_stack_for_agent_id()
+                self.llm_event.model = chunk.model
+                self.llm_event.prompt = kwargs["messages"]
+
+                # NOTE: We assume for completion only choices[0] is relevant
+                choice = chunk.choices[0]
+
+                if choice.delta.content:
+                    accumulated_delta.content += choice.delta.content
+
+                if choice.delta.role:
+                    accumulated_delta.role = choice.delta.role
+
+                if choice.delta.tool_calls:
+                    accumulated_delta.tool_calls = choice.delta.tool_calls
+
+                if choice.delta.function_call:
+                    accumulated_delta.function_call = choice.delta.function_call
+
+                if choice.finish_reason:
+                    # Streaming is done. Record LLMEvent
+                    self.llm_event.returns.choices[0].finish_reason = (
+                        choice.finish_reason
+                    )
+                    self.llm_event.completion = {
+                        "role": accumulated_delta.role,
+                        "content": accumulated_delta.content,
+                        "function_call": accumulated_delta.function_call,
+                        "tool_calls": accumulated_delta.tool_calls,
+                    }
+                    self.llm_event.end_timestamp = get_ISO_time()
+
+                    self._safe_record(session, self.llm_event)
+            except Exception as e:
+                self._safe_record(
+                    session, ErrorEvent(trigger_event=self.llm_event, exception=e)
+                )
+
+                kwargs_str = pprint.pformat(kwargs)
+                chunk = pprint.pformat(chunk)
+                logger.warning(
+                    f"Unable to parse a chunk for LLM call. Skipping upload to AgentOps\n"
+                    f"chunk:\n {chunk}\n"
+                    f"kwargs:\n {kwargs_str}\n"
+                )
+
+        # if the response is a generator, decorate the generator
+        if isinstance(response, Stream):
+
+            def generator():
+                for chunk in response:
+                    handle_stream_chunk(chunk)
+                    yield chunk
+
+            return generator()
+
+        # For asynchronous AsyncStream
+        elif isinstance(response, AsyncStream):
+
+            async def async_generator():
+                async for chunk in response:
+                    handle_stream_chunk(chunk)
+                    yield chunk
+
+            return async_generator()
+
+        # For async AsyncCompletion
+        elif isinstance(response, AsyncCompletions):
+
+            async def async_generator():
+                async for chunk in response:
+                    handle_stream_chunk(chunk)
+                    yield chunk
+
+            return async_generator()
+
+        # v1.0.0+ responses are objects
+        try:
+            self.llm_event.returns = response.model_dump()
+            self.llm_event.agent_id = check_call_stack_for_agent_id()
+            self.llm_event.prompt = kwargs["messages"]
+            self.llm_event.prompt_tokens = response.usage.prompt_tokens
+            self.llm_event.completion = response.choices[0].message.model_dump()
+            self.llm_event.completion_tokens = response.usage.completion_tokens
+            self.llm_event.model = response.model
+
+            self._safe_record(session, self.llm_event)
+        except Exception as e:
+            self._safe_record(
+                session, ErrorEvent(trigger_event=self.llm_event, exception=e)
+            )
+
+            kwargs_str = pprint.pformat(kwargs)
+            response = pprint.pformat(response)
+            logger.warning(
+                f"Unable to parse response for LLM call. Skipping upload to AgentOps\n"
+                f"response:\n {response}\n"
+                f"kwargs:\n {kwargs_str}\n"
+            )
+
+        return response
+
     def override_openai_v1_completion(self):
         from openai.resources.chat import completions
+        from openai.types.chat import ChatCompletion, ChatCompletionChunk
 
         # Store the original method
         global original_create
@@ -499,6 +634,37 @@ class LlmTracker:
             session = kwargs.get("session", None)
             if "session" in kwargs.keys():
                 del kwargs["session"]
+
+            completion_override = fetch_completion_override_from_time_travel_cache(
+                kwargs
+            )
+            if completion_override:
+                result_model = None
+                pydantic_models = (ChatCompletion, ChatCompletionChunk)
+                for pydantic_model in pydantic_models:
+                    try:
+                        result_model = pydantic_model.model_validate_json(
+                            completion_override
+                        )
+                        break
+                    except Exception as e:
+                        pass
+
+                if result_model is None:
+                    logger.error(
+                        f"Time Travel: Pydantic validation failed for {pydantic_models} \n"
+                        f"Time Travel: Completion override was:\n"
+                        f"{pprint.pformat(completion_override)}"
+                    )
+                    return None
+                return self._handle_response_v1_openai(
+                    result_model, kwargs, init_timestamp, session=session
+                )
+
+            # prompt_override = fetch_prompt_override_from_time_travel_cache(kwargs)
+            # if prompt_override:
+            #     kwargs["messages"] = prompt_override["messages"]
+
             # Call the original function with its original arguments
             result = original_create(*args, **kwargs)
             return self._handle_response_v1_openai(
@@ -510,17 +676,51 @@ class LlmTracker:
 
     def override_openai_v1_async_completion(self):
         from openai.resources.chat import completions
+        from openai.types.chat import ChatCompletion, ChatCompletionChunk
 
         # Store the original method
         global original_create_async
         original_create_async = completions.AsyncCompletions.create
 
         async def patched_function(*args, **kwargs):
-            # Call the original function with its original arguments
+
             init_timestamp = get_ISO_time()
+
             session = kwargs.get("session", None)
             if "session" in kwargs.keys():
                 del kwargs["session"]
+
+            completion_override = fetch_completion_override_from_time_travel_cache(
+                kwargs
+            )
+            if completion_override:
+                result_model = None
+                pydantic_models = (ChatCompletion, ChatCompletionChunk)
+                for pydantic_model in pydantic_models:
+                    try:
+                        result_model = pydantic_model.model_validate_json(
+                            completion_override
+                        )
+                        break
+                    except Exception as e:
+                        pass
+
+                if result_model is None:
+                    logger.error(
+                        f"Time Travel: Pydantic validation failed for {pydantic_models} \n"
+                        f"Time Travel: Completion override was:\n"
+                        f"{pprint.pformat(completion_override)}"
+                    )
+                    return None
+                return self._handle_response_v1_openai(
+                    result_model, kwargs, init_timestamp, session=session
+                )
+
+            # prompt_override = fetch_prompt_override_from_time_travel_cache(kwargs)
+            # if prompt_override:
+            #     kwargs["messages"] = prompt_override["messages"]
+
+            # Call the original function with its original arguments
             result = await original_create_async(*args, **kwargs)
             return self._handle_response_v1_openai(
                 result, kwargs, init_timestamp, session=session
@@ -531,16 +731,34 @@ class LlmTracker:
 
     def override_litellm_completion(self):
         import litellm
+        from openai.types.chat import (
+            ChatCompletion,
+        )  # Note: litellm calls all LLM APIs using the OpenAI format
 
         original_create = litellm.completion
 
         def patched_function(*args, **kwargs):
             init_timestamp = get_ISO_time()
+
             session = kwargs.get("session", None)
             if "session" in kwargs.keys():
                 del kwargs["session"]
+
+            completion_override = fetch_completion_override_from_time_travel_cache(
+                kwargs
+            )
+            if completion_override:
+                result_model = ChatCompletion.model_validate_json(completion_override)
+                return self._handle_response_v1_openai(
+                    result_model, kwargs, init_timestamp, session=session
+                )
+
+            # prompt_override = fetch_prompt_override_from_time_travel_cache(kwargs)
+            # if prompt_override:
+            #     kwargs["messages"] = prompt_override["messages"]
+
+            # Call the original function with its original arguments
             result = original_create(*args, **kwargs)
-            # Note: litellm calls all LLM APIs using the OpenAI format
             return self._handle_response_v1_openai(
                 result, kwargs, init_timestamp, session=session
             )
@@ -549,17 +767,34 @@ class LlmTracker:
 
     def override_litellm_async_completion(self):
         import litellm
+        from openai.types.chat import (
+            ChatCompletion,
+        )  # Note: litellm calls all LLM APIs using the OpenAI format
 
-        original_create = litellm.acompletion
+        original_create_async = litellm.acompletion
 
         async def patched_function(*args, **kwargs):
-            # Call the original function with its original arguments
             init_timestamp = get_ISO_time()
+
             session = kwargs.get("session", None)
             if "session" in kwargs.keys():
                 del kwargs["session"]
-            result = await original_create(*args, **kwargs)
-            # Note: litellm calls all LLM APIs using the OpenAI format
+
+            completion_override = fetch_completion_override_from_time_travel_cache(
+                kwargs
+            )
+            if completion_override:
+                result_model = ChatCompletion.model_validate_json(completion_override)
+                return self._handle_response_v1_openai(
+                    result_model, kwargs, init_timestamp, session=session
+                )
+
+            # prompt_override = fetch_prompt_override_from_time_travel_cache(kwargs)
+            # if prompt_override:
+            #     kwargs["messages"] = prompt_override["messages"]
+
+            # Call the original function with its original arguments
+            result = await original_create_async(*args, **kwargs)
             return self._handle_response_v1_openai(
                 result, kwargs, init_timestamp, session=session
             )
@@ -644,6 +879,39 @@ class LlmTracker:
 
         # Override the original method with the patched one
         AsyncClient.chat = patched_function
+
+    def override_groq_chat(self):
+        from groq.resources.chat import completions
+
+        original_create = completions.Completions.create
+
+        def patched_function(*args, **kwargs):
+            # Call the original function with its original arguments
+            init_timestamp = get_ISO_time()
+            session = kwargs.get("session", None)
+            if "session" in kwargs.keys():
+                del kwargs["session"]
+            result = original_create(*args, **kwargs)
+            return self._handle_response_groq(
+                result, kwargs, init_timestamp, session=session
+            )
+
+        # Override the original method with the patched one
+        completions.Completions.create = patched_function
+
+    def override_groq_chat_stream(self):
+        from groq.resources.chat import completions
+
+        original_create = completions.AsyncCompletions.create
+
+        def patched_function(*args, **kwargs):
+            # Call the original function with its original arguments
+            init_timestamp = get_ISO_time()
+            result = original_create(*args, **kwargs)
+            return self._handle_response_groq(result, kwargs, init_timestamp)
+
+        # Override the original method with the patched one
+        completions.AsyncCompletions.create = patched_function
 
     def _override_method(self, api, method_path, module):
         def handle_response(result, kwargs, init_timestamp):
@@ -744,6 +1012,17 @@ class LlmTracker:
                     else:
                         logger.warning(
                             f"Only Ollama>=0.0.1 supported. v{module_version} found."
+                        )
+
+                if api == "groq":
+                    module_version = version(api)
+
+                    if Version(module_version) >= parse("0.9.0"):
+                        self.override_groq_chat()
+                        self.override_groq_chat_stream()
+                    else:
+                        logger.warning(
+                            f"Only Groq>=0.9.0 supported. v{module_version} found."
                         )
 
     def stop_instrumenting(self):
