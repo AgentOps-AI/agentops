@@ -1,7 +1,7 @@
 from openai import AsyncOpenAI
 import asyncio
 import agentops
-from agentops import record_function
+from agentops import record_action
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -9,7 +9,7 @@ load_dotenv()
 agentops.init()
 
 
-@record_function("openai v1 async no streaming")
+@record_action("openai v1 async no streaming")
 async def call_openai_v1_async_no_streaming():
     client = AsyncOpenAI()
 
@@ -25,7 +25,7 @@ async def call_openai_v1_async_no_streaming():
     # raise ValueError("This is an intentional error for testing.")
 
 
-@record_function("openai v1 async with streaming")
+@record_action("openai v1 async with streaming")
 async def call_openai_v1_async_streaming():
     client = AsyncOpenAI()  # Using the async client
 

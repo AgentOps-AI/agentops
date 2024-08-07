@@ -47,12 +47,12 @@ import EnvTooltip from '/snippets/add-env-tooltip.mdx'
 <CardGroup cols={1}>
 
 <Card icon="code" title="Decorate Functions">
-  You can instrument other functions inside your code with the handy `@record_function`
+  You can instrument other functions inside your code with the handy `@record_action`
   decorator, which will record an `action_type`, the parameters, and the returns. You
   will see these function calls alongside your LLM calls from instantiating the AgentOps client.
   ```python python
   # (record specific functions)
-  @agentops.record_function('sample function being record')
+  @agentops.record_action('sample function being record')
   def sample_function(...):
     ...
 ```
@@ -94,7 +94,7 @@ import agentops
 agentops.init(<INSERT YOUR API KEY HERE>)
 
 # (record specific functions)
-@agentops.record_function('sample function being record')
+@agentops.record_action('sample function being record')
 def sample_function(...):
   ...
 

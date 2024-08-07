@@ -4,7 +4,7 @@ from typing import Optional, List, Union
 
 from .client import Client
 from .event import Event, ActionEvent, LLMEvent, ToolEvent, ErrorEvent
-from .decorators import record_function, track_agent, record_tool
+from .decorators import record_action, track_agent, record_tool, record_function
 from .helpers import check_agentops_update
 from .log_config import logger
 from .session import Session
