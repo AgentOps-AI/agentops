@@ -11,6 +11,13 @@ from .log_config import logger
 
 
 def record_function(event_name: str):
+    logger.warning(
+        "DEPRECATION WARNING: record_function has been replaced with record_action and will be removed in the next minor version. Also see: record_tool"
+    )
+    return record_action(event_name)
+
+
+def record_action(event_name: str):
     """
     Decorator to record an event before and after a function call.
     Usage:
@@ -32,7 +39,7 @@ def record_function(event_name: str):
                 if session is None:
                     if Client().is_multi_session:
                         raise ValueError(
-                            "If multiple sessions exists, `session` is a required parameter in the function decorated by @record_function"
+                            "If multiple sessions exists, `session` is a required parameter in the function decorated by @record_action"
                         )
                 func_args = inspect.signature(func).parameters
                 arg_names = list(func_args.keys())
@@ -93,7 +100,7 @@ def record_function(event_name: str):
                 if session is None:
                     if Client().is_multi_session:
                         raise ValueError(
-                            "If multiple sessions exists, `session` is a required parameter in the function decorated by @record_function"
+                            "If multiple sessions exists, `session` is a required parameter in the function decorated by @record_action"
                         )
                 func_args = inspect.signature(func).parameters
                 arg_names = list(func_args.keys())
