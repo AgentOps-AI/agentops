@@ -18,16 +18,6 @@ from ..helpers import debug_print_function_params
 import os
 from ..log_config import logger
 import logging
-from importlib.metadata import version, PackageNotFoundError
-
-
-def get_langchain_version() -> Union[1, 2]:
-    try:
-        version_str = version("langchain")
-        minor_version = int(version_str.split(".")[1])
-        return minor_version
-    except PackageNotFoundError:
-        return "Package not found"
 
 
 def get_model_from_kwargs(kwargs: any) -> str:
