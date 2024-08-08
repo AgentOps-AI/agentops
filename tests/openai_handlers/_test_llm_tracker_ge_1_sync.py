@@ -1,6 +1,6 @@
 from openai import OpenAI
 import agentops
-from agentops import record_function
+from agentops import record_action
 from packaging.version import parse
 from importlib import import_module
 import sys
@@ -19,7 +19,7 @@ if api in sys.modules:
             print("openai version: ", module_version)
 
 
-@record_function("openai v1 sync no streaming")
+@record_action("openai v1 sync no streaming")
 def call_openai_v1_sync_no_streaming():
     client = OpenAI()
     chat_completion = client.chat.completions.create(
@@ -34,7 +34,7 @@ def call_openai_v1_sync_no_streaming():
     # raise ValueError("This is an intentional error for testing.")
 
 
-@record_function("openai v1 sync with streaming")
+@record_action("openai v1 sync with streaming")
 def call_openai_v1_sync_streaming():
     client = OpenAI()
     chat_completion = client.chat.completions.create(

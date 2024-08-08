@@ -2,7 +2,7 @@ import pytest
 import requests_mock
 import time
 import agentops
-from agentops import record_function
+from agentops import record_action
 from datetime import datetime
 from agentops.helpers import clear_singletons
 import contextlib
@@ -46,10 +46,10 @@ class TestRecordAction:
         self.event_type = "test_event_type"
         agentops.init(self.api_key, max_wait_time=5, auto_start_session=False)
 
-    def test_record_function_decorator(self, mock_req):
+    def test_record_action_decorator(self, mock_req):
         agentops.start_session()
 
-        @record_function(event_name=self.event_type)
+        @record_action(event_name=self.event_type)
         def add_two(x, y):
             return x + y
 
@@ -67,11 +67,11 @@ class TestRecordAction:
 
         agentops.end_session(end_state="Success")
 
-    def test_record_function_decorator_multiple(self, mock_req):
+    def test_record_action_decorator_multiple(self, mock_req):
         agentops.start_session()
 
         # Arrange
-        @record_function(event_name=self.event_type)
+        @record_action(event_name=self.event_type)
         def add_three(x, y, z=3):
             return x + y + z
 
@@ -92,10 +92,10 @@ class TestRecordAction:
         agentops.end_session(end_state="Success")
 
     @pytest.mark.asyncio
-    async def test_async_function_call(self, mock_req):
+    async def test_async_action_call(self, mock_req):
         agentops.start_session()
 
-        @record_function(self.event_type)
+        @record_action(self.event_type)
         async def async_add(x, y):
             time.sleep(0.1)
             return x + y
@@ -128,7 +128,7 @@ class TestRecordAction:
         assert session_2 is not None
 
         # Arrange
-        @record_function(event_name=self.event_type)
+        @record_action(event_name=self.event_type)
         def add_three(x, y, z=3):
             return x + y + z
 
@@ -174,7 +174,7 @@ class TestRecordAction:
         assert session_2 is not None
 
         # Arrange
-        @record_function(self.event_type)
+        @record_action(self.event_type)
         async def async_add(x, y):
             time.sleep(0.1)
             return x + y
@@ -217,7 +217,7 @@ class TestRecordAction:
         session_2 = agentops.start_session()
 
         # Arrange
-        @record_function(self.event_type)
+        @record_action(self.event_type)
         def add_two(x, y):
             time.sleep(0.1)
             return x + y
