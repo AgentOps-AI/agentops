@@ -56,7 +56,7 @@ class LangchainCallbackHandler(BaseCallbackHandler):
         endpoint: Optional[str] = None,
         max_wait_time: Optional[int] = None,
         max_queue_size: Optional[int] = None,
-        tags: Optional[List[str]] = None,
+        default_tags: Optional[List[str]] = None,
     ):
 
         logging_level = os.getenv("AGENTOPS_LOGGING_LEVEL")
@@ -74,13 +74,19 @@ class LangchainCallbackHandler(BaseCallbackHandler):
             "endpoint": endpoint,
             "max_wait_time": max_wait_time,
             "max_queue_size": max_queue_size,
-            "tags": tags,
+            "default_tags": default_tags,
         }
 
-        self.ao_client = AOClient(
-            **{k: v for k, v in client_params.items() if v is not None},
-            instrument_llm_calls=False,
-        )
+        self.ao_client = AOClient()
+        if self.ao_client.session_count == 0:
+            self.ao_client.configure(
+                **{k: v for k, v in client_params.items() if v is not None},
+                instrument_llm_calls=False,
+            )
+
+        if not self.ao_client.is_initialized:
+            self.ao_client.initialize()
+
         self.agent_actions: Dict[UUID, List[ActionEvent]] = defaultdict(list)
         self.events = Events()
 
@@ -167,9 +173,6 @@ class LangchainCallbackHandler(BaseCallbackHandler):
         metadata: Optional[Dict[str, Any]] = None,
         **kwargs: Any,
     ) -> Any:
-        print(self.events)
-        print(str(run_id))
-        run_id_2 = run_id
         try:
             self.events.chain[str(run_id)] = ActionEvent(
                 params={
@@ -182,7 +185,6 @@ class LangchainCallbackHandler(BaseCallbackHandler):
             )
         except Exception as e:
             print(e)
-        print("added")
 
     @debug_print_function_params
     def on_chain_end(
@@ -224,8 +226,6 @@ class LangchainCallbackHandler(BaseCallbackHandler):
         inputs: Optional[Dict[str, Any]] = None,
         **kwargs: Any,
     ) -> Any:
-        print(self.events)
-        print(str(run_id))
         self.events.tool[str(run_id)] = ToolEvent(
             params=input_str if inputs is None else inputs,
             name=serialized["name"],
@@ -260,6 +260,8 @@ class LangchainCallbackHandler(BaseCallbackHandler):
                 details=output,
             )
             self.ao_client.record(error_event)
+        else:
+            self.ao_client.record(tool_event)
 
     @debug_print_function_params
     def on_tool_error(

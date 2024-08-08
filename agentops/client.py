@@ -63,6 +63,7 @@ class Client(metaclass=MetaClient):
         env_data_opt_out: Optional[bool] = None,
     ):
         if self.has_sessions:
+            raise Exception("")
             return logger.warning(
                 f"{len(self._sessions)} session(s) in progress. Configuration is locked until there are no more sessions running"
             )
@@ -82,6 +83,9 @@ class Client(metaclass=MetaClient):
         )
 
     def initialize(self) -> Union[Session, None]:
+        if self.is_initialized:
+            return
+
         self.unsuppress_logs()
 
         if self._config.api_key is None:
