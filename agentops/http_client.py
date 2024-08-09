@@ -119,3 +119,58 @@ class HttpClient:
             raise ApiServerException("API server: - internal server error")
 
         return result
+
+    @staticmethod
+    def get(
+        url: str,
+        api_key: Optional[str] = None,
+        jwt: Optional[str] = None,
+        header=None,
+    ) -> Response:
+        result = Response()
+        try:
+            # Create request session with retries configured
+            request_session = requests.Session()
+            request_session.mount(url, HTTPAdapter(max_retries=retry_config))
+
+            if api_key is not None:
+                JSON_HEADER["X-Agentops-Api-Key"] = api_key
+
+            if jwt is not None:
+                JSON_HEADER["Authorization"] = f"Bearer {jwt}"
+
+            res = request_session.get(url, headers=JSON_HEADER, timeout=20)
+
+            result.parse(res)
+        except requests.exceptions.Timeout:
+            result.code = 408
+            result.status = HttpStatus.TIMEOUT
+            raise ApiServerException(
+                "Could not reach API server - connection timed out"
+            )
+        except requests.exceptions.HTTPError as e:
+            try:
+                result.parse(e.response)
+            except Exception:
+                result = Response()
+                result.code = e.response.status_code
+                result.status = Response.get_status(e.response.status_code)
+                result.body = {"error": str(e)}
+                raise ApiServerException(f"HTTPError: {e}")
+        except requests.exceptions.RequestException as e:
+            result.body = {"error": str(e)}
+            raise ApiServerException(f"RequestException: {e}")
+
+        if result.code == 401:
+            raise ApiServerException(
+                f"API server: invalid API key: {api_key}. Find your API key at https://app.agentops.ai/settings/projects"
+            )
+        if result.code == 400:
+            if "message" in result.body:
+                raise ApiServerException(f"API server: {result.body['message']}")
+            else:
+                raise ApiServerException(f"API server: {result.body}")
+        if result.code == 500:
+            raise ApiServerException("API server: - internal server error")
+
+        return result
