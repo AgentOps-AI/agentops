@@ -1,0 +1,59 @@
+name: Run Notebook and Check Logs
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  run-notebook-and-check-logs:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ['3.8']
+      fail-fast: false
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ matrix.python-version }}
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -U jupyter
+
+    - name: Create .env file
+      run: |
+        echo "OPENAI_API_KEY=${{ secrets.OPENAI_API_KEY }}" >> .env
+        echo "AGENTOPS_API_KEY=${{ secrets.AGENTOPS_API_KEY }}" >> .env
+        echo "CO_API_KEY=${{ secrets.CO_API_KEY }}" >> .env
+
+    - name: Run notebook
+      run: |
+        jupyter execute openai-gpt.ipynb
+
+    - name: Check for errors and warnings
+      run: |
+        if [ -f agentops.log ]; then
+          if grep -E "ERROR|WARNING" agentops.log; then
+            echo "Errors or warnings found in agentops.log for Python ${{ matrix.python-version }}"
+            exit 1
+          else
+            echo "No errors or warnings found in agentops.log for Python ${{ matrix.python-version }}"
+          fi
+        else
+          echo "agentops.log file not found. Assuming successful execution without logging."
+        fi
+
+    - name: Upload log as artifact (if exists)
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: agentops-log-${{ matrix.python-version }}
+        path: agentops.log
+        if-no-files-found: ignore
