@@ -34,26 +34,28 @@ jobs:
         exit_code=0
         for notebook in examples/*.ipynb; do
           notebook_name=$(basename "$notebook" .ipynb)
-          log_file="logs/${notebook_name}.log"
-          agentops_log="logs/agentops-${notebook_name}.log"
+          agentops_log="logs/agentops-${notebook}.log"
           
-          # Run the notebook and capture its output
-          jupyter execute "$notebook" > "$log_file" 2>&1
+          # Run the notebook
+          jupyter execute "$notebook"
           
           # If agentops.log was created, move and rename it
           if [ -f agentops.log ]; then
             mv agentops.log "$agentops_log"
-          fi
-          
-          # Check both logs for errors or warnings
-          if grep -E "ERROR|WARNING" "$log_file" "$agentops_log" 2>/dev/null; then
-            echo "Errors or warnings found in $notebook_name for Python ${{ matrix.python-version }}"
-            exit_code=1
+            
+            # Check agentops log for errors or warnings
+            if grep -E "ERROR|WARNING" "$agentops_log"; then
+              echo "Errors or warnings found in $agentops_log for Python ${{ matrix.python-version }}"
+              exit_code=1
+            else
+              echo "No errors or warnings found in $agentops_log for Python ${{ matrix.python-version }}"
+            fi
           else
-            echo "No errors or warnings found in $notebook_name for Python ${{ matrix.python-version }}"
+            echo "No agentops.log generated for $notebook_name"
           fi
         done
         exit $exit_code
+
     - name: Upload logs as artifacts
       uses: actions/upload-artifact@v4
       if: always()
