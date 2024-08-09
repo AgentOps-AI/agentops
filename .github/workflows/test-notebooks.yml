@@ -37,7 +37,9 @@ jobs:
 
     - name: Run notebook
       run: |
-        jupyter execute examples/multi_agent_example.ipynb
+        for notebook in examples/*.ipynb; do
+          jupyter execute "$notebook"
+        done
 
     - name: Check for errors and warnings
       run: |
