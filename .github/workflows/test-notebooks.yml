@@ -35,8 +35,18 @@ jobs:
         for notebook in examples/*.ipynb; do
           notebook_name=$(basename "$notebook" .ipynb)
           log_file="logs/${notebook_name}.log"
+          agentops_log="logs/agentops-${notebook_name}.log"
+          
+          # Run the notebook and capture its output
           jupyter execute "$notebook" > "$log_file" 2>&1
-          if grep -E "ERROR|WARNING" "$log_file"; then
+          
+          # If agentops.log was created, move and rename it
+          if [ -f agentops.log ]; then
+            mv agentops.log "$agentops_log"
+          fi
+          
+          # Check both logs for errors or warnings
+          if grep -E "ERROR|WARNING" "$log_file" "$agentops_log" 2>/dev/null; then
             echo "Errors or warnings found in $notebook_name for Python ${{ matrix.python-version }}"
             exit_code=1
           else
