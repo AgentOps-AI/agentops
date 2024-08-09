@@ -63,7 +63,6 @@ class Client(metaclass=MetaClient):
         env_data_opt_out: Optional[bool] = None,
     ):
         if self.has_sessions:
-            raise Exception("")
             return logger.warning(
                 f"{len(self._sessions)} session(s) in progress. Configuration is locked until there are no more sessions running"
             )

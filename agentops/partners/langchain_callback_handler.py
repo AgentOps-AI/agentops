@@ -89,7 +89,6 @@ class LangchainCallbackHandler(BaseCallbackHandler):
             },  # TODO: params is inconsistent, in ToolEvent we put it in logs
             model=get_model_from_kwargs(kwargs),
             prompt=prompts[0],
-            # tags=tags # TODO
         )
 
     @debug_print_function_params
