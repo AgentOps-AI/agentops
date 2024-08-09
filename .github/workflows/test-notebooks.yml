@@ -1,11 +1,9 @@
 name: Test Notebooks
-
 on:
   push:
     branches: [ main, automate-notebook-testing ]
   pull_request:
     branches: [ main, automate-notebook-testing ]
-
 jobs:
   test-notebooks:
     runs-on: ubuntu-latest
@@ -13,20 +11,16 @@ jobs:
       matrix:
         python-version: ['3.8']
       fail-fast: false
-
     steps:
     - uses: actions/checkout@v4
-
     - name: Set up Python ${{ matrix.python-version }}
       uses: actions/setup-python@v4
       with:
         python-version: ${{ matrix.python-version }}
-
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
         pip install -U jupyter
-
     - name: Create .env file
       run: |
         echo "OPENAI_API_KEY=${{ secrets.OPENAI_API_KEY }}" >> .env
@@ -34,30 +28,26 @@ jobs:
         echo "CO_API_KEY=${{ secrets.CO_API_KEY }}" >> .env
         echo "GROQ_API_KEY=${{ secrets.GROQ_API_KEY }}" >> .env
         echo "SERPER_API_KEY=${{ secrets.SERPER_API_KEY }}" >> .env
-
-    - name: Run notebook
+    - name: Run notebooks and check for errors
       run: |
+        mkdir -p logs
+        exit_code=0
         for notebook in examples/*.ipynb; do
-          jupyter execute "$notebook"
-        done
-
-    - name: Check for errors and warnings
-      run: |
-        if [ -f agentops.log ]; then
-          if grep -E "ERROR|WARNING" agentops.log; then
-            echo "Errors or warnings found in agentops.log for Python ${{ matrix.python-version }}"
-            exit 1
+          notebook_name=$(basename "$notebook" .ipynb)
+          log_file="logs/${notebook_name}.log"
+          jupyter execute "$notebook" > "$log_file" 2>&1
+          if grep -E "ERROR|WARNING" "$log_file"; then
+            echo "Errors or warnings found in $notebook_name for Python ${{ matrix.python-version }}"
+            exit_code=1
           else
-            echo "No errors or warnings found in agentops.log for Python ${{ matrix.python-version }}"
+            echo "No errors or warnings found in $notebook_name for Python ${{ matrix.python-version }}"
           fi
-        else
-          echo "agentops.log file not found. Assuming successful execution without logging."
-        fi
-
-    - name: Upload log as artifact (if exists)
+        done
+        exit $exit_code
+    - name: Upload logs as artifacts
       uses: actions/upload-artifact@v4
       if: always()
       with:
-        name: agentops-log-${{ matrix.python-version }}
-        path: agentops.log
-        if-no-files-found: ignore
+        name: notebook-logs-${{ matrix.python-version }}
+        path: logs/*.log
+        if-no-files-found: warn
