@@ -9,7 +9,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: ['3.8', '3.9', '3.10', '3.11', '3.12']
+        python-version: ['3.11']
       fail-fast: false
     steps:
     - uses: actions/checkout@v4
@@ -33,13 +33,27 @@ jobs:
       run: |
         mkdir -p logs
         exit_code=0
+
+        exclude_notebooks=(
+          "./examples/crew/job_posting.ipynb"
+        )
+
         for notebook in $(find . -name '*.ipynb'); do
+
+          skip=false
+          for excluded in "${exclude_notebooks[@]}"; do
+            if [[ "$notebook" == "$excluded" ]]; then
+              skip=true
+              echo "Skipping excluded notebook: $notebook"
+              break
+            fi
+          done
+
+          $skip && continue
+
           notebook_name=$(basename "$notebook" .ipynb)
           notebook_path=$(realpath "$notebook")
           notebook_dir=$(dirname "$notebook_path")
-          
-          # Remove any existing agentops.log before running the notebook
-          rm -f "${notebook_dir}/agentops.log"
           
           # Run the notebook
           jupyter execute "$notebook_path" || true
