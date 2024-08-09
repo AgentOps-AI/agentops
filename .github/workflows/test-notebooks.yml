@@ -2,9 +2,9 @@ name: Test Notebooks
 
 on:
   push:
-    branches: [ main ]
+    branches: [ main, automate-notebook-testing ]
   pull_request:
-    branches: [ main ]
+    branches: [ main, automate-notebook-testing ]
 
 jobs:
   test-notebooks:
