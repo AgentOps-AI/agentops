@@ -1,4 +1,4 @@
-name: Run Notebook and Check Logs
+name: Test Notebooks
 
 on:
   push:
@@ -7,7 +7,7 @@ on:
     branches: [ main ]
 
 jobs:
-  run-notebook-and-check-logs:
+  test-notebooks:
     runs-on: ubuntu-latest
     strategy:
       matrix:
