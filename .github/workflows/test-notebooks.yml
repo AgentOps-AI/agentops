@@ -32,8 +32,7 @@ jobs:
       run: |
         mkdir -p logs
         exit_code=0
-
-        for notebook in $(find examples -name '*.ipynb'); do
+        for notebook in $(find . -name '*.ipynb'); do
           notebook_name=$(basename "$notebook" .ipynb)
           notebook_path=$(realpath "$notebook")
           notebook_dir=$(dirname "$notebook_path")
@@ -65,7 +64,7 @@ jobs:
         if [ $(find logs -name 'agentops-*.log' | wc -l) -eq 0 ]; then
           echo "No agentops.log files were generated for any notebook"
         fi
-
+        
         exit $exit_code
 
     - name: Upload logs as artifacts
