@@ -15,9 +15,7 @@ from agentops import ActionEvent, LLMEvent, ToolEvent, ErrorEvent
 from agentops.helpers import get_ISO_time
 
 from ..helpers import debug_print_function_params
-import os
 from ..log_config import logger
-import logging
 
 
 def get_model_from_kwargs(kwargs: any) -> str:
@@ -46,14 +44,12 @@ class LangchainCallbackHandler(BaseCallbackHandler):
         endpoint: Optional[str] = None,
         max_wait_time: Optional[int] = None,
         max_queue_size: Optional[int] = None,
-        default_tags: Optional[List[str]] = None,
     ):
         client_params: Dict[str, Any] = {
             "api_key": api_key,
             "endpoint": endpoint,
             "max_wait_time": max_wait_time,
             "max_queue_size": max_queue_size,
-            "default_tags": default_tags,
         }
 
         self.ao_client = AOClient()
