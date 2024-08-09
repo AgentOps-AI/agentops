@@ -48,17 +48,6 @@ class LangchainCallbackHandler(BaseCallbackHandler):
         max_queue_size: Optional[int] = None,
         default_tags: Optional[List[str]] = None,
     ):
-
-        logging_level = os.getenv("AGENTOPS_LOGGING_LEVEL")
-        log_levels = {
-            "CRITICAL": logging.CRITICAL,
-            "ERROR": logging.ERROR,
-            "INFO": logging.INFO,
-            "WARNING": logging.WARNING,
-            "DEBUG": logging.DEBUG,
-        }
-        logger.setLevel(log_levels.get(logging_level or "INFO", "INFO"))
-
         client_params: Dict[str, Any] = {
             "api_key": api_key,
             "endpoint": endpoint,
