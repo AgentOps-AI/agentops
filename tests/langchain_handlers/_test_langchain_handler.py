@@ -4,7 +4,7 @@ from langchain.chat_models import ChatOpenAI
 from langchain.agents import initialize_agent, AgentType
 from dotenv import load_dotenv
 from langchain.agents import tool
-from agentops.langchain_callback_handler import (
+from agentops.partners.langchain_callback_handler import (
     LangchainCallbackHandler as AgentOpsLangchainCallbackHandler,
     AsyncLangchainCallbackHandler as AgentOpsAsyncLangchainCallbackHandler,
 )
