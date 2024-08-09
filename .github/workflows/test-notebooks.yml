@@ -32,10 +32,12 @@ jobs:
         echo "OPENAI_API_KEY=${{ secrets.OPENAI_API_KEY }}" >> .env
         echo "AGENTOPS_API_KEY=${{ secrets.AGENTOPS_API_KEY }}" >> .env
         echo "CO_API_KEY=${{ secrets.CO_API_KEY }}" >> .env
+        echo "GROQ_API_KEY=${{ secrets.GROQ_API_KEY }}" >> .env
+        echo "SERPER_API_KEY=${{ secrets.SERPER_API_KEY }}" >> .env
 
     - name: Run notebook
       run: |
-        jupyter execute examples/multi_session_llm.ipynb
+        jupyter execute examples/multi_agent_groq_example.ipynb
 
     - name: Check for errors and warnings
       run: |
