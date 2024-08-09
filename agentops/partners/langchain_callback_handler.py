@@ -162,7 +162,7 @@ class LangchainCallbackHandler(BaseCallbackHandler):
                 action_type="chain",
             )
         except Exception as e:
-            print(e)
+            logger.warning(e)
 
     @debug_print_function_params
     def on_chain_end(
