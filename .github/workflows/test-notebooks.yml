@@ -1,15 +1,15 @@
 name: Test Notebooks
 on:
   push:
-    branches: [ main, automate-notebook-testing ]
+    branches: [ main ]
   pull_request:
-    branches: [ main, automate-notebook-testing ]
+    branches: [ main ]
 jobs:
   test-notebooks:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: ['3.8']
+        python-version: ['3.8', '3.9', '3.10', '3.11', '3.12']
       fail-fast: false
     steps:
     - uses: actions/checkout@v4
