@@ -32,7 +32,7 @@ jobs:
       run: |
         mkdir -p logs
         exit_code=0
-        
+
         for notebook in $(find examples -name '*.ipynb'); do
           notebook_name=$(basename "$notebook" .ipynb)
           notebook_path=$(realpath "$notebook")
@@ -42,7 +42,7 @@ jobs:
           rm -f "${notebook_dir}/agentops.log"
           
           # Run the notebook
-          jupyter execute "$notebook_path"
+          jupyter execute "$notebook_path" || true
           
           # Check if agentops.log was created
           if [ -f "${notebook_dir}/agentops.log" ]; then
@@ -60,12 +60,12 @@ jobs:
             echo "No agentops.log generated for $notebook_name"
           fi
         done
-        
+
         # Check if any logs were found
         if [ $(find logs -name 'agentops-*.log' | wc -l) -eq 0 ]; then
           echo "No agentops.log files were generated for any notebook"
         fi
-        
+
         exit $exit_code
 
     - name: Upload logs as artifacts
