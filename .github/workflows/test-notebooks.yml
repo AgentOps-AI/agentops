@@ -35,7 +35,7 @@ jobs:
 
     - name: Run notebook
       run: |
-        jupyter execute openai-gpt.ipynb
+        jupyter execute examples/openai-gpt.ipynb
 
     - name: Check for errors and warnings
       run: |
