@@ -32,28 +32,40 @@ jobs:
       run: |
         mkdir -p logs
         exit_code=0
-        for notebook in examples/*.ipynb; do
+        
+        for notebook in $(find examples -name '*.ipynb'); do
           notebook_name=$(basename "$notebook" .ipynb)
-          agentops_log="logs/agentops-${notebook}.log"
+          notebook_path=$(realpath "$notebook")
+          notebook_dir=$(dirname "$notebook_path")
+          
+          # Remove any existing agentops.log before running the notebook
+          rm -f "${notebook_dir}/agentops.log"
           
           # Run the notebook
-          jupyter execute "$notebook"
+          jupyter execute "$notebook_path"
           
-          # If agentops.log was created, move and rename it
-          if [ -f agentops.log ]; then
-            mv agentops.log "$agentops_log"
+          # Check if agentops.log was created
+          if [ -f "${notebook_dir}/agentops.log" ]; then
+            dest_log="logs/agentops-${notebook_name}.log"
+            mv "${notebook_dir}/agentops.log" "$dest_log"
             
             # Check agentops log for errors or warnings
-            if grep -E "ERROR|WARNING" "$agentops_log"; then
-              echo "Errors or warnings found in $agentops_log for Python ${{ matrix.python-version }}"
+            if grep -E "ERROR|WARNING" "$dest_log"; then
+              echo "Errors or warnings found in $dest_log for Python ${{ matrix.python-version }}"
               exit_code=1
             else
-              echo "No errors or warnings found in $agentops_log for Python ${{ matrix.python-version }}"
+              echo "No errors or warnings found in $dest_log for Python ${{ matrix.python-version }}"
             fi
           else
             echo "No agentops.log generated for $notebook_name"
           fi
         done
+        
+        # Check if any logs were found
+        if [ $(find logs -name 'agentops-*.log' | wc -l) -eq 0 ]; then
+          echo "No agentops.log files were generated for any notebook"
+        fi
+        
         exit $exit_code
 
     - name: Upload logs as artifacts
@@ -61,5 +73,5 @@ jobs:
       if: always()
       with:
         name: notebook-logs-${{ matrix.python-version }}
-        path: logs/*.log
+        path: logs/agentops-*.log
         if-no-files-found: warn
