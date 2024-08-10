@@ -923,6 +923,7 @@ class LlmTracker:
     def override_anthropic_sync_completion(self):
         from anthropic.resources import messages
         from anthropic.types import (
+            Message,
             RawContentBlockDeltaEvent,
             RawContentBlockStartEvent,
             RawContentBlockStopEvent,
@@ -947,6 +948,7 @@ class LlmTracker:
             if completion_override:
                 result_model = None
                 pydantic_models = (
+                    Message,
                     RawContentBlockDeltaEvent,
                     RawContentBlockStartEvent,
                     RawContentBlockStopEvent,
@@ -987,6 +989,7 @@ class LlmTracker:
     def override_anthropic_async_completion(self):
         from anthropic.resources import messages
         from anthropic.types import (
+            Message,
             RawContentBlockDeltaEvent,
             RawContentBlockStartEvent,
             RawContentBlockStopEvent,
@@ -1012,6 +1015,7 @@ class LlmTracker:
             if completion_override:
                 result_model = None
                 pydantic_models = (
+                    Message,
                     RawContentBlockDeltaEvent,
                     RawContentBlockStartEvent,
                     RawContentBlockStopEvent,
