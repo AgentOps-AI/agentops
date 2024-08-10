@@ -931,7 +931,6 @@ class LlmTracker:
             RawMessageStopEvent,
         )
 
-
         # Store the original method
         global original_create
         original_create = messages.Messages.create
@@ -1037,7 +1036,7 @@ class LlmTracker:
                         f"{pprint.pformat(completion_override)}"
                     )
                     return None
-                
+
                 return self._handle_response_anthropic(
                     result_model, kwargs, init_timestamp, session=session
                 )
