@@ -641,7 +641,7 @@ class LlmTracker:
                     self.llm_event.prompt_tokens = chunk.message.usage.input_tokens
                     self.llm_event.completion = {
                         "role": chunk.message.role,
-                        "content": "", # Always returned as [] in this instance type
+                        "content": "",  # Always returned as [] in this instance type
                     }
                 elif chunk.type == "content_block_start":
                     if chunk.content_block.type == "text":
@@ -650,13 +650,15 @@ class LlmTracker:
                         self.tool_id = chunk.content_block.id
                         self.tool_event[self.tool_id] = ToolEvent(
                             name=chunk.content_block.name,
-                            logs={"type": chunk.content_block.type, "input": ""}
+                            logs={"type": chunk.content_block.type, "input": ""},
                         )
                 elif chunk.type == "content_block_delta":
                     if chunk.delta.type == "text_delta":
                         self.llm_event.completion["content"] += chunk.delta.text
                     elif chunk.delta.type == "input_json_delta":
-                        self.tool_event[self.tool_id].logs["input"] += chunk.delta.partial_json
+                        self.tool_event[self.tool_id].logs[
+                            "input"
+                        ] += chunk.delta.partial_json
                 elif chunk.type == "content_block_stop":
                     pass
                 elif chunk.type == "message_delta":
@@ -716,7 +718,7 @@ class LlmTracker:
             self.llm_event.prompt_tokens = response.usage.input_tokens
             self.llm_event.completion = {
                 "role": "assistant",
-                "content": response.content
+                "content": response.content,
             }
             self.llm_event.completion_tokens = response.usage.output_tokens
             self.llm_event.model = response.model
