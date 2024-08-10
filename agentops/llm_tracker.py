@@ -654,7 +654,7 @@ class LlmTracker:
                 elif isinstance(chunk, RawContentBlockStopEvent):
                     pass
                 elif isinstance(chunk, RawMessageDeltaEvent):
-                    self.llm_event.completion_tokens += chunk.message.usage.output_tokens
+                    self.llm_event.completion_tokens = chunk.usage.output_tokens
                 elif isinstance(chunk, RawMessageStopEvent):
                     self.llm_event.completion = accumulated_delta
                     self.llm_event.end_timestamp = get_ISO_time()
