@@ -644,12 +644,12 @@ class LlmTracker:
                     self.llm_event.model = kwargs["model"]
                     self.llm_event.prompt = kwargs["messages"][0]["content"]
                     self.llm_event.prompt_tokens = chunk.message.usage.input_tokens
-                    self.llm_event.completion = ""
-                elif isinstance(chunk, RawContentBlockStartEvent):
                     self.llm_event.completion = {
-                        "role": "assistant",
-                        "content": chunk.content_block.text,
+                        "role": chunk.message.role,
+                        "content": "", # Always returned as [] in the this instance type
                     }
+                elif isinstance(chunk, RawContentBlockStartEvent):
+                    self.llm_event.completion["content"] += chunk.content_block.text
                 elif isinstance(chunk, RawContentBlockDeltaEvent):
                     self.llm_event.completion["content"] += chunk.delta.text
                 elif isinstance(chunk, RawContentBlockStopEvent):
@@ -1166,7 +1166,7 @@ class LlmTracker:
 
                     if module_version is None:
                         logger.warning(
-                            f"Cannot determine Anthropic version. Only Anthropic>=0.0.1 supported."
+                            f"Cannot determine Anthropic version. Only Anthropic>=0.32.0 supported."
                         )
 
                     if Version(module_version) >= parse("0.32.0"):
@@ -1174,7 +1174,7 @@ class LlmTracker:
                         self.override_anthropic_async_completion()
                     else:
                         logger.warning(
-                            f"Only Anthropic>=0.0.1 supported. v{module_version} found."
+                            f"Only Anthropic>=0.32.0 supported. v{module_version} found."
                         )
 
     def stop_instrumenting(self):
