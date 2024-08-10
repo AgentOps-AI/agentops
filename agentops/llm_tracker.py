@@ -646,7 +646,7 @@ class LlmTracker:
                     self.llm_event.prompt_tokens = chunk.message.usage.input_tokens
                     self.llm_event.completion = {
                         "role": chunk.message.role,
-                        "content": "", # Always returned as [] in the this instance type
+                        "content": "", # Always returned as [] in this instance type
                     }
                 elif isinstance(chunk, RawContentBlockStartEvent):
                     self.llm_event.completion["content"] += chunk.content_block.text
