@@ -636,27 +636,27 @@ class LlmTracker:
             self.llm_event.session_id = session.session_id
 
         def handle_stream_chunk(chunk: Message):
-            if self.llm_event.returns == None:
-                self.llm_event.returns = chunk
-
             try:
-                accumulated_delta = ""
-                self.llm_event.agent_id = check_call_stack_for_agent_id()
-                self.llm_event.prompt = kwargs["messages"][0]["content"]
-
+                # We take the first chunk and accumulate the deltas from all subsequent chunks to build one full chat completion
                 if isinstance(chunk, RawMessageStartEvent):
-                    self.llm_event.model = chunk.message.model
+                    self.llm_event.returns = chunk
+                    self.llm_event.agent_id = check_call_stack_for_agent_id()
+                    self.llm_event.model = kwargs["model"]
+                    self.llm_event.prompt = kwargs["messages"][0]["content"]
                     self.llm_event.prompt_tokens = chunk.message.usage.input_tokens
+                    self.llm_event.completion = ""
                 elif isinstance(chunk, RawContentBlockStartEvent):
-                    accumulated_delta += chunk.content_block.text
+                    self.llm_event.completion = {
+                        "role": "assistant",
+                        "content": chunk.content_block.text,
+                    }
                 elif isinstance(chunk, RawContentBlockDeltaEvent):
-                    accumulated_delta += chunk.delta.text
+                    self.llm_event.completion["content"] += chunk.delta.text
                 elif isinstance(chunk, RawContentBlockStopEvent):
                     pass
                 elif isinstance(chunk, RawMessageDeltaEvent):
                     self.llm_event.completion_tokens = chunk.usage.output_tokens
                 elif isinstance(chunk, RawMessageStopEvent):
-                    self.llm_event.completion = accumulated_delta
                     self.llm_event.end_timestamp = get_ISO_time()
                     self._safe_record(session, self.llm_event)
 
