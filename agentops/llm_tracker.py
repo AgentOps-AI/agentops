@@ -621,42 +621,47 @@ class LlmTracker:
         """Handle responses for Anthropic"""
         from anthropic import Stream, AsyncStream
         from anthropic.resources import AsyncMessages
-        from anthropic.types import (
-            Message,
-            RawContentBlockDeltaEvent,
-            RawContentBlockStartEvent,
-            RawContentBlockStopEvent,
-            RawMessageDeltaEvent,
-            RawMessageStartEvent,
-            RawMessageStopEvent,
-        )
+        from anthropic.types import Message
 
         self.llm_event = LLMEvent(init_timestamp=init_timestamp, params=kwargs)
         if session is not None:
             self.llm_event.session_id = session.session_id
 
+        self.tool_event = {}
+        self.tool_id = ""
+
         def handle_stream_chunk(chunk: Message):
             try:
                 # We take the first chunk and accumulate the deltas from all subsequent chunks to build one full chat completion
-                if isinstance(chunk, RawMessageStartEvent):
+                if chunk.type == "message_start":
                     self.llm_event.returns = chunk
                     self.llm_event.agent_id = check_call_stack_for_agent_id()
                     self.llm_event.model = kwargs["model"]
-                    self.llm_event.prompt = kwargs["messages"][0]["content"]
+                    self.llm_event.prompt = kwargs["messages"]
                     self.llm_event.prompt_tokens = chunk.message.usage.input_tokens
                     self.llm_event.completion = {
                         "role": chunk.message.role,
                         "content": "", # Always returned as [] in this instance type
                     }
-                elif isinstance(chunk, RawContentBlockStartEvent):
-                    self.llm_event.completion["content"] += chunk.content_block.text
-                elif isinstance(chunk, RawContentBlockDeltaEvent):
-                    self.llm_event.completion["content"] += chunk.delta.text
-                elif isinstance(chunk, RawContentBlockStopEvent):
+                elif chunk.type == "content_block_start":
+                    if chunk.content_block.type == "text":
+                        self.llm_event.completion["content"] += chunk.content_block.text
+                    elif chunk.content_block.type == "tool_use":
+                        self.tool_id = chunk.content_block.id
+                        self.tool_event[self.tool_id] = ToolEvent(
+                            name=chunk.content_block.name,
+                            logs={"type": chunk.content_block.type, "input": ""}
+                        )
+                elif chunk.type == "content_block_delta":
+                    if chunk.delta.type == "text_delta":
+                        self.llm_event.completion["content"] += chunk.delta.text
+                    elif chunk.delta.type == "input_json_delta":
+                        self.tool_event[self.tool_id].logs["input"] += chunk.delta.partial_json
+                elif chunk.type == "content_block_stop":
                     pass
-                elif isinstance(chunk, RawMessageDeltaEvent):
+                elif chunk.type == "message_delta":
                     self.llm_event.completion_tokens = chunk.usage.output_tokens
-                elif isinstance(chunk, RawMessageStopEvent):
+                elif chunk.type == "message_stop":
                     self.llm_event.end_timestamp = get_ISO_time()
                     self._safe_record(session, self.llm_event)
 
@@ -707,9 +712,12 @@ class LlmTracker:
         try:
             self.llm_event.returns = response.model_dump()
             self.llm_event.agent_id = check_call_stack_for_agent_id()
-            self.llm_event.prompt = kwargs["messages"][0]["content"]
+            self.llm_event.prompt = kwargs["messages"]
             self.llm_event.prompt_tokens = response.usage.input_tokens
-            self.llm_event.completion = response.content[0].text
+            self.llm_event.completion = {
+                "role": "assistant",
+                "content": response.content
+            }
             self.llm_event.completion_tokens = response.usage.output_tokens
             self.llm_event.model = response.model
             self.llm_event.end_timestamp = get_ISO_time()
