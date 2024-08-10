@@ -642,11 +642,11 @@ class LlmTracker:
             try:
                 accumulated_delta = ""
                 self.llm_event.agent_id = check_call_stack_for_agent_id()
-                self.llm_event.prompt = kwargs["messages"]
+                self.llm_event.prompt = kwargs["messages"][0]["content"]
 
                 if isinstance(chunk, RawMessageStartEvent):
                     self.llm_event.model = chunk.message.model
-                    self.llm_event.prompt_tokens = chunk.content
+                    self.llm_event.prompt_tokens = chunk.usage.input_tokens
                 elif isinstance(chunk, RawContentBlockStartEvent):
                     accumulated_delta += chunk.content_block.text
                 elif isinstance(chunk, RawContentBlockDeltaEvent):
@@ -670,7 +670,7 @@ class LlmTracker:
                 logger.warning(
                     f"Unable to parse a chunk for LLM call. Skipping upload to AgentOps\n"
                     f"chunk:\n {chunk}\n"
-                    f"kwargs:\n {kwargs_str}\n"
+                    f"kwargs:\n {kwargs_str}\n",
                 )
 
         # if the response is a generator, decorate the generator
@@ -707,7 +707,7 @@ class LlmTracker:
         try:
             self.llm_event.returns = response.model_dump()
             self.llm_event.agent_id = check_call_stack_for_agent_id()
-            self.llm_event.prompt = kwargs["messages"]
+            self.llm_event.prompt = kwargs["messages"][0]["content"]
             self.llm_event.prompt_tokens = response.usage.input_tokens
             self.llm_event.completion = response.content[0].text
             self.llm_event.completion_tokens = response.usage.output_tokens
