@@ -922,6 +922,15 @@ class LlmTracker:
 
     def override_anthropic_sync_completion(self):
         from anthropic.resources import messages
+        from anthropic.types import (
+            RawContentBlockDeltaEvent,
+            RawContentBlockStartEvent,
+            RawContentBlockStopEvent,
+            RawMessageDeltaEvent,
+            RawMessageStartEvent,
+            RawMessageStopEvent,
+        )
+
 
         # Store the original method
         global original_create
@@ -932,6 +941,41 @@ class LlmTracker:
             session = kwargs.get("session", None)
             if "session" in kwargs.keys():
                 del kwargs["session"]
+
+            completion_override = fetch_completion_override_from_time_travel_cache(
+                kwargs
+            )
+            if completion_override:
+                result_model = None
+                pydantic_models = (
+                    RawContentBlockDeltaEvent,
+                    RawContentBlockStartEvent,
+                    RawContentBlockStopEvent,
+                    RawMessageDeltaEvent,
+                    RawMessageStartEvent,
+                    RawMessageStopEvent,
+                )
+
+                for pydantic_model in pydantic_models:
+                    try:
+                        result_model = pydantic_model.model_validate_json(
+                            completion_override
+                        )
+                        break
+                    except Exception as e:
+                        pass
+
+                if result_model is None:
+                    logger.error(
+                        f"Time Travel: Pydantic validation failed for {pydantic_models} \n"
+                        f"Time Travel: Completion override was:\n"
+                        f"{pprint.pformat(completion_override)}"
+                    )
+                    return None
+                return self._handle_response_anthropic(
+                    result_model, kwargs, init_timestamp, session=session
+                )
+
             # Call the original function with its original arguments
             result = original_create(*args, **kwargs)
             return self._handle_response_anthropic(
@@ -943,6 +987,14 @@ class LlmTracker:
 
     def override_anthropic_async_completion(self):
         from anthropic.resources import messages
+        from anthropic.types import (
+            RawContentBlockDeltaEvent,
+            RawContentBlockStartEvent,
+            RawContentBlockStopEvent,
+            RawMessageDeltaEvent,
+            RawMessageStartEvent,
+            RawMessageStopEvent,
+        )
 
         # Store the original method
         global original_create_async
@@ -954,6 +1006,42 @@ class LlmTracker:
             session = kwargs.get("session", None)
             if "session" in kwargs.keys():
                 del kwargs["session"]
+
+            completion_override = fetch_completion_override_from_time_travel_cache(
+                kwargs
+            )
+            if completion_override:
+                result_model = None
+                pydantic_models = (
+                    RawContentBlockDeltaEvent,
+                    RawContentBlockStartEvent,
+                    RawContentBlockStopEvent,
+                    RawMessageDeltaEvent,
+                    RawMessageStartEvent,
+                    RawMessageStopEvent,
+                )
+
+                for pydantic_model in pydantic_models:
+                    try:
+                        result_model = pydantic_model.model_validate_json(
+                            completion_override
+                        )
+                        break
+                    except Exception as e:
+                        pass
+
+                if result_model is None:
+                    logger.error(
+                        f"Time Travel: Pydantic validation failed for {pydantic_models} \n"
+                        f"Time Travel: Completion override was:\n"
+                        f"{pprint.pformat(completion_override)}"
+                    )
+                    return None
+                
+                return self._handle_response_anthropic(
+                    result_model, kwargs, init_timestamp, session=session
+                )
+
             result = await original_create_async(*args, **kwargs)
             return self._handle_response_anthropic(
                 result, kwargs, init_timestamp, session=session
