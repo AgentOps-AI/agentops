@@ -47,7 +47,7 @@ def _handle_response_cohere(
                     "content": chunk.response.text,
                 }
                 tracker.llm_event.end_timestamp = get_ISO_time()
-                tracker._safe_record(session, tracker.llm_event)
+                safe_record(session, tracker.llm_event)
 
                 # StreamedChatResponse_SearchResults = ActionEvent
                 search_results = chunk.response.search_results
@@ -80,7 +80,7 @@ def _handle_response_cohere(
                         action_event.end_timestamp = get_ISO_time()
 
                 for key, action_event in tracker.action_events.items():
-                    tracker._safe_record(session, action_event)
+                    safe_record(session, action_event)
 
             elif isinstance(chunk, StreamedChatResponse_TextGeneration):
                 tracker.llm_event.completion += chunk.text
@@ -106,7 +106,7 @@ def _handle_response_cohere(
                 pass
 
         except Exception as e:
-            tracker._safe_record(
+            safe_record(
                 session, ErrorEvent(trigger_event=tracker.llm_event, exception=e)
             )
 
@@ -166,11 +166,9 @@ def _handle_response_cohere(
         tracker.llm_event.completion_tokens = response.meta.tokens.output_tokens
         tracker.llm_event.model = kwargs.get("model", "command-r-plus")
 
-        tracker._safe_record(session, tracker.llm_event)
+        safe_record(session, tracker.llm_event)
     except Exception as e:
-        tracker._safe_record(
-            session, ErrorEvent(trigger_event=tracker.llm_event, exception=e)
-        )
+        safe_record(session, ErrorEvent(trigger_event=tracker.llm_event, exception=e))
         kwargs_str = pprint.pformat(kwargs)
         response = pprint.pformat(response)
         logger.warning(
@@ -194,7 +192,7 @@ def override_cohere_chat(tracker):
         if "session" in kwargs.keys():
             del kwargs["session"]
         result = original_chat(*args, **kwargs)
-        return tracker._handle_response_cohere(
+        return tracker.handle_response_cohere(
             result, kwargs, init_timestamp, session=session
         )
 

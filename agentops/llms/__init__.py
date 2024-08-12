@@ -173,9 +173,3 @@ class LlmTracker:
         undo_override_openai_v1_async_completion()
         undo_override_openai_v1_completion()
         undo_override_ollama(self)
-
-    def _safe_record(self, session, event):
-        if session is not None:
-            session.record(event)
-        else:
-            self.client.record(event)

@@ -19,7 +19,7 @@ from typing import Optional, List, Union, Tuple
 from termcolor import colored
 
 from .event import Event, ErrorEvent
-from .helpers import (
+from .singleton import (
     conditional_singleton,
 )
 from .session import Session, active_sessions

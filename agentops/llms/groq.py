@@ -57,9 +57,9 @@ def _handle_response_groq(
                 }
                 tracker.llm_event.end_timestamp = get_ISO_time()
 
-                tracker._safe_record(session, tracker.llm_event)
+                safe_record(session, tracker.llm_event)
         except Exception as e:
-            tracker._safe_record(
+            safe_record(
                 session, ErrorEvent(trigger_event=tracker.llm_event, exception=e)
             )
 
@@ -111,11 +111,9 @@ def _handle_response_groq(
         tracker.llm_event.completion_tokens = response.usage.completion_tokens
         tracker.llm_event.model = response.model
 
-        tracker._safe_record(session, tracker.llm_event)
+        safe_record(session, tracker.llm_event)
     except Exception as e:
-        tracker._safe_record(
-            session, ErrorEvent(trigger_event=tracker.llm_event, exception=e)
-        )
+        safe_record(session, ErrorEvent(trigger_event=tracker.llm_event, exception=e))
 
         kwargs_str = pprint.pformat(kwargs)
         response = pprint.pformat(response)

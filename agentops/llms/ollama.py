@@ -97,7 +97,7 @@ def _handle_response_ollama(
     tracker.llm_event.prompt = kwargs["messages"]
     tracker.llm_event.completion = response["message"]
 
-    tracker._safe_record(session, tracker.llm_event)
+    safe_record(session, tracker.llm_event)
     return response
 
 
