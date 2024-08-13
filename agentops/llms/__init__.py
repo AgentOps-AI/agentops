@@ -12,12 +12,7 @@ import inspect
 from .cohere import CohereProvider
 from .groq import GroqProvider
 from .litellm import override_litellm_completion, override_litellm_async_completion
-from .ollama import (
-    override_ollama_chat,
-    override_ollama_chat_client,
-    override_ollama_chat_async_client,
-    undo_override_ollama,
-)
+from .ollama import OllamaProvider
 from .openai import OpenAiProvider
 
 original_func = {}
@@ -48,42 +43,42 @@ class LlmTracker:
         self.client = client
         self.completion = ""
 
-    def _override_openai_v0_method(self, api, method_path, module):
-        def handle_response(result, kwargs, init_timestamp):
-            if api == "openai":
-                return handle_response_v0_openai(self, result, kwargs, init_timestamp)
-            return result
-
-        def wrap_method(original_method):
-            if inspect.iscoroutinefunction(original_method):
-
-                @functools.wraps(original_method)
-                async def async_method(*args, **kwargs):
-                    init_timestamp = get_ISO_time()
-                    response = await original_method(*args, **kwargs)
-                    return handle_response(response, kwargs, init_timestamp)
-
-                return async_method
-
-            else:
-
-                @functools.wraps(original_method)
-                def sync_method(*args, **kwargs):
-                    init_timestamp = get_ISO_time()
-                    response = original_method(*args, **kwargs)
-                    return handle_response(response, kwargs, init_timestamp)
-
-                return sync_method
-
-        method_parts = method_path.split(".")
-        original_method = functools.reduce(getattr, method_parts, module)
-        new_method = wrap_method(original_method)
-
-        if len(method_parts) == 1:
-            setattr(module, method_parts[0], new_method)
-        else:
-            parent = functools.reduce(getattr, method_parts[:-1], module)
-            setattr(parent, method_parts[-1], new_method)
+    # def _override_openai_v0_method(self, api, method_path, module):
+    # def handle_response(result, kwargs, init_timestamp):
+    #     if api == "openai":
+    #         return handle_response_v0_openai(self, result, kwargs, init_timestamp)
+    #     return result
+    #
+    # def wrap_method(original_method):
+    #     if inspect.iscoroutinefunction(original_method):
+    #
+    #         @functools.wraps(original_method)
+    #         async def async_method(*args, **kwargs):
+    #             init_timestamp = get_ISO_time()
+    #             response = await original_method(*args, **kwargs)
+    #             return handle_response(response, kwargs, init_timestamp)
+    #
+    #         return async_method
+    #
+    #     else:
+    #
+    #         @functools.wraps(original_method)
+    #         def sync_method(*args, **kwargs):
+    #             init_timestamp = get_ISO_time()
+    #             response = original_method(*args, **kwargs)
+    #             return handle_response(response, kwargs, init_timestamp)
+    #
+    #         return sync_method
+    #
+    # method_parts = method_path.split(".")
+    # original_method = functools.reduce(getattr, method_parts, module)
+    # new_method = wrap_method(original_method)
+    #
+    # if len(method_parts) == 1:
+    #     setattr(module, method_parts[0], new_method)
+    # else:
+    #     parent = functools.reduce(getattr, method_parts[:-1], module)
+    #     setattr(parent, method_parts[-1], new_method)
 
     def override_api(self):
         """
@@ -143,9 +138,8 @@ class LlmTracker:
                     module_version = version(api)
 
                     if Version(module_version) >= parse("0.0.1"):
-                        override_ollama_chat(self)
-                        override_ollama_chat_client(self)
-                        override_ollama_chat_async_client(self)
+                        provider = OllamaProvider(self.client)
+                        provider.override()
                     else:
                         logger.warning(
                             f"Only Ollama>=0.0.1 supported. v{module_version} found."
@@ -166,4 +160,8 @@ class LlmTracker:
         openai_provider = OpenAiProvider(self.client)
         openai_provider.undo_override()
 
-        undo_override_ollama(self)
+        groq_provider = GroqProvider(self.client)
+        groq_provider.undo_override()
+
+        cohere_provider = CohereProvider(self.client)
+        cohere_provider.undo_override()
