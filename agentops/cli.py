@@ -1,8 +1,8 @@
 import argparse
-from ..time_travel import fetch_time_travel_id, set_time_travel_active_state
+from .time_travel import fetch_time_travel_id, set_time_travel_active_state
 
 
-def cli():
+def main():
     parser = argparse.ArgumentParser(description="AgentOps CLI")
     subparsers = parser.add_subparsers(dest="command")
 
