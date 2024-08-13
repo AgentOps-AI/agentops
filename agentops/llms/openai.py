@@ -11,7 +11,7 @@ from ..log_config import logger
 from ..helpers import check_call_stack_for_agent_id, get_ISO_time
 
 
-class OpenAiInstrumentedProvider(InstrumentedProvider):
+class OpenAiProvider(InstrumentedProvider):
 
     original_create = None
     original_create_async = None

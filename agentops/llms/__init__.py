@@ -6,13 +6,11 @@ from importlib.metadata import version
 from packaging.version import Version, parse
 
 from ..log_config import logger
-from ..event import LLMEvent
 from ..helpers import get_ISO_time
 import inspect
-from typing import Optional
 
 from .cohere import override_cohere_chat, override_cohere_chat_stream
-from .groq import override_groq_chat, override_groq_chat_stream
+from .groq import GroqProvider
 from .litellm import override_litellm_completion, override_litellm_async_completion
 from .ollama import (
     override_ollama_chat,
@@ -20,7 +18,7 @@ from .ollama import (
     override_ollama_chat_async_client,
     undo_override_ollama,
 )
-from .openai import OpenAiInstrumentedProvider
+from .openai import OpenAiProvider
 
 original_func = {}
 original_create = None
@@ -116,7 +114,7 @@ class LlmTracker:
                     if hasattr(module, "__version__"):
                         module_version = parse(module.__version__)
                         if module_version >= parse("1.0.0"):
-                            provider = OpenAiInstrumentedProvider(self.client)
+                            provider = OpenAiProvider(self.client)
                             provider.override()
                         else:
                             # Patch openai <v1.0.0 methods
@@ -157,14 +155,15 @@ class LlmTracker:
                     module_version = version(api)
 
                     if Version(module_version) >= parse("0.9.0"):
-                        override_groq_chat(self)
-                        override_groq_chat_stream(self)
+                        provider = GroqProvider(self.client)
+                        provider.override()
                     else:
                         logger.warning(
                             f"Only Groq>=0.9.0 supported. v{module_version} found."
                         )
 
     def stop_instrumenting(self):
-        undo_override_openai_v1_async_completion()
-        undo_override_openai_v1_completion()
+        openai_provider = OpenAiProvider(self.client)
+        openai_provider.undo_override()
+
         undo_override_ollama(self)

@@ -1,163 +1,174 @@
 import pprint
 from typing import Optional
 
-from ..event import ActionEvent, ErrorEvent, LLMEvent
+from .instrumented_provider import InstrumentedProvider
+from ..event import ErrorEvent, LLMEvent
 from ..session import Session
 from ..log_config import logger
 from agentops.helpers import get_ISO_time, check_call_stack_for_agent_id
 
 
-def _handle_response_groq(
-    tracker, response, kwargs, init_timestamp, session: Optional[Session] = None
-):
-    """Handle responses for OpenAI versions >v1.0.0"""
-    from groq import AsyncStream, Stream
-    from groq.resources.chat import AsyncCompletions
-    from groq.types.chat import ChatCompletionChunk
+class GroqProvider(InstrumentedProvider):
+    def __init__(self, client):
+        super().__init__(client)
+        self.client = client
 
-    tracker.llm_event = LLMEvent(init_timestamp=init_timestamp, params=kwargs)
-    if session is not None:
-        tracker.llm_event.session_id = session.session_id
+    def override(self):
+        self._override_chat()
+        self._override_chat_stream()
 
-    def handle_stream_chunk(chunk: ChatCompletionChunk):
-        # NOTE: prompt/completion usage not returned in response when streaming
-        # We take the first ChatCompletionChunk and accumulate the deltas from all subsequent chunks to build one full chat completion
-        if tracker.llm_event.returns == None:
-            tracker.llm_event.returns = chunk
+    def undo_override(self):
+        pass
 
-        try:
-            accumulated_delta = tracker.llm_event.returns.choices[0].delta
-            tracker.llm_event.agent_id = check_call_stack_for_agent_id()
-            tracker.llm_event.model = chunk.model
-            tracker.llm_event.prompt = kwargs["messages"]
+    def handle_response(
+        self, response, kwargs, init_timestamp, session: Optional[Session] = None
+    ):
+        """Handle responses for OpenAI versions >v1.0.0"""
+        from groq import AsyncStream, Stream
+        from groq.resources.chat import AsyncCompletions
+        from groq.types.chat import ChatCompletionChunk
 
-            # NOTE: We assume for completion only choices[0] is relevant
-            choice = chunk.choices[0]
+        self.llm_event = LLMEvent(init_timestamp=init_timestamp, params=kwargs)
+        if session is not None:
+            self.llm_event.session_id = session.session_id
 
-            if choice.delta.content:
-                accumulated_delta.content += choice.delta.content
+        def handle_stream_chunk(chunk: ChatCompletionChunk):
+            # NOTE: prompt/completion usage not returned in response when streaming
+            # We take the first ChatCompletionChunk and accumulate the deltas from all subsequent chunks to build one full chat completion
+            if self.llm_event.returns == None:
+                self.llm_event.returns = chunk
 
-            if choice.delta.role:
-                accumulated_delta.role = choice.delta.role
+            try:
+                accumulated_delta = self.llm_event.returns.choices[0].delta
+                self.llm_event.agent_id = check_call_stack_for_agent_id()
+                self.llm_event.model = chunk.model
+                self.llm_event.prompt = kwargs["messages"]
 
-            if choice.delta.tool_calls:
-                accumulated_delta.tool_calls = choice.delta.tool_calls
+                # NOTE: We assume for completion only choices[0] is relevant
+                choice = chunk.choices[0]
 
-            if choice.delta.function_call:
-                accumulated_delta.function_call = choice.delta.function_call
+                if choice.delta.content:
+                    accumulated_delta.content += choice.delta.content
 
-            if choice.finish_reason:
-                # Streaming is done. Record LLMEvent
-                tracker.llm_event.returns.choices[0].finish_reason = (
-                    choice.finish_reason
+                if choice.delta.role:
+                    accumulated_delta.role = choice.delta.role
+
+                if choice.delta.tool_calls:
+                    accumulated_delta.tool_calls = choice.delta.tool_calls
+
+                if choice.delta.function_call:
+                    accumulated_delta.function_call = choice.delta.function_call
+
+                if choice.finish_reason:
+                    # Streaming is done. Record LLMEvent
+                    self.llm_event.returns.choices[0].finish_reason = (
+                        choice.finish_reason
+                    )
+                    self.llm_event.completion = {
+                        "role": accumulated_delta.role,
+                        "content": accumulated_delta.content,
+                        "function_call": accumulated_delta.function_call,
+                        "tool_calls": accumulated_delta.tool_calls,
+                    }
+                    self.llm_event.end_timestamp = get_ISO_time()
+
+                    self._safe_record(session, self.llm_event)
+            except Exception as e:
+                self._safe_record(
+                    session, ErrorEvent(trigger_event=self.llm_event, exception=e)
                 )
-                tracker.llm_event.completion = {
-                    "role": accumulated_delta.role,
-                    "content": accumulated_delta.content,
-                    "function_call": accumulated_delta.function_call,
-                    "tool_calls": accumulated_delta.tool_calls,
-                }
-                tracker.llm_event.end_timestamp = get_ISO_time()
 
-                safe_record(session, tracker.llm_event)
+                kwargs_str = pprint.pformat(kwargs)
+                chunk = pprint.pformat(chunk)
+                logger.warning(
+                    f"Unable to parse a chunk for LLM call. Skipping upload to AgentOps\n"
+                    f"chunk:\n {chunk}\n"
+                    f"kwargs:\n {kwargs_str}\n"
+                )
+
+        # if the response is a generator, decorate the generator
+        if isinstance(response, Stream):
+
+            def generator():
+                for chunk in response:
+                    handle_stream_chunk(chunk)
+                    yield chunk
+
+            return generator()
+
+        # For asynchronous AsyncStream
+        elif isinstance(response, AsyncStream):
+
+            async def async_generator():
+                async for chunk in response:
+                    handle_stream_chunk(chunk)
+                    yield chunk
+
+            return async_generator()
+
+        # For async AsyncCompletion
+        elif isinstance(response, AsyncCompletions):
+
+            async def async_generator():
+                async for chunk in response:
+                    handle_stream_chunk(chunk)
+                    yield chunk
+
+            return async_generator()
+
+        # v1.0.0+ responses are objects
+        try:
+            self.llm_event.returns = response.model_dump()
+            self.llm_event.agent_id = check_call_stack_for_agent_id()
+            self.llm_event.prompt = kwargs["messages"]
+            self.llm_event.prompt_tokens = response.usage.prompt_tokens
+            self.llm_event.completion = response.choices[0].message.model_dump()
+            self.llm_event.completion_tokens = response.usage.completion_tokens
+            self.llm_event.model = response.model
+
+            self._safe_record(session, self.llm_event)
         except Exception as e:
-            safe_record(
-                session, ErrorEvent(trigger_event=tracker.llm_event, exception=e)
+            self._safe_record(
+                session, ErrorEvent(trigger_event=self.llm_event, exception=e)
             )
 
             kwargs_str = pprint.pformat(kwargs)
-            chunk = pprint.pformat(chunk)
+            response = pprint.pformat(response)
             logger.warning(
-                f"Unable to parse a chunk for LLM call. Skipping upload to AgentOps\n"
-                f"chunk:\n {chunk}\n"
+                f"Unable to parse response for LLM call. Skipping upload to AgentOps\n"
+                f"response:\n {response}\n"
                 f"kwargs:\n {kwargs_str}\n"
             )
 
-    # if the response is a generator, decorate the generator
-    if isinstance(response, Stream):
+        return response
 
-        def generator():
-            for chunk in response:
-                handle_stream_chunk(chunk)
-                yield chunk
+    def _override_chat(self):
+        from groq.resources.chat import completions
 
-        return generator()
+        original_create = completions.Completions.create
 
-    # For asynchronous AsyncStream
-    elif isinstance(response, AsyncStream):
+        def patched_function(*args, **kwargs):
+            # Call the original function with its original arguments
+            init_timestamp = get_ISO_time()
+            session = kwargs.get("session", None)
+            if "session" in kwargs.keys():
+                del kwargs["session"]
+            result = original_create(*args, **kwargs)
+            return self.handle_response(result, kwargs, init_timestamp, session=session)
 
-        async def async_generator():
-            async for chunk in response:
-                handle_stream_chunk(chunk)
-                yield chunk
+        # Override the original method with the patched one
+        completions.Completions.create = patched_function
 
-        return async_generator()
+    def _override_chat_stream(self):
+        from groq.resources.chat import completions
 
-    # For async AsyncCompletion
-    elif isinstance(response, AsyncCompletions):
+        original_create = completions.AsyncCompletions.create
 
-        async def async_generator():
-            async for chunk in response:
-                handle_stream_chunk(chunk)
-                yield chunk
+        def patched_function(*args, **kwargs):
+            # Call the original function with its original arguments
+            init_timestamp = get_ISO_time()
+            result = original_create(*args, **kwargs)
+            return self.handle_response(result, kwargs, init_timestamp)
 
-        return async_generator()
-
-    # v1.0.0+ responses are objects
-    try:
-        tracker.llm_event.returns = response.model_dump()
-        tracker.llm_event.agent_id = check_call_stack_for_agent_id()
-        tracker.llm_event.prompt = kwargs["messages"]
-        tracker.llm_event.prompt_tokens = response.usage.prompt_tokens
-        tracker.llm_event.completion = response.choices[0].message.model_dump()
-        tracker.llm_event.completion_tokens = response.usage.completion_tokens
-        tracker.llm_event.model = response.model
-
-        safe_record(session, tracker.llm_event)
-    except Exception as e:
-        safe_record(session, ErrorEvent(trigger_event=tracker.llm_event, exception=e))
-
-        kwargs_str = pprint.pformat(kwargs)
-        response = pprint.pformat(response)
-        logger.warning(
-            f"Unable to parse response for LLM call. Skipping upload to AgentOps\n"
-            f"response:\n {response}\n"
-            f"kwargs:\n {kwargs_str}\n"
-        )
-
-    return response
-
-
-def override_groq_chat(tracker):
-    from groq.resources.chat import completions
-
-    original_create = completions.Completions.create
-
-    def patched_function(*args, **kwargs):
-        # Call the original function with its original arguments
-        init_timestamp = get_ISO_time()
-        session = kwargs.get("session", None)
-        if "session" in kwargs.keys():
-            del kwargs["session"]
-        result = original_create(*args, **kwargs)
-        return tracker._handle_response_groq(
-            result, kwargs, init_timestamp, session=session
-        )
-
-    # Override the original method with the patched one
-    completions.Completions.create = patched_function
-
-
-def override_groq_chat_stream(tracker):
-    from groq.resources.chat import completions
-
-    original_create = completions.AsyncCompletions.create
-
-    def patched_function(*args, **kwargs):
-        # Call the original function with its original arguments
-        init_timestamp = get_ISO_time()
-        result = original_create(*args, **kwargs)
-        return tracker._handle_response_groq(result, kwargs, init_timestamp)
-
-    # Override the original method with the patched one
-    completions.AsyncCompletions.create = patched_function
+        # Override the original method with the patched one
+        completions.AsyncCompletions.create = patched_function
