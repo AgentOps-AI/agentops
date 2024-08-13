@@ -43,43 +43,6 @@ class LlmTracker:
         self.client = client
         self.completion = ""
 
-    # def _override_openai_v0_method(self, api, method_path, module):
-    # def handle_response(result, kwargs, init_timestamp):
-    #     if api == "openai":
-    #         return handle_response_v0_openai(self, result, kwargs, init_timestamp)
-    #     return result
-    #
-    # def wrap_method(original_method):
-    #     if inspect.iscoroutinefunction(original_method):
-    #
-    #         @functools.wraps(original_method)
-    #         async def async_method(*args, **kwargs):
-    #             init_timestamp = get_ISO_time()
-    #             response = await original_method(*args, **kwargs)
-    #             return handle_response(response, kwargs, init_timestamp)
-    #
-    #         return async_method
-    #
-    #     else:
-    #
-    #         @functools.wraps(original_method)
-    #         def sync_method(*args, **kwargs):
-    #             init_timestamp = get_ISO_time()
-    #             response = original_method(*args, **kwargs)
-    #             return handle_response(response, kwargs, init_timestamp)
-    #
-    #         return sync_method
-    #
-    # method_parts = method_path.split(".")
-    # original_method = functools.reduce(getattr, method_parts, module)
-    # new_method = wrap_method(original_method)
-    #
-    # if len(method_parts) == 1:
-    #     setattr(module, method_parts[0], new_method)
-    # else:
-    #     parent = functools.reduce(getattr, method_parts[:-1], module)
-    #     setattr(parent, method_parts[-1], new_method)
-
     def override_api(self):
         """
         Overrides key methods of the specified API to record events.
@@ -112,11 +75,10 @@ class LlmTracker:
                             provider = OpenAiProvider(self.client)
                             provider.override()
                         else:
-                            # Patch openai <v1.0.0 methods
-                            for method_path in self.SUPPORTED_APIS["openai"]["0.0.0"]:
-                                self._override_openai_v0_method(
-                                    api, method_path, module
-                                )
+                            raise DeprecationWarning(
+                                "OpenAI versions < 0.1 are no longer supported by AgentOps. Please upgrade OpenAI or "
+                                "downgrade AgentOps."
+                            )
 
                 if api == "cohere":
                     # Patch cohere v5.4.0+ methods
