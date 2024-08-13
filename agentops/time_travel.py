@@ -1,8 +1,8 @@
 import json
 import yaml
+import os
 from .http_client import HttpClient
 from .exceptions import ApiServerException
-import os
 from .helpers import singleton
 from os import environ
 
@@ -33,12 +33,9 @@ class TimeTravel:
 def fetch_time_travel_id(ttd_id):
     try:
         endpoint = environ.get("AGENTOPS_API_ENDPOINT", "https://api.agentops.ai")
-        payload = json.dumps({"ttd_id": ttd_id}).encode("utf-8")
         ttd_res = HttpClient.get(f"{endpoint}/v2/ttd/{ttd_id}")
         if ttd_res.code != 200:
-            raise Exception(
-                f"Failed to fetch TTD with status code {ttd_res.status_code}"
-            )
+            raise Exception(f"Failed to fetch TTD with status code {ttd_res.code}")
 
         prompt_to_returns_map = {
             "completion_overrides": {

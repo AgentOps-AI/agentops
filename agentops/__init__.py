@@ -8,7 +8,6 @@ from .decorators import record_action, track_agent, record_tool, record_function
 from .helpers import check_agentops_update
 from .log_config import logger
 from .session import Session
-from .cli import cli
 import threading
 
 try:
