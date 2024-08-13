@@ -4,7 +4,6 @@ import os
 from .http_client import HttpClient
 from .exceptions import ApiServerException
 from .helpers import singleton
-from os import environ
 
 
 @singleton
@@ -32,7 +31,7 @@ class TimeTravel:
 
 def fetch_time_travel_id(ttd_id):
     try:
-        endpoint = environ.get("AGENTOPS_API_ENDPOINT", "https://api.agentops.ai")
+        endpoint = os.environ.get("AGENTOPS_API_ENDPOINT", "https://api.agentops.ai")
         ttd_res = HttpClient.get(f"{endpoint}/v2/ttd/{ttd_id}")
         if ttd_res.code != 200:
             raise Exception(f"Failed to fetch TTD with status code {ttd_res.code}")
