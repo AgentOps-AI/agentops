@@ -1,18 +1,15 @@
 from pprint import pformat
 from functools import wraps
 from datetime import datetime, timezone
-import json
 import inspect
 from typing import Union
 import http.client
 import json
 from importlib.metadata import version, PackageNotFoundError
 
-from . import Client
 from .log_config import logger
 from uuid import UUID
 from importlib.metadata import version
-import subprocess
 
 
 def get_ISO_time():
@@ -182,10 +179,3 @@ def debug_print_function_params(func):
         return func(self, *args, **kwargs)
 
     return wrapper
-
-
-def safe_record(session, event):
-    if session is not None:
-        session.record(event)
-    else:
-        Client().record(event)

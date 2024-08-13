@@ -1,7 +1,9 @@
 import pprint
 from typing import Optional
 
-from agentops import ErrorEvent, logger, LLMEvent, Session
+from ..event import ActionEvent, ErrorEvent, LLMEvent
+from ..session import Session
+from ..log_config import logger
 from agentops.helpers import get_ISO_time, check_call_stack_for_agent_id
 
 

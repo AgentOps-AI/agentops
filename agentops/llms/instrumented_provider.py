@@ -1,11 +1,17 @@
 from abc import ABC, abstractmethod
 from typing import Optional
 
-from agentops import Session
+from ..session import Session
+from ..event import LLMEvent
 
 
 class InstrumentedProvider(ABC):
     _provider_name: str = "InstrumentedModel"
+    llm_event: Optional[LLMEvent] = None
+    client = None
+
+    def __init__(self, client):
+        self.client = client
 
     @abstractmethod
     def handle_response(
@@ -24,3 +30,9 @@ class InstrumentedProvider(ABC):
     @property
     def provider_name(self):
         return self._provider_name
+
+    def _safe_record(self, session, event):
+        if session is not None:
+            session.record(event)
+        else:
+            self.client.record(event)

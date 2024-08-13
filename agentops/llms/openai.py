@@ -5,15 +5,19 @@ from typing import Optional
 from agentops.llms.instrumented_provider import InstrumentedProvider
 from agentops.time_travel import fetch_completion_override_from_time_travel_cache
 
-from agentops import LLMEvent, Session, ErrorEvent, logger
-from agentops.helpers import check_call_stack_for_agent_id, get_ISO_time, safe_record
+from ..event import ActionEvent, ErrorEvent, LLMEvent
+from ..session import Session
+from ..log_config import logger
+from ..helpers import check_call_stack_for_agent_id, get_ISO_time
 
 
 class OpenAiInstrumentedProvider(InstrumentedProvider):
+
     original_create = None
     original_create_async = None
 
-    def __init__(self):
+    def __init__(self, client):
+        super().__init__(client)
         self._provider_name = "OpenAI"
 
     def handle_response(
@@ -24,21 +28,21 @@ class OpenAiInstrumentedProvider(InstrumentedProvider):
         from openai.resources import AsyncCompletions
         from openai.types.chat import ChatCompletionChunk
 
-        tracker.llm_event = LLMEvent(init_timestamp=init_timestamp, params=kwargs)
+        self.llm_event = LLMEvent(init_timestamp=init_timestamp, params=kwargs)
         if session is not None:
-            tracker.llm_event.session_id = session.session_id
+            self.llm_event.session_id = session.session_id
 
         def handle_stream_chunk(chunk: ChatCompletionChunk):
             # NOTE: prompt/completion usage not returned in response when streaming
             # We take the first ChatCompletionChunk and accumulate the deltas from all subsequent chunks to build one full chat completion
-            if tracker.llm_event.returns == None:
-                tracker.llm_event.returns = chunk
+            if self.llm_event.returns == None:
+                self.llm_event.returns = chunk
 
             try:
-                accumulated_delta = tracker.llm_event.returns.choices[0].delta
-                tracker.llm_event.agent_id = check_call_stack_for_agent_id()
-                tracker.llm_event.model = chunk.model
-                tracker.llm_event.prompt = kwargs["messages"]
+                accumulated_delta = self.llm_event.returns.choices[0].delta
+                self.llm_event.agent_id = check_call_stack_for_agent_id()
+                self.llm_event.model = chunk.model
+                self.llm_event.prompt = kwargs["messages"]
 
                 # NOTE: We assume for completion only choices[0] is relevant
                 choice = chunk.choices[0]
@@ -57,21 +61,21 @@ class OpenAiInstrumentedProvider(InstrumentedProvider):
 
                 if choice.finish_reason:
                     # Streaming is done. Record LLMEvent
-                    tracker.llm_event.returns.choices[0].finish_reason = (
+                    self.llm_event.returns.choices[0].finish_reason = (
                         choice.finish_reason
                     )
-                    tracker.llm_event.completion = {
+                    self.llm_event.completion = {
                         "role": accumulated_delta.role,
                         "content": accumulated_delta.content,
                         "function_call": accumulated_delta.function_call,
                         "tool_calls": accumulated_delta.tool_calls,
                     }
-                    tracker.llm_event.end_timestamp = get_ISO_time()
+                    self.llm_event.end_timestamp = get_ISO_time()
 
-                    safe_record(session, tracker.llm_event)
+                    self._safe_record(session, self.llm_event)
             except Exception as e:
-                safe_record(
-                    session, ErrorEvent(trigger_event=tracker.llm_event, exception=e)
+                self._safe_record(
+                    session, ErrorEvent(trigger_event=self.llm_event, exception=e)
                 )
 
                 kwargs_str = pprint.pformat(kwargs)
@@ -114,18 +118,18 @@ class OpenAiInstrumentedProvider(InstrumentedProvider):
 
         # v1.0.0+ responses are objects
         try:
-            tracker.llm_event.returns = response
-            tracker.llm_event.agent_id = check_call_stack_for_agent_id()
-            tracker.llm_event.prompt = kwargs["messages"]
-            tracker.llm_event.prompt_tokens = response.usage.prompt_tokens
-            tracker.llm_event.completion = response.choices[0].message.model_dump()
-            tracker.llm_event.completion_tokens = response.usage.completion_tokens
-            tracker.llm_event.model = response.model
+            self.llm_event.returns = response
+            self.llm_event.agent_id = check_call_stack_for_agent_id()
+            self.llm_event.prompt = kwargs["messages"]
+            self.llm_event.prompt_tokens = response.usage.prompt_tokens
+            self.llm_event.completion = response.choices[0].message.model_dump()
+            self.llm_event.completion_tokens = response.usage.completion_tokens
+            self.llm_event.model = response.model
 
-            safe_record(session, tracker.llm_event)
+            self._safe_record(session, self.llm_event)
         except Exception as e:
-            safe_record(
-                session, ErrorEvent(trigger_event=tracker.llm_event, exception=e)
+            self._safe_record(
+                session, ErrorEvent(trigger_event=self.llm_event, exception=e)
             )
 
             kwargs_str = pprint.pformat(kwargs)
@@ -178,7 +182,7 @@ class OpenAiInstrumentedProvider(InstrumentedProvider):
                         f"{pprint.pformat(completion_override)}"
                     )
                     return None
-                return tracker._handle_response_v1_openai(
+                return self.handle_response(
                     result_model, kwargs, init_timestamp, session=session
                 )
 
@@ -188,9 +192,7 @@ class OpenAiInstrumentedProvider(InstrumentedProvider):
 
             # Call the original function with its original arguments
             result = original_create(*args, **kwargs)
-            return tracker._handle_response_v1_openai(
-                result, kwargs, init_timestamp, session=session
-            )
+            return self.handle_response(result, kwargs, init_timestamp, session=session)
 
         # Override the original method with the patched one
         completions.Completions.create = patched_function
@@ -233,7 +235,7 @@ class OpenAiInstrumentedProvider(InstrumentedProvider):
                         f"{pprint.pformat(completion_override)}"
                     )
                     return None
-                return tracker._handle_response_v1_openai(
+                return self.handle_response(
                     result_model, kwargs, init_timestamp, session=session
                 )
 
@@ -243,124 +245,21 @@ class OpenAiInstrumentedProvider(InstrumentedProvider):
 
             # Call the original function with its original arguments
             result = await original_create_async(*args, **kwargs)
-            return tracker._handle_response_v1_openai(
-                result, kwargs, init_timestamp, session=session
-            )
+            return self.handle_response(result, kwargs, init_timestamp, session=session)
 
         # Override the original method with the patched one
         completions.AsyncCompletions.create = patched_function
 
-    def _undo_override_openai_v1_completion(self):
+    def _undo_override_completion(self):
         from openai.resources.chat import completions
 
         completions.Completions.create = self.original_create
 
-    def _undo_override_openai_v1_async_completion(self):
+    def _undo_override_async_completion(self):
         from openai.resources.chat import completions
 
         completions.AsyncCompletions.create = self.original_create_async
 
-
-def handle_response_v0_openai(
-    tracker, response, kwargs, init_timestamp, session: Optional[Session] = None
-):
-    """Handle responses for OpenAI versions <v1.0.0"""
-
-    tracker.llm_event = LLMEvent(init_timestamp=init_timestamp, params=kwargs)
-    if session is not None:
-        tracker.llm_event.session_id = session.session_id
-
-    def handle_stream_chunk(chunk):
-        # NOTE: prompt/completion usage not returned in response when streaming
-        # We take the first ChatCompletionChunk and accumulate the deltas from all subsequent chunks to build one full chat completion
-        if tracker.llm_event.returns == None:
-            tracker.llm_event.returns = chunk
-
-        try:
-            accumulated_delta = tracker.llm_event.returns["choices"][0]["delta"]
-            tracker.llm_event.agent_id = check_call_stack_for_agent_id()
-            tracker.llm_event.model = chunk["model"]
-            tracker.llm_event.prompt = kwargs["messages"]
-            choice = chunk["choices"][
-                0
-            ]  # NOTE: We assume for completion only choices[0] is relevant
-
-            if choice["delta"].get("content"):
-                accumulated_delta["content"] += choice["delta"].content
-
-            if choice["delta"].get("role"):
-                accumulated_delta["role"] = choice["delta"].get("role")
-
-            if choice["finish_reason"]:
-                # Streaming is done. Record LLMEvent
-                tracker.llm_event.returns.choices[0]["finish_reason"] = choice[
-                    "finish_reason"
-                ]
-                tracker.llm_event.completion = {
-                    "role": accumulated_delta["role"],
-                    "content": accumulated_delta["content"],
-                }
-                tracker.llm_event.end_timestamp = get_ISO_time()
-
-                safe_record(session, tracker.llm_event)
-        except Exception as e:
-            safe_record(
-                session, ErrorEvent(trigger_event=tracker.llm_event, exception=e)
-            )
-
-            kwargs_str = pprint.pformat(kwargs)
-            chunk = pprint.pformat(chunk)
-            logger.warning(
-                f"Unable to parse a chunk for LLM call. Skipping upload to AgentOps\n"
-                f"chunk:\n {chunk}\n"
-                f"kwargs:\n {kwargs_str}\n"
-            )
-
-    # if the response is a generator, decorate the generator
-    if inspect.isasyncgen(response):
-
-        async def async_generator():
-            async for chunk in response:
-                handle_stream_chunk(chunk)
-
-                yield chunk
-
-        return async_generator()
-
-    elif inspect.isgenerator(response):
-
-        def generator():
-            for chunk in response:
-                handle_stream_chunk(chunk)
-
-                yield chunk
-
-        return generator()
-
-    # v0.0.0 responses are dicts
-    try:
-        tracker.llm_event.returns = response
-        tracker.llm_event.agent_id = check_call_stack_for_agent_id()
-        tracker.llm_event.prompt = kwargs["messages"]
-        tracker.llm_event.prompt_tokens = response["usage"]["prompt_tokens"]
-        tracker.llm_event.completion = {
-            "role": "assistant",
-            "content": response["choices"][0]["message"]["content"],
-        }
-        tracker.llm_event.completion_tokens = response["usage"]["completion_tokens"]
-        tracker.llm_event.model = response["model"]
-        tracker.llm_event.end_timestamp = get_ISO_time()
-
-        safe_record(session, tracker.llm_event)
-    except Exception as e:
-        safe_record(session, ErrorEvent(trigger_event=tracker.llm_event, exception=e))
-
-        kwargs_str = pprint.pformat(kwargs)
-        response = pprint.pformat(response)
-        logger.warning(
-            f"Unable to parse response for LLM call. Skipping upload to AgentOps\n"
-            f"response:\n {response}\n"
-            f"kwargs:\n {kwargs_str}\n"
-        )
-
-    return response
+    def undo_override(self):
+        self._undo_override_completion()
+        self._undo_override_async_completion()

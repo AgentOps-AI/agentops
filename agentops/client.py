@@ -27,7 +27,7 @@ from .host_env import get_host_env
 from .log_config import logger
 from .meta_client import MetaClient
 from .config import Configuration
-from .llm_tracker import LlmTracker
+from .llms import LlmTracker
 
 
 @conditional_singleton
@@ -448,3 +448,10 @@ class Client(metaclass=MetaClient):
     @property
     def parent_key(self):
         return self._config.parent_key
+
+
+def safe_record(session, event):
+    if session is not None:
+        session.record(event)
+    else:
+        Client().record(event)

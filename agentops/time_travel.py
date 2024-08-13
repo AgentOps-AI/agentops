@@ -3,7 +3,7 @@ import yaml
 from .http_client import HttpClient
 from .exceptions import ApiServerException
 import os
-from .helpers import singleton
+from .singleton import singleton
 from os import environ
 
 

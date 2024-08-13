@@ -20,13 +20,7 @@ from .ollama import (
     override_ollama_chat_async_client,
     undo_override_ollama,
 )
-from .openai import (
-    override_openai_v1_completion,
-    override_openai_v1_async_completion,
-    handle_response_v0_openai,
-    undo_override_openai_v1_async_completion,
-    undo_override_openai_v1_completion,
-)
+from .openai import OpenAiInstrumentedProvider
 
 original_func = {}
 original_create = None
@@ -55,9 +49,8 @@ class LlmTracker:
     def __init__(self, client):
         self.client = client
         self.completion = ""
-        self.llm_event: Optional[LLMEvent] = None
 
-    def _override_method(self, api, method_path, module):
+    def _override_openai_v0_method(self, api, method_path, module):
         def handle_response(result, kwargs, init_timestamp):
             if api == "openai":
                 return handle_response_v0_openai(self, result, kwargs, init_timestamp)
@@ -123,12 +116,14 @@ class LlmTracker:
                     if hasattr(module, "__version__"):
                         module_version = parse(module.__version__)
                         if module_version >= parse("1.0.0"):
-                            override_openai_v1_completion(self)
-                            override_openai_v1_async_completion(self)
+                            provider = OpenAiInstrumentedProvider(self.client)
+                            provider.override()
                         else:
                             # Patch openai <v1.0.0 methods
                             for method_path in self.SUPPORTED_APIS["openai"]["0.0.0"]:
-                                self._override_method(api, method_path, module)
+                                self._override_openai_v0_method(
+                                    api, method_path, module
+                                )
 
                 if api == "cohere":
                     # Patch cohere v5.4.0+ methods
