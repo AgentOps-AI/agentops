@@ -2,7 +2,7 @@ import argparse
 from .time_travel import fetch_time_travel_id, set_time_travel_active_state
 
 
-def main():
+def cli():
     parser = argparse.ArgumentParser(description="AgentOps CLI")
     subparsers = parser.add_subparsers(dest="command")
 
@@ -35,7 +35,3 @@ def main():
             set_time_travel_active_state("on")
         if args.off:
             set_time_travel_active_state("off")
-
-
-if __name__ == "__main__":
-    main()
