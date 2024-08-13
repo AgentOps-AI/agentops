@@ -9,7 +9,7 @@ from ..log_config import logger
 from ..helpers import get_ISO_time
 import inspect
 
-from .cohere import override_cohere_chat, override_cohere_chat_stream
+from .cohere import CohereProvider
 from .groq import GroqProvider
 from .litellm import override_litellm_completion, override_litellm_async_completion
 from .ollama import (
@@ -132,8 +132,8 @@ class LlmTracker:
                         )
 
                     if Version(module_version) >= parse("5.4.0"):
-                        override_cohere_chat(self)
-                        override_cohere_chat_stream(self)
+                        provider = CohereProvider(self.client)
+                        provider.override()
                     else:
                         logger.warning(
                             f"Only Cohere>=5.4.0 supported. v{module_version} found."
