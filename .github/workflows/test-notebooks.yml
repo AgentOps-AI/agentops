@@ -1,6 +1,6 @@
 name: Test Notebooks
 on:
-  workflow_dispatch: # Allows manual triggering
+  pull_request_target: # Allows manual triggering from PR UI
   push:
     branches:
       - main
