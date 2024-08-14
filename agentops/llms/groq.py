@@ -15,7 +15,7 @@ class GroqProvider(InstrumentedProvider):
 
     def override(self):
         self._override_chat()
-        self._override_chat_stream()
+        self._override_async_chat()
 
     def undo_override(self):
         pass
@@ -159,15 +159,15 @@ class GroqProvider(InstrumentedProvider):
         # Override the original method with the patched one
         completions.Completions.create = patched_function
 
-    def _override_chat_stream(self):
+    def _override_async_chat(self):
         from groq.resources.chat import completions
 
         original_create = completions.AsyncCompletions.create
 
-        def patched_function(*args, **kwargs):
+        async def patched_function(*args, **kwargs):
             # Call the original function with its original arguments
             init_timestamp = get_ISO_time()
-            result = original_create(*args, **kwargs)
+            result = await original_create(*args, **kwargs)
             return self.handle_response(result, kwargs, init_timestamp)
 
         # Override the original method with the patched one
