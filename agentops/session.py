@@ -268,7 +268,7 @@ class Session:
         if not self.is_running:
             return
         with self.lock:
-            queue_copy = copy.deepcopy(self.queue)  # Copy the current items
+            queue_copy = self.queue[:]  # Copy the current items
             self.queue = []
 
             if len(queue_copy) > 0:
