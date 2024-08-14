@@ -46,9 +46,8 @@ class LangchainCallbackHandler(BaseCallbackHandler):
         endpoint: Optional[str] = None,
         max_wait_time: Optional[int] = None,
         max_queue_size: Optional[int] = None,
-        tags: Optional[List[str]] = None,
+        default_tags: Optional[List[str]] = None,
     ):
-
         logging_level = os.getenv("AGENTOPS_LOGGING_LEVEL")
         log_levels = {
             "CRITICAL": logging.CRITICAL,
@@ -64,12 +63,19 @@ class LangchainCallbackHandler(BaseCallbackHandler):
             "endpoint": endpoint,
             "max_wait_time": max_wait_time,
             "max_queue_size": max_queue_size,
-            "tags": tags,
+            "default_tags": default_tags,
         }
 
-        self.ao_client = AOClient(
-            **{k: v for k, v in client_params.items() if v is not None}, override=False
-        )
+        self.ao_client = AOClient()
+        if self.ao_client.session_count == 0:
+            self.ao_client.configure(
+                **{k: v for k, v in client_params.items() if v is not None},
+                instrument_llm_calls=False,
+            )
+
+        if not self.ao_client.is_initialized:
+            self.ao_client.initialize()
+
         self.agent_actions: Dict[UUID, List[ActionEvent]] = defaultdict(list)
         self.events = Events()
 
@@ -93,7 +99,6 @@ class LangchainCallbackHandler(BaseCallbackHandler):
             },  # TODO: params is inconsistent, in ToolEvent we put it in logs
             model=get_model_from_kwargs(kwargs),
             prompt=prompts[0],
-            # tags=tags # TODO
         )
 
     @debug_print_function_params
@@ -156,15 +161,18 @@ class LangchainCallbackHandler(BaseCallbackHandler):
         metadata: Optional[Dict[str, Any]] = None,
         **kwargs: Any,
     ) -> Any:
-        self.events.chain[str(run_id)] = ActionEvent(
-            params={
-                **serialized,
-                **inputs,
-                **({} if metadata is None else metadata),
-                **kwargs,
-            },
-            action_type="chain",
-        )
+        try:
+            self.events.chain[str(run_id)] = ActionEvent(
+                params={
+                    **serialized,
+                    **inputs,
+                    **({} if metadata is None else metadata),
+                    **kwargs,
+                },
+                action_type="chain",
+            )
+        except Exception as e:
+            logger.warning(e)
 
     @debug_print_function_params
     def on_chain_end(
@@ -240,6 +248,8 @@ class LangchainCallbackHandler(BaseCallbackHandler):
                 details=output,
             )
             self.ao_client.record(error_event)
+        else:
+            self.ao_client.record(tool_event)
 
     @debug_print_function_params
     def on_tool_error(
@@ -357,7 +367,13 @@ class LangchainCallbackHandler(BaseCallbackHandler):
 
     @property
     def session_id(self):
-        return self.ao_client.current_session_id
+        raise DeprecationWarning(
+            "session_id is deprecated in favor of current_session_ids"
+        )
+
+    @property
+    def current_session_ids(self):
+        return self.ao_client.current_session_ids
 
 
 class AsyncLangchainCallbackHandler(AsyncCallbackHandler):

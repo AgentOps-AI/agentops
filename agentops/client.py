@@ -82,6 +82,9 @@ class Client(metaclass=MetaClient):
         )
 
     def initialize(self) -> Union[Session, None]:
+        if self.is_initialized:
+            return
+
         self.unsuppress_logs()
 
         if self._config.api_key is None:

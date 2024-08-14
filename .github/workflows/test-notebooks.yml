@@ -1,9 +1,11 @@
 name: Test Notebooks
 on:
+  workflow_dispatch: # Allows manual triggering
   push:
-    branches: [ main ]
-  pull_request:
-    branches: [ main ]
+    branches:
+      - main
+    paths-ignore:
+      - 'docs/**'
 jobs:
   test-notebooks:
     runs-on: ubuntu-latest

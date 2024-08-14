@@ -41,3 +41,6 @@ Issues = "https://github.com/AgentOps-AI/agentops/issues"
 
 [tool.autopep8]
 max_line_length = 120
+
+[project.scripts]
+agentops = "agentops.cli:main"
