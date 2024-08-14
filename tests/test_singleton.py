@@ -1,8 +1,6 @@
 import uuid
 
-import pytest
-
-from agentops.helpers import singleton, conditional_singleton, clear_singletons
+from agentops.singleton import singleton, conditional_singleton, clear_singletons
 
 
 @singleton
