@@ -3,8 +3,12 @@
 
 import os
 
-os.environ["SERPER_API_KEY"] = "..."
-os.environ["OPENAI_API_KEY"] = "..."
+# os.environ["SERPER_API_KEY"] = "..."
+# os.environ["OPENAI_API_KEY"] = "..."
+
+from dotenv import load_dotenv
+
+load_dotenv()
 
 from crewai import Agent
 from crewai_tools.tools import WebsiteSearchTool, SerperDevTool, FileReadTool
@@ -126,7 +130,7 @@ class Tasks:
 from crewai import Crew
 import agentops
 
-agentops.init(tags=["crew-job-posting-example"])
+agentops.init(default_tags=["crew-job-posting-example"])
 
 tasks = Tasks()
 agents = Agents()

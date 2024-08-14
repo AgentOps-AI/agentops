@@ -32,10 +32,6 @@ def main():
         if args.branch_name:
             fetch_time_travel_id(args.branch_name)
         if args.on:
-            set_time_travel_active_state("on")
+            set_time_travel_active_state(True)
         if args.off:
-            set_time_travel_active_state("off")
-
-
-if __name__ == "__main__":
-    main()
+            set_time_travel_active_state(False)
