@@ -1,6 +1,8 @@
 import pprint
 from typing import Optional
 
+import litellm.utils
+
 from ..log_config import logger
 from ..event import LLMEvent, ErrorEvent
 from ..session import Session
@@ -88,6 +90,16 @@ class LiteLLMProvider(InstrumentedProvider):
 
         # if the response is a generator, decorate the generator
         if isinstance(response, Stream):
+
+            def generator():
+                for chunk in response:
+                    handle_stream_chunk(chunk)
+                    yield chunk
+
+            return generator()
+
+        # litellm uses a CustomStreamWrapper
+        if isinstance(response, litellm.utils.CustomStreamWrapper):
 
             def generator():
                 for chunk in response:
