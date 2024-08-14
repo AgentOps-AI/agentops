@@ -6,12 +6,10 @@ from importlib.metadata import version
 from packaging.version import Version, parse
 
 from ..log_config import logger
-from ..helpers import get_ISO_time
-import inspect
 
 from .cohere import CohereProvider
 from .groq import GroqProvider
-from .litellm import override_litellm_completion, override_litellm_async_completion
+from .litellm import LiteLLMProvider
 from .ollama import OllamaProvider
 from .openai import OpenAiProvider
 
@@ -59,8 +57,8 @@ class LlmTracker:
                         )
 
                     if Version(module_version) >= parse("1.3.1"):
-                        override_litellm_completion(self)
-                        override_litellm_async_completion(self)
+                        provider = LiteLLMProvider(self.client)
+                        provider.override()
                     else:
                         logger.warning(
                             f"Only LiteLLM>=1.3.1 supported. v{module_version} found."

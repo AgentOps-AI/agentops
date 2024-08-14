@@ -448,10 +448,3 @@ class Client(metaclass=MetaClient):
     @property
     def parent_key(self):
         return self._config.parent_key
-
-
-def safe_record(session, event):
-    if session is not None:
-        session.record(event)
-    else:
-        Client().record(event)
