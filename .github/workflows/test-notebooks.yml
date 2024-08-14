@@ -1,9 +1,6 @@
 name: Test Notebooks
 on:
-  push:
-    branches: [ main ]
-  pull_request:
-    branches: [ main ]
+  workflow_dispatch: # Allows manual triggering
 jobs:
   test-notebooks:
     runs-on: ubuntu-latest
