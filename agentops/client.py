@@ -351,7 +351,7 @@ class Client(metaclass=MetaClient):
             atexit.register(
                 lambda: cleanup(
                     end_state="Indeterminate",
-                    end_state_reason="Process exited without calling end_session()",
+                    end_state_reason="N/A (process exited without calling agentops.end_session(...))",
                 )
             )
             signal.signal(signal.SIGINT, signal_handler)
