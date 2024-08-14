@@ -59,6 +59,7 @@ class OllamaProvider(InstrumentedProvider):
     def override(self):
         self._override_chat_client()
         self._override_chat()
+        self._override_chat_async_client()
 
     def undo_override(self):
         if "ollama" in sys.modules:
