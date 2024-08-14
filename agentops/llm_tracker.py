@@ -718,7 +718,7 @@ class LlmTracker:
             self.llm_event.prompt_tokens = response.usage.input_tokens
             self.llm_event.completion = {
                 "role": "assistant",
-                "content": response.content,
+                "content": response.content[0].text,
             }
             self.llm_event.completion_tokens = response.usage.output_tokens
             self.llm_event.model = response.model
