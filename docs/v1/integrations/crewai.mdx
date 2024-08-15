@@ -6,7 +6,7 @@ description: '[CrewAI](https://crewai.io) is a framework for easily building mul
 import CodeTooltip from '/snippets/add-code-tooltip.mdx'
 import EnvTooltip from '/snippets/add-env-tooltip.mdx'
 
-AgentOps and CrewAI teamed up to make monitoring Crew agents dead simple. Crew and AgentOps have a first class partnership, adding agent observability to all Crew runs with 3 lines of code.
+AgentOps and CrewAI teamed up to make monitoring Crew agents dead simple. Crew and AgentOps have a first class partnership, adding agent observability to all Crew runs with 2 lines of code.
 
 <Card title="Crew.ai + AgentOps" icon="ship" href="https://www.loom.com/share/cfcaaef8d4a14cc7a974843bda1076bf">
 	CrewAI multi-agent framework with AgentOps support
@@ -38,16 +38,13 @@ Crew has comprehensive [documentation](https://docs.crewai.com) available as wel
 			```
 		</CodeGroup>
 	</Step>
-	<Step title="Add 3 lines of code">
+	<Step title="Add 2 lines of code">
 		<CodeTooltip/>
 		<span className="api-key-container">
 			<CodeGroup>
 				```python python
 				import agentops
 				agentops.init(<INSERT YOUR API KEY HERE>)
-				...
-				# MUST END SESSION at end of program (e.g. main.py)
-				agentops.end_session("Success") # Success|Fail|Indeterminate
 				```
 			</CodeGroup>
 		</span>
