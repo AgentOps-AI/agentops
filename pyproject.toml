@@ -24,6 +24,7 @@ dependencies = [
     "psutil==5.9.8",
     "packaging==23.2",
     "termcolor==2.4.0",
+    "PyYAML==6.0.1"
 ]
 [project.optional-dependencies]
 dev = [
