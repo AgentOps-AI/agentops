@@ -71,56 +71,60 @@ def fetch_prompt_override_from_time_travel_cache(kwargs):
         return
 
     if TimeTravel()._prompt_override_map:
-        from openai.types.chat.chat_completion_user_message_param import (
-            ChatCompletionUserMessageParam,
-        )
+        prompt_messages = kwargs["messages"]
 
-        messages = kwargs["messages"]
+        find_cache_hit(prompt_messages, TimeTravel()._prompt_override_map)
 
-        from typing import List
+        # def find_cache_hit(listA, listB):
+        #     for item in listB:
+        #         for key, value in item.items():
+        #             if (
+        #                 isinstance(key, list)
+        #                 and len(key) == len(listA)
+        #                 and all(a == c for a, c in zip(listA, key))
+        #             ):
+        #                 return value
+        #     return None  # Return None if no match is found
 
-        def validate_and_parse_messages(
-            messages: List[dict],
-        ) -> List[ChatCompletionUserMessageParam]:
-            parsed_messages = []
-            for message in messages:
-                try:
-                    parsed_message = ChatCompletionUserMessageParam(
-                        content=message["content"],
-                        role=message["role"],
-                        name=message.get("name", ""),
-                    )
-                    parsed_messages.append(parsed_message)
-                except KeyError as e:
-                    raise ValueError(f"Missing required field in message: {e}")
-            return parsed_messages
+        # matched_prompt = None
+        # continue_to_next_prompt_message = False
 
-        # Validate and parse the messages
-        messages = validate_and_parse_messages(messages)
+        # for i in range(len(prompt_messages)):
+        #     try:
+        #         for key in TimeTravel()._prompt_override_map.keys():
+        #             matched_prompt = TimeTravel()._prompt_override_map[key]
+        #             try:
+        #                 cached_messages = json.loads(key).get("messages", [])
+        #                 if len(prompt_messages) != len(cached_messages):
+        #                     continue
 
-        parsed_prompts = []
-        for key in TimeTravel()._prompt_override_map.keys():
-            try:
-                prompt_messages = json.loads(key).get("messages", [])
-                parsed_messages = validate_and_parse_messages(prompt_messages)
-                parsed_prompts.append(parsed_messages)
-            except (json.JSONDecodeError, ValueError) as e:
-                print(f"Error parsing messages for key {key}: {e}")
+        #                 if (
+        #                     prompt_messages[i]["content"]
+        #                     == cached_messages[i]["content"]
+        #                 ):
+        #                     continue_to_next_prompt_message = True
+        #                 else:
+        #                     return
 
-        def compare_messages(messages, parsed_messages):
-            if len(messages) != len(parsed_messages):
-                return False
-            for i in range(len(messages)):
-                if messages[i]["content"] != parsed_messages[i]["content"]:
-                    return False
-            return True
+        #             except (json.JSONDecodeError, ValueError) as e:
+        #                 pass  # TODO
+        #             except KeyError as e:
+        #                 pass  # TODO
+        #     except KeyError as e:
+        #         pass  # TODO
 
-        for key, parsed_prompt in zip(
-            TimeTravel()._prompt_override_map.keys(), parsed_prompts
-        ):
-            if compare_messages(messages, parsed_prompt):
-                result_from_cache = TimeTravel()._prompt_override_map[key]
-                return json.loads(result_from_cache)
+        # return matched_prompt
+
+
+def find_cache_hit(listA, mapA):
+    for key, value in mapA.items():
+        print(f"key: {key}")
+        print(f"value: {value}")
+        if isinstance(key, list) and len(key) == len(listA):
+            print(f"listA: {listA}")
+            if all(a["content"] == b["content"] for a, b in zip(listA, key)):
+                return value
+    return None
 
 
 def check_time_travel_active():
