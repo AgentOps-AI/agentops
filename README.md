@@ -33,10 +33,9 @@
 
 <div align="center" style="background-color: #F4F5FF; padding: 10px; border-radius: 5px;">
   <div style="display: flex; justify-content: center; gap: 10px;">
-    <img src="docs/images/external/app_screenshots/session-replay.png" alt="Session Debugging" style="flex: 1; max-width: 30%; height: auto;">
-    <img src="docs/images/external/app_screenshots/overview.png" alt="Session Replays" style="flex: 1; max-width: 30%; height: auto;">
-    <img src="docs/images/external/app_screenshots/session-overview.png" alt="Session Analytics" style="flex: 1; max-width: 30%; height: auto;">
-
+    <img src="docs/images/external/app_screenshots/session-overview.png" alt="Agent Debugging" style="flex: 1; max-width: 30%; height: auto;">
+    <img src="docs/images/external/app_screenshots/session-replay.png" alt="Session Replays" style="flex: 1; max-width: 30%; height: auto;">
+    <img src="docs/images/external/app_screenshots/overview.png" alt="Summary Analytics" style="flex: 1; max-width: 30%; height: auto;">
   </div>
   <span style="color: black;">All of this with just 2 lines of code</span>
 </div>
@@ -61,7 +60,7 @@ pip install agentops
 ```
 
 
-### Session replays in 2 lines of code
+#### Session replays in 2 lines of code
 
 Initialize the AgentOps client and automatically get analytics on all your LLM calls.
 
@@ -81,14 +80,11 @@ agentops.end_session('Success')
 
 All your sessions can be viewed on the [AgentOps dashboard](https://app.agentops.ai?ref=gh)
 <br/>
-For more functionality refer to our [documentation](http://docs.agentops.ai)
-
-
 
 <details>
-  <summary>Session Debugging</summary>
+  <summary>Agent Debugging</summary>
   <a href="https://app.agentops.ai?ref=gh">
-    <img src="docs/images/external/app_screenshots/session-overview.png" style="width: 90%;" alt="Session Analytics"/>
+    <img src="docs/images/external/app_screenshots/session-overview.png" style="width: 90%;" alt="Agent Debugging"/>
   </a>
 </details>
 
@@ -100,34 +96,51 @@ For more functionality refer to our [documentation](http://docs.agentops.ai)
 </details>
 
 <details open>
-  <summary>Session Analytics</summary>
+  <summary>Summary Analytics</summary>
   <a href="https://app.agentops.ai?ref=gh">
-   <img src="docs/images/external/app_screenshots/overview.png" style="width: 90%;" alt="Agent Dashboard"/>
+   <img src="docs/images/external/app_screenshots/overview.png" style="width: 90%;" alt="Summary Analytics"/>
   </a>
 </details>
 
 
-### More lines of code
+### First class Developer Experience
+Add powerful observability to your agents, tools and functions with as little code as possible: one line.
+<br/>
+Refer to our [documentation](http://docs.agentops.ai)
+
 ```python
-import agentops
+# Automatically associate all Events with the agent that originated them
+from agentops import track_agent
 
-# Beginning of program's code (i.e. main.py, __init__.py)
-agentops.init(< INSERT YOUR API KEY HERE >)
-
-...
-
-
-# (optional: record specific functions)
-@agentops.record_action('sample function being record')
-def sample_function(...):
-    ...
-
-
-# End of program
-agentops.end_session('Success')
+@track_agent(name='SomeCustomName')
+class MyAgent:
+  ...
 ```
 
+```python
+# Automatically create ToolEvents for tools that agents will use
+from agentops import record_tool
 
+@record_tool('SampleToolName')
+def sample_tool(...):
+  ...
+```
+
+```python
+# Automatically create ActionEvents for other functions.
+from agentops import record_action
+
+@agentops.record_action('sample function being record')
+def sample_function(...):
+  ...
+```
+
+```python
+# Manually record any other Events
+from agentops import record, ActionEvent
+
+record(ActionEvent("received_user_input"))
+```
 
 ## Integrations 🦾
 
