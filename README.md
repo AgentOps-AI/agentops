@@ -7,38 +7,29 @@
   <em>AI agents suck. We’re fixing that.</em>
 </p>
 
-<p align="center">
-    <a href="https://pypi.org/project/agentops/" target="_blank">
-        <img alt="Python" src="https://img.shields.io/badge/python-3670A0?style=for-the-badge&logo=python&logoColor=ffdd54" />
-        <img alt="Version" src="https://img.shields.io/pypi/v/agentops?style=for-the-badge&color=3670A0">
-    </a>
-</p>
+
 <p align="center">
 <a href="https://twitter.com/agentopsai/">🐦 Twitter</a>
 <span>&nbsp;&nbsp;•&nbsp;&nbsp;</span>
 <a href="https://discord.gg/FagdcwwXRR">📢 Discord</a>
 <span>&nbsp;&nbsp;•&nbsp;&nbsp;</span>
-<a href="https://app.agentops.ai/?ref=gh">🖇️ AgentOps</a>
+<a href="https://app.agentops.ai/?ref=gh">🖇️ Dashboard</a>
 <span>&nbsp;&nbsp;•&nbsp;&nbsp;</span>
 <a href="https://docs.agentops.ai/introduction">📙 Documentation</a>
 </p>
 
-# AgentOps 🖇️
-
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-![PyPI - Version](https://img.shields.io/pypi/v/agentops)
-<a href="https://pepy.tech/project/agentops">
-  <img src="https://static.pepy.tech/badge/agentops/month">
-</a>
-<a href="https://twitter.com/agentopsai">
-  <img src="https://img.shields.io/badge/follow-%40agentops-1DA1F2?logo=twitter&style=social" alt="AgentOps Twitter"/>
-</a>
-<a href="https://discord.gg/mKW3ZhN9p2">
-  <img src="https://img.shields.io/badge/chat-on%20Discord-blueviolet" alt="Discord community channel"/>
-</a>
-<a href="https://github.com/agentops-ai/agentops/issues">
-  <img src="https://img.shields.io/github/commit-activity/m/agentops-ai/agentops" alt="git commit activity"/>
-</a>
+<div align="center">
+  <a href="https://pepy.tech/project/agentops">
+    <img src="https://static.pepy.tech/badge/agentops/month" alt="Downloads">
+  </a>
+  <a href="https://github.com/agentops-ai/agentops/issues">
+  <img src="https://img.shields.io/github/commit-activity/m/agentops-ai/agentops" alt="git commit activity">
+  </a>
+  <img src="https://img.shields.io/pypi/v/agentops?&color=3670A0" alt="PyPI - Version">
+  <a href="https://opensource.org/licenses/MIT">
+    <img src="https://img.shields.io/badge/License-MIT-yellow.svg" alt="License: MIT">
+  </a>
+</div>
 
 AgentOps helps developers build, evaluate, and monitor AI agents. Tools to build agents from prototype to production.
 
