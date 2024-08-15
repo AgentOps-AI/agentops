@@ -9,8 +9,7 @@ from .helpers import singleton
 @singleton
 class TimeTravel:
     def __init__(self):
-        self._completion_overrides_map = {}
-        self._prompt_override_map = {}
+        self._completion_overrides = {}
 
         script_dir = os.path.dirname(os.path.abspath(__file__))
         parent_dir = os.path.dirname(script_dir)
@@ -19,11 +18,8 @@ class TimeTravel:
         try:
             with open(cache_path, "r") as file:
                 time_travel_cache_json = json.load(file)
-                self._completion_overrides_map = time_travel_cache_json.get(
+                self._completion_overrides = time_travel_cache_json.get(
                     "completion_overrides"
-                )
-                self._prompt_override_map = time_travel_cache_json.get(
-                    "prompt_override"
                 )
         except FileNotFoundError:
             return
@@ -36,7 +32,7 @@ def fetch_time_travel_id(ttd_id):
         if ttd_res.code != 200:
             raise Exception(f"Failed to fetch TTD with status code {ttd_res.code}")
 
-        prompt_to_returns_map = {
+        completion_overrides = {
             "completion_overrides": {
                 (
                     str({"messages": item["prompt"]["messages"]})
@@ -47,7 +43,7 @@ def fetch_time_travel_id(ttd_id):
             }
         }
         with open("agentops_time_travel.json", "w") as file:
-            json.dump(prompt_to_returns_map, file, indent=4)
+            json.dump(completion_overrides, file, indent=4)
 
         set_time_travel_active_state(True)
     except ApiServerException as e:
@@ -60,24 +56,26 @@ def fetch_completion_override_from_time_travel_cache(kwargs):
     if not check_time_travel_active():
         return
 
-    if TimeTravel()._completion_overrides_map:
-        prompt_messages = kwargs["messages"]
-        return find_cache_hit(prompt_messages, TimeTravel()._completion_overrides_map)
+    if TimeTravel()._completion_overrides:
+        return find_cache_hit(kwargs["messages"], TimeTravel()._completion_overrides)
 
 
 # NOTE: This is specific to the messages: [{'role': '...', 'content': '...'}, ...] format
-def find_cache_hit(listA, mapA):
-    for key, value in mapA.items():
+def find_cache_hit(prompt_messages, completion_overrides):
+    for key, value in completion_overrides.items():
         try:
-            parsed_key = eval(key)
-            if isinstance(parsed_key, dict) and "messages" in parsed_key:
-                cached_messages = parsed_key["messages"]
+            completion_override_dict = eval(key)
+            if (
+                isinstance(completion_override_dict, dict)
+                and "messages" in completion_override_dict
+            ):
+                cached_messages = completion_override_dict["messages"]
                 if isinstance(cached_messages, list) and len(cached_messages) == len(
-                    listA
+                    prompt_messages
                 ):
                     if all(
                         a["content"] == b["content"]
-                        for a, b in zip(listA, cached_messages)
+                        for a, b in zip(prompt_messages, cached_messages)
                     ):
                         return value
         except (SyntaxError, ValueError):
