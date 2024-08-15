@@ -3,9 +3,11 @@
     <img src="docs/images/external/logo/banner-badge.png" style="max-width: 500px" width="50%" alt="Logo">
   </a>
 </div>
-<p align="center">
-  <em>AI agents suck. We’re fixing that.</em>
-</p>
+
+<div align="center">
+  <em>Observability and DevTool platform for AI Agents</em>
+</div>
+
 
 
 <p align="center">
@@ -31,7 +33,19 @@
   </a>
 </div>
 
-AgentOps helps developers build, evaluate, and monitor AI agents. Tools to build agents from prototype to production.
+<div align="center" style="background-color: #f4f4f4; padding: 10px; border-radius: 5px;">
+  <div style="display: flex; justify-content: center; gap: 10px;">
+    <img src="docs/images/external/app_screenshots/overview.png" alt="Image 1" style="flex: 1; max-width: 30%; height: auto;">
+    <img src="docs/images/external/app_screenshots/session-overview.png" alt="Image 2" style="flex: 1; max-width: 30%; height: auto;">
+    <img src="docs/images/external/app_screenshots/session-replay.png" alt="Image 3" style="flex: 1; max-width: 30%; height: auto;">
+  </div>
+  <span style="color: black;">All of this with just 2 lines of code</span>
+</div>
+
+<br/>
+
+
+AgentOps helps developers build, evaluate, and monitor AI agents. From prototype to production.
 
 |                                       |                                                               |
 | ------------------------------------- | ------------------------------------------------------------- |
