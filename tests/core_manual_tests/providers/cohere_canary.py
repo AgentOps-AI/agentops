@@ -1,16 +1,17 @@
+import asyncio
+
 import agentops
 from dotenv import load_dotenv
-import os
 import cohere
 
 load_dotenv()
 agentops.init(default_tags=["cohere-provider-test"])
 co = cohere.Client()
+aco = cohere.AsyncClient()
 
-chat = co.chat(message="Tell me a fun fact about potatoes")
+chat = co.chat(message="say hi 1")
 
-stream = co.chat_stream(message="Tell me a fun fact about radishes")
-
+stream = co.chat_stream(message="say hi 2")
 response = ""
 for event in stream:
     if event.event_type == "text-generation":
@@ -21,6 +22,13 @@ for event in stream:
         print(event)
         print("\n")
 
+
+async def main():
+    async_response = await aco.chat(message="say hi 3")
+    print(async_response)
+
+
+asyncio.run(main())
 
 agentops.end_session(end_state="Success")
 

@@ -27,6 +27,7 @@ class LiteLLMProvider(InstrumentedProvider):
         from openai import AsyncStream, Stream
         from openai.resources import AsyncCompletions
         from openai.types.chat import ChatCompletionChunk
+        from litellm.utils import CustomStreamWrapper
 
         self.llm_event = LLMEvent(init_timestamp=init_timestamp, params=kwargs)
         if session is not None:
@@ -97,7 +98,7 @@ class LiteLLMProvider(InstrumentedProvider):
             return generator()
 
         # litellm uses a CustomStreamWrapper
-        if response.__class__.__name__ == "CustomStreamWrapper":
+        if isinstance(response, CustomStreamWrapper):
 
             def generator():
                 for chunk in response:

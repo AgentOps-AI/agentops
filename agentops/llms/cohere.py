@@ -13,6 +13,7 @@ class CohereProvider(InstrumentedProvider):
     def override(self):
         self._override_chat()
         self._override_chat_stream()
+        self._override_async_chat()
 
     def undo_override(self):
         pass
@@ -65,33 +66,35 @@ class CohereProvider(InstrumentedProvider):
 
                     # StreamedChatResponse_SearchResults = ActionEvent
                     search_results = chunk.response.search_results
-                    for search_result in search_results:
-                        query = search_result.search_query
-                        if query.generation_id in self.action_events:
-                            action_event = self.action_events[query.generation_id]
-                            search_result_dict = search_result.dict()
-                            del search_result_dict["search_query"]
-                            action_event.returns = search_result_dict
-                            action_event.end_timestamp = get_ISO_time()
+                    if search_results:
+                        for search_result in search_results:
+                            query = search_result.search_query
+                            if query.generation_id in self.action_events:
+                                action_event = self.action_events[query.generation_id]
+                                search_result_dict = search_result.dict()
+                                del search_result_dict["search_query"]
+                                action_event.returns = search_result_dict
+                                action_event.end_timestamp = get_ISO_time()
 
                     # StreamedChatResponse_CitationGeneration = ActionEvent
-                    documents = {doc["id"]: doc for doc in chunk.response.documents}
-                    citations = chunk.response.citations
-                    for citation in citations:
-                        citation_id = f"{citation.start}.{citation.end}"
-                        if citation_id in self.action_events:
-                            action_event = self.action_events[citation_id]
-                            citation_dict = citation.dict()
-                            # Replace document_ids with the actual documents
-                            citation_dict["documents"] = [
-                                documents[doc_id]
-                                for doc_id in citation_dict["document_ids"]
-                                if doc_id in documents
-                            ]
-                            del citation_dict["document_ids"]
+                    if chunk.response.documents:
+                        documents = {doc["id"]: doc for doc in chunk.response.documents}
+                        citations = chunk.response.citations
+                        for citation in citations:
+                            citation_id = f"{citation.start}.{citation.end}"
+                            if citation_id in self.action_events:
+                                action_event = self.action_events[citation_id]
+                                citation_dict = citation.dict()
+                                # Replace document_ids with the actual documents
+                                citation_dict["documents"] = [
+                                    documents[doc_id]
+                                    for doc_id in citation_dict["document_ids"]
+                                    if doc_id in documents
+                                ]
+                                del citation_dict["document_ids"]
 
-                            action_event.returns = citation_dict
-                            action_event.end_timestamp = get_ISO_time()
+                                action_event.returns = citation_dict
+                                action_event.end_timestamp = get_ISO_time()
 
                     for key, action_event in self.action_events.items():
                         self._safe_record(session, action_event)
@@ -131,6 +134,7 @@ class CohereProvider(InstrumentedProvider):
                     f"chunk:\n {chunk}\n"
                     f"kwargs:\n {kwargs_str}\n"
                 )
+                raise e
 
         # NOTE: As of Cohere==5.x.x, async is not supported
         # if the response is a generator, decorate the generator
@@ -211,6 +215,23 @@ class CohereProvider(InstrumentedProvider):
 
         # Override the original method with the patched one
         cohere.Client.chat = patched_function
+
+    def _override_async_chat(self):
+        import cohere.types
+
+        original_chat = cohere.AsyncClient.chat
+
+        async def patched_function(*args, **kwargs):
+            # Call the original function with its original arguments
+            init_timestamp = get_ISO_time()
+            session = kwargs.get("session", None)
+            if "session" in kwargs.keys():
+                del kwargs["session"]
+            result = await original_chat(*args, **kwargs)
+            return self.handle_response(result, kwargs, init_timestamp, session=session)
+
+        # Override the original method with the patched one
+        cohere.AsyncClient.chat = patched_function
 
     def _override_chat_stream(self):
         import cohere
