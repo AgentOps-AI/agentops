@@ -135,10 +135,8 @@ agentops.end_session('Success')
 
 Build Crew agents with observability with only 2 lines of code. Simply set an `AGENTOPS_API_KEY` in your environment, and your crews will get automatic monitoring on the AgentOps dashboard.
 
-AgentOps is integrated with CrewAI on a pre-release fork. Install crew with
-
 ```bash
-pip install git+https://github.com/AgentOps-AI/crewAI.git@main
+pip install 'crewai[agentops]'
 ```
 
 - [AgentOps integration example](https://docs.agentops.ai/v1/integrations/crewai)
