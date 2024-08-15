@@ -8,8 +8,6 @@
   <em>Observability and DevTool platform for AI Agents</em>
 </div>
 
-
-
 <p align="center">
 <a href="https://twitter.com/agentopsai/">🐦 Twitter</a>
 <span>&nbsp;&nbsp;•&nbsp;&nbsp;</span>
@@ -33,11 +31,12 @@
   </a>
 </div>
 
-<div align="center" style="background-color: #f4f4f4; padding: 10px; border-radius: 5px;">
+<div align="center" style="background-color: #F4F5FF; padding: 10px; border-radius: 5px;">
   <div style="display: flex; justify-content: center; gap: 10px;">
-    <img src="docs/images/external/app_screenshots/overview.png" alt="Image 1" style="flex: 1; max-width: 30%; height: auto;">
-    <img src="docs/images/external/app_screenshots/session-overview.png" alt="Image 2" style="flex: 1; max-width: 30%; height: auto;">
-    <img src="docs/images/external/app_screenshots/session-replay.png" alt="Image 3" style="flex: 1; max-width: 30%; height: auto;">
+    <img src="docs/images/external/app_screenshots/session-replay.png" alt="Session Debugging" style="flex: 1; max-width: 30%; height: auto;">
+    <img src="docs/images/external/app_screenshots/overview.png" alt="Session Replays" style="flex: 1; max-width: 30%; height: auto;">
+    <img src="docs/images/external/app_screenshots/session-overview.png" alt="Session Analytics" style="flex: 1; max-width: 30%; height: auto;">
+
   </div>
   <span style="color: black;">All of this with just 2 lines of code</span>
 </div>
@@ -61,15 +60,59 @@ AgentOps helps developers build, evaluate, and monitor AI agents. From prototype
 pip install agentops
 ```
 
-### Session replays in 3 lines of code
 
-Initialize the AgentOps client and automatically get analytics on every LLM call.
+### Session replays in 2 lines of code
+
+Initialize the AgentOps client and automatically get analytics on all your LLM calls.
+
+[Get an API key](https://app.agentops.ai/settings/projects)
 
 ```python
 import agentops
 
-# Beginning of program's code (i.e. main.py, __init__.py)
+# Beginning of your program (i.e. main.py, __init__.py)
 agentops.init( < INSERT YOUR API KEY HERE >)
+
+...
+
+# End of program
+agentops.end_session('Success')
+```
+
+All your sessions can be viewed on the [AgentOps dashboard](https://app.agentops.ai?ref=gh)
+<br/>
+For more functionality refer to our [documentation](http://docs.agentops.ai)
+
+
+
+<details>
+  <summary>Session Debugging</summary>
+  <a href="https://app.agentops.ai?ref=gh">
+    <img src="docs/images/external/app_screenshots/session-overview.png" style="width: 90%;" alt="Session Analytics"/>
+  </a>
+</details>
+
+<details>
+  <summary>Session Replays</summary>
+  <a href="https://app.agentops.ai?ref=gh">
+    <img src="docs/images/external/app_screenshots/session-replay.png" style="width: 90%;" alt="Session Replays"/>
+  </a>
+</details>
+
+<details open>
+  <summary>Session Analytics</summary>
+  <a href="https://app.agentops.ai?ref=gh">
+   <img src="docs/images/external/app_screenshots/overview.png" style="width: 90%;" alt="Agent Dashboard"/>
+  </a>
+</details>
+
+
+### More lines of code
+```python
+import agentops
+
+# Beginning of program's code (i.e. main.py, __init__.py)
+agentops.init(< INSERT YOUR API KEY HERE >)
 
 ...
 
@@ -82,31 +125,9 @@ def sample_function(...):
 
 # End of program
 agentops.end_session('Success')
-# Woohoo You're done 🎉
 ```
 
-All your sessions are available on the [AgentOps dashboard](https://app.agentops.ai?ref=gh). Refer to our [API documentation](http://docs.agentops.ai) for detailed instructions.
 
-<details open>
-  <summary>Agent Dashboard</summary>
-  <a href="https://app.agentops.ai?ref=gh">
-   <img src="docs/images/external/app_screenshots/overview.png" style="width: 90%;" alt="Agent Dashboard"/>
-  </a>
-</details>
-
-<details>
-  <summary>Session Analytics</summary>
-  <a href="https://app.agentops.ai?ref=gh">
-    <img src="docs/images/external/app_screenshots/session-overview.png" style="width: 90%;" alt="Session Analytics"/>
-  </a>
-</details>
-
-<details>
-  <summary>Session Replays</summary>
-  <a href="https://app.agentops.ai?ref=gh">
-    <img src="docs/images/external/app_screenshots/session-replay.png" style="width: 90%;" alt="Session Replays"/>
-  </a>
-</details>
 
 ## Integrations 🦾
 
