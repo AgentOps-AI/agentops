@@ -61,69 +61,27 @@ def fetch_completion_override_from_time_travel_cache(kwargs):
         return
 
     if TimeTravel()._completion_overrides_map:
-        search_prompt = str({"messages": kwargs["messages"]})
-        result_from_cache = TimeTravel()._completion_overrides_map.get(search_prompt)
-        return result_from_cache
-
-
-def fetch_prompt_override_from_time_travel_cache(kwargs):
-    if not check_time_travel_active():
-        return
-
-    if TimeTravel()._prompt_override_map:
         prompt_messages = kwargs["messages"]
-
-        find_cache_hit(prompt_messages, TimeTravel()._prompt_override_map)
-
-        # def find_cache_hit(listA, listB):
-        #     for item in listB:
-        #         for key, value in item.items():
-        #             if (
-        #                 isinstance(key, list)
-        #                 and len(key) == len(listA)
-        #                 and all(a == c for a, c in zip(listA, key))
-        #             ):
-        #                 return value
-        #     return None  # Return None if no match is found
-
-        # matched_prompt = None
-        # continue_to_next_prompt_message = False
-
-        # for i in range(len(prompt_messages)):
-        #     try:
-        #         for key in TimeTravel()._prompt_override_map.keys():
-        #             matched_prompt = TimeTravel()._prompt_override_map[key]
-        #             try:
-        #                 cached_messages = json.loads(key).get("messages", [])
-        #                 if len(prompt_messages) != len(cached_messages):
-        #                     continue
-
-        #                 if (
-        #                     prompt_messages[i]["content"]
-        #                     == cached_messages[i]["content"]
-        #                 ):
-        #                     continue_to_next_prompt_message = True
-        #                 else:
-        #                     return
-
-        #             except (json.JSONDecodeError, ValueError) as e:
-        #                 pass  # TODO
-        #             except KeyError as e:
-        #                 pass  # TODO
-        #     except KeyError as e:
-        #         pass  # TODO
-
-        # return matched_prompt
+        return find_cache_hit(prompt_messages, TimeTravel()._completion_overrides_map)
 
 
+# NOTE: This is specific to the messages: [{'role': '...', 'content': '...'}, ...] format
 def find_cache_hit(listA, mapA):
     for key, value in mapA.items():
-        print(f"key: {key}")
-        print(f"value: {value}")
-        if isinstance(key, list) and len(key) == len(listA):
-            print(f"listA: {listA}")
-            if all(a["content"] == b["content"] for a, b in zip(listA, key)):
-                return value
+        try:
+            parsed_key = eval(key)
+            if isinstance(parsed_key, dict) and "messages" in parsed_key:
+                cached_messages = parsed_key["messages"]
+                if isinstance(cached_messages, list) and len(cached_messages) == len(
+                    listA
+                ):
+                    if all(
+                        a["content"] == b["content"]
+                        for a, b in zip(listA, cached_messages)
+                    ):
+                        return value
+        except (SyntaxError, ValueError):
+            pass  # TODO
     return None
 
 
