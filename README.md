@@ -8,15 +8,7 @@
   <em>Observability and DevTool platform for AI Agents</em>
 </div>
 
-<p align="center">
-<a href="https://twitter.com/agentopsai/">🐦 Twitter</a>
-<span>&nbsp;&nbsp;•&nbsp;&nbsp;</span>
-<a href="https://discord.gg/FagdcwwXRR">📢 Discord</a>
-<span>&nbsp;&nbsp;•&nbsp;&nbsp;</span>
-<a href="https://app.agentops.ai/?ref=gh">🖇️ Dashboard</a>
-<span>&nbsp;&nbsp;•&nbsp;&nbsp;</span>
-<a href="https://docs.agentops.ai/introduction">📙 Documentation</a>
-</p>
+<br />
 
 <div align="center">
   <a href="https://pepy.tech/project/agentops">
@@ -27,17 +19,22 @@
   </a>
   <img src="https://img.shields.io/pypi/v/agentops?&color=3670A0" alt="PyPI - Version">
   <a href="https://opensource.org/licenses/MIT">
-    <img src="https://img.shields.io/badge/License-MIT-yellow.svg" alt="License: MIT">
+    <img src="https://img.shields.io/badge/License-MIT-yellow.svg?&color=3670A0" alt="License: MIT">
   </a>
 </div>
 
-<div align="center" style="background-color: #F4F5FF; padding: 10px; border-radius: 5px;">
-  <div style="display: flex; justify-content: center; gap: 10px;">
-    <img src="docs/images/external/app_screenshots/session-overview.png" alt="Agent Debugging" style="flex: 1; max-width: 30%; height: auto;">
-    <img src="docs/images/external/app_screenshots/session-replay.png" alt="Session Replays" style="flex: 1; max-width: 30%; height: auto;">
-    <img src="docs/images/external/app_screenshots/overview.png" alt="Summary Analytics" style="flex: 1; max-width: 30%; height: auto;">
-  </div>
-  <span style="color: black;">All of this with just 2 lines of code</span>
+<p align="center">
+<a href="https://twitter.com/agentopsai/">🐦 Twitter</a>
+<span>&nbsp;&nbsp;•&nbsp;&nbsp;</span>
+<a href="https://discord.gg/FagdcwwXRR">📢 Discord</a>
+<span>&nbsp;&nbsp;•&nbsp;&nbsp;</span>
+<a href="https://app.agentops.ai/?ref=gh">🖇️ Dashboard</a>
+<span>&nbsp;&nbsp;•&nbsp;&nbsp;</span>
+<a href="https://docs.agentops.ai/introduction">📙 Documentation</a>
+</p>
+
+<div style="justify-content: center">
+  <img src="docs/images/external/app_screenshots/dashboard_banner.png" alt="Dashboard Banner">
 </div>
 
 <br/>
@@ -104,7 +101,7 @@ All your sessions can be viewed on the [AgentOps dashboard](https://app.agentops
 
 
 ### First class Developer Experience
-Add powerful observability to your agents, tools and functions with as little code as possible: one line.
+Add powerful observability to your agents, tools, and functions with as little code as possible: one line at a time.
 <br/>
 Refer to our [documentation](http://docs.agentops.ai)
 
@@ -311,16 +308,8 @@ Check out the [LlamaIndex docs](https://docs.llamaindex.ai/en/stable/module_guid
 
 ## Time travel debugging 🔮
 
-<div style="display: flex; flex-direction: column; align-items: center; background-color: #F4F5FF; padding: 20px; border-radius: 5px; gap: 20px;">
-  <div style="display: flex; justify-content: center; gap: 30px;">
-    <img src="docs/images/external/app_screenshots/time_travel_1.png" alt="Agent Debugging" style="flex: 1; max-width: 45%; height: auto;">
-    <img src="docs/images/external/app_screenshots/time_travel_2.png" alt="Session Replays" style="flex: 1; max-width: 45%; height: auto;">
-  </div>
-  <div style="color: black; text-align: center;">
-    Recapture time, money, and control in your Agent development workflow
-    <br />
-    Cache LLM calls and edit the Completions to trigger different paths in your Agent's execution.
-  </div>
+<div style="justify-content: center">
+  <img src="docs/images/external/app_screenshots/time_travel_banner.png" alt="Time Travel Banner">
 </div>
 
 <br />
