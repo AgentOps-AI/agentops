@@ -283,7 +283,31 @@ response = await litellm.acompletion(model="claude-3", messages=messages)
 
 ### LlamaIndex 🦙
 
-(Coming Soon)
+
+AgentOps works seamlessly with applications built using LlamaIndex, a framework for building context-augmented generative AI applications with LLMs.
+
+<details>
+  <summary>Installation</summary>
+  
+```shell
+pip install llama-index-instrumentation-agentops
+```
+
+To use the handler, import and set
+
+```python
+from llama_index.core import set_global_handler
+
+# NOTE: Feel free to set your AgentOps environment variables (e.g., 'AGENTOPS_API_KEY')
+# as outlined in the AgentOps documentation, or pass the equivalent keyword arguments
+# anticipated by AgentOps' AOClient as **eval_params in set_global_handler.
+
+set_global_handler("agentops")
+```
+
+Check out the [LlamaIndex docs](https://docs.llamaindex.ai/en/stable/module_guides/observability/?h=agentops#agentops) for more details.
+
+</details>
 
 ## Time travel debugging 🔮
 
