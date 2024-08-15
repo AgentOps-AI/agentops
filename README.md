@@ -287,7 +287,19 @@ response = await litellm.acompletion(model="claude-3", messages=messages)
 
 ## Time travel debugging 🔮
 
-(coming soon!)
+<div style="display: flex; flex-direction: column; align-items: center; background-color: #F4F5FF; padding: 20px; border-radius: 5px; gap: 20px;">
+  <div style="display: flex; justify-content: center; gap: 30px;">
+    <img src="docs/images/external/app_screenshots/time_travel_1.png" alt="Agent Debugging" style="flex: 1; max-width: 45%; height: auto;">
+    <img src="docs/images/external/app_screenshots/time_travel_2.png" alt="Session Replays" style="flex: 1; max-width: 45%; height: auto;">
+  </div>
+  <div style="color: black; text-align: center;">
+    Recapture time, money, and control in your Agent development workflow
+    <br />
+    Cache LLM calls and edit the Completions to trigger different paths in your Agent's execution.
+  </div>
+</div>
+
+[Try it out!](https://app.agentops.ai/timetravel)
 
 ## Agent Arena 🥊
 
