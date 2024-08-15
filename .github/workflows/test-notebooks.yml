@@ -1,9 +1,11 @@
 name: Test Notebooks
 on:
+  pull_request_target: # Allows manual triggering from PR UI
   push:
-    branches: [ main ]
-  pull_request:
-    branches: [ main ]
+    branches:
+      - main
+    paths-ignore:
+      - 'docs/**'
 jobs:
   test-notebooks:
     runs-on: ubuntu-latest

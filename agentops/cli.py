@@ -35,7 +35,3 @@ def main():
             set_time_travel_active_state(True)
         if args.off:
             set_time_travel_active_state(False)
-
-
-if __name__ == "__main__":
-    main()
