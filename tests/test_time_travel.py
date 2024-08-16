@@ -14,14 +14,13 @@ class TestTimeTravel(unittest.TestCase):
     @patch(
         "builtins.open",
         new_callable=mock_open,
-        read_data='{"completion_overrides": {}, "prompt_override": {}}',
+        read_data='{"completion_overrides": {}}',
     )
     def test_init(self, mock_open, mock_abspath, mock_dirname):
         mock_abspath.return_value = "/path/to/script"
         mock_dirname.return_value = "/path/to"
         instance = TimeTravel()
-        self.assertEqual(instance._completion_overrides_map, {})
-        self.assertEqual(instance._prompt_override_map, {})
+        self.assertEqual(instance._completion_overrides, {})
 
     @patch("os.path.dirname")
     @patch("os.path.abspath")
