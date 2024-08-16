@@ -11,12 +11,12 @@ agentops.init(default_tags=["TTD Test", openai.__version__])
 
 try:
     chat_completion_1 = client.chat.completions.create(
-        messages=(
+        messages=[
             {
                 "content": "Come up with a random superpower that isn't time travel. Just return the superpower in the format: 'Superpower: [superpower]'",
                 "role": "user",
-            },
-        ),
+            }
+        ],
         model="gpt-3.5-turbo-0125",
     )
     content1 = chat_completion_1.choices[0].message.content

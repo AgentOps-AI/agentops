@@ -62,9 +62,9 @@ def fetch_completion_override_from_time_travel_cache(kwargs):
 
 # NOTE: This is specific to the messages: [{'role': '...', 'content': '...'}, ...] format
 def find_cache_hit(prompt_messages, completion_overrides):
-    if not isinstance(prompt_messages, list):
+    if not isinstance(prompt_messages, (list, tuple)):
         print(
-            "Time Travel Error - unexpected type for prompt_messages. Expected 'list'. Got ",
+            "Time Travel Error - unexpected type for prompt_messages. Expected 'list' or 'tuple'. Got ",
             type(prompt_messages),
         )
         return None
