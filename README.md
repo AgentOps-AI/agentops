@@ -3,44 +3,44 @@
     <img src="docs/images/external/logo/banner-badge.png" style="max-width: 500px" width="50%" alt="Logo">
   </a>
 </div>
-<p align="center">
-  <em>AI agents suck. We’re fixing that.</em>
-</p>
 
-<p align="center">
-    <a href="https://pypi.org/project/agentops/" target="_blank">
-        <img alt="Python" src="https://img.shields.io/badge/python-3670A0?style=for-the-badge&logo=python&logoColor=ffdd54" />
-        <img alt="Version" src="https://img.shields.io/pypi/v/agentops?style=for-the-badge&color=3670A0">
-    </a>
-</p>
+<div align="center">
+  <em>Observability and DevTool platform for AI Agents</em>
+</div>
+
+<br />
+
+<div align="center">
+  <a href="https://pepy.tech/project/agentops">
+    <img src="https://static.pepy.tech/badge/agentops/month" alt="Downloads">
+  </a>
+  <a href="https://github.com/agentops-ai/agentops/issues">
+  <img src="https://img.shields.io/github/commit-activity/m/agentops-ai/agentops" alt="git commit activity">
+  </a>
+  <img src="https://img.shields.io/pypi/v/agentops?&color=3670A0" alt="PyPI - Version">
+  <a href="https://opensource.org/licenses/MIT">
+    <img src="https://img.shields.io/badge/License-MIT-yellow.svg?&color=3670A0" alt="License: MIT">
+  </a>
+</div>
+
 <p align="center">
 <a href="https://twitter.com/agentopsai/">🐦 Twitter</a>
 <span>&nbsp;&nbsp;•&nbsp;&nbsp;</span>
 <a href="https://discord.gg/FagdcwwXRR">📢 Discord</a>
 <span>&nbsp;&nbsp;•&nbsp;&nbsp;</span>
-<a href="https://app.agentops.ai/?ref=gh">🖇️ AgentOps</a>
+<a href="https://app.agentops.ai/?ref=gh">🖇️ Dashboard</a>
 <span>&nbsp;&nbsp;•&nbsp;&nbsp;</span>
 <a href="https://docs.agentops.ai/introduction">📙 Documentation</a>
 </p>
 
-# AgentOps 🖇️
+<div style="justify-content: center">
+  <img src="docs/images/external/app_screenshots/dashboard_banner.png" alt="Dashboard Banner">
+</div>
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-![PyPI - Version](https://img.shields.io/pypi/v/agentops)
-<a href="https://pepy.tech/project/agentops">
-  <img src="https://static.pepy.tech/badge/agentops/month">
-</a>
-<a href="https://twitter.com/agentopsai">
-  <img src="https://img.shields.io/badge/follow-%40agentops-1DA1F2?logo=twitter&style=social" alt="AgentOps Twitter"/>
-</a>
-<a href="https://discord.gg/mKW3ZhN9p2">
-  <img src="https://img.shields.io/badge/chat-on%20Discord-blueviolet" alt="Discord community channel"/>
-</a>
-<a href="https://github.com/agentops-ai/agentops/issues">
-  <img src="https://img.shields.io/github/commit-activity/m/agentops-ai/agentops" alt="git commit activity"/>
-</a>
+<br/>
 
-AgentOps helps developers build, evaluate, and monitor AI agents. Tools to build agents from prototype to production.
+
+AgentOps helps developers build, evaluate, and monitor AI agents. From prototype to production.
 
 |                                       |                                                               |
 | ------------------------------------- | ------------------------------------------------------------- |
@@ -56,43 +56,32 @@ AgentOps helps developers build, evaluate, and monitor AI agents. Tools to build
 pip install agentops
 ```
 
-### Session replays in 3 lines of code
 
-Initialize the AgentOps client and automatically get analytics on every LLM call.
+#### Session replays in 2 lines of code
+
+Initialize the AgentOps client and automatically get analytics on all your LLM calls.
+
+[Get an API key](https://app.agentops.ai/settings/projects)
 
 ```python
 import agentops
 
-# Beginning of program's code (i.e. main.py, __init__.py)
+# Beginning of your program (i.e. main.py, __init__.py)
 agentops.init( < INSERT YOUR API KEY HERE >)
 
 ...
 
-
-# (optional: record specific functions)
-@agentops.record_action('sample function being record')
-def sample_function(...):
-    ...
-
-
 # End of program
 agentops.end_session('Success')
-# Woohoo You're done 🎉
 ```
 
-All your sessions are available on the [AgentOps dashboard](https://app.agentops.ai?ref=gh). Refer to our [API documentation](http://docs.agentops.ai) for detailed instructions.
-
-<details open>
-  <summary>Agent Dashboard</summary>
-  <a href="https://app.agentops.ai?ref=gh">
-   <img src="docs/images/external/app_screenshots/overview.png" style="width: 90%;" alt="Agent Dashboard"/>
-  </a>
-</details>
+All your sessions can be viewed on the [AgentOps dashboard](https://app.agentops.ai?ref=gh)
+<br/>
 
 <details>
-  <summary>Session Analytics</summary>
+  <summary>Agent Debugging</summary>
   <a href="https://app.agentops.ai?ref=gh">
-    <img src="docs/images/external/app_screenshots/session-overview.png" style="width: 90%;" alt="Session Analytics"/>
+    <img src="docs/images/external/app_screenshots/session-overview.png" style="width: 90%;" alt="Agent Debugging"/>
   </a>
 </details>
 
@@ -102,6 +91,53 @@ All your sessions are available on the [AgentOps dashboard](https://app.agentops
     <img src="docs/images/external/app_screenshots/session-replay.png" style="width: 90%;" alt="Session Replays"/>
   </a>
 </details>
+
+<details open>
+  <summary>Summary Analytics</summary>
+  <a href="https://app.agentops.ai?ref=gh">
+   <img src="docs/images/external/app_screenshots/overview.png" style="width: 90%;" alt="Summary Analytics"/>
+  </a>
+</details>
+
+
+### First class Developer Experience
+Add powerful observability to your agents, tools, and functions with as little code as possible: one line at a time.
+<br/>
+Refer to our [documentation](http://docs.agentops.ai)
+
+```python
+# Automatically associate all Events with the agent that originated them
+from agentops import track_agent
+
+@track_agent(name='SomeCustomName')
+class MyAgent:
+  ...
+```
+
+```python
+# Automatically create ToolEvents for tools that agents will use
+from agentops import record_tool
+
+@record_tool('SampleToolName')
+def sample_tool(...):
+  ...
+```
+
+```python
+# Automatically create ActionEvents for other functions.
+from agentops import record_action
+
+@agentops.record_action('sample function being record')
+def sample_function(...):
+  ...
+```
+
+```python
+# Manually record any other Events
+from agentops import record, ActionEvent
+
+record(ActionEvent("received_user_input"))
+```
 
 ## Integrations 🦾
 
@@ -244,11 +280,41 @@ response = await litellm.acompletion(model="claude-3", messages=messages)
 
 ### LlamaIndex 🦙
 
-(Coming Soon)
+
+AgentOps works seamlessly with applications built using LlamaIndex, a framework for building context-augmented generative AI applications with LLMs.
+
+<details>
+  <summary>Installation</summary>
+  
+```shell
+pip install llama-index-instrumentation-agentops
+```
+
+To use the handler, import and set
+
+```python
+from llama_index.core import set_global_handler
+
+# NOTE: Feel free to set your AgentOps environment variables (e.g., 'AGENTOPS_API_KEY')
+# as outlined in the AgentOps documentation, or pass the equivalent keyword arguments
+# anticipated by AgentOps' AOClient as **eval_params in set_global_handler.
+
+set_global_handler("agentops")
+```
+
+Check out the [LlamaIndex docs](https://docs.llamaindex.ai/en/stable/module_guides/observability/?h=agentops#agentops) for more details.
+
+</details>
 
 ## Time travel debugging 🔮
 
-(coming soon!)
+<div style="justify-content: center">
+  <img src="docs/images/external/app_screenshots/time_travel_banner.png" alt="Time Travel Banner">
+</div>
+
+<br />
+
+[Try it out!](https://app.agentops.ai/timetravel)
 
 ## Agent Arena 🥊
 
@@ -295,17 +361,25 @@ Check out our growth in the community:
 
 ## Popular projects using AgentOps
 
+
 | Repository | Stars  |
 | :--------  | -----: |
-|<img class="avatar mr-2" src="https://avatars.githubusercontent.com/u/667063?s=40&v=4" width="20" height="20" alt="">  &nbsp; [joaomdmoura](https://github.com/joaomdmoura) / [crewAI](https://github.com/joaomdmoura/crewAI) | 16888 |
-|<img class="avatar mr-2" src="https://avatars.githubusercontent.com/u/152537519?s=40&v=4" width="20" height="20" alt="">  &nbsp; [superagent-ai](https://github.com/superagent-ai) / [superagent](https://github.com/superagent-ai/superagent) | 4933 |
-|<img class="avatar mr-2" src="https://avatars.githubusercontent.com/u/30197649?s=40&v=4" width="20" height="20" alt="">  &nbsp; [iyaja](https://github.com/iyaja) / [llama-fs](https://github.com/iyaja/llama-fs) | 4507 |
-|<img class="avatar mr-2" src="https://avatars.githubusercontent.com/u/454862?s=40&v=4" width="20" height="20" alt="">  &nbsp; [MervinPraison](https://github.com/MervinPraison) / [PraisonAI](https://github.com/MervinPraison/PraisonAI) | 1015 |
-|<img class="avatar mr-2" src="https://avatars.githubusercontent.com/u/140554352?s=40&v=4" width="20" height="20" alt="">  &nbsp; [AgentOps-AI](https://github.com/AgentOps-AI) / [Jaiqu](https://github.com/AgentOps-AI/Jaiqu) | 265 |
-|<img class="avatar mr-2" src="https://avatars.githubusercontent.com/u/64493665?s=40&v=4" width="20" height="20" alt="">  &nbsp; [tonykipkemboi](https://github.com/tonykipkemboi) / [youtube_yapper_trapper](https://github.com/tonykipkemboi/youtube_yapper_trapper) | 42 |
-|<img class="avatar mr-2" src="https://avatars.githubusercontent.com/u/18406448?s=40&v=4" width="20" height="20" alt="">  &nbsp; [alejandro-ao](https://github.com/alejandro-ao) / [exa-crewai](https://github.com/alejandro-ao/exa-crewai) | 31 |
-|<img class="avatar mr-2" src="https://avatars.githubusercontent.com/u/17598928?s=40&v=4" width="20" height="20" alt="">  &nbsp; [sethcoast](https://github.com/sethcoast) / [cover-letter-builder](https://github.com/sethcoast/cover-letter-builder) | 23 |
-|<img class="avatar mr-2" src="https://avatars.githubusercontent.com/u/109994880?s=40&v=4" width="20" height="20" alt="">  &nbsp; [bhancockio](https://github.com/bhancockio) / [chatgpt4o-analysis](https://github.com/bhancockio/chatgpt4o-analysis) | 16 |
+|<img class="avatar mr-2" src="https://avatars.githubusercontent.com/u/2707039?s=40&v=4" width="20" height="20" alt="">  &nbsp; [geekan](https://github.com/geekan) / [MetaGPT](https://github.com/geekan/MetaGPT) | 42787 |
+|<img class="avatar mr-2" src="https://avatars.githubusercontent.com/u/130722866?s=40&v=4" width="20" height="20" alt="">  &nbsp; [run-llama](https://github.com/run-llama) / [llama_index](https://github.com/run-llama/llama_index) | 34446 |
+|<img class="avatar mr-2" src="https://avatars.githubusercontent.com/u/170677839?s=40&v=4" width="20" height="20" alt="">  &nbsp; [crewAIInc](https://github.com/crewAIInc) / [crewAI](https://github.com/crewAIInc/crewAI) | 18287 |
+|<img class="avatar mr-2" src="https://avatars.githubusercontent.com/u/134388954?s=40&v=4" width="20" height="20" alt="">  &nbsp; [camel-ai](https://github.com/camel-ai) / [camel](https://github.com/camel-ai/camel) | 5166 |
+|<img class="avatar mr-2" src="https://avatars.githubusercontent.com/u/152537519?s=40&v=4" width="20" height="20" alt="">  &nbsp; [superagent-ai](https://github.com/superagent-ai) / [superagent](https://github.com/superagent-ai/superagent) | 5050 |
+|<img class="avatar mr-2" src="https://avatars.githubusercontent.com/u/30197649?s=40&v=4" width="20" height="20" alt="">  &nbsp; [iyaja](https://github.com/iyaja) / [llama-fs](https://github.com/iyaja/llama-fs) | 4713 |
+|<img class="avatar mr-2" src="https://avatars.githubusercontent.com/u/162546372?s=40&v=4" width="20" height="20" alt="">  &nbsp; [BasedHardware](https://github.com/BasedHardware) / [Omi](https://github.com/BasedHardware/Omi) | 2723 |
+|<img class="avatar mr-2" src="https://avatars.githubusercontent.com/u/454862?s=40&v=4" width="20" height="20" alt="">  &nbsp; [MervinPraison](https://github.com/MervinPraison) / [PraisonAI](https://github.com/MervinPraison/PraisonAI) | 2007 |
+|<img class="avatar mr-2" src="https://avatars.githubusercontent.com/u/140554352?s=40&v=4" width="20" height="20" alt="">  &nbsp; [AgentOps-AI](https://github.com/AgentOps-AI) / [Jaiqu](https://github.com/AgentOps-AI/Jaiqu) | 272 |
+|<img class="avatar mr-2" src="https://avatars.githubusercontent.com/u/3074263?s=40&v=4" width="20" height="20" alt="">  &nbsp; [strnad](https://github.com/strnad) / [CrewAI-Studio](https://github.com/strnad/CrewAI-Studio) | 134 |
+|<img class="avatar mr-2" src="https://avatars.githubusercontent.com/u/18406448?s=40&v=4" width="20" height="20" alt="">  &nbsp; [alejandro-ao](https://github.com/alejandro-ao) / [exa-crewai](https://github.com/alejandro-ao/exa-crewai) | 55 |
+|<img class="avatar mr-2" src="https://avatars.githubusercontent.com/u/64493665?s=40&v=4" width="20" height="20" alt="">  &nbsp; [tonykipkemboi](https://github.com/tonykipkemboi) / [youtube_yapper_trapper](https://github.com/tonykipkemboi/youtube_yapper_trapper) | 47 |
+|<img class="avatar mr-2" src="https://avatars.githubusercontent.com/u/17598928?s=40&v=4" width="20" height="20" alt="">  &nbsp; [sethcoast](https://github.com/sethcoast) / [cover-letter-builder](https://github.com/sethcoast/cover-letter-builder) | 27 |
+|<img class="avatar mr-2" src="https://avatars.githubusercontent.com/u/109994880?s=40&v=4" width="20" height="20" alt="">  &nbsp; [bhancockio](https://github.com/bhancockio) / [chatgpt4o-analysis](https://github.com/bhancockio/chatgpt4o-analysis) | 19 |
+|<img class="avatar mr-2" src="https://avatars.githubusercontent.com/u/14105911?s=40&v=4" width="20" height="20" alt="">  &nbsp; [breakstring](https://github.com/breakstring) / [Agentic_Story_Book_Workflow](https://github.com/breakstring/Agentic_Story_Book_Workflow) | 14 |
+|<img class="avatar mr-2" src="https://avatars.githubusercontent.com/u/124134656?s=40&v=4" width="20" height="20" alt="">  &nbsp; [MULTI-ON](https://github.com/MULTI-ON) / [multion-python](https://github.com/MULTI-ON/multion-python) | 13 |
 
 
 _Generated using [github-dependents-info](https://github.com/nvuillam/github-dependents-info), by [Nicolas Vuillamy](https://github.com/nvuillam)_

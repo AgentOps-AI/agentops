@@ -7,7 +7,7 @@ from dotenv import load_dotenv
 load_dotenv()
 client = OpenAI()
 
-agentops.init(tags=["TTD Test", openai.__version__])
+agentops.init(default_tags=["TTD Test", openai.__version__])
 
 try:
     chat_completion_1 = client.chat.completions.create(
