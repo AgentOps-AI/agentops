@@ -62,24 +62,53 @@ def fetch_completion_override_from_time_travel_cache(kwargs):
 
 # NOTE: This is specific to the messages: [{'role': '...', 'content': '...'}, ...] format
 def find_cache_hit(prompt_messages, completion_overrides):
+    if not isinstance(prompt_messages, list):
+        print(
+            "Time Travel Error - unexpected type for prompt_messages. Expected 'list'. Got ",
+            type(prompt_messages),
+        )
+        return None
+
+    if not isinstance(completion_overrides, dict):
+        print(
+            "Time Travel Error - unexpected type for completion_overrides. Expected 'dict'. Got ",
+            type(completion_overrides),
+        )
+        return None
     for key, value in completion_overrides.items():
         try:
             completion_override_dict = eval(key)
-            if (
-                isinstance(completion_override_dict, dict)
-                and "messages" in completion_override_dict
+            if not isinstance(completion_override_dict, dict):
+                print(
+                    "Time Travel Error - unexpected type for completion_override_dict. Expected 'dict'. Got ",
+                    type(completion_override_dict),
+                )
+                continue
+
+            cached_messages = completion_override_dict.get("messages")
+            if not isinstance(cached_messages, list):
+                print(
+                    "Time Travel Error - unexpected type for cached_messages. Expected 'list'. Got ",
+                    type(cached_messages),
+                )
+                continue
+
+            if len(cached_messages) != len(prompt_messages):
+                continue
+
+            if all(
+                isinstance(a, dict)
+                and isinstance(b, dict)
+                and a.get("content") == b.get("content")
+                for a, b in zip(prompt_messages, cached_messages)
             ):
-                cached_messages = completion_override_dict["messages"]
-                if isinstance(cached_messages, list) and len(cached_messages) == len(
-                    prompt_messages
-                ):
-                    if all(
-                        a["content"] == b["content"]
-                        for a, b in zip(prompt_messages, cached_messages)
-                    ):
-                        return value
-        except (SyntaxError, ValueError):
-            pass  # TODO
+                return value
+        except (SyntaxError, ValueError, TypeError) as e:
+            print(
+                f"Time Travel Error - Error processing completion_overrides item: {e}"
+            )
+        except Exception as e:
+            print(f"Time Travel Error - Unexpected error in find_cache_hit: {e}")
     return None
 
 
@@ -121,7 +150,7 @@ def set_time_travel_active_state(is_active: bool):
 
         if is_active:
             manage_time_travel_state(activated=True)
-            print("AgentOps: Time Travel Activated")
+            print("🖇 AgentOps: Time Travel Activated")
         else:
             manage_time_travel_state(activated=False)
             print("🖇 AgentOps: Time Travel Deactivated")
