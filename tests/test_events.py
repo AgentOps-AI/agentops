@@ -3,7 +3,7 @@ import requests_mock
 import pytest
 import agentops
 from agentops import ActionEvent, ErrorEvent
-from agentops.helpers import clear_singletons
+from agentops.singleton import clear_singletons
 
 
 @pytest.fixture(autouse=True)

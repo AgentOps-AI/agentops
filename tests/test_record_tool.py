@@ -5,7 +5,7 @@ import agentops
 from agentops import record_tool
 from datetime import datetime
 
-from agentops.helpers import clear_singletons
+from agentops.singleton import clear_singletons
 import contextlib
 
 jwts = ["some_jwt", "some_jwt2", "some_jwt3"]

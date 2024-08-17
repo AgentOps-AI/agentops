@@ -3,8 +3,7 @@ import requests_mock
 import time
 import agentops
 from agentops import ActionEvent, Client
-from agentops.exceptions import NoSessionException, MultiSessionException
-from agentops.helpers import clear_singletons
+from agentops.singleton import clear_singletons
 
 
 @pytest.fixture(autouse=True)
