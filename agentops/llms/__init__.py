@@ -12,6 +12,7 @@ from .groq import GroqProvider
 from .litellm import LiteLLMProvider
 from .ollama import OllamaProvider
 from .openai import OpenAiProvider
+from .anthropic import AnthropicProvider
 
 original_func = {}
 original_create = None
@@ -34,6 +35,9 @@ class LlmTracker:
         "ollama": {"0.0.1": ("chat", "Client.chat", "AsyncClient.chat")},
         "groq": {
             "0.9.0": ("Client.chat", "AsyncClient.chat"),
+        },
+        "anthropic": {
+            "0.32.0": ("completions.create",),
         },
     }
 
@@ -116,6 +120,22 @@ class LlmTracker:
                             f"Only Groq>=0.9.0 supported. v{module_version} found."
                         )
 
+                if api == "anthropic":
+                    module_version = version(api)
+
+                    if module_version is None:
+                        logger.warning(
+                            f"Cannot determine Anthropic version. Only Anthropic>=0.32.0 supported."
+                        )
+
+                    if Version(module_version) >= parse("0.32.0"):
+                        provider = AnthropicProvider(self.client)
+                        provider.override()
+                    else:
+                        logger.warning(
+                            f"Only Anthropic>=0.32.0 supported. v{module_version} found."
+                        )
+
     def stop_instrumenting(self):
         openai_provider = OpenAiProvider(self.client)
         openai_provider.undo_override()
@@ -125,3 +145,6 @@ class LlmTracker:
 
         cohere_provider = CohereProvider(self.client)
         cohere_provider.undo_override()
+
+        anthropic_provider = AnthropicProvider(self.client)
+        anthropic_provider.undo_override()
