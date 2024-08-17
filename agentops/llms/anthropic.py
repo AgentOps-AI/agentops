@@ -148,7 +148,7 @@ class AnthropicProvider(InstrumentedProvider):
             )
 
         return response
-    
+
     def override(self):
         self._override_completion()
         self._override_async_completion()
@@ -212,9 +212,7 @@ class AnthropicProvider(InstrumentedProvider):
 
             # Call the original function with its original arguments
             result = original_create(*args, **kwargs)
-            return self.handle_response(
-                result, kwargs, init_timestamp, session=session
-            )
+            return self.handle_response(result, kwargs, init_timestamp, session=session)
 
         # Override the original method with the patched one
         messages.Messages.create = patched_function
@@ -279,13 +277,10 @@ class AnthropicProvider(InstrumentedProvider):
                 )
 
             result = await original_create_async(*args, **kwargs)
-            return self.handle_response(
-                result, kwargs, init_timestamp, session=session
-            )
+            return self.handle_response(result, kwargs, init_timestamp, session=session)
 
         # Override the original method with the patched one
         messages.AsyncMessages.create = patched_function
-
 
     def _undo_override_completion(self):
         global original_create
