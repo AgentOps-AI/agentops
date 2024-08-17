@@ -12,6 +12,7 @@ from .groq import GroqProvider
 from .litellm import LiteLLMProvider
 from .ollama import OllamaProvider
 from .openai import OpenAiProvider
+from .mistral import MistralProvider
 
 original_func = {}
 original_create = None
@@ -34,6 +35,9 @@ class LlmTracker:
         "ollama": {"0.0.1": ("chat", "Client.chat", "AsyncClient.chat")},
         "groq": {
             "0.9.0": ("Client.chat", "AsyncClient.chat"),
+        },
+        "mistralai": {
+            "1.0.1": ("chat.complete", "chat.stream"),
         },
     }
 
@@ -116,6 +120,17 @@ class LlmTracker:
                             f"Only Groq>=0.9.0 supported. v{module_version} found."
                         )
 
+                if api == "mistralai":
+                    module_version = version(api)
+
+                    if Version(module_version) >= parse("1.0.1"):
+                        provider = MistralProvider(self.client)
+                        provider.override()
+                    else:
+                        logger.warning(
+                            f"Only MistralAI>=1.0.1 supported. v{module_version} found."
+                        )
+
     def stop_instrumenting(self):
         openai_provider = OpenAiProvider(self.client)
         openai_provider.undo_override()
@@ -125,3 +140,6 @@ class LlmTracker:
 
         cohere_provider = CohereProvider(self.client)
         cohere_provider.undo_override()
+
+        mistral_provider = MistralProvider(self.client)
+        mistral_provider.undo_override()
