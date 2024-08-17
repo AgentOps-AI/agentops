@@ -21,7 +21,7 @@ class AnthropicProvider(InstrumentedProvider):
         self.tool_event = {}
         self.tool_id = ""
 
-    def _handle_response(
+    def handle_response(
         self, response, kwargs, init_timestamp, session: Optional[Session] = None
     ):
         """Handle responses for Anthropic"""
@@ -206,13 +206,13 @@ class AnthropicProvider(InstrumentedProvider):
                         f"{pprint.pformat(completion_override)}"
                     )
                     return None
-                return self._handle_response(
+                return self.handle_response(
                     result_model, kwargs, init_timestamp, session=session
                 )
 
             # Call the original function with its original arguments
             result = original_create(*args, **kwargs)
-            return self._handle_response(
+            return self.handle_response(
                 result, kwargs, init_timestamp, session=session
             )
 
@@ -274,12 +274,12 @@ class AnthropicProvider(InstrumentedProvider):
                     )
                     return None
 
-                return self._handle_response(
+                return self.handle_response(
                     result_model, kwargs, init_timestamp, session=session
                 )
 
             result = await original_create_async(*args, **kwargs)
-            return self._handle_response(
+            return self.handle_response(
                 result, kwargs, init_timestamp, session=session
             )
 
