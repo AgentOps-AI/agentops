@@ -9,8 +9,7 @@ from .singleton import singleton
 @singleton
 class TimeTravel:
     def __init__(self):
-        self._completion_overrides_map = {}
-        self._prompt_override_map = {}
+        self._completion_overrides = {}
 
         script_dir = os.path.dirname(os.path.abspath(__file__))
         parent_dir = os.path.dirname(script_dir)
@@ -19,11 +18,8 @@ class TimeTravel:
         try:
             with open(cache_path, "r") as file:
                 time_travel_cache_json = json.load(file)
-                self._completion_overrides_map = time_travel_cache_json.get(
+                self._completion_overrides = time_travel_cache_json.get(
                     "completion_overrides"
-                )
-                self._prompt_override_map = time_travel_cache_json.get(
-                    "prompt_override"
                 )
         except FileNotFoundError:
             return
@@ -36,7 +32,7 @@ def fetch_time_travel_id(ttd_id):
         if ttd_res.code != 200:
             raise Exception(f"Failed to fetch TTD with status code {ttd_res.code}")
 
-        prompt_to_returns_map = {
+        completion_overrides = {
             "completion_overrides": {
                 (
                     str({"messages": item["prompt"]["messages"]})
@@ -47,7 +43,7 @@ def fetch_time_travel_id(ttd_id):
             }
         }
         with open("agentops_time_travel.json", "w") as file:
-            json.dump(prompt_to_returns_map, file, indent=4)
+            json.dump(completion_overrides, file, indent=4)
 
         set_time_travel_active_state(True)
     except ApiServerException as e:
@@ -60,20 +56,60 @@ def fetch_completion_override_from_time_travel_cache(kwargs):
     if not check_time_travel_active():
         return
 
-    if TimeTravel()._completion_overrides_map:
-        search_prompt = str({"messages": kwargs["messages"]})
-        result_from_cache = TimeTravel()._completion_overrides_map.get(search_prompt)
-        return result_from_cache
+    if TimeTravel()._completion_overrides:
+        return find_cache_hit(kwargs["messages"], TimeTravel()._completion_overrides)
 
 
-def fetch_prompt_override_from_time_travel_cache(kwargs):
-    if not check_time_travel_active():
-        return
+# NOTE: This is specific to the messages: [{'role': '...', 'content': '...'}, ...] format
+def find_cache_hit(prompt_messages, completion_overrides):
+    if not isinstance(prompt_messages, (list, tuple)):
+        print(
+            "Time Travel Error - unexpected type for prompt_messages. Expected 'list' or 'tuple'. Got ",
+            type(prompt_messages),
+        )
+        return None
 
-    if TimeTravel()._prompt_override_map:
-        search_prompt = str({"messages": kwargs["messages"]})
-        result_from_cache = TimeTravel()._prompt_override_map.get(search_prompt)
-        return json.loads(result_from_cache)
+    if not isinstance(completion_overrides, dict):
+        print(
+            "Time Travel Error - unexpected type for completion_overrides. Expected 'dict'. Got ",
+            type(completion_overrides),
+        )
+        return None
+    for key, value in completion_overrides.items():
+        try:
+            completion_override_dict = eval(key)
+            if not isinstance(completion_override_dict, dict):
+                print(
+                    "Time Travel Error - unexpected type for completion_override_dict. Expected 'dict'. Got ",
+                    type(completion_override_dict),
+                )
+                continue
+
+            cached_messages = completion_override_dict.get("messages")
+            if not isinstance(cached_messages, list):
+                print(
+                    "Time Travel Error - unexpected type for cached_messages. Expected 'list'. Got ",
+                    type(cached_messages),
+                )
+                continue
+
+            if len(cached_messages) != len(prompt_messages):
+                continue
+
+            if all(
+                isinstance(a, dict)
+                and isinstance(b, dict)
+                and a.get("content") == b.get("content")
+                for a, b in zip(prompt_messages, cached_messages)
+            ):
+                return value
+        except (SyntaxError, ValueError, TypeError) as e:
+            print(
+                f"Time Travel Error - Error processing completion_overrides item: {e}"
+            )
+        except Exception as e:
+            print(f"Time Travel Error - Unexpected error in find_cache_hit: {e}")
+    return None
 
 
 def check_time_travel_active():
@@ -114,7 +150,7 @@ def set_time_travel_active_state(is_active: bool):
 
         if is_active:
             manage_time_travel_state(activated=True)
-            print("AgentOps: Time Travel Activated")
+            print("🖇 AgentOps: Time Travel Activated")
         else:
             manage_time_travel_state(activated=False)
             print("🖇 AgentOps: Time Travel Deactivated")
