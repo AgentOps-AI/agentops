@@ -26,6 +26,7 @@ class MistralProvider(InstrumentedProvider):
         self, response, kwargs, init_timestamp, session: Optional[Session] = None
     ) -> dict:
         """Handle responses for Mistral"""
+        from mistralai.types import UNSET, UNSET_SENTINEL
 
         self.llm_event = LLMEvent(init_timestamp=init_timestamp, params=kwargs)
         if session is not None:
@@ -52,7 +53,10 @@ class MistralProvider(InstrumentedProvider):
                 if choice.delta.role:
                     accumulated_delta.role = choice.delta.role
 
-                if choice.delta.tool_calls:
+                # Check if tool_calls is Unset and set to None if it is
+                if choice.delta.tool_calls in (UNSET, UNSET_SENTINEL):
+                    accumulated_delta.tool_calls = None
+                elif choice.delta.tool_calls:
                     accumulated_delta.tool_calls = choice.delta.tool_calls
 
                 if chunk.data.choices[0].finish_reason:
@@ -60,7 +64,7 @@ class MistralProvider(InstrumentedProvider):
                     self.llm_event.returns.choices[0].finish_reason = (
                         choice.finish_reason
                     )
-                    self.llm_event.complettion = {
+                    self.llm_event.completion = {
                         "role": accumulated_delta.role,
                         "content": accumulated_delta.content,
                         "tool_calls": accumulated_delta.tool_calls,
@@ -84,16 +88,7 @@ class MistralProvider(InstrumentedProvider):
                 )
 
         # if the response is a generator, decorate the generator
-        if inspect.isasyncgen(response):
-
-            async def async_generator():
-                async for chunk in response:
-                    handle_stream_chunk(chunk)
-                    yield chunk
-
-            return async_generator()
-
-        elif inspect.isgenerator(response):
+        if inspect.isgenerator(response):
 
             def generator():
                 for chunk in response:
@@ -102,6 +97,15 @@ class MistralProvider(InstrumentedProvider):
 
             return generator()
         
+        elif inspect.isasyncgen(response):
+
+            async def async_generator():
+                async for chunk in response:
+                    handle_stream_chunk(chunk)
+                    yield chunk
+
+            return async_generator()
+
         try:
             self.llm_event.returns = response
             self.llm_event.agent_id = check_call_stack_for_agent_id()
