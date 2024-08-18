@@ -11,6 +11,7 @@ from .instrumented_provider import InstrumentedProvider
 
 from mistralai import Chat
 
+
 class MistralProvider(InstrumentedProvider):
 
     original_complete = None
@@ -70,7 +71,9 @@ class MistralProvider(InstrumentedProvider):
                         "tool_calls": accumulated_delta.tool_calls,
                     }
                     self.llm_event.prompt_tokens = chunk.data.usage.prompt_tokens
-                    self.llm_event.completion_tokens = chunk.data.usage.completion_tokens
+                    self.llm_event.completion_tokens = (
+                        chunk.data.usage.completion_tokens
+                    )
                     self.llm_event.end_timestamp = get_ISO_time()
                     self._safe_record(session, self.llm_event)
 
@@ -96,7 +99,7 @@ class MistralProvider(InstrumentedProvider):
                     yield chunk
 
             return generator()
-        
+
         elif inspect.isasyncgen(response):
 
             async def async_generator():
@@ -128,7 +131,7 @@ class MistralProvider(InstrumentedProvider):
                 f"response:\n {response}\n"
                 f"kwargs:\n {kwargs_str}\n"
             )
-        
+
         return response
 
     def _override_complete(self):
