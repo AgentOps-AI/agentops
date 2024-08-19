@@ -6,13 +6,16 @@ from ..event import LLMEvent
 from ..session import Session
 from agentops.helpers import get_ISO_time, check_call_stack_for_agent_id
 from .instrumented_provider import InstrumentedProvider
+from ..singleton import singleton
 
 original_func = {}
-original_create = None
-original_create_async = None
 
 
+@singleton
 class OllamaProvider(InstrumentedProvider):
+    original_create = None
+    original_create_async = None
+
     def handle_response(
         self, response, kwargs, init_timestamp, session: Optional[Session] = None
     ) -> dict:

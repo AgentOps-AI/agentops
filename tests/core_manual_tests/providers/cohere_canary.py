@@ -30,6 +30,10 @@ async def main():
 
 asyncio.run(main())
 
+agentops.stop_instrumenting()
+
+chat_untracked = co.chat(message="say hi untracked")
+
 agentops.end_session(end_state="Success")
 
 ###

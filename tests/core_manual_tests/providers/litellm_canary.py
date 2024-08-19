@@ -31,6 +31,12 @@ async def main():
 
 asyncio.run(main())
 
+agentops.stop_instrumenting()
+
+untracked_response = litellm.completion(
+    model="gpt-3.5-turbo", messages=[{"content": "Hello, how are you?", "role": "user"}]
+)
+
 agentops.end_session(end_state="Success")
 
 ###

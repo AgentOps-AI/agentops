@@ -9,8 +9,10 @@ from ..event import ActionEvent, ErrorEvent, LLMEvent
 from ..session import Session
 from ..log_config import logger
 from ..helpers import check_call_stack_for_agent_id, get_ISO_time
+from ..singleton import singleton
 
 
+@singleton
 class OpenAiProvider(InstrumentedProvider):
 
     original_create = None
@@ -151,8 +153,7 @@ class OpenAiProvider(InstrumentedProvider):
         from openai.types.chat import ChatCompletion, ChatCompletionChunk
 
         # Store the original method
-        global original_create
-        original_create = completions.Completions.create
+        self.original_create = completions.Completions.create
 
         def patched_function(*args, **kwargs):
             init_timestamp = get_ISO_time()
@@ -191,7 +192,7 @@ class OpenAiProvider(InstrumentedProvider):
             #     kwargs["messages"] = prompt_override["messages"]
 
             # Call the original function with its original arguments
-            result = original_create(*args, **kwargs)
+            result = self.original_create(*args, **kwargs)
             return self.handle_response(result, kwargs, init_timestamp, session=session)
 
         # Override the original method with the patched one
@@ -202,8 +203,7 @@ class OpenAiProvider(InstrumentedProvider):
         from openai.types.chat import ChatCompletion, ChatCompletionChunk
 
         # Store the original method
-        global original_create_async
-        original_create_async = completions.AsyncCompletions.create
+        self.original_create_async = completions.AsyncCompletions.create
 
         async def patched_function(*args, **kwargs):
 

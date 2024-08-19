@@ -2,7 +2,6 @@ import asyncio
 
 import agentops
 from dotenv import load_dotenv
-import os
 import anthropic
 
 load_dotenv()
@@ -16,7 +15,7 @@ response = anthropic_client.messages.create(
     messages=[
         {
             "role": "user",
-            "content": "What is 2+2?",
+            "content": "say hi",
         }
     ],
 )
@@ -28,7 +27,7 @@ stream_response = anthropic_client.messages.create(
     messages=[
         {
             "role": "user",
-            "content": "What is 2+2?",
+            "content": "asy hi 2",
         }
     ],
     stream=True,
@@ -49,7 +48,7 @@ async def async_test():
         messages=[
             {
                 "role": "user",
-                "content": "What is 2+2?",
+                "content": "say hi 3",
             }
         ],
     )
@@ -57,6 +56,20 @@ async def async_test():
 
 
 asyncio.run(async_test())
+
+agentops.stop_instrumenting()
+
+untracked_response = anthropic_client.messages.create(
+    max_tokens=1024,
+    model="claude-3-5-sonnet-20240620",
+    messages=[
+        {
+            "role": "user",
+            "content": "say hi 4",
+        }
+    ],
+)
+
 
 agentops.end_session(end_state="Success")
 

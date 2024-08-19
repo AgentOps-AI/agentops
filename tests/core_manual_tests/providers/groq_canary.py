@@ -44,6 +44,15 @@ async def async_test():
 
 asyncio.run(async_test())
 
+agentops.stop_instrumenting()
+
+untracked_res = groq_client.chat.completions.create(
+    model="llama3-70b-8192",
+    messages=[
+        {"role": "user", "content": "Say hello"},
+    ],
+)
+
 agentops.end_session(end_state="Success")
 
 ###

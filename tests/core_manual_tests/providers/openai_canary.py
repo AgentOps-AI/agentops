@@ -9,24 +9,36 @@ agentops.init(default_tags=["openai-v1-provider-test"])
 openai = OpenAI()
 async_openai = OpenAI()
 
-messages = [{"role": "user", "content": "Hello"}]
 
 # option 1: use session.patch
 response = openai.chat.completions.create(
     model="gpt-3.5-turbo",
-    messages=messages,
+    messages=[{"role": "user", "content": "Hello"}],
     temperature=0.5,
 )
 
 stream_response = openai.chat.completions.create(
-    model="gpt-3.5-turbo", messages=messages, temperature=0.5, stream=True
+    model="gpt-3.5-turbo",
+    messages=[{"role": "user", "content": "Hello streamed"}],
+    temperature=0.5,
+    stream=True,
 )
 
 for chunk in stream_response:
     print(chunk)
 
 async_response = async_openai.chat.completions.create(
-    model="gpt-3.5-turbo", messages=messages, temperature=0.5
+    model="gpt-3.5-turbo",
+    messages=[{"role": "user", "content": "Hello async"}],
+    temperature=0.5,
+)
+
+agentops.stop_instrumenting()
+
+not_tracked_response = openai.chat.completions.create(
+    model="gpt-3.5-turbo",
+    messages=[{"role": "user", "content": "Hello untracked"}],
+    temperature=0.5,
 )
 
 agentops.end_session(end_state="Success")

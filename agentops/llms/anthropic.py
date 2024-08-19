@@ -8,8 +8,10 @@ from ..event import ErrorEvent, LLMEvent, ToolEvent
 from ..session import Session
 from ..log_config import logger
 from ..helpers import check_call_stack_for_agent_id, get_ISO_time
+from ..singleton import singleton
 
 
+@singleton
 class AnthropicProvider(InstrumentedProvider):
 
     original_create = None
@@ -166,8 +168,7 @@ class AnthropicProvider(InstrumentedProvider):
         )
 
         # Store the original method
-        global original_create
-        original_create = messages.Messages.create
+        self.original_create = messages.Messages.create
 
         def patched_function(*args, **kwargs):
             init_timestamp = get_ISO_time()
@@ -211,7 +212,7 @@ class AnthropicProvider(InstrumentedProvider):
                 )
 
             # Call the original function with its original arguments
-            result = original_create(*args, **kwargs)
+            result = self.original_create(*args, **kwargs)
             return self.handle_response(result, kwargs, init_timestamp, session=session)
 
         # Override the original method with the patched one
@@ -230,8 +231,7 @@ class AnthropicProvider(InstrumentedProvider):
         )
 
         # Store the original method
-        global original_create_async
-        original_create_async = messages.AsyncMessages.create
+        self.original_create_async = messages.AsyncMessages.create
 
         async def patched_function(*args, **kwargs):
             # Call the original function with its original arguments
@@ -276,24 +276,14 @@ class AnthropicProvider(InstrumentedProvider):
                     result_model, kwargs, init_timestamp, session=session
                 )
 
-            result = await original_create_async(*args, **kwargs)
+            result = await self.original_create_async(*args, **kwargs)
             return self.handle_response(result, kwargs, init_timestamp, session=session)
 
         # Override the original method with the patched one
         messages.AsyncMessages.create = patched_function
 
-    def _undo_override_completion(self):
-        global original_create
+    def undo_override(self):
         from anthropic.resources import messages
 
         messages.Messages.create = self.original_create
-
-    def _undo_override_async_completion(self):
-        global original_create_async
-        from anthropic.resources import messages
-
         messages.AsyncMessages.create = self.original_create_async
-
-    def undo_override(self):
-        self._undo_override_completion()
-        self._undo_override_async_completion()

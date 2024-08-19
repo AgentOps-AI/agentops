@@ -39,6 +39,18 @@ async def main():
 
 asyncio.run(main())
 
+agentops.stop_instrumenting()
+
+untracked_response = ollama.chat(
+    model="llama3.1",
+    messages=[
+        {
+            "role": "user",
+            "content": "say hello",
+        },
+    ],
+)
+
 agentops.end_session(end_state="Success")
 
 ###
