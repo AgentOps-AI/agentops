@@ -75,7 +75,7 @@ class LlmTracker:
                         else:
                             raise DeprecationWarning(
                                 "OpenAI versions < 0.1 are no longer supported by AgentOps. Please upgrade OpenAI or "
-                                "downgrade AgentOps."
+                                "downgrade AgentOps to <=0.3.8."
                             )
 
                 if api == "cohere":
