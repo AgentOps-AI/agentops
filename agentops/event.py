@@ -70,7 +70,7 @@ class LLMEvent(Event):
     thread_id(UUID, optional): The unique identifier of the contextual thread that a message pertains to.
     prompt(str, list, optional): The message or messages that were used to prompt the LLM. Preferably in ChatML format which is more fully supported by AgentOps.
     prompt_tokens(int, optional): The number of tokens in the prompt message.
-    completion(str, object, optional): The message or returned by the LLM. Preferably in ChatML format which is more fully supported by AgentOps.
+    completion(str, object, optional): The message or messages returned by the LLM. Preferably in ChatML format which is more fully supported by AgentOps.
     completion_tokens(int, optional): The number of tokens in the completion message.
     model(str, optional): LLM model e.g. "gpt-4", "gpt-3.5-turbo".
 
