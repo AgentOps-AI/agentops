@@ -249,7 +249,113 @@ agentops.end_session('Success')
 </details>
 
 
-### LiteLLM
+### Anthropic ﹨
+
+Track agents built with the Anthropic Python SDK (>=0.32.0).
+
+- [AgentOps integration example](./examples/anthropic/anthropic_example.ipynb)
+- [Official Anthropic documentation](https://docs.anthropic.com/en/docs/welcome)
+
+<details>
+  <summary>Installation</summary>
+  
+```bash
+pip install anthropic
+```
+
+```python python
+import anthropic
+import agentops
+
+# Beginning of program's code (i.e. main.py, __init__.py)
+agentops.init(<INSERT YOUR API KEY HERE>)
+
+client = anthropic.Anthropic(
+    # This is the default and can be omitted
+    api_key=os.environ.get("ANTHROPIC_API_KEY"),
+)
+
+message = client.messages.create(
+        max_tokens=1024,
+        messages=[
+            {
+                "role": "user",
+                "content": "Tell me a cool fact about AgentOps",
+            }
+        ],
+        model="claude-3-opus-20240229",
+    )
+print(message.content)
+
+agentops.end_session('Success')
+```
+
+Streaming
+```python python
+import anthropic
+import agentops
+
+# Beginning of program's code (i.e. main.py, __init__.py)
+agentops.init(<INSERT YOUR API KEY HERE>)
+
+client = anthropic.Anthropic(
+    # This is the default and can be omitted
+    api_key=os.environ.get("ANTHROPIC_API_KEY"),
+)
+
+stream = client.messages.create(
+    max_tokens=1024,
+    model="claude-3-opus-20240229",
+    messages=[
+        {
+            "role": "user",
+            "content": "Tell me something cool about streaming agents",
+        }
+    ],
+    stream=True,
+)
+
+response = ""
+for event in stream:
+    if event.type == "content_block_delta":
+        response += event.delta.text
+    elif event.type == "message_stop":
+        print("\n")
+        print(response)
+        print("\n")
+```
+
+Async
+
+```python python
+import asyncio
+from anthropic import AsyncAnthropic
+
+client = AsyncAnthropic(
+    # This is the default and can be omitted
+    api_key=os.environ.get("ANTHROPIC_API_KEY"),
+)
+
+
+async def main() -> None:
+    message = await client.messages.create(
+        max_tokens=1024,
+        messages=[
+            {
+                "role": "user",
+                "content": "Tell me something interesting about async agents",
+            }
+        ],
+        model="claude-3-opus-20240229",
+    )
+    print(message.content)
+
+
+await main()
+```
+</details>
+
+### LiteLLM 🚅
 
 AgentOps provides support for LiteLLM(>=1.3.1), allowing you to call 100+ LLMs using the same Input/Output Format. 
 
