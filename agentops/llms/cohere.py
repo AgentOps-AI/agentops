@@ -7,16 +7,30 @@ from ..event import ActionEvent, ErrorEvent, LLMEvent
 from ..session import Session
 from ..log_config import logger
 from agentops.helpers import get_ISO_time, check_call_stack_for_agent_id
+from ..singleton import singleton
 
 
+@singleton
 class CohereProvider(InstrumentedProvider):
+    original_create = None
+    original_create_stream = None
+    original_create_async = None
+
     def override(self):
         self._override_chat()
         self._override_chat_stream()
         self._override_async_chat()
 
     def undo_override(self):
-        pass
+        import cohere
+
+        print(self.original_create)
+        print(self.original_create_stream)
+        print(self.original_create_async)
+
+        cohere.Client.chat = self.original_create
+        cohere.Client.chat_stream = self.original_create_stream
+        cohere.AsyncClient.chat = self.original_create_async
 
     def __init__(self, client):
         super().__init__(client)
@@ -200,9 +214,9 @@ class CohereProvider(InstrumentedProvider):
         return response
 
     def _override_chat(self):
-        import cohere.types
+        import cohere
 
-        original_chat = cohere.Client.chat
+        self.original_create = cohere.Client.chat
 
         def patched_function(*args, **kwargs):
             # Call the original function with its original arguments
@@ -210,7 +224,7 @@ class CohereProvider(InstrumentedProvider):
             session = kwargs.get("session", None)
             if "session" in kwargs.keys():
                 del kwargs["session"]
-            result = original_chat(*args, **kwargs)
+            result = self.original_create(*args, **kwargs)
             return self.handle_response(result, kwargs, init_timestamp, session=session)
 
         # Override the original method with the patched one
@@ -219,7 +233,7 @@ class CohereProvider(InstrumentedProvider):
     def _override_async_chat(self):
         import cohere.types
 
-        original_chat = cohere.AsyncClient.chat
+        self.original_create_async = cohere.AsyncClient.chat
 
         async def patched_function(*args, **kwargs):
             # Call the original function with its original arguments
@@ -227,7 +241,7 @@ class CohereProvider(InstrumentedProvider):
             session = kwargs.get("session", None)
             if "session" in kwargs.keys():
                 del kwargs["session"]
-            result = await original_chat(*args, **kwargs)
+            result = await self.original_create_async(*args, **kwargs)
             return self.handle_response(result, kwargs, init_timestamp, session=session)
 
         # Override the original method with the patched one
@@ -236,12 +250,12 @@ class CohereProvider(InstrumentedProvider):
     def _override_chat_stream(self):
         import cohere
 
-        original_chat = cohere.Client.chat_stream
+        self.original_create_stream = cohere.Client.chat_stream
 
         def patched_function(*args, **kwargs):
             # Call the original function with its original arguments
             init_timestamp = get_ISO_time()
-            result = original_chat(*args, **kwargs)
+            result = self.original_create_stream(*args, **kwargs)
             return self.handle_response(result, kwargs, init_timestamp)
 
         # Override the original method with the patched one

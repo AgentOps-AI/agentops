@@ -7,9 +7,14 @@ from ..session import Session
 from agentops.helpers import get_ISO_time, check_call_stack_for_agent_id
 from agentops.llms.instrumented_provider import InstrumentedProvider
 from agentops.time_travel import fetch_completion_override_from_time_travel_cache
+from ..singleton import singleton
 
 
+@singleton
 class LiteLLMProvider(InstrumentedProvider):
+    original_create = None
+    original_create_async = None
+
     def __init__(self, client):
         super().__init__(client)
 
@@ -18,7 +23,8 @@ class LiteLLMProvider(InstrumentedProvider):
         self._override_completion()
 
     def undo_override(self):
-        pass
+        self._undo_override_completion()
+        self._undo_override_async_completion()
 
     def handle_response(
         self, response, kwargs, init_timestamp, session: Optional[Session] = None
@@ -159,7 +165,7 @@ class LiteLLMProvider(InstrumentedProvider):
             ChatCompletion,
         )  # Note: litellm calls all LLM APIs using the OpenAI format
 
-        original_create = litellm.completion
+        self.original_create = litellm.completion
 
         def patched_function(*args, **kwargs):
             init_timestamp = get_ISO_time()
@@ -182,7 +188,7 @@ class LiteLLMProvider(InstrumentedProvider):
             #     kwargs["messages"] = prompt_override["messages"]
 
             # Call the original function with its original arguments
-            result = original_create(*args, **kwargs)
+            result = self.original_create(*args, **kwargs)
             return self.handle_response(result, kwargs, init_timestamp, session=session)
 
         litellm.completion = patched_function
@@ -193,7 +199,7 @@ class LiteLLMProvider(InstrumentedProvider):
             ChatCompletion,
         )  # Note: litellm calls all LLM APIs using the OpenAI format
 
-        original_create_async = litellm.acompletion
+        self.original_create_async = litellm.acompletion
 
         async def patched_function(*args, **kwargs):
             init_timestamp = get_ISO_time()
@@ -216,8 +222,18 @@ class LiteLLMProvider(InstrumentedProvider):
             #     kwargs["messages"] = prompt_override["messages"]
 
             # Call the original function with its original arguments
-            result = await original_create_async(*args, **kwargs)
+            result = await self.original_create_async(*args, **kwargs)
             return self.handle_response(result, kwargs, init_timestamp, session=session)
 
         # Override the original method with the patched one
         litellm.acompletion = patched_function
+
+    def _undo_override_completion(self):
+        import litellm
+
+        litellm.completion = self.original_create
+
+    def _undo_override_async_completion(self):
+        import litellm
+
+        litellm.acompletion = self.original_create_async

@@ -125,3 +125,9 @@ class LlmTracker:
 
         cohere_provider = CohereProvider(self.client)
         cohere_provider.undo_override()
+
+        litellm_provider = LiteLLMProvider(self.client)
+        litellm_provider.undo_override()
+
+        ollama_provider = OllamaProvider(self.client)
+        ollama_provider.undo_override()

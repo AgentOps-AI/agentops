@@ -6,9 +6,14 @@ from ..event import ErrorEvent, LLMEvent
 from ..session import Session
 from ..log_config import logger
 from agentops.helpers import get_ISO_time, check_call_stack_for_agent_id
+from ..singleton import singleton
 
 
+@singleton
 class GroqProvider(InstrumentedProvider):
+    original_create = None
+    original_async_create = None
+
     def __init__(self, client):
         super().__init__(client)
         self.client = client
@@ -145,7 +150,7 @@ class GroqProvider(InstrumentedProvider):
     def _override_chat(self):
         from groq.resources.chat import completions
 
-        original_create = completions.Completions.create
+        self.original_create = completions.Completions.create
 
         def patched_function(*args, **kwargs):
             # Call the original function with its original arguments
@@ -153,7 +158,7 @@ class GroqProvider(InstrumentedProvider):
             session = kwargs.get("session", None)
             if "session" in kwargs.keys():
                 del kwargs["session"]
-            result = original_create(*args, **kwargs)
+            result = self.original_create(*args, **kwargs)
             return self.handle_response(result, kwargs, init_timestamp, session=session)
 
         # Override the original method with the patched one
@@ -162,13 +167,23 @@ class GroqProvider(InstrumentedProvider):
     def _override_async_chat(self):
         from groq.resources.chat import completions
 
-        original_create = completions.AsyncCompletions.create
+        self.original_create = completions.AsyncCompletions.create
 
         async def patched_function(*args, **kwargs):
             # Call the original function with its original arguments
             init_timestamp = get_ISO_time()
-            result = await original_create(*args, **kwargs)
+            result = await self.original_create(*args, **kwargs)
             return self.handle_response(result, kwargs, init_timestamp)
 
         # Override the original method with the patched one
         completions.AsyncCompletions.create = patched_function
+
+    def _undo_override_completion(self):
+        from groq.resources.chat import completions
+
+        completions.Completions.create = self.original_create
+
+    def _undo_override_async_completion(self):
+        from groq.resources.chat import completions
+
+        completions.AsyncCompletions.create = self.original_create
