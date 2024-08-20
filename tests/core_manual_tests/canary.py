@@ -4,7 +4,7 @@ from dotenv import load_dotenv
 from agentops import ActionEvent
 
 load_dotenv()
-agentops.init()
+agentops.init(default_tags=["canary"])
 openai = OpenAI()
 
 messages = [{"role": "user", "content": "Hello"}]

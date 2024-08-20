@@ -19,7 +19,7 @@ from typing import Optional, List, Union, Tuple
 from termcolor import colored
 
 from .event import Event, ErrorEvent
-from .helpers import (
+from .singleton import (
     conditional_singleton,
 )
 from .session import Session, active_sessions
@@ -27,7 +27,7 @@ from .host_env import get_host_env
 from .log_config import logger
 from .meta_client import MetaClient
 from .config import Configuration
-from .llm_tracker import LlmTracker
+from .llms import LlmTracker
 
 
 @conditional_singleton

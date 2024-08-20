@@ -3,7 +3,7 @@ import yaml
 import os
 from .http_client import HttpClient
 from .exceptions import ApiServerException
-from .helpers import singleton
+from .singleton import singleton
 
 
 @singleton
