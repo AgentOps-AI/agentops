@@ -171,7 +171,7 @@ def record_tool(tool_name: Optional[str] = None):
                     function being decorated. Additionally, timing information about
                     the action is recorded
     Args:
-            tool_name (str): The name of the event to record.
+            tool_name (optional, str): The name of the event to record.
     """
 
     def decorator(func):
