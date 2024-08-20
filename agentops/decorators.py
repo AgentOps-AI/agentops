@@ -17,7 +17,7 @@ def record_function(event_name: str):
     return record_action(event_name)
 
 
-def record_action(event_name: str):
+def record_action(event_name: Optional[str] = None):
     """
     Decorator to record an event before and after a function call.
     Usage:
@@ -25,7 +25,7 @@ def record_action(event_name: str):
                     function being decorated. Additionally, timing information about
                     the action is recorded
     Args:
-            event_name (str): The name of the event to record.
+            event_name (optional, str): The name of the event to record.
     """
 
     def decorator(func):
@@ -53,11 +53,16 @@ def record_action(event_name: str):
                 arg_values.update(dict(zip(arg_names, args)))
                 arg_values.update(kwargs)
 
+                if not event_name:
+                    action_type = func.__name__
+                else:
+                    action_type = event_name
+
                 event = ActionEvent(
                     params=arg_values,
                     init_timestamp=init_time,
                     agent_id=check_call_stack_for_agent_id(),
-                    action_type=event_name,
+                    action_type=action_type,
                 )
 
                 try:
@@ -114,11 +119,16 @@ def record_action(event_name: str):
                 arg_values.update(dict(zip(arg_names, args)))
                 arg_values.update(kwargs)
 
+                if not event_name:
+                    action_type = func.__name__
+                else:
+                    action_type = event_name
+
                 event = ActionEvent(
                     params=arg_values,
                     init_timestamp=init_time,
                     agent_id=check_call_stack_for_agent_id(),
-                    action_type=event_name,
+                    action_type=action_type,
                 )
 
                 try:
