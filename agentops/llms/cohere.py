@@ -24,10 +24,6 @@ class CohereProvider(InstrumentedProvider):
     def undo_override(self):
         import cohere
 
-        # print(self.original_create)
-        # print(self.original_create_stream)
-        # print(self.original_create_async)
-
         cohere.Client.chat = self.original_create
         cohere.Client.chat_stream = self.original_create_stream
         cohere.AsyncClient.chat = self.original_create_async

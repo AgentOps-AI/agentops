@@ -5,8 +5,8 @@ description: "Tracking LLM Calls using the AgentOps SDK"
 
 ### How it works
 
-When the AgentOps SDK detects the `openai`, `litellm`, or `cohere` as installed modules, it will automatically
-start tracking their usage. No further work is required from you! 😊
+When the AgentOps SDK detects a supported LLM provider module installed, it will automatically
+start tracking its usage. No further work is required from you! 😊
 
 ### Not working? 
 
@@ -27,6 +27,14 @@ To get started, just follow the quick start guide.
     Get started with AgentOps in under 5 minutes
   </Card>
 </CardGroup>
+
+### Stop Tracking LLM Calls
+
+To stop tracking LLM calls after running `agentops.init()`, you can call `agentops.stop_instrumenting()`.
+
+This function reverts the changes made to your LLM Provider's module, removing AgentOps instrumentation.
+
+_Special consideration for Cohere: Calling `stop_instrumenting()` has no effect on previously instantiated Cohere clients. You must create a new Cohere client after calling this function._
 
 <script type="module" src="/scripts/github_stars.js"></script>
 <script type="module" src="/scripts/link_to_api_button.js"></script>

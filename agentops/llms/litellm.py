@@ -25,9 +25,6 @@ class LiteLLMProvider(InstrumentedProvider):
         self._override_completion()
 
     def undo_override(self):
-        print(self.original_create)
-        print(self.original_create_async)
-
         import litellm
         from openai.resources.chat import completions
 

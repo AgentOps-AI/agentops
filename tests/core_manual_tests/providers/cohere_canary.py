@@ -32,7 +32,11 @@ asyncio.run(main())
 
 agentops.stop_instrumenting()
 
-chat_untracked = co.chat(message="say hi untracked")
+# for cohere, because the client is not a singleton, calling `stop_instrumenting()` only affects
+# new clients created, not existing clients.
+
+co_untracked = cohere.Client()
+chat_untracked = co_untracked.chat(message="say hi untracked")
 
 agentops.end_session(end_state="Success")
 
