@@ -137,20 +137,9 @@ class LlmTracker:
                         )
 
     def stop_instrumenting(self):
-        openai_provider = OpenAiProvider(self.client)
-        openai_provider.undo_override()
-
-        groq_provider = GroqProvider(self.client)
-        groq_provider.undo_override()
-
-        cohere_provider = CohereProvider(self.client)
-        cohere_provider.undo_override()
-
-        litellm_provider = LiteLLMProvider(self.client)
-        litellm_provider.undo_override()
-
-        ollama_provider = OllamaProvider(self.client)
-        ollama_provider.undo_override()
-
-        anthropic_provider = AnthropicProvider(self.client)
-        anthropic_provider.undo_override()
+        OpenAiProvider(self.client).undo_override()
+        GroqProvider(self.client).undo_override()
+        CohereProvider(self.client).undo_override()
+        LiteLLMProvider(self.client).undo_override()
+        OllamaProvider(self.client).undo_override()
+        AnthropicProvider(self.client).undo_override()

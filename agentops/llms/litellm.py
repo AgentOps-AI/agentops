@@ -14,6 +14,8 @@ from ..singleton import singleton
 class LiteLLMProvider(InstrumentedProvider):
     original_create = None
     original_create_async = None
+    original_oai_create = None
+    original_oai_create_async = None
 
     def __init__(self, client):
         super().__init__(client)
@@ -23,8 +25,17 @@ class LiteLLMProvider(InstrumentedProvider):
         self._override_completion()
 
     def undo_override(self):
-        self._undo_override_completion()
-        self._undo_override_async_completion()
+        print(self.original_create)
+        print(self.original_create_async)
+
+        import litellm
+        from openai.resources.chat import completions
+
+        litellm.acompletion = self.original_create_async
+        litellm.completion = self.original_create
+
+        completions.Completions.create = self.original_oai_create
+        completions.AsyncCompletions.create = self.original_oai_create_async
 
     def handle_response(
         self, response, kwargs, init_timestamp, session: Optional[Session] = None
@@ -164,8 +175,10 @@ class LiteLLMProvider(InstrumentedProvider):
         from openai.types.chat import (
             ChatCompletion,
         )  # Note: litellm calls all LLM APIs using the OpenAI format
+        from openai.resources.chat import completions
 
         self.original_create = litellm.completion
+        self.original_oai_create = completions.Completions.create
 
         def patched_function(*args, **kwargs):
             init_timestamp = get_ISO_time()
@@ -198,8 +211,10 @@ class LiteLLMProvider(InstrumentedProvider):
         from openai.types.chat import (
             ChatCompletion,
         )  # Note: litellm calls all LLM APIs using the OpenAI format
+        from openai.resources.chat import completions
 
         self.original_create_async = litellm.acompletion
+        self.original_oai_create_async = completions.AsyncCompletions.create
 
         async def patched_function(*args, **kwargs):
             init_timestamp = get_ISO_time()
@@ -227,13 +242,3 @@ class LiteLLMProvider(InstrumentedProvider):
 
         # Override the original method with the patched one
         litellm.acompletion = patched_function
-
-    def _undo_override_completion(self):
-        import litellm
-
-        litellm.completion = self.original_create
-
-    def _undo_override_async_completion(self):
-        import litellm
-
-        litellm.acompletion = self.original_create_async

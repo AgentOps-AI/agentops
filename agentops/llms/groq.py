@@ -23,7 +23,10 @@ class GroqProvider(InstrumentedProvider):
         self._override_async_chat()
 
     def undo_override(self):
-        pass
+        from groq.resources.chat import completions
+
+        completions.Completions.create = self.original_create
+        completions.AsyncCompletions.create = self.original_create
 
     def handle_response(
         self, response, kwargs, init_timestamp, session: Optional[Session] = None
@@ -167,23 +170,13 @@ class GroqProvider(InstrumentedProvider):
     def _override_async_chat(self):
         from groq.resources.chat import completions
 
-        self.original_create = completions.AsyncCompletions.create
+        self.original_async_create = completions.AsyncCompletions.create
 
         async def patched_function(*args, **kwargs):
             # Call the original function with its original arguments
             init_timestamp = get_ISO_time()
-            result = await self.original_create(*args, **kwargs)
+            result = await self.original_async_create(*args, **kwargs)
             return self.handle_response(result, kwargs, init_timestamp)
 
         # Override the original method with the patched one
         completions.AsyncCompletions.create = patched_function
-
-    def _undo_override_completion(self):
-        from groq.resources.chat import completions
-
-        completions.Completions.create = self.original_create
-
-    def _undo_override_async_completion(self):
-        from groq.resources.chat import completions
-
-        completions.AsyncCompletions.create = self.original_create

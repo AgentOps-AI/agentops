@@ -250,16 +250,8 @@ class OpenAiProvider(InstrumentedProvider):
         # Override the original method with the patched one
         completions.AsyncCompletions.create = patched_function
 
-    def _undo_override_completion(self):
-        from openai.resources.chat import completions
-
-        completions.Completions.create = self.original_create
-
-    def _undo_override_async_completion(self):
+    def undo_override(self):
         from openai.resources.chat import completions
 
         completions.AsyncCompletions.create = self.original_create_async
-
-    def undo_override(self):
-        self._undo_override_completion()
-        self._undo_override_async_completion()
+        completions.Completions.create = self.original_create
