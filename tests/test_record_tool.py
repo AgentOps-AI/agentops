@@ -68,6 +68,27 @@ class TestRecordTool:
 
         agentops.end_session(end_state="Success")
 
+    def test_record_tool_default_name(self, mock_req):
+        agentops.start_session()
+
+        @record_tool()
+        def add_two(x, y):
+            return x + y
+
+        # Act
+        add_two(3, 4)
+        time.sleep(0.1)
+
+        # Assert
+        assert len(mock_req.request_history) == 2
+        assert mock_req.last_request.headers["X-Agentops-Api-Key"] == self.api_key
+        request_json = mock_req.last_request.json()
+        assert request_json["events"][0]["name"] == "add_two"
+        assert request_json["events"][0]["params"] == {"x": 3, "y": 4}
+        assert request_json["events"][0]["returns"] == 7
+
+        agentops.end_session(end_state="Success")
+
     def test_record_tool_decorator_multiple(self, mock_req):
         agentops.start_session()
 

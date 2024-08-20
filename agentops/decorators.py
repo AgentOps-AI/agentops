@@ -163,7 +163,7 @@ def record_action(event_name: Optional[str] = None):
     return decorator
 
 
-def record_tool(tool_name: str):
+def record_tool(tool_name: Optional[str] = None):
     """
     Decorator to record a tool use event before and after a function call.
     Usage:
@@ -199,11 +199,16 @@ def record_tool(tool_name: str):
                 arg_values.update(dict(zip(arg_names, args)))
                 arg_values.update(kwargs)
 
+                if not tool_name:
+                    name = func.__name__
+                else:
+                    name = tool_name
+
                 event = ToolEvent(
                     params=arg_values,
                     init_timestamp=init_time,
                     agent_id=check_call_stack_for_agent_id(),
-                    name=tool_name,
+                    name=name,
                 )
 
                 try:
@@ -260,11 +265,16 @@ def record_tool(tool_name: str):
                 arg_values.update(dict(zip(arg_names, args)))
                 arg_values.update(kwargs)
 
+                if not tool_name:
+                    name = func.__name__
+                else:
+                    name = tool_name
+
                 event = ToolEvent(
                     params=arg_values,
                     init_timestamp=init_time,
                     agent_id=check_call_stack_for_agent_id(),
-                    name=tool_name,
+                    name=name,
                 )
 
                 try:
