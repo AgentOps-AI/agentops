@@ -283,7 +283,8 @@ class AnthropicProvider(InstrumentedProvider):
         messages.AsyncMessages.create = patched_function
 
     def undo_override(self):
-        from anthropic.resources import messages
+        if self.original_create is not None and self.original_create_async is not None:
+            from anthropic.resources import messages
 
-        messages.Messages.create = self.original_create
-        messages.AsyncMessages.create = self.original_create_async
+            messages.Messages.create = self.original_create
+            messages.AsyncMessages.create = self.original_create_async

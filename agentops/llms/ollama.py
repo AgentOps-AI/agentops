@@ -65,7 +65,7 @@ class OllamaProvider(InstrumentedProvider):
         self._override_chat_async_client()
 
     def undo_override(self):
-        if "ollama" in sys.modules:
+        if original_func is not None:
             import ollama
 
             ollama.chat = original_func["ollama.chat"]

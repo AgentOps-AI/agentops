@@ -25,14 +25,20 @@ class LiteLLMProvider(InstrumentedProvider):
         self._override_completion()
 
     def undo_override(self):
-        import litellm
-        from openai.resources.chat import completions
+        if (
+            self.original_create is not None
+            and self.original_create_async is not None
+            and self.original_oai_create is not None
+            and self.original_oai_create_async is not None
+        ):
+            import litellm
+            from openai.resources.chat import completions
 
-        litellm.acompletion = self.original_create_async
-        litellm.completion = self.original_create
+            litellm.acompletion = self.original_create_async
+            litellm.completion = self.original_create
 
-        completions.Completions.create = self.original_oai_create
-        completions.AsyncCompletions.create = self.original_oai_create_async
+            completions.Completions.create = self.original_oai_create
+            completions.AsyncCompletions.create = self.original_oai_create_async
 
     def handle_response(
         self, response, kwargs, init_timestamp, session: Optional[Session] = None
