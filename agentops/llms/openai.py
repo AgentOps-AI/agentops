@@ -244,14 +244,15 @@ class OpenAiProvider(InstrumentedProvider):
             #     kwargs["messages"] = prompt_override["messages"]
 
             # Call the original function with its original arguments
-            result = await original_create_async(*args, **kwargs)
+            result = await self.original_create_async(*args, **kwargs)
             return self.handle_response(result, kwargs, init_timestamp, session=session)
 
         # Override the original method with the patched one
         completions.AsyncCompletions.create = patched_function
 
     def undo_override(self):
-        from openai.resources.chat import completions
+        if self.original_create is not None and self.original_create_async is not None:
+            from openai.resources.chat import completions
 
-        completions.AsyncCompletions.create = self.original_create_async
-        completions.Completions.create = self.original_create
+            completions.AsyncCompletions.create = self.original_create_async
+            completions.Completions.create = self.original_create

@@ -23,10 +23,11 @@ class GroqProvider(InstrumentedProvider):
         self._override_async_chat()
 
     def undo_override(self):
-        from groq.resources.chat import completions
+        if self.original_create is not None and self.original_async_create is not None:
+            from groq.resources.chat import completions
 
-        completions.Completions.create = self.original_create
-        completions.AsyncCompletions.create = self.original_create
+            completions.Completions.create = self.original_create
+            completions.AsyncCompletions.create = self.original_create
 
     def handle_response(
         self, response, kwargs, init_timestamp, session: Optional[Session] = None
