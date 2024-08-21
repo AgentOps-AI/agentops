@@ -3,6 +3,7 @@ async function loadContent(div_element) {
     try {
         const fileName = div_element.getAttribute('data-content-file');
         const response = await fetch(fileName);
+        
         if (!response.ok) throw new Error('Network response was not ok');
         div_element.innerHTML = await response.text();
     } catch (error) {
@@ -13,7 +14,7 @@ async function loadContent(div_element) {
 // Load content when the page is fully loaded
 window.onload = function() {
     const divs = document.querySelectorAll('div[data-content-file]');
-    divs.forEach(div => {
-        loadContent(div);
+    divs.forEach(async div => {
+        await loadContent(div);
     });
 };
