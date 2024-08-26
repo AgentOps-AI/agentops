@@ -1,6 +1,4 @@
 from unittest import TestCase
-from unittest.mock import patch, MagicMock
-from uuid import uuid4
 
 from agentops import track_agent
 import agentops
