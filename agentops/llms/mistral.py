@@ -9,8 +9,6 @@ from ..log_config import logger
 from agentops.helpers import get_ISO_time, check_call_stack_for_agent_id
 from .instrumented_provider import InstrumentedProvider
 
-from mistralai import Chat
-
 
 class MistralProvider(InstrumentedProvider):
 
@@ -27,6 +25,7 @@ class MistralProvider(InstrumentedProvider):
         self, response, kwargs, init_timestamp, session: Optional[Session] = None
     ) -> dict:
         """Handle responses for Mistral"""
+        from mistralai import Chat
         from mistralai.types import UNSET, UNSET_SENTINEL
 
         self.llm_event = LLMEvent(init_timestamp=init_timestamp, params=kwargs)
@@ -135,6 +134,8 @@ class MistralProvider(InstrumentedProvider):
         return response
 
     def _override_complete(self):
+        from mistralai import Chat
+
         global original_chat
         original_chat = Chat.complete
 
@@ -151,6 +152,8 @@ class MistralProvider(InstrumentedProvider):
         Chat.complete = patched_function
 
     def _override_complete_async(self):
+        from mistralai import Chat
+
         global original_chat_async
         original_chat_async = Chat.complete_async
 
@@ -167,6 +170,8 @@ class MistralProvider(InstrumentedProvider):
         Chat.complete_async = patched_function
 
     def _override_stream(self):
+        from mistralai import Chat
+
         global original_stream
         original_stream = Chat.stream
 
@@ -183,6 +188,8 @@ class MistralProvider(InstrumentedProvider):
         Chat.stream = patched_function
 
     def _override_stream_async(self):
+        from mistralai import Chat
+
         global original_stream_async
         original_stream_async = Chat.stream_async
 
@@ -204,20 +211,16 @@ class MistralProvider(InstrumentedProvider):
         self._override_stream()
         self._override_stream_async()
 
-    def _undo_override_complete(self):
-        Chat.complete = self.original_complete
-
-    def _undo_override_complete_async(self):
-        Chat.complete_async = self.original_complete_async
-
-    def _undo_override_stream(self):
-        Chat.stream = self.original_stream
-
-    def _undo_override_stream_async(self):
-        Chat.stream_async = self.original_stream_async
-
     def undo_override(self):
-        self._undo_override_complete()
-        self._undo_override_complete_async()
-        self._undo_override_stream()
-        self._undo_override_stream_async()
+        if (
+            self.original_complete is not None
+            and self.original_complete_async is not None
+            and self.original_stream is not None
+            and self.original_stream_async is not None
+        ):
+            from mistralai import Chat
+
+            Chat.complete = self.original_complete
+            Chat.complete_async = self.original_complete_async
+            Chat.stream = self.original_stream
+            Chat.stream_async = self.original_stream_async
