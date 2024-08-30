@@ -360,7 +360,7 @@ await main()
 Track agents built with the Anthropic Python SDK (>=0.32.0).
 
 - [AgentOps integration example](./examples/mistral//mistral_example.ipynb)
-- [Official Anthropic documentation](https://docs.mistral.ai)
+- [Official Mistral documentation](https://docs.mistral.ai)
 
 <details>
   <summary>Installation</summary>
