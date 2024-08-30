@@ -76,6 +76,7 @@ async def main():
     await async_test()
     await async_stream_test()
 
+
 asyncio.run(main())
 
 agentops.end_session(end_state="Success")
