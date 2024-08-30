@@ -355,6 +355,149 @@ await main()
 ```
 </details>
 
+### Mistral 〽️
+
+Track agents built with the Anthropic Python SDK (>=0.32.0).
+
+- [AgentOps integration example](./examples/mistral//mistral_example.ipynb)
+- [Official Anthropic documentation](https://docs.mistral.ai)
+
+<details>
+  <summary>Installation</summary>
+  
+```bash
+pip install mistralai
+```
+
+Sync
+
+```python python
+from mistralai import Mistral
+import agentops
+
+# Beginning of program's code (i.e. main.py, __init__.py)
+agentops.init(<INSERT YOUR API KEY HERE>)
+
+client = Mistral(
+    # This is the default and can be omitted
+    api_key=os.environ.get("MISTRAL_API_KEY"),
+)
+
+message = client.chat.complete(
+        messages=[
+            {
+                "role": "user",
+                "content": "Tell me a cool fact about AgentOps",
+            }
+        ],
+        model="open-mistral-nemo",
+    )
+print(message.choices[0].message.content)
+
+agentops.end_session('Success')
+```
+
+Streaming
+
+```python python
+from mistralai import Mistral
+import agentops
+
+# Beginning of program's code (i.e. main.py, __init__.py)
+agentops.init(<INSERT YOUR API KEY HERE>)
+
+client = Mistral(
+    # This is the default and can be omitted
+    api_key=os.environ.get("MISTRAL_API_KEY"),
+)
+
+message = client.chat.stream(
+        messages=[
+            {
+                "role": "user",
+                "content": "Tell me something cool about streaming agents",
+            }
+        ],
+        model="open-mistral-nemo",
+    )
+
+response = ""
+for event in message:
+    if event.data.choices[0].finish_reason == "stop":
+        print("\n")
+        print(response)
+        print("\n")
+    else:
+        response += event.text
+
+agentops.end_session('Success')
+```
+
+Async
+
+```python python
+import asyncio
+from mistralai import Mistral
+
+client = Mistral(
+    # This is the default and can be omitted
+    api_key=os.environ.get("MISTRAL_API_KEY"),
+)
+
+
+async def main() -> None:
+    message = await client.chat.complete_async(
+        messages=[
+            {
+                "role": "user",
+                "content": "Tell me something interesting about async agents",
+            }
+        ],
+        model="open-mistral-nemo",
+    )
+    print(message.choices[0].message.content)
+
+
+await main()
+```
+
+Async Streaming
+
+```python python
+import asyncio
+from mistralai import Mistral
+
+client = Mistral(
+    # This is the default and can be omitted
+    api_key=os.environ.get("MISTRAL_API_KEY"),
+)
+
+
+async def main() -> None:
+    message = await client.chat.stream_async(
+        messages=[
+            {
+                "role": "user",
+                "content": "Tell me something interesting about async streaming agents",
+            }
+        ],
+        model="open-mistral-nemo",
+    )
+
+    response = ""
+    async for event in message:
+        if event.data.choices[0].finish_reason == "stop":
+            print("\n")
+            print(response)
+            print("\n")
+        else:
+            response += event.text
+
+
+await main()
+```
+</details>
+
 ### LiteLLM 🚅
 
 AgentOps provides support for LiteLLM(>=1.3.1), allowing you to call 100+ LLMs using the same Input/Output Format. 
