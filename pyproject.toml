@@ -33,7 +33,7 @@ dev = [
     "tach~=0.9",
 ]
 langchain = [
-    "langchain~=1.19"
+    "langchain==0.2.14"
 ]
 
 [project.urls]
