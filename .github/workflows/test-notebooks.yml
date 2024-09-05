@@ -25,8 +25,9 @@ jobs:
         pip install -U jupyter
     - name: Create .env file
       run: |
-        echo "OPENAI_API_KEY=${{ secrets.OPENAI_API_KEY }}" >> .env
         echo "AGENTOPS_API_KEY=${{ secrets.AGENTOPS_API_KEY }}" >> .env
+        echo "OPENAI_API_KEY=${{ secrets.OPENAI_API_KEY }}" >> .env
+        echo "ANTHROPIC_API_KEY=${{ secrets.ANTHROPIC_API_KEY }}" >> .env
         echo "CO_API_KEY=${{ secrets.CO_API_KEY }}" >> .env
         echo "GROQ_API_KEY=${{ secrets.GROQ_API_KEY }}" >> .env
         echo "MULTION_API_KEY=${{ secrets.MULTION_API_KEY }}" >> .env
