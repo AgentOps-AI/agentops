@@ -1,6 +1,5 @@
 name: Test Notebooks
 on:
-  pull_request_target: # Allows manual triggering from PR UI
   push:
     branches:
       - main
@@ -9,6 +8,15 @@ on:
       - "examples/**"
       - "tests/**"
       - ".github/workflows/test-notebooks.yml"
+  pull_request_target:
+    branches:
+      - main
+    paths:
+      - "agentops/**"
+      - "examples/**"
+      - "tests/**"
+      - ".github/workflows/test-notebooks.yml"
+  workflow_dispatch:
 jobs:
   test-notebooks:
     runs-on: ubuntu-latest
