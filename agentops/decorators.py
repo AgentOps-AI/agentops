@@ -326,11 +326,11 @@ def track_agent(name: Union[str, None] = None):
 
                     original_init(self, *args, **kwargs)
 
-                    if not Client().is_initialized:
-                        Client().add_pre_init_warning(
-                            f"Failed to track an agent {name} because agentops.init() was not "
-                            + "called before initializing the agent with the @track_agent decorator."
-                        )
+                    # if not Client().is_initialized:
+                    #     Client().add_pre_init_warning(
+                    #         f"Failed to track an agent {name} because agentops.init() was not "
+                    #         + "called before initializing the agent with the @track_agent decorator."
+                    #     )
 
                     self.agent_ops_agent_id = str(uuid4())
 
@@ -344,14 +344,15 @@ def track_agent(name: Union[str, None] = None):
                         session=session,
                     )
                 except AttributeError as e:
-                    Client().add_pre_init_warning(
-                        f"Failed to track an agent {name} because agentops.init() was not "
-                        + "called before initializing the agent with the @track_agent decorator."
-                    )
-                    logger.warning(
-                        "Failed to track an agent. This often happens if agentops.init() was not "
-                        "called before initializing an agent with the @track_agent decorator."
-                    )
+                    print(e)
+                    # Client().add_pre_init_warning(
+                    #     f"Failed to track an agent {name} because agentops.init() was not "
+                    #     + "called before initializing the agent with the @track_agent decorator."
+                    # )
+                    # logger.warning(
+                    #     "Failed to track an agent. This often happens if agentops.init() was not "
+                    #     "called before initializing an agent with the @track_agent decorator."
+                    # )
                     original_init(self, *args, **kwargs)
 
             obj.__init__ = new_init
