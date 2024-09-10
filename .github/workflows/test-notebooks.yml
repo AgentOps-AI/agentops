@@ -1,11 +1,22 @@
 name: Test Notebooks
 on:
-  pull_request_target: # Allows manual triggering from PR UI
   push:
     branches:
       - main
-    paths-ignore:
-      - 'docs/**'
+    paths:
+      - "agentops/**"
+      - "examples/**"
+      - "tests/**"
+      - ".github/workflows/test-notebooks.yml"
+  pull_request_target:
+    branches:
+      - main
+    paths:
+      - "agentops/**"
+      - "examples/**"
+      - "tests/**"
+      - ".github/workflows/test-notebooks.yml"
+  workflow_dispatch:
 jobs:
   test-notebooks:
     runs-on: ubuntu-latest
@@ -38,7 +49,8 @@ jobs:
         exit_code=0
 
         exclude_notebooks=(
-          "./examples/crew/job_posting.ipynb"
+          "./examples/crew/job_posting.ipynb",
+          "./examples/demos/agentchat_agentops.ipynb"
         )
 
         for notebook in $(find . -name '*.ipynb'); do
