@@ -1,3 +1,4 @@
+import time
 from enum import Enum
 from typing import Optional, List
 from requests.adapters import Retry, HTTPAdapter
@@ -73,6 +74,9 @@ class Response:
 
 
 class HttpClient:
+    MAX_RETRIES = 3
+    RETRY_DELAY = 1  # Delay between retries in seconds
+
     @staticmethod
     def post(
         url: str,
@@ -80,7 +84,7 @@ class HttpClient:
         api_key: Optional[str] = None,
         parent_key: Optional[str] = None,
         jwt: Optional[str] = None,
-        header=None,
+        retries: int = 0,
     ) -> Response:
         result = Response()
         try:
@@ -102,29 +106,19 @@ class HttpClient:
             )
 
             result.parse(res)
-        except requests.exceptions.Timeout:
-            result.code = 408
-            result.status = HttpStatus.TIMEOUT
-            HttpClient._handle_failed_request(
-                url, payload, api_key, parent_key, jwt, "Timeout"
-            )
-            raise ApiServerException(
-                "Could not reach API server - connection timed out"
-            )
-        except requests.exceptions.HTTPError as e:
-            try:
-                result.parse(e.response)
-            except Exception:
-                result = Response()
-                result.code = e.response.status_code
-                result.status = Response.get_status(e.response.status_code)
-                result.body = {"error": str(e)}
-                HttpClient._handle_failed_request(
-                    url, payload, api_key, parent_key, jwt, "HTTPError"
+
+        except (requests.exceptions.Timeout, requests.exceptions.HTTPError) as e:
+            if retries < HttpClient.MAX_RETRIES:
+                time.sleep(HttpClient.RETRY_DELAY)
+                return HttpClient.post(
+                    url, payload, api_key, parent_key, jwt, retries + 1
                 )
-                raise ApiServerException(f"HTTPError: {e}")
+            else:
+                HttpClient._handle_failed_request(
+                    url, payload, api_key, parent_key, jwt, type(e).__name__
+                )
+                raise ApiServerException(f"{type(e).__name__}: {e}")
         except requests.exceptions.RequestException as e:
-            result.body = {"error": str(e)}
             HttpClient._handle_failed_request(
                 url, payload, api_key, parent_key, jwt, "RequestException"
             )
@@ -152,7 +146,7 @@ class HttpClient:
         url: str,
         api_key: Optional[str] = None,
         jwt: Optional[str] = None,
-        header=None,
+        retries: int = 0,
     ) -> Response:
         result = Response()
         try:
@@ -169,27 +163,17 @@ class HttpClient:
             res = request_session.get(url, headers=JSON_HEADER, timeout=20)
 
             result.parse(res)
-        except requests.exceptions.Timeout:
-            result.code = 408
-            result.status = HttpStatus.TIMEOUT
-            HttpClient._handle_failed_request(url, None, api_key, None, jwt, "Timeout")
-            raise ApiServerException(
-                "Could not reach API server - connection timed out"
-            )
-        except requests.exceptions.HTTPError as e:
-            try:
-                result.parse(e.response)
-            except Exception:
-                result = Response()
-                result.code = e.response.status_code
-                result.status = Response.get_status(e.response.status_code)
-                result.body = {"error": str(e)}
+
+        except (requests.exceptions.Timeout, requests.exceptions.HTTPError) as e:
+            if retries < HttpClient.MAX_RETRIES:
+                time.sleep(HttpClient.RETRY_DELAY)
+                return HttpClient.get(url, api_key, jwt, retries + 1)
+            else:
                 HttpClient._handle_failed_request(
-                    url, None, api_key, None, jwt, "HTTPError"
+                    url, None, api_key, None, jwt, type(e).__name__
                 )
-                raise ApiServerException(f"HTTPError: {e}")
+                raise ApiServerException(f"{type(e).__name__}: {e}")
         except requests.exceptions.RequestException as e:
-            result.body = {"error": str(e)}
             HttpClient._handle_failed_request(
                 url, None, api_key, None, jwt, "RequestException"
             )
@@ -221,7 +205,6 @@ class HttpClient:
         jwt: Optional[str],
         error_type: str,
     ):
-        """Push failed request to DLQ."""
         dead_letter_queue.add(
             {
                 "url": url,

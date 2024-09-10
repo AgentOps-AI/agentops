@@ -11,6 +11,8 @@ from agentops.http_client import (
 
 
 class TestHttpClient(unittest.TestCase):
+    MAX_RETRIES = 3
+    RETRY_DELAY = 1
 
     @patch("requests.Session")
     def test_post_success(self, mock_session):
@@ -151,6 +153,23 @@ class TestHttpClient(unittest.TestCase):
 
         dead_letter_queue.clear()
         self.assertEqual(len(dead_letter_queue.get_all()), 0)
+
+    @patch("requests.Session")
+    def test_post_with_retries(self, mock_session):
+        # Mock a Timeout for the first two attempts, then success on the third
+        mock_session_instance = mock_session.return_value
+        mock_session_instance.post.side_effect = [
+            requests.exceptions.Timeout,
+            requests.exceptions.Timeout,
+            Mock(status_code=200, json=lambda: {"message": "Success"}),
+        ]
+
+        url = "https://example.com/api"
+        payload = b'{"key": "value"}'
+
+        response = HttpClient.post(url, payload)
+
+        self.assertEqual(response.code, 200)
 
 
 if __name__ == "__main__":
