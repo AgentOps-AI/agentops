@@ -1,5 +1,5 @@
 from enum import Enum
-from typing import Optional
+from typing import Optional, List
 from requests.adapters import Retry, HTTPAdapter
 import requests
 
@@ -21,8 +21,24 @@ class HttpStatus(Enum):
     UNKNOWN = -1
 
 
-class Response:
+class DeadLetterQueue:
+    def __init__(self):
+        self.queue: List[dict] = []
 
+    def add(self, request_data: dict):
+        self.queue.append(request_data)
+
+    def get_all(self) -> List[dict]:
+        return self.queue
+
+    def clear(self):
+        self.queue.clear()
+
+
+dead_letter_queue = DeadLetterQueue()
+
+
+class Response:
     def __init__(
         self, status: HttpStatus = HttpStatus.UNKNOWN, body: Optional[dict] = None
     ):
@@ -57,7 +73,6 @@ class Response:
 
 
 class HttpClient:
-
     @staticmethod
     def post(
         url: str,
@@ -90,6 +105,9 @@ class HttpClient:
         except requests.exceptions.Timeout:
             result.code = 408
             result.status = HttpStatus.TIMEOUT
+            HttpClient._handle_failed_request(
+                url, payload, api_key, parent_key, jwt, "Timeout"
+            )
             raise ApiServerException(
                 "Could not reach API server - connection timed out"
             )
@@ -101,9 +119,15 @@ class HttpClient:
                 result.code = e.response.status_code
                 result.status = Response.get_status(e.response.status_code)
                 result.body = {"error": str(e)}
+                HttpClient._handle_failed_request(
+                    url, payload, api_key, parent_key, jwt, "HTTPError"
+                )
                 raise ApiServerException(f"HTTPError: {e}")
         except requests.exceptions.RequestException as e:
             result.body = {"error": str(e)}
+            HttpClient._handle_failed_request(
+                url, payload, api_key, parent_key, jwt, "RequestException"
+            )
             raise ApiServerException(f"RequestException: {e}")
 
         if result.code == 401:
@@ -116,6 +140,9 @@ class HttpClient:
             else:
                 raise ApiServerException(f"API server: {result.body}")
         if result.code == 500:
+            HttpClient._handle_failed_request(
+                url, payload, api_key, parent_key, jwt, "ServerError"
+            )
             raise ApiServerException("API server: - internal server error")
 
         return result
@@ -145,6 +172,7 @@ class HttpClient:
         except requests.exceptions.Timeout:
             result.code = 408
             result.status = HttpStatus.TIMEOUT
+            HttpClient._handle_failed_request(url, None, api_key, None, jwt, "Timeout")
             raise ApiServerException(
                 "Could not reach API server - connection timed out"
             )
@@ -156,9 +184,15 @@ class HttpClient:
                 result.code = e.response.status_code
                 result.status = Response.get_status(e.response.status_code)
                 result.body = {"error": str(e)}
+                HttpClient._handle_failed_request(
+                    url, None, api_key, None, jwt, "HTTPError"
+                )
                 raise ApiServerException(f"HTTPError: {e}")
         except requests.exceptions.RequestException as e:
             result.body = {"error": str(e)}
+            HttpClient._handle_failed_request(
+                url, None, api_key, None, jwt, "RequestException"
+            )
             raise ApiServerException(f"RequestException: {e}")
 
         if result.code == 401:
@@ -171,6 +205,30 @@ class HttpClient:
             else:
                 raise ApiServerException(f"API server: {result.body}")
         if result.code == 500:
+            HttpClient._handle_failed_request(
+                url, None, api_key, None, jwt, "ServerError"
+            )
             raise ApiServerException("API server: - internal server error")
 
         return result
+
+    @staticmethod
+    def _handle_failed_request(
+        url: str,
+        payload: Optional[bytes],
+        api_key: Optional[str],
+        parent_key: Optional[str],
+        jwt: Optional[str],
+        error_type: str,
+    ):
+        """Push failed request to DLQ."""
+        dead_letter_queue.add(
+            {
+                "url": url,
+                "payload": payload,
+                "api_key": api_key,
+                "parent_key": parent_key,
+                "jwt": jwt,
+                "error_type": error_type,
+            }
+        )
