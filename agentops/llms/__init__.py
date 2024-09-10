@@ -13,6 +13,7 @@ from .litellm import LiteLLMProvider
 from .ollama import OllamaProvider
 from .openai import OpenAiProvider
 from .anthropic import AnthropicProvider
+from .ai21 import AI21Provider
 
 original_func = {}
 original_create = None
@@ -38,6 +39,9 @@ class LlmTracker:
         },
         "anthropic": {
             "0.32.0": ("completions.create",),
+        },
+        "ai21": {
+            "2.0.0": ("chat.completions.create",),
         },
     }
 
@@ -136,6 +140,22 @@ class LlmTracker:
                             f"Only Anthropic>=0.32.0 supported. v{module_version} found."
                         )
 
+                if api == "ai21":
+                    module_version = version(api)
+
+                    if module_version is None:
+                        logger.warning(
+                            f"Cannot determine AI21 version. Only AI21>=2.0.0 supported."
+                        )
+
+                    if Version(module_version) >= parse("2.0.0"):
+                        provider = AI21Provider(self.client)
+                        provider.override()
+                    else:
+                        logger.warning(
+                            f"Only AI21>=2.0.0 supported. v{module_version} found."
+                        )
+
     def stop_instrumenting(self):
         OpenAiProvider(self.client).undo_override()
         GroqProvider(self.client).undo_override()
@@ -143,3 +163,4 @@ class LlmTracker:
         LiteLLMProvider(self.client).undo_override()
         OllamaProvider(self.client).undo_override()
         AnthropicProvider(self.client).undo_override()
+        AI21Provider(self.client).undo_override()
