@@ -40,6 +40,7 @@ class DeadLetterQueue:
 
 
 dead_letter_queue = DeadLetterQueue()
+retrying = False
 
 
 class Response:
@@ -209,6 +210,7 @@ class HttpClient:
     def _retry_dlq_requests():
         """Retry requests in the DLQ"""
         for failed_request in dead_letter_queue.get_all():
+            dead_letter_queue.clear()
             try:
                 if "payload" in failed_request:
                     # Retry POST request from DLQ
@@ -226,11 +228,11 @@ class HttpClient:
                         failed_request["api_key"],
                         failed_request["jwt"],
                     )
-                # If successful, remove from DLQ
-                dead_letter_queue.remove(failed_request)
             except ApiServerException:
+                dead_letter_queue.add(failed_request)
                 # If it still fails, keep it in the DLQ
-                pass
+            except Exception as e:
+                dead_letter_queue.add(failed_request)
 
     @staticmethod
     def _handle_failed_request(

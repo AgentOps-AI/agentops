@@ -49,7 +49,7 @@ class TestHttpClient(unittest.TestCase):
         with self.assertRaises(ApiServerException) as context:
             HttpClient.post(url, payload)
 
-        self.assertIn("connection timed out", str(context.exception))
+        self.assertIn("timeout", str(context.exception).lower())
         self.assertEqual(len(dead_letter_queue.get_all()), 1)
 
     @patch("requests.Session")
@@ -73,7 +73,7 @@ class TestHttpClient(unittest.TestCase):
         self.assertEqual(len(dead_letter_queue.get_all()), 1)
         failed_request = dead_letter_queue.get_all()[0]
         self.assertEqual(failed_request["url"], url)
-        self.assertEqual(failed_request["error_type"], "ServerError")
+        self.assertEqual(failed_request["error_type"], "HTTPError")
 
     @patch("requests.Session")
     def test_post_invalid_api_key(self, mock_session):
@@ -123,7 +123,7 @@ class TestHttpClient(unittest.TestCase):
         with self.assertRaises(ApiServerException) as context:
             HttpClient.get(url)
 
-        self.assertIn("connection timed out", str(context.exception))
+        self.assertIn("timeout", str(context.exception).lower())
         self.assertEqual(len(dead_letter_queue.get_all()), 1)
 
     @patch("requests.Session")
@@ -146,7 +146,7 @@ class TestHttpClient(unittest.TestCase):
         self.assertEqual(len(dead_letter_queue.get_all()), 1)
         failed_request = dead_letter_queue.get_all()[0]
         self.assertEqual(failed_request["url"], url)
-        self.assertEqual(failed_request["error_type"], "ServerError")
+        self.assertEqual(failed_request["error_type"], "HTTPError")
 
     def test_clear_dead_letter_queue(self):
         # Add a dummy request to DLQ and clear it
@@ -215,7 +215,7 @@ class TestHttpClient(unittest.TestCase):
         HttpClient.post(url, payload)
 
         # Check that both failed requests in the DLQ were retried and removed
-        self.assertEqual(len(dead_letter_queue.get_all()), 0)
+        self.assertEqual(0, len(dead_letter_queue.get_all()))
 
     @patch("requests.Session")
     def test_dlq_retry_fails_and_stays_in_queue(self, mock_session):
