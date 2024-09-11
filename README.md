@@ -253,7 +253,7 @@ agentops.end_session('Success')
 
 Track agents built with the Anthropic Python SDK (>=0.32.0).
 
-- [AgentOps integration example](./examples/anthropic/anthropic_example.ipynb)
+- [AgentOps integration example](examples/anthropic-sdk/anthropic_example.ipynb)
 - [Official Anthropic documentation](https://docs.anthropic.com/en/docs/welcome)
 
 <details>
