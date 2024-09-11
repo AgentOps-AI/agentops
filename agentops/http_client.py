@@ -32,6 +32,9 @@ class DeadLetterQueue:
     def get_all(self) -> List[dict]:
         return self.queue
 
+    def remove(self, request_data: dict):
+        self.queue.remove(request_data)
+
     def clear(self):
         self.queue.clear()
 
@@ -107,6 +110,9 @@ class HttpClient:
 
             result.parse(res)
 
+            if result.code == 200:
+                HttpClient._retry_dlq_requests()
+
         except (requests.exceptions.Timeout, requests.exceptions.HTTPError) as e:
             if retries < HttpClient.MAX_RETRIES:
                 time.sleep(HttpClient.RETRY_DELAY)
@@ -164,6 +170,9 @@ class HttpClient:
 
             result.parse(res)
 
+            if result.code == 200:
+                HttpClient._retry_dlq_requests()
+
         except (requests.exceptions.Timeout, requests.exceptions.HTTPError) as e:
             if retries < HttpClient.MAX_RETRIES:
                 time.sleep(HttpClient.RETRY_DELAY)
@@ -195,6 +204,33 @@ class HttpClient:
             raise ApiServerException("API server: - internal server error")
 
         return result
+
+    @staticmethod
+    def _retry_dlq_requests():
+        """Retry requests in the DLQ"""
+        for failed_request in dead_letter_queue.get_all():
+            try:
+                if "payload" in failed_request:
+                    # Retry POST request from DLQ
+                    HttpClient.post(
+                        failed_request["url"],
+                        failed_request["payload"],
+                        failed_request["api_key"],
+                        failed_request["parent_key"],
+                        failed_request["jwt"],
+                    )
+                else:
+                    # Retry GET request from DLQ
+                    HttpClient.get(
+                        failed_request["url"],
+                        failed_request["api_key"],
+                        failed_request["jwt"],
+                    )
+                # If successful, remove from DLQ
+                dead_letter_queue.remove(failed_request)
+            except ApiServerException:
+                # If it still fails, keep it in the DLQ
+                pass
 
     @staticmethod
     def _handle_failed_request(
