@@ -78,9 +78,6 @@ class Response:
 
 
 class HttpClient:
-    MAX_RETRIES = 3
-    RETRY_DELAY = 1  # Delay between retries in seconds
-
     @staticmethod
     def post(
         url: str,
@@ -88,7 +85,6 @@ class HttpClient:
         api_key: Optional[str] = None,
         parent_key: Optional[str] = None,
         jwt: Optional[str] = None,
-        retries: int = 0,
     ) -> Response:
         result = Response()
         try:
@@ -115,16 +111,10 @@ class HttpClient:
                 HttpClient._retry_dlq_requests()
 
         except (requests.exceptions.Timeout, requests.exceptions.HTTPError) as e:
-            if retries < HttpClient.MAX_RETRIES:
-                time.sleep(HttpClient.RETRY_DELAY)
-                return HttpClient.post(
-                    url, payload, api_key, parent_key, jwt, retries + 1
-                )
-            else:
-                HttpClient._handle_failed_request(
-                    url, payload, api_key, parent_key, jwt, type(e).__name__
-                )
-                raise ApiServerException(f"{type(e).__name__}: {e}")
+            HttpClient._handle_failed_request(
+                url, payload, api_key, parent_key, jwt, type(e).__name__
+            )
+            raise ApiServerException(f"{type(e).__name__}: {e}")
         except requests.exceptions.RequestException as e:
             HttpClient._handle_failed_request(
                 url, payload, api_key, parent_key, jwt, "RequestException"
@@ -153,7 +143,6 @@ class HttpClient:
         url: str,
         api_key: Optional[str] = None,
         jwt: Optional[str] = None,
-        retries: int = 0,
     ) -> Response:
         result = Response()
         try:
@@ -175,14 +164,10 @@ class HttpClient:
                 HttpClient._retry_dlq_requests()
 
         except (requests.exceptions.Timeout, requests.exceptions.HTTPError) as e:
-            if retries < HttpClient.MAX_RETRIES:
-                time.sleep(HttpClient.RETRY_DELAY)
-                return HttpClient.get(url, api_key, jwt, retries + 1)
-            else:
-                HttpClient._handle_failed_request(
-                    url, None, api_key, None, jwt, type(e).__name__
-                )
-                raise ApiServerException(f"{type(e).__name__}: {e}")
+            HttpClient._handle_failed_request(
+                url, None, api_key, None, jwt, type(e).__name__
+            )
+            raise ApiServerException(f"{type(e).__name__}: {e}")
         except requests.exceptions.RequestException as e:
             HttpClient._handle_failed_request(
                 url, None, api_key, None, jwt, "RequestException"
