@@ -110,7 +110,7 @@ class TestRecordAction:
         # Enable agentops back again
         agentops.enable()
 
-    def test_record_action_reenable(self, mock_req):
+    def test_record_action_reenabled(self, mock_req):
         # Enable agentops (if not already enabled)
         agentops.enable()
         agentops.start_session()
