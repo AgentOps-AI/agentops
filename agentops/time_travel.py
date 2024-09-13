@@ -4,6 +4,10 @@ import os
 from .http_client import HttpClient
 from .exceptions import ApiServerException
 from .singleton import singleton
+import threading
+
+_terminal_indicator_lock = threading.Lock()
+_terminal_indicator_printed = False
 
 
 @singleton
@@ -64,14 +68,14 @@ def fetch_completion_override_from_time_travel_cache(kwargs):
 def find_cache_hit(prompt_messages, completion_overrides):
     if not isinstance(prompt_messages, (list, tuple)):
         print(
-            "Time Travel Error - unexpected type for prompt_messages. Expected 'list' or 'tuple'. Got ",
+            "🖇⏰ AgentOps: Time Travel Error - unexpected type for prompt_messages. Expected 'list' or 'tuple'. Got ",
             type(prompt_messages),
         )
         return None
 
     if not isinstance(completion_overrides, dict):
         print(
-            "Time Travel Error - unexpected type for completion_overrides. Expected 'dict'. Got ",
+            "🖇⏰ AgentOps: Time Travel Error - unexpected type for completion_overrides. Expected 'dict'. Got ",
             type(completion_overrides),
         )
         return None
@@ -80,7 +84,7 @@ def find_cache_hit(prompt_messages, completion_overrides):
             completion_override_dict = eval(key)
             if not isinstance(completion_override_dict, dict):
                 print(
-                    "Time Travel Error - unexpected type for completion_override_dict. Expected 'dict'. Got ",
+                    "🖇⏰ AgentOps: Time Travel Error - unexpected type for completion_override_dict. Expected 'dict'. Got ",
                     type(completion_override_dict),
                 )
                 continue
@@ -88,7 +92,7 @@ def find_cache_hit(prompt_messages, completion_overrides):
             cached_messages = completion_override_dict.get("messages")
             if not isinstance(cached_messages, list):
                 print(
-                    "Time Travel Error - unexpected type for cached_messages. Expected 'list'. Got ",
+                    "🖇⏰ AgentOps: Time Travel Error - unexpected type for cached_messages. Expected 'list'. Got ",
                     type(cached_messages),
                 )
                 continue
@@ -105,10 +109,12 @@ def find_cache_hit(prompt_messages, completion_overrides):
                 return value
         except (SyntaxError, ValueError, TypeError) as e:
             print(
-                f"Time Travel Error - Error processing completion_overrides item: {e}"
+                f"🖇⏰ AgentOps: Time Travel Error - Error processing completion_overrides item: {e}"
             )
         except Exception as e:
-            print(f"Time Travel Error - Unexpected error in find_cache_hit: {e}")
+            print(
+                f"🖇⏰ AgentOps: Time Travel Error - Unexpected error in find_cache_hit: {e}"
+            )
     return None
 
 
@@ -120,7 +126,7 @@ def check_time_travel_active():
     try:
         with open(config_file_path, "r") as config_file:
             config = yaml.safe_load(config_file)
-            if config.get("Time_Travel_Debugging_Active", True):
+            if config.get("Time_Travel_Debugging_Active") is True:
                 manage_time_travel_state(activated=True)
                 return True
     except FileNotFoundError:
@@ -144,20 +150,24 @@ def set_time_travel_active_state(is_active: bool):
             yaml.dump(config, config_file)
         except:
             print(
-                f"🖇 AgentOps: Unable to write to {config_path}. Time Travel not activated"
+                f"🖇⏰ AgentOps:  Unable to write to {config_path}. Time Travel not activated"
             )
             return
 
         if is_active:
             manage_time_travel_state(activated=True)
-            print("🖇 AgentOps: Time Travel Activated")
+            print("🖇⏰ AgentOps: Time Travel Activated")
         else:
             manage_time_travel_state(activated=False)
-            print("🖇 AgentOps: Time Travel Deactivated")
+            print("🖇⏰ AgentOps: Time Travel Deactivated")
 
 
 def add_time_travel_terminal_indicator():
-    print(f"🖇️ ⏰ | ", end="")
+    global _terminal_indicator_printed
+    with _terminal_indicator_lock:
+        if not _terminal_indicator_printed:
+            print(f"🖇⏰ AgentOps: Time Travel Activated")
+            _terminal_indicator_printed = True
 
 
 def reset_terminal():
@@ -169,5 +179,6 @@ def manage_time_travel_state(activated=False, error=None):
         add_time_travel_terminal_indicator()
     else:
         reset_terminal()
-        if error is not None:
-            print(f"🖇 Deactivating Time Travel. Error with configuration: {error}")
+        print("🖇⏰ AgentOps: Deactivating Time Travel. Error with configuration")
+        if error:
+            print(error)
