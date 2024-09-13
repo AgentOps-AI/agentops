@@ -338,7 +338,12 @@ def track_agent(name: Union[str, None] = None):
                         session=session,
                     )
                 except AttributeError as e:
-                    print(e)
+                    Client().add_pre_init_warning(
+                        f"Failed to track an agent {name} with the @track_agent decorator."
+                    )
+                    logger.warning(
+                        "Failed to track an agent with the @track_agent decorator."
+                    )
                     original_init(self, *args, **kwargs)
 
             obj.__init__ = new_init
