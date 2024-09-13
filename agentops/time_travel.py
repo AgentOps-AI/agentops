@@ -6,14 +6,12 @@ from .exceptions import ApiServerException
 from .singleton import singleton
 import threading
 
-_terminal_indicator_lock = threading.Lock()
-_terminal_indicator_printed = False
-
 
 @singleton
 class TimeTravel:
     def __init__(self):
         self._completion_overrides = {}
+        self._initialized = False
 
         script_dir = os.path.dirname(os.path.abspath(__file__))
         parent_dir = os.path.dirname(script_dir)
@@ -163,11 +161,8 @@ def set_time_travel_active_state(is_active: bool):
 
 
 def add_time_travel_terminal_indicator():
-    global _terminal_indicator_printed
-    with _terminal_indicator_lock:
-        if not _terminal_indicator_printed:
-            print(f"🖇⏰ AgentOps: Time Travel Activated")
-            _terminal_indicator_printed = True
+    if TimeTravel()._initialized is False:
+        print(f"🖇⏰ AgentOps: Time Travel Activated")
 
 
 def reset_terminal():
@@ -177,8 +172,10 @@ def reset_terminal():
 def manage_time_travel_state(activated=False, error=None):
     if activated:
         add_time_travel_terminal_indicator()
+        TimeTravel()._initialized = True
     else:
         reset_terminal()
         print("🖇⏰ AgentOps: Deactivating Time Travel. Error with configuration")
         if error:
             print(error)
+        TimeTravel()._initialized = False
