@@ -58,6 +58,8 @@ class TestRecordAction:
         time.sleep(0.1)
 
         # Assert
+        for req in mock_req.request_history:
+            print(req)
         assert len(mock_req.request_history) == 2
         assert mock_req.last_request.headers["X-Agentops-Api-Key"] == self.api_key
         request_json = mock_req.last_request.json()

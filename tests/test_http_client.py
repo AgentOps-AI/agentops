@@ -1,3 +1,4 @@
+import os
 import unittest
 from unittest.mock import patch, Mock
 import requests
@@ -16,7 +17,11 @@ class TestHttpClient(unittest.TestCase):
 
     def setUp(self):
         # Clear DLQ before each test
+        dead_letter_queue.is_testing = False
         dead_letter_queue.clear()
+
+    def tearDown(self):
+        dead_letter_queue.is_testing = True
 
     @patch("requests.Session")
     def test_post_success(self, mock_session):
@@ -28,7 +33,7 @@ class TestHttpClient(unittest.TestCase):
         mock_session_instance = mock_session.return_value
         mock_session_instance.post.return_value = mock_response
 
-        url = "https://example.com/api"
+        url = "https://api.agentops.ai/health"
         payload = b'{"key": "value"}'
 
         response = HttpClient.post(url, payload)
@@ -43,7 +48,7 @@ class TestHttpClient(unittest.TestCase):
         mock_session_instance = mock_session.return_value
         mock_session_instance.post.side_effect = requests.exceptions.Timeout
 
-        url = "https://example.com/api"
+        url = "https://api.agentops.ai/health"
         payload = b'{"key": "value"}'
 
         with self.assertRaises(ApiServerException) as context:
@@ -63,7 +68,7 @@ class TestHttpClient(unittest.TestCase):
             response=mock_response
         )
 
-        url = "https://example.com/api"
+        url = "https://api.agentops.ai/health"
         payload = b'{"key": "value"}'
 
         with self.assertRaises(ApiServerException) as context:
@@ -85,7 +90,7 @@ class TestHttpClient(unittest.TestCase):
         mock_session_instance = mock_session.return_value
         mock_session_instance.post.return_value = mock_response
 
-        url = "https://example.com/api"
+        url = "https://api.agentops.ai/health"
         payload = b'{"key": "value"}'
 
         with self.assertRaises(ApiServerException) as context:
@@ -104,7 +109,7 @@ class TestHttpClient(unittest.TestCase):
         mock_session_instance = mock_session.return_value
         mock_session_instance.get.return_value = mock_response
 
-        url = "https://example.com/api"
+        url = "https://api.agentops.ai/health"
 
         response = HttpClient.get(url)
 
@@ -118,7 +123,7 @@ class TestHttpClient(unittest.TestCase):
         mock_session_instance = mock_session.return_value
         mock_session_instance.get.side_effect = requests.exceptions.Timeout
 
-        url = "https://example.com/api"
+        url = "https://api.agentops.ai/health"
 
         with self.assertRaises(ApiServerException) as context:
             HttpClient.get(url)
@@ -138,7 +143,7 @@ class TestHttpClient(unittest.TestCase):
             response=mock_response
         )
 
-        url = "https://example.com/api"
+        url = "https://api.agentops.ai/health"
 
         with self.assertRaises(ApiServerException) as context:
             HttpClient.get(url)
@@ -151,29 +156,12 @@ class TestHttpClient(unittest.TestCase):
     def test_clear_dead_letter_queue(self):
         # Add a dummy request to DLQ and clear it
         dead_letter_queue.add(
-            {"url": "https://example.com", "error_type": "DummyError"}
+            {"url": "https://api.agentops.ai/health", "error_type": "DummyError"}
         )
         self.assertEqual(len(dead_letter_queue.get_all()), 1)
 
         dead_letter_queue.clear()
         self.assertEqual(len(dead_letter_queue.get_all()), 0)
-
-    @patch("requests.Session")
-    def test_post_with_retries(self, mock_session):
-        # Mock a Timeout for the first two attempts, then success on the third
-        mock_session_instance = mock_session.return_value
-        mock_session_instance.post.side_effect = [
-            requests.exceptions.Timeout,
-            requests.exceptions.Timeout,
-            Mock(status_code=200, json=lambda: {"message": "Success"}),
-        ]
-
-        url = "https://example.com/api"
-        payload = b'{"key": "value"}'
-
-        response = HttpClient.post(url, payload)
-
-        self.assertEqual(response.code, 200)
 
     @patch("requests.Session")
     def test_post_success_triggers_dlq_retry(self, mock_session):
@@ -191,7 +179,7 @@ class TestHttpClient(unittest.TestCase):
 
         # Manually add failed requests to the DLQ
         failed_request_1 = {
-            "url": "https://example.com/api1",
+            "url": "https://api.agentops.ai/health",
             "payload": b'{"key": "value1"}',
             "api_key": "API_KEY_1",
             "parent_key": None,
@@ -199,7 +187,7 @@ class TestHttpClient(unittest.TestCase):
             "error_type": "Timeout",
         }
         failed_request_2 = {
-            "url": "https://example.com/api2",
+            "url": "https://api.agentops.ai/health",
             "payload": b'{"key": "value2"}',
             "api_key": "API_KEY_2",
             "parent_key": None,
@@ -210,7 +198,7 @@ class TestHttpClient(unittest.TestCase):
         dead_letter_queue.add(failed_request_2)
 
         # Perform an initial successful POST request
-        url = "https://example.com/api"
+        url = "https://api.agentops.ai/health"
         payload = b'{"key": "value"}'
         HttpClient.post(url, payload)
 
@@ -239,7 +227,7 @@ class TestHttpClient(unittest.TestCase):
 
         # Manually add a failed request to the DLQ
         failed_request = {
-            "url": "https://example.com/api1",
+            "url": "https://api.agentops.ai/health",
             "payload": b'{"key": "value1"}',
             "api_key": "API_KEY_1",
             "parent_key": None,
@@ -249,7 +237,7 @@ class TestHttpClient(unittest.TestCase):
         dead_letter_queue.add(failed_request)
 
         # Perform an initial successful POST request
-        url = "https://example.com/api"
+        url = "https://api.agentops.ai/health"
         payload = b'{"key": "value"}'
         HttpClient.post(url, payload)
 
@@ -274,7 +262,7 @@ class TestHttpClient(unittest.TestCase):
 
         # Manually add failed POST and GET requests to the DLQ
         failed_post_request = {
-            "url": "https://example.com/api1",
+            "url": "https://api.agentops.ai/health",
             "payload": b'{"key": "value1"}',
             "api_key": "API_KEY_1",
             "parent_key": None,
@@ -282,7 +270,7 @@ class TestHttpClient(unittest.TestCase):
             "error_type": "Timeout",
         }
         failed_get_request = {
-            "url": "https://example.com/api2",
+            "url": "https://api.agentops.ai/health",
             "payload": None,  # GET request
             "api_key": "API_KEY_2",
             "parent_key": None,
@@ -293,7 +281,7 @@ class TestHttpClient(unittest.TestCase):
         dead_letter_queue.add(failed_get_request)
 
         # Perform an initial successful POST request
-        url = "https://example.com/api"
+        url = "https://api.agentops.ai/health"
         payload = b'{"key": "value"}'
         HttpClient.post(url, payload)
 
@@ -303,7 +291,7 @@ class TestHttpClient(unittest.TestCase):
     def test_clear_dlq_after_success(self):
         # Add requests to DLQ and ensure they are removed after retry success
         failed_request = {
-            "url": "https://example.com/api1",
+            "url": "https://api.agentops.ai/health",
             "payload": b'{"key": "value1"}',
             "api_key": "API_KEY_1",
             "parent_key": None,

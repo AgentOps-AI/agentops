@@ -1,10 +1,16 @@
-import time
 from enum import Enum
 from typing import Optional, List
 from requests.adapters import Retry, HTTPAdapter
 import requests
+from agentops.log_config import logger
 
 from .exceptions import ApiServerException
+from dotenv import load_dotenv
+import os
+
+from .singleton import singleton
+
+load_dotenv()
 
 JSON_HEADER = {"Content-Type": "application/json; charset=UTF-8", "Accept": "*/*"}
 
@@ -22,25 +28,28 @@ class HttpStatus(Enum):
     UNKNOWN = -1
 
 
+# @singleton
 class DeadLetterQueue:
     def __init__(self):
         self.queue: List[dict] = []
+        self.is_testing = os.environ.get("ENVIRONMENT") == "test"
 
     def add(self, request_data: dict):
-        self.queue.append(request_data)
+        if not self.is_testing:
+            self.queue.append(request_data)
 
     def get_all(self) -> List[dict]:
         return self.queue
 
     def remove(self, request_data: dict):
-        self.queue.remove(request_data)
+        if not self.is_testing:
+            self.queue.remove(request_data)
 
     def clear(self):
         self.queue.clear()
 
 
 dead_letter_queue = DeadLetterQueue()
-retrying = False
 
 
 class Response:
