@@ -16,6 +16,7 @@ class Configuration:
         self.auto_start_session: bool = True
         self.skip_auto_end_session: bool = False
         self.env_data_opt_out: bool = False
+        self.is_disabled: bool = False
 
     def configure(
         self,
@@ -30,6 +31,7 @@ class Configuration:
         auto_start_session: Optional[bool] = None,
         skip_auto_end_session: Optional[bool] = None,
         env_data_opt_out: Optional[bool] = None,
+        is_disabled: Optional[bool] = None,
     ):
         if api_key is not None:
             try:
@@ -72,3 +74,6 @@ class Configuration:
 
         if env_data_opt_out is not None:
             self.env_data_opt_out = env_data_opt_out
+
+        if is_disabled is not None:
+            self.is_disabled = is_disabled

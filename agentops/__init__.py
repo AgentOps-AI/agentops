@@ -39,6 +39,7 @@ def init(
     auto_start_session: Optional[bool] = None,
     inherited_session_id: Optional[str] = None,
     skip_auto_end_session: Optional[bool] = None,
+    is_disabled: Optional[bool] = None,
 ) -> Union[Session, None]:
     """
     Initializes the AgentOps singleton pattern.
@@ -86,6 +87,7 @@ def init(
         instrument_llm_calls=instrument_llm_calls,
         auto_start_session=auto_start_session,
         skip_auto_end_session=skip_auto_end_session,
+        is_disabled=is_disabled,
     )
 
     if inherited_session_id is not None:
@@ -112,6 +114,7 @@ def configure(
     instrument_llm_calls: Optional[bool] = None,
     auto_start_session: Optional[bool] = None,
     skip_auto_end_session: Optional[bool] = None,
+    is_disabled: Optional[bool] = None,
 ):
     """
     Configure the AgentOps Client
@@ -138,6 +141,7 @@ def configure(
         instrument_llm_calls=instrument_llm_calls,
         auto_start_session=auto_start_session,
         skip_auto_end_session=skip_auto_end_session,
+        is_disabled=is_disabled,
     )
 
 
@@ -315,3 +319,9 @@ def get_session(session_id: str):
 # prevents unexpected sessions on new tests
 def end_all_sessions() -> None:
     return Client().end_all_sessions()
+
+def disable():
+    Client().configure(is_disabled=True)
+
+def enable():
+    Client().configure(is_disabled=False)

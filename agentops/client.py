@@ -61,6 +61,7 @@ class Client(metaclass=MetaClient):
         auto_start_session: Optional[bool] = None,
         skip_auto_end_session: Optional[bool] = None,
         env_data_opt_out: Optional[bool] = None,
+        is_disabled: Optional[bool] = None,
     ):
         if self.has_sessions:
             return logger.warning(
@@ -79,10 +80,14 @@ class Client(metaclass=MetaClient):
             auto_start_session=auto_start_session,
             skip_auto_end_session=skip_auto_end_session,
             env_data_opt_out=env_data_opt_out,
+            is_disabled=is_disabled,
         )
 
     def initialize(self) -> Union[Session, None]:
         if self.is_initialized:
+            return
+        
+        if self._config.is_disabled:
             return
 
         self.unsuppress_logs()
@@ -128,6 +133,9 @@ class Client(metaclass=MetaClient):
         """
         if not self.is_initialized:
             return
+        
+        if self._config.is_disabled:
+            return
 
         # if a string and not a list of strings
         if not (isinstance(tags, list) and all(isinstance(item, str) for item in tags)):
@@ -152,6 +160,9 @@ class Client(metaclass=MetaClient):
             tags (List[str]): The list of tags to set.
         """
         if not self.is_initialized:
+            return
+        
+        if self._config.is_disabled:
             return
 
         session = self._safe_get_session()
@@ -190,6 +201,9 @@ class Client(metaclass=MetaClient):
         """
         if not self.is_initialized:
             return
+    
+        if self._config.is_disabled:
+            return
 
         session = self._safe_get_session()
         if session is None:
@@ -213,6 +227,9 @@ class Client(metaclass=MetaClient):
             inherited_session_id (optional, str): assign session id to match existing Session
         """
         if not self.is_initialized:
+            return
+        
+        if self._config.is_disabled:
             return
 
         if inherited_session_id is not None:
@@ -380,6 +397,10 @@ class Client(metaclass=MetaClient):
     def _safe_get_session(self) -> Optional[Session]:
         if not self.is_initialized:
             return None
+        
+        if self._config.is_disabled:
+            return None
+
         if len(self._sessions) == 1:
             return self._sessions[0]
 
