@@ -88,6 +88,51 @@ class TestRecordAction:
 
         agentops.end_session(end_state="Success")
 
+    def test_record_action_disabled(self, mock_req):
+        # Disable agentops
+        agentops.disable()
+
+        agentops.start_session()
+
+        @record_action(event_name=self.event_type)
+        def add_two(x, y):
+            return x + y
+
+        # Act
+        add_two(3, 4)
+        time.sleep(0.1)
+
+        # Assert
+        assert len(mock_req.request_history) == 0 
+
+        agentops.end_session(end_state="Success")
+        
+        # Enable agentops back again
+        agentops.enable()
+
+    def test_record_action_reenable(self, mock_req):
+        # Enable agentops (if not already enabled)
+        agentops.enable()
+        agentops.start_session()
+
+        @record_action(event_name=self.event_type)
+        def add_two(x, y):
+            return x + y
+
+        # Act
+        add_two(5, 6)
+        time.sleep(0.1)
+
+        # Assert
+        assert len(mock_req.request_history) > 0
+        assert mock_req.last_request.headers["X-Agentops-Api-Key"] == self.api_key
+        request_json = mock_req.last_request.json()
+        assert request_json["events"][0]["action_type"] == self.event_type
+        assert request_json["events"][0]["params"] == {"x": 5, "y": 6}
+        assert request_json["events"][0]["returns"] == 11
+
+        agentops.end_session(end_state="Success")
+
     def test_record_action_decorator_multiple(self, mock_req):
         agentops.start_session()
 

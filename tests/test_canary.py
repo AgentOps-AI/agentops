@@ -48,3 +48,39 @@ class TestCanary:
         assert request_json["events"][0]["event_type"] == event_type
 
         agentops.end_session("Success")
+        
+    def test_agent_ops_disabled(self, mock_req):
+        # Arrange
+        event_type = "test_event_type"
+        agentops.disable()
+        agentops.start_session()
+
+        # Act
+        agentops.record(ActionEvent(event_type))
+        time.sleep(0.1)
+
+        # Assert
+        assert len(mock_req.request_history) == 0 
+
+        agentops.end_session("Success")
+        agentops.enable()
+
+    def test_agent_ops_reenabled(self, mock_req):
+        # Enable agentops (if not already enabled)
+        agentops.enable()
+        
+        # Arrange
+        event_type = "test_event_type"
+        agentops.start_session()
+
+        # Act
+        agentops.record(ActionEvent(event_type))
+        time.sleep(0.1)
+
+        # Assert
+        assert len(mock_req.request_history) == 2
+        request_json = mock_req.last_request.json()
+        assert mock_req.last_request.headers["X-Agentops-Api-Key"] == self.api_key
+        assert request_json["events"][0]["event_type"] == event_type
+
+        agentops.end_session("Success")

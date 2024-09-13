@@ -89,6 +89,47 @@ class TestRecordTool:
 
         agentops.end_session(end_state="Success")
 
+    def test_record_tool_disabled(self, mock_req):
+        agentops.disable()
+        agentops.start_session()
+        
+        @record_tool(tool_name=self.tool_name)
+        def add_two(x, y):
+            return x + y
+
+        # Act
+        add_two(3, 4)
+        time.sleep(0.1)
+
+        # Assert
+        assert len(mock_req.request_history) == 0 
+
+        agentops.end_session(end_state="Success")
+
+    def test_record_tool_reenable(self, mock_req):
+        # Enable agentops (if not already enabled)
+        agentops.enable()
+        agentops.start_session()
+
+
+        @record_tool(tool_name=self.tool_name)
+        def add_two(x, y):
+            return x + y
+
+        # Act
+        add_two(5, 6)
+        time.sleep(0.1)
+
+        # Assert
+        assert len(mock_req.request_history) > 0
+        assert mock_req.last_request.headers["X-Agentops-Api-Key"] == self.api_key
+        request_json = mock_req.last_request.json()
+        assert request_json["events"][0]["name"] == self.tool_name
+        assert request_json["events"][0]["params"] == {"x": 5, "y": 6}
+        assert request_json["events"][0]["returns"] == 11
+
+        agentops.end_session(end_state="Success")
+
     def test_record_tool_decorator_multiple(self, mock_req):
         agentops.start_session()
 

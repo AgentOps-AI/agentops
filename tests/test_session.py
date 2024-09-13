@@ -75,6 +75,40 @@ class TestSingleSessions:
 
         agentops.end_all_sessions()
 
+    def test_disabled_session(self, mock_req):
+        agentops.disable()
+        session = agentops.start_session()
+
+        # Assert
+        assert session is None 
+
+        agentops.record(ActionEvent(self.event_type))
+        time.sleep(0.15)
+
+        # Assert
+        assert len(mock_req.request_history) == 0
+
+        agentops.end_session("Success")
+
+        # Enable agentops back again
+        agentops.enable()
+
+    def test_session_reenable(self, mock_req):
+        # Enable agentops (if not already enabled)
+        agentops.enable()
+        session = agentops.start_session()
+
+        # Assert
+        assert session is not None
+
+        agentops.record(ActionEvent(self.event_type))
+        time.sleep(0.15)
+
+        # Assert
+        assert len(mock_req.request_history) > 0
+
+        agentops.end_session("Success")
+
     def test_add_tags(self, mock_req):
         # Arrange
         tags = ["GPT-4"]
