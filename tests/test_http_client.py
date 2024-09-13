@@ -22,6 +22,7 @@ class TestHttpClient(unittest.TestCase):
 
     def tearDown(self):
         dead_letter_queue.is_testing = True
+        dead_letter_queue.clear()
 
     @patch("requests.Session")
     def test_post_success(self, mock_session):
