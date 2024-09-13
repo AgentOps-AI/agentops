@@ -4,7 +4,6 @@ import os
 from .http_client import HttpClient
 from .exceptions import ApiServerException
 from .singleton import singleton
-import threading
 
 
 @singleton
