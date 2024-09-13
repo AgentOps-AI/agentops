@@ -6,6 +6,7 @@ from agentops import record_action
 from datetime import datetime
 from agentops.singleton import clear_singletons
 import contextlib
+from agentops.http_client import dead_letter_queue
 
 jwts = ["some_jwt", "some_jwt2", "some_jwt3"]
 
@@ -13,6 +14,7 @@ jwts = ["some_jwt", "some_jwt2", "some_jwt3"]
 @pytest.fixture(autouse=True)
 def setup_teardown():
     clear_singletons()
+    dead_letter_queue.is_testing = True
     yield
     agentops.end_all_sessions()  # teardown part
 

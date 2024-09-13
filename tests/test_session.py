@@ -3,12 +3,14 @@ import requests_mock
 import time
 import agentops
 from agentops import ActionEvent, Client
+from agentops.http_client import dead_letter_queue
 from agentops.singleton import clear_singletons
 
 
 @pytest.fixture(autouse=True)
 def setup_teardown():
     clear_singletons()
+    dead_letter_queue.is_testing = True
     yield
     agentops.end_all_sessions()  # teardown part
 
