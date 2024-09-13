@@ -38,6 +38,7 @@ class Client(metaclass=MetaClient):
         self._llm_tracker: Optional[LlmTracker] = None
         self._sessions: List[Session] = active_sessions
         self._config = Configuration()
+        self._pre_init_queue = {"agents": []}
 
         self.configure(
             api_key=os.environ.get("AGENTOPS_API_KEY"),
@@ -105,6 +106,13 @@ class Client(metaclass=MetaClient):
         session = None
         if self._config.auto_start_session:
             session = self.start_session()
+
+        if session:
+            for agent_args in self._pre_init_queue["agents"]:
+                session.create_agent(
+                    name=agent_args["name"], agent_id=agent_args["agent_id"]
+                )
+            self._pre_init_queue["agents"] = []
 
         return session
 
@@ -234,6 +242,13 @@ class Client(metaclass=MetaClient):
             config=self._config,
         )
 
+        if self._pre_init_queue["agents"] and len(self._pre_init_queue["agents"]) > 0:
+            for agent_args in self._pre_init_queue["agents"]:
+                session.create_agent(
+                    name=agent_args["name"], agent_id=agent_args["agent_id"]
+                )
+            self._pre_init_queue["agents"] = []
+
         if not session.is_running:
             return logger.error("Failed to start session")
 
@@ -294,7 +309,9 @@ class Client(metaclass=MetaClient):
             # if no session passed, assume single session
             session = self._safe_get_session()
             if session is None:
-                return
+                self._pre_init_queue["agents"].append(
+                    {"name": name, "agent_id": agent_id}
+                )
             session.create_agent(name=name, agent_id=agent_id)
 
         return agent_id
