@@ -8,6 +8,9 @@ from agentops.helpers import get_ISO_time, check_call_stack_for_agent_id
 from agentops.llms.instrumented_provider import InstrumentedProvider
 from agentops.time_travel import fetch_completion_override_from_time_travel_cache
 from ..singleton import singleton
+import threading
+
+_provider_lock = threading.Lock()
 
 
 @singleton
@@ -16,6 +19,7 @@ class LiteLLMProvider(InstrumentedProvider):
     original_create_async = None
     original_oai_create = None
     original_oai_create_async = None
+    tracked_llm_event_ids = []
 
     def __init__(self, client):
         super().__init__(client)
@@ -50,6 +54,7 @@ class LiteLLMProvider(InstrumentedProvider):
         from litellm.utils import CustomStreamWrapper
 
         self.llm_event = LLMEvent(init_timestamp=init_timestamp, params=kwargs)
+
         if session is not None:
             self.llm_event.session_id = session.session_id
 
@@ -157,6 +162,15 @@ class LiteLLMProvider(InstrumentedProvider):
             self.llm_event.completion_tokens = response.usage.completion_tokens
             self.llm_event.model = response.model
 
+            with open("llm_event_output.txt", "a", encoding="utf-8") as file:
+                file.write(f"{self.llm_event.id}\n")
+                file.write(f"{self.llm_event}\n")
+
+            # if self.llm_event.id in self.tracked_llm_event_ids:
+            #     breakpoint()
+            # else:
+            #     self.tracked_llm_event_ids.append(self.llm_event.id)
+
             self._safe_record(session, self.llm_event)
         except Exception as e:
             self._safe_record(
@@ -205,7 +219,13 @@ class LiteLLMProvider(InstrumentedProvider):
 
             # Call the original function with its original arguments
             result = self.original_create(*args, **kwargs)
-            return self.handle_response(result, kwargs, init_timestamp, session=session)
+            # result = ChatCompletion.model_validate_json(
+            #     '{"id":"chatcmpl-A5LDOyPPCgV0kOKF6iNQs4cWEZpry","choices":[{"finish_reason":"stop","index":0,"message":{"content":"{\\"spelling\\":[],\\"punctuation\\":[],\\"grammar\\":[],\\"file_path\\":\\"documentation.md\\"}\\n\\n    ","role":"assistant","tool_calls":null,"function_call":null}}],"created":1725836554,"model":"gpt-4o-2024-05-13","object":"chat.completion","system_fingerprint":"fp_25624ae3a5","usage":{"completion_tokens":21,"prompt_tokens":925,"total_tokens":946},"service_tier":null}'
+            # )
+            with _provider_lock:
+                return self.handle_response(
+                    result, kwargs, init_timestamp, session=session
+                )
 
         litellm.completion = patched_function
 
