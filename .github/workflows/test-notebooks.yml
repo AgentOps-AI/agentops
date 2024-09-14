@@ -1,14 +1,7 @@
 name: Test Notebooks
 on:
-  push:
-    branches:
-      - main
-    paths:
-      - "agentops/**"
-      - "examples/**"
-      - "tests/**"
-      - ".github/workflows/test-notebooks.yml"
-  pull_request_target:
+  pull_request:
+    types: [closed]
     branches:
       - main
     paths:
