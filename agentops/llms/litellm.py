@@ -8,9 +8,6 @@ from agentops.helpers import get_ISO_time, check_call_stack_for_agent_id
 from agentops.llms.instrumented_provider import InstrumentedProvider
 from agentops.time_travel import fetch_completion_override_from_time_travel_cache
 from ..singleton import singleton
-import threading
-
-_provider_lock = threading.Lock()
 
 
 @singleton
@@ -19,7 +16,6 @@ class LiteLLMProvider(InstrumentedProvider):
     original_create_async = None
     original_oai_create = None
     original_oai_create_async = None
-    tracked_llm_event_ids = []
 
     def __init__(self, client):
         super().__init__(client)
@@ -53,22 +49,21 @@ class LiteLLMProvider(InstrumentedProvider):
         from openai.types.chat import ChatCompletionChunk
         from litellm.utils import CustomStreamWrapper
 
-        self.llm_event = LLMEvent(init_timestamp=init_timestamp, params=kwargs)
-
+        llm_event = LLMEvent(init_timestamp=init_timestamp, params=kwargs)
         if session is not None:
-            self.llm_event.session_id = session.session_id
+            llm_event.session_id = session.session_id
 
         def handle_stream_chunk(chunk: ChatCompletionChunk):
             # NOTE: prompt/completion usage not returned in response when streaming
             # We take the first ChatCompletionChunk and accumulate the deltas from all subsequent chunks to build one full chat completion
-            if self.llm_event.returns == None:
-                self.llm_event.returns = chunk
+            if llm_event.returns == None:
+                llm_event.returns = chunk
 
             try:
-                accumulated_delta = self.llm_event.returns.choices[0].delta
-                self.llm_event.agent_id = check_call_stack_for_agent_id()
-                self.llm_event.model = chunk.model
-                self.llm_event.prompt = kwargs["messages"]
+                accumulated_delta = llm_event.returns.choices[0].delta
+                llm_event.agent_id = check_call_stack_for_agent_id()
+                llm_event.model = chunk.model
+                llm_event.prompt = kwargs["messages"]
 
                 # NOTE: We assume for completion only choices[0] is relevant
                 choice = chunk.choices[0]
@@ -87,21 +82,19 @@ class LiteLLMProvider(InstrumentedProvider):
 
                 if choice.finish_reason:
                     # Streaming is done. Record LLMEvent
-                    self.llm_event.returns.choices[0].finish_reason = (
-                        choice.finish_reason
-                    )
-                    self.llm_event.completion = {
+                    llm_event.returns.choices[0].finish_reason = choice.finish_reason
+                    llm_event.completion = {
                         "role": accumulated_delta.role,
                         "content": accumulated_delta.content,
                         "function_call": accumulated_delta.function_call,
                         "tool_calls": accumulated_delta.tool_calls,
                     }
-                    self.llm_event.end_timestamp = get_ISO_time()
+                    llm_event.end_timestamp = get_ISO_time()
 
-                    self._safe_record(session, self.llm_event)
+                    self._safe_record(session, llm_event)
             except Exception as e:
                 self._safe_record(
-                    session, ErrorEvent(trigger_event=self.llm_event, exception=e)
+                    session, ErrorEvent(trigger_event=llm_event, exception=e)
                 )
 
                 kwargs_str = pprint.pformat(kwargs)
@@ -154,28 +147,17 @@ class LiteLLMProvider(InstrumentedProvider):
 
         # v1.0.0+ responses are objects
         try:
-            self.llm_event.returns = response
-            self.llm_event.agent_id = check_call_stack_for_agent_id()
-            self.llm_event.prompt = kwargs["messages"]
-            self.llm_event.prompt_tokens = response.usage.prompt_tokens
-            self.llm_event.completion = response.choices[0].message.model_dump()
-            self.llm_event.completion_tokens = response.usage.completion_tokens
-            self.llm_event.model = response.model
+            llm_event.returns = response
+            llm_event.agent_id = check_call_stack_for_agent_id()
+            llm_event.prompt = kwargs["messages"]
+            llm_event.prompt_tokens = response.usage.prompt_tokens
+            llm_event.completion = response.choices[0].message.model_dump()
+            llm_event.completion_tokens = response.usage.completion_tokens
+            llm_event.model = response.model
 
-            with open("llm_event_output.txt", "a", encoding="utf-8") as file:
-                file.write(f"{self.llm_event.id}\n")
-                file.write(f"{self.llm_event}\n")
-
-            # if self.llm_event.id in self.tracked_llm_event_ids:
-            #     breakpoint()
-            # else:
-            #     self.tracked_llm_event_ids.append(self.llm_event.id)
-
-            self._safe_record(session, self.llm_event)
+            self._safe_record(session, llm_event)
         except Exception as e:
-            self._safe_record(
-                session, ErrorEvent(trigger_event=self.llm_event, exception=e)
-            )
+            self._safe_record(session, ErrorEvent(trigger_event=llm_event, exception=e))
 
             kwargs_str = pprint.pformat(kwargs)
             response = pprint.pformat(response)
@@ -219,13 +201,7 @@ class LiteLLMProvider(InstrumentedProvider):
 
             # Call the original function with its original arguments
             result = self.original_create(*args, **kwargs)
-            # result = ChatCompletion.model_validate_json(
-            #     '{"id":"chatcmpl-A5LDOyPPCgV0kOKF6iNQs4cWEZpry","choices":[{"finish_reason":"stop","index":0,"message":{"content":"{\\"spelling\\":[],\\"punctuation\\":[],\\"grammar\\":[],\\"file_path\\":\\"documentation.md\\"}\\n\\n    ","role":"assistant","tool_calls":null,"function_call":null}}],"created":1725836554,"model":"gpt-4o-2024-05-13","object":"chat.completion","system_fingerprint":"fp_25624ae3a5","usage":{"completion_tokens":21,"prompt_tokens":925,"total_tokens":946},"service_tier":null}'
-            # )
-            with _provider_lock:
-                return self.handle_response(
-                    result, kwargs, init_timestamp, session=session
-                )
+            return self.handle_response(result, kwargs, init_timestamp, session=session)
 
         litellm.completion = patched_function
 
