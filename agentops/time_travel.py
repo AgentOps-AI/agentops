@@ -4,6 +4,9 @@ import os
 from .http_client import HttpClient
 from .exceptions import ApiServerException
 from .singleton import singleton
+import threading
+
+_time_travel_lock = threading.Lock()
 
 
 @singleton
@@ -160,8 +163,9 @@ def set_time_travel_active_state(is_active: bool):
 
 
 def add_time_travel_terminal_indicator():
-    if TimeTravel()._initialized is False:
-        print(f"🖇⏰ AgentOps: Time Travel Activated")
+    with _time_travel_lock:
+        if not TimeTravel()._initialized:
+            print(f"🖇⏰ AgentOps: Time Travel Activated")
 
 
 def reset_terminal():
