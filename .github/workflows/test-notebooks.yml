@@ -42,7 +42,7 @@ jobs:
         exit_code=0
 
         exclude_notebooks=(
-          "./examples/crew/job_posting.ipynb",
+          "./examples/crewai_examples/job_posting.ipynb",
           "./examples/demos/agentchat_agentops.ipynb"
         )
 
