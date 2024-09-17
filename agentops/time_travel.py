@@ -5,6 +5,8 @@ from .http_client import HttpClient
 from .exceptions import ApiServerException
 from .singleton import singleton
 
+ttd_prepend_string = "🖇️ Agentops: ⏰ Time Travel |"
+
 
 @singleton
 class TimeTravel:
@@ -47,9 +49,9 @@ def fetch_time_travel_id(ttd_id):
 
         set_time_travel_active_state(True)
     except ApiServerException as e:
-        print(f"🖇️ Agentops: ⏰ Time Travel Error - {e}")
+        print(f"{ttd_prepend_string} Error - {e}")
     except Exception as e:
-        print(f"🖇️ Agentops: ⏰ Time Travel Error - {e}")
+        print(f"{ttd_prepend_string} Error - {e}")
 
 
 def fetch_completion_override_from_time_travel_cache(kwargs):
@@ -64,14 +66,14 @@ def fetch_completion_override_from_time_travel_cache(kwargs):
 def find_cache_hit(prompt_messages, completion_overrides):
     if not isinstance(prompt_messages, (list, tuple)):
         print(
-            "🖇️ Agentops: ⏰ Time Travel Error - unexpected type for prompt_messages. Expected 'list' or 'tuple'. Got ",
+            f"{ttd_prepend_string} Error - unexpected type for prompt_messages. Expected 'list' or 'tuple'. Got ",
             type(prompt_messages),
         )
         return None
 
     if not isinstance(completion_overrides, dict):
         print(
-            "🖇️ Agentops: ⏰ Time Travel Error - unexpected type for completion_overrides. Expected 'dict'. Got ",
+            f"{ttd_prepend_string} Error - unexpected type for completion_overrides. Expected 'dict'. Got ",
             type(completion_overrides),
         )
         return None
@@ -80,7 +82,7 @@ def find_cache_hit(prompt_messages, completion_overrides):
             completion_override_dict = eval(key)
             if not isinstance(completion_override_dict, dict):
                 print(
-                    "🖇️ Agentops: ⏰ Time Travel Error - unexpected type for completion_override_dict. Expected 'dict'. Got ",
+                    f"{ttd_prepend_string} Error - unexpected type for completion_override_dict. Expected 'dict'. Got ",
                     type(completion_override_dict),
                 )
                 continue
@@ -88,7 +90,7 @@ def find_cache_hit(prompt_messages, completion_overrides):
             cached_messages = completion_override_dict.get("messages")
             if not isinstance(cached_messages, list):
                 print(
-                    "🖇️ Agentops: ⏰ Time Travel Error - unexpected type for cached_messages. Expected 'list'. Got ",
+                    f"{ttd_prepend_string} Error - unexpected type for cached_messages. Expected 'list'. Got ",
                     type(cached_messages),
                 )
                 continue
@@ -105,11 +107,11 @@ def find_cache_hit(prompt_messages, completion_overrides):
                 return value
         except (SyntaxError, ValueError, TypeError) as e:
             print(
-                f"🖇️ Agentops: ⏰ Time Travel Error - Error processing completion_overrides item: {e}"
+                f"{ttd_prepend_string} Error - Error processing completion_overrides item: {e}"
             )
         except Exception as e:
             print(
-                f"🖇️ Agentops: ⏰ Time Travel Error - Unexpected error in find_cache_hit: {e}"
+                f"{ttd_prepend_string} Error - Unexpected error in find_cache_hit: {e}"
             )
     return None
 
@@ -142,11 +144,11 @@ def set_time_travel_active_state(is_active: bool):
             yaml.dump(config, config_file)
         except:
             print(
-                f"🖇️ Agentops: ⏰ Time Travel Error - Unable to write to {config_path}. Time Travel not activated"
+                f"{ttd_prepend_string} Error - Unable to write to {config_path}. Time Travel not activated"
             )
             return
 
     if is_active:
-        print("🖇️ Agentops: ⏰ Time Travel Activated")
+        print(f"{ttd_prepend_string} Activated")
     else:
-        print("🖇️ Agentops: ⏰ Time Travel Deactivated")
+        print(f"{ttd_prepend_string} Deactivated")
