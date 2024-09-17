@@ -1,0 +1,48 @@
+name: Update Docs
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  add-markdown-examples-to-docs:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.x'
+
+      - name: Install dependencies
+        run: |
+          pip install jupyter nbconvert
+
+      - name: Convert notebooks to markdown and add to docs
+        run: |
+          cd docs/v1/examples
+          for file in *.mdx; do
+            source_file=$(grep -oP '(?<=\{/\*  SOURCE_FILE: ).*(?=  \*/\})' "$file")
+            if [[ -n $source_file && -f "../../$source_file" ]]; then
+              jupyter nbconvert --to markdown "../../$source_file"
+              markdown_file="${source_file%.ipynb}.md"
+              sed -i '/\{\/\*  SOURCE_FILE: '"$source_file"'  \*\/\}/,/\{\/\*  SOURCE_FILE: '"$source_file"'  \*\/\}/c\{/\*  SOURCE_FILE: '"$source_file"'  \*/\}\n'"$(cat ../../$markdown_file)"'\n\{/\*  SOURCE_FILE: '"$source_file"'  \*/\}' "$file"
+              rm "../../$markdown_file"
+            fi
+          done
+
+    #   - name: Commit changes
+    #     run: |
+    #       git config --local user.email "action@github.com"
+    #       git config --local user.name "GitHub Action"
+    #       git add docs/v1/examples/*.mdx
+    #       git diff --quiet && git diff --staged --quiet || git commit -m "Update documentation from notebooks"
+
+    #   - name: Push changes
+    #     uses: ad-m/github-push-action@master
+    #     with:
+    #       github_token: ${{ secrets.GITHUB_TOKEN }}
+    #       branch: main
