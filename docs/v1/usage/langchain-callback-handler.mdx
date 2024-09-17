@@ -1,12 +1,12 @@
 ---
-title: 'Langchain Callback Handler'
-description: 'How to use AgentOps with Langchain'
+title: 'LangChain Callback Handler'
+description: 'How to use AgentOps with LangChain'
 ---
 
-By default, AgentOps is compatible with agents using Langchain with our LLM Instrumentor as long as they're using
+By default, AgentOps is compatible with agents using LangChain with our LLM Instrumentor as long as they're using
 supported models.
 
-As an alternative to instrumenting, the Langchain Callback Handler is available.
+As an alternative to instrumenting, the LangChain Callback Handler is available.
 
 ## Constructor
 
@@ -41,7 +41,7 @@ properly include `instrument_llm_calls=False`. In this case, call
 
 ### Implement Callback Handler
 
-Initialize the handler with its constructor and pass it into the callbacks array from Langchain.
+Initialize the handler with its constructor and pass it into the callbacks array from LangChain.
 ```python
 from agentops.langchain_callback_handler import LangchainCallbackHandler
 ChatOpenAI(callbacks=[LangchainCallbackHandler()])
@@ -63,9 +63,9 @@ response = chain.invoke({"animal": "bears"})
 
 ## Why use the handler?
 
-If your project uses Langchain for Agents, Events and Tools, it may be easier to use the callback Handler for observability.
+If your project uses LangChain for Agents, Events and Tools, it may be easier to use the callback Handler for observability.
 
-If your project uses models with Langchain that are not yet supported by AgentOps, they can be supported by the Handler.
+If your project uses models with LangChain that are not yet supported by AgentOps, they can be supported by the Handler.
 
 <script type="module" src="/scripts/github_stars.js"></script>
 <script type="module" src="/scripts/link_to_api_button.js"></script>

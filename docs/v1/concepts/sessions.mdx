@@ -58,7 +58,7 @@ Calling `agentops.init(auto_start_session=False)` will initialize the AgentOps S
 
 To start a session later, call `agentops.start_session()` [(reference)](/v1/usage/sdk-reference/#start-session)
 
-Both `agentops.init()` and `agentops.start_session()` works as a factory pattern and returns a `Session` object. The above methods can all be called on this session object.
+Both `agentops.init()` and `agentops.start_session()` work as a factory pattern and return a `Session` object. The above methods can all be called on this session object.
 
 ## Ending a Session
 If a process ends without any call to agentops, it will show in the dashboard as `Indeterminate`.
@@ -71,7 +71,7 @@ with an existing session_id.
 `agentops.init(inherited_session_id=<id>)`
 `agentops.start_session(inherited_session_id=<id>)`
 
-You can retrieve the current session_id by assigning the returned value from `init()` or `start_session()`
+You can retrieve the current `session_id` by assigning the returned value from `init()` or `start_session()`
 
 <CodeGroup>
 ```python python
@@ -90,8 +90,7 @@ Both processes will now contribute data to the same session.
 ## The AgentOps SDK Client
 _More info for the curious_
 
-Under the hood, `agentops.init()` sets up a `Client` object with various configuration options like your API key, worker thread options
-for when to send out batches of events, etc. Whenever you start a new session, these configuration options will automatically
+Under the hood, `agentops.init()` creates a `Client` object with various configuration options. Whenever you start a new session, these configuration options will automatically
 be applied. You can also apply different configuration options when you start a new session by passing in a
 [Configuration](/v1/usage/sdk-reference/#configuration) object.
 

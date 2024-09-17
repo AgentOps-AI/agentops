@@ -1,16 +1,16 @@
 ---
-title: Langchain
-description: "AgentOps provides first class support for Lanchain applications"
+title: LangChain
+description: "AgentOps provides first class support for LangChain applications"
 ---
 
 import EnvTooltip from '/snippets/add-env-tooltip.mdx'
 
-AgentOps works seamlessly with applications built using Langchain.
+AgentOps works seamlessly with applications built using LangChain.
 
-## Adding AgentOps to Langchain applications
+## Adding AgentOps to LangChain applications
 
 <Steps>
-	<Step title="Install the AgentOps SDK and the additional Langchain dependency">
+	<Step title="Install the AgentOps SDK and the additional LangChain dependency">
 		<CodeGroup>
 			```bash pip
 			pip install agentops
@@ -24,7 +24,7 @@ AgentOps works seamlessly with applications built using Langchain.
 		<Check>[Give us a star](https://github.com/AgentOps-AI/agentops) on GitHub while you're at it (you may be our <span id="stars-text">2,000th</span> 😊)</Check>
 	</Step>
 	<Step title="Set up your import statements">
-		Import the following Langchain and AgentOps dependencies
+		Import the following LangChain and AgentOps dependencies
 		<CodeGroup>
 			```python python
 			import os
@@ -34,15 +34,15 @@ AgentOps works seamlessly with applications built using Langchain.
 			```
 		</CodeGroup>
 	</Step>
-	<Step title="Set up your Langchain handler to make the calls">
+	<Step title="Set up your LangChain handler to make the calls">
 		<Tip>
-			Note that you don't need to set up a separate agentops.init() call, as the Langchain callback handler will automatically initialize the AgentOps client for you.
+			Note that you don't need to set up a separate agentops.init() call, as the LangChain callback handler will automatically initialize the AgentOps client for you.
 		</Tip>
-		Set up your Langchain agent with the AgentOps callback handler and AgentOps will automatically record your Langchain sessions.
+		Set up your LangChain agent with the AgentOps callback handler, and AgentOps will automatically record your LangChain sessions.
 		<span className="api-key-container">
 			<CodeGroup>
 				```python python
-				handler = LangchainCallbackHandler(api_key=AGENTOPS_API_KEY, tags=['Langchain Example'])
+				handler = LangchainCallbackHandler(api_key=AGENTOPS_API_KEY, tags=['LangChain Example'])
 
 
 
@@ -70,9 +70,9 @@ AgentOps works seamlessly with applications built using Langchain.
 			</span>
 	</Step>
 	<Step title="Run your agent">
-	Execute your program and visit [app.agentops.ai/drilldown](https://app.agentops.ai/drilldown) to observe your Langchain Agent! 🕵️
+	Execute your program and visit [app.agentops.ai/drilldown](https://app.agentops.ai/drilldown) to observe your LangChain Agent! 🕵️
 	<Tip>
-		After your run, AgentOps prints a clickable url to console linking directly to your session in the Dashboard
+		After your run, AgentOps prints a clickable URL to the console linking directly to your session in the Dashboard
 	</Tip>
 	<div/>{/* Intentionally blank div for newline */}
 	<Frame type="glass" caption="Clickable link to session">
@@ -90,7 +90,7 @@ AgentOps works seamlessly with applications built using Langchain.
 	from langchain.agents import initialize_agent, AgentType
 	from agentops.langchain_callback_handler import LangchainCallbackHandler
 
-	handler = LangchainCallbackHandler(api_key=AGENTOPS_API_KEY, tags=['Langchain Example'])
+	handler = LangchainCallbackHandler(api_key=AGENTOPS_API_KEY, tags=['LangChain Example'])
 
 	llm = ChatOpenAI(openai_api_key=OPENAI_API_KEY,
 		callbacks=[handler],
