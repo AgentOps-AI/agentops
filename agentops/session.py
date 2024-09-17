@@ -7,6 +7,7 @@ from decimal import ROUND_HALF_UP, Decimal
 from termcolor import colored
 from typing import Optional, List, Union
 from uuid import UUID, uuid4
+from dateutil import parser
 
 from .exceptions import ApiServerException
 from .enums import EndState
@@ -52,6 +53,7 @@ class Session:
         self.jwt = None
         self.lock = threading.Lock()
         self.queue = []
+        self.event_counts = { 'llms': 0, 'tools': 0, 'actions': 0, 'errors': 0, 'apis': 0 }
 
         self.stop_flag = threading.Event()
         self.thread = threading.Thread(target=self._run)
@@ -110,6 +112,11 @@ class Session:
 
         logger.debug(res.body)
         token_cost = res.body.get("token_cost", "unknown")
+
+        duration = parser.parse(self.end_timestamp) - parser.parse(self.init_timestamp)
+        logger.info(f"This run's total LLM calls: {self.event_counts['llms']}")
+        logger.info(f"This run's total Tool calls: {self.event_counts['tools']}")
+        logger.info(f"This run's total duration: {duration}")
 
         if token_cost == "unknown" or token_cost is None:
             logger.info("Could not determine cost of run.")
@@ -292,6 +299,21 @@ class Session:
                 )
                 logger.debug(serialized_payload)
                 logger.debug("</AGENTOPS_DEBUG_OUTPUT>\n")
+
+                # Count total events created based on type
+                events = payload['events']
+                for event in events:
+                    event_type = event['event_type']
+                    if event_type == 'llms':
+                        self.event_counts['llms'] += 1
+                    elif event_type == 'tools':
+                        self.event_counts['tools'] += 1
+                    elif event_type == 'actions':
+                        self.event_counts['actions'] += 1
+                    elif event_type == 'errors':
+                        self.event_counts['errors'] += 1
+                    elif event_type == 'apis':
+                        self.event_counts['apis'] += 1
 
     def _run(self) -> None:
         while not self.stop_flag.is_set():
