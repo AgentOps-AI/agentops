@@ -52,9 +52,9 @@ class CohereProvider(InstrumentedProvider):
 
         # from cohere.types.chat import ChatGenerationChunk
         # NOTE: Cohere only returns one message and its role will be CHATBOT which we are coercing to "assistant"
-        self.llm_event = LLMEvent(init_timestamp=init_timestamp, params=kwargs)
+        llm_event = LLMEvent(init_timestamp=init_timestamp, params=kwargs)
         if session is not None:
-            self.llm_event.session_id = session.session_id
+            llm_event.session_id = session.session_id
 
         self.action_events = {}
 
@@ -62,22 +62,22 @@ class CohereProvider(InstrumentedProvider):
 
             # We take the first chunk and accumulate the deltas from all subsequent chunks to build one full chat completion
             if isinstance(chunk, StreamedChatResponse_StreamStart):
-                self.llm_event.returns = chunk
-                self.llm_event.agent_id = check_call_stack_for_agent_id()
-                self.llm_event.model = kwargs.get("model", "command-r-plus")
-                self.llm_event.prompt = kwargs["message"]
-                self.llm_event.completion = ""
+                llm_event.returns = chunk
+                llm_event.agent_id = check_call_stack_for_agent_id()
+                llm_event.model = kwargs.get("model", "command-r-plus")
+                llm_event.prompt = kwargs["message"]
+                llm_event.completion = ""
                 return
 
             try:
                 if isinstance(chunk, StreamedChatResponse_StreamEnd):
                     # StreamedChatResponse_TextGeneration = LLMEvent
-                    self.llm_event.completion = {
+                    llm_event.completion = {
                         "role": "assistant",
                         "content": chunk.response.text,
                     }
-                    self.llm_event.end_timestamp = get_ISO_time()
-                    self._safe_record(session, self.llm_event)
+                    llm_event.end_timestamp = get_ISO_time()
+                    self._safe_record(session, llm_event)
 
                     # StreamedChatResponse_SearchResults = ActionEvent
                     search_results = chunk.response.search_results
@@ -115,7 +115,7 @@ class CohereProvider(InstrumentedProvider):
                         self._safe_record(session, action_event)
 
                 elif isinstance(chunk, StreamedChatResponse_TextGeneration):
-                    self.llm_event.completion += chunk.text
+                    llm_event.completion += chunk.text
                 elif isinstance(chunk, StreamedChatResponse_ToolCallsGeneration):
                     pass
                 elif isinstance(chunk, StreamedChatResponse_CitationGeneration):
@@ -139,7 +139,7 @@ class CohereProvider(InstrumentedProvider):
 
             except Exception as e:
                 self._safe_record(
-                    session, ErrorEvent(trigger_event=self.llm_event, exception=e)
+                    session, ErrorEvent(trigger_event=llm_event, exception=e)
                 )
 
                 kwargs_str = pprint.pformat(kwargs)
@@ -175,15 +175,15 @@ class CohereProvider(InstrumentedProvider):
         # Not enough to record StreamedChatResponse_ToolCallsGeneration because the tool may have not gotten called
 
         try:
-            self.llm_event.returns = response
-            self.llm_event.agent_id = check_call_stack_for_agent_id()
-            self.llm_event.prompt = []
+            llm_event.returns = response
+            llm_event.agent_id = check_call_stack_for_agent_id()
+            llm_event.prompt = []
             if response.chat_history:
                 role_map = {"USER": "user", "CHATBOT": "assistant", "SYSTEM": "system"}
 
                 for i in range(len(response.chat_history) - 1):
                     message = response.chat_history[i]
-                    self.llm_event.prompt.append(
+                    llm_event.prompt.append(
                         {
                             "role": role_map.get(message.role, message.role),
                             "content": message.message,
@@ -191,19 +191,17 @@ class CohereProvider(InstrumentedProvider):
                     )
 
                 last_message = response.chat_history[-1]
-                self.llm_event.completion = {
+                llm_event.completion = {
                     "role": role_map.get(last_message.role, last_message.role),
                     "content": last_message.message,
                 }
-            self.llm_event.prompt_tokens = response.meta.tokens.input_tokens
-            self.llm_event.completion_tokens = response.meta.tokens.output_tokens
-            self.llm_event.model = kwargs.get("model", "command-r-plus")
+            llm_event.prompt_tokens = response.meta.tokens.input_tokens
+            llm_event.completion_tokens = response.meta.tokens.output_tokens
+            llm_event.model = kwargs.get("model", "command-r-plus")
 
-            self._safe_record(session, self.llm_event)
+            self._safe_record(session, llm_event)
         except Exception as e:
-            self._safe_record(
-                session, ErrorEvent(trigger_event=self.llm_event, exception=e)
-            )
+            self._safe_record(session, ErrorEvent(trigger_event=llm_event, exception=e))
             kwargs_str = pprint.pformat(kwargs)
             response = pprint.pformat(response)
             logger.warning(
