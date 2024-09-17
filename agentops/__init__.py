@@ -27,10 +27,9 @@ if "autogen" in sys.modules:
 if "crewai" in sys.modules:
     crew_version = version.parse(get_version("crewai"))
 
-    if crew_version < version.parse("0.56.0"):  # uses langchain
+    # uses langchain, greater versions will use litellm and default is to instrument
+    if crew_version < version.parse("0.56.0"):
         Client().configure(instrument_llm_calls=False)
-    else:  # uses LiteLLM
-        Client().configure(instrument_llm_calls=True)
 
     Client().add_default_tags(["crewai"])
 
