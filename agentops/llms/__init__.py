@@ -43,7 +43,6 @@ class LlmTracker:
 
     def __init__(self, client):
         self.client = client
-        self.completion = ""
 
     def override_api(self):
         """
