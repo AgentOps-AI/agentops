@@ -27,7 +27,6 @@ if "autogen" in sys.modules:
 if "crewai" in sys.modules:
     crew_version = version.parse(get_version("crewai"))
 
-    # TODO: change on crew release
     if crew_version < version.parse("0.56.0"):  # uses langchain
         Client().configure(instrument_llm_calls=False)
     else:  # uses LiteLLM
