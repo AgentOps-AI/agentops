@@ -4,6 +4,9 @@ on:
   push:
     branches:
       - main
+    paths:
+      - 'examples/**'
+      - 'docs/v1/examples/**'
 
 jobs:
   add-markdown-examples-to-docs:
