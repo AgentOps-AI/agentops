@@ -195,8 +195,8 @@ class CohereProvider(InstrumentedProvider):
                     "role": role_map.get(last_message.role, last_message.role),
                     "content": last_message.message,
                 }
-            llm_event.prompt_tokens = response.meta.tokens.input_tokens
-            llm_event.completion_tokens = response.meta.tokens.output_tokens
+            llm_event.prompt_tokens = int(response.meta.tokens.input_tokens)
+            llm_event.completion_tokens = int(response.meta.tokens.output_tokens)
             llm_event.model = kwargs.get("model", "command-r-plus")
 
             self._safe_record(session, llm_event)
