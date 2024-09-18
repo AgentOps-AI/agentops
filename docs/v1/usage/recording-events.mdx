@@ -16,12 +16,12 @@ and record an event for your function.
 ```python python
 from agentops import record_action
 
-@record_action('sample function being record')
+@record_action('sample function being recorded')
 def sample_function(...):
     ...
 ```
 
-The decorator will record the function's parameters, returns, and the time duration. We suggest using this on functions that take a long time and contain nested functions. For example, if you decorate a function that makes several openai calls, then each openai call will show in the replay graph as a child of the decorated function.
+The decorator will record the function's parameters, return values, and the time duration. We suggest using this on functions that take a long time and contain nested functions. For example, if you decorate a function that makes several OpenAI calls, then each OpenAI call will show in the replay graph as a child of the decorated function.
 
 ## `@record_tool` Decorator
 
@@ -37,12 +37,12 @@ def sample_tool(...):
     ...
 ```
 
-The decorator will record the function's parameters, returns, and the time duration. We suggest using this on functions that take a long time and contain nested functions. For example, if you decorate a function that makes several openai calls, then each openai call will show in the replay graph as a child of the decorated function.
+The decorator will record the function's parameters, returns, and the time duration. We suggest using this on functions that take a long time and contain nested functions. For example, if you decorate a function that makes several OpenAI calls, then each OpenAI call will show in the replay graph as a child of the decorated function.
 
 
 ## `record()` Method
 
-From this point, simply call the .record() method in the AgentOps client:
+From this point, simply call the `.record()` method in the AgentOps client:
 
 Record any child of the [Event type](/v1/concepts/events) or ErrorEvent.
 

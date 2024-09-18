@@ -1,7 +1,11 @@
-
 name: Tach Check
 
-on: [pull_request]
+on:
+  pull_request:
+    paths:
+      - 'agentops/**'
+      - 'tests/**'
+      - 'examples/**'
 
 jobs:
   tach-check:

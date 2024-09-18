@@ -1,0 +1,77 @@
+name: Add Notebook Examples to Docs
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'examples/**'
+      - 'docs/v1/examples/**'
+      
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  add-notebook-examples-to-docs:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.x'
+
+      - name: Install dependencies
+        run: |
+          pip install jupyter nbconvert
+
+      - name: Convert notebooks to markdown and add to docs
+        run: |
+          set -x  # Enable debug mode
+          for file in docs/v1/examples/*.mdx; do
+            echo "Processing file: $file"
+            source_file=$(grep -oP '(?<=\{/\*  SOURCE_FILE: ).*(?=  \*/\})' "$file" || true)
+            if [[ -z "$source_file" ]]; then
+              echo "Error: No source file found in $file, skipping..." >&2
+              continue
+            fi
+            echo "Source file: $source_file"
+            if [[ -f "$source_file" ]]; then
+              echo "Converting notebook to markdown"
+              jupyter nbconvert --to markdown "$source_file" || { echo "Error: Failed to convert $source_file" >&2; continue; }
+              markdown_file="${source_file%.ipynb}.md"
+              echo "Appending markdown to $file"
+              echo -e "\n\n" >> "$file"
+              cat "$markdown_file" >> "$file" || { echo "Error: Failed to append markdown to $file" >&2; continue; }
+              rm "$markdown_file" || { echo "Error: Failed to remove $markdown_file" >&2; continue; }
+            else
+              echo "Error: Source file not found: $source_file" >&2
+            fi
+          done
+
+      - name: Commit changes
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          git add docs/v1/examples/*.mdx
+          git diff --quiet && git diff --staged --quiet || git commit -m "GitHub Action: Update examples in docs from notebooks"
+
+      - name: Create Pull Request
+        uses: peter-evans/create-pull-request@v5
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          commit-message: Update examples in docs from notebooks
+          title: 'Update examples in docs from notebooks'
+          body: |
+            This PR updates the examples in the docs from the corresponding notebooks.
+            Please review the changes before merging.
+          branch: update-docs-examples
+          base: main
+#   - name: Push changes
+#     uses: ad-m/github-push-action@master
+#     with:
+#       github_token: ${{ secrets.GITHUB_TOKEN }}
+#       branch: main
