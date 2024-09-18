@@ -266,3 +266,7 @@ class HttpClient:
                 "error_type": error_type,
             }
         )
+
+        logger.warning(
+            f"An error occurred while communicating with the server: {error_type}"
+        )

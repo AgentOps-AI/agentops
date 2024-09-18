@@ -12,9 +12,6 @@ from agentops.http_client import (
 
 
 @patch("builtins.open", new_callable=mock_open, read_data='{"messages": []}')
-# @patch("os.path.exists", return_value=False)
-# @patch("os.path.isfile", return_value=False)
-# @patch("os.makedirs")
 class TestHttpClient(unittest.TestCase):
     MAX_RETRIES = 3
     RETRY_DELAY = 1
