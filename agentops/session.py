@@ -7,6 +7,7 @@ from decimal import ROUND_HALF_UP, Decimal
 from termcolor import colored
 from typing import Optional, List, Union
 from uuid import UUID, uuid4
+from dateutil import parser
 
 from .exceptions import ApiServerException
 from .enums import EndState
@@ -52,6 +53,13 @@ class Session:
         self.jwt = None
         self.lock = threading.Lock()
         self.queue = []
+        self.event_counts = {
+            "llms": 0,
+            "tools": 0,
+            "actions": 0,
+            "errors": 0,
+            "apis": 0,
+        }
 
         self.stop_flag = threading.Event()
         self.thread = threading.Thread(target=self._run)
@@ -97,6 +105,20 @@ class Session:
         self.thread.join(timeout=1)
         self._flush_queue()
 
+        def format_duration(start_time, end_time):
+            duration = parser.parse(end_time) - parser.parse(start_time)
+            hours, remainder = divmod(duration.total_seconds(), 3600)
+            minutes, seconds = divmod(remainder, 60)
+
+            parts = []
+            if hours > 0:
+                parts.append(f"{int(hours)}h")
+            if minutes > 0:
+                parts.append(f"{int(minutes)}m")
+            parts.append(f"{seconds:.1f}s")
+
+            return " ".join(parts)
+
         with self.lock:
             payload = {"session": self.__dict__}
             try:
@@ -111,22 +133,30 @@ class Session:
         logger.debug(res.body)
         token_cost = res.body.get("token_cost", "unknown")
 
+        formatted_duration = format_duration(self.init_timestamp, self.end_timestamp)
+
         if token_cost == "unknown" or token_cost is None:
-            logger.info("Could not determine cost of run.")
             token_cost_d = Decimal(0)
         else:
             token_cost_d = Decimal(token_cost)
-            logger.info(
-                "This run's cost ${}".format(
-                    "{:.2f}".format(token_cost_d)
-                    if token_cost_d == 0
-                    else "{:.6f}".format(
-                        token_cost_d.quantize(
-                            Decimal("0.000001"), rounding=ROUND_HALF_UP
-                        )
-                    )
+            formatted_cost = (
+                "{:.2f}".format(token_cost_d)
+                if token_cost_d == 0
+                else "{:.6f}".format(
+                    token_cost_d.quantize(Decimal("0.000001"), rounding=ROUND_HALF_UP)
                 )
             )
+
+        analytics = (
+            f"Analytics for this run - "
+            f"LLM calls: {self.event_counts['llms']} | "
+            f"Tool calls: {self.event_counts['tools']} | "
+            f"Actions: {self.event_counts['actions']} | "
+            f"Errors: {self.event_counts['errors']} | "
+            f"Duration: {formatted_duration} | "
+            f"Cost: ${formatted_cost}"
+        )
+        logger.info(analytics)
 
         logger.info(
             colored(
@@ -292,6 +322,21 @@ class Session:
                 )
                 logger.debug(serialized_payload)
                 logger.debug("</AGENTOPS_DEBUG_OUTPUT>\n")
+
+                # Count total events created based on type
+                events = payload["events"]
+                for event in events:
+                    event_type = event["event_type"]
+                    if event_type == "llms":
+                        self.event_counts["llms"] += 1
+                    elif event_type == "tools":
+                        self.event_counts["tools"] += 1
+                    elif event_type == "actions":
+                        self.event_counts["actions"] += 1
+                    elif event_type == "errors":
+                        self.event_counts["errors"] += 1
+                    elif event_type == "apis":
+                        self.event_counts["apis"] += 1
 
     def _run(self) -> None:
         while not self.stop_flag.is_set():
