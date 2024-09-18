@@ -1,4 +1,4 @@
-name: Update Docs
+name: Add Notebook Examples to Docs
 
 on:
   push:
@@ -7,9 +7,13 @@ on:
     paths:
       - 'examples/**'
       - 'docs/v1/examples/**'
+      
+permissions:
+  contents: write
+  pull-requests: write
 
 jobs:
-  add-markdown-examples-to-docs:
+  add-notebook-examples-to-docs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
@@ -31,23 +35,20 @@ jobs:
             echo "Processing file: $file"
             source_file=$(grep -oP '(?<=\{/\*  SOURCE_FILE: ).*(?=  \*/\})' "$file" || true)
             if [[ -z "$source_file" ]]; then
-              echo "No source file found in $file, skipping..."
+              echo "Error: No source file found in $file, skipping..." >&2
               continue
             fi
             echo "Source file: $source_file"
             if [[ -f "$source_file" ]]; then
               echo "Converting notebook to markdown"
-              jupyter nbconvert --to markdown "$source_file" || { echo "Failed to convert $source_file"; continue; }
+              jupyter nbconvert --to markdown "$source_file" || { echo "Error: Failed to convert $source_file" >&2; continue; }
               markdown_file="${source_file%.ipynb}.md"
               echo "Appending markdown to $file"
               echo -e "\n\n" >> "$file"
-              cat "$markdown_file" >> "$file" || { echo "Failed to append markdown to $file"; continue; }
-              echo "Contents of $file after appending markdown:"
-              cat "$file"
-              echo "Removing temporary markdown file"
-              rm "$markdown_file" || { echo "Failed to remove $markdown_file"; continue; }
+              cat "$markdown_file" >> "$file" || { echo "Error: Failed to append markdown to $file" >&2; continue; }
+              rm "$markdown_file" || { echo "Error: Failed to remove $markdown_file" >&2; continue; }
             else
-              echo "Source file not found: $source_file"
+              echo "Error: Source file not found: $source_file" >&2
             fi
           done
 
