@@ -28,21 +28,21 @@ class MistralProvider(InstrumentedProvider):
         from mistralai import Chat
         from mistralai.types import UNSET, UNSET_SENTINEL
 
-        self.llm_event = LLMEvent(init_timestamp=init_timestamp, params=kwargs)
+        llm_event = LLMEvent(init_timestamp=init_timestamp, params=kwargs)
         if session is not None:
-            self.llm_event.session_id = session.session_id
+            llm_event.session_id = session.session_id
 
         def handle_stream_chunk(chunk: dict):
             # NOTE: prompt/completion usage not returned in response when streaming
             # We take the first ChatCompletionChunk and accumulate the deltas from all subsequent chunks to build one full chat completion
-            if self.llm_event.returns == None:
-                self.llm_event.returns = chunk.data
+            if llm_event.returns is None:
+                llm_event.returns = chunk.data
 
             try:
-                accumulated_delta = self.llm_event.returns.choices[0].delta
-                self.llm_event.agent_id = check_call_stack_for_agent_id()
-                self.llm_event.model = chunk.data.model
-                self.llm_event.prompt = kwargs["messages"]
+                accumulated_delta = llm_event.returns.choices[0].delta
+                llm_event.agent_id = check_call_stack_for_agent_id()
+                llm_event.model = chunk.data.model
+                llm_event.prompt = kwargs["messages"]
 
                 # NOTE: We assume for completion only choices[0] is relevant
                 choice = chunk.data.choices[0]
@@ -61,24 +61,24 @@ class MistralProvider(InstrumentedProvider):
 
                 if chunk.data.choices[0].finish_reason:
                     # Streaming is done. Record LLMEvent
-                    self.llm_event.returns.choices[0].finish_reason = (
+                    llm_event.returns.choices[0].finish_reason = (
                         choice.finish_reason
                     )
-                    self.llm_event.completion = {
+                    llm_event.completion = {
                         "role": accumulated_delta.role,
                         "content": accumulated_delta.content,
                         "tool_calls": accumulated_delta.tool_calls,
                     }
-                    self.llm_event.prompt_tokens = chunk.data.usage.prompt_tokens
-                    self.llm_event.completion_tokens = (
+                    llm_event.prompt_tokens = chunk.data.usage.prompt_tokens
+                    llm_event.completion_tokens = (
                         chunk.data.usage.completion_tokens
                     )
-                    self.llm_event.end_timestamp = get_ISO_time()
-                    self._safe_record(session, self.llm_event)
+                    llm_event.end_timestamp = get_ISO_time()
+                    self._safe_record(session, llm_event)
 
             except Exception as e:
                 self._safe_record(
-                    session, ErrorEvent(trigger_event=self.llm_event, exception=e)
+                    session, ErrorEvent(trigger_event=llm_event, exception=e)
                 )
 
                 kwargs_str = pprint.pformat(kwargs)
@@ -109,19 +109,19 @@ class MistralProvider(InstrumentedProvider):
             return async_generator()
 
         try:
-            self.llm_event.returns = response
-            self.llm_event.agent_id = check_call_stack_for_agent_id()
-            self.llm_event.model = response.model
-            self.llm_event.prompt = kwargs["messages"]
-            self.llm_event.prompt_tokens = response.usage.prompt_tokens
-            self.llm_event.completion = response.choices[0].message.model_dump()
-            self.llm_event.completion_tokens = response.usage.completion_tokens
-            self.llm_event.end_timestamp = get_ISO_time()
+            llm_event.returns = response
+            llm_event.agent_id = check_call_stack_for_agent_id()
+            llm_event.model = response.model
+            llm_event.prompt = kwargs["messages"]
+            llm_event.prompt_tokens = response.usage.prompt_tokens
+            llm_event.completion = response.choices[0].message.model_dump()
+            llm_event.completion_tokens = response.usage.completion_tokens
+            llm_event.end_timestamp = get_ISO_time()
 
-            self._safe_record(session, self.llm_event)
+            self._safe_record(session, llm_event)
         except Exception as e:
             self._safe_record(
-                session, ErrorEvent(trigger_event=self.llm_event, exception=e)
+                session, ErrorEvent(trigger_event=llm_event, exception=e)
             )
             kwargs_str = pprint.pformat(kwargs)
             response = pprint.pformat(response)
