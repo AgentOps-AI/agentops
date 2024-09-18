@@ -51,7 +51,7 @@ Start a new [Session](/v1/concepts/sessions) for recording events.
 
 ### `end_session()`
 
-End the current session with the AgentOps service.
+Ends the current session with the AgentOps service.
 
 **Parameters**:
 
@@ -113,8 +113,8 @@ Set the parent API key which has visibility over projects it is a parent of.
 
 ### `stop_instrumenting()`
 
-Stop instrumenting LLM calls. This is typically used by agent frameworks (i.e. [CrewAI](/v1/integrations/crewai),
-[autogen](/v1/integrations/autogen)) to stop using the AgentOps auto instrumentation of LLM libraries like OpenAI. This
+Stops instrumenting LLM calls. This is typically used by agent frameworks (i.e., [CrewAI](/v1/integrations/crewai) and
+[autogen](/v1/integrations/autogen)) to stop using AgentOps' auto-instrumentation of LLM libraries such as OpenAI. This
 allows these frameworks to use their own instrumenting or callback handler.
 
 
@@ -151,7 +151,7 @@ Stores the configuration settings for AgentOps clients.
 [Reference](/v1/usage/langchain-callback-handler)
 
 This callback handler is intended to be used as an option in place of AgentOps auto-instrumenting. This is only useful
-when using Langchain as your LLM calling library.
+when using LangChain as your LLM calling library.
 
 <script type="module" src="/scripts/github_stars.js"></script>
 <script type="module" src="/scripts/link_to_api_button.js"></script>
