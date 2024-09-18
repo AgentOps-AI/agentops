@@ -8,7 +8,8 @@ from .exceptions import ApiServerException
 from dotenv import load_dotenv
 import os
 
-from .singleton import singleton
+from .helpers import ensure_dead_letter_queue
+import json
 
 load_dotenv()
 
@@ -28,25 +29,43 @@ class HttpStatus(Enum):
     UNKNOWN = -1
 
 
-# @singleton
 class DeadLetterQueue:
     def __init__(self):
         self.queue: List[dict] = []
         self.is_testing = os.environ.get("ENVIRONMENT") == "test"
 
+        # if not self.is_testing:
+        self.file_path = ensure_dead_letter_queue()
+
+    def read_queue(self):
+        if not self.is_testing:
+            with open(self.file_path, "r") as f:
+                return json.load(f)["messages"]
+        else:
+            return []
+
+    def write_queue(self):
+        if not self.is_testing:
+            with open(self.file_path, "w") as f:
+                json.dump({"messages": self.queue}, f)
+
     def add(self, request_data: dict):
         if not self.is_testing:
             self.queue.append(request_data)
+            self.write_queue()
 
     def get_all(self) -> List[dict]:
         return self.queue
 
     def remove(self, request_data: dict):
         if not self.is_testing:
-            self.queue.remove(request_data)
+            if request_data in self.queue:
+                self.queue.remove(request_data)
+                self.write_queue()
 
     def clear(self):
         self.queue.clear()
+        self.write_queue()
 
 
 dead_letter_queue = DeadLetterQueue()
