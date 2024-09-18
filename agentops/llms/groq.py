@@ -37,21 +37,21 @@ class GroqProvider(InstrumentedProvider):
         from groq.resources.chat import AsyncCompletions
         from groq.types.chat import ChatCompletionChunk
 
-        self.llm_event = LLMEvent(init_timestamp=init_timestamp, params=kwargs)
+        llm_event = LLMEvent(init_timestamp=init_timestamp, params=kwargs)
         if session is not None:
-            self.llm_event.session_id = session.session_id
+            llm_event.session_id = session.session_id
 
         def handle_stream_chunk(chunk: ChatCompletionChunk):
             # NOTE: prompt/completion usage not returned in response when streaming
             # We take the first ChatCompletionChunk and accumulate the deltas from all subsequent chunks to build one full chat completion
-            if self.llm_event.returns == None:
-                self.llm_event.returns = chunk
+            if llm_event.returns == None:
+                llm_event.returns = chunk
 
             try:
-                accumulated_delta = self.llm_event.returns.choices[0].delta
-                self.llm_event.agent_id = check_call_stack_for_agent_id()
-                self.llm_event.model = chunk.model
-                self.llm_event.prompt = kwargs["messages"]
+                accumulated_delta = llm_event.returns.choices[0].delta
+                llm_event.agent_id = check_call_stack_for_agent_id()
+                llm_event.model = chunk.model
+                llm_event.prompt = kwargs["messages"]
 
                 # NOTE: We assume for completion only choices[0] is relevant
                 choice = chunk.choices[0]
@@ -70,21 +70,19 @@ class GroqProvider(InstrumentedProvider):
 
                 if choice.finish_reason:
                     # Streaming is done. Record LLMEvent
-                    self.llm_event.returns.choices[0].finish_reason = (
-                        choice.finish_reason
-                    )
-                    self.llm_event.completion = {
+                    llm_event.returns.choices[0].finish_reason = choice.finish_reason
+                    llm_event.completion = {
                         "role": accumulated_delta.role,
                         "content": accumulated_delta.content,
                         "function_call": accumulated_delta.function_call,
                         "tool_calls": accumulated_delta.tool_calls,
                     }
-                    self.llm_event.end_timestamp = get_ISO_time()
+                    llm_event.end_timestamp = get_ISO_time()
 
-                    self._safe_record(session, self.llm_event)
+                    self._safe_record(session, llm_event)
             except Exception as e:
                 self._safe_record(
-                    session, ErrorEvent(trigger_event=self.llm_event, exception=e)
+                    session, ErrorEvent(trigger_event=llm_event, exception=e)
                 )
 
                 kwargs_str = pprint.pformat(kwargs)
@@ -127,19 +125,17 @@ class GroqProvider(InstrumentedProvider):
 
         # v1.0.0+ responses are objects
         try:
-            self.llm_event.returns = response.model_dump()
-            self.llm_event.agent_id = check_call_stack_for_agent_id()
-            self.llm_event.prompt = kwargs["messages"]
-            self.llm_event.prompt_tokens = response.usage.prompt_tokens
-            self.llm_event.completion = response.choices[0].message.model_dump()
-            self.llm_event.completion_tokens = response.usage.completion_tokens
-            self.llm_event.model = response.model
+            llm_event.returns = response.model_dump()
+            llm_event.agent_id = check_call_stack_for_agent_id()
+            llm_event.prompt = kwargs["messages"]
+            llm_event.prompt_tokens = response.usage.prompt_tokens
+            llm_event.completion = response.choices[0].message.model_dump()
+            llm_event.completion_tokens = response.usage.completion_tokens
+            llm_event.model = response.model
 
-            self._safe_record(session, self.llm_event)
+            self._safe_record(session, llm_event)
         except Exception as e:
-            self._safe_record(
-                session, ErrorEvent(trigger_event=self.llm_event, exception=e)
-            )
+            self._safe_record(session, ErrorEvent(trigger_event=llm_event, exception=e))
 
             kwargs_str = pprint.pformat(kwargs)
             response = pprint.pformat(response)

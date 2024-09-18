@@ -9,6 +9,8 @@ from .helpers import check_agentops_update
 from .log_config import logger
 from .session import Session
 import threading
+from importlib.metadata import version as get_version
+from packaging import version
 
 try:
     from .partners.langchain_callback_handler import (
@@ -23,7 +25,12 @@ if "autogen" in sys.modules:
     Client().add_default_tags(["autogen"])
 
 if "crewai" in sys.modules:
-    Client().configure(instrument_llm_calls=False)
+    crew_version = version.parse(get_version("crewai"))
+
+    # uses langchain, greater versions will use litellm and default is to instrument
+    if crew_version < version.parse("0.56.0"):
+        Client().configure(instrument_llm_calls=False)
+
     Client().add_default_tags(["crewai"])
 
 

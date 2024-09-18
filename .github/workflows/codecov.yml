@@ -2,9 +2,15 @@ name: Codecov
 
 on:
   push:
-    branches: [ main ]
+    branches:
+      - main
+    paths:
+      - 'agentops/**'
   pull_request:
-    branches: [ main ]
+    branches:
+      - main
+    paths:
+      - 'agentops/**'
 
 jobs:
   test:
