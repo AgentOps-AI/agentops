@@ -36,7 +36,6 @@ jobs:
             echo "Processing file: $file"
             source_file=$(grep -oP '(?<=\{/\*  SOURCE_FILE: ).*(?=  \*/\})' "$file" || true)
             if [[ -z "$source_file" ]]; then
-              echo "Error: No source file found in $file, skipping..." >&2
               continue
             fi
             echo "Source file: $source_file"
@@ -62,8 +61,20 @@ jobs:
           git add docs/v1/examples/*.mdx
           git diff --quiet && git diff --staged --quiet || git commit -m "GitHub Action: Update examples in docs from notebooks"
 
-      - name: Push changes
-        uses: ad-m/github-push-action@master
+      - name: Create Pull Request
+        uses: peter-evans/create-pull-request@v5
         with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          branch: main
+          token: ${{ secrets.GITHUB_TOKEN }}
+          commit-message: Update examples in docs from notebooks
+          title: 'Update examples in docs from notebooks'
+          body: |
+            This PR updates the examples in the docs from the corresponding notebooks.
+            Please review the changes before merging.
+          branch: update-docs-examples
+          base: main
+          
+#   - name: Push changes
+#     uses: ad-m/github-push-action@master
+#     with:
+#       github_token: ${{ secrets.GITHUB_TOKEN }}
+#       branch: main
