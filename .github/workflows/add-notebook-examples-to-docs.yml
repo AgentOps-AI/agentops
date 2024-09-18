@@ -35,7 +35,6 @@ jobs:
             echo "Processing file: $file"
             source_file=$(grep -oP '(?<=\{/\*  SOURCE_FILE: ).*(?=  \*/\})' "$file" || true)
             if [[ -z "$source_file" ]]; then
-              echo "Error: No source file found in $file, skipping..." >&2
               continue
             fi
             echo "Source file: $source_file"
