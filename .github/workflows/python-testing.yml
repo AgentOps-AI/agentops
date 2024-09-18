@@ -4,9 +4,15 @@ on:
   push:
     branches:
       - main
+    paths:
+      - 'agentops/**'
+      - 'tests/**'
   pull_request:
     branches:
       - main
+    paths:
+      - 'agentops/**'
+      - 'tests/**'
 
 jobs:
   build:

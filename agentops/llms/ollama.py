@@ -19,25 +19,25 @@ class OllamaProvider(InstrumentedProvider):
     def handle_response(
         self, response, kwargs, init_timestamp, session: Optional[Session] = None
     ) -> dict:
-        self.llm_event = LLMEvent(init_timestamp=init_timestamp, params=kwargs)
+        llm_event = LLMEvent(init_timestamp=init_timestamp, params=kwargs)
 
         def handle_stream_chunk(chunk: dict):
             message = chunk.get("message", {"role": None, "content": ""})
 
             if chunk.get("done"):
-                self.llm_event.completion["content"] += message.get("content")
-                self.llm_event.end_timestamp = get_ISO_time()
-                self.llm_event.model = f'ollama/{chunk.get("model")}'
-                self.llm_event.returns = chunk
-                self.llm_event.returns["message"] = self.llm_event.completion
-                self.llm_event.prompt = kwargs["messages"]
-                self.llm_event.agent_id = check_call_stack_for_agent_id()
-                self.client.record(self.llm_event)
+                llm_event.completion["content"] += message.get("content")
+                llm_event.end_timestamp = get_ISO_time()
+                llm_event.model = f'ollama/{chunk.get("model")}'
+                llm_event.returns = chunk
+                llm_event.returns["message"] = llm_event.completion
+                llm_event.prompt = kwargs["messages"]
+                llm_event.agent_id = check_call_stack_for_agent_id()
+                self.client.record(llm_event)
 
-            if self.llm_event.completion is None:
-                self.llm_event.completion = message
+            if llm_event.completion is None:
+                llm_event.completion = message
             else:
-                self.llm_event.completion["content"] += message.get("content")
+                llm_event.completion["content"] += message.get("content")
 
         if inspect.isgenerator(response):
 
@@ -48,15 +48,15 @@ class OllamaProvider(InstrumentedProvider):
 
             return generator()
 
-        self.llm_event.end_timestamp = get_ISO_time()
+        llm_event.end_timestamp = get_ISO_time()
 
-        self.llm_event.model = f'ollama/{response["model"]}'
-        self.llm_event.returns = response
-        self.llm_event.agent_id = check_call_stack_for_agent_id()
-        self.llm_event.prompt = kwargs["messages"]
-        self.llm_event.completion = response["message"]
+        llm_event.model = f'ollama/{response["model"]}'
+        llm_event.returns = response
+        llm_event.agent_id = check_call_stack_for_agent_id()
+        llm_event.prompt = kwargs["messages"]
+        llm_event.completion = response["message"]
 
-        self._safe_record(session, self.llm_event)
+        self._safe_record(session, llm_event)
         return response
 
     def override(self):
@@ -65,7 +65,7 @@ class OllamaProvider(InstrumentedProvider):
         self._override_chat_async_client()
 
     def undo_override(self):
-        if original_func is not None:
+        if original_func is not None and original_func != {}:
             import ollama
 
             ollama.chat = original_func["ollama.chat"]

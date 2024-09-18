@@ -31,27 +31,27 @@ class AnthropicProvider(InstrumentedProvider):
         from anthropic.resources import AsyncMessages
         from anthropic.types import Message
 
-        self.llm_event = LLMEvent(init_timestamp=init_timestamp, params=kwargs)
+        llm_event = LLMEvent(init_timestamp=init_timestamp, params=kwargs)
         if session is not None:
-            self.llm_event.session_id = session.session_id
+            llm_event.session_id = session.session_id
 
         def handle_stream_chunk(chunk: Message):
             try:
                 # We take the first chunk and accumulate the deltas from all subsequent chunks to build one full chat completion
                 if chunk.type == "message_start":
-                    self.llm_event.returns = chunk
-                    self.llm_event.agent_id = check_call_stack_for_agent_id()
-                    self.llm_event.model = kwargs["model"]
-                    self.llm_event.prompt = kwargs["messages"]
-                    self.llm_event.prompt_tokens = chunk.message.usage.input_tokens
-                    self.llm_event.completion = {
+                    llm_event.returns = chunk
+                    llm_event.agent_id = check_call_stack_for_agent_id()
+                    llm_event.model = kwargs["model"]
+                    llm_event.prompt = kwargs["messages"]
+                    llm_event.prompt_tokens = chunk.message.usage.input_tokens
+                    llm_event.completion = {
                         "role": chunk.message.role,
                         "content": "",  # Always returned as [] in this instance type
                     }
 
                 elif chunk.type == "content_block_start":
                     if chunk.content_block.type == "text":
-                        self.llm_event.completion["content"] += chunk.content_block.text
+                        llm_event.completion["content"] += chunk.content_block.text
 
                     elif chunk.content_block.type == "tool_use":
                         self.tool_id = chunk.content_block.id
@@ -62,7 +62,7 @@ class AnthropicProvider(InstrumentedProvider):
 
                 elif chunk.type == "content_block_delta":
                     if chunk.delta.type == "text_delta":
-                        self.llm_event.completion["content"] += chunk.delta.text
+                        llm_event.completion["content"] += chunk.delta.text
 
                     elif chunk.delta.type == "input_json_delta":
                         self.tool_event[self.tool_id].logs[
@@ -73,15 +73,15 @@ class AnthropicProvider(InstrumentedProvider):
                     pass
 
                 elif chunk.type == "message_delta":
-                    self.llm_event.completion_tokens = chunk.usage.output_tokens
+                    llm_event.completion_tokens = chunk.usage.output_tokens
 
                 elif chunk.type == "message_stop":
-                    self.llm_event.end_timestamp = get_ISO_time()
-                    self._safe_record(session, self.llm_event)
+                    llm_event.end_timestamp = get_ISO_time()
+                    self._safe_record(session, llm_event)
 
             except Exception as e:
                 self._safe_record(
-                    session, ErrorEvent(trigger_event=self.llm_event, exception=e)
+                    session, ErrorEvent(trigger_event=llm_event, exception=e)
                 )
 
                 kwargs_str = pprint.pformat(kwargs)
@@ -124,23 +124,21 @@ class AnthropicProvider(InstrumentedProvider):
 
         # Handle object responses
         try:
-            self.llm_event.returns = response.model_dump()
-            self.llm_event.agent_id = check_call_stack_for_agent_id()
-            self.llm_event.prompt = kwargs["messages"]
-            self.llm_event.prompt_tokens = response.usage.input_tokens
-            self.llm_event.completion = {
+            llm_event.returns = response.model_dump()
+            llm_event.agent_id = check_call_stack_for_agent_id()
+            llm_event.prompt = kwargs["messages"]
+            llm_event.prompt_tokens = response.usage.input_tokens
+            llm_event.completion = {
                 "role": "assistant",
                 "content": response.content[0].text,
             }
-            self.llm_event.completion_tokens = response.usage.output_tokens
-            self.llm_event.model = response.model
-            self.llm_event.end_timestamp = get_ISO_time()
+            llm_event.completion_tokens = response.usage.output_tokens
+            llm_event.model = response.model
+            llm_event.end_timestamp = get_ISO_time()
 
-            self._safe_record(session, self.llm_event)
+            self._safe_record(session, llm_event)
         except Exception as e:
-            self._safe_record(
-                session, ErrorEvent(trigger_event=self.llm_event, exception=e)
-            )
+            self._safe_record(session, ErrorEvent(trigger_event=llm_event, exception=e))
             kwargs_str = pprint.pformat(kwargs)
             response = pprint.pformat(response)
             logger.warning(
