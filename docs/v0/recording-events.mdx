@@ -18,7 +18,7 @@ def sample_function(...):
     ...
 ```
 
-The the decorator will record the function's parameters, returns, and the time duration. We suggest using this on functions that take a long time and contain nested functions. For example, if you decorate a function that makes several openai calls, then each openai call will show in the replay graph as a child of the decorated function.
+The decorator will record the function's parameters, returns, and the time duration. We suggest using this on functions that take a long time and contain nested functions. For example, if you decorate a function that makes several openai calls, then each openai call will show in the replay graph as a child of the decorated function.
 
 
 record_action:
@@ -36,7 +36,7 @@ ao_client.record(Event("event_type1"))
 ```
 
 In AgentOps, each session is associated with a number of "Events". Events have 
-must have an "event_type" which is any abitrary string of your choice. It might be something
+must have an "event_type" which is any arbitrary string of your choice. It might be something
 like "OpenAI Call". Events can also have other information such as the parameters of the operation,
 the returned data, alongside tags, etc.
 
