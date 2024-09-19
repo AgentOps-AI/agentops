@@ -5,14 +5,18 @@ on:
     branches:
       - main
     paths:
-      - 'agentops/**'
-      - 'tests/**'
+      - 'agentops/**/*.py'
+      - 'agentops/**/*.ipynb'
+      - 'tests/**/*.py'
+      - 'tests/**/*.ipynb'
   pull_request:
     branches:
       - main
     paths:
-      - 'agentops/**'
-      - 'tests/**'
+      - 'agentops/**/*.py'
+      - 'agentops/**/*.ipynb'
+      - 'tests/**/*.py'
+      - 'tests/**/*.ipynb'
 
 jobs:
   build:
