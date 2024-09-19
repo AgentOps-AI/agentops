@@ -11,6 +11,9 @@ on:
 
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 jobs:
   add-notebook-examples-to-docs:
     runs-on: ubuntu-latest
@@ -52,15 +55,14 @@ jobs:
             fi
           done
 
-      - name: Commit changes
+      - name: Commit and push changes
         run: |
-          git config --local user.email "action@github.com"
-          git config --local user.name "GitHub Action"
+          git config --global user.name 'Howard Gil'
+          git config --global user.email 'HowieG@users.noreply.github.com'
           git add docs/v1/examples/*.mdx
-          git diff --quiet && git diff --staged --quiet || git commit -m "GitHub Action: Update examples in docs from notebooks"
-          
-      - name: Push changes
-        uses: ad-m/github-push-action@master
-        with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          branch: main
+          if git diff --staged --quiet; then
+            echo "No changes to commit"
+          else
+            git commit -m "GitHub Action: Update examples in docs from notebooks"
+            git push
+          fi
