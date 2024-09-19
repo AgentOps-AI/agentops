@@ -61,18 +61,14 @@ class MistralProvider(InstrumentedProvider):
 
                 if choice.finish_reason:
                     # Streaming is done. Record LLMEvent
-                    llm_event.returns.choices[0].finish_reason = (
-                        choice.finish_reason
-                    )
+                    llm_event.returns.choices[0].finish_reason = choice.finish_reason
                     llm_event.completion = {
                         "role": accumulated_delta.role,
                         "content": accumulated_delta.content,
                         "tool_calls": accumulated_delta.tool_calls,
                     }
                     llm_event.prompt_tokens = chunk.data.usage.prompt_tokens
-                    llm_event.completion_tokens = (
-                        chunk.data.usage.completion_tokens
-                    )
+                    llm_event.completion_tokens = chunk.data.usage.completion_tokens
                     llm_event.end_timestamp = get_ISO_time()
                     self._safe_record(session, llm_event)
 
@@ -120,9 +116,7 @@ class MistralProvider(InstrumentedProvider):
 
             self._safe_record(session, llm_event)
         except Exception as e:
-            self._safe_record(
-                session, ErrorEvent(trigger_event=llm_event, exception=e)
-            )
+            self._safe_record(session, ErrorEvent(trigger_event=llm_event, exception=e))
             kwargs_str = pprint.pformat(kwargs)
             response = pprint.pformat(response)
             logger.warning(
