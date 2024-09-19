@@ -13,6 +13,7 @@ on:
 
 permissions:
   contents: write
+  pull-requests: write
 
 jobs:
   add-notebook-examples-to-docs:
@@ -55,14 +56,14 @@ jobs:
             fi
           done
 
-      - name: Add, commit, and push changes
-        run: |
-          git config --global user.name 'Howard Gil'
-          git config --global user.email 'HowieG@users.noreply.github.com'
-          git add docs/v1/examples/*.mdx
-          if git diff --staged --quiet; then
-            echo "No changes to commit"
-          else
-            git commit -m "GitHub Action: Update examples in docs from notebooks"
-            git push
-          fi
+      - name: Create Pull Request
+        uses: peter-evans/create-pull-request@v7
+        with:
+          committer: Howard Gil <howardbgil@gmail.com>
+          commit-message: GitHub Action - Update examples in docs from notebooks
+          title: GitHub Action - Update examples in docs from notebooks
+          body: Changes detected in examples/** or docs/v1/examples/** triggered an update of the docs/v1/examples/**.mdx files to incorporate markdown from the corresponding notebook in examples/**.
+          branch: update-examples-in-docs-from-notebooks
+          delete-branch: true
+          assignees: HowieG,siyangqiu,bboynton97,areibman
+          reviewers: HowieG,siyangqiu,bboynton97,areibman
