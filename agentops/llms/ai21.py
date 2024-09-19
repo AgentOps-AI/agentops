@@ -28,28 +28,81 @@ class AI21Provider(InstrumentedProvider):
     ):
         """Handle responses for AI21"""
 
-        self.llm_event = LLMEvent(init_timestamp=init_timestamp, params=kwargs)
+        llm_event = LLMEvent(init_timestamp=init_timestamp, params=kwargs)
         if session is not None:
-            self.llm_event.session_id = session.session_id
+            llm_event.session_id = session.session_id
 
-        def handle_stream_chunk(chunk):
-            pass
+        # def handle_stream_chunk(chunk: dict):
+        #     # We take the first ChatCompletionChunk and accumulate the deltas from all subsequent chunks to build one full chat completion
+        #     if llm_event.returns is None:
+        #         llm_event.returns = chunk.data
+
+        #     try:
+        #         accumulated_delta = llm_event.returns.choices[0].delta
+        #         llm_event.agent_id = check_call_stack_for_agent_id()
+        #         llm_event.model = chunk.data.model
+        #         llm_event.prompt = kwargs["messages"]
+
+        #         # NOTE: We assume for completion only choices[0] is relevant
+        #         choice = chunk.data.choices[0]
+
+        #         if choice.delta.content:
+        #             accumulated_delta.content += choice.delta.content
+
+        #         if choice.delta.role:
+        #             accumulated_delta.role = choice.delta.role
+
+        #         # Check if tool_calls is Unset and set to None if it is
+        #         if choice.delta.tool_calls in (UNSET, UNSET_SENTINEL):
+        #             accumulated_delta.tool_calls = None
+        #         elif choice.delta.tool_calls:
+        #             accumulated_delta.tool_calls = choice.delta.tool_calls
+
+        #         if chunk.data.choices[0].finish_reason:
+        #             # Streaming is done. Record LLMEvent
+        #             llm_event.returns.choices[0].finish_reason = (
+        #                 choice.finish_reason
+        #             )
+        #             llm_event.completion = {
+        #                 "role": accumulated_delta.role,
+        #                 "content": accumulated_delta.content,
+        #                 "tool_calls": accumulated_delta.tool_calls,
+        #             }
+        #             llm_event.prompt_tokens = chunk.data.usage.prompt_tokens
+        #             llm_event.completion_tokens = (
+        #                 chunk.data.usage.completion_tokens
+        #             )
+        #             llm_event.end_timestamp = get_ISO_time()
+        #             self._safe_record(session, llm_event)
+
+        #     except Exception as e:
+        #         self._safe_record(
+        #             session, ErrorEvent(trigger_event=llm_event, exception=e)
+        #         )
+
+        #         kwargs_str = pprint.pformat(kwargs)
+        #         chunk = pprint.pformat(chunk)
+        #         logger.warning(
+        #             f"Unable to parse a chunk for LLM call. Skipping upload to AgentOps\n"
+        #             f"chunk:\n {chunk}\n"
+        #             f"kwargs:\n {kwargs_str}\n"
+        #         )
 
         # Handle object responses
         try:
-            self.llm_event.returns = response.model_dump()
-            self.llm_event.agent_id = check_call_stack_for_agent_id()
-            self.llm_event.prompt = kwargs["messages"]
-            self.llm_event.prompt_tokens = response.usage.prompt_tokens
-            self.llm_event.completion = response.choices[0].message.model_dump()
-            self.llm_event.completion_tokens = response.usage.completion_tokens
-            self.llm_event.model = kwargs["model"]
-            self.llm_event.end_timestamp = get_ISO_time()
+            llm_event.returns = response
+            llm_event.agent_id = check_call_stack_for_agent_id()
+            llm_event.model = kwargs["model"]
+            llm_event.prompt = [message.model_dump() for message in kwargs["messages"]]
+            llm_event.prompt_tokens = response.usage.prompt_tokens
+            llm_event.completion = response.choices[0].message.model_dump()
+            llm_event.completion_tokens = response.usage.completion_tokens
+            llm_event.end_timestamp = get_ISO_time()
 
-            self._safe_record(session, self.llm_event)
+            self._safe_record(session, llm_event)
         except Exception as e:
             self._safe_record(
-                session, ErrorEvent(trigger_event=self.llm_event, exception=e)
+                session, ErrorEvent(trigger_event=llm_event, exception=e)
             )
             kwargs_str = pprint.pformat(kwargs)
             response = pprint.pformat(response)
@@ -68,7 +121,22 @@ class AI21Provider(InstrumentedProvider):
         self._override_stream_async()
 
     def _override_completion(self):
-        pass
+        from ai21.clients.studio.resources.chat import ChatCompletions
+
+        global original_chat
+        original_chat = ChatCompletions.create
+
+        def patched_function(*args, **kwargs):
+            # Call the original function with its original arguments
+            init_timestamp = get_ISO_time()
+            session = kwargs.get("session", None)
+            if "session" in kwargs.keys():
+                del kwargs["session"]
+            result = original_chat(*args, **kwargs)
+            return self.handle_response(result, kwargs, init_timestamp, session=session)
+
+        # Override the original method with the patched one
+        ChatCompletions.create = patched_function
 
     def _override_complete_async(self):
         pass
