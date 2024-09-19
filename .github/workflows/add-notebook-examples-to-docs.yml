@@ -7,8 +7,10 @@ on:
     paths:
       - 'examples/**'
       - 'docs/v1/examples/**'
-      - '.github/workflows/add-markdown-examples-to-docs.yml'
-      
+      - '.github/workflows/add-notebook-examples-to-docs.yml'
+
+  workflow_dispatch:
+
 permissions:
   contents: write
   pull-requests: write
