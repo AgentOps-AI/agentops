@@ -48,7 +48,7 @@ jobs:
               echo "Removing existing content after {/* SOURCE_FILE: ... */}"
               sed -i '\#{/\*  SOURCE_FILE:#,$d' "$file"
               echo "Appending markdown to $file"
-              echo -e "\n{/*  SOURCE_FILE: $source_file  */}\n" >> "$file"
+              echo -e "{/*  SOURCE_FILE: $source_file  */}\n" >> "$file"
               cat "$markdown_file" >> "$file" || { echo "Error: Failed to append markdown to $file" >&2; continue; }
               rm "$markdown_file" || { echo "Error: Failed to remove $markdown_file" >&2; continue; }
             else
