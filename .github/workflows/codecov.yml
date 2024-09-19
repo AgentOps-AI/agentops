@@ -5,12 +5,12 @@ on:
     branches:
       - main
     paths:
-      - 'agentops/**'
+      - 'agentops/**/*.py'
   pull_request:
     branches:
       - main
     paths:
-      - 'agentops/**'
+      - 'agentops/**/*.py'
 
 jobs:
   test:

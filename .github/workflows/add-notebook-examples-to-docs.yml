@@ -7,8 +7,10 @@ on:
     paths:
       - 'examples/**'
       - 'docs/v1/examples/**'
-      - '.github/workflows/add-markdown-examples-to-docs.yml'
-      
+      - '.github/workflows/add-notebook-examples-to-docs.yml'
+
+  workflow_dispatch:
+
 permissions:
   contents: write
   pull-requests: write
@@ -44,7 +46,7 @@ jobs:
               jupyter nbconvert --to markdown "$source_file" || { echo "Error: Failed to convert $source_file" >&2; continue; }
               markdown_file="${source_file%.ipynb}.md"
               echo "Removing existing content after {/* SOURCE_FILE: ... */}"
-              sed -i '/\{\/\*  SOURCE_FILE:/,$d' "$file"
+              sed -i '\#{/\*  SOURCE_FILE:#,$d' "$file"
               echo "Appending markdown to $file"
               echo -e "\n{/*  SOURCE_FILE: $source_file  */}\n" >> "$file"
               cat "$markdown_file" >> "$file" || { echo "Error: Failed to append markdown to $file" >&2; continue; }
