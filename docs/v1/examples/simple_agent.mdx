@@ -5,4 +5,123 @@ mode: "wide"
 ---
 _View Notebook on <a href={'https://github.com/AgentOps-AI/agentops/blob/main/examples/openai-gpt.ipynb'} target={'_blank'}>Github</a>_
 
+
 {/*  SOURCE_FILE: examples/openai-gpt.ipynb  */}
+
+# AgentOps Basic Monitoring 
+This is an example of how to use the AgentOps library for basic Agent monitoring with OpenAI's GPT
+
+First let's install the required packages
+
+
+```python
+%pip install -U openai
+%pip install -U agentops
+%pip install -U python-dotenv
+```
+
+Then import them
+
+
+```python
+from openai import OpenAI
+import agentops
+import os
+from dotenv import load_dotenv
+```
+
+Next, we'll set our API keys. There are several ways to do this, the code below is just the most foolproof way for the purposes of this notebook. It accounts for both users who use environment variables and those who just want to set the API Key here in this notebook.
+
+[Get an AgentOps API key](https://agentops.ai/settings/projects)
+
+1. Create an environment variable in a .env file or other method. By default, the AgentOps `init()` function will look for an environment variable named `AGENTOPS_API_KEY`. Or...
+
+2. Replace `<your_agentops_key>` below and pass in the optional `api_key` parameter to the AgentOps `init(api_key=...)` function. Remember not to commit your API key to a public repo!
+
+
+```python
+load_dotenv()
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY") or "<your_openai_key>"
+AGENTOPS_API_KEY = os.getenv("AGENTOPS_API_KEY") or "<your_agentops_key>"
+```
+
+The AgentOps library is designed to be a plug-and-play replacement for the OpenAI Client, maximizing use with minimal install effort.
+
+
+```python
+openai = OpenAI(api_key=OPENAI_API_KEY)
+agentops.init(AGENTOPS_API_KEY, default_tags=["openai-gpt-notebook"])
+```
+
+Now just use OpenAI as you would normally!
+
+## Single Session with ChatCompletion
+
+
+```python
+message = [{"role": "user", "content": "Write a 12 word poem about secret agents."}]
+response = openai.chat.completions.create(
+    model="gpt-3.5-turbo", messages=message, temperature=0.5, stream=False
+)
+print(response.choices[0].message.content)
+```
+
+Make sure to end your session with a `Result` (Success|Fail|Indeterminate) for better tracking
+
+
+```python
+agentops.end_session("Success")
+```
+
+Now if you check the AgentOps dashboard, you should see information related to this run!
+
+# Events
+Additionally, you can track custom events via AgentOps.
+Let's start a new session and record some events 
+
+
+```python
+# Create new session
+agentops.start_session(tags=["openai-gpt-notebook-events"])
+```
+
+The easiest way to record actions is through the use of AgentOp's decorators
+
+
+```python
+from agentops import record_action
+
+
+@record_action("add numbers")
+def add(x, y):
+    return x + y
+
+
+add(2, 4)
+```
+
+We can also manually craft an event exactly the way we want
+
+
+```python
+from agentops import ActionEvent
+
+message = ({"role": "user", "content": "Hello"},)
+response = openai.chat.completions.create(
+    model="gpt-3.5-turbo", messages=message, temperature=0.5
+)
+
+if "hello" in str(response.choices[0].message.content).lower():
+    agentops.record(
+        ActionEvent(
+            action_type="Agent says hello",
+            params=str(message),
+            returns=str(response.choices[0].message.content),
+        )
+    )
+```
+
+
+```python
+agentops.end_session("Success")
+```

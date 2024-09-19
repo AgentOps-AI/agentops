@@ -5,4 +5,325 @@ mode: "wide"
 ---
 _View Notebook on <a href={'https://github.com/AgentOps-AI/agentops/blob/48ae12d4e4e085eed57346f1c40a054097431937/examples/langchain_examples.ipynb'} target={'_blank'}>Github</a>_
 
+
 {/*  SOURCE_FILE: examples/langchain_examples/langchain_examples.ipynb  */}
+
+# AgentOps Langchain Agent Implementation
+
+Using AgentOps monitoring with Langchain is simple. We've created a LangchainCallbackHandler that will do all of the heavy lifting!
+
+First let's install the required packages
+
+
+```python
+%pip install langchain==0.2.9
+%pip install langchain_openai
+%pip install -U agentops
+%pip install -U python-dotenv
+```
+
+Then import them
+
+
+```python
+import os
+from langchain_openai import ChatOpenAI
+from langchain.agents import tool, AgentExecutor, create_openai_tools_agent
+from dotenv import load_dotenv
+from langchain_core.prompts import ChatPromptTemplate
+```
+
+The only difference with using AgentOps is that we'll also import this special Callback Handler
+
+
+```python
+from agentops.partners.langchain_callback_handler import (
+    LangchainCallbackHandler as AgentOpsLangchainCallbackHandler,
+)
+```
+
+Next, we'll set our API keys. There are several ways to do this, the code below is just the most foolproof way for the purposes of this notebook. It accounts for both users who use environment variables and those who just want to set the API Key here in this notebook.
+
+[Get an AgentOps API key](https://agentops.ai/settings/projects)
+
+1. Create an environment variable in a .env file or other method. By default, the AgentOps `init()` function will look for an environment variable named `AGENTOPS_API_KEY`. Or...
+
+2. Replace `<your_agentops_key>` below and pass in the optional `api_key` parameter to the AgentOps `init(api_key=...)` function. Remember not to commit your API key to a public repo!
+
+
+```python
+load_dotenv()
+AGENTOPS_API_KEY = os.environ.get("AGENTOPS_API_KEY")
+OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY")
+```
+
+This is where AgentOps comes into play. Before creating our LLM instance via Langchain, first we'll create an instance of the AO LangchainCallbackHandler. After the handler is initialized, a session will be recorded automatically.
+
+Pass in your API key, and optionally any tags to describe this session for easier lookup in the AO dashboard.
+
+agentops_handler = AgentOpsLangchainCallbackHandler(
+    api_key=AGENTOPS_API_KEY, default_tags=["Langchain Example"]
+)
+
+
+
+```python
+agentops_handler = AgentOpsLangchainCallbackHandler(
+    api_key=AGENTOPS_API_KEY, default_tags=["Langchain Example"]
+)
+
+llm = ChatOpenAI(
+    openai_api_key=OPENAI_API_KEY, callbacks=[agentops_handler], model="gpt-3.5-turbo"
+)
+
+# You must pass in a callback handler to record your agent
+llm.callbacks = [agentops_handler]
+
+prompt = ChatPromptTemplate.from_messages(
+    [
+        ("system", "You are a helpful assistant. Respond only in Spanish."),
+        ("human", "{input}"),
+        # Placeholders fill up a **list** of messages
+        ("placeholder", "{agent_scratchpad}"),
+        # ("tool_names", "find_movie")
+    ]
+)
+```
+
+You can also retrieve the `session_id` of the newly created session.
+
+
+```python
+print("Agent Ops session ID: " + str(agentops_handler.current_session_ids))
+```
+
+Agents generally use tools. Let's define a simple tool here. Tool usage is also recorded.
+
+
+```python
+@tool
+def find_movie(genre: str) -> str:
+    """Find available movies"""
+    if genre == "drama":
+        return "Dune 2"
+    else:
+        return "Pineapple Express"
+
+
+tools = [find_movie]
+```
+
+For each tool, you need to also add the callback handler
+
+
+```python
+for t in tools:
+    t.callbacks = [agentops_handler]
+```
+
+Add the tools to our LLM
+
+
+```python
+llm_with_tools = llm.bind_tools([find_movie])
+```
+
+Finally, let's create our agent! Pass in the callback handler to the agent, and all the actions will be recorded in the AO Dashboard
+
+
+```python
+agent = create_openai_tools_agent(llm, tools, prompt)
+agent_executor = AgentExecutor(agent=agent, tools=tools)
+```
+
+
+```python
+agent_executor.invoke(
+    {"input": "What comedies are playing?"}, config={"callback": [agentops_handler]}
+)
+```
+
+## Check your session
+Finally, check your run on [AgentOps](https://app.agentops.ai)
+
+Now if we look in the AgentOps dashboard, you will see a session recorded with the LLM calls and tool usage.
+
+## Langchain V0.1 Example
+This example is out of date. You can uncomment all the following cells and the example will run but AgentOps is deprecating support.
+
+
+```python
+# %pip install langchain==0.1.6
+```
+
+
+```python
+# import os
+# from langchain_openai import ChatOpenAI
+# from langchain.agents import initialize_agent, AgentType
+# from langchain.agents import tool
+```
+
+The only difference with using AgentOps is that we'll also import this special Callback Handler
+
+
+```python
+# from agentops.partners.langchain_callback_handler import (
+#     LangchainCallbackHandler as AgentOpsLangchainCallbackHandler,
+# )
+```
+
+Next, we'll grab our two API keys.
+
+
+```python
+# from dotenv import load_dotenv
+
+# load_dotenv()
+```
+
+This is where AgentOps comes into play. Before creating our LLM instance via Langchain, first we'll create an instance of the AO LangchainCallbackHandler. After the handler is initialized, a session will be recorded automatically.
+
+Pass in your API key, and optionally any tags to describe this session for easier lookup in the AO dashboard.
+
+
+```python
+# AGENTOPS_API_KEY = os.environ.get("AGENTOPS_API_KEY")
+# OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY")
+
+# agentops_handler = AgentOpsLangchainCallbackHandler(
+#     api_key=AGENTOPS_API_KEY, default_tags=["Langchain Example"]
+# )
+
+# llm = ChatOpenAI(
+#     openai_api_key=OPENAI_API_KEY, callbacks=[agentops_handler], model="gpt-3.5-turbo"
+# )
+```
+
+You can also retrieve the `session_id` of the newly created session.
+
+
+```python
+# print("Agent Ops session ID: " + str(agentops_handler.current_session_ids))
+```
+
+Agents generally use tools. Let's define a simple tool here. Tool usage is also recorded.
+
+
+```python
+# @tool
+# def find_movie(genre) -> str:
+#     """Find available movies"""
+#     if genre == "drama":
+#         return "Dune 2"
+#     else:
+#         return "Pineapple Express"
+
+
+# tools = [find_movie]
+```
+
+For each tool, you need to also add the callback handler
+
+
+```python
+# for t in tools:
+#     t.callbacks = [agentops_handler]
+```
+
+Finally, let's use our agent! Pass in the callback handler to the agent, and all the actions will be recorded in the AO Dashboard
+
+
+```python
+# agent = initialize_agent(
+#     tools,
+#     llm,
+#     agent=AgentType.CHAT_ZERO_SHOT_REACT_DESCRIPTION,
+#     verbose=True,
+#     callbacks=[
+#         agentops_handler
+#     ],  # You must pass in a callback handler to record your agent
+#     handle_parsing_errors=True,
+# )
+```
+
+
+```python
+# agent.invoke("What comedies are playing?", callbacks=[agentops_handler])
+```
+
+## Check your session
+Finally, check your run on [AgentOps](https://app.agentops.ai)
+
+# Async Agents
+
+Several langchain agents require async callback handlers. AgentOps also supports this.
+
+
+```python
+# import os
+# from langchain.chat_models import ChatOpenAI
+# from langchain.agents import initialize_agent, AgentType
+# from langchain.agents import tool
+```
+
+
+```python
+# from agentops.partners.langchain_callback_handler import (
+#     AsyncLangchainCallbackHandler as AgentOpsAsyncLangchainCallbackHandler,
+# )
+```
+
+
+```python
+# from dotenv import load_dotenv
+
+# load_dotenv()
+
+# AGENTOPS_API_KEY = os.environ.get("AGENTOPS_API_KEY")
+# OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY")
+```
+
+
+```python
+# agentops_handler = AgentOpsAsyncLangchainCallbackHandler(
+#     api_key=AGENTOPS_API_KEY, tags=["Async Example"]
+# )
+
+# llm = ChatOpenAI(
+#     openai_api_key=OPENAI_API_KEY, callbacks=[agentops_handler], model="gpt-3.5-turbo"
+# )
+
+# print("Agent Ops session ID: " + str(await agentops_handler.session_id))
+```
+
+
+```python
+# @tool
+# def find_movie(genre) -> str:
+#     """Find available movies"""
+#     if genre == "drama":
+#         return "Dune 2"
+#     else:
+#         return "Pineapple Express"
+
+
+# tools = [find_movie]
+
+# for t in tools:
+#     t.callbacks = [agentops_handler]
+```
+
+
+```python
+# agent = initialize_agent(
+#     tools,
+#     llm,
+#     agent=AgentType.CHAT_ZERO_SHOT_REACT_DESCRIPTION,
+#     verbose=True,
+#     handle_parsing_errors=True,
+#     callbacks=[agentops_handler],
+# )
+
+# await agent.arun("What comedies are playing?")
+```
