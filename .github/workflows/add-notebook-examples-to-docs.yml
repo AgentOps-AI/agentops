@@ -11,10 +11,6 @@ on:
 
   workflow_dispatch:
 
-permissions:
-  contents: write
-  pull-requests: write
-
 jobs:
   add-notebook-examples-to-docs:
     runs-on: ubuntu-latest
@@ -62,21 +58,9 @@ jobs:
           git config --local user.name "GitHub Action"
           git add docs/v1/examples/*.mdx
           git diff --quiet && git diff --staged --quiet || git commit -m "GitHub Action: Update examples in docs from notebooks"
-
-      - name: Create Pull Request
-        uses: peter-evans/create-pull-request@v5
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          commit-message: Update examples in docs from notebooks
-          title: 'Update examples in docs from notebooks'
-          body: |
-            This PR updates the examples in the docs from the corresponding notebooks.
-            Please review the changes before merging.
-          branch: update-docs-examples
-          base: main
           
-#   - name: Push changes
-#     uses: ad-m/github-push-action@master
-#     with:
-#       github_token: ${{ secrets.GITHUB_TOKEN }}
-#       branch: main
+      - name: Push changes
+        uses: ad-m/github-push-action@master
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          branch: main
