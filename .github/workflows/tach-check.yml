@@ -3,9 +3,8 @@ name: Tach Check
 on:
   pull_request:
     paths:
-      - 'agentops/**'
-      - 'tests/**'
-      - 'examples/**'
+      - '**/*.py'
+      - '**/*.ipynb'
 
 jobs:
   tach-check:

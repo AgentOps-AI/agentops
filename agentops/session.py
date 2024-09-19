@@ -7,7 +7,7 @@ from decimal import ROUND_HALF_UP, Decimal
 from termcolor import colored
 from typing import Optional, List, Union
 from uuid import UUID, uuid4
-from dateutil import parser
+from datetime import datetime
 
 from .exceptions import ApiServerException
 from .enums import EndState
@@ -106,7 +106,10 @@ class Session:
         self._flush_queue()
 
         def format_duration(start_time, end_time):
-            duration = parser.parse(end_time) - parser.parse(start_time)
+            start = datetime.fromisoformat(start_time.replace("Z", "+00:00"))
+            end = datetime.fromisoformat(end_time.replace("Z", "+00:00"))
+            duration = end - start
+
             hours, remainder = divmod(duration.total_seconds(), 3600)
             minutes, seconds = divmod(remainder, 60)
 
