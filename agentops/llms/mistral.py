@@ -59,7 +59,7 @@ class MistralProvider(InstrumentedProvider):
                 elif choice.delta.tool_calls:
                     accumulated_delta.tool_calls = choice.delta.tool_calls
 
-                if chunk.data.choices[0].finish_reason:
+                if choice.finish_reason:
                     # Streaming is done. Record LLMEvent
                     llm_event.returns.choices[0].finish_reason = (
                         choice.finish_reason
@@ -136,8 +136,8 @@ class MistralProvider(InstrumentedProvider):
     def _override_complete(self):
         from mistralai import Chat
 
-        global original_chat
-        original_chat = Chat.complete
+        global original_complete
+        original_complete = Chat.complete
 
         def patched_function(*args, **kwargs):
             # Call the original function with its original arguments
@@ -145,7 +145,7 @@ class MistralProvider(InstrumentedProvider):
             session = kwargs.get("session", None)
             if "session" in kwargs.keys():
                 del kwargs["session"]
-            result = original_chat(*args, **kwargs)
+            result = original_complete(*args, **kwargs)
             return self.handle_response(result, kwargs, init_timestamp, session=session)
 
         # Override the original method with the patched one
@@ -154,8 +154,8 @@ class MistralProvider(InstrumentedProvider):
     def _override_complete_async(self):
         from mistralai import Chat
 
-        global original_chat_async
-        original_chat_async = Chat.complete_async
+        global original_complete_async
+        original_complete_async = Chat.complete_async
 
         async def patched_function(*args, **kwargs):
             # Call the original function with its original arguments
@@ -163,7 +163,7 @@ class MistralProvider(InstrumentedProvider):
             session = kwargs.get("session", None)
             if "session" in kwargs.keys():
                 del kwargs["session"]
-            result = await original_chat_async(*args, **kwargs)
+            result = await original_complete_async(*args, **kwargs)
             return self.handle_response(result, kwargs, init_timestamp, session=session)
 
         # Override the original method with the patched one
