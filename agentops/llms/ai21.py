@@ -17,8 +17,6 @@ class AI21Provider(InstrumentedProvider):
 
     original_create = None
     original_create_async = None
-    # original_stream = None
-    # original_stream_async = None
 
     def __init__(self, client):
         super().__init__(client)
@@ -40,12 +38,16 @@ class AI21Provider(InstrumentedProvider):
             # We take the first ChatCompletionChunk and accumulate the deltas from all subsequent chunks to build one full chat completion
             if llm_event.returns is None:
                 llm_event.returns = chunk
+                # Manually setting content to empty string to avoid error
+                llm_event.returns.choices[0].delta.content = ""
 
             try:
                 accumulated_delta = llm_event.returns.choices[0].delta
                 llm_event.agent_id = check_call_stack_for_agent_id()
                 llm_event.model = kwargs["model"]
-                llm_event.prompt = [message.model_dump() for message in kwargs["messages"]]
+                llm_event.prompt = [
+                    message.model_dump() for message in kwargs["messages"]
+                ]
 
                 # NOTE: We assume for completion only choices[0] is relevant
                 choice = chunk.choices[0]
@@ -58,9 +60,7 @@ class AI21Provider(InstrumentedProvider):
 
                 if choice.finish_reason:
                     # Streaming is done. Record LLMEvent
-                    llm_event.returns.choices[0].finish_reason = (
-                        choice.finish_reason
-                    )
+                    llm_event.returns.choices[0].finish_reason = choice.finish_reason
                     llm_event.completion = {
                         "role": accumulated_delta.role,
                         "content": accumulated_delta.content,
@@ -84,15 +84,6 @@ class AI21Provider(InstrumentedProvider):
                 )
 
         # if the response is a generator, decorate the generator
-        # if isinstance(response, ChatCompletionChunk):
-
-        #     def generator():
-        #         for chunk in response:
-        #             handle_stream_chunk(chunk)
-        #             yield chunk
-
-        #     return generator()
-
         # For synchronous Stream
         if isinstance(response, Stream):
 
@@ -112,7 +103,6 @@ class AI21Provider(InstrumentedProvider):
                     yield chunk
 
             return async_generator()
-        
 
         # Handle object responses
         try:
@@ -127,9 +117,7 @@ class AI21Provider(InstrumentedProvider):
 
             self._safe_record(session, llm_event)
         except Exception as e:
-            self._safe_record(
-                session, ErrorEvent(trigger_event=llm_event, exception=e)
-            )
+            self._safe_record(session, ErrorEvent(trigger_event=llm_event, exception=e))
             kwargs_str = pprint.pformat(kwargs)
             response = pprint.pformat(response)
             logger.warning(
@@ -182,40 +170,6 @@ class AI21Provider(InstrumentedProvider):
         # Override the original method with the patched one
         AsyncChatCompletions.create = patched_function
 
-    # def _override_stream(self):
-    #     from ai21.clients.studio.resources.chat import ChatCompletions
-
-    #     global original_stream
-    #     original_stream = ChatCompletions.create
-
-    #     def patched_function(*args, **kwargs):
-    #         # Call the original function with its original arguments
-    #         init_timestamp = get_ISO_time()
-    #         session = kwargs.get("session", None)
-    #         if "session" in kwargs.keys():
-    #             del kwargs["session"]
-    #         result = original_stream(*args, **kwargs)
-    #         return self.handle_response(result, kwargs, init_timestamp, session=session)
-
-    #     ChatCompletions.create = patched_function
-
-    # def _override_stream_async(self):
-    #     from ai21.clients.studio.resources.chat import AsyncChatCompletions
-
-    #     global original_stream_async
-    #     original_stream_async = AsyncChatCompletions.create
-
-    #     async def patched_function(*args, **kwargs):
-    #         # Call the original function with its original arguments
-    #         init_timestamp = get_ISO_time()
-    #         session = kwargs.get("session", None)
-    #         if "session" in kwargs.keys():
-    #             del kwargs["session"]
-    #         result = await original_stream_async(*args, **kwargs)
-    #         return self.handle_response(result, kwargs, init_timestamp, session=session)
-
-    #     AsyncChatCompletions.create = patched_function
-
     def undo_override(self):
         if (
             self.original_create is not None
@@ -223,8 +177,10 @@ class AI21Provider(InstrumentedProvider):
             # and self.original_stream is not None
             # and self.original_stream_async is not None
         ):
-            from ai21.clients.studio.resources.chat import ChatCompletions, AsyncChatCompletions
+            from ai21.clients.studio.resources.chat import (
+                ChatCompletions,
+                AsyncChatCompletions,
+            )
 
             ChatCompletions.create = self.original_create
             AsyncChatCompletions.create = self.original_create_async
-
