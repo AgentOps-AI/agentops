@@ -58,6 +58,9 @@ class AI21Provider(InstrumentedProvider):
                 if choice.delta.role:
                     accumulated_delta.role = choice.delta.role
 
+                if choice.delta.tool_calls:
+                    accumulated_delta.tool_calls += ToolEvent(logs=choice.delta.tools)
+
                 if choice.finish_reason:
                     # Streaming is done. Record LLMEvent
                     llm_event.returns.choices[0].finish_reason = choice.finish_reason
@@ -131,8 +134,6 @@ class AI21Provider(InstrumentedProvider):
     def override(self):
         self._override_completion()
         self._override_completion_async()
-        # self._override_stream()
-        # self._override_stream_async()
 
     def _override_completion(self):
         from ai21.clients.studio.resources.chat import ChatCompletions
