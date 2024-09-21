@@ -305,8 +305,6 @@ def reauthorize_jwt(old_jwt: str, api_key: str, session_id: str) -> Union[str, N
         api_key,
     )
 
-    logger.debug(res.body)
-
     if res.code != 200:
         return None
 
