@@ -2,8 +2,10 @@ from typing import List, Optional
 from uuid import UUID
 
 from .log_config import logger
+from .singleton import singleton
 
 
+@singleton
 class Configuration:
     def __init__(self):
         self.api_key: Optional[str] = None

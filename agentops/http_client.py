@@ -1,14 +1,18 @@
+from datetime import datetime
 from enum import Enum
-from typing import Optional, List
+from typing import Optional, List, Union
+
+import jwt
 from requests.adapters import Retry, HTTPAdapter
 import requests
 from agentops.log_config import logger
+from .config import Configuration
 
 from .exceptions import ApiServerException
 from dotenv import load_dotenv
 import os
 
-from .helpers import ensure_dead_letter_queue
+from .helpers import ensure_dead_letter_queue, filter_unjsonable, safe_serialize
 import json
 
 load_dotenv()
@@ -47,7 +51,7 @@ class DeadLetterQueue:
     def write_queue(self):
         if not self.is_testing:
             with open(self.file_path, "w") as f:
-                json.dump({"messages": self.queue}, f)
+                json.dump({"messages": safe_serialize(self.queue)}, f)
 
     def add(self, request_data: dict):
         if not self.is_testing:
@@ -112,7 +116,7 @@ class HttpClient:
         payload: bytes,
         api_key: Optional[str] = None,
         parent_key: Optional[str] = None,
-        jwt: Optional[str] = None,
+        token: Optional[str] = None,
     ) -> Response:
         result = Response()
         try:
@@ -126,8 +130,23 @@ class HttpClient:
             if parent_key is not None:
                 JSON_HEADER["X-Agentops-Parent-Key"] = parent_key
 
-            if jwt is not None:
-                JSON_HEADER["Authorization"] = f"Bearer {jwt}"
+            if token is not None:
+                decoded_jwt = jwt.decode(
+                    token,
+                    algorithms=["HS256"],
+                    options={"verify_signature": False},
+                )
+
+                # if token is expired, reauth
+                if datetime.fromtimestamp(decoded_jwt["exp"]) < datetime.now():
+                    new_jwt = reauthorize_jwt(
+                        token,
+                        api_key,
+                        decoded_jwt["session_id"],
+                    )
+                    token = new_jwt
+
+                JSON_HEADER["Authorization"] = f"Bearer {token}"
 
             res = request_session.post(
                 url, data=payload, headers=JSON_HEADER, timeout=20
@@ -140,16 +159,18 @@ class HttpClient:
 
         except (requests.exceptions.Timeout, requests.exceptions.HTTPError) as e:
             HttpClient._handle_failed_request(
-                url, payload, api_key, parent_key, jwt, type(e).__name__
+                url, payload, api_key, parent_key, token, type(e).__name__
             )
             raise ApiServerException(f"{type(e).__name__}: {e}")
         except requests.exceptions.RequestException as e:
             HttpClient._handle_failed_request(
-                url, payload, api_key, parent_key, jwt, "RequestException"
+                url, payload, api_key, parent_key, token, "RequestException"
             )
             raise ApiServerException(f"RequestException: {e}")
 
         if result.code == 401:
+            if result.body.get("message") == "Expired Token":
+                raise ApiServerException(f"API server: jwt token expired.")
             raise ApiServerException(
                 f"API server: invalid API key: {api_key}. Find your API key at https://app.agentops.ai/settings/projects"
             )
@@ -160,7 +181,7 @@ class HttpClient:
                 raise ApiServerException(f"API server: {result.body}")
         if result.code == 500:
             HttpClient._handle_failed_request(
-                url, payload, api_key, parent_key, jwt, "ServerError"
+                url, payload, api_key, parent_key, token, "ServerError"
             )
             raise ApiServerException("API server: - internal server error")
 
@@ -170,7 +191,7 @@ class HttpClient:
     def get(
         url: str,
         api_key: Optional[str] = None,
-        jwt: Optional[str] = None,
+        token: Optional[str] = None,
     ) -> Response:
         result = Response()
         try:
@@ -181,8 +202,8 @@ class HttpClient:
             if api_key is not None:
                 JSON_HEADER["X-Agentops-Api-Key"] = api_key
 
-            if jwt is not None:
-                JSON_HEADER["Authorization"] = f"Bearer {jwt}"
+            if token is not None:
+                JSON_HEADER["Authorization"] = f"Bearer {token}"
 
             res = request_session.get(url, headers=JSON_HEADER, timeout=20)
 
@@ -193,12 +214,12 @@ class HttpClient:
 
         except (requests.exceptions.Timeout, requests.exceptions.HTTPError) as e:
             HttpClient._handle_failed_request(
-                url, None, api_key, None, jwt, type(e).__name__
+                url, None, api_key, None, token, type(e).__name__
             )
             raise ApiServerException(f"{type(e).__name__}: {e}")
         except requests.exceptions.RequestException as e:
             HttpClient._handle_failed_request(
-                url, None, api_key, None, jwt, "RequestException"
+                url, None, api_key, None, token, "RequestException"
             )
             raise ApiServerException(f"RequestException: {e}")
 
@@ -229,7 +250,9 @@ class HttpClient:
                     # Retry POST request from DLQ
                     HttpClient.post(
                         failed_request["url"],
-                        failed_request["payload"],
+                        json.dumps(filter_unjsonable(failed_request["payload"])).encode(
+                            "utf-8"
+                        ),
                         failed_request["api_key"],
                         failed_request["parent_key"],
                         failed_request["jwt"],
@@ -241,7 +264,7 @@ class HttpClient:
                         failed_request["api_key"],
                         failed_request["jwt"],
                     )
-            except ApiServerException:
+            except ApiServerException as e:
                 dead_letter_queue.add(failed_request)
                 # If it still fails, keep it in the DLQ
             except Exception as e:
@@ -270,3 +293,21 @@ class HttpClient:
         logger.warning(
             f"An error occurred while communicating with the server: {error_type}"
         )
+
+
+def reauthorize_jwt(old_jwt: str, api_key: str, session_id: str) -> Union[str, None]:
+    payload = {"jwt": old_jwt, "session_id": session_id}
+    serialized_payload = json.dumps(filter_unjsonable(payload)).encode("utf-8")
+    config = Configuration()
+    res = HttpClient.post(
+        f"{config.endpoint}/v2/reauthorize_jwt",
+        serialized_payload,
+        api_key,
+    )
+
+    logger.debug(res.body)
+
+    if res.code != 200:
+        return None
+
+    return res.body.get("jwt", None)

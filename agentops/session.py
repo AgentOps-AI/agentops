@@ -125,7 +125,7 @@ class Session:
                 res = HttpClient.post(
                     f"{self.config.endpoint}/v2/update_session",
                     json.dumps(filter_unjsonable(payload)).encode("utf-8"),
-                    jwt=self.jwt,
+                    token=self.jwt,
                 )
             except ApiServerException as e:
                 return logger.error(f"Could not end session - {e}")
@@ -289,7 +289,7 @@ class Session:
                 res = HttpClient.post(
                     f"{self.config.endpoint}/v2/update_session",
                     json.dumps(filter_unjsonable(payload)).encode("utf-8"),
-                    jwt=self.jwt,
+                    token=self.jwt,
                 )
             except ApiServerException as e:
                 return logger.error(f"Could not update session - {e}")
@@ -311,7 +311,7 @@ class Session:
                     HttpClient.post(
                         f"{self.config.endpoint}/v2/create_events",
                         serialized_payload,
-                        jwt=self.jwt,
+                        token=self.jwt,
                     )
                 except ApiServerException as e:
                     return logger.error(f"Could not post events - {e}")
@@ -360,7 +360,7 @@ class Session:
             HttpClient.post(
                 f"{self.config.endpoint}/v2/create_agent",
                 serialized_payload,
-                jwt=self.jwt,
+                token=self.jwt,
             )
         except ApiServerException as e:
             return logger.error(f"Could not create agent - {e}")
