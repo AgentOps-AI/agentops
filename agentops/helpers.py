@@ -59,20 +59,27 @@ def filter_unjsonable(d: dict) -> dict:
 
 def safe_serialize(obj):
     def default(o):
-        if isinstance(o, UUID):
-            return str(o)
-        elif hasattr(o, "model_dump_json"):
-            return o.model_dump_json()
-        elif hasattr(o, "to_json"):
-            return o.to_json()
-        elif hasattr(o, "json"):
-            return o.json()
-        elif hasattr(o, "to_dict"):
-            return o.to_dict()
-        elif hasattr(o, "dict"):
-            return o.dict()
-        else:
-            return f"<<non-serializable: {type(o).__qualname__}>>"
+        try:
+            if isinstance(o, UUID):
+                return str(o)
+            elif hasattr(o, "model_dump_json"):
+                return str(o.model_dump_json())
+            elif hasattr(o, "to_json"):
+                return str(o.to_json())
+            elif hasattr(o, "json"):
+                return str(o.json())
+            elif hasattr(o, "to_dict"):
+                return {k: str(v) for k, v in o.to_dict().items() if not callable(v)}
+            elif hasattr(o, "dict"):
+                return {k: str(v) for k, v in o.dict().items() if not callable(v)}
+            elif isinstance(o, dict):
+                return {k: str(v) for k, v in o.items()}
+            elif isinstance(o, list):
+                return [str(item) for item in o]
+            else:
+                return f"<<non-serializable: {type(o).__qualname__}>>"
+        except Exception as e:
+            return f"<<serialization-error: {str(e)}>>"
 
     def remove_unwanted_items(value):
         """Recursively remove self key and None/... values from dictionaries so they aren't serialized"""
