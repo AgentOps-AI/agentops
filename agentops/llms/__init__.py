@@ -41,7 +41,10 @@ class LlmTracker:
             "0.32.0": ("completions.create",),
         },
         "ai21": {
-            "2.0.0": ("chat.completions.create",),
+            "2.0.0": (
+                "chat.completions.create",
+                "client.answer.create",
+            ),
         },
     }
 
