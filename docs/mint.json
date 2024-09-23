@@ -79,7 +79,7 @@
       "pages": [
         "v1/usage/dashboard-info",
         "v1/usage/sdk-reference",
-        "v1/usage/environment-variables",
+        "v1/usage/advanced-configuration",
         "v1/usage/tracking-llm-calls",
         "v1/usage/tracking-agents",
         "v1/usage/recording-events",
