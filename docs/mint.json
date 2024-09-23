@@ -48,6 +48,11 @@
       "name": "Call my Agent (Support)",
       "icon": "headset",
       "url": "https://agentops.ai/contact"
+    },
+    {
+      "name": "Give Feedback",
+      "icon": "comment-smile",
+      "url": "https://agentops.ai/contact"
     }
   ],
   "navigation": [
@@ -112,10 +117,5 @@
       "apiKey": "phc_BrY3H11IViWSoUJ0QFfjBx7kEwIJMT0PjBEXZQmddW",
       "apiHost": "https://us.i.posthog.com"
     }
-  },
-  "feedback": {
-    "thumbsRating": true,
-    "suggestEdit": true,
-    "raiseIssue": true
   }
 }
