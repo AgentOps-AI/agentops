@@ -1,0 +1,53 @@
+name: 📚 Documentation Update
+description: Suggest an improvement or addition to our documentation
+title: "[Docs]: "
+labels: ["documentation"]
+assignees: []
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thank you for helping us improve AgentOps documentation! Your input is valuable in making our docs more helpful and comprehensive.
+  - type: textarea
+    id: current-state
+    attributes:
+      label: 📘 Current State of Documentation
+      description: What information is missing or could be improved?
+      placeholder: Describe the current state of the documentation you'd like to update.
+    validations:
+      required: true
+  - type: textarea
+    id: suggested-improvement
+    attributes:
+      label: 📖 Suggested Improvement
+      description: Describe your idea for the new/improved documentation.
+      placeholder: What changes or additions would you like to see?
+    validations:
+      required: true
+  - type: input
+    id: affected-pages
+    attributes:
+      label: 🔗 Affected Documentation Pages
+      description: If applicable, provide links to the documentation pages that need updating.
+      placeholder: https://docs.agentops.ai/page-to-update
+    validations:
+      required: false
+  - type: textarea
+    id: additional-context
+    attributes:
+      label: 🔍 Additional Context
+      description: Any extra information to help us understand the change?
+      placeholder: Provide any additional details or context for the documentation update.
+    validations:
+      required: false
+  - type: checkboxes
+    id: contribution
+    attributes:
+      label: 🤝 Contribution
+      description: Would you be willing to contribute to this documentation update?
+      options:
+        - label: Yes, I'd be happy to submit a pull request with these changes.
+        - label: I need some guidance on how to contribute.
+        - label: I'd prefer the Agentops team to handle this update.
+    validations:
+      required: true

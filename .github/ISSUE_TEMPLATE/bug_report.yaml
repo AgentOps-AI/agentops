@@ -1,0 +1,53 @@
+name: 🐛 Bug Report
+description: Noticed something off with Agentops? Let us know!
+title: "[Bug]: "
+labels: ["bug"]
+assignees: []
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to fill out this bug report! Your feedback helps us improve AgentOps.
+  - type: input
+    id: contact
+    attributes:
+      label: Contact Details
+      description: How can we get in touch with you if we need more info?
+      placeholder: ex. email@example.com
+    validations:
+      required: false    
+  - type: input
+    id: package-version
+    attributes:
+      label: 📦 Package Version
+      description: What version of Agentops are you using?
+      placeholder: ex. 0.3.12
+    validations:
+      required: true
+  - type: input
+    id: framework-version
+    attributes:
+      label: 🎞️ Framework Version
+      description: Which frameworks are you using? (if applicable)
+      placeholder: ex. Autogen 0.3.0, CrewAI 0.61.0, Langchain 0.2.1
+    validations:
+      required: false
+  - type: textarea
+    id: bug-description
+    attributes:
+      label: 🔎 Describe the Bug
+      description: Give a clear and concise description of the bug and how to reproduce it. Include any error messages and screenshots.
+      placeholder: What went wrong?
+    validations:
+      required: true
+  - type: checkboxes
+    id: contribution
+    attributes:
+      label: 🤝 Contribution
+      description: Would you be willing to contribute to this update?
+      options:
+        - label: Yes, I'd be happy to submit a pull request with these changes.
+        - label: I need some guidance on how to contribute.
+        - label: I'd prefer the AgentOps team to handle this update.
+    validations:
+      required: true
