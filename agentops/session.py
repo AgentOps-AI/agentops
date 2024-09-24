@@ -149,14 +149,15 @@ class Session:
                     token_cost_d.quantize(Decimal("0.000001"), rounding=ROUND_HALF_UP)
                 )
             )
+
         analytics = (
-            f"Session stats - "
-            f"{colored('Cost:', attrs=['bold'])} ${formatted_cost} "
-            f"{colored('Duration:', attrs=['bold'])} {formatted_duration} "
-            f"{colored('LLMs:', attrs=['bold'])} {self.event_counts['llms']} "
-            f"{colored('Tools:', attrs=['bold'])} {self.event_counts['tools']} "
-            f"{colored('Actions:', attrs=['bold'])} {self.event_counts['actions']} "
-            f"{colored('Errors:', attrs=['bold'])} {self.event_counts['errors']}"
+            f"Session Stats - "
+            f"Duration: {formatted_duration} | "
+            f"Cost: ${formatted_cost} | "
+            f"LLM calls: {self.event_counts['llms']} | "
+            f"Tool calls: {self.event_counts['tools']} | "
+            f"Actions: {self.event_counts['actions']} | "
+            f"Errors: {self.event_counts['errors']}"
         )
         logger.info(analytics)
 
