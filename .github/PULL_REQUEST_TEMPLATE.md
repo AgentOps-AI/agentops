@@ -1,18 +1,8 @@
 ## 📥 Pull Request
 
 **📘 Description**
-Briefly describe the changes you've made.
-
-**🔄 Related Issue (if applicable)**
-If this PR is related to an existing issue, reference it here.
-
-**🎯 Goal**
-Explain the intention behind this change.
-
-**🔍 Additional Context**
-Any extra information or context to help us understand the change?
+_Briefly describe the changes you've made._
 
 **🧪 Testing**
-Describe the tests you performed to validate your changes.
+_Describe the tests you performed to validate your changes._
 
-Thank you for your contribution to Agentops!
