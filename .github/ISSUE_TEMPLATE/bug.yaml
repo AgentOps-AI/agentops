@@ -1,0 +1,58 @@
+name: 🐛 Bug Report
+description: Noticed something off with Agentops? Let us know!
+title: "[Bug]: "
+labels: ["bug"]
+assignees: []
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to fill out this bug report! Your feedback helps us improve Agentops.
+  - type: textarea
+    id: bug-description
+    attributes:
+      label: 🔎 Describe the Bug
+      description: Give a clear and concise description of the bug.
+      placeholder: What went wrong?
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction-steps
+    attributes:
+      label: 🔄 Reproduction Steps
+      description: List the steps to reproduce the behavior.
+      placeholder: |
+        1. Go to '...'
+        2. Click on '....'
+        3. Scroll down to '....'
+        4. See error
+    validations:
+      required: false
+  - type: textarea
+    id: expected-behavior
+    attributes:
+      label: 🙁 Expected Behavior
+      description: Describe what you expected to happen.
+      placeholder: What should have happened?
+    validations:
+      required: false
+  - type: textarea
+    id: screenshots
+    attributes:
+      label: 📸 Screenshots
+      description: If applicable, add screenshots to help explain the problem.
+      placeholder: Drag and drop images here, or paste image links.
+    validations:
+      required: false
+  - type: textarea
+    id: additional-context
+    attributes:
+      label: 🔍 Additional Context
+      description: Provide any other context about the problem here.
+      placeholder: Any other relevant information?
+    validations:
+      required: false
+  - type: markdown
+    attributes:
+      value: |
+        Thank you for helping us improve Agentops!
