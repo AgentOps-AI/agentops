@@ -9,6 +9,7 @@ from agentops.singleton import clear_singletons
 @pytest.fixture(autouse=True)
 def setup_teardown():
     clear_singletons()
+    agentops.end_all_sessions()
     yield
     agentops.end_all_sessions()  # teardown part
 

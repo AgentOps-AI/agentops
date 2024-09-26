@@ -1,9 +1,21 @@
+from datetime import datetime
 from enum import Enum
-from typing import Optional
+from typing import Optional, List, Union
+
+import jwt
 from requests.adapters import Retry, HTTPAdapter
 import requests
+from agentops.log_config import logger
+from .config import Configuration
 
 from .exceptions import ApiServerException
+from dotenv import load_dotenv
+import os
+
+from .helpers import ensure_dead_letter_queue, filter_unjsonable, safe_serialize
+import json
+
+load_dotenv()
 
 JSON_HEADER = {"Content-Type": "application/json; charset=UTF-8", "Accept": "*/*"}
 
@@ -21,8 +33,49 @@ class HttpStatus(Enum):
     UNKNOWN = -1
 
 
-class Response:
+class DeadLetterQueue:
+    def __init__(self):
+        self.queue: List[dict] = []
+        self.is_testing = os.environ.get("ENVIRONMENT") == "test"
 
+        # if not self.is_testing:
+        self.file_path = ensure_dead_letter_queue()
+
+    def read_queue(self):
+        if not self.is_testing:
+            with open(self.file_path, "r") as f:
+                return json.load(f)["messages"]
+        else:
+            return []
+
+    def write_queue(self):
+        if not self.is_testing:
+            with open(self.file_path, "w") as f:
+                json.dump({"messages": safe_serialize(self.queue)}, f)
+
+    def add(self, request_data: dict):
+        if not self.is_testing:
+            self.queue.append(request_data)
+            self.write_queue()
+
+    def get_all(self) -> List[dict]:
+        return self.queue
+
+    def remove(self, request_data: dict):
+        if not self.is_testing:
+            if request_data in self.queue:
+                self.queue.remove(request_data)
+                self.write_queue()
+
+    def clear(self):
+        self.queue.clear()
+        self.write_queue()
+
+
+dead_letter_queue = DeadLetterQueue()
+
+
+class Response:
     def __init__(
         self, status: HttpStatus = HttpStatus.UNKNOWN, body: Optional[dict] = None
     ):
@@ -57,15 +110,13 @@ class Response:
 
 
 class HttpClient:
-
     @staticmethod
     def post(
         url: str,
         payload: bytes,
         api_key: Optional[str] = None,
         parent_key: Optional[str] = None,
-        jwt: Optional[str] = None,
-        header=None,
+        token: Optional[str] = None,
     ) -> Response:
         result = Response()
         try:
@@ -79,34 +130,47 @@ class HttpClient:
             if parent_key is not None:
                 JSON_HEADER["X-Agentops-Parent-Key"] = parent_key
 
-            if jwt is not None:
-                JSON_HEADER["Authorization"] = f"Bearer {jwt}"
+            if token is not None:
+                decoded_jwt = jwt.decode(
+                    token,
+                    algorithms=["HS256"],
+                    options={"verify_signature": False},
+                )
+
+                # if token is expired, reauth
+                if datetime.fromtimestamp(decoded_jwt["exp"]) < datetime.now():
+                    new_jwt = reauthorize_jwt(
+                        token,
+                        api_key,
+                        decoded_jwt["session_id"],
+                    )
+                    token = new_jwt
+
+                JSON_HEADER["Authorization"] = f"Bearer {token}"
 
             res = request_session.post(
                 url, data=payload, headers=JSON_HEADER, timeout=20
             )
 
             result.parse(res)
-        except requests.exceptions.Timeout:
-            result.code = 408
-            result.status = HttpStatus.TIMEOUT
-            raise ApiServerException(
-                "Could not reach API server - connection timed out"
+
+            if result.code == 200:
+                HttpClient._retry_dlq_requests()
+
+        except (requests.exceptions.Timeout, requests.exceptions.HTTPError) as e:
+            HttpClient._handle_failed_request(
+                url, payload, api_key, parent_key, token, type(e).__name__
             )
-        except requests.exceptions.HTTPError as e:
-            try:
-                result.parse(e.response)
-            except Exception:
-                result = Response()
-                result.code = e.response.status_code
-                result.status = Response.get_status(e.response.status_code)
-                result.body = {"error": str(e)}
-                raise ApiServerException(f"HTTPError: {e}")
+            raise ApiServerException(f"{type(e).__name__}: {e}")
         except requests.exceptions.RequestException as e:
-            result.body = {"error": str(e)}
+            HttpClient._handle_failed_request(
+                url, payload, api_key, parent_key, token, "RequestException"
+            )
             raise ApiServerException(f"RequestException: {e}")
 
         if result.code == 401:
+            if result.body.get("message") == "Expired Token":
+                raise ApiServerException(f"API server: jwt token expired.")
             raise ApiServerException(
                 f"API server: invalid API key: {api_key}. Find your API key at https://app.agentops.ai/settings/projects"
             )
@@ -116,6 +180,9 @@ class HttpClient:
             else:
                 raise ApiServerException(f"API server: {result.body}")
         if result.code == 500:
+            HttpClient._handle_failed_request(
+                url, payload, api_key, parent_key, token, "ServerError"
+            )
             raise ApiServerException("API server: - internal server error")
 
         return result
@@ -124,8 +191,7 @@ class HttpClient:
     def get(
         url: str,
         api_key: Optional[str] = None,
-        jwt: Optional[str] = None,
-        header=None,
+        token: Optional[str] = None,
     ) -> Response:
         result = Response()
         try:
@@ -136,29 +202,25 @@ class HttpClient:
             if api_key is not None:
                 JSON_HEADER["X-Agentops-Api-Key"] = api_key
 
-            if jwt is not None:
-                JSON_HEADER["Authorization"] = f"Bearer {jwt}"
+            if token is not None:
+                JSON_HEADER["Authorization"] = f"Bearer {token}"
 
             res = request_session.get(url, headers=JSON_HEADER, timeout=20)
 
             result.parse(res)
-        except requests.exceptions.Timeout:
-            result.code = 408
-            result.status = HttpStatus.TIMEOUT
-            raise ApiServerException(
-                "Could not reach API server - connection timed out"
+
+            if result.code == 200:
+                HttpClient._retry_dlq_requests()
+
+        except (requests.exceptions.Timeout, requests.exceptions.HTTPError) as e:
+            HttpClient._handle_failed_request(
+                url, None, api_key, None, token, type(e).__name__
             )
-        except requests.exceptions.HTTPError as e:
-            try:
-                result.parse(e.response)
-            except Exception:
-                result = Response()
-                result.code = e.response.status_code
-                result.status = Response.get_status(e.response.status_code)
-                result.body = {"error": str(e)}
-                raise ApiServerException(f"HTTPError: {e}")
+            raise ApiServerException(f"{type(e).__name__}: {e}")
         except requests.exceptions.RequestException as e:
-            result.body = {"error": str(e)}
+            HttpClient._handle_failed_request(
+                url, None, api_key, None, token, "RequestException"
+            )
             raise ApiServerException(f"RequestException: {e}")
 
         if result.code == 401:
@@ -171,6 +233,79 @@ class HttpClient:
             else:
                 raise ApiServerException(f"API server: {result.body}")
         if result.code == 500:
+            HttpClient._handle_failed_request(
+                url, None, api_key, None, jwt, "ServerError"
+            )
             raise ApiServerException("API server: - internal server error")
 
         return result
+
+    @staticmethod
+    def _retry_dlq_requests():
+        """Retry requests in the DLQ"""
+        for failed_request in dead_letter_queue.get_all():
+            dead_letter_queue.clear()
+            try:
+                if "payload" in failed_request:
+                    # Retry POST request from DLQ
+                    HttpClient.post(
+                        failed_request["url"],
+                        json.dumps(filter_unjsonable(failed_request["payload"])).encode(
+                            "utf-8"
+                        ),
+                        failed_request["api_key"],
+                        failed_request["parent_key"],
+                        failed_request["jwt"],
+                    )
+                else:
+                    # Retry GET request from DLQ
+                    HttpClient.get(
+                        failed_request["url"],
+                        failed_request["api_key"],
+                        failed_request["jwt"],
+                    )
+            except ApiServerException as e:
+                dead_letter_queue.add(failed_request)
+                # If it still fails, keep it in the DLQ
+            except Exception as e:
+                dead_letter_queue.add(failed_request)
+
+    @staticmethod
+    def _handle_failed_request(
+        url: str,
+        payload: Optional[bytes],
+        api_key: Optional[str],
+        parent_key: Optional[str],
+        jwt: Optional[str],
+        error_type: str,
+    ):
+        dead_letter_queue.add(
+            {
+                "url": url,
+                "payload": payload,
+                "api_key": api_key,
+                "parent_key": parent_key,
+                "jwt": jwt,
+                "error_type": error_type,
+            }
+        )
+
+        logger.warning(
+            f"An error occurred while communicating with the server: {error_type}"
+        )
+
+
+def reauthorize_jwt(old_jwt: str, api_key: str, session_id: str) -> Union[str, None]:
+    payload = {"jwt": old_jwt, "session_id": session_id}
+    serialized_payload = json.dumps(filter_unjsonable(payload)).encode("utf-8")
+    config = Configuration()
+    res = HttpClient.post(
+        f"{config.endpoint}/v2/reauthorize_jwt",
+        serialized_payload,
+        api_key,
+    )
+
+    if res.code != 200:
+        return None
+
+    return res.body.get("jwt", None)

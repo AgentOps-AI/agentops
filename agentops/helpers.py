@@ -6,10 +6,10 @@ from typing import Union
 import http.client
 import json
 from importlib.metadata import version, PackageNotFoundError
-
 from .log_config import logger
 from uuid import UUID
 from importlib.metadata import version
+import os
 
 
 def get_ISO_time():
@@ -186,3 +186,19 @@ def debug_print_function_params(func):
         return func(self, *args, **kwargs)
 
     return wrapper
+
+
+def ensure_dead_letter_queue():
+    # Define file path
+    file_path = os.path.join(".agentops", "dead_letter_queue.json")
+
+    # Check if directory exists
+    if not os.path.exists(".agentops"):
+        os.makedirs(".agentops")
+
+    # Check if file exists
+    if not os.path.isfile(file_path):
+        with open(file_path, "w") as f:
+            json.dump({"messages": []}, f)
+
+    return file_path
