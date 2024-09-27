@@ -1,0 +1,37 @@
+name: 🚀 Feature Request
+description: Got an idea to improve AgentOps? We're all ears!
+title: "[Feature]: "
+labels: ["enhancement"]
+assignees: []
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to share your feature idea! Your input helps us improve AgentOps.
+  - type: textarea
+    id: feature-description-and-solution
+    attributes:
+      label: 💡 Feature Description and Proposed Solution
+      description: Briefly describe your feature suggestion and how you envision it working. Include any mockups/screenshots if applicable.
+      placeholder: What's your brilliant idea?
+    validations:
+      required: true
+  - type: textarea
+    id: problem-related
+    attributes:
+      label: 🤔 Related Problem
+      description: Is your feature request related to a problem you're facing?
+      placeholder: Describe the problem, if applicable. The more we understand your struggle, the better we can address it.
+    validations:
+      required: false
+  - type: checkboxes
+    id: contribution
+    attributes:
+      label: 🤝 Contribution
+      description: Would you be willing to contribute to this update?
+      options:
+        - label: Yes, I'd be happy to submit a pull request with these changes.
+        - label: I need some guidance on how to contribute.
+        - label: I'd prefer the AgentOps team to handle this update.
+    validations:
+      required: true

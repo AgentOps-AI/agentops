@@ -65,7 +65,7 @@ The ToolEvent class is for recording calls to tools e.g. searchWeb, fetchFromDB.
 | name      | str         | None    | "Parsing Tool"                                          | Name of the tool             |
 | logs      | str or dict | None    | "Tool executed successfully" or `{"status": "success"}` | Logs from the tool execution |
 
-The tool event should be created previous to running the tool in order to track the execution time.
+The tool event should be created before running the tool in order to track the execution time.
 
 <CodeGroup>
 ```python python
