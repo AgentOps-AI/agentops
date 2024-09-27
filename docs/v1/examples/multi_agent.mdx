@@ -103,7 +103,7 @@ engineer = EngineerAgent()
 
 Now we have our agents and we tagged them with the `@track_agent` decorator. Any LLM calls that go through this class will now be tagged as agent calls in AgentOps.
 
-Lets use these agents!
+Let's use these agents!
 
 
 ```python
@@ -129,7 +129,7 @@ display(Markdown("```python\n" + generated_test + "\n```"))
 
 Perfect! It generated the code as expected, and in the DEBUG logs, you can see that the calls were made by agents named "engineer" and "qa"!
 
-Lets verify one more thing! If we make an LLM call outside of the context of a tracked agent, we want to make sure it gets assigned to the Default Agent.
+Let's verify one more thing! If we make an LLM call outside of the context of a tracked agent, we want to make sure it gets assigned to the Default Agent.
 
 
 ```python
