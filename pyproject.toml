@@ -20,11 +20,11 @@ classifiers = [
     "Operating System :: OS Independent",
 ]
 dependencies = [
-    "requests==2.31.0",
+    "requests>=2.0.0,<3.0.0",
     "psutil==5.9.8",
     "packaging==23.2",
     "termcolor==2.4.0",
-    "PyYAML==6.0.1"
+    "PyYAML>=5.3,<7.0"
 ]
 [project.optional-dependencies]
 dev = [
