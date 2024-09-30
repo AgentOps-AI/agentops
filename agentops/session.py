@@ -66,11 +66,6 @@ class Session:
         self.thread.daemon = True
         self.thread.start()
 
-        self.is_running = self._start_session()
-        if self.is_running == False:
-            self.stop_flag.set()
-            self.thread.join(timeout=1)
-
     def set_video(self, video: str) -> None:
         """
         Sets a url to the video recording of the session.
@@ -341,9 +336,14 @@ class Session:
                         self.event_counts["apis"] += 1
 
     def _run(self) -> None:
+        self.is_running = self._start_session()
+        if self.is_running == False:
+            self.stop_flag.set()
+            self.thread.join(timeout=1)
+
         while not self.stop_flag.is_set():
             time.sleep(self.config.max_wait_time / 1000)
-            if self.queue:
+            if self.queue and self.jwt is not None:
                 self._flush_queue()
 
     def create_agent(self, name, agent_id):
