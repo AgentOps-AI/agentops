@@ -235,8 +235,8 @@ class Client(metaclass=MetaClient):
         if tags is not None:
             session_tags.update(tags)
 
-        def _start_session_callback(result: bool):
-            if result:
+        def _start_session_callback(session: Session):
+            if session.is_running:
                 if len(self._pre_init_queue["agents"]) > 0:
                     for agent_args in self._pre_init_queue["agents"]:
                         session.create_agent(

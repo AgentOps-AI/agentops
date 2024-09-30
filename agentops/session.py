@@ -40,7 +40,7 @@ class Session:
         config: Configuration,
         tags: Optional[List[str]] = None,
         host_env: Optional[dict] = None,
-        callback: Optional[Callable[[bool], None]] = None,
+        callback: Optional[Callable[["Session"], None]] = None,
     ):
         self.end_timestamp = None
         self.end_state: Optional[str] = None
@@ -341,14 +341,14 @@ class Session:
                     elif event_type == "apis":
                         self.event_counts["apis"] += 1
 
-    def _run(self, callback: Optional[Callable[[bool], None]] = None) -> None:
+    def _run(self, callback: Optional[Callable[["Session"], None]] = None) -> None:
         self.is_running = self._start_session()
         if self.is_running == False:
             self.stop_flag.set()
             self.thread.join(timeout=1)
 
         if callback:
-            callback(self.is_running)
+            callback(self)
 
         while not self.stop_flag.is_set():
             time.sleep(self.config.max_wait_time / 1000)
