@@ -60,7 +60,7 @@ class Session:
             "errors": 0,
             "apis": 0,
         }
-
+        self.is_running = False
         self.stop_flag = threading.Event()
         self.thread = threading.Thread(target=self._run)
         self.thread.daemon = True
