@@ -105,58 +105,21 @@ class Session:
         self.thread.join(timeout=1)
         self._flush_queue()
 
-        def format_duration(start_time, end_time):
-            start = datetime.fromisoformat(start_time.replace("Z", "+00:00"))
-            end = datetime.fromisoformat(end_time.replace("Z", "+00:00"))
-            duration = end - start
-
-            hours, remainder = divmod(duration.total_seconds(), 3600)
-            minutes, seconds = divmod(remainder, 60)
-
-            parts = []
-            if hours > 0:
-                parts.append(f"{int(hours)}h")
-            if minutes > 0:
-                parts.append(f"{int(minutes)}m")
-            parts.append(f"{seconds:.1f}s")
-
-            return " ".join(parts)
-
-        with self.lock:
-            payload = {"session": self.__dict__}
-            try:
-                res = HttpClient.post(
-                    f"{self.config.endpoint}/v2/update_session",
-                    json.dumps(filter_unjsonable(payload)).encode("utf-8"),
-                    jwt=self.jwt,
-                )
-            except ApiServerException as e:
-                return logger.error(f"Could not end session - {e}")
-
-        logger.debug(res.body)
-        token_cost = res.body.get("token_cost", "unknown")
-
-        formatted_duration = format_duration(self.init_timestamp, self.end_timestamp)
-
+        token_cost = self._get_token_cost()
         if token_cost == "unknown" or token_cost is None:
             token_cost_d = Decimal(0)
         else:
             token_cost_d = Decimal(token_cost)
-            formatted_cost = (
-                "{:.2f}".format(token_cost_d)
-                if token_cost_d == 0
-                else "{:.6f}".format(
-                    token_cost_d.quantize(Decimal("0.000001"), rounding=ROUND_HALF_UP)
-                )
-            )
+        analytic_stats = self.get_analytics()
+
         analytics = (
             f"Session stats - "
-            f"{colored('Cost:', attrs=['bold'])} ${formatted_cost} "
-            f"{colored('Duration:', attrs=['bold'])} {formatted_duration} "
-            f"{colored('LLMs:', attrs=['bold'])} {self.event_counts['llms']} "
-            f"{colored('Tools:', attrs=['bold'])} {self.event_counts['tools']} "
-            f"{colored('Actions:', attrs=['bold'])} {self.event_counts['actions']} "
-            f"{colored('Errors:', attrs=['bold'])} {self.event_counts['errors']}"
+            f"{colored('Cost:', attrs=['bold'])} ${analytic_stats['Cost']} "
+            f"{colored('Duration:', attrs=['bold'])} {analytic_stats['Duration']} "
+            f"{colored('LLMs:', attrs=['bold'])} {analytic_stats['LLM calls']} "
+            f"{colored('Tools:', attrs=['bold'])} {analytic_stats['Tool calls']} "
+            f"{colored('Actions:', attrs=['bold'])} {analytic_stats['Actions']} "
+            f"{colored('Errors:', attrs=['bold'])} {analytic_stats['Errors']}"
         )
         logger.info(analytics)
 
@@ -376,6 +339,73 @@ class Session:
             return func(*args, **kwargs)
 
         return wrapper
+
+    @staticmethod
+    def _format_duration(start_time, end_time):
+        start = datetime.fromisoformat(start_time.replace("Z", "+00:00"))
+        end = datetime.fromisoformat(end_time.replace("Z", "+00:00"))
+        duration = end - start
+
+        hours, remainder = divmod(duration.total_seconds(), 3600)
+        minutes, seconds = divmod(remainder, 60)
+
+        parts = []
+        if hours > 0:
+            parts.append(f"{int(hours)}h")
+        if minutes > 0:
+            parts.append(f"{int(minutes)}m")
+        parts.append(f"{seconds:.1f}s")
+
+        return " ".join(parts)
+
+    def _get_token_cost(self):
+        with self.lock:
+            payload = {"session": self.__dict__}
+            try:
+                res = HttpClient.post(
+                    f"{self.config.endpoint}/v2/update_session",
+                    json.dumps(filter_unjsonable(payload)).encode("utf-8"),
+                    jwt=self.jwt,
+                )
+            except ApiServerException as e:
+                return logger.error(f"Could not end session - {e}")
+
+        logger.debug(res.body)
+        return res.body.get("token_cost", "unknown")
+
+    @staticmethod
+    def _format_token_cost(token_cost_d):
+        return (
+            "{:.2f}".format(token_cost_d)
+            if token_cost_d == 0
+            else "{:.6f}".format(
+                token_cost_d.quantize(Decimal("0.000001"), rounding=ROUND_HALF_UP)
+            )
+        )
+
+    def get_analytics(self) -> dict[str, Union[Decimal, str]]:
+        if not self.end_timestamp:
+            self.end_timestamp = get_ISO_time()
+
+        formatted_duration = self._format_duration(
+            self.init_timestamp,
+            self.end_timestamp
+        )
+        token_cost = self._get_token_cost()
+        if token_cost == "unknown" or token_cost is None:
+            token_cost_d = Decimal(0)
+        else:
+            token_cost_d = Decimal(token_cost)
+        formatted_cost = self._format_token_cost(token_cost_d)
+
+        return {
+            "LLM calls": self.event_counts['llms'],
+            "Tool calls": self.event_counts['tools'],
+            "Actions": self.event_counts['actions'],
+            "Errors": self.event_counts['errors'],
+            "Duration": formatted_duration,
+            "Cost": formatted_cost,
+        }
 
 
 active_sessions: List[Session] = []
