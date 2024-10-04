@@ -113,12 +113,12 @@ class Session:
         analytic_stats = self.get_analytics()
 
         analytics = (
-            f"Session stats - "
-            f"{colored('Cost:', attrs=['bold'])} ${analytic_stats['Cost']} "
-            f"{colored('Duration:', attrs=['bold'])} {analytic_stats['Duration']} "
-            f"{colored('LLMs:', attrs=['bold'])} {analytic_stats['LLM calls']} "
-            f"{colored('Tools:', attrs=['bold'])} {analytic_stats['Tool calls']} "
-            f"{colored('Actions:', attrs=['bold'])} {analytic_stats['Actions']} "
+            f"Session Stats - "
+            f"{colored('Duration:', attrs=['bold'])} {analytic_stats['Duration']} | "
+            f"{colored('Cost:', attrs=['bold'])} ${analytic_stats['Cost']} | "
+            f"{colored('LLMs:', attrs=['bold'])} {analytic_stats['LLM calls']} | "
+            f"{colored('Tools:', attrs=['bold'])} {analytic_stats['Tool calls']} | "
+            f"{colored('Actions:', attrs=['bold'])} {analytic_stats['Actions']} | "
             f"{colored('Errors:', attrs=['bold'])} {analytic_stats['Errors']}"
         )
         logger.info(analytics)
