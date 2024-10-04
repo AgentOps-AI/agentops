@@ -388,8 +388,7 @@ class Session:
             self.end_timestamp = get_ISO_time()
 
         formatted_duration = self._format_duration(
-            self.init_timestamp,
-            self.end_timestamp
+            self.init_timestamp, self.end_timestamp
         )
         token_cost = self._get_token_cost()
         if token_cost == "unknown" or token_cost is None:
@@ -399,10 +398,10 @@ class Session:
         formatted_cost = self._format_token_cost(token_cost_d)
 
         return {
-            "LLM calls": self.event_counts['llms'],
-            "Tool calls": self.event_counts['tools'],
-            "Actions": self.event_counts['actions'],
-            "Errors": self.event_counts['errors'],
+            "LLM calls": self.event_counts["llms"],
+            "Tool calls": self.event_counts["tools"],
+            "Actions": self.event_counts["actions"],
+            "Errors": self.event_counts["errors"],
             "Duration": formatted_duration,
             "Cost": formatted_cost,
         }
