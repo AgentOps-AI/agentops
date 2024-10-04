@@ -72,7 +72,7 @@ def init(
     Client().unsuppress_logs()
     t = threading.Thread(target=check_agentops_update)
     t.start()
-
+    print("start init")
     if Client().is_initialized:
         return logger.warning(
             "AgentOps has already been initialized. If you are trying to start a session, call agentops.start_session() instead."

@@ -62,6 +62,8 @@ class Session:
             "apis": 0,
         }
         self.is_running = False
+        print("create session")
+        active_sessions.append(self)
         self.stop_flag = threading.Event()
         self.thread = threading.Thread(target=self._run, args=(callback,))
         self.thread.daemon = True
@@ -251,17 +253,21 @@ class Session:
 
     def _start_session(self):
         self.queue = []
+        print("_start_session")
         with self.lock:
+            print("why lock")
             payload = {"session": self.__dict__}
             serialized_payload = json.dumps(filter_unjsonable(payload)).encode("utf-8")
 
             try:
+                print(f"posting {self.config.api_key}")
                 res = HttpClient.post(
                     f"{self.config.endpoint}/v2/create_session",
                     serialized_payload,
                     self.config.api_key,
                     self.config.parent_key,
                 )
+                print(res)
             except ApiServerException as e:
                 logger.error(f"Could not start session - {e}")
                 return False
@@ -342,13 +348,16 @@ class Session:
                         self.event_counts["apis"] += 1
 
     def _run(self, callback: Optional[Callable[["Session"], None]] = None) -> None:
+        print("start_urn")
         self.is_running = self._start_session()
-        if self.is_running == False:
-            self.stop_flag.set()
-            self.thread.join(timeout=1)
+        print("after is_running")
 
         if callback:
             callback(self)
+
+        if self.is_running == False:
+            self.stop_flag.set()
+            self.thread.join(timeout=1)
 
         while not self.stop_flag.is_set():
             time.sleep(self.config.max_wait_time / 1000)

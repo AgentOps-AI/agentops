@@ -237,6 +237,7 @@ class Client(metaclass=MetaClient):
 
         def _start_session_callback(session: Session):
             if session.is_running:
+                print("hi")
                 if len(self._pre_init_queue["agents"]) > 0:
                     for agent_args in self._pre_init_queue["agents"]:
                         session.create_agent(
@@ -250,7 +251,8 @@ class Client(metaclass=MetaClient):
                         "blue",
                     )
                 )
-                self._sessions.append(session)
+            else:
+                self._sessions.remove(session)
 
         session = Session(
             session_id=session_id,

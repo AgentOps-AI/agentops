@@ -48,6 +48,7 @@ class TestPreInit:
         assert len(mock_req.request_history) == 0
 
         agentops.init(api_key=self.api_key)
+        time.sleep(1)
 
         # Assert
         # start session and create agent

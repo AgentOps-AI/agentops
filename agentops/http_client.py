@@ -67,6 +67,7 @@ class HttpClient:
         jwt: Optional[str] = None,
         header=None,
     ) -> Response:
+        print("posting")
         result = Response()
         try:
             # Create request session with retries configured
@@ -81,12 +82,14 @@ class HttpClient:
 
             if jwt is not None:
                 JSON_HEADER["Authorization"] = f"Bearer {jwt}"
-
+            print("trying")
             res = request_session.post(
                 url, data=payload, headers=JSON_HEADER, timeout=20
             )
-
+            print("afterwards")
+            print(res)
             result.parse(res)
+            print(result)
         except requests.exceptions.Timeout:
             result.code = 408
             result.status = HttpStatus.TIMEOUT
