@@ -30,6 +30,11 @@
   },
   "anchors": [
     {
+      "name": "Chat With Docs",
+      "icon": "user-doctor-message",
+      "url": "https://chatgpt.com/g/g-8wCVRuAsm-agentops-assistant"
+    },
+    {
       "name": "Your Dashboard",
       "icon": "chart-tree-map",
       "url": "https://app.agentops.ai"
