@@ -4,7 +4,6 @@ AgentOps client module that provides a client class with public interfaces and c
 Classes:
     Client: Provides methods to interact with the AgentOps service.
 """
-
 import inspect
 import atexit
 import logging
@@ -87,7 +86,6 @@ class Client(metaclass=MetaClient):
             return
 
         self.unsuppress_logs()
-
         if self._config.api_key is None:
             return logger.error(
                 "Could not initialize AgentOps client - API Key is missing."
@@ -95,8 +93,6 @@ class Client(metaclass=MetaClient):
             )
 
         self._handle_unclean_exits()
-        self._initialize_partner_framework()
-
         self._initialized = True
 
         if self._config.instrument_llm_calls:
@@ -116,11 +112,10 @@ class Client(metaclass=MetaClient):
 
         return session
 
-    def _initialize_partner_framework(self) -> None:
+    def _initialize_autogen_logger(self) -> None:
         try:
             import autogen
             from .partners.autogen_logger import AutogenLogger
-
             autogen.runtime_logging.start(logger=AutogenLogger())
         except ImportError:
             pass
@@ -237,7 +232,6 @@ class Client(metaclass=MetaClient):
 
         def _start_session_callback(session: Session):
             if session.is_running:
-                print("hi")
                 if len(self._pre_init_queue["agents"]) > 0:
                     for agent_args in self._pre_init_queue["agents"]:
                         session.create_agent(
