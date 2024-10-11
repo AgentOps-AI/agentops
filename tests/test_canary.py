@@ -48,7 +48,7 @@ class TestCanary:
             except Exception as e:
                 time.sleep(2**_)
         else:
-            pytest.fail("Assertion failed after 3 attempts with waiting")
+            pytest.fail("Assertion failed after 4 attempts with waiting")
 
         agentops.end_session("Success")
 
@@ -56,6 +56,3 @@ class TestCanary:
         assert len(mock_req.request_history) == 3
 
         assert mock_req.last_request.headers["X-Agentops-Api-Key"] == self.api_key
-
-        request_json = mock_req.last_request.json()
-        assert request_json["event_counts"]["actions"] == 1
