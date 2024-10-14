@@ -142,7 +142,7 @@ class Session:
             token_cost_d = Decimal(0)
         else:
             token_cost_d = Decimal(token_cost)
-            
+
         formatted_cost = (
             "{:.2f}".format(token_cost_d)
             if token_cost_d == 0
