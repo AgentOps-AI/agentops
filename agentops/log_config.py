@@ -38,7 +38,7 @@ logger.addHandler(stream_handler)
 class AgentOpsLogFileFormatter(logging.Formatter):
     def format(self, record):
         # Remove ANSI escape codes from the message
-        record.msg = ANSI_ESCAPE_PATTERN.sub("", record.msg)
+        record.msg = ANSI_ESCAPE_PATTERN.sub("", str(record.msg))
         return super().format(record)
 
 
