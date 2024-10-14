@@ -162,9 +162,14 @@ class Session:
         )
         logger.info(analytics)
 
+        session_url = res.body.get(
+            "session_url",
+            f"https://app.agentops.ai/drilldown?session_id={self.session_id}",
+        )
+
         logger.info(
             colored(
-                f"\x1b[34mSession Replay: https://app.agentops.ai/drilldown?session_id={self.session_id}\x1b[0m",
+                f"\x1b[34mSession Replay: {session_url}\x1b[0m",
                 "blue",
             )
         )
@@ -280,6 +285,18 @@ class Session:
             self.jwt = jwt
             if jwt is None:
                 return False
+
+            session_url = res.body.get(
+                "session_url",
+                f"https://app.agentops.ai/drilldown?session_id={self.session_id}",
+            )
+
+            logger.info(
+                colored(
+                    f"\x1b[34mSession Replay: {session_url}\x1b[0m",
+                    "blue",
+                )
+            )
 
             return True
 
