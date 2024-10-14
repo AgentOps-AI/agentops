@@ -14,7 +14,7 @@ def setup_teardown():
 
 
 @pytest.fixture
-def mock_req():
+def mock_req(scope="function"):
     with requests_mock.Mocker() as m:
         url = "https://api.agentops.ai"
         m.post(url + "/v2/create_events", text="ok")
@@ -46,6 +46,7 @@ class TestCanary:
                 assert request_json["events"][0]["event_type"] == event_type
                 break
             except Exception as e:
+                print(e)
                 time.sleep(2**_)
         else:
             pytest.fail("Assertion failed after 4 attempts with waiting")
