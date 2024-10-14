@@ -46,7 +46,6 @@ class TestCanary:
                 assert request_json["events"][0]["event_type"] == event_type
                 break
             except Exception as e:
-                print(e)
                 time.sleep(2**_)
         else:
             pytest.fail("Assertion failed after 4 attempts with waiting")
