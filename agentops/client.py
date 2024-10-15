@@ -242,22 +242,15 @@ class Client(metaclass=MetaClient):
             config=self._config,
         )
 
+        if not session.is_running:
+            return logger.error("Failed to start session")
+
         if self._pre_init_queue["agents"] and len(self._pre_init_queue["agents"]) > 0:
             for agent_args in self._pre_init_queue["agents"]:
                 session.create_agent(
                     name=agent_args["name"], agent_id=agent_args["agent_id"]
                 )
             self._pre_init_queue["agents"] = []
-
-        if not session.is_running:
-            return logger.error("Failed to start session")
-
-        logger.info(
-            colored(
-                f"\x1b[34mSession Replay: https://app.agentops.ai/drilldown?session_id={session.session_id}\x1b[0m",
-                "blue",
-            )
-        )
 
         self._sessions.append(session)
         return session
