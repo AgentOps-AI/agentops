@@ -3,7 +3,7 @@ import requests_mock
 from agentops import Client
 
 
-@pytest.fixture
+@pytest.fixture(scope="function")
 def mock_req():
     with requests_mock.Mocker() as m:
         url = "https://api.agentops.ai"

@@ -81,11 +81,9 @@ class HttpClient:
 
             if jwt is not None:
                 JSON_HEADER["Authorization"] = f"Bearer {jwt}"
-
             res = request_session.post(
                 url, data=payload, headers=JSON_HEADER, timeout=20
             )
-
             result.parse(res)
         except requests.exceptions.Timeout:
             result.code = 408

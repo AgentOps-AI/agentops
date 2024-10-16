@@ -5,7 +5,7 @@ import threading
 import time
 from decimal import ROUND_HALF_UP, Decimal
 from termcolor import colored
-from typing import Optional, List, Union
+from typing import Optional, List, Union, Callable
 from uuid import UUID, uuid4
 from datetime import datetime
 
@@ -40,6 +40,7 @@ class Session:
         config: Configuration,
         tags: Optional[List[str]] = None,
         host_env: Optional[dict] = None,
+        callback: Optional[Callable[["Session"], None]] = None,
     ):
         self.end_timestamp = None
         self.end_state: Optional[str] = None
@@ -60,16 +61,12 @@ class Session:
             "errors": 0,
             "apis": 0,
         }
-
+        self.is_running = False
+        active_sessions.append(self)
         self.stop_flag = threading.Event()
-        self.thread = threading.Thread(target=self._run)
+        self.thread = threading.Thread(target=self._run, args=(callback,))
         self.thread.daemon = True
         self.thread.start()
-
-        self.is_running = self._start_session()
-        if self.is_running == False:
-            self.stop_flag.set()
-            self.thread.join(timeout=1)
 
     def set_video(self, video: str) -> None:
         """
@@ -274,16 +271,21 @@ class Session:
                     self.config.parent_key,
                 )
             except ApiServerException as e:
-                return logger.error(f"Could not start session - {e}")
+                logger.error(f"Could not start session - {e}")
+                return False
 
             logger.debug(res.body)
 
             if res.code != 200:
+                logger.error(f"Could not start session - server error")
                 return False
 
             jwt = res.body.get("jwt", None)
             self.jwt = jwt
             if jwt is None:
+                logger.error(
+                    f"Could not start session - server could not authenticate your API Key"
+                )
                 return False
 
             session_url = res.body.get(
@@ -359,10 +361,19 @@ class Session:
                     elif event_type == "apis":
                         self.event_counts["apis"] += 1
 
-    def _run(self) -> None:
+    def _run(self, callback: Optional[Callable[["Session"], None]] = None) -> None:
+        self.is_running = self._start_session()
+
+        if callback:
+            callback(self)
+
+        if self.is_running == False:
+            self.stop_flag.set()
+            self.thread.join(timeout=1)
+
         while not self.stop_flag.is_set():
             time.sleep(self.config.max_wait_time / 1000)
-            if self.queue:
+            if self.queue and self.jwt is not None:
                 self._flush_queue()
 
     def create_agent(self, name, agent_id):
