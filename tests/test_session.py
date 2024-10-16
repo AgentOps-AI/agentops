@@ -13,8 +13,8 @@ def setup_teardown():
     agentops.end_all_sessions()  # teardown part
 
 
-@pytest.fixture
-def mock_req(scope="function"):
+@pytest.fixture(scope="function")
+def mock_req():
     with requests_mock.Mocker() as m:
         url = "https://api.agentops.ai"
         m.post(url + "/v2/create_events", text="ok")

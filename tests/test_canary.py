@@ -13,8 +13,8 @@ def setup_teardown():
     agentops.end_all_sessions()  # teardown part
 
 
-@pytest.fixture
-def mock_req(scope="function"):
+@pytest.fixture(autouse=True, scope="function")
+def mock_req():
     with requests_mock.Mocker() as m:
         url = "https://api.agentops.ai"
         m.post(url + "/v2/create_events", text="ok")
@@ -37,22 +37,14 @@ class TestCanary:
         event_type = "test_event_type"
         agentops.start_session()
 
-        # Queue action, give it time to post
+        # Act
         agentops.record(ActionEvent(event_type))
+        time.sleep(0.1)
 
-        for _ in range(4):
-            try:
-                request_json = mock_req.last_request.json()
-                assert request_json["events"][0]["event_type"] == event_type
-                break
-            except Exception as e:
-                time.sleep(2**_)
-        else:
-            pytest.fail("Assertion failed after 4 attempts with waiting")
+        # Assert
+        assert len(mock_req.request_history) == 2
+        request_json = mock_req.last_request.json()
+        assert mock_req.last_request.headers["X-Agentops-Api-Key"] == self.api_key
+        assert request_json["events"][0]["event_type"] == event_type
 
         agentops.end_session("Success")
-
-        # Assert: 2 requests for start and end session, 1 for the event
-        assert len(mock_req.request_history) == 3
-
-        assert mock_req.last_request.headers["X-Agentops-Api-Key"] == self.api_key

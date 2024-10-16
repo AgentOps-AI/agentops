@@ -18,8 +18,8 @@ def setup_teardown():
 
 
 @contextlib.contextmanager
-@pytest.fixture(autouse=True)
-def mock_req(scope="function"):
+@pytest.fixture(autouse=True, scope="function")
+def mock_req():
     with requests_mock.Mocker() as m:
         url = "https://api.agentops.ai"
         m.post(url + "/v2/create_agent", text="ok")
@@ -52,7 +52,14 @@ class TestPreInit:
 
         # Assert
         # start session and create agent
-        assert len(mock_req.request_history) == 2
-        assert mock_req.last_request.headers["X-Agentops-Api-Key"] == self.api_key
-
         agentops.end_session(end_state="Success")
+
+        # Wait for flush
+        time.sleep(1.5)
+
+        # 3 requests: create session, create agent, update session
+        assert len(mock_req.request_history) == 3
+
+        assert mock_req.request_history[-2].headers["X-Agentops-Api-Key"] == self.api_key
+
+        mock_req.reset()
