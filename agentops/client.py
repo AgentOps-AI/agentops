@@ -256,6 +256,17 @@ class Client(metaclass=MetaClient):
             callback=_start_session_callback,
         )
 
+        if not session.is_running:
+            return logger.error("Failed to start session")
+
+        if self._pre_init_queue["agents"] and len(self._pre_init_queue["agents"]) > 0:
+            for agent_args in self._pre_init_queue["agents"]:
+                session.create_agent(
+                    name=agent_args["name"], agent_id=agent_args["agent_id"]
+                )
+            self._pre_init_queue["agents"] = []
+
+        self._sessions.append(session)
         return session
 
     def end_session(

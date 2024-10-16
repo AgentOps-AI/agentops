@@ -139,13 +139,14 @@ class Session:
             token_cost_d = Decimal(0)
         else:
             token_cost_d = Decimal(token_cost)
-            formatted_cost = (
-                "{:.2f}".format(token_cost_d)
-                if token_cost_d == 0
-                else "{:.6f}".format(
-                    token_cost_d.quantize(Decimal("0.000001"), rounding=ROUND_HALF_UP)
-                )
+
+        formatted_cost = (
+            "{:.2f}".format(token_cost_d)
+            if token_cost_d == 0
+            else "{:.6f}".format(
+                token_cost_d.quantize(Decimal("0.000001"), rounding=ROUND_HALF_UP)
             )
+        )
 
         analytics = (
             f"Session Stats - "
@@ -158,9 +159,14 @@ class Session:
         )
         logger.info(analytics)
 
+        session_url = res.body.get(
+            "session_url",
+            f"https://app.agentops.ai/drilldown?session_id={self.session_id}",
+        )
+
         logger.info(
             colored(
-                f"\x1b[34mSession Replay: https://app.agentops.ai/drilldown?session_id={self.session_id}\x1b[0m",
+                f"\x1b[34mSession Replay: {session_url}\x1b[0m",
                 "blue",
             )
         )
@@ -281,6 +287,18 @@ class Session:
                     f"Could not start session - server could not authenticate your API Key"
                 )
                 return False
+
+            session_url = res.body.get(
+                "session_url",
+                f"https://app.agentops.ai/drilldown?session_id={self.session_id}",
+            )
+
+            logger.info(
+                colored(
+                    f"\x1b[34mSession Replay: {session_url}\x1b[0m",
+                    "blue",
+                )
+            )
 
             return True
 

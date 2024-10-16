@@ -60,7 +60,7 @@ def init(
             be read from the AGENTOPS_API_ENDPOINT environment variable. Defaults to 'https://api.agentops.ai'.
         max_wait_time (int, optional): The maximum time to wait in milliseconds before flushing the queue.
             Defaults to 5,000 (5 seconds)
-        max_queue_size (int, optional): The maximum size of the event queue. Defaults to 100.
+        max_queue_size (int, optional): The maximum size of the event queue. Defaults to 512.
         tags (List[str], optional): [Deprecated] Use `default_tags` instead.
         default_tags (List[str], optional): Default tags for the sessions that can be used for grouping or sorting later (e.g. ["GPT-4"]).
         instrument_llm_calls (bool): Whether to instrument LLM calls and emit LLMEvents.
