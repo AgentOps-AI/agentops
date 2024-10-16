@@ -1,0 +1,61 @@
+
+File: ./docs/v1/examples/recording_events.mdx
+No spelling errors found.
+                                                            Punctuation Corrections                                                            
+╭──────────────────────────────────────────────┬───────────────────────────────────────────────┬──────────────────────────────────────────────╮
+│ Original                                     │ Corrected                                     │ Explanation                                  │
+├──────────────────────────────────────────────┼───────────────────────────────────────────────┼──────────────────────────────────────────────┤
+│ AgentOps has a number of different [Event    │ AgentOps has a number of different [Event     │ Added a period at the end of the sentence    │
+│ Types](https://docs.agentops.ai/v1/details/… │ Types](https://docs.agentops.ai/v1/details/e… │ for proper punctuation.                      │
+│                                              │                                               │                                              │
+╰──────────────────────────────────────────────┴───────────────────────────────────────────────┴──────────────────────────────────────────────╯
+                                                              Grammar Corrections                                                              
+╭──────────────────────────────────────────────┬───────────────────────────────────────────────┬──────────────────────────────────────────────╮
+│ Original                                     │ Corrected                                     │ Explanation                                  │
+├──────────────────────────────────────────────┼───────────────────────────────────────────────┼──────────────────────────────────────────────┤
+│ We automatically instrument your LLM Calls   │ We automatically instrument your LLM calls    │ Changed 'Calls' to lowercase 'calls' for     │
+│ from OpenAI, LiteLLM, Cohere, and more. Just │ from OpenAI, LiteLLM, Cohere, and more. Just  │ consistency, and added a comma and 'as       │
+│ make sure their SDKs are imported before     │ make sure their SDKs are imported before      │ shown' for better flow and clarity.          │
+│ initializing AgentOps like we see below      │ initializing AgentOps, as shown below.        │                                              │
+│                                              │                                               │                                              │
+│ Next, we'll set our API keys. There are      │ Next, we'll set our API keys. There are       │ Changed semicolon to separate independent    │
+│ several ways to do this, the code below is   │ several ways to do this; the code below is    │ clauses, removed 'just' for conciseness, and │
+│ just the most foolproof way for the purposes │ just the most foolproof way for the purposes  │ changed 'API Key' to lowercase 'API key' for │
+│ of this notebook. It accounts for both users │ of this notebook. It accounts for both users  │ consistency.                                 │
+│ who use environment variables and those who  │ who use environment variables and those who   │                                              │
+│ just want to set the API Key here in this    │ want to set the API key directly in this      │                                              │
+│ notebook.                                    │ notebook.                                     │                                              │
+│                                              │                                               │                                              │
+│ Create an environment variable in a .env     │ Create an environment variable in a .env file │ Added 'use' to improve the sentence          │
+│ file or other method. By default, the        │ or use another method. By default, the        │ structure and clarity.                       │
+│ AgentOps `init()` function will look for an  │ AgentOps `init()` function will look for an   │                                              │
+│ environment variable named                   │ environment variable named                    │                                              │
+│ `AGENTOPS_API_KEY`. Or...                    │ `AGENTOPS_API_KEY`. Or...                     │                                              │
+│                                              │                                               │                                              │
+│ Replace `<your_agentops_key>` below and pass │ Replace `<your_agentops_key>` below and pass  │ Changed 'pass in' to 'pass' for conciseness, │
+│ in the optional `api_key` parameter to the   │ the optional `api_key` parameter to the       │ and expanded 'repo' to 'repository' for      │
+│ AgentOps `init(api_key=...)` function.       │ AgentOps `init(api_key=...)` function.        │ clarity.                                     │
+│ Remember not to commit your API key to a     │ Remember not to commit your API key to a      │                                              │
+│ public repo!                                 │ public repository!                            │                                              │
+│                                              │                                               │                                              │
+│ AgentOps allows you to record other actions. │ AgentOps allows you to record other actions.  │ Corrected 'AgentOp's' to 'AgentOps'' for     │
+│ The easiest way to record actions is through │ The easiest way to record actions is through  │ proper possessive form of the company name,  │
+│ the use of AgentOp's decorators              │ the use of AgentOps' decorators.              │ and added a period at the end of the         │
+│                                              │                                               │ sentence.                                    │
+│                                              │                                               │                                              │
+│ We can also manually craft an event exactly  │ We can also manually craft an event exactly   │ Added a period at the end of the sentence    │
+│ the way we want by creating and recording an │ the way we want by creating and recording an  │ for proper punctuation.                      │
+│ `ActionEvent`                                │ `ActionEvent`.                                │                                              │
+│                                              │                                               │                                              │
+│ Agents use tools. These tools are useful to  │ Agents use tools. These tools are useful to   │ Added 'the method shown' to provide more     │
+│ track with information such as name, end     │ track with information such as name, end      │ context and improve clarity.                 │
+│ status, runtime, etc. To record tool usage,  │ status, runtime, etc. To record tool usage,   │                                              │
+│ you can create and record a `ToolEvent`      │ you can create and record a `ToolEvent`       │                                              │
+│ similar to above.                            │ similar to the method shown above.            │                                              │
+│                                              │                                               │                                              │
+│ Error events can be used alone or in         │ Error events can be used alone or in          │ Added an apostrophe to 'Let's' for the       │
+│ reference to another event. Lets add a catch │ reference to another event. Let's add a catch │ contraction of 'Let us', and added a period  │
+│ block to the code above                      │ block to the code above.                      │ at the end of the sentence.                  │
+│                                              │                                               │                                              │
+╰──────────────────────────────────────────────┴───────────────────────────────────────────────┴──────────────────────────────────────────────╯
+Total errors found: 9

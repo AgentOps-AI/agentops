@@ -60,6 +60,8 @@ class TestPreInit:
         # 3 requests: create session, create agent, update session
         assert len(mock_req.request_history) == 3
 
-        assert mock_req.request_history[-2].headers["X-Agentops-Api-Key"] == self.api_key
+        assert (
+            mock_req.request_history[-2].headers["X-Agentops-Api-Key"] == self.api_key
+        )
 
         mock_req.reset()

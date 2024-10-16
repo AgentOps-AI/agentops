@@ -4,6 +4,7 @@ AgentOps client module that provides a client class with public interfaces and c
 Classes:
     Client: Provides methods to interact with the AgentOps service.
 """
+
 import inspect
 import atexit
 import logging
@@ -116,6 +117,7 @@ class Client(metaclass=MetaClient):
         try:
             import autogen
             from .partners.autogen_logger import AutogenLogger
+
             autogen.runtime_logging.start(logger=AutogenLogger())
         except ImportError:
             pass

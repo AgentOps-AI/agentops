@@ -71,9 +71,7 @@ def init(
     Attributes:
     """
     Client().unsuppress_logs()
-    t = threading.Thread(
-        target=check_agentops_update
-    )
+    t = threading.Thread(target=check_agentops_update)
     t.start()
     if Client().is_initialized:
         return logger.warning(
