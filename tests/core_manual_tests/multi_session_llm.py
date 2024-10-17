@@ -10,8 +10,8 @@ openai = OpenAI()
 session_1 = agentops.start_session(tags=["multi-session-test-1"])
 session_2 = agentops.start_session(tags=["multi-session-test-2"])
 
-print("session_id_1: {}".format(session_1))
-print("session_id_2: {}".format(session_2))
+print("session_id_1: {}".format(session_1.session_id))
+print("session_id_2: {}".format(session_2.session_id))
 
 messages = [{"role": "user", "content": "Hello"}]
 
