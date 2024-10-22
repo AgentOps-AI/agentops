@@ -31,6 +31,8 @@
 <a href="https://app.agentops.ai/?ref=gh">🖇️ Dashboard</a>
 <span>&nbsp;&nbsp;•&nbsp;&nbsp;</span>
 <a href="https://docs.agentops.ai/introduction">📙 Documentation</a>
+<span>&nbsp;&nbsp;•&nbsp;&nbsp;</span>
+<a href="https://docs.agentops.ai/introduction">💬 Chat with Code and Docs</a>
 </p>
 
 <div style="justify-content: center">
