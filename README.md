@@ -32,7 +32,7 @@
 <span>&nbsp;&nbsp;•&nbsp;&nbsp;</span>
 <a href="https://docs.agentops.ai/introduction">📙 Documentation</a>
 <span>&nbsp;&nbsp;•&nbsp;&nbsp;</span>
-<a href="https://docs.agentops.ai/introduction">💬 Chat with Docs</a>
+<a href="https://entelligence.ai/AgentOps-AI&agentops">💬 Chat with Docs</a>
 </p>
 
 <div style="justify-content: center">
