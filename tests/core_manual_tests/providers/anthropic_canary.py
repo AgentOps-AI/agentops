@@ -27,7 +27,7 @@ stream_response = anthropic_client.messages.create(
     messages=[
         {
             "role": "user",
-            "content": "asy hi 2",
+            "content": "say hi 2",
         }
     ],
     stream=True,
