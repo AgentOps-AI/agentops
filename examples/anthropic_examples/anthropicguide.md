@@ -1,7 +1,3 @@
-
-DRAFT DRAFT DRAFT DRAFT DRAFT DRAFT DRAFT DRAFT DRAFT DRAFT DRAFT DRAFT DRAFT DRAFT DRAFT DRAFT 
-
-
 # Anthropic and AgentOps
 
 AgentOps supports Anthropic's API for conversing with their LLM backend!
@@ -49,22 +45,39 @@ From here, you have a number of ways you can interact with the Anthropic API!
 > You can download these journals directly and try them on Google Colab or Kaggle!
 
 
+> [!WARNING]
+> Remember; you need to set an API key for both Agentops and Anthropic!
+
+
 ## Sync Example; Nier Storyteller
 
 In this example, we generate a sentence from three parts before having Anthropic generate a short story based off it!
 
-examples/anthropic_examples/anthropic-example-sync.ipynb
+[Access the Journal By Clicking Here](./anthropic-example-sync.ipynb).
 
 ## Async Example; Titan Support Protocol
 
-In this example, we generate a script line for a mech based on it's health and the type. At the same time, we generate a random string to output. We finally wait for both functions to finish before printing both.
+In this example, we generate a script line for a mech based on it's health and the type. At the same time, we generate 4 UUIDs. We finally wait for both functions to finish before printing them for the user.
 
-examples/anthropic_examples/anthropic-example-async.ipynb
+[Access the Journal By Clicking Here](./anthropic-example-async.ipynb)
 
 ## Tool Example; Cyberware
 
 In this example, we have the LLM call a simulated tool which gives one random piece of Cyberware based on the user's requested company. From there, the AI tells the user if the cyberware is good for the user's intended purpose. (combatant, hacker, etc.),
 
-examples/anthropic_examples/antrophic-example-tool.ipynb
+[Access the Journal By Clicking Here](./antrophic-example-tool.ipynb)
+
+
+
+
+
+## Looking for a Barebones, Straight To The Point Journal?
+
+This journal directly shows the bare basics on using Anthropic and AgentOps!
+
+> [!WARNING]
+> This is mainly recommended for those adept at programming or those who already understand how AgentOps and LLM APIs generally work!
+
+[Access the Journal By Clicking Here](./anthropic_example.ipynb)
 
 
