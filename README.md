@@ -24,16 +24,24 @@
 </div>
 
 <p align="center">
-<a href="https://twitter.com/agentopsai/">🐦 Twitter</a>
-<span>&nbsp;&nbsp;•&nbsp;&nbsp;</span>
-<a href="https://discord.gg/FagdcwwXRR">📢 Discord</a>
-<span>&nbsp;&nbsp;•&nbsp;&nbsp;</span>
-<a href="https://app.agentops.ai/?ref=gh">🖇️ Dashboard</a>
-<span>&nbsp;&nbsp;•&nbsp;&nbsp;</span>
-<a href="https://docs.agentops.ai/introduction">📙 Documentation</a>
-<span>&nbsp;&nbsp;•&nbsp;&nbsp;</span>
-<a href="https://entelligence.ai/AgentOps-AI&agentops">💬 Chat with Docs</a>
+  <a href="https://twitter.com/agentopsai/">
+    <img src="https://img.shields.io/twitter/follow/agentopsai?style=social" alt="Twitter" style="height: 20px;">
+  </a>
+  <a href="https://discord.gg/FagdcwwXRR">
+    <img src="https://img.shields.io/badge/discord-7289da.svg?style=flat-square&logo=discord" alt="Discord" style="height: 20px;">
+  </a>
+  <a href="https://app.agentops.ai/?ref=gh">
+    <img src="https://img.shields.io/badge/Dashboard-blue.svg?style=flat-square" alt="Dashboard" style="height: 20px;">
+  </a>
+  <a href="https://docs.agentops.ai/introduction">
+    <img src="https://img.shields.io/badge/Documentation-orange.svg?style=flat-square" alt="Documentation" style="height: 20px;">
+  </a>
+  <a href="https://entelligence.ai/AgentOps-AI&agentops">
+    <img src="https://img.shields.io/badge/Chat%20with%20Docs-green.svg?style=flat-square" alt="Chat with Docs" style="height: 20px;">
+  </a>
 </p>
+
+
 
 <div style="justify-content: center">
   <img src="docs/images/external/app_screenshots/dashboard_banner.png" alt="Dashboard Banner">
