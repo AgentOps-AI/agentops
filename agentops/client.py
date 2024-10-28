@@ -232,30 +232,11 @@ class Client(metaclass=MetaClient):
         if tags is not None:
             session_tags.update(tags)
 
-        def _start_session_callback(session: Session):
-            if session.is_running:
-                if len(self._pre_init_queue["agents"]) > 0:
-                    for agent_args in self._pre_init_queue["agents"]:
-                        session.create_agent(
-                            name=agent_args["name"], agent_id=agent_args["agent_id"]
-                        )
-                    self._pre_init_queue["agents"] = []
-
-                logger.info(
-                    colored(
-                        f"\x1b[34mSession Replay: https://app.agentops.ai/drilldown?session_id={session.session_id}\x1b[0m",
-                        "blue",
-                    )
-                )
-            else:
-                self._sessions.remove(session)
-
         session = Session(
             session_id=session_id,
             tags=list(session_tags),
             host_env=get_host_env(self._config.env_data_opt_out),
             config=self._config,
-            callback=_start_session_callback,
         )
 
         if not session.is_running:
