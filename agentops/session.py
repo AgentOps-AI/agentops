@@ -318,6 +318,8 @@ class Session:
                 return logger.error(f"Could not update session - {e}")
 
     def _flush_queue(self) -> None:
+        import time
+        print("\n🔄 FLUSHING QUEUE 🔄", flush=True)
         if not self.is_running:
             return
         with self.lock:
@@ -331,11 +333,15 @@ class Session:
 
                 serialized_payload = safe_serialize(payload).encode("utf-8")
                 try:
+                    print("\n🚀 Starting post 🚀\n", serialized_payload)
+                    start_time = time.time()
                     HttpClient.post(
                         f"{self.config.endpoint}/v2/create_events",
                         serialized_payload,
                         jwt=self.jwt,
                     )
+                    end_time = time.time()
+                    print(f"\n🚀 QUEUE FLUSHED SUCCESSFULLY! 🚀\nTime taken: {end_time - start_time:.2f} seconds\n")
                 except ApiServerException as e:
                     return logger.error(f"Could not post events - {e}")
 
@@ -362,18 +368,9 @@ class Session:
                         self.event_counts["apis"] += 1
 
     def _run(self, callback: Optional[Callable[["Session"], None]] = None) -> None:
-        self.is_running = self._start_session()
-
-        if callback:
-            callback(self)
-
-        if self.is_running == False:
-            self.stop_flag.set()
-            self.thread.join(timeout=1)
-
         while not self.stop_flag.is_set():
             time.sleep(self.config.max_wait_time / 1000)
-            if self.queue and self.jwt is not None:
+            if self.queue:
                 self._flush_queue()
 
     def create_agent(self, name, agent_id):
