@@ -61,12 +61,15 @@ class Session:
             "errors": 0,
             "apis": 0,
         }
-        self.is_running = False
-        active_sessions.append(self)
         self.stop_flag = threading.Event()
         self.thread = threading.Thread(target=self._run, args=(callback,))
         self.thread.daemon = True
         self.thread.start()
+
+        self.is_running = self._start_session()
+        if self.is_running == False:
+            self.stop_flag.set()
+            self.thread.join(timeout=1)
 
     def set_video(self, video: str) -> None:
         """
