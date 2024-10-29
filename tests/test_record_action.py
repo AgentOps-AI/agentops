@@ -33,8 +33,10 @@ def mock_req():
             return {"status": "success", "jwt": next(jwt_tokens)}
 
         m.post(url + "/v2/create_session", json=create_session_response)
+        m.post(url + "/v2/create_events", json={"status": "ok"})
         m.post(url + "/v2/update_session", json={"status": "success", "token_cost": 5})
-        m.post(url + "/v2/developer_errors", text="ok")
+        m.post(url + "/v2/developer_errors", json={"status": "ok"})
+        m.post("https://pypi.org/pypi/agentops/json", status_code=404)
 
         yield m
 
@@ -98,14 +100,19 @@ class TestRecordAction:
 
         # Act
         add_three(1, 2)
-        time.sleep(0.1)
-        add_three(1, 2)
-        time.sleep(0.1)
+        add_three(1, 2, 4)
+
+        time.sleep(1.5)
 
         # Assert
-        assert len(mock_req.request_history) == 3
+        assert len(mock_req.request_history) == 2
         assert mock_req.last_request.headers["X-Agentops-Api-Key"] == self.api_key
         request_json = mock_req.last_request.json()
+
+        assert request_json["events"][1]["action_type"] == self.event_type
+        assert request_json["events"][1]["params"] == {"x": 1, "y": 2, "z": 4}
+        assert request_json["events"][1]["returns"] == 7
+
         assert request_json["events"][0]["action_type"] == self.event_type
         assert request_json["events"][0]["params"] == {"x": 1, "y": 2, "z": 3}
         assert request_json["events"][0]["returns"] == 6
@@ -156,8 +163,13 @@ class TestRecordAction:
         # Act
         add_three(1, 2, session=session_1)
         time.sleep(0.1)
-        add_three(1, 2, session=session_2)
+        add_three(1, 2, 3, session=session_2)
         time.sleep(0.1)
+
+        for request in mock_req.request_history:
+            print('!!!')
+            print(request.json())
+            print(request.headers)
 
         # Assert
         assert len(mock_req.request_history) == 4
