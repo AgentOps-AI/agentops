@@ -19,7 +19,7 @@ def setup_teardown():
 
 
 @contextlib.contextmanager
-@pytest.fixture(autouse=True, scope="function")
+@pytest.fixture(autouse=True)
 def mock_req():
     with requests_mock.Mocker() as m:
         url = "https://api.agentops.ai"

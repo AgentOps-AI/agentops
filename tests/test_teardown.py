@@ -13,6 +13,7 @@ def mock_req():
         )
         m.post(url + "/v2/update_session", json={"status": "success", "token_cost": 5})
         m.post(url + "/v2/developer_errors", text="ok")
+        m.post("https://pypi.org/pypi/agentops/json", status_code=404)
         yield m
 
 

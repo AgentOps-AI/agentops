@@ -27,6 +27,7 @@ def mock_req():
         m.post(
             url + "/v2/create_session", json={"status": "success", "jwt": "some_jwt"}
         )
+        m.post("https://pypi.org/pypi/agentops/json", status_code=404)
 
         yield m
 

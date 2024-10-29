@@ -26,6 +26,7 @@ def mock_req():
         )
         m.post(url + "/v2/update_session", json={"status": "success", "token_cost": 5})
         m.post(url + "/v2/developer_errors", text="ok")
+        m.post("https://pypi.org/pypi/agentops/json", status_code=404)
         yield m
 
 
@@ -192,7 +193,7 @@ class TestMultiSessions:
     def setup_method(self):
         self.api_key = "11111111-1111-4111-8111-111111111111"
         self.event_type = "test_event_type"
-        agentops.init(api_key=self.api_key, max_wait_time=50, auto_start_session=False)
+        agentops.init(api_key=self.api_key, max_wait_time=500, auto_start_session=False)
 
     def test_two_sessions(self, mock_req):
         session_1 = agentops.start_session()
