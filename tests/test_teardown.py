@@ -3,16 +3,16 @@ import requests_mock
 from agentops import Client
 
 
-@pytest.fixture(scope="function")
+@pytest.fixture(autouse=True, scope="function")
 def mock_req():
     with requests_mock.Mocker() as m:
         url = "https://api.agentops.ai"
-        m.post(url + "/v2/create_events", text="ok")
+        m.post(url + "/v2/create_events", json={"status": "ok"})
         m.post(
             url + "/v2/create_session", json={"status": "success", "jwt": "some_jwt"}
         )
         m.post(url + "/v2/update_session", json={"status": "success", "token_cost": 5})
-        m.post(url + "/v2/developer_errors", text="ok")
+        m.post(url + "/v2/developer_errors", json={"status": "ok"})
         m.post("https://pypi.org/pypi/agentops/json", status_code=404)
         yield m
 

@@ -22,7 +22,7 @@ def setup_teardown():
 def mock_req():
     with requests_mock.Mocker() as m:
         url = "https://api.agentops.ai"
-        m.post(url + "/v2/create_events", text="ok")
+        m.post(url + "/v2/create_events", json={"status": "ok"})
 
         # Use iter to create an iterator that can return the jwt values
         jwt_tokens = iter(jwts)

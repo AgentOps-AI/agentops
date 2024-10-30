@@ -29,8 +29,8 @@ def mock_req():
         )
         m.post("https://pypi.org/pypi/agentops/json", status_code=404)
 
-        m.post(url + "/v2/create_events", text="ok")
-        m.post(url + "/v2/developer_errors", text="ok")
+        m.post(url + "/v2/create_events", json={"status": "ok"})
+        m.post(url + "/v2/developer_errors", json={"status": "ok"})
 
         yield m
 
