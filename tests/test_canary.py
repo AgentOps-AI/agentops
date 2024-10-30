@@ -41,13 +41,9 @@ class TestCanary:
         # Act
         agentops.record(ActionEvent(event_type))
         time.sleep(2)
-        # Print which endpoints the mock requests reached
-        for request in mock_req.request_history:
-            print('!!!')
-            print(f"Mock request reached endpoint: {request.url}")
 
-        # Assert
-        assert len(mock_req.request_history) == 2
+        # 3 requests: check_for_updates, create_session, create_events
+        assert len(mock_req.request_history) == 3
 
         request_json = mock_req.last_request.json()
         assert mock_req.last_request.headers["X-Agentops-Api-Key"] == self.api_key

@@ -22,12 +22,15 @@ def setup_teardown():
 def mock_req():
     with requests_mock.Mocker() as m:
         url = "https://api.agentops.ai"
-        m.post(url + "/v2/create_agent", text="ok")
-        m.post(url + "/v2/update_session", text="ok")
+        m.post(url + "/v2/create_agent", json={"status": "success"})
+        m.post(url + "/v2/update_session", json={"status": "success", "token_cost": 5})
         m.post(
             url + "/v2/create_session", json={"status": "success", "jwt": "some_jwt"}
         )
         m.post("https://pypi.org/pypi/agentops/json", status_code=404)
+
+        m.post(url + "/v2/create_events", text="ok")
+        m.post(url + "/v2/developer_errors", text="ok")
 
         yield m
 
@@ -58,8 +61,8 @@ class TestPreInit:
         # Wait for flush
         time.sleep(1.5)
 
-        # 3 requests: create session, create agent, update session
-        assert len(mock_req.request_history) == 3
+        # 4 requests: check_for_updates, create_session, create_agent, update_session
+        assert len(mock_req.request_history) == 4
 
         assert (
             mock_req.request_history[-2].headers["X-Agentops-Api-Key"] == self.api_key

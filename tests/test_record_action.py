@@ -166,7 +166,6 @@ class TestRecordAction:
         add_three(1, 2, 3, session=session_2)
         time.sleep(0.1)
 
-        # Assert
         assert len(mock_req.request_history) == 6
 
         request_json = mock_req.last_request.json()

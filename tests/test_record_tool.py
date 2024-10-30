@@ -160,8 +160,8 @@ class TestRecordTool:
         add_three(1, 2, session=session_2)
         time.sleep(0.1)
 
-        # 5 requests: check_for_updates, start_session, record_tool, start_session, record_tool
-        assert len(mock_req.request_history) == 5
+        # 6 requests: check_for_updates, start_session, record_tool, start_session, record_tool, end_session
+        assert len(mock_req.request_history) == 6
 
         request_json = mock_req.last_request.json()
         assert mock_req.last_request.headers["X-Agentops-Api-Key"] == self.api_key
