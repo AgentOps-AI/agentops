@@ -3,7 +3,7 @@ from functools import wraps
 from datetime import datetime, timezone
 import inspect
 from typing import Union
-import http.client
+import requests
 import json
 from importlib.metadata import version, PackageNotFoundError
 
@@ -127,25 +127,26 @@ def get_agentops_version():
 
 
 def check_agentops_update():
-    # using http.client to avoid this call being caught by requests_mock on tests
-    conn = http.client.HTTPSConnection("pypi.org")
-    conn.request("GET", "/pypi/agentops/json")
-    response = conn.getresponse()
-    data = response.read().decode()
-    json_data = json.loads(data)
+    try:
+        # Use requests instead of http.client
+        response = requests.get("https://pypi.org/pypi/agentops/json")
 
-    if response.status == 200:
-        latest_version = json_data["info"]["version"]
+        if response.status_code == 200:
+            json_data = response.json()
+            latest_version = json_data["info"]["version"]
 
-        try:
-            current_version = version("agentops")
-        except PackageNotFoundError:
-            return None
+            try:
+                current_version = version("agentops")
+            except PackageNotFoundError:
+                return None
 
-        if not latest_version == current_version:
-            logger.warning(
-                f" WARNING: agentops is out of date. Please update with the command: 'pip install --upgrade agentops'"
-            )
+            if not latest_version == current_version:
+                logger.warning(
+                    f" WARNING: agentops is out of date. Please update with the command: 'pip install --upgrade agentops'"
+                )
+    except Exception as e:
+        logger.debug(f"Failed to check for updates: {e}")
+        return None
 
 
 # Function decorator that prints function name and its arguments to the console for debug purposes
