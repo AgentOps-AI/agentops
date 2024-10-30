@@ -58,8 +58,8 @@ class TestRecordTool:
         add_two(3, 4)
         time.sleep(0.1)
 
-        # Assert
-        assert len(mock_req.request_history) == 2
+        # 3 requests: check_for_updates, start_session, record_tool
+        assert len(mock_req.request_history) == 3
         assert mock_req.last_request.headers["X-Agentops-Api-Key"] == self.api_key
         request_json = mock_req.last_request.json()
         assert request_json["events"][0]["name"] == self.tool_name
@@ -80,7 +80,7 @@ class TestRecordTool:
         time.sleep(0.1)
 
         # Assert
-        assert len(mock_req.request_history) == 2
+        assert len(mock_req.request_history) == 3
         assert mock_req.last_request.headers["X-Agentops-Api-Key"] == self.api_key
         request_json = mock_req.last_request.json()
         assert request_json["events"][0]["name"] == "add_two"
@@ -103,8 +103,8 @@ class TestRecordTool:
         add_three(1, 2)
         time.sleep(0.1)
 
-        # Assert
-        assert len(mock_req.request_history) == 3
+        # 4 requests: check_for_updates, start_session, record_tool, record_tool
+        assert len(mock_req.request_history) == 4
         assert mock_req.last_request.headers["X-Agentops-Api-Key"] == self.api_key
         request_json = mock_req.last_request.json()
         assert request_json["events"][0]["name"] == self.tool_name
@@ -160,8 +160,8 @@ class TestRecordTool:
         add_three(1, 2, session=session_2)
         time.sleep(0.1)
 
-        # Assert
-        assert len(mock_req.request_history) == 4
+        # 5 requests: check_for_updates, start_session, record_tool, start_session, record_tool
+        assert len(mock_req.request_history) == 5
 
         request_json = mock_req.last_request.json()
         assert mock_req.last_request.headers["X-Agentops-Api-Key"] == self.api_key
