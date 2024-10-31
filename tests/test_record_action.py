@@ -46,7 +46,7 @@ class TestRecordAction:
         self.url = "https://api.agentops.ai"
         self.api_key = "11111111-1111-4111-8111-111111111111"
         self.event_type = "test_event_type"
-        agentops.init(self.api_key, max_wait_time=5, auto_start_session=False)
+        agentops.init(self.api_key, max_wait_time=50, auto_start_session=False)
 
     def test_record_action_decorator(self, mock_req):
         agentops.start_session()

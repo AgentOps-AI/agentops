@@ -1,6 +1,6 @@
 import pytest
 import requests_mock
-from agentops import Client
+import agentops
 
 
 @pytest.fixture(autouse=True, scope="function")
@@ -21,12 +21,8 @@ def mock_req():
 
 
 class TestSessions:
-    def setup_method(self, mock_req):
-        self.api_key = "11111111-1111-4111-8111-111111111111"
-        self.event_type = "test_event_type"
-        Client().configure(api_key=self.api_key)
-        Client().initialize()
-
     def test_exit(self, mock_req):
-        # Tests should not hang.
-        ...
+        url = "https://api.agentops.ai"
+        api_key = "11111111-1111-4111-8111-111111111111"
+        tool_name = "test_tool_name"
+        agentops.init(api_key, max_wait_time=5, auto_start_session=False)
