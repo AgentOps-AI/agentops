@@ -429,21 +429,7 @@ class LlmTracker:
         """Retrieve original method for provider"""
         return self.original_methods.get(provider, {}).get(method_name)
 
-    def override_openai_v1_completion(self):
-        from openai.resources.chat import completions
-        
-        # Store with provider context
-        self._store_original_method('openai', 'create', completions.Completions.create)
-        self.active_providers['openai'] = True
 
-        def patched_function(*args, **kwargs):
-            init_timestamp = get_ISO_time()
-            # Get provider-specific original method
-            original = self._get_original_method('openai', 'create')
-            result = original(*args, **kwargs)
-            return self._handle_response_v1_openai(result, kwargs, init_timestamp)
-
-        completions.Completions.create = patched_function
 
     def override_litellm_completion(self):
         import litellm
