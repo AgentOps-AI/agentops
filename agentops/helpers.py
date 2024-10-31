@@ -128,7 +128,6 @@ def get_agentops_version():
 
 def check_agentops_update():
     try:
-        # Use requests instead of http.client
         response = requests.get("https://pypi.org/pypi/agentops/json")
 
         if response.status_code == 200:
