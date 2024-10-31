@@ -29,3 +29,4 @@ class TestSessions:
 
     def test_exit(self, mock_req):
         # Tests should not hang.
+        ...
