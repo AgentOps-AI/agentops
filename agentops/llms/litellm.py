@@ -25,22 +25,15 @@ class LiteLLMProvider(InstrumentedProvider):
         self._override_completion()
 
     def undo_override(self):
-        if (
-            self.original_create is not None
-            and self.original_create_async is not None
-            and self.original_oai_create is not None
-            and self.original_oai_create_async is not None
-        ):
+        if self.original_create is not None and self.original_create_async is not None:
             import litellm
-            from openai.resources.chat import completions
-
+            
             litellm.acompletion = self.original_create_async
             litellm.completion = self.original_create
 
-            completions.Completions.create = self.original_oai_create
-            completions.AsyncCompletions.create = self.original_oai_create_async
-
-    def handle_response(self, response, kwargs, init_timestamp, session: Optional[Session] = None) -> dict:
+    def handle_response(
+        self, response, kwargs, init_timestamp, session: Optional[Session] = None
+    ) -> dict:
         """Handle responses for OpenAI versions >v1.0.0"""
         from openai import AsyncStream, Stream
         from openai.resources import AsyncCompletions
@@ -167,13 +160,10 @@ class LiteLLMProvider(InstrumentedProvider):
 
     def _override_completion(self):
         import litellm
-        from openai.types.chat import (
-            ChatCompletion,
-        )  # Note: litellm calls all LLM APIs using the OpenAI format
-        from openai.resources.chat import completions
+        from openai.types.chat import ChatCompletion
 
+        # Only store and override litellm's completion method
         self.original_create = litellm.completion
-        self.original_oai_create = completions.Completions.create
 
         def patched_function(*args, **kwargs):
             init_timestamp = get_ISO_time()
@@ -199,13 +189,10 @@ class LiteLLMProvider(InstrumentedProvider):
 
     def _override_async_completion(self):
         import litellm
-        from openai.types.chat import (
-            ChatCompletion,
-        )  # Note: litellm calls all LLM APIs using the OpenAI format
-        from openai.resources.chat import completions
+        from openai.types.chat import ChatCompletion
 
+        # Only store and override litellm's async completion method
         self.original_create_async = litellm.acompletion
-        self.original_oai_create_async = completions.AsyncCompletions.create
 
         async def patched_function(*args, **kwargs):
             init_timestamp = get_ISO_time()
