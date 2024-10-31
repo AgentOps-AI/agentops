@@ -604,6 +604,12 @@ class LlmTracker:
         self.active_providers.clear()
         self.original_methods.clear()
 
+    def undo_override_openai_v1_completion(self):
+        global original_create
+        from openai.resources.chat import completions
+
+        completions.Completions.create = original_create
+
     def undo_override_openai_v1_async_completion(self):
         global original_create_async
         from openai.resources.chat import completions
