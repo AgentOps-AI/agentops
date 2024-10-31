@@ -418,6 +418,22 @@ class LlmTracker:
             )
 
         return response
+    
+    def override_openai_v1_completion(self):
+        from openai.resources.chat import completions
+
+        # Store the original method
+        global original_create
+        original_create = completions.Completions.create
+
+        def patched_function(*args, **kwargs):
+            init_timestamp = get_ISO_time()
+            # Call the original function with its original arguments
+            result = original_create(*args, **kwargs)
+            return self._handle_response_v1_openai(result, kwargs, init_timestamp)
+
+        # Override the original method with the patched one
+        completions.Completions.create = patched_function
 
     def _store_original_method(self, provider: str, method_name: str, method):
         """Store original method with provider context"""
@@ -603,6 +619,12 @@ class LlmTracker:
                 
         self.active_providers.clear()
         self.original_methods.clear()
+
+    def undo_override_openai_v1_completion(self):
+        global original_create
+        from openai.resources.chat import completions
+
+        completions.Completions.create = original_create
 
     def undo_override_openai_v1_async_completion(self):
         global original_create_async
