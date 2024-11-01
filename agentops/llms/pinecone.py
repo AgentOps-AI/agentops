@@ -1,20 +1,27 @@
-import pprint
 from typing import Optional, Dict, Any, Union, List
-import gc
-import os
 
-from ..log_config import logger
-from ..event import VectorEvent, ErrorEvent, ActionEvent
-from ..session import Session, get_current_session
-from ..helpers import get_ISO_time
-from agentops.llms.instrumented_provider import InstrumentedProvider
-from ..singleton import singleton
-from ..enums import EventType
+import pinecone
 from pinecone.grpc import PineconeGRPC
+from pinecone_plugins.assistant.models.chat import Message
+
+from ..enums import EventType
+from ..event import VectorEvent, ErrorEvent, ActionEvent
+from ..helpers import get_ISO_time
+from ..log_config import logger
+from ..session import Session, get_current_session
+from ..singleton import singleton
+from agentops.llms.instrumented_provider import InstrumentedProvider
+
 
 @singleton
 class PineconeProvider(InstrumentedProvider):
     def __init__(self, client):
+        """
+        Initialize the PineconeProvider with the given client.
+        
+        Args:
+            client: The Pinecone client instance.
+        """
         super().__init__(client)
         self._provider_name = "Pinecone"
         self.original_methods = {}
@@ -23,7 +30,18 @@ class PineconeProvider(InstrumentedProvider):
     def handle_response(
         self, response: Any, kwargs: Dict, init_timestamp: str, session: Optional[Session] = None
     ) -> Any:
-        """Handle responses for Pinecone operations"""
+        """
+        Handle responses for Pinecone operations by creating and recording appropriate events.
+        
+        Args:
+            response: The response returned by the Pinecone operation.
+            kwargs: Keyword arguments passed to the operation.
+            init_timestamp: The timestamp when the operation was initiated.
+            session: The current session, if any.
+        
+        Returns:
+            The processed response.
+        """
         operation_type = kwargs.get("operation_type", "unknown")
         
         # Create ActionEvent with operation details
@@ -65,7 +83,17 @@ class PineconeProvider(InstrumentedProvider):
         return response
 
     def _get_operation_details(self, operation_type: str, kwargs: Dict, response: Any) -> Dict:
-        """Get detailed information about the operation"""
+        """
+        Retrieve detailed information about the performed operation.
+        
+        Args:
+            operation_type: The type of the operation.
+            kwargs: Keyword arguments passed to the operation.
+            response: The response returned by the operation.
+        
+        Returns:
+            A dictionary containing detailed information about the operation.
+        """
         details = {
             "operation": operation_type,
             "timestamp": get_ISO_time(),
@@ -88,15 +116,18 @@ class PineconeProvider(InstrumentedProvider):
                 })
             elif operation_type == "upsert":
                 vectors = kwargs.get("vectors", [])
+                # Convert tuple to list if necessary
+                if isinstance(vectors, tuple):
+                    vectors = list(vectors)
                 details.update({
                     "action_description": f"Upserting {len(vectors)} vectors",
                     "vector_count": len(vectors),
-                    "vector_ids": [v.get("id") for v in vectors],
-                    "has_metadata": any("metadata" in v for v in vectors),
-                    "has_sparse_values": any("sparse_values" in v for v in vectors),
+                    "vector_ids": [v["id"] if isinstance(v, dict) else v.id if hasattr(v, 'id') else str(v) for v in vectors],
+                    "has_metadata": any(isinstance(v, dict) and "metadata" in v or hasattr(v, 'metadata') for v in vectors),
+                    "has_sparse_values": any(isinstance(v, dict) and "sparse_values" in v or hasattr(v, 'sparse_values') for v in vectors),
                     "sample_vector": vectors[0] if vectors else None,
-                    "dimension": len(vectors[0].get("values", [])) if vectors else None,
-                    "metadata_fields": list(vectors[0].get("metadata", {}).keys()) if vectors and "metadata" in vectors[0] else []
+                    "dimension": len(vectors[0].get("values", [])) if isinstance(vectors[0], dict) else len(vectors[0].values) if hasattr(vectors[0], 'values') else None,
+                    "metadata_fields": list(vectors[0].get("metadata", {}).keys()) if isinstance(vectors[0], dict) and "metadata" in vectors[0] else list(vectors[0].metadata.keys()) if hasattr(vectors[0], 'metadata') else []
                 })
             elif operation_type == "query":
                 details.update({
@@ -117,7 +148,7 @@ class PineconeProvider(InstrumentedProvider):
                     "delete_all": kwargs.get("delete_all", False)
                 })
             elif operation_type == "fetch":
-                vectors = response.vectors if hasattr(response, 'vectors') else {}
+                vectors = getattr(response, 'vectors', {})
                 details.update({
                     "action_description": f"Fetching {len(kwargs.get('ids', []))} vectors",
                     "ids": kwargs.get("ids", []),
@@ -207,7 +238,16 @@ class PineconeProvider(InstrumentedProvider):
         return details
 
     def _format_response(self, response: Any, operation_type: str) -> Dict:
-        """Format response with context based on operation type"""
+        """
+        Format the response based on the operation type to include relevant context.
+        
+        Args:
+            response: The response returned by the Pinecone operation.
+            operation_type: The type of the operation.
+        
+        Returns:
+            A dictionary containing the formatted response.
+        """
         try:
             if operation_type == "list":
                 # Handle generator response
@@ -236,10 +276,9 @@ class PineconeProvider(InstrumentedProvider):
             }
 
     def override(self):
-        """Override Pinecone's methods using module-level patching"""
-        import pinecone
-        from pinecone.grpc import PineconeGRPC
-        
+        """
+        Override Pinecone's methods using module-level patching to inject event handling.
+        """
         # Skip if already patched
         if hasattr(pinecone.Index, '_is_patched'):
             return
@@ -270,7 +309,18 @@ class PineconeProvider(InstrumentedProvider):
         
         # Inference operations
         def wrapped_embed(pc_instance, model: str, inputs: List[str], **kwargs):
-            """Wrapper for Pinecone's embed method"""
+            """
+            Wrapper for Pinecone's embed method to handle event recording.
+            
+            Args:
+                pc_instance: The Pinecone client instance.
+                model: The model to use for embedding.
+                inputs: A list of input strings to embed.
+                **kwargs: Additional keyword arguments.
+            
+            Returns:
+                The response from the embed operation.
+            """
             init_timestamp = get_ISO_time()
             session = get_current_session()
             try:
@@ -331,7 +381,19 @@ class PineconeProvider(InstrumentedProvider):
                 raise
 
         def wrapped_rerank(pc_instance, model: str, query: str, documents: List[Dict], **kwargs):
-            """Wrapper for Pinecone's rerank method"""
+            """
+            Wrapper for Pinecone's rerank method to handle event recording.
+            
+            Args:
+                pc_instance: The Pinecone client instance.
+                model: The model to use for reranking.
+                query: The query string.
+                documents: A list of documents to rerank.
+                **kwargs: Additional keyword arguments.
+            
+            Returns:
+                The response from the rerank operation.
+            """
             init_timestamp = get_ISO_time()
             session = get_current_session()
             try:
@@ -395,8 +457,17 @@ class PineconeProvider(InstrumentedProvider):
         self.embed = wrapped_embed
         self.rerank = wrapped_rerank
 
-        # Create patched method wrapper
-        def make_patched(name, orig):
+        def make_patched(name: str, orig):
+            """
+            Create a patched version of the original Pinecone method to inject event handling.
+            
+            Args:
+                name: The name of the method being patched.
+                orig: The original method.
+            
+            Returns:
+                The patched method.
+            """
             def patched(*args, **kwargs):
                 init_timestamp = get_ISO_time()
                 session = get_current_session()
@@ -442,14 +513,14 @@ class PineconeProvider(InstrumentedProvider):
             self.original_methods[f'Pinecone.{method_name}'] = method
             setattr(pinecone.Pinecone, method_name, make_patched(method_name, method))
 
-        # Mark as patched
+        # Mark as patched to prevent re-patching
         pinecone.Index._is_patched = True
         pinecone.Pinecone._is_patched = True
 
     def undo_override(self) -> None:
-        """Restore original Pinecone methods"""
-        import pinecone
-
+        """
+        Restore the original Pinecone methods that were overridden.
+        """
         for method_name, original_method in self.original_methods.items():
             class_name, method = method_name.split('.')
             if class_name == 'Index':
@@ -458,7 +529,13 @@ class PineconeProvider(InstrumentedProvider):
                 setattr(pinecone.Pinecone, method, original_method)
 
     def _safe_record(self, session: Optional[Session], event: Union[VectorEvent, ErrorEvent]) -> None:
-        """Safely record events with duplicate handling"""
+        """
+        Safely record events with duplicate handling and retry logic.
+        
+        Args:
+            session: The current session, if any.
+            event: The event to be recorded.
+        """
         try:
             if session is not None:
                 max_retries = 3
@@ -481,7 +558,19 @@ class PineconeProvider(InstrumentedProvider):
     def _handle_assistant_response(
         self, response: Any, operation_type: str, kwargs: Dict, init_timestamp: str, session: Optional[Session] = None
     ) -> Any:
-        """Handle responses for Pinecone Assistant operations"""
+        """
+        Handle responses for Pinecone Assistant operations by creating and recording appropriate events.
+        
+        Args:
+            response: The response returned by the Assistant operation.
+            operation_type: The type of the operation.
+            kwargs: Keyword arguments passed to the operation.
+            init_timestamp: The timestamp when the operation was initiated.
+            session: The current session, if any.
+        
+        Returns:
+            The processed response.
+        """
         try:
             # If response is an error dictionary, raise it as an exception
             if isinstance(response, dict) and "error" in response:
@@ -528,7 +617,7 @@ class PineconeProvider(InstrumentedProvider):
             
             self._safe_record(session, event)
             return response
-            
+                
         except Exception as e:
             error_event = ErrorEvent(
                 trigger_event=ActionEvent(
@@ -546,7 +635,19 @@ class PineconeProvider(InstrumentedProvider):
 
     def create_assistant(self, pc_instance, assistant_name: str, instructions: Optional[str] = None,
                         metadata: Optional[Dict] = {}, timeout: int = 30) -> Any:
-        """Create a new Pinecone Assistant"""
+        """
+        Create a new Pinecone Assistant.
+        
+        Args:
+            pc_instance: The Pinecone client instance.
+            assistant_name: The name of the assistant to create.
+            instructions: Optional instructions for the assistant.
+            metadata: Optional metadata for the assistant.
+            timeout: Timeout for the creation operation.
+        
+        Returns:
+            The response from the create_assistant operation.
+        """
         init_timestamp = get_ISO_time()
         session = get_current_session()
         kwargs = {
@@ -574,7 +675,15 @@ class PineconeProvider(InstrumentedProvider):
             raise
 
     def list_assistants(self, pc_instance) -> Any:
-        """List all assistants"""
+        """
+        List all Pinecone Assistants.
+        
+        Args:
+            pc_instance: The Pinecone client instance.
+        
+        Returns:
+            The response from the list_assistants operation.
+        """
         init_timestamp = get_ISO_time()
         session = get_current_session()
         try:
@@ -596,7 +705,16 @@ class PineconeProvider(InstrumentedProvider):
             raise
 
     def get_assistant(self, pc_instance, assistant_name: str) -> Any:
-        """Get assistant status"""
+        """
+        Retrieve the status of a specific Pinecone Assistant.
+        
+        Args:
+            pc_instance: The Pinecone client instance.
+            assistant_name: The name of the assistant to retrieve.
+        
+        Returns:
+            The response from the get_assistant operation.
+        """
         init_timestamp = get_ISO_time()
         session = get_current_session()
         kwargs = {"assistant_name": assistant_name}
@@ -622,7 +740,18 @@ class PineconeProvider(InstrumentedProvider):
 
     def update_assistant(self, pc_instance, assistant_name: str, instructions: Optional[str] = None,
                         metadata: Optional[Dict] = None) -> Any:
-        """Update an existing assistant"""
+        """
+        Update an existing Pinecone Assistant.
+        
+        Args:
+            pc_instance: The Pinecone client instance.
+            assistant_name: The name of the assistant to update.
+            instructions: Optional new instructions for the assistant.
+            metadata: Optional new metadata for the assistant.
+        
+        Returns:
+            The response from the update_assistant operation.
+        """
         init_timestamp = get_ISO_time()
         session = get_current_session()
         kwargs = {
@@ -637,7 +766,16 @@ class PineconeProvider(InstrumentedProvider):
             raise self._handle_assistant_response({"error": str(e)}, "update_assistant", kwargs, init_timestamp, session)
 
     def delete_assistant(self, pc_instance, assistant_name: str) -> Any:
-        """Delete an assistant"""
+        """
+        Delete a Pinecone Assistant.
+        
+        Args:
+            pc_instance: The Pinecone client instance.
+            assistant_name: The name of the assistant to delete.
+        
+        Returns:
+            The response from the delete_assistant operation.
+        """
         init_timestamp = get_ISO_time()
         session = get_current_session()
         kwargs = {"assistant_name": assistant_name}
@@ -648,14 +786,23 @@ class PineconeProvider(InstrumentedProvider):
             raise self._handle_assistant_response({"error": str(e)}, "delete_assistant", kwargs, init_timestamp, session)
 
     def chat_with_assistant(self, pc_instance, assistant_name: str, messages: List[Dict],
-                           stream: bool = False, model: Optional[str] = None) -> Any:
-        """Chat with an assistant"""
+                            stream: bool = False, model: Optional[str] = None) -> Any:
+        """
+        Engage in a chat session with a Pinecone Assistant.
+        
+        Args:
+            pc_instance: The Pinecone client instance.
+            assistant_name: The name of the assistant to chat with.
+            messages: A list of message dictionaries containing 'content'.
+            stream: Whether to stream the responses.
+            model: The model to use for the assistant.
+        
+        Returns:
+            The response from the chat operation.
+        """
         init_timestamp = get_ISO_time()
         session = get_current_session()
         try:
-            # Import the Message class
-            from pinecone_plugins.assistant.models.chat import Message
-            
             # Convert dict messages to Message objects
             message_objects = [Message(content=msg["content"]) for msg in messages]
             
@@ -688,7 +835,19 @@ class PineconeProvider(InstrumentedProvider):
 
     def upload_file(self, pc_instance, assistant_name: str, file_path: str, 
                     metadata: Optional[Dict] = None, timeout: Optional[int] = None) -> Any:
-        """Upload a file to an assistant"""
+        """
+        Upload a file to a Pinecone Assistant.
+        
+        Args:
+            pc_instance: The Pinecone client instance.
+            assistant_name: The name of the assistant to upload the file to.
+            file_path: The path to the file to upload.
+            metadata: Optional metadata for the file.
+            timeout: Optional timeout for the upload operation.
+        
+        Returns:
+            The response from the upload_file operation.
+        """
         init_timestamp = get_ISO_time()
         session = get_current_session()
         kwargs = {
@@ -734,7 +893,17 @@ class PineconeProvider(InstrumentedProvider):
             raise
 
     def describe_file(self, pc_instance, assistant_name: str, file_id: str) -> Any:
-        """Get details about an uploaded file"""
+        """
+        Retrieve details about an uploaded file in a Pinecone Assistant.
+        
+        Args:
+            pc_instance: The Pinecone client instance.
+            assistant_name: The name of the assistant.
+            file_id: The ID of the file to describe.
+        
+        Returns:
+            The response from the describe_file operation.
+        """
         init_timestamp = get_ISO_time()
         session = get_current_session()
         kwargs = {
@@ -781,7 +950,17 @@ class PineconeProvider(InstrumentedProvider):
             raise
 
     def delete_file(self, pc_instance, assistant_name: str, file_id: str) -> Any:
-        """Delete an uploaded file from an assistant"""
+        """
+        Delete an uploaded file from a Pinecone Assistant.
+        
+        Args:
+            pc_instance: The Pinecone client instance.
+            assistant_name: The name of the assistant.
+            file_id: The ID of the file to delete.
+        
+        Returns:
+            The response from the delete_file operation.
+        """
         init_timestamp = get_ISO_time()
         session = get_current_session()
         kwargs = {
@@ -812,14 +991,23 @@ class PineconeProvider(InstrumentedProvider):
 
     def chat_completions(self, pc_instance, assistant_name: str, messages: List[Dict],
                         stream: bool = False, model: Optional[str] = None) -> Any:
-        """Chat with an assistant using OpenAI-compatible interface"""
+        """
+        Engage in a chat session with a Pinecone Assistant using an OpenAI-compatible interface.
+        
+        Args:
+            pc_instance: The Pinecone client instance.
+            assistant_name: The name of the assistant to chat with.
+            messages: A list of message dictionaries containing 'content'.
+            stream: Whether to stream the responses.
+            model: The model to use for the assistant.
+        
+        Returns:
+            The response formatted for OpenAI compatibility.
+        """
         init_timestamp = get_ISO_time()
         session = get_current_session()
         
         try:
-            # Import the Message class
-            from pinecone_plugins.assistant.models.chat import Message
-            
             # Convert dict messages to Message objects
             message_objects = [Message(content=msg["content"]) for msg in messages]
             

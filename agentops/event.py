@@ -134,6 +134,7 @@ class ErrorEvent:
             self.exception = None  # removes exception from serialization
 
 
+@dataclass
 class VectorEvent(Event):
     """Event class for vector operations"""
     event_type: str = "action"
@@ -153,17 +154,3 @@ class VectorEvent(Event):
     index_name: Optional[str] = None
     index_type: Optional[str] = None
 
-
-class AssistantEvent(Event):
-    """Event class for Pinecone Assistant operations"""
-    event_type: str = "assistant"
-    operation_type: str = "unknown"  # create_assistant, chat_assistant, chat_completion_assistant, etc.
-    assistant_name: Optional[str] = None
-    instructions: Optional[str] = None
-    metadata: Optional[Dict] = None
-    messages: Optional[List[Dict]] = None
-    model: Optional[str] = None
-    stream: Optional[bool] = None
-    filter: Optional[Dict] = None
-    citations: Optional[List[Dict]] = None
-    status: Optional[str] = None
