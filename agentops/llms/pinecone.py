@@ -477,3 +477,391 @@ class PineconeProvider(InstrumentedProvider):
                         break
         except Exception as e:
             logger.error(f"Failed to record event: {e}")
+
+    def _handle_assistant_response(
+        self, response: Any, operation_type: str, kwargs: Dict, init_timestamp: str, session: Optional[Session] = None
+    ) -> Any:
+        """Handle responses for Pinecone Assistant operations"""
+        try:
+            # If response is an error dictionary, raise it as an exception
+            if isinstance(response, dict) and "error" in response:
+                raise Exception(response["error"])
+
+            # Create response data based on operation type
+            response_data = {
+                "operation_type": operation_type,
+                "timestamp": get_ISO_time()
+            }
+            
+            # Add operation-specific data
+            if operation_type == "create_assistant":
+                response_data.update({
+                    "assistant_name": response.get("name"),
+                    "status": response.get("status"),
+                    "created_at": response.get("created_at")
+                })
+            elif operation_type == "chat":
+                response_data.update({
+                    "model": response.get("model"),
+                    "usage": response.get("usage"),
+                    "citations": response.get("citations")
+                })
+            elif operation_type == "upload_file":
+                response_data.update({
+                    "file_id": response.get("id"),
+                    "file_name": response.get("name"),
+                    "status": response.get("status"),
+                    "percent_done": response.get("percent_done")
+                })
+            
+            # Create ActionEvent
+            event = ActionEvent(
+                init_timestamp=init_timestamp,
+                action_type=operation_type,
+                returns=response_data,
+                params=kwargs
+            )
+            
+            if session:
+                event.session_id = session.session_id
+                session.event_counts["actions"] += 1
+            
+            self._safe_record(session, event)
+            return response
+            
+        except Exception as e:
+            error_event = ErrorEvent(
+                trigger_event=ActionEvent(
+                    init_timestamp=init_timestamp,
+                    action_type=operation_type,
+                    returns={"error": str(e)}
+                ),
+                exception=e,
+                details=kwargs
+            )
+            if session:
+                error_event.trigger_event.session_id = session.session_id
+            self._safe_record(session, error_event)
+            raise
+
+    def create_assistant(self, pc_instance, assistant_name: str, instructions: Optional[str] = None,
+                        metadata: Optional[Dict] = {}, timeout: int = 30) -> Any:
+        """Create a new Pinecone Assistant"""
+        init_timestamp = get_ISO_time()
+        session = get_current_session()
+        kwargs = {
+            "assistant_name": assistant_name,
+            "instructions": instructions,
+            "metadata": metadata or {},
+            "timeout": timeout
+        }
+        try:
+            response = pc_instance.assistant.create_assistant(**kwargs)
+            return self._handle_assistant_response(response, "create_assistant", kwargs, init_timestamp, session)
+        except Exception as e:
+            error_event = ErrorEvent(
+                trigger_event=ActionEvent(
+                    init_timestamp=init_timestamp,
+                    action_type="create_assistant",
+                    returns={"error": str(e)}
+                ),
+                exception=e,
+                details=kwargs
+            )
+            if session:
+                error_event.trigger_event.session_id = session.session_id
+            self._safe_record(session, error_event)
+            raise
+
+    def list_assistants(self, pc_instance) -> Any:
+        """List all assistants"""
+        init_timestamp = get_ISO_time()
+        session = get_current_session()
+        try:
+            response = pc_instance.assistant.list_assistants()
+            return self._handle_assistant_response(response, "list_assistants", {}, init_timestamp, session)
+        except Exception as e:
+            error_event = ErrorEvent(
+                trigger_event=ActionEvent(
+                    init_timestamp=init_timestamp,
+                    action_type="list_assistants",
+                    returns={"error": str(e)}
+                ),
+                exception=e,
+                details={}
+            )
+            if session:
+                error_event.trigger_event.session_id = session.session_id
+            self._safe_record(session, error_event)
+            raise
+
+    def get_assistant(self, pc_instance, assistant_name: str) -> Any:
+        """Get assistant status"""
+        init_timestamp = get_ISO_time()
+        session = get_current_session()
+        kwargs = {"assistant_name": assistant_name}
+        try:
+            # Create an Assistant instance and get its status
+            assistant = pc_instance.assistant.Assistant(assistant_name=assistant_name)
+            response = assistant.get(name=assistant_name)
+            return self._handle_assistant_response(response, "get_assistant", kwargs, init_timestamp, session)
+        except Exception as e:
+            error_event = ErrorEvent(
+                trigger_event=ActionEvent(
+                    init_timestamp=init_timestamp,
+                    action_type="get_assistant",
+                    returns={"error": str(e)}
+                ),
+                exception=e,
+                details=kwargs
+            )
+            if session:
+                error_event.trigger_event.session_id = session.session_id
+            self._safe_record(session, error_event)
+            raise
+
+    def update_assistant(self, pc_instance, assistant_name: str, instructions: Optional[str] = None,
+                        metadata: Optional[Dict] = None) -> Any:
+        """Update an existing assistant"""
+        init_timestamp = get_ISO_time()
+        session = get_current_session()
+        kwargs = {
+            "assistant_name": assistant_name,
+            "instructions": instructions,
+            "metadata": metadata
+        }
+        try:
+            response = pc_instance.assistant.update_assistant(**kwargs)
+            return self._handle_assistant_response(response, "update_assistant", kwargs, init_timestamp, session)
+        except Exception as e:
+            raise self._handle_assistant_response({"error": str(e)}, "update_assistant", kwargs, init_timestamp, session)
+
+    def delete_assistant(self, pc_instance, assistant_name: str) -> Any:
+        """Delete an assistant"""
+        init_timestamp = get_ISO_time()
+        session = get_current_session()
+        kwargs = {"assistant_name": assistant_name}
+        try:
+            response = pc_instance.assistant.delete_assistant(assistant_name)
+            return self._handle_assistant_response(response, "delete_assistant", kwargs, init_timestamp, session)
+        except Exception as e:
+            raise self._handle_assistant_response({"error": str(e)}, "delete_assistant", kwargs, init_timestamp, session)
+
+    def chat_with_assistant(self, pc_instance, assistant_name: str, messages: List[Dict],
+                           stream: bool = False, model: Optional[str] = None) -> Any:
+        """Chat with an assistant"""
+        init_timestamp = get_ISO_time()
+        session = get_current_session()
+        try:
+            # Import the Message class
+            from pinecone_plugins.assistant.models.chat import Message
+            
+            # Convert dict messages to Message objects
+            message_objects = [Message(content=msg["content"]) for msg in messages]
+            
+            # Create kwargs for event tracking
+            kwargs = {
+                "assistant_name": assistant_name,
+                "messages": messages,
+                "stream": stream,
+                "model": model
+            }
+            
+            # Get assistant and chat
+            assistant = pc_instance.assistant.Assistant(assistant_name=assistant_name)
+            response = assistant.chat(messages=message_objects, stream=stream, model=model)
+            return self._handle_assistant_response(response, "chat", kwargs, init_timestamp, session)
+        except Exception as e:
+            error_event = ErrorEvent(
+                trigger_event=ActionEvent(
+                    init_timestamp=init_timestamp,
+                    action_type="chat",
+                    returns={"error": str(e)}
+                ),
+                exception=e,
+                details=kwargs
+            )
+            if session:
+                error_event.trigger_event.session_id = session.session_id
+            self._safe_record(session, error_event)
+            raise
+
+    def upload_file(self, pc_instance, assistant_name: str, file_path: str, 
+                    metadata: Optional[Dict] = None, timeout: Optional[int] = None) -> Any:
+        """Upload a file to an assistant"""
+        init_timestamp = get_ISO_time()
+        session = get_current_session()
+        kwargs = {
+            "assistant_name": assistant_name,
+            "file_path": file_path,
+            "metadata": metadata,
+            "timeout": timeout
+        }
+        try:
+            # Create an Assistant instance first
+            assistant = pc_instance.assistant.Assistant(assistant_name=assistant_name)
+            
+            # Upload file using the file_path directly
+            response = assistant.upload_file(file_path=file_path, timeout=timeout)
+            
+            # Convert FileModel to dictionary
+            if hasattr(response, '__dict__'):
+                response = {
+                    "id": getattr(response, 'id', None),
+                    "name": getattr(response, 'name', None),
+                    "metadata": getattr(response, 'metadata', None),
+                    "created_on": getattr(response, 'created_on', None),
+                    "updated_on": getattr(response, 'updated_on', None),
+                    "status": getattr(response, 'status', None),
+                    "percent_done": getattr(response, 'percent_done', None),
+                    "signed_url": getattr(response, 'signed_url', None)
+                }
+            
+            return self._handle_assistant_response(response, "upload_file", kwargs, init_timestamp, session)
+        except Exception as e:
+            error_event = ErrorEvent(
+                trigger_event=ActionEvent(
+                    init_timestamp=init_timestamp,
+                    action_type="upload_file",
+                    returns={"error": str(e)}
+                ),
+                exception=e,
+                details=kwargs
+            )
+            if session:
+                error_event.trigger_event.session_id = session.session_id
+            self._safe_record(session, error_event)
+            raise
+
+    def describe_file(self, pc_instance, assistant_name: str, file_id: str) -> Any:
+        """Get details about an uploaded file"""
+        init_timestamp = get_ISO_time()
+        session = get_current_session()
+        kwargs = {
+            "assistant_name": assistant_name,
+            "file_id": file_id
+        }
+        try:
+            # Create an Assistant instance first
+            assistant = pc_instance.assistant.Assistant(assistant_name=assistant_name)
+            
+            # Get file details
+            response = assistant.describe_file(file_id=file_id)
+            
+            # Convert response to dict if it's not already
+            if hasattr(response, '__dict__'):
+                response = response.__dict__
+            
+            # Create a safe response dictionary
+            formatted_response = {
+                "name": response.get("name"),
+                "id": response.get("id"),
+                "metadata": response.get("metadata"),
+                "created_on": response.get("created_on"),
+                "updated_on": response.get("updated_on"),
+                "status": response.get("status"),
+                "percent_done": response.get("percent_done"),
+                "signed_url": response.get("signed_url")
+            }
+            
+            return self._handle_assistant_response(formatted_response, "describe_file", kwargs, init_timestamp, session)
+        except Exception as e:
+            error_event = ErrorEvent(
+                trigger_event=ActionEvent(
+                    init_timestamp=init_timestamp,
+                    action_type="describe_file",
+                    returns={"error": str(e)}
+                ),
+                exception=e,
+                details=kwargs
+            )
+            if session:
+                error_event.trigger_event.session_id = session.session_id
+            self._safe_record(session, error_event)
+            raise
+
+    def delete_file(self, pc_instance, assistant_name: str, file_id: str) -> Any:
+        """Delete an uploaded file from an assistant"""
+        init_timestamp = get_ISO_time()
+        session = get_current_session()
+        kwargs = {
+            "assistant_name": assistant_name,
+            "file_id": file_id
+        }
+        try:
+            # Create an Assistant instance first
+            assistant = pc_instance.assistant.Assistant(assistant_name=assistant_name)
+            
+            # Delete the file
+            response = assistant.delete_file(file_id=file_id)
+            return self._handle_assistant_response(response, "delete_file", kwargs, init_timestamp, session)
+        except Exception as e:
+            error_event = ErrorEvent(
+                trigger_event=ActionEvent(
+                    init_timestamp=init_timestamp,
+                    action_type="delete_file",
+                    returns={"error": str(e)}
+                ),
+                exception=e,
+                details=kwargs
+            )
+            if session:
+                error_event.trigger_event.session_id = session.session_id
+            self._safe_record(session, error_event)
+            raise
+
+    def chat_completions(self, pc_instance, assistant_name: str, messages: List[Dict],
+                        stream: bool = False, model: Optional[str] = None) -> Any:
+        """Chat with an assistant using OpenAI-compatible interface"""
+        init_timestamp = get_ISO_time()
+        session = get_current_session()
+        
+        try:
+            # Import the Message class
+            from pinecone_plugins.assistant.models.chat import Message
+            
+            # Convert dict messages to Message objects
+            message_objects = [Message(content=msg["content"]) for msg in messages]
+            
+            # Create kwargs for event tracking
+            kwargs = {
+                "assistant_name": assistant_name,
+                "messages": messages,
+                "stream": stream,
+                "model": model
+            }
+            
+            # Get assistant and use chat_completions
+            assistant = pc_instance.assistant.Assistant(assistant_name=assistant_name)
+            response = assistant.chat_completions(messages=message_objects, stream=stream, model=model)
+            
+            # Format response for OpenAI compatibility
+            formatted_response = {
+                "id": response.get("id"),
+                "choices": [{
+                    "finish_reason": response.get("finish_reason", "stop"),
+                    "index": 0,
+                    "message": {
+                        "role": "assistant",
+                        "content": response.get("message", {}).get("content", "")
+                    }
+                }],
+                "model": response.get("model"),
+                "usage": response.get("usage", {})
+            }
+            
+            return self._handle_assistant_response(formatted_response, "chat_completions", kwargs, init_timestamp, session)
+        except Exception as e:
+            error_event = ErrorEvent(
+                trigger_event=ActionEvent(
+                    init_timestamp=init_timestamp,
+                    action_type="chat_completions",
+                    returns={"error": str(e)}
+                ),
+                exception=e,
+                details=kwargs
+            )
+            if session:
+                error_event.trigger_event.session_id = session.session_id
+            self._safe_record(session, error_event)
+            raise

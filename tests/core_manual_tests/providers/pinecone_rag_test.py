@@ -199,10 +199,116 @@ def test_additional_operations(pc):
     except Exception as e:
         print(f"Error in semantic search operations: {str(e)}")
 
+def test_collection_operations(pc):
+    """Test collection operations"""
+    print("\nTesting collection operations...")
+    collection_name = "test-collection"
+    index_name = "test-index-rag"
+    
+    try:
+        # List collections
+        print("\nListing collections...")
+        collections = pc.list_collections()
+        print(f"Current collections: {collections}")
+        
+        # Create collection
+        print(f"\nCreating collection {collection_name}...")
+        create_response = pc.create_collection(
+            name=collection_name,
+            source=index_name
+        )
+        print(f"Collection created: {create_response}")
+        
+        # Wait for collection to be ready
+        print("\nWaiting for collection to be ready...")
+        while True:
+            description = pc.describe_collection(collection_name)
+            if description.status == "Ready":
+                break
+            time.sleep(1)
+            
+        # Describe collection
+        print(f"\nDescribing collection {collection_name}...")
+        collection_info = pc.describe_collection(collection_name)
+        print(f"Collection info: {collection_info}")
+        
+        # Delete collection
+        print(f"\nDeleting collection {collection_name}...")
+        pc.delete_collection(collection_name)
+        print("Collection deleted")
+        
+    except Exception as e:
+        print(f"Error in collection operations: {e}")
+
+def test_vector_operations(index):
+    """Test vector operations"""
+    print("\nTesting vector operations...")
+    namespace = "test-namespace"
+    
+    try:
+        # Create test vectors
+        vectors = [
+            (
+                "test-vec-1",
+                [0.1] * 1536,
+                {"label": "test1"}
+            ),
+            (
+                "test-vec-2",
+                [0.2] * 1536,
+                {"label": "test2"}
+            )
+        ]
+        
+        # Upsert test vectors
+        print("\nUpserting test vectors...")
+        upsert_response = index.upsert(
+            vectors=vectors,
+            namespace=namespace
+        )
+        print(f"Upsert response: {upsert_response}")
+        
+        # Update vector
+        print("\nUpdating vector...")
+        update_response = index.update(
+            id="test-vec-1",
+            values=[0.3] * 1536,
+            set_metadata={"label": "updated"},
+            namespace=namespace
+        )
+        print(f"Update response: {update_response}")
+        
+        # Fetch to verify update
+        print("\nFetching updated vector...")
+        fetch_response = index.fetch(
+            ids=["test-vec-1"],
+            namespace=namespace
+        )
+        print(f"Fetch response: {fetch_response}")
+        
+        # Delete specific vectors
+        print("\nDeleting specific vectors...")
+        delete_response = index.delete(
+            ids=["test-vec-1"],
+            namespace=namespace
+        )
+        print(f"Delete response: {delete_response}")
+        
+        # Delete all vectors in namespace
+        print("\nDeleting all vectors in namespace...")
+        delete_all_response = index.delete(
+            delete_all=True,
+            namespace=namespace
+        )
+        print(f"Delete all response: {delete_all_response}")
+        
+    except Exception as e:
+        print(f"Error in vector operations: {e}")
+
 def test_rag_pipeline():
     """Test complete RAG pipeline with additional operations"""
     index_name = "test-index-rag"
-    dimension = 1536  # Dimension for text-embedding-3-small
+    dimension = 1536
     
     try:
         # List existing indexes
@@ -232,6 +338,10 @@ def test_rag_pipeline():
         
         # Test additional operations
         test_additional_operations(pc)
+        
+        # Add new test operations
+        test_vector_operations(index)
+        test_collection_operations(pc)
         
         # Test queries
         test_queries = [

@@ -2,37 +2,41 @@ import agentops
 from dotenv import load_dotenv
 from pinecone import Pinecone
 import os
-import time
+from pinecone_plugins.assistant.models.chat import Message
 
 load_dotenv()
 
 def test_assistant_operations():
     """Test Pinecone Assistant operations"""
+    # Initialize Pinecone and Provider
     pc = Pinecone(api_key=os.getenv("PINECONE_API_KEY"))
+    provider = agentops.llms.PineconeProvider(pc)
     
     try:
         # List existing assistants
         print("\nListing assistants...")
-        assistants = pc.list_assistants()
+        assistants = provider.list_assistants(pc)
         print(f"Current assistants: {assistants}")
         
         # Create a new assistant
         print("\nCreating assistant...")
-        assistant = pc.create_assistant(
-            name="test-assistant",
-            instructions="You are a helpful assistant for testing purposes.",
-            model="gpt-4"
+        assistant = provider.create_assistant(
+            pc,
+            assistant_name="test-assistant",
+            instructions="You are a helpful assistant for testing purposes."
         )
         print(f"Created assistant: {assistant}")
         
         # Check assistant status
-        status = pc.check_assistant_status(assistant.id)
+        print("\nChecking assistant status...")
+        status = provider.get_assistant(pc, "test-assistant")
         print(f"Assistant status: {status}")
         
         # Update assistant
         print("\nUpdating assistant...")
-        updated = pc.update_assistant(
-            assistant_id=assistant.id,
+        updated = provider.update_assistant(
+            pc,
+            assistant_name="test-assistant",
             instructions="Updated instructions for testing."
         )
         print(f"Updated assistant: {updated}")
@@ -42,56 +46,44 @@ def test_assistant_operations():
         with open("test_data.txt", "w") as f:
             f.write("This is test data for the assistant.")
         
-        file_upload = pc.upload_file(
-            assistant_id=assistant.id,
+        file_upload = provider.upload_file(
+            pc,
+            assistant_name="test-assistant",
             file_path="test_data.txt"
         )
         print(f"File upload: {file_upload}")
         
-        # Describe file
-        file_info = pc.describe_file(
-            assistant_id=assistant.id,
-            file_id=file_upload.id
+        # Describe uploaded file
+        print("\nDescribing uploaded file...")
+        file_description = provider.describe_file(
+            pc,
+            assistant_name="test-assistant",
+            file_id=file_upload["id"]  # Now this should work since file_upload is a dict
         )
-        print(f"File info: {file_info}")
+        print(f"File description: {file_description}")
         
-        # Test chat
-        print("\nTesting chat...")
-        chat_response = pc.chat(
-            assistant_id=assistant.id,
-            messages=[{"role": "user", "content": "Hello, can you help me with testing?"}]
+        # Test chat with OpenAI-compatible interface
+        print("\nTesting chat completions...")
+        chat_completion = provider.chat_completions(
+            pc,
+            assistant_name="test-assistant",
+            messages=[{"content": "What information can you find in the uploaded file?"}]
         )
-        print(f"Chat response: {chat_response}")
+        print(f"Chat completion response: {chat_completion}")
         
-        # Test OpenAI-compatible chat
-        print("\nTesting OpenAI-compatible chat...")
-        openai_response = pc.chat_openai(
-            assistant_id=assistant.id,
-            messages=[{"role": "user", "content": "Hello using OpenAI format"}]
+        # Delete uploaded file
+        print("\nDeleting uploaded file...")
+        delete_response = provider.delete_file(
+            pc,
+            assistant_name="test-assistant",
+            file_id=file_upload["id"]
         )
-        print(f"OpenAI-compatible response: {openai_response}")
-        
-        # Test evaluation
-        print("\nTesting evaluation...")
-        eval_response = pc.evaluate(
-            assistant_id=assistant.id,
-            question="What is 2+2?",
-            answer="4",
-            context="Basic arithmetic testing."
-        )
-        print(f"Evaluation response: {eval_response}")
+        print(f"File deletion response: {delete_response}")
         
         # Clean up
         print("\nCleaning up...")
-        # Delete file
-        pc.delete_file(
-            assistant_id=assistant.id,
-            file_id=file_upload.id
-        )
-        print("File deleted")
-        
         # Delete assistant
-        pc.delete_assistant(assistant.id)
+        provider.delete_assistant(pc, "test-assistant")
         print("Assistant deleted")
         
         os.remove("test_data.txt")
