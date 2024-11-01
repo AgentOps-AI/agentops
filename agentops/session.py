@@ -59,6 +59,7 @@ class Session:
             "actions": 0,
             "errors": 0,
             "apis": 0,
+            "vectors": 0,
         }
 
         self.stop_flag = threading.Event()
@@ -158,7 +159,8 @@ class Session:
             f"{colored('LLMs:', attrs=['bold'])} {self.event_counts['llms']} | "
             f"{colored('Tools:', attrs=['bold'])} {self.event_counts['tools']} | "
             f"{colored('Actions:', attrs=['bold'])} {self.event_counts['actions']} | "
-            f"{colored('Errors:', attrs=['bold'])} {self.event_counts['errors']}"
+            f"{colored('Errors:', attrs=['bold'])} {self.event_counts['errors']} | "
+            f"{colored('Vectors:', attrs=['bold'])} {self.event_counts['vectors']}"
         )
         logger.info(analytics)
 
@@ -358,6 +360,8 @@ class Session:
                         self.event_counts["errors"] += 1
                     elif event_type == "apis":
                         self.event_counts["apis"] += 1
+                    elif event_type == "vectors":
+                        self.event_counts["vectors"] += 1
 
     def _run(self) -> None:
         while not self.stop_flag.is_set():
@@ -398,3 +402,9 @@ class Session:
 
 
 active_sessions: List[Session] = []
+
+def get_current_session() -> Optional[Session]:
+    """Get the most recent active session"""
+    if not active_sessions:
+        return None
+    return active_sessions[-1]  # Return the most recently added session

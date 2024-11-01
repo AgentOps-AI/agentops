@@ -1,47 +1,42 @@
 [build-system]
-requires = ["setuptools>=61.0", "wheel"]
-build-backend = "setuptools.build_meta"
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"
 
-[project]
+[tool.poetry]
 name = "agentops"
 version = "0.3.14"
-authors = [
-  { name="Alex Reibman", email="areibman@gmail.com" },
-  { name="Shawn Qiu", email="siyangqiu@gmail.com" },
-  { name="Braelyn Boynton", email="bboynton97@gmail.com" },
-  { name="Howard Gil", email="howardbgil@gmail.com" }
-]
 description = "Observability and DevTool Platform for AI Agents"
 readme = "README.md"
-requires-python = ">=3.7"
-classifiers = [
-    "Programming Language :: Python :: 3",
-    "License :: OSI Approved :: MIT License",
-    "Operating System :: OS Independent",
+authors = [
+    "Alex Reibman <areibman@gmail.com>",
+    "Shawn Qiu <siyangqiu@gmail.com>",
+    "Braelyn Boynton <bboynton97@gmail.com>",
+    "Howard Gil <howardbgil@gmail.com>"
 ]
-dependencies = [
-    "requests>=2.0.0,<3.0.0",
-    "psutil==5.9.8",
-    "packaging==23.2",
-    "termcolor==2.4.0",
-    "PyYAML>=5.3,<7.0"
-]
-[project.optional-dependencies]
-dev = [
-    "pytest==7.4.0",
-    "requests_mock==1.11.0",
-    "tach~=0.9",
-]
-langchain = [
-    "langchain==0.2.14"
-]
+license = "MIT"
+homepage = "https://github.com/AgentOps-AI/agentops"
+repository = "https://github.com/AgentOps-AI/agentops"
+keywords = ["observability", "devtool", "AI", "agents"]
 
-[project.urls]
-Homepage = "https://github.com/AgentOps-AI/agentops"
-Issues = "https://github.com/AgentOps-AI/agentops/issues"
+[tool.poetry.dependencies]
+python = ">=3.8.1,<4.0"
+requests = ">=2.0.0,<3.0.0"
+psutil = "5.9.8"
+packaging = "23.2"
+termcolor = "2.4.0"
+PyYAML = ">=5.3,<7.0"
+langchain = { version = "0.2.14", optional = true }
+
+[tool.poetry.extras]
+langchain = ["langchain"]
+
+[tool.poetry.dev-dependencies]
+pytest = "7.4.0"
+requests_mock = "1.11.0"
+tach = "^0.9"
+
+[tool.poetry.scripts]
+agentops = "agentops.cli:main"
 
 [tool.autopep8]
 max_line_length = 120
-
-[project.scripts]
-agentops = "agentops.cli:main"
