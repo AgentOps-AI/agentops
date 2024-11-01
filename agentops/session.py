@@ -8,6 +8,8 @@ from termcolor import colored
 from typing import Optional, List, Union
 from uuid import UUID, uuid4
 from datetime import datetime
+import atexit
+import signal
 
 from .exceptions import ApiServerException
 from .enums import EndState
@@ -71,6 +73,10 @@ class Session:
             self.stop_flag.set()
             self.thread.join(timeout=1)
 
+        self._cleanup_done = False
+        atexit.register(self._cleanup)
+        signal.signal(signal.SIGINT, self._signal_handler)
+
     def set_video(self, video: str) -> None:
         """
         Sets a url to the video recording of the session.
@@ -86,20 +92,15 @@ class Session:
         end_state_reason: Optional[str] = None,
         video: Optional[str] = None,
     ) -> Union[Decimal, None]:
+        with self.lock:
+            if not self.is_running or self.end_timestamp:
+                return
 
-        if not self.is_running:
-            return
-
-        if not any(end_state == state.value for state in EndState):
-            return logger.warning(
-                "Invalid end_state. Please use one of the EndState enums"
-            )
-
-        self.end_timestamp = get_ISO_time()
-        self.end_state = end_state
-        self.end_state_reason = end_state_reason
-        if video is not None:
-            self.video = video
+            self.end_timestamp = get_ISO_time()
+            self.end_state = end_state
+            self.end_state_reason = end_state_reason
+            if video is not None:
+                self.video = video
 
         self.stop_flag.set()
         self.thread.join(timeout=1)
@@ -395,6 +396,24 @@ class Session:
             return func(*args, **kwargs)
 
         return wrapper
+
+    def _signal_handler(self, signum, frame):
+        """Handle interrupt signals gracefully"""
+        self._cleanup()
+        # Re-raise the signal after cleanup
+        signal.signal(signum, signal.default_int_handler)
+        signal.raise_signal(signum)
+
+    def _cleanup(self):
+        """Ensure clean shutdown of session"""
+        if not self._cleanup_done:
+            with self.lock:
+                if self.is_running and not self.end_timestamp:
+                    self.end_session(
+                        end_state="Indeterminate",
+                        end_state_reason="Session interrupted"
+                    )
+                self._cleanup_done = True
 
 
 active_sessions: List[Session] = []
