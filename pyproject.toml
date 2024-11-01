@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "agentops"
-version = "0.3.14"
+version = "0.3.15rc1"
 authors = [
   { name="Alex Reibman", email="areibman@gmail.com" },
   { name="Shawn Qiu", email="siyangqiu@gmail.com" },
@@ -45,3 +45,7 @@ max_line_length = 120
 
 [project.scripts]
 agentops = "agentops.cli:main"
+
+[tool.pytest.ini_options]
+asyncio_mode = "strict"
+asyncio_default_fixture_loop_scope = "function"
