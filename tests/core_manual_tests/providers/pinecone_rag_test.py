@@ -35,20 +35,34 @@ def create_index(index_name, dimension):
     """Create Pinecone index"""
     print(f"\nCreating index {index_name}...")
     
-    pc.create_index(
-        name=index_name,
-        dimension=dimension,
-        metric="cosine",
-        spec=ServerlessSpec(
-            cloud="aws",
-            region="us-east-1"
+    try:
+        pc.create_index(
+            name=index_name,
+            dimension=dimension,
+            metric="cosine",
+            spec=ServerlessSpec(
+                cloud="aws",
+                region="us-east-1"
+            )
         )
-    )
-    
-    while not pc.describe_index(index_name).status['ready']:
-        time.sleep(1)
-    
-    return pc.Index(index_name)
+        
+        # Wait for index to be ready
+        while True:
+            try:
+                status = pc.describe_index(index_name).status['ready']
+                if status:
+                    break
+                time.sleep(1)
+            except Exception as e:
+                print(f"Waiting for index to be ready... ({str(e)})")
+                time.sleep(1)
+                continue
+                
+        return pc.Index(index_name)
+        
+    except Exception as e:
+        print(f"Error creating index: {e}")
+        raise
 
 def index_documents(index, texts):
     """Index documents with their embeddings"""
@@ -105,8 +119,88 @@ def generate_answer(query, context):
     )
     return response.choices[0].message.content
 
+def test_data_plane_operations(index):
+    """Test various data plane operations"""
+    print("\nTesting data plane operations...")
+    
+    try:
+        # Test list
+        print("\nTesting list vector IDs...")
+        vector_ids = list(index.list(namespace="test-namespace"))
+        print(f"List response: {vector_ids}")
+        
+        # Test describe index stats
+        print("\nTesting describe index stats...")
+        stats = index.describe_index_stats()
+        print(f"Index stats: {stats}")
+        
+        # Test fetch
+        print("\nTesting fetch vectors...")
+        if vector_ids:  # Only fetch if we have vector IDs
+            fetch_response = index.fetch(
+                ids=vector_ids[:2],  # Get first 2 IDs
+                namespace="test-namespace"
+            )
+            print(f"Fetch response: {fetch_response}")
+        
+        # Test update
+        print("\nTesting update vector...")
+        try:
+            if vector_ids:  # Only update if we have vector IDs
+                # Create a random vector of the correct dimension
+                random_vector = np.random.rand(1536).tolist()
+                update_response = index.update(
+                    id=vector_ids[0],
+                    values=random_vector,
+                    namespace="test-namespace"
+                )
+                print(f"Update response: {update_response}")
+        except Exception as e:
+            print(f"Update operation error: {e}")
+            
+    except Exception as e:
+        print(f"Error in data plane operations: {e}")
+
+def test_additional_operations(pc):
+    """Test semantic search operations"""
+    print("\nTesting semantic search operations...")
+    try:
+        # Test embedding using OpenAI
+        print("\nTesting OpenAI embedding...")
+        try:
+            response = openai_client.embeddings.create(
+                model="text-embedding-3-small",
+                input="test document",
+                encoding_format="float"
+            )
+            embedding = response.data[0].embedding
+            print(f"Generated embedding of dimension {len(embedding)}")
+            
+            # Use the embedding for semantic search
+            print("\nTesting semantic search with embedding...")
+            index = pc.Index("test-index-rag")
+            results = index.query(
+                vector=embedding,
+                top_k=2,
+                namespace="test-namespace",
+                include_metadata=True
+            )
+            
+            print("\nSearch results:")
+            for match in results.matches:
+                print(f"ID: {match.id}, Score: {match.score}")
+                if hasattr(match, 'metadata'):
+                    print(f"Metadata: {match.metadata}")
+                print("---")
+                
+        except Exception as e:
+            print(f"Search operation error: {str(e)}")
+            
+    except Exception as e:
+        print(f"Error in semantic search operations: {str(e)}")
+
 def test_rag_pipeline():
-    """Test complete RAG pipeline"""
+    """Test complete RAG pipeline with additional operations"""
     index_name = "test-index-rag"
     dimension = 1536  # Dimension for text-embedding-3-small
     
@@ -132,6 +226,12 @@ def test_rag_pipeline():
         index_documents(index, SAMPLE_TEXTS)
         print("Waiting for documents to be indexed...")
         time.sleep(5)  # Add delay to ensure documents are indexed
+        
+        # Test data plane operations
+        test_data_plane_operations(index)
+        
+        # Test additional operations
+        test_additional_operations(pc)
         
         # Test queries
         test_queries = [
