@@ -18,15 +18,19 @@ def setup_teardown():
 
 
 @contextlib.contextmanager
-@pytest.fixture(autouse=True)
+@pytest.fixture(autouse=True, scope="function")
 def mock_req():
     with requests_mock.Mocker() as m:
         url = "https://api.agentops.ai"
-        m.post(url + "/v2/create_agent", text="ok")
-        m.post(url + "/v2/update_session", text="ok")
+        m.post(url + "/v2/create_agent", json={"status": "success"})
+        m.post(url + "/v2/update_session", json={"status": "success", "token_cost": 5})
         m.post(
             url + "/v2/create_session", json={"status": "success", "jwt": "some_jwt"}
         )
+        m.post("https://pypi.org/pypi/agentops/json", status_code=404)
+
+        m.post(url + "/v2/create_events", json={"status": "ok"})
+        m.post(url + "/v2/developer_errors", json={"status": "ok"})
 
         yield m
 
@@ -48,10 +52,20 @@ class TestPreInit:
         assert len(mock_req.request_history) == 0
 
         agentops.init(api_key=self.api_key)
+        time.sleep(1)
 
         # Assert
         # start session and create agent
-        assert len(mock_req.request_history) == 2
-        assert mock_req.last_request.headers["X-Agentops-Api-Key"] == self.api_key
-
         agentops.end_session(end_state="Success")
+
+        # Wait for flush
+        time.sleep(1.5)
+
+        # 4 requests: check_for_updates, create_session, create_agent, update_session
+        assert len(mock_req.request_history) == 4
+
+        assert (
+            mock_req.request_history[-2].headers["X-Agentops-Api-Key"] == self.api_key
+        )
+
+        mock_req.reset()

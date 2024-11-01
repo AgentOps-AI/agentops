@@ -87,7 +87,6 @@ class Client(metaclass=MetaClient):
             return
 
         self.unsuppress_logs()
-
         if self._config.api_key is None:
             return logger.error(
                 "Could not initialize AgentOps client - API Key is missing."
@@ -95,8 +94,6 @@ class Client(metaclass=MetaClient):
             )
 
         self._handle_unclean_exits()
-        self._initialize_partner_framework()
-
         self._initialized = True
 
         if self._config.instrument_llm_calls:
@@ -116,7 +113,7 @@ class Client(metaclass=MetaClient):
 
         return session
 
-    def _initialize_partner_framework(self) -> None:
+    def _initialize_autogen_logger(self) -> None:
         try:
             import autogen
             from .partners.autogen_logger import AutogenLogger
@@ -305,7 +302,8 @@ class Client(metaclass=MetaClient):
                 self._pre_init_queue["agents"].append(
                     {"name": name, "agent_id": agent_id}
                 )
-            session.create_agent(name=name, agent_id=agent_id)
+            else:
+                session.create_agent(name=name, agent_id=agent_id)
 
         return agent_id
 
