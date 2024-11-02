@@ -36,6 +36,7 @@ def create_index(index_name, dimension):
     print(f"\nCreating index {index_name}...")
     
     try:
+        # Create the index
         pc.create_index(
             name=index_name,
             dimension=dimension,
@@ -49,13 +50,24 @@ def create_index(index_name, dimension):
         # Wait for index to be ready
         while True:
             try:
-                status = pc.describe_index(index_name).status['ready']
-                if status:
+                description = pc.describe_index(index_name)
+                # Handle both dictionary and object responses based on API docs
+                if isinstance(description, dict):
+                    status = description.get('status', {})
+                    is_ready = status.get('ready', False)
+                    state = status.get('state', 'Unknown')
+                else:
+                    status = getattr(description, 'status', {})
+                    is_ready = getattr(status, 'ready', False)
+                    state = getattr(status, 'state', 'Unknown')
+                
+                print(f"Index status: {state}")
+                if is_ready:
                     break
-                time.sleep(1)
+                time.sleep(2)  # Increased delay to reduce API calls
             except Exception as e:
-                print(f"Waiting for index to be ready... ({str(e)})")
-                time.sleep(1)
+                print(f"Error checking index status: {e}")
+                time.sleep(2)
                 continue
                 
         return pc.Index(index_name)

@@ -68,17 +68,56 @@ class PineconeProvider(InstrumentedProvider):
         
         self._safe_record(session, event)
         
-        # For index operations that return a generator or response object
+        # For index operations, ensure we're returning the proper response
         if operation_type in ["create_index", "describe_index"]:
-            try:
-                if hasattr(response, '__iter__') and not isinstance(response, (dict, list, str)):
-                    response_list = list(response)
-                    if response_list:
-                        return response_list[0]
-                    return response
-            except Exception as e:
-                logger.error(f"Error processing index operation response: {e}")
+            # Handle None response
+            if response is None:
+                return {
+                    "name": kwargs.get("name", "unknown"),
+                    "status": {
+                        "ready": False,
+                        "state": "Creating"
+                    }
+                }
+            
+            # If response is already a dict with proper structure, return it
+            if isinstance(response, dict) and "status" in response:
                 return response
+                
+            # If response is a dict but missing status, add it
+            if isinstance(response, dict):
+                response["status"] = {
+                    "ready": False,
+                    "state": "Creating"
+                }
+                return response
+                
+            # If response has status attribute
+            if hasattr(response, 'status'):
+                return {
+                    "name": getattr(response, 'name', kwargs.get("name", "unknown")),
+                    "status": response.status
+                }
+                
+            # If response has to_dict method
+            if hasattr(response, 'to_dict'):
+                response_dict = response.to_dict()
+                if "status" not in response_dict:
+                    response_dict["status"] = {
+                        "ready": False,
+                        "state": "Creating"
+                    }
+                return response_dict
+                
+            # If we can't properly format the response, return a safe dict
+            logger.warning(f"Unexpected response type for {operation_type}: {type(response)}")
+            return {
+                "name": kwargs.get("name", "unknown"),
+                "status": {
+                    "ready": False,
+                    "state": "Unknown"
+                }
+            }
 
         return response
 
@@ -249,26 +288,37 @@ class PineconeProvider(InstrumentedProvider):
             A dictionary containing the formatted response.
         """
         try:
+            # Special handling for list operation which returns an iterator
             if operation_type == "list":
-                # Handle generator response
                 vector_ids = list(response) if hasattr(response, '__iter__') else []
                 formatted = {"vector_ids": vector_ids}
+            # Handle other response types
             elif isinstance(response, dict):
-                formatted = response
+                formatted = response.copy()
             elif hasattr(response, 'to_dict'):
                 formatted = response.to_dict()
+            elif hasattr(response, '__dict__'):
+                formatted = response.__dict__.copy()
             elif isinstance(response, (list, tuple)):
                 formatted = {"items": [str(item) for item in response]}
             else:
                 formatted = {"raw_response": str(response)}
             
-            # Convert any integer keys to strings
+            # Ensure all dictionary keys are strings
             if isinstance(formatted, dict):
                 formatted = {str(k): v for k, v in formatted.items()}
+                formatted["operation_type"] = operation_type
+                
+                # For index operations, ensure critical fields are present
+                if operation_type in ["create_index", "describe_index"]:
+                    required_fields = ["name", "dimension", "metric"]
+                    for field in required_fields:
+                        if field not in formatted:
+                            formatted[field] = None
             
-            formatted["operation_type"] = operation_type
             return formatted
         except Exception as e:
+            logger.error(f"Error formatting response: {e}")
             return {
                 "operation_type": operation_type,
                 "error": str(e),
