@@ -17,6 +17,7 @@ class OpenAiProvider(InstrumentedProvider):
 
     original_create = None
     original_create_async = None
+    original_assistant_methods = None
 
     def __init__(self, client):
         super().__init__(client)
@@ -140,9 +141,98 @@ class OpenAiProvider(InstrumentedProvider):
 
         return response
 
+    def _override_openai_assistants_beta(self):
+        """Override OpenAI Assistants API methods"""
+        from openai.resources import beta
+        from openai.types.beta import Assistant
+
+        assistant_methods = {
+            # Assistants
+            "assistants_create": beta.Assistants.create,
+            "assistants_retrieve": beta.Assistants.retrieve,
+            "assistants_update": beta.Assistants.update,
+            "assistants_delete": beta.Assistants.delete,
+            "assistants_list": beta.Assistants.list,
+            # Threads
+            "threads_create": beta.Threads.create,
+            "threads_retrieve": beta.Threads.retrieve,
+            "threads_update": beta.Threads.update,
+            "threads_delete": beta.Threads.delete,
+            # Messages
+            "messages_create": beta.threads.Messages.create,
+            "messages_retrieve": beta.threads.Messages.retrieve,
+            "messages_update": beta.threads.Messages.update,
+            "messages_list": beta.threads.Messages.list,
+            # Runs
+            "runs_create": beta.threads.Runs.create,
+            "runs_retrieve": beta.threads.Runs.retrieve,
+            "runs_update": beta.threads.Runs.update,
+            "runs_list": beta.threads.Runs.list,
+            "runs_submit_tool_outputs": beta.threads.Runs.submit_tool_outputs,
+            "runs_cancel": beta.threads.Runs.cancel,
+        }
+
+        # Store original methods
+        self.original_assistant_methods = assistant_methods.copy()
+
+        def patched_function(original_func, method_name):
+            def patched_function(*args, **kwargs):
+                init_timestamp = get_ISO_time()
+                session = kwargs.pop("session", None)
+
+                try:
+                    result = original_func(*args, **kwargs)
+
+                    # Create an event for API call
+                    event = ActionEvent(
+                        action_type=f"assistant_{method_name}",
+                        init_timestamp=init_timestamp,
+                        end_timestamp=get_ISO_time(),
+                        params=kwargs,
+                        returns=(
+                            result.model_dump()
+                            if hasattr(result, "model_dump")
+                            else str(result)
+                        ),
+                    )
+
+                    if session is not None:
+                        event.session_id = session.session_id
+
+                    self._safe_record(session, event)
+                    return result
+                except Exception as e:
+                    self._safe_record(
+                        session,
+                        ErrorEvent(
+                            trigger_event=ActionEvent(
+                                action_type=f"assistant_{method_name}", params=kwargs
+                            ),
+                            exception=e,
+                        ),
+                    )
+                    raise
+
+            return patched_function
+
+        # Override each Assistant API method
+        for method_name, original_method in assistant_methods.items():
+            patched = patched_function(original_method, method_name)
+
+            if method_name.startswith("threads_"):
+                setattr(beta.Threads, method_name[8:], patched)
+            elif method_name.startswith("messages_"):
+                setattr(beta.threads.Messages, method_name[9:], patched)
+            elif method_name.startswith("runs_"):
+                setattr(beta.threads.Runs, method_name[5:], patched)
+            elif method_name.startswith("assistants_"):
+                setattr(beta.Assistants, method_name[11:], patched)
+
     def override(self):
         self._override_openai_v1_completion()
         self._override_openai_v1_async_completion()
+        self._override_openai_v1_async_completion()
+        self._override_openai_assistants_beta()
 
     def _override_openai_v1_completion(self):
         from openai.resources.chat import completions
@@ -252,3 +342,16 @@ class OpenAiProvider(InstrumentedProvider):
 
             completions.AsyncCompletions.create = self.original_create_async
             completions.Completions.create = self.original_create
+
+        if self.original_assistant_methods is not None:
+            from openai.resources import beta
+
+            for method_name, original_method in self.original_assistant_methods.items():
+                if method_name.startswith("threads_"):
+                    setattr(beta.Threads, method_name[8:], original_method)
+                elif method_name.startswith("messages_"):
+                    setattr(beta.Messages, method_name[9:], original_method)
+                elif method_name.startswith("runs_"):
+                    setattr(beta.Runs, method_name[5:], original_method)
+                else:
+                    setattr(beta.Assistants, method_name, original_method)
