@@ -36,7 +36,7 @@
 </p>
 
 <div style="justify-content: center">
-  <img src="docs/images/external/app_screenshots/dashboard_banner.png" alt="Dashboard Banner">
+  <img src="docs/images/external/app_screenshots/dashboard-banner.png" alt="Dashboard Banner">
 </div>
 
 <br/>
@@ -83,7 +83,13 @@ All your sessions can be viewed on the [AgentOps dashboard](https://app.agentops
 <details>
   <summary>Agent Debugging</summary>
   <a href="https://app.agentops.ai?ref=gh">
-    <img src="docs/images/external/app_screenshots/session-overview.png" style="width: 90%;" alt="Agent Debugging"/>
+    <img src="docs/images/external/app_screenshots/session-drilldown-metadata.png" style="width: 90%;" alt="Agent Metadata"/>
+  </a>
+  <a href="https://app.agentops.ai?ref=gh">
+    <img src="docs/images/external/app_screenshots/chat-viewer.png" style="width: 90%;" alt="Chat Viewer"/>
+  </a>
+  <a href="https://app.agentops.ai?ref=gh">
+    <img src="docs/images/external/app_screenshots/session-drilldown-graphs.png" style="width: 90%;" alt="Event Graphs"/>
   </a>
 </details>
 
@@ -98,6 +104,9 @@ All your sessions can be viewed on the [AgentOps dashboard](https://app.agentops
   <summary>Summary Analytics</summary>
   <a href="https://app.agentops.ai?ref=gh">
    <img src="docs/images/external/app_screenshots/overview.png" style="width: 90%;" alt="Summary Analytics"/>
+  </a>
+  <a href="https://app.agentops.ai?ref=gh">
+   <img src="docs/images/external/app_screenshots/overview-charts.png" style="width: 90%;" alt="Summary Analytics Charts"/>
   </a>
 </details>
 
