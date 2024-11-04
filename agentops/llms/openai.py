@@ -170,6 +170,9 @@ class OpenAiProvider(InstrumentedProvider):
             "runs_list": beta.threads.Runs.list,
             "runs_submit_tool_outputs": beta.threads.Runs.submit_tool_outputs,
             "runs_cancel": beta.threads.Runs.cancel,
+            # Runs Steps
+            "runs_steps_retrieve": beta.threads.runs.steps.retrieve,
+            "runs_steps_list": beta.threads.runs.steps.list,,
         }
 
         # Store original methods
