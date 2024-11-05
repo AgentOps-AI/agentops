@@ -41,16 +41,14 @@ class LlmTracker:
         "anthropic": {
             "0.32.0": ("completions.create",),
         },
-<< << << < HEAD
         "mistralai": {
             "1.0.1": ("chat.complete", "chat.stream"),
-== == == =
+        },
         "ai21": {
             "2.0.0": (
                 "chat.completions.create",
                 "client.answer.create",
             ),
->>>>>> > main
         },
     }
 
@@ -148,7 +146,6 @@ class LlmTracker:
                             f"Only Anthropic>=0.32.0 supported. v{module_version} found."
                         )
 
-<< << << < HEAD
                 if api == "mistralai":
                     module_version = version(api)
 
@@ -158,7 +155,6 @@ class LlmTracker:
                     else:
                         logger.warning(
                             f"Only MistralAI>=1.0.1 supported. v{module_version} found."
-== == == =
                 if api == "ai21":
                     module_version=version(api)
 
@@ -173,7 +169,6 @@ class LlmTracker:
                     else:
                         logger.warning(
                             f"Only AI21>=2.0.0 supported. v{module_version} found."
->> >>>> > main
                         )
 
     def stop_instrumenting(self):
@@ -183,8 +178,5 @@ class LlmTracker:
         LiteLLMProvider(self.client).undo_override()
         OllamaProvider(self.client).undo_override()
         AnthropicProvider(self.client).undo_override()
-<< << << < HEAD
         MistralProvider(self.client).undo_override()
-== == == =
         AI21Provider(self.client).undo_override()
->> >>>> > main
