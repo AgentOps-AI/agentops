@@ -4,6 +4,9 @@ description: "Use AI21's latest models with AgentOps including:
 Jamba 1.5, Jamba Instruct, and specialized task models"
 ---
 
+import CodeTooltip from '/snippets/add-code-tooltip.mdx'
+import EnvTooltip from '/snippets/add-env-tooltip.mdx'
+
 ## AI21
 
 From [AI21's docs](https://docs.ai21.com/):
@@ -14,7 +17,7 @@ AI21 provides state-of-the-art language models through a simple API, offering:
 - Chat and completion endpoints
 - Enterprise-grade reliability and support
 
-AI21 supports several [models](https://docs.ai21.com/reference/models) including Jamba 1.5, Jamba Instruct, and task-specific models.
+AI21 supports several including Jamba 1.5, Jamba Instruct, and task-specific models.
 
 ## Using AgentOps with AI21
 
@@ -22,34 +25,57 @@ AI21 supports several [models](https://docs.ai21.com/reference/models) including
 
 AgentOps works seamlessly with AI21's Python SDK. Here's how to use it:
 
-```python
-from ai21 import AI21Client
-from ai21.models.chat import ChatMessage
-import agentops
+<Steps>
+  <Step title="Install the AgentOps SDK">
+    <CodeGroup>
+      ```bash pip 
+      pip install agentops
+      ```
+      ```bash poetry
+      poetry add agentops
+      ```
+    </CodeGroup>
+  </Step>
+  <Step title="Add AgentOps to your code">
+    <CodeTooltip/>
+    <span className="api-key-container">
+      <CodeGroup>
+        ```python python
+        from ai21 import AI21Client
+        from ai21.models.chat import ChatMessage
+        import agentops
 
-# Initialize clients
-client = AI21Client(api_key="your-api-key")
-agentops.init("your-agentops-key")
+        # Initialize clients
+        agentops.init(<INSERT YOUR API KEY HERE>)
+        client = AI21Client(api_key="your-api-key")
 
-# Create your messages
-messages = [
-    ChatMessage(
-        content="You are a world renowned poet in the style of Edgar Allan Poe.",
-        role="system",
-    ),
-    ChatMessage(
-        content="Write me a short poem about AI agents.",
-        role="user",
-    ),
-]
+        # Your AI21 code here...
 
-# Make the API call
-response = client.chat.completions.create(
-    messages=messages,
-    model="jamba-1.5-mini",
-)
-print(response.choices[0].message.content)
-```
+        agentops.end_session("Success") # Success|Fail|Indeterminate
+        ```
+      </CodeGroup>
+    </span>
+    <EnvTooltip />
+    <span className="api-key-container">
+      <CodeGroup>
+        ```python .env
+        AGENTOPS_API_KEY=<YOUR API KEY>
+        ```
+      </CodeGroup>
+      Read more about environment variables in [Advanced Configuration](/v1/usage/advanced-configuration)
+    </span>
+  </Step>
+  <Step title="Run your Agent">
+    Execute your program and visit [app.agentops.ai/drilldown](https://app.agentops.ai/drilldown) to observe your Agent! 🕵️
+    <Tip>
+      After your run, AgentOps prints a clickable url to console linking directly to your session in the Dashboard
+    </Tip>
+    <div/>{/* Intentionally blank div for newline */}
+    <Frame type="glass" caption="Clickable link to session">
+      <img height="200" src="https://github.com/AgentOps-AI/agentops/blob/cf67191f13e0e2a09446a61b7393e1810b3eee95/docs/images/link-to-session.gif?raw=true" />
+    </Frame>
+  </Step>
+</Steps>
 
 ### Streaming Support
 
