@@ -155,8 +155,10 @@ class LlmTracker:
                     else:
                         logger.warning(
                             f"Only MistralAI>=1.0.1 supported. v{module_version} found."
+                        )
+
                 if api == "ai21":
-                    module_version=version(api)
+                    module_version = version(api)
 
                     if module_version is None:
                         logger.warning(
@@ -164,7 +166,7 @@ class LlmTracker:
                         )
 
                     if Version(module_version) >= parse("2.0.0"):
-                        provider=AI21Provider(self.client)
+                        provider = AI21Provider(self.client)
                         provider.override()
                     else:
                         logger.warning(
