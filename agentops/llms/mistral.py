@@ -41,7 +41,7 @@ class MistralProvider(InstrumentedProvider):
             try:
                 accumulated_delta = llm_event.returns.choices[0].delta
                 llm_event.agent_id = check_call_stack_for_agent_id()
-                llm_event.model = 'mistral/' + chunk.data.model
+                llm_event.model = "mistral/" + chunk.data.model
                 llm_event.prompt = kwargs["messages"]
 
                 # NOTE: We assume for completion only choices[0] is relevant
@@ -107,7 +107,7 @@ class MistralProvider(InstrumentedProvider):
         try:
             llm_event.returns = response
             llm_event.agent_id = check_call_stack_for_agent_id()
-            llm_event.model = 'mistral/' + response.model
+            llm_event.model = "mistral/" + response.model
             llm_event.prompt = kwargs["messages"]
             llm_event.prompt_tokens = response.usage.prompt_tokens
             llm_event.completion = response.choices[0].message.model_dump()
