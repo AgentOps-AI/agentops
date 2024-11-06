@@ -13,6 +13,7 @@ from .litellm import LiteLLMProvider
 from .ollama import OllamaProvider
 from .openai import OpenAiProvider
 from .anthropic import AnthropicProvider
+from .mistral import MistralProvider
 from .ai21 import AI21Provider
 
 original_func = {}
@@ -39,6 +40,9 @@ class LlmTracker:
         },
         "anthropic": {
             "0.32.0": ("completions.create",),
+        },
+        "mistralai": {
+            "1.0.1": ("chat.complete", "chat.stream"),
         },
         "ai21": {
             "2.0.0": (
@@ -142,6 +146,17 @@ class LlmTracker:
                             f"Only Anthropic>=0.32.0 supported. v{module_version} found."
                         )
 
+                if api == "mistralai":
+                    module_version = version(api)
+
+                    if Version(module_version) >= parse("1.0.1"):
+                        provider = MistralProvider(self.client)
+                        provider.override()
+                    else:
+                        logger.warning(
+                            f"Only MistralAI>=1.0.1 supported. v{module_version} found."
+                        )
+
                 if api == "ai21":
                     module_version = version(api)
 
@@ -165,4 +180,5 @@ class LlmTracker:
         LiteLLMProvider(self.client).undo_override()
         OllamaProvider(self.client).undo_override()
         AnthropicProvider(self.client).undo_override()
+        MistralProvider(self.client).undo_override()
         AI21Provider(self.client).undo_override()
