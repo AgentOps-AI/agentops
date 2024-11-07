@@ -57,9 +57,30 @@ class Response:
 
 
 class HttpClient:
+    _session = None  # Class-level session object
 
-    @staticmethod
+    @classmethod
+    def get_session(cls) -> requests.Session:
+        if cls._session is None:
+            cls._session = requests.Session()
+            # Configure session defaults
+            adapter = HTTPAdapter(
+                max_retries=retry_config,
+                pool_connections=10,  # Number of connection pools to cache
+                pool_maxsize=100,     # Maximum number of connections to save in the pool
+            )
+            cls._session.mount('http://', adapter)
+            cls._session.mount('https://', adapter)
+            cls._session.headers.update({
+                'Content-Type': 'application/json; charset=UTF-8',
+                'Accept': '*/*',
+                'User-Agent': 'AgentOps-Client'
+            })
+        return cls._session
+
+    @classmethod
     def post(
+        cls,
         url: str,
         payload: bytes,
         api_key: Optional[str] = None,
@@ -68,31 +89,26 @@ class HttpClient:
         header=None,
     ) -> Response:
         result = Response()
+        session = cls.get_session()
+
+        # Update headers for this request
+        headers = dict(session.headers)
+        if api_key:
+            headers["X-Agentops-Api-Key"] = api_key
+        if parent_key:
+            headers["X-Agentops-Parent-Key"] = parent_key
+        if jwt:
+            headers["Authorization"] = f"Bearer {jwt}"
+
         try:
-            # Create request session with retries configured
-            request_session = requests.Session()
-            request_session.mount(url, HTTPAdapter(max_retries=retry_config))
-
-            if api_key is not None:
-                JSON_HEADER["X-Agentops-Api-Key"] = api_key
-
-            if parent_key is not None:
-                JSON_HEADER["X-Agentops-Parent-Key"] = parent_key
-
-            if jwt is not None:
-                JSON_HEADER["Authorization"] = f"Bearer {jwt}"
-
-            res = request_session.post(
-                url, data=payload, headers=JSON_HEADER, timeout=20
-            )
-
+            res = session.post(url, data=payload, headers=headers, timeout=20)
             result.parse(res)
+
         except requests.exceptions.Timeout:
             result.code = 408
             result.status = HttpStatus.TIMEOUT
-            raise ApiServerException(
-                "Could not reach API server - connection timed out"
-            )
+            raise ApiServerException("Could not reach API server - connection timed out")
+
         except requests.exceptions.HTTPError as e:
             try:
                 result.parse(e.response)
@@ -102,10 +118,12 @@ class HttpClient:
                 result.status = Response.get_status(e.response.status_code)
                 result.body = {"error": str(e)}
                 raise ApiServerException(f"HTTPError: {e}")
+
         except requests.exceptions.RequestException as e:
             result.body = {"error": str(e)}
             raise ApiServerException(f"RequestException: {e}")
 
+        # Handle error status codes
         if result.code == 401:
             raise ApiServerException(
                 f"API server: invalid API key: {api_key}. Find your API key at https://app.agentops.ai/settings/projects"
@@ -120,34 +138,33 @@ class HttpClient:
 
         return result
 
-    @staticmethod
+    @classmethod
     def get(
+        cls,
         url: str,
         api_key: Optional[str] = None,
         jwt: Optional[str] = None,
         header=None,
     ) -> Response:
         result = Response()
+        session = cls.get_session()
+
+        # Update headers for this request
+        headers = dict(session.headers)
+        if api_key:
+            headers["X-Agentops-Api-Key"] = api_key
+        if jwt:
+            headers["Authorization"] = f"Bearer {jwt}"
+
         try:
-            # Create request session with retries configured
-            request_session = requests.Session()
-            request_session.mount(url, HTTPAdapter(max_retries=retry_config))
-
-            if api_key is not None:
-                JSON_HEADER["X-Agentops-Api-Key"] = api_key
-
-            if jwt is not None:
-                JSON_HEADER["Authorization"] = f"Bearer {jwt}"
-
-            res = request_session.get(url, headers=JSON_HEADER, timeout=20)
-
+            res = session.get(url, headers=headers, timeout=20)
             result.parse(res)
+
         except requests.exceptions.Timeout:
             result.code = 408
             result.status = HttpStatus.TIMEOUT
-            raise ApiServerException(
-                "Could not reach API server - connection timed out"
-            )
+            raise ApiServerException("Could not reach API server - connection timed out")
+
         except requests.exceptions.HTTPError as e:
             try:
                 result.parse(e.response)
@@ -157,10 +174,12 @@ class HttpClient:
                 result.status = Response.get_status(e.response.status_code)
                 result.body = {"error": str(e)}
                 raise ApiServerException(f"HTTPError: {e}")
+
         except requests.exceptions.RequestException as e:
             result.body = {"error": str(e)}
             raise ApiServerException(f"RequestException: {e}")
 
+        # Handle error status codes
         if result.code == 401:
             raise ApiServerException(
                 f"API server: invalid API key: {api_key}. Find your API key at https://app.agentops.ai/settings/projects"
