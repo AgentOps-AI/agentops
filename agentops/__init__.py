@@ -20,11 +20,6 @@ try:
 except ModuleNotFoundError:
     pass
 
-if "autogen" in sys.modules:
-    Client().configure(instrument_llm_calls=False)
-    Client()._initialize_autogen_logger()
-    Client().add_default_tags(["autogen"])
-
 if "crewai" in sys.modules:
     crew_version = version.parse(get_version("crewai"))
 
@@ -70,6 +65,12 @@ def init(
             (i.e. Crew determining when tasks are complete and ending the session)
     Attributes:
     """
+
+    if "autogen" in sys.modules:
+        Client().configure(instrument_llm_calls=False)
+        Client()._initialize_autogen_logger()
+        Client().add_default_tags(["autogen"])
+
     Client().unsuppress_logs()
     t = threading.Thread(target=check_agentops_update)
     t.start()
