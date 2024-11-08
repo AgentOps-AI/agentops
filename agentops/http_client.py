@@ -67,15 +67,17 @@ class HttpClient:
             adapter = HTTPAdapter(
                 max_retries=retry_config,
                 pool_connections=1,  # Assuming api.agentops.ai is the only host
-                pool_maxsize=100,     # Maximum number of connections to save in the pool
+                pool_maxsize=100,  # Maximum number of connections to save in the pool
             )
-            cls._session.mount('http://', adapter)
-            cls._session.mount('https://', adapter)
-            cls._session.headers.update({
-                'Content-Type': 'application/json; charset=UTF-8',
-                'Accept': '*/*',
-                'User-Agent': 'AgentOps-Client'
-            })
+            cls._session.mount("http://", adapter)
+            cls._session.mount("https://", adapter)
+            cls._session.headers.update(
+                {
+                    "Content-Type": "application/json; charset=UTF-8",
+                    "Accept": "*/*",
+                    "User-Agent": "AgentOps-Client",
+                }
+            )
         return cls._session
 
     @classmethod
@@ -107,7 +109,9 @@ class HttpClient:
         except requests.exceptions.Timeout:
             result.code = 408
             result.status = HttpStatus.TIMEOUT
-            raise ApiServerException("Could not reach API server - connection timed out")
+            raise ApiServerException(
+                "Could not reach API server - connection timed out"
+            )
 
         except requests.exceptions.HTTPError as e:
             try:
@@ -163,7 +167,9 @@ class HttpClient:
         except requests.exceptions.Timeout:
             result.code = 408
             result.status = HttpStatus.TIMEOUT
-            raise ApiServerException("Could not reach API server - connection timed out")
+            raise ApiServerException(
+                "Could not reach API server - connection timed out"
+            )
 
         except requests.exceptions.HTTPError as e:
             try:
