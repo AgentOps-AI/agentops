@@ -21,7 +21,7 @@ classifiers = [
 ]
 dependencies = [
     "requests>=2.0.0,<3.0.0",
-    "psutil==5.9.8",
+    "psutil>=5.9.8",
     "packaging==23.2",
     "termcolor==2.4.0",
     "PyYAML>=5.3,<7.0"
