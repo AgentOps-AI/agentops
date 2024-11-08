@@ -22,6 +22,24 @@ def get_ISO_time():
     return datetime.now(timezone.utc).isoformat()
 
 
+def format_duration(start_time, end_time):
+    start = datetime.fromisoformat(start_time.replace("Z", "+00:00"))
+    end = datetime.fromisoformat(end_time.replace("Z", "+00:00"))
+    duration = end - start
+
+    hours, remainder = divmod(duration.total_seconds(), 3600)
+    minutes, seconds = divmod(remainder, 60)
+
+    parts = []
+    if hours > 0:
+        parts.append(f"{int(hours)}h")
+    if minutes > 0:
+        parts.append(f"{int(minutes)}m")
+    parts.append(f"{seconds:.1f}s")
+
+    return " ".join(parts)
+
+
 def is_jsonable(x):
     try:
         json.dumps(x)

@@ -66,7 +66,7 @@ class HttpClient:
             # Configure session defaults
             adapter = HTTPAdapter(
                 max_retries=retry_config,
-                pool_connections=10,  # Number of connection pools to cache
+                pool_connections=1,  # Assuming api.agentops.ai is the only host
                 pool_maxsize=100,     # Maximum number of connections to save in the pool
             )
             cls._session.mount('http://', adapter)
