@@ -14,7 +14,6 @@ from IPython.core.error import (
 )  # only needed by AgentOps testing automation
 from typing import Annotated, Literal
 from autogen import register_function
-import time
 import litellm
 
 load_dotenv()
@@ -26,26 +25,16 @@ app = FastAPI()
 
 @app.get("/completion")
 def completion():
-    start_time = time.time()
-
-    session_start = time.time()
     session = agentops.start_session(tags=["api-server-test", "fastapi"])
-    session_time = time.time() - session_start
-    print(f"Session initialization took {session_time:.2f} seconds")
 
     messages = [{"role": "user", "content": "Hello"}]
 
-    llm_start = time.time()
     response = litellm.completion(
         model="gpt-4o",
         messages=messages,
         temperature=0.5,
     )
-    print(response)
-    llm_time = time.time() - llm_start
-    print(f"LLM call took {llm_time:.2f} seconds")
 
-    record_start = time.time()
     session.record(
         ActionEvent(
             action_type="Agent says hello",
@@ -53,29 +42,15 @@ def completion():
             returns=str(response.choices[0].message.content),
         ),
     )
-    record_time = time.time() - record_start
-    print(f"Recording event took {record_time:.2f} seconds")
 
-    end_start = time.time()
     session.end_session(end_state="Success")
-    end_time = time.time() - end_start
-    print(f"Ending session took {end_time:.2f} seconds")
-
-    total_time = time.time() - start_time
-    print(f"Total completion time: {total_time:.2f} seconds")
 
     return {"response": response}
 
 
 @app.get("/autogen_completion")
 def autogen_completion():
-    # Add time tracking
-    start_time = time.time()
-    # Record start time for session initialization
-    session_start = time.time()
     session = agentops.start_session(tags=["api-server-test", "fastapi", "autogen"])
-    session_time = time.time() - session_start
-    print(f"Session initialization took {session_time:.2f} seconds")
 
     # Define model, openai api key, tags, etc in the agent configuration
     config_list = [
@@ -119,7 +94,9 @@ def autogen_completion():
     )
 
     # Register the calculator function
-    assistant.register_for_llm(name="calculator", description="A simple calculator")(calculator)
+    assistant.register_for_llm(name="calculator", description="A simple calculator")(
+        calculator
+    )
     user_proxy.register_for_execution(name="calculator")(calculator)
 
     register_function(
@@ -140,17 +117,9 @@ def autogen_completion():
         session.end_session("Indeterminate")
         return {"response": "Chat initiation skipped - stdin not implemented"}
 
-    # Close your AgentOps session to indicate that it completed
-    end_start = time.time()
     session.end_session("Success")
-    end_duration = time.time() - end_start
-    print(f"Session ended in {end_duration:.2f}s. Visit your AgentOps dashboard to see the replay")
 
-    # Calculate duration at the end
-    duration = time.time() - start_time
-    print(f"Total duration: {duration:.2f} seconds")
-
-    return {"response": response, "duration": duration}
+    return {"response": response}
 
 
 if __name__ == "__main__":
