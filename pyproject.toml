@@ -23,7 +23,7 @@ dependencies = [
     "requests>=2.0.0,<3.0.0",
     "psutil>=5.9.8",
     "packaging==23.2",
-    "termcolor~=2.4.0", # 2.x.x tolerant
+    "termcolor>=2.3.0", # 2.x.x tolerant
     "PyYAML>=5.3,<7.0"
 ]
 [project.optional-dependencies]
