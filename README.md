@@ -24,19 +24,27 @@
 </div>
 
 <p align="center">
-<a href="https://twitter.com/agentopsai/">🐦 Twitter</a>
-<span>&nbsp;&nbsp;•&nbsp;&nbsp;</span>
-<a href="https://discord.gg/FagdcwwXRR">📢 Discord</a>
-<span>&nbsp;&nbsp;•&nbsp;&nbsp;</span>
-<a href="https://app.agentops.ai/?ref=gh">🖇️ Dashboard</a>
-<span>&nbsp;&nbsp;•&nbsp;&nbsp;</span>
-<a href="https://docs.agentops.ai/introduction">📙 Documentation</a>
-<span>&nbsp;&nbsp;•&nbsp;&nbsp;</span>
-<a href="https://entelligence.ai/AgentOps-AI&agentops">💬 Chat with Docs</a>
+  <a href="https://twitter.com/agentopsai/">
+    <img src="https://img.shields.io/twitter/follow/agentopsai?style=social" alt="Twitter" style="height: 20px;">
+  </a>
+  <a href="https://discord.gg/FagdcwwXRR">
+    <img src="https://img.shields.io/badge/discord-7289da.svg?style=flat-square&logo=discord" alt="Discord" style="height: 20px;">
+  </a>
+  <a href="https://app.agentops.ai/?ref=gh">
+    <img src="https://img.shields.io/badge/Dashboard-blue.svg?style=flat-square" alt="Dashboard" style="height: 20px;">
+  </a>
+  <a href="https://docs.agentops.ai/introduction">
+    <img src="https://img.shields.io/badge/Documentation-orange.svg?style=flat-square" alt="Documentation" style="height: 20px;">
+  </a>
+  <a href="https://entelligence.ai/AgentOps-AI&agentops">
+    <img src="https://img.shields.io/badge/Chat%20with%20Docs-green.svg?style=flat-square" alt="Chat with Docs" style="height: 20px;">
+  </a>
 </p>
 
+
+
 <div style="justify-content: center">
-  <img src="docs/images/external/app_screenshots/dashboard_banner.png" alt="Dashboard Banner">
+  <img src="docs/images/external/app_screenshots/dashboard-banner.png" alt="Dashboard Banner">
 </div>
 
 <br/>
@@ -83,7 +91,13 @@ All your sessions can be viewed on the [AgentOps dashboard](https://app.agentops
 <details>
   <summary>Agent Debugging</summary>
   <a href="https://app.agentops.ai?ref=gh">
-    <img src="docs/images/external/app_screenshots/session-overview.png" style="width: 90%;" alt="Agent Debugging"/>
+    <img src="docs/images/external/app_screenshots/session-drilldown-metadata.png" style="width: 90%;" alt="Agent Metadata"/>
+  </a>
+  <a href="https://app.agentops.ai?ref=gh">
+    <img src="docs/images/external/app_screenshots/chat-viewer.png" style="width: 90%;" alt="Chat Viewer"/>
+  </a>
+  <a href="https://app.agentops.ai?ref=gh">
+    <img src="docs/images/external/app_screenshots/session-drilldown-graphs.png" style="width: 90%;" alt="Event Graphs"/>
   </a>
 </details>
 
@@ -98,6 +112,9 @@ All your sessions can be viewed on the [AgentOps dashboard](https://app.agentops
   <summary>Summary Analytics</summary>
   <a href="https://app.agentops.ai?ref=gh">
    <img src="docs/images/external/app_screenshots/overview.png" style="width: 90%;" alt="Summary Analytics"/>
+  </a>
+  <a href="https://app.agentops.ai?ref=gh">
+   <img src="docs/images/external/app_screenshots/overview-charts.png" style="width: 90%;" alt="Summary Analytics Charts"/>
   </a>
 </details>
 
@@ -351,6 +368,149 @@ async def main() -> None:
         model="claude-3-opus-20240229",
     )
     print(message.content)
+
+
+await main()
+```
+</details>
+
+### Mistral 〽️
+
+Track agents built with the Anthropic Python SDK (>=0.32.0).
+
+- [AgentOps integration example](./examples/mistral//mistral_example.ipynb)
+- [Official Mistral documentation](https://docs.mistral.ai)
+
+<details>
+  <summary>Installation</summary>
+  
+```bash
+pip install mistralai
+```
+
+Sync
+
+```python python
+from mistralai import Mistral
+import agentops
+
+# Beginning of program's code (i.e. main.py, __init__.py)
+agentops.init(<INSERT YOUR API KEY HERE>)
+
+client = Mistral(
+    # This is the default and can be omitted
+    api_key=os.environ.get("MISTRAL_API_KEY"),
+)
+
+message = client.chat.complete(
+        messages=[
+            {
+                "role": "user",
+                "content": "Tell me a cool fact about AgentOps",
+            }
+        ],
+        model="open-mistral-nemo",
+    )
+print(message.choices[0].message.content)
+
+agentops.end_session('Success')
+```
+
+Streaming
+
+```python python
+from mistralai import Mistral
+import agentops
+
+# Beginning of program's code (i.e. main.py, __init__.py)
+agentops.init(<INSERT YOUR API KEY HERE>)
+
+client = Mistral(
+    # This is the default and can be omitted
+    api_key=os.environ.get("MISTRAL_API_KEY"),
+)
+
+message = client.chat.stream(
+        messages=[
+            {
+                "role": "user",
+                "content": "Tell me something cool about streaming agents",
+            }
+        ],
+        model="open-mistral-nemo",
+    )
+
+response = ""
+for event in message:
+    if event.data.choices[0].finish_reason == "stop":
+        print("\n")
+        print(response)
+        print("\n")
+    else:
+        response += event.text
+
+agentops.end_session('Success')
+```
+
+Async
+
+```python python
+import asyncio
+from mistralai import Mistral
+
+client = Mistral(
+    # This is the default and can be omitted
+    api_key=os.environ.get("MISTRAL_API_KEY"),
+)
+
+
+async def main() -> None:
+    message = await client.chat.complete_async(
+        messages=[
+            {
+                "role": "user",
+                "content": "Tell me something interesting about async agents",
+            }
+        ],
+        model="open-mistral-nemo",
+    )
+    print(message.choices[0].message.content)
+
+
+await main()
+```
+
+Async Streaming
+
+```python python
+import asyncio
+from mistralai import Mistral
+
+client = Mistral(
+    # This is the default and can be omitted
+    api_key=os.environ.get("MISTRAL_API_KEY"),
+)
+
+
+async def main() -> None:
+    message = await client.chat.stream_async(
+        messages=[
+            {
+                "role": "user",
+                "content": "Tell me something interesting about async streaming agents",
+            }
+        ],
+        model="open-mistral-nemo",
+    )
+
+    response = ""
+    async for event in message:
+        if event.data.choices[0].finish_reason == "stop":
+            print("\n")
+            print(response)
+            print("\n")
+        else:
+            response += event.text
 
 
 await main()
