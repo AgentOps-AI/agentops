@@ -63,7 +63,6 @@ class AnthropicProvider(InstrumentedProvider):
 
                 elif chunk.type == "content_block_delta":
                     if chunk.delta.type == "text_delta":
-                        b
                         llm_event.completion["content"] += chunk.delta.text
 
                     elif chunk.delta.type == "input_json_delta":
@@ -179,7 +178,9 @@ class AnthropicProvider(InstrumentedProvider):
                 if "session" in kwargs.keys():
                     del kwargs["session"]
 
-                completion_override = fetch_completion_override_from_time_travel_cache(kwargs)
+                completion_override = fetch_completion_override_from_time_travel_cache(
+                    kwargs
+                )
                 if completion_override:
                     result_model = None
                     pydantic_models = (
@@ -194,7 +195,9 @@ class AnthropicProvider(InstrumentedProvider):
 
                     for pydantic_model in pydantic_models:
                         try:
-                            result_model = pydantic_model.model_validate_json(completion_override)
+                            result_model = pydantic_model.model_validate_json(
+                                completion_override
+                            )
                             break
                         except Exception as e:
                             pass
@@ -206,12 +209,19 @@ class AnthropicProvider(InstrumentedProvider):
                             f"{pprint.pformat(completion_override)}"
                         )
                         return None
-                    return self.handle_response(result_model, kwargs, init_timestamp, session=session)
+                    return self.handle_response(
+                        result_model, kwargs, init_timestamp, session=session
+                    )
 
                 # Call the original function with its original arguments
-                original_func = self.original_create_beta if is_beta else self.original_create
+                original_func = (
+                    self.original_create_beta if is_beta else self.original_create
+                )
                 result = original_func(*args, **kwargs)
-                return self.handle_response(result, kwargs, init_timestamp, session=session)
+                return self.handle_response(
+                    result, kwargs, init_timestamp, session=session
+                )
+
             return patched_function
 
         # Override the original methods with the patched ones
@@ -242,7 +252,9 @@ class AnthropicProvider(InstrumentedProvider):
                 if "session" in kwargs.keys():
                     del kwargs["session"]
 
-                completion_override = fetch_completion_override_from_time_travel_cache(kwargs)
+                completion_override = fetch_completion_override_from_time_travel_cache(
+                    kwargs
+                )
                 if completion_override:
                     result_model = None
                     pydantic_models = (
@@ -257,7 +269,9 @@ class AnthropicProvider(InstrumentedProvider):
 
                     for pydantic_model in pydantic_models:
                         try:
-                            result_model = pydantic_model.model_validate_json(completion_override)
+                            result_model = pydantic_model.model_validate_json(
+                                completion_override
+                            )
                             break
                         except Exception as e:
                             pass
@@ -270,12 +284,21 @@ class AnthropicProvider(InstrumentedProvider):
                         )
                         return None
 
-                    return self.handle_response(result_model, kwargs, init_timestamp, session=session)
+                    return self.handle_response(
+                        result_model, kwargs, init_timestamp, session=session
+                    )
 
                 # Call the original function with its original arguments
-                original_func = self.original_create_async_beta if is_beta else self.original_create_async
+                original_func = (
+                    self.original_create_async_beta
+                    if is_beta
+                    else self.original_create_async
+                )
                 result = await original_func(*args, **kwargs)
-                return self.handle_response(result, kwargs, init_timestamp, session=session)
+                return self.handle_response(
+                    result, kwargs, init_timestamp, session=session
+                )
+
             return patched_function
 
         # Override the original methods with the patched ones
