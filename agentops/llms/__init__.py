@@ -13,7 +13,8 @@ from .litellm import LiteLLMProvider
 from .ollama import OllamaProvider
 from .openai import OpenAiProvider
 from .anthropic import AnthropicProvider
-from .pinecone import PineconeProvider
+from .mistral import MistralProvider
+from .ai21 import AI21Provider
 
 original_func = {}
 original_create = None
@@ -40,26 +41,13 @@ class LlmTracker:
         "anthropic": {
             "0.32.0": ("completions.create",),
         },
-        "pinecone": {
+        "mistralai": {
+            "1.0.1": ("chat.complete", "chat.stream"),
+        },
+        "ai21": {
             "2.0.0": (
-                "Index.upsert", 
-                "Index.query", 
-                "Index.delete", 
-                "Index.update", 
-                "Index.fetch",
-                "create_index",
-                "delete_index",
-                "describe_index",
-                "list_indexes",
-                "create_collection",
-                "delete_collection",
-                "assistant.create_assistant",
-                "assistant.update_assistant",
-                "assistant.delete_assistant",
-                "assistant.get_assistant",
-                "assistant.list_assistants",
-                "assistant.Assistant.chat",
-                "assistant.Assistant.chat_completions"
+                "chat.completions.create",
+                "client.answer.create",
             ),
         },
     }
@@ -158,15 +146,31 @@ class LlmTracker:
                             f"Only Anthropic>=0.32.0 supported. v{module_version} found."
                         )
 
-                if api == "pinecone":
+                if api == "mistralai":
                     module_version = version(api)
 
-                    if Version(module_version) >= parse("2.0.0"):
-                        provider = PineconeProvider(self.client)
+                    if Version(module_version) >= parse("1.0.1"):
+                        provider = MistralProvider(self.client)
                         provider.override()
                     else:
                         logger.warning(
-                            f"Only Pinecone>=2.0.0 supported. v{module_version} found."
+                            f"Only MistralAI>=1.0.1 supported. v{module_version} found."
+                        )
+
+                if api == "ai21":
+                    module_version = version(api)
+
+                    if module_version is None:
+                        logger.warning(
+                            f"Cannot determine AI21 version. Only AI21>=2.0.0 supported."
+                        )
+
+                    if Version(module_version) >= parse("2.0.0"):
+                        provider = AI21Provider(self.client)
+                        provider.override()
+                    else:
+                        logger.warning(
+                            f"Only AI21>=2.0.0 supported. v{module_version} found."
                         )
 
     def stop_instrumenting(self):
@@ -176,4 +180,5 @@ class LlmTracker:
         LiteLLMProvider(self.client).undo_override()
         OllamaProvider(self.client).undo_override()
         AnthropicProvider(self.client).undo_override()
-        PineconeProvider(self.client).undo_override()
+        MistralProvider(self.client).undo_override()
+        AI21Provider(self.client).undo_override()

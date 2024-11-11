@@ -158,3 +158,22 @@
   padding: 0;
   margin: 0;
 }
+
+.hidden {
+  display: none;
+}
+
+@media (min-width: 1024px) {
+  .lg\:block {
+    display: block;
+  }
+  .lg\:hidden {
+    display: none;
+  }
+}
+
+@media (min-width: 768px) {
+  .md\:block {
+    display: block;
+  }
+}
