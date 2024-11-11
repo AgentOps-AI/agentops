@@ -1,11 +1,12 @@
 from typing import Optional, Dict, Any, Union, List
+from uuid import uuid4
 
 import pinecone
 from pinecone.grpc import PineconeGRPC
 from pinecone_plugins.assistant.models.chat import Message
 
 from ..enums import EventType
-from ..event import VectorEvent, ErrorEvent, ActionEvent
+from ..event import VectorEvent, ErrorEvent, ActionEvent, LLMEvent
 from ..helpers import get_ISO_time
 from ..log_config import logger
 from ..session import Session, get_current_session
@@ -1040,19 +1041,10 @@ class PineconeProvider(InstrumentedProvider):
             raise
 
     def chat_completions(self, pc_instance, assistant_name: str, messages: List[Dict],
-                        stream: bool = False, model: Optional[str] = None) -> Any:
+                        stream: bool = False, model: Optional[str] = None) -> str:
         """
         Engage in a chat session with a Pinecone Assistant using an OpenAI-compatible interface.
-        
-        Args:
-            pc_instance: The Pinecone client instance.
-            assistant_name: The name of the assistant to chat with.
-            messages: A list of message dictionaries containing 'content'.
-            stream: Whether to stream the responses.
-            model: The model to use for the assistant.
-        
-        Returns:
-            The response formatted for OpenAI compatibility.
+        Returns the complete response content including citations and references if present.
         """
         init_timestamp = get_ISO_time()
         session = get_current_session()
@@ -1073,28 +1065,78 @@ class PineconeProvider(InstrumentedProvider):
             assistant = pc_instance.assistant.Assistant(assistant_name=assistant_name)
             response = assistant.chat_completions(messages=message_objects, stream=stream, model=model)
             
-            # Format response for OpenAI compatibility
-            formatted_response = {
-                "id": response.get("id"),
-                "choices": [{
-                    "finish_reason": response.get("finish_reason", "stop"),
-                    "index": 0,
-                    "message": {
-                        "role": "assistant",
-                        "content": response.get("message", {}).get("content", "")
-                    }
-                }],
-                "model": response.get("model"),
-                "usage": response.get("usage", {})
+            # Debug logging
+            print(f"Debug - Raw response: {response}")
+            
+            # Initialize completion text
+            completion_text = ""
+            
+            # Extract message content - handle both dictionary and object responses
+            if isinstance(response, dict):
+                # Handle dictionary response
+                choices = response.get("choices", [])
+                if choices and isinstance(choices[0], dict):
+                    message = choices[0].get("message", {})
+                    if isinstance(message, dict):
+                        completion_text = message.get("content", "")
+            else:
+                # Handle object response
+                try:
+                    if hasattr(response, 'choices') and response.choices:
+                        if hasattr(response.choices[0], 'message'):
+                            completion_text = response.choices[0].message.content
+                except AttributeError:
+                    # If we can't access attributes, convert to string
+                    completion_text = str(response)
+            
+            # If still empty, try alternative extraction methods
+            if not completion_text:
+                try:
+                    # Try to access as string representation
+                    completion_text = str(response)
+                    # If it's just an empty string or 'None', use the full response
+                    if not completion_text or completion_text == 'None':
+                        completion_text = f"Full response: {response}"
+                except:
+                    completion_text = "Error extracting response content"
+            
+            # Create completion message for event logging
+            completion_message = {
+                "role": "assistant",
+                "content": completion_text
             }
             
-            return self._handle_assistant_response(formatted_response, "chat_completions", kwargs, init_timestamp, session)
+            # Create LLMEvent
+            llm_event = LLMEvent(
+                init_timestamp=init_timestamp,
+                prompt=messages[-1]["content"] if messages else "",
+                completion=completion_message,
+                model=response.get("model", "unknown") if isinstance(response, dict) else "unknown",
+                params=kwargs,
+                returns=response,
+                prompt_tokens=response.get("usage", {}).get("prompt_tokens") if isinstance(response, dict) else None,
+                completion_tokens=response.get("usage", {}).get("completion_tokens") if isinstance(response, dict) else None
+            )
+            
+            if session:
+                llm_event.session_id = session.session_id
+                if "event_counts" in session.__dict__:
+                    session.event_counts["llms"] += 1
+            
+            self._safe_record(session, llm_event)
+            
+            # Return the complete text
+            return completion_text
+        
         except Exception as e:
+            print(f"Debug - Exception in chat_completions: {str(e)}")
             error_event = ErrorEvent(
-                trigger_event=ActionEvent(
+                trigger_event=LLMEvent(
                     init_timestamp=init_timestamp,
-                    action_type="chat_completions",
-                    returns={"error": str(e)}
+                    prompt=messages[-1]["content"] if messages else "",
+                    completion="",
+                    model=model or "unknown",
+                    params=kwargs
                 ),
                 exception=e,
                 details=kwargs

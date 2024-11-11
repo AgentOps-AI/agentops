@@ -1,13 +1,16 @@
 import agentops
 from dotenv import load_dotenv
 from pinecone import Pinecone
-import os
 from pinecone_plugins.assistant.models.chat import Message
+import time
+import tempfile
+import os
 
+# Load environment variables
 load_dotenv()
 
 def test_assistant_operations():
-    """Test Pinecone Assistant operations"""
+    """Test Pinecone Assistant operations using in-memory or temporary file handling"""
     # Initialize Pinecone and Provider
     pc = Pinecone(api_key=os.getenv("PINECONE_API_KEY"))
     provider = agentops.llms.PineconeProvider(pc)
@@ -41,33 +44,55 @@ def test_assistant_operations():
         )
         print(f"Updated assistant: {updated}")
         
-        # Upload file
-        print("\nUploading file...")
-        with open("test_data.txt", "w") as f:
-            f.write("This is test data for the assistant.")
+        # Create in-memory file-like object with test data
+        test_data_content = """
+            This is a test document containing specific information.
+            The document discusses important facts:
+            1. The sky is blue
+            2. Water boils at 100 degrees Celsius
+            3. The Earth orbits around the Sun
+            
+            This information should be retrievable by the assistant.
+            """
         
+        # Create a proper temporary file with content
+        temp_dir = tempfile.mkdtemp()  # Create a temporary directory
+        file_path = os.path.join(temp_dir, 'test_document.txt')  # Create a path with explicit filename
+        
+        with open(file_path, 'w', encoding='utf-8') as f:
+            f.write(test_data_content)
+
+        # Upload file using the explicit file path
+        print("\nUploading file...")
         file_upload = provider.upload_file(
             pc,
             assistant_name="test-assistant",
-            file_path="test_data.txt"
+            file_path=file_path
         )
         print(f"File upload: {file_upload}")
         
-        # Describe uploaded file
-        print("\nDescribing uploaded file...")
-        file_description = provider.describe_file(
-            pc,
-            assistant_name="test-assistant",
-            file_id=file_upload["id"]  # Now this should work since file_upload is a dict
-        )
-        print(f"File description: {file_description}")
+        # Wait for file processing (check status until ready)
+        print("\nWaiting for file processing...")
+        max_retries = 10
+        for _ in range(max_retries):
+            file_status = provider.describe_file(
+                pc,
+                assistant_name="test-assistant",
+                file_id=file_upload["id"]
+            )
+            if file_status.get("status") == "Available":
+                break
+            print("File still processing, waiting...")
+            time.sleep(2)
         
         # Test chat with OpenAI-compatible interface
         print("\nTesting chat completions...")
         chat_completion = provider.chat_completions(
             pc,
             assistant_name="test-assistant",
-            messages=[{"content": "What information can you find in the uploaded file?"}]
+            messages=[
+                {"role": "user", "content": "What facts are mentioned in the uploaded file about nature and science?"}
+            ]
         )
         print(f"Chat completion response: {chat_completion}")
         
@@ -82,12 +107,12 @@ def test_assistant_operations():
         
         # Clean up
         print("\nCleaning up...")
+        os.remove(file_path)  # Remove the temporary file
+        os.rmdir(temp_dir)    # Remove the temporary directory
         # Delete assistant
         provider.delete_assistant(pc, "test-assistant")
         print("Assistant deleted")
-        
-        os.remove("test_data.txt")
-        
+
     except Exception as e:
         print(f"Error during testing: {e}")
         agentops.end_session(end_state="Fail")
@@ -98,4 +123,4 @@ def test_assistant_operations():
 
 if __name__ == "__main__":
     agentops.init(default_tags=["pinecone-assistant-test"])
-    test_assistant_operations() 
+    test_assistant_operations()
