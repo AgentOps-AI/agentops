@@ -29,7 +29,7 @@ class Session:
     Attributes:
         init_timestamp (float): The timestamp for when the session started, represented as seconds since the epoch.
         end_timestamp (float, optional): The timestamp for when the session ended, represented as seconds since the epoch. This is only set after end_session is called.
-        end_state (str, optional): The final state of the session. Suggested: "Success", "Fail", "Indeterminate"
+        end_state (str, optional): The final state of the session. Suggested: "Success", "Fail", "Indeterminate". Defaults to "Indeterminate".
         end_state_reason (str, optional): The reason for ending the session.
 
     """
@@ -42,7 +42,7 @@ class Session:
         host_env: Optional[dict] = None,
     ):
         self.end_timestamp = None
-        self.end_state: Optional[str] = None
+        self.end_state: Optional[str] = "Indeterminate"
         self.session_id = session_id
         self.init_timestamp = get_ISO_time()
         self.tags: List[str] = tags or []

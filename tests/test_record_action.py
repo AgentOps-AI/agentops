@@ -18,11 +18,11 @@ def setup_teardown():
 
 
 @contextlib.contextmanager
-@pytest.fixture(autouse=True)
+@pytest.fixture(autouse=True, scope="function")
 def mock_req():
     with requests_mock.Mocker() as m:
         url = "https://api.agentops.ai"
-        m.post(url + "/v2/create_events", text="ok")
+        m.post(url + "/v2/create_events", json={"status": "ok"})
 
         # Use iter to create an iterator that can return the jwt values
         jwt_tokens = iter(jwts)
@@ -33,8 +33,10 @@ def mock_req():
             return {"status": "success", "jwt": next(jwt_tokens)}
 
         m.post(url + "/v2/create_session", json=create_session_response)
+        m.post(url + "/v2/create_events", json={"status": "ok"})
         m.post(url + "/v2/update_session", json={"status": "success", "token_cost": 5})
-        m.post(url + "/v2/developer_errors", text="ok")
+        m.post(url + "/v2/developer_errors", json={"status": "ok"})
+        m.post("https://pypi.org/pypi/agentops/json", status_code=404)
 
         yield m
 
@@ -44,7 +46,7 @@ class TestRecordAction:
         self.url = "https://api.agentops.ai"
         self.api_key = "11111111-1111-4111-8111-111111111111"
         self.event_type = "test_event_type"
-        agentops.init(self.api_key, max_wait_time=5, auto_start_session=False)
+        agentops.init(self.api_key, max_wait_time=50, auto_start_session=False)
 
     def test_record_action_decorator(self, mock_req):
         agentops.start_session()
@@ -57,8 +59,8 @@ class TestRecordAction:
         add_two(3, 4)
         time.sleep(0.1)
 
-        # Assert
-        assert len(mock_req.request_history) == 2
+        # 3 requests: check_for_updates, start_session, record_action
+        assert len(mock_req.request_history) == 3
         assert mock_req.last_request.headers["X-Agentops-Api-Key"] == self.api_key
         request_json = mock_req.last_request.json()
         assert request_json["events"][0]["action_type"] == self.event_type
@@ -78,8 +80,8 @@ class TestRecordAction:
         add_two(3, 4)
         time.sleep(0.1)
 
-        # Assert
-        assert len(mock_req.request_history) == 2
+        # 3 requests: check_for_updates, start_session, record_action
+        assert len(mock_req.request_history) == 3
         assert mock_req.last_request.headers["X-Agentops-Api-Key"] == self.api_key
         request_json = mock_req.last_request.json()
         assert request_json["events"][0]["action_type"] == "add_two"
@@ -98,14 +100,19 @@ class TestRecordAction:
 
         # Act
         add_three(1, 2)
-        time.sleep(0.1)
-        add_three(1, 2)
-        time.sleep(0.1)
+        add_three(1, 2, 4)
 
-        # Assert
+        time.sleep(1.5)
+
+        # 3 requests: check_for_updates, start_session, record_action
         assert len(mock_req.request_history) == 3
         assert mock_req.last_request.headers["X-Agentops-Api-Key"] == self.api_key
         request_json = mock_req.last_request.json()
+
+        assert request_json["events"][1]["action_type"] == self.event_type
+        assert request_json["events"][1]["params"] == {"x": 1, "y": 2, "z": 4}
+        assert request_json["events"][1]["returns"] == 7
+
         assert request_json["events"][0]["action_type"] == self.event_type
         assert request_json["events"][0]["params"] == {"x": 1, "y": 2, "z": 3}
         assert request_json["events"][0]["returns"] == 6
@@ -128,7 +135,7 @@ class TestRecordAction:
         # Assert
         assert result == 7
         # Assert
-        assert len(mock_req.request_history) == 2
+        assert len(mock_req.request_history) == 3
         assert mock_req.last_request.headers["X-Agentops-Api-Key"] == self.api_key
         request_json = mock_req.last_request.json()
         assert request_json["events"][0]["action_type"] == self.event_type
@@ -156,11 +163,10 @@ class TestRecordAction:
         # Act
         add_three(1, 2, session=session_1)
         time.sleep(0.1)
-        add_three(1, 2, session=session_2)
+        add_three(1, 2, 3, session=session_2)
         time.sleep(0.1)
 
-        # Assert
-        assert len(mock_req.request_history) == 4
+        assert len(mock_req.request_history) == 5
 
         request_json = mock_req.last_request.json()
         assert mock_req.last_request.headers["X-Agentops-Api-Key"] == self.api_key
@@ -207,7 +213,7 @@ class TestRecordAction:
         time.sleep(0.1)
 
         # Assert
-        assert len(mock_req.request_history) == 4
+        assert len(mock_req.request_history) == 5
 
         request_json = mock_req.last_request.json()
         assert mock_req.last_request.headers["X-Agentops-Api-Key"] == self.api_key
