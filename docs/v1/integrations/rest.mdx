@@ -123,10 +123,25 @@ curl -X POST https://api.agentops.ai/v2/create_session \
       "init_timestamp": "2024-03-14T12:00:00Z",
       "tags": ["production", "customer-service"],
       "host_env": {
-        "platform": "linux",
-        "python_version": "3.9.0",
-        "dependencies": {
-          "openai": "1.2.3"
+        "OS": {
+          "OS": "Windows",
+          "OS Release": "11",
+          "OS Version": "10.0.22631"
+        },
+        "CPU": {
+          "CPU Usage": "5.9%",
+          "Total cores": 12
+        },
+        "RAM": {
+          "Used": "14.49 GB",
+          "Total": "31.75 GB"
+        },
+        "SDK": {
+          "Python Version": "3.12.0",
+          "System Packages": {
+            "agentops": "0.3.17",
+            "openai": "1.2.3"
+          }
         }
       }
     }
@@ -144,10 +159,25 @@ X-Agentops-Api-Key: your_api_key
     "init_timestamp": "2024-03-14T12:00:00Z",
     "tags": ["production", "customer-service"],
     "host_env": {
-      "platform": "linux",
-      "python_version": "3.9.0",
-      "dependencies": {
-        "openai": "1.2.3"
+      "OS": {
+        "OS": "Windows",
+        "OS Release": "11",
+        "OS Version": "10.0.22631"
+      },
+      "CPU": {
+        "CPU Usage": "5.9%",
+        "Total cores": 12
+      },
+      "RAM": {
+        "Used": "14.49 GB",
+        "Total": "31.75 GB"
+      },
+      "SDK": {
+        "Python Version": "3.12.0",
+        "System Packages": {
+          "agentops": "0.3.17",
+          "openai": "1.2.3"
+        }
       }
     }
   }
