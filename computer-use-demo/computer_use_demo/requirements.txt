@@ -1,0 +1,12 @@
+streamlit>=1.38.0
+anthropic[bedrock,vertex]>=0.37.1
+jsonschema==4.22.0
+boto3>=1.28.57
+google-auth<3,>=2
+-e ./agentops
+
+# requests>=2.0.0,<3.0.0
+# psutil==5.9.8
+# packaging==23.2
+# termcolor>=2.3.0
+# PyYAML>=5.3,<7.0
