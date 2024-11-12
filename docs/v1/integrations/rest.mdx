@@ -8,6 +8,8 @@ The AgentOps REST API allows you to integrate agent monitoring directly into you
 - Custom integrations
 - Direct API access
 
+For a complete API reference, you can view our [OpenAPI specification](https://api.agentops.ai/v2/openapi.yaml).
+
 ## Authentication
 
 The AgentOps API uses a two-step authentication process:
@@ -78,7 +80,7 @@ JWTs expire after 24 hours. When a token expires, use your API key to get a new 
 
 <CodeGroup>
 ```bash curl
-curl -X POST https://api.agentops.ai/reauthorize_jwt \
+curl -X POST https://api.agentops.ai/v2/reauthorize_jwt \
   -H "Content-Type: application/json" \
   -H "X-Agentops-Api-Key: your_api_key" \
   -d '{
@@ -112,32 +114,42 @@ Start a new monitoring session using your generated session ID:
 
 <CodeGroup>
 ```bash curl
-curl -X POST https://api.agentops.ai/create_session \
+curl -X POST https://api.agentops.ai/v2/create_session \
   -H "Content-Type: application/json" \
   -H "X-Agentops-Api-Key: your_api_key" \
   -d '{
-    "id": "550e8400-e29b-41d4-a716-446655440000",
-    "init_timestamp": "2024-03-14T12:00:00Z",
-    "tags": ["production", "customer-service"],
-    "host_env": {
-      "python_version": "3.9.0",
-      "platform": "linux"
+    "session": {
+      "id": "550e8400-e29b-41d4-a716-446655440000",
+      "init_timestamp": "2024-03-14T12:00:00Z",
+      "tags": ["production", "customer-service"],
+      "host_env": {
+        "platform": "linux",
+        "python_version": "3.9.0",
+        "dependencies": {
+          "openai": "1.2.3"
+        }
+      }
     }
   }'
 ```
 
 ```bash Request
-POST https://api.agentops.ai/create_session
+POST https://api.agentops.ai/v2/create_session
 Content-Type: application/json
 X-Agentops-Api-Key: your_api_key
 
 {
-  "id": "550e8400-e29b-41d4-a716-446655440000",
-  "init_timestamp": "2024-03-14T12:00:00Z",
-  "tags": ["production", "customer-service"],
-  "host_env": {
-    "python_version": "3.9.0",
-    "platform": "linux"
+  "session": {
+    "id": "550e8400-e29b-41d4-a716-446655440000",
+    "init_timestamp": "2024-03-14T12:00:00Z",
+    "tags": ["production", "customer-service"],
+    "host_env": {
+      "platform": "linux",
+      "python_version": "3.9.0",
+      "dependencies": {
+        "openai": "1.2.3"
+      }
+    }
   }
 }
 ```
@@ -149,27 +161,33 @@ Update an existing session (e.g., when it ends):
 
 <CodeGroup>
 ```bash curl
-curl -X POST https://api.agentops.ai/update_session \
+curl -X POST https://api.agentops.ai/v2/update_session \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer your_jwt_token" \
   -d '{
-    "id": "550e8400-e29b-41d4-a716-446655440000",
-    "end_timestamp": "2024-03-14T12:05:00Z",
-    "end_state": "completed",
-    "end_state_reason": "Task successfully completed"
+    "session": {
+      "id": "550e8400-e29b-41d4-a716-446655440000",
+      "end_timestamp": "2024-03-14T12:05:00Z",
+      "end_state": "Success",
+      "end_state_reason": "Task successfully completed",
+      "tags": ["production", "updated-tag"]
+    }
   }'
 ```
 
 ```bash Request
-POST https://api.agentops.ai/update_session
+POST https://api.agentops.ai/v2/update_session
 Content-Type: application/json
 Authorization: Bearer your_jwt_token
 
 {
-  "id": "550e8400-e29b-41d4-a716-446655440000",
-  "end_timestamp": "2024-03-14T12:05:00Z",
-  "end_state": "completed",
-  "end_state_reason": "Task successfully completed"
+  "session": {
+    "id": "550e8400-e29b-41d4-a716-446655440000",
+    "end_timestamp": "2024-03-14T12:05:00Z",
+    "end_state": "Success",
+    "end_state_reason": "Task successfully completed",
+    "tags": ["production", "updated-tag"]
+  }
 }
 ```
 </CodeGroup>
@@ -182,7 +200,7 @@ Track LLM calls, tool usage, or other events:
 
 <CodeGroup>
 ```bash curl
-curl -X POST https://api.agentops.ai/create_events \
+curl -X POST https://api.agentops.ai/v2/create_events \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer your_jwt_token" \
   -d '{
@@ -216,7 +234,7 @@ curl -X POST https://api.agentops.ai/create_events \
 ```
 
 ```bash Request
-POST https://api.agentops.ai/create_events
+POST https://api.agentops.ai/v2/create_events
 Content-Type: application/json
 Authorization: Bearer your_jwt_token
 
@@ -257,13 +275,14 @@ Update existing events (e.g., adding completion information):
 
 <CodeGroup>
 ```bash curl
-curl -X POST https://api.agentops.ai/update_events \
+curl -X POST https://api.agentops.ai/v2/update_events \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer your_jwt_token" \
   -d '{
     "events": [
       {
-        "id": "event-id-123",
+        "event_id": "event-id-123",
+        "end_timestamp": "2024-03-14T12:01:02Z",
         "completion": "Updated completion text",
         "completion_tokens": 100
       }
@@ -272,14 +291,15 @@ curl -X POST https://api.agentops.ai/update_events \
 ```
 
 ```bash Request
-POST https://api.agentops.ai/update_events
+POST https://api.agentops.ai/v2/update_events
 Content-Type: application/json
 Authorization: Bearer your_jwt_token
 
 {
   "events": [
     {
-      "id": "event-id-123",
+      "event_id": "event-id-123",
+      "end_timestamp": "2024-03-14T12:01:02Z",
       "completion": "Updated completion text",
       "completion_tokens": 100
     }
@@ -296,97 +316,23 @@ Register a new agent in a session:
 
 <CodeGroup>
 ```bash curl
-curl -X POST https://api.agentops.ai/create_agent \
+curl -X POST https://api.agentops.ai/v2/create_agent \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer your_jwt_token" \
   -d '{
     "id": "agent-123",
-    "name": "Research Assistant",
-    "role": "Performs web research",
-    "tools": ["web_search", "summarize"],
-    "system_prompt": "You are a research assistant..."
+    "name": "Research Assistant"
   }'
 ```
 
 ```bash Request
-POST https://api.agentops.ai/create_agent
+POST https://api.agentops.ai/v2/create_agent
 Content-Type: application/json
 Authorization: Bearer your_jwt_token
 
 {
   "id": "agent-123",
-  "name": "Research Assistant",
-  "role": "Performs web research",
-  "tools": ["web_search", "summarize"],
-  "system_prompt": "You are a research assistant..."
-}
-```
-</CodeGroup>
-
-## Thread Management
-
-### Create Thread
-
-Create a new conversation thread:
-
-<CodeGroup>
-```bash curl
-curl -X POST https://api.agentops.ai/create_thread \
-  -H "Content-Type: application/json" \
-  -H "Authorization: Bearer your_jwt_token" \
-  -d '{
-    "id": "thread-456",
-    "name": "Customer Inquiry",
-    "init_timestamp": "2024-03-14T12:00:00Z"
-  }'
-```
-
-```bash Request
-POST https://api.agentops.ai/create_thread
-Content-Type: application/json
-Authorization: Bearer your_jwt_token
-
-{
-  "id": "thread-456",
-  "name": "Customer Inquiry",
-  "init_timestamp": "2024-03-14T12:00:00Z"
-}
-```
-</CodeGroup>
-
-## Error Reporting
-
-### Report Developer Error
-
-Report implementation or runtime errors:
-
-<CodeGroup>
-```bash curl
-curl -X POST https://api.agentops.ai/developer_errors \
-  -H "Content-Type: application/json" \
-  -H "X-Agentops-Api-Key: your_api_key" \
-  -d '{
-    "error": "Invalid API response format",
-    "stack_trace": "...",
-    "context": {
-      "function": "process_response",
-      "line": 123
-    }
-  }'
-```
-
-```bash Request
-POST https://api.agentops.ai/developer_errors
-Content-Type: application/json
-X-Agentops-Api-Key: your_api_key
-
-{
-  "error": "Invalid API response format",
-  "stack_trace": "...",
-  "context": {
-    "function": "process_response",
-    "line": 123
-  }
+  "name": "Research Assistant"
 }
 ```
 </CodeGroup>
@@ -408,19 +354,21 @@ BASE_URL = "https://api.agentops.ai"
 # Create session
 session_id = str(uuid.uuid4())
 response = requests.post(
-    f"{BASE_URL}/create_session",
+    f"{BASE_URL}/v2/create_session",
     headers={"X-Agentops-Api-Key": API_KEY},
     json={
-        "id": session_id,
-        "init_timestamp": datetime.now(timezone.utc).isoformat(),
-        "tags": ["example"]
+        "session": {
+            "id": session_id,
+            "init_timestamp": datetime.now(timezone.utc).isoformat(),
+            "tags": ["example"]
+        }
     }
 )
 jwt_token = response.json()["jwt"]
 
 # Track LLM call
 requests.post(
-    f"{BASE_URL}/create_events",
+    f"{BASE_URL}/v2/create_events",
     headers={"Authorization": f"Bearer {jwt_token}"},
     json={
         "events": [{
@@ -437,12 +385,14 @@ requests.post(
 
 # End session
 requests.post(
-    f"{BASE_URL}/update_session",
+    f"{BASE_URL}/v2/update_session",
     headers={"Authorization": f"Bearer {jwt_token}"},
     json={
-        "id": session_id,
-        "end_timestamp": datetime.now(timezone.utc).isoformat(),
-        "end_state": "completed"
+        "session": {
+            "id": session_id,
+            "end_timestamp": datetime.now(timezone.utc).isoformat(),
+            "end_state": "completed"
+        }
     }
 )
 ```
