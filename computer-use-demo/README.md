@@ -170,7 +170,7 @@ docker build . -t computer-use-demo:local  # manually build the docker image (op
 export ANTHROPIC_API_KEY=%your_api_key%
 
 docker run \
-    -e ANTHROPIC_API_KEY=<YOUR_ANTHROPIC_API_KEY> \
+    -e ANTHROPIC_API_KEY=$ANTHROPIC_API_KEY \
     -v $(pwd)/computer_use_demo:/home/computeruse/computer_use_demo/ \
     -v $HOME/.anthropic:/home/computeruse/.anthropic \
     -p 5900:5900 \
