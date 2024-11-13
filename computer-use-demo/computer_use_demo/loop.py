@@ -7,6 +7,9 @@ from collections.abc import Callable
 from datetime import datetime
 from enum import StrEnum
 from typing import Any, cast
+import logging
+
+logger = logging.getLogger("__name__")
 
 import httpx
 from anthropic import (
@@ -31,9 +34,13 @@ from anthropic.types.beta import (
 
 from .tools import BashTool, ComputerTool, EditTool, ToolCollection, ToolResult
 
-import agentops
+# from .agentops.agentops.llms.test import test
 
-agentops.init(api_key="ff21ec62-f686-459f-b642-62a8105f6ae8")
+# import agentops.agentops as agentops
+
+# print(agentops)
+
+# agentops.init(api_key="ff21ec62-f686-459f-b642-62a8105f6ae8")
 
 # import debugpy
 # debugpy.listen(5678)
@@ -112,6 +119,12 @@ async def sampling_loop(
     )
 
     while True:
+
+        print("Hello")
+
+        logger.info("Test")
+        # test()
+
         enable_prompt_caching = False
         betas = [COMPUTER_USE_BETA_FLAG]
         image_truncation_threshold = 10
@@ -142,7 +155,10 @@ async def sampling_loop(
         # implementation may be able call the SDK directly with:
         # `response = client.messages.create(...)` instead.
         try:
+
+
             raw_response = client.beta.messages.with_raw_response.create(
+            # raw_response = client.beta.messages.create(
                 max_tokens=max_tokens,
                 messages=messages,
                 model=model,
@@ -156,10 +172,17 @@ async def sampling_loop(
         except APIError as e:
             api_response_callback(e.request, e.body, e)
             return messages
+        
+        print("--- --- ---")
+        print(raw_response)
+        print("--- --- ---")
 
-        api_response_callback(
-            raw_response.http_response.request, raw_response.http_response, None
-        )
+        # api_response_callback(
+        #     raw_response.http_response.request, raw_response.http_response, None
+        # )
+
+        
+        # print(raw_response.dir())
 
         response = raw_response.parse()
 

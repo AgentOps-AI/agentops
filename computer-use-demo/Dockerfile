@@ -88,11 +88,19 @@ RUN python -m pip install --upgrade pip==23.1.2 setuptools==58.0.4 wheel==0.40.0
 
 # only reinstall if requirements.txt changes
 COPY --chown=$USERNAME:$USERNAME computer_use_demo/requirements.txt $HOME/computer_use_demo/requirements.txt
-RUN python -m pip install -r $HOME/computer_use_demo/requirements.txt
+
+
+# RUN python -m pip install -U -e $HOME/computer_use_demo/agentops
+# RUN pip install -U -e ./agentops
 
 # setup desktop env & app
 COPY --chown=$USERNAME:$USERNAME image/ $HOME
 COPY --chown=$USERNAME:$USERNAME computer_use_demo/ $HOME/computer_use_demo/
+COPY --chown=$USERNAME:$USERNAME agentops $HOME/computer_use_demo/agentops
+
+# RUN pip install -U -e ./agentops
+
+RUN python -m pip install -r $HOME/computer_use_demo/requirements.txt
 
 ARG DISPLAY_NUM=1
 ARG HEIGHT=768

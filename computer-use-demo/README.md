@@ -172,6 +172,7 @@ export ANTHROPIC_API_KEY=%your_api_key%
 docker run \
     -e ANTHROPIC_API_KEY=$ANTHROPIC_API_KEY \
     -v $(pwd)/computer_use_demo:/home/computeruse/computer_use_demo/ \
+    -v $(pwd)/agentops:/home/computeruse/computer_use_demo/agentops \
     -v $HOME/.anthropic:/home/computeruse/.anthropic \
     -p 5900:5900 \
     -p 8501:8501 \
