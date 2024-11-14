@@ -315,7 +315,7 @@ def track_agent(name: Union[str, None] = None):
         # Add descriptors for agent properties
         obj.agent_ops_agent_id = AgentOpsDescriptor("agent_id")
         obj.agent_ops_agent_name = AgentOpsDescriptor("agent_name")
-        
+
         if name:
             obj._agentops_agent_name = name
 
@@ -344,7 +344,7 @@ def track_agent(name: Union[str, None] = None):
                         agent_id=self._agentops_agent_id,
                         session=session,
                     )
-                except AttributeError as e:
+                except AttributeError:
                     Client().add_pre_init_warning(
                         f"Failed to track an agent {name} with the @track_agent decorator."
                     )
@@ -358,8 +358,7 @@ def track_agent(name: Union[str, None] = None):
         elif inspect.isfunction(obj):
             obj._agentops_agent_id = str(uuid4())
             Client().create_agent(
-                name=obj._agentops_agent_name,
-                agent_id=obj._agentops_agent_id
+                name=obj._agentops_agent_name, agent_id=obj._agentops_agent_id
             )
 
         else:

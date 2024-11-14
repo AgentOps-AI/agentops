@@ -13,8 +13,6 @@ import requests
 from .log_config import logger
 
 
-
-
 def get_ISO_time():
     """
     Get the current UTC time in ISO 8601 format with milliseconds precision in UTC timezone.

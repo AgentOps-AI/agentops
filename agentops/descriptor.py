@@ -48,7 +48,7 @@ class AgentOpsDescriptor:
                             if isinstance(agent_name_desc, AgentOpsDescriptor):
                                 agent_name = agent_name_desc.__get__(var, var_type)
                                 return agent_id
-                    # elif 
+                    # elif
                 except Exception as e:
                     continue
 
