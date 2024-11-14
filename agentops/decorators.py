@@ -8,6 +8,7 @@ from .helpers import check_call_stack_for_agent_id, get_ISO_time
 from .session import Session
 from .client import Client
 from .log_config import logger
+from .descriptor import AgentOpsDescriptor
 
 
 def record_function(event_name: str):
@@ -311,30 +312,36 @@ def record_tool(tool_name: Optional[str] = None):
 
 def track_agent(name: Union[str, None] = None):
     def decorator(obj):
+        # Add descriptors for agent properties
+        obj.agent_ops_agent_id = AgentOpsDescriptor("agent_id")
+        obj.agent_ops_agent_name = AgentOpsDescriptor("agent_name")
+        
         if name:
-            obj.agent_ops_agent_name = name
+            obj._agentops_agent_name = name
 
         if inspect.isclass(obj):
             original_init = obj.__init__
 
             def new_init(self, *args, **kwargs):
                 try:
+                    # Handle name from kwargs
                     kwarg_name = kwargs.get("agentops_name", None)
                     if kwarg_name is not None:
-                        self.agent_ops_agent_name = kwarg_name
+                        self._agentops_agent_name = kwarg_name
                         del kwargs["agentops_name"]
 
                     original_init(self, *args, **kwargs)
 
-                    self.agent_ops_agent_id = str(uuid4())
+                    # Set agent ID using descriptor
+                    self._agentops_agent_id = str(uuid4())
 
                     session = kwargs.get("session", None)
                     if session is not None:
-                        self.agent_ops_session_id = session.session_id
+                        self._agentops_session_id = session.session_id
 
                     Client().create_agent(
-                        name=self.agent_ops_agent_name,
-                        agent_id=self.agent_ops_agent_id,
+                        name=self._agentops_agent_name,
+                        agent_id=self._agentops_agent_id,
                         session=session,
                     )
                 except AttributeError as e:
@@ -349,9 +356,10 @@ def track_agent(name: Union[str, None] = None):
             obj.__init__ = new_init
 
         elif inspect.isfunction(obj):
-            obj.agent_ops_agent_id = str(uuid4())  # type: ignore
+            obj._agentops_agent_id = str(uuid4())
             Client().create_agent(
-                name=obj.agent_ops_agent_name, agent_id=obj.agent_ops_agent_id  # type: ignore
+                name=obj._agentops_agent_name,
+                agent_id=obj._agentops_agent_id
             )
 
         else:
