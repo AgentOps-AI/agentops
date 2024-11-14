@@ -1,0 +1,429 @@
+---
+title: "REST API"
+description: "Direct integration with AgentOps API"
+---
+
+The AgentOps REST API allows you to integrate agent monitoring directly into your application without using our Python SDK. This is useful for:
+- Non-Python applications
+- Custom integrations
+- Direct API access
+
+For a complete API reference, you can view our [OpenAPI specification](https://api.agentops.ai/v2/openapi.yaml).
+
+## Authentication
+
+The AgentOps API uses a two-step authentication process:
+1. API Key: Used to create sessions and get JWT tokens
+2. JWT: Used for all operations within a session
+
+### Initial Authentication
+
+When you create a session, you'll use your API key and receive a JWT token in response:
+
+<CodeGroup>
+```bash curl
+curl -X POST https://api.agentops.ai/create_session \
+  -H "Content-Type: application/json" \
+  -H "X-Agentops-Api-Key: your_api_key" \
+  -d '{
+    "id": "550e8400-e29b-41d4-a716-446655440000",
+    "init_timestamp": "2024-03-14T12:00:00Z"
+  }'
+```
+
+```json Success Response
+{
+  "status": "success",
+  "jwt": "eyJhbGciOiJIUzI1NiIs...",
+  "session_id": "550e8400-e29b-41d4-a716-446655440000"
+}
+```
+
+```bash Error Response
+HTTP/1.1 401 Unauthorized
+{
+  "error": "Invalid API key",
+  "message": "Please check your API key and try again"
+}
+```
+</CodeGroup>
+
+### Using JWT Tokens
+
+Use the JWT token in the Authorization header for all subsequent requests:
+
+<CodeGroup>
+```bash Example Request
+curl -X POST https://api.agentops.ai/create_events \
+  -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIs..." \
+  -H "Content-Type: application/json" \
+  -d '{
+    "events": [{
+      "type": "llm",
+      "init_timestamp": "2024-03-14T12:01:00Z"
+    }]
+  }'
+```
+
+```bash Error Response
+HTTP/1.1 401 Unauthorized
+{
+  "error": "Invalid or expired JWT",
+  "message": "Please reauthorize using /reauthorize_jwt"
+}
+```
+</CodeGroup>
+
+### Refreshing Tokens
+
+JWTs expire after 24 hours. When a token expires, use your API key to get a new one:
+
+<CodeGroup>
+```bash curl
+curl -X POST https://api.agentops.ai/v2/reauthorize_jwt \
+  -H "Content-Type: application/json" \
+  -H "X-Agentops-Api-Key: your_api_key" \
+  -d '{
+    "session_id": "550e8400-e29b-41d4-a716-446655440000"
+  }'
+```
+
+```json Success Response
+{
+  "status": "success",
+  "jwt": "eyJhbGciOiJIUzI1NiIs..."
+}
+```
+</CodeGroup>
+
+## Session Management
+
+Sessions require a unique identifier that you generate client-side. While any unique string will work, we recommend using UUIDs for consistency. Here's how to generate one in Python:
+
+<CodeGroup>
+```python Python
+import uuid
+session_id = str(uuid.uuid4())
+# "550e8400-e29b-41d4-a716-446655440000"
+```
+</CodeGroup>
+
+### Create Session
+
+Start a new monitoring session using your generated session ID:
+
+<CodeGroup>
+```bash curl
+curl -X POST https://api.agentops.ai/v2/create_session \
+  -H "Content-Type: application/json" \
+  -H "X-Agentops-Api-Key: your_api_key" \
+  -d '{
+    "session": {
+      "id": "550e8400-e29b-41d4-a716-446655440000",
+      "init_timestamp": "2024-03-14T12:00:00Z",
+      "tags": ["production", "customer-service"],
+      "host_env": {
+        "OS": {
+          "OS": "Windows",
+          "OS Release": "11",
+          "OS Version": "10.0.22631"
+        },
+        "CPU": {
+          "CPU Usage": "5.9%",
+          "Total cores": 12
+        },
+        "RAM": {
+          "Used": "14.49 GB",
+          "Total": "31.75 GB"
+        },
+        "SDK": {
+          "Python Version": "3.12.0",
+          "System Packages": {
+            "agentops": "0.3.17",
+            "openai": "1.2.3"
+          }
+        }
+      }
+    }
+  }'
+```
+
+```bash Request
+POST https://api.agentops.ai/v2/create_session
+Content-Type: application/json
+X-Agentops-Api-Key: your_api_key
+
+{
+  "session": {
+    "id": "550e8400-e29b-41d4-a716-446655440000",
+    "init_timestamp": "2024-03-14T12:00:00Z",
+    "tags": ["production", "customer-service"],
+    "host_env": {
+      "OS": {
+        "OS": "Windows",
+        "OS Release": "11",
+        "OS Version": "10.0.22631"
+      },
+      "CPU": {
+        "CPU Usage": "5.9%",
+        "Total cores": 12
+      },
+      "RAM": {
+        "Used": "14.49 GB",
+        "Total": "31.75 GB"
+      },
+      "SDK": {
+        "Python Version": "3.12.0",
+        "System Packages": {
+          "agentops": "0.3.17",
+          "openai": "1.2.3"
+        }
+      }
+    }
+  }
+}
+```
+</CodeGroup>
+
+### Update Session
+
+Update an existing session (e.g., when it ends):
+
+<CodeGroup>
+```bash curl
+curl -X POST https://api.agentops.ai/v2/update_session \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer your_jwt_token" \
+  -d '{
+    "session": {
+      "id": "550e8400-e29b-41d4-a716-446655440000",
+      "end_timestamp": "2024-03-14T12:05:00Z",
+      "end_state": "Success",
+      "end_state_reason": "Task successfully completed",
+      "tags": ["production", "updated-tag"]
+    }
+  }'
+```
+
+```bash Request
+POST https://api.agentops.ai/v2/update_session
+Content-Type: application/json
+Authorization: Bearer your_jwt_token
+
+{
+  "session": {
+    "id": "550e8400-e29b-41d4-a716-446655440000",
+    "end_timestamp": "2024-03-14T12:05:00Z",
+    "end_state": "Success",
+    "end_state_reason": "Task successfully completed",
+    "tags": ["production", "updated-tag"]
+  }
+}
+```
+</CodeGroup>
+
+## Event Tracking
+
+### Create Events
+
+Track LLM calls, tool usage, or other events:
+
+<CodeGroup>
+```bash curl
+curl -X POST https://api.agentops.ai/v2/create_events \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer your_jwt_token" \
+  -d '{
+    "events": [
+      {
+        "type": "llm",
+        "init_timestamp": "2024-03-14T12:01:00Z",
+        "end_timestamp": "2024-03-14T12:01:02Z",
+        "model": "gpt-4",
+        "prompt": [
+          {"role": "system", "content": "You are a helpful assistant"},
+          {"role": "user", "content": "Analyze this data..."}
+        ],
+        "completion": {
+          "role": "assistant",
+          "content": "Based on the data..."
+        },
+        "prompt_tokens": 150,
+        "completion_tokens": 80
+      },
+      {
+        "type": "tool",
+        "name": "database_query",
+        "init_timestamp": "2024-03-14T12:01:03Z",
+        "end_timestamp": "2024-03-14T12:01:04Z",
+        "input": "SELECT * FROM users",
+        "output": "Retrieved 5 users"
+      }
+    ]
+  }'
+```
+
+```bash Request
+POST https://api.agentops.ai/v2/create_events
+Content-Type: application/json
+Authorization: Bearer your_jwt_token
+
+{
+  "events": [
+    {
+      "type": "llm",
+      "init_timestamp": "2024-03-14T12:01:00Z",
+      "end_timestamp": "2024-03-14T12:01:02Z",
+      "model": "gpt-4",
+      "prompt": [
+        {"role": "system", "content": "You are a helpful assistant"},
+        {"role": "user", "content": "Analyze this data..."}
+      ],
+      "completion": {
+        "role": "assistant",
+        "content": "Based on the data..."
+      },
+      "prompt_tokens": 150,
+      "completion_tokens": 80
+    },
+    {
+      "type": "tool",
+      "name": "database_query",
+      "init_timestamp": "2024-03-14T12:01:03Z",
+      "end_timestamp": "2024-03-14T12:01:04Z",
+      "input": "SELECT * FROM users",
+      "output": "Retrieved 5 users"
+    }
+  ]
+}
+```
+</CodeGroup>
+
+### Update Events
+
+Update existing events (e.g., adding completion information):
+
+<CodeGroup>
+```bash curl
+curl -X POST https://api.agentops.ai/v2/update_events \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer your_jwt_token" \
+  -d '{
+    "events": [
+      {
+        "event_id": "event-id-123",
+        "end_timestamp": "2024-03-14T12:01:02Z",
+        "completion": "Updated completion text",
+        "completion_tokens": 100
+      }
+    ]
+  }'
+```
+
+```bash Request
+POST https://api.agentops.ai/v2/update_events
+Content-Type: application/json
+Authorization: Bearer your_jwt_token
+
+{
+  "events": [
+    {
+      "event_id": "event-id-123",
+      "end_timestamp": "2024-03-14T12:01:02Z",
+      "completion": "Updated completion text",
+      "completion_tokens": 100
+    }
+  ]
+}
+```
+</CodeGroup>
+
+## Agent Management
+
+### Create Agent
+
+Register a new agent in a session:
+
+<CodeGroup>
+```bash curl
+curl -X POST https://api.agentops.ai/v2/create_agent \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer your_jwt_token" \
+  -d '{
+    "id": "agent-123",
+    "name": "Research Assistant"
+  }'
+```
+
+```bash Request
+POST https://api.agentops.ai/v2/create_agent
+Content-Type: application/json
+Authorization: Bearer your_jwt_token
+
+{
+  "id": "agent-123",
+  "name": "Research Assistant"
+}
+```
+</CodeGroup>
+
+## Example Integration
+
+Here's a complete example using Python's requests library:
+
+<CodeGroup>
+```python Complete Example
+import requests
+import uuid
+from datetime import datetime, timezone
+
+# Configuration
+API_KEY = "your_api_key"
+BASE_URL = "https://api.agentops.ai"
+
+# Create session
+session_id = str(uuid.uuid4())
+response = requests.post(
+    f"{BASE_URL}/v2/create_session",
+    headers={"X-Agentops-Api-Key": API_KEY},
+    json={
+        "session": {
+            "id": session_id,
+            "init_timestamp": datetime.now(timezone.utc).isoformat(),
+            "tags": ["example"]
+        }
+    }
+)
+jwt_token = response.json()["jwt"]
+
+# Track LLM call
+requests.post(
+    f"{BASE_URL}/v2/create_events",
+    headers={"Authorization": f"Bearer {jwt_token}"},
+    json={
+        "events": [{
+            "type": "llm",
+            "init_timestamp": datetime.now(timezone.utc).isoformat(),
+            "model": "gpt-4",
+            "prompt": "Hello, world!",
+            "completion": "Hi there!",
+            "prompt_tokens": 3,
+            "completion_tokens": 2
+        }]
+    }
+)
+
+# End session
+requests.post(
+    f"{BASE_URL}/v2/update_session",
+    headers={"Authorization": f"Bearer {jwt_token}"},
+    json={
+        "session": {
+            "id": session_id,
+            "end_timestamp": datetime.now(timezone.utc).isoformat(),
+            "end_state": "completed"
+        }
+    }
+)
+```
+</CodeGroup>

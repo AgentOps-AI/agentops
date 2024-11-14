@@ -93,7 +93,8 @@
         "v1/integrations/cohere",
         "v1/integrations/anthropic",
         "v1/integrations/litellm",
-        "v1/integrations/multion"
+        "v1/integrations/multion",
+        "v1/integrations/rest"
       ]
     },
     {
