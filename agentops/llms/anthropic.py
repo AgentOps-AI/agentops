@@ -1,19 +1,22 @@
+import json
 import pprint
 from typing import Optional
+
+from anthropic import APIResponse
+from anthropic._legacy_response import LegacyAPIResponse
 
 from agentops.llms.instrumented_provider import InstrumentedProvider
 from agentops.time_travel import fetch_completion_override_from_time_travel_cache
 
 from ..event import ErrorEvent, LLMEvent, ToolEvent
-from ..session import Session
-from ..log_config import logger
 from ..helpers import check_call_stack_for_agent_id, get_ISO_time
+from ..log_config import logger
+from ..session import Session
 from ..singleton import singleton
 
 
 @singleton
 class AnthropicProvider(InstrumentedProvider):
-
     original_create = None
     original_create_async = None
 
@@ -27,9 +30,9 @@ class AnthropicProvider(InstrumentedProvider):
         self, response, kwargs, init_timestamp, session: Optional[Session] = None
     ):
         """Handle responses for Anthropic"""
-        from anthropic import Stream, AsyncStream
-        from anthropic.resources import AsyncMessages
         import anthropic.resources.beta.messages.messages as beta_messages
+        from anthropic import AsyncStream, Stream
+        from anthropic.resources import AsyncMessages
         from anthropic.types import Message
 
         llm_event = LLMEvent(init_timestamp=init_timestamp, params=kwargs)
@@ -66,9 +69,9 @@ class AnthropicProvider(InstrumentedProvider):
                         llm_event.completion["content"] += chunk.delta.text
 
                     elif chunk.delta.type == "input_json_delta":
-                        self.tool_event[self.tool_id].logs[
-                            "input"
-                        ] += chunk.delta.partial_json
+                        self.tool_event[self.tool_id].logs["input"] += (
+                            chunk.delta.partial_json
+                        )
 
                 elif chunk.type == "content_block_stop":
                     pass
@@ -125,17 +128,45 @@ class AnthropicProvider(InstrumentedProvider):
 
         # Handle object responses
         try:
-            llm_event.returns = response.model_dump()
-            llm_event.agent_id = check_call_stack_for_agent_id()
-            llm_event.prompt = kwargs["messages"]
-            llm_event.prompt_tokens = response.usage.input_tokens
-            llm_event.completion = {
-                "role": "assistant",
-                "content": response.content[0].text,
-            }
-            llm_event.completion_tokens = response.usage.output_tokens
-            llm_event.model = response.model
+            # AttributeError("'LegacyAPIResponse' object has no attribute 'model_dump'")
+            if isinstance(response, (APIResponse, LegacyAPIResponse)) or not hasattr(
+                response, "model_dump"
+            ):
+                """
+                response's data structure:
+                dict_keys(['id', 'type', 'role', 'model', 'content', 'stop_reason', 'stop_sequence', 'usage'])
+
+                {'id': 'msg_018Gk9N2pcWaYLS7mxXbPD5i', 'type': 'message', 'role': 'assistant', 'model': 'claude-3-5-sonnet-20241022', 'content': [{'type': 'text', 'text': 'I\'ll help you investigate'}], 'stop_reason': 'end_turn', 'stop_sequence': None, 'usage': {'input_tokens': 2419, 'output_tokens': 116}}
+                """
+                response_data = json.loads(response.text)
+                llm_event.returns = response_data
+                llm_event.model = response_data["model"]
+                llm_event.completion = {
+                    "role": response_data.get("role"),
+                    "content": response_data.get("content")[0].get("text")
+                    if response_data.get("content")
+                    else "",
+                }
+                if usage := response_data.get("usage"):
+                    llm_event.prompt_tokens = usage.get("input_tokens")
+                    llm_event.completion_tokens = usage.get("output_tokens")
+
+            # Han
+            else:
+                # This bets on the fact that the response object has a model_dump method
+                llm_event.returns = response.model_dump()
+                llm_event.prompt_tokens = response.usage.input_tokens
+                llm_event.completion_tokens = response.usage.output_tokens
+
+                llm_event.completion = {
+                    "role": "assistant",
+                    "content": response.content[0].text,
+                }
+                llm_event.model = response.model
+
             llm_event.end_timestamp = get_ISO_time()
+            llm_event.prompt = kwargs["messages"]
+            llm_event.agent_id = check_call_stack_for_agent_id()
 
             self._safe_record(session, llm_event)
         except Exception as e:
@@ -155,8 +186,8 @@ class AnthropicProvider(InstrumentedProvider):
         self._override_async_completion()
 
     def _override_completion(self):
-        from anthropic.resources import messages
         import anthropic.resources.beta.messages.messages as beta_messages
+        from anthropic.resources import messages
         from anthropic.types import (
             Message,
             RawContentBlockDeltaEvent,
@@ -175,6 +206,9 @@ class AnthropicProvider(InstrumentedProvider):
             def patched_function(*args, **kwargs):
                 init_timestamp = get_ISO_time()
                 session = kwargs.get("session", None)
+                # if is_beta:
+                #     breakpoint()
+
                 if "session" in kwargs.keys():
                     del kwargs["session"]
 
@@ -229,6 +263,7 @@ class AnthropicProvider(InstrumentedProvider):
         beta_messages.Messages.create = create_patched_function(is_beta=True)
 
     def _override_async_completion(self):
+        import anthropic.resources.beta.messages.messages as beta_messages
         from anthropic.resources import messages
         from anthropic.types import (
             Message,
@@ -239,7 +274,6 @@ class AnthropicProvider(InstrumentedProvider):
             RawMessageStartEvent,
             RawMessageStopEvent,
         )
-        import anthropic.resources.beta.messages.messages as beta_messages
 
         # Store the original method
         self.original_create_async = messages.AsyncMessages.create
