@@ -13,6 +13,8 @@ from .litellm import LiteLLMProvider
 from .ollama import OllamaProvider
 from .openai import OpenAiProvider
 from .anthropic import AnthropicProvider
+from .mistral import MistralProvider
+from .ai21 import AI21Provider
 
 original_func = {}
 original_create = None
@@ -39,6 +41,15 @@ class LlmTracker:
         "anthropic": {
             "0.32.0": ("completions.create",),
         },
+        "mistralai": {
+            "1.0.1": ("chat.complete", "chat.stream"),
+        },
+        "ai21": {
+            "2.0.0": (
+                "chat.completions.create",
+                "client.answer.create",
+            ),
+        },
     }
 
     def __init__(self, client):
@@ -55,17 +66,13 @@ class LlmTracker:
                 if api == "litellm":
                     module_version = version(api)
                     if module_version is None:
-                        logger.warning(
-                            f"Cannot determine LiteLLM version. Only LiteLLM>=1.3.1 supported."
-                        )
+                        logger.warning("Cannot determine LiteLLM version. Only LiteLLM>=1.3.1 supported.")
 
                     if Version(module_version) >= parse("1.3.1"):
                         provider = LiteLLMProvider(self.client)
                         provider.override()
                     else:
-                        logger.warning(
-                            f"Only LiteLLM>=1.3.1 supported. v{module_version} found."
-                        )
+                        logger.warning(f"Only LiteLLM>=1.3.1 supported. v{module_version} found.")
                     return  # If using an abstraction like litellm, do not patch the underlying LLM APIs
 
                 if api == "openai":
@@ -85,17 +92,13 @@ class LlmTracker:
                     # Patch cohere v5.4.0+ methods
                     module_version = version(api)
                     if module_version is None:
-                        logger.warning(
-                            f"Cannot determine Cohere version. Only Cohere>=5.4.0 supported."
-                        )
+                        logger.warning("Cannot determine Cohere version. Only Cohere>=5.4.0 supported.")
 
                     if Version(module_version) >= parse("5.4.0"):
                         provider = CohereProvider(self.client)
                         provider.override()
                     else:
-                        logger.warning(
-                            f"Only Cohere>=5.4.0 supported. v{module_version} found."
-                        )
+                        logger.warning(f"Only Cohere>=5.4.0 supported. v{module_version} found.")
 
                 if api == "ollama":
                     module_version = version(api)
@@ -104,9 +107,7 @@ class LlmTracker:
                         provider = OllamaProvider(self.client)
                         provider.override()
                     else:
-                        logger.warning(
-                            f"Only Ollama>=0.0.1 supported. v{module_version} found."
-                        )
+                        logger.warning(f"Only Ollama>=0.0.1 supported. v{module_version} found.")
 
                 if api == "groq":
                     module_version = version(api)
@@ -115,25 +116,40 @@ class LlmTracker:
                         provider = GroqProvider(self.client)
                         provider.override()
                     else:
-                        logger.warning(
-                            f"Only Groq>=0.9.0 supported. v{module_version} found."
-                        )
+                        logger.warning(f"Only Groq>=0.9.0 supported. v{module_version} found.")
 
                 if api == "anthropic":
                     module_version = version(api)
 
                     if module_version is None:
-                        logger.warning(
-                            f"Cannot determine Anthropic version. Only Anthropic>=0.32.0 supported."
-                        )
+                        logger.warning("Cannot determine Anthropic version. Only Anthropic>=0.32.0 supported.")
 
                     if Version(module_version) >= parse("0.32.0"):
                         provider = AnthropicProvider(self.client)
                         provider.override()
                     else:
-                        logger.warning(
-                            f"Only Anthropic>=0.32.0 supported. v{module_version} found."
-                        )
+                        logger.warning(f"Only Anthropic>=0.32.0 supported. v{module_version} found.")
+
+                if api == "mistralai":
+                    module_version = version(api)
+
+                    if Version(module_version) >= parse("1.0.1"):
+                        provider = MistralProvider(self.client)
+                        provider.override()
+                    else:
+                        logger.warning(f"Only MistralAI>=1.0.1 supported. v{module_version} found.")
+
+                if api == "ai21":
+                    module_version = version(api)
+
+                    if module_version is None:
+                        logger.warning("Cannot determine AI21 version. Only AI21>=2.0.0 supported.")
+
+                    if Version(module_version) >= parse("2.0.0"):
+                        provider = AI21Provider(self.client)
+                        provider.override()
+                    else:
+                        logger.warning(f"Only AI21>=2.0.0 supported. v{module_version} found.")
 
     def stop_instrumenting(self):
         OpenAiProvider(self.client).undo_override()
@@ -142,3 +158,5 @@ class LlmTracker:
         LiteLLMProvider(self.client).undo_override()
         OllamaProvider(self.client).undo_override()
         AnthropicProvider(self.client).undo_override()
+        MistralProvider(self.client).undo_override()
+        AI21Provider(self.client).undo_override()

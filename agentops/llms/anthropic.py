@@ -1,3 +1,4 @@
+import json
 import pprint
 from typing import Optional
 
@@ -5,15 +6,14 @@ from agentops.llms.instrumented_provider import InstrumentedProvider
 from agentops.time_travel import fetch_completion_override_from_time_travel_cache
 
 from ..event import ErrorEvent, LLMEvent, ToolEvent
-from ..session import Session
-from ..log_config import logger
 from ..helpers import check_call_stack_for_agent_id, get_ISO_time
+from ..log_config import logger
+from ..session import Session
 from ..singleton import singleton
 
 
 @singleton
 class AnthropicProvider(InstrumentedProvider):
-
     original_create = None
     original_create_async = None
 
@@ -23,11 +23,10 @@ class AnthropicProvider(InstrumentedProvider):
         self.tool_event = {}
         self.tool_id = ""
 
-    def handle_response(
-        self, response, kwargs, init_timestamp, session: Optional[Session] = None
-    ):
+    def handle_response(self, response, kwargs, init_timestamp, session: Optional[Session] = None):
         """Handle responses for Anthropic"""
-        from anthropic import Stream, AsyncStream
+        import anthropic.resources.beta.messages.messages as beta_messages
+        from anthropic import AsyncStream, Stream
         from anthropic.resources import AsyncMessages
         from anthropic.types import Message
 
@@ -65,9 +64,7 @@ class AnthropicProvider(InstrumentedProvider):
                         llm_event.completion["content"] += chunk.delta.text
 
                     elif chunk.delta.type == "input_json_delta":
-                        self.tool_event[self.tool_id].logs[
-                            "input"
-                        ] += chunk.delta.partial_json
+                        self.tool_event[self.tool_id].logs["input"] += chunk.delta.partial_json
 
                 elif chunk.type == "content_block_stop":
                     pass
@@ -80,9 +77,7 @@ class AnthropicProvider(InstrumentedProvider):
                     self._safe_record(session, llm_event)
 
             except Exception as e:
-                self._safe_record(
-                    session, ErrorEvent(trigger_event=llm_event, exception=e)
-                )
+                self._safe_record(session, ErrorEvent(trigger_event=llm_event, exception=e))
 
                 kwargs_str = pprint.pformat(kwargs)
                 chunk = pprint.pformat(chunk)
@@ -124,17 +119,63 @@ class AnthropicProvider(InstrumentedProvider):
 
         # Handle object responses
         try:
-            llm_event.returns = response.model_dump()
-            llm_event.agent_id = check_call_stack_for_agent_id()
-            llm_event.prompt = kwargs["messages"]
-            llm_event.prompt_tokens = response.usage.input_tokens
-            llm_event.completion = {
-                "role": "assistant",
-                "content": response.content[0].text,
-            }
-            llm_event.completion_tokens = response.usage.output_tokens
-            llm_event.model = response.model
+            # Naively handle AttributeError("'LegacyAPIResponse' object has no attribute 'model_dump'")
+            if hasattr(response, "model_dump"):
+                # This bets on the fact that the response object has a model_dump method
+                llm_event.returns = response.model_dump()
+                llm_event.prompt_tokens = response.usage.input_tokens
+                llm_event.completion_tokens = response.usage.output_tokens
+
+                llm_event.completion = {
+                    "role": "assistant",
+                    "content": response.content[0].text,
+                }
+                llm_event.model = response.model
+
+            else:
+                """Handle raw response data from the Anthropic API.
+
+                The raw response has the following structure:
+                {
+                    'id': str,              # Message ID (e.g. 'msg_018Gk9N2pcWaYLS7mxXbPD5i') 
+                    'type': str,            # Type of response (e.g. 'message')
+                    'role': str,            # Role of responder (e.g. 'assistant')
+                    'model': str,           # Model used (e.g. 'claude-3-5-sonnet-20241022')
+                    'content': List[Dict],  # List of content blocks with 'type' and 'text'
+                    'stop_reason': str,     # Reason for stopping (e.g. 'end_turn')
+                    'stop_sequence': Any,   # Stop sequence used, if any
+                    'usage': {              # Token usage statistics
+                        'input_tokens': int,
+                        'output_tokens': int
+                    }
+                }
+
+                Note: We import Anthropic types here since the package must be installed
+                for raw responses to be available; doing so in the global scope would 
+                result in dependencies error since this provider is not lazily imported (tests fail)
+                """
+                from anthropic import APIResponse
+                from anthropic._legacy_response import LegacyAPIResponse
+
+                assert isinstance(response, (APIResponse, LegacyAPIResponse)), (
+                    f"Expected APIResponse or LegacyAPIResponse, got {type(response)}. "
+                    "This is likely caused by changes in the Anthropic SDK and the integrations with AgentOps needs update."
+                    "Please open an issue at https://github.com/AgentOps-AI/agentops/issues"
+                )
+                response_data = json.loads(response.text)
+                llm_event.returns = response_data
+                llm_event.model = response_data["model"]
+                llm_event.completion = {
+                    "role": response_data.get("role"),
+                    "content": response_data.get("content")[0].get("text") if response_data.get("content") else "",
+                }
+                if usage := response_data.get("usage"):
+                    llm_event.prompt_tokens = usage.get("input_tokens")
+                    llm_event.completion_tokens = usage.get("output_tokens")
+
             llm_event.end_timestamp = get_ISO_time()
+            llm_event.prompt = kwargs["messages"]
+            llm_event.agent_id = check_call_stack_for_agent_id()
 
             self._safe_record(session, llm_event)
         except Exception as e:
@@ -154,6 +195,7 @@ class AnthropicProvider(InstrumentedProvider):
         self._override_async_completion()
 
     def _override_completion(self):
+        import anthropic.resources.beta.messages.messages as beta_messages
         from anthropic.resources import messages
         from anthropic.types import (
             Message,
@@ -167,56 +209,58 @@ class AnthropicProvider(InstrumentedProvider):
 
         # Store the original method
         self.original_create = messages.Messages.create
+        self.original_create_beta = beta_messages.Messages.create
 
-        def patched_function(*args, **kwargs):
-            init_timestamp = get_ISO_time()
-            session = kwargs.get("session", None)
-            if "session" in kwargs.keys():
-                del kwargs["session"]
+        def create_patched_function(is_beta=False):
+            def patched_function(*args, **kwargs):
+                init_timestamp = get_ISO_time()
+                session = kwargs.get("session", None)
 
-            completion_override = fetch_completion_override_from_time_travel_cache(
-                kwargs
-            )
-            if completion_override:
-                result_model = None
-                pydantic_models = (
-                    Message,
-                    RawContentBlockDeltaEvent,
-                    RawContentBlockStartEvent,
-                    RawContentBlockStopEvent,
-                    RawMessageDeltaEvent,
-                    RawMessageStartEvent,
-                    RawMessageStopEvent,
-                )
+                if "session" in kwargs.keys():
+                    del kwargs["session"]
 
-                for pydantic_model in pydantic_models:
-                    try:
-                        result_model = pydantic_model.model_validate_json(
-                            completion_override
-                        )
-                        break
-                    except Exception as e:
-                        pass
-
-                if result_model is None:
-                    logger.error(
-                        f"Time Travel: Pydantic validation failed for {pydantic_models} \n"
-                        f"Time Travel: Completion override was:\n"
-                        f"{pprint.pformat(completion_override)}"
+                completion_override = fetch_completion_override_from_time_travel_cache(kwargs)
+                if completion_override:
+                    result_model = None
+                    pydantic_models = (
+                        Message,
+                        RawContentBlockDeltaEvent,
+                        RawContentBlockStartEvent,
+                        RawContentBlockStopEvent,
+                        RawMessageDeltaEvent,
+                        RawMessageStartEvent,
+                        RawMessageStopEvent,
                     )
-                    return None
-                return self.handle_response(
-                    result_model, kwargs, init_timestamp, session=session
-                )
 
-            # Call the original function with its original arguments
-            result = self.original_create(*args, **kwargs)
-            return self.handle_response(result, kwargs, init_timestamp, session=session)
+                    for pydantic_model in pydantic_models:
+                        try:
+                            result_model = pydantic_model.model_validate_json(completion_override)
+                            break
+                        except Exception as e:
+                            pass
 
-        # Override the original method with the patched one
-        messages.Messages.create = patched_function
+                    if result_model is None:
+                        logger.error(
+                            f"Time Travel: Pydantic validation failed for {pydantic_models} \n"
+                            f"Time Travel: Completion override was:\n"
+                            f"{pprint.pformat(completion_override)}"
+                        )
+                        return None
+                    return self.handle_response(result_model, kwargs, init_timestamp, session=session)
+
+                # Call the original function with its original arguments
+                original_func = self.original_create_beta if is_beta else self.original_create
+                result = original_func(*args, **kwargs)
+                return self.handle_response(result, kwargs, init_timestamp, session=session)
+
+            return patched_function
+
+        # Override the original methods with the patched ones
+        messages.Messages.create = create_patched_function(is_beta=False)
+        beta_messages.Messages.create = create_patched_function(is_beta=True)
 
     def _override_async_completion(self):
+        import anthropic.resources.beta.messages.messages as beta_messages
         from anthropic.resources import messages
         from anthropic.types import (
             Message,
@@ -230,55 +274,55 @@ class AnthropicProvider(InstrumentedProvider):
 
         # Store the original method
         self.original_create_async = messages.AsyncMessages.create
+        self.original_create_async_beta = beta_messages.AsyncMessages.create
 
-        async def patched_function(*args, **kwargs):
-            # Call the original function with its original arguments
-            init_timestamp = get_ISO_time()
-            session = kwargs.get("session", None)
-            if "session" in kwargs.keys():
-                del kwargs["session"]
+        def create_patched_async_function(is_beta=False):
+            async def patched_function(*args, **kwargs):
+                init_timestamp = get_ISO_time()
+                session = kwargs.get("session", None)
+                if "session" in kwargs.keys():
+                    del kwargs["session"]
 
-            completion_override = fetch_completion_override_from_time_travel_cache(
-                kwargs
-            )
-            if completion_override:
-                result_model = None
-                pydantic_models = (
-                    Message,
-                    RawContentBlockDeltaEvent,
-                    RawContentBlockStartEvent,
-                    RawContentBlockStopEvent,
-                    RawMessageDeltaEvent,
-                    RawMessageStartEvent,
-                    RawMessageStopEvent,
-                )
-
-                for pydantic_model in pydantic_models:
-                    try:
-                        result_model = pydantic_model.model_validate_json(
-                            completion_override
-                        )
-                        break
-                    except Exception as e:
-                        pass
-
-                if result_model is None:
-                    logger.error(
-                        f"Time Travel: Pydantic validation failed for {pydantic_models} \n"
-                        f"Time Travel: Completion override was:\n"
-                        f"{pprint.pformat(completion_override)}"
+                completion_override = fetch_completion_override_from_time_travel_cache(kwargs)
+                if completion_override:
+                    result_model = None
+                    pydantic_models = (
+                        Message,
+                        RawContentBlockDeltaEvent,
+                        RawContentBlockStartEvent,
+                        RawContentBlockStopEvent,
+                        RawMessageDeltaEvent,
+                        RawMessageStartEvent,
+                        RawMessageStopEvent,
                     )
-                    return None
 
-                return self.handle_response(
-                    result_model, kwargs, init_timestamp, session=session
-                )
+                    for pydantic_model in pydantic_models:
+                        try:
+                            result_model = pydantic_model.model_validate_json(completion_override)
+                            break
+                        except Exception as e:
+                            pass
 
-            result = await self.original_create_async(*args, **kwargs)
-            return self.handle_response(result, kwargs, init_timestamp, session=session)
+                    if result_model is None:
+                        logger.error(
+                            f"Time Travel: Pydantic validation failed for {pydantic_models} \n"
+                            f"Time Travel: Completion override was:\n"
+                            f"{pprint.pformat(completion_override)}"
+                        )
+                        return None
 
-        # Override the original method with the patched one
-        messages.AsyncMessages.create = patched_function
+                    return self.handle_response(result_model, kwargs, init_timestamp, session=session)
+
+                # Call the original function with its original arguments
+                original_func = self.original_create_async_beta if is_beta else self.original_create_async
+                result = await original_func(*args, **kwargs)
+                return self.handle_response(result, kwargs, init_timestamp, session=session)
+
+            return patched_function
+
+        # Override the original methods with the patched ones
+        messages.AsyncMessages.create = create_patched_async_function(is_beta=False)
+        beta_messages.AsyncMessages.create = create_patched_async_function(is_beta=True)
 
     def undo_override(self):
         if self.original_create is not None and self.original_create_async is not None:
