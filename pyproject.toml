@@ -57,7 +57,6 @@ asyncio_default_fixture_loop_scope = "function"
 
 [tool.ruff]
 line-length = 120
-target-version = "py37"
 
 [tool.ruff.lint]
 ignore = [
@@ -70,16 +69,35 @@ ignore = [
 ]
 
 exclude = [
+    ".bzr",
+    ".direnv",
+    ".eggs",
     ".git",
+    ".git-rewrite",
+    ".github",
+    ".hg",
+    ".ipynb_checkpoints",
+    ".mypy_cache",
+    ".nox",
+    ".pants.d",
+    ".pyenv",
+    ".pytest_cache",
+    ".vscode",
+    ".pytype",
+    ".ruff_cache",
+    ".svn",
     ".tox",
-    "__pycache__",
+    ".venv",
+    ".vscode",
+    "__pypackages__",
+    "_build",
+    "buck-out",
     "build",
     "dist",
+    "docs",
+    "examples",
+    "node_modules",
+    "site-packages",
+    "venv",
     "tests/core_manual_tests",
 ]
-
-[tool.black]
-line-length = 120
-target-version = ['py37']
-include = '\.pyi?$'
-extend-exclude = '^/tests/core_manual_tests/'
