@@ -35,6 +35,7 @@ dev = [
     "pytest-mock",
     "pyfakefs",
     "requests_mock==1.11.0",
+    "ruff",
     "tach~=0.9",
 ]
 langchain = [
