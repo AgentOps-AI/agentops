@@ -10,7 +10,7 @@ class Configuration:
         self.parent_key: Optional[str] = None
         self.endpoint: str = "https://api.agentops.ai"
         self.max_wait_time: int = 5000
-        self.max_queue_size: int = 100
+        self.max_queue_size: int = 512
         self.default_tags: set[str] = set()
         self.instrument_llm_calls: bool = True
         self.auto_start_session: bool = True

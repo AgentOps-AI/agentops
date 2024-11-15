@@ -32,7 +32,7 @@
     {
       "name": "Chat With Docs",
       "icon": "user-doctor-message",
-      "url": "https://chatgpt.com/g/g-8wCVRuAsm-agentops-assistant"
+      "url": "https://entelligence.ai/AgentOps-AI&agentops"
     },
     {
       "name": "Your Dashboard",
@@ -91,8 +91,10 @@
         "v1/integrations/autogen",
         "v1/integrations/langchain",
         "v1/integrations/cohere",
+        "v1/integrations/anthropic",
         "v1/integrations/litellm",
-        "v1/integrations/multion"
+        "v1/integrations/multion",
+        "v1/integrations/rest"
       ]
     },
     {
