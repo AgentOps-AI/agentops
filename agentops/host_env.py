@@ -51,8 +51,7 @@ def get_installed_packages():
         return {
             # TODO: add to opt out
             "Installed Packages": {
-                dist.metadata.get("Name"): dist.metadata.get("Version")
-                for dist in importlib.metadata.distributions()
+                dist.metadata.get("Name"): dist.metadata.get("Version") for dist in importlib.metadata.distributions()
             }
         }
     except:
@@ -125,9 +124,7 @@ def get_disk_details():
             }
         except OSError as inaccessible:
             # Skip inaccessible partitions, such as removable drives with no media
-            logger.debug(
-                "Mountpoint %s inaccessible: %s", partition.mountpoint, inaccessible
-            )
+            logger.debug("Mountpoint %s inaccessible: %s", partition.mountpoint, inaccessible)
 
     return disk_info
 
