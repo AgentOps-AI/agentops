@@ -406,7 +406,7 @@ class Session:
                 if self.is_running and not self.end_timestamp:
                     self.end_session(
                         end_state="Indeterminate",
-                        end_state_reason="Session interrupted"
+                        end_state_reason="Session interrupted",
                     )
                 self._cleanup_done = True
 
