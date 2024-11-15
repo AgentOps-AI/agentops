@@ -54,3 +54,32 @@ agentops = "agentops.cli:main"
 [tool.pytest.ini_options]
 asyncio_mode = "strict"
 asyncio_default_fixture_loop_scope = "function"
+
+[tool.ruff]
+line-length = 120
+target-version = "py37"
+
+[tool.ruff.lint]
+ignore = [
+    "F401",  # Unused imports
+    "E712",  # Comparison to True/False
+    "E711",  # Comparison to None
+    "E722",  # Bare except
+    "F821",  # Undefined names
+    "F841",  # Unused variables
+]
+
+exclude = [
+    ".git",
+    ".tox",
+    "__pycache__",
+    "build",
+    "dist",
+    "tests/core_manual_tests",
+]
+
+[tool.black]
+line-length = 120
+target-version = ['py37']
+include = '\.pyi?$'
+extend-exclude = '^/tests/core_manual_tests/'

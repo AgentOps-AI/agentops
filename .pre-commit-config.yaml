@@ -3,11 +3,12 @@ repos:
     rev: "v0.2.1"
     hooks:
       - id: ruff
-        language_version: python3
-        args: [--fix, --exit-non-zero-on-fix, --show-fixes]
+        args: [--fix, --exit-non-zero-on-fix]
       - id: ruff-format
+        args: [--check]
 
   - repo: https://github.com/psf/black
-    rev: 24.1.1  # Use the latest stable version
+    rev: 24.1.1
     hooks:
       - id: black
+        args: [--check]
