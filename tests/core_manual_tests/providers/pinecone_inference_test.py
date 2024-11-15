@@ -1,4 +1,5 @@
 import agentops
+from agentops.llms.pinecone import PineconeProvider
 from dotenv import load_dotenv
 from pinecone import Pinecone
 import os
@@ -13,7 +14,7 @@ def test_inference_operations():
     pc = Pinecone(api_key=os.getenv("PINECONE_API_KEY"))
     
     # Get PineconeProvider instance
-    provider = agentops.llms.PineconeProvider(pc)
+    provider = PineconeProvider(pc)
     
     try:
         # Test embedding generation

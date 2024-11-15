@@ -1,4 +1,5 @@
 import agentops
+from agentops.llms.pinecone import PineconeProvider
 from dotenv import load_dotenv
 from pinecone import Pinecone
 from pinecone_plugins.assistant.models.chat import Message
@@ -13,7 +14,7 @@ def test_assistant_operations():
     """Test Pinecone Assistant operations using in-memory or temporary file handling"""
     # Initialize Pinecone and Provider
     pc = Pinecone(api_key=os.getenv("PINECONE_API_KEY"))
-    provider = agentops.llms.PineconeProvider(pc)
+    provider = PineconeProvider(pc)
     
     try:
         # List existing assistants
