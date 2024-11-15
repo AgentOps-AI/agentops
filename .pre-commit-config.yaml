@@ -5,10 +5,8 @@ repos:
       - id: ruff
         args: [--fix, --exit-non-zero-on-fix]
       - id: ruff-format
-        args: [--check]
 
   - repo: https://github.com/psf/black
     rev: 24.1.1
     hooks:
       - id: black
-        args: [--check]
