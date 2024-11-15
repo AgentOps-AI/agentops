@@ -54,6 +54,7 @@ class TestAgentOpsDescriptor(TestCase):
 
     def test_from_stack_direct_call(self):
         """Test from_stack when called directly from a method with an agent"""
+
         @track_agent(name="TestAgent")
         class TestAgent:
             def get_my_id(self):
@@ -65,11 +66,13 @@ class TestAgentOpsDescriptor(TestCase):
 
     def test_from_stack_nested_call(self):
         """Test from_stack when called through nested function calls"""
+
         @track_agent(name="TestAgent")
         class TestAgent:
             def get_my_id(self):
                 def nested_func():
                     return agentops_property.from_stack()
+
                 return nested_func()
 
         agent = TestAgent()
@@ -78,6 +81,7 @@ class TestAgentOpsDescriptor(TestCase):
 
     def test_from_stack_multiple_agents(self):
         """Test from_stack with multiple agents in different stack frames"""
+
         @track_agent(name="Agent1")
         class Agent1:
             def get_other_agent_id(self, other_agent):
@@ -90,7 +94,7 @@ class TestAgentOpsDescriptor(TestCase):
 
         agent1 = Agent1()
         agent2 = Agent2()
-        
+
         # Should return agent2's ID since it's the closest in the call stack
         detected_id = agent1.get_other_agent_id(agent2)
         self.assertEqual(detected_id, agent2.agentops_agent_id)
@@ -98,6 +102,7 @@ class TestAgentOpsDescriptor(TestCase):
 
     def test_from_stack_no_agent(self):
         """Test from_stack when no agent is in the call stack"""
+
         class NonAgent:
             def get_id(self):
                 return agentops_property.from_stack()
@@ -107,13 +112,14 @@ class TestAgentOpsDescriptor(TestCase):
 
     def test_from_stack_with_exception(self):
         """Test from_stack's behavior when exceptions occur during stack inspection"""
+
         class ProblemAgent:
             agentops_agent_id = agentops_property()
-            
+
             @property
             def problematic_attr(self):
                 raise Exception("Simulated error")
-            
+
             def get_id(self):
                 return agentops_property.from_stack()
 
@@ -123,6 +129,7 @@ class TestAgentOpsDescriptor(TestCase):
 
     def test_from_stack_inheritance(self):
         """Test from_stack with inheritance hierarchy"""
+
         @track_agent(name="BaseAgent")
         class BaseAgent:
             def get_id_from_base(self):
@@ -136,6 +143,6 @@ class TestAgentOpsDescriptor(TestCase):
         derived = DerivedAgent()
         base_call_id = derived.get_id_from_base()
         derived_call_id = derived.get_id_from_derived()
-        
+
         self.assertEqual(base_call_id, derived.agentops_agent_id)
         self.assertEqual(derived_call_id, derived.agentops_agent_id)

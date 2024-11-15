@@ -39,9 +39,7 @@ def filter_unjsonable(d: dict) -> dict:
                 k: (
                     filter_dict(v)
                     if isinstance(v, (dict, list)) or is_jsonable(v)
-                    else str(v)
-                    if isinstance(v, UUID)
-                    else ""
+                    else str(v) if isinstance(v, UUID) else ""
                 )
                 for k, v in obj.items()
             }
@@ -50,9 +48,7 @@ def filter_unjsonable(d: dict) -> dict:
                 (
                     filter_dict(x)
                     if isinstance(x, (dict, list)) or is_jsonable(x)
-                    else str(x)
-                    if isinstance(x, UUID)
-                    else ""
+                    else str(x) if isinstance(x, UUID) else ""
                 )
                 for x in obj
             ]
