@@ -6,7 +6,7 @@ from importlib.metadata import PackageNotFoundError, version
 from pprint import pformat
 from typing import Any, Optional, Union
 from uuid import UUID
-from .descriptor import AgentOpsDescriptor
+from .descriptor import agentops_property
 
 import requests
 
@@ -104,7 +104,7 @@ def safe_serialize(obj):
 
 
 def check_call_stack_for_agent_id() -> Union[UUID, None]:
-    return AgentOpsDescriptor.from_stack()
+    return agentops_property.from_stack()
 
 
 def get_agentops_version():

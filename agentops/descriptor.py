@@ -1,25 +1,135 @@
 import inspect
-from typing import Any, Optional, Union
+import logging
+from typing import Union
 from uuid import UUID
 
 
-class AgentOpsDescriptor:
-    """Property Descriptor for handling agent-related properties"""
+class agentops_property:
+    """
+    A descriptor that provides a standardized way to handle agent property access and storage.
+    Properties are automatically stored with an '_agentops_' prefix to avoid naming conflicts.
 
-    def __init__(self, name: str):
-        self.name = f"_agentops_{name}"
+    The descriptor can be used in two ways:
+    1. As a class attribute directly
+    2. Added dynamically through a decorator (like @track_agent)
 
-    def __get__(self, obj: Any, objtype=None) -> Optional[Any]:
-        return getattr(obj, self.name, None)
+    Attributes:
+        private_name (str): The internal name used for storing the property value,
+            prefixed with '_agentops_'. Set either through __init__ or __set_name__.
 
-    def __set__(self, obj: Any, value: Any):
-        setattr(obj, self.name, value)
+    Example:
+        ```python
+        # Direct usage in a class
+        class Agent:
+            name = agentops_property()
+            id = agentops_property()
+
+            def __init__(self):
+                self.name = "Agent1"  # Stored as '_agentops_name'
+                self.id = "123"       # Stored as '_agentops_id'
+
+        # Usage with decorator
+        @track_agent()
+        class Agent:
+            pass
+            # agentops_agent_id and agentops_agent_name are added automatically
+        ```
+
+    Notes:
+        - Property names with 'agentops_' prefix are automatically stripped when creating
+          the internal storage name
+        - Returns None if the property hasn't been set
+        - The descriptor will attempt to resolve property names even when added dynamically
+    """
+
+    def __init__(self, name=None):
+        """
+        Initialize the descriptor.
+
+        Args:
+            name (str, optional): The name for the property. Used as fallback when
+                the descriptor is added dynamically and __set_name__ isn't called.
+        """
+        self.private_name = None
+        if name:
+            self.private_name = f"_agentops_{name.replace('agentops_', '')}"
+
+    def __set_name__(self, owner, name):
+        """
+        Called by Python when the descriptor is defined directly in a class.
+        Sets up the private name used for attribute storage.
+
+        Args:
+            owner: The class that owns this descriptor
+            name: The name given to this descriptor in the class
+        """
+        self.private_name = f"_agentops_{name.replace('agentops_', '')}"
+
+    def __get__(self, obj, objtype=None):
+        """
+        Get the property value.
+
+        Args:
+            obj: The instance to get the property from
+            objtype: The class of the instance
+
+        Returns:
+            The property value, or None if not set
+            The descriptor itself if accessed on the class rather than an instance
+
+        Raises:
+            AttributeError: If the property name cannot be determined
+        """
+        if obj is None:
+            return self
+
+        # Handle case where private_name wasn't set by __set_name__
+        if self.private_name is None:
+            # Try to find the name by looking through the class dict
+            for name, value in type(obj).__dict__.items():
+                if value is self:
+                    self.private_name = f"_agentops_{name.replace('agentops_', '')}"
+                    break
+            if self.private_name is None:
+                raise AttributeError("Property name could not be determined")
+
+        logging.debug(f"Getting agentops_property: {self.private_name}")
+        return getattr(obj, self.private_name, None)
+
+    def __set__(self, obj, value):
+        """
+        Set the property value.
+
+        Args:
+            obj: The instance to set the property on
+            value: The value to set
+
+        Raises:
+            AttributeError: If the property name cannot be determined
+        """
+        if self.private_name is None:
+            # Same name resolution as in __get__
+            for name, value in type(obj).__dict__.items():
+                if value is self:
+                    self.private_name = f"_agentops_{name.replace('agentops_', '')}"
+                    break
+            if self.private_name is None:
+                raise AttributeError("Property name could not be determined")
+
+        logging.debug(f"Setting agentops_property: {self.private_name} to {value}")
+        setattr(obj, self.private_name, value)
 
     @staticmethod
     def from_stack() -> Union[UUID, None]:
         """
-        Look through the call stack for the class that called the LLM.
-        Checks specifically for AgentOpsDescriptor descriptors.
+        Look through the call stack to find an agent ID.
+
+        This method searches the call stack for objects that have agentops_property
+        descriptors and returns the agent_id if found.
+
+        Returns:
+            UUID: The agent ID if found in the call stack
+            None: If no agent ID is found or if "__main__" is encountered
         """
         for frame_info in inspect.stack():
             local_vars = frame_info.frame.f_locals
@@ -38,18 +148,17 @@ class AgentOpsDescriptor:
                         name: getattr(var_type, name, None) for name in dir(var_type)
                     }
 
-                    agent_id_desc = class_attrs.get("agent_ops_agent_id")
+                    agent_id_desc = class_attrs.get("agentops_agent_id")
 
-                    if isinstance(agent_id_desc, AgentOpsDescriptor):
+                    if isinstance(agent_id_desc, agentops_property):
                         agent_id = agent_id_desc.__get__(var, var_type)
 
                         if agent_id:
-                            agent_name_desc = class_attrs.get("agent_ops_agent_name")
-                            if isinstance(agent_name_desc, AgentOpsDescriptor):
+                            agent_name_desc = class_attrs.get("agentops_agent_name")
+                            if isinstance(agent_name_desc, agentops_property):
                                 agent_name = agent_name_desc.__get__(var, var_type)
                                 return agent_id
-                    # elif
-                except Exception as e:
+                except Exception:
                     continue
 
         return None

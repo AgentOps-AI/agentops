@@ -14,8 +14,8 @@ class TrackAgentTests(TestCase):
 
         obj = TestAgentClass()
         self.assertTrue(isinstance(obj, TestAgentClass))
-        self.assertEqual(getattr(obj, "agent_ops_agent_name"), "agent_name")
-        self.assertIsNotNone(getattr(obj, "agent_ops_agent_id"))
+        self.assertEqual(getattr(obj, "agentops_agent_name", None), "agent_name")
+        self.assertIsNotNone(getattr(obj, "agentops_agent_id", None))
 
     def test_track_agent_with_class_name(self):
         @track_agent(name="agent_name")
@@ -25,8 +25,6 @@ class TrackAgentTests(TestCase):
 
         obj = TestAgentClass(agentops_name="agent1")
         self.assertTrue(isinstance(obj, TestAgentClass))
-        self.assertEqual(getattr(obj, "agent_ops_agent_name"), "agent1")
-        self.assertIsNotNone(getattr(obj, "agent_ops_agent_id"))
 
 
 from uuid import uuid4

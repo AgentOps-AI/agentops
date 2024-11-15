@@ -8,7 +8,7 @@ from .helpers import check_call_stack_for_agent_id, get_ISO_time
 from .session import Session
 from .client import Client
 from .log_config import logger
-from .descriptor import AgentOpsDescriptor
+from .descriptor import agentops_property
 
 
 def record_function(event_name: str):
@@ -313,8 +313,8 @@ def record_tool(tool_name: Optional[str] = None):
 def track_agent(name: Union[str, None] = None):
     def decorator(obj):
         # Add descriptors for agent properties
-        obj.agent_ops_agent_id = AgentOpsDescriptor("agent_id")
-        obj.agent_ops_agent_name = AgentOpsDescriptor("agent_name")
+        obj.agentops_agent_id = agentops_property()
+        obj.agentops_agent_name = agentops_property()
 
         if name:
             obj._agentops_agent_name = name
