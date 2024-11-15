@@ -1,8 +1,8 @@
 from unittest import TestCase
-
-import pytest
+from uuid import uuid4
 
 from agentops import track_agent
+from agentops.descriptor import agentops_property
 
 
 class TrackAgentTests(TestCase):
@@ -25,132 +25,117 @@ class TrackAgentTests(TestCase):
 
         obj = TestAgentClass(agentops_name="agent1")
         self.assertTrue(isinstance(obj, TestAgentClass))
-
-
-from uuid import uuid4
-
-from agentops.helpers import AgentOpsDescriptor, check_call_stack_for_agent_id
+        self.assertEqual(getattr(obj, "agentops_agent_name"), "agent1")
+        self.assertIsNotNone(getattr(obj, "agentops_agent_id"))
 
 
 class TestAgentOpsDescriptor(TestCase):
     def test_agent_property_get_set(self):
-        """Test basic get/set functionality of AgentOpsDescriptor"""
+        """Test basic get/set functionality of agentops_property"""
 
         class TestAgent:
-            agent_id = AgentOpsDescriptor("agent_id")
-            agent_name = AgentOpsDescriptor("agent_name")
+            agent_id = agentops_property()
+            agent_name = agentops_property()
 
         agent = TestAgent()
         test_id = str(uuid4())
         test_name = "TestAgent"
 
         # Test setting values
-        agent._agentops_agent_id = test_id
-        agent._agentops_agent_name = test_name
+        agent.agent_id = test_id
+        agent.agent_name = test_name
 
         # Test getting values
-        assert agent.agent_id == test_id
-        assert agent.agent_name == test_name
+        self.assertEqual(agent.agent_id, test_id)
+        self.assertEqual(agent.agent_name, test_name)
 
         # Test getting non-existent value returns None
-        assert TestAgent().agent_id is None
+        self.assertIsNone(TestAgent().agent_id)
 
-    @pytest.mark.skip(reason="Not planned")
-    def test_check_call_stack_agent_detection(self):
-        """Test that check_call_stack_for_agent_id correctly identifies agents"""
-
+    def test_from_stack_direct_call(self):
+        """Test from_stack when called directly from a method with an agent"""
+        @track_agent(name="TestAgent")
         class TestAgent:
-            agent_ops_agent_id = AgentOpsDescriptor("agent_id")
-            agent_ops_agent_name = AgentOpsDescriptor("agent_name")
-
-            def __init__(self):
-                self._agentops_agent_id = str(uuid4())
-                self._agentops_agent_name = "TestAgent"
-
             def get_my_id(self):
-                # Make self visible in locals()
-                agent = self
-                return check_call_stack_for_agent_id()
+                return agentops_property.from_stack()
 
         agent = TestAgent()
         detected_id = agent.get_my_id()
-        assert detected_id == agent.agent_ops_agent_id
+        self.assertEqual(detected_id, agent.agentops_agent_id)
 
-    @pytest.mark.skip(reason="Not planned")
-    def test_check_call_stack_ignores_raw_attributes(self):
-        """Test that check_call_stack_for_agent_id ignores non-descriptor attributes"""
-
-        class FakeAgent:
-            def __init__(self):
-                self._agentops_agent_id = str(uuid4())
-                self._agentops_agent_name = "FakeAgent"
-
-            def get_my_id(self):
-                # Make self visible in locals()
-                agent = self
-                return check_call_stack_for_agent_id()
-
-        fake_agent = FakeAgent()
-        detected_id = fake_agent.get_my_id()
-
-        assert detected_id is None
-
-    @pytest.mark.skip(reason="Not planned")
-    def test_check_call_stack_nested_calls(self):
-        """Test that check_call_stack_for_agent_id works through nested function calls"""
-
+    def test_from_stack_nested_call(self):
+        """Test from_stack when called through nested function calls"""
+        @track_agent(name="TestAgent")
         class TestAgent:
-            agent_ops_agent_id = AgentOpsDescriptor("agent_id")
-            agent_ops_agent_name = AgentOpsDescriptor("agent_name")
-
-            def __init__(self):
-                self._agentops_agent_id = str(uuid4())
-                self._agentops_agent_name = "TestAgent"
-
-            def nested_call_level_1(self):
-                # Make self visible in locals()
-                agent = self
-                return self.nested_call_level_2()
-
-            def nested_call_level_2(self):
-                # Make self visible in locals()
-                agent = self
-                return check_call_stack_for_agent_id()
+            def get_my_id(self):
+                def nested_func():
+                    return agentops_property.from_stack()
+                return nested_func()
 
         agent = TestAgent()
-        detected_id = agent.nested_call_level_1()
+        detected_id = agent.get_my_id()
+        self.assertEqual(detected_id, agent.agentops_agent_id)
 
-        assert detected_id == agent.agent_ops_agent_id
+    def test_from_stack_multiple_agents(self):
+        """Test from_stack with multiple agents in different stack frames"""
+        @track_agent(name="Agent1")
+        class Agent1:
+            def get_other_agent_id(self, other_agent):
+                return other_agent.get_my_id()
 
-    @pytest.mark.skip(reason="Not planned")
-    def test_multiple_agents_in_stack(self):
-        """Test that check_call_stack_for_agent_id finds the correct agent when multiple exist"""
+        @track_agent(name="Agent2")
+        class Agent2:
+            def get_my_id(self):
+                return agentops_property.from_stack()
 
-        class AgentA:
-            agent_ops_agent_id = AgentOpsDescriptor("agent_id")
-            agent_ops_agent_name = AgentOpsDescriptor("agent_name")
+        agent1 = Agent1()
+        agent2 = Agent2()
+        
+        # Should return agent2's ID since it's the closest in the call stack
+        detected_id = agent1.get_other_agent_id(agent2)
+        self.assertEqual(detected_id, agent2.agentops_agent_id)
+        self.assertNotEqual(detected_id, agent1.agentops_agent_id)
 
-            def __init__(self):
-                self._agentops_agent_id = str(uuid4())
-                self._agentops_agent_name = "AgentA"
+    def test_from_stack_no_agent(self):
+        """Test from_stack when no agent is in the call stack"""
+        class NonAgent:
+            def get_id(self):
+                return agentops_property.from_stack()
 
-        class AgentB:
-            agent_ops_agent_id = AgentOpsDescriptor("agent_id")
-            agent_ops_agent_name = AgentOpsDescriptor("agent_name")
+        non_agent = NonAgent()
+        self.assertIsNone(non_agent.get_id())
 
-            def __init__(self, other_agent):
-                self._agentops_agent_id = str(uuid4())
-                self._agentops_agent_name = "AgentB"
-                self.other = other_agent
+    def test_from_stack_with_exception(self):
+        """Test from_stack's behavior when exceptions occur during stack inspection"""
+        class ProblemAgent:
+            agentops_agent_id = agentops_property()
+            
+            @property
+            def problematic_attr(self):
+                raise Exception("Simulated error")
+            
+            def get_id(self):
+                return agentops_property.from_stack()
 
-            def check_id(self):
-                # Make self visible in locals()
-                agent = self
-                return check_call_stack_for_agent_id()
+        agent = ProblemAgent()
+        # Should return None and not raise exception
+        self.assertIsNone(agent.get_id())
 
-        agent_a = AgentA()
-        agent_b = AgentB(agent_a)
+    def test_from_stack_inheritance(self):
+        """Test from_stack with inheritance hierarchy"""
+        @track_agent(name="BaseAgent")
+        class BaseAgent:
+            def get_id_from_base(self):
+                return agentops_property.from_stack()
 
-        detected_id = agent_b.check_id()
-        assert detected_id == agent_b.agent_ops_agent_id
-        assert detected_id != agent_a.agent_ops_agent_id
+        @track_agent(name="DerivedAgent")
+        class DerivedAgent(BaseAgent):
+            def get_id_from_derived(self):
+                return agentops_property.from_stack()
+
+        derived = DerivedAgent()
+        base_call_id = derived.get_id_from_base()
+        derived_call_id = derived.get_id_from_derived()
+        
+        self.assertEqual(base_call_id, derived.agentops_agent_id)
+        self.assertEqual(derived_call_id, derived.agentops_agent_id)
