@@ -28,6 +28,110 @@ class TrackAgentTests(TestCase):
         self.assertEqual(getattr(obj, "agentops_agent_name"), "agent1")
         self.assertIsNotNone(getattr(obj, "agentops_agent_id"))
 
+    def test_track_agent_with_post_init_name_assignment(self):
+        """Test setting agentops_agent_name after initialization"""
+
+        @track_agent()
+        class TestAgentClass:
+            def __init__(self):
+                self.role = "test_role"
+                # Simulate post_init behavior like in CrewAI
+                self.agentops_agent_name = self.role
+
+        obj = TestAgentClass()
+        self.assertEqual(getattr(obj, "agentops_agent_name"), "test_role")
+        self.assertIsNotNone(getattr(obj, "agentops_agent_id"))
+
+    def test_track_agent_with_property_override(self):
+        """Test overriding agentops properties after initialization"""
+
+        @track_agent()
+        class TestAgentClass:
+            def __init__(self):
+                self.role = "initial_role"
+                self.agentops_agent_name = self.role
+
+            @property
+            def role(self):
+                return self._role
+
+            @role.setter
+            def role(self, value):
+                self._role = value
+                # Update agentops_agent_name when role changes
+                if hasattr(self, "agentops_agent_name"):
+                    self.agentops_agent_name = value
+
+        # Test initial setting
+        obj = TestAgentClass()
+        self.assertEqual(getattr(obj, "agentops_agent_name"), "initial_role")
+
+        # Test property update
+        obj.role = "updated_role"
+        self.assertEqual(getattr(obj, "agentops_agent_name"), "updated_role")
+        self.assertIsNotNone(getattr(obj, "agentops_agent_id"))
+
+    def test_track_agent_with_none_values(self):
+        """Test handling of None values for agentops properties"""
+
+        @track_agent()
+        class TestAgentClass:
+            def __init__(self):
+                self.role = None
+                self.agentops_agent_name = None
+                self._model_validate()
+
+            def _model_validate(self):
+                # Simulate setting name after validation
+                if self.role is not None:
+                    self.agentops_agent_name = self.role
+
+        # Test initialization with None
+        obj = TestAgentClass()
+        self.assertIsNone(getattr(obj, "agentops_agent_name"))
+        self.assertIsNotNone(
+            getattr(obj, "agentops_agent_id")
+        )  # ID should still be set
+
+        # Test updating from None
+        obj.role = "new_role"
+        obj._model_validate()
+        self.assertEqual(getattr(obj, "agentops_agent_name"), "new_role")
+
+    def test_track_agent_with_pydantic_model(self):
+        """Test setting agentops_agent_name with actual Pydantic BaseModel"""
+        try:
+            from pydantic import BaseModel, Field, model_validator
+        except ImportError:
+            self.skipTest("Pydantic not installed, skipping Pydantic model test")
+
+        @track_agent()
+        class TestAgentModel(BaseModel):
+            role: str = Field(default="test_role")
+            agentops_agent_name: str | None = None
+            agentops_agent_id: str | None = None
+
+            @model_validator(mode="after")
+            def set_agent_name(self):
+                # Simulate CrewAI's post_init_setup behavior
+                self.agentops_agent_name = self.role
+                return self
+
+        # Test basic initialization
+        obj = TestAgentModel()
+        self.assertEqual(obj.agentops_agent_name, "test_role")
+        self.assertIsNotNone(obj.agentops_agent_id)
+
+        # Test with custom role
+        obj2 = TestAgentModel(role="custom_role")
+        self.assertEqual(obj2.agentops_agent_name, "custom_role")
+        self.assertIsNotNone(obj2.agentops_agent_id)
+
+        # Test model update
+        obj.role = "updated_role"
+        obj.set_agent_name()
+        self.assertEqual(obj.agentops_agent_name, "updated_role")
+
 
 class TestAgentOpsDescriptor(TestCase):
     def test_agent_property_get_set(self):
@@ -58,7 +162,7 @@ class TestAgentOpsDescriptor(TestCase):
         @track_agent(name="TestAgent")
         class TestAgent:
             def get_my_id(self):
-                return agentops_property.from_stack()
+                return agentops_property.stack_lookup()
 
         agent = TestAgent()
         detected_id = agent.get_my_id()
@@ -71,7 +175,7 @@ class TestAgentOpsDescriptor(TestCase):
         class TestAgent:
             def get_my_id(self):
                 def nested_func():
-                    return agentops_property.from_stack()
+                    return agentops_property.stack_lookup()
 
                 return nested_func()
 
@@ -90,7 +194,7 @@ class TestAgentOpsDescriptor(TestCase):
         @track_agent(name="Agent2")
         class Agent2:
             def get_my_id(self):
-                return agentops_property.from_stack()
+                return agentops_property.stack_lookup()
 
         agent1 = Agent1()
         agent2 = Agent2()
@@ -105,7 +209,7 @@ class TestAgentOpsDescriptor(TestCase):
 
         class NonAgent:
             def get_id(self):
-                return agentops_property.from_stack()
+                return agentops_property.stack_lookup()
 
         non_agent = NonAgent()
         self.assertIsNone(non_agent.get_id())
@@ -121,7 +225,7 @@ class TestAgentOpsDescriptor(TestCase):
                 raise Exception("Simulated error")
 
             def get_id(self):
-                return agentops_property.from_stack()
+                return agentops_property.stack_lookup()
 
         agent = ProblemAgent()
         # Should return None and not raise exception
@@ -133,12 +237,12 @@ class TestAgentOpsDescriptor(TestCase):
         @track_agent(name="BaseAgent")
         class BaseAgent:
             def get_id_from_base(self):
-                return agentops_property.from_stack()
+                return agentops_property.stack_lookup()
 
         @track_agent(name="DerivedAgent")
         class DerivedAgent(BaseAgent):
             def get_id_from_derived(self):
-                return agentops_property.from_stack()
+                return agentops_property.stack_lookup()
 
         derived = DerivedAgent()
         base_call_id = derived.get_id_from_base()

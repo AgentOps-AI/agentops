@@ -93,7 +93,13 @@ class agentops_property:
             if self.private_name is None:
                 raise AttributeError("Property name could not be determined")
 
-        logging.debug(f"Getting agentops_property: {self.private_name}")
+        # First try getting from object's __dict__ (for Pydantic)
+        if hasattr(obj, '__dict__'):
+            dict_value = obj.__dict__.get(self.private_name[1:])
+            if dict_value is not None:
+                return dict_value
+        
+        # Fall back to our private storage
         return getattr(obj, self.private_name, None)
 
     def __set__(self, obj, value):
@@ -109,18 +115,37 @@ class agentops_property:
         """
         if self.private_name is None:
             # Same name resolution as in __get__
-            for name, value in type(obj).__dict__.items():
-                if value is self:
+            for name, val in type(obj).__dict__.items():
+                if val is self:
                     self.private_name = f"_agentops_{name.replace('agentops_', '')}"
                     break
             if self.private_name is None:
                 raise AttributeError("Property name could not be determined")
 
-        logging.debug(f"Setting agentops_property: {self.private_name} to {value}")
+        # Set in both object's __dict__ (for Pydantic) and our private storage
+        if hasattr(obj, '__dict__'):
+            obj.__dict__[self.private_name[1:]] = value
         setattr(obj, self.private_name, value)
 
+    def __delete__(self, obj):
+        """
+        Delete the property value.
+
+        Args:
+            obj: The instance to delete the property from
+
+        Raises:
+            AttributeError: If the property name cannot be determined
+        """
+        if self.private_name is None:
+            raise AttributeError("Property name could not be determined")
+        try:
+            delattr(obj, self.private_name)
+        except AttributeError:
+            pass
+
     @staticmethod
-    def from_stack() -> Union[UUID, None]:
+    def stack_lookup() -> Union[UUID, None]:
         """
         Look through the call stack to find an agent ID.
 

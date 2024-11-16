@@ -312,29 +312,38 @@ def record_tool(tool_name: Optional[str] = None):
 
 def track_agent(name: Union[str, None] = None):
     def decorator(obj):
-        # Add descriptors for agent properties
-        obj.agentops_agent_id = agentops_property()
-        obj.agentops_agent_name = agentops_property()
-
-        if name:
-            obj._agentops_agent_name = name
-
         if inspect.isclass(obj):
+            # Set up the descriptors on the class
+            setattr(obj, "agentops_agent_id", agentops_property())
+            setattr(obj, "agentops_agent_name", agentops_property())
+
             original_init = obj.__init__
 
             def new_init(self, *args, **kwargs):
+                """
+                WIthin the __init__ method, we set agentops_ properties via the private, internal descriptor
+                """
                 try:
-                    # Handle name from kwargs
-                    if kname := kwargs.pop("agentops_name", None) is not None:
-                        self.agentops_agent_name = kname
-
+                    # Handle name from kwargs first
+                    name_ = kwargs.pop("agentops_name", None)
+                    
+                    # Call original init
                     original_init(self, *args, **kwargs)
+
+                    # Set the agent ID
+                    self._agentops_agent_id = str(uuid4())
+                    
+                    # Force set the private name directly to bypass potential Pydantic interference
+                    if name_ is not None:
+                        setattr(self, "_agentops_agent_name", name_)
+                    elif name is not None:
+                        setattr(self, "_agentops_agent_name", name)
+                    elif hasattr(self, "role"):
+                        setattr(self, "_agentops_agent_name", self.role)
 
                     session = kwargs.get("session", None)
                     if session is not None:
-                        self.agentops_session_id = session.session_id
-                    else:
-                        self.agentops_agent_id = str(uuid4())
+                        self._agentops_session_id = session.session_id
 
                     Client().create_agent(
                         name=self.agentops_agent_name,
@@ -349,12 +358,12 @@ def track_agent(name: Union[str, None] = None):
                     logger.warning(
                         "Failed to track an agent with the @track_agent decorator."
                     )
-                    original_init(self, *args, **kwargs)
 
             obj.__init__ = new_init
 
         elif inspect.isfunction(obj):
             obj.agentops_agent_id = str(uuid4())
+            obj.agentops_agent_name = name
             Client().create_agent(
                 name=obj.agentops_agent_name, agent_id=obj.agentops_agent_id
             )
