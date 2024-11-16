@@ -105,7 +105,6 @@ def check_call_stack_for_agent_id() -> Union[UUID, None]:
     return agentops_property.stack_lookup()
 
 
-
 def get_agentops_version():
     try:
         pkg_version = version("agentops")

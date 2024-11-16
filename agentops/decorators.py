@@ -318,13 +318,13 @@ def track_agent(name: Union[str, None] = None):
                 try:
                     # Handle name from kwargs first
                     name_ = kwargs.pop("agentops_name", None)
-                    
+
                     # Call original init
                     original_init(self, *args, **kwargs)
 
                     # Set the agent ID
                     self._agentops_agent_id = str(uuid4())
-                    
+
                     # Force set the private name directly to bypass potential Pydantic interference
                     if name_ is not None:
                         setattr(self, "_agentops_agent_name", name_)
@@ -345,22 +345,15 @@ def track_agent(name: Union[str, None] = None):
 
                 except AttributeError as ex:
                     logger.debug(ex)
-                    Client().add_pre_init_warning(
-                        f"Failed to track an agent {name} with the @track_agent decorator."
-                    )
-                    logger.warning(
-                        "Failed to track an agent with the @track_agent decorator."
-                    )
-
+                    Client().add_pre_init_warning(f"Failed to track an agent {name} with the @track_agent decorator.")
+                    logger.warning("Failed to track an agent with the @track_agent decorator.")
 
             obj.__init__ = new_init
 
         elif inspect.isfunction(obj):
             obj.agentops_agent_id = str(uuid4())
             obj.agentops_agent_name = name
-            Client().create_agent(
-                name=obj.agentops_agent_name, agent_id=obj.agentops_agent_id
-            )
+            Client().create_agent(name=obj.agentops_agent_name, agent_id=obj.agentops_agent_id)
 
         else:
             raise Exception("Invalid input, 'obj' must be a class or a function")

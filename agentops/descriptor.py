@@ -94,11 +94,11 @@ class agentops_property:
                 raise AttributeError("Property name could not be determined")
 
         # First try getting from object's __dict__ (for Pydantic)
-        if hasattr(obj, '__dict__'):
+        if hasattr(obj, "__dict__"):
             dict_value = obj.__dict__.get(self.private_name[1:])
             if dict_value is not None:
                 return dict_value
-        
+
         # Fall back to our private storage
         return getattr(obj, self.private_name, None)
 
@@ -123,7 +123,7 @@ class agentops_property:
                 raise AttributeError("Property name could not be determined")
 
         # Set in both object's __dict__ (for Pydantic) and our private storage
-        if hasattr(obj, '__dict__'):
+        if hasattr(obj, "__dict__"):
             obj.__dict__[self.private_name[1:]] = value
         setattr(obj, self.private_name, value)
 
@@ -169,9 +169,7 @@ class agentops_property:
                     var_type = type(var)
 
                     # Get all class attributes
-                    class_attrs = {
-                        name: getattr(var_type, name, None) for name in dir(var_type)
-                    }
+                    class_attrs = {name: getattr(var_type, name, None) for name in dir(var_type)}
 
                     agent_id_desc = class_attrs.get("agentops_agent_id")
 

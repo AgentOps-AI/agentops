@@ -89,9 +89,7 @@ class TrackAgentTests(TestCase):
         # Test initialization with None
         obj = TestAgentClass()
         self.assertIsNone(getattr(obj, "agentops_agent_name"))
-        self.assertIsNotNone(
-            getattr(obj, "agentops_agent_id")
-        )  # ID should still be set
+        self.assertIsNotNone(getattr(obj, "agentops_agent_id"))  # ID should still be set
 
         # Test updating from None
         obj.role = "new_role"
