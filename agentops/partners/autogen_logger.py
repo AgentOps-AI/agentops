@@ -72,13 +72,9 @@ class AutogenLogger(BaseLogger):
     def log_new_agent(self, agent: ConversableAgent, init_args: Dict[str, Any]) -> None:
         """Calls agentops.create_agent"""
         ao_agent_id = agentops.create_agent(agent.name, str(uuid4()))
-        self.agent_store.append(
-            {"agentops_id": ao_agent_id, "autogen_id": str(id(agent))}
-        )
+        self.agent_store.append({"agentops_id": ao_agent_id, "autogen_id": str(id(agent))})
 
-    def log_event(
-        self, source: Union[str, Agent], name: str, **kwargs: Dict[str, Any]
-    ) -> None:
+    def log_event(self, source: Union[str, Agent], name: str, **kwargs: Dict[str, Any]) -> None:
         """Records an ActionEvent to AgentOps session"""
         event = ActionEvent(action_type=name)
         agentops_id = self._get_agentops_id_from_agent(str(id(source)))
@@ -86,9 +82,7 @@ class AutogenLogger(BaseLogger):
         event.params = kwargs
         agentops.record(event)
 
-    def log_function_use(
-        self, source: Union[str, Agent], function: F, args: Dict[str, Any], returns: any
-    ):
+    def log_function_use(self, source: Union[str, Agent], function: F, args: Dict[str, Any], returns: any):
         """Records a ToolEvent to AgentOps session"""
         event = ToolEvent()
         agentops_id = self._get_agentops_id_from_agent(str(id(source)))
