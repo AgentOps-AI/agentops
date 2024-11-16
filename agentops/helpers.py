@@ -9,7 +9,6 @@ from importlib.metadata import version, PackageNotFoundError
 
 from .log_config import logger
 from uuid import UUID
-from importlib.metadata import version
 
 
 def get_ISO_time():
@@ -38,7 +37,9 @@ def filter_unjsonable(d: dict) -> dict:
                 k: (
                     filter_dict(v)
                     if isinstance(v, (dict, list)) or is_jsonable(v)
-                    else str(v) if isinstance(v, UUID) else ""
+                    else str(v)
+                    if isinstance(v, UUID)
+                    else ""
                 )
                 for k, v in obj.items()
             }
@@ -47,7 +48,9 @@ def filter_unjsonable(d: dict) -> dict:
                 (
                     filter_dict(x)
                     if isinstance(x, (dict, list)) or is_jsonable(x)
-                    else str(x) if isinstance(x, UUID) else ""
+                    else str(x)
+                    if isinstance(x, UUID)
+                    else ""
                 )
                 for x in obj
             ]
@@ -85,9 +88,7 @@ def safe_serialize(obj):
         """Recursively remove self key and None/... values from dictionaries so they aren't serialized"""
         if isinstance(value, dict):
             return {
-                k: remove_unwanted_items(v)
-                for k, v in value.items()
-                if v is not None and v is not ... and k != "self"
+                k: remove_unwanted_items(v) for k, v in value.items() if v is not None and v is not ... and k != "self"
             }
         elif isinstance(value, list):
             return [remove_unwanted_items(item) for item in value]
@@ -106,9 +107,7 @@ def check_call_stack_for_agent_id() -> Union[UUID, None]:
             # We stop looking up the stack at main because after that we see global variables
             if var == "__main__":
                 return None
-            if hasattr(var, "agent_ops_agent_id") and getattr(
-                var, "agent_ops_agent_id"
-            ):
+            if hasattr(var, "agent_ops_agent_id") and getattr(var, "agent_ops_agent_id"):
                 logger.debug(
                     "LLM call from agent named: %s",
                     getattr(var, "agent_ops_agent_name"),
@@ -141,7 +140,7 @@ def check_agentops_update():
 
             if not latest_version == current_version:
                 logger.warning(
-                    f" WARNING: agentops is out of date. Please update with the command: 'pip install --upgrade agentops'"
+                    " WARNING: agentops is out of date. Please update with the command: 'pip install --upgrade agentops'"
                 )
     except Exception as e:
         logger.debug(f"Failed to check for updates: {e}")

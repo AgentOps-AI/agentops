@@ -77,6 +77,18 @@ Even if you're not ready to contribute code, we'd love to hear your thoughts. Dr
    .\venv\Scripts\activate   # Windows
    ```
 
+3. **Pre-commit Setup**:
+   We use pre-commit hooks to automatically format and lint code. Set them up with:
+   ```bash
+   pip install pre-commit
+   pre-commit install
+   ```
+
+   That's it! The hooks will run automatically when you commit. To manually check all files:
+   ```bash
+   pre-commit run --all-files
+   ```
+
 ## Testing
 
 We use a comprehensive testing stack to ensure code quality and reliability. Our testing framework includes pytest and several specialized testing tools.
