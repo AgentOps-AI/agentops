@@ -3,12 +3,12 @@ import inspect
 from typing import Optional, Union
 from uuid import uuid4
 
+from .client import Client
+from .descriptor import agentops_property
 from .event import ActionEvent, ErrorEvent, ToolEvent
 from .helpers import check_call_stack_for_agent_id, get_ISO_time
-from .session import Session
-from .client import Client
 from .log_config import logger
-from .descriptor import agentops_property
+from .session import Session
 
 
 def record_function(event_name: str):
@@ -325,26 +325,24 @@ def track_agent(name: Union[str, None] = None):
             def new_init(self, *args, **kwargs):
                 try:
                     # Handle name from kwargs
-                    kwarg_name = kwargs.get("agentops_name", None)
-                    if kwarg_name is not None:
-                        self._agentops_agent_name = kwarg_name
-                        del kwargs["agentops_name"]
+                    if kname := kwargs.pop("agentops_name", None) is not None:
+                        self.agentops_agent_name = kname
 
                     original_init(self, *args, **kwargs)
 
-                    # Set agent ID using descriptor
-                    self._agentops_agent_id = str(uuid4())
-
                     session = kwargs.get("session", None)
                     if session is not None:
-                        self._agentops_session_id = session.session_id
+                        self.agentops_session_id = session.session_id
+                    else:
+                        self.agentops_agent_id = str(uuid4())
 
                     Client().create_agent(
-                        name=self._agentops_agent_name,
-                        agent_id=self._agentops_agent_id,
+                        name=self.agentops_agent_name,
+                        agent_id=self.agentops_agent_id,
                         session=session,
                     )
-                except AttributeError:
+                except AttributeError as ex:
+                    logger.debug(ex)
                     Client().add_pre_init_warning(
                         f"Failed to track an agent {name} with the @track_agent decorator."
                     )
@@ -356,9 +354,9 @@ def track_agent(name: Union[str, None] = None):
             obj.__init__ = new_init
 
         elif inspect.isfunction(obj):
-            obj._agentops_agent_id = str(uuid4())
+            obj.agentops_agent_id = str(uuid4())
             Client().create_agent(
-                name=obj._agentops_agent_name, agent_id=obj._agentops_agent_id
+                name=obj.agentops_agent_name, agent_id=obj.agentops_agent_id
             )
 
         else:
