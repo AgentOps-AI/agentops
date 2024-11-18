@@ -196,8 +196,6 @@ class AnthropicProvider(InstrumentedProvider):
             def patched_function(*args, **kwargs):
                 init_timestamp = get_ISO_time()
                 session = kwargs.get("session", None)
-                # if is_beta:
-                #     breakpoint()
 
                 if "session" in kwargs.keys():
                     del kwargs["session"]
