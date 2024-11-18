@@ -35,6 +35,7 @@ dev = [
     "pytest-mock",
     "pyfakefs",
     "requests_mock==1.11.0",
+    "ruff",
     "tach~=0.9",
 ]
 langchain = [
@@ -54,3 +55,50 @@ agentops = "agentops.cli:main"
 [tool.pytest.ini_options]
 asyncio_mode = "strict"
 asyncio_default_fixture_loop_scope = "function"
+
+[tool.ruff]
+line-length = 120
+
+[tool.ruff.lint]
+ignore = [
+    "F401",  # Unused imports
+    "E712",  # Comparison to True/False
+    "E711",  # Comparison to None
+    "E722",  # Bare except
+    "F821",  # Undefined names
+    "F841",  # Unused variables
+]
+
+exclude = [
+    ".bzr",
+    ".direnv",
+    ".eggs",
+    ".git",
+    ".git-rewrite",
+    ".github",
+    ".hg",
+    ".ipynb_checkpoints",
+    ".mypy_cache",
+    ".nox",
+    ".pants.d",
+    ".pyenv",
+    ".pytest_cache",
+    ".vscode",
+    ".pytype",
+    ".ruff_cache",
+    ".svn",
+    ".tox",
+    ".venv",
+    ".vscode",
+    "__pypackages__",
+    "_build",
+    "buck-out",
+    "build",
+    "dist",
+    "docs",
+    "examples",
+    "node_modules",
+    "site-packages",
+    "venv",
+    "tests/core_manual_tests",
+]
