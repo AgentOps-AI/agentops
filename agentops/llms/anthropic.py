@@ -141,7 +141,6 @@ class AnthropicProvider(InstrumentedProvider):
                     llm_event.prompt_tokens = usage.get("input_tokens")
                     llm_event.completion_tokens = usage.get("output_tokens")
 
-            # Han
             else:
                 # This bets on the fact that the response object has a model_dump method
                 llm_event.returns = response.model_dump()
