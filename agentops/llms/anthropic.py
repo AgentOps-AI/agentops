@@ -2,9 +2,6 @@ import json
 import pprint
 from typing import Optional
 
-from anthropic import APIResponse
-from anthropic._legacy_response import LegacyAPIResponse
-
 from agentops.llms.instrumented_provider import InstrumentedProvider
 from agentops.time_travel import fetch_completion_override_from_time_travel_cache
 
@@ -122,26 +119,8 @@ class AnthropicProvider(InstrumentedProvider):
 
         # Handle object responses
         try:
-            # AttributeError("'LegacyAPIResponse' object has no attribute 'model_dump'")
-            if isinstance(response, (APIResponse, LegacyAPIResponse)) or not hasattr(response, "model_dump"):
-                """
-                response's data structure:
-                dict_keys(['id', 'type', 'role', 'model', 'content', 'stop_reason', 'stop_sequence', 'usage'])
-
-                {'id': 'msg_018Gk9N2pcWaYLS7mxXbPD5i', 'type': 'message', 'role': 'assistant', 'model': 'claude-3-5-sonnet-20241022', 'content': [{'type': 'text', 'text': 'I\'ll help you investigate'}], 'stop_reason': 'end_turn', 'stop_sequence': None, 'usage': {'input_tokens': 2419, 'output_tokens': 116}}
-                """
-                response_data = json.loads(response.text)
-                llm_event.returns = response_data
-                llm_event.model = response_data["model"]
-                llm_event.completion = {
-                    "role": response_data.get("role"),
-                    "content": response_data.get("content")[0].get("text") if response_data.get("content") else "",
-                }
-                if usage := response_data.get("usage"):
-                    llm_event.prompt_tokens = usage.get("input_tokens")
-                    llm_event.completion_tokens = usage.get("output_tokens")
-
-            else:
+            # Naively handle AttributeError("'LegacyAPIResponse' object has no attribute 'model_dump'")
+            if hasattr(response, "model_dump"):
                 # This bets on the fact that the response object has a model_dump method
                 llm_event.returns = response.model_dump()
                 llm_event.prompt_tokens = response.usage.input_tokens
@@ -152,6 +131,47 @@ class AnthropicProvider(InstrumentedProvider):
                     "content": response.content[0].text,
                 }
                 llm_event.model = response.model
+
+            else:
+                """Handle raw response data from the Anthropic API.
+
+                The raw response has the following structure:
+                {
+                    'id': str,              # Message ID (e.g. 'msg_018Gk9N2pcWaYLS7mxXbPD5i') 
+                    'type': str,            # Type of response (e.g. 'message')
+                    'role': str,            # Role of responder (e.g. 'assistant')
+                    'model': str,           # Model used (e.g. 'claude-3-5-sonnet-20241022')
+                    'content': List[Dict],  # List of content blocks with 'type' and 'text'
+                    'stop_reason': str,     # Reason for stopping (e.g. 'end_turn')
+                    'stop_sequence': Any,   # Stop sequence used, if any
+                    'usage': {              # Token usage statistics
+                        'input_tokens': int,
+                        'output_tokens': int
+                    }
+                }
+
+                Note: We import Anthropic types here since the package must be installed
+                for raw responses to be available; doing so in the global scope would 
+                result in dependencies error since this provider is not lazily imported (tests fail)
+                """
+                from anthropic import APIResponse
+                from anthropic._legacy_response import LegacyAPIResponse
+
+                assert isinstance(response, (APIResponse, LegacyAPIResponse)), (
+                    f"Expected APIResponse or LegacyAPIResponse, got {type(response)}. "
+                    "This is likely caused by changes in the Anthropic SDK and the integrations with AgentOps needs update."
+                    "Please open an issue at https://github.com/AgentOps-AI/agentops/issues"
+                )
+                response_data = json.loads(response.text)
+                llm_event.returns = response_data
+                llm_event.model = response_data["model"]
+                llm_event.completion = {
+                    "role": response_data.get("role"),
+                    "content": response_data.get("content")[0].get("text") if response_data.get("content") else "",
+                }
+                if usage := response_data.get("usage"):
+                    llm_event.prompt_tokens = usage.get("input_tokens")
+                    llm_event.completion_tokens = usage.get("output_tokens")
 
             llm_event.end_timestamp = get_ISO_time()
             llm_event.prompt = kwargs["messages"]
