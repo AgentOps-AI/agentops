@@ -459,3 +459,7 @@ class Client(metaclass=MetaClient):
     @property
     def parent_key(self):
         return self._config.parent_key
+
+    @property
+    def current_client(self):
+        return self if self.is_initialized else None
