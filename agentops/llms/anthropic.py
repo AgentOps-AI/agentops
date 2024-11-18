@@ -67,9 +67,7 @@ class AnthropicProvider(InstrumentedProvider):
                         llm_event.completion["content"] += chunk.delta.text
 
                     elif chunk.delta.type == "input_json_delta":
-                        self.tool_event[self.tool_id].logs["input"] += (
-                            chunk.delta.partial_json
-                        )
+                        self.tool_event[self.tool_id].logs["input"] += chunk.delta.partial_json
 
                 elif chunk.type == "content_block_stop":
                     pass
@@ -125,9 +123,7 @@ class AnthropicProvider(InstrumentedProvider):
         # Handle object responses
         try:
             # AttributeError("'LegacyAPIResponse' object has no attribute 'model_dump'")
-            if isinstance(response, (APIResponse, LegacyAPIResponse)) or not hasattr(
-                response, "model_dump"
-            ):
+            if isinstance(response, (APIResponse, LegacyAPIResponse)) or not hasattr(response, "model_dump"):
                 """
                 response's data structure:
                 dict_keys(['id', 'type', 'role', 'model', 'content', 'stop_reason', 'stop_sequence', 'usage'])
@@ -139,9 +135,7 @@ class AnthropicProvider(InstrumentedProvider):
                 llm_event.model = response_data["model"]
                 llm_event.completion = {
                     "role": response_data.get("role"),
-                    "content": response_data.get("content")[0].get("text")
-                    if response_data.get("content")
-                    else "",
+                    "content": response_data.get("content")[0].get("text") if response_data.get("content") else "",
                 }
                 if usage := response_data.get("usage"):
                     llm_event.prompt_tokens = usage.get("input_tokens")
