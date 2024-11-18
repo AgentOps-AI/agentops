@@ -18,12 +18,8 @@ def mock_req():
     with requests_mock.Mocker() as m:
         url = "https://api.agentops.ai"
         m.post(url + "/v2/create_events", json={"status": "ok"})
-        m.post(
-            url + "/v2/create_session", json={"status": "success", "jwt": "some_jwt"}
-        )
-        m.post(
-            url + "/v2/reauthorize_jwt", json={"status": "success", "jwt": "some_jwt"}
-        )
+        m.post(url + "/v2/create_session", json={"status": "success", "jwt": "some_jwt"})
+        m.post(url + "/v2/reauthorize_jwt", json={"status": "success", "jwt": "some_jwt"})
         m.post(url + "/v2/update_session", json={"status": "success", "token_cost": 5})
         m.post(url + "/v2/developer_errors", json={"status": "ok"})
         m.post("https://pypi.org/pypi/agentops/json", status_code=404)
@@ -58,7 +54,7 @@ class TestSingleSessions:
         assert len(mock_req.request_history) == 3
         time.sleep(0.15)
 
-        assert mock_req.last_request.headers["Authorization"] == f"Bearer some_jwt"
+        assert mock_req.last_request.headers["Authorization"] == "Bearer some_jwt"
         request_json = mock_req.last_request.json()
         assert request_json["events"][0]["event_type"] == self.event_type
 
@@ -68,7 +64,7 @@ class TestSingleSessions:
 
         # We should have 4 requests (additional end session)
         assert len(mock_req.request_history) == 4
-        assert mock_req.last_request.headers["Authorization"] == f"Bearer some_jwt"
+        assert mock_req.last_request.headers["Authorization"] == "Bearer some_jwt"
         request_json = mock_req.last_request.json()
         assert request_json["session"]["end_state"] == end_state
         assert len(request_json["session"]["tags"]) == 0
@@ -217,7 +213,7 @@ class TestMultiSessions:
 
         # 5 requests: check_for_updates, 2 start_session, 2 record_event
         assert len(mock_req.request_history) == 5
-        assert mock_req.last_request.headers["Authorization"] == f"Bearer some_jwt"
+        assert mock_req.last_request.headers["Authorization"] == "Bearer some_jwt"
         request_json = mock_req.last_request.json()
         assert request_json["events"][0]["event_type"] == self.event_type
 
@@ -228,7 +224,7 @@ class TestMultiSessions:
 
         # Additional end session request
         assert len(mock_req.request_history) == 6
-        assert mock_req.last_request.headers["Authorization"] == f"Bearer some_jwt"
+        assert mock_req.last_request.headers["Authorization"] == "Bearer some_jwt"
         request_json = mock_req.last_request.json()
         assert request_json["session"]["end_state"] == end_state
         assert len(request_json["session"]["tags"]) == 0
@@ -236,7 +232,7 @@ class TestMultiSessions:
         session_2.end_session(end_state)
         # Additional end session request
         assert len(mock_req.request_history) == 7
-        assert mock_req.last_request.headers["Authorization"] == f"Bearer some_jwt"
+        assert mock_req.last_request.headers["Authorization"] == "Bearer some_jwt"
         request_json = mock_req.last_request.json()
         assert request_json["session"]["end_state"] == end_state
         assert len(request_json["session"]["tags"]) == 0
@@ -264,12 +260,8 @@ class TestMultiSessions:
         req1 = mock_req.request_history[-1].json()
         req2 = mock_req.request_history[-2].json()
 
-        session_1_req = (
-            req1 if req1["session"]["session_id"] == session_1.session_id else req2
-        )
-        session_2_req = (
-            req2 if req2["session"]["session_id"] == session_2.session_id else req1
-        )
+        session_1_req = req1 if req1["session"]["session_id"] == session_1.session_id else req2
+        session_2_req = req2 if req2["session"]["session_id"] == session_2.session_id else req1
 
         assert session_1_req["session"]["end_state"] == end_state
         assert session_2_req["session"]["end_state"] == end_state

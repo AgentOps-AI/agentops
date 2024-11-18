@@ -11,7 +11,6 @@ from .instrumented_provider import InstrumentedProvider
 
 
 class MistralProvider(InstrumentedProvider):
-
     original_complete = None
     original_complete_async = None
     original_stream = None
@@ -21,9 +20,7 @@ class MistralProvider(InstrumentedProvider):
         super().__init__(client)
         self._provider_name = "Mistral"
 
-    def handle_response(
-        self, response, kwargs, init_timestamp, session: Optional[Session] = None
-    ) -> dict:
+    def handle_response(self, response, kwargs, init_timestamp, session: Optional[Session] = None) -> dict:
         """Handle responses for Mistral"""
         from mistralai import Chat
         from mistralai.types import UNSET, UNSET_SENTINEL
@@ -73,9 +70,7 @@ class MistralProvider(InstrumentedProvider):
                     self._safe_record(session, llm_event)
 
             except Exception as e:
-                self._safe_record(
-                    session, ErrorEvent(trigger_event=llm_event, exception=e)
-                )
+                self._safe_record(session, ErrorEvent(trigger_event=llm_event, exception=e))
 
                 kwargs_str = pprint.pformat(kwargs)
                 chunk = pprint.pformat(chunk)

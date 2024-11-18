@@ -13,7 +13,6 @@ from ..singleton import singleton
 
 @singleton
 class AnthropicProvider(InstrumentedProvider):
-
     original_create = None
     original_create_async = None
 
@@ -23,9 +22,7 @@ class AnthropicProvider(InstrumentedProvider):
         self.tool_event = {}
         self.tool_id = ""
 
-    def handle_response(
-        self, response, kwargs, init_timestamp, session: Optional[Session] = None
-    ):
+    def handle_response(self, response, kwargs, init_timestamp, session: Optional[Session] = None):
         """Handle responses for Anthropic"""
         from anthropic import Stream, AsyncStream
         from anthropic.resources import AsyncMessages
@@ -66,9 +63,7 @@ class AnthropicProvider(InstrumentedProvider):
                         llm_event.completion["content"] += chunk.delta.text
 
                     elif chunk.delta.type == "input_json_delta":
-                        self.tool_event[self.tool_id].logs[
-                            "input"
-                        ] += chunk.delta.partial_json
+                        self.tool_event[self.tool_id].logs["input"] += chunk.delta.partial_json
 
                 elif chunk.type == "content_block_stop":
                     pass
@@ -81,9 +76,7 @@ class AnthropicProvider(InstrumentedProvider):
                     self._safe_record(session, llm_event)
 
             except Exception as e:
-                self._safe_record(
-                    session, ErrorEvent(trigger_event=llm_event, exception=e)
-                )
+                self._safe_record(session, ErrorEvent(trigger_event=llm_event, exception=e))
 
                 kwargs_str = pprint.pformat(kwargs)
                 chunk = pprint.pformat(chunk)
@@ -178,9 +171,7 @@ class AnthropicProvider(InstrumentedProvider):
                 if "session" in kwargs.keys():
                     del kwargs["session"]
 
-                completion_override = fetch_completion_override_from_time_travel_cache(
-                    kwargs
-                )
+                completion_override = fetch_completion_override_from_time_travel_cache(kwargs)
                 if completion_override:
                     result_model = None
                     pydantic_models = (
@@ -195,9 +186,7 @@ class AnthropicProvider(InstrumentedProvider):
 
                     for pydantic_model in pydantic_models:
                         try:
-                            result_model = pydantic_model.model_validate_json(
-                                completion_override
-                            )
+                            result_model = pydantic_model.model_validate_json(completion_override)
                             break
                         except Exception as e:
                             pass
@@ -209,18 +198,12 @@ class AnthropicProvider(InstrumentedProvider):
                             f"{pprint.pformat(completion_override)}"
                         )
                         return None
-                    return self.handle_response(
-                        result_model, kwargs, init_timestamp, session=session
-                    )
+                    return self.handle_response(result_model, kwargs, init_timestamp, session=session)
 
                 # Call the original function with its original arguments
-                original_func = (
-                    self.original_create_beta if is_beta else self.original_create
-                )
+                original_func = self.original_create_beta if is_beta else self.original_create
                 result = original_func(*args, **kwargs)
-                return self.handle_response(
-                    result, kwargs, init_timestamp, session=session
-                )
+                return self.handle_response(result, kwargs, init_timestamp, session=session)
 
             return patched_function
 
@@ -252,9 +235,7 @@ class AnthropicProvider(InstrumentedProvider):
                 if "session" in kwargs.keys():
                     del kwargs["session"]
 
-                completion_override = fetch_completion_override_from_time_travel_cache(
-                    kwargs
-                )
+                completion_override = fetch_completion_override_from_time_travel_cache(kwargs)
                 if completion_override:
                     result_model = None
                     pydantic_models = (
@@ -269,9 +250,7 @@ class AnthropicProvider(InstrumentedProvider):
 
                     for pydantic_model in pydantic_models:
                         try:
-                            result_model = pydantic_model.model_validate_json(
-                                completion_override
-                            )
+                            result_model = pydantic_model.model_validate_json(completion_override)
                             break
                         except Exception as e:
                             pass
@@ -284,20 +263,12 @@ class AnthropicProvider(InstrumentedProvider):
                         )
                         return None
 
-                    return self.handle_response(
-                        result_model, kwargs, init_timestamp, session=session
-                    )
+                    return self.handle_response(result_model, kwargs, init_timestamp, session=session)
 
                 # Call the original function with its original arguments
-                original_func = (
-                    self.original_create_async_beta
-                    if is_beta
-                    else self.original_create_async
-                )
+                original_func = self.original_create_async_beta if is_beta else self.original_create_async
                 result = await original_func(*args, **kwargs)
-                return self.handle_response(
-                    result, kwargs, init_timestamp, session=session
-                )
+                return self.handle_response(result, kwargs, init_timestamp, session=session)
 
             return patched_function
 

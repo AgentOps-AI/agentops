@@ -2,7 +2,6 @@ ao_instances = {}
 
 
 def singleton(class_):
-
     def getinstance(*args, **kwargs):
         if class_ not in ao_instances:
             ao_instances[class_] = class_(*args, **kwargs)
@@ -12,7 +11,6 @@ def singleton(class_):
 
 
 def conditional_singleton(class_):
-
     def getinstance(*args, **kwargs):
         use_singleton = kwargs.pop("use_singleton", True)
         if use_singleton:
