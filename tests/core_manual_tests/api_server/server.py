@@ -14,7 +14,6 @@ app = FastAPI()
 
 @app.get("/completion")
 def completion():
-
     session = agentops.start_session(tags=["api-server-test"])
 
     messages = [{"role": "user", "content": "Hello"}]

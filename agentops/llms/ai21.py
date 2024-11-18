@@ -14,7 +14,6 @@ from ..singleton import singleton
 
 @singleton
 class AI21Provider(InstrumentedProvider):
-
     original_create = None
     original_create_async = None
     original_answer = None
@@ -24,9 +23,7 @@ class AI21Provider(InstrumentedProvider):
         super().__init__(client)
         self._provider_name = "AI21"
 
-    def handle_response(
-        self, response, kwargs, init_timestamp, session: Optional[Session] = None
-    ):
+    def handle_response(self, response, kwargs, init_timestamp, session: Optional[Session] = None):
         """Handle responses for AI21"""
         from ai21.stream.stream import Stream
         from ai21.stream.async_stream import AsyncStream
@@ -51,9 +48,7 @@ class AI21Provider(InstrumentedProvider):
                 accumulated_delta = llm_event.returns.choices[0].delta
                 llm_event.agent_id = check_call_stack_for_agent_id()
                 llm_event.model = kwargs["model"]
-                llm_event.prompt = [
-                    message.model_dump() for message in kwargs["messages"]
-                ]
+                llm_event.prompt = [message.model_dump() for message in kwargs["messages"]]
 
                 # NOTE: We assume for completion only choices[0] is relevant
                 choice = chunk.choices[0]
@@ -80,9 +75,7 @@ class AI21Provider(InstrumentedProvider):
                     self._safe_record(session, llm_event)
 
             except Exception as e:
-                self._safe_record(
-                    session, ErrorEvent(trigger_event=llm_event, exception=e)
-                )
+                self._safe_record(session, ErrorEvent(trigger_event=llm_event, exception=e))
 
                 kwargs_str = pprint.pformat(kwargs)
                 chunk = pprint.pformat(chunk)
@@ -119,9 +112,7 @@ class AI21Provider(InstrumentedProvider):
                 llm_event.returns = response
                 llm_event.agent_id = check_call_stack_for_agent_id()
                 llm_event.model = kwargs["model"]
-                llm_event.prompt = [
-                    message.model_dump() for message in kwargs["messages"]
-                ]
+                llm_event.prompt = [message.model_dump() for message in kwargs["messages"]]
                 llm_event.prompt_tokens = response.usage.prompt_tokens
                 llm_event.completion = response.choices[0].message.model_dump()
                 llm_event.completion_tokens = response.usage.completion_tokens

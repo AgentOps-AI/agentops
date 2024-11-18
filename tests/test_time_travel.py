@@ -8,7 +8,6 @@ from agentops.time_travel import (
 
 
 class TestTimeTravel(unittest.TestCase):
-
     @patch("os.path.dirname")
     @patch("os.path.abspath")
     @patch(
