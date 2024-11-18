@@ -1,14 +1,16 @@
-from pprint import pformat
-from functools import wraps
-from datetime import datetime, timezone
 import inspect
-from typing import Union
-import requests
 import json
-from importlib.metadata import version, PackageNotFoundError
+from datetime import datetime, timezone
+from functools import wraps
+from importlib.metadata import PackageNotFoundError, version
+from pprint import pformat
+from typing import Any, Optional, Union
+from uuid import UUID
+from .descriptor import agentops_property
+
+import requests
 
 from .log_config import logger
-from uuid import UUID
 
 
 def get_ISO_time():
@@ -100,20 +102,7 @@ def safe_serialize(obj):
 
 
 def check_call_stack_for_agent_id() -> Union[UUID, None]:
-    for frame_info in inspect.stack():
-        # Look through the call stack for the class that called the LLM
-        local_vars = frame_info.frame.f_locals
-        for var in local_vars.values():
-            # We stop looking up the stack at main because after that we see global variables
-            if var == "__main__":
-                return None
-            if hasattr(var, "agent_ops_agent_id") and getattr(var, "agent_ops_agent_id"):
-                logger.debug(
-                    "LLM call from agent named: %s",
-                    getattr(var, "agent_ops_agent_name"),
-                )
-                return getattr(var, "agent_ops_agent_id")
-    return None
+    return agentops_property.stack_lookup()
 
 
 def get_agentops_version():
