@@ -29,9 +29,7 @@ class GroqProvider(InstrumentedProvider):
             completions.Completions.create = self.original_create
             completions.AsyncCompletions.create = self.original_create
 
-    def handle_response(
-        self, response, kwargs, init_timestamp, session: Optional[Session] = None
-    ):
+    def handle_response(self, response, kwargs, init_timestamp, session: Optional[Session] = None):
         """Handle responses for OpenAI versions >v1.0.0"""
         from groq import AsyncStream, Stream
         from groq.resources.chat import AsyncCompletions
@@ -81,9 +79,7 @@ class GroqProvider(InstrumentedProvider):
 
                     self._safe_record(session, llm_event)
             except Exception as e:
-                self._safe_record(
-                    session, ErrorEvent(trigger_event=llm_event, exception=e)
-                )
+                self._safe_record(session, ErrorEvent(trigger_event=llm_event, exception=e))
 
                 kwargs_str = pprint.pformat(kwargs)
                 chunk = pprint.pformat(chunk)

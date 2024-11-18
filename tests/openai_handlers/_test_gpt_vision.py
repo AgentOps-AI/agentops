@@ -45,9 +45,7 @@ def encode_image(image_path):
 
 
 # Path to your image
-image_path = os.path.join(
-    os.path.dirname(os.path.abspath(__file__)), "logo_for_vision_test.png"
-)
+image_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "logo_for_vision_test.png")
 
 # Getting the base64 string
 base64_image = encode_image(image_path)
@@ -71,9 +69,7 @@ payload = {
     "max_tokens": 300,
 }
 
-response = requests.post(
-    "https://api.openai.com/v1/chat/completions", headers=headers, json=payload
-)
+response = requests.post("https://api.openai.com/v1/chat/completions", headers=headers, json=payload)
 
 print(response.json())
 

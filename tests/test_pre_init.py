@@ -24,9 +24,7 @@ def mock_req():
         url = "https://api.agentops.ai"
         m.post(url + "/v2/create_agent", json={"status": "success"})
         m.post(url + "/v2/update_session", json={"status": "success", "token_cost": 5})
-        m.post(
-            url + "/v2/create_session", json={"status": "success", "jwt": "some_jwt"}
-        )
+        m.post(url + "/v2/create_session", json={"status": "success", "jwt": "some_jwt"})
         m.post("https://pypi.org/pypi/agentops/json", status_code=404)
 
         m.post(url + "/v2/create_events", json={"status": "ok"})
@@ -64,8 +62,6 @@ class TestPreInit:
         # 4 requests: check_for_updates, create_session, create_agent, update_session
         assert len(mock_req.request_history) == 4
 
-        assert (
-            mock_req.request_history[-2].headers["X-Agentops-Api-Key"] == self.api_key
-        )
+        assert mock_req.request_history[-2].headers["X-Agentops-Api-Key"] == self.api_key
 
         mock_req.reset()

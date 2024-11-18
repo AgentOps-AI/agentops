@@ -36,9 +36,7 @@ class CohereProvider(InstrumentedProvider):
     def __init__(self, client):
         super().__init__(client)
 
-    def handle_response(
-        self, response, kwargs, init_timestamp, session: Optional[Session] = None
-    ):
+    def handle_response(self, response, kwargs, init_timestamp, session: Optional[Session] = None):
         """Handle responses for Cohere versions >v5.4.0"""
         from cohere.types.streamed_chat_response import (
             StreamedChatResponse_CitationGeneration,
@@ -59,7 +57,6 @@ class CohereProvider(InstrumentedProvider):
         self.action_events = {}
 
         def handle_stream_chunk(chunk, session: Optional[Session] = None):
-
             # We take the first chunk and accumulate the deltas from all subsequent chunks to build one full chat completion
             if isinstance(chunk, StreamedChatResponse_StreamStart):
                 llm_event.returns = chunk
@@ -102,9 +99,7 @@ class CohereProvider(InstrumentedProvider):
                                 citation_dict = citation.dict()
                                 # Replace document_ids with the actual documents
                                 citation_dict["documents"] = [
-                                    documents[doc_id]
-                                    for doc_id in citation_dict["document_ids"]
-                                    if doc_id in documents
+                                    documents[doc_id] for doc_id in citation_dict["document_ids"] if doc_id in documents
                                 ]
                                 del citation_dict["document_ids"]
 
@@ -120,12 +115,10 @@ class CohereProvider(InstrumentedProvider):
                     pass
                 elif isinstance(chunk, StreamedChatResponse_CitationGeneration):
                     for citation in chunk.citations:
-                        self.action_events[f"{citation.start}.{citation.end}"] = (
-                            ActionEvent(
-                                action_type="citation",
-                                init_timestamp=get_ISO_time(),
-                                params=citation.text,
-                            )
+                        self.action_events[f"{citation.start}.{citation.end}"] = ActionEvent(
+                            action_type="citation",
+                            init_timestamp=get_ISO_time(),
+                            params=citation.text,
                         )
                 elif isinstance(chunk, StreamedChatResponse_SearchQueriesGeneration):
                     for query in chunk.search_queries:
@@ -138,9 +131,7 @@ class CohereProvider(InstrumentedProvider):
                     pass
 
             except Exception as e:
-                self._safe_record(
-                    session, ErrorEvent(trigger_event=llm_event, exception=e)
-                )
+                self._safe_record(session, ErrorEvent(trigger_event=llm_event, exception=e))
 
                 kwargs_str = pprint.pformat(kwargs)
                 chunk = pprint.pformat(chunk)
