@@ -50,6 +50,9 @@ class LlmTracker:
                 "client.answer.create",
             ),
         },
+        "taskweaver": {
+            "0.0.12a0": ("OpenAIService.chat_completion",),
+        },
     }
 
     def __init__(self, client):
