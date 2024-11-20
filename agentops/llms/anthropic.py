@@ -1,3 +1,4 @@
+import json
 import pprint
 from typing import Optional
 
@@ -5,9 +6,9 @@ from agentops.llms.instrumented_provider import InstrumentedProvider
 from agentops.time_travel import fetch_completion_override_from_time_travel_cache
 
 from ..event import ErrorEvent, LLMEvent, ToolEvent
-from ..session import Session
-from ..log_config import logger
 from ..helpers import check_call_stack_for_agent_id, get_ISO_time
+from ..log_config import logger
+from ..session import Session
 from ..singleton import singleton
 
 
@@ -24,9 +25,9 @@ class AnthropicProvider(InstrumentedProvider):
 
     def handle_response(self, response, kwargs, init_timestamp, session: Optional[Session] = None):
         """Handle responses for Anthropic"""
-        from anthropic import Stream, AsyncStream
-        from anthropic.resources import AsyncMessages
         import anthropic.resources.beta.messages.messages as beta_messages
+        from anthropic import AsyncStream, Stream
+        from anthropic.resources import AsyncMessages
         from anthropic.types import Message
 
         llm_event = LLMEvent(init_timestamp=init_timestamp, params=kwargs)
@@ -118,17 +119,63 @@ class AnthropicProvider(InstrumentedProvider):
 
         # Handle object responses
         try:
-            llm_event.returns = response.model_dump()
-            llm_event.agent_id = check_call_stack_for_agent_id()
-            llm_event.prompt = kwargs["messages"]
-            llm_event.prompt_tokens = response.usage.input_tokens
-            llm_event.completion = {
-                "role": "assistant",
-                "content": response.content[0].text,
-            }
-            llm_event.completion_tokens = response.usage.output_tokens
-            llm_event.model = response.model
+            # Naively handle AttributeError("'LegacyAPIResponse' object has no attribute 'model_dump'")
+            if hasattr(response, "model_dump"):
+                # This bets on the fact that the response object has a model_dump method
+                llm_event.returns = response.model_dump()
+                llm_event.prompt_tokens = response.usage.input_tokens
+                llm_event.completion_tokens = response.usage.output_tokens
+
+                llm_event.completion = {
+                    "role": "assistant",
+                    "content": response.content[0].text,
+                }
+                llm_event.model = response.model
+
+            else:
+                """Handle raw response data from the Anthropic API.
+
+                The raw response has the following structure:
+                {
+                    'id': str,              # Message ID (e.g. 'msg_018Gk9N2pcWaYLS7mxXbPD5i') 
+                    'type': str,            # Type of response (e.g. 'message')
+                    'role': str,            # Role of responder (e.g. 'assistant')
+                    'model': str,           # Model used (e.g. 'claude-3-5-sonnet-20241022')
+                    'content': List[Dict],  # List of content blocks with 'type' and 'text'
+                    'stop_reason': str,     # Reason for stopping (e.g. 'end_turn')
+                    'stop_sequence': Any,   # Stop sequence used, if any
+                    'usage': {              # Token usage statistics
+                        'input_tokens': int,
+                        'output_tokens': int
+                    }
+                }
+
+                Note: We import Anthropic types here since the package must be installed
+                for raw responses to be available; doing so in the global scope would 
+                result in dependencies error since this provider is not lazily imported (tests fail)
+                """
+                from anthropic import APIResponse
+                from anthropic._legacy_response import LegacyAPIResponse
+
+                assert isinstance(response, (APIResponse, LegacyAPIResponse)), (
+                    f"Expected APIResponse or LegacyAPIResponse, got {type(response)}. "
+                    "This is likely caused by changes in the Anthropic SDK and the integrations with AgentOps needs update."
+                    "Please open an issue at https://github.com/AgentOps-AI/agentops/issues"
+                )
+                response_data = json.loads(response.text)
+                llm_event.returns = response_data
+                llm_event.model = response_data["model"]
+                llm_event.completion = {
+                    "role": response_data.get("role"),
+                    "content": response_data.get("content")[0].get("text") if response_data.get("content") else "",
+                }
+                if usage := response_data.get("usage"):
+                    llm_event.prompt_tokens = usage.get("input_tokens")
+                    llm_event.completion_tokens = usage.get("output_tokens")
+
             llm_event.end_timestamp = get_ISO_time()
+            llm_event.prompt = kwargs["messages"]
+            llm_event.agent_id = check_call_stack_for_agent_id()
 
             self._safe_record(session, llm_event)
         except Exception as e:
@@ -148,8 +195,8 @@ class AnthropicProvider(InstrumentedProvider):
         self._override_async_completion()
 
     def _override_completion(self):
-        from anthropic.resources import messages
         import anthropic.resources.beta.messages.messages as beta_messages
+        from anthropic.resources import messages
         from anthropic.types import (
             Message,
             RawContentBlockDeltaEvent,
@@ -168,6 +215,7 @@ class AnthropicProvider(InstrumentedProvider):
             def patched_function(*args, **kwargs):
                 init_timestamp = get_ISO_time()
                 session = kwargs.get("session", None)
+
                 if "session" in kwargs.keys():
                     del kwargs["session"]
 
@@ -212,6 +260,7 @@ class AnthropicProvider(InstrumentedProvider):
         beta_messages.Messages.create = create_patched_function(is_beta=True)
 
     def _override_async_completion(self):
+        import anthropic.resources.beta.messages.messages as beta_messages
         from anthropic.resources import messages
         from anthropic.types import (
             Message,
@@ -222,7 +271,6 @@ class AnthropicProvider(InstrumentedProvider):
             RawMessageStartEvent,
             RawMessageStopEvent,
         )
-        import anthropic.resources.beta.messages.messages as beta_messages
 
         # Store the original method
         self.original_create_async = messages.AsyncMessages.create
