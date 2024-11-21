@@ -183,6 +183,47 @@ class TestSingleSessions:
         session = Client()._safe_get_session()
         assert session is None
 
+    def test_get_analytics(self, mock_req):
+        # Arrange
+        session = agentops.start_session()
+        session.add_tags(["test-session-analytics-tag"])
+        assert session is not None
+
+        # Record some events to increment counters
+        session.record(ActionEvent("llms"))
+        session.record(ActionEvent("tools"))
+        session.record(ActionEvent("actions"))
+        session.record(ActionEvent("errors"))
+        time.sleep(0.1)
+
+        # Act
+        response = session._get_response()
+        analytics = session.get_analytics(response)
+
+        # Assert
+        assert isinstance(analytics, dict)
+        assert all(key in analytics for key in [
+            "LLM calls", "Tool calls", "Actions", "Errors", "Duration", "Cost"
+        ])
+
+        # Check specific values
+        assert analytics["LLM calls"] == 1
+        assert analytics["Tool calls"] == 1
+        assert analytics["Actions"] == 1
+        assert analytics["Errors"] == 1
+
+        # Check duration format
+        assert isinstance(analytics["Duration"], str)
+        assert "s" in analytics["Duration"]
+
+        # Check cost format (mock returns token_cost: 5)
+        assert analytics["Cost"] == "5.000000"
+
+        # End session and cleanup
+        session.end_session(end_state="Success")
+        time.sleep(0.15)
+        agentops.end_all_sessions()
+
 
 class TestMultiSessions:
     def setup_method(self):
