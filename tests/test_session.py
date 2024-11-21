@@ -333,12 +333,13 @@ class TestMultiSessions:
 
         time.sleep(1.5)
 
-        # Assert 2 record_event requests - 2 for each session
+        # Act
         response_1 = session_1._get_response()
         analytics_1 = session_1.get_analytics(response_1)
         response_2 = session_2._get_response()
         analytics_2 = session_2.get_analytics(response_2)
 
+        # Assert 2 record_event requests - 2 for each session
         assert analytics_1["LLM calls"] == 1
         assert analytics_1["Tool calls"] == 1
         assert analytics_1["Actions"] == 0
@@ -348,6 +349,16 @@ class TestMultiSessions:
         assert analytics_2["Tool calls"] == 0
         assert analytics_2["Actions"] == 1
         assert analytics_2["Errors"] == 1
+
+        # Check duration format
+        assert isinstance(analytics_1["Duration"], str)
+        assert "s" in analytics_1["Duration"]
+        assert isinstance(analytics_2["Duration"], str)
+        assert "s" in analytics_2["Duration"]
+
+        # Check cost format (mock returns token_cost: 5)
+        assert analytics_1["Cost"] == "5.000000"
+        assert analytics_2["Cost"] == "5.000000"
 
         end_state = "Success"
 
