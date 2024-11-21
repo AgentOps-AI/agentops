@@ -102,3 +102,6 @@ exclude = [
     "venv",
     "tests/core_manual_tests",
 ]
+
+[tool.setuptools]
+packages = ["agentops"]
