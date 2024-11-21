@@ -15,7 +15,7 @@ from .event import ErrorEvent, Event
 from .log_config import logger
 from .config import Configuration
 from .helpers import get_ISO_time, filter_unjsonable, safe_serialize
-from .http_client import HttpClient
+from .http_client import HttpClient, Response
 
 
 class Session:
@@ -102,7 +102,9 @@ class Session:
         self.thread.join(timeout=1)
         self._flush_queue()
 
-        token_cost = self._get_token_cost()
+        response = self._get_response()
+        token_cost = response.body.get("token_cost", "unknown")
+
         if token_cost == "unknown" or token_cost is None:
             token_cost_d = Decimal(0)
         else:
@@ -113,8 +115,8 @@ class Session:
             if token_cost_d == 0
             else "{:.6f}".format(token_cost_d.quantize(Decimal("0.000001"), rounding=ROUND_HALF_UP))
         )
-        
-        analytic_stats = self.get_analytics()
+
+        analytic_stats = self.get_analytics(response)
 
         analytics = (
             f"Session Stats - "
@@ -127,7 +129,7 @@ class Session:
         )
         logger.info(analytics)
 
-        session_url = res.body.get(
+        session_url = response.body.get(
             "session_url",
             f"https://app.agentops.ai/drilldown?session_id={self.session_id}",
         )
@@ -376,7 +378,7 @@ class Session:
 
         return " ".join(parts)
 
-    def _get_token_cost(self):
+    def _get_response(self) -> Response:
         with self.lock:
             payload = {"session": self.__dict__}
             try:
@@ -389,7 +391,7 @@ class Session:
                 return logger.error(f"Could not end session - {e}")
 
         logger.debug(res.body)
-        return res.body.get("token_cost", "unknown")
+        return res
 
     @staticmethod
     def _format_token_cost(token_cost_d):
@@ -401,14 +403,15 @@ class Session:
             )
         )
 
-    def get_analytics(self) -> dict[str, Union[Decimal, str]]:
+    def get_analytics(self, response: Response) -> dict[str, Union[Decimal, str]]:
         if not self.end_timestamp:
             self.end_timestamp = get_ISO_time()
 
         formatted_duration = self._format_duration(
             self.init_timestamp, self.end_timestamp
         )
-        token_cost = self._get_token_cost()
+        token_cost = response.body.get("token_cost", "unknown")
+
         if token_cost == "unknown" or token_cost is None:
             token_cost_d = Decimal(0)
         else:
