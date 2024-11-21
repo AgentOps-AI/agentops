@@ -114,7 +114,7 @@ We use the following testing packages:
 
 We use tox to automate and standardize testing. Tox:
 - Creates isolated virtual environments for testing
-- Tests against multiple Python versions (3.7-3.12)
+- Tests against multiple Python versions (3.9-3.12)
 - Runs all test suites consistently
 - Ensures dependencies are correctly specified
 - Verifies the package installs correctly
