@@ -22,9 +22,7 @@ class HttpStatus(Enum):
 
 
 class Response:
-    def __init__(
-        self, status: HttpStatus = HttpStatus.UNKNOWN, body: Optional[dict] = None
-    ):
+    def __init__(self, status: HttpStatus = HttpStatus.UNKNOWN, body: Optional[dict] = None):
         self.status: HttpStatus = status
         self.code: int = status.value
         self.body = body if body else {}
@@ -80,17 +78,13 @@ class HttpClient:
             if jwt is not None:
                 JSON_HEADER["Authorization"] = f"Bearer {jwt}"
 
-            res = request_session.post(
-                url, data=payload, headers=JSON_HEADER, timeout=20
-            )
+            res = request_session.post(url, data=payload, headers=JSON_HEADER, timeout=20)
 
             result.parse(res)
         except requests.exceptions.Timeout:
             result.code = 408
             result.status = HttpStatus.TIMEOUT
-            raise ApiServerException(
-                "Could not reach API server - connection timed out"
-            )
+            raise ApiServerException("Could not reach API server - connection timed out")
         except requests.exceptions.HTTPError as e:
             try:
                 result.parse(e.response)
@@ -143,9 +137,7 @@ class HttpClient:
         except requests.exceptions.Timeout:
             result.code = 408
             result.status = HttpStatus.TIMEOUT
-            raise ApiServerException(
-                "Could not reach API server - connection timed out"
-            )
+            raise ApiServerException("Could not reach API server - connection timed out")
         except requests.exceptions.HTTPError as e:
             try:
                 result.parse(e.response)
