@@ -131,8 +131,12 @@ class LangchainCallbackHandler(BaseCallbackHandler):
         llm_event.end_timestamp = get_ISO_time()
         llm_event.completion = response.generations[0][0].text
         if response.llm_output is not None:
-            llm_event.prompt_tokens = response.llm_output["token_usage"]["prompt_tokens"]
-            llm_event.completion_tokens = response.llm_output["token_usage"]["completion_tokens"]
+            llm_event.prompt_tokens = response.llm_output["token_usage"][
+                "prompt_tokens"
+            ]
+            llm_event.completion_tokens = response.llm_output["token_usage"][
+                "completion_tokens"
+            ]
 
         if len(response.generations) == 0:
             # TODO: more descriptive error
@@ -293,7 +297,9 @@ class LangchainCallbackHandler(BaseCallbackHandler):
         **kwargs: Any,
     ) -> None:
         action_event: ActionEvent = self.events.retriever[str(run_id)]
-        action_event.logs = documents  # TODO: Adding this. Might want to add elsewhere e.g. params
+        action_event.logs = (
+            documents  # TODO: Adding this. Might want to add elsewhere e.g. params
+        )
         action_event.end_timestamp = get_ISO_time()
         self.ao_client.record(action_event)
 
@@ -320,7 +326,9 @@ class LangchainCallbackHandler(BaseCallbackHandler):
         parent_run_id: Optional[UUID] = None,
         **kwargs: Any,
     ) -> Any:
-        self.agent_actions[run_id].append(ActionEvent(params={"action": action, **kwargs}, action_type="agent"))
+        self.agent_actions[run_id].append(
+            ActionEvent(params={"action": action, **kwargs}, action_type="agent")
+        )
 
     @debug_print_function_params
     def on_agent_finish(
@@ -359,7 +367,9 @@ class LangchainCallbackHandler(BaseCallbackHandler):
 
     @property
     def session_id(self):
-        raise DeprecationWarning("session_id is deprecated in favor of current_session_ids")
+        raise DeprecationWarning(
+            "session_id is deprecated in favor of current_session_ids"
+        )
 
     @property
     def current_session_ids(self):
@@ -385,7 +395,9 @@ class AsyncLangchainCallbackHandler(AsyncCallbackHandler):
             "tags": tags,
         }
 
-        self.ao_client = AOClient(**{k: v for k, v in client_params.items() if v is not None}, override=False)
+        self.ao_client = AOClient(
+            **{k: v for k, v in client_params.items() if v is not None}, override=False
+        )
 
         self.events = Events()
         self.agent_actions: Dict[UUID, List[ActionEvent]] = defaultdict(list)
@@ -469,8 +481,12 @@ class AsyncLangchainCallbackHandler(AsyncCallbackHandler):
         llm_event.end_timestamp = get_ISO_time()
         llm_event.completion = response.generations[0][0].text
         if response.llm_output is not None:
-            llm_event.prompt_tokens = response.llm_output["token_usage"]["prompt_tokens"]
-            llm_event.completion_tokens = response.llm_output["token_usage"]["completion_tokens"]
+            llm_event.prompt_tokens = response.llm_output["token_usage"][
+                "prompt_tokens"
+            ]
+            llm_event.completion_tokens = response.llm_output["token_usage"][
+                "completion_tokens"
+            ]
 
         if len(response.generations) == 0:
             # TODO: more descriptive error
@@ -628,7 +644,9 @@ class AsyncLangchainCallbackHandler(AsyncCallbackHandler):
         **kwargs: Any,
     ) -> None:
         action_event: ActionEvent = self.events.retriever[str(run_id)]
-        action_event.logs = documents  # TODO: Adding this. Might want to add elsewhere e.g. params
+        action_event.logs = (
+            documents  # TODO: Adding this. Might want to add elsewhere e.g. params
+        )
         action_event.end_timestamp = get_ISO_time()
         self.ao_client.record(action_event)
 
@@ -655,7 +673,9 @@ class AsyncLangchainCallbackHandler(AsyncCallbackHandler):
         parent_run_id: Optional[UUID] = None,
         **kwargs: Any,
     ) -> Any:
-        self.agent_actions[run_id].append(ActionEvent(params={"action": action, **kwargs}, action_type="agent"))
+        self.agent_actions[run_id].append(
+            ActionEvent(params={"action": action, **kwargs}, action_type="agent")
+        )
 
     @debug_print_function_params
     async def on_agent_finish(

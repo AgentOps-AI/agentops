@@ -90,7 +90,9 @@ class Session:
             return
 
         if not any(end_state == state.value for state in EndState):
-            return logger.warning("Invalid end_state. Please use one of the EndState enums")
+            return logger.warning(
+                "Invalid end_state. Please use one of the EndState enums"
+            )
 
         self.end_timestamp = get_ISO_time()
         self.end_state = end_state
@@ -143,7 +145,9 @@ class Session:
         formatted_cost = (
             "{:.2f}".format(token_cost_d)
             if token_cost_d == 0
-            else "{:.6f}".format(token_cost_d.quantize(Decimal("0.000001"), rounding=ROUND_HALF_UP))
+            else "{:.6f}".format(
+                token_cost_d.quantize(Decimal("0.000001"), rounding=ROUND_HALF_UP)
+            )
         )
 
         analytics = (
@@ -217,7 +221,8 @@ class Session:
             if event.trigger_event:
                 if (
                     not event.trigger_event.end_timestamp
-                    or event.trigger_event.init_timestamp == event.trigger_event.end_timestamp
+                    or event.trigger_event.init_timestamp
+                    == event.trigger_event.end_timestamp
                 ):
                     event.trigger_event.end_timestamp = get_ISO_time()
 
@@ -332,7 +337,9 @@ class Session:
                     return logger.error(f"Could not post events - {e}")
 
                 logger.debug("\n<AGENTOPS_DEBUG_OUTPUT>")
-                logger.debug(f"Session request to {self.config.endpoint}/v2/create_events")
+                logger.debug(
+                    f"Session request to {self.config.endpoint}/v2/create_events"
+                )
                 logger.debug(serialized_payload)
                 logger.debug("</AGENTOPS_DEBUG_OUTPUT>\n")
 

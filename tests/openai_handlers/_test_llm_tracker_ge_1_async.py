@@ -47,7 +47,9 @@ async def call_openai_v1_async_streaming():
 async def main():
     await call_openai_v1_async_no_streaming()
     await call_openai_v1_async_streaming()
-    agentops.end_session("Success")  # This would also need to be made async if it makes network calls
+    agentops.end_session(
+        "Success"
+    )  # This would also need to be made async if it makes network calls
 
 
 asyncio.run(main())

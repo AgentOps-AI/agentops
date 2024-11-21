@@ -7,7 +7,9 @@ import litellm
 load_dotenv()
 agentops.init(default_tags=["litellm-provider-test"])
 
-response = litellm.completion(model="gpt-3.5-turbo", messages=[{"content": "Hello, how are you?", "role": "user"}])
+response = litellm.completion(
+    model="gpt-3.5-turbo", messages=[{"content": "Hello, how are you?", "role": "user"}]
+)
 
 stream_response = litellm.completion(
     model="gpt-3.5-turbo",

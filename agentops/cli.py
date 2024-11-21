@@ -6,7 +6,9 @@ def main():
     parser = argparse.ArgumentParser(description="AgentOps CLI")
     subparsers = parser.add_subparsers(dest="command")
 
-    timetravel_parser = subparsers.add_parser("timetravel", help="Time Travel Debugging commands", aliases=["tt"])
+    timetravel_parser = subparsers.add_parser(
+        "timetravel", help="Time Travel Debugging commands", aliases=["tt"]
+    )
     timetravel_parser.add_argument(
         "branch_name",
         type=str,

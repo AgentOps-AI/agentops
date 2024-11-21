@@ -7,7 +7,9 @@ import pkg_resources
 print("Running OpenAI <v1.0.0")
 
 
-ao_client = agentops.Client(tags=["mock tests", pkg_resources.get_distribution("openai").version])
+ao_client = agentops.Client(
+    tags=["mock tests", pkg_resources.get_distribution("openai").version]
+)
 
 openai.api_key = os.environ["OPENAI_API_KEY"]
 
@@ -15,7 +17,9 @@ openai.api_key = os.environ["OPENAI_API_KEY"]
 async def stream_achat():
     message = [{"role": "user", "content": "stream achat test"}]
 
-    res = await openai.ChatCompletion.acreate(model="gpt-3.5-turbo", messages=message, temperature=0.5, stream=True)
+    res = await openai.ChatCompletion.acreate(
+        model="gpt-3.5-turbo", messages=message, temperature=0.5, stream=True
+    )
     async for r in res:
         print(r)
     print("*" * 100)
@@ -23,7 +27,9 @@ async def stream_achat():
 
 def stream_chat():
     message = [{"role": "user", "content": "stream chat test"}]
-    res = openai.ChatCompletion.create(model="gpt-3.5-turbo", messages=message, temperature=0.5, stream=True)
+    res = openai.ChatCompletion.create(
+        model="gpt-3.5-turbo", messages=message, temperature=0.5, stream=True
+    )
     for r in res:
         print(r)
     print("*" * 100)
@@ -31,7 +37,9 @@ def stream_chat():
 
 async def achat():
     message = [{"role": "user", "content": "achat test"}]
-    res = await openai.ChatCompletion.acreate(model="gpt-3.5-turbo", messages=message, temperature=0.5)
+    res = await openai.ChatCompletion.acreate(
+        model="gpt-3.5-turbo", messages=message, temperature=0.5
+    )
     print(res)
 
     print("*" * 100)
@@ -39,7 +47,9 @@ async def achat():
 
 def chat():
     message = [{"role": "user", "content": "chat test"}]
-    res = openai.ChatCompletion.create(model="gpt-3.5-turbo", messages=message, temperature=0.5)
+    res = openai.ChatCompletion.create(
+        model="gpt-3.5-turbo", messages=message, temperature=0.5
+    )
     print(res)
 
     print("*" * 100)

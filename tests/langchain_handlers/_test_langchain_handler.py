@@ -14,9 +14,13 @@ load_dotenv()
 AGENTOPS_API_KEY = os.environ.get("AGENTOPS_API_KEY")
 OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY")
 
-agentops_handler = AgentOpsLangchainCallbackHandler(api_key=AGENTOPS_API_KEY, tags=["Langchain Example"])
+agentops_handler = AgentOpsLangchainCallbackHandler(
+    api_key=AGENTOPS_API_KEY, tags=["Langchain Example"]
+)
 
-llm = ChatOpenAI(openai_api_key=OPENAI_API_KEY, callbacks=[agentops_handler], model="gpt-3.5-turbo")
+llm = ChatOpenAI(
+    openai_api_key=OPENAI_API_KEY, callbacks=[agentops_handler], model="gpt-3.5-turbo"
+)
 
 
 @tool
@@ -39,7 +43,9 @@ agent = initialize_agent(
     llm,
     agent=AgentType.CHAT_ZERO_SHOT_REACT_DESCRIPTION,
     verbose=True,
-    callbacks=[agentops_handler],  # You must pass in a callback handler to record your agent
+    callbacks=[
+        agentops_handler
+    ],  # You must pass in a callback handler to record your agent
     handle_parsing_errors=True,
 )
 
@@ -50,16 +56,22 @@ agent.run("What comedies are playing?", callbacks=[agentops_handler])
 ########
 # Async
 
-agentops_handler = AgentOpsAsyncLangchainCallbackHandler(api_key=AGENTOPS_API_KEY, tags=["Async Example"])
+agentops_handler = AgentOpsAsyncLangchainCallbackHandler(
+    api_key=AGENTOPS_API_KEY, tags=["Async Example"]
+)
 
-llm = ChatOpenAI(openai_api_key=OPENAI_API_KEY, callbacks=[agentops_handler], model="gpt-3.5-turbo")
+llm = ChatOpenAI(
+    openai_api_key=OPENAI_API_KEY, callbacks=[agentops_handler], model="gpt-3.5-turbo"
+)
 
 agent = initialize_agent(
     tools,
     llm,
     agent=AgentType.CHAT_ZERO_SHOT_REACT_DESCRIPTION,
     verbose=True,
-    callbacks=[agentops_handler],  # You must pass in a callback handler to record your agent
+    callbacks=[
+        agentops_handler
+    ],  # You must pass in a callback handler to record your agent
     handle_parsing_errors=True,
 )
 

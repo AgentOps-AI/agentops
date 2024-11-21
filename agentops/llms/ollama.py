@@ -16,7 +16,9 @@ class OllamaProvider(InstrumentedProvider):
     original_create = None
     original_create_async = None
 
-    def handle_response(self, response, kwargs, init_timestamp, session: Optional[Session] = None) -> dict:
+    def handle_response(
+        self, response, kwargs, init_timestamp, session: Optional[Session] = None
+    ) -> dict:
         llm_event = LLMEvent(init_timestamp=init_timestamp, params=kwargs)
 
         def handle_stream_chunk(chunk: dict):
@@ -82,7 +84,9 @@ class OllamaProvider(InstrumentedProvider):
             # Call the original function with its original arguments
             init_timestamp = get_ISO_time()
             result = original_func["ollama.chat"](*args, **kwargs)
-            return self.handle_response(result, kwargs, init_timestamp, session=kwargs.get("session", None))
+            return self.handle_response(
+                result, kwargs, init_timestamp, session=kwargs.get("session", None)
+            )
 
         # Override the original method with the patched one
         ollama.chat = patched_function
