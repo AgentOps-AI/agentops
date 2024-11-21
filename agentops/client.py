@@ -44,7 +44,10 @@ class Client(metaclass=MetaClient):
             api_key=os.environ.get("AGENTOPS_API_KEY"),
             parent_key=os.environ.get("AGENTOPS_PARENT_KEY"),
             endpoint=os.environ.get("AGENTOPS_API_ENDPOINT"),
-            env_data_opt_out=os.environ.get("AGENTOPS_ENV_DATA_OPT_OUT", "False").lower() == "true",
+            env_data_opt_out=os.environ.get(
+                "AGENTOPS_ENV_DATA_OPT_OUT", "False"
+            ).lower()
+            == "true",
         )
 
     def configure(
@@ -103,7 +106,9 @@ class Client(metaclass=MetaClient):
 
         if session:
             for agent_args in self._pre_init_queue["agents"]:
-                session.create_agent(name=agent_args["name"], agent_id=agent_args["agent_id"])
+                session.create_agent(
+                    name=agent_args["name"], agent_id=agent_args["agent_id"]
+                )
             self._pre_init_queue["agents"] = []
 
         return session
@@ -136,7 +141,9 @@ class Client(metaclass=MetaClient):
 
         session = self._safe_get_session()
         if session is None:
-            return logger.warning("Could not add tags. Start a session by calling agentops.start_session().")
+            return logger.warning(
+                "Could not add tags. Start a session by calling agentops.start_session()."
+            )
 
         session.add_tags(tags=tags)
 
@@ -155,7 +162,9 @@ class Client(metaclass=MetaClient):
         session = self._safe_get_session()
 
         if session is None:
-            return logger.warning("Could not set tags. Start a session by calling agentops.start_session().")
+            return logger.warning(
+                "Could not set tags. Start a session by calling agentops.start_session()."
+            )
         else:
             session.set_tags(tags=tags)
 
@@ -189,7 +198,9 @@ class Client(metaclass=MetaClient):
 
         session = self._safe_get_session()
         if session is None:
-            return logger.error("Could not record event. Start a session by calling agentops.start_session().")
+            return logger.error(
+                "Could not record event. Start a session by calling agentops.start_session()."
+            )
         session.record(event)
 
     def start_session(
@@ -233,7 +244,9 @@ class Client(metaclass=MetaClient):
 
         if self._pre_init_queue["agents"] and len(self._pre_init_queue["agents"]) > 0:
             for agent_args in self._pre_init_queue["agents"]:
-                session.create_agent(name=agent_args["name"], agent_id=agent_args["agent_id"])
+                session.create_agent(
+                    name=agent_args["name"], agent_id=agent_args["agent_id"]
+                )
             self._pre_init_queue["agents"] = []
 
         self._sessions.append(session)
@@ -264,7 +277,9 @@ class Client(metaclass=MetaClient):
         if is_auto_end and self._config.skip_auto_end_session:
             return
 
-        token_cost = session.end_session(end_state=end_state, end_state_reason=end_state_reason, video=video)
+        token_cost = session.end_session(
+            end_state=end_state, end_state_reason=end_state_reason, video=video
+        )
 
         return token_cost
 
@@ -284,7 +299,9 @@ class Client(metaclass=MetaClient):
             # if no session passed, assume single session
             session = self._safe_get_session()
             if session is None:
-                self._pre_init_queue["agents"].append({"name": name, "agent_id": agent_id})
+                self._pre_init_queue["agents"].append(
+                    {"name": name, "agent_id": agent_id}
+                )
             else:
                 session.create_agent(name=name, agent_id=agent_id)
 
@@ -309,7 +326,9 @@ class Client(metaclass=MetaClient):
             """
             signal_name = "SIGINT" if signum == signal.SIGINT else "SIGTERM"
             logger.info("%s detected. Ending session...", signal_name)
-            self.end_session(end_state="Fail", end_state_reason=f"Signal {signal_name} detected")
+            self.end_session(
+                end_state="Fail", end_state_reason=f"Signal {signal_name} detected"
+            )
             sys.exit(0)
 
         def handle_exception(exc_type, exc_value, exc_traceback):
@@ -322,7 +341,9 @@ class Client(metaclass=MetaClient):
                 exc_traceback (TracebackType): A traceback object encapsulating the call stack at the
                                             point where the exception originally occurred.
             """
-            formatted_traceback = "".join(traceback.format_exception(exc_type, exc_value, exc_traceback))
+            formatted_traceback = "".join(
+                traceback.format_exception(exc_type, exc_value, exc_traceback)
+            )
 
             for session in self._sessions:
                 session.end_session(
@@ -355,7 +376,13 @@ class Client(metaclass=MetaClient):
     # replaces the session currently stored with a specific session_id, with a new session
     def _update_session(self, session: Session):
         self._sessions[
-            self._sessions.index([sess for sess in self._sessions if sess.session_id == session.session_id][0])
+            self._sessions.index(
+                [
+                    sess
+                    for sess in self._sessions
+                    if sess.session_id == session.session_id
+                ][0]
+            )
         ] = session
 
     def _safe_get_session(self) -> Optional[Session]:
@@ -365,7 +392,9 @@ class Client(metaclass=MetaClient):
             return self._sessions[0]
 
         if len(self._sessions) > 1:
-            calling_function = inspect.stack()[2].function  # Using index 2 because we have a wrapper at index 1
+            calling_function = inspect.stack()[
+                2
+            ].function  # Using index 2 because we have a wrapper at index 1
             return logger.warning(
                 f"Multiple sessions detected. You must use session.{calling_function}(). More info: https://docs.agentops.ai/v1/concepts/core-concepts#session-management"
             )

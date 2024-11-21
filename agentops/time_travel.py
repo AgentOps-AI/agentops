@@ -20,7 +20,9 @@ class TimeTravel:
         try:
             with open(cache_path, "r") as file:
                 time_travel_cache_json = json.load(file)
-                self._completion_overrides = time_travel_cache_json.get("completion_overrides")
+                self._completion_overrides = time_travel_cache_json.get(
+                    "completion_overrides"
+                )
         except FileNotFoundError:
             return
 
@@ -97,14 +99,20 @@ def find_cache_hit(prompt_messages, completion_overrides):
                 continue
 
             if all(
-                isinstance(a, dict) and isinstance(b, dict) and a.get("content") == b.get("content")
+                isinstance(a, dict)
+                and isinstance(b, dict)
+                and a.get("content") == b.get("content")
                 for a, b in zip(prompt_messages, cached_messages)
             ):
                 return value
         except (SyntaxError, ValueError, TypeError) as e:
-            print(f"{ttd_prepend_string} Error - Error processing completion_overrides item: {e}")
+            print(
+                f"{ttd_prepend_string} Error - Error processing completion_overrides item: {e}"
+            )
         except Exception as e:
-            print(f"{ttd_prepend_string} Error - Unexpected error in find_cache_hit: {e}")
+            print(
+                f"{ttd_prepend_string} Error - Unexpected error in find_cache_hit: {e}"
+            )
     return None
 
 
@@ -135,7 +143,9 @@ def set_time_travel_active_state(is_active: bool):
         try:
             yaml.dump(config, config_file)
         except:
-            print(f"{ttd_prepend_string} Error - Unable to write to {config_path}. Time Travel not activated")
+            print(
+                f"{ttd_prepend_string} Error - Unable to write to {config_path}. Time Travel not activated"
+            )
             return
 
     if is_active:
