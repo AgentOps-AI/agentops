@@ -69,16 +69,24 @@ class HttpClient:
             request_session = requests.Session()
             request_session.mount(url, HTTPAdapter(max_retries=retry_config))
 
+            # Start with default JSON header
+            headers = JSON_HEADER.copy()
+
+            # Add API key and parent key if provided
             if api_key is not None:
-                JSON_HEADER["X-Agentops-Api-Key"] = api_key
+                headers["X-Agentops-Api-Key"] = api_key
 
             if parent_key is not None:
-                JSON_HEADER["X-Agentops-Parent-Key"] = parent_key
+                headers["X-Agentops-Parent-Key"] = parent_key
 
             if jwt is not None:
-                JSON_HEADER["Authorization"] = f"Bearer {jwt}"
+                headers["Authorization"] = f"Bearer {jwt}"
 
-            res = request_session.post(url, data=payload, headers=JSON_HEADER, timeout=20)
+            # Override with custom header if provided
+            if header is not None:
+                headers.update(header)
+
+            res = request_session.post(url, data=payload, headers=headers, timeout=20)
 
             result.parse(res)
         except requests.exceptions.Timeout:
