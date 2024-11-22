@@ -22,51 +22,6 @@ from .http_client import HttpClient
 from .log_config import logger
 
 
-class AgentOpsSpanExporter(SpanExporter):
-    """
-    Manages publishing events for a single sesssion
-    """
-
-    def __init__(self, endpoint: str, jwt: str):
-        self.endpoint = endpoint
-        self._headers = {"Authorization": f"Bearer {jwt}", "Content-Type": "application/json"}
-
-    def export(self, spans: Sequence[ReadableSpan]) -> SpanExportResult:
-        try:
-            events = []
-            for span in spans:
-                # Convert span to AgentOps event format
-                event_data = {
-                    "id": span.attributes.get("event.id"),
-                    "event_type": span.name,
-                    "init_timestamp": span.attributes.get("event.timestamp"),
-                    "end_timestamp": span.attributes.get("event.end_timestamp"),
-                    "data": span.attributes.get("event.data", {}),
-                }
-                events.append(event_data)
-
-            if events:
-                # Use existing HttpClient to send events
-                res = HttpClient.post(
-                    f"{self.endpoint}/v2/create_events",
-                    json.dumps({"events": events}).encode("utf-8"),
-                    headers=self._headers,
-                )
-                if res.code == 200:
-                    return SpanExportResult.SUCCESS
-
-            return SpanExportResult.FAILURE
-        except Exception as e:
-            logger.error(f"Failed to export spans: {e}")
-            return SpanExportResult.FAILURE
-
-    def force_flush(self, timeout_millis: Optional[int] = None) -> bool:
-        return True
-
-    def shutdown(self) -> None:
-        pass
-
-
 class Session:
     """
     Represents a session of events, with a start and end state.
@@ -127,7 +82,7 @@ class Session:
             return
 
         # Configure custom AgentOps exporter
-        self._otel_exporter = AgentOpsSpanExporter(endpoint=self.config.endpoint, jwt=self.jwt)
+        self._otel_exporter = AgentOpsSpanExporter(endpoint=self.config.endpoint, jwt=self.jwt)  # type: ignore
 
         # Use BatchSpanProcessor with custom export interval
         span_processor = BatchSpanProcessor(
@@ -139,7 +94,7 @@ class Session:
 
         self._otel_tracer.add_span_processor(span_processor)
         # trace.set_tracer_provider(self._otel_tracer)
-        # self.tracer = trace.get_tracer(__name__)
+        # self._otel_tracer = trace.get_tracer(__name__)
 
     def set_video(self, video: str) -> None:
         """
@@ -293,9 +248,9 @@ class Session:
             return
 
         # Create span context for the event
-        context = trace.set_span_in_context(self.tracer.start_span(event.event_type))
+        context = trace.set_span_in_context(self._otel_tracer.start_span(event.event_type))
 
-        with self.tracer.start_as_current_span(
+        with self._otel_tracer.start_as_current_span(
             name=event.event_type,
             context=context,
             attributes={

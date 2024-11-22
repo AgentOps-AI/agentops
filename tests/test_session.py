@@ -51,7 +51,7 @@ class TestSingleSessions:
     def test_session(self, mock_req):
         session = agentops.start_session()
         assert session is not None
-        assert session.trace_provider is not None
+        assert session._otel_tracer is not None
         assert session.tracer is not None
 
         # Record events and verify spans are created
@@ -82,7 +82,7 @@ class TestSingleSessions:
         session = agentops.start_session(tags=tags)
 
         # Verify tags are in OTLP resource attributes
-        resource_attrs = session.trace_provider.resource.attributes
+        resource_attrs = session._otel_tracer.resource.attributes
         assert resource_attrs["session.tags"] == "GPT-4"
 
         session.add_tags(["test-tag", "dupe-tag"])
@@ -110,7 +110,7 @@ class TestSingleSessions:
             spans.append(span)
 
         # Add a simple processor to capture spans
-        session.trace_provider.add_span_processor(span_processor)
+        session._otel_tracer.add_span_processor(span_processor)
 
         # Record another event
         session.record(ActionEvent(self.event_type))
@@ -143,7 +143,7 @@ class TestSingleSessions:
         def span_processor(span: ReadableSpan):
             spans.append(span)
 
-        session.trace_provider.add_span_processor(span_processor)
+        session._otel_tracer.add_span_processor(span_processor)
 
         # Verify error span attributes
         assert len(spans) > 0
