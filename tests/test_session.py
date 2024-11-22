@@ -197,8 +197,7 @@ class TestSingleSessions:
         time.sleep(0.1)
 
         # Act
-        response = session._get_response()
-        analytics = session.get_analytics(response)
+        analytics = session.get_analytics()
 
         # Assert
         assert isinstance(analytics, dict)
@@ -334,10 +333,8 @@ class TestMultiSessions:
         time.sleep(1.5)
 
         # Act
-        response_1 = session_1._get_response()
-        analytics_1 = session_1.get_analytics(response_1)
-        response_2 = session_2._get_response()
-        analytics_2 = session_2.get_analytics(response_2)
+        analytics_1 = session_1.get_analytics()
+        analytics_2 = session_2.get_analytics()
 
         # Assert 2 record_event requests - 2 for each session
         assert analytics_1["LLM calls"] == 1
