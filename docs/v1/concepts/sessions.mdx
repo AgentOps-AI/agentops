@@ -95,7 +95,9 @@ agentops.init(inherited_session_id=<id>)
 Both processes will now contribute data to the same session.
 
 ## Session Analytics
-You can retrieve the analytics for a session by calling `session.get_analytics()`.
+You can retrieve the analytics for a session by calling `session.get_analytics()`. 
+
+The example below shows how to record events and retrieve analytics.
 
 <CodeGroup>
 
@@ -106,6 +108,13 @@ session.record(ActionEvent("llms"))
 session.record(ActionEvent("tools"))
 analytics = session.get_analytics()
 print(analytics)
+session.end_session("Success")
+```
+
+The output will look like this -
+
+```bash
+{'LLM calls': 0, 'Tool calls': 0, 'Actions': 0, 'Errors': 0, 'Duration': '0.9s', 'Cost': '0.00'}
 ```
 
 </CodeGroup>
