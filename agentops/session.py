@@ -5,7 +5,7 @@ import threading
 import time
 from decimal import ROUND_HALF_UP, Decimal
 from termcolor import colored
-from typing import Any,Optional, List, Union
+from typing import Any, Optional, List, Union
 from uuid import UUID, uuid4
 from datetime import datetime
 
@@ -403,18 +403,14 @@ class Session:
         return (
             "{:.2f}".format(token_cost_d)
             if token_cost_d == 0
-            else "{:.6f}".format(
-                token_cost_d.quantize(Decimal("0.000001"), rounding=ROUND_HALF_UP)
-            )
+            else "{:.6f}".format(token_cost_d.quantize(Decimal("0.000001"), rounding=ROUND_HALF_UP))
         )
 
     def get_analytics(self) -> Optional[dict[str, Union[Decimal, str]]]:
         if not self.end_timestamp:
             self.end_timestamp = get_ISO_time()
 
-        formatted_duration = self._format_duration(
-            self.init_timestamp, self.end_timestamp
-        )
+        formatted_duration = self._format_duration(self.init_timestamp, self.end_timestamp)
 
         response = self._get_response()
         if response is None:

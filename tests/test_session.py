@@ -201,9 +201,7 @@ class TestSingleSessions:
 
         # Assert
         assert isinstance(analytics, dict)
-        assert all(key in analytics for key in [
-            "LLM calls", "Tool calls", "Actions", "Errors", "Duration", "Cost"
-        ])
+        assert all(key in analytics for key in ["LLM calls", "Tool calls", "Actions", "Errors", "Duration", "Cost"])
 
         # Check specific values
         assert analytics["LLM calls"] == 1
