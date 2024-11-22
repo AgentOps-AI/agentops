@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import asyncio
 import functools
 import json
@@ -13,32 +15,33 @@ from opentelemetry.sdk.trace import ReadableSpan, TracerProvider
 from opentelemetry.sdk.trace.export import BatchSpanProcessor, SpanExporter, SpanExportResult
 from termcolor import colored
 
-from agentops.http_client import HttpClient
-from agentops.log_config import logger
-
+from .client import Client
 from .config import Configuration
 from .enums import EndState
 from .event import ErrorEvent, Event
 from .exceptions import ApiServerException
 from .helpers import filter_unjsonable, get_ISO_time, safe_serialize
+from .http_client import HttpClient
+from .log_config import logger
 
 """
-Global TracerProvider: Consider setting a single global TracerProvider for the entire application. This can be done in the Client class during initialization. This ensures all sessions share the same tracing configuration and resources.
-Session-Specific Tracers: Use trace.get_tracer() to create session-specific tracers from the global TracerProvider. This allows you to maintain session-specific context while benefiting from a consistent global configuration.
-Error Handling: Ensure that all exceptions are logged and handled gracefully, especially in asynchronous or multi-threaded contexts.
+OTEL Guidelines:
+
+- Maintain a single TracerProvider for the application runtime 
+    - Initialized in Client
+- Allow multiple sessions to share the provider while maintaining their own context
 """
 
 
 class SessionExporter(SpanExporter):
     """
-    Manages publishing events for a single sesssion
+    Manages publishing events for a single session
     """
 
-    session: Session
-
-    def __init__(self, endpoint: str, jwt: str):
-        self.endpoint = endpoint
-        self._headers = {"Authorization": f"Bearer {jwt}", "Content-Type": "application/json"}
+    def __init__(self, session: Session):
+        self.session = session
+        self.endpoint = session.config.endpoint
+        self._headers = {"Authorization": f"Bearer {session.jwt}", "Content-Type": "application/json"}
 
     def export(self, spans: Sequence[ReadableSpan]) -> SpanExportResult:
         try:
@@ -120,16 +123,10 @@ class Session:
             "apis": 0,
         }
 
-        # Initialize OpenTelemetry for this session
-        # Create a session-specific TracerProvider
-        self._otel_tracer = TracerProvider(
-            resource=Resource(
-                attributes={
-                    "service.name": "agentops",
-                    "session.id": str(session_id),
-                    "session.tags": ",".join(self.tags) if self.tags else "",
-                }
-            )
+        # Get tracer from global provider with session-specific context
+        self._tracer = trace.get_tracer(
+            "agentops.session",
+            tracer_provider=Client().get_tracer_provider(),
         )
 
         # Start session first to get JWT
@@ -138,9 +135,9 @@ class Session:
             return
 
         # Configure custom AgentOps exporter
-        self._otel_exporter = SessionExporter(endpoint=self.config.endpoint, jwt=self.jwt)  # type: ignore
+        self._otel_exporter = SessionExporter(session=self)
 
-        # Use BatchSpanProcessor with custom export interval
+        # Add session-specific processor to the global provider
         span_processor = BatchSpanProcessor(
             self._otel_exporter,
             max_queue_size=self.config.max_queue_size,
@@ -148,9 +145,7 @@ class Session:
             max_export_batch_size=self.config.max_queue_size,
         )
 
-        self._otel_tracer.add_span_processor(span_processor)
-        # trace.set_tracer_provider(self._otel_tracer)
-        # self._otel_tracer = trace.get_tracer(__name__)
+        Client().get_tracer_provider().add_span_processor(span_processor)
 
     def set_video(self, video: str) -> None:
         """
@@ -161,6 +156,21 @@ class Session:
         """
         self.video = video
 
+    def _flush_spans(self) -> bool:
+        """
+        Flush all pending spans with timeout.
+        Returns True if flush was successful, False otherwise.
+        """
+        if not hasattr(self, "_tracer"):
+            return True
+
+        success = True
+        for processor in Client().get_tracer_provider().span_processors:
+            if not processor.force_flush(timeout_millis=self.config.max_wait_time):
+                logger.warning("Failed to flush all spans before session end")
+                success = False
+        return success
+
     def end_session(
         self,
         end_state: str = "Indeterminate",
@@ -168,7 +178,7 @@ class Session:
         video: Optional[str] = None,
     ) -> Union[Decimal, None]:
         if not self.is_running:
-            return
+            return None
 
         if not any(end_state == state.value for state in EndState):
             return logger.warning("Invalid end_state. Please use one of the EndState enums")
@@ -179,15 +189,13 @@ class Session:
         if video is not None:
             self.video = video
 
-        # Proper shutdown sequence
+        # Shutdown sequence
         try:
-            # Force flush any pending spans
-            if processor := getattr(self._otel_tracer, "_active_span_processor", None):
-                if hasattr(processor, "force_flush"):
-                    processor.force_flush()
+            # 1. Stop accepting new spans
+            self.is_running = False
 
-            # Shutdown the trace provider
-            self._otel_tracer.shutdown()
+            # 2. Flush all pending spans
+            self._flush_spans()
 
         except Exception as e:
             logger.warning(f"Error during OpenTelemetry shutdown: {e}")
@@ -303,16 +311,14 @@ class Session:
         if not self.is_running:
             return
 
-        # Create span context for the event
-        context = trace.set_span_in_context(self._otel_tracer.start_span(event.event_type))
-
-        with self._otel_tracer.start_as_current_span(
+        # Use session-specific tracer with session context
+        with self._tracer.start_as_current_span(
             name=event.event_type,
-            context=context,
             attributes={
                 "event.id": str(event.id),
                 "event.type": event.event_type,
                 "event.timestamp": event.init_timestamp,
+                "session.id": str(self.session_id),  # Add session context
                 "event.data": json.dumps(filter_unjsonable(event.__dict__)),
             },
         ) as span:
