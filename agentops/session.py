@@ -12,10 +12,9 @@ from uuid import UUID, uuid4
 from opentelemetry import trace
 from opentelemetry.sdk.resources import SERVICE_NAME, Resource
 from opentelemetry.sdk.trace import ReadableSpan, TracerProvider
-from opentelemetry.sdk.trace.export import BatchSpanProcessor, SpanExporter, SpanExportResult
+from opentelemetry.sdk.trace.export import BatchSpanProcessor, ConsoleSpanExporter, SpanExporter, SpanExportResult
 from termcolor import colored
 
-from .client import Client
 from .config import Configuration
 from .enums import EndState
 from .event import ErrorEvent, Event
@@ -27,21 +26,71 @@ from .log_config import logger
 """
 OTEL Guidelines:
 
+
+
 - Maintain a single TracerProvider for the application runtime 
-    - Initialized in Client
+    - Have one global TracerProvider in the Client class
+
+- According to the OpenTelemetry Python documentation, Resource should be initialized once per application and shared across all telemetry (traces, metrics, logs).
+- Each Session gets its own Tracer (with session-specific context)
 - Allow multiple sessions to share the provider while maintaining their own context
+
+
+
+:: Resource
+
+    ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+    Captures information about the entity producing telemetry as Attributes. 
+    For example, a process producing telemetry that is running in a container 
+    on Kubernetes has a process name, a pod name, a namespace, and possibly 
+    a deployment name. All these attributes can be included in the Resource.
+    ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+
+    The key insight from the documentation is:
+
+    - Resource represents the entity producing telemetry - in our case, that's the AgentOps SDK application itself
+    - Session-specific information should be attributes on the spans themselves
+        - A Resource is meant to identify the service/process/application1
+        - Sessions are units of work within that application
+        - The documentation example about "process name, pod name, namespace" refers to where the code is running, not the work it's doing
+
 """
 
 
 class SessionExporter(SpanExporter):
     """
-    Manages publishing events for a single session
+    Manages publishing events for Session
     """
 
-    def __init__(self, session: Session):
+    _tracer_provider = None
+
+    @staticmethod
+    def get_tracer_provider():
+        """Get or create the global tracer provider"""
+        if SessionExporter._tracer_provider is None:
+            # Initialize with default resource
+            resource = Resource.create(
+                {
+                    "service.name": "agentops",
+                    # Additional resource attributes can be added here
+                }
+            )
+            SessionExporter._tracer_provider = TracerProvider(resource=resource)
+            trace.set_tracer_provider(SessionExporter._tracer_provider)
+        return SessionExporter._tracer_provider
+
+    def __init__(self, session: Session, **kwargs):
         self.session = session
-        self.endpoint = session.config.endpoint
-        self._headers = {"Authorization": f"Bearer {session.jwt}", "Content-Type": "application/json"}
+        super().__init__(**kwargs)
+
+    @property
+    def headers(self):
+        # Using a computed @property as session.jwt might change
+        return {"Authorization": f"Bearer {self.session.jwt}", "Content-Type": "application/json"}
+
+    @property
+    def endpoint(self):
+        return f"{self.session.config.endpoint}/v2/create_events"
 
     def export(self, spans: Sequence[ReadableSpan]) -> SpanExportResult:
         try:
@@ -62,9 +111,10 @@ class SessionExporter(SpanExporter):
             if events:
                 # Use existing HttpClient to send events
                 res = HttpClient.post(
-                    f"{self.endpoint}/v2/create_events",
+                    self.endpoint,
                     json.dumps({"events": events}).encode("utf-8"),
-                    header=self._headers,
+                    self.session.config.api_key,
+                    header=self.headers,
                 )
                 if res.code == 200:
                     return SpanExportResult.SUCCESS
@@ -124,9 +174,9 @@ class Session:
         }
 
         # Get tracer from global provider with session-specific context
-        self._tracer = trace.get_tracer(
-            "agentops.session",
-            tracer_provider=Client().get_tracer_provider(),
+        self._otel_tracer = trace.get_tracer(
+            f"agentops.session.{str(session_id)}",  # Include session ID for unique identification
+            schema_url="https://opentelemetry.io/schemas/1.11.0",
         )
 
         # Start session first to get JWT
@@ -139,13 +189,14 @@ class Session:
 
         # Add session-specific processor to the global provider
         span_processor = BatchSpanProcessor(
-            self._otel_exporter,
+            # self._otel_exporter,
+            ConsoleSpanExporter(),
             max_queue_size=self.config.max_queue_size,
             schedule_delay_millis=self.config.max_wait_time,
             max_export_batch_size=self.config.max_queue_size,
         )
 
-        Client().get_tracer_provider().add_span_processor(span_processor)
+        SessionExporter.get_tracer_provider().add_span_processor(span_processor)
 
     def set_video(self, video: str) -> None:
         """
@@ -165,7 +216,7 @@ class Session:
             return True
 
         success = True
-        for processor in Client().get_tracer_provider().span_processors:
+        for processor in SessionExporter.get_tracer_provider().span_processors:
             if not processor.force_flush(timeout_millis=self.config.max_wait_time):
                 logger.warning("Failed to flush all spans before session end")
                 success = False
@@ -312,13 +363,14 @@ class Session:
             return
 
         # Use session-specific tracer with session context
-        with self._tracer.start_as_current_span(
+        with self._otel_tracer.start_as_current_span(
             name=event.event_type,
             attributes={
                 "event.id": str(event.id),
                 "event.type": event.event_type,
                 "event.timestamp": event.init_timestamp,
                 "session.id": str(self.session_id),  # Add session context
+                "session.tags": ",".join(self.tags) if self.tags else "",  # Add session tags
                 "event.data": json.dumps(filter_unjsonable(event.__dict__)),
             },
         ) as span:
