@@ -39,7 +39,7 @@ dev = [
     "tach~=0.9",
 ]
 langchain = [
-    "langchain==0.2.14"
+    "langchain==0.2.14; python_version >= '3.8.1'"
 ]
 
 [project.urls]
@@ -102,3 +102,6 @@ exclude = [
     "venv",
     "tests/core_manual_tests",
 ]
+
+[tool.setuptools]
+packages = ["agentops"]
