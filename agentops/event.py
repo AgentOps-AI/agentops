@@ -132,3 +132,25 @@ class ErrorEvent:
             self.error_type = self.error_type or type(self.exception).__name__
             self.details = self.details or str(self.exception)
             self.exception = None  # removes exception from serialization
+
+
+@dataclass
+class VectorEvent(Event):
+    """Event class for vector operations"""
+    event_type: str = "action"
+    operation_type: str = "unknown"
+    vector_count: Optional[int] = None
+    namespace: Optional[str] = None
+    top_k: Optional[int] = None
+    filter: Optional[Dict] = None
+    ids: Optional[List[str]] = None
+    dimension: Optional[int] = None
+    metric: Optional[str] = None
+    pods: Optional[int] = None
+    replicas: Optional[int] = None
+    metadata_config: Optional[Dict] = None
+    source_collection: Optional[str] = None
+    target_collection: Optional[str] = None
+    index_name: Optional[str] = None
+    index_type: Optional[str] = None
+
