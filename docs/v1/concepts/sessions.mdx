@@ -77,6 +77,7 @@ with an existing session_id.
 You can retrieve the current `session_id` by assigning the returned value from `init()` or `start_session()`.
 
 <CodeGroup>
+
 ```python
 import agentops
 session = agentops.init()
@@ -88,6 +89,7 @@ session = agentops.init()
 session_id = retrieve_session_id() # <-- your function
 agentops.init(inherited_session_id=<id>)
 ```
+
 </CodeGroup>
 
 Both processes will now contribute data to the same session.
@@ -96,6 +98,7 @@ Both processes will now contribute data to the same session.
 You can retrieve the analytics for a session by calling `session.get_analytics()`.
 
 <CodeGroup>
+
 ```python
 import agentops
 session = agentops.init()
@@ -104,6 +107,7 @@ session.record(ActionEvent("tools"))
 analytics = session.get_analytics()
 print(analytics)
 ```
+
 </CodeGroup>
 
 ## The AgentOps SDK Client
