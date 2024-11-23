@@ -114,10 +114,21 @@ class TestSingleSessions:
 
         # 4 requests: check_for_updates, start_session, record_event, end_session
         assert len(mock_req.request_history) == 4
-        assert mock_req.last_request.headers["X-Agentops-Api-Key"] == self.api_key
-        request_json = mock_req.last_request.json()
-        assert request_json["session"]["end_state"] == end_state
-        assert request_json["session"]["tags"] == tags
+
+        # Get the last two requests
+        end_session_req = mock_req.request_history[-1]  # This should be the end_session request
+        record_event_req = mock_req.request_history[-2]  # This should be the record_event request
+
+        # Verify end_session request
+        assert end_session_req.headers["X-Agentops-Api-Key"] == self.api_key
+        end_session_json = end_session_req.json()
+        assert end_session_json["session"]["end_state"] == end_state
+        assert end_session_json["session"]["tags"] == tags
+
+        # Verify record_event request
+        record_event_json = record_event_req.json()
+        assert "events" in record_event_json
+        assert record_event_json["events"][0]["event_type"] == self.event_type
 
         agentops.end_all_sessions()
 
