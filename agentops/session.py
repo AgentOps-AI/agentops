@@ -189,8 +189,8 @@ class Session:
 
         # Add session-specific processor to the global provider
         span_processor = BatchSpanProcessor(
-            # self._otel_exporter,
-            ConsoleSpanExporter(),
+            self._otel_exporter,
+            # ConsoleSpanExporter(),
             max_queue_size=self.config.max_queue_size,
             schedule_delay_millis=self.config.max_wait_time,
             max_export_batch_size=self.config.max_queue_size,
