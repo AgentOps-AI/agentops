@@ -376,7 +376,7 @@ class Session:
         self.tags = tags
         self._update_session()
 
-    def record(self, event: Union[Event, ErrorEvent]):
+    def record(self, event: Union[Event, ErrorEvent], flush_now=False):
         """Record an event using OpenTelemetry spans"""
         if not self.is_running:
             return
@@ -408,8 +408,7 @@ class Session:
                 event.end_timestamp = get_ISO_time()
                 span.set_attribute("event.end_timestamp", event.end_timestamp)
 
-            # Force flush to ensure events are sent immediately in tests
-            if getattr(self.config, "testing", False):
+            if flush_now:
                 for processor in SessionExporter.get_tracer_provider().span_processors:
                     processor.force_flush()
 
