@@ -28,7 +28,6 @@ dependencies = [
     "opentelemetry-api>=1.22.0,<2.0.0", # API for interfaces
     "opentelemetry-sdk>=1.22.0,<2.0.0", # SDK for implementation
     "opentelemetry-exporter-otlp-proto-http>=1.22.0,<2.0.0", # For OTLPSpanExporter
-    "pytest-sugar>=1.0.0",
 ]
 [project.optional-dependencies]
 dev = [
