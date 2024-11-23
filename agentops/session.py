@@ -437,23 +437,44 @@ class Session:
             return jwt
 
     def _start_session(self):
-        """Initialize session and get JWT token"""
-        payload = {"session": self.__dict__}
-        try:
-            res = HttpClient.post(
-                f"{self.config.endpoint}/v2/create_session",
-                json.dumps(filter_unjsonable(payload)).encode("utf-8"),
-                self.config.api_key,
-                self.config.parent_key,
+        self.queue = []
+        with self._lock:
+            payload = {"session": self.__dict__}
+            serialized_payload = json.dumps(filter_unjsonable(payload)).encode("utf-8")
+
+            try:
+                res = HttpClient.post(
+                    f"{self.config.endpoint}/v2/create_session",
+                    serialized_payload,
+                    self.config.api_key,
+                    self.config.parent_key,
+                )
+            except ApiServerException as e:
+                return logger.error(f"Could not start session - {e}")
+
+            logger.debug(res.body)
+
+            if res.code != 200:
+                return False
+
+            jwt = res.body.get("jwt", None)
+            self.jwt = jwt
+            if jwt is None:
+                return False
+
+            session_url = res.body.get(
+                "session_url",
+                f"https://app.agentops.ai/drilldown?session_id={self.session_id}",
             )
-        except ApiServerException as e:
-            return logger.error(f"Could not start session - {e}")
 
-        if res.code != 200:
-            return False
+            logger.info(
+                colored(
+                    f"\x1b[34mSession Replay: {session_url}\x1b[0m",
+                    "blue",
+                )
+            )
 
-        self.jwt = res.body.get("jwt")
-        return bool(self.jwt)
+            return True
 
     def _update_session(self) -> None:
         if not self.is_running:
