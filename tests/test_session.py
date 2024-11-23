@@ -192,6 +192,43 @@ class TestSingleSessions:
         session = Client()._safe_get_session()
         assert session is None
 
+    def test_get_analytics(self, mock_req):
+        # Arrange
+        session = agentops.start_session()
+        session.add_tags(["test-session-analytics-tag"])
+        assert session is not None
+
+        # Record some events to increment counters
+        session.record(ActionEvent("llms"))
+        session.record(ActionEvent("tools"))
+        session.record(ActionEvent("actions"))
+        session.record(ActionEvent("errors"))
+        time.sleep(0.1)
+
+        # Act
+        analytics = session.get_analytics()
+
+        # Assert
+        assert isinstance(analytics, dict)
+        assert all(key in analytics for key in ["LLM calls", "Tool calls", "Actions", "Errors", "Duration", "Cost"])
+
+        # Check specific values
+        assert analytics["LLM calls"] == 1
+        assert analytics["Tool calls"] == 1
+        assert analytics["Actions"] == 1
+        assert analytics["Errors"] == 1
+
+        # Check duration format
+        assert isinstance(analytics["Duration"], str)
+        assert "s" in analytics["Duration"]
+
+        # Check cost format (mock returns token_cost: 5)
+        assert analytics["Cost"] == "5.000000"
+
+        # End session and cleanup
+        session.end_session(end_state="Success")
+        agentops.end_all_sessions()
+
 
 class TestMultiSessions:
     def setup_method(self):
@@ -285,3 +322,49 @@ class TestMultiSessions:
             "session-2",
             "session-2-added",
         ]
+
+    def test_get_analytics_multiple_sessions(self, mock_req):
+        session_1 = agentops.start_session()
+        session_1.add_tags(["session-1", "test-analytics-tag"])
+        session_2 = agentops.start_session()
+        session_2.add_tags(["session-2", "test-analytics-tag"])
+        assert session_1 is not None
+        assert session_2 is not None
+
+        # Record events in the sessions
+        session_1.record(ActionEvent("llms"))
+        session_1.record(ActionEvent("tools"))
+        session_2.record(ActionEvent("actions"))
+        session_2.record(ActionEvent("errors"))
+
+        time.sleep(1.5)
+
+        # Act
+        analytics_1 = session_1.get_analytics()
+        analytics_2 = session_2.get_analytics()
+
+        # Assert 2 record_event requests - 2 for each session
+        assert analytics_1["LLM calls"] == 1
+        assert analytics_1["Tool calls"] == 1
+        assert analytics_1["Actions"] == 0
+        assert analytics_1["Errors"] == 0
+
+        assert analytics_2["LLM calls"] == 0
+        assert analytics_2["Tool calls"] == 0
+        assert analytics_2["Actions"] == 1
+        assert analytics_2["Errors"] == 1
+
+        # Check duration format
+        assert isinstance(analytics_1["Duration"], str)
+        assert "s" in analytics_1["Duration"]
+        assert isinstance(analytics_2["Duration"], str)
+        assert "s" in analytics_2["Duration"]
+
+        # Check cost format (mock returns token_cost: 5)
+        assert analytics_1["Cost"] == "5.000000"
+        assert analytics_2["Cost"] == "5.000000"
+
+        end_state = "Success"
+
+        session_1.end_session(end_state)
+        session_2.end_session(end_state)
