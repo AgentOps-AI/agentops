@@ -250,22 +250,6 @@ class Session:
         except Exception as e:
             logger.warning(f"Error during OpenTelemetry shutdown: {e}")
 
-        # Update session state
-        with self._lock:
-            payload = {"session": self.__dict__}
-            try:
-                res = HttpClient.post(
-                    f"{self.config.endpoint}/v2/update_session",
-                    json.dumps(filter_unjsonable(payload)).encode("utf-8"),
-                    self.config.api_key,
-                    jwt=self.jwt,
-                )
-            except ApiServerException as e:
-                return logger.error(f"Could not end session - {e}")
-
-        logger.debug(res.body)
-        token_cost = res.body.get("token_cost", "unknown")
-
         def format_duration(start_time, end_time):
             start = datetime.fromisoformat(start_time.replace("Z", "+00:00"))
             end = datetime.fromisoformat(end_time.replace("Z", "+00:00"))
@@ -282,6 +266,21 @@ class Session:
             parts.append(f"{seconds:.1f}s")
 
             return " ".join(parts)
+
+        # Update session state
+        with self._lock:
+            payload = {"session": self.__dict__}
+            try:
+                res = HttpClient.post(
+                    f"{self.config.endpoint}/v2/update_session",
+                    json.dumps(filter_unjsonable(payload)).encode("utf-8"),
+                    jwt=self.jwt,
+                )
+            except ApiServerException as e:
+                return logger.error(f"Could not end session - {e}")
+
+        logger.debug(res.body)
+        token_cost = res.body.get("token_cost", "unknown")
 
         formatted_duration = format_duration(self.init_timestamp, self.end_timestamp)
 
@@ -508,7 +507,6 @@ class Session:
             HttpClient.post(
                 f"{self.config.endpoint}/v2/create_agent",
                 serialized_payload,
-                self.config.api_key,
                 jwt=self.jwt,
             )
         except ApiServerException as e:
