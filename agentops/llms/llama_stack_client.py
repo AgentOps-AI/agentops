@@ -23,7 +23,7 @@ class LlamaStackClientProvider(InstrumentedProvider):
     def handle_response(self, response, kwargs, init_timestamp, session: Optional[Session] = None) -> dict:
         """Handle responses for LlamaStack"""
         from llama_stack_client import LlamaStackClient
-        
+
         llm_event = LLMEvent(init_timestamp=init_timestamp, params=kwargs)
         if session is not None:
             llm_event.session_id = session.session_id
@@ -47,8 +47,9 @@ class LlamaStackClientProvider(InstrumentedProvider):
                     llm_event.returns.delta += choice.delta
 
                 if choice.event_type == "complete":
-                    
-                    llm_event.prompt = [{ "content": message.content, "role": message.role } for message in kwargs["messages"]]
+                    llm_event.prompt = [
+                        {"content": message.content, "role": message.role} for message in kwargs["messages"]
+                    ]
                     llm_event.agent_id = check_call_stack_for_agent_id()
                     llm_event.completion = accumulated_delta
                     llm_event.prompt_tokens = None
@@ -88,9 +89,9 @@ class LlamaStackClientProvider(InstrumentedProvider):
 
         try:
             llm_event.returns = response
-            llm_event.agent_id = check_call_stack_for_agent_id()            
+            llm_event.agent_id = check_call_stack_for_agent_id()
             llm_event.model = kwargs["model_id"]
-            llm_event.prompt = [{ "content": message.content, "role": message.role } for message in kwargs["messages"]]
+            llm_event.prompt = [{"content": message.content, "role": message.role} for message in kwargs["messages"]]
             llm_event.prompt_tokens = None
             llm_event.completion = response.completion_message.content
             llm_event.completion_tokens = None
@@ -134,9 +135,7 @@ class LlamaStackClientProvider(InstrumentedProvider):
         # self._override_stream_async()
 
     def undo_override(self):
-        if (
-            self.original_complete is not None
-        ):
-
+        if self.original_complete is not None:
             from llama_stack_client.resources import InferenceResource
+
             InferenceResource.chat_completion = self.original_complete
