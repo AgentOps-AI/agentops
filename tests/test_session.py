@@ -1,30 +1,25 @@
+import json
 import time
+from typing import Dict, Optional, Sequence
+from unittest.mock import MagicMock, Mock, patch
 
 import pytest
 import requests_mock
 from opentelemetry import trace
 from opentelemetry.sdk.trace import ReadableSpan
-from opentelemetry.sdk.trace import TracerProvider as SDKTracerProvider
-from opentelemetry.trace import TracerProvider
-from unittest.mock import Mock, patch
+from opentelemetry.sdk.trace.export import SpanExportResult
 
 import agentops
 from agentops import ActionEvent, Client
+from agentops.http_client import HttpClient
 from agentops.singleton import clear_singletons
 
 
 @pytest.fixture(autouse=True)
 def setup_teardown(mock_req):
-    # Mock OTEL components
-    mock_tracer = Mock()
-    mock_span = Mock()
-    mock_tracer.start_as_current_span.return_value.__enter__.return_value = mock_span
-
-    with patch("opentelemetry.trace.get_tracer", return_value=mock_tracer):
-        clear_singletons()
-        trace.set_tracer_provider(None)
-        yield
-        agentops.end_all_sessions()
+    clear_singletons()
+    yield
+    agentops.end_all_sessions()  # teardown part
 
 
 @pytest.fixture(autouse=True, scope="function")
@@ -103,54 +98,6 @@ class TestSingleSessions:
 
         request_json = mock_req.last_request.json()
         assert request_json["session"]["tags"] == ["GPT-4", "test-tag", "dupe-tag"]
-
-    def test_session(self, mock_req):
-        agentops.start_session()
-
-        agentops.record(ActionEvent(self.event_type))
-        agentops.record(ActionEvent(self.event_type))
-
-        time.sleep(0.1)
-        # 3 Requests: check_for_updates, start_session, create_events (2 in 1)
-        assert len(mock_req.request_history) == 3
-        time.sleep(0.15)
-
-        assert mock_req.last_request.headers["Authorization"] == "Bearer some_jwt"
-        request_json = mock_req.last_request.json()
-        assert request_json["events"][0]["event_type"] == self.event_type
-
-        end_state = "Success"
-        agentops.end_session(end_state)
-        time.sleep(0.15)
-
-        # We should have 4 requests (additional end session)
-        assert len(mock_req.request_history) == 4
-        assert mock_req.last_request.headers["Authorization"] == "Bearer some_jwt"
-        request_json = mock_req.last_request.json()
-        assert request_json["session"]["end_state"] == end_state
-        assert len(request_json["session"]["tags"]) == 0
-
-        agentops.end_all_sessions()
-
-    def test_add_tags(self, mock_req):
-        # Arrange
-        tags = ["GPT-4"]
-        agentops.start_session(tags=tags)
-        agentops.add_tags(["test-tag", "dupe-tag"])
-        agentops.add_tags(["dupe-tag"])
-
-        # Act
-        end_state = "Success"
-        agentops.end_session(end_state)
-        time.sleep(0.15)
-
-        # Assert - Changed to check for Authorization header instead of X-Agentops-Api-Key
-        assert mock_req.last_request.headers["Authorization"] == "Bearer some_jwt"
-        request_json = mock_req.last_request.json()
-        assert request_json["session"]["end_state"] == end_state
-        assert request_json["session"]["tags"] == ["GPT-4", "test-tag", "dupe-tag"]
-
-        agentops.end_all_sessions()
 
     def test_tags(self, mock_req):
         # Arrange
