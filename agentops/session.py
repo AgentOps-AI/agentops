@@ -568,7 +568,7 @@ class Session:
             return func(*args, **kwargs)
 
         return wrapper
-    
+
     def _get_response(self) -> Optional[Response]:
         with self._lock:
             payload = {"session": self.__dict__}
@@ -584,7 +584,7 @@ class Session:
 
         logger.debug(response.body)
         return response
-    
+
     def _format_duration(self, start_time, end_time) -> str:
         start = datetime.fromisoformat(start_time.replace("Z", "+00:00"))
         end = datetime.fromisoformat(end_time.replace("Z", "+00:00"))
@@ -601,7 +601,7 @@ class Session:
         parts.append(f"{seconds:.1f}s")
 
         return " ".join(parts)
-    
+
     def _get_token_cost(self, response: Response) -> Decimal:
         token_cost = response.body.get("token_cost", "unknown")
         if token_cost == "unknown" or token_cost is None:
@@ -614,7 +614,7 @@ class Session:
             if token_cost == 0
             else "{:.6f}".format(token_cost.quantize(Decimal("0.000001"), rounding=ROUND_HALF_UP))
         )
-    
+
     def get_analytics(self) -> Optional[Dict[str, Any]]:
         if not self.end_timestamp:
             self.end_timestamp = get_ISO_time()
@@ -661,7 +661,7 @@ class Session:
         return " ".join(parts)
 
     def _get_response(self) -> Optional[Response]:
-        with self.lock:
+        with self._lock:
             payload = {"session": self.__dict__}
             try:
                 response = HttpClient.post(
