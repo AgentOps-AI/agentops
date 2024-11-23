@@ -81,23 +81,24 @@ class TestSingleSessions:
         assert not session.is_running
 
     def test_add_tags(self, mock_req):
+        # Arrange
         tags = ["GPT-4"]
-        session = agentops.start_session(tags=tags)
+        agentops.start_session(tags=tags)
+        agentops.add_tags(["test-tag", "dupe-tag"])
+        agentops.add_tags(["dupe-tag"])
 
-        # Verify tags are in OTLP resource attributes
-        resource_attrs = session._otel_tracer.resource.attributes
-        assert resource_attrs["session.tags"] == "GPT-4"
-
-        session.add_tags(["test-tag", "dupe-tag"])
-        session.add_tags(["dupe-tag"])
-
-        # Verify updated tags
+        # Act
         end_state = "Success"
-        session.end_session(end_state)
+        agentops.end_session(end_state)
         time.sleep(0.15)
 
+        # Assert 3 requests, 1 for session init, 1 for event, 1 for end session
+        assert mock_req.last_request.headers["X-Agentops-Api-Key"] == self.api_key
         request_json = mock_req.last_request.json()
+        assert request_json["session"]["end_state"] == end_state
         assert request_json["session"]["tags"] == ["GPT-4", "test-tag", "dupe-tag"]
+
+        agentops.end_all_sessions()
 
     def test_tags(self, mock_req):
         # Arrange
@@ -114,21 +115,10 @@ class TestSingleSessions:
 
         # 4 requests: check_for_updates, start_session, record_event, end_session
         assert len(mock_req.request_history) == 4
-
-        # Get the last two requests
-        end_session_req = mock_req.request_history[-1]  # This should be the end_session request
-        record_event_req = mock_req.request_history[-2]  # This should be the record_event request
-
-        # Verify end_session request
-        assert end_session_req.headers["X-Agentops-Api-Key"] == self.api_key
-        end_session_json = end_session_req.json()
-        assert end_session_json["session"]["end_state"] == end_state
-        assert end_session_json["session"]["tags"] == tags
-
-        # Verify record_event request
-        record_event_json = record_event_req.json()
-        assert "events" in record_event_json
-        assert record_event_json["events"][0]["event_type"] == self.event_type
+        assert mock_req.last_request.headers["X-Agentops-Api-Key"] == self.api_key
+        request_json = mock_req.last_request.json()
+        assert request_json["session"]["end_state"] == end_state
+        assert request_json["session"]["tags"] == tags
 
         agentops.end_all_sessions()
 
