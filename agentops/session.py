@@ -436,7 +436,6 @@ class Session:
             return jwt
 
     def _start_session(self):
-        self.queue = []
         with self._lock:
             payload = {"session": self.__dict__}
             serialized_payload = json.dumps(filter_unjsonable(payload)).encode("utf-8")
