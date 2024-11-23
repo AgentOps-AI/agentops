@@ -63,30 +63,25 @@ class SessionExporter(SpanExporter):
     Manages publishing events for Session
     """
 
-    _tracer_provider = None
-
     @staticmethod
     def get_tracer_provider():
         """Get or create the global tracer provider"""
-        if SessionExporter._tracer_provider is None:
-            # Create resource with standard OTEL attributes
-            resource = Resource.create(
-                {SERVICE_NAME: "agentops", "service.version": "1.0", "deployment.environment": "production"}
-            )
+        # Create resource with standard OTEL attributes
+        resource = Resource.create(
+            {SERVICE_NAME: "agentops", "service.version": "1.0", "deployment.environment": "production"}
+        )
 
-            # Create provider with resource
-            provider = TracerProvider(resource=resource)
+        # Create provider with resource
+        provider = TracerProvider(resource=resource)
 
-            # Set as global provider
-            trace.set_tracer_provider(provider)
+        # Set as global provider
+        trace.set_tracer_provider(provider)
 
-            # Store reference
-            SessionExporter._tracer_provider = provider
-
-        return SessionExporter._tracer_provider
+        return provider
 
     def __init__(self, session: Session, **kwargs):
         self.session = session
+        self._shutdown = False
         super().__init__(**kwargs)
 
     @property
@@ -104,12 +99,19 @@ class SessionExporter(SpanExporter):
         return f"{self.session.config.endpoint}/v2/create_events"
 
     def export(self, spans: Sequence[ReadableSpan]) -> SpanExportResult:
+        if self._shutdown:
+            return SpanExportResult.SUCCESS
+
         try:
             events = []
             for span in spans:
+                event_id = span.attributes.get("event.id")
+                if not event_id:
+                    continue
+
                 events.append(
                     {
-                        "id": span.attributes.get("event.id"),
+                        "id": event_id,
                         "event_type": span.name,
                         "init_timestamp": span.attributes.get("event.timestamp"),
                         "end_timestamp": span.attributes.get("event.end_timestamp"),
@@ -118,13 +120,12 @@ class SessionExporter(SpanExporter):
                     }
                 )
 
-            if events:
-                # Use HttpClient with proper API key handling
+            if events and not self._shutdown:
                 res = HttpClient.post(
-                    f"{self.session.config.endpoint}/v2/create_events",
+                    self.endpoint,
                     json.dumps({"events": events}).encode("utf-8"),
-                    api_key=self.session.config.api_key,  # Pass API key directly
-                    jwt=self.session.jwt,  # Pass JWT directly
+                    api_key=self.session.config.api_key,
+                    jwt=self.session.jwt,
                 )
                 if res.code == 200:
                     return SpanExportResult.SUCCESS
@@ -138,7 +139,9 @@ class SessionExporter(SpanExporter):
         return True
 
     def shutdown(self) -> None:
-        self.session.end_session()
+        """Handle shutdown gracefully"""
+        self._shutdown = True
+        # Don't call session.end_session() here to avoid circular dependencies
 
 
 class Session:
@@ -240,8 +243,9 @@ class Session:
         if not any(end_state == state.value for state in EndState):
             return logger.warning("Invalid end_state. Please use one of the EndState enums")
 
-        # 1. Stop accepting new spans
-        self.is_running = False
+        # 1. Set shutdown flag on exporter first to prevent new exports
+        if hasattr(self, "_span_processor") and hasattr(self._span_processor, "_span_exporter"):
+            self._span_processor._span_exporter._shutdown = True
 
         # 2. Set session end state
         self.end_timestamp = get_ISO_time()
@@ -250,7 +254,10 @@ class Session:
         if video is not None:
             self.video = video
 
-        # 3. Clean up OTEL components before updating session state
+        # 3. Mark session as not running
+        self.is_running = False
+
+        # 4. Clean up OTEL components
         try:
             if hasattr(self, "_span_processor"):
                 self._span_processor.force_flush(timeout_millis=30000)
@@ -259,14 +266,14 @@ class Session:
         except Exception as e:
             logger.warning(f"Error during span processor cleanup: {e}")
 
-        # 4. Update session state
+        # 5. Final session update
         with self._lock:
             payload = {"session": self.__dict__}
             try:
                 res = HttpClient.post(
                     f"{self.config.endpoint}/v2/update_session",
                     json.dumps(filter_unjsonable(payload)).encode("utf-8"),
-                    api_key=self.config.api_key,  # Add API key here
+                    api_key=self.config.api_key,
                     jwt=self.jwt,
                 )
             except ApiServerException as e:
