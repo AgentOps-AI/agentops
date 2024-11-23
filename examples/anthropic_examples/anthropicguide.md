@@ -63,9 +63,26 @@ In this example, we generate a script line for a mech based on it's health and t
 
 ## Tool Example; Cyberware
 
-In this example, we have the LLM call a simulated tool which gives one random piece of Cyberware based on the user's requested company. From there, the AI tells the user if the cyberware is good for the user's intended purpose. (combatant, hacker, etc.),
+In this example, we have the LLM call a simulated tool which gives one random piece of Cyberware based on the user's requested company. From there, the AI tells the user if the cyberware is good for the user's intended purpose. (combatant, hacker, etc.).
 
 [Access the Journal By Clicking Here](./antrophic-example-tool.ipynb)
+
+
+
+
+> [!WARNING]
+> If you want to use the tools system, please look at the journal below! This gives examples related to knowing when a tool was used, some practices for calling a function from an API and returning it among other things! Using it is NOT the same as the other examples!
+
+
+## Tool Deepdive; VEGA Hell Combat System
+
+In this example, we look at the tool system through a deeper dive; we will use our LLM assistant, VEGA, to get three missions from an API and determine which deserves priority. Then, we will send a number of enemies we want to scan for during combat while also getting our weapons inventory (using two tools at the same time). VEGA will tell us the bet way in which to combat these enemies through a combat strategy.
+
+[Access the Journal By Clicking Here](./agentops-anthropic-understanding-tools.ipynb)
+
+
+[You should also look at Anthropic's Tool Documents!](https://docs.anthropic.com/en/docs/build-with-claude/tool-use)
+
 
 
 

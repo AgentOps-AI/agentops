@@ -18,12 +18,8 @@ def mock_req():
     with requests_mock.Mocker() as m:
         url = "https://api.agentops.ai"
         m.post(url + "/v2/create_events", json={"status": "ok"})
-        m.post(
-            url + "/v2/create_session", json={"status": "success", "jwt": "some_jwt"}
-        )
-        m.post(
-            url + "/v2/reauthorize_jwt", json={"status": "success", "jwt": "some_jwt"}
-        )
+        m.post(url + "/v2/create_session", json={"status": "success", "jwt": "some_jwt"})
+        m.post(url + "/v2/reauthorize_jwt", json={"status": "success", "jwt": "some_jwt"})
         m.post(url + "/v2/update_session", json={"status": "success", "token_cost": 5})
         m.post(url + "/v2/developer_errors", json={"status": "ok"})
         m.post("https://pypi.org/pypi/agentops/json", status_code=404)
@@ -58,7 +54,7 @@ class TestSingleSessions:
         assert len(mock_req.request_history) == 3
         time.sleep(0.15)
 
-        assert mock_req.last_request.headers["Authorization"] == f"Bearer some_jwt"
+        assert mock_req.last_request.headers["Authorization"] == "Bearer some_jwt"
         request_json = mock_req.last_request.json()
         assert request_json["events"][0]["event_type"] == self.event_type
 
@@ -68,7 +64,7 @@ class TestSingleSessions:
 
         # We should have 4 requests (additional end session)
         assert len(mock_req.request_history) == 4
-        assert mock_req.last_request.headers["Authorization"] == f"Bearer some_jwt"
+        assert mock_req.last_request.headers["Authorization"] == "Bearer some_jwt"
         request_json = mock_req.last_request.json()
         assert request_json["session"]["end_state"] == end_state
         assert len(request_json["session"]["tags"]) == 0
@@ -187,6 +183,43 @@ class TestSingleSessions:
         session = Client()._safe_get_session()
         assert session is None
 
+    def test_get_analytics(self, mock_req):
+        # Arrange
+        session = agentops.start_session()
+        session.add_tags(["test-session-analytics-tag"])
+        assert session is not None
+
+        # Record some events to increment counters
+        session.record(ActionEvent("llms"))
+        session.record(ActionEvent("tools"))
+        session.record(ActionEvent("actions"))
+        session.record(ActionEvent("errors"))
+        time.sleep(0.1)
+
+        # Act
+        analytics = session.get_analytics()
+
+        # Assert
+        assert isinstance(analytics, dict)
+        assert all(key in analytics for key in ["LLM calls", "Tool calls", "Actions", "Errors", "Duration", "Cost"])
+
+        # Check specific values
+        assert analytics["LLM calls"] == 1
+        assert analytics["Tool calls"] == 1
+        assert analytics["Actions"] == 1
+        assert analytics["Errors"] == 1
+
+        # Check duration format
+        assert isinstance(analytics["Duration"], str)
+        assert "s" in analytics["Duration"]
+
+        # Check cost format (mock returns token_cost: 5)
+        assert analytics["Cost"] == "5.000000"
+
+        # End session and cleanup
+        session.end_session(end_state="Success")
+        agentops.end_all_sessions()
+
 
 class TestMultiSessions:
     def setup_method(self):
@@ -217,7 +250,7 @@ class TestMultiSessions:
 
         # 5 requests: check_for_updates, 2 start_session, 2 record_event
         assert len(mock_req.request_history) == 5
-        assert mock_req.last_request.headers["Authorization"] == f"Bearer some_jwt"
+        assert mock_req.last_request.headers["Authorization"] == "Bearer some_jwt"
         request_json = mock_req.last_request.json()
         assert request_json["events"][0]["event_type"] == self.event_type
 
@@ -228,7 +261,7 @@ class TestMultiSessions:
 
         # Additional end session request
         assert len(mock_req.request_history) == 6
-        assert mock_req.last_request.headers["Authorization"] == f"Bearer some_jwt"
+        assert mock_req.last_request.headers["Authorization"] == "Bearer some_jwt"
         request_json = mock_req.last_request.json()
         assert request_json["session"]["end_state"] == end_state
         assert len(request_json["session"]["tags"]) == 0
@@ -236,7 +269,7 @@ class TestMultiSessions:
         session_2.end_session(end_state)
         # Additional end session request
         assert len(mock_req.request_history) == 7
-        assert mock_req.last_request.headers["Authorization"] == f"Bearer some_jwt"
+        assert mock_req.last_request.headers["Authorization"] == "Bearer some_jwt"
         request_json = mock_req.last_request.json()
         assert request_json["session"]["end_state"] == end_state
         assert len(request_json["session"]["tags"]) == 0
@@ -264,12 +297,8 @@ class TestMultiSessions:
         req1 = mock_req.request_history[-1].json()
         req2 = mock_req.request_history[-2].json()
 
-        session_1_req = (
-            req1 if req1["session"]["session_id"] == session_1.session_id else req2
-        )
-        session_2_req = (
-            req2 if req2["session"]["session_id"] == session_2.session_id else req1
-        )
+        session_1_req = req1 if req1["session"]["session_id"] == session_1.session_id else req2
+        session_2_req = req2 if req2["session"]["session_id"] == session_2.session_id else req1
 
         assert session_1_req["session"]["end_state"] == end_state
         assert session_2_req["session"]["end_state"] == end_state
@@ -284,3 +313,49 @@ class TestMultiSessions:
             "session-2",
             "session-2-added",
         ]
+
+    def test_get_analytics_multiple_sessions(self, mock_req):
+        session_1 = agentops.start_session()
+        session_1.add_tags(["session-1", "test-analytics-tag"])
+        session_2 = agentops.start_session()
+        session_2.add_tags(["session-2", "test-analytics-tag"])
+        assert session_1 is not None
+        assert session_2 is not None
+
+        # Record events in the sessions
+        session_1.record(ActionEvent("llms"))
+        session_1.record(ActionEvent("tools"))
+        session_2.record(ActionEvent("actions"))
+        session_2.record(ActionEvent("errors"))
+
+        time.sleep(1.5)
+
+        # Act
+        analytics_1 = session_1.get_analytics()
+        analytics_2 = session_2.get_analytics()
+
+        # Assert 2 record_event requests - 2 for each session
+        assert analytics_1["LLM calls"] == 1
+        assert analytics_1["Tool calls"] == 1
+        assert analytics_1["Actions"] == 0
+        assert analytics_1["Errors"] == 0
+
+        assert analytics_2["LLM calls"] == 0
+        assert analytics_2["Tool calls"] == 0
+        assert analytics_2["Actions"] == 1
+        assert analytics_2["Errors"] == 1
+
+        # Check duration format
+        assert isinstance(analytics_1["Duration"], str)
+        assert "s" in analytics_1["Duration"]
+        assert isinstance(analytics_2["Duration"], str)
+        assert "s" in analytics_2["Duration"]
+
+        # Check cost format (mock returns token_cost: 5)
+        assert analytics_1["Cost"] == "5.000000"
+        assert analytics_2["Cost"] == "5.000000"
+
+        end_state = "Success"
+
+        session_1.end_session(end_state)
+        session_2.end_session(end_state)
