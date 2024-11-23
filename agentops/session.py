@@ -382,11 +382,32 @@ class Session:
         if not self.is_running:
             return
 
+        # Ensure event has required id attribute
+        if not hasattr(event, "id"):
+            event.id = uuid4()
+
         # Create session context
         token = set_value("session.id", str(self.session_id))
 
         try:
             token = attach(token)
+
+            # Prepare event data with required fields
+            event_data = filter_unjsonable(event.__dict__)
+
+            # Add required fields if missing
+            if isinstance(event, ErrorEvent):
+                if "error_type" not in event_data:
+                    event_data["error_type"] = event.event_type
+            else:
+                # Add action_type for action events
+                if event.event_type == "actions" and "action_type" not in event_data:
+                    event_data["action_type"] = event_data.get("name", "unknown_action")
+
+                # Add name for tool events
+                if event.event_type == "tools" and "name" not in event_data:
+                    event_data["name"] = event_data.get("tool_name", "unknown_tool")
+
             with self._otel_tracer.start_as_current_span(
                 name=event.event_type,
                 attributes={
@@ -395,7 +416,7 @@ class Session:
                     "event.timestamp": event.init_timestamp,
                     "session.id": str(self.session_id),
                     "session.tags": ",".join(self.tags) if self.tags else "",
-                    "event.data": json.dumps(filter_unjsonable(event.__dict__)),
+                    "event.data": json.dumps(event_data),
                 },
             ) as span:
                 if event.event_type in self.event_counts:
