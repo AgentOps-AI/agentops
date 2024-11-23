@@ -10,6 +10,7 @@ from typing import List, Optional, Sequence, Union
 from uuid import UUID, uuid4
 
 from opentelemetry import trace
+from opentelemetry.context import attach, detach, set_value
 from opentelemetry.sdk.resources import SERVICE_NAME, Resource
 from opentelemetry.sdk.trace import ReadableSpan, TracerProvider
 from opentelemetry.sdk.trace.export import BatchSpanProcessor, ConsoleSpanExporter, SpanExporter, SpanExportResult
@@ -68,15 +69,20 @@ class SessionExporter(SpanExporter):
     def get_tracer_provider():
         """Get or create the global tracer provider"""
         if SessionExporter._tracer_provider is None:
-            # Initialize with default resource
+            # Create resource with standard OTEL attributes
             resource = Resource.create(
-                {
-                    "service.name": "agentops",
-                    # Additional resource attributes can be added here
-                }
+                {SERVICE_NAME: "agentops", "service.version": "1.0", "deployment.environment": "production"}
             )
-            SessionExporter._tracer_provider = TracerProvider(resource=resource)
-            trace.set_tracer_provider(SessionExporter._tracer_provider)
+
+            # Create provider with resource
+            provider = TracerProvider(resource=resource)
+
+            # Set as global provider
+            trace.set_tracer_provider(provider)
+
+            # Store reference
+            SessionExporter._tracer_provider = provider
+
         return SessionExporter._tracer_provider
 
     def __init__(self, session: Session, **kwargs):
@@ -101,8 +107,6 @@ class SessionExporter(SpanExporter):
         try:
             events = []
             for span in spans:
-                # Convert span to AgentOps event format
-                assert hasattr(span, "attributes")
                 events.append(
                     {
                         "id": span.attributes.get("event.id"),
@@ -110,17 +114,17 @@ class SessionExporter(SpanExporter):
                         "init_timestamp": span.attributes.get("event.timestamp"),
                         "end_timestamp": span.attributes.get("event.end_timestamp"),
                         "data": span.attributes.get("event.data", {}),
-                        "session_id": str(self.session.session_id),  # Ensure session ID is included
+                        "session_id": str(self.session.session_id),
                     }
                 )
 
             if events:
-                # Use existing HttpClient to send events
+                # Use HttpClient with proper API key handling
                 res = HttpClient.post(
-                    self.endpoint,
+                    f"{self.session.config.endpoint}/v2/create_events",
                     json.dumps({"events": events}).encode("utf-8"),
-                    api_key=self.session.config.api_key,  # Pass API key separately
-                    jwt=self.session.jwt,  # Pass JWT separately
+                    api_key=self.session.config.api_key,  # Pass API key directly
+                    jwt=self.session.jwt,  # Pass JWT directly
                 )
                 if res.code == 200:
                     return SpanExportResult.SUCCESS
@@ -184,23 +188,19 @@ class Session:
         if not self.is_running:
             return
 
-        # Initialize OTEL components only after successful session start
-        self._otel_tracer = trace.get_tracer(
+        # Initialize OTEL components
+        self._tracer_provider = SessionExporter.get_tracer_provider()
+        self._otel_tracer = self._tracer_provider.get_tracer(
             f"agentops.session.{str(session_id)}",
-            schema_url="https://opentelemetry.io/schemas/1.11.0",
         )
-
-        # Configure custom AgentOps exporter
         self._otel_exporter = SessionExporter(session=self)
-
-        # Store the span processor reference for this specific session
         self._span_processor = BatchSpanProcessor(
             self._otel_exporter,
             max_queue_size=self.config.max_queue_size,
             schedule_delay_millis=self.config.max_wait_time,
             max_export_batch_size=self.config.max_queue_size,
         )
-        SessionExporter.get_tracer_provider().add_span_processor(self._span_processor)
+        self._tracer_provider.add_span_processor(self._span_processor)
 
     def set_video(self, video: str) -> None:
         """
@@ -250,12 +250,14 @@ class Session:
         if video is not None:
             self.video = video
 
-        # 3. Flush pending spans before updating session state
+        # 3. Clean up OTEL components before updating session state
         try:
             if hasattr(self, "_span_processor"):
-                self._span_processor.force_flush(timeout_millis=self.config.max_wait_time)
+                self._span_processor.force_flush(timeout_millis=30000)
+                self._span_processor.shutdown()
+                del self._span_processor
         except Exception as e:
-            logger.warning(f"Error flushing spans: {e}")
+            logger.warning(f"Error during span processor cleanup: {e}")
 
         # 4. Update session state
         with self._lock:
@@ -264,17 +266,14 @@ class Session:
                 res = HttpClient.post(
                     f"{self.config.endpoint}/v2/update_session",
                     json.dumps(filter_unjsonable(payload)).encode("utf-8"),
+                    api_key=self.config.api_key,  # Add API key here
                     jwt=self.jwt,
                 )
             except ApiServerException as e:
                 return logger.error(f"Could not end session - {e}")
 
-        # 5. Shutdown span processor after session state is updated
-        try:
-            if hasattr(self, "_span_processor"):
-                self._span_processor.shutdown()
-        except Exception as e:
-            logger.warning(f"Error during span processor shutdown: {e}")
+        logger.debug(res.body)
+        token_cost = res.body.get("token_cost", "unknown")
 
         def format_duration(start_time, end_time):
             start = datetime.fromisoformat(start_time.replace("Z", "+00:00"))
@@ -292,21 +291,6 @@ class Session:
             parts.append(f"{seconds:.1f}s")
 
             return " ".join(parts)
-
-        # Update session state
-        with self._lock:
-            payload = {"session": self.__dict__}
-            try:
-                res = HttpClient.post(
-                    f"{self.config.endpoint}/v2/update_session",
-                    json.dumps(filter_unjsonable(payload)).encode("utf-8"),
-                    jwt=self.jwt,
-                )
-            except ApiServerException as e:
-                return logger.error(f"Could not end session - {e}")
-
-        logger.debug(res.body)
-        token_cost = res.body.get("token_cost", "unknown")
 
         formatted_duration = format_duration(self.init_timestamp, self.end_timestamp)
 
@@ -391,36 +375,39 @@ class Session:
         if not self.is_running:
             return
 
-        # Use session-specific tracer with session context
-        with self._otel_tracer.start_as_current_span(
-            name=event.event_type,
-            attributes={
-                "event.id": str(event.id),
-                "event.type": event.event_type,
-                "event.timestamp": event.init_timestamp,
-                "session.id": str(self.session_id),
-                "session.tags": ",".join(self.tags) if self.tags else "",
-                "event.data": json.dumps(filter_unjsonable(event.__dict__)),
-            },
-        ) as span:
-            # Update event counts
-            if event.event_type in self.event_counts:
-                self.event_counts[event.event_type] += 1
+        # Create session context
+        token = set_value("session.id", str(self.session_id))
 
-            if isinstance(event, ErrorEvent):
-                span.set_attribute("error", True)
-                if event.trigger_event:
-                    span.set_attribute("trigger_event.id", str(event.trigger_event.id))
-                    span.set_attribute("trigger_event.type", event.trigger_event.event_type)
+        try:
+            token = attach(token)
+            with self._otel_tracer.start_as_current_span(
+                name=event.event_type,
+                attributes={
+                    "event.id": str(event.id),
+                    "event.type": event.event_type,
+                    "event.timestamp": event.init_timestamp,
+                    "session.id": str(self.session_id),
+                    "session.tags": ",".join(self.tags) if self.tags else "",
+                    "event.data": json.dumps(filter_unjsonable(event.__dict__)),
+                },
+            ) as span:
+                if event.event_type in self.event_counts:
+                    self.event_counts[event.event_type] += 1
 
-            # Set end time if not already set
-            if not event.end_timestamp:
-                event.end_timestamp = get_ISO_time()
-                span.set_attribute("event.end_timestamp", event.end_timestamp)
+                if isinstance(event, ErrorEvent):
+                    span.set_attribute("error", True)
+                    if event.trigger_event:
+                        span.set_attribute("trigger_event.id", str(event.trigger_event.id))
+                        span.set_attribute("trigger_event.type", event.trigger_event.event_type)
 
-            if flush_now:
-                for processor in SessionExporter.get_tracer_provider().span_processors:
-                    processor.force_flush()
+                if not event.end_timestamp:
+                    event.end_timestamp = get_ISO_time()
+                    span.set_attribute("event.end_timestamp", event.end_timestamp)
+
+                if flush_now and hasattr(self, "_span_processor"):
+                    self._span_processor.force_flush()
+        finally:
+            detach(token)
 
     def _send_event(self, event):
         """Direct event sending for testing"""
