@@ -577,7 +577,13 @@ class Session:
             HttpClient.post(
                 f"{self.config.endpoint}/v2/create_agent",
                 serialized_payload,
+                api_key=self.config.api_key,
                 jwt=self.jwt,
+                header={
+                    "Authorization": f"Bearer {self.jwt}",
+                    "Content-Type": "application/json",
+                    "X-Agentops-Api-Key": self.config.api_key,
+                },
             )
         except ApiServerException as e:
             return logger.error(f"Could not create agent - {e}")
