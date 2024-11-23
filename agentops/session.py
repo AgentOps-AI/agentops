@@ -85,8 +85,13 @@ class SessionExporter(SpanExporter):
 
     @property
     def headers(self):
-        # Using a computed @property as session.jwt might change
-        return {"Authorization": f"Bearer {self.session.jwt}", "Content-Type": "application/json"}
+        # Add API key to headers along with JWT
+        headers = {
+            "Authorization": f"Bearer {self.session.jwt}",
+            "Content-Type": "application/json",
+            "X-Agentops-Api-Key": self.session.config.api_key,
+        }
+        return headers
 
     @property
     def endpoint(self):
@@ -105,6 +110,7 @@ class SessionExporter(SpanExporter):
                         "init_timestamp": span.attributes.get("event.timestamp"),
                         "end_timestamp": span.attributes.get("event.end_timestamp"),
                         "data": span.attributes.get("event.data", {}),
+                        "session_id": str(self.session.session_id),  # Ensure session ID is included
                     }
                 )
 
@@ -113,8 +119,8 @@ class SessionExporter(SpanExporter):
                 res = HttpClient.post(
                     self.endpoint,
                     json.dumps({"events": events}).encode("utf-8"),
-                    self.session.config.api_key,
-                    header=self.headers,
+                    api_key=self.session.config.api_key,  # Pass API key separately
+                    jwt=self.session.jwt,  # Pass JWT separately
                 )
                 if res.code == 200:
                     return SpanExportResult.SUCCESS
@@ -345,9 +351,6 @@ class Session:
     def add_tags(self, tags: List[str]) -> None:
         """
         Append to session tags at runtime.
-
-        Args:
-            tags (List[str]): The list of tags to append.
         """
         if not self.is_running:
             return
@@ -356,16 +359,20 @@ class Session:
             if isinstance(tags, str):
                 tags = [tags]
 
+        # Initialize tags if None
         if self.tags is None:
-            self.tags = tags
-        else:
-            for tag in tags:
-                if tag not in self.tags:
-                    self.tags.append(tag)
+            self.tags = []
 
+        # Add new tags that don't exist
+        for tag in tags:
+            if tag not in self.tags:
+                self.tags.append(tag)
+
+        # Update session state immediately
         self._update_session()
 
     def set_tags(self, tags):
+        """Set session tags, replacing any existing tags"""
         if not self.is_running:
             return
 
@@ -373,7 +380,10 @@ class Session:
             if isinstance(tags, str):
                 tags = [tags]
 
-        self.tags = tags
+        # Set tags directly
+        self.tags = tags.copy()  # Make a copy to avoid reference issues
+
+        # Update session state immediately
         self._update_session()
 
     def record(self, event: Union[Event, ErrorEvent], flush_now=False):
@@ -494,6 +504,7 @@ class Session:
             return True
 
     def _update_session(self) -> None:
+        """Update session state on the server"""
         if not self.is_running:
             return
         with self._lock:  # TODO: Determine whether we really need to lock here: are incoming calls coming from other threads?
@@ -503,7 +514,7 @@ class Session:
                 res = HttpClient.post(
                     f"{self.config.endpoint}/v2/update_session",
                     json.dumps(filter_unjsonable(payload)).encode("utf-8"),
-                    self.config.api_key,
+                    # self.config.api_key,
                     jwt=self.jwt,
                 )
             except ApiServerException as e:
