@@ -382,9 +382,13 @@ class Session:
         if not self.is_running:
             return
 
-        # Ensure event has required id attribute
+        # Ensure event has all required base attributes
         if not hasattr(event, "id"):
             event.id = uuid4()
+        if not hasattr(event, "init_timestamp"):
+            event.init_timestamp = get_ISO_time()
+        if not hasattr(event, "end_timestamp"):
+            event.end_timestamp = get_ISO_time()
 
         # Create session context
         token = set_value("session.id", str(self.session_id))
@@ -392,21 +396,24 @@ class Session:
         try:
             token = attach(token)
 
-            # Prepare event data with required fields
-            event_data = filter_unjsonable(event.__dict__)
+            # Create a copy of event data to modify
+            event_data = dict(filter_unjsonable(event.__dict__))
 
-            # Add required fields if missing
+            # Add required fields based on event type
             if isinstance(event, ErrorEvent):
-                if "error_type" not in event_data:
-                    event_data["error_type"] = event.event_type
-            else:
-                # Add action_type for action events
-                if event.event_type == "actions" and "action_type" not in event_data:
+                event_data["error_type"] = getattr(event, "error_type", event.event_type)
+            elif event.event_type == "actions":
+                # Ensure action events have action_type
+                if "action_type" not in event_data:
                     event_data["action_type"] = event_data.get("name", "unknown_action")
-
-                # Add name for tool events
-                if event.event_type == "tools" and "name" not in event_data:
+                if "name" not in event_data:
+                    event_data["name"] = event_data.get("action_type", "unknown_action")
+            elif event.event_type == "tools":
+                # Ensure tool events have name
+                if "name" not in event_data:
                     event_data["name"] = event_data.get("tool_name", "unknown_tool")
+                if "tool_name" not in event_data:
+                    event_data["tool_name"] = event_data.get("name", "unknown_tool")
 
             with self._otel_tracer.start_as_current_span(
                 name=event.event_type,
@@ -414,6 +421,7 @@ class Session:
                     "event.id": str(event.id),
                     "event.type": event.event_type,
                     "event.timestamp": event.init_timestamp,
+                    "event.end_timestamp": event.end_timestamp,
                     "session.id": str(self.session_id),
                     "session.tags": ",".join(self.tags) if self.tags else "",
                     "event.data": json.dumps(event_data),
@@ -424,13 +432,9 @@ class Session:
 
                 if isinstance(event, ErrorEvent):
                     span.set_attribute("error", True)
-                    if event.trigger_event:
+                    if hasattr(event, "trigger_event") and event.trigger_event:
                         span.set_attribute("trigger_event.id", str(event.trigger_event.id))
                         span.set_attribute("trigger_event.type", event.trigger_event.event_type)
-
-                if not event.end_timestamp:
-                    event.end_timestamp = get_ISO_time()
-                    span.set_attribute("event.end_timestamp", event.end_timestamp)
 
                 if flush_now and hasattr(self, "_span_processor"):
                     self._span_processor.force_flush()
