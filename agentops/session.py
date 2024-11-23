@@ -257,6 +257,7 @@ class Session:
                 res = HttpClient.post(
                     f"{self.config.endpoint}/v2/update_session",
                     json.dumps(filter_unjsonable(payload)).encode("utf-8"),
+                    self.config.api_key,
                     jwt=self.jwt,
                 )
             except ApiServerException as e:
@@ -464,6 +465,7 @@ class Session:
                 res = HttpClient.post(
                     f"{self.config.endpoint}/v2/update_session",
                     json.dumps(filter_unjsonable(payload)).encode("utf-8"),
+                    self.config.api_key,
                     jwt=self.jwt,
                 )
             except ApiServerException as e:
@@ -485,6 +487,7 @@ class Session:
             HttpClient.post(
                 f"{self.config.endpoint}/v2/create_agent",
                 serialized_payload,
+                self.config.api_key,
                 jwt=self.jwt,
             )
         except ApiServerException as e:
