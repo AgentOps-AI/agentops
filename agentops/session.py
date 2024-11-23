@@ -172,14 +172,30 @@ class Session:
 
     Args:
         session_id (UUID): The session id is used to record particular runs.
+        config (Configuration): The configuration object for the session.
         tags (List[str], optional): Tags that can be used for grouping or sorting later. Examples could be ["GPT-4"].
+        host_env (dict, optional): A dictionary containing host and environment data.
 
     Attributes:
-        init_timestamp (float): The timestamp for when the session started, represented as seconds since the epoch.
-        end_timestamp (float, optional): The timestamp for when the session ended, represented as seconds since the epoch. This is only set after end_session is called.
-        end_state (str, optional): The final state of the session. Suggested: "Success", "Fail", "Indeterminate". Defaults to "Indeterminate".
+        init_timestamp (str): The ISO timestamp for when the session started.
+        end_timestamp (str, optional): The ISO timestamp for when the session ended. Only set after end_session is called.
+        end_state (str, optional): The final state of the session. Options: "Success", "Fail", "Indeterminate". Defaults to "Indeterminate".
         end_state_reason (str, optional): The reason for ending the session.
-
+        session_id (UUID): Unique identifier for the session.
+        tags (List[str]): List of tags associated with the session for grouping and filtering.
+        video (str, optional): URL to a video recording of the session.
+        host_env (dict, optional): Dictionary containing host and environment data.
+        config (Configuration): Configuration object containing settings for the session.
+        jwt (str, optional): JSON Web Token for authentication with the AgentOps API.
+        token_cost (Decimal): Running total of token costs for the session.
+        event_counts (dict): Counter for different types of events:
+            - llms: Number of LLM calls
+            - tools: Number of tool calls
+            - actions: Number of actions
+            - errors: Number of errors
+            - apis: Number of API calls
+        session_url (str, optional): URL to view the session in the AgentOps dashboard.
+        is_running (bool): Flag indicating if the session is currently active.
     """
 
     def __init__(
@@ -209,6 +225,7 @@ class Session:
             "errors": 0,
             "apis": 0,
         }
+        self.session_url: Optional[str] = None
 
         # Start session first to get JWT
         self.is_running = self._start_session()
@@ -265,7 +282,8 @@ class Session:
             return None
 
         if not any(end_state == state.value for state in EndState):
-            return logger.warning("Invalid end_state. Please use one of the EndState enums")
+            logger.warning("Invalid end_state. Please use one of the EndState enums")
+            return None
 
         # 1. Set shutdown flag on exporter first to prevent new exports
         if hasattr(self, "_span_processor") and hasattr(self._span_processor, "_span_exporter"):
@@ -311,7 +329,6 @@ class Session:
                 "blue",
             )
         )
-
         active_sessions.remove(self)
         return self._token_cost
 
@@ -599,6 +616,81 @@ class Session:
         )
     
     def get_analytics(self) -> Optional[Dict[str, Any]]:
+        if not self.end_timestamp:
+            self.end_timestamp = get_ISO_time()
+
+        formatted_duration = self._format_duration(self.init_timestamp, self.end_timestamp)
+
+        response = self._get_response()
+        if response is None:
+            return None
+
+        self.token_cost = self._get_token_cost(response)
+        formatted_cost = self._format_token_cost(self.token_cost)
+
+        self.session_url = response.body.get(
+            "session_url",
+            f"https://app.agentops.ai/drilldown?session_id={self.session_id}",
+        )
+
+        return {
+            "LLM calls": self.event_counts["llms"],
+            "Tool calls": self.event_counts["tools"],
+            "Actions": self.event_counts["actions"],
+            "Errors": self.event_counts["errors"],
+            "Duration": formatted_duration,
+            "Cost": formatted_cost,
+        }
+
+    @staticmethod
+    def _format_duration(start_time, end_time):
+        start = datetime.fromisoformat(start_time.replace("Z", "+00:00"))
+        end = datetime.fromisoformat(end_time.replace("Z", "+00:00"))
+        duration = end - start
+
+        hours, remainder = divmod(duration.total_seconds(), 3600)
+        minutes, seconds = divmod(remainder, 60)
+
+        parts = []
+        if hours > 0:
+            parts.append(f"{int(hours)}h")
+        if minutes > 0:
+            parts.append(f"{int(minutes)}m")
+        parts.append(f"{seconds:.1f}s")
+
+        return " ".join(parts)
+
+    def _get_response(self) -> Optional[Response]:
+        with self.lock:
+            payload = {"session": self.__dict__}
+            try:
+                response = HttpClient.post(
+                    f"{self.config.endpoint}/v2/update_session",
+                    json.dumps(filter_unjsonable(payload)).encode("utf-8"),
+                    jwt=self.jwt,
+                )
+            except ApiServerException as e:
+                logger.error(f"Could not fetch response from server - {e}")
+                return None
+
+        logger.debug(response.body)
+        return response
+
+    def _get_token_cost(self, response: Response) -> Decimal:
+        token_cost = response.body.get("token_cost", "unknown")
+        if token_cost == "unknown" or token_cost is None:
+            return Decimal(0)
+        return Decimal(token_cost)
+
+    @staticmethod
+    def _format_token_cost(token_cost_d):
+        return (
+            "{:.2f}".format(token_cost_d)
+            if token_cost_d == 0
+            else "{:.6f}".format(token_cost_d.quantize(Decimal("0.000001"), rounding=ROUND_HALF_UP))
+        )
+
+    def get_analytics(self) -> Optional[dict[str, Union[Decimal, str]]]:
         if not self.end_timestamp:
             self.end_timestamp = get_ISO_time()
 
