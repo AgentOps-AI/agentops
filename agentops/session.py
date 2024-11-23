@@ -105,17 +105,33 @@ class SessionExporter(SpanExporter):
         try:
             events = []
             for span in spans:
-                event_id = span.attributes.get("event.id")
-                if not event_id:
-                    continue
+                event_data = json.loads(span.attributes.get("event.data", "{}"))
+
+                # Format event data based on event type
+                if span.name == "actions":
+                    # Action events expect action_type, params, returns
+                    formatted_data = {
+                        "action_type": event_data.get("action_type", event_data.get("name", "unknown_action")),
+                        "params": event_data.get("params", {}),
+                        "returns": event_data.get("returns"),
+                    }
+                elif span.name == "tools":
+                    # Tool events expect name, params, returns
+                    formatted_data = {
+                        "name": event_data.get("name", event_data.get("tool_name", "unknown_tool")),
+                        "params": event_data.get("params", {}),
+                        "returns": event_data.get("returns"),
+                    }
+                else:
+                    formatted_data = event_data
 
                 events.append(
                     {
-                        "id": event_id,
+                        "id": span.attributes.get("event.id"),
                         "event_type": span.name,
                         "init_timestamp": span.attributes.get("event.timestamp"),
                         "end_timestamp": span.attributes.get("event.end_timestamp"),
-                        "data": span.attributes.get("event.data", {}),
+                        **formatted_data,  # Spread the formatted data at top level
                         "session_id": str(self.session.session_id),
                     }
                 )
@@ -126,7 +142,13 @@ class SessionExporter(SpanExporter):
                     json.dumps({"events": events}).encode("utf-8"),
                     api_key=self.session.config.api_key,
                     jwt=self.session.jwt,
+                    header={
+                        "Authorization": f"Bearer {self.session.jwt}",
+                        "Content-Type": "application/json",
+                        "X-AgentOps-Api-Key": self.session.config.api_key,
+                    },
                 )
+
                 if res.code == 200:
                     return SpanExportResult.SUCCESS
 
