@@ -189,8 +189,7 @@ class Session:
 
         # Add session-specific processor to the global provider
         span_processor = BatchSpanProcessor(
-            # self._otel_exporter,
-            ConsoleSpanExporter(),
+            self._otel_exporter,
             max_queue_size=self.config.max_queue_size,
             schedule_delay_millis=self.config.max_wait_time,
             max_export_batch_size=self.config.max_queue_size,
@@ -389,9 +388,10 @@ class Session:
                 event.end_timestamp = get_ISO_time()
                 span.set_attribute("event.end_timestamp", event.end_timestamp)
 
-            # For testing - directly send event
+            # Force flush to ensure events are sent immediately in tests
             if getattr(self.config, "testing", False):
-                self._send_event(event)
+                for processor in SessionExporter.get_tracer_provider().span_processors:
+                    processor.force_flush()
 
     def _send_event(self, event):
         """Direct event sending for testing"""
