@@ -187,15 +187,14 @@ class Session:
         # Configure custom AgentOps exporter
         self._otel_exporter = SessionExporter(session=self)
 
-        # Add session-specific processor to the global provider
-        span_processor = BatchSpanProcessor(
+        # Store the span processor reference for this specific session
+        self._span_processor = BatchSpanProcessor(
             self._otel_exporter,
             max_queue_size=self.config.max_queue_size,
             schedule_delay_millis=self.config.max_wait_time,
             max_export_batch_size=self.config.max_queue_size,
         )
-
-        SessionExporter.get_tracer_provider().add_span_processor(span_processor)
+        SessionExporter.get_tracer_provider().add_span_processor(self._span_processor)
 
     def set_video(self, video: str) -> None:
         """
@@ -208,18 +207,20 @@ class Session:
 
     def _flush_spans(self) -> bool:
         """
-        Flush all pending spans with timeout.
+        Flush pending spans for this specific session with timeout.
         Returns True if flush was successful, False otherwise.
         """
-        if not hasattr(self, "_tracer"):
+        if not hasattr(self, "_span_processor"):
             return True
 
-        success = True
-        for processor in SessionExporter.get_tracer_provider().span_processors:
-            if not processor.force_flush(timeout_millis=self.config.max_wait_time):
+        try:
+            success = self._span_processor.force_flush(timeout_millis=self.config.max_wait_time)
+            if not success:
                 logger.warning("Failed to flush all spans before session end")
-                success = False
-        return success
+            return success
+        except Exception as e:
+            logger.warning(f"Error flushing spans: {e}")
+            return False
 
     def end_session(
         self,
@@ -233,22 +234,41 @@ class Session:
         if not any(end_state == state.value for state in EndState):
             return logger.warning("Invalid end_state. Please use one of the EndState enums")
 
+        # 1. Stop accepting new spans
+        self.is_running = False
+
+        # 2. Set session end state
         self.end_timestamp = get_ISO_time()
         self.end_state = end_state
         self.end_state_reason = end_state_reason
         if video is not None:
             self.video = video
 
-        # Shutdown sequence
+        # 3. Flush pending spans before updating session state
         try:
-            # 1. Stop accepting new spans
-            self.is_running = False
-
-            # 2. Flush all pending spans
-            self._flush_spans()
-
+            if hasattr(self, "_span_processor"):
+                self._span_processor.force_flush(timeout_millis=self.config.max_wait_time)
         except Exception as e:
-            logger.warning(f"Error during OpenTelemetry shutdown: {e}")
+            logger.warning(f"Error flushing spans: {e}")
+
+        # 4. Update session state
+        with self._lock:
+            payload = {"session": self.__dict__}
+            try:
+                res = HttpClient.post(
+                    f"{self.config.endpoint}/v2/update_session",
+                    json.dumps(filter_unjsonable(payload)).encode("utf-8"),
+                    jwt=self.jwt,
+                )
+            except ApiServerException as e:
+                return logger.error(f"Could not end session - {e}")
+
+        # 5. Shutdown span processor after session state is updated
+        try:
+            if hasattr(self, "_span_processor"):
+                self._span_processor.shutdown()
+        except Exception as e:
+            logger.warning(f"Error during span processor shutdown: {e}")
 
         def format_duration(start_time, end_time):
             start = datetime.fromisoformat(start_time.replace("Z", "+00:00"))
@@ -477,7 +497,7 @@ class Session:
     def _update_session(self) -> None:
         if not self.is_running:
             return
-        with self._lock:
+        with self._lock:  # TODO: Determine whether we really need to lock here: are incoming calls coming from other threads?
             payload = {"session": self.__dict__}
 
             try:
