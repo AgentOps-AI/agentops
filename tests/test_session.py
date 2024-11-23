@@ -53,32 +53,32 @@ class TestSingleSessions:
         agentops.init(api_key=self.api_key, max_wait_time=50, auto_start_session=False)
 
     def test_session(self, mock_req):
-        session = agentops.start_session()
-        assert session is not None
-        assert session._otel_tracer is not None
+        agentops.start_session()
 
-        # Record events and verify spans are created
         agentops.record(ActionEvent(self.event_type))
         agentops.record(ActionEvent(self.event_type))
 
-        # Allow time for BatchSpanProcessor to process
         time.sleep(0.1)
-
-        # Verify OTLP exporter configuration
-        assert session._otel_exporter.endpoint == f"{session.config.endpoint}/v2/create_events"
-        assert session._otel_exporter.headers["Authorization"] == "Bearer some_jwt"
-
-        # End session and verify cleanup
-        end_state = "Success"
-        token_cost = agentops.end_session(end_state)
+        # 3 Requests: check_for_updates, start_session, create_events (2 in 1)
+        assert len(mock_req.request_history) == 3
         time.sleep(0.15)
 
-        assert token_cost == 5
-        assert session.end_state == end_state
-        assert len(session.tags) == 0
+        assert mock_req.last_request.headers["Authorization"] == "Bearer some_jwt"
+        request_json = mock_req.last_request.json()
+        assert request_json["events"][0]["event_type"] == self.event_type
 
-        # Verify session shutdown
-        assert not session.is_running
+        end_state = "Success"
+        agentops.end_session(end_state)
+        time.sleep(0.15)
+
+        # We should have 4 requests (additional end session)
+        assert len(mock_req.request_history) == 4
+        assert mock_req.last_request.headers["Authorization"] == "Bearer some_jwt"
+        request_json = mock_req.last_request.json()
+        assert request_json["session"]["end_state"] == end_state
+        assert len(request_json["session"]["tags"]) == 0
+
+        agentops.end_all_sessions()
 
     def test_add_tags(self, mock_req):
         # Arrange
