@@ -173,16 +173,16 @@ class Session:
             "apis": 0,
         }
 
-        # Get tracer from global provider with session-specific context
-        self._otel_tracer = trace.get_tracer(
-            f"agentops.session.{str(session_id)}",  # Include session ID for unique identification
-            schema_url="https://opentelemetry.io/schemas/1.11.0",
-        )
-
         # Start session first to get JWT
         self.is_running = self._start_session()
         if not self.is_running:
             return
+
+        # Initialize OTEL components only after successful session start
+        self._otel_tracer = trace.get_tracer(
+            f"agentops.session.{str(session_id)}",
+            schema_url="https://opentelemetry.io/schemas/1.11.0",
+        )
 
         # Configure custom AgentOps exporter
         self._otel_exporter = SessionExporter(session=self)
