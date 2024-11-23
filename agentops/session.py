@@ -189,8 +189,8 @@ class Session:
 
         # Add session-specific processor to the global provider
         span_processor = BatchSpanProcessor(
-            self._otel_exporter,
-            # ConsoleSpanExporter(),
+            # self._otel_exporter,
+            ConsoleSpanExporter(),
             max_queue_size=self.config.max_queue_size,
             schedule_delay_millis=self.config.max_wait_time,
             max_export_batch_size=self.config.max_queue_size,
@@ -369,8 +369,8 @@ class Session:
                 "event.id": str(event.id),
                 "event.type": event.event_type,
                 "event.timestamp": event.init_timestamp,
-                "session.id": str(self.session_id),  # Add session context
-                "session.tags": ",".join(self.tags) if self.tags else "",  # Add session tags
+                "session.id": str(self.session_id),
+                "session.tags": ",".join(self.tags) if self.tags else "",
                 "event.data": json.dumps(filter_unjsonable(event.__dict__)),
             },
         ) as span:
@@ -388,6 +388,33 @@ class Session:
             if not event.end_timestamp:
                 event.end_timestamp = get_ISO_time()
                 span.set_attribute("event.end_timestamp", event.end_timestamp)
+
+            # For testing - directly send event
+            if getattr(self.config, "testing", False):
+                self._send_event(event)
+
+    def _send_event(self, event):
+        """Direct event sending for testing"""
+        try:
+            payload = {
+                "events": [
+                    {
+                        "id": str(event.id),
+                        "event_type": event.event_type,
+                        "init_timestamp": event.init_timestamp,
+                        "end_timestamp": event.end_timestamp,
+                        "data": filter_unjsonable(event.__dict__),
+                    }
+                ]
+            }
+
+            HttpClient.post(
+                f"{self.config.endpoint}/v2/create_events",
+                json.dumps(payload).encode("utf-8"),
+                jwt=self.jwt,
+            )
+        except Exception as e:
+            logger.error(f"Failed to send event: {e}")
 
     def _reauthorize_jwt(self) -> Union[str, None]:
         with self._lock:

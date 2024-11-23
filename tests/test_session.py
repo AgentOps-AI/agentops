@@ -6,6 +6,7 @@ from opentelemetry import trace
 from opentelemetry.sdk.trace import ReadableSpan
 from opentelemetry.sdk.trace import TracerProvider as SDKTracerProvider
 from opentelemetry.trace import TracerProvider
+from unittest.mock import Mock, patch
 
 import agentops
 from agentops import ActionEvent, Client
@@ -14,10 +15,16 @@ from agentops.singleton import clear_singletons
 
 @pytest.fixture(autouse=True)
 def setup_teardown(mock_req):
-    clear_singletons()
-    trace.set_tracer_provider(None)
-    yield
-    agentops.end_all_sessions()  # teardown part
+    # Mock OTEL components
+    mock_tracer = Mock()
+    mock_span = Mock()
+    mock_tracer.start_as_current_span.return_value.__enter__.return_value = mock_span
+
+    with patch("opentelemetry.trace.get_tracer", return_value=mock_tracer):
+        clear_singletons()
+        trace.set_tracer_provider(None)
+        yield
+        agentops.end_all_sessions()
 
 
 @pytest.fixture(autouse=True, scope="function")
