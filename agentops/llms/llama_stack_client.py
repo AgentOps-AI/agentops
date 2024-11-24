@@ -78,15 +78,6 @@ class LlamaStackClientProvider(InstrumentedProvider):
 
             return generator()
 
-        elif inspect.isasyncgen(response):
-
-            async def async_generator():
-                async for chunk in response:
-                    handle_stream_chunk(chunk)
-                    yield chunk
-
-            return async_generator()
-
         try:
             llm_event.returns = response
             llm_event.agent_id = check_call_stack_for_agent_id()
