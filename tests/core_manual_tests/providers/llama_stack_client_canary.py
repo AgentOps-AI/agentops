@@ -48,8 +48,10 @@ async def stream_test():
         log.print()
 
 
-async def main():
-    await stream_test()
+def main():
+    asyncio.run(stream_test())
+
+main()
 
 
 agentops.end_session(end_state="Success")
