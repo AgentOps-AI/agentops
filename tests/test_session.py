@@ -535,3 +535,36 @@ class TestSessionExporter:
 
         # Verify no request was made
         assert not any(req.url.endswith("/v2/create_events") for req in mock_req.request_history[-1:])
+
+    def test_export_llm_event(self, mock_req):
+        """Test export of LLM event with specific handling of timestamps"""
+        llm_attributes = {
+            "event.data": json.dumps(
+                {
+                    "prompt": "test prompt",
+                    "completion": "test completion",
+                    "model": "test-model",
+                    "tokens": 100,
+                    "cost": 0.002,
+                }
+            )
+        }
+
+        span = self.create_test_span(name="llms", attributes=llm_attributes)
+        result = self.exporter.export([span])
+
+        assert result == SpanExportResult.SUCCESS
+
+        last_request = mock_req.request_history[-1].json()
+        event = last_request["events"][0]
+
+        # Verify LLM specific fields
+        assert event["prompt"] == "test prompt"
+        assert event["completion"] == "test completion"
+        assert event["model"] == "test-model"
+        assert event["tokens"] == 100
+        assert event["cost"] == 0.002
+
+        # Verify timestamps
+        assert event["init_timestamp"] is not None
+        assert event["end_timestamp"] is not None
