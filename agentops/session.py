@@ -391,7 +391,7 @@ class Session:
             event.id = uuid4()
         if not hasattr(event, "init_timestamp"):
             event.init_timestamp = get_ISO_time()
-        if not hasattr(event, "end_timestamp"):
+        if not hasattr(event, "end_timestamp") or event.end_timestamp is None:
             event.end_timestamp = get_ISO_time()
 
         # Create session context
@@ -424,8 +424,8 @@ class Session:
                 attributes={
                     "event.id": str(event.id),
                     "event.type": event.event_type,
-                    "event.timestamp": event.init_timestamp,
-                    "event.end_timestamp": event.end_timestamp,
+                    "event.timestamp": event.init_timestamp or get_ISO_time(),
+                    "event.end_timestamp": event.end_timestamp or get_ISO_time(),
                     "session.id": str(self.session_id),
                     "session.tags": ",".join(self.tags) if self.tags else "",
                     "event.data": json.dumps(event_data),
