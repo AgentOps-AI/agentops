@@ -568,3 +568,23 @@ class TestSessionExporter:
         # Verify timestamps
         assert event["init_timestamp"] is not None
         assert event["end_timestamp"] is not None
+
+    def test_export_with_missing_id(self, mock_req):
+        """Test handling of missing event ID"""
+        attributes = {"event.id": None}
+
+        span = self.create_test_span(attributes=attributes)
+        result = self.exporter.export([span])
+
+        assert result == SpanExportResult.SUCCESS
+
+        last_request = mock_req.request_history[-1].json()
+        event = last_request["events"][0]
+
+        # Verify ID is present and valid UUID
+        assert "id" in event
+        assert event["id"] is not None
+        try:
+            UUID(event["id"])
+        except ValueError:
+            pytest.fail("Event ID is not a valid UUID")

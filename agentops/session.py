@@ -116,7 +116,6 @@ class SessionExporter(SpanExporter):
                         "returns": event_data.get("returns"),
                     }
                 elif span.name == "tools":
-                    # Tool events expect name, params, returns
                     formatted_data = {
                         "name": event_data.get("name", event_data.get("tool_name", "unknown_tool")),
                         "params": event_data.get("params", {}),
@@ -136,9 +135,14 @@ class SessionExporter(SpanExporter):
                 if end_timestamp is None:
                     end_timestamp = current_time
 
+                # Get event ID, generate new one if missing
+                event_id = span.attributes.get("event.id")
+                if event_id is None:
+                    event_id = str(uuid4())
+
                 events.append(
                     {
-                        "id": span.attributes.get("event.id"),
+                        "id": event_id,  # Ensure ID is always present
                         "event_type": span.name,
                         "init_timestamp": init_timestamp,
                         "end_timestamp": end_timestamp,
