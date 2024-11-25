@@ -2,12 +2,17 @@ import json
 import time
 from typing import Dict, Optional, Sequence
 from unittest.mock import MagicMock, Mock, patch
+from datetime import datetime, timezone
 
 import pytest
 import requests_mock
 from opentelemetry import trace
 from opentelemetry.sdk.trace import ReadableSpan
+from opentelemetry.trace import SpanContext, SpanKind
 from opentelemetry.sdk.trace.export import SpanExportResult
+from opentelemetry.trace import Status, StatusCode
+from opentelemetry.trace.span import TraceState
+from uuid import UUID
 
 import agentops
 from agentops import ActionEvent, Client
@@ -368,3 +373,165 @@ class TestMultiSessions:
 
         session_1.end_session(end_state)
         session_2.end_session(end_state)
+
+
+class TestSessionExporter:
+    def setup_method(self):
+        self.api_key = "11111111-1111-4111-8111-111111111111"
+        # Initialize agentops first
+        agentops.init(api_key=self.api_key, max_wait_time=50, auto_start_session=False)
+        self.session = agentops.start_session()
+        assert self.session is not None  # Verify session was created
+        self.exporter = self.session._otel_exporter
+
+    def teardown_method(self):
+        """Clean up after each test"""
+        if self.session:
+            self.session.end_session("Success")
+        agentops.end_all_sessions()
+        clear_singletons()
+
+    def create_test_span(self, name="test_span", attributes=None):
+        """Helper to create a test span with required attributes"""
+        if attributes is None:
+            attributes = {}
+
+        # Ensure required attributes are present
+        base_attributes = {
+            "event.id": str(UUID(int=1)),
+            "event.type": "test_type",
+            "event.timestamp": datetime.now(timezone.utc).isoformat(),
+            "event.end_timestamp": datetime.now(timezone.utc).isoformat(),
+            "event.data": json.dumps({"test": "data"}),
+            "session.id": str(self.session.session_id),
+        }
+        base_attributes.update(attributes)
+
+        context = SpanContext(
+            trace_id=0x000000000000000000000000DEADBEEF,
+            span_id=0x00000000DEADBEF0,
+            is_remote=False,
+            trace_state=TraceState(),
+        )
+
+        return ReadableSpan(
+            name=name,
+            context=context,
+            kind=SpanKind.INTERNAL,
+            status=Status(StatusCode.OK),
+            start_time=123,
+            end_time=456,
+            attributes=base_attributes,
+            events=[],
+            links=[],
+            resource=self.session._tracer_provider.resource,
+        )
+
+    def test_export_basic_span(self, mock_req):
+        """Test basic span export with all required fields"""
+        span = self.create_test_span()
+        result = self.exporter.export([span])
+
+        assert result == SpanExportResult.SUCCESS
+        assert len(mock_req.request_history) > 0
+
+        last_request = mock_req.last_request.json()
+        assert "events" in last_request
+        event = last_request["events"][0]
+
+        # Verify required fields
+        assert "id" in event
+        assert "event_type" in event
+        assert "init_timestamp" in event
+        assert "end_timestamp" in event
+        assert "session_id" in event
+
+    def test_export_action_event(self, mock_req):
+        """Test export of action event with specific formatting"""
+        action_attributes = {
+            "event.data": json.dumps(
+                {"action_type": "test_action", "params": {"param1": "value1"}, "returns": "test_return"}
+            )
+        }
+
+        span = self.create_test_span(name="actions", attributes=action_attributes)
+        result = self.exporter.export([span])
+
+        assert result == SpanExportResult.SUCCESS
+
+        last_request = mock_req.request_history[-1].json()
+        event = last_request["events"][0]
+
+        assert event["action_type"] == "test_action"
+        assert event["params"] == {"param1": "value1"}
+        assert event["returns"] == "test_return"
+
+    def test_export_tool_event(self, mock_req):
+        """Test export of tool event with specific formatting"""
+        tool_attributes = {
+            "event.data": json.dumps({"name": "test_tool", "params": {"param1": "value1"}, "returns": "test_return"})
+        }
+
+        span = self.create_test_span(name="tools", attributes=tool_attributes)
+        result = self.exporter.export([span])
+
+        assert result == SpanExportResult.SUCCESS
+
+        last_request = mock_req.request_history[-1].json()
+        event = last_request["events"][0]
+
+        assert event["name"] == "test_tool"
+        assert event["params"] == {"param1": "value1"}
+        assert event["returns"] == "test_return"
+
+    def test_export_with_missing_timestamp(self, mock_req):
+        """Test handling of missing end_timestamp"""
+        attributes = {"event.end_timestamp": None}  # This should be handled gracefully
+
+        span = self.create_test_span(attributes=attributes)
+        result = self.exporter.export([span])
+
+        assert result == SpanExportResult.SUCCESS
+
+        last_request = mock_req.request_history[-1].json()
+        event = last_request["events"][0]
+
+        # Verify end_timestamp is present and valid
+        assert "end_timestamp" in event
+        assert event["end_timestamp"] is not None
+
+    def test_export_with_missing_timestamps_advanced(self, mock_req):
+        """Test handling of missing timestamps"""
+        attributes = {"event.timestamp": None, "event.end_timestamp": None}
+
+        span = self.create_test_span(attributes=attributes)
+        result = self.exporter.export([span])
+
+        assert result == SpanExportResult.SUCCESS
+
+        last_request = mock_req.request_history[-1].json()
+        event = last_request["events"][0]
+
+        # Verify timestamps are present and valid
+        assert "init_timestamp" in event
+        assert "end_timestamp" in event
+        assert event["init_timestamp"] is not None
+        assert event["end_timestamp"] is not None
+
+        # Verify timestamps are in ISO format
+        try:
+            datetime.fromisoformat(event["init_timestamp"].replace("Z", "+00:00"))
+            datetime.fromisoformat(event["end_timestamp"].replace("Z", "+00:00"))
+        except ValueError:
+            pytest.fail("Timestamps are not in valid ISO format")
+
+    def test_export_with_shutdown(self, mock_req):
+        """Test export behavior when shutdown"""
+        self.exporter._shutdown = True
+        span = self.create_test_span()
+
+        result = self.exporter.export([span])
+        assert result == SpanExportResult.SUCCESS
+
+        # Verify no request was made
+        assert not any(req.url.endswith("/v2/create_events") for req in mock_req.request_history[-1:])
