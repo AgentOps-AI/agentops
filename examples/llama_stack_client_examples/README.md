@@ -38,7 +38,7 @@ docker run \
   -it \
   -p $LLAMA_STACK_PORT:$LLAMA_STACK_PORT \
   -v ~/.llama:/root/.llama \
-  -v ./llama-stack-server-config.yaml:/root/my-run.yaml \
+  -v ./examples/llama_stack_client_examples/llama-stack-server-config.yaml:/root/my-run.yaml \
   llamastack/distribution-ollama \
   --yaml-config /root/my-run.yaml \
   --port $LLAMA_STACK_PORT \
