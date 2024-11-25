@@ -4,7 +4,7 @@ import asyncio
 import functools
 import json
 import threading
-from datetime import datetime
+from datetime import datetime, timezone
 from decimal import ROUND_HALF_UP, Decimal
 from typing import Any, Dict, List, Optional, Sequence, Union
 from uuid import UUID, uuid4
@@ -125,12 +125,23 @@ class SessionExporter(SpanExporter):
                 else:
                     formatted_data = event_data
 
+                # Get timestamps, providing defaults if missing
+                current_time = datetime.now(timezone.utc).isoformat()
+                init_timestamp = span.attributes.get("event.timestamp")
+                end_timestamp = span.attributes.get("event.end_timestamp")
+
+                # Handle missing timestamps
+                if init_timestamp is None:
+                    init_timestamp = current_time
+                if end_timestamp is None:
+                    end_timestamp = current_time
+
                 events.append(
                     {
                         "id": span.attributes.get("event.id"),
                         "event_type": span.name,
-                        "init_timestamp": span.attributes.get("event.timestamp"),
-                        "end_timestamp": span.attributes.get("event.end_timestamp"),
+                        "init_timestamp": init_timestamp,
+                        "end_timestamp": end_timestamp,
                         **formatted_data,  # Spread the formatted data at top level
                         "session_id": str(self.session.session_id),
                     }
