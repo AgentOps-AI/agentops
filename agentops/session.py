@@ -338,6 +338,8 @@ class Session:
         )
         logger.info(analytics)
 
+        self._session_url = "https://app.agentops.ai/drilldown?session_id=" + str(self.session_id)
+
         logger.info(
             colored(
                 f"\x1b[34mSession Replay: {self._session_url}\x1b[0m",
