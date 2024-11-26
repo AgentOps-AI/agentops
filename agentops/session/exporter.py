@@ -6,7 +6,7 @@ import json
 import threading
 from datetime import datetime, timezone
 from decimal import ROUND_HALF_UP, Decimal
-from typing import TYPE_CHECKING, Any, Dict, List, Optional, Sequence, Union
+from typing import TYPE_CHECKING, Any, Dict, List, Optional, Protocol, Sequence, Union
 from uuid import UUID, uuid4
 from weakref import WeakSet
 
@@ -24,6 +24,17 @@ from agentops.exceptions import ApiServerException
 from agentops.helpers import filter_unjsonable, get_ISO_time, safe_serialize
 from agentops.http_client import HttpClient, Response
 from agentops.log_config import logger
+
+
+class SessionProtocol(Protocol):
+    """
+    Session protocol for SessionExporterMixIn to understand Session
+    """
+
+    session_id: UUID
+    jwt: Optional[str]
+    config: Configuration
+
 
 if TYPE_CHECKING:
     from agentops.session import Session
@@ -160,7 +171,9 @@ class SessionExporter(SpanExporter):
         # Don't call session.end_session() here to avoid circular dependencies
 
 
-class SessionExporterMixIn(object):
+class SessionExporterMixIn(
+    SessionProtocol,
+):
     """
     Session will use this mixin to implement the exporter
     """
@@ -173,13 +186,16 @@ class SessionExporterMixIn(object):
 
     _otel_exporter: SessionExporter
 
-    def __init__(self, session_id: UUID, **kwargs):
+    def __init__(self, **kwargs):
         # Initialize OTEL components with a more controlled processor
+
+        super().__init__(**kwargs)
         self._tracer_provider = TracerProvider()
         self._otel_tracer = self._tracer_provider.get_tracer(
-            f"agentops.session.{str(session_id)}",
+            f"agentops.session.{str(self.session_id)}",
         )
-        self._otel_exporter = SessionExporter(session=self)
+        # Cast self to Session type since we know this mixin will be used with Session class
+        self._otel_exporter = SessionExporter(session=self)  # type: ignore[arg-type]
 
         # Use smaller batch size and shorter delay to reduce buffering
         self._span_processor = BatchSpanProcessor(
@@ -209,7 +225,7 @@ class SessionExporterMixIn(object):
             logger.warning(f"Error flushing spans: {e}")
             return False
 
-    def end(sefl):
+    def end(self):
         self.flush()
 
     def __del__(self):
