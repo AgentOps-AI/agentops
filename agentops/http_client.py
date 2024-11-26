@@ -1,7 +1,8 @@
 from enum import Enum
 from typing import Optional
-from requests.adapters import Retry, HTTPAdapter
+
 import requests
+from requests.adapters import HTTPAdapter, Retry
 
 from .exceptions import ApiServerException
 
@@ -54,6 +55,49 @@ class Response:
 
 
 class HttpClient:
+    _session = None
+
+    @staticmethod
+    def _get_session() -> requests.Session:
+        """Get the global HTTP session"""
+        if HttpClient._session is None:
+            HttpClient._session = requests.Session()
+            HttpClient._session.headers.update(
+                {
+                    "Connection": "keep-alive",
+                    "Keep-Alive": "timeout=10, max=378",  # Can be more generous with a shared connection
+                    "Content-Type": "application/json",
+                }
+            )
+        return HttpClient._session
+
+    @staticmethod
+    def _prepare_headers(
+        api_key: Optional[str] = None,
+        parent_key: Optional[str] = None,
+        jwt: Optional[str] = None,
+        custom_headers: Optional[dict] = None,
+    ) -> dict:
+        """Prepare headers for the request"""
+        # Start with default JSON header
+        headers = JSON_HEADER.copy()
+
+        # Add API key and parent key if provided
+        if api_key is not None:
+            headers["X-Agentops-Api-Key"] = api_key
+
+        if parent_key is not None:
+            headers["X-Agentops-Parent-Key"] = parent_key
+
+        if jwt is not None:
+            headers["Authorization"] = f"Bearer {jwt}"
+
+        # Override with custom headers if provided
+        if custom_headers is not None:
+            headers.update(custom_headers)
+
+        return headers
+
     @staticmethod
     def post(
         url: str,
@@ -65,30 +109,11 @@ class HttpClient:
     ) -> Response:
         result = Response()
         try:
-            # Create request session with retries configured
-            request_session = requests.Session()
-            request_session.mount(url, HTTPAdapter(max_retries=retry_config))
-
-            # Start with default JSON header
-            headers = JSON_HEADER.copy()
-
-            # Add API key and parent key if provided
-            if api_key is not None:
-                headers["X-Agentops-Api-Key"] = api_key
-
-            if parent_key is not None:
-                headers["X-Agentops-Parent-Key"] = parent_key
-
-            if jwt is not None:
-                headers["Authorization"] = f"Bearer {jwt}"
-
-            # Override with custom header if provided
-            if header is not None:
-                headers.update(header)
-
-            res = request_session.post(url, data=payload, headers=headers, timeout=20)
-
+            headers = HttpClient._prepare_headers(api_key, parent_key, jwt, header)
+            session = HttpClient._get_session()
+            res = session.post(url, data=payload, headers=headers, timeout=20)
             result.parse(res)
+
         except requests.exceptions.Timeout:
             result.code = 408
             result.status = HttpStatus.TIMEOUT
@@ -129,19 +154,11 @@ class HttpClient:
     ) -> Response:
         result = Response()
         try:
-            # Create request session with retries configured
-            request_session = requests.Session()
-            request_session.mount(url, HTTPAdapter(max_retries=retry_config))
-
-            if api_key is not None:
-                JSON_HEADER["X-Agentops-Api-Key"] = api_key
-
-            if jwt is not None:
-                JSON_HEADER["Authorization"] = f"Bearer {jwt}"
-
-            res = request_session.get(url, headers=JSON_HEADER, timeout=20)
-
+            headers = HttpClient._prepare_headers(api_key, None, jwt, header)
+            session = HttpClient._get_session()
+            res = session.get(url, headers=headers, timeout=20)
             result.parse(res)
+
         except requests.exceptions.Timeout:
             result.code = 408
             result.status = HttpStatus.TIMEOUT
