@@ -140,7 +140,6 @@ class LlamaStackClientProvider(InstrumentedProvider):
                     async for chunk in response:
                         handle_stream_agent(chunk)
                         yield chunk
-
                 return async_generator()
             else:
                 llm_event = LLMEvent(init_timestamp=init_timestamp, params=kwargs)
