@@ -86,8 +86,9 @@ class HttpClient:
 
         return cls._session
 
-    @staticmethod
+    @classmethod
     def _prepare_headers(
+        cls,
         api_key: Optional[str] = None,
         parent_key: Optional[str] = None,
         jwt: Optional[str] = None,
