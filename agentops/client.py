@@ -5,8 +5,8 @@ Classes:
     Client: Provides methods to interact with the AgentOps service.
 """
 
-import inspect
 import atexit
+import inspect
 import logging
 import os
 import signal
@@ -14,20 +14,19 @@ import sys
 import threading
 import traceback
 from decimal import Decimal
+from typing import List, Optional, Tuple, Union
 from uuid import UUID, uuid4
-from typing import Optional, List, Union, Tuple
+
 from termcolor import colored
 
-from .event import Event, ErrorEvent
-from .singleton import (
-    conditional_singleton,
-)
-from .session import Session, active_sessions
+from .config import Configuration
+from .event import ErrorEvent, Event
 from .host_env import get_host_env
+from .llms import LlmTracker
 from .log_config import logger
 from .meta_client import MetaClient
-from .config import Configuration
-from .llms import LlmTracker
+from .session import Session, active_sessions
+from .singleton import conditional_singleton
 
 
 @conditional_singleton
@@ -39,6 +38,7 @@ class Client(metaclass=MetaClient):
         self._sessions: List[Session] = active_sessions
         self._config = Configuration()
         self._pre_init_queue = {"agents": []}
+        self._host_env = None  # Cache host env data
 
         self.configure(
             api_key=os.environ.get("AGENTOPS_API_KEY"),
@@ -111,6 +111,7 @@ class Client(metaclass=MetaClient):
     def _initialize_autogen_logger(self) -> None:
         try:
             import autogen
+
             from .partners.autogen_logger import AutogenLogger
 
             autogen.runtime_logging.start(logger=AutogenLogger())
@@ -224,7 +225,7 @@ class Client(metaclass=MetaClient):
         session = Session(
             session_id=session_id,
             tags=list(session_tags),
-            host_env=get_host_env(self._config.env_data_opt_out),
+            host_env=self._get_cached_host_env(),
             config=self._config,
         )
 
@@ -430,3 +431,9 @@ class Client(metaclass=MetaClient):
     @property
     def parent_key(self):
         return self._config.parent_key
+
+    def _get_cached_host_env(self):
+        """Cache and reuse host environment data"""
+        if self._host_env is None and not self._config.env_data_opt_out:
+            self._host_env = get_host_env(self._config.env_data_opt_out)
+        return self._host_env
