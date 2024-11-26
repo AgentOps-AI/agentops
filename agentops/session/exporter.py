@@ -93,7 +93,29 @@ class SessionExporter(SpanExporter):
 
                 events = []
                 for span in spans:
-                    event_data = json.loads(span.attributes.get("event.data", "{}"))
+                    # Safely get attributes with defaults
+                    attributes = span.attributes or {}
+                    event_data = {}
+                    try:
+                        data_str = attributes.get("event.data", "{}")
+                        if isinstance(data_str, str):
+                            event_data = json.loads(data_str)
+                        elif isinstance(data_str, dict):
+                            event_data = data_str
+                    except json.JSONDecodeError:
+                        logger.error("Failed to parse event data JSON")
+                        event_data = {}
+
+                    # Safely get timestamps
+                    current_time = datetime.now(timezone.utc).isoformat()
+                    init_timestamp = attributes.get("event.timestamp", current_time)
+                    end_timestamp = attributes.get("event.end_timestamp", current_time)
+
+                    # Safely get event ID
+                    event_id = attributes.get("event.id")
+                    if not event_id:
+                        event_id = str(uuid4())
+                        logger.warning("Event ID not found, generating new one but this shouldn't happen")
 
                     # Format event data based on event type
                     if span.name == "actions":
@@ -111,26 +133,13 @@ class SessionExporter(SpanExporter):
                     else:
                         formatted_data = event_data
 
-                    # Get timestamps, providing defaults if missing
-                    current_time = datetime.now(timezone.utc).isoformat()
-                    init_timestamp = span.attributes.get("event.timestamp", current_time)
-                    end_timestamp = span.attributes.get("event.end_timestamp", current_time)
-
-                    # Get event ID, generate new one if missing
-                    event_id = span.attributes.get("event.id")
-                    if event_id is None:
-                        logger.warning(
-                            "Exporting event without Event ID not found, generating new one but this shouldn't happen"
-                        )
-                        event_id = str(uuid4())
-
                     events.append(
                         {
                             "id": event_id,
                             "event_type": span.name,
                             "init_timestamp": init_timestamp,
                             "end_timestamp": end_timestamp,
-                            **event_data,
+                            **formatted_data,
                             "session_id": str(self.session.session_id),
                         }
                     )
