@@ -4,9 +4,18 @@ import asyncio
 import functools
 import json
 import threading
+import time
 from datetime import datetime, timezone
 from decimal import ROUND_HALF_UP, Decimal
 from typing import Any, Dict, List, Optional, Sequence, Union
+
+from agentops.session.api import SessionApi
+
+try:
+    from typing import DefaultDict  # Python 3.9+
+except ImportError:
+    from typing_extensions import DefaultDict  # Python 3.8 and below
+
 from uuid import UUID, uuid4
 from weakref import WeakSet
 
@@ -18,7 +27,7 @@ from opentelemetry.sdk.trace.export import BatchSpanProcessor, ConsoleSpanExport
 from termcolor import colored
 
 from agentops.config import Configuration
-from agentops.enums import EndState
+from agentops.enums import EndState, EventType
 from agentops.event import ErrorEvent, Event
 from agentops.exceptions import ApiServerException
 from agentops.helpers import filter_unjsonable, get_ISO_time, safe_serialize
@@ -27,7 +36,28 @@ from agentops.log_config import logger
 from agentops.session.exporter import SessionExporter
 
 
-class Session:
+class SessionDict(DefaultDict):
+    session_id: UUID
+    # --------------
+    config: Configuration
+    end_state: str = EndState.INDETERMINATE.value
+    end_state_reason: Optional[str] = None
+    end_timestamp: Optional[str] = None
+    # Create a counter dictionary with each EventType name initialized to 0
+    event_counts: Dict[str, int]
+    host_env: Optional[dict] = None
+    init_timestamp: str  # Will be set to get_ISO_time() during __init__
+    is_running: bool = False
+    jwt: Optional[str] = None
+    tags: Optional[List[str]] = None
+    video: Optional[str] = None
+
+    def __init__(self, **kwargs):
+        kwargs.setdefault("event_counts", {event_type.value: 0 for event_type in EventType})
+        kwargs.setdefault("init_timestamp", get_ISO_time())
+        super().__init__(**kwargs)
+
+class Session(SessionDict, SessionExporterMixIn):
     """
     Represents a session of events, with a start and end state.
 
@@ -89,28 +119,24 @@ class Session:
         }
         # self.session_url: Optional[str] = None
 
+        # Set creation timestamp
+        self.__create_ts = time.monotonic()
+
+        self.api = SessionApi(self)
+
+        self._locks = {
+            "lifecycle": threading.Lock(),  # Controls session lifecycle operations
+            "update_session": threading.Lock(),  # Protects session state updates"
+            "events": threading.Lock(),  # Protects event queue operations
+            "session": threading.Lock(),  # Protects session state updates
+            "tags": threading.Lock(),  # Protects tag modifications
+            "api": threading.Lock(),  # Protects API calls
+        }
+
         # Start session first to get JWT
-        self.is_running = self._start_session()
+        self._start_session()
         if not self.is_running:
             return
-
-        # Initialize OTEL components with a more controlled processor
-        self._tracer_provider = TracerProvider()
-        self._otel_tracer = self._tracer_provider.get_tracer(
-            f"agentops.session.{str(session_id)}",
-        )
-        self._otel_exporter = SessionExporter(session=self)
-
-        # Use smaller batch size and shorter delay to reduce buffering
-        self._span_processor = BatchSpanProcessor(
-            self._otel_exporter,
-            max_queue_size=self.config.max_queue_size,
-            schedule_delay_millis=self.config.max_wait_time,
-            max_export_batch_size=min(max(self.config.max_queue_size // 20, 1), min(self.config.max_queue_size, 32)),
-            export_timeout_millis=20000,
-        )
-
-        self._tracer_provider.add_span_processor(self._span_processor)
 
     def set_video(self, video: str) -> None:
         """
@@ -120,23 +146,6 @@ class Session:
             video (str): The url of the video recording
         """
         self.video = video
-
-    def _flush_spans(self) -> bool:
-        """
-        Flush pending spans for this specific session with timeout.
-        Returns True if flush was successful, False otherwise.
-        """
-        if not hasattr(self, "_span_processor"):
-            return True
-
-        try:
-            success = self._span_processor.force_flush(timeout_millis=self.config.max_wait_time)
-            if not success:
-                logger.warning("Failed to flush all spans before session end")
-            return success
-        except Exception as e:
-            logger.warning(f"Error flushing spans: {e}")
-            return False
 
     def end_session(
         self,
@@ -154,12 +163,10 @@ class Session:
 
             try:
                 # Force flush any pending spans before ending session
-                if hasattr(self, "_span_processor"):
-                    self._span_processor.force_flush(timeout_millis=5000)
+                self.exporter.flush()
 
                 # 1. Set shutdown flag on exporter first
-                if hasattr(self, "_otel_exporter"):
-                    self._otel_exporter.shutdown()
+                self.exporter.shutdown()
 
                 # 2. Set session end state
                 self.end_timestamp = get_ISO_time()
@@ -170,18 +177,6 @@ class Session:
 
                 # 3. Mark session as not running before cleanup
                 self.is_running = False
-
-                # 4. Clean up OTEL components
-                if hasattr(self, "_span_processor"):
-                    try:
-                        # Force flush any pending spans
-                        self._span_processor.force_flush(timeout_millis=5000)
-                        # Shutdown the processor
-                        self._span_processor.shutdown()
-                    except Exception as e:
-                        logger.warning(f"Error during span processor cleanup: {e}")
-                    finally:
-                        del self._span_processor
 
                 # 5. Final session update
                 if not (analytics_stats := self.get_analytics()):
@@ -262,56 +257,8 @@ class Session:
         if not hasattr(event, "end_timestamp") or event.end_timestamp is None:
             event.end_timestamp = get_ISO_time()
 
-        # Create session context
-        token = set_value("session.id", str(self.session_id))
-
-        try:
-            token = attach(token)
-
-            # Create a copy of event data to modify
-            event_data = dict(filter_unjsonable(event.__dict__))
-
-            # Add required fields based on event type
-            if isinstance(event, ErrorEvent):
-                event_data["error_type"] = getattr(event, "error_type", event.event_type)
-            elif event.event_type == "actions":
-                # Ensure action events have action_type
-                if "action_type" not in event_data:
-                    event_data["action_type"] = event_data.get("name", "unknown_action")
-                if "name" not in event_data:
-                    event_data["name"] = event_data.get("action_type", "unknown_action")
-            elif event.event_type == "tools":
-                # Ensure tool events have name
-                if "name" not in event_data:
-                    event_data["name"] = event_data.get("tool_name", "unknown_tool")
-                if "tool_name" not in event_data:
-                    event_data["tool_name"] = event_data.get("name", "unknown_tool")
-
-            with self._otel_tracer.start_as_current_span(
-                name=event.event_type,
-                attributes={
-                    "event.id": str(event.id),
-                    "event.type": event.event_type,
-                    "event.timestamp": event.init_timestamp or get_ISO_time(),
-                    "event.end_timestamp": event.end_timestamp or get_ISO_time(),
-                    "session.id": str(self.session_id),
-                    "session.tags": ",".join(self.tags) if self.tags else "",
-                    "event.data": json.dumps(event_data),
-                },
-            ) as span:
-                if event.event_type in self.event_counts:
-                    self.event_counts[event.event_type] += 1
-
-                if isinstance(event, ErrorEvent):
-                    span.set_attribute("error", True)
-                    if hasattr(event, "trigger_event") and event.trigger_event:
-                        span.set_attribute("trigger_event.id", str(event.trigger_event.id))
-                        span.set_attribute("trigger_event.type", event.trigger_event.event_type)
-
-                if flush_now and hasattr(self, "_span_processor"):
-                    self._span_processor.force_flush()
-        finally:
-            detach(token)
+        # Delegate to OTEL-specific recording logic
+        self._record_otel_event(event, flush_now)
 
     def _send_event(self, event):
         """Direct event sending for testing"""
@@ -356,7 +303,13 @@ class Session:
             return jwt
 
     def _start_session(self):
-        with self._lock:
+        """
+        Should either return `self` or raise an exception if the session could not be started.
+        TODO: Determine the side effects of:
+        - `bool` not being returned anymore
+        - An exception being raised: what are the side effects?
+        """
+        with self._locks["lifecycle"]:
             payload = {"session": self.__dict__}
             serialized_payload = json.dumps(filter_unjsonable(payload)).encode("utf-8")
 
@@ -391,22 +344,14 @@ class Session:
 
     def _update_session(self) -> None:
         """Update session state on the server"""
-        if not self.is_running:
-            return
-        with self._lock:  # TODO: Determine whether we really need to lock here: are incoming calls coming from other threads?
-            payload = {"session": self.__dict__}
+        with self._locks[
+            "update_session"
+        ]:  # TODO: Determine whether we really need to lock here: are incoming calls coming from other threads?
+            if not self.is_running:
+                return
+            self.api.create_session()
 
-            try:
-                res = HttpClient.post(
-                    f"{self.config.endpoint}/v2/update_session",
-                    json.dumps(filter_unjsonable(payload)).encode("utf-8"),
-                    # self.config.api_key,
-                    jwt=self.jwt,
-                )
-            except ApiServerException as e:
-                return logger.error(f"Could not update session - {e}")
-
-    def create_agent(self, name, agent_id):
+    def create_agent(self, name, agent_id):  # FIXME: Move call to SessionApi
         if not self.is_running:
             return
         if agent_id is None:
