@@ -9,12 +9,11 @@ from termcolor import colored
 from agentops.event import Event
 from agentops.exceptions import ApiServerException
 from agentops.helpers import filter_unjsonable, safe_serialize
-from agentops.http_client import HttpClient, HttpStatus, Response
+from agentops.http_client import HttpClient, Response
 from agentops.log_config import logger
 
 if TYPE_CHECKING:
     from agentops.session import Session
-    from agentops.session.session import SessionDict
 
 P = ParamSpec("P")
 T = TypeVar("T")
@@ -55,94 +54,52 @@ def retry_auth(func: Callable[P, T]) -> Callable[P, T]:
 
 
 class SessionApi:
-    """
-    Solely focuses on interacting with the API
-
-    Developer notes:
-        Need to clarify (and define) a standard and consistent Api interface.
-
-        The way it can be approached is by having a base `Api` class that holds common
-        configurations and features, while implementors provide entity-related controllers
-    """
-
-    # TODO: Decouple from standard Configuration a Session's entity own configuration.
-    # NOTE: pydantic-settings plays out beautifully in such setup, but it's not a requirement.
-    # TODO: Eventually move to apis/
-    session: "Session"
+    """API client for Session operations"""
 
     def __init__(self, session: "Session"):
         self.session = session
 
     @property
-    def config(self):  # Forward decl.
+    def config(self):
         return self.session.config
 
-    @property
-    def jwt(self) -> Optional[str]:
-        """Convenience property that falls back to dictionary access"""
-        return self.session.get("jwt")
-
-    @jwt.setter
-    def jwt(self, value: Optional[str]):
-        self.session["jwt"] = value
-
-    def reauthorize_jwt(self) -> Union[str, None]:
-        """Attempt to get a new JWT token"""
-        payload = {"session_id": self.session.session_id}
-        serialized_payload = json.dumps(filter_unjsonable(payload)).encode("utf-8")
-        try:
-            res = HttpClient.post(
-                f"{self.config.endpoint}/v2/reauthorize_jwt",
-                serialized_payload,
-                api_key=self.config.api_key,
-                retry_auth=False,  # Prevent recursion
-            )
-
-            if res.code == 200 and (jwt := res.body.get("jwt")):
-                return jwt
-
-        except ApiServerException as e:
-            logger.error(f"Failed to reauthorize: {e}")
-
-        return None
-
-    @retry_auth
     def update_session(self) -> tuple[dict, Optional[str]]:
         """Updates session data via API call."""
         payload = {"session": dict(self.session)}
-        serialized_payload = json.dumps(filter_unjsonable(payload)).encode("utf-8")
+        serialized_payload = safe_serialize(payload).encode("utf-8")
 
-        res = HttpClient.post(
-            f"{self.config.endpoint}/v2/update_session",
-            serialized_payload,
-            jwt=self.jwt,
-        )
+        try:
+            res = HttpClient.post(
+                f"{self.config.endpoint}/v2/update_session",
+                serialized_payload,
+                session_id=str(self.session.session_id),
+            )
 
-        session_url = res.body.get(
-            "session_url",
-            f"https://app.agentops.ai/drilldown?session_id={self.session.session_id}",
-        )
+            session_url = res.body.get(
+                "session_url",
+                f"https://app.agentops.ai/drilldown?session_id={self.session.session_id}",
+            )
 
-        return res.body, session_url
+            return res.body, session_url
 
-    @retry_auth
+        except ApiServerException as e:
+            logger.error(f"Failed to update session: {e}")
+            return {}, None
+
     def create_session(self) -> bool:
         """Creates a new session via API call"""
         payload = {"session": dict(self.session)}
-        serialized_payload = json.dumps(filter_unjsonable(payload)).encode("utf-8")
+        serialized_payload = safe_serialize(payload).encode("utf-8")
 
-        res = HttpClient.post(
-            f"{self.config.endpoint}/v2/create_session",
-            serialized_payload,
-            api_key=self.config.api_key,
-            parent_key=self.config.parent_key,
-        )
+        try:
+            res = HttpClient.post(
+                f"{self.config.endpoint}/v2/create_session",
+                serialized_payload,
+                session_id=str(self.session.session_id),
+                api_key=self.config.api_key,
+                parent_key=self.config.parent_key,
+            )
 
-        if res.code != 200:
-            return False
-
-        if jwt := res.body.get("jwt"):
-            self.jwt = jwt
             session_url = res.body.get(
                 "session_url",
                 f"https://app.agentops.ai/drilldown?session_id={self.session.session_id}",
@@ -156,27 +113,27 @@ class SessionApi:
             )
             return True
 
-        return False
+        except ApiServerException as e:
+            logger.error(f"Failed to create session: {e}")
+            return False
 
-    @retry_auth
     def batch(self, events: List[Event]) -> None:
         """Send batch of events to API"""
         endpoint = f"{self.config.endpoint}/v2/create_events"
         serialized_payload = safe_serialize(dict(events=events)).encode("utf-8")
 
-        res = HttpClient.post(
-            endpoint,
-            serialized_payload,
-            jwt=self.jwt,
-        )
+        try:
+            res = HttpClient.post(
+                endpoint,
+                serialized_payload,
+                session_id=str(self.session.session_id),
+            )
 
-        # Update event counts on success
-        for event in events:
-            event_type = event["event_type"]
-            if event_type in self.session["event_counts"]:
-                self.session["event_counts"][event_type] += 1
+            # Update event counts on success
+            for event in events:
+                event_type = event.event_type
+                if event_type in self.session["event_counts"]:
+                    self.session["event_counts"][event_type] += 1
 
-        logger.debug("\n<AGENTOPS_DEBUG_OUTPUT>")
-        logger.debug(f"Session request to {endpoint}")
-        logger.debug(serialized_payload)
-        logger.debug("</AGENTOPS_DEBUG_OUTPUT>\n")
+        except ApiServerException as e:
+            logger.error(f"Failed to send events: {e}")
