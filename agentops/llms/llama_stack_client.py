@@ -22,6 +22,7 @@ class LlamaStackClientProvider(InstrumentedProvider):
         """Handle responses for LlamaStack"""
         try:
             accum_delta = None
+            accum_tool_delta = None
 
             def handle_stream_chunk(chunk: dict):
                 llm_event = LLMEvent(init_timestamp=init_timestamp, params=kwargs)
@@ -72,6 +73,7 @@ class LlamaStackClientProvider(InstrumentedProvider):
                 # NOTE: prompt/completion usage not returned in response when streaming
                 # We take the first ChatCompletionResponseStreamChunkEvent and accumulate the deltas from all subsequent chunks to build one full chat completion
                 llm_event = LLMEvent(init_timestamp=init_timestamp, params=kwargs)
+                tool_event = ToolEvent(init_timestamp=init_timestamp, params=kwargs)
 
                 if session is not None:
                     llm_event.session_id = session.session_id
@@ -80,9 +82,9 @@ class LlamaStackClientProvider(InstrumentedProvider):
                     llm_event.returns = chunk.event
 
                 try:
-                    if chunk.event.payload.event_type == "step_start":
+                    if chunk.event.payload.event_type == "turn_start":
                         pass
-                    elif chunk.event.payload.event_type == "turn_start":
+                    elif chunk.event.payload.event_type == "step_start":
                         pass
                     elif chunk.event.payload.event_type == "step_progress":
                     
@@ -97,11 +99,21 @@ class LlamaStackClientProvider(InstrumentedProvider):
                             else:
                                 accum_delta = delta
                         elif (chunk.event.payload.step_type == "inference" and chunk.event.payload.tool_call_delta and chunk.event.payload.tool_call_delta.parse_status == "started"):
-                            pass
+                            tool_event.name = "ToolExecution - started"
+                            self._safe_record(session, tool_event)
                         elif (chunk.event.payload.step_type == "inference" and chunk.event.payload.tool_call_delta and chunk.event.payload.tool_call_delta.parse_status == "in_progress"):
-                            pass
+                            nonlocal accum_tool_delta
+                            delta = chunk.event.payload.tool_call_delta.content
+                            if accum_tool_delta:
+                                accum_tool_delta += delta
+                            else:
+                                accum_tool_delta = delta
                         elif (chunk.event.payload.step_type == "inference" and chunk.event.payload.tool_call_delta and chunk.event.payload.tool_call_delta.parse_status == "success"):
-                            pass
+                            tool_event.name = "ToolExecution - success"
+                            tool_event.params["completion"] = accum_tool_delta
+                            self._safe_record(session, tool_event)
+                        elif (chunk.event.payload.step_type == "inference" and chunk.event.payload.tool_call_delta and chunk.event.payload.tool_call_delta.parse_status == "failure"):
+                            self._safe_record(session, ErrorEvent(trigger_event=tool_event, exception=Exception("ToolExecution - failure")))
 
                     elif chunk.event.payload.event_type == "step_complete":
                         if (chunk.event.payload.step_type == "inference"):
@@ -111,10 +123,14 @@ class LlamaStackClientProvider(InstrumentedProvider):
                             llm_event.agent_id = check_call_stack_for_agent_id()
                             llm_event.model = metadata.get("model_id", "Unable to identify model")
                             llm_event.prompt_tokens = None
-                            llm_event.completion = accum_delta
+                            llm_event.completion = accum_delta or kwargs["completion"]
                             llm_event.completion_tokens = None
                             llm_event.end_timestamp = get_ISO_time()
                             self._safe_record(session, llm_event)
+                        elif (chunk.event.payload.step_type == "tool_execution"):
+                            tool_event.name = "ToolExecution - complete"
+                            tool_event.params["completion"] = accum_tool_delta
+                            self._safe_record(session, tool_event)
                     elif chunk.event.payload.event_type == "turn_complete":
                         pass
 
