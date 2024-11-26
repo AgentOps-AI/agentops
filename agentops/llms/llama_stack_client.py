@@ -105,7 +105,6 @@ class LlamaStackClientProvider(InstrumentedProvider):
                             pass
 
                     elif chunk.event.payload.event_type == "step_complete":
-                        print("Step complete")
                         if (chunk.event.payload.step_type == "inference"):
                             llm_event.prompt = [
                                 {"content": message['content'], "role": message['role']} for message in kwargs["messages"]
