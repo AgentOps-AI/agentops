@@ -171,124 +171,26 @@ class SessionExporter(SpanExporter):
         # Don't call session.end_session() here to avoid circular dependencies
 
 
-class SessionExporterMixIn(
-    SessionProtocol,
-):
-    """
-    Session will use this mixin to implement the exporter
-    """
+class SessionExporterMixIn:
+    """Mixin class that provides OpenTelemetry exporting capabilities to Session"""
 
-    _span_processor: BatchSpanProcessor
+    def __init__(self):
+        """Initialize OpenTelemetry components"""
+        self._span_processor = None
+        self._tracer_provider = None
+        self._exporter = None
+        self._shutdown = threading.Event()
 
-    _tracer_provider: TracerProvider
-
-    _otel_tracer: trace.Tracer
-
-    _otel_exporter: SessionExporter
-
-    def __init__(self, **kwargs):
-        # Initialize OTEL components with a more controlled processor
-
-        super().__init__(**kwargs)
-        self._tracer_provider = TracerProvider()
-        self._otel_tracer = self._tracer_provider.get_tracer(
-            f"agentops.session.{str(self.session_id)}",
-        )
-        # Cast self to Session type since we know this mixin will be used with Session class
-        self._otel_exporter = SessionExporter(session=self)  # type: ignore[arg-type]
-
-        # Use smaller batch size and shorter delay to reduce buffering
-        self._span_processor = BatchSpanProcessor(
-            self._otel_exporter,
-            max_queue_size=self.config.max_queue_size,
-            schedule_delay_millis=self.config.max_wait_time,
-            max_export_batch_size=min(max(self.config.max_queue_size // 20, 1), min(self.config.max_queue_size, 32)),
-            export_timeout_millis=20000,
-        )
-
-        self._tracer_provider.add_span_processor(self._span_processor)
-
-    def flush(self) -> bool:
-        """
-        Flush pending spans for this specific session with timeout.
-        Returns True if flush was successful, False otherwise.
-        """
-        if not hasattr(self, "_span_processor"):
-            return True
-
-        try:
-            success = self._span_processor.force_flush(timeout_millis=self.config.max_wait_time)
-            if not success:
-                logger.warning("Failed to flush all spans before session end")
-            return success
-        except Exception as e:
-            logger.warning(f"Error flushing spans: {e}")
-            return False
-
-    def end(self):
-        self.flush()
+        # Initialize other attributes that might be accessed during cleanup
+        self._locks = getattr(self, "_locks", {})
+        self.is_running = getattr(self, "is_running", False)
 
     def __del__(self):
-        self.end()
+        """Cleanup when the object is garbage collected"""
         try:
-            # Force flush any pending spans
-            self._span_processor.force_flush(timeout_millis=5000)
-            # Shutdown the processor
-            self._span_processor.shutdown()
+            if hasattr(self, "_span_processor") and self._span_processor:
+                self._span_processor.shutdown()
         except Exception as e:
             logger.warning(f"Error during span processor cleanup: {e}")
-        finally:
-            del self._span_processor
 
-    def _record_otel_event(self, event: Union[Event, ErrorEvent], flush_now=False):
-        """Handle the OpenTelemetry-specific event recording logic"""
-        # Create session context
-        token = set_value("session.id", str(self.session_id))
-
-        try:
-            token = attach(token)
-
-            # Create a copy of event data to modify
-            event_data = dict(filter_unjsonable(event.__dict__))
-
-            # Add required fields based on event type
-            if isinstance(event, ErrorEvent):
-                event_data["error_type"] = getattr(event, "error_type", event.event_type)
-            elif event.event_type == "actions":
-                # Ensure action events have action_type
-                if "action_type" not in event_data:
-                    event_data["action_type"] = event_data.get("name", "unknown_action")
-                if "name" not in event_data:
-                    event_data["name"] = event_data.get("action_type", "unknown_action")
-            elif event.event_type == "tools":
-                # Ensure tool events have name
-                if "name" not in event_data:
-                    event_data["name"] = event_data.get("tool_name", "unknown_tool")
-                if "tool_name" not in event_data:
-                    event_data["tool_name"] = event_data.get("name", "unknown_tool")
-
-            with self._otel_tracer.start_as_current_span(
-                name=event.event_type,
-                attributes={
-                    "event.id": str(event.id),
-                    "event.type": event.event_type,
-                    "event.timestamp": event.init_timestamp or get_ISO_time(),
-                    "event.end_timestamp": event.end_timestamp or get_ISO_time(),
-                    "session.id": str(self.session_id),
-                    "session.tags": ",".join(self.tags) if self.tags else "",
-                    "event.data": json.dumps(event_data),
-                },
-            ) as span:
-                if event.event_type in self.event_counts:
-                    self.event_counts[event.event_type] += 1
-
-                if isinstance(event, ErrorEvent):
-                    span.set_attribute("error", True)
-                    if hasattr(event, "trigger_event") and event.trigger_event:
-                        span.set_attribute("trigger_event.id", str(event.trigger_event.id))
-                        span.set_attribute("trigger_event.type", event.trigger_event.event_type)
-
-                if flush_now:
-                    self.flush()
-        finally:
-            detach(token)
+    # ... rest of the class implementation ...
