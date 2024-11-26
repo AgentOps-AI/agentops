@@ -340,6 +340,18 @@ class SessionsCollection(WeakSet):
             )
         )
 
+    def append(self, session: Session) -> None:
+        """Append a session to the collection"""
+        super().add(session)
+
+    def remove(self, session: Session) -> None:
+        """Remove a session from the collection"""
+        super().discard(session)
+
+    def __len__(self) -> int:
+        """Return the number of sessions in the collection"""
+        return len(list(super().__iter__()))
+
 
 active_sessions = SessionsCollection()
 # active_sessions: List[Session] = []
