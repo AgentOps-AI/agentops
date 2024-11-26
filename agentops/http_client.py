@@ -1,7 +1,8 @@
-from enum import Enum
-from typing import Optional, Dict, Any, ClassVar
-from threading import Lock
+import json
 import threading
+from enum import Enum
+from threading import Lock
+from typing import Any, ClassVar, Dict, Optional
 
 import requests
 from requests.adapters import HTTPAdapter
@@ -92,22 +93,76 @@ class HttpClient:
         return cls._session
 
     @classmethod
+    def post(
+        cls,
+        url: str,
+        payload: bytes,
+        session_id: Optional[str] = None,
+        api_key: Optional[str] = None,
+        parent_key: Optional[str] = None,
+        header: Optional[Dict[str, str]] = None,
+    ) -> Response:
+        """Make HTTP POST request using connection pooling"""
+        result = Response()
+        try:
+            headers = cls._prepare_headers(session_id, api_key, parent_key, header)
+            session = cls.get_session()
+
+            # Make initial request
+            res = session.post(url, data=payload, headers=headers, timeout=20)
+            result.parse(res)
+
+            # Handle auth failure and retry once
+            if result.code == 401 and session_id and api_key:
+                # Try to get new JWT
+                reauth_res = session.post(
+                    f"{url.rsplit('/', 1)[0]}/reauthorize_jwt",
+                    data=json.dumps({}).encode("utf-8"),
+                    headers=cls._prepare_headers(None, api_key, None, None),
+                    timeout=20,
+                )
+
+                if reauth_res.status_code == 200:
+                    reauth_body = reauth_res.json()
+                    if new_jwt := reauth_body.get("jwt"):
+                        # Store new JWT
+                        with cls._jwt_lock:
+                            cls._jwt_store[session_id] = new_jwt
+
+                        # Retry original request with new JWT
+                        headers = cls._prepare_headers(session_id, api_key, parent_key, header)
+                        res = session.post(url, data=payload, headers=headers, timeout=20)
+                        result.parse(res)
+
+            # Handle JWT in successful response
+            if result.code == 200 and (jwt := result.body.get("jwt")):
+                if session_id:
+                    with cls._jwt_lock:
+                        cls._jwt_store[session_id] = jwt
+
+            # Handle errors
+            if result.code == 401:
+                if session_id:
+                    with cls._jwt_lock:
+                        cls._jwt_store.pop(session_id, None)
+                raise ApiServerException("API server: invalid API key or JWT. Check your credentials.")
+            if result.code == 400:
+                raise ApiServerException(f"API server: {result.body.get('message', result.body)}")
+            if result.code == 500:
+                raise ApiServerException("API server: internal server error")
+
+            return result
+
+        except requests.exceptions.Timeout:
+            raise ApiServerException("Could not reach API server - connection timed out")
+        except requests.exceptions.RequestException as e:
+            raise ApiServerException(f"Request failed: {e}")
+
+    @classmethod
     def get_jwt(cls, session_id: str) -> Optional[str]:
         """Get JWT for a session"""
         with cls._jwt_lock:
             return cls._jwt_store.get(session_id)
-
-    @classmethod
-    def set_jwt(cls, session_id: str, jwt: str) -> None:
-        """Set JWT for a session"""
-        with cls._jwt_lock:
-            cls._jwt_store[session_id] = jwt
-
-    @classmethod
-    def clear_jwt(cls, session_id: str) -> None:
-        """Clear JWT for a session"""
-        with cls._jwt_lock:
-            cls._jwt_store.pop(session_id, None)
 
     @classmethod
     def _prepare_headers(
@@ -126,53 +181,15 @@ class HttpClient:
         if parent_key is not None:
             headers["X-Agentops-Parent-Key"] = parent_key
 
-        if session_id is not None and (jwt := cls.get_jwt(session_id)):
-            headers["Authorization"] = f"Bearer {jwt}"
+        if session_id is not None:
+            with cls._jwt_lock:
+                if jwt := cls._jwt_store.get(session_id):
+                    headers["Authorization"] = f"Bearer {jwt}"
 
         if custom_headers is not None:
             headers.update(custom_headers)
 
         return headers
-
-    @classmethod
-    def post(
-        cls,
-        url: str,
-        payload: bytes,
-        session_id: Optional[str] = None,
-        api_key: Optional[str] = None,
-        parent_key: Optional[str] = None,
-        header: Optional[Dict[str, str]] = None,
-    ) -> Response:
-        """Make HTTP POST request using connection pooling"""
-        result = Response()
-        try:
-            headers = cls._prepare_headers(session_id, api_key, parent_key, header)
-            session = cls.get_session()
-            res = session.post(url, data=payload, headers=headers, timeout=20)
-            result.parse(res)
-
-            # Handle JWT in response
-            if result.code == 200 and (jwt := result.body.get("jwt")):
-                if session_id:
-                    cls.set_jwt(session_id, jwt)
-
-            # Handle auth errors
-            if result.code == 401:
-                if session_id:
-                    cls.clear_jwt(session_id)
-                raise ApiServerException("API server: invalid API key or JWT. Check your credentials.")
-            if result.code == 400:
-                raise ApiServerException(f"API server: {result.body.get('message', result.body)}")
-            if result.code == 500:
-                raise ApiServerException("API server: internal server error")
-
-            return result
-
-        except requests.exceptions.Timeout:
-            raise ApiServerException("Could not reach API server - connection timed out")
-        except requests.exceptions.RequestException as e:
-            raise ApiServerException(f"Request failed: {e}")
 
     @classmethod
     def get(
