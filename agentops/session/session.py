@@ -47,7 +47,7 @@ class SessionDict(DefaultDict):
     event_counts: Dict[str, int]
     host_env: Optional[dict] = None
     init_timestamp: str  # Will be set to get_ISO_time() during __init__
-    is_running: bool = False
+    # is_running moved to Session class as a property
     jwt: Optional[str] = None
     tags: Optional[List[str]] = None
     video: Optional[str] = None
@@ -79,6 +79,9 @@ class Session(SessionDict, SessionExporterMixIn):
         self._lock = threading.Lock()
         self._end_session_lock = threading.Lock()
 
+        # Replace boolean flag with Event
+        self._running = threading.Event()
+
         # Set creation timestamp
         self.__create_ts = time.monotonic()
 
@@ -96,6 +99,19 @@ class Session(SessionDict, SessionExporterMixIn):
 
         # Start session first to get JWT
         self._start_session()
+
+    @property
+    def is_running(self) -> bool:
+        """Check if the session is currently running"""
+        return self._running.is_set()
+
+    @is_running.setter
+    def is_running(self, value: bool) -> None:
+        """Set the session's running state"""
+        if value:
+            self._running.set()
+        else:
+            self._running.clear()
 
     def set_video(self, video: str) -> None:
         """Sets a url to the video recording of the session."""
