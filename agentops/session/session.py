@@ -358,13 +358,30 @@ class SessionsCollection(WeakSet):
     3. Standard WeakSet doesn't support indexing
     """
 
+    def __init__(self):
+        super().__init__()
+        self._lock = threading.RLock()
+
     def __getitem__(self, index: int) -> Session:
         """
         Enable indexing into the collection (e.g., sessions[0]).
         """
-        # Convert to list for indexing since sets aren't ordered
-        items = list(self)
-        return items[index]
+        with self._lock:
+            # Convert to list for indexing since sets aren't ordered
+            items = list(self)
+            return items[index]
+
+    def __setitem__(self, index: int, session: Session) -> None:
+        """
+        Enable item assignment (e.g., sessions[0] = new_session).
+        """
+        with self._lock:
+            items = list(self)
+            if 0 <= index < len(items):
+                self.remove(items[index])
+                self.add(session)
+            else:
+                raise IndexError("list assignment index out of range")
 
     def __iter__(self):
         """
@@ -374,26 +391,35 @@ class SessionsCollection(WeakSet):
         WARNING: Using _create_ts as a fallback for ordering may lead to unexpected results
         if init_timestamp is not set correctly.
         """
-        return iter(
-            sorted(
-                super().__iter__(),
-                key=lambda session: (
-                    session.init_timestamp if hasattr(session, "init_timestamp") else session._create_ts
-                ),
+        with self._lock:
+            return iter(
+                sorted(
+                    super().__iter__(),
+                    key=lambda session: (
+                        session.init_timestamp if hasattr(session, "init_timestamp") else session._create_ts
+                    ),
+                )
             )
-        )
 
     def append(self, session: Session) -> None:
         """Append a session to the collection"""
-        super().add(session)
+        with self._lock:
+            super().add(session)
 
     def remove(self, session: Session) -> None:
         """Remove a session from the collection"""
-        super().discard(session)
+        with self._lock:
+            super().discard(session)
 
     def __len__(self) -> int:
         """Return the number of sessions in the collection"""
-        return len(list(super().__iter__()))
+        with self._lock:
+            return len(list(super().__iter__()))
+
+    def index(self, session: Session) -> int:
+        """Return the index of a session in the collection"""
+        with self._lock:
+            return list(super().__iter__()).index(session)
 
 
 active_sessions = SessionsCollection()
