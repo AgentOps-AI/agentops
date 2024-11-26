@@ -90,7 +90,6 @@ class LlamaStackClientProvider(InstrumentedProvider):
                             nonlocal accum_delta
                             delta = chunk.event.payload.text_delta_model_response
                             llm_event.agent_id = check_call_stack_for_agent_id()
-                            llm_event.model = "Llama Stack"
                             llm_event.prompt = kwargs["messages"]
 
                             if accum_delta:
