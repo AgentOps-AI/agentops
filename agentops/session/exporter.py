@@ -81,10 +81,6 @@ class SessionExporter(SpanExporter):
         self._export_lock = threading.Lock()
         super().__init__(**kwargs)
 
-    @property
-    def endpoint(self):
-        return f"{self.session.config.endpoint}/v2/create_events"
-
     def export(self, spans: Sequence[ReadableSpan]) -> SpanExportResult:
         if self._shutdown.is_set():
             return SpanExportResult.SUCCESS
@@ -117,18 +113,15 @@ class SessionExporter(SpanExporter):
 
                     # Get timestamps, providing defaults if missing
                     current_time = datetime.now(timezone.utc).isoformat()
-                    init_timestamp = span.attributes.get("event.timestamp")
-                    end_timestamp = span.attributes.get("event.end_timestamp")
-
-                    # Handle missing timestamps
-                    if init_timestamp is None:
-                        init_timestamp = current_time
-                    if end_timestamp is None:
-                        end_timestamp = current_time
+                    init_timestamp = span.attributes.get("event.timestamp", current_time)
+                    end_timestamp = span.attributes.get("event.end_timestamp", current_time)
 
                     # Get event ID, generate new one if missing
                     event_id = span.attributes.get("event.id")
                     if event_id is None:
+                        logger.warning(
+                            "Exporting event without Event ID not found, generating new one but this shouldn't happen"
+                        )
                         event_id = str(uuid4())
 
                     events.append(
@@ -145,13 +138,9 @@ class SessionExporter(SpanExporter):
                 # Only make HTTP request if we have events and not shutdown
                 if events:
                     try:
-                        res = HttpClient.post(
-                            self.endpoint,
-                            json.dumps({"events": events}).encode("utf-8"),
-                            api_key=self.session.config.api_key,
-                            jwt=self.session.jwt,
-                        )
-                        return SpanExportResult.SUCCESS if res.code == 200 else SpanExportResult.FAILURE
+                        # Use SessionApi to send events
+                        self.session.api.batch(events)
+                        return SpanExportResult.SUCCESS
                     except Exception as e:
                         logger.error(f"Failed to send events: {e}")
                         return SpanExportResult.FAILURE
@@ -168,10 +157,9 @@ class SessionExporter(SpanExporter):
     def shutdown(self) -> None:
         """Handle shutdown gracefully"""
         self._shutdown.set()
-        # Don't call session.end_session() here to avoid circular dependencies
 
 
-class SessionExporterMixIn:
+class SessionExporterMixIn(SessionProtocol):
     """Mixin class that provides OpenTelemetry exporting capabilities to Session"""
 
     def __init__(self):
@@ -184,6 +172,58 @@ class SessionExporterMixIn:
         # Initialize other attributes that might be accessed during cleanup
         self._locks = getattr(self, "_locks", {})
         self.is_running = getattr(self, "is_running", False)
+
+        # Initialize OTEL components
+        self._setup_otel()
+
+    def _setup_otel(self):
+        """Set up OpenTelemetry components"""
+        # Create exporter
+        self._exporter = SessionExporter(self)
+
+        # Create and configure tracer provider
+        self._tracer_provider = TracerProvider(resource=Resource.create({SERVICE_NAME: "agentops"}))
+
+        # Create and register span processor
+        self._span_processor = BatchSpanProcessor(self._exporter)
+        self._tracer_provider.add_span_processor(self._span_processor)
+
+        # Get tracer
+        self._tracer = self._tracer_provider.get_tracer(__name__)
+
+    def _record_otel_event(self, event: Union[Event, ErrorEvent], flush_now: bool = False) -> None:
+        """Record an event using OpenTelemetry spans"""
+        if not hasattr(self, "_tracer"):
+            self._setup_otel()
+
+        # Create span context
+        context = set_value("session_id", str(self.session_id))
+        token = attach(context)
+
+        try:
+            # Start and end span
+            with self._tracer.start_as_current_span(
+                name=str(event.event_type),
+                kind=trace.SpanKind.INTERNAL,
+            ) as span:
+                # Set span attributes using safe_serialize for event data
+                span.set_attributes(
+                    {
+                        "event.id": str(event.id),
+                        "event.type": str(event.event_type),
+                        "event.timestamp": event.init_timestamp,
+                        "event.end_timestamp": event.end_timestamp,
+                        "event.data": safe_serialize(event),
+                        "session.id": str(self.session_id),
+                    }
+                )
+
+        finally:
+            detach(token)
+
+        # Force flush if requested or in test environment
+        if flush_now:
+            self._span_processor.force_flush()
 
     def __del__(self):
         """Cleanup when the object is garbage collected"""
