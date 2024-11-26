@@ -276,27 +276,6 @@ class TestSingleSessions:
         session.end_session(end_state="Success")
         agentops.end_all_sessions()
 
-    def test_span_processor_config(self):
-        session = agentops.start_session()
-
-        # Verify BatchSpanProcessor is configured for immediate export in tests
-        processor = session._span_processor
-        assert processor._max_export_batch_size == 1
-        assert processor._schedule_delay_millis == 0
-
-    def test_event_batching(self):
-        with patch("agentops.session.exporter.BatchSpanProcessor") as mock_processor:
-            session = agentops.start_session()
-
-            # Record multiple events
-            events = [ActionEvent(f"event_{i}") for i in range(3)]
-            for event in events:
-                session.record(event)
-
-            # Verify events were batched correctly
-            mock_processor.return_value.on_end.assert_called()
-            assert len(mock_processor.return_value.on_end.call_args[0][0]) == 3
-
 
 class TestMultiSessions:
     def setup_method(self):

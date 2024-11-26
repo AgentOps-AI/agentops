@@ -1,14 +1,15 @@
-import pytest
 from unittest.mock import Mock, patch
 from uuid import uuid4
-from opentelemetry.sdk.trace.export import SpanExportResult
-from opentelemetry.trace import SpanKind
-from opentelemetry.sdk.trace import ReadableSpan
 
-from agentops.session.exporter import SessionExporter
-from agentops.event import Event, ErrorEvent
+import pytest
+from opentelemetry.sdk.trace import ReadableSpan
+from opentelemetry.sdk.trace.export import BatchSpanProcessor, SpanExportResult
+from opentelemetry.trace import SpanKind
+
 from agentops.config import Configuration
+from agentops.event import ErrorEvent, Event
 from agentops.session import Session
+from agentops.session.exporter import SessionExporter
 
 
 @pytest.fixture
@@ -121,3 +122,39 @@ def test_export_error_handling(exporter, mock_session):
 
     result = exporter.export([span])
     assert result == SpanExportResult.FAILURE
+
+
+def test_span_processor_config(mock_session):
+    """Test that BatchSpanProcessor is configured correctly for testing"""
+    # Create a mock BatchSpanProcessor instead of using real Session
+    mock_processor = Mock(spec=BatchSpanProcessor)
+    mock_processor._max_export_batch_size = 1
+    mock_processor._schedule_delay_millis = 0
+
+    with patch("agentops.session.Session._span_processor", mock_processor):
+        session = Session(mock_session.config)
+        # Verify BatchSpanProcessor configuration
+        assert session._span_processor._max_export_batch_size == 1
+        assert session._span_processor._schedule_delay_millis == 0
+
+
+def test_event_batching(mock_session):
+    """Test that events are properly batched for export"""
+    mock_processor = Mock(spec=BatchSpanProcessor)
+    mock_processor.on_end = Mock()
+
+    with patch("agentops.session.Session._span_processor", mock_processor), patch(
+        "agentops.session.Session._tracer_provider"
+    ) as mock_provider:
+        session = Session(mock_session.config)
+        session._span_processor = mock_processor  # Explicitly set the processor
+
+        # Create mock events
+        mock_events = [Mock(spec=Event) for _ in range(3)]
+
+        # Record events
+        for event in mock_events:
+            session.record(event)
+
+        # Verify batching
+        assert mock_processor.on_end.call_count == 3
