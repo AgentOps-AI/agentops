@@ -8,6 +8,7 @@ from datetime import datetime, timezone
 from decimal import ROUND_HALF_UP, Decimal
 from typing import Any, Dict, List, Optional, Sequence, Union
 from uuid import UUID, uuid4
+from weakref import WeakSet
 
 from opentelemetry import trace
 from opentelemetry.context import attach, detach, set_value
@@ -16,147 +17,14 @@ from opentelemetry.sdk.trace import ReadableSpan, TracerProvider
 from opentelemetry.sdk.trace.export import BatchSpanProcessor, ConsoleSpanExporter, SpanExporter, SpanExportResult
 from termcolor import colored
 
-from .config import Configuration
-from .enums import EndState
-from .event import ErrorEvent, Event
-from .exceptions import ApiServerException
-from .helpers import filter_unjsonable, get_ISO_time, safe_serialize
-from .http_client import HttpClient, Response
-from .log_config import logger
-
-"""
-OTEL Guidelines:
-
-
-
-- Maintain a single TracerProvider for the application runtime 
-    - Have one global TracerProvider in the Client class
-
-- According to the OpenTelemetry Python documentation, Resource should be initialized once per application and shared across all telemetry (traces, metrics, logs).
-- Each Session gets its own Tracer (with session-specific context)
-- Allow multiple sessions to share the provider while maintaining their own context
-
-
-
-:: Resource
-
-    ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
-    Captures information about the entity producing telemetry as Attributes. 
-    For example, a process producing telemetry that is running in a container 
-    on Kubernetes has a process name, a pod name, a namespace, and possibly 
-    a deployment name. All these attributes can be included in the Resource.
-    ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
-
-    The key insight from the documentation is:
-
-    - Resource represents the entity producing telemetry - in our case, that's the AgentOps SDK application itself
-    - Session-specific information should be attributes on the spans themselves
-        - A Resource is meant to identify the service/process/application1
-        - Sessions are units of work within that application
-        - The documentation example about "process name, pod name, namespace" refers to where the code is running, not the work it's doing
-
-"""
-
-
-class SessionExporter(SpanExporter):
-    """
-    Manages publishing events for Session
-    """
-
-    def __init__(self, session: Session, **kwargs):
-        self.session = session
-        self._shutdown = threading.Event()
-        self._export_lock = threading.Lock()
-        super().__init__(**kwargs)
-
-    @property
-    def endpoint(self):
-        return f"{self.session.config.endpoint}/v2/create_events"
-
-    def export(self, spans: Sequence[ReadableSpan]) -> SpanExportResult:
-        if self._shutdown.is_set():
-            return SpanExportResult.SUCCESS
-
-        with self._export_lock:
-            try:
-                # Skip if no spans to export
-                if not spans:
-                    return SpanExportResult.SUCCESS
-
-                events = []
-                for span in spans:
-                    event_data = json.loads(span.attributes.get("event.data", "{}"))
-
-                    # Format event data based on event type
-                    if span.name == "actions":
-                        formatted_data = {
-                            "action_type": event_data.get("action_type", event_data.get("name", "unknown_action")),
-                            "params": event_data.get("params", {}),
-                            "returns": event_data.get("returns"),
-                        }
-                    elif span.name == "tools":
-                        formatted_data = {
-                            "name": event_data.get("name", event_data.get("tool_name", "unknown_tool")),
-                            "params": event_data.get("params", {}),
-                            "returns": event_data.get("returns"),
-                        }
-                    else:
-                        formatted_data = event_data
-
-                    # Get timestamps, providing defaults if missing
-                    current_time = datetime.now(timezone.utc).isoformat()
-                    init_timestamp = span.attributes.get("event.timestamp")
-                    end_timestamp = span.attributes.get("event.end_timestamp")
-
-                    # Handle missing timestamps
-                    if init_timestamp is None:
-                        init_timestamp = current_time
-                    if end_timestamp is None:
-                        end_timestamp = current_time
-
-                    # Get event ID, generate new one if missing
-                    event_id = span.attributes.get("event.id")
-                    if event_id is None:
-                        event_id = str(uuid4())
-
-                    events.append(
-                        {
-                            "id": event_id,
-                            "event_type": span.name,
-                            "init_timestamp": init_timestamp,
-                            "end_timestamp": end_timestamp,
-                            **event_data,
-                            "session_id": str(self.session.session_id),
-                        }
-                    )
-
-                # Only make HTTP request if we have events and not shutdown
-                if events:
-                    try:
-                        res = HttpClient.post(
-                            self.endpoint,
-                            json.dumps({"events": events}).encode("utf-8"),
-                            api_key=self.session.config.api_key,
-                            jwt=self.session.jwt,
-                        )
-                        return SpanExportResult.SUCCESS if res.code == 200 else SpanExportResult.FAILURE
-                    except Exception as e:
-                        logger.error(f"Failed to send events: {e}")
-                        return SpanExportResult.FAILURE
-
-                return SpanExportResult.SUCCESS
-
-            except Exception as e:
-                logger.error(f"Failed to export spans: {e}")
-                return SpanExportResult.FAILURE
-
-    def force_flush(self, timeout_millis: Optional[int] = None) -> bool:
-        return True
-
-    def shutdown(self) -> None:
-        """Handle shutdown gracefully"""
-        self._shutdown.set()
-        # Don't call session.end_session() here to avoid circular dependencies
+from agentops.config import Configuration
+from agentops.enums import EndState
+from agentops.event import ErrorEvent, Event
+from agentops.exceptions import ApiServerException
+from agentops.helpers import filter_unjsonable, get_ISO_time, safe_serialize
+from agentops.http_client import HttpClient, Response
+from agentops.log_config import logger
+from agentops.session.exporter import SessionExporter
 
 
 class Session:
@@ -644,6 +512,43 @@ class Session:
     # @session_url.setter
     # def session_url(self, url: str):
     #     pass
+
+
+class SessionsCollection(WeakSet):
+    """
+    A custom collection for managing Session objects that combines WeakSet's automatic cleanup
+    with list-like indexing capabilities.
+
+    This class is needed because:
+    1. We want WeakSet's automatic cleanup of unreferenced sessions
+    2. We need to access sessions by index (e.g., self._sessions[0]) for backwards compatibility
+    3. Standard WeakSet doesn't support indexing
+    """
+
+    def __getitem__(self, index: int) -> Session:
+        """
+        Enable indexing into the collection (e.g., sessions[0]).
+        """
+        # Convert to list for indexing since sets aren't ordered
+        items = list(self)
+        return items[index]
+
+    def __iter__(self):
+        """
+        Override the default iterator to yield sessions sorted by init_timestamp.
+        If init_timestamp is not available, fall back to __create_ts.
+
+        WARNING: Using __create_ts as a fallback for ordering may lead to unexpected results
+        if init_timestamp is not set correctly.
+        """
+        return iter(
+            sorted(
+                super().__iter__(),
+                key=lambda session: (
+                    session.init_timestamp if hasattr(session, "init_timestamp") else session.__create_ts
+                ),
+            )
+        )
 
 
 active_sessions: List[Session] = []
