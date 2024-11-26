@@ -285,6 +285,10 @@ class Session:
                 return None
 
             try:
+                # Force flush any pending spans before ending session
+                if hasattr(self, "_span_processor"):
+                    self._span_processor.force_flush(timeout_millis=5000)
+
                 # 1. Set shutdown flag on exporter first
                 if hasattr(self, "_otel_exporter"):
                     self._otel_exporter.shutdown()
