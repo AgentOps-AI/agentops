@@ -3,7 +3,7 @@ import pprint
 import sys
 from typing import Dict, Optional
 
-from ..event import LLMEvent, ErrorEvent
+from ..event import LLMEvent, ErrorEvent, ToolEvent
 from ..session import Session
 from ..log_config import logger
 from agentops.helpers import get_ISO_time, check_call_stack_for_agent_id
@@ -21,35 +21,38 @@ class LlamaStackClientProvider(InstrumentedProvider):
     def handle_response(self, response, kwargs, init_timestamp, session: Optional[Session] = None, metadata: Optional[Dict] = {}) -> dict:
         """Handle responses for LlamaStack"""
         try:
-            llm_event = LLMEvent(init_timestamp=init_timestamp, params=kwargs)
-            if session is not None:
-                llm_event.session_id = session.session_id
+            accum_delta = None
 
             def handle_stream_chunk(chunk: dict):
+                llm_event = LLMEvent(init_timestamp=init_timestamp, params=kwargs)
+                if session is not None:
+                    llm_event.session_id = session.session_id
+
                 # NOTE: prompt/completion usage not returned in response when streaming
                 # We take the first ChatCompletionResponseStreamChunkEvent and accumulate the deltas from all subsequent chunks to build one full chat completion
                 if llm_event.returns is None:
                     llm_event.returns = chunk.event
 
                 try:
-                    accumulated_delta = llm_event.returns.delta
+                    nonlocal accum_delta
                     llm_event.agent_id = check_call_stack_for_agent_id()
                     llm_event.model = kwargs["model_id"]
                     llm_event.prompt = kwargs["messages"]
 
                     # NOTE: We assume for completion only choices[0] is relevant
-                    choice = chunk.event
+                    # chunk.event
 
-                    if choice.delta:
-                        llm_event.returns.delta += choice.delta
-
-                    if choice.event_type == "complete":
+                    if chunk.event.event_type == "start":
+                        accum_delta = chunk.event.delta
+                    elif chunk.event.event_type == "progress":
+                        accum_delta += chunk.event.delta
+                    elif chunk.event.event_type == "complete":
                         llm_event.prompt = [
                             {"content": message.content, "role": message.role} for message in kwargs["messages"]
                         ]
                         llm_event.agent_id = check_call_stack_for_agent_id()
-                        llm_event.completion = accumulated_delta
                         llm_event.prompt_tokens = None
+                        llm_event.completion = accum_delta
                         llm_event.completion_tokens = None
                         llm_event.end_timestamp = get_ISO_time()
                         self._safe_record(session, llm_event)
@@ -68,7 +71,11 @@ class LlamaStackClientProvider(InstrumentedProvider):
             def handle_stream_agent(chunk: dict):
                 # NOTE: prompt/completion usage not returned in response when streaming
                 # We take the first ChatCompletionResponseStreamChunkEvent and accumulate the deltas from all subsequent chunks to build one full chat completion
-                
+                llm_event = LLMEvent(init_timestamp=init_timestamp, params=kwargs)
+
+                if session is not None:
+                    llm_event.session_id = session.session_id
+
                 if llm_event.returns is None:
                     llm_event.returns = chunk.event
 
@@ -79,29 +86,39 @@ class LlamaStackClientProvider(InstrumentedProvider):
                         pass
                     elif chunk.event.payload.event_type == "step_progress":
                     
-                        if (chunk.event.payload.step_type == "inference"):
+                        if (chunk.event.payload.step_type == "inference" and chunk.event.payload.text_delta_model_response):
+                            nonlocal accum_delta
                             delta = chunk.event.payload.text_delta_model_response
                             llm_event.agent_id = check_call_stack_for_agent_id()
                             llm_event.model = "Llama Stack"
                             llm_event.prompt = kwargs["messages"]
 
-                            if llm_event.completion:
-                                llm_event.completion += delta
+                            if accum_delta:
+                                accum_delta += delta
                             else:
-                                llm_event.completion = delta
-                                
+                                accum_delta = delta
+                        elif (chunk.event.payload.step_type == "inference" and chunk.event.payload.tool_call_delta and chunk.event.payload.tool_call_delta.parse_status == "started"):
+                            pass
+                        elif (chunk.event.payload.step_type == "inference" and chunk.event.payload.tool_call_delta and chunk.event.payload.tool_call_delta.parse_status == "in_progress"):
+                            pass
+                        elif (chunk.event.payload.step_type == "inference" and chunk.event.payload.tool_call_delta and chunk.event.payload.tool_call_delta.parse_status == "success"):
+                            pass
+
                     elif chunk.event.payload.event_type == "step_complete":
-                        pass
+                        print("Step complete")
+                        if (chunk.event.payload.step_type == "inference"):
+                            llm_event.prompt = [
+                                {"content": message['content'], "role": message['role']} for message in kwargs["messages"]
+                            ]
+                            llm_event.agent_id = check_call_stack_for_agent_id()
+                            llm_event.model = metadata.get("model_id", "Unable to identify model")
+                            llm_event.prompt_tokens = None
+                            llm_event.completion = accum_delta
+                            llm_event.completion_tokens = None
+                            llm_event.end_timestamp = get_ISO_time()
+                            self._safe_record(session, llm_event)
                     elif chunk.event.payload.event_type == "turn_complete":
-                        llm_event.prompt = [
-                            {"content": message['content'], "role": message['role']} for message in kwargs["messages"]
-                        ]
-                        llm_event.agent_id = check_call_stack_for_agent_id()
-                        llm_event.model = metadata.get("model_id", "Unable to identify model")
-                        llm_event.prompt_tokens = None
-                        llm_event.completion_tokens = None
-                        llm_event.end_timestamp = get_ISO_time()
-                        self._safe_record(session, llm_event)
+                        pass
 
                 except Exception as e:
                     self._safe_record(session, ErrorEvent(trigger_event=llm_event, exception=e))
@@ -128,9 +145,13 @@ class LlamaStackClientProvider(InstrumentedProvider):
 
                 return async_generator()
             else:
+                llm_event = LLMEvent(init_timestamp=init_timestamp, params=kwargs)
+                if session is not None:
+                    llm_event.session_id = session.session_id
+
                 llm_event.returns = response
                 llm_event.agent_id = check_call_stack_for_agent_id()
-                llm_event.model = metadata["model_id"]
+                llm_event.model = kwargs["model_id"]
                 llm_event.prompt = [{"content": message.content, "role": message.role} for message in kwargs["messages"]]
                 llm_event.prompt_tokens = None
                 llm_event.completion = response.completion_message.content
@@ -190,8 +211,6 @@ class LlamaStackClientProvider(InstrumentedProvider):
     def override(self):
         self._override_complete()
         self._override_create_turn()
-        # self._override_stream()
-        # self._override_stream_async()
 
     def undo_override(self):
         if self.original_complete is not None:
