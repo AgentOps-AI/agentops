@@ -33,7 +33,7 @@ from agentops.exceptions import ApiServerException
 from agentops.helpers import filter_unjsonable, get_ISO_time, safe_serialize
 from agentops.http_client import HttpClient, Response
 from agentops.log_config import logger
-from agentops.session.exporter import SessionExporter
+from agentops.session.exporter import SessionExporter, SessionExporterMixIn
 
 
 class SessionDict(DefaultDict):

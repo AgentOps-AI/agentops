@@ -24,26 +24,6 @@ if TYPE_CHECKING:
     from agentops.session import Session
 
 
-class SessionDict(DefaultDict):
-    session_id: UUID
-    # --------------
-    config: Configuration
-    end_state: str = EndState.INDETERMINATE.value
-    end_state_reason: Optional[str] = None
-    end_timestamp: Optional[str] = None
-    # Create a counter dictionary with each EventType name initialized to 0
-    event_counts: Dict[str, int]
-    host_env: Optional[dict] = None
-    init_timestamp: str  # Will be set to get_ISO_time() during __init__
-    is_running: bool = False
-    jwt: Optional[str] = None
-    tags: Optional[List[str]] = None
-    video: Optional[str] = None
-
-    def __init__(self, **kwargs):
-        kwargs.setdefault("event_counts", {event_type.value: 0 for event_type in EventType})
-        kwargs.setdefault("init_timestamp", get_ISO_time())
-        super().__init__(**kwargs)
 
 
 class SessionApi:
