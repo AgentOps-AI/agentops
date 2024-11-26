@@ -1,15 +1,15 @@
 # from __future__ import annotations  # Allow forward references
 
 import json
-from typing import TYPE_CHECKING, List, Optional, Union
 from functools import wraps
+from typing import TYPE_CHECKING, Callable, List, Optional, ParamSpec, TypeVar, Union
 
 from termcolor import colored
 
 from agentops.event import Event
 from agentops.exceptions import ApiServerException
 from agentops.helpers import filter_unjsonable, safe_serialize
-from agentops.http_client import HttpClient
+from agentops.http_client import HttpClient, HttpStatus, Response
 from agentops.log_config import logger
 
 if TYPE_CHECKING:
