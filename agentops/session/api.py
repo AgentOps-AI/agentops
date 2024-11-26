@@ -9,7 +9,7 @@ from termcolor import colored
 from agentops.event import Event
 from agentops.exceptions import ApiServerException
 from agentops.helpers import filter_unjsonable, safe_serialize
-from agentops.http_client import HttpClient, Response
+from agentops.http_client import HttpClient, HttpStatus, Response
 from agentops.log_config import logger
 
 if TYPE_CHECKING:
@@ -33,7 +33,6 @@ def retry_auth(func: Callable[P, T]) -> Callable[P, T]:
     def wrapper(self: "SessionApi", *args: P.args, **kwargs: P.kwargs) -> T:
         try:
             result = func(self, *args, **kwargs)
-
             # If the result is a Response object and indicates auth failure
             if isinstance(result, Response) and result.status == HttpStatus.INVALID_API_KEY:
                 # Attempt reauthorization
