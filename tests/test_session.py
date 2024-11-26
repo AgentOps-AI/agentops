@@ -1,22 +1,23 @@
 import json
 import time
+from datetime import datetime, timezone
 from typing import Dict, Optional, Sequence
 from unittest.mock import MagicMock, Mock, patch
-from datetime import datetime, timezone
+from uuid import UUID, uuid4
 
 import pytest
 import requests_mock
 from opentelemetry import trace
 from opentelemetry.sdk.trace import ReadableSpan
-from opentelemetry.trace import SpanContext, SpanKind
 from opentelemetry.sdk.trace.export import SpanExportResult
-from opentelemetry.trace import Status, StatusCode
+from opentelemetry.trace import SpanContext, SpanKind, Status, StatusCode
 from opentelemetry.trace.span import TraceState
-from uuid import UUID
 
 import agentops
 from agentops import ActionEvent, Client
-from agentops.http_client import HttpClient
+from agentops.config import Configuration
+from agentops.http_client import HttpClient, HttpStatus, Response
+from agentops.session import Session
 from agentops.singleton import clear_singletons
 
 
@@ -25,6 +26,44 @@ def setup_teardown(mock_req):
     clear_singletons()
     yield
     agentops.end_all_sessions()  # teardown part
+
+
+import logging
+
+logging.warning("ATTENTION: This test suite is legacy")
+
+
+"""
+Time patching demo:
+
+class TestSession:
+    @patch('time.monotonic')
+    def test_session_timing(self, mock_time):
+        # Mock a sequence of timestamps (in seconds)
+        timestamps = [
+            0.0,    # Session start
+            0.1,    # First event
+            0.2,    # Second event
+            0.3     # Session end
+        ]
+        mock_time.side_effect = timestamps
+        
+        # Start session
+        session = agentops.start_session()
+        
+        # First event - time will be 0.1
+        session.record(ActionEvent("test_event"))
+        
+        # Second event - time will be 0.2
+        session.record(ActionEvent("test_event"))
+        
+        # End session - time will be 0.3
+        session.end_session("Success")
+        
+        # Verify duration calculation
+        analytics = session.get_analytics()
+        assert analytics["Duration"] == "0.3s"  # Duration from 0.0 to 0.3
+"""
 
 
 @pytest.fixture(autouse=True, scope="function")
@@ -57,9 +96,12 @@ class TestSingleSessions:
         self.event_type = "test_event_type"
         agentops.init(api_key=self.api_key, max_wait_time=50, auto_start_session=False)
 
-    def test_session(self, mock_req):
-        agentops.start_session()
+    @patch("time.monotonic")
+    def test_session(self, mock_time, mock_req):
+        # Mock time progression
+        mock_time.side_effect = [0, 0.1, 0.2, 0.3]  # Simulate time passing
 
+        agentops.start_session()
         agentops.record(ActionEvent(self.event_type))
         agentops.record(ActionEvent(self.event_type))
 
@@ -233,6 +275,27 @@ class TestSingleSessions:
         # End session and cleanup
         session.end_session(end_state="Success")
         agentops.end_all_sessions()
+
+    def test_span_processor_config(self):
+        session = agentops.start_session()
+
+        # Verify BatchSpanProcessor is configured for immediate export in tests
+        processor = session._span_processor
+        assert processor._max_export_batch_size == 1
+        assert processor._schedule_delay_millis == 0
+
+    def test_event_batching(self):
+        with patch("agentops.session.exporter.BatchSpanProcessor") as mock_processor:
+            session = agentops.start_session()
+
+            # Record multiple events
+            events = [ActionEvent(f"event_{i}") for i in range(3)]
+            for event in events:
+                session.record(event)
+
+            # Verify events were batched correctly
+            mock_processor.return_value.on_end.assert_called()
+            assert len(mock_processor.return_value.on_end.call_args[0][0]) == 3
 
 
 class TestMultiSessions:
@@ -588,3 +651,15 @@ class TestSessionExporter:
             UUID(event["id"])
         except ValueError:
             pytest.fail("Event ID is not a valid UUID")
+
+    @patch("agentops.session.exporter.SessionExporter")
+    def test_event_export(self, mock_exporter):
+        session = agentops.start_session()
+        event = ActionEvent("test_action")
+
+        session.record(event)
+
+        # Verify exporter called with correct span
+        mock_exporter.return_value.export.assert_called_once()
+        exported_span = mock_exporter.return_value.export.call_args[0][0][0]
+        assert exported_span.name == "test_action"
