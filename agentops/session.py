@@ -63,121 +63,99 @@ class SessionExporter(SpanExporter):
     Manages publishing events for Session
     """
 
-    @staticmethod
-    def get_tracer_provider():
-        """Get or create the global tracer provider"""
-        # Create resource with standard OTEL attributes
-        resource = Resource.create(
-            {SERVICE_NAME: "agentops", "service.version": "1.0", "deployment.environment": "production"}
-        )
-
-        # Create provider with resource
-        provider = TracerProvider(resource=resource)
-
-        # Set as global provider
-        trace.set_tracer_provider(provider)
-
-        return provider
-
     def __init__(self, session: Session, **kwargs):
         self.session = session
-        self._shutdown = False
+        self._shutdown = threading.Event()
+        self._export_lock = threading.Lock()
         super().__init__(**kwargs)
-
-    @property
-    def headers(self):
-        # Add API key to headers along with JWT
-        headers = {
-            "Authorization": f"Bearer {self.session.jwt}",
-            "Content-Type": "application/json",
-            "X-Agentops-Api-Key": self.session.config.api_key,
-        }
-        return headers
 
     @property
     def endpoint(self):
         return f"{self.session.config.endpoint}/v2/create_events"
 
     def export(self, spans: Sequence[ReadableSpan]) -> SpanExportResult:
-        if self._shutdown:
+        if self._shutdown.is_set():
             return SpanExportResult.SUCCESS
 
-        try:
-            events = []
-            for span in spans:
-                event_data = json.loads(span.attributes.get("event.data", "{}"))
-
-                # Format event data based on event type
-                if span.name == "actions":
-                    # Action events expect action_type, params, returns
-                    formatted_data = {
-                        "action_type": event_data.get("action_type", event_data.get("name", "unknown_action")),
-                        "params": event_data.get("params", {}),
-                        "returns": event_data.get("returns"),
-                    }
-                elif span.name == "tools":
-                    formatted_data = {
-                        "name": event_data.get("name", event_data.get("tool_name", "unknown_tool")),
-                        "params": event_data.get("params", {}),
-                        "returns": event_data.get("returns"),
-                    }
-                else:
-                    formatted_data = event_data
-
-                # Get timestamps, providing defaults if missing
-                current_time = datetime.now(timezone.utc).isoformat()
-                init_timestamp = span.attributes.get("event.timestamp")
-                end_timestamp = span.attributes.get("event.end_timestamp")
-
-                # Handle missing timestamps
-                if init_timestamp is None:
-                    init_timestamp = current_time
-                if end_timestamp is None:
-                    end_timestamp = current_time
-
-                # Get event ID, generate new one if missing
-                event_id = span.attributes.get("event.id")
-                if event_id is None:
-                    event_id = str(uuid4())
-
-                events.append(
-                    {
-                        "id": event_id,  # Ensure ID is always present
-                        "event_type": span.name,
-                        "init_timestamp": init_timestamp,
-                        "end_timestamp": end_timestamp,
-                        **formatted_data,  # Spread the formatted data at top level
-                        "session_id": str(self.session.session_id),
-                    }
-                )
-
-            if events and not self._shutdown:
-                res = HttpClient.post(
-                    self.endpoint,
-                    json.dumps({"events": events}).encode("utf-8"),
-                    api_key=self.session.config.api_key,
-                    jwt=self.session.jwt,
-                    header={
-                        "Authorization": f"Bearer {self.session.jwt}",
-                        "Content-Type": "application/json",
-                        "X-AgentOps-Api-Key": self.session.config.api_key,
-                    },
-                )
-
-                if res.code == 200:
+        with self._export_lock:
+            try:
+                # Skip if no spans to export
+                if not spans:
                     return SpanExportResult.SUCCESS
 
-            return SpanExportResult.FAILURE
-        except Exception as e:
-            logger.error(f"Failed to export spans: {e}")
-            return SpanExportResult.FAILURE
+                events = []
+                for span in spans:
+                    event_data = json.loads(span.attributes.get("event.data", "{}"))
+
+                    # Format event data based on event type
+                    if span.name == "actions":
+                        formatted_data = {
+                            "action_type": event_data.get("action_type", event_data.get("name", "unknown_action")),
+                            "params": event_data.get("params", {}),
+                            "returns": event_data.get("returns"),
+                        }
+                    elif span.name == "tools":
+                        formatted_data = {
+                            "name": event_data.get("name", event_data.get("tool_name", "unknown_tool")),
+                            "params": event_data.get("params", {}),
+                            "returns": event_data.get("returns"),
+                        }
+                    else:
+                        formatted_data = event_data
+
+                    # Get timestamps, providing defaults if missing
+                    current_time = datetime.now(timezone.utc).isoformat()
+                    init_timestamp = span.attributes.get("event.timestamp")
+                    end_timestamp = span.attributes.get("event.end_timestamp")
+
+                    # Handle missing timestamps
+                    if init_timestamp is None:
+                        init_timestamp = current_time
+                    if end_timestamp is None:
+                        end_timestamp = current_time
+
+                    # Get event ID, generate new one if missing
+                    event_id = span.attributes.get("event.id")
+                    if event_id is None:
+                        event_id = str(uuid4())
+
+                    events.append(
+                        {
+                            "id": event_id,
+                            "event_type": span.name,
+                            "init_timestamp": init_timestamp,
+                            "end_timestamp": end_timestamp,
+                            **event_data,
+                            "session_id": str(self.session.session_id),
+                        }
+                    )
+
+                # Only make HTTP request if we have events and not shutdown
+                if events:
+                    try:
+                        res = HttpClient.post(
+                            self.endpoint,
+                            json.dumps({"events": events}).encode("utf-8"),
+                            api_key=self.session.config.api_key,
+                            jwt=self.session.jwt,
+                        )
+                        return SpanExportResult.SUCCESS if res.code == 200 else SpanExportResult.FAILURE
+                    except Exception as e:
+                        logger.error(f"Failed to send events: {e}")
+                        return SpanExportResult.FAILURE
+
+                return SpanExportResult.SUCCESS
+
+            except Exception as e:
+                logger.error(f"Failed to export spans: {e}")
+                return SpanExportResult.FAILURE
 
     def force_flush(self, timeout_millis: Optional[int] = None) -> bool:
         return True
 
     def shutdown(self) -> None:
         """Handle shutdown gracefully"""
-        self._shutdown = True
+        self._shutdown.set()
         # Don't call session.end_session() here to avoid circular dependencies
 
 
@@ -231,7 +209,8 @@ class Session:
         self.config = config
         self.jwt = None
         self._lock = threading.Lock()
-        self._token_cost: Decimal = Decimal(0)
+        self._end_session_lock = threading.Lock()
+        self.token_cost: Decimal = Decimal(0)
         self._session_url: str = ""
         self.event_counts = {
             "llms": 0,
@@ -240,25 +219,29 @@ class Session:
             "errors": 0,
             "apis": 0,
         }
-        self.session_url: Optional[str] = None
+        # self.session_url: Optional[str] = None
 
         # Start session first to get JWT
         self.is_running = self._start_session()
         if not self.is_running:
             return
 
-        # Initialize OTEL components
-        self._tracer_provider = SessionExporter.get_tracer_provider()
+        # Initialize OTEL components with a more controlled processor
+        self._tracer_provider = TracerProvider()
         self._otel_tracer = self._tracer_provider.get_tracer(
             f"agentops.session.{str(session_id)}",
         )
         self._otel_exporter = SessionExporter(session=self)
+
+        # Use smaller batch size and shorter delay to reduce buffering
         self._span_processor = BatchSpanProcessor(
             self._otel_exporter,
             max_queue_size=self.config.max_queue_size,
             schedule_delay_millis=self.config.max_wait_time,
-            max_export_batch_size=self.config.max_queue_size,
+            max_export_batch_size=min(max(self.config.max_queue_size // 20, 1), min(self.config.max_queue_size, 32)),
+            export_timeout_millis=20000,
         )
+
         self._tracer_provider.add_span_processor(self._span_processor)
 
     def set_video(self, video: str) -> None:
@@ -293,61 +276,68 @@ class Session:
         end_state_reason: Optional[str] = None,
         video: Optional[str] = None,
     ) -> Union[Decimal, None]:
-        if not self.is_running:
-            return None
+        with self._end_session_lock:
+            if not self.is_running:
+                return None
 
-        if not any(end_state == state.value for state in EndState):
-            logger.warning("Invalid end_state. Please use one of the EndState enums")
-            return None
+            if not any(end_state == state.value for state in EndState):
+                logger.warning("Invalid end_state. Please use one of the EndState enums")
+                return None
 
-        # 1. Set shutdown flag on exporter first to prevent new exports
-        if hasattr(self, "_span_processor") and hasattr(self._span_processor, "_span_exporter"):
-            self._span_processor._span_exporter._shutdown = True
+            try:
+                # 1. Set shutdown flag on exporter first
+                if hasattr(self, "_otel_exporter"):
+                    self._otel_exporter.shutdown()
 
-        # 2. Set session end state
-        self.end_timestamp = get_ISO_time()
-        self.end_state = end_state
-        self.end_state_reason = end_state_reason
-        if video is not None:
-            self.video = video
+                # 2. Set session end state
+                self.end_timestamp = get_ISO_time()
+                self.end_state = end_state
+                self.end_state_reason = end_state_reason
+                if video is not None:
+                    self.video = video
 
-        # 3. Mark session as not running
-        self.is_running = False
+                # 3. Mark session as not running before cleanup
+                self.is_running = False
 
-        # 4. Clean up OTEL components
-        try:
-            if hasattr(self, "_span_processor"):
-                self._span_processor.force_flush(timeout_millis=30000)
-                self._span_processor.shutdown()
-                del self._span_processor
-        except Exception as e:
-            logger.warning(f"Error during span processor cleanup: {e}")
+                # 4. Clean up OTEL components
+                if hasattr(self, "_span_processor"):
+                    try:
+                        # Force flush any pending spans
+                        self._span_processor.force_flush(timeout_millis=5000)
+                        # Shutdown the processor
+                        self._span_processor.shutdown()
+                    except Exception as e:
+                        logger.warning(f"Error during span processor cleanup: {e}")
+                    finally:
+                        del self._span_processor
 
-        # 5. Final session update
-        if not (analytics_stats := self.get_analytics()):
-            return None
+                # 5. Final session update
+                if not (analytics_stats := self.get_analytics()):
+                    return None
 
-        analytics = (
-            f"Session Stats - "
-            f"{colored('Duration:', attrs=['bold'])} {analytics_stats['Duration']} | "
-            f"{colored('Cost:', attrs=['bold'])} ${analytics_stats['Cost']} | "
-            f"{colored('LLMs:', attrs=['bold'])} {analytics_stats['LLM calls']} | "
-            f"{colored('Tools:', attrs=['bold'])} {analytics_stats['Tool calls']} | "
-            f"{colored('Actions:', attrs=['bold'])} {analytics_stats['Actions']} | "
-            f"{colored('Errors:', attrs=['bold'])} {analytics_stats['Errors']}"
-        )
-        logger.info(analytics)
+                analytics = (
+                    f"Session Stats - "
+                    f"{colored('Duration:', attrs=['bold'])} {analytics_stats['Duration']} | "
+                    f"{colored('Cost:', attrs=['bold'])} ${analytics_stats['Cost']} | "
+                    f"{colored('LLMs:', attrs=['bold'])} {analytics_stats['LLM calls']} | "
+                    f"{colored('Tools:', attrs=['bold'])} {analytics_stats['Tool calls']} | "
+                    f"{colored('Actions:', attrs=['bold'])} {analytics_stats['Actions']} | "
+                    f"{colored('Errors:', attrs=['bold'])} {analytics_stats['Errors']}"
+                )
+                logger.info(analytics)
 
-        self._session_url = "https://app.agentops.ai/drilldown?session_id=" + str(self.session_id)
+            except Exception as e:
+                logger.exception(f"Error during session end: {e}")
+            finally:
+                active_sessions.remove(self)  # First thing, get rid of the session
 
-        logger.info(
-            colored(
-                f"\x1b[34mSession Replay: {self._session_url}\x1b[0m",
-                "blue",
-            )
-        )
-        active_sessions.remove(self)
-        return self._token_cost
+                logger.info(
+                    colored(
+                        f"\x1b[34mSession Replay: {self.session_url}\x1b[0m",
+                        "blue",
+                    )
+                )
+            return self.token_cost
 
     def add_tags(self, tags: List[str]) -> None:
         """
@@ -502,8 +492,8 @@ class Session:
                 res = HttpClient.post(
                     f"{self.config.endpoint}/v2/create_session",
                     serialized_payload,
-                    self.config.api_key,
-                    self.config.parent_key,
+                    api_key=self.config.api_key,
+                    parent_key=self.config.parent_key,
                 )
             except ApiServerException as e:
                 return logger.error(f"Could not start session - {e}")
@@ -518,14 +508,9 @@ class Session:
             if jwt is None:
                 return False
 
-            session_url = res.body.get(
-                "session_url",
-                f"https://app.agentops.ai/drilldown?session_id={self.session_id}",
-            )
-
             logger.info(
                 colored(
-                    f"\x1b[34mSession Replay: {session_url}\x1b[0m",
+                    f"\x1b[34mSession Replay: {self.session_url}\x1b[0m",
                     "blue",
                 )
             )
@@ -567,11 +552,6 @@ class Session:
                 serialized_payload,
                 api_key=self.config.api_key,
                 jwt=self.jwt,
-                header={
-                    "Authorization": f"Bearer {self.jwt}",
-                    "Content-Type": "application/json",
-                    "X-Agentops-Api-Key": self.config.api_key,
-                },
             )
         except ApiServerException as e:
             return logger.error(f"Could not create agent - {e}")
@@ -587,17 +567,16 @@ class Session:
         return wrapper
 
     def _get_response(self) -> Optional[Response]:
-        with self._lock:
-            payload = {"session": self.__dict__}
-            try:
-                response = HttpClient.post(
-                    f"{self.config.endpoint}/v2/update_session",
-                    json.dumps(filter_unjsonable(payload)).encode("utf-8"),
-                    api_key=self.config.api_key,
-                    jwt=self.jwt,
-                )
-            except ApiServerException as e:
-                return logger.error(f"Could not end session - {e}")
+        payload = {"session": self.__dict__}
+        try:
+            response = HttpClient.post(
+                f"{self.config.endpoint}/v2/update_session",
+                json.dumps(filter_unjsonable(payload)).encode("utf-8"),
+                api_key=self.config.api_key,
+                jwt=self.jwt,
+            )
+        except ApiServerException as e:
+            return logger.error(f"Could not end session - {e}")
 
         logger.debug(response.body)
         return response
@@ -638,17 +617,10 @@ class Session:
 
         formatted_duration = self._format_duration(self.init_timestamp, self.end_timestamp)
 
-        response = self._get_response()
-        if response is None:
+        if (response := self._get_response()) is None:
             return None
 
         self.token_cost = self._get_token_cost(response)
-        formatted_cost = self._format_token_cost(self.token_cost)
-
-        self.session_url = response.body.get(
-            "session_url",
-            f"https://app.agentops.ai/drilldown?session_id={self.session_id}",
-        )
 
         return {
             "LLM calls": self.event_counts["llms"],
@@ -656,8 +628,18 @@ class Session:
             "Actions": self.event_counts["actions"],
             "Errors": self.event_counts["errors"],
             "Duration": formatted_duration,
-            "Cost": formatted_cost,
+            "Cost": self._format_token_cost(self.token_cost),
         }
+
+    @property
+    def session_url(self) -> str:
+        """Returns the URL for this session in the AgentOps dashboard."""
+        assert self.session_id, "Session ID is required to generate a session URL"
+        return f"https://app.agentops.ai/drilldown?session_id={self.session_id}"
+
+    # @session_url.setter
+    # def session_url(self, url: str):
+    #     pass
 
 
 active_sessions: List[Session] = []

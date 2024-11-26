@@ -527,7 +527,7 @@ class TestSessionExporter:
 
     def test_export_with_shutdown(self, mock_req):
         """Test export behavior when shutdown"""
-        self.exporter._shutdown = True
+        self.exporter._shutdown.set()
         span = self.create_test_span()
 
         result = self.exporter.export([span])
