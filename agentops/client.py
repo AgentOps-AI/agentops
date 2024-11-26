@@ -14,6 +14,7 @@ import sys
 import threading
 import traceback
 from decimal import Decimal
+from functools import cached_property
 from typing import List, Optional, Tuple, Union
 from uuid import UUID, uuid4
 
@@ -225,7 +226,7 @@ class Client(metaclass=MetaClient):
         session = Session(
             session_id=session_id,
             tags=list(session_tags),
-            host_env=self._get_cached_host_env(),
+            host_env=self.host_env,
             config=self._config,
         )
 
@@ -432,8 +433,7 @@ class Client(metaclass=MetaClient):
     def parent_key(self):
         return self._config.parent_key
 
-    def _get_cached_host_env(self):
+    @cached_property
+    def host_env(self):
         """Cache and reuse host environment data"""
-        if self._host_env is None and not self._config.env_data_opt_out:
-            self._host_env = get_host_env(self._config.env_data_opt_out)
-        return self._host_env
+        return get_host_env(self._config.env_data_opt_out)
