@@ -71,23 +71,12 @@ class Session(SessionDict, SessionExporterMixIn):
         tags: Optional[List[str]] = None,
         host_env: Optional[dict] = None,
     ):
-        # Initialize parent class first
-        super().__init__(
-            session_id=session_id, config=config, tags=tags or [], host_env=host_env, token_cost=Decimal(0)
-        )
-
+        # Initialize threading primitives first
         self._lock = threading.Lock()
         self._end_session_lock = threading.Lock()
-
-        # Replace boolean flag with Event
         self._running = threading.Event()
 
-        # Set creation timestamp
-        self.__create_ts = time.monotonic()
-
-        # Initialize API handler
-        self.api = SessionApi(self)
-
+        # Initialize locks dict
         self._locks = {
             "lifecycle": threading.Lock(),  # Controls session lifecycle operations
             "update_session": threading.Lock(),  # Protects session state updates
@@ -97,8 +86,43 @@ class Session(SessionDict, SessionExporterMixIn):
             "api": threading.Lock(),  # Protects API calls
         }
 
+        # Initialize SessionExporterMixIn
+        SessionExporterMixIn.__init__(self)
+
+        # Initialize SessionDict with all required attributes
+        super().__init__(
+            session_id=session_id,
+            config=config,
+            tags=tags or [],
+            host_env=host_env,
+            token_cost=Decimal(0),
+            end_state=EndState.INDETERMINATE.value,
+            end_state_reason=None,
+            end_timestamp=None,
+            jwt=None,
+            video=None,
+            event_counts={event_type.value: 0 for event_type in EventType},
+            init_timestamp=get_ISO_time(),
+        )
+
+        # Set creation timestamp
+        self.__create_ts = time.monotonic()
+
+        # Initialize API handler
+        self.api = SessionApi(self)
+
         # Start session first to get JWT
         self._start_session()
+
+    def __hash__(self) -> int:
+        """Make Session hashable using session_id"""
+        return hash(str(self.session_id))
+
+    def __eq__(self, other: object) -> bool:
+        """Define equality based on session_id"""
+        if not isinstance(other, Session):
+            return NotImplemented
+        return str(self.session_id) == str(other.session_id)
 
     @property
     def is_running(self) -> bool:
