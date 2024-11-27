@@ -38,7 +38,7 @@ class LlmTracker:
         },
         "ollama": {"0.0.1": ("chat", "Client.chat", "AsyncClient.chat")},
         "llama_stack_client": {
-            "0.0.53": ("resources.InferenceResource.chat_completion"),
+            "0.0.53": ("resources.InferenceResource.chat_completion", "lib.agents.agent.Agent.create_turn"),
         },
         "groq": {
             "0.9.0": ("Client.chat", "AsyncClient.chat"),
