@@ -53,8 +53,6 @@ def fetch_time_travel_id(ttd_id):
 
 
 def fetch_completion_override_from_time_travel_cache(kwargs):
-    print(" - - - - ")
-
     if not check_time_travel_active():
         return
 
