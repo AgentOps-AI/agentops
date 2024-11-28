@@ -51,6 +51,9 @@ Optionally, sessions may include:
 
 _Note: Overrides any current tags_
 
+#### `get_analytics`
+**Returns** (dict): A dictionary containing various analytics metrics for the session.
+
 
 ## Starting a Session
 When you call `agentops.init()`, a session is automatically started.
@@ -62,7 +65,7 @@ Both `agentops.init()` and `agentops.start_session()` work as a factory pattern 
 
 ## Ending a Session
 If a process ends without any call to agentops, it will show in the dashboard as `Indeterminate`.
-To end with a state, call either `agentops.end_session(...)` [(reference)](/v1/usage/sdk-reference/#end-session) if only one session is in use. Otherwise use `session.end_session(...)`
+To end with a state, call either `agentops.end_session(...)` [(reference)](/v1/usage/sdk-reference/#end-session) if only one session is in use. Otherwise use `session.end_session(...)`.
 
 ## Inherited Sessions
 When working with multiple agents running in different processes, it's possible to initialize AgentOps or start a session
@@ -71,21 +74,50 @@ with an existing session_id.
 `agentops.init(inherited_session_id=<id>)`
 `agentops.start_session(inherited_session_id=<id>)`
 
-You can retrieve the current `session_id` by assigning the returned value from `init()` or `start_session()`
+You can retrieve the current `session_id` by assigning the returned value from `init()` or `start_session()`.
 
 <CodeGroup>
-```python python
+
+```python
 import agentops
 session = agentops.init()
 # pass session.session_id to the other process
+```
 
+```python
 # -- other process --
 session_id = retrieve_session_id() # <-- your function
 agentops.init(inherited_session_id=<id>)
 ```
+
 </CodeGroup>
 
 Both processes will now contribute data to the same session.
+
+## Session Analytics
+You can retrieve the analytics for a session by calling `session.get_analytics()`. 
+
+The example below shows how to record events and retrieve analytics.
+
+<CodeGroup>
+
+```python
+import agentops
+session = agentops.init()
+session.record(ActionEvent("llms"))
+session.record(ActionEvent("tools"))
+analytics = session.get_analytics()
+print(analytics)
+session.end_session("Success")
+```
+
+The output will look like this -
+
+```bash
+{'LLM calls': 0, 'Tool calls': 0, 'Actions': 0, 'Errors': 0, 'Duration': '0.9s', 'Cost': '0.00'}
+```
+
+</CodeGroup>
 
 ## The AgentOps SDK Client
 _More info for the curious_
