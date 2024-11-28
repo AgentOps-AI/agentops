@@ -30,7 +30,6 @@ class InstrumentedProvider(ABC):
         return self._provider_name
 
     def _safe_record(self, session, event):
-        print("... _safe_record ...")
         if session is not None:
             session.record(event)
         else:
