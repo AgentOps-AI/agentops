@@ -43,7 +43,8 @@ class SessionApi:
             res = HttpClient.post(
                 f"{self.config.endpoint}/v2/update_session",
                 json.dumps(filter_unjsonable(payload)).encode("utf-8"),
-                jwt=self.jwt,
+                session_id=str(self.session.session_id),
+                api_key=self.config.api_key,
             )
         except ApiServerException as e:
             logger.error(f"Could not update session - {e}")
@@ -56,7 +57,7 @@ class SessionApi:
 
         return res.body, session_url
 
-    def batch(self, events: List[Event]) -> Response:
+    def batch(self, events: List[Union[Event, dict]]) -> Response:
         """Send batch of events to API"""
         endpoint = f"{self.config.endpoint}/v2/create_events"
         serialized_payload = safe_serialize(dict(events=events)).encode("utf-8")
@@ -70,9 +71,16 @@ class SessionApi:
         # Update event counts on success
         if res.status == HttpStatus.SUCCESS:
             for event in events:
-                event_type = event.event_type
-                if event_type in self.session["event_counts"]:
-                    self.session["event_counts"][event_type] += 1
+                # Handle both Event objects and dictionaries
+                if isinstance(event, Event):
+                    event_type = event.event_type
+                else:
+                    # For dict events, get the value that matches an EventType value
+                    event_type = event["event_type"]
+
+                # Use the enum value for counting
+                if event_type in self.session.state.event_counts:
+                    self.session.state.event_counts[event_type] += 1
 
         return res
 

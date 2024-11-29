@@ -18,6 +18,8 @@ from functools import cached_property
 from typing import List, Optional, Tuple, Union
 from uuid import UUID, uuid4
 
+from opentelemetry import trace
+from opentelemetry.sdk.trace import TracerProvider
 from termcolor import colored
 
 from .config import Configuration
@@ -28,6 +30,11 @@ from .log_config import logger
 from .meta_client import MetaClient
 from .session import Session, active_sessions
 from .singleton import conditional_singleton
+
+# This can only be done once, a warning will be logged if any further attempt is made.
+_provider = TracerProvider()
+print("@@@PROVIDER:" + str(id(_provider)))
+trace.set_tracer_provider(_provider)
 
 
 @conditional_singleton
@@ -198,7 +205,7 @@ class Client(metaclass=MetaClient):
         self,
         tags: Optional[List[str]] = None,
         inherited_session_id: Optional[str] = None,
-    ) -> Union[Session, None]:
+    ) -> Session:
         """
         Start a new session for recording events.
 

@@ -3,8 +3,9 @@ import time
 
 import pytest
 
-from agentops.helpers import atomic
+from agentops.decorators import atomic
 
+from agentops.singleton import singleton, conditional_singleton, clear_singletons
 
 class TestAtomicDecorator:
     def test_atomic_basic(self):
@@ -326,3 +327,126 @@ class TestAtomicDecorator:
         # Check sequence is properly ordered within each generator call
         for i in range(0, len(sequence), 5):
             assert sequence[i : i + 5] == list(range(5)), "Generator sequence should be ordered"
+
+
+    def test_atomic_with_singleton(self):
+        """Test atomic works with singleton classes"""
+        
+        @singleton
+        class Counter:
+            def __init__(self):
+                self.value = 0
+
+            @atomic(key="singleton_counter")
+            def increment(self):
+                current = self.value
+                threading.Event().wait(0.001)
+                self.value = current + 1
+
+        # Create multiple instances (should be the same object)
+        counter1 = Counter()
+        counter2 = Counter()
+        assert counter1 is counter2, "Singleton not working"
+
+        threads = []
+        for _ in range(50):
+            t1 = threading.Thread(target=counter1.increment)
+            t2 = threading.Thread(target=counter2.increment)
+            threads.extend([t1, t2])
+            t1.start()
+            t2.start()
+
+        for t in threads:
+            t.join()
+
+        assert counter1.value == 100, "Counter should be thread-safe across singleton instances"
+        clear_singletons()
+
+    def test_atomic_with_conditional_singleton(self):
+        """Test atomic works with conditional singletons"""
+        
+        @conditional_singleton
+        class Counter:
+            def __init__(self):
+                self.value = 0
+
+            @atomic(key="conditional_counter")
+            def increment(self):
+                current = self.value
+                threading.Event().wait(0.001)
+                self.value = current + 1
+
+        # Create singleton instance
+        counter1 = Counter(use_singleton=True)
+        counter2 = Counter(use_singleton=True)
+        assert counter1 is counter2, "Conditional singleton (True) not working"
+
+        # Create separate instances
+        counter3 = Counter(use_singleton=False)
+        counter4 = Counter(use_singleton=False)
+        assert counter3 is not counter4, "Conditional singleton (False) not working"
+
+        threads = []
+        for _ in range(50):
+            t1 = threading.Thread(target=counter1.increment)
+            t2 = threading.Thread(target=counter2.increment)
+            t3 = threading.Thread(target=counter3.increment)
+            t4 = threading.Thread(target=counter4.increment)
+            threads.extend([t1, t2, t3, t4])
+            for t in [t1, t2, t3, t4]:
+                t.start()
+
+        for t in threads:
+            t.join()
+
+        assert counter1.value == 100, "Counter should be thread-safe across singleton instances"
+        assert counter3.value == 50, "Separate instance should have its own count"
+        assert counter4.value == 50, "Separate instance should have its own count"
+        clear_singletons()
+
+    def test_atomic_with_class_instances(self):
+        """Test atomic behavior across different instances of the same class"""
+        
+        class Counter:
+            def __init__(self):
+                self.value = 0
+                self._id = id(self)  # Use object id as unique identifier
+
+            @atomic(key=lambda self: f"instance_counter_{id(self)}")
+            def increment(self):
+                current = self.value
+                threading.Event().wait(0.001)
+                self.value = current + 1
+
+            @atomic(key="shared_counter")
+            def increment_shared(self):
+                current = self.value
+                threading.Event().wait(0.001)
+                self.value = current + 1
+
+        # Create separate instances
+        counter1 = Counter()
+        counter2 = Counter()
+
+        threads = []
+        # Test instance-specific locks
+        for _ in range(50):
+            t1 = threading.Thread(target=counter1.increment)
+            t2 = threading.Thread(target=counter2.increment)
+            threads.extend([t1, t2])
+            t1.start()
+            t2.start()
+
+        # Test shared lock
+        for _ in range(50):
+            t1 = threading.Thread(target=counter1.increment_shared)
+            t2 = threading.Thread(target=counter2.increment_shared)
+            threads.extend([t1, t2])
+            t1.start()
+            t2.start()
+
+        for t in threads:
+            t.join()
+
+        assert counter1.value == 100, "Counter1 should have its own count"
+        assert counter2.value == 100, "Counter2 should have its own count" 

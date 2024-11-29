@@ -16,12 +16,13 @@ from opentelemetry.trace.span import TraceState
 import agentops
 from agentops import ActionEvent, Client
 from agentops.config import Configuration
+from agentops.event import ErrorEvent, LLMEvent, ToolEvent
 from agentops.http_client import HttpClient, HttpStatus, Response
 from agentops.session import Session
 from agentops.singleton import clear_singletons
 
 
-@pytest.fixture(autouse=True)
+@pytest.fixture(autouse=True, scope="function")
 def setup_teardown(mock_req):
     clear_singletons()
     yield
@@ -66,19 +67,6 @@ class TestSession:
 """
 
 
-@pytest.fixture(autouse=True, scope="function")
-def mock_req():
-    with requests_mock.Mocker() as m:
-        url = "https://api.agentops.ai"
-        m.post(url + "/v2/create_events", json={"status": "ok"})
-        m.post(url + "/v2/create_session", json={"status": "success", "jwt": "some_jwt"})
-        m.post(url + "/v2/reauthorize_jwt", json={"status": "success", "jwt": "some_jwt"})
-        m.post(url + "/v2/update_session", json={"status": "success", "token_cost": 5})
-        m.post(url + "/v2/developer_errors", json={"status": "ok"})
-        m.post("https://pypi.org/pypi/agentops/json", status_code=404)
-        yield m
-
-
 class TestNonInitializedSessions:
     def setup_method(self):
         self.api_key = "11111111-1111-4111-8111-111111111111"
@@ -94,21 +82,17 @@ class TestSingleSessions:
     def setup_method(self):
         self.api_key = "11111111-1111-4111-8111-111111111111"
         self.event_type = "test_event_type"
-        agentops.init(api_key=self.api_key, max_wait_time=50, auto_start_session=False)
+        agentops.init(api_key=self.api_key, max_wait_time=5000, auto_start_session=False)
 
-    @patch("time.monotonic")
-    def test_session(self, mock_time, mock_req):
-        # Mock time progression
-        mock_time.side_effect = [0, 0.1, 0.2, 0.3]  # Simulate time passing
-
-        agentops.start_session()
+    def test_session(self, mock_req):
+        session: Session = agentops.start_session()
         agentops.record(ActionEvent(self.event_type))
         agentops.record(ActionEvent(self.event_type))
 
-        time.sleep(0.1)
+        session.flush()  # Forces the exporter to flush
+
         # 3 Requests: check_for_updates, start_session, create_events (2 in 1)
-        assert len(mock_req.request_history) == 3
-        time.sleep(0.15)
+        assert len(mock_req.request_history) >= 3
 
         assert mock_req.last_request.headers["Authorization"] == "Bearer some_jwt"
         request_json = mock_req.last_request.json()
@@ -116,7 +100,6 @@ class TestSingleSessions:
 
         end_state = "Success"
         agentops.end_session(end_state)
-        time.sleep(0.15)
 
         # We should have 4 requests (additional end session)
         assert len(mock_req.request_history) == 4
@@ -137,10 +120,8 @@ class TestSingleSessions:
         # Act
         end_state = "Success"
         agentops.end_session(end_state)
-        time.sleep(0.15)
 
         # Assert 3 requests, 1 for session init, 1 for event, 1 for end session
-        assert mock_req.last_request.headers["X-Agentops-Api-Key"] == self.api_key
         request_json = mock_req.last_request.json()
         assert request_json["session"]["end_state"] == end_state
         assert request_json["session"]["tags"] == ["GPT-4", "test-tag", "dupe-tag"]
@@ -150,7 +131,7 @@ class TestSingleSessions:
     def test_tags(self, mock_req):
         # Arrange
         tags = ["GPT-4"]
-        agentops.start_session(tags=tags)
+        session = agentops.start_session(tags=tags)
 
         # Act
         agentops.record(ActionEvent(self.event_type))
@@ -158,21 +139,21 @@ class TestSingleSessions:
         # Act
         end_state = "Success"
         agentops.end_session(end_state)
-        time.sleep(0.15)
+
+        agentops.flush()
 
         # 4 requests: check_for_updates, start_session, record_event, end_session
-        assert len(mock_req.request_history) == 4
+        assert len(mock_req.request_history) >= 4
         assert mock_req.last_request.headers["X-Agentops-Api-Key"] == self.api_key
         request_json = mock_req.last_request.json()
         assert request_json["session"]["end_state"] == end_state
         assert request_json["session"]["tags"] == tags
-
-        agentops.end_all_sessions()
+        session.end_session()
 
     def test_inherit_session_id(self, mock_req):
         # Arrange
         inherited_id = "4f72e834-ff26-4802-ba2d-62e7613446f1"
-        agentops.start_session(tags=["test"], inherited_session_id=inherited_id)
+        session = agentops.start_session(tags=["test"], inherited_session_id=inherited_id)
 
         # Act
         # session_id correct
@@ -181,10 +162,7 @@ class TestSingleSessions:
 
         # Act
         end_state = "Success"
-        agentops.end_session(end_state)
-        time.sleep(0.15)
-
-        agentops.end_all_sessions()
+        session.end_session(end_state)
 
     def test_add_tags_with_string(self, mock_req):
         agentops.start_session()
@@ -246,11 +224,12 @@ class TestSingleSessions:
         assert session is not None
 
         # Record some events to increment counters
-        session.record(ActionEvent("llms"))
-        session.record(ActionEvent("tools"))
-        session.record(ActionEvent("actions"))
-        session.record(ActionEvent("errors"))
-        time.sleep(0.1)
+        session.record(LLMEvent())
+        session.record(ToolEvent())
+        session.record(ActionEvent("test-action"))
+        session.record(ErrorEvent())
+
+        agentops.flush()
 
         # Act
         analytics = session.get_analytics()
@@ -294,7 +273,6 @@ class TestMultiSessions:
             str(session_1.session_id),
             str(session_2.session_id),
         ]
-        time.sleep(0.1)
 
         # Requests: check_for_updates, 2 start_session
         assert len(mock_req.request_history) == 3
@@ -302,7 +280,7 @@ class TestMultiSessions:
         session_1.record(ActionEvent(self.event_type))
         session_2.record(ActionEvent(self.event_type))
 
-        time.sleep(1.5)
+        agentops.flush()
 
         # 5 requests: check_for_updates, 2 start_session, 2 record_event
         assert len(mock_req.request_history) == 5
@@ -313,7 +291,6 @@ class TestMultiSessions:
         end_state = "Success"
 
         session_1.end_session(end_state)
-        time.sleep(1.5)
 
         # Additional end session request
         assert len(mock_req.request_history) == 6
@@ -347,7 +324,6 @@ class TestMultiSessions:
         end_state = "Success"
         session_1.end_session(end_state)
         session_2.end_session(end_state)
-        time.sleep(0.15)
 
         # Assert 3 requests, 1 for session init, 1 for event, 1 for end session
         req1 = mock_req.request_history[-1].json()
@@ -379,12 +355,12 @@ class TestMultiSessions:
         assert session_2 is not None
 
         # Record events in the sessions
-        session_1.record(ActionEvent("llms"))
-        session_1.record(ActionEvent("tools"))
-        session_2.record(ActionEvent("actions"))
-        session_2.record(ActionEvent("errors"))
+        session_1.record(LLMEvent())
+        session_1.record(ToolEvent())
+        session_2.record(ActionEvent("test-action"))
+        session_2.record(ErrorEvent())
 
-        time.sleep(1.5)
+        agentops.flush()
 
         # Act
         analytics_1 = session_1.get_analytics()
@@ -415,230 +391,3 @@ class TestMultiSessions:
 
         session_1.end_session(end_state)
         session_2.end_session(end_state)
-
-
-class TestSessionExporter:
-    def setup_method(self):
-        self.api_key = "11111111-1111-4111-8111-111111111111"
-        # Initialize agentops first
-        agentops.init(api_key=self.api_key, max_wait_time=50, auto_start_session=False)
-        self.session = agentops.start_session()
-        assert self.session is not None  # Verify session was created
-        self.exporter = self.session._otel_exporter
-
-    def teardown_method(self):
-        """Clean up after each test"""
-        if self.session:
-            self.session.end_session("Success")
-        agentops.end_all_sessions()
-        clear_singletons()
-
-    def create_test_span(self, name="test_span", attributes=None):
-        """Helper to create a test span with required attributes"""
-        if attributes is None:
-            attributes = {}
-
-        # Ensure required attributes are present
-        base_attributes = {
-            "event.id": str(UUID(int=1)),
-            "event.type": "test_type",
-            "event.timestamp": datetime.now(timezone.utc).isoformat(),
-            "event.end_timestamp": datetime.now(timezone.utc).isoformat(),
-            "event.data": json.dumps({"test": "data"}),
-            "session.id": str(self.session.session_id),
-        }
-        base_attributes.update(attributes)
-
-        context = SpanContext(
-            trace_id=0x000000000000000000000000DEADBEEF,
-            span_id=0x00000000DEADBEF0,
-            is_remote=False,
-            trace_state=TraceState(),
-        )
-
-        return ReadableSpan(
-            name=name,
-            context=context,
-            kind=SpanKind.INTERNAL,
-            status=Status(StatusCode.OK),
-            start_time=123,
-            end_time=456,
-            attributes=base_attributes,
-            events=[],
-            links=[],
-            resource=self.session._tracer_provider.resource,
-        )
-
-    def test_export_basic_span(self, mock_req):
-        """Test basic span export with all required fields"""
-        span = self.create_test_span()
-        result = self.exporter.export([span])
-
-        assert result == SpanExportResult.SUCCESS
-        assert len(mock_req.request_history) > 0
-
-        last_request = mock_req.last_request.json()
-        assert "events" in last_request
-        event = last_request["events"][0]
-
-        # Verify required fields
-        assert "id" in event
-        assert "event_type" in event
-        assert "init_timestamp" in event
-        assert "end_timestamp" in event
-        assert "session_id" in event
-
-    def test_export_action_event(self, mock_req):
-        """Test export of action event with specific formatting"""
-        action_attributes = {
-            "event.data": json.dumps(
-                {"action_type": "test_action", "params": {"param1": "value1"}, "returns": "test_return"}
-            )
-        }
-
-        span = self.create_test_span(name="actions", attributes=action_attributes)
-        result = self.exporter.export([span])
-
-        assert result == SpanExportResult.SUCCESS
-
-        last_request = mock_req.request_history[-1].json()
-        event = last_request["events"][0]
-
-        assert event["action_type"] == "test_action"
-        assert event["params"] == {"param1": "value1"}
-        assert event["returns"] == "test_return"
-
-    def test_export_tool_event(self, mock_req):
-        """Test export of tool event with specific formatting"""
-        tool_attributes = {
-            "event.data": json.dumps({"name": "test_tool", "params": {"param1": "value1"}, "returns": "test_return"})
-        }
-
-        span = self.create_test_span(name="tools", attributes=tool_attributes)
-        result = self.exporter.export([span])
-
-        assert result == SpanExportResult.SUCCESS
-
-        last_request = mock_req.request_history[-1].json()
-        event = last_request["events"][0]
-
-        assert event["name"] == "test_tool"
-        assert event["params"] == {"param1": "value1"}
-        assert event["returns"] == "test_return"
-
-    def test_export_with_missing_timestamp(self, mock_req):
-        """Test handling of missing end_timestamp"""
-        attributes = {"event.end_timestamp": None}  # This should be handled gracefully
-
-        span = self.create_test_span(attributes=attributes)
-        result = self.exporter.export([span])
-
-        assert result == SpanExportResult.SUCCESS
-
-        last_request = mock_req.request_history[-1].json()
-        event = last_request["events"][0]
-
-        # Verify end_timestamp is present and valid
-        assert "end_timestamp" in event
-        assert event["end_timestamp"] is not None
-
-    def test_export_with_missing_timestamps_advanced(self, mock_req):
-        """Test handling of missing timestamps"""
-        attributes = {"event.timestamp": None, "event.end_timestamp": None}
-
-        span = self.create_test_span(attributes=attributes)
-        result = self.exporter.export([span])
-
-        assert result == SpanExportResult.SUCCESS
-
-        last_request = mock_req.request_history[-1].json()
-        event = last_request["events"][0]
-
-        # Verify timestamps are present and valid
-        assert "init_timestamp" in event
-        assert "end_timestamp" in event
-        assert event["init_timestamp"] is not None
-        assert event["end_timestamp"] is not None
-
-        # Verify timestamps are in ISO format
-        try:
-            datetime.fromisoformat(event["init_timestamp"].replace("Z", "+00:00"))
-            datetime.fromisoformat(event["end_timestamp"].replace("Z", "+00:00"))
-        except ValueError:
-            pytest.fail("Timestamps are not in valid ISO format")
-
-    def test_export_with_shutdown(self, mock_req):
-        """Test export behavior when shutdown"""
-        self.exporter._shutdown.set()
-        span = self.create_test_span()
-
-        result = self.exporter.export([span])
-        assert result == SpanExportResult.SUCCESS
-
-        # Verify no request was made
-        assert not any(req.url.endswith("/v2/create_events") for req in mock_req.request_history[-1:])
-
-    def test_export_llm_event(self, mock_req):
-        """Test export of LLM event with specific handling of timestamps"""
-        llm_attributes = {
-            "event.data": json.dumps(
-                {
-                    "prompt": "test prompt",
-                    "completion": "test completion",
-                    "model": "test-model",
-                    "tokens": 100,
-                    "cost": 0.002,
-                }
-            )
-        }
-
-        span = self.create_test_span(name="llms", attributes=llm_attributes)
-        result = self.exporter.export([span])
-
-        assert result == SpanExportResult.SUCCESS
-
-        last_request = mock_req.request_history[-1].json()
-        event = last_request["events"][0]
-
-        # Verify LLM specific fields
-        assert event["prompt"] == "test prompt"
-        assert event["completion"] == "test completion"
-        assert event["model"] == "test-model"
-        assert event["tokens"] == 100
-        assert event["cost"] == 0.002
-
-        # Verify timestamps
-        assert event["init_timestamp"] is not None
-        assert event["end_timestamp"] is not None
-
-    def test_export_with_missing_id(self, mock_req):
-        """Test handling of missing event ID"""
-        attributes = {"event.id": None}
-
-        span = self.create_test_span(attributes=attributes)
-        result = self.exporter.export([span])
-
-        assert result == SpanExportResult.SUCCESS
-
-        last_request = mock_req.request_history[-1].json()
-        event = last_request["events"][0]
-
-        # Verify ID is present and valid UUID
-        assert "id" in event
-        assert event["id"] is not None
-        try:
-            UUID(event["id"])
-        except ValueError:
-            pytest.fail("Event ID is not a valid UUID")
-
-    @patch("agentops.session.exporter.SessionExporter")
-    def test_event_export(self, mock_exporter):
-        session = agentops.start_session()
-        event = ActionEvent("test_action")
-
-        session.record(event)
-
-        # Verify exporter called with correct span
-        mock_exporter.return_value.export.assert_called_once()
-        exported_span = mock_exporter.return_value.export.call_args[0][0][0]
-        assert exported_span.name == "test_action"

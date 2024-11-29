@@ -1,22 +1,21 @@
 # agentops/__init__.py
+import json
 import sys
-from typing import Optional, List, Union
-
-from .client import Client
-from .event import Event, ActionEvent, LLMEvent, ToolEvent, ErrorEvent
-from .decorators import record_action, track_agent, record_tool, record_function
-from .helpers import check_agentops_update
-from .log_config import logger
-from .session import Session
 import threading
 from importlib.metadata import version as get_version
+from typing import List, Optional, Union
+
 from packaging import version
 
+from .client import Client
+from .decorators import record_action, record_function, record_tool, track_agent
+from .event import ActionEvent, ErrorEvent, Event, LLMEvent, ToolEvent
+from .helpers import check_agentops_update
+from .log_config import logger
+from .session import Session, active_sessions
+
 try:
-    from .partners.langchain_callback_handler import (
-        LangchainCallbackHandler,
-        AsyncLangchainCallbackHandler,
-    )
+    from .partners.langchain_callback_handler import AsyncLangchainCallbackHandler, LangchainCallbackHandler
 except ModuleNotFoundError:
     pass
 
@@ -150,7 +149,7 @@ def configure(
 def start_session(
     tags: Optional[List[str]] = None,
     inherited_session_id: Optional[str] = None,
-) -> Union[Session, None]:
+) -> Session:
     """
     Start a new session for recording events.
 
@@ -321,3 +320,24 @@ def get_session(session_id: str):
 # prevents unexpected sessions on new tests
 def end_all_sessions() -> None:
     return Client().end_all_sessions()
+
+
+def flush():
+    """
+    Publish all pending events to API and return the flushed events
+
+    Returns:
+        bool: Whether the flush was successful
+    """
+    # from agentops.session.exporter import get_tracer_provider
+    from opentelemetry import trace
+
+    from agentops.client import Client
+
+    # assert Client()
+    # Get the provider and force flush
+    provider = trace.get_tracer_provider()
+
+    print("@@@PROVIDER:" + str(id(provider)))
+    breakpoint()
+    return provider.force_flush() # !!

@@ -112,6 +112,14 @@ class HttpClient:
             res = session.post(url, data=payload, headers=headers, timeout=20)
             result.parse(res)
 
+            # Handle JWT in successful response first - this ensures we capture new session JWTs
+            if result.code == 200 and (jwt := result.body.get("jwt")):
+                if session_id:
+                    with cls._jwt_lock:
+                        cls._jwt_store[session_id] = jwt
+                        # Update headers with new JWT for this request
+                        headers["Authorization"] = f"Bearer {jwt}"
+
             # Handle auth failure and retry once
             if result.code == 401 and session_id and api_key:
                 # Try to get new JWT
@@ -133,12 +141,6 @@ class HttpClient:
                         headers = cls._prepare_headers(session_id, api_key, parent_key, header)
                         res = session.post(url, data=payload, headers=headers, timeout=20)
                         result.parse(res)
-
-            # Handle JWT in successful response
-            if result.code == 200 and (jwt := result.body.get("jwt")):
-                if session_id:
-                    with cls._jwt_lock:
-                        cls._jwt_store[session_id] = jwt
 
             # Handle errors
             if result.code == 401:

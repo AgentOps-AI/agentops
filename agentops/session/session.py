@@ -3,19 +3,14 @@ from __future__ import annotations
 import asyncio
 import functools
 import json
+import sys  # Add this at the top with other imports
 import threading
 import time
+from collections import deque
+from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from decimal import ROUND_HALF_UP, Decimal
-from typing import Any, Dict, List, Optional, Sequence, Union
-
-from agentops.session.api import SessionApi
-
-try:
-    from typing import DefaultDict  # Python 3.9+
-except ImportError:
-    from typing_extensions import DefaultDict  # Python 3.8 and below
-
+from typing import Any, Deque, Dict, List, Optional, Sequence, Union
 from uuid import UUID, uuid4
 from weakref import WeakSet
 
@@ -28,38 +23,40 @@ from termcolor import colored
 
 from agentops.config import Configuration
 from agentops.enums import EndState, EventType
-from agentops.event import ErrorEvent, Event
+from agentops.event import ActionEvent, ErrorEvent, Event, LLMEvent, ToolEvent
 from agentops.exceptions import ApiServerException
 from agentops.helpers import filter_unjsonable, get_ISO_time, safe_serialize
 from agentops.http_client import HttpClient, Response
 from agentops.log_config import logger
+from agentops.session.api import SessionApi
 from agentops.session.exporter import SessionExporter, SessionExporterMixIn
 
+try:
+    from typing import DefaultDict  # Python 3.9+
+except ImportError:
+    from typing_extensions import DefaultDict  # Python 3.8 and below
 
-class SessionDict(DefaultDict):
+
+@dataclass
+class SessionState:
+    """Encapsulates all session state data"""
+
     session_id: UUID
-    # --------------
     config: Configuration
-    end_state: str = EndState.INDETERMINATE.value
+    tags: List[str] = field(default_factory=list)
+    host_env: Optional[dict] = None
+    token_cost: Decimal = Decimal(0)
+    end_state: str = field(default_factory=lambda: EndState.INDETERMINATE.value)
     end_state_reason: Optional[str] = None
     end_timestamp: Optional[str] = None
-    # Create a counter dictionary with each EventType name initialized to 0
-    event_counts: Dict[str, int]
-    host_env: Optional[dict] = None
-    init_timestamp: str  # Will be set to get_ISO_time() during __init__
-    # is_running moved to Session class as a property
     jwt: Optional[str] = None
-    tags: Optional[List[str]] = None
     video: Optional[str] = None
-    token_cost: Decimal = Decimal(0)
-
-    def __init__(self, **kwargs):
-        kwargs.setdefault("event_counts", {event_type.value: 0 for event_type in EventType})
-        kwargs.setdefault("init_timestamp", get_ISO_time())
-        super().__init__(**kwargs)
+    event_counts: Dict[str, int] = field(default_factory=lambda: {"llms": 0, "tools": 0, "actions": 0, "errors": 0})
+    init_timestamp: str = field(default_factory=get_ISO_time)
+    recent_events: Deque[Union[Event, ErrorEvent]] = field(default_factory=lambda: deque(maxlen=20))
 
 
-class Session(SessionDict, SessionExporterMixIn):
+class Session(SessionExporterMixIn):
     """
     Represents a session of events, with a start and end state.
     """
@@ -71,28 +68,10 @@ class Session(SessionDict, SessionExporterMixIn):
         tags: Optional[List[str]] = None,
         host_env: Optional[dict] = None,
     ):
-        # Initialize SessionDict first with all required attributes
-        super().__init__(
-            session_id=session_id,
-            config=config,
-            tags=tags or [],
-            host_env=host_env,
-            token_cost=Decimal(0),
-            end_state=EndState.INDETERMINATE.value,
-            end_state_reason=None,
-            end_timestamp=None,
-            jwt=None,
-            video=None,
-            event_counts={event_type.value: 0 for event_type in EventType},
-            init_timestamp=get_ISO_time(),
-        )
+        # Initialize session state
+        self.state = SessionState(session_id=session_id, config=config, tags=tags or [], host_env=host_env)
 
         # Initialize threading primitives
-        self._lock = threading.Lock()
-        self._end_session_lock = threading.Lock()
-        self._running = threading.Event()
-
-        # Initialize locks dict
         self._locks = {
             "lifecycle": threading.Lock(),  # Controls session lifecycle operations
             "update_session": threading.Lock(),  # Protects session state updates
@@ -101,29 +80,62 @@ class Session(SessionDict, SessionExporterMixIn):
             "tags": threading.Lock(),  # Protects tag modifications
             "api": threading.Lock(),  # Protects API calls
         }
+        self._running = threading.Event()
 
-        # Initialize SessionExporterMixIn
+        # Initialize components
+        self.api = SessionApi(self)
         SessionExporterMixIn.__init__(self)
 
-        # Set creation timestamp
-        self._create_ts = time.monotonic()
-
-        # Initialize API handler
-        self.api = SessionApi(self)
-
-        # Start session first to get JWT
+        # Start session
         self._start_session()
 
     def __hash__(self) -> int:
         """Make Session hashable using session_id"""
-        return hash(str(self.session_id))
+        return hash(str(self.state.session_id))
 
     def __eq__(self, other: object) -> bool:
         """Define equality based on session_id"""
         if not isinstance(other, Session):
             return NotImplemented
-        return str(self.session_id) == str(other.session_id)
+        return str(self.state.session_id) == str(other.state.session_id)
 
+    ## >>>> Allow transparent access to state attributes >>>>
+    def __getattr__(self, name: str) -> Any:
+        """Transparently get attributes from state if they don't exist on session"""
+        # Avoid recursion by checking if state exists first
+        if name == "state":
+            raise AttributeError(f"'{type(self).__name__}' object has no attribute 'state'")
+
+        # Only check state attributes if state exists
+        if hasattr(self, "state"):
+            if hasattr(self.state, name):
+                return getattr(self.state, name)
+
+        raise AttributeError(f"'{type(self).__name__}' object has no attribute '{name}'")
+
+    def __setattr__(self, name: str, value: Any) -> None:
+        """Transparently set attributes on state if they exist there"""
+        # Handle initialization of core attributes directly
+        if name in ("state", "_session_attrs", "_locks", "_running", "api"):
+            super().__setattr__(name, value)
+            return
+
+        # Initialize _session_attrs if needed
+        if not hasattr(self, "_session_attrs"):
+            super().__setattr__("_session_attrs", set())
+
+        if name in self._session_attrs:
+            # This is a session attribute, set it directly
+            super().__setattr__(name, value)
+        elif hasattr(self, "state") and hasattr(self.state, name):
+            # This is a state attribute, set it on state
+            setattr(self.state, name, value)
+        else:
+            # New attribute, add it to session
+            self._session_attrs.add(name)
+            super().__setattr__(name, value)
+
+    ## <<<< End of transparent access to state attributes <<<<
     @property
     def is_running(self) -> bool:
         """Check if the session is currently running"""
@@ -132,18 +144,18 @@ class Session(SessionDict, SessionExporterMixIn):
     @property
     def config(self) -> Configuration:
         """Get the session's configuration"""
-        return self["config"]
+        return self.state.config
 
     @property
     def session_url(self) -> str:
         """Returns the URL for this session in the AgentOps dashboard."""
-        assert self.session_id, "Session ID is required to generate a session URL"
-        return f"https://app.agentops.ai/drilldown?session_id={self.session_id}"
+        assert self.state.session_id, "Session ID is required to generate a session URL"
+        return f"https://app.agentops.ai/drilldown?session_id={self.state.session_id}"
 
     @property
     def session_id(self) -> UUID:
         """Get the session's UUID"""
-        return self["session_id"]
+        return self.state.session_id
 
     @is_running.setter
     def is_running(self, value: bool) -> None:
@@ -155,7 +167,7 @@ class Session(SessionDict, SessionExporterMixIn):
 
     def set_video(self, video: str) -> None:
         """Sets a url to the video recording of the session."""
-        self.video = video
+        self.state.video = video
         self._update_session()
 
     def end_session(
@@ -164,34 +176,29 @@ class Session(SessionDict, SessionExporterMixIn):
         end_state_reason: Optional[str] = None,
         video: Optional[str] = None,
     ) -> Union[Decimal, None]:
-        with self._end_session_lock:
+        """End the current session and clean up resources"""
+        with self._locks["lifecycle"]:
             if not self.is_running:
                 return None
 
-            if not any(end_state == state.value for state in EndState):
-                logger.warning("Invalid end_state. Please use one of the EndState enums")
-                return None
-
             try:
-                # Force flush any pending spans before ending session
-                self.exporter.flush()
-                self.exporter.shutdown()
+                self._exporter.shutdown()
+                self._exporter.flush()
 
-                # Set session end state
-                self.end_timestamp = get_ISO_time()
-                self.end_state = end_state
-                self.end_state_reason = end_state_reason
+                # Update session state
+                self.state.end_state = end_state
+                self.state.end_timestamp = get_ISO_time()
+                self.state.end_state_reason = end_state_reason
                 if video is not None:
-                    self.video = video
+                    self.state.video = video
 
-                # Mark session as not running before cleanup
                 self.is_running = False
+                self.api.update_session()
 
-                # Get final analytics
+                # Get analytics and log stats
                 if not (analytics_stats := self.get_analytics()):
                     return None
 
-                # Log analytics
                 analytics = (
                     f"Session Stats - "
                     f"{colored('Duration:', attrs=['bold'])} {analytics_stats['Duration']} | "
@@ -207,7 +214,6 @@ class Session(SessionDict, SessionExporterMixIn):
                 logger.exception(f"Error during session end: {e}")
             finally:
                 active_sessions.remove(self)
-
                 logger.info(
                     colored(
                         f"\x1b[34mSession Replay: {self.session_url}\x1b[0m",
@@ -257,16 +263,35 @@ class Session(SessionDict, SessionExporterMixIn):
         if not self.is_running:
             return
 
-        # Ensure event has all required base attributes
-        if not hasattr(event, "id"):
-            event.id = uuid4()
-        if not hasattr(event, "init_timestamp"):
-            event.init_timestamp = get_ISO_time()
-        if not hasattr(event, "end_timestamp") or event.end_timestamp is None:
-            event.end_timestamp = get_ISO_time()
+        with self._locks["events"]:  # Add lock to prevent race conditions
+            # FIXME: This is hacky! Better handle ErrorEvent differently
+            if not hasattr(event, "id"):
+                event.id = uuid4()
 
-        # Delegate to OTEL-specific recording logic
-        self._record_otel_event(event, flush_now)
+            # Handle ErrorEvent separately since it doesn't inherit from Event
+            if isinstance(event, ErrorEvent):
+                if not hasattr(event, "timestamp"):
+                    event.timestamp = get_ISO_time()
+                # Update error count
+                self.state.event_counts["errors"] += 1
+            else:
+                if not hasattr(event, "init_timestamp"):
+                    event.init_timestamp = get_ISO_time()
+                if not hasattr(event, "end_timestamp") or event.end_timestamp is None:
+                    event.end_timestamp = get_ISO_time()
+                # Update appropriate event count based on event type
+                if isinstance(event, LLMEvent):
+                    self.state.event_counts["llms"] += 1
+                elif isinstance(event, ToolEvent):
+                    self.state.event_counts["tools"] += 1
+                elif isinstance(event, ActionEvent):
+                    self.state.event_counts["actions"] += 1
+
+            # Add event to recent events - deque will automatically maintain max size
+            self.state.recent_events.append(event)
+
+            # Delegate to OTEL-specific recording logic
+            self._record_otel_event(event, flush_now)
 
     def _start_session(self) -> bool:
         """Initialize the session via API"""
@@ -281,28 +306,44 @@ class Session(SessionDict, SessionExporterMixIn):
         with self._locks["update_session"]:
             if not self.is_running:
                 return
-            self.api.update_session()
+            response_body, _ = self.api.update_session()
+            if response_body and "token_cost" in response_body:
+                self.state.token_cost = Decimal(str(response_body["token_cost"]))
 
     def get_analytics(self) -> Dict[str, Union[int, str]]:
         """Get session analytics
 
         Returns:
-            Dictionary containing analytics data
+            Dictionary containing analytics data including:
+            - LLM calls count
+            - Tool calls count
+            - Actions count
+            - Errors count
+            - Duration
+            - Cost
         """
-        # Implementation that returns a dictionary with the required keys:
+
+        formatted_duration = self._format_duration(self.state.init_timestamp, self.state.end_timestamp)
+
         return {
-            "LLM calls": 0,  # Replace with actual values
-            "Tool calls": 0,
-            "Actions": 0,
-            "Errors": 0,
-            "Duration": "0s",
-            "Cost": "0.000000",
+            "LLM calls": self.state.event_counts.get("llms", 0),
+            "Tool calls": self.state.event_counts.get("tools", 0),
+            "Actions": self.state.event_counts.get("actions", 0),
+            "Errors": self.state.event_counts.get("errors", 0),
+            "Duration": formatted_duration,
+            "Cost": self._format_token_cost(self.state.token_cost),
         }
 
-    def _format_duration(self, start_time: str, end_time: str) -> str:
+    def _format_duration(self, start_time: str, end_time: Optional[str] = None) -> str:
         """Format duration between two timestamps"""
         start = datetime.fromisoformat(start_time.replace("Z", "+00:00"))
-        end = datetime.fromisoformat(end_time.replace("Z", "+00:00"))
+
+        # If no end time provided, use current time
+        if end_time is None:
+            end = datetime.now(timezone.utc)
+        else:
+            end = datetime.fromisoformat(end_time.replace("Z", "+00:00"))
+
         duration = end - start
 
         hours, remainder = divmod(duration.total_seconds(), 3600)
@@ -332,19 +373,37 @@ class Session(SessionDict, SessionExporterMixIn):
             else "{:.6f}".format(token_cost.quantize(Decimal("0.000001"), rounding=ROUND_HALF_UP))
         )
 
+    # >>> Forward state attributes for serialization
     def __iter__(self):
-        """
-        Override the default iterator to yield sessions sorted by init_timestamp.
-        If init_timestamp is not available, fall back to _create_ts.
-        """
-        return iter(
-            sorted(
-                super().__iter__(),
-                key=lambda session: (
-                    session.init_timestamp if hasattr(session, "init_timestamp") else session._create_ts
-                ),
-            )
-        )
+        """Make Session iterable for dict() conversion"""
+        for key, value in self.state.__dict__.items():
+            yield key, value
+
+    def __getstate__(self) -> dict:
+        """Return the state for serialization"""
+        return self.state.__dict__
+
+    # >>> End of forward state attributes for serialization
+
+    @property
+    def recent_events(self) -> List[Union[Event, ErrorEvent]]:
+        """Get the most recent events (up to 20) recorded in this session"""
+        return list(self.state.recent_events)
+
+    def flush(self) -> None:
+        """Flush the session exporter and span processor"""
+        # with self._locks["events"]:
+        if not self.is_running:
+            return
+        try:
+            # Forces the BatchSpanProcessor to immediately process any spans in its current batch buffer.
+            # The BatchSpanProcessor normally batches spans for efficiency and processes them based on configured batch size or schedule.
+            self._span_processor.force_flush()
+            # This flushes the exporter itself, which is responsible for actually sending the data to the backend system.
+            # The exporter may have its own internal buffering or retry mechanisms.
+            self._exporter.flush()
+        except Exception as e:
+            logger.error(f"Error during flush: {e}")
 
 
 class SessionsCollection(WeakSet):
@@ -359,8 +418,8 @@ class SessionsCollection(WeakSet):
     """
 
     def __init__(self):
-        super().__init__()
         self._lock = threading.RLock()
+        super().__init__()
 
     def __getitem__(self, index: int) -> Session:
         """
@@ -396,7 +455,9 @@ class SessionsCollection(WeakSet):
                 sorted(
                     super().__iter__(),
                     key=lambda session: (
-                        session.init_timestamp if hasattr(session, "init_timestamp") else session._create_ts
+                        session.state.init_timestamp
+                        if hasattr(session, "state") and hasattr(session.state, "init_timestamp")
+                        else session._create_ts
                     ),
                 )
             )
@@ -423,4 +484,3 @@ class SessionsCollection(WeakSet):
 
 
 active_sessions = SessionsCollection()
-# active_sessions: List[Session] = []
