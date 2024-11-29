@@ -62,8 +62,11 @@ asyncio_default_fixture_loop_scope = "function"
 test_paths = [
     "tests",
 ]
-addopts = "--import-mode=importlib --tb=short -p no:warnings"
+addopts = "--import-mode=importlib --tb=short -p no:warnings -s"
 pythonpath = ["."]
+log_cli = "True"
+log_cli_level = "INFO"
+
 
 [tool.ruff]
 line-length = 120
