@@ -1,5 +1,6 @@
 import functools
 import inspect
+from types import MethodType
 from typing import Optional, Union
 from uuid import uuid4
 
@@ -361,3 +362,99 @@ def track_agent(name: Union[str, None] = None):
         return obj
 
     return decorator
+
+
+# >>> multi-purpose atomic-ops decorator
+import threading
+import weakref
+from functools import wraps
+from typing import Dict, Union
+
+
+class atomic:
+    """A decorator class that provides thread-safe atomic operations.
+
+    This decorator ensures that decorated functions/methods execute atomically by using locks.
+    It supports both function and method decoration, with flexible locking strategies.
+
+    Key Features:
+    - Thread-safe execution of decorated functions/methods
+    - Supports both @atomic and @atomic() syntax
+    - Configurable locking scope via custom keys
+    - Optional reentrant locking
+    - Instance-specific locking for methods
+
+    Usage:
+        @atomic  # Uses function name as lock key
+        def my_func():
+            pass
+
+        @atomic(key="custom_key")  # Uses custom key for lock
+        def another_func():
+            pass
+
+        @atomic(key=lambda self: f"instance_{id(self)}")  # Instance-specific locks
+        def method(self):
+            pass
+
+    Args:
+        key: Optional[Union[str, Callable]]. Lock key or key generator function.
+             If None, uses function's qualified name.
+        reentrant: bool. If True, allows reentrant locking. Default False.
+    """
+
+    _locks = {}  # Class-level registry of all locks
+    _registry_lock = threading.Lock()  # Lock for thread-safe registry access
+
+    def __init__(self, func=None, *, key=None, reentrant=False):
+        # Support both @atomic and @atomic() syntax
+        self.func = func
+        self.key = key
+        self.reentrant = reentrant
+
+        if func is not None:  # @atomic case
+            self._wrapped = self._wrap(func)
+
+    def __call__(self, *args, **kwargs):
+        if self.func is None:  # @atomic() case
+            self.func = args[0]
+            self._wrapped = self._wrap(self.func)
+            return self._wrapped
+        return self._wrapped(*args, **kwargs)
+
+    def _wrap(self, func):
+        @wraps(func)
+        def wrapper(*args, **kwargs):
+            # Get instance for instance methods
+            instance = args[0] if args and not isinstance(args[0], type) else None
+
+            # Generate lock key
+            if callable(self.key) and instance:
+                # For instance-specific locks, use the key generator
+                lock_key = self.key(instance)
+            else:
+                # For shared locks or function locks, use the provided key or function qualname
+                lock_key = self.key or f"{func.__module__}.{func.__qualname__}"
+
+            # Get or create lock
+            with self._registry_lock:
+                if lock_key not in self._locks:
+                    self._locks[lock_key] = threading.RLock()  # THIS HAS TO BE A RLOCK NO MATTER WHAT
+                lock = self._locks[lock_key]
+
+            if not self.reentrant and lock._is_owned():
+                raise RuntimeError("Lock is not reentrant")
+
+            with lock:
+                return func(*args, **kwargs)
+
+        return wrapper
+
+    def __get__(self, obj, objtype=None):
+        """Support descriptor protocol for instance methods"""
+        if obj is None:
+            return self
+        return MethodType(self._wrapped, obj)
+
+
+# >>> @atomic

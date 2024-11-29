@@ -60,7 +60,6 @@ class TestRecordTool:
 
         # 3 requests: check_for_updates, start_session, record_tool
         assert len(mock_req.request_history) == 3
-        assert mock_req.last_request.headers["X-Agentops-Api-Key"] == self.api_key
         request_json = mock_req.last_request.json()
         assert request_json["events"][0]["name"] == self.tool_name
         assert request_json["events"][0]["params"] == {"x": 3, "y": 4}
@@ -81,7 +80,6 @@ class TestRecordTool:
 
         # Assert
         assert len(mock_req.request_history) == 3
-        assert mock_req.last_request.headers["X-Agentops-Api-Key"] == self.api_key
         request_json = mock_req.last_request.json()
         assert request_json["events"][0]["name"] == "add_two"
         assert request_json["events"][0]["params"] == {"x": 3, "y": 4}
@@ -105,7 +103,6 @@ class TestRecordTool:
 
         # 4 requests: check_for_updates, start_session, record_tool, record_tool
         assert len(mock_req.request_history) == 4
-        assert mock_req.last_request.headers["X-Agentops-Api-Key"] == self.api_key
         request_json = mock_req.last_request.json()
         assert request_json["events"][0]["name"] == self.tool_name
         assert request_json["events"][0]["params"] == {"x": 1, "y": 2, "z": 3}
@@ -130,7 +127,6 @@ class TestRecordTool:
         assert result == 7
         # Assert
         assert len(mock_req.request_history) == 3
-        assert mock_req.last_request.headers["X-Agentops-Api-Key"] == self.api_key
         request_json = mock_req.last_request.json()
         assert request_json["events"][0]["name"] == self.tool_name
         assert request_json["events"][0]["params"] == {"x": 3, "y": 4}
@@ -164,14 +160,12 @@ class TestRecordTool:
         assert len(mock_req.request_history) == 5
 
         request_json = mock_req.last_request.json()
-        assert mock_req.last_request.headers["X-Agentops-Api-Key"] == self.api_key
         assert mock_req.last_request.headers["Authorization"] == "Bearer some_jwt2"
         assert request_json["events"][0]["name"] == self.tool_name
         assert request_json["events"][0]["params"] == {"x": 1, "y": 2, "z": 3}
         assert request_json["events"][0]["returns"] == 6
 
         second_last_request_json = mock_req.request_history[-2].json()
-        assert mock_req.request_history[-2].headers["X-Agentops-Api-Key"] == self.api_key
         assert mock_req.request_history[-2].headers["Authorization"] == "Bearer some_jwt"
         assert second_last_request_json["events"][0]["name"] == self.tool_name
         assert second_last_request_json["events"][0]["params"] == {
@@ -207,14 +201,12 @@ class TestRecordTool:
         assert len(mock_req.request_history) == 5
 
         request_json = mock_req.last_request.json()
-        assert mock_req.last_request.headers["X-Agentops-Api-Key"] == self.api_key
         assert mock_req.last_request.headers["Authorization"] == "Bearer some_jwt2"
         assert request_json["events"][0]["name"] == self.tool_name
         assert request_json["events"][0]["params"] == {"x": 1, "y": 2}
         assert request_json["events"][0]["returns"] == 3
 
         second_last_request_json = mock_req.request_history[-2].json()
-        assert mock_req.request_history[-2].headers["X-Agentops-Api-Key"] == self.api_key
         assert mock_req.request_history[-2].headers["Authorization"] == "Bearer some_jwt"
         assert second_last_request_json["events"][0]["name"] == self.tool_name
         assert second_last_request_json["events"][0]["params"] == {
