@@ -30,10 +30,7 @@ def completion():
     end_time = time.time()
     execution_time = end_time - start_time
 
-    return {
-        "response": "Done",
-        "execution_time_seconds": round(execution_time, 3)
-    }
+    return {"response": "Done", "execution_time_seconds": round(execution_time, 3)}
 
 
 if __name__ == "__main__":

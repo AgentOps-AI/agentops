@@ -411,7 +411,7 @@ class atomic:
         self.func = func
         self.key = key
         self.reentrant = reentrant
-        
+
         if func is not None:  # @atomic case
             self._wrapped = self._wrap(func)
 
@@ -427,7 +427,7 @@ class atomic:
         def wrapper(*args, **kwargs):
             # Get instance for instance methods
             instance = args[0] if args and not isinstance(args[0], type) else None
-            
+
             # Generate lock key
             if callable(self.key) and instance:
                 # For instance-specific locks, use the key generator
@@ -439,7 +439,7 @@ class atomic:
             # Get or create lock
             with self._registry_lock:
                 if lock_key not in self._locks:
-                    self._locks[lock_key] = threading.RLock() # THIS HAS TO BE A RLOCK NO MATTER WHAT
+                    self._locks[lock_key] = threading.RLock()  # THIS HAS TO BE A RLOCK NO MATTER WHAT
                 lock = self._locks[lock_key]
 
             if not self.reentrant and lock._is_owned():

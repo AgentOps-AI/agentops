@@ -106,7 +106,8 @@ class SessionProtocol(Protocol):
     session_id: UUID
 
     @property
-    def config(self) -> Configuration: ...
+    def config(self) -> Configuration:
+        ...
 
     state: SessionState
 

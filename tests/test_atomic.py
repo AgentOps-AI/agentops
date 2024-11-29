@@ -7,6 +7,7 @@ from agentops.decorators import atomic
 
 from agentops.singleton import singleton, conditional_singleton, clear_singletons
 
+
 class TestAtomicDecorator:
     def test_atomic_basic(self):
         """Test basic atomic operation"""
@@ -328,10 +329,9 @@ class TestAtomicDecorator:
         for i in range(0, len(sequence), 5):
             assert sequence[i : i + 5] == list(range(5)), "Generator sequence should be ordered"
 
-
     def test_atomic_with_singleton(self):
         """Test atomic works with singleton classes"""
-        
+
         @singleton
         class Counter:
             def __init__(self):
@@ -364,7 +364,7 @@ class TestAtomicDecorator:
 
     def test_atomic_with_conditional_singleton(self):
         """Test atomic works with conditional singletons"""
-        
+
         @conditional_singleton
         class Counter:
             def __init__(self):
@@ -406,7 +406,7 @@ class TestAtomicDecorator:
 
     def test_atomic_with_class_instances(self):
         """Test atomic behavior across different instances of the same class"""
-        
+
         class Counter:
             def __init__(self):
                 self.value = 0
@@ -449,4 +449,4 @@ class TestAtomicDecorator:
             t.join()
 
         assert counter1.value == 100, "Counter1 should have its own count"
-        assert counter2.value == 100, "Counter2 should have its own count" 
+        assert counter2.value == 100, "Counter2 should have its own count"

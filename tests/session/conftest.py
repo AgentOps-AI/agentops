@@ -31,4 +31,3 @@ def session(mock_req):
 
     # Clear all sessions
     agentops.end_all_sessions()
-
