@@ -24,7 +24,7 @@ agentops.init(os.getenv("AGENTOPS_API_KEY"), default_tags=["llama-stack-client-e
 
 
 LLAMA_STACK_PORT = 5001
-INFERENCE_MODEL="meta-llama/Llama-3.2-3B-Instruct"
+INFERENCE_MODEL="meta-llama/Llama-3.2-1B-Instruct"
 
 async def agent_test():
     client = LlamaStackClient(

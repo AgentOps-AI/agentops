@@ -3,11 +3,11 @@ import pprint
 import sys
 from typing import Dict, Optional
 
-from ..event import LLMEvent, ErrorEvent, ToolEvent
-from ..session import Session
-from ..log_config import logger
+from agentops.event import LLMEvent, ErrorEvent, ToolEvent
+from agentops.session import Session
+from agentops.log_config import logger
 from agentops.helpers import get_ISO_time, check_call_stack_for_agent_id
-from .instrumented_provider import InstrumentedProvider
+from agentops.llms.instrumented_provider import InstrumentedProvider
 
 class LlamaStackClientProvider(InstrumentedProvider):
     original_complete = None
