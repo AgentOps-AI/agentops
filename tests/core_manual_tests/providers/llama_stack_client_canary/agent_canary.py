@@ -7,24 +7,17 @@ from llama_stack_client.lib.agents.event_logger import EventLogger
 from llama_stack_client.types import Attachment
 from llama_stack_client.types.agent_create_params import AgentConfig
 
-import os
-import fire
-from llama_stack_client import LlamaStackClient
-from llama_stack_client.lib.agents.agent import Agent
-from llama_stack_client.lib.agents.event_logger import EventLogger
-from llama_stack_client.types.agent_create_params import AgentConfig
-
 import agentops
+
+LLAMA_STACK_PORT = 5001
+INFERENCE_MODEL = "meta-llama/Llama-3.2-1B-Instruct"
 
 # import debugpy
 # debugpy.listen(5678)
 # debugpy.wait_for_client()
 
-agentops.init(os.getenv("AGENTOPS_API_KEY"), default_tags=["llama-stack-client-example"], auto_start_session=False)
+agentops.init(default_tags=["llama-stack-client-example"], auto_start_session=False)
 
-
-LLAMA_STACK_PORT = 5001
-INFERENCE_MODEL="meta-llama/Llama-3.2-1B-Instruct"
 
 async def agent_test():
     client = LlamaStackClient(
@@ -89,9 +82,6 @@ async def agent_test():
             log.print()
 
 
-def main():
-  agentops.start_session()
-  asyncio.run(agent_test())
-  agentops.end_session("Success")
-
-main()
+agentops.start_session()
+asyncio.run(agent_test())
+agentops.end_session("Success")
