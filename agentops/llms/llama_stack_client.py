@@ -98,22 +98,24 @@ class LlamaStackClientProvider(InstrumentedProvider):
                                 accum_delta += delta
                             else:
                                 accum_delta = delta
-                        elif (chunk.event.payload.step_type == "inference" and chunk.event.payload.tool_call_delta and chunk.event.payload.tool_call_delta.parse_status == "started"):
-                            tool_event.name = "ToolExecution - started"
-                            self._safe_record(session, tool_event)
-                        elif (chunk.event.payload.step_type == "inference" and chunk.event.payload.tool_call_delta and chunk.event.payload.tool_call_delta.parse_status == "in_progress"):
-                            nonlocal accum_tool_delta
-                            delta = chunk.event.payload.tool_call_delta.content
-                            if accum_tool_delta:
-                                accum_tool_delta += delta
-                            else:
-                                accum_tool_delta = delta
-                        elif (chunk.event.payload.step_type == "inference" and chunk.event.payload.tool_call_delta and chunk.event.payload.tool_call_delta.parse_status == "success"):
-                            tool_event.name = "ToolExecution - success"
-                            tool_event.params["completion"] = accum_tool_delta
-                            self._safe_record(session, tool_event)
-                        elif (chunk.event.payload.step_type == "inference" and chunk.event.payload.tool_call_delta and chunk.event.payload.tool_call_delta.parse_status == "failure"):
-                            self._safe_record(session, ErrorEvent(trigger_event=tool_event, exception=Exception("ToolExecution - failure")))
+                        elif (chunk.event.payload.step_type == "inference" and chunk.event.payload.tool_call_delta):
+                            
+                            if (chunk.event.payload.tool_call_delta.parse_status == "started"):
+                                tool_event.name = "ToolExecution - started"
+                                self._safe_record(session, tool_event)
+                            elif (chunk.event.payload.tool_call_delta.parse_status == "in_progress"):
+                                nonlocal accum_tool_delta
+                                delta = chunk.event.payload.tool_call_delta.content
+                                if accum_tool_delta:
+                                    accum_tool_delta += delta
+                                else:
+                                    accum_tool_delta = delta
+                            elif (chunk.event.payload.tool_call_delta.parse_status == "success"):
+                                tool_event.name = "ToolExecution - success"
+                                tool_event.params["completion"] = accum_tool_delta
+                                self._safe_record(session, tool_event)    
+                            elif (chunk.event.payload.tool_call_delta.parse_status == "failure"):
+                                self._safe_record(session, ErrorEvent(trigger_event=tool_event, exception=Exception("ToolExecution - failure")))
 
                     elif chunk.event.payload.event_type == "step_complete":
                         if (chunk.event.payload.step_type == "inference"):
