@@ -61,9 +61,10 @@ class AutogenLogger(BaseLogger):
         # Note: Autogen tokens are not included in the request and function call tokens are not counted in the completion
         llm_event = LLMEvent(
             prompt=request["messages"],
-            completion=completion.message.to_json(),
+            completion=completion.message.content,
             model=response.model,
             cost=cost,
+            returns=completion.message.to_json(),
         )
         llm_event.init_timestamp = start_time
         llm_event.end_timestamp = get_ISO_time()
