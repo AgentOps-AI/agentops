@@ -29,7 +29,7 @@ OTEL Guidelines:
 
 
 
-- Maintain a single TracerProvider for the application runtime 
+- Maintain a single TracerProvider for the application runtime
     - Have one global TracerProvider in the Client class
 
 - According to the OpenTelemetry Python documentation, Resource should be initialized once per application and shared across all telemetry (traces, metrics, logs).
@@ -41,9 +41,9 @@ OTEL Guidelines:
 :: Resource
 
     ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
-    Captures information about the entity producing telemetry as Attributes. 
-    For example, a process producing telemetry that is running in a container 
-    on Kubernetes has a process name, a pod name, a namespace, and possibly 
+    Captures information about the entity producing telemetry as Attributes.
+    For example, a process producing telemetry that is running in a container
+    on Kubernetes has a process name, a pod name, a namespace, and possibly
     a deployment name. All these attributes can be included in the Resource.
     ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
@@ -103,6 +103,7 @@ class SessionExporter(SpanExporter):
                     else:
                         formatted_data = event_data
 
+                    formatted_data = {**event_data, **formatted_data}
                     # Get timestamps, providing defaults if missing
                     current_time = datetime.now(timezone.utc).isoformat()
                     init_timestamp = span.attributes.get("event.timestamp")
@@ -125,7 +126,7 @@ class SessionExporter(SpanExporter):
                             "event_type": span.name,
                             "init_timestamp": init_timestamp,
                             "end_timestamp": end_timestamp,
-                            **event_data,
+                            **formatted_data,
                             "session_id": str(self.session.session_id),
                         }
                     )
