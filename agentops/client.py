@@ -278,23 +278,16 @@ class Client(metaclass=MetaClient):
     ):
         if agent_id is None:
             agent_id = str(uuid4())
-            print(f"Generated new agent ID: {agent_id}")
-
-        print(f"Creating agent '{name}' with ID {agent_id}")
 
         # if a session is passed in, use multi-session logic
         if session:
-            print("Using provided session for agent creation")
             return session.create_agent(name=name, agent_id=agent_id)
         else:
             # if no session passed, assume single session
-            print("No session provided - using default session")
             session = self._safe_get_session()
             if session is None:
-                print("No active session found - queueing agent for creation")
                 self._pre_init_queue["agents"].append({"name": name, "agent_id": agent_id})
             else:
-                print("Creating agent in active session")
                 session.create_agent(name=name, agent_id=agent_id)
 
         return agent_id
