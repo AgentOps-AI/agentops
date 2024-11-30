@@ -14,7 +14,7 @@ providers:
     provider_type: remote::fireworks
     config:
       url: "https://api.fireworks.ai/inference"
-      api_key: "fw_3ZVeWz59L6eAVPG1GRnCm7wW"
+      api_key: "<FIREWORKS_API_KEY>"
   memory:
   - provider_id: faiss
     provider_type: inline::faiss
