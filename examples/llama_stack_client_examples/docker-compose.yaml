@@ -5,32 +5,66 @@ services:
     container_name: ollama_server
     ports:
       - "11434:11434" # Map Ollama's port to host
+    environment:
+      OLLAMA_DEBUG: 1
     volumes:
       - ~/.ollama/models:/root/.ollama # Persist data (e.g., downloaded models)
+    deploy:
+      resources:
+        limits:
+          memory: 16G    # Set maximum memory
+        reservations:
+          memory: 12G    # Set minimum memory reservation
     entrypoint: ["ollama", "serve"] # Start the Ollama server
     restart: always # Ensure Ollama server restarts on failure
+    healthcheck:
+      # ugh, no CURL in ollama image
+      test: ["CMD", "curl", "-f", "http://ollama:11434"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
   # Ephemeral service to trigger model download
-  model_downloader:
-    image: curlimages/curl:latest # Use a lightweight image with curl
+  # model_downloader:
+  #   image: curlimages/curl:latest # Use a lightweight image with curl
+  #   depends_on:
+  #     - ollama # Ensure the Ollama server starts first
+  #   entrypoint: >
+  #     sh -c "sleep 5 &&
+  #     curl -X POST http://ollama:11434/api/pull -d '{\"model\": \"llama3.2:3b-instruct-fp16\"}'"
+  #   restart: "no" # Ensure this service doesn't restart
+
+  ollama-init:
+    image: ollama/ollama:latest
     depends_on:
-      - ollama # Ensure the Ollama server starts first
-    entrypoint: >
-      sh -c "sleep 5 &&
-      curl -X POST http://ollama:11434/api/pull -d '{\"model\": \"llama3.2:3b-instruct-fp16\"}'"
-    restart: "no" # Ensure this service doesn't restart
+      ollama:
+        condition: service_started
+    network_mode: bridge
+    container_name: ollama-init
+    environment:
+      - OLLAMA_HOST=host.docker.internal
+      - INFERENCE_MODEL=llama3.2:3b-instruct-fp16
+    volumes:
+      - ~/.ollama:/root/.ollama
+      - ./pull-models.sh:/root/pull-models.sh
+    entrypoint: ["/root/pull-models.sh"]
 
 
-  tester:
-    image: curlimages/curl:latest # Use a lightweight image with curl
-    depends_on:
-      - model_downloader # Ensure the Ollama server starts first
-    entrypoint: >
-      sh -c "sleep 5 &&
-      curl -X POST http://ollama:11434/api/generate -d '{\"model\": \"llama3.2:3b-instruct-fp16\",\"prompt\": \"Say 3 words\"}'"
-    restart: "no" # Ensure this service doesn't restart
+  # tester:
+  #   image: curlimages/curl:latest # Use a lightweight image with curl
+  #   depends_on:
+  #     - model_downloader # Ensure the Ollama server starts first
+  #   entrypoint: >
+  #     sh -c "sleep 5 &&
+  #     curl -X POST http://ollama:11434/api/generate -d '{\"model\": \"llama3.2:3b-instruct-fp16\",\"prompt\": \"Say 3 words\"}'"
+  #   restart: "no" # Ensure this service doesn't restart
 
   llama-stack:
+    depends_on:
+      ollama:
+        condition: service_started
+      ollama-init:
+        condition: service_started
     image: llamastack/distribution-ollama
     container_name: llama_stack_server
     ports:
@@ -45,10 +79,6 @@ services:
       --yaml-config /root/my-run.yaml
       --port 5001
     platform: linux/amd64
-    depends_on:
-      - ollama
-      - model_downloader
-      - tester
 
 networks:
   default:

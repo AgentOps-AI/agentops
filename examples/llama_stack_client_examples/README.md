@@ -104,6 +104,8 @@ docker-compose -f docker-compose.yaml up
 
 1. Models contain different id's w.r.t. Ollama and Llama Stack. For example, Ollama refers to `Llama-3.2-3B-Instruct` as `llama3.2:1b-instruct-fp16` whereas Llama Stack refers to it as `meta-llama/Llama-3.2-3B-Instruct`
 
+2. Docker will likely need more system memory resources allocated to it
+
 ## Useful ollama commands
 
 - `ollama list`
