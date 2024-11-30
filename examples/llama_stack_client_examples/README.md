@@ -102,7 +102,7 @@ docker-compose -f docker-compose.yaml up
 
 ## Common Gotchas
 
-1. Models contain different id's w.r.t. Ollama and Llama Stack. For example, Ollama refers to `Llama-3.2-3B-Instruct` as `llama3.2:3b-instruct-fp16` whereas Llama Stack refers to it as `meta-llama/Llama-3.2-3B-Instruct`
+1. Models contain different id's w.r.t. Ollama and Llama Stack. For example, Ollama refers to `Llama-3.2-3B-Instruct` as `llama3.2:1b-instruct-fp16` whereas Llama Stack refers to it as `meta-llama/Llama-3.2-3B-Instruct`
 
 ## Useful ollama commands
 

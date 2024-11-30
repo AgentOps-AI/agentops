@@ -17,7 +17,7 @@ services:
       - ollama # Ensure the Ollama server starts first
     entrypoint: >
       sh -c "sleep 5 &&
-      curl -X POST http://ollama:11434/api/pull -d '{\"model\": \"llama3.2:1b-instruct-fp16\"}'"
+      curl -X POST http://ollama:11434/api/pull -d '{\"model\": \"llama3.2:3b-instruct-fp16\"}'"
     restart: "no" # Ensure this service doesn't restart
 
 
@@ -27,7 +27,7 @@ services:
       - model_downloader # Ensure the Ollama server starts first
     entrypoint: >
       sh -c "sleep 5 &&
-      curl -X POST http://ollama:11434/api/generate -d '{\"model\": \"llama3.2:1b-instruct-fp16\",\"prompt\": \"Say 3 words\"}'"
+      curl -X POST http://ollama:11434/api/generate -d '{\"model\": \"llama3.2:3b-instruct-fp16\",\"prompt\": \"Say 3 words\"}'"
     restart: "no" # Ensure this service doesn't restart
 
   llama-stack:
@@ -39,7 +39,7 @@ services:
       - "~/.ollama/models:/root/.ollama"
       - "./llama-stack-server-config.yaml:/root/my-run.yaml"
     environment:
-      - INFERENCE_MODEL=meta-llama/Llama-3.2-1B-Instruct
+      - INFERENCE_MODEL=meta-llama/Llama-3.2-3B-Instruct
       - OLLAMA_URL=http://ollama:11434
     command: >
       --yaml-config /root/my-run.yaml
