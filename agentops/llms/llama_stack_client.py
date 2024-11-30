@@ -207,8 +207,7 @@ class LlamaStackClientProvider(InstrumentedProvider):
     def _override_create_turn(self):
         from llama_stack_client.lib.agents.agent import Agent
 
-        global original_create_turn
-        original_create_turn = Agent.create_turn
+        self.original_create_turn = Agent.create_turn
 
         def patched_function(*args, **kwargs):
             # Call the original function with its original arguments
@@ -216,7 +215,7 @@ class LlamaStackClientProvider(InstrumentedProvider):
             session = kwargs.get("session", None)
             if "session" in kwargs.keys():
                 del kwargs["session"]
-            result = original_create_turn(*args, **kwargs)
+            result = self.original_create_turn(*args, **kwargs)
             return self.handle_response(result, kwargs, init_timestamp, session=session, metadata={"model_id": args[0].agent_config.get("model")})
 
         # Override the original method with the patched one
