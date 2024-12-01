@@ -58,13 +58,21 @@ class AutogenLogger(BaseLogger):
 
         completion = response.choices[len(response.choices) - 1]
 
+        completion_dict = completion.message.to_dict()
+        formatted_completion = {
+            "role": completion_dict.get("role"),
+            "content": completion_dict.get("content"),
+            "tool_calls": completion_dict.get("tool_calls"),
+            "function_call": completion_dict.get("function_call"),
+        }
+
         # Note: Autogen tokens are not included in the request and function call tokens are not counted in the completion
         llm_event = LLMEvent(
             prompt=request["messages"],
-            completion=completion.message,
+            completion=formatted_completion,
             model=response.model,
             cost=cost,
-            returns=completion.message.to_json(),
+            returns=completion.message.to_dict(),
         )
         llm_event.init_timestamp = start_time
         llm_event.end_timestamp = get_ISO_time()
