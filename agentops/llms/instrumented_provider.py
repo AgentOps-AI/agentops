@@ -1,4 +1,5 @@
 from abc import ABC, abstractmethod
+from multiprocessing.connection import Client
 from typing import Optional
 
 from ..session import Session
@@ -8,7 +9,6 @@ from ..event import LLMEvent
 class InstrumentedProvider(ABC):
     _provider_name: str = "InstrumentedModel"
     llm_event: Optional[LLMEvent] = None
-    client = None
 
     def __init__(self, client):
         self.client = client
