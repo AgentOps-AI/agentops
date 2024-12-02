@@ -2,7 +2,7 @@
 
 Here are the links of where to find Fireworks integration examples in the Llama Stack repository
 
-*Disclaimer: This has been tested but not shown to ever work end-2-end*  
+*Disclaimer: This Llama Stack Server + Fireworks setup has been tested but NOT shown to ever work end-2-end*  
 
 ##
 
