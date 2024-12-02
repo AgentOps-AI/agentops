@@ -1,21 +1,22 @@
 import pprint
-from typing import Optional
+from typing import Optional, Union, Dict, Any, Generator, AsyncGenerator, Callable
 
-from ..log_config import logger
-from ..event import LLMEvent, ErrorEvent
-from ..session import Session
+from agentops.log_config import logger
+from agentops.event import LLMEvent, ErrorEvent
+from agentops.session import Session
 from agentops.helpers import get_ISO_time, check_call_stack_for_agent_id
 from agentops.llms.instrumented_provider import InstrumentedProvider
 from agentops.time_travel import fetch_completion_override_from_time_travel_cache
-from ..singleton import singleton
-
+from agentops.singleton import singleton
+from openai.types.chat import ChatCompletion, ChatCompletionChunk
+from litellm.types.utils import ModelResponse
 
 @singleton
 class LiteLLMProvider(InstrumentedProvider):
-    original_create = None
-    original_create_async = None
-    original_oai_create = None
-    original_oai_create_async = None
+    original_create: Optional[Callable] = None
+    original_create_async: Optional[Callable] = None
+    original_oai_create: Optional[Callable] = None
+    original_oai_create_async: Optional[Callable] = None
 
     def __init__(self, client):
         super().__init__(client)
@@ -27,13 +28,22 @@ class LiteLLMProvider(InstrumentedProvider):
     def undo_override(self):
         if self.original_create is not None and self.original_create_async is not None:
             import litellm
-            
-            litellm.acompletion = self.original_create_async
-            litellm.completion = self.original_create
+
+            setattr(litellm, "acompletion", self.original_create_async)
+            setattr(litellm, "completion", self.original_create)
 
     def handle_response(
-        self, response, kwargs, init_timestamp, session: Optional[Session] = None
-    ) -> dict:
+        self,
+        response: Union[ModelResponse, ChatCompletionChunk],
+        kwargs: Dict[str, Any],
+        init_timestamp: str,
+        session: Optional[Session] = None,
+    ) -> Union[
+        Generator[ChatCompletionChunk, None, None],
+        AsyncGenerator[ChatCompletionChunk, None],
+        ChatCompletion,
+        Dict[str, Any],
+    ]:
         """Handle responses for OpenAI versions >v1.0.0"""
         from openai import AsyncStream, Stream
         from openai.resources import AsyncCompletions
@@ -97,7 +107,7 @@ class LiteLLMProvider(InstrumentedProvider):
         # if the response is a generator, decorate the generator
         if isinstance(response, Stream):
 
-            def generator():
+            def generator() -> Generator[ChatCompletionChunk, None, None]:
                 for chunk in response:
                     handle_stream_chunk(chunk)
                     yield chunk
@@ -107,7 +117,7 @@ class LiteLLMProvider(InstrumentedProvider):
         # litellm uses a CustomStreamWrapper
         if isinstance(response, CustomStreamWrapper):
 
-            def generator():
+            def generator() -> Generator[ChatCompletionChunk, None, None]:
                 for chunk in response:
                     handle_stream_chunk(chunk)
                     yield chunk
@@ -117,7 +127,7 @@ class LiteLLMProvider(InstrumentedProvider):
         # For asynchronous AsyncStream
         elif isinstance(response, AsyncStream):
 
-            async def async_generator():
+            async def async_generator() -> AsyncGenerator[ChatCompletionChunk, None]:
                 async for chunk in response:
                     handle_stream_chunk(chunk)
                     yield chunk
@@ -127,7 +137,7 @@ class LiteLLMProvider(InstrumentedProvider):
         # For async AsyncCompletion
         elif isinstance(response, AsyncCompletions):
 
-            async def async_generator():
+            async def async_generator() -> AsyncGenerator[ChatCompletionChunk, None]:
                 async for chunk in response:
                     handle_stream_chunk(chunk)
                     yield chunk
@@ -172,9 +182,9 @@ class LiteLLMProvider(InstrumentedProvider):
             if "session" in kwargs.keys():
                 del kwargs["session"]
 
-            completion_override = fetch_completion_override_from_time_travel_cache(kwargs)
+            completion_override: Optional[str] = fetch_completion_override_from_time_travel_cache(kwargs)
             if completion_override:
-                result_model = ChatCompletion.model_validate_json(completion_override)
+                result_model: ChatCompletion = ChatCompletion.model_validate_json(completion_override)
                 return self.handle_response(result_model, kwargs, init_timestamp, session=session)
 
             # prompt_override = fetch_prompt_override_from_time_travel_cache(kwargs)
