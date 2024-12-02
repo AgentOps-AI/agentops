@@ -121,3 +121,4 @@ docker-compose -f docker.compose.yaml up
 - download https://ollama.com/
 - https://www.llama.com/docs/getting_the_models/meta/
 - https://llama-stack.readthedocs.io/en/latest/getting_started/index.html
+- https://github.com/meta-llama/llama-stack-apps/blob/main/examples/agents/hello.py

@@ -12,9 +12,9 @@ import agentops
 LLAMA_STACK_PORT = 5001
 INFERENCE_MODEL = "meta-llama/Llama-3.2-1B-Instruct"
 
-# import debugpy
-# debugpy.listen(5678)
-# debugpy.wait_for_client()
+import debugpy
+debugpy.listen(5678)
+debugpy.wait_for_client()
 
 agentops.init(default_tags=["llama-stack-client-example"], auto_start_session=False)
 
@@ -60,7 +60,7 @@ async def agent_test():
     agent = Agent(client, agent_config)
     user_prompts = [
         "Hello",
-        "Which players played in the winning team of the NBA western conference semifinals of 2024, please use tools",
+        "Which players played in the winning team of the NBA western conference semifinals of 2014, please use tools",
     ]
 
     session_id = agent.create_session("test-session")

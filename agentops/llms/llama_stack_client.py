@@ -1,7 +1,7 @@
 import inspect
 import pprint
 import sys
-from typing import Dict, Optional
+from typing import Any, AsyncGenerator, Dict, Optional
 
 from agentops.event import LLMEvent, ErrorEvent, ToolEvent
 from agentops.session import Session
@@ -15,6 +15,7 @@ class LlamaStackClientProvider(InstrumentedProvider):
     
 
     def __init__(self, client):
+        print("_!_!_ LlamaStackClientProvider _!_!_")
         super().__init__(client)
         self._provider_name = "LlamaStack"
 
@@ -23,9 +24,13 @@ class LlamaStackClientProvider(InstrumentedProvider):
         try:
             accum_delta = None
             accum_tool_delta = None
+            tool_event = None
+            llm_event = None
 
             def handle_stream_chunk(chunk: dict):
-                llm_event = LLMEvent(init_timestamp=init_timestamp, params=kwargs)
+                # llm_event = LLMEvent(init_timestamp=init_timestamp, params=kwargs)
+                # llm_event = LLMEvent(init_timestamp=init_timestamp, params=kwargs)
+
                 if session is not None:
                     llm_event.session_id = session.session_id
 
@@ -72,19 +77,21 @@ class LlamaStackClientProvider(InstrumentedProvider):
             def handle_stream_agent(chunk: dict):
                 # NOTE: prompt/completion usage not returned in response when streaming
                 # We take the first ChatCompletionResponseStreamChunkEvent and accumulate the deltas from all subsequent chunks to build one full chat completion
-                llm_event = LLMEvent(init_timestamp=init_timestamp, params=kwargs)
-                tool_event = ToolEvent(init_timestamp=init_timestamp, params=kwargs)
+                # llm_event = LLMEvent(init_timestamp=init_timestamp, params=kwargs)
+                
+                nonlocal llm_event
 
                 if session is not None:
                     llm_event.session_id = session.session_id
 
-                if llm_event.returns is None:
+                if getattr(llm_event, 'returns', None):
                     llm_event.returns = chunk.event
-
                 try:
                     if chunk.event.payload.event_type == "turn_start":
                         pass
                     elif chunk.event.payload.event_type == "step_start":
+                        print("step_start")
+                        llm_event = LLMEvent(init_timestamp=init_timestamp, params=kwargs)
                         pass
                     elif chunk.event.payload.event_type == "step_progress":
                     
@@ -101,9 +108,15 @@ class LlamaStackClientProvider(InstrumentedProvider):
                         elif (chunk.event.payload.step_type == "inference" and chunk.event.payload.tool_call_delta):
                             
                             if (chunk.event.payload.tool_call_delta.parse_status == "started"):
+                                print('ToolExecution - started')
+                                nonlocal tool_event
+                                tool_event = ToolEvent(init_timestamp=get_ISO_time(), params=kwargs)
+
                                 tool_event.name = "ToolExecution - started"
-                                self._safe_record(session, tool_event)
+                                tool_event.init_timestamp = get_ISO_time()
+                                # self._safe_record(session, tool_event)
                             elif (chunk.event.payload.tool_call_delta.parse_status == "in_progress"):
+                                print('ToolExecution - progress')
                                 nonlocal accum_tool_delta
                                 delta = chunk.event.payload.tool_call_delta.content
                                 if accum_tool_delta:
@@ -111,14 +124,22 @@ class LlamaStackClientProvider(InstrumentedProvider):
                                 else:
                                     accum_tool_delta = delta
                             elif (chunk.event.payload.tool_call_delta.parse_status == "success"):
+                                print('ToolExecution - success')
                                 tool_event.name = "ToolExecution - success"
                                 tool_event.params["completion"] = accum_tool_delta
-                                self._safe_record(session, tool_event)    
+                                tool_event.end_timestamp = get_ISO_time()
+                                # self._safe_record(session, tool_event)    
                             elif (chunk.event.payload.tool_call_delta.parse_status == "failure"):
-                                self._safe_record(session, ErrorEvent(trigger_event=tool_event, exception=Exception("ToolExecution - failure")))
+                                tool_event.name = "ToolExecution - failure"
+                                tool_event.end_timestamp = get_ISO_time()
+                                print('ToolExecution - failure')
+                                pass
+                                # self._safe_record(session, ErrorEvent(trigger_event=tool_event, exception=Exception("ToolExecution - failure")))
 
                     elif chunk.event.payload.event_type == "step_complete":
+                        print("step_complete")
                         if (chunk.event.payload.step_type == "inference"):
+                            print("step_complete inference")
                             llm_event.prompt = [
                                 {"content": message['content'], "role": message['role']} for message in kwargs["messages"]
                             ]
@@ -130,6 +151,7 @@ class LlamaStackClientProvider(InstrumentedProvider):
                             llm_event.end_timestamp = get_ISO_time()
                             self._safe_record(session, llm_event)
                         elif (chunk.event.payload.step_type == "tool_execution"):
+                            print('ToolExecution - complete')
                             tool_event.name = "ToolExecution - complete"
                             tool_event.params["completion"] = accum_tool_delta
                             self._safe_record(session, tool_event)
@@ -146,7 +168,6 @@ class LlamaStackClientProvider(InstrumentedProvider):
                         f"chunk:\n {chunk}\n"
                         f"kwargs:\n {kwargs_str}\n"
                     )
-
             if kwargs.get("stream", False):
                 def generator():
                     for chunk in response:
@@ -154,6 +175,12 @@ class LlamaStackClientProvider(InstrumentedProvider):
                         yield chunk
                 return generator()
             elif inspect.isasyncgen(response):
+                async def async_generator():
+                    async for chunk in response:
+                        handle_stream_agent(chunk)
+                        yield chunk
+                return async_generator()
+            elif inspect.isgenerator(response):
                 async def async_generator():
                     async for chunk in response:
                         handle_stream_agent(chunk)
@@ -215,6 +242,7 @@ class LlamaStackClientProvider(InstrumentedProvider):
             session = kwargs.get("session", None)
             if "session" in kwargs.keys():
                 del kwargs["session"]
+                
             result = self.original_create_turn(*args, **kwargs)
             return self.handle_response(result, kwargs, init_timestamp, session=session, metadata={"model_id": args[0].agent_config.get("model")})
 
@@ -223,6 +251,7 @@ class LlamaStackClientProvider(InstrumentedProvider):
 
 
     def override(self):
+        print("_!_!_ override _!_!_")
         self._override_complete()
         self._override_create_turn()
 
