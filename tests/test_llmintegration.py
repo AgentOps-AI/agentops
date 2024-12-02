@@ -108,7 +108,7 @@ def test_openai_litellm_tango(llm_event_spy, openai_client, litellm_client):
     assert llm_event_spy["litellm"].call_count == 1
 
     openai_client.chat.completions.create(
-        model="gpt-4", messages=message, temperature=0
+        model="gpt-4o", messages=message, temperature=0
     )
 
     assert llm_event_spy["openai"].call_count == 1
