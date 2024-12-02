@@ -69,7 +69,7 @@ ie: Check out the examples in the `llama_stack_client_examples.ipynb` file
 ## Running the Ollama Server in a Docker Container
 
 ```sh - set up the ollama server
-docker-compose -f docker-compose.yaml up
+docker-compose -f docker.compose.yaml up
 ```
 
 ```sh - download a model
@@ -97,7 +97,7 @@ curl http://localhost:11434/api/chat -d '{
 ## 2 - Running the Ollama Server in a Docker Container
 
 ```sh
-docker-compose -f docker-compose.yaml up
+docker-compose -f docker.compose.yaml up
 ```
 
 ## Common Gotchas
