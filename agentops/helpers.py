@@ -1,16 +1,17 @@
+import functools
 import inspect
 import json
 from datetime import datetime, timezone
 from functools import wraps
 from importlib.metadata import PackageNotFoundError, version
 from pprint import pformat
-from typing import Any, Optional, Union
+from typing import Any, Awaitable, Callable, Coroutine, Optional, TypeVar, Union
 from uuid import UUID
-from .descriptor import agentops_property
 
 import requests
 
-from .log_config import logger
+from agentops.descriptor import agentops_property
+from agentops.log_config import logger
 
 
 def get_ISO_time():
@@ -174,3 +175,72 @@ def debug_print_function_params(func):
         return func(self, *args, **kwargs)
 
     return wrapper
+
+
+T = TypeVar("T")
+
+
+import asyncio
+
+
+def run_coroutine_sync(coroutine: Coroutine[Any, Any, T], timeout: float = 30) -> T:
+    """
+    https://stackoverflow.com/questions/55647753/call-async-function-from-sync-function-while-the-synchronous-function-continues
+    """
+    import threading
+    from concurrent.futures import ThreadPoolExecutor
+
+    def run_in_new_loop():
+        new_loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(new_loop)
+        try:
+            return new_loop.run_until_complete(coroutine)
+        finally:
+            new_loop.close()
+
+    try:
+        loop = asyncio.get_running_loop()
+    except RuntimeError:
+        return asyncio.run(coroutine)
+
+    if threading.current_thread() is threading.main_thread():
+        if not loop.is_running():
+            return loop.run_until_complete(coroutine)
+        else:
+            with ThreadPoolExecutor() as pool:
+                future = pool.submit(run_in_new_loop)
+                return future.result(timeout=timeout)
+    else:
+        return asyncio.run_coroutine_threadsafe(coroutine, loop).result()
+
+
+def make_sync_or_async(sync_fn):
+    """
+    Decorator that allows a function to be called either synchronously or asynchronously.
+    When called synchronously, executes sync_fn.
+    When awaited, executes the async function.
+    """
+
+    def decorator(async_fn):
+        @wraps(async_fn)
+        def wrapper(*args, **kwargs):
+            return sync_fn(*args, **kwargs)
+
+        wrapper.__await__ = async_fn.__await__
+        return wrapper
+
+    return decorator
+
+
+def __fb():
+    return "sync data"
+
+
+# Example usage:
+@make_sync_or_async(sync_fn=__fb)
+async def read_data():
+    return "async data"
+
+
+# Can be used either way:
+result = read_data()  # Executes synchronously

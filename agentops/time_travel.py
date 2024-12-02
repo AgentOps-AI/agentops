@@ -1,144 +1,311 @@
+import asyncio
 import json
-import yaml
 import os
-from .http_client import HttpClient
-from .exceptions import ApiServerException
-from .singleton import singleton
+import threading
+from typing import Dict, List, Literal, Optional, TypedDict, Union
 
-ttd_prepend_string = "🖇️ Agentops: ⏰ Time Travel |"
+from .exceptions import ApiServerException
+from .http_client import HttpClient
+from .singleton import singleton
+from .storage.local import local_store as storage
+
+TTD_PREPEND_STRING = "🖇️ Agentops: ⏰ Time Travel |"
+TIME_TRAVEL_CACHE_FILE = "time_travel_cache.json"
+TIME_TRAVEL_CONFIG_FILE = "time_travel_config.yaml"
+
+
+# Schema Definitions
+class Message(TypedDict):
+    role: str
+    content: str
+
+
+class ChatMLPrompt(TypedDict):
+    type: Literal["chatml"]
+    messages: List[Message]
+
+
+class TextPrompt(TypedDict):
+    type: Literal["text"]
+    text: str
+
+
+class TTDItem(TypedDict):
+    """Schema for individual TTD items in the API response"""
+
+    prompt: Union[ChatMLPrompt, TextPrompt]
+    returns: str
+    timestamp: str
+    model: str
+    provider: str
+    session_id: str
+
+
+class TTDResponse(TypedDict):
+    """Schema for the TTD API response"""
+
+    code: int
+    body: List[TTDItem]
+
+
+class TimeTravelCache(TypedDict):
+    """Schema for agentops_time_travel.json"""
+
+    completion_overrides: Dict[str, str]  # Key is stringified prompt, value is completion
+
+
+class TimeTravelConfig(TypedDict):
+    """Schema for .agentops_time_travel.yaml"""
+
+    Time_Travel_Debugging_Active: bool
+
+
+def check_time_travel_active() -> bool:
+    """
+    Check if time travel debugging is active.
+
+    Returns:
+        bool: True if time travel debugging is active, False otherwise
+    """
+    config = storage.read_yaml(TIME_TRAVEL_CONFIG_FILE)
+    return config.get("Time_Travel_Debugging_Active", False) if config else False
+
+
+async def async_check_time_travel_active() -> bool:
+    """
+    Asynchronously check if time travel debugging is active.
+
+    Returns:
+        bool: True if time travel debugging is active, False otherwise
+    """
+    config = await storage.aread_yaml(TIME_TRAVEL_CONFIG_FILE)
+    return config.get("Time_Travel_Debugging_Active", False) if config else False
+
+
+def set_time_travel_active_state(is_active: bool) -> None:
+    """
+    Set the time travel debugging active state.
+
+    Args:
+        is_active: Whether to activate or deactivate time travel debugging
+    """
+    config = storage.read_yaml(TIME_TRAVEL_CONFIG_FILE) or {}
+    config["Time_Travel_Debugging_Active"] = is_active
+
+    if storage.write_yaml(TIME_TRAVEL_CONFIG_FILE, config):
+        print(f"{TTD_PREPEND_STRING} {'Activated' if is_active else 'Deactivated'}")
+    else:
+        print(
+            f"{TTD_PREPEND_STRING} Error - Unable to write config. Time Travel not {'activated' if is_active else 'deactivated'}"
+        )
+
+
+async def async_set_time_travel_active_state(is_active: bool) -> None:
+    """
+    Asynchronously set the time travel debugging active state.
+
+    Args:
+        is_active: Whether to activate or deactivate time travel debugging
+    """
+    config = await storage.aread_yaml(TIME_TRAVEL_CONFIG_FILE) or {}
+    config["Time_Travel_Debugging_Active"] = is_active
+
+    if await storage.awrite_yaml(TIME_TRAVEL_CONFIG_FILE, config):
+        print(f"{TTD_PREPEND_STRING} {'Activated' if is_active else 'Deactivated'}")
+    else:
+        print(
+            f"{TTD_PREPEND_STRING} Error - Unable to write config. Time Travel not {'activated' if is_active else 'deactivated'}"
+        )
 
 
 @singleton
 class TimeTravel:
     def __init__(self):
-        self._completion_overrides = {}
+        self._completion_overrides: Dict[str, str] = {}
+        self._initialized = False
+        self._lock = threading.Lock()
+        self._async_lock = asyncio.Lock()
 
-        script_dir = os.path.dirname(os.path.abspath(__file__))
-        parent_dir = os.path.dirname(script_dir)
-        cache_path = os.path.join(parent_dir, "agentops_time_travel.json")
+    def __await__(self):
+        async def f():
+            await self._initialize()
+            return self
 
-        try:
-            with open(cache_path, "r") as file:
-                time_travel_cache_json = json.load(file)
-                self._completion_overrides = time_travel_cache_json.get("completion_overrides")
-        except FileNotFoundError:
+        return f().__await__()
+
+    async def _initialize(self) -> None:
+        """Initialize the TimeTravel instance, handling both sync and async contexts."""
+        if self._initialized:
             return
 
+        try:
+            cache_data = await self._async_read_cache()
+        except (AttributeError, NotImplementedError):
+            cache_data = self._sync_read_cache()
 
-def fetch_time_travel_id(ttd_id):
-    try:
-        endpoint = os.environ.get("AGENTOPS_API_ENDPOINT", "https://api.agentops.ai")
-        ttd_res = HttpClient.get(f"{endpoint}/v2/ttd/{ttd_id}")
-        if ttd_res.code != 200:
-            raise Exception(f"Failed to fetch TTD with status code {ttd_res.code}")
+        if cache_data:
+            self._completion_overrides = cache_data.get("completion_overrides", {})
+        self._initialized = True
 
-        completion_overrides = {
+    async def _async_read_cache(self) -> Optional[Dict]:
+        """Attempt to read the cache asynchronously."""
+        async with self._async_lock:
+            return await storage.aread_json(TIME_TRAVEL_CACHE_FILE)
+
+    def _sync_read_cache(self) -> Optional[Dict]:
+        """Read the cache synchronously."""
+        with self._lock:
+            return storage.read_json(TIME_TRAVEL_CACHE_FILE)
+
+    def ensure_initialized(self) -> None:
+        """Ensure the instance is initialized in a synchronous context."""
+        if not self._initialized:
+            cache_data = self._sync_read_cache()
+            if cache_data:
+                self._completion_overrides = cache_data.get("completion_overrides", {})
+            self._initialized = True
+
+    async def _ensure_initialized(self) -> None:
+        """Ensure the instance is initialized in an async context."""
+        if not self._initialized:
+            cache_data = await self._async_read_cache()
+            if cache_data:
+                self._completion_overrides = cache_data.get("completion_overrides", {})
+            self._initialized = True
+
+    def fetch_time_travel_id(self, ttd_id: str) -> None:
+        """Synchronous version of fetch_time_travel_id"""
+        try:
+            endpoint = os.environ.get("AGENTOPS_API_ENDPOINT", "https://api.agentops.ai")
+            ttd_res = HttpClient.get(f"{endpoint}/v2/ttd/{ttd_id}")
+            if ttd_res.code != 200:
+                raise Exception(f"Failed to fetch TTD with status code {ttd_res.code}")
+
+            completion_overrides = self._process_ttd_response(ttd_res.body)
+            storage.write_json(TIME_TRAVEL_CACHE_FILE, completion_overrides)
+            set_time_travel_active_state(True)  # Using global function
+        except (ApiServerException, Exception) as e:
+            print(f"{TTD_PREPEND_STRING} Error - {e}")
+
+    async def fetch_time_travel_id_async(self, ttd_id: str) -> None:
+        """Asynchronous version of fetch_time_travel_id"""
+        raise NotImplementedError("Requires HttpClient.get_async")
+        # try:
+        #     endpoint = os.environ.get("AGENTOPS_API_ENDPOINT", "https://api.agentops.ai")
+        #     ttd_res = await HttpClient.get_async(f"{endpoint}/v2/ttd/{ttd_id}")
+        #     if ttd_res.code != 200:
+        #         raise Exception(f"Failed to fetch TTD with status code {ttd_res.code}")
+        #
+        #     completion_overrides = self._process_ttd_response(ttd_res.body)
+        #     await storage.awrite_json(TIME_TRAVEL_CACHE_FILE, completion_overrides)
+        #     await async_set_time_travel_active_state(True)  # Using global async function
+        # except (ApiServerException, Exception) as e:
+        #     print(f"{TTD_PREPEND_STRING} Error - {e}")
+
+    def _process_ttd_response(self, body: List[TTDItem]) -> Dict[str, Dict[str, str]]:
+        """Helper method to process TTD response body"""
+        return {
             "completion_overrides": {
                 (
                     str({"messages": item["prompt"]["messages"]})
                     if item["prompt"].get("type") == "chatml"
                     else str(item["prompt"])
                 ): item["returns"]
-                for item in ttd_res.body  # TODO: rename returns to completion_override
+                for item in body
             }
         }
-        with open("agentops_time_travel.json", "w") as file:
-            json.dump(completion_overrides, file, indent=4)
 
-        set_time_travel_active_state(True)
-    except ApiServerException as e:
-        print(f"{ttd_prepend_string} Error - {e}")
-    except Exception as e:
-        print(f"{ttd_prepend_string} Error - {e}")
+    def fetch_completion_override(self, kwargs):
+        if not check_time_travel_active():
+            return None
 
+        self.ensure_initialized()
+        if self._completion_overrides:
+            return find_cache_hit(kwargs["messages"], self._completion_overrides)
+        return None
 
-def fetch_completion_override_from_time_travel_cache(kwargs):
-    if not check_time_travel_active():
-        return
+    async def async_fetch_completion_override(self, kwargs):
+        if not await async_check_time_travel_active():
+            return None
 
-    if TimeTravel()._completion_overrides:
-        return find_cache_hit(kwargs["messages"], TimeTravel()._completion_overrides)
+        await self._ensure_initialized()
+        if self._completion_overrides:
+            return find_cache_hit(kwargs["messages"], self._completion_overrides)
+        return None
 
 
 # NOTE: This is specific to the messages: [{'role': '...', 'content': '...'}, ...] format
 def find_cache_hit(prompt_messages, completion_overrides):
+    """
+    Find a matching completion override for the given prompt messages.
+
+    Args:
+        prompt_messages: List of message dictionaries
+        completion_overrides: Dictionary of cached completions
+
+    Returns:
+        str or None: The cached completion if found, None otherwise
+    """
     if not isinstance(prompt_messages, (list, tuple)):
         print(
-            f"{ttd_prepend_string} Error - unexpected type for prompt_messages. Expected 'list' or 'tuple'. Got ",
+            f"{TTD_PREPEND_STRING} Error - unexpected type for prompt_messages. Expected 'list' or 'tuple'. Got ",
             type(prompt_messages),
         )
         return None
 
     if not isinstance(completion_overrides, dict):
         print(
-            f"{ttd_prepend_string} Error - unexpected type for completion_overrides. Expected 'dict'. Got ",
+            f"{TTD_PREPEND_STRING} Error - unexpected type for completion_overrides. Expected 'dict'. Got ",
             type(completion_overrides),
         )
         return None
-    for key, value in completion_overrides.items():
-        try:
-            completion_override_dict = eval(key)
-            if not isinstance(completion_override_dict, dict):
-                print(
-                    f"{ttd_prepend_string} Error - unexpected type for completion_override_dict. Expected 'dict'. Got ",
-                    type(completion_override_dict),
-                )
-                continue
 
-            cached_messages = completion_override_dict.get("messages")
-            if not isinstance(cached_messages, list):
-                print(
-                    f"{ttd_prepend_string} Error - unexpected type for cached_messages. Expected 'list'. Got ",
-                    type(cached_messages),
-                )
-                continue
+    # Create the key in the same format as stored in cache
+    current_key = str({"messages": prompt_messages})
 
-            if len(cached_messages) != len(prompt_messages):
-                continue
+    # Direct dictionary lookup instead of iteration and eval
+    if current_key in completion_overrides:
+        return completion_overrides[current_key]
 
-            if all(
-                isinstance(a, dict) and isinstance(b, dict) and a.get("content") == b.get("content")
-                for a, b in zip(prompt_messages, cached_messages)
-            ):
-                return value
-        except (SyntaxError, ValueError, TypeError) as e:
-            print(f"{ttd_prepend_string} Error - Error processing completion_overrides item: {e}")
-        except Exception as e:
-            print(f"{ttd_prepend_string} Error - Unexpected error in find_cache_hit: {e}")
     return None
 
 
-def check_time_travel_active():
-    script_dir = os.path.dirname(os.path.abspath(__file__))
-    parent_dir = os.path.dirname(script_dir)
-    config_file_path = os.path.join(parent_dir, ".agentops_time_travel.yaml")
+def fetch_completion_override_from_time_travel_cache(kwargs):
+    """
+    Fetch a completion override from the time travel cache.
 
-    try:
-        with open(config_file_path, "r") as config_file:
-            config = yaml.safe_load(config_file)
-            return config.get("Time_Travel_Debugging_Active", False)
-    except FileNotFoundError:
-        return False
+    Args:
+        kwargs: Dictionary containing message data
+
+    Returns:
+        str or None: The cached completion if found, None otherwise
+    """
+    if not check_time_travel_active():
+        return None
+
+    time_travel = TimeTravel()
+    time_travel.ensure_initialized()
+
+    if time_travel._completion_overrides:
+        return find_cache_hit(kwargs["messages"], time_travel._completion_overrides)
+    return None
 
 
-def set_time_travel_active_state(is_active: bool):
-    config_path = ".agentops_time_travel.yaml"
-    try:
-        with open(config_path, "r") as config_file:
-            config = yaml.safe_load(config_file) or {}
-    except FileNotFoundError:
-        config = {}
+async def async_fetch_completion_override_from_time_travel_cache(kwargs):
+    """
+    Asynchronously fetch a completion override from the time travel cache.
 
-    config["Time_Travel_Debugging_Active"] = is_active
+    Args:
+        kwargs: Dictionary containing message data
 
-    with open(config_path, "w") as config_file:
-        try:
-            yaml.dump(config, config_file)
-        except:
-            print(f"{ttd_prepend_string} Error - Unable to write to {config_path}. Time Travel not activated")
-            return
+    Returns:
+        str or None: The cached completion if found, None otherwise
+    """
+    if not await async_check_time_travel_active():
+        return None
 
-    if is_active:
-        print(f"{ttd_prepend_string} Activated")
-    else:
-        print(f"{ttd_prepend_string} Deactivated")
+    time_travel = await TimeTravel()
+
+    if time_travel._completion_overrides:
+        return find_cache_hit(kwargs["messages"], time_travel._completion_overrides)
+    return None
