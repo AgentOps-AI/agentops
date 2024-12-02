@@ -43,6 +43,7 @@ dev = [
     "pytest-asyncio",
     "pytest-vcr",
     "pytest-mock",
+    "pytest-aiofiles",
     "pyfakefs",
     "requests_mock==1.11.0",
     "ruff",
