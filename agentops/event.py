@@ -82,6 +82,7 @@ class LLMEvent(Event):
     prompt_tokens: Optional[int] = None
     completion: Union[str, object] = None
     completion_tokens: Optional[int] = None
+    cost: Optional[float] = None
     model: Optional[str] = None
 
 

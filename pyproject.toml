@@ -24,7 +24,10 @@ dependencies = [
     "psutil==5.9.8",
     "packaging==23.2",
     "termcolor>=2.3.0", # 2.x.x tolerant
-    "PyYAML>=5.3,<7.0"
+    "PyYAML>=5.3,<7.0",
+    "opentelemetry-api>=1.22.0,<2.0.0", # API for interfaces
+    "opentelemetry-sdk>=1.22.0,<2.0.0", # SDK for implementation
+    "opentelemetry-exporter-otlp-proto-http>=1.22.0,<2.0.0", # For OTLPSpanExporter
 ]
 [project.optional-dependencies]
 dev = [
@@ -37,6 +40,7 @@ dev = [
     "requests_mock==1.11.0",
     "ruff",
     "tach~=0.9",
+    "vcrpy>=6.0.0; python_version >= '3.8'"
 ]
 langchain = [
     "langchain==0.2.14; python_version >= '3.8.1'"
@@ -55,6 +59,11 @@ agentops = "agentops.cli:main"
 [tool.pytest.ini_options]
 asyncio_mode = "strict"
 asyncio_default_fixture_loop_scope = "function"
+test_paths = [
+    "tests",
+]
+addopts = "--import-mode=importlib --tb=short -p no:warnings"
+pythonpath = ["."]
 
 [tool.ruff]
 line-length = 120
