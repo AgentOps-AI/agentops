@@ -46,7 +46,9 @@ def record_action(event_name: Optional[str] = None):
                 arg_names = list(func_args.keys())
                 # Get default values
                 arg_values = {
-                    name: func_args[name].default for name in arg_names if func_args[name].default is not inspect._empty
+                    name: func_args[name].default
+                    for name in arg_names
+                    if func_args[name].default is not inspect._empty
                 }
                 # Update with positional arguments
                 arg_values.update(dict(zip(arg_names, args)))
@@ -110,7 +112,9 @@ def record_action(event_name: Optional[str] = None):
                 arg_names = list(func_args.keys())
                 # Get default values
                 arg_values = {
-                    name: func_args[name].default for name in arg_names if func_args[name].default is not inspect._empty
+                    name: func_args[name].default
+                    for name in arg_names
+                    if func_args[name].default is not inspect._empty
                 }
                 # Update with positional arguments
                 arg_values.update(dict(zip(arg_names, args)))
@@ -188,7 +192,9 @@ def record_tool(tool_name: Optional[str] = None):
                 arg_names = list(func_args.keys())
                 # Get default values
                 arg_values = {
-                    name: func_args[name].default for name in arg_names if func_args[name].default is not inspect._empty
+                    name: func_args[name].default
+                    for name in arg_names
+                    if func_args[name].default is not inspect._empty
                 }
                 # Update with positional arguments
                 arg_values.update(dict(zip(arg_names, args)))
@@ -252,7 +258,9 @@ def record_tool(tool_name: Optional[str] = None):
                 arg_names = list(func_args.keys())
                 # Get default values
                 arg_values = {
-                    name: func_args[name].default for name in arg_names if func_args[name].default is not inspect._empty
+                    name: func_args[name].default
+                    for name in arg_names
+                    if func_args[name].default is not inspect._empty
                 }
                 # Update with positional arguments
                 arg_values.update(dict(zip(arg_names, args)))
@@ -345,15 +353,21 @@ def track_agent(name: Union[str, None] = None):
 
                 except AttributeError as ex:
                     logger.debug(ex)
-                    Client().add_pre_init_warning(f"Failed to track an agent {name} with the @track_agent decorator.")
-                    logger.warning("Failed to track an agent with the @track_agent decorator.")
+                    Client().add_pre_init_warning(
+                        f"Failed to track an agent {name} with the @track_agent decorator."
+                    )
+                    logger.warning(
+                        "Failed to track an agent with the @track_agent decorator."
+                    )
 
             obj.__init__ = new_init
 
         elif inspect.isfunction(obj):
             obj.agentops_agent_id = str(uuid4())
             obj.agentops_agent_name = name
-            Client().create_agent(name=obj.agentops_agent_name, agent_id=obj.agentops_agent_id)
+            Client().create_agent(
+                name=obj.agentops_agent_name, agent_id=obj.agentops_agent_id
+            )
 
         else:
             raise Exception("Invalid input, 'obj' must be a class or a function")

@@ -169,7 +169,9 @@ class agentops_property:
                     var_type = type(var)
 
                     # Get all class attributes
-                    class_attrs = {name: getattr(var_type, name, None) for name in dir(var_type)}
+                    class_attrs = {
+                        name: getattr(var_type, name, None) for name in dir(var_type)
+                    }
 
                     agent_id_desc = class_attrs.get("agentops_agent_id")
 
