@@ -29,7 +29,14 @@ dependencies = [
     "opentelemetry-sdk>=1.22.0,<2.0.0", # SDK for implementation
     "opentelemetry-exporter-otlp-proto-http>=1.22.0,<2.0.0", # For OTLPSpanExporter
 ]
+
 [project.optional-dependencies]
+langchain = [
+    "langchain==0.2.14; python_version >= '3.8.1'"
+]
+
+
+[dependency-groups]
 dev = [
     "pytest==7.4.0",
     "pytest-depends",
@@ -42,9 +49,7 @@ dev = [
     "tach~=0.9",
     "vcrpy>=6.0.0; python_version >= '3.8'"
 ]
-langchain = [
-    "langchain==0.2.14; python_version >= '3.8.1'"
-]
+
 
 [project.urls]
 Homepage = "https://github.com/AgentOps-AI/agentops"
