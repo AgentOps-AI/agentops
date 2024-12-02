@@ -38,7 +38,7 @@ class LiteLLMProvider(InstrumentedProvider):
         from openai import AsyncStream, Stream
         from openai.resources import AsyncCompletions
         from openai.types.chat import ChatCompletionChunk
-        from litellm.utils import CustomStreamWrapper
+        from litellm.litellm_core_utils.streaming_handler import CustomStreamWrapper
 
         llm_event = LLMEvent(init_timestamp=init_timestamp, params=kwargs)
         if session is not None:
