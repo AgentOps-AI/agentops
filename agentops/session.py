@@ -95,17 +95,13 @@ class SessionExporter(SpanExporter):
                     # Format event data based on event type
                     if span.name == "actions":
                         formatted_data = {
-                            "action_type": event_data.get(
-                                "action_type", event_data.get("name", "unknown_action")
-                            ),
+                            "action_type": event_data.get("action_type", event_data.get("name", "unknown_action")),
                             "params": event_data.get("params", {}),
                             "returns": event_data.get("returns"),
                         }
                     elif span.name == "tools":
                         formatted_data = {
-                            "name": event_data.get(
-                                "name", event_data.get("tool_name", "unknown_tool")
-                            ),
+                            "name": event_data.get("name", event_data.get("tool_name", "unknown_tool")),
                             "params": event_data.get("params", {}),
                             "returns": event_data.get("returns"),
                         }
@@ -149,11 +145,7 @@ class SessionExporter(SpanExporter):
                             api_key=self.session.config.api_key,
                             jwt=self.session.jwt,
                         )
-                        return (
-                            SpanExportResult.SUCCESS
-                            if res.code == 200
-                            else SpanExportResult.FAILURE
-                        )
+                        return SpanExportResult.SUCCESS if res.code == 200 else SpanExportResult.FAILURE
                     except Exception as e:
                         logger.error(f"Failed to send events: {e}")
                         return SpanExportResult.FAILURE
@@ -279,9 +271,7 @@ class Session:
             return True
 
         try:
-            success = self._span_processor.force_flush(
-                timeout_millis=self.config.max_wait_time
-            )
+            success = self._span_processor.force_flush(timeout_millis=self.config.max_wait_time)
             if not success:
                 logger.warning("Failed to flush all spans before session end")
             return success
@@ -300,9 +290,7 @@ class Session:
                 return None
 
             if not any(end_state == state.value for state in EndState):
-                logger.warning(
-                    "Invalid end_state. Please use one of the EndState enums"
-                )
+                logger.warning("Invalid end_state. Please use one of the EndState enums")
                 return None
 
             try:
@@ -426,9 +414,7 @@ class Session:
 
             # Add required fields based on event type
             if isinstance(event, ErrorEvent):
-                event_data["error_type"] = getattr(
-                    event, "error_type", event.event_type
-                )
+                event_data["error_type"] = getattr(event, "error_type", event.event_type)
             elif event.event_type == "actions":
                 # Ensure action events have action_type
                 if "action_type" not in event_data:
@@ -460,12 +446,8 @@ class Session:
                 if isinstance(event, ErrorEvent):
                     span.set_attribute("error", True)
                     if hasattr(event, "trigger_event") and event.trigger_event:
-                        span.set_attribute(
-                            "trigger_event.id", str(event.trigger_event.id)
-                        )
-                        span.set_attribute(
-                            "trigger_event.type", event.trigger_event.event_type
-                        )
+                        span.set_attribute("trigger_event.id", str(event.trigger_event.id))
+                        span.set_attribute("trigger_event.type", event.trigger_event.event_type)
 
                 if flush_now and hasattr(self, "_span_processor"):
                     self._span_processor.force_flush()
@@ -639,18 +621,14 @@ class Session:
         return (
             "{:.2f}".format(token_cost)
             if token_cost == 0
-            else "{:.6f}".format(
-                token_cost.quantize(Decimal("0.000001"), rounding=ROUND_HALF_UP)
-            )
+            else "{:.6f}".format(token_cost.quantize(Decimal("0.000001"), rounding=ROUND_HALF_UP))
         )
 
     def get_analytics(self) -> Optional[Dict[str, Any]]:
         if not self.end_timestamp:
             self.end_timestamp = get_ISO_time()
 
-        formatted_duration = self._format_duration(
-            self.init_timestamp, self.end_timestamp
-        )
+        formatted_duration = self._format_duration(self.init_timestamp, self.end_timestamp)
 
         if (response := self._get_response()) is None:
             return None

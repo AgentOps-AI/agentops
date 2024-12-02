@@ -32,12 +32,8 @@ def mock_req():
     with requests_mock.Mocker() as m:
         url = "https://api.agentops.ai"
         m.post(url + "/v2/create_events", json={"status": "ok"})
-        m.post(
-            url + "/v2/create_session", json={"status": "success", "jwt": "some_jwt"}
-        )
-        m.post(
-            url + "/v2/reauthorize_jwt", json={"status": "success", "jwt": "some_jwt"}
-        )
+        m.post(url + "/v2/create_session", json={"status": "success", "jwt": "some_jwt"})
+        m.post(url + "/v2/reauthorize_jwt", json={"status": "success", "jwt": "some_jwt"})
         m.post(url + "/v2/update_session", json={"status": "success", "token_cost": 5})
         m.post(url + "/v2/developer_errors", json={"status": "ok"})
         m.post("https://pypi.org/pypi/agentops/json", status_code=404)
@@ -325,12 +321,8 @@ class TestMultiSessions:
         req1 = mock_req.request_history[-1].json()
         req2 = mock_req.request_history[-2].json()
 
-        session_1_req = (
-            req1 if req1["session"]["session_id"] == session_1.session_id else req2
-        )
-        session_2_req = (
-            req2 if req2["session"]["session_id"] == session_2.session_id else req1
-        )
+        session_1_req = req1 if req1["session"]["session_id"] == session_1.session_id else req2
+        session_2_req = req2 if req2["session"]["session_id"] == session_2.session_id else req1
 
         assert session_1_req["session"]["end_state"] == end_state
         assert session_2_req["session"]["end_state"] == end_state
@@ -562,10 +554,7 @@ class TestSessionExporter:
         assert result == SpanExportResult.SUCCESS
 
         # Verify no request was made
-        assert not any(
-            req.url.endswith("/v2/create_events")
-            for req in mock_req.request_history[-1:]
-        )
+        assert not any(req.url.endswith("/v2/create_events") for req in mock_req.request_history[-1:])
 
     def test_export_llm_event(self, mock_req):
         """Test export of LLM event with specific handling of timestamps"""

@@ -40,9 +40,7 @@ class LiteLLMProvider(InstrumentedProvider):
             completions.Completions.create = self.original_oai_create
             completions.AsyncCompletions.create = self.original_oai_create_async
 
-    def handle_response(
-        self, response, kwargs, init_timestamp, session: Optional[Session] = None
-    ) -> dict:
+    def handle_response(self, response, kwargs, init_timestamp, session: Optional[Session] = None) -> dict:
         """Handle responses for OpenAI versions >v1.0.0"""
         from openai import AsyncStream, Stream
         from openai.resources import AsyncCompletions
@@ -93,9 +91,7 @@ class LiteLLMProvider(InstrumentedProvider):
 
                     self._safe_record(session, llm_event)
             except Exception as e:
-                self._safe_record(
-                    session, ErrorEvent(trigger_event=llm_event, exception=e)
-                )
+                self._safe_record(session, ErrorEvent(trigger_event=llm_event, exception=e))
 
                 kwargs_str = pprint.pformat(kwargs)
                 chunk = pprint.pformat(chunk)
@@ -186,14 +182,10 @@ class LiteLLMProvider(InstrumentedProvider):
             if "session" in kwargs.keys():
                 del kwargs["session"]
 
-            completion_override = fetch_completion_override_from_time_travel_cache(
-                kwargs
-            )
+            completion_override = fetch_completion_override_from_time_travel_cache(kwargs)
             if completion_override:
                 result_model = ChatCompletion.model_validate_json(completion_override)
-                return self.handle_response(
-                    result_model, kwargs, init_timestamp, session=session
-                )
+                return self.handle_response(result_model, kwargs, init_timestamp, session=session)
 
             # prompt_override = fetch_prompt_override_from_time_travel_cache(kwargs)
             # if prompt_override:
@@ -222,14 +214,10 @@ class LiteLLMProvider(InstrumentedProvider):
             if "session" in kwargs.keys():
                 del kwargs["session"]
 
-            completion_override = fetch_completion_override_from_time_travel_cache(
-                kwargs
-            )
+            completion_override = fetch_completion_override_from_time_travel_cache(kwargs)
             if completion_override:
                 result_model = ChatCompletion.model_validate_json(completion_override)
-                return self.handle_response(
-                    result_model, kwargs, init_timestamp, session=session
-                )
+                return self.handle_response(result_model, kwargs, init_timestamp, session=session)
 
             # prompt_override = fetch_prompt_override_from_time_travel_cache(kwargs)
             # if prompt_override:

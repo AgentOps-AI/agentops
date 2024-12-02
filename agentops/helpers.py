@@ -39,7 +39,9 @@ def filter_unjsonable(d: dict) -> dict:
                 k: (
                     filter_dict(v)
                     if isinstance(v, (dict, list)) or is_jsonable(v)
-                    else str(v) if isinstance(v, UUID) else ""
+                    else str(v)
+                    if isinstance(v, UUID)
+                    else ""
                 )
                 for k, v in obj.items()
             }
@@ -48,7 +50,9 @@ def filter_unjsonable(d: dict) -> dict:
                 (
                     filter_dict(x)
                     if isinstance(x, (dict, list)) or is_jsonable(x)
-                    else str(x) if isinstance(x, UUID) else ""
+                    else str(x)
+                    if isinstance(x, UUID)
+                    else ""
                 )
                 for x in obj
             ]
@@ -86,9 +90,7 @@ def safe_serialize(obj):
         """Recursively remove self key and None/... values from dictionaries so they aren't serialized"""
         if isinstance(value, dict):
             return {
-                k: remove_unwanted_items(v)
-                for k, v in value.items()
-                if v is not None and v is not ... and k != "self"
+                k: remove_unwanted_items(v) for k, v in value.items() if v is not None and v is not ... and k != "self"
             }
         elif isinstance(value, list):
             return [remove_unwanted_items(item) for item in value]

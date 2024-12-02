@@ -24,9 +24,7 @@ class HttpStatus(Enum):
 
 
 class Response:
-    def __init__(
-        self, status: HttpStatus = HttpStatus.UNKNOWN, body: Optional[dict] = None
-    ):
+    def __init__(self, status: HttpStatus = HttpStatus.UNKNOWN, body: Optional[dict] = None):
         self.status: HttpStatus = status
         self.code: int = status.value
         self.body = body if body else {}
@@ -70,9 +68,7 @@ class HttpClient:
             adapter = requests.adapters.HTTPAdapter(
                 pool_connections=15,  # Number of connection pools
                 pool_maxsize=256,  # Connections per pool
-                max_retries=Retry(
-                    total=3, backoff_factor=0.1, status_forcelist=[500, 502, 503, 504]
-                ),
+                max_retries=Retry(total=3, backoff_factor=0.1, status_forcelist=[500, 502, 503, 504]),
             )
 
             # Mount adapter for both HTTP and HTTPS
@@ -136,9 +132,7 @@ class HttpClient:
         except requests.exceptions.Timeout:
             result.code = 408
             result.status = HttpStatus.TIMEOUT
-            raise ApiServerException(
-                "Could not reach API server - connection timed out"
-            )
+            raise ApiServerException("Could not reach API server - connection timed out")
         except requests.exceptions.HTTPError as e:
             try:
                 result.parse(e.response)
@@ -185,9 +179,7 @@ class HttpClient:
         except requests.exceptions.Timeout:
             result.code = 408
             result.status = HttpStatus.TIMEOUT
-            raise ApiServerException(
-                "Could not reach API server - connection timed out"
-            )
+            raise ApiServerException("Could not reach API server - connection timed out")
         except requests.exceptions.HTTPError as e:
             try:
                 result.parse(e.response)

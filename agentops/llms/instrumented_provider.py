@@ -14,9 +14,7 @@ class InstrumentedProvider(ABC):
         self.client = client
 
     @abstractmethod
-    def handle_response(
-        self, response, kwargs, init_timestamp, session: Optional[Session] = None
-    ) -> dict:
+    def handle_response(self, response, kwargs, init_timestamp, session: Optional[Session] = None) -> dict:
         pass
 
     @abstractmethod
