@@ -18,16 +18,15 @@ services:
     healthcheck:
       # ̶u̶g̶h̶,̶ ̶n̶o̶ ̶C̶U̶R̶L̶ ̶i̶n̶ ̶o̶l̶l̶a̶m̶a̶ ̶i̶m̶a̶g̶e̶
       # - fine 
-      test: ["CMD", "sh", "-c", "echo -e \"GET / HTTP/1.1\\r\\nHost: ollama\\r\\nConnection: close\\r\\n\\r\\n\" | openssl s_client -connect ollama:11434 2>/dev/null | grep \"HTTP/1.1 200\""]
-      interval: 10s
+      test: ["CMD", "sh", "-c", "echo -e \"GET / HTTP/1.1\\r\\nHost: localhost\\r\\nConnection: close\\r\\n\\r\\n\" | openssl s_client -connect localhost:11434 2>/dev/null | grep \"HTTP/1.1 200\""]
+      interval: 3s
       timeout: 5s
       retries: 5
 
   ollama-init:
     image: ollama/ollama:latest
     depends_on:
-      ollama:
-        condition: service_healthy
+      - ollama
     network_mode: ${NETWORK_MODE:-bridge}
     environment:
       - OLLAMA_HOST=ollama
@@ -40,10 +39,8 @@ services:
 
   llamastack:
     depends_on:
-      ollama:
-        condition: service_started
-      ollama-init:
-        condition: service_started
+      - ollama
+      - ollama-init
     image: ${LLAMA_STACK_IMAGE:-llamastack/distribution-ollama}
     network_mode: ${NETWORK_MODE:-bridge}
     volumes:
