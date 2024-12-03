@@ -35,8 +35,8 @@ services:
       - SAFETY_MODEL=${SAFETY_MODEL:-}
     volumes:
       - ~/.ollama:/root/.ollama
-      - ./pull-models.sh:/pull-models.sh
-    entrypoint: ["/pull-models.sh"]
+      - ./pull-models.sh:/root/pull-models.sh
+    entrypoint: ["/root/pull-models.sh"]
 
   llamastack:
     depends_on:
