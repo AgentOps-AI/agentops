@@ -1,33 +1,32 @@
 services:
   ollama:
+    hostname: ollama
+    # extra_hosts:
+      # - "host.docker.internal:host-gateway"
     image: ollama/ollama:latest
-    network_mode: ${NETWORK_MODE:-bridge}
     volumes:
       - ~/.ollama:/root/.ollama
-    ports:
-      - "11434:11434"
     environment:
       OLLAMA_DEBUG: 1
     command: []
     deploy:
       resources:
         limits:
-          memory: 8G    # Set maximum memory
+          memory: 4G    # Set maximum memory
         reservations:
-          memory: 8G    # Set minimum memory reservation
+          memory: 2G    # Set minimum memory reservation
     healthcheck:
-      # ̶u̶g̶h̶,̶ ̶n̶o̶ ̶C̶U̶R̶L̶ ̶i̶n̶ ̶o̶l̶l̶a̶m̶a̶ ̶i̶m̶a̶g̶e̶
-      # - fine 
-      test: ["CMD", "sh", "-c", "echo -e \"GET / HTTP/1.1\\r\\nHost: localhost\\r\\nConnection: close\\r\\n\\r\\n\" | openssl s_client -connect localhost:11434 2>/dev/null | grep \"HTTP/1.1 200\""]
+      test: ["CMD", "sh", "-c", "echo -e \"GET / HTTP/1.1\\r\\nHost: localhost\\r\\n\\r\\n\" | nc localhost 11434 | grep -q \"HTTP/1.1 200\""]
       interval: 3s
       timeout: 5s
       retries: 5
+    networks:
+      - ollama-network
 
   ollama-init:
     image: ollama/ollama:latest
     depends_on:
       - ollama
-    network_mode: ${NETWORK_MODE:-bridge}
     environment:
       - OLLAMA_HOST=ollama
       - INFERENCE_MODEL=${INFERENCE_MODEL}
@@ -36,13 +35,16 @@ services:
       - ~/.ollama:/root/.ollama
       - ./pull-models.sh:/root/pull-models.sh
     entrypoint: ["/root/pull-models.sh"]
+    networks:
+      - ollama-network
 
   llamastack:
     depends_on:
-      - ollama
-      - ollama-init
+      ollama:
+        condition: service_healthy
+      ollama-init:
+        condition: service_started
     image: ${LLAMA_STACK_IMAGE:-llamastack/distribution-ollama}
-    network_mode: ${NETWORK_MODE:-bridge}
     volumes:
       - ~/.llama:/root/.llama
       # Link to ollama run.yaml file
@@ -62,20 +64,24 @@ services:
         delay: 10s
         max_attempts: 3
         window: 60s
-  notebook:
-    image: python:3.12
-    depends_on:
-      llamastack:
-        condition: service_started
-    network_mode: ${NETWORK_MODE:-bridge}
-    volumes:
-      - ./notebook.ipynb:/app/notebook.ipynb
-    command: >
-      bash -c "pip install llama-stack-client jupyter nbconvert &&
-      jupyter nbconvert --to python /app/notebook.ipynb &&
-      python /app/notebook.py"
-    restart: "no"
-
+  # notebook:
+  #   image: python:3.12
+  #   depends_on:
+  #     llamastack:
+  #       condition: service_started
+  #   network_mode: ${NETWORK_MODE:-bridge}
+  #   volumes:
+  #     - ./notebook.ipynb:/app/notebook.ipynb
+  #   command: >
+  #     bash -c "pip install llama-stack-client jupyter nbconvert &&
+  #     jupyter nbconvert --to python /app/notebook.ipynb &&
+  #     python /app/notebook.py"
+  #   restart: "no"
+networks:
+  llama-stack:
+    driver: bridge
+  ollama-network:
+    driver: bridge
 volumes:
   ollama-init:
   llamastack:
