@@ -1,8 +1,8 @@
 services:
   ollama:
     hostname: ollama
-    # extra_hosts:
-      # - "host.docker.internal:host-gateway"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     image: ollama/ollama:latest
     volumes:
       - ~/.ollama:/root/.ollama
@@ -16,7 +16,7 @@ services:
         reservations:
           memory: 2G    # Set minimum memory reservation
     healthcheck:
-      test: ["CMD", "sh", "-c", "echo -e \"GET / HTTP/1.1\\r\\nHost: localhost\\r\\n\\r\\n\" | nc localhost 11434 | grep -q \"HTTP/1.1 200\""]
+      test: ["CMD", "bash", "-c", "</dev/tcp/localhost/11434"]
       interval: 3s
       timeout: 5s
       retries: 5
@@ -29,7 +29,7 @@ services:
       - ollama
     environment:
       - OLLAMA_HOST=ollama
-      - INFERENCE_MODEL=${INFERENCE_MODEL:-llama3.2:3b-instruct-fp16}
+      - INFERENCE_MODEL=${INFERENCE_MODEL:-llama3.2:latest}
       - SAFETY_MODEL=${SAFETY_MODEL:-}
     volumes:
       - ~/.ollama:/root/.ollama
@@ -44,7 +44,8 @@ services:
         condition: service_healthy
       ollama-init:
         condition: service_started
-    image: ${LLAMA_STACK_IMAGE:-llamastack/distribution-ollama}
+    image: ${LLAMA_STACK_IMAGE:-llamastack/llamastack-local-cpu}
+    platform: linux/arm64
     volumes:
       - ~/.llama:/root/.llama
       # Link to ollama run.yaml file
@@ -77,6 +78,9 @@ services:
   #     jupyter nbconvert --to python /app/notebook.ipynb &&
   #     python /app/notebook.py"
   #   restart: "no"
+    networks:
+      - ollama-network
+
 networks:
   ollama-network:
     driver: bridge
