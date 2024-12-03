@@ -1,7 +1,9 @@
 import inspect
 import pprint
 import sys
-from typing import Any, AsyncGenerator, Dict, Optional
+from typing import Any, AsyncGenerator, Dict, Optional, List
+import logging
+from typing import Union
 
 from agentops.event import LLMEvent, ErrorEvent, ToolEvent
 from agentops.session import Session
@@ -92,13 +94,13 @@ class LlamaStackClientProvider(InstrumentedProvider):
                 #     llm_event.returns = chunk.event
                 try:
                     if chunk.event.payload.event_type == "turn_start":
-                        print("turn_start")
+                        logger.debug("turn_start")
                         stack.append({
                             'event_type': chunk.event.payload.event_type,
                             'event': None
                         })
                     elif chunk.event.payload.event_type == "step_start":
-                        print("step_start")
+                        logger.debug("step_start")
                         llm_event = LLMEvent(init_timestamp=get_ISO_time(), params=kwargs)
                         stack.append({
                             'event_type': chunk.event.payload.event_type,
@@ -115,7 +117,7 @@ class LlamaStackClientProvider(InstrumentedProvider):
                                 accum_delta = delta
                         elif (chunk.event.payload.step_type == "inference" and chunk.event.payload.tool_call_delta):  
                             if (chunk.event.payload.tool_call_delta.parse_status == "started"):
-                                print('tool_started')
+                                logger.debug('tool_started')
                                 tool_event = ToolEvent(init_timestamp=get_ISO_time(), params=kwargs)
                                 tool_event.name = "tool_started"
 
@@ -134,7 +136,7 @@ class LlamaStackClientProvider(InstrumentedProvider):
                                 else:
                                     accum_tool_delta = delta
                             elif (chunk.event.payload.tool_call_delta.parse_status == "success"):
-                                print('ToolExecution - success')
+                                logger.debug('ToolExecution - success')
                                 if stack[-1]['event_type'] == "tool_started": # check if the last event in the stack is a tool execution event
                                     
                                     tool_event = stack.pop().get("event")
@@ -143,7 +145,7 @@ class LlamaStackClientProvider(InstrumentedProvider):
                                     tool_event.params["completion"] = accum_tool_delta
                                     self._safe_record(session, tool_event)    
                             elif (chunk.event.payload.tool_call_delta.parse_status == "failure"):
-                                print('ToolExecution - failure')
+                                logger.warning('ToolExecution - failure')
                                 if stack[-1]['event_type'] == "ToolExecution - started":
                                     tool_event = stack.pop().get("event")
                                     tool_event.end_timestamp = get_ISO_time()
@@ -152,11 +154,12 @@ class LlamaStackClientProvider(InstrumentedProvider):
                                     self._safe_record(session, ErrorEvent(trigger_event=tool_event, exception=Exception("ToolExecution - failure")))
 
                     elif chunk.event.payload.event_type == "step_complete":
-                        print("step_complete")
+                        logger.debug("Step complete event received")
+                        
                         if (chunk.event.payload.step_type == "inference"):
-
-                            print("step_complete inference")
-                            if stack[-1]['event_type'] == "step_start": # check if the last event in the stack is a step start event
+                            logger.debug("Step complete inference")
+                            
+                            if stack[-1]['event_type'] == "step_start":
                                 llm_event = stack.pop().get("event")                            
                                 llm_event.prompt = [
                                     {"content": message['content'], "role": message['role']} for message in kwargs["messages"]
@@ -168,16 +171,18 @@ class LlamaStackClientProvider(InstrumentedProvider):
                                 llm_event.completion_tokens = None
                                 llm_event.end_timestamp = get_ISO_time()
                                 self._safe_record(session, llm_event)
+                            else:
+                                logger.warning("Unexpected event stack state for inference step complete")
                         elif (chunk.event.payload.step_type == "tool_execution"):
                             if stack[-1]['event_type'] == "tool_started":
-                                print('tool_complete')
+                                logger.debug('tool_complete')
                                 tool_event = stack.pop().get("event")
                                 tool_event.name = "tool_complete"
                                 tool_event.params["completion"] = accum_tool_delta
                                 self._safe_record(session, tool_event)
                     elif chunk.event.payload.event_type == "turn_complete":
                         if stack[-1]['event_type'] == "turn_start":
-                            print('turn_start')
+                            logger.debug('turn_start')
                             # llm_event = stack.pop()
                             # llm_event.end_timestamp = get_ISO_time()
                             # self._safe_record(session, llm_event)

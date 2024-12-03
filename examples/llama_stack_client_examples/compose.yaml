@@ -1,7 +1,6 @@
 services:
   ollama:
     image: ollama/ollama:latest
-    container_name: ollama
     network_mode: ${NETWORK_MODE:-bridge}
     volumes:
       - ~/.ollama:/root/.ollama
@@ -16,28 +15,28 @@ services:
           memory: 8G    # Set maximum memory
         reservations:
           memory: 8G    # Set minimum memory reservation
-    # healthcheck:
-    #   # ugh, no CURL in ollama image
-    #   test: ["CMD", "curl", "-f", "http://ollama:11434"]
-    #   interval: 10s
-    #   timeout: 5s
-    #   retries: 5
+    healthcheck:
+      # ̶u̶g̶h̶,̶ ̶n̶o̶ ̶C̶U̶R̶L̶ ̶i̶n̶ ̶o̶l̶l̶a̶m̶a̶ ̶i̶m̶a̶g̶e̶
+      # - fine 
+      test: ["CMD", "sh", "-c", "echo -e \"GET / HTTP/1.1\\r\\nHost: ollama\\r\\nConnection: close\\r\\n\\r\\n\" | openssl s_client -connect ollama:11434 2>/dev/null | grep \"HTTP/1.1 200\""]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
   ollama-init:
     image: ollama/ollama:latest
     depends_on:
-      - ollama
-        # condition: service_healthy
+      ollama:
+        condition: service_healthy
     network_mode: ${NETWORK_MODE:-bridge}
-    container_name: ollama-init
     environment:
       - OLLAMA_HOST=ollama
       - INFERENCE_MODEL=${INFERENCE_MODEL}
       - SAFETY_MODEL=${SAFETY_MODEL:-}
     volumes:
       - ~/.ollama:/root/.ollama
-      - ./pull-models.sh:/root/pull-models.sh
-    entrypoint: ["/root/pull-models.sh"]
+      - ./pull-models.sh:/pull-models.sh
+    entrypoint: ["/pull-models.sh"]
 
   llamastack:
     depends_on:
@@ -51,7 +50,7 @@ services:
       - ~/.llama:/root/.llama
       # Link to ollama run.yaml file
       - ~/local/llama-stack/:/app/llama-stack-source
-      - ./run${SAFETY_MODEL:+-with-safety}.yaml:/root/my-run.yaml
+      - ./run${SAFETY_MODEL:+-with-safety}.yaml:/root/run.yaml
     ports:
       - "${LLAMA_STACK_PORT:-5001}:${LLAMA_STACK_PORT:-5001}"
     environment:
@@ -59,15 +58,27 @@ services:
       - SAFETY_MODEL=${SAFETY_MODEL:-}
       - OLLAMA_URL=http://ollama:11434
     entrypoint: >
-        python -m llama_stack.distribution.server.server /root/my-run.yaml \
-        --port ${LLAMA_STACK_PORT:-5001}
+        python -m llama_stack.distribution.server.server --yaml-config /root/run.yaml --port ${LLAMA_STACK_PORT:-5001}
     deploy:
       restart_policy:
         condition: on-failure
         delay: 10s
         max_attempts: 3
         window: 60s
+  notebook:
+    image: python:3.12
+    depends_on:
+      llamastack:
+        condition: service_started
+    network_mode: ${NETWORK_MODE:-bridge}
+    volumes:
+      - ./notebook.ipynb:/app/notebook.ipynb
+    command: >
+      bash -c "pip install llama-stack-client jupyter nbconvert &&
+      jupyter nbconvert --to python /app/notebook.ipynb &&
+      python /app/notebook.py"
+    restart: "no"
+
 volumes:
-  ollama:
   ollama-init:
   llamastack:

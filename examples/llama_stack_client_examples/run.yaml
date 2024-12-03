@@ -46,7 +46,6 @@ models:
 - metadata: {}
   model_id: ${env.INFERENCE_MODEL}
   provider_id: ollama
-  provider_model_id: null
 shields: []
 memory_banks: []
 datasets: []
