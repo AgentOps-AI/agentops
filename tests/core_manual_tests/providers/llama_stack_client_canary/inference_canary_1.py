@@ -1,5 +1,4 @@
 import asyncio
-
 import agentops
 import os
 from dotenv import load_dotenv
@@ -42,18 +41,6 @@ async def stream_test():
 
 def main():
     agentops.start_session()
-
-    # client.inference.chat_completion(
-    #     messages=[
-    #         UserMessage(
-    #             content="hello world, write me a 3 word poem about the moon",
-    #             role="user",
-    #         ),
-    #     ],
-    #     model_id="meta-llama/Llama-3.2-1B-Instruct",
-    #     stream=False,
-    # )
-
     asyncio.run(stream_test())
     agentops.end_session(end_state="Success")
 

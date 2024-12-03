@@ -111,6 +111,7 @@ docker-compose -f docker.compose.yaml up
 - `ollama list`
 - `ollama help`
 - `ollama ps`
+- `tail -f ~/.ollama/logs/server.log`
 
 ## Reference links used during development
 
