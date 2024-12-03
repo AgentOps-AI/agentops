@@ -12,9 +12,9 @@ import agentops
 LLAMA_STACK_PORT = 5001
 INFERENCE_MODEL = "meta-llama/Llama-3.2-1B-Instruct"
 
-import debugpy
-debugpy.listen(5678)
-debugpy.wait_for_client()
+# import debugpy
+# debugpy.listen(5678)
+# debugpy.wait_for_client()
 
 agentops.init(default_tags=["llama-stack-client-example"], auto_start_session=False)
 

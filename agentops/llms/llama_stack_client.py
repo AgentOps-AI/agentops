@@ -60,7 +60,7 @@ class LlamaStackClientProvider(InstrumentedProvider):
                                 {"content": message.content, "role": message.role} for message in kwargs["messages"]
                             ]
                             llm_event.agent_id = check_call_stack_for_agent_id()
-                            llm_event.model = metadata.get("model_id", "Unable to identify model")
+                            llm_event.model = kwargs["model_id"]
                             llm_event.prompt_tokens = None
                             llm_event.completion = accum_delta or kwargs["completion"]
                             llm_event.completion_tokens = None

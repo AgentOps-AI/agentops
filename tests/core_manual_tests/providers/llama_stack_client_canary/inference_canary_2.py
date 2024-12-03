@@ -41,7 +41,7 @@ async def stream_test():
 def main():
     agentops.start_session()
 
-    client.inference.chat_completion(
+    response = client.inference.chat_completion(
         messages=[
             UserMessage(
                 content="hello world, write me a 3 word poem about the moon",
@@ -51,6 +51,8 @@ def main():
         model_id="meta-llama/Llama-3.2-1B-Instruct",
         stream=False,
     )
+
+    print(response)
     
     agentops.end_session(end_state="Success")
 
