@@ -78,8 +78,6 @@ services:
   #     python /app/notebook.py"
   #   restart: "no"
 networks:
-  llama-stack:
-    driver: bridge
   ollama-network:
     driver: bridge
 volumes:
