@@ -29,7 +29,7 @@ services:
       - ollama
     environment:
       - OLLAMA_HOST=ollama
-      - INFERENCE_MODEL=${INFERENCE_MODEL}
+      - INFERENCE_MODEL=${INFERENCE_MODEL:-llama3.2:3b-instruct-fp16}
       - SAFETY_MODEL=${SAFETY_MODEL:-}
     volumes:
       - ~/.ollama:/root/.ollama
