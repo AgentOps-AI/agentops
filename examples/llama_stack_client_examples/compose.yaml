@@ -44,8 +44,7 @@ services:
         condition: service_healthy
       ollama-init:
         condition: service_started
-    image: ${LLAMA_STACK_IMAGE:-llamastack/llamastack-local-cpu}
-    platform: linux/arm64
+    image: ${LLAMA_STACK_IMAGE:-llamastack/distribution-ollama}
     volumes:
       - ~/.llama:/root/.llama
       # Link to ollama run.yaml file
