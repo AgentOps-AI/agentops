@@ -53,7 +53,7 @@ services:
     ports:
       - "${LLAMA_STACK_PORT:-5001}:${LLAMA_STACK_PORT:-5001}"
     environment:
-      - INFERENCE_MODEL=${INFERENCE_MODEL}
+      - INFERENCE_MODEL=${INFERENCE_MODEL:-} # ?
       - SAFETY_MODEL=${SAFETY_MODEL:-}
       - OLLAMA_URL=http://ollama:11434
     entrypoint: >
