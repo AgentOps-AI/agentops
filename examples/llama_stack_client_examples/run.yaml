@@ -13,8 +13,7 @@ providers:
   - provider_id: ollama
     provider_type: remote::ollama
     config:
-      host: ollama
-      port: 11434
+      url: ${env.OLLAMA_URL:http://ollama:11434}
   memory:
   - provider_id: faiss
     provider_type: inline::faiss
