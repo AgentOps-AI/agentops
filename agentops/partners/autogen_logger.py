@@ -10,9 +10,9 @@ from openai import AzureOpenAI, OpenAI
 from openai.types.chat import ChatCompletion
 
 from autogen.logger.base_logger import BaseLogger, LLMConfig
-from autogen.logger.logger_utils import get_current_ts, to_dict
 
 from agentops.enums import EndState
+from agentops.helpers import get_ISO_time
 
 from agentops import LLMEvent, ToolEvent, ActionEvent
 from uuid import uuid4
@@ -55,17 +55,19 @@ class AutogenLogger(BaseLogger):
         start_time: str,
     ) -> None:
         """Records an LLMEvent to AgentOps session"""
-        end_time = get_current_ts()
 
         completion = response.choices[len(response.choices) - 1]
 
+        # Note: Autogen tokens are not included in the request and function call tokens are not counted in the completion
         llm_event = LLMEvent(
             prompt=request["messages"],
             completion=completion.message,
             model=response.model,
+            cost=cost,
+            returns=completion.message.to_json(),
         )
         llm_event.init_timestamp = start_time
-        llm_event.end_timestamp = end_time
+        llm_event.end_timestamp = get_ISO_time()
         llm_event.agent_id = self._get_agentops_id_from_agent(str(id(agent)))
         agentops.record(llm_event)
 

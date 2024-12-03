@@ -1,9 +1,10 @@
 # API server test
 This is a manual test with two files. It checks to make sure that the SDK works in an API environment.
 
-## Running
-1. `python server.py`
-2. In different terminal, `python client.py`
+## Running the FastAPI Server
+You can run FastAPI with:
+1. `uvicorn main:app --reload`
+2. To test, run `curl http://localhost:8000/completion` in a different terminal.
 
 ## Validate
 Check in your AgentOps Dashboard 
