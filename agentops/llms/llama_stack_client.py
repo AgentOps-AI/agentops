@@ -65,16 +65,6 @@ class LlamaStackClientProvider(InstrumentedProvider):
                             llm_event.end_timestamp = get_ISO_time()
                             self._safe_record(session, llm_event)
 
-                        # llm_event.prompt = [
-                        #     {"content": message.content, "role": message.role} for message in kwargs["messages"]
-                        # ]
-                        # llm_event.agent_id = check_call_stack_for_agent_id()
-                        # llm_event.prompt_tokens = None
-                        # llm_event.completion = accum_delta
-                        # llm_event.completion_tokens = None
-                        # llm_event.end_timestamp = get_ISO_time()
-                        # self._safe_record(session, llm_event)
-
                 except Exception as e:
                     llm_event = LLMEvent(init_timestamp=init_timestamp, end_timestamp=get_ISO_time(), params=kwargs)
                     self._safe_record(session, ErrorEvent(trigger_event=llm_event, exception=e))
