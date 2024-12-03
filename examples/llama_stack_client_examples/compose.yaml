@@ -48,7 +48,7 @@ services:
     volumes:
       - ~/.llama:/root/.llama
       # Link to ollama run.yaml file
-      - ~/local/llama-stack/:/app/llama-stack-source
+      # - ~/local/llama-stack/:/app/llama-stack-source
       - ./run${SAFETY_MODEL:+-with-safety}.yaml:/root/run.yaml
     ports:
       - "${LLAMA_STACK_PORT:-5001}:${LLAMA_STACK_PORT:-5001}"
