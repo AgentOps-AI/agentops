@@ -28,11 +28,8 @@ class LlamaStackClientProvider(InstrumentedProvider):
             # llm_event = None
 
             def handle_stream_chunk(chunk: dict):
-                # llm_event = LLMEvent(init_timestamp=init_timestamp, params=kwargs)
-                # llm_event = LLMEvent(init_timestamp=init_timestamp, params=kwargs)
 
-                # if session is not None:
-                #     llm_event.session_id = session.session_id
+                nonlocal stack
 
                 # NOTE: prompt/completion usage not returned in response when streaming
                 # We take the first ChatCompletionResponseStreamChunkEvent and accumulate the deltas from all subsequent chunks to build one full chat completion
@@ -45,25 +42,41 @@ class LlamaStackClientProvider(InstrumentedProvider):
                     # llm_event.model = kwargs["model_id"]
                     # llm_event.prompt = kwargs["messages"]
 
-                    # NOTE: We assume for completion only choices[0] is relevant
-                    # chunk.event
-
                     if chunk.event.event_type == "start":
+                        llm_event = LLMEvent(init_timestamp=get_ISO_time(), params=kwargs)
+                        stack.append({
+                            'event_type': "start",
+                            'event': llm_event
+                        })
                         accum_delta = chunk.event.delta
                     elif chunk.event.event_type == "progress":
                         accum_delta += chunk.event.delta
                     elif chunk.event.event_type == "complete":
-                        llm_event.prompt = [
-                            {"content": message.content, "role": message.role} for message in kwargs["messages"]
-                        ]
-                        llm_event.agent_id = check_call_stack_for_agent_id()
-                        llm_event.prompt_tokens = None
-                        llm_event.completion = accum_delta
-                        llm_event.completion_tokens = None
-                        llm_event.end_timestamp = get_ISO_time()
-                        self._safe_record(session, llm_event)
+                        if stack[-1]['event_type'] == "start": # check if the last event in the stack is a step start event
+                            llm_event = stack.pop().get("event")                            
+                            llm_event.prompt = [
+                                {"content": message.content, "role": message.role} for message in kwargs["messages"]
+                            ]
+                            llm_event.agent_id = check_call_stack_for_agent_id()
+                            llm_event.model = metadata.get("model_id", "Unable to identify model")
+                            llm_event.prompt_tokens = None
+                            llm_event.completion = accum_delta or kwargs["completion"]
+                            llm_event.completion_tokens = None
+                            llm_event.end_timestamp = get_ISO_time()
+                            self._safe_record(session, llm_event)
+
+                        # llm_event.prompt = [
+                        #     {"content": message.content, "role": message.role} for message in kwargs["messages"]
+                        # ]
+                        # llm_event.agent_id = check_call_stack_for_agent_id()
+                        # llm_event.prompt_tokens = None
+                        # llm_event.completion = accum_delta
+                        # llm_event.completion_tokens = None
+                        # llm_event.end_timestamp = get_ISO_time()
+                        # self._safe_record(session, llm_event)
 
                 except Exception as e:
+                    llm_event = LLMEvent(init_timestamp=init_timestamp, end_timestamp=get_ISO_time(), params=kwargs)
                     self._safe_record(session, ErrorEvent(trigger_event=llm_event, exception=e))
 
                     kwargs_str = pprint.pformat(kwargs)
