@@ -7,26 +7,7 @@ Run Llama Stack with Ollama - either local or containerized.
 Just run:
 
 ```bash
-./start-stack.sh
-```
-
-The script will:
-1. Check if Ollama is already running locally
-2. Check if Llama Stack server is already running
-3. Guide you through what needs to be started
-
-Example outputs:
-
-```bash
-# Scenario 1: Ollama running locally
-✓ Ollama server is running locally
-✗ No Llama Stack server detected
-Start Llama Stack server? [Y/n] 
-
-# Scenario 2: Nothing running
-✗ No local Ollama server detected
-✗ No Llama Stack server detected
-No Ollama server detected. Start both Ollama and Llama Stack? [Y/n] 
+docker compose up
 ```
 
 ## Environment Variables
