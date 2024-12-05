@@ -15,13 +15,26 @@ This is a living integration. Should you need any added functionality, message u
 </Card>
 
 <Steps>
-  <Step title="Install the AgentOps and Anthropic SDKs">
+  <Step title="Install the AgentOps SDK">
     <CodeGroup>
       ```bash pip 
-      pip install agentops anthropic
+      pip install agentops
       ```
       ```bash poetry
-      poetry add agentops anthropic
+      poetry add agentops
+      ```
+    </CodeGroup>
+  </Step>
+  <Step title="Install the Anthropic SDK">
+    <Note>
+      `anthropic>=2.0.0` is currently supported with additional support for the Computer Use tool.
+    </Note>
+    <CodeGroup>
+      ```bash pip
+      pip install anthropic
+      ```
+      ```bash poetry
+      poetry add anthropic
       ```
     </CodeGroup>
   </Step>
