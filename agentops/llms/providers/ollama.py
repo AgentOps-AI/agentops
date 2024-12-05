@@ -2,11 +2,11 @@ import inspect
 import sys
 from typing import Optional
 
-from ..event import LLMEvent
-from ..session import Session
+from ...event import LLMEvent
+from ...session import Session
 from agentops.helpers import get_ISO_time, check_call_stack_for_agent_id
 from .instrumented_provider import InstrumentedProvider
-from ..singleton import singleton
+from ...singleton import singleton
 
 original_func = {}
 
@@ -64,7 +64,7 @@ class OllamaProvider(InstrumentedProvider):
 
     def undo_override(self):
         if original_func is not None and original_func != {}:
-            import ollama
+            import agentops.llms.providers.ollama as ollama
 
             ollama.chat = original_func["ollama.chat"]
             ollama.Client.chat = original_func["ollama.Client.chat"]
@@ -74,7 +74,7 @@ class OllamaProvider(InstrumentedProvider):
         super().__init__(client)
 
     def _override_chat(self):
-        import ollama
+        import agentops.llms.providers.ollama as ollama
 
         original_func["ollama.chat"] = ollama.chat
 
@@ -88,7 +88,7 @@ class OllamaProvider(InstrumentedProvider):
         ollama.chat = patched_function
 
     def _override_chat_client(self):
-        from ollama import Client
+        from agentops.llms.providers.ollama import Client
 
         original_func["ollama.Client.chat"] = Client.chat
 
@@ -102,7 +102,7 @@ class OllamaProvider(InstrumentedProvider):
         Client.chat = patched_function
 
     def _override_chat_async_client(self):
-        from ollama import AsyncClient
+        from agentops.llms.providers.ollama import AsyncClient
 
         original_func["ollama.AsyncClient.chat"] = AsyncClient.chat
 

@@ -1,13 +1,13 @@
 import pprint
 from typing import Optional
 
-from ..log_config import logger
-from ..event import LLMEvent, ErrorEvent
-from ..session import Session
+from ...log_config import logger
+from ...event import LLMEvent, ErrorEvent
+from ...session import Session
 from agentops.helpers import get_ISO_time, check_call_stack_for_agent_id
-from agentops.llms.instrumented_provider import InstrumentedProvider
+from agentops.llms.providers.instrumented_provider import InstrumentedProvider
 from agentops.time_travel import fetch_completion_override_from_time_travel_cache
-from ..singleton import singleton
+from ...singleton import singleton
 
 
 @singleton
