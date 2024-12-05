@@ -118,7 +118,7 @@ This is a living integration. Should you need any added functionality, message u
       agentops.init(<INSERT YOUR API KEY HERE>)
       client = AsyncOpenAI()
 
-      message = await client.chat.completions.create(
+      response = await client.chat.completions.create(
           model="gpt-4o-mini",
           messages=[{
               "role": "user",
