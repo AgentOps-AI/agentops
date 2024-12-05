@@ -15,13 +15,36 @@ This is a living integration. Should you need any added functionality, message u
 </Card>
 
 <Steps>
-  <Step title="Install the AgentOps and OpenAI SDKs">
+  <Step title="Install the AgentOps SDK">
     <CodeGroup>
       ```bash pip 
-      pip install agentops openai
+      pip install agentops
       ```
       ```bash poetry
-      poetry add agentops openai
+      poetry add agentops
+      ```
+    </CodeGroup>
+  </Step>
+  <Step title="Install the OpenAI SDK">
+    <Note>
+      `openai<1.0.0` has limited support while `openai>=1.0.0` is continuously supported.
+    </Note>
+    <CodeGroup>
+      ```bash pip
+      pip install openai
+      ```
+      ```bash poetry
+      poetry add openai
+      ```
+    </CodeGroup>
+
+    To install `openai<1.0.0`, use the following:
+    <CodeGroup>
+      ```bash pip
+      pip install "openai<1.0.0"
+      ```
+      ```bash poetry
+      poetry add "openai<1.0.0"
       ```
     </CodeGroup>
   </Step>
@@ -109,7 +132,12 @@ This is a living integration. Should you need any added functionality, message u
   asyncio.run(main())
   ```
 
-  ```python streaming sync
+</CodeGroup>
+
+### Streaming examples
+
+<CodeGroup>
+  ```python sync
   from openai import OpenAI
   import agentops
 
@@ -117,7 +145,7 @@ This is a living integration. Should you need any added functionality, message u
   client = OpenAI()
 
   stream = client.chat.completions.create(
-      model="gpt-4o",
+      model="gpt-4o-mini",
       stream=True,
       messages=[{
             "role": "user",
@@ -131,7 +159,7 @@ This is a living integration. Should you need any added functionality, message u
   agentops.end_session('Success')
   ```
 
-  ```python streaming async
+  ```python async
   from openai import AsyncOpenAI
   import agentops
   import asyncio
