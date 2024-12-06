@@ -64,7 +64,7 @@ class OllamaProvider(InstrumentedProvider):
 
     def undo_override(self):
         if original_func is not None and original_func != {}:
-            import agentops.llms.providers.ollama as ollama
+            import ollama
 
             ollama.chat = original_func["ollama.chat"]
             ollama.Client.chat = original_func["ollama.Client.chat"]
@@ -74,7 +74,7 @@ class OllamaProvider(InstrumentedProvider):
         super().__init__(client)
 
     def _override_chat(self):
-        import agentops.llms.providers.ollama as ollama
+        import ollama
 
         original_func["ollama.chat"] = ollama.chat
 
@@ -88,7 +88,7 @@ class OllamaProvider(InstrumentedProvider):
         ollama.chat = patched_function
 
     def _override_chat_client(self):
-        from agentops.llms.providers.ollama import Client
+        from ollama import Client
 
         original_func["ollama.Client.chat"] = Client.chat
 
@@ -102,7 +102,7 @@ class OllamaProvider(InstrumentedProvider):
         Client.chat = patched_function
 
     def _override_chat_async_client(self):
-        from agentops.llms.providers.ollama import AsyncClient
+        from ollama import AsyncClient
 
         original_func["ollama.AsyncClient.chat"] = AsyncClient.chat
 
