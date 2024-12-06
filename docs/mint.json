@@ -87,15 +87,16 @@
     {
       "group": "Integrations",
       "pages": [
-        "v1/integrations/crewai",
-        "v1/integrations/autogen",
-        "v1/integrations/langchain",
-        "v1/integrations/cohere",
         "v1/integrations/anthropic",
-        "v1/integrations/ollama",
-        "v1/integrations/llama_stack",
+        "v1/integrations/autogen",
+        "v1/integrations/cohere",
+        "v1/integrations/crewai",
+        "v1/integrations/langchain",
         "v1/integrations/litellm",
+        "v1/integrations/llama_stack",
         "v1/integrations/multion",
+        "v1/integrations/ollama",
+        "v1/integrations/openai",
         "v1/integrations/rest"
       ]
     },
