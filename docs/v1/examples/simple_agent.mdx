@@ -115,7 +115,7 @@ if "hello" in str(response.choices[0].message.content).lower():
     agentops.record(
         ActionEvent(
             action_type="Agent says hello",
-            params=str(message),
+            logs=str(message),
             returns=str(response.choices[0].message.content),
         )
     )
