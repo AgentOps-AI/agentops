@@ -21,8 +21,15 @@ At a high level, AgentOps gives you the ability to monitor LLM calls, costs, lat
 - [Multi-Agent](./multi_agent_example.ipynb)
 
 ## Integrations
-- [Using Langchain](./langchain_examples.ipynb)
-- [Crew.ai](https://github.com/joaomdmoura/crewAI-examples/tree/main/markdown_validator)
-  - Crew is a framework for developing agents, a number of their example projects use AgentOps
-- [Cohere](./cohere_example.ipynb)
-- [Anthropic](./anthropic_example.ipynb)
+- [AI21](./ai21_examples/ai21_examples.ipynb)
+- [Anthropic](./anthropic_examples/)- 
+- [Autogen](./autogen_examples/)
+- [Cohere](./cohere_examples/cohere_example.ipynb)
+- [Crew.ai](./crew_examples/)
+- [Groq](./multi_agent_groq_example.ipynb)
+- [Langchain](./langchain_examples/langchain_examples.ipynb)
+- [LiteLLM](./litlelm_examples/litlelm_example.ipynb)
+- [Mistral](./mistral_examples/mistral_example.ipynb)
+- [MultiOn](./multion_examples/)
+- [Ollama](./ollama_examples/ollama_examples.ipynb)
+- [OpenAI](./openai_examples/)
