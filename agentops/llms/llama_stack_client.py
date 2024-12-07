@@ -34,15 +34,9 @@ class LlamaStackClientProvider(InstrumentedProvider):
                 nonlocal stack
 
                 # NOTE: prompt/completion usage not returned in response when streaming
-                # We take the first ChatCompletionResponseStreamChunkEvent and accumulate the deltas from all subsequent chunks to build one full chat completion
-                # if llm_event.returns is None:
-                #     llm_event.returns = chunk.event
 
                 try:
                     nonlocal accum_delta
-                    # llm_event.agent_id = check_call_stack_for_agent_id()
-                    # llm_event.model = kwargs["model_id"]
-                    # llm_event.prompt = kwargs["messages"]
 
                     if chunk.event.event_type == "start":
                         llm_event = LLMEvent(init_timestamp=get_ISO_time(), params=kwargs)
@@ -81,8 +75,6 @@ class LlamaStackClientProvider(InstrumentedProvider):
 
             def handle_stream_agent(chunk: dict):
                 # NOTE: prompt/completion usage not returned in response when streaming
-                # We take the first ChatCompletionResponseStreamChunkEvent and accumulate the deltas from all subsequent chunks to build one full chat completion
-                # llm_event = LLMEvent(init_timestamp=init_timestamp, params=kwargs)
                 
                 # nonlocal llm_event
                 nonlocal stack
@@ -90,8 +82,6 @@ class LlamaStackClientProvider(InstrumentedProvider):
                 if session is not None:
                     llm_event.session_id = session.session_id
 
-                # if getattr(llm_event, 'returns', None):
-                #     llm_event.returns = chunk.event
                 try:
                     if chunk.event.payload.event_type == "turn_start":
                         logger.debug("turn_start")
@@ -126,9 +116,7 @@ class LlamaStackClientProvider(InstrumentedProvider):
                                     "event": tool_event
                                 })
 
-                                # self._safe_record(session, tool_event)
                             elif (chunk.event.payload.tool_call_delta.parse_status == "in_progress"):
-                                # print('ToolExecution - in_progress')
                                 nonlocal accum_tool_delta
                                 delta = chunk.event.payload.tool_call_delta.content
                                 if accum_tool_delta:
@@ -141,7 +129,6 @@ class LlamaStackClientProvider(InstrumentedProvider):
                                     
                                     tool_event = stack.pop().get("event")
                                     tool_event.end_timestamp = get_ISO_time()
-                                    # tool_event.name = "ToolExecution - success"
                                     tool_event.params["completion"] = accum_tool_delta
                                     self._safe_record(session, tool_event)    
                             elif (chunk.event.payload.tool_call_delta.parse_status == "failure"):
@@ -149,7 +136,6 @@ class LlamaStackClientProvider(InstrumentedProvider):
                                 if stack[-1]['event_type'] == "ToolExecution - started":
                                     tool_event = stack.pop().get("event")
                                     tool_event.end_timestamp = get_ISO_time()
-                                    # tool_event.name = "ToolExecution - failure"
                                     tool_event.params["completion"] = accum_tool_delta
                                     self._safe_record(session, ErrorEvent(trigger_event=tool_event, exception=Exception("ToolExecution - failure")))
 
@@ -183,9 +169,6 @@ class LlamaStackClientProvider(InstrumentedProvider):
                     elif chunk.event.payload.event_type == "turn_complete":
                         if stack[-1]['event_type'] == "turn_start":
                             logger.debug('turn_start')
-                            # llm_event = stack.pop()
-                            # llm_event.end_timestamp = get_ISO_time()
-                            # self._safe_record(session, llm_event)
                         pass
 
                 except Exception as e:
