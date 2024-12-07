@@ -5,16 +5,16 @@ import threading
 import uuid
 from typing import TYPE_CHECKING, Any, Dict, List, Tuple, Union, TypeVar, Callable
 
-import agentops
+from .. import record, create_agent, end_session
 from openai import AzureOpenAI, OpenAI
 from openai.types.chat import ChatCompletion
 
 from autogen.logger.base_logger import BaseLogger, LLMConfig
 
-from agentops.enums import EndState
+from ..enums import EndState
 from ..helpers import get_ISO_time
 
-from agentops import LLMEvent, ToolEvent, ActionEvent
+from .. import LLMEvent, ToolEvent, ActionEvent
 from uuid import uuid4
 
 if TYPE_CHECKING:
@@ -69,11 +69,11 @@ class AutogenLogger(BaseLogger):
         llm_event.init_timestamp = start_time
         llm_event.end_timestamp = get_ISO_time()
         llm_event.agent_id = self._get_agentops_id_from_agent(str(id(agent)))
-        agentops.record(llm_event)
+        record(llm_event)
 
     def log_new_agent(self, agent: ConversableAgent, init_args: Dict[str, Any]) -> None:
         """Calls agentops.create_agent"""
-        ao_agent_id = agentops.create_agent(agent.name, str(uuid4()))
+        ao_agent_id = create_agent(agent.name, str(uuid4()))
         self.agent_store.append({"agentops_id": ao_agent_id, "autogen_id": str(id(agent))})
 
     def log_event(self, source: Union[str, Agent], name: str, **kwargs: Dict[str, Any]) -> None:
@@ -82,7 +82,7 @@ class AutogenLogger(BaseLogger):
         agentops_id = self._get_agentops_id_from_agent(str(id(source)))
         event.agent_id = agentops_id
         event.params = kwargs
-        agentops.record(event)
+        record(event)
 
     def log_function_use(self, source: Union[str, Agent], function: F, args: Dict[str, Any], returns: any):
         """Records a ToolEvent to AgentOps session"""
@@ -93,7 +93,7 @@ class AutogenLogger(BaseLogger):
         event.params = args
         event.returns = returns
         event.name = getattr(function, "_name")
-        agentops.record(event)
+        record(event)
 
     def log_new_wrapper(
         self,
@@ -112,7 +112,7 @@ class AutogenLogger(BaseLogger):
 
     def stop(self) -> None:
         """Ends AgentOps session"""
-        agentops.end_session(end_state=EndState.INDETERMINATE.value)
+        end_session(end_state=EndState.INDETERMINATE.value)
 
     def get_connection(self) -> None:
         """Method intentionally left blank"""

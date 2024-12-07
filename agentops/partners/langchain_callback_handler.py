@@ -10,11 +10,10 @@ from langchain_core.messages import BaseMessage
 
 from tenacity import RetryCallState
 
-from agentops import Client as AOClient
-from agentops import ActionEvent, LLMEvent, ToolEvent, ErrorEvent
-from ...helpers import get_ISO_time
+from .. import Client as AOClient
+from .. import ActionEvent, LLMEvent, ToolEvent, ErrorEvent
 
-from ..helpers import debug_print_function_params
+from ..helpers import debug_print_function_params, get_ISO_time
 import os
 from ..log_config import logger
 import logging
