@@ -78,8 +78,8 @@ async def agent_test():
 
         print("Response: ", response)
 
-        async for log in EventLogger().log(response):
-            log.print()
+        # for log in EventLogger().log(response):
+        #     log.print()
 
 
 agentops.start_session()

@@ -9,10 +9,6 @@ load_dotenv()
 
 agentops.init(os.getenv("AGENTOPS_API_KEY"), default_tags=["llama-stack-client-example"], auto_start_session=False)
 
-# import debugpy
-# debugpy.listen(5678)
-# debugpy.wait_for_client()
-
 host = "0.0.0.0"  # LLAMA_STACK_HOST
 port = 5001  # LLAMA_STACK_PORT
 
@@ -52,7 +48,7 @@ def main():
         stream=False,
     )
 
-    print(response)
+    print(response.completion_message.content)
     
     agentops.end_session(end_state="Success")
 
