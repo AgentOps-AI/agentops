@@ -1,14 +1,16 @@
 # Llama Stack Client Examples
 
-Run Llama Stack with Ollama - either local or containerized.
+The example notebook demonstrates how to use the Llama Stack Client to monitor an Agentic application using AgentOps. We have also provided a `compose.yaml` file to run Ollama in a container.
 
 ## Quick Start
 
-Just run:
+First run the following command to start the Ollama server with the Llama Stack client:
 
 ```bash
 docker compose up
 ```
+
+Next, run the [notebook](./llama_stack_example.ipynb) to see the waterfall visualization in the [AgentOps](https://app.agentops.ai) dashboard.
 
 ## Environment Variables
 
@@ -17,34 +19,16 @@ docker compose up
 | `LLAMA_STACK_PORT` | Server port | 5001 |
 | `INFERENCE_MODEL` | Model ID (must match Llama Stack format) | meta-llama/Llama-3.2-1B-Instruct |
 | `OLLAMA_MODEL` | Ollama model ID (must match Ollama format) | llama3.2:1b-instruct-fp16 |
-| ⚠️ **Important:** | The model IDs must match their respective formats - Ollama and Llama Stack use different naming conventions for the same models | - |
 | `SAFETY_MODEL` | Optional safety model | - |
 | `NETWORK_MODE` | Docker network mode | auto-configured |
 | `OLLAMA_URL` | Ollama API URL | auto-configured |
 
 ## Common Gotchas
 
-1. Model naming conventions differ between Ollama and Llama Stack. The same model is referenced differently - for instance, `meta-llama/Llama-3.2-1B-Instruct` in Llama Stack corresponds to `llama3.2:1b-instruct-fp16` in Ollama.
+1. Model naming conventions differ between Ollama and Llama Stack. The same model is referenced differently. For instance, `meta-llama/Llama-3.2-1B-Instruct` in Llama Stack corresponds to `llama3.2:1b-instruct-fp16` in Ollama.
 
-2. Ensure Docker has sufficient system memory allocation to run properly
+2. Ensure Docker is configured with sufficient system memory allocation to run properly.
 
-```
-llama-stack-client --endpoint http://localhost:$LLAMA_STACK_PORT models list
-┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━┓
-┃ identifier                       ┃ provider_id ┃ provider_resource_id      ┃ metadata ┃
-┡━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━╇━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━━━━━━━━━━━╇━━━━━━━━━━┩
-│ meta-llama/Llama-3.2-1B-Instruct │ ollama      │ llama3.2:1b-instruct-fp16 │          │
-└──────────────────────────────────┴─────────────┴───────────────────────────┴──────────┘
-```
-
-2. Docker needs sufficient memory allocation
-
-3. Ollama commands:
-   ```bash
-   ollama list
-   ollama help
-   ollama ps
-   ```
 
 ## References
 
