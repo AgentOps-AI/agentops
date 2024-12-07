@@ -2,8 +2,8 @@ import json
 import pprint
 from typing import Optional
 
-from agentops.llms.providers.instrumented_provider import InstrumentedProvider
-from agentops.time_travel import fetch_completion_override_from_time_travel_cache
+from ...llms.providers.instrumented_provider import InstrumentedProvider
+from ...time_travel import fetch_completion_override_from_time_travel_cache
 
 from ...event import ErrorEvent, LLMEvent, ToolEvent
 from ...helpers import check_call_stack_for_agent_id, get_ISO_time

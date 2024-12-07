@@ -4,7 +4,7 @@ from typing import Optional
 
 from ...event import LLMEvent
 from ...session import Session
-from agentops.helpers import get_ISO_time, check_call_stack_for_agent_id
+from ...helpers import get_ISO_time, check_call_stack_for_agent_id
 from .instrumented_provider import InstrumentedProvider
 from ...singleton import singleton
 

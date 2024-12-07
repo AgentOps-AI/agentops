@@ -5,7 +5,7 @@ from .instrumented_provider import InstrumentedProvider
 from ...event import ErrorEvent, LLMEvent
 from ...session import Session
 from ...log_config import logger
-from agentops.helpers import get_ISO_time, check_call_stack_for_agent_id
+from ...helpers import get_ISO_time, check_call_stack_for_agent_id
 from ...singleton import singleton
 
 
