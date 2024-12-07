@@ -12,9 +12,9 @@ services:
     deploy:
       resources:
         limits:
-          memory: 4G    # Set maximum memory
+          memory: 8G
         reservations:
-          memory: 2G    # Set minimum memory reservation
+          memory: 4G
     healthcheck:
       test: ["CMD", "bash", "-c", "</dev/tcp/localhost/11434"]
       interval: 3s
@@ -47,13 +47,11 @@ services:
     image: ${LLAMA_STACK_IMAGE:-llamastack/distribution-ollama}
     volumes:
       - ~/.llama:/root/.llama
-      # Link to ollama run.yaml file
-      # - ~/local/llama-stack/:/app/llama-stack-source
       - ./run${SAFETY_MODEL:+-with-safety}.yaml:/root/run.yaml
     ports:
       - "${LLAMA_STACK_PORT:-5001}:${LLAMA_STACK_PORT:-5001}"
     environment:
-      - INFERENCE_MODEL=${INFERENCE_MODEL:-meta-llama/Llama-3.2-3B-Instruct} # ?
+      - INFERENCE_MODEL=${INFERENCE_MODEL:-meta-llama/Llama-3.2-3B-Instruct}
       - SAFETY_MODEL=${SAFETY_MODEL:-}
       - OLLAMA_URL=http://ollama:11434
     entrypoint: >
@@ -64,19 +62,6 @@ services:
         delay: 10s
         max_attempts: 3
         window: 60s
-  # notebook:
-  #   image: python:3.12
-  #   depends_on:
-  #     llamastack:
-  #       condition: service_started
-  #   network_mode: ${NETWORK_MODE:-bridge}
-  #   volumes:
-  #     - ./notebook.ipynb:/app/notebook.ipynb
-  #   command: >
-  #     bash -c "pip install llama-stack-client jupyter nbconvert &&
-  #     jupyter nbconvert --to python /app/notebook.ipynb &&
-  #     python /app/notebook.py"
-  #   restart: "no"
     networks:
       - ollama-network
 
