@@ -1,14 +1,14 @@
 ---
 title: 'Llama Stack'
-description: '[Llama Stack](https://llama-stack.readthedocs.io/) is a framework for building Agentic applications.'
+description: 'Llama Stack is a framework from Meta AI for building Agentic applications.'
 ---
 
 import CodeTooltip from '/snippets/add-code-tooltip.mdx'
 import EnvTooltip from '/snippets/add-env-tooltip.mdx'
 
-AgentOps has built an integration with Llama Stack to make monitoring applications that leverage [llama-stack-client-python](https://github.com/meta-llama/llama-stack-client-python) simple.
+AgentOps integrates with Llama Stack via its python [client](https://github.com/meta-llama/llama-stack-client-python) to provide observability into applications that leverage it.
 
-Llama Stack has comprehensive [documentation](https://llama-stack.readthedocs.io/) available as well as a great [quickstart](https://llama-stack.readthedocs.io/en/latest/getting_started/index.html) guide.
+Llama Stack has comprehensive [documentation](https://llama-stack.readthedocs.io/) available as well as a great [quickstart](https://llama-stack.readthedocs.io/en/latest/getting_started/index.html) guide. You can use this guide to setup the Llama Stack server and client or alternatively use our Docker [compose](https://github.com/AgentOps-AI/agentops/blob/main/examples/llama_stack_client_examples/docker-compose.yml) file.
 
 ## Adding AgentOps to Llama Stack applications
 
@@ -23,7 +23,17 @@ Llama Stack has comprehensive [documentation](https://llama-stack.readthedocs.io
 			```
 		</CodeGroup>
 	</Step>
-	<Step title="Add 2 lines of code">
+	<Step title="Install the Llama Stack Client">
+		<CodeGroup>
+			```bash pip
+			pip install llama-stack-client
+			```
+			```bash poetry
+			poetry add llama-stack-client
+			```
+		</CodeGroup>
+	</Step>
+	<Step title="Add 3 lines of code">
 		<CodeTooltip/>
 		<span className="api-key-container">
 			<CodeGroup>
@@ -51,12 +61,9 @@ Llama Stack has comprehensive [documentation](https://llama-stack.readthedocs.io
 	</Step>
 </Steps>
 
-## Llama Stack + AgentOps Examples
+## Examples
 
-<CardGroup cols={2}>
-    <Card title="Agent Class" icon="microchip-ai" href="https://github.com/AgentOps-AI/agentops/pull/530/files/65a5ab4fdcf310326f191d4b870d4f553591e3ea#diff-fdddf65549f3714f8f007ce7dfd1cde720329fe54155d54389dd50fbd81813cb" />
-	  <Card title="Inference Class" icon="question" href="https://github.com/AgentOps-AI/agentops/pull/530/files/65a5ab4fdcf310326f191d4b870d4f553591e3ea#diff-6688ff4fb7ab1ce7b1cc9b8362ca27264a3060c16737fb1d850305787a6e3699" />
-</CardGroup>
+An example notebook is available [here](https://github.com/AgentOps-AI/agentops/blob/main/examples/llama_stack_client_examples/notebook.ipynb) to showcase how to use the Llama Stack client with AgentOps.
 
 <script type="module" src="/scripts/github_stars.js"></script>
 <script type="module" src="/scripts/link_to_api_button.js"></script>
