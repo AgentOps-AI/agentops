@@ -18,6 +18,7 @@ client = LlamaStackClient(
     base_url=f"{full_host}",
 )
 
+
 async def stream_test():
     response = client.inference.chat_completion(
         messages=[
@@ -49,7 +50,8 @@ def main():
     )
 
     print(response.completion_message.content)
-    
+
     agentops.end_session(end_state="Success")
+
 
 main()
