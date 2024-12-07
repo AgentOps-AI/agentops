@@ -106,4 +106,4 @@ exclude = [
 ]
 
 [tool.setuptools]
-packages = { find = { include = ["agentops*"] } }
+packages = ["agentops", "agentops.llms"]
