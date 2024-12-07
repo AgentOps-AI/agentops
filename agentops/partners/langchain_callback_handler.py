@@ -15,7 +15,7 @@ from langchain_core.messages import BaseMessage
 
 from agentops import Client as AOClient
 from agentops import ActionEvent, LLMEvent, ToolEvent, ErrorEvent
-from ..helpers import get_ISO_time, debug_print_function_params
+from agentops.helpers import get_ISO_time, debug_print_function_params
 
 from ..log_config import logger
 
