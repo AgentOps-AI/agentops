@@ -22,7 +22,7 @@ classifiers = [
 dependencies = [
     "requests>=2.0.0,<3.0.0",
     "psutil==5.9.8",
-    "packaging==23.2",
+    "packaging>=23.2",
     "termcolor>=2.3.0", # 2.x.x tolerant
     "PyYAML>=5.3,<7.0",
     "opentelemetry-api>=1.22.0,<2.0.0", # API for interfaces
