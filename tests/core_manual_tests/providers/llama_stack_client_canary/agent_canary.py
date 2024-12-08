@@ -9,10 +9,6 @@ from llama_stack_client.types.agent_create_params import AgentConfig
 
 load_dotenv()
 
-# import debugpy
-# debugpy.listen(5678)
-# debugpy.wait_for_client()
-
 import agentops # type: ignore
 agentops.init(os.getenv("AGENTOPS_API_KEY"), default_tags=["llama-stack-client-example"], auto_start_session=False)
 
