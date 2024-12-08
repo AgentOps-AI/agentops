@@ -24,6 +24,7 @@ class LlamaStackClientProvider(InstrumentedProvider):
         self, response, kwargs, init_timestamp, session: Optional[Session] = None, metadata: Optional[Dict] = {}
     ) -> dict:
         """Handle responses for LlamaStack"""
+
         try:
             stack = []
             accum_delta = None
@@ -194,21 +195,19 @@ class LlamaStackClientProvider(InstrumentedProvider):
 
                 return generator()
             elif inspect.isasyncgen(response):
-
-                async def async_generator():
+                async def agent_generator():
                     async for chunk in response:
                         handle_stream_agent(chunk)
                         yield chunk
 
-                return async_generator()
+                return agent_generator()
             elif inspect.isgenerator(response):
-
-                async def async_generator():
-                    async for chunk in response:
+                def agent_generator():
+                    for chunk in response:
                         handle_stream_agent(chunk)
                         yield chunk
 
-                return async_generator()
+                return agent_generator()
             else:
                 llm_event = LLMEvent(init_timestamp=init_timestamp, params=kwargs)
                 if session is not None:
