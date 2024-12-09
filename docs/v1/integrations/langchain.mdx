@@ -39,7 +39,6 @@ AgentOps works seamlessly with applications built using LangChain.
 			Note that you don't need to set up a separate agentops.init() call, as the LangChain callback handler will automatically initialize the AgentOps client for you.
 		</Tip>
 		Set up your LangChain agent with the AgentOps callback handler, and AgentOps will automatically record your LangChain sessions.
-		<span className="api-key-container">
 			<CodeGroup>
 				```python python
 				handler = LangchainCallbackHandler(api_key=AGENTOPS_API_KEY, tags=['LangChain Example'])
@@ -58,16 +57,13 @@ AgentOps works seamlessly with applications built using LangChain.
 					handle_parsing_errors=True)
 				```
 			</CodeGroup>
-			</span>
 			<EnvTooltip />
-			<span className="api-key-container">
 				<CodeGroup>
 					```python .env
 					AGENTOPS_API_KEY=<YOUR API KEY>
 					```
 				</CodeGroup>
 				Read more about environment variables in [Advanced Configuration](/v1/usage/advanced-configuration)
-			</span>
 	</Step>
 	<Step title="Run your agent">
 	Execute your program and visit [app.agentops.ai/drilldown](https://app.agentops.ai/drilldown) to observe your LangChain Agent! 🕵️
