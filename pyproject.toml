@@ -30,6 +30,19 @@ dependencies = [
     "opentelemetry-exporter-otlp-proto-http>=1.22.0,<2.0.0", # For OTLPSpanExporter
 ]
 
+[dependency-groups]
+dev = [
+    "pytest==7.4.0",
+    "pytest-depends",
+    "pytest-asyncio",
+    "pytest-vcr",
+    "pytest-mock",
+    "pyfakefs",
+     "requests_mock==1.11.0",
+     "ruff",
+     "vcrpy>=6.0.0; python_version >= '3.8'"
+ ]
+
 [project.optional-dependencies]
 langchain = [
     "langchain==0.2.14; python_version >= '3.8.1'"
