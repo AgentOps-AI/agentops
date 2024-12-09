@@ -58,28 +58,28 @@ AgentOps works seamlessly with applications built using LangChain.
 				```
 			</CodeGroup>
 			<EnvTooltip />
-				<CodeGroup>
-					```python .env
-					AGENTOPS_API_KEY=<YOUR API KEY>
-					```
-				</CodeGroup>
-				Read more about environment variables in [Advanced Configuration](/v1/usage/advanced-configuration)
+			<CodeGroup>
+				```python .env
+				AGENTOPS_API_KEY=<YOUR API KEY>
+				```
+			</CodeGroup>
+			Read more about environment variables in [Advanced Configuration](/v1/usage/advanced-configuration)
 	</Step>
 	<Step title="Run your agent">
-	Execute your program and visit [app.agentops.ai/drilldown](https://app.agentops.ai/drilldown) to observe your LangChain Agent! 🕵️
-	<Tip>
-		After your run, AgentOps prints a clickable URL to the console linking directly to your session in the Dashboard
-	</Tip>
-	<div/>{/* Intentionally blank div for newline */}
-	<Frame type="glass" caption="Clickable link to session">
-		<img height="200" src="https://github.com/AgentOps-AI/agentops/blob/main/docs/images/link-to-session.gif?raw=true" />
-	</Frame>
-</Step>
+		Execute your program and visit [app.agentops.ai/drilldown](https://app.agentops.ai/drilldown) to observe your LangChain Agent! 🕵️
+		<Tip>
+			After your run, AgentOps prints a clickable URL to the console linking directly to your session in the Dashboard
+		</Tip>
+		<div/>{/* Intentionally blank div for newline */}
+		<Frame type="glass" caption="Clickable link to session">
+			<img height="200" src="https://github.com/AgentOps-AI/agentops/blob/main/docs/images/link-to-session.gif?raw=true" />
+		</Frame>
+	</Step>
 </Steps>
 
 ## Full Examples
 
-<CodeGroup className="adjust-api-key">
+<CodeGroup>
 	```python python
 	import os
 	from langchain.chat_models import ChatOpenAI
