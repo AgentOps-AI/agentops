@@ -95,6 +95,7 @@
         "v1/integrations/groq",
         "v1/integrations/langchain",
         "v1/integrations/litellm",
+        "v1/integrations/mistral",
         "v1/integrations/multion",
         "v1/integrations/ollama",
         "v1/integrations/openai",
