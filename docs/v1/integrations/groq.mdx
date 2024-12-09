@@ -41,18 +41,8 @@ import EnvTooltip from '/snippets/add-env-tooltip.mdx'
       agentops.init(<INSERT YOUR API KEY HERE>)
       client = Groq(api_key="your_api_key")
       
-      chat_completion = client.chat.completions.create(
-          messages=[
-              {
-                  "role": "user",
-                  "content": "Write a haiku about AI and humans working together"
-              }
-          ],
-          model="mixtral-8x7b-32768",
-          temperature=0.7,
-      )
-      
-      print(chat_completion.choices[0].message.content)
+      # Your code here...
+
       agentops.end_session('Success')
       ```
     </CodeGroup>
