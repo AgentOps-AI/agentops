@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - main
+    tags-ignore: ["**"]
     paths:
       - 'agentops/**/*.py'
       - 'agentops/**/*.ipynb'
@@ -18,25 +19,45 @@ on:
       - 'tests/**/*.py'
       - 'tests/**/*.ipynb'
   workflow_dispatch:
-
+concurrency:
+  group: check-${{ github.ref }}
+  cancel-in-progress: true
 jobs:
-  build:
-    runs-on: ubuntu-latest
+  test:
+    name: test with Python ${{ matrix.python-version }} on ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
     strategy:
+      fail-fast: false
       matrix:
-        python-version: ["3.7","3.8","3.9","3.10","3.11","3.12"]
+        python-version: ["3.7", "3.8", "3.9", "3.10", "3.11", "3.12"]
+        os: [ubuntu-latest, macos-latest, windows-latest]
 
     steps:
       - uses: actions/checkout@v4
       
-      - uses: astral-sh/setup-uv@v4
+      - name: Install the latest version of uv
+        uses: astral-sh/setup-uv@v4
         with:
           enable-cache: true
-          cache-dependency-glob: "**/pyproject.toml"
-          python-version: ${{ matrix.python-version }}
+          cache-dependency-glob: "pyproject.toml"
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+      - name: Add .local/bin to Windows PATH
+        if: runner.os == 'Windows'
+        shell: bash
 
-      - name: Install dependencies
-        run: uv sync --dev
-        
-      - name: Run tests with tox
-        run: uvx tox
+        run: echo "$USERPROFILE/.local/bin" >> $GITHUB_PATH
+      - name: Install tox
+        run: uv tool install --python-preference only-managed --python ${{ matrix.python-version }} tox --with tox-uv --with tox-gh
+
+      - name: Install Python
+        run: uv python install --python-preference only-managed ${{ matrix.python-version }}
+
+      - name: Setup test suite
+        run: tox run -vv --notest --skip-missing-interpreters false
+        env:
+          TOX_GH_MAJOR_MINOR: ${{ matrix.python-version }}
+
+      - name: Run test suite
+        run: tox run --skip-pkg-install
+        env:
+          TOX_GH_MAJOR_MINOR: ${{ matrix.python-version }}
