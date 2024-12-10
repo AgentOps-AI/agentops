@@ -21,9 +21,8 @@ classifiers = [
 ]
 dependencies = [
     "requests>=2.0.0,<3.0.0",
-    "psutil==5.9.8",
-    "packaging==23.2",
-    "termcolor>=2.3.0", # 2.x.x tolerant
+    "psutil>=5.9.8,<6.1.0",
+    "termcolor>=2.3.0,<2.5.0",
     "PyYAML>=5.3,<7.0",
     "opentelemetry-api>=1.22.0,<2.0.0", # API for interfaces
     "opentelemetry-sdk>=1.22.0,<2.0.0", # SDK for implementation
