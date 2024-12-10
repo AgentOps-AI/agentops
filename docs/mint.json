@@ -94,6 +94,7 @@
         "v1/integrations/crewai",
         "v1/integrations/groq",
         "v1/integrations/langchain",
+        "v1/integrations/llama_stack",
         "v1/integrations/litellm",
         "v1/integrations/mistral",
         "v1/integrations/multion",
