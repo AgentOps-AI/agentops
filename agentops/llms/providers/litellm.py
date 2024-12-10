@@ -1,31 +1,51 @@
-import inspect
 import pprint
 from typing import Optional
 
-from agentops.llms.instrumented_provider import InstrumentedProvider
-from agentops.time_travel import fetch_completion_override_from_time_travel_cache
-
-from ..event import ActionEvent, ErrorEvent, LLMEvent
-from ..session import Session
-from ..log_config import logger
-from ..helpers import check_call_stack_for_agent_id, get_ISO_time
-from ..singleton import singleton
+from ...log_config import logger
+from ...event import LLMEvent, ErrorEvent
+from ...session import Session
+from ...helpers import get_ISO_time, check_call_stack_for_agent_id
+from ...llms.providers.instrumented_provider import InstrumentedProvider
+from ...time_travel import fetch_completion_override_from_time_travel_cache
+from ...singleton import singleton
 
 
 @singleton
-class OpenAiProvider(InstrumentedProvider):
+class LiteLLMProvider(InstrumentedProvider):
     original_create = None
     original_create_async = None
+    original_oai_create = None
+    original_oai_create_async = None
 
     def __init__(self, client):
         super().__init__(client)
-        self._provider_name = "OpenAI"
+
+    def override(self):
+        self._override_async_completion()
+        self._override_completion()
+
+    def undo_override(self):
+        if (
+            self.original_create is not None
+            and self.original_create_async is not None
+            and self.original_oai_create is not None
+            and self.original_oai_create_async is not None
+        ):
+            import litellm
+            from openai.resources.chat import completions
+
+            litellm.acompletion = self.original_create_async
+            litellm.completion = self.original_create
+
+            completions.Completions.create = self.original_oai_create
+            completions.AsyncCompletions.create = self.original_oai_create_async
 
     def handle_response(self, response, kwargs, init_timestamp, session: Optional[Session] = None) -> dict:
         """Handle responses for OpenAI versions >v1.0.0"""
         from openai import AsyncStream, Stream
         from openai.resources import AsyncCompletions
         from openai.types.chat import ChatCompletionChunk
+        from litellm.utils import CustomStreamWrapper
 
         llm_event = LLMEvent(init_timestamp=init_timestamp, params=kwargs)
         if session is not None:
@@ -91,6 +111,16 @@ class OpenAiProvider(InstrumentedProvider):
 
             return generator()
 
+        # litellm uses a CustomStreamWrapper
+        if isinstance(response, CustomStreamWrapper):
+
+            def generator():
+                for chunk in response:
+                    handle_stream_chunk(chunk)
+                    yield chunk
+
+            return generator()
+
         # For asynchronous AsyncStream
         elif isinstance(response, AsyncStream):
 
@@ -135,41 +165,26 @@ class OpenAiProvider(InstrumentedProvider):
 
         return response
 
-    def override(self):
-        self._override_openai_v1_completion()
-        self._override_openai_v1_async_completion()
-
-    def _override_openai_v1_completion(self):
+    def _override_completion(self):
+        import litellm
+        from openai.types.chat import (
+            ChatCompletion,
+        )  # Note: litellm calls all LLM APIs using the OpenAI format
         from openai.resources.chat import completions
-        from openai.types.chat import ChatCompletion, ChatCompletionChunk
 
-        # Store the original method
-        self.original_create = completions.Completions.create
+        self.original_create = litellm.completion
+        self.original_oai_create = completions.Completions.create
 
         def patched_function(*args, **kwargs):
             init_timestamp = get_ISO_time()
+
             session = kwargs.get("session", None)
             if "session" in kwargs.keys():
                 del kwargs["session"]
 
             completion_override = fetch_completion_override_from_time_travel_cache(kwargs)
             if completion_override:
-                result_model = None
-                pydantic_models = (ChatCompletion, ChatCompletionChunk)
-                for pydantic_model in pydantic_models:
-                    try:
-                        result_model = pydantic_model.model_validate_json(completion_override)
-                        break
-                    except Exception as e:
-                        pass
-
-                if result_model is None:
-                    logger.error(
-                        f"Time Travel: Pydantic validation failed for {pydantic_models} \n"
-                        f"Time Travel: Completion override was:\n"
-                        f"{pprint.pformat(completion_override)}"
-                    )
-                    return None
+                result_model = ChatCompletion.model_validate_json(completion_override)
                 return self.handle_response(result_model, kwargs, init_timestamp, session=session)
 
             # prompt_override = fetch_prompt_override_from_time_travel_cache(kwargs)
@@ -180,15 +195,17 @@ class OpenAiProvider(InstrumentedProvider):
             result = self.original_create(*args, **kwargs)
             return self.handle_response(result, kwargs, init_timestamp, session=session)
 
-        # Override the original method with the patched one
-        completions.Completions.create = patched_function
+        litellm.completion = patched_function
 
-    def _override_openai_v1_async_completion(self):
+    def _override_async_completion(self):
+        import litellm
+        from openai.types.chat import (
+            ChatCompletion,
+        )  # Note: litellm calls all LLM APIs using the OpenAI format
         from openai.resources.chat import completions
-        from openai.types.chat import ChatCompletion, ChatCompletionChunk
 
-        # Store the original method
-        self.original_create_async = completions.AsyncCompletions.create
+        self.original_create_async = litellm.acompletion
+        self.original_oai_create_async = completions.AsyncCompletions.create
 
         async def patched_function(*args, **kwargs):
             init_timestamp = get_ISO_time()
@@ -199,22 +216,7 @@ class OpenAiProvider(InstrumentedProvider):
 
             completion_override = fetch_completion_override_from_time_travel_cache(kwargs)
             if completion_override:
-                result_model = None
-                pydantic_models = (ChatCompletion, ChatCompletionChunk)
-                for pydantic_model in pydantic_models:
-                    try:
-                        result_model = pydantic_model.model_validate_json(completion_override)
-                        break
-                    except Exception as e:
-                        pass
-
-                if result_model is None:
-                    logger.error(
-                        f"Time Travel: Pydantic validation failed for {pydantic_models} \n"
-                        f"Time Travel: Completion override was:\n"
-                        f"{pprint.pformat(completion_override)}"
-                    )
-                    return None
+                result_model = ChatCompletion.model_validate_json(completion_override)
                 return self.handle_response(result_model, kwargs, init_timestamp, session=session)
 
             # prompt_override = fetch_prompt_override_from_time_travel_cache(kwargs)
@@ -226,11 +228,4 @@ class OpenAiProvider(InstrumentedProvider):
             return self.handle_response(result, kwargs, init_timestamp, session=session)
 
         # Override the original method with the patched one
-        completions.AsyncCompletions.create = patched_function
-
-    def undo_override(self):
-        if self.original_create is not None and self.original_create_async is not None:
-            from openai.resources.chat import completions
-
-            completions.AsyncCompletions.create = self.original_create_async
-            completions.Completions.create = self.original_create
+        litellm.acompletion = patched_function

@@ -23,7 +23,7 @@ from termcolor import colored
 from .config import Configuration
 from .event import ErrorEvent, Event
 from .host_env import get_host_env
-from .llms import LlmTracker
+from .llms.tracker import LlmTracker
 from .log_config import logger
 from .meta_client import MetaClient
 from .session import Session, active_sessions
