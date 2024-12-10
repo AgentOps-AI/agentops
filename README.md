@@ -521,7 +521,7 @@ await main()
 
 ### CamelAI ﹨
 
-Track agents built with the Anthropic Python SDK (>=0.32.0).
+Track agents built with the CamelAI Python SDK (>=0.32.0).
 
 - [CamelAI integration guide](https://docs.camel-ai.org/cookbooks/agents_tracking.html#)
 - [Official CamelAI documentation](https://docs.camel-ai.org/index.html)
