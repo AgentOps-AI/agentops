@@ -88,13 +88,3 @@ In this example, we look at the tool system through a deeper dive; we will use o
 
 
 
-## Looking for a Barebones, Straight To The Point Journal?
-
-This journal directly shows the bare basics on using Anthropic and AgentOps!
-
-> [!WARNING]
-> This is mainly recommended for those adept at programming or those who already understand how AgentOps and LLM APIs generally work!
-
-[Access the Journal By Clicking Here](./anthropic_example.ipynb)
-
-

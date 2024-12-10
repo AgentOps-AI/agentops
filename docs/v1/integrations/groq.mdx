@@ -1,0 +1,130 @@
+---
+title: Groq
+description: "AgentOps provides first class support for Groq"
+---
+
+import CodeTooltip from '/snippets/add-code-tooltip.mdx'
+import EnvTooltip from '/snippets/add-env-tooltip.mdx'
+
+[Groq](https://groq.com) accelerates LLM inference with its ultra-fast Language Processing Unit (LPU) that powers Groq Cloud. Explore the [Groq docs](https://console.groq.com/docs/overview) to get started with their developer console.
+
+## Steps to Integrate Groq with AgentOps
+
+<Steps>
+  <Step title="Install the AgentOps SDK">
+    <CodeGroup>
+      ```bash pip 
+      pip install agentops
+      ```
+      ```bash poetry
+      poetry add agentops
+      ```
+    </CodeGroup>
+  </Step>
+  <Step title="Install the Groq SDK">
+    <CodeGroup>
+      ```bash pip
+      pip install groq
+      ```
+      ```bash poetry
+      poetry add groq
+      ```
+    </CodeGroup>
+  </Step>
+  <Step title="Initialize AgentOps and develop with Groq">
+    <CodeTooltip/>
+    <CodeGroup>
+      ```python python
+      from groq import Groq
+      import agentops
+
+      agentops.init(<INSERT YOUR API KEY HERE>)
+      client = Groq(api_key="your_api_key")
+      
+      # Your code here...
+
+      agentops.end_session('Success')
+      ```
+    </CodeGroup>
+    <EnvTooltip />
+      <CodeGroup>
+        ```python .env
+        AGENTOPS_API_KEY=<YOUR API KEY>
+        GROQ_API_KEY=<YOUR OPENAI API KEY>
+        ```
+      </CodeGroup>
+      Read more about environment variables in [Advanced Configuration](/v1/usage/advanced-configuration)
+  </Step>
+  <Step title="Run your Agent">
+    Execute your program and visit [app.agentops.ai/drilldown](https://app.agentops.ai/drilldown) to observe your Agent! 🕵️
+    <Tip>
+      After your run, AgentOps prints a clickable url to console linking directly to your session in the Dashboard
+    </Tip>
+    <div/>
+    <Frame type="glass" caption="Clickable link to session">
+      <img height="200" src="https://github.com/AgentOps-AI/agentops/blob/main/docs/images/external/groq/groq_session.png?raw=true" />
+    </Frame>
+  </Step>
+</Steps>
+
+## Full Examples
+
+<CodeGroup>
+
+```python sync
+from groq import Groq
+import agentops
+
+agentops.init(<INSERT YOUR API KEY HERE>)
+client = Groq(api_key="your_api_key")
+
+response = client.chat.completions.create(
+    messages=[
+        {
+            "role": "user",
+            "content": "Explain the importance of low latency LLMs",
+        }
+    ],
+    model="llama3-8b-8192",
+)
+
+print(response.choices[0].message.content)
+agentops.end_session('Success')
+```
+
+```python async
+from groq import AsyncGroq
+import agentops
+import asyncio
+
+async def main() -> None:
+    agentops.init(<INSERT YOUR API KEY HERE>)
+    client = AsyncGroq(api_key="your_api_key")
+
+    response = await client.chat.completions.create(
+        messages=[
+            {
+                "role": "user",
+                "content": "Explain the importance of low latency LLMs",
+            }
+        ],
+        model="llama3-8b-8192",
+    )
+
+    print(response.choices[0].message.content)
+    agentops.end_session('Success')
+
+asyncio.run(main())
+```
+
+</CodeGroup>
+
+<Card title="Multi Agent Example" icon="bolt" href="https://github.com/AgentOps-AI/agentops/blob/main/examples/multi_agent_groq_example.ipynb">
+    This notebook demonstrates how to use AgentOps with a multi-agent system using Groq.
+</Card>
+
+<script type="module" src="/scripts/github_stars.js"></script>
+<script type="module" src="/scripts/scroll-img-fadein-animation.js"></script>
+<script type="module" src="/scripts/button_heartbeat_animation.js"></script>
+<script type="css" src="/styles/styles.css"></script>
+<script type="module" src="/scripts/adjust_api_dynamically.js"></script>

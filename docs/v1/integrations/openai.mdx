@@ -6,10 +6,6 @@ description: "AgentOps provides first class support for OpenAI's GPT family of m
 import CodeTooltip from '/snippets/add-code-tooltip.mdx'
 import EnvTooltip from '/snippets/add-env-tooltip.mdx'
 
-<Note>
-This is a living integration. Should you need any added functionality, message us on [Discord](https://discord.gg/UgJyyxx7uc)!
-</Note>
-
 <Card title="OpenAI" icon="robot" href="https://www.openai.com">
     First class support for GPT family of models
 </Card>
@@ -50,7 +46,6 @@ This is a living integration. Should you need any added functionality, message u
   </Step>
   <Step title="Add 3 lines of code">
     <CodeTooltip/>
-    <span className="api-key-container">
     <CodeGroup>
       ```python python
       import agentops
@@ -60,12 +55,10 @@ This is a living integration. Should you need any added functionality, message u
       client = OpenAI()
       ...
       # End of program (e.g. main.py)
-      agentops.end_session("Success") # Success|Fail|Indeterminate
+      agentops.end_session("Success")
       ```
     </CodeGroup>
-    </span>
     <EnvTooltip />
-    <span className="api-key-container">
       <CodeGroup>
         ```python .env
         AGENTOPS_API_KEY=<YOUR API KEY>
@@ -73,7 +66,6 @@ This is a living integration. Should you need any added functionality, message u
         ```
       </CodeGroup>
       Read more about environment variables in [Advanced Configuration](/v1/usage/advanced-configuration)
-    </span>
   </Step>
   <Step title="Run your Agent">
     Execute your program and visit [app.agentops.ai/drilldown](https://app.agentops.ai/drilldown) to observe your Agent! 🕵️
@@ -188,7 +180,6 @@ This is a living integration. Should you need any added functionality, message u
 </CodeGroup>
 
 <script type="module" src="/scripts/github_stars.js"></script>
-<script type="module" src="/scripts/link_to_api_button.js"></script>
 <script type="module" src="/scripts/scroll-img-fadein-animation.js"></script>
 <script type="module" src="/scripts/button_heartbeat_animation.js"></script>
 <script type="css" src="/styles/styles.css"></script>

@@ -18,7 +18,6 @@ import EnvTooltip from '/snippets/add-env-tooltip.mdx'
   </Step>
   <Step title="Add 2 lines of code">
     <CodeTooltip />
-    <span className="api-key-container">
     Get an AgentOps API key [here](https://app.agentops.ai/settings/projects)
       <CodeGroup>
         ```python python
@@ -26,7 +25,6 @@ import EnvTooltip from '/snippets/add-env-tooltip.mdx'
         agentops.init(<INSERT YOUR API KEY HERE>)
         ```
       </CodeGroup>
-    </span>
     <EnvTooltip />
   </Step>
   <Step title="Run your agent">
@@ -36,7 +34,7 @@ import EnvTooltip from '/snippets/add-env-tooltip.mdx'
      <div/>{/* Intentionally blank div for newline */}
 
      <Frame type="glass" caption="Clickable link to session">
-        <img height="200" src="https://github.com/AgentOps-AI/agentops/blob/cf67191f13e0e2a09446a61b7393e1810b3eee95/docs/images/link-to-session.gif?raw=true" />
+        <img height="200" src="https://github.com/AgentOps-AI/agentops/blob/main/docs/images/link-to-session.gif?raw=true" />
     </Frame>
   </Step>
 </Steps>
@@ -135,7 +133,6 @@ agentops.end_session('Success')
 </CardGroup>
 
 <script type="module" src="/scripts/github_stars.js"></script>
-<script type="module" src="/scripts/link_to_api_button.js"></script>
 <script type="module" src="/scripts/scroll-img-fadein-animation.js"></script>
 <script type="module" src="/scripts/button_heartbeat_animation.js"></script>
 <script type="css" src="/styles/styles.css"></script>
