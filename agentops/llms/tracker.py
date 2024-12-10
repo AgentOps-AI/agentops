@@ -4,6 +4,8 @@ from importlib.metadata import version
 
 from packaging.version import Version, parse
 
+from agentops.llms.llama_stack_client import LlamaStackClientProvider
+
 from ..log_config import logger
 
 from .providers.cohere import CohereProvider
@@ -34,6 +36,9 @@ class LlmTracker:
             "5.4.0": ("chat", "chat_stream"),
         },
         "ollama": {"0.0.1": ("chat", "Client.chat", "AsyncClient.chat")},
+        "llama_stack_client": {
+            "0.0.53": ("resources.InferenceResource.chat_completion", "lib.agents.agent.Agent.create_turn"),
+        },
         "groq": {
             "0.9.0": ("Client.chat", "AsyncClient.chat"),
         },
@@ -150,6 +155,15 @@ class LlmTracker:
                     else:
                         logger.warning(f"Only AI21>=2.0.0 supported. v{module_version} found.")
 
+                if api == "llama_stack_client":
+                    module_version = version(api)
+
+                    if Version(module_version) >= parse("0.0.53"):
+                        provider = LlamaStackClientProvider(self.client)
+                        provider.override()
+                    else:
+                        logger.warning(f"Only LlamaStackClient>=0.0.53 supported. v{module_version} found.")
+
     def stop_instrumenting(self):
         OpenAiProvider(self.client).undo_override()
         GroqProvider(self.client).undo_override()
@@ -159,3 +173,4 @@ class LlmTracker:
         AnthropicProvider(self.client).undo_override()
         MistralProvider(self.client).undo_override()
         AI21Provider(self.client).undo_override()
+        LlamaStackClientProvider(self.client).undo_override()
