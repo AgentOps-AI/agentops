@@ -137,7 +137,7 @@ class AnthropicProvider(InstrumentedProvider):
 
                 The raw response has the following structure:
                 {
-                    'id': str,              # Message ID (e.g. 'msg_018Gk9N2pcWaYLS7mxXbPD5i') 
+                    'id': str,              # Message ID (e.g. 'msg_018Gk9N2pcWaYLS7mxXbPD5i')
                     'type': str,            # Type of response (e.g. 'message')
                     'role': str,            # Role of responder (e.g. 'assistant')
                     'model': str,           # Model used (e.g. 'claude-3-5-sonnet-20241022')
@@ -151,7 +151,7 @@ class AnthropicProvider(InstrumentedProvider):
                 }
 
                 Note: We import Anthropic types here since the package must be installed
-                for raw responses to be available; doing so in the global scope would 
+                for raw responses to be available; doing so in the global scope would
                 result in dependencies error since this provider is not lazily imported (tests fail)
                 """
                 from anthropic import APIResponse
@@ -167,7 +167,7 @@ class AnthropicProvider(InstrumentedProvider):
                 llm_event.model = response_data["model"]
                 llm_event.completion = {
                     "role": response_data.get("role"),
-                    "content": response_data.get("content")[0].get("text") if response_data.get("content") else "",
+                    "content": (response_data.get("content")[0].get("text") if response_data.get("content") else ""),
                 }
                 if usage := response_data.get("usage"):
                     llm_event.prompt_tokens = usage.get("input_tokens")

@@ -1,7 +1,9 @@
 from enum import Enum
-from typing import Optional
-from requests.adapters import Retry, HTTPAdapter
+from typing import Optional, Dict, Any
+
 import requests
+from requests.adapters import HTTPAdapter, Retry
+import json
 
 from .exceptions import ApiServerException
 
@@ -54,33 +56,79 @@ class Response:
 
 
 class HttpClient:
-    @staticmethod
+    _session: Optional[requests.Session] = None
+
+    @classmethod
+    def get_session(cls) -> requests.Session:
+        """Get or create the global session with optimized connection pooling"""
+        if cls._session is None:
+            cls._session = requests.Session()
+
+            # Configure connection pooling
+            adapter = requests.adapters.HTTPAdapter(
+                pool_connections=15,  # Number of connection pools
+                pool_maxsize=256,  # Connections per pool
+                max_retries=Retry(total=3, backoff_factor=0.1, status_forcelist=[500, 502, 503, 504]),
+            )
+
+            # Mount adapter for both HTTP and HTTPS
+            cls._session.mount("http://", adapter)
+            cls._session.mount("https://", adapter)
+
+            # Set default headers
+            cls._session.headers.update(
+                {
+                    "Connection": "keep-alive",
+                    "Keep-Alive": "timeout=10, max=1000",
+                    "Content-Type": "application/json",
+                }
+            )
+
+        return cls._session
+
+    @classmethod
+    def _prepare_headers(
+        cls,
+        api_key: Optional[str] = None,
+        parent_key: Optional[str] = None,
+        jwt: Optional[str] = None,
+        custom_headers: Optional[dict] = None,
+    ) -> dict:
+        """Prepare headers for the request"""
+        headers = JSON_HEADER.copy()
+
+        if api_key is not None:
+            headers["X-Agentops-Api-Key"] = api_key
+
+        if parent_key is not None:
+            headers["X-Agentops-Parent-Key"] = parent_key
+
+        if jwt is not None:
+            headers["Authorization"] = f"Bearer {jwt}"
+
+        if custom_headers is not None:
+            headers.update(custom_headers)
+
+        return headers
+
+    @classmethod
     def post(
+        cls,
         url: str,
         payload: bytes,
         api_key: Optional[str] = None,
         parent_key: Optional[str] = None,
         jwt: Optional[str] = None,
-        header=None,
+        header: Optional[Dict[str, str]] = None,
     ) -> Response:
+        """Make HTTP POST request using connection pooling"""
         result = Response()
         try:
-            # Create request session with retries configured
-            request_session = requests.Session()
-            request_session.mount(url, HTTPAdapter(max_retries=retry_config))
-
-            if api_key is not None:
-                JSON_HEADER["X-Agentops-Api-Key"] = api_key
-
-            if parent_key is not None:
-                JSON_HEADER["X-Agentops-Parent-Key"] = parent_key
-
-            if jwt is not None:
-                JSON_HEADER["Authorization"] = f"Bearer {jwt}"
-
-            res = request_session.post(url, data=payload, headers=JSON_HEADER, timeout=20)
-
+            headers = cls._prepare_headers(api_key, parent_key, jwt, header)
+            session = cls.get_session()
+            res = session.post(url, data=payload, headers=headers, timeout=20)
             result.parse(res)
+
         except requests.exceptions.Timeout:
             result.code = 408
             result.status = HttpStatus.TIMEOUT
@@ -112,28 +160,22 @@ class HttpClient:
 
         return result
 
-    @staticmethod
+    @classmethod
     def get(
+        cls,
         url: str,
         api_key: Optional[str] = None,
         jwt: Optional[str] = None,
-        header=None,
+        header: Optional[Dict[str, str]] = None,
     ) -> Response:
+        """Make HTTP GET request using connection pooling"""
         result = Response()
         try:
-            # Create request session with retries configured
-            request_session = requests.Session()
-            request_session.mount(url, HTTPAdapter(max_retries=retry_config))
-
-            if api_key is not None:
-                JSON_HEADER["X-Agentops-Api-Key"] = api_key
-
-            if jwt is not None:
-                JSON_HEADER["Authorization"] = f"Bearer {jwt}"
-
-            res = request_session.get(url, headers=JSON_HEADER, timeout=20)
-
+            headers = cls._prepare_headers(api_key, None, jwt, header)
+            session = cls.get_session()
+            res = session.get(url, headers=headers, timeout=20)
             result.parse(res)
+
         except requests.exceptions.Timeout:
             result.code = 408
             result.status = HttpStatus.TIMEOUT
