@@ -1,3 +1,4 @@
+import agentops
 import asyncio
 import os
 from dotenv import load_dotenv
@@ -8,8 +9,6 @@ from llama_stack_client.lib.agents.event_logger import EventLogger
 from llama_stack_client.types.agent_create_params import AgentConfig
 
 load_dotenv()
-
-import agentops  # type: ignore
 
 agentops.init(os.getenv("AGENTOPS_API_KEY"), default_tags=["llama-stack-client-example"], auto_start_session=False)
 
