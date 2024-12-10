@@ -46,7 +46,7 @@ class LangchainCallbackHandler(BaseCallbackHandler):
         endpoint: Optional[str] = None,
         max_wait_time: Optional[int] = None,
         max_queue_size: Optional[int] = None,
-        default_tags: Optional[List[str]] = None,
+        tags: Optional[List[str]] = None,
     ):
         logging_level = os.getenv("AGENTOPS_LOGGING_LEVEL")
         log_levels = {
@@ -63,7 +63,7 @@ class LangchainCallbackHandler(BaseCallbackHandler):
             "endpoint": endpoint,
             "max_wait_time": max_wait_time,
             "max_queue_size": max_queue_size,
-            "default_tags": default_tags,
+            "default_tags": tags,
         }
 
         self.ao_client = AOClient()
