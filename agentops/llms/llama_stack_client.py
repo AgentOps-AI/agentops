@@ -195,6 +195,7 @@ class LlamaStackClientProvider(InstrumentedProvider):
 
                 return generator()
             elif inspect.isasyncgen(response):
+
                 async def agent_generator():
                     async for chunk in response:
                         handle_stream_agent(chunk)
@@ -202,6 +203,7 @@ class LlamaStackClientProvider(InstrumentedProvider):
 
                 return agent_generator()
             elif inspect.isgenerator(response):
+
                 def agent_generator():
                     for chunk in response:
                         handle_stream_agent(chunk)

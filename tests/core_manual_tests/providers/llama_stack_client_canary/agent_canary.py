@@ -9,12 +9,14 @@ from llama_stack_client.types.agent_create_params import AgentConfig
 
 load_dotenv()
 
-import agentops # type: ignore
+import agentops  # type: ignore
+
 agentops.init(os.getenv("AGENTOPS_API_KEY"), default_tags=["llama-stack-client-example"], auto_start_session=False)
 
 LLAMA_STACK_HOST = "0.0.0.0"
 LLAMA_STACK_PORT = 5001
 INFERENCE_MODEL = "meta-llama/Llama-3.2-1B-Instruct"
+
 
 async def agent_test():
     client = LlamaStackClient(
@@ -75,6 +77,7 @@ async def agent_test():
 
         for log in EventLogger().log(response):
             log.print()
+
 
 agentops.start_session()
 asyncio.run(agent_test())
