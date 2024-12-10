@@ -11,17 +11,13 @@ def mock_partitions():
             device="/dev/sda1",
             mountpoint="/",
             fstype="ext4",
-            opts="rw,relatime",
-            maxfile=0,
-            maxpath=0,
+            opts="rw,relatime"
         ),
         sdiskpart(
             device="z:\\",
             mountpoint="z:\\",
             fstype="ntfs",
-            opts="rw,relatime",
-            maxfile=0,
-            maxpath=0,
+            opts="rw,relatime"
         ),
     ]
 
