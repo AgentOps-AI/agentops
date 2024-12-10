@@ -9,7 +9,7 @@ from agentops.event import LLMEvent, ErrorEvent, ToolEvent
 from agentops.session import Session
 from agentops.log_config import logger
 from agentops.helpers import get_ISO_time, check_call_stack_for_agent_id
-from agentops.llms.instrumented_provider import InstrumentedProvider
+from agentops.llms.providers.instrumented_provider import InstrumentedProvider
 
 
 class LlamaStackClientProvider(InstrumentedProvider):
