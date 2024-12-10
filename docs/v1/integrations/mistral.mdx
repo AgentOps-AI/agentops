@@ -1,0 +1,194 @@
+---
+title: Mistral
+description: "AgentOps provides first class support for Mistral AI's models"
+---
+
+import CodeTooltip from '/snippets/add-code-tooltip.mdx'
+import EnvTooltip from '/snippets/add-env-tooltip.mdx'
+
+[Mistral](https://mistral.ai) publishes open-weight AI models that can be used for a variety of tasks. To develop with Mistral, visit their developer docs [here](https://docs.mistral.ai).
+
+## Steps to Integrate Mistral with AgentOps
+
+<Steps>
+  <Step title="Install the AgentOps SDK">
+    <CodeGroup>
+      ```bash pip 
+      pip install agentops
+      ```
+      ```bash poetry
+      poetry add agentops
+      ```
+    </CodeGroup>
+  </Step>
+  <Step title="Install the Mistral SDK">
+    <CodeGroup>
+      ```bash pip
+      pip install mistralai
+      ```
+      ```bash poetry
+      poetry add mistralai
+      ```
+    </CodeGroup>
+  </Step>
+  <Step title="Initialize AgentOps and develop with Mistral">
+    <CodeTooltip/>
+    <CodeGroup>
+      ```python python
+      from mistralai import Mistral
+      import agentops
+
+      agentops.init(<INSERT YOUR API KEY HERE>)
+      client = Mistral(api_key="your_api_key")
+      
+      # Your code here...
+
+      agentops.end_session('Success')
+      ```
+    </CodeGroup>
+    <EnvTooltip />
+      <CodeGroup>
+        ```python .env
+        AGENTOPS_API_KEY=<YOUR API KEY>
+        MISTRAL_API_KEY=<YOUR MISTRAL API KEY>
+        ```
+      </CodeGroup>
+  </Step>
+  <Step title="Run your Agent">
+    Execute your program and visit [app.agentops.ai/drilldown](https://app.agentops.ai/drilldown) to observe your Agent! 🕵️
+    <Tip>
+      After your run, AgentOps prints a clickable url to console linking directly to your session in the Dashboard
+    </Tip>
+    <div/>
+    <Frame type="glass" caption="Clickable link to session">
+      <img height="200" src="https://github.com/AgentOps-AI/agentops/blob/main/docs/images/external/mistral/mistral_session.png?raw=true" />
+    </Frame>
+  </Step>
+</Steps>
+
+## Full Examples
+
+A notebook demonstrating how to use AgentOps with Mistral can be found [here](https://github.com/AgentOps-AI/agentops/blob/main/examples/mistral_examples/mistral_example.ipynb).
+
+<CodeGroup>
+
+```python sync
+from mistralai import Mistral
+import agentops
+
+agentops.init(<INSERT YOUR API KEY HERE>)
+client = Mistral(api_key="your_api_key")
+
+response = client.chat.complete(
+    model="mistral-small-latest",
+    messages=[
+        {
+            "role": "user",
+            "content": "Explain the history of the French Revolution."
+        }
+    ],
+)
+
+print(response.choices[0].message.content)
+agentops.end_session('Success')
+```
+
+```python async
+import asyncio
+from mistralai import Mistral
+import agentops
+
+async def main():
+    agentops.init(<INSERT YOUR API KEY HERE>)
+    client = Mistral(api_key="your_api_key")
+
+    response = await client.chat.complete_async(
+        model="mistral-small-latest",
+        messages=[
+            {
+                "role": "user",
+                "content": "Write a short summary about the poem La Belle Dame sans Merci.",
+            },
+        ],
+    )
+
+    print(response.choices[0].message.content)
+    agentops.end_session('Success')
+
+asyncio.run(main())
+```
+
+</CodeGroup>
+
+### Streaming Examples
+
+<CodeGroup>
+
+```python sync
+from mistralai import Mistral
+import agentops
+
+agentops.init(<INSERT YOUR API KEY HERE>)
+client = Mistral(api_key="your_api_key")
+
+complete_response = ""
+
+response = client.chat.stream(
+    model="mistral-small-latest",
+    messages=[
+        {
+            "role": "user",
+            "content": "Who was Joan of Arc?"
+        }
+    ],
+)
+
+for chunk in response:
+    if chunk.data.choices[0].finish_reason == "stop":
+        print(complete_response)
+    else:
+        complete_response += chunk.data.choices[0].delta.content
+
+agentops.end_session('Success')
+```
+
+```python async
+import asyncio
+from mistralai import Mistral
+import agentops
+
+async def main():
+    agentops.init(<INSERT YOUR API KEY HERE>)
+    client = Mistral(api_key="your_api_key")
+
+    complete_response = ""
+
+    response = await client.chat.stream_async(
+        model="mistral-small-latest",
+        messages=[
+            {
+                "role": "user",
+                "content": "Write a short summary about the poem La Belle Dame sans Merci.",
+            },
+        ],
+    )
+
+    async for chunk in response:
+        if chunk.data.choices[0].finish_reason == "stop":
+            print(complete_response)
+        else:
+            complete_response += chunk.data.choices[0].delta.content
+
+    agentops.end_session('Success')
+
+asyncio.run(main())
+```
+
+</CodeGroup>
+
+
+<script type="module" src="/scripts/github_stars.js"></script>
+<script type="module" src="/scripts/scroll-img-fadein-animation.js"></script>
+<script type="module" src="/scripts/button_heartbeat_animation.js"></script>
+<script type="css" src="/styles/styles.css"></script>
+<script type="module" src="/scripts/adjust_api_dynamically.js"></script>

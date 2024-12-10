@@ -613,6 +613,14 @@ Check out the [LlamaIndex docs](https://docs.llamaindex.ai/en/stable/module_guid
 
 </details>
 
+### Llama Stack 🦙🥞
+
+AgentOps provides support for Llama Stack Python Client(>=0.0.53), allowing you to monitor your Agentic applications. 
+
+- [AgentOps integration example 1](https://github.com/AgentOps-AI/agentops/pull/530/files/65a5ab4fdcf310326f191d4b870d4f553591e3ea#diff-fdddf65549f3714f8f007ce7dfd1cde720329fe54155d54389dd50fbd81813cb)
+- [AgentOps integration example 2](https://github.com/AgentOps-AI/agentops/pull/530/files/65a5ab4fdcf310326f191d4b870d4f553591e3ea#diff-6688ff4fb7ab1ce7b1cc9b8362ca27264a3060c16737fb1d850305787a6e3699)
+- [Official Llama Stack Python Client](https://github.com/meta-llama/llama-stack-client-python)
+
 ## Time travel debugging 🔮
 
 <div style="justify-content: center">
