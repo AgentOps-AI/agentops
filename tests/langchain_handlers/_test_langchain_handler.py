@@ -1,6 +1,6 @@
 import asyncio
 import os
-from langchain.chat_models import ChatOpenAI
+from langchain_community.chat_models import ChatOpenAI
 from langchain.agents import initialize_agent, AgentType
 from dotenv import load_dotenv
 from langchain.agents import tool
@@ -16,7 +16,7 @@ OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY")
 
 agentops_handler = AgentOpsLangchainCallbackHandler(api_key=AGENTOPS_API_KEY, tags=["Langchain Example"])
 
-llm = ChatOpenAI(openai_api_key=OPENAI_API_KEY, callbacks=[agentops_handler], model="gpt-3.5-turbo")
+llm = ChatOpenAI(openai_api_key=OPENAI_API_KEY, callbacks=[agentops_handler], model="gpt-4o-mini")
 
 
 @tool
@@ -52,7 +52,7 @@ agent.run("What comedies are playing?", callbacks=[agentops_handler])
 
 agentops_handler = AgentOpsAsyncLangchainCallbackHandler(api_key=AGENTOPS_API_KEY, tags=["Async Example"])
 
-llm = ChatOpenAI(openai_api_key=OPENAI_API_KEY, callbacks=[agentops_handler], model="gpt-3.5-turbo")
+llm = ChatOpenAI(openai_api_key=OPENAI_API_KEY, callbacks=[agentops_handler], model="gpt-4o-mini")
 
 agent = initialize_agent(
     tools,
@@ -65,7 +65,7 @@ agent = initialize_agent(
 
 
 async def run_async():
-    await agent.run("What comedies are playing?", callbacks=[agentops_handler])
+    await agent.arun("What comedies are playing?", callbacks=[agentops_handler])
 
 
 asyncio.run(run_async())
