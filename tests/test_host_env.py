@@ -7,18 +7,8 @@ from psutil._common import sdiskpart, sdiskusage
 
 def mock_partitions():
     return [
-        sdiskpart(
-            device="/dev/sda1",
-            mountpoint="/",
-            fstype="ext4",
-            opts="rw,relatime"
-        ),
-        sdiskpart(
-            device="z:\\",
-            mountpoint="z:\\",
-            fstype="ntfs",
-            opts="rw,relatime"
-        ),
+        sdiskpart(device="/dev/sda1", mountpoint="/", fstype="ext4", opts="rw,relatime"),
+        sdiskpart(device="z:\\", mountpoint="z:\\", fstype="ntfs", opts="rw,relatime"),
     ]
 
 
