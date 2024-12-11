@@ -3,11 +3,11 @@ import pprint
 from typing import Optional
 
 from .instrumented_provider import InstrumentedProvider
-from ...event import ActionEvent, ErrorEvent, LLMEvent
-from ...session import Session
-from ...log_config import logger
-from ...helpers import get_ISO_time, check_call_stack_for_agent_id
-from ...singleton import singleton
+from agentops.event import ActionEvent, ErrorEvent, LLMEvent
+from agentops.session import Session
+from agentops.log_config import logger
+from agentops.helpers import get_ISO_time, check_call_stack_for_agent_id
+from agentops.singleton import singleton
 
 
 @singleton
