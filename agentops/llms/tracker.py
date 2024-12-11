@@ -1,4 +1,3 @@
-import functools
 import sys
 from importlib import import_module
 from importlib.metadata import version
@@ -9,14 +8,14 @@ from agentops.llms.llama_stack_client import LlamaStackClientProvider
 
 from ..log_config import logger
 
-from .cohere import CohereProvider
-from .groq import GroqProvider
-from .litellm import LiteLLMProvider
-from .ollama import OllamaProvider
-from .openai import OpenAiProvider
-from .anthropic import AnthropicProvider
-from .mistral import MistralProvider
-from .ai21 import AI21Provider
+from .providers.cohere import CohereProvider
+from .providers.groq import GroqProvider
+from .providers.litellm import LiteLLMProvider
+from .providers.ollama import OllamaProvider
+from .providers.openai import OpenAiProvider
+from .providers.anthropic import AnthropicProvider
+from .providers.mistral import MistralProvider
+from .providers.ai21 import AI21Provider
 
 original_func = {}
 original_create = None

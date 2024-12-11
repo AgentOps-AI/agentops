@@ -2,14 +2,14 @@ import inspect
 import pprint
 from typing import Optional
 
-from agentops.llms.instrumented_provider import InstrumentedProvider
+from agentops.llms.providers.instrumented_provider import InstrumentedProvider
 from agentops.time_travel import fetch_completion_override_from_time_travel_cache
 
-from ..event import ActionEvent, ErrorEvent, LLMEvent
-from ..session import Session
-from ..log_config import logger
-from ..helpers import check_call_stack_for_agent_id, get_ISO_time
-from ..singleton import singleton
+from agentops.event import ActionEvent, ErrorEvent, LLMEvent
+from agentops.session import Session
+from agentops.log_config import logger
+from agentops.helpers import check_call_stack_for_agent_id, get_ISO_time
+from agentops.singleton import singleton
 
 
 @singleton
