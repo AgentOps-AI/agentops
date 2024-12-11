@@ -1,51 +1,39 @@
 import pprint
 from typing import Optional
 
-from ..log_config import logger
-from ..event import LLMEvent, ErrorEvent
-from ..session import Session
+from .instrumented_provider import InstrumentedProvider
+from agentops.event import ErrorEvent, LLMEvent
+from agentops.session import Session
+from agentops.log_config import logger
 from agentops.helpers import get_ISO_time, check_call_stack_for_agent_id
-from agentops.llms.instrumented_provider import InstrumentedProvider
-from agentops.time_travel import fetch_completion_override_from_time_travel_cache
-from ..singleton import singleton
+from agentops.singleton import singleton
 
 
 @singleton
-class LiteLLMProvider(InstrumentedProvider):
+class GroqProvider(InstrumentedProvider):
     original_create = None
-    original_create_async = None
-    original_oai_create = None
-    original_oai_create_async = None
+    original_async_create = None
 
     def __init__(self, client):
         super().__init__(client)
+        self.client = client
 
     def override(self):
-        self._override_async_completion()
-        self._override_completion()
+        self._override_chat()
+        self._override_async_chat()
 
     def undo_override(self):
-        if (
-            self.original_create is not None
-            and self.original_create_async is not None
-            and self.original_oai_create is not None
-            and self.original_oai_create_async is not None
-        ):
-            import litellm
-            from openai.resources.chat import completions
+        if self.original_create is not None and self.original_async_create is not None:
+            from groq.resources.chat import completions
 
-            litellm.acompletion = self.original_create_async
-            litellm.completion = self.original_create
+            completions.Completions.create = self.original_create
+            completions.AsyncCompletions.create = self.original_create
 
-            completions.Completions.create = self.original_oai_create
-            completions.AsyncCompletions.create = self.original_oai_create_async
-
-    def handle_response(self, response, kwargs, init_timestamp, session: Optional[Session] = None) -> dict:
+    def handle_response(self, response, kwargs, init_timestamp, session: Optional[Session] = None):
         """Handle responses for OpenAI versions >v1.0.0"""
-        from openai import AsyncStream, Stream
-        from openai.resources import AsyncCompletions
-        from openai.types.chat import ChatCompletionChunk
-        from litellm.utils import CustomStreamWrapper
+        from groq import AsyncStream, Stream
+        from groq.resources.chat import AsyncCompletions
+        from groq.types.chat import ChatCompletionChunk
 
         llm_event = LLMEvent(init_timestamp=init_timestamp, params=kwargs)
         if session is not None:
@@ -111,16 +99,6 @@ class LiteLLMProvider(InstrumentedProvider):
 
             return generator()
 
-        # litellm uses a CustomStreamWrapper
-        if isinstance(response, CustomStreamWrapper):
-
-            def generator():
-                for chunk in response:
-                    handle_stream_chunk(chunk)
-                    yield chunk
-
-            return generator()
-
         # For asynchronous AsyncStream
         elif isinstance(response, AsyncStream):
 
@@ -143,7 +121,7 @@ class LiteLLMProvider(InstrumentedProvider):
 
         # v1.0.0+ responses are objects
         try:
-            llm_event.returns = response
+            llm_event.returns = response.model_dump()
             llm_event.agent_id = check_call_stack_for_agent_id()
             llm_event.prompt = kwargs["messages"]
             llm_event.prompt_tokens = response.usage.prompt_tokens
@@ -165,67 +143,33 @@ class LiteLLMProvider(InstrumentedProvider):
 
         return response
 
-    def _override_completion(self):
-        import litellm
-        from openai.types.chat import (
-            ChatCompletion,
-        )  # Note: litellm calls all LLM APIs using the OpenAI format
-        from openai.resources.chat import completions
+    def _override_chat(self):
+        from groq.resources.chat import completions
 
-        self.original_create = litellm.completion
-        self.original_oai_create = completions.Completions.create
+        self.original_create = completions.Completions.create
 
         def patched_function(*args, **kwargs):
+            # Call the original function with its original arguments
             init_timestamp = get_ISO_time()
-
             session = kwargs.get("session", None)
             if "session" in kwargs.keys():
                 del kwargs["session"]
-
-            completion_override = fetch_completion_override_from_time_travel_cache(kwargs)
-            if completion_override:
-                result_model = ChatCompletion.model_validate_json(completion_override)
-                return self.handle_response(result_model, kwargs, init_timestamp, session=session)
-
-            # prompt_override = fetch_prompt_override_from_time_travel_cache(kwargs)
-            # if prompt_override:
-            #     kwargs["messages"] = prompt_override["messages"]
-
-            # Call the original function with its original arguments
             result = self.original_create(*args, **kwargs)
             return self.handle_response(result, kwargs, init_timestamp, session=session)
 
-        litellm.completion = patched_function
+        # Override the original method with the patched one
+        completions.Completions.create = patched_function
 
-    def _override_async_completion(self):
-        import litellm
-        from openai.types.chat import (
-            ChatCompletion,
-        )  # Note: litellm calls all LLM APIs using the OpenAI format
-        from openai.resources.chat import completions
+    def _override_async_chat(self):
+        from groq.resources.chat import completions
 
-        self.original_create_async = litellm.acompletion
-        self.original_oai_create_async = completions.AsyncCompletions.create
+        self.original_async_create = completions.AsyncCompletions.create
 
         async def patched_function(*args, **kwargs):
-            init_timestamp = get_ISO_time()
-
-            session = kwargs.get("session", None)
-            if "session" in kwargs.keys():
-                del kwargs["session"]
-
-            completion_override = fetch_completion_override_from_time_travel_cache(kwargs)
-            if completion_override:
-                result_model = ChatCompletion.model_validate_json(completion_override)
-                return self.handle_response(result_model, kwargs, init_timestamp, session=session)
-
-            # prompt_override = fetch_prompt_override_from_time_travel_cache(kwargs)
-            # if prompt_override:
-            #     kwargs["messages"] = prompt_override["messages"]
-
             # Call the original function with its original arguments
-            result = await self.original_create_async(*args, **kwargs)
-            return self.handle_response(result, kwargs, init_timestamp, session=session)
+            init_timestamp = get_ISO_time()
+            result = await self.original_async_create(*args, **kwargs)
+            return self.handle_response(result, kwargs, init_timestamp)
 
         # Override the original method with the patched one
-        litellm.acompletion = patched_function
+        completions.AsyncCompletions.create = patched_function
