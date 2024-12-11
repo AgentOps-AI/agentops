@@ -2,11 +2,11 @@ import inspect
 import sys
 from typing import Optional
 
-from ...event import LLMEvent
-from ...session import Session
-from ...helpers import get_ISO_time, check_call_stack_for_agent_id
+from agentops.event import LLMEvent
+from agentops.session import Session
+from agentops.helpers import get_ISO_time, check_call_stack_for_agent_id
 from .instrumented_provider import InstrumentedProvider
-from ...singleton import singleton
+from agentops.singleton import singleton
 
 original_func = {}
 

@@ -3,10 +3,10 @@ import pprint
 import sys
 from typing import Optional
 
-from ...event import LLMEvent, ErrorEvent
-from ...session import Session
-from ...log_config import logger
-from ...helpers import get_ISO_time, check_call_stack_for_agent_id
+from agentops.event import LLMEvent, ErrorEvent
+from agentops.session import Session
+from agentops.log_config import logger
+from agentops.helpers import get_ISO_time, check_call_stack_for_agent_id
 from .instrumented_provider import InstrumentedProvider
 
 
