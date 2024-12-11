@@ -21,8 +21,9 @@ import EnvTooltip from '/snippets/add-env-tooltip.mdx'
   </Step>
   <Step title="Install XAI libraries">
     <Note>
-      You can use either OpenAI or Anthropic to use the xAI models.
+      xAI models can be accessed via OpenAI or Anthropic clients.
     </Note>
+    To install the OpenAI client, run:
     <CodeGroup>
       ```bash pip
       pip install openai
@@ -31,6 +32,7 @@ import EnvTooltip from '/snippets/add-env-tooltip.mdx'
       poetry add openai
       ```
     </CodeGroup>
+    To install the Anthropic client, run:
     <CodeGroup>
       ```bash pip
       pip install anthropic
