@@ -302,7 +302,14 @@ def record_tool(tool_name: Optional[str] = None):
     return decorator
 
 
-def track_agent(name: Union[str, None] = None):
+def track_agent(name: Union[str, None] = None, skip_event: bool = False):
+    """
+    Decorator to track an agent.
+
+    Args:
+        name: Name of the agent
+        skip_event: Whether to skip creating an event for agent creation
+    """
     def decorator(obj):
         if inspect.isclass(obj):
             # Set up the descriptors on the class
@@ -337,11 +344,24 @@ def track_agent(name: Union[str, None] = None):
                     if session is not None:
                         self._agentops_session_id = session.session_id
 
-                    Client().create_agent(
-                        name=self.agentops_agent_name,
-                        agent_id=self.agentops_agent_id,
-                        session=session,
-                    )
+                    client = Client()
+                    agent_info = {
+                        "name": self.agentops_agent_name,
+                        "agent_id": self._agentops_agent_id,
+                        "skip_event": skip_event,
+                    }
+
+                    # Only create agent if it's not already queued and client is initialized
+                    if client.is_initialized:
+                        client.create_agent(
+                            name=agent_info["name"],
+                            agent_id=agent_info["agent_id"],
+                            skip_event=skip_event,
+                        )
+                    else:
+                        # Check if agent is already in queue
+                        if not any(a["agent_id"] == agent_info["agent_id"] for a in client._pre_init_queue["agents"]):
+                            client._pre_init_queue["agents"].append(agent_info)
 
                 except AttributeError as ex:
                     logger.debug(ex)
@@ -353,7 +373,21 @@ def track_agent(name: Union[str, None] = None):
         elif inspect.isfunction(obj):
             obj.agentops_agent_id = str(uuid4())
             obj.agentops_agent_name = name
-            Client().create_agent(name=obj.agentops_agent_name, agent_id=obj.agentops_agent_id)
+
+            client = Client()
+            agent_info = {
+                "name": obj.agentops_agent_name,
+                "agent_id": obj.agentops_agent_id,
+                "skip_event": skip_event,
+            }
+
+            # Only create agent if it's not already queued and client is initialized
+            if client.is_initialized:
+                client.create_agent(name=agent_info["name"], agent_id=agent_info["agent_id"], skip_event=skip_event)
+            else:
+                # Check if agent is already in queue
+                if not any(a["agent_id"] == agent_info["agent_id"] for a in client._pre_init_queue["agents"]):
+                    client._pre_init_queue["agents"].append(agent_info)
 
         else:
             raise Exception("Invalid input, 'obj' must be a class or a function")

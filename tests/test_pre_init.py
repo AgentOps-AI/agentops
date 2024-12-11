@@ -33,7 +33,7 @@ def mock_req():
         yield m
 
 
-@track_agent(name="TestAgent")
+@track_agent(name="TestAgent", skip_event=True)
 class BasicAgent:
     def __init__(self):
         pass
@@ -52,12 +52,38 @@ class TestPreInit:
         agentops.init(api_key=self.api_key)
         time.sleep(1)
 
+        # Print request history for debugging
+        print("\nInitial request history:")
+        for i, req in enumerate(mock_req.request_history):
+            print(f"\nRequest {i + 1}:")
+            print(f"Method: {req.method}")
+            print(f"URL: {req.url}")
+            print(f"Headers: {dict(req.headers)}")
+            try:
+                print(f"Body: {req.json()}")
+            except:
+                print(f"Raw Body: {req.text}")
+                print(f"Body Type: {type(req.text)}")
+
         # Assert
         # start session and create agent
         agentops.end_session(end_state="Success")
 
         # Wait for flush
         time.sleep(1.5)
+
+        # Print final request history
+        print("\nFinal request history:")
+        for i, req in enumerate(mock_req.request_history):
+            print(f"\nRequest {i + 1}:")
+            print(f"Method: {req.method}")
+            print(f"URL: {req.url}")
+            print(f"Headers: {dict(req.headers)}")
+            try:
+                print(f"Body: {req.json()}")
+            except:
+                print(f"Raw Body: {req.text}")
+                print(f"Body Type: {type(req.text)}")
 
         # 4 requests: check_for_updates, create_session, create_agent, update_session
         assert len(mock_req.request_history) == 4

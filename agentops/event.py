@@ -44,6 +44,17 @@ class Event:
     agent_id: Optional[UUID] = field(default_factory=check_call_stack_for_agent_id)
     id: UUID = field(default_factory=uuid4)
 
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            "event_type": self.event_type,
+            "params": self.params,
+            "returns": self.returns,
+            "init_timestamp": self.init_timestamp,
+            "end_timestamp": self.end_timestamp,
+            "agent_id": str(self.agent_id) if self.agent_id else None,
+            "id": str(self.id)
+        }
+
 
 @dataclass
 class ActionEvent(Event):
@@ -60,6 +71,16 @@ class ActionEvent(Event):
     action_type: Optional[str] = None
     logs: Optional[Union[str, Sequence[Any]]] = None
     screenshot: Optional[str] = None
+
+    def to_dict(self) -> Dict[str, Any]:
+        base_dict = super().to_dict()
+        action_dict = {
+            "action_type": self.action_type,
+            "logs": self.logs,
+            "screenshot": self.screenshot
+        }
+        base_dict.update(action_dict)
+        return base_dict
 
 
 @dataclass
@@ -85,6 +106,20 @@ class LLMEvent(Event):
     cost: Optional[float] = None
     model: Optional[str] = None
 
+    def to_dict(self) -> Dict[str, Any]:
+        base_dict = super().to_dict()
+        llm_dict = {
+            "thread_id": str(self.thread_id) if self.thread_id else None,
+            "prompt": self.prompt,
+            "prompt_tokens": self.prompt_tokens,
+            "completion": self.completion,
+            "completion_tokens": self.completion_tokens,
+            "cost": self.cost,
+            "model": self.model
+        }
+        base_dict.update(llm_dict)
+        return base_dict
+
 
 @dataclass
 class ToolEvent(Event):
@@ -100,12 +135,18 @@ class ToolEvent(Event):
     name: Optional[str] = None
     logs: Optional[Union[str, dict]] = None
 
-
-# Does not inherit from Event because error will (optionally) be linked to an ActionEvent, LLMEvent, etc that will have the details
+    def to_dict(self) -> Dict[str, Any]:
+        base_dict = super().to_dict()
+        tool_dict = {
+            "name": self.name,
+            "logs": self.logs
+        }
+        base_dict.update(tool_dict)
+        return base_dict
 
 
 @dataclass
-class ErrorEvent:
+class ErrorEvent(Event):
     """
     For recording any errors e.g. ones related to agent execution
 
@@ -119,17 +160,28 @@ class ErrorEvent:
 
     """
 
+    event_type: str = EventType.ERROR.value
     trigger_event: Optional[Event] = None
     exception: Optional[BaseException] = None
     error_type: Optional[str] = None
     code: Optional[str] = None
     details: Optional[Union[str, Dict[str, str]]] = None
     logs: Optional[str] = field(default_factory=traceback.format_exc)
-    timestamp: str = field(default_factory=get_ISO_time)
 
     def __post_init__(self):
-        self.event_type = EventType.ERROR.value
         if self.exception:
             self.error_type = self.error_type or type(self.exception).__name__
             self.details = self.details or str(self.exception)
             self.exception = None  # removes exception from serialization
+
+    def to_dict(self) -> Dict[str, Any]:
+        base_dict = super().to_dict()
+        error_dict = {
+            "trigger_event": self.trigger_event.to_dict() if self.trigger_event else None,
+            "error_type": self.error_type,
+            "code": self.code,
+            "details": self.details,
+            "logs": self.logs
+        }
+        base_dict.update(error_dict)
+        return base_dict

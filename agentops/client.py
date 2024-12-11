@@ -104,7 +104,11 @@ class Client(metaclass=MetaClient):
 
         if session:
             for agent_args in self._pre_init_queue["agents"]:
-                session.create_agent(name=agent_args["name"], agent_id=agent_args["agent_id"])
+                session.create_agent(
+                    name=agent_args["name"],
+                    agent_id=agent_args["agent_id"],
+                    skip_event=agent_args.get("skip_event", False)
+                )
             self._pre_init_queue["agents"] = []
 
         return session
@@ -224,6 +228,7 @@ class Client(metaclass=MetaClient):
             session_tags.update(tags)
 
         session = Session(
+            api_key=self._config.api_key,  # Pass api_key from config
             session_id=session_id,
             tags=list(session_tags),
             host_env=self.host_env,
@@ -235,7 +240,9 @@ class Client(metaclass=MetaClient):
 
         if self._pre_init_queue["agents"] and len(self._pre_init_queue["agents"]) > 0:
             for agent_args in self._pre_init_queue["agents"]:
-                session.create_agent(name=agent_args["name"], agent_id=agent_args["agent_id"])
+                # Skip event recording but still create agent
+                agent_args["skip_event"] = True
+                session.create_agent(**agent_args)
             self._pre_init_queue["agents"] = []
 
         self._sessions.append(session)
@@ -275,21 +282,37 @@ class Client(metaclass=MetaClient):
         name: str,
         agent_id: Optional[str] = None,
         session: Optional[Session] = None,
+        skip_event: bool = False,
     ):
+        """
+        Create a new agent.
+
+        Args:
+            name (str): The name of the agent
+            agent_id (Optional[str]): Optional agent ID. If not provided, a UUID will be generated
+            session (Optional[Session]): Optional session to create agent in. If not provided, uses current session
+            skip_event (bool): Whether to skip recording the agent creation event
+        """
         if agent_id is None:
             agent_id = str(uuid4())
 
         # if a session is passed in, use multi-session logic
         if session:
-            return session.create_agent(name=name, agent_id=agent_id)
-        else:
-            # if no session passed, assume single session
-            session = self._safe_get_session()
-            if session is None:
-                self._pre_init_queue["agents"].append({"name": name, "agent_id": agent_id})
-            else:
-                session.create_agent(name=name, agent_id=agent_id)
+            session.create_agent(name=name, agent_id=agent_id, skip_event=skip_event)
+            return agent_id
 
+        # if not initialized, queue the agent for creation when a session starts
+        if not self.is_initialized:
+            self._pre_init_queue["agents"].append(
+                {"name": name, "agent_id": agent_id, "skip_event": skip_event}
+            )
+            return agent_id
+
+        session = self._safe_get_session()
+        if session is None:
+            return logger.error("Could not create agent. Start a session by calling agentops.start_session().")
+
+        session.create_agent(name=name, agent_id=agent_id, skip_event=skip_event)
         return agent_id
 
     def _handle_unclean_exits(self):

@@ -26,15 +26,41 @@ class AssistantAgent:
         """
         self.assistant_id = assistant_id
         self.session = session
-        self._client = OpenAI()
+        self._client = None
+        self._assistant = None
+        self._model = None
+        self._name = None
 
-        # Fetch assistant details
-        self._assistant = self._client.beta.assistants.retrieve(assistant_id)
-        self.model = self._assistant.model
-        self.name = self._assistant.name
+    def _ensure_client(self) -> None:
+        """Ensure OpenAI client is initialized."""
+        if not self._client:
+            self._client = OpenAI()
+
+    def _load_assistant(self) -> None:
+        """Load assistant details if not already loaded."""
+        if not self._assistant:
+            self._ensure_client()
+            self._assistant = self._client.beta.assistants.retrieve(self.assistant_id)
+            self._model = self._assistant.model
+            self._name = self._assistant.name
+
+    @property
+    def model(self) -> str:
+        """Get the model name, loading assistant details if needed."""
+        if self._model is None:
+            self._load_assistant()
+        return self._model
+
+    @property
+    def name(self) -> str:
+        """Get the assistant name, loading assistant details if needed."""
+        if self._name is None:
+            self._load_assistant()
+        return self._name
 
     def create_thread(self) -> str:
         """Create new thread and return thread_id."""
+        self._ensure_client()
         thread = self._client.beta.threads.create()
         self.session.thread_id = thread.id
         return thread.id
@@ -47,6 +73,7 @@ class AssistantAgent:
             thread_id: The thread to add the message to
             content: The message content
         """
+        self._ensure_client()
         message = self._client.beta.threads.messages.create(thread_id=thread_id, role="user", content=content)
         return message.id
 
@@ -58,7 +85,7 @@ class AssistantAgent:
             thread_id: The thread to run the assistant on
             instructions: Optional override instructions
         """
-        # Create run
+        self._load_assistant()  # Load assistant details before running
         run = self._client.beta.threads.runs.create(
             thread_id=thread_id, assistant_id=self.assistant_id, instructions=instructions
         )
