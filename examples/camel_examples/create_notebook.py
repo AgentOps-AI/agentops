@@ -7,7 +7,9 @@ nb = nbf.v4.new_notebook()
 
 
 # Title and introduction
-nb.cells.append(nbf.v4.new_markdown_cell("""# CAMEL Agent Tracking with AgentOps
+nb.cells.append(
+    nbf.v4.new_markdown_cell(
+        """# CAMEL Agent Tracking with AgentOps
 
 This notebook demonstrates how to track CAMEL agents using AgentOps. We'll cover:
 1. Setting up CAMEL and AgentOps
@@ -16,24 +18,34 @@ This notebook demonstrates how to track CAMEL agents using AgentOps. We'll cover
 
 ## Installation
 
-First, install the required packages:"""))
+First, install the required packages:"""
+    )
+)
 
 
 # Installation cell
-nb.cells.append(nbf.v4.new_code_cell(
-    """!pip install "camel-ai[all]==0.2.11"
-!pip install agentops"""))
+nb.cells.append(
+    nbf.v4.new_code_cell(
+        """!pip install "camel-ai[all]==0.2.11"
+!pip install agentops"""
+    )
+)
 
 
 # Setup markdown
-nb.cells.append(nbf.v4.new_markdown_cell("""## Setup
+nb.cells.append(
+    nbf.v4.new_markdown_cell(
+        """## Setup
 
-Set up your API keys for OpenAI and AgentOps:"""))
+Set up your API keys for OpenAI and AgentOps:"""
+    )
+)
 
 
 # Setup code
-nb.cells.append(nbf.v4.new_code_cell(
-    """import os
+nb.cells.append(
+    nbf.v4.new_code_cell(
+        """import os
 from getpass import getpass
 
 # Set OpenAI API key
@@ -42,18 +54,25 @@ if "OPENAI_API_KEY" not in os.environ:
 
 # Set AgentOps API key
 if "AGENTOPS_API_KEY" not in os.environ:
-    os.environ["AGENTOPS_API_KEY"] = getpass("Enter your AgentOps API key: ")"""))
+    os.environ["AGENTOPS_API_KEY"] = getpass("Enter your AgentOps API key: ")"""
+    )
+)
 
 
 # Single agent markdown
-nb.cells.append(nbf.v4.new_markdown_cell("""## Single Agent with Tools
+nb.cells.append(
+    nbf.v4.new_markdown_cell(
+        """## Single Agent with Tools
 
-Let's create a single CAMEL agent that uses search tools and track it with AgentOps:"""))
+Let's create a single CAMEL agent that uses search tools and track it with AgentOps:"""
+    )
+)
 
 
 # Single agent code
-nb.cells.append(nbf.v4.new_code_cell(
-    """import agentops
+nb.cells.append(
+    nbf.v4.new_code_cell(
+        """import agentops
 from camel.agents import ChatAgent
 from camel.messages import BaseMessage
 from camel.models import ModelFactory
@@ -91,18 +110,25 @@ response = camel_agent.step(user_msg)
 print(response)
 
 # End the session
-agentops.end_session("Success")"""))
+agentops.end_session("Success")"""
+    )
+)
 
 
 # Multi-agent markdown
-nb.cells.append(nbf.v4.new_markdown_cell("""## Multi-Agent with Tools
+nb.cells.append(
+    nbf.v4.new_markdown_cell(
+        """## Multi-Agent with Tools
 
-Now let's create multiple CAMEL agents that can work together and track their interactions:"""))
+Now let's create multiple CAMEL agents that can work together and track their interactions:"""
+    )
+)
 
 
 # Multi-agent code
-nb.cells.append(nbf.v4.new_code_cell(
-    """import agentops
+nb.cells.append(
+    nbf.v4.new_code_cell(
+        """import agentops
 from typing import List
 from camel.agents.chat_agent import FunctionCallingRecord
 from camel.societies import RolePlaying
@@ -153,11 +179,15 @@ for msg in chat_history:
     print(f"{msg.role_name}: {msg.content}\\n")
 
 # End the session
-agentops.end_session("Success")"""))
+agentops.end_session("Success")"""
+    )
+)
 
 
 # Results markdown
-nb.cells.append(nbf.v4.new_markdown_cell("""## Viewing Results
+nb.cells.append(
+    nbf.v4.new_markdown_cell(
+        """## Viewing Results
 
 After running either example, you can view the detailed record of the run in the AgentOps dashboard. The dashboard will show:
 1. Agent interactions and messages
@@ -165,7 +195,9 @@ After running either example, you can view the detailed record of the run in the
 3. LLM calls and responses
 4. Session metadata and tags
 
-Visit [app.agentops.ai/drilldown](https://app.agentops.ai/drilldown) to see your agent's performance!"""))
+Visit [app.agentops.ai/drilldown](https://app.agentops.ai/drilldown) to see your agent's performance!"""
+    )
+)
 
 
 # Set the notebook metadata
