@@ -66,7 +66,7 @@ except Exception as e:
 # In[3]:
 
 
-@agentops.track_agent(name='mistral-agent')
+@agentops.track_agent(name="mistral-agent")
 def get_completion(prompt):
     """Get a completion from Mistral with monitoring."""
     if not has_valid_keys:
@@ -94,7 +94,7 @@ print(response)
 # In[4]:
 
 
-@agentops.track_agent(name='mistral-stream-agent')
+@agentops.track_agent(name="mistral-stream-agent")
 def get_streaming_completion(prompt):
     """Get a streaming completion from Mistral with monitoring."""
     if not has_valid_keys:
@@ -129,7 +129,7 @@ response = get_streaming_completion("What is machine learning?")
 # In[5]:
 
 
-@agentops.track_agent(name='mistral-async-agent')
+@agentops.track_agent(name="mistral-async-agent")
 async def get_async_completion(prompt):
     """Get an async completion from Mistral with monitoring."""
     if not has_valid_keys:
@@ -137,8 +137,7 @@ async def get_async_completion(prompt):
 
     try:
         response = await client.chat.complete_async(
-            model="mistral-small-latest",
-            messages=[{"role": "user", "content": prompt}]
+            model="mistral-small-latest", messages=[{"role": "user", "content": prompt}]
         )
         return response.choices[0].message.content
     except Exception as e:
@@ -165,7 +164,7 @@ else:
 # In[6]:
 
 
-@agentops.record_action('process-response')
+@agentops.record_action("process-response")
 def process_response(response):
     """Process and analyze the model's response."""
     try:
@@ -190,11 +189,7 @@ print(f"Response word count: {word_count}")
 # In[7]:
 
 
-prompts = [
-    "What is artificial intelligence?",
-    "How does natural language processing work?",
-    "Explain neural networks"
-]
+prompts = ["What is artificial intelligence?", "How does natural language processing work?", "Explain neural networks"]
 
 responses = []
 for prompt in prompts:
