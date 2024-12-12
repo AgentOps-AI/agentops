@@ -3,45 +3,17 @@ from typing import Optional, Dict, Any
 import requests
 from requests.adapters import HTTPAdapter, Retry
 import json
+import logging
 
 from .exceptions import ApiServerException
 from .enums import HttpStatus
+from .response import Response
 
 JSON_HEADER = {"Content-Type": "application/json; charset=UTF-8", "Accept": "*/*"}
 
 retry_config = Retry(total=5, backoff_factor=0.1)
 
-
-class Response:
-    def __init__(self, status: HttpStatus = HttpStatus.UNKNOWN, body: Optional[dict] = None):
-        self.status: HttpStatus = status
-        self.code: int = status.value
-        self.body = body if body else {}
-
-    def parse(self, res: requests.models.Response):
-        res_body = res.json()
-        self.code = res.status_code
-        self.status = self.get_status(self.code)
-        self.body = res_body
-        return self
-
-    @staticmethod
-    def get_status(code: int) -> HttpStatus:
-        if 200 <= code < 300:
-            return HttpStatus.SUCCESS
-        elif code == 429:
-            return HttpStatus.TOO_MANY_REQUESTS
-        elif code == 413:
-            return HttpStatus.PAYLOAD_TOO_LARGE
-        elif code == 408:
-            return HttpStatus.TIMEOUT
-        elif code == 401:
-            return HttpStatus.INVALID_API_KEY
-        elif 400 <= code < 500:
-            return HttpStatus.INVALID_REQUEST
-        elif code >= 500:
-            return HttpStatus.FAILED
-        return HttpStatus.UNKNOWN
+logger = logging.getLogger(__name__)
 
 
 class HttpClient:
@@ -93,23 +65,31 @@ class HttpClient:
         }
 
         headers = {}
+
+        # Add default JSON headers with proper casing
         for k, v in JSON_HEADER.items():
             lower_k = k.lower()
-            headers[proper_case.get(lower_k, k)] = v
+            proper_k = proper_case.get(lower_k, k)
+            headers[proper_k] = v
 
+        # Add API key with proper casing
         if api_key is not None:
-            headers[proper_case["x-agentops-api-key"]] = api_key
+            headers["X-AgentOps-Api-Key"] = api_key
 
+        # Add parent key with proper casing
         if parent_key is not None:
-            headers[proper_case["x-agentops-parent-key"]] = parent_key
+            headers["X-AgentOps-Parent-Key"] = parent_key
 
+        # Add JWT with proper casing
         if jwt is not None:
-            headers[proper_case["authorization"]] = f"Bearer {jwt}"
+            headers["Authorization"] = f"Bearer {jwt}"
 
+        # Add custom headers with proper casing
         if custom_headers is not None:
             for k, v in custom_headers.items():
                 lower_k = k.lower()
-                headers[proper_case.get(lower_k, k)] = v
+                proper_k = proper_case.get(lower_k, k)
+                headers[proper_k] = v
 
         return headers
 
@@ -126,13 +106,28 @@ class HttpClient:
         """Make HTTP POST request using connection pooling"""
         result = Response()
         try:
-            # Prepare headers with case-insensitive handling
             headers = cls._prepare_headers(api_key, parent_key, jwt, header)
             session = cls.get_session()
 
-            # Make request with prepared headers
             res = session.post(url, data=payload, headers=headers, timeout=20)
             result.parse(res)
+
+            if result.code == 401 and jwt is not None and "/v2/create_session" not in url:
+                try:
+                    reauth_payload = json.dumps({"session_id": json.loads(payload)["session_id"]}).encode("utf-8")
+                    reauth_url = url.replace(url.split("/v2/")[1], "reauthorize_jwt")
+                    reauth_headers = cls._prepare_headers(api_key, None, None, None)
+
+                    reauth_res = session.post(reauth_url, data=reauth_payload, headers=reauth_headers, timeout=20)
+                    reauth_result = Response()
+                    reauth_result.parse(reauth_res)
+
+                    if reauth_result.status == HttpStatus.SUCCESS and "jwt" in reauth_result.body:
+                        new_headers = cls._prepare_headers(api_key, parent_key, reauth_result.body["jwt"], header)
+                        retry_res = session.post(url, data=payload, headers=new_headers, timeout=20)
+                        result.parse(retry_res)
+                except Exception as e:
+                    logger.error(f"JWT reauthorization failed: {str(e)}")
 
         except requests.exceptions.Timeout:
             result.code = 408
@@ -151,7 +146,6 @@ class HttpClient:
             result.body = {"error": str(e)}
             raise ApiServerException(f"RequestException: {e}")
 
-        # Handle response status codes
         if result.code == 401:
             raise ApiServerException(
                 f"API server: invalid API key or JWT. Find your API key at https://app.agentops.ai/settings/projects"
@@ -181,6 +175,24 @@ class HttpClient:
             session = cls.get_session()
             res = session.get(url, headers=headers, timeout=20)
             result.parse(res)
+
+            if result.code == 401 and jwt is not None and "/v2/create_session" not in url:
+                try:
+                    session_id = url.split("/")[-1]
+                    reauth_payload = json.dumps({"session_id": session_id}).encode("utf-8")
+                    reauth_url = url.replace(url.split("/v2/")[1], "reauthorize_jwt")
+                    reauth_headers = cls._prepare_headers(api_key, None, None, None)
+
+                    reauth_res = session.post(reauth_url, data=reauth_payload, headers=reauth_headers, timeout=20)
+                    reauth_result = Response()
+                    reauth_result.parse(reauth_res)
+
+                    if reauth_result.status == HttpStatus.SUCCESS and "jwt" in reauth_result.body:
+                        new_headers = cls._prepare_headers(api_key, None, reauth_result.body["jwt"], header)
+                        retry_res = session.get(url, headers=new_headers, timeout=20)
+                        result.parse(retry_res)
+                except Exception as e:
+                    logger.error(f"JWT reauthorization failed: {str(e)}")
 
         except requests.exceptions.Timeout:
             result.code = 408
