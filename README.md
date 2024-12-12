@@ -181,6 +181,7 @@ With only two lines of code, add full observability and monitoring to Autogen ag
 
 Track and analyze CAMEL agents with full observability. Set an `AGENTOPS_API_KEY` in your environment and initialize AgentOps to get started.
 
+- [Camel AI](https://www.camel-ai.org/) - Advanced agent communication framework
 - [AgentOps integration example](https://docs.agentops.ai/v1/integrations/camel)
 - [Official Camel AI documentation](https://docs.camel-ai.org/cookbooks/agents_tracking.html)
 

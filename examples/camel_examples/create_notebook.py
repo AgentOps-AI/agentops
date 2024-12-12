@@ -1,204 +1,264 @@
 import nbformat as nbf
-import json
-
 
 # Create a new notebook
 nb = nbf.v4.new_notebook()
 
-
-# Title and introduction
+# Add title and description
 nb.cells.append(
     nbf.v4.new_markdown_cell(
         """# CAMEL Agent Tracking with AgentOps
 
-This notebook demonstrates how to track CAMEL agents using AgentOps. We'll cover:
-1. Setting up CAMEL and AgentOps
-2. Running a single agent with tools
-3. Running multiple agents with tools
-
-## Installation
-
-First, install the required packages:"""
+This notebook demonstrates how to use AgentOps to track and monitor CAMEL agents. We'll cover:
+1. Setting up CAMEL with AgentOps
+2. Running a single agent example
+3. Creating a multi-agent conversation
+4. Analyzing session data and costs"""
     )
 )
 
-
-# Installation cell
-nb.cells.append(
-    nbf.v4.new_code_cell(
-        """!pip install "camel-ai[all]==0.2.11"
-!pip install agentops"""
-    )
-)
-
-
-# Setup markdown
+# Add setup and dependency check
 nb.cells.append(
     nbf.v4.new_markdown_cell(
         """## Setup
 
-Set up your API keys for OpenAI and AgentOps:"""
+First, let's ensure we have all required packages installed and set up our environment."""
     )
 )
 
+# Add dependency installation cell
+nb.cells.append(
+    nbf.v4.new_code_cell(
+        """import sys
+import subprocess
 
-# Setup code
+def install_package(package):
+    subprocess.check_call([sys.executable, "-m", "pip", "install", package])
+
+# Install required packages if not present
+required_packages = ["camel-ai", "agentops"]
+for package in required_packages:
+    try:
+        __import__(package.replace("-", "_"))
+    except ImportError:
+        print(f"Installing {package}...")
+        install_package(package)
+        print(f"{package} installed successfully!")"""
+    )
+)
+
+# Add imports cell
 nb.cells.append(
     nbf.v4.new_code_cell(
         """import os
-from getpass import getpass
+import agentops
+from camel.agents import ChatAgent
+from camel.messages import BaseMessage
+from camel.types import ModelPlatformType, ModelType
+from camel.models import ModelFactory
+import openai
 
-# Set OpenAI API key
-if "OPENAI_API_KEY" not in os.environ:
-    os.environ["OPENAI_API_KEY"] = getpass("Enter your OpenAI API key: ")
+# Helper function to clean API keys
+def clean_api_key(key):
+    if key:
+        return key.strip().strip('"').strip("'")
+    return None
 
-# Set AgentOps API key
-if "AGENTOPS_API_KEY" not in os.environ:
-    os.environ["AGENTOPS_API_KEY"] = getpass("Enter your AgentOps API key: ")"""
+# Get and validate API keys
+openai_key = clean_api_key(os.getenv("OPENAI_API_KEY"))
+agentops_key = clean_api_key(os.getenv("AGENTOPS_API_KEY"))
+
+if not openai_key:
+    raise ValueError("OPENAI_API_KEY environment variable is not set")
+if not agentops_key:
+    raise ValueError("AGENTOPS_API_KEY environment variable is not set")
+
+# Configure OpenAI client
+openai.api_key = openai_key
+if openai_key.startswith('sk-proj-'):
+    openai.api_base = "https://api.openai.com/v1"  # Ensure using standard API endpoint"""
     )
 )
 
-
-# Single agent markdown
+# Add description for single agent example
 nb.cells.append(
     nbf.v4.new_markdown_cell(
-        """## Single Agent with Tools
+        """## Single Agent Example
 
-Let's create a single CAMEL agent that uses search tools and track it with AgentOps:"""
+Let's create a simple example where we use a single CAMEL agent to explain Python concepts while tracking the interaction with AgentOps."""
     )
 )
-
 
 # Single agent code
 nb.cells.append(
     nbf.v4.new_code_cell(
-        """import agentops
-from camel.agents import ChatAgent
-from camel.messages import BaseMessage
-from camel.models import ModelFactory
-from camel.types import ModelPlatformType, ModelType
+        """# Initialize AgentOps client
+ao_client = agentops.Client()
+ao_client.configure(api_key=agentops_key)
 
-# Initialize AgentOps
-agentops.init(os.getenv("AGENTOPS_API_KEY"), default_tags=["CAMEL Single Agent Example"])
+# Initialize client and start session
+try:
+    session = ao_client.initialize()
+    if not session:
+        session = ao_client.start_session(tags=["camel_example", "single_agent"])
 
-# Import toolkits after AgentOps init for tracking
-from camel.toolkits import SearchToolkit
+    if not session:
+        raise RuntimeError("Failed to create AgentOps session")
+except Exception as e:
+    print(f"Error initializing AgentOps: {e}")
+    raise
 
-# Set up the agent with search tools
+# Create a tracked version of ChatAgent
+class TrackedChatAgent(ChatAgent):
+    def __init__(self, system_message, model, name="agent", session=None):
+        super().__init__(system_message=system_message, model=model)
+        self.name = name
+        self.session = session
+
+    def step(self, user_msg):
+        try:
+            response = super().step(user_msg)
+            # Record the interaction with basic parameters
+            if self.session:
+                try:
+                    self.session.record(
+                        agentops.LLMEvent(
+                            model=str(self.model_backend.model_type),
+                            prompt=user_msg,
+                            completion=response.msgs[0].content
+                        )
+                    )
+                except Exception as e:
+                    print(f"Failed to record event: {e}")
+            return response
+        except Exception as e:
+            print(f"Error during agent step: {e}")
+            raise
+
+# Set up the agent
 sys_msg = BaseMessage.make_assistant_message(
-    role_name="Tools calling operator",
-    content="You are a helpful assistant"
+    role_name="Python Expert",
+    content="You are a helpful Python programming expert who can explain concepts clearly and concisely."
 )
 
-# Configure tools and model
-tools = [*SearchToolkit().get_tools()]
+# Configure model with GPT-3.5
 model = ModelFactory.create(
     model_platform=ModelPlatformType.OPENAI,
-    model_type=ModelType.GPT_4O_MINI,
+    model_type=ModelType.GPT_3_5_TURBO,
 )
 
-# Create the agent
-camel_agent = ChatAgent(
+# Create the agent with session
+camel_agent = TrackedChatAgent(
     system_message=sys_msg,
     model=model,
-    tools=tools,
+    name="python_expert",
+    session=session
 )
 
 # Run the agent
-user_msg = "What is CAMEL-AI.org?"
+user_msg = "What are Python decorators and how do they work?"
+print("User:", user_msg)
+
 response = camel_agent.step(user_msg)
-print(response)
+print("\\nAssistant:", response.msgs[0].content)
+
+# Get analytics
+print("\\nSession Analytics:")
+analytics = session.get_analytics()
+print(f"Total Messages: {session.event_counts['llms']}")
+print(f"Total Costs: ${session.token_cost:.4f}\\n")
+
+# Print detailed analytics
+print("Detailed Analytics:")
+for key, value in analytics.items():
+    print(f"{key}: {value}")
 
 # End the session
-agentops.end_session("Success")"""
+session.end_session(end_state="Success", end_state_reason="Completed CAMEL AI example")"""
     )
 )
 
-
-# Multi-agent markdown
+# Add markdown cell for multi-agent setup
 nb.cells.append(
     nbf.v4.new_markdown_cell(
-        """## Multi-Agent with Tools
+        """## Multi-Agent Conversation
 
-Now let's create multiple CAMEL agents that can work together and track their interactions:"""
+Now let's demonstrate how to track a conversation between two CAMEL agents using AgentOps."""
     )
 )
 
-
-# Multi-agent code
+# Add multi-agent code
 nb.cells.append(
     nbf.v4.new_code_cell(
-        """import agentops
-from typing import List
-from camel.agents.chat_agent import FunctionCallingRecord
-from camel.societies import RolePlaying
-from camel.types import ModelPlatformType, ModelType
-
-# Initialize AgentOps with multi-agent tag
-agentops.start_session(tags=["CAMEL Multi-agent Example"])
-
-# Import toolkits after AgentOps init
-from camel.toolkits import SearchToolkit, MathToolkit
-
-# Set up your task
-task_prompt = (
-    "Assume now is 2024 in the Gregorian calendar, "
-    "estimate the current age of University of Oxford "
-    "and then add 10 more years to this age, "
-    "and get the current weather of the city where "
-    "the University is located."
+        """# Create another agent for multi-agent conversation
+sys_msg_2 = BaseMessage.make_assistant_message(
+    role_name="Student",
+    content="You are a curious student who asks follow-up questions about Python concepts."
 )
 
-# Create role-playing agents
-assistant_role_name = "Research Assistant"
-user_role_name = "Task Requester"
-
-# Configure model
-model = ModelFactory.create(
-    model_platform=ModelPlatformType.OPENAI,
-    model_type=ModelType.GPT_4O_MINI,
-)
-
-# Set up tools
-tools = [*SearchToolkit().get_tools(), *MathToolkit().get_tools()]
-
-# Create role-playing scenario
-role_play = RolePlaying(
-    assistant_role_name=assistant_role_name,
-    user_role_name=user_role_name,
-    task_prompt=task_prompt,
+# Create second agent with session
+student_agent = TrackedChatAgent(
+    system_message=sys_msg_2,
     model=model,
-    tools=tools
+    name="student",
+    session=session
 )
 
-# Start the conversation
-chat_history = role_play.chat()
+# Run multi-agent conversation
+print("Starting multi-agent conversation...")
+student_msg = "Can you explain more about how to create decorators that accept arguments?"
+print("\\nStudent:", student_msg)
 
-# Print the conversation
-for msg in chat_history:
-    print(f"{msg.role_name}: {msg.content}\\n")
+expert_response = camel_agent.step(student_msg)
+print("\\nPython Expert:", expert_response.msgs[0].content)
+
+student_followup = "Could you provide a practical example of when to use decorators with arguments?"
+print("\\nStudent:", student_followup)
+
+expert_final = camel_agent.step(student_followup)
+print("\\nPython Expert:", expert_final.msgs[0].content)
+
+# Get final analytics
+print("\\nSession Analytics:")
+analytics = session.get_analytics()
+print(f"Total Messages: {session.event_counts['llms']}")
+print(f"Total Costs: ${session.token_cost:.4f}\\n")
+
+# Print detailed analytics
+print("Detailed Analytics:")
+for key, value in analytics.items():
+    print(f"{key}: {value}")
 
 # End the session
-agentops.end_session("Success")"""
+session.end_session(end_state="Success", end_state_reason="Completed CAMEL AI example")"""
     )
 )
 
-
-# Results markdown
+# Add markdown cell for conclusion
 nb.cells.append(
     nbf.v4.new_markdown_cell(
-        """## Viewing Results
+        """## Conclusion
 
-After running either example, you can view the detailed record of the run in the AgentOps dashboard. The dashboard will show:
-1. Agent interactions and messages
-2. Tool usage and results
-3. LLM calls and responses
-4. Session metadata and tags
+In this notebook, we demonstrated how to:
+1. Track single-agent CAMEL interactions with AgentOps
+2. Monitor multi-agent conversations
+3. Collect analytics on message counts and costs
+4. Manage different agent roles and personalities
 
-Visit [app.agentops.ai/drilldown](https://app.agentops.ai/drilldown) to see your agent's performance!"""
+For more information, visit:
+- [CAMEL AI Documentation](https://www.camel-ai.org/)
+- [AgentOps Dashboard](https://app.agentops.ai/)
+- [AgentOps Documentation](https://docs.agentops.ai/)"""
     )
 )
 
+# Save the notebook
+nb.cells.append(
+    nbf.v4.new_markdown_cell(
+        """---
+Generated with AgentOps - Observability for AI Agents
+"""
+    )
+)
 
 # Set the notebook metadata
 nb.metadata = {
@@ -213,7 +273,6 @@ nb.metadata = {
         "version": "3.12",
     },
 }
-
 
 # Write the notebook to a file
 with open("camel_example.ipynb", "w") as f:
