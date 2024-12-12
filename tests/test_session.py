@@ -98,7 +98,7 @@ class TestSingleSessions:
         time.sleep(0.15)
 
         # Assert 3 requests, 1 for session init, 1 for event, 1 for end session
-        assert mock_req.last_request.headers["X-Agentops-Api-Key"] == self.api_key
+        assert mock_req.last_request.headers["X-AgentOps-Api-Key"] == self.api_key
         request_json = mock_req.last_request.json()
         assert request_json["session"]["end_state"] == end_state
         assert request_json["session"]["tags"] == ["GPT-4", "test-tag", "dupe-tag"]
@@ -120,7 +120,7 @@ class TestSingleSessions:
 
         # 4 requests: check_for_updates, start_session, record_event, end_session
         assert len(mock_req.request_history) == 4
-        assert mock_req.last_request.headers["X-Agentops-Api-Key"] == self.api_key
+        assert mock_req.last_request.headers["X-AgentOps-Api-Key"] == self.api_key
         request_json = mock_req.last_request.json()
         assert request_json["session"]["end_state"] == end_state
         assert request_json["session"]["tags"] == tags

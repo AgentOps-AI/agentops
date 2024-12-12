@@ -1,4 +1,3 @@
-from enum import Enum
 from typing import Optional, Dict, Any
 
 import requests
@@ -6,21 +5,11 @@ from requests.adapters import HTTPAdapter, Retry
 import json
 
 from .exceptions import ApiServerException
+from .enums import HttpStatus
 
 JSON_HEADER = {"Content-Type": "application/json; charset=UTF-8", "Accept": "*/*"}
 
 retry_config = Retry(total=5, backoff_factor=0.1)
-
-
-class HttpStatus(Enum):
-    SUCCESS = 200
-    INVALID_REQUEST = 400
-    INVALID_API_KEY = 401
-    TIMEOUT = 408
-    PAYLOAD_TOO_LARGE = 413
-    TOO_MANY_REQUESTS = 429
-    FAILED = 500
-    UNKNOWN = -1
 
 
 class Response:
@@ -94,20 +83,33 @@ class HttpClient:
         jwt: Optional[str] = None,
         custom_headers: Optional[dict] = None,
     ) -> dict:
-        """Prepare headers for the request"""
-        headers = JSON_HEADER.copy()
+        """Prepare headers for the request with case-insensitive handling"""
+        proper_case = {
+            "content-type": "Content-Type",
+            "accept": "Accept",
+            "x-agentops-api-key": "X-AgentOps-Api-Key",
+            "x-agentops-parent-key": "X-AgentOps-Parent-Key",
+            "authorization": "Authorization",
+        }
+
+        headers = {}
+        for k, v in JSON_HEADER.items():
+            lower_k = k.lower()
+            headers[proper_case.get(lower_k, k)] = v
 
         if api_key is not None:
-            headers["X-Agentops-Api-Key"] = api_key
+            headers[proper_case["x-agentops-api-key"]] = api_key
 
         if parent_key is not None:
-            headers["X-Agentops-Parent-Key"] = parent_key
+            headers[proper_case["x-agentops-parent-key"]] = parent_key
 
         if jwt is not None:
-            headers["Authorization"] = f"Bearer {jwt}"
+            headers[proper_case["authorization"]] = f"Bearer {jwt}"
 
         if custom_headers is not None:
-            headers.update(custom_headers)
+            for k, v in custom_headers.items():
+                lower_k = k.lower()
+                headers[proper_case.get(lower_k, k)] = v
 
         return headers
 
@@ -124,8 +126,11 @@ class HttpClient:
         """Make HTTP POST request using connection pooling"""
         result = Response()
         try:
+            # Prepare headers with case-insensitive handling
             headers = cls._prepare_headers(api_key, parent_key, jwt, header)
             session = cls.get_session()
+
+            # Make request with prepared headers
             res = session.post(url, data=payload, headers=headers, timeout=20)
             result.parse(res)
 
@@ -146,9 +151,10 @@ class HttpClient:
             result.body = {"error": str(e)}
             raise ApiServerException(f"RequestException: {e}")
 
+        # Handle response status codes
         if result.code == 401:
             raise ApiServerException(
-                f"API server: invalid API key: {api_key}. Find your API key at https://app.agentops.ai/settings/projects"
+                f"API server: invalid API key or JWT. Find your API key at https://app.agentops.ai/settings/projects"
             )
         if result.code == 400:
             if "message" in result.body:
@@ -156,7 +162,7 @@ class HttpClient:
             else:
                 raise ApiServerException(f"API server: {result.body}")
         if result.code == 500:
-            raise ApiServerException("API server: - internal server error")
+            raise ApiServerException("API server: internal server error")
 
         return result
 
@@ -203,6 +209,6 @@ class HttpClient:
             else:
                 raise ApiServerException(f"API server: {result.body}")
         if result.code == 500:
-            raise ApiServerException("API server: - internal server error")
+            raise ApiServerException("API server: internal server error")
 
         return result

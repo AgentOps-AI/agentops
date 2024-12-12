@@ -88,6 +88,6 @@ class TestPreInit:
         # 4 requests: check_for_updates, create_session, create_agent, update_session
         assert len(mock_req.request_history) == 4
 
-        assert mock_req.request_history[-2].headers["X-Agentops-Api-Key"] == self.api_key
+        assert mock_req.request_history[-2].headers["X-AgentOps-Api-Key"] == self.api_key
 
         mock_req.reset()
