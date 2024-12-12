@@ -1,0 +1,26 @@
+exclude = [
+    ".*__pycache__",
+    ".*egg-info",
+    "docs",
+    "examples",
+    "tests",
+    "venv",
+]
+source_roots = [
+    ".",
+]
+
+[[modules]]
+path = "agentops"
+depends_on = [
+    { path = "agentops.enums" },
+    { path = "agentops.log_config" },
+]
+
+[[modules]]
+path = "agentops.enums"
+depends_on = []
+
+[[modules]]
+path = "agentops.log_config"
+depends_on = []

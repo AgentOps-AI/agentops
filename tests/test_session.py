@@ -589,6 +589,41 @@ class TestSessionExporter:
         assert event["init_timestamp"] is not None
         assert event["end_timestamp"] is not None
 
+    def test_voyage_provider(self, mock_req):
+        from agentops.llms.providers.voyage import VoyageProvider
+
+        provider = VoyageProvider()
+        assert provider is not None
+
+        voyage_attributes = {
+            "event.data": json.dumps(
+                {
+                    "prompt": "test voyage prompt",
+                    "completion": "test voyage completion",
+                    "model": "voyage-01",
+                    "tokens": 150,
+                    "cost": 0.003,
+                }
+            )
+        }
+
+        span = self.create_test_span(name="llms", attributes=voyage_attributes)
+        result = self.exporter.export([span])
+
+        assert result == SpanExportResult.SUCCESS
+
+        last_request = mock_req.request_history[-1].json()
+        event = last_request["events"][0]
+
+        assert event["prompt"] == "test voyage prompt"
+        assert event["completion"] == "test voyage completion"
+        assert event["model"] == "voyage-01"
+        assert event["tokens"] == 150
+        assert event["cost"] == 0.003
+
+        assert event["init_timestamp"] is not None
+        assert event["end_timestamp"] is not None
+
     def test_export_with_missing_id(self, mock_req):
         """Test handling of missing event ID"""
         attributes = {"event.id": None}
