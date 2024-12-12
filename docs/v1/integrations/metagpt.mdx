@@ -1,0 +1,95 @@
+---
+title: "MetaGPT"
+description: "Track your MetaGPT software company simulations"
+---
+
+import { Callout } from 'nextra/components'
+import { Tab, Tabs } from 'nextra/components'
+
+# MetaGPT Integration
+
+[MetaGPT](https://github.com/geekan/MetaGPT) is a multi-agent framework that simulates a software company, where different roles (Product Manager, Architect, Engineer) collaborate to build software from a simple prompt.
+
+## Installation
+
+```bash
+pip install metagpt agentops
+```
+
+## Configuration
+
+Add your AgentOps API key to MetaGPT's configuration file (`~/.metagpt/config2.yaml`):
+
+```yaml
+agentops_api_key: "YOUR_AGENTOPS_API_KEY" # get key from https://app.agentops.ai/settings/projects
+```
+
+## Example: Software Company Simulation
+
+Here's how to run a MetaGPT software company simulation with AgentOps tracking:
+
+```python
+from metagpt.software_company import generate_repo
+
+# AgentOps tracking is automatically enabled if agentops_api_key is configured
+repo = generate_repo("Create a simple calculator app")
+```
+
+## Viewing Results
+
+After running your simulation:
+
+1. Visit [app.agentops.ai](https://app.agentops.ai)
+2. Sign in with GitHub to access your dashboard
+3. Find your session tagged with "software_company"
+
+![AgentOps Login](/v1/img/metagpt/login.png)
+
+Here's an example of a MetaGPT software company simulation tracked by AgentOps:
+
+```text
+=== MetaGPT with AgentOps Integration Example ===
+
+Session Overview:
+Duration: 1m 0.2s | Cost: $0.164820 | LLMs: 3 | Tools: 0 | Actions: 0 | Errors: 0
+Session URL: https://app.agentops.ai/drilldown?session_id=ac0ea6a2-3f50-4f4b-994f-117d829a0116
+
+Agent Interactions:
+1. Product Manager (Alice) - Prepared requirements and PRD
+2. Architect (Bob) - Created system design with MVC pattern
+3. Project Manager (Eve) - Generated task list and dependencies
+
+Project Outcome:
+Generated calculator app with:
+- main.py - Application entry point
+- model.py - Calculation logic and history management
+- view.py - User interface components
+- controller.py - Input handling and coordination
+```
+
+The example above demonstrates how AgentOps tracks:
+- Session metrics (duration, cost, LLM usage)
+- Agent interactions and role assignments
+- Project outcomes and deliverables
+
+## How it Works
+
+MetaGPT automatically integrates with AgentOps to track your software company simulations. When you run `generate_repo()`, AgentOps:
+
+1. Initializes a new session with the "software_company" tag
+2. Tracks all agent interactions throughout the simulation
+3. Records the final outcome when the simulation completes
+
+## Advanced Configuration
+
+You can customize the AgentOps integration by modifying the tags:
+
+```python
+import agentops
+from metagpt.software_company import generate_repo
+
+# Initialize with custom tags
+agentops.init(tags=["software_company", "calculator_project"])
+
+repo = generate_repo("Create a simple calculator app")
+```
