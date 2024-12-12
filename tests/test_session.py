@@ -590,11 +590,19 @@ class TestSessionExporter:
         assert event["end_timestamp"] is not None
 
     def test_voyage_provider(self, mock_req):
+        """Test Voyage AI provider integration with mocked client."""
         from agentops.llms.providers.voyage import VoyageProvider
 
-        provider = VoyageProvider()
+        # Mock Voyage client
+        class MockVoyageClient:
+            def embed(self, *args, **kwargs):
+                return {"embeddings": [[0.1, 0.2, 0.3]]}
+
+        # Initialize provider with mock client
+        provider = VoyageProvider(MockVoyageClient())
         assert provider is not None
 
+        # Test event attributes
         voyage_attributes = {
             "event.data": json.dumps(
                 {
@@ -612,6 +620,7 @@ class TestSessionExporter:
 
         assert result == SpanExportResult.SUCCESS
 
+        # Verify event attributes
         last_request = mock_req.request_history[-1].json()
         event = last_request["events"][0]
 
@@ -623,6 +632,12 @@ class TestSessionExporter:
 
         assert event["init_timestamp"] is not None
         assert event["end_timestamp"] is not None
+
+        # Test embedding functionality
+        result = provider.client.embed("test input")
+        assert "embeddings" in result
+        assert len(result["embeddings"]) == 1
+        assert len(result["embeddings"][0]) == 3
 
     def test_export_with_missing_id(self, mock_req):
         """Test handling of missing event ID"""

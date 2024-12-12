@@ -49,9 +49,6 @@ langchain = [
 ci = [
     "tach~=0.9",
 ]
-voyage = [
-    "voyageai>=0.1.0"
-]
 
 [project.urls]
 Homepage = "https://github.com/AgentOps-AI/agentops"
