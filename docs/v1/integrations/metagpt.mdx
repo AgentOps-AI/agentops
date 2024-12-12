@@ -13,16 +13,34 @@ import { Tab, Tabs } from 'nextra/components'
 ## Installation
 
 ```bash
-pip install metagpt agentops
+pip install "metagpt==0.8.1" "openai==1.6.1" agentops
 ```
+
+<Callout type="info">
+MetaGPT 0.8.1 requires OpenAI SDK version 1.6.1 specifically. Using different versions may cause compatibility issues with the integration.
+</Callout>
 
 ## Configuration
 
-Add your AgentOps API key to MetaGPT's configuration file (`~/.metagpt/config2.yaml`):
+Add your AgentOps API key to MetaGPT's configuration file (`~/.metagpt/config2.yaml`). Use this minimal configuration:
 
 ```yaml
+llm:
+  api_type: "openai"
+  api_key: "YOUR_OPENAI_API_KEY"
+  model: "gpt-4"
+
+repair_llm_output: true
 agentops_api_key: "YOUR_AGENTOPS_API_KEY" # get key from https://app.agentops.ai/settings/projects
 ```
+
+<Callout type="warning">
+Make sure to replace `YOUR_OPENAI_API_KEY` and `YOUR_AGENTOPS_API_KEY` with your actual API keys. Keep the configuration minimal to avoid initialization issues.
+</Callout>
+
+<Callout type="warning">
+**Known Limitation**: MetaGPT 0.8.1 has compatibility issues with proxy configurations. For now, ensure you're running without any proxy settings in your environment or configuration.
+</Callout>
 
 ## Example: Software Company Simulation
 
