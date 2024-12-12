@@ -58,7 +58,7 @@ AgentOps helps developers build, evaluate, and monitor AI agents. From prototype
 | 💸 **LLM Cost Management**            | Track spend with LLM foundation model providers               |
 | 🧪 **Agent Benchmarking**             | Test your agents against 1,000+ evals                         |
 | 🔐 **Compliance and Security**        | Detect common prompt injection and data exfiltration exploits |
-| 🤝 **Framework Integrations**         | Native Integrations with CrewAI, AutoGen, & LangChain         |
+| 🤝 **Framework Integrations**         | Native Integrations with AutoGen, Camel AI, CrewAI, & LangChain         |
 
 ## Quick Start ⌨️
 
@@ -176,6 +176,64 @@ With only two lines of code, add full observability and monitoring to Autogen ag
 
 - [Autogen Observability Example](https://microsoft.github.io/autogen/docs/notebooks/agentchat_agentops)
 - [Autogen - AgentOps Documentation](https://microsoft.github.io/autogen/docs/ecosystem/agentops)
+
+### Camel AI 🐪
+
+Track and analyze CAMEL agents with full observability. Set an `AGENTOPS_API_KEY` in your environment and initialize AgentOps to get started.
+
+- [AgentOps integration example](https://docs.agentops.ai/v1/integrations/camel)
+- [Official Camel AI documentation](https://docs.camel-ai.org/cookbooks/agents_tracking.html)
+
+<details>
+  <summary>Installation</summary>
+
+```bash
+pip install "camel-ai[all]==0.2.11"
+pip install agentops
+```
+
+```python
+import os
+import agentops
+from camel.agents import ChatAgent
+from camel.messages import BaseMessage
+from camel.models import ModelFactory
+from camel.types import ModelPlatformType, ModelType
+
+# Initialize AgentOps
+agentops.init(os.getenv("AGENTOPS_API_KEY"), default_tags=["CAMEL Example"])
+
+# Import toolkits after AgentOps init for tracking
+from camel.toolkits import SearchToolkit
+
+# Set up the agent with search tools
+sys_msg = BaseMessage.make_assistant_message(
+    role_name='Tools calling operator',
+    content='You are a helpful assistant'
+)
+
+# Configure tools and model
+tools = [*SearchToolkit().get_tools()]
+model = ModelFactory.create(
+    model_platform=ModelPlatformType.OPENAI,
+    model_type=ModelType.GPT_4O_MINI,
+)
+
+# Create and run the agent
+camel_agent = ChatAgent(
+    system_message=sys_msg,
+    model=model,
+    tools=tools,
+)
+
+response = camel_agent.step("What is AgentOps?")
+print(response)
+
+agentops.end_session("Success")
+```
+
+Check out our [Camel integration guide](https://docs.agentops.ai/v1/integrations/camel) for more examples including multi-agent scenarios.
+</details>
 
 ### Langchain 🦜🔗
 
