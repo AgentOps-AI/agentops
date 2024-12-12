@@ -293,40 +293,39 @@ agentops.init(os.getenv("AGENTOPS_API_KEY"), session_name="mistral-analysis")
 @agentops.track_agent(name="mistral-analyzer")
 def comprehensive_analysis():
     """Run a comprehensive analysis of Mistral model behavior."""
-    # Test different scenarios
-    scenarios = [
-        ("basic", "What is artificial intelligence?"),
-        ("technical", "Explain how transformers work in deep learning."),
-        ("creative", "Write a short story about a robot learning to paint."),
-        ("complex", "Compare and contrast different machine learning algorithms.")
-    ]
+    try:
+        # Test different scenarios
+        prompts = [
+            "What is AI?",  # Short prompt
+            "Explain the concept of machine learning.",  # Medium prompt
+            "Write a detailed analysis of artificial intelligence.",  # Long prompt
+        ]
 
-    results = {}
-    for scenario_type, prompt in scenarios:
-        try:
-            print(f"\\nTesting {scenario_type} scenario...")
+        results = []
+        for prompt in prompts:
             response = client.chat.complete(
                 model="mistral-small-latest",
                 messages=[{"role": "user", "content": prompt}]
             )
-            results[scenario_type] = response.choices[0].message.content
-        except Exception as e:
-            print(f"Error in {scenario_type} scenario: {str(e)}")
-            results[scenario_type] = None
+            results.append(response.choices[0].message.content)
 
-    return results
+        # Analyze results
+        for i, (prompt, result) in enumerate(zip(prompts, results)):
+            print(f"Analysis {i+1}:")
+            print(f"Prompt length: {len(prompt)} chars")
+            print(f"Response length: {len(result)} chars")
 
-# Run analysis
-results = comprehensive_analysis()
+        return "Analysis completed successfully"
+    except Exception as e:
+        print(f"Error in analysis: {str(e)}")
+        return str(e)
 
-# End session with summary
-agentops.end_session("Analysis complete")
+# Run the analysis
+result = comprehensive_analysis()
+print(f"Analysis result: {result}")
 
-print("\\nView the session replay in the AgentOps dashboard to analyze:")
-print("- Response timing patterns")
-print("- Token usage distribution")
-print("- Error patterns")
-print("- Cost optimization opportunities")'''
+# End the session with status
+agentops.end_session("Analysis completed")'''
         ),
     ]
 )

@@ -40,7 +40,8 @@ has_valid_keys = validate_api_keys()
 
 try:
     if has_valid_keys:
-        agentops.init(os.getenv("AGENTOPS_API_KEY"))
+        # Create a new session for monitoring Mistral interactions
+        agentops.init(os.getenv("AGENTOPS_API_KEY"), session_name="mistral-monitoring")
         client = Mistral(api_key=os.getenv("MISTRAL_API_KEY"))
         print("Successfully initialized AgentOps and Mistral clients")
     else:
@@ -69,9 +70,11 @@ def get_completion(prompt):
         return f"Error: {str(e)}"
 
 
-# Example usage
+# Example usage with session management
+agentops.init(os.getenv("AGENTOPS_API_KEY"), session_name="mistral-basic")
 response = get_completion("Explain quantum computing in simple terms")
 print(response)
+agentops.end_session("Basic completion completed")
 
 
 # ## Streaming Responses
@@ -101,8 +104,10 @@ def get_streaming_completion(prompt):
         return f"Error: {str(e)}"
 
 
-# Example usage
+# Example usage with session management
+agentops.init(os.getenv("AGENTOPS_API_KEY"), session_name="mistral-stream")
 response = get_streaming_completion("What is machine learning?")
+agentops.end_session("Streaming completion completed")
 
 
 # ## Async Operations
@@ -126,17 +131,20 @@ async def get_async_completion(prompt):
         return f"Error: {str(e)}"
 
 
-# Example usage
+# Example usage with session management
 async def main():
+    agentops.init(os.getenv("AGENTOPS_API_KEY"), session_name="mistral-async")
     response = await get_async_completion("What are the benefits of async programming?")
     print(response)
+    agentops.end_session("Async completion completed")
 
 
 if __name__ == "__main__":
     asyncio.run(main())
 else:
-    # For notebook execution
-    loop = asyncio.get_event_loop()
+    # For notebook execution, create a new event loop
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
     loop.run_until_complete(main())
 
 
@@ -158,16 +166,20 @@ def process_response(response):
         return 0
 
 
-# Example usage combining completion and processing
+# Example usage with session management
+agentops.init(os.getenv("AGENTOPS_API_KEY"), session_name="mistral-processing")
 response = get_completion("Explain the theory of relativity")
 word_count = process_response(response)
 print(f"Response word count: {word_count}")
+agentops.end_session("Processing completed")
 
 
 # ## Multiple Prompts
 #
 # Track multiple interactions in a single session:
 
+# Start a new session for multiple prompts
+agentops.init(os.getenv("AGENTOPS_API_KEY"), session_name="mistral-multi")
 prompts = ["What is artificial intelligence?", "How does natural language processing work?", "Explain neural networks"]
 
 responses = []
@@ -176,9 +188,5 @@ for prompt in prompts:
     responses.append(response)
     print(f"\nPrompt: {prompt}\nResponse: {response}\n")
 
-
-# ## End Session
-#
-# Always remember to end your AgentOps session:
-
-agentops.end_session("Success")
+# End the final session
+agentops.end_session("Multiple prompts completed")
