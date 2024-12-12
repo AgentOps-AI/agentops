@@ -2,7 +2,7 @@
 # coding: utf-8
 
 # # Monitoring Mistral with AgentOps
-# 
+#
 # This notebook demonstrates how to monitor and analyze Mistral model runs using AgentOps. We'll cover:
 # - Basic model completions with monitoring
 # - Streaming responses
@@ -10,7 +10,7 @@
 # - Custom event tracking
 
 # ## Setup
-# 
+#
 # First, let's install the required packages:
 
 # In[1]:
@@ -24,9 +24,10 @@ get_ipython().run_line_magic('pip', 'install -U mistralai agentops python-dotenv
 # In[2]:
 
 
+import asyncio
+import os
 from mistralai import Mistral
 import agentops
-import os
 from dotenv import load_dotenv
 
 # Load environment variables
@@ -59,7 +60,7 @@ except Exception as e:
 
 
 # ## Basic Completion with Monitoring
-# 
+#
 # Let's create a simple function that gets completions from Mistral and is monitored by AgentOps:
 
 # In[3]:
@@ -87,7 +88,7 @@ print(response)
 
 
 # ## Streaming Responses
-# 
+#
 # For longer responses, you might want to use streaming to get tokens as they're generated:
 
 # In[4]:
@@ -122,13 +123,11 @@ response = get_streaming_completion("What is machine learning?")
 
 
 # ## Async Operations
-# 
+#
 # For better performance in async applications:
 
 # In[5]:
 
-
-import asyncio
 
 @agentops.track_agent(name='mistral-async-agent')
 async def get_async_completion(prompt):
@@ -151,11 +150,16 @@ async def main():
     response = await get_async_completion("What are the benefits of async programming?")
     print(response)
 
-await main()
+if __name__ == "__main__":
+    asyncio.run(main())
+else:
+    # For notebook execution
+    loop = asyncio.get_event_loop()
+    loop.run_until_complete(main())
 
 
 # ## Custom Event Tracking
-# 
+#
 # Track specific functions in your application:
 
 # In[6]:
@@ -180,7 +184,7 @@ print(f"Response word count: {word_count}")
 
 
 # ## Multiple Prompts
-# 
+#
 # Track multiple interactions in a single session:
 
 # In[7]:
@@ -200,7 +204,7 @@ for prompt in prompts:
 
 
 # ## End Session
-# 
+#
 # Always remember to end your AgentOps session:
 
 # In[8]:
