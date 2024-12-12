@@ -3,11 +3,7 @@ import importlib.util
 
 
 def verify_packages():
-    required_packages = [
-        ("camel", "camel-ai[all]"),
-        ("agentops", "agentops"),
-        ("jupyter", "jupyter")
-    ]
+    required_packages = [("camel", "camel-ai[all]"), ("agentops", "agentops"), ("jupyter", "jupyter")]
 
     all_passed = True
     for module_name, package_name in required_packages:
