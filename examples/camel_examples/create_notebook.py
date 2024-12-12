@@ -1,5 +1,6 @@
 import nbformat as nbf
 
+
 # Create a new notebook
 nb = nbf.v4.new_notebook()
 
@@ -74,7 +75,7 @@ if not agentops_key:
 
 # Configure OpenAI client
 openai.api_key = openai_key
-if openai_key.startswith('sk-proj-'):
+if openai_key.startswith("sk-proj-"):
     openai.api_base = "https://api.openai.com/v1"  # Ensure using standard API endpoint"""
     )
 )
