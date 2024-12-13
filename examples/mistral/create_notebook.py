@@ -67,11 +67,14 @@ def validate_api_keys():
 # Initialize clients with validation
 has_valid_keys = validate_api_keys()
 
+# Initialize AgentOps and Mistral clients
+agentops.init(os.getenv("AGENTOPS_API_KEY"))
+client = None  # Initialize client in global scope
 try:
     if has_valid_keys:
-        agentops.init(os.getenv("AGENTOPS_API_KEY"))
         client = Mistral(api_key=os.getenv("MISTRAL_API_KEY"))
         print("Successfully initialized AgentOps and Mistral clients")
+        print("AgentOps session initialized")
     else:
         print("Running in demonstration mode with placeholder responses")
 except Exception as e:
@@ -177,14 +180,9 @@ async def get_async_completion(prompt):
         print(f"Error in async completion: {str(e)}")
         return f"Error: {str(e)}"
 
-# Example usage with proper async handling
-async def run_main():
-    response = await get_async_completion("What are the benefits of async programming?")
-    print(response)
-
-# Use asyncio.run to properly handle async code
-if __name__ == "__main__":
-    asyncio.run(run_main())'''
+# Example usage with proper async handling for Jupyter
+response = await get_async_completion("What are the benefits of async programming?")
+print(response)'''
         ),
     ]
 )
@@ -289,11 +287,13 @@ Let's create a comprehensive analysis session:"""
         ),
         nbf.v4.new_code_cell(
             '''# Start a new analysis session
-agentops.init(os.getenv("AGENTOPS_API_KEY"), session_name="mistral-analysis")
+session = agentops.start_session()
 
-@agentops.track_agent(name="mistral-analyzer")
 def comprehensive_analysis():
     """Run a comprehensive analysis of Mistral model behavior."""
+    # Create an agent for this analysis
+    agent = session.create_agent(name="mistral-analyzer")
+
     try:
         # Test different scenarios
         prompts = [
@@ -304,11 +304,17 @@ def comprehensive_analysis():
 
         results = []
         for prompt in prompts:
-            response = client.chat.complete(
-                model="mistral-small-latest",
-                messages=[{"role": "user", "content": prompt}]
-            )
-            results.append(response.choices[0].message.content)
+            if not has_valid_keys:
+                print(f"Using placeholder response for prompt: {prompt}")
+                results.append("This is a placeholder response. Please set valid API keys.")
+                continue
+
+            with agent:  # Use context manager for proper tracking
+                response = client.chat.complete(
+                    model="mistral-small-latest",
+                    messages=[{"role": "user", "content": prompt}]
+                )
+                results.append(response.choices[0].message.content)
 
         # Analyze results
         for i, (prompt, result) in enumerate(zip(prompts, results)):
@@ -325,8 +331,13 @@ def comprehensive_analysis():
 result = comprehensive_analysis()
 print(f"Analysis result: {result}")
 
-# End the session with status
-agentops.end_session("Analysis completed")'''
+# End the session with proper status
+print("Ending AgentOps session...")
+try:
+    session.end(agentops.EndState.COMPLETED)
+except Exception as e:
+    print(f"Error ending session: {str(e)}")
+print("Session ended successfully")'''
         ),
     ]
 )
