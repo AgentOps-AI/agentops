@@ -16,8 +16,8 @@ You can get CamelAI's API working with a few lines of code!
 ### 1. Import agentops and anthropic to your environment
 
 ```python
-%pip install camel-ai[all]==0.2.9
-%pip install agentops==0.3.10
+%pip install camel-ai[all]
+%pip install agentops
 ```
 
 ### 2. Setup import statements
