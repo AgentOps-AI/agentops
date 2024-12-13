@@ -55,8 +55,10 @@ In this example, we use a csv file to short tune an LLM! We make it sounds like 
 
 [Access the Journal By Clicking Here](./camelai-simple-example.ipynb).
 
-> [!NOTE]
-> You need the Bladewolf Training CSV for this, you can find it [here](./Bladewolf Training Data - Sheet1.csv).
+> [!NOTE]  
+> You need the Bladewolf Training CSV for this; you can find it [here](./Bladewolf_Training_Data_Sheet1.csv)!
+
+
 
 ## Tool Example; Apex Legends Internet Search
 
