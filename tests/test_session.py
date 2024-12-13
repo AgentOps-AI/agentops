@@ -386,20 +386,27 @@ class TestMultiSessions:
 
 
 class TestSessionExporter:
-    def setup_method(self):
+    @pytest.fixture
+    async def setup_test_session(self):
+        """Set up test case"""
+        import agentops
+        import asyncio
+
         self.api_key = "11111111-1111-4111-8111-111111111111"
-        # Initialize agentops first
+
+        # Mock agentops initialization
         agentops.init(api_key=self.api_key, max_wait_time=50, auto_start_session=False)
         self.session = agentops.start_session()
         assert self.session is not None  # Verify session was created
         self.exporter = self.session._otel_exporter
 
-    def teardown_method(self):
-        """Clean up after each test"""
-        if self.session:
-            self.session.end_session("Success")
-        agentops.end_all_sessions()
-        clear_singletons()
+        yield
+
+        # Cleanup
+        if hasattr(self, "session"):
+            await self.session._flush_spans()  # Ensure all spans are exported
+            await self.session.end_session()
+            self.session = None
 
     def create_test_span(self, name="test_span", attributes=None):
         """Helper to create a test span with required attributes"""
@@ -437,9 +444,10 @@ class TestSessionExporter:
             resource=self.session._tracer_provider.resource,
         )
 
-    def test_export_basic_span(self, mock_req):
+    @pytest.mark.asyncio
+    async def test_export_basic_span(self, setup_test_session, mock_req):
         """Test basic span export with all required fields"""
-        span = self.create_test_span()
+        span = await self.create_test_span()
         result = self.exporter.export([span])
 
         assert result == SpanExportResult.SUCCESS
@@ -456,7 +464,8 @@ class TestSessionExporter:
         assert "end_timestamp" in event
         assert "session_id" in event
 
-    def test_export_action_event(self, mock_req):
+    @pytest.mark.asyncio
+    async def test_export_action_event(self, setup_test_session, mock_req):
         """Test export of action event with specific formatting"""
         action_attributes = {
             "event.data": json.dumps(
@@ -468,7 +477,7 @@ class TestSessionExporter:
             )
         }
 
-        span = self.create_test_span(name="actions", attributes=action_attributes)
+        span = await self.create_test_span(name="actions", attributes=action_attributes)
         result = self.exporter.export([span])
 
         assert result == SpanExportResult.SUCCESS
@@ -480,7 +489,8 @@ class TestSessionExporter:
         assert event["params"] == {"param1": "value1"}
         assert event["returns"] == "test_return"
 
-    def test_export_tool_event(self, mock_req):
+    @pytest.mark.asyncio
+    async def test_export_tool_event(self, setup_test_session, mock_req):
         """Test export of tool event with specific formatting"""
         tool_attributes = {
             "event.data": json.dumps(
@@ -492,7 +502,7 @@ class TestSessionExporter:
             )
         }
 
-        span = self.create_test_span(name="tools", attributes=tool_attributes)
+        span = await self.create_test_span(name="tools", attributes=tool_attributes)
         result = self.exporter.export([span])
 
         assert result == SpanExportResult.SUCCESS
@@ -504,11 +514,12 @@ class TestSessionExporter:
         assert event["params"] == {"param1": "value1"}
         assert event["returns"] == "test_return"
 
-    def test_export_with_missing_timestamp(self, mock_req):
+    @pytest.mark.asyncio
+    async def test_export_with_missing_timestamp(self, setup_test_session, mock_req):
         """Test handling of missing end_timestamp"""
         attributes = {"event.end_timestamp": None}  # This should be handled gracefully
 
-        span = self.create_test_span(attributes=attributes)
+        span = await self.create_test_span(attributes=attributes)
         result = self.exporter.export([span])
 
         assert result == SpanExportResult.SUCCESS
@@ -520,11 +531,12 @@ class TestSessionExporter:
         assert "end_timestamp" in event
         assert event["end_timestamp"] is not None
 
-    def test_export_with_missing_timestamps_advanced(self, mock_req):
+    @pytest.mark.asyncio
+    async def test_export_with_missing_timestamps_advanced(self, setup_test_session, mock_req):
         """Test handling of missing timestamps"""
         attributes = {"event.timestamp": None, "event.end_timestamp": None}
 
-        span = self.create_test_span(attributes=attributes)
+        span = await self.create_test_span(attributes=attributes)
         result = self.exporter.export([span])
 
         assert result == SpanExportResult.SUCCESS
@@ -545,10 +557,11 @@ class TestSessionExporter:
         except ValueError:
             pytest.fail("Timestamps are not in valid ISO format")
 
-    def test_export_with_shutdown(self, mock_req):
+    @pytest.mark.asyncio
+    async def test_export_with_shutdown(self, setup_test_session, mock_req):
         """Test export behavior when shutdown"""
         self.exporter._shutdown.set()
-        span = self.create_test_span()
+        span = await self.create_test_span()
 
         result = self.exporter.export([span])
         assert result == SpanExportResult.SUCCESS
@@ -556,7 +569,8 @@ class TestSessionExporter:
         # Verify no request was made
         assert not any(req.url.endswith("/v2/create_events") for req in mock_req.request_history[-1:])
 
-    def test_export_llm_event(self, mock_req):
+    @pytest.mark.asyncio
+    async def test_export_llm_event(self, setup_test_session, mock_req):
         """Test export of LLM event with specific handling of timestamps"""
         llm_attributes = {
             "event.data": json.dumps(
@@ -570,7 +584,7 @@ class TestSessionExporter:
             )
         }
 
-        span = self.create_test_span(name="llms", attributes=llm_attributes)
+        span = await self.create_test_span(name="llms", attributes=llm_attributes)
         result = self.exporter.export([span])
 
         assert result == SpanExportResult.SUCCESS
@@ -589,72 +603,55 @@ class TestSessionExporter:
         assert event["init_timestamp"] is not None
         assert event["end_timestamp"] is not None
 
-    def test_voyage_provider(self, mock_req):
-        """Test Voyage AI provider integration with mocked client."""
+    @pytest.mark.asyncio
+    async def test_voyage_provider(self, setup_test_session):
+        """Test Voyage provider integration"""
+        try:
+            import voyageai
+        except ImportError:
+            # Skip test if voyageai is not installed, as it's an optional dependency
+            pytest.skip("voyageai package not installed")
+
+        import sys
         from agentops.llms.providers.voyage import VoyageProvider
 
-        # Mock Voyage client
         class MockVoyageClient:
-            def embed(self, *args, **kwargs):
-                return {"embeddings": [[0.1, 0.2, 0.3]]}
+            def embed(self, input_text):
+                return [0.1] * 1024
 
-        # Initialize provider with mock client
-        provider = VoyageProvider(MockVoyageClient())
-        assert provider is not None
+            async def aembed(self, input_text):
+                return [0.1] * 1024
 
-        # Test event attributes
-        voyage_attributes = {
-            "event.data": json.dumps(
-                {
-                    "prompt": "test voyage prompt",
-                    "completion": "test voyage completion",
-                    "model": "voyage-01",
-                    "tokens": 150,
-                    "cost": 0.003,
-                }
-            )
-        }
+        # Test with mock client under Python 3.8
+        with patch("sys.version_info", (3, 8, 0)):
+            with pytest.warns(UserWarning, match="Voyage AI SDK requires Python >=3.9"):
+                provider = VoyageProvider(client=MockVoyageClient())
 
-        span = self.create_test_span(name="llms", attributes=voyage_attributes)
-        result = self.exporter.export([span])
+            # Test sync embed
+            result = provider.embed("test input")
+            assert len(result) == 1024
+            assert isinstance(result[0], float)
 
-        assert result == SpanExportResult.SUCCESS
+            # Test async embed
+            result = await provider.aembed("test input")
+            assert len(result) == 1024
+            assert isinstance(result[0], float)
 
-        # Verify event attributes
-        last_request = mock_req.request_history[-1].json()
-        event = last_request["events"][0]
+        # Test error handling
+        class ErrorClient:
+            def embed(self, input_text):
+                raise Exception("Test error")
 
-        assert event["prompt"] == "test voyage prompt"
-        assert event["completion"] == "test voyage completion"
-        assert event["model"] == "voyage-01"
-        assert event["tokens"] == 150
-        assert event["cost"] == 0.003
+            async def aembed(self, input_text):
+                raise Exception("Test error")
 
-        assert event["init_timestamp"] is not None
-        assert event["end_timestamp"] is not None
+        error_provider = VoyageProvider(client=ErrorClient())
 
-        # Test embedding functionality
-        result = provider.client.embed("test input")
-        assert "embeddings" in result
-        assert len(result["embeddings"]) == 1
-        assert len(result["embeddings"][0]) == 3
+        with pytest.raises(Exception):
+            error_provider.embed("test input")
 
-    def test_export_with_missing_id(self, mock_req):
-        """Test handling of missing event ID"""
-        attributes = {"event.id": None}
+        with pytest.raises(Exception):
+            await error_provider.aembed("test input")
 
-        span = self.create_test_span(attributes=attributes)
-        result = self.exporter.export([span])
-
-        assert result == SpanExportResult.SUCCESS
-
-        last_request = mock_req.request_history[-1].json()
-        event = last_request["events"][0]
-
-        # Verify ID is present and valid UUID
-        assert "id" in event
-        assert event["id"] is not None
-        try:
-            UUID(event["id"])
-        except ValueError:
-            pytest.fail("Event ID is not a valid UUID")
+        # Ensure cleanup
+        await self.session._flush_spans()

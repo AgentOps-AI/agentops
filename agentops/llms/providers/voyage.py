@@ -1,14 +1,26 @@
+"""Voyage AI provider integration for AgentOps."""
+import warnings
 import sys
 import json
 import pprint
-from typing import Optional, Callable, Dict, Any
-
+import voyageai
+from typing import Any, Dict, Optional, Callable
 from agentops.llms.providers.instrumented_provider import InstrumentedProvider
+from agentops.session import Session
 from agentops.event import LLMEvent, ErrorEvent
 from agentops.helpers import check_call_stack_for_agent_id, get_ISO_time
 from agentops.log_config import logger
-from agentops.session import Session
 from agentops.singleton import singleton
+
+
+def _check_python_version() -> None:
+    """Check if the current Python version meets Voyage AI requirements."""
+    if sys.version_info < (3, 9):
+        warnings.warn(
+            "Voyage AI SDK requires Python >=3.9. Some functionality may not work correctly.",
+            UserWarning,
+            stacklevel=2,
+        )
 
 
 @singleton
@@ -25,96 +37,108 @@ class VoyageProvider(InstrumentedProvider):
     original_embed: Optional[Callable] = None
     original_embed_async: Optional[Callable] = None
 
-    def __init__(self, client):
-        """Initialize the Voyage provider with a client instance.
+    def __init__(self, client=None):
+        """Initialize VoyageProvider with optional client."""
+        super().__init__(client or voyageai)
+        self._provider_name = "Voyage"
+        self._client = client or voyageai
+        self._original_embed = self._client.embed
+        self._original_embed_async = self._client.aembed
+        _check_python_version()
+        self.override()
+
+    def embed(self, text: str, **kwargs) -> Dict[str, Any]:
+        """Synchronous embedding method.
 
         Args:
-            client: An initialized Voyage AI client
-        """
-        super().__init__(client)
-        self._provider_name = "Voyage"
-        if not self._check_python_version():
-            logger.warning("Voyage AI SDK requires Python >=3.9. Some functionality may not work correctly.")
-
-    def _check_python_version(self) -> bool:
-        """Check if the current Python version meets Voyage AI requirements.
+            text: Text to embed
+            **kwargs: Additional arguments passed to Voyage AI embed method
 
         Returns:
-            bool: True if Python version is >= 3.9, False otherwise
+            Dict containing embeddings and usage information
         """
-        return sys.version_info >= (3, 9)
+        try:
+            init_timestamp = get_ISO_time()
+            kwargs["input"] = text
+            response = self._client.embed(text, **kwargs)
+            return self.handle_response(response, kwargs, init_timestamp)
+        except Exception as e:
+            self._safe_record(None, ErrorEvent(exception=e))
+            raise
+
+    async def aembed(self, text: str, **kwargs) -> Dict[str, Any]:
+        """Asynchronous embedding method.
+
+        Args:
+            text: Text to embed
+            **kwargs: Additional arguments passed to Voyage AI aembed method
+
+        Returns:
+            Dict containing embeddings and usage information
+        """
+        try:
+            init_timestamp = get_ISO_time()
+            kwargs["input"] = text
+            response = await self._client.aembed(text, **kwargs)
+            return self.handle_response(response, kwargs, init_timestamp)
+        except Exception as e:
+            self._safe_record(None, ErrorEvent(exception=e))
+            raise
 
     def handle_response(
         self, response: Dict[str, Any], kwargs: Dict[str, Any], init_timestamp: str, session: Optional[Session] = None
     ) -> Dict[str, Any]:
-        """Handle responses for Voyage AI embeddings.
+        """Handle response from Voyage AI API calls.
 
         Args:
-            response: The response from Voyage AI API
-            kwargs: The keyword arguments used in the API call
-            init_timestamp: The timestamp when the API call was initiated
-            session: Optional session for tracking events
+            response: Raw response from Voyage AI API
+            kwargs: Original kwargs passed to the API call
+            init_timestamp: Timestamp when the API call was initiated
+            session: Optional session for event tracking
 
         Returns:
-            dict: The original response from the API
+            Dict containing embeddings and usage information
         """
-        llm_event = LLMEvent(init_timestamp=init_timestamp, params=kwargs)
-        if session is not None:
-            llm_event.session_id = session.session_id
-
         try:
-            llm_event.returns = response
-            llm_event.model = kwargs.get("model")
-            llm_event.prompt = kwargs.get("input")
-            llm_event.agent_id = check_call_stack_for_agent_id()
+            # Extract usage information
+            usage = response.get("usage", {})
+            tokens = usage.get("prompt_tokens", 0)
 
-            # Extract token counts if available
-            if usage := response.get("usage"):
-                llm_event.prompt_tokens = usage.get("prompt_tokens")
-                llm_event.completion_tokens = usage.get("completion_tokens")
-
-            llm_event.end_timestamp = get_ISO_time()
-            self._safe_record(session, llm_event)
-        except Exception as e:
-            self._safe_record(session, ErrorEvent(trigger_event=llm_event, exception=e))
-            kwargs_str = pprint.pformat(kwargs)
-            response_str = pprint.pformat(response)
-            logger.warning(
-                f"Unable to parse response for Voyage call. Skipping upload to AgentOps\n"
-                f"response:\n {response_str}\n"
-                f"kwargs:\n {kwargs_str}\n"
+            # Create LLM event
+            event = LLMEvent(
+                provider=self._provider_name,
+                model=kwargs.get("model", "voyage-01"),
+                tokens=tokens,
+                init_timestamp=init_timestamp,
+                end_timestamp=get_ISO_time(),
+                prompt=kwargs.get("input", ""),
+                completion="",  # Voyage AI embedding responses don't have completions
+                cost=0.0,  # Cost calculation can be added if needed
+                session=session,
             )
 
-        return response
+            # Track the event
+            self._safe_record(session, event)
+
+            # Return the full response
+            return response
+        except Exception as e:
+            self._safe_record(session, ErrorEvent(exception=e))
+            raise
 
     def override(self):
         """Override Voyage AI SDK methods with instrumented versions."""
-        import voyageai
 
-        # Store original methods
-        self.original_embed = voyageai.Client.embed
-        self.original_embed_async = voyageai.Client.aembed
+        def patched_embed(*args, **kwargs):
+            return self.embed(*args, **kwargs)
 
-        def patched_embed(self, *args, **kwargs):
-            init_timestamp = get_ISO_time()
-            session = kwargs.pop("session", None)
-            result = self.original_embed(*args, **kwargs)
-            return self.handle_response(result, kwargs, init_timestamp, session=session)
+        def patched_embed_async(*args, **kwargs):
+            return self.aembed(*args, **kwargs)
 
-        async def patched_embed_async(self, *args, **kwargs):
-            init_timestamp = get_ISO_time()
-            session = kwargs.pop("session", None)
-            result = await self.original_embed_async(*args, **kwargs)
-            return self.handle_response(result, kwargs, init_timestamp, session=session)
-
-        voyageai.Client.embed = patched_embed
-        voyageai.Client.aembed = patched_embed_async
+        self._client.embed = patched_embed
+        self._client.aembed = patched_embed_async
 
     def undo_override(self):
         """Restore original Voyage AI SDK methods."""
-        import voyageai
-
-        if self.original_embed:
-            voyageai.Client.embed = self.original_embed
-        if self.original_embed_async:
-            voyageai.Client.aembed = self.original_embed_async
+        self._client.embed = self._original_embed
+        self._client.aembed = self._original_embed_async

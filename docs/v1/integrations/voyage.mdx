@@ -1,0 +1,97 @@
+# Voyage AI Integration
+
+<img src="https://github.com/AgentOps-AI/agentops/blob/main/docs/images/external/voyage/voyage-logo.png?raw=true" width="250px" style="max-width: 100%; height: auto;"/>
+
+AgentOps provides seamless integration with Voyage AI's embedding models, allowing you to track and monitor your embedding operations while maintaining high performance.
+
+## Requirements
+
+- Python >= 3.9 (Voyage AI SDK requirement)
+- AgentOps library
+- Voyage AI API key
+
+## Installation
+
+```bash
+pip install agentops voyageai
+```
+
+## Basic Usage
+
+Initialize the Voyage AI provider with your client:
+
+```python
+import voyageai
+from agentops.llms.providers.voyage import VoyageProvider
+
+# Initialize clients
+voyage_client = voyageai.Client()
+provider = VoyageProvider(voyage_client)
+```
+
+Generate embeddings and track usage:
+
+```python
+# Create embeddings
+text = "The quick brown fox jumps over the lazy dog."
+result = provider.embed(text)
+
+print(f"Embedding dimension: {len(result['embeddings'][0])}")
+print(f"Token usage: {result['usage']}")
+```
+
+## Async Support
+
+The provider supports asynchronous operations for better performance:
+
+```python
+import asyncio
+
+async def process_multiple_texts():
+    texts = [
+        "First example text",
+        "Second example text",
+        "Third example text"
+    ]
+
+    # Process texts concurrently
+    tasks = [provider.aembed(text) for text in texts]
+    results = await asyncio.gather(*tasks)
+
+    return results
+
+# Run async example
+results = await process_multiple_texts()
+```
+
+## Error Handling
+
+The provider includes comprehensive error handling:
+
+```python
+# Handle invalid input
+try:
+    result = provider.embed(None)
+except ValueError as e:
+    print(f"Caught ValueError: {e}")
+
+# Handle API errors
+try:
+    result = provider.embed("test", invalid_param=True)
+except Exception as e:
+    print(f"Caught API error: {e}")
+```
+
+## Python Version Compatibility
+
+The Voyage AI SDK requires Python 3.9 or higher. When using an incompatible Python version, the provider will log a warning:
+
+```python
+import sys
+if sys.version_info < (3, 9):
+    print("Warning: Voyage AI SDK requires Python >=3.9")
+```
+
+## Example Notebook
+
+For a complete example, check out our [Jupyter notebook](https://github.com/AgentOps-AI/agentops/blob/main/examples/voyage/voyage_example.ipynb) demonstrating all features of the Voyage AI integration.
