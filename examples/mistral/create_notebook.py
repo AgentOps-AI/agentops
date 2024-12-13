@@ -1,6 +1,14 @@
-import nbformat as nbf
-import asyncio
 import os
+import nbformat as nbf
+import sys
+from pathlib import Path
+
+# Add agentops to path if needed
+if str(Path.home() / "repos/agentops") not in sys.path:
+    sys.path.append(str(Path.home() / "repos/agentops"))
+
+from agentops.session import EndState  # Import EndState at the top level
+import agentops
 
 nb = nbf.v4.new_notebook()
 
@@ -287,6 +295,7 @@ Let's create a comprehensive analysis session:"""
         ),
         nbf.v4.new_code_cell(
             '''# Start a new analysis session
+from agentops.session import EndState  # Import EndState from correct module
 session = agentops.start_session()
 
 def comprehensive_analysis():
@@ -310,11 +319,18 @@ def comprehensive_analysis():
                 continue
 
             with agent:  # Use context manager for proper tracking
-                response = client.chat.complete(
-                    model="mistral-small-latest",
-                    messages=[{"role": "user", "content": prompt}]
-                )
-                results.append(response.choices[0].message.content)
+                try:
+                    response = client.chat.complete(
+                        model="mistral-small-latest",
+                        messages=[{"role": "user", "content": prompt}]
+                    )
+                    results.append(response.choices[0].message.content)
+                except AttributeError:
+                    print("Client not initialized. Using placeholder response.")
+                    results.append("This is a placeholder response. Please set valid API keys.")
+                except Exception as e:
+                    print(f"Error during completion: {str(e)}")
+                    results.append(f"Error: {str(e)}")
 
         # Analyze results
         for i, (prompt, result) in enumerate(zip(prompts, results)):
@@ -334,7 +350,7 @@ print(f"Analysis result: {result}")
 # End the session with proper status
 print("Ending AgentOps session...")
 try:
-    session.end(agentops.EndState.COMPLETED)
+    session.end(EndState.COMPLETED)  # Use imported EndState
 except Exception as e:
     print(f"Error ending session: {str(e)}")
 print("Session ended successfully")'''
