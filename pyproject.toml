@@ -41,13 +41,13 @@ dev = [
     "ruff",
     "vcrpy>=6.0.0; python_version >= '3.8'"
  ]
+ci = [
+    "tach~=0.9",
+]
 
 [project.optional-dependencies]
 langchain = [
     "langchain==0.2.14; python_version >= '3.8.1'"
-]
-ci = [
-    "tach~=0.9",
 ]
 
 
@@ -118,4 +118,4 @@ exclude = [
 ]
 
 [tool.setuptools]
-packages = ["agentops", "agentops.llms", "agentops.llms.providers", "agentops.partners"]
+packages = ["agentops"]
