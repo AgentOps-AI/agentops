@@ -24,8 +24,3 @@ depends_on = []
 [[modules]]
 path = "agentops.log_config"
 depends_on = []
-
-[dependency-group.ci]
-dependencies = [
-    "tach~=0.9"
-]
