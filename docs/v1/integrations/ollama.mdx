@@ -6,13 +6,7 @@ description: "AgentOps provides first class support for Ollama"
 import CodeTooltip from '/snippets/add-code-tooltip.mdx'
 import EnvTooltip from '/snippets/add-env-tooltip.mdx'
 
-<Note>
-This is a living integration. Should you need any added functionality, message us on [Discord](https://discord.gg/UgJyyxx7uc)!
-</Note>
-
-<Card title="Ollama" icon={<img src="https://www.github.com/agentops-ai/agentops/blob/main/docs/images/external/ollama/ollama-icon.png?raw=true" alt="Ollama" />} iconType="image" href="https://ollama.com">
-    First class support for Ollama
-</Card>
+[Ollama](https://ollama.com) is a lightweight, open-source tool for running and managing LLM models. Track your Ollama model calls with AgentOps.
 
 <Steps>
   <Step title="Install the AgentOps SDK">
@@ -22,6 +16,16 @@ This is a living integration. Should you need any added functionality, message u
       ```
       ```bash poetry
       poetry add agentops ollama
+      ```
+    </CodeGroup>
+  </Step>
+  <Step title="Install the Ollama SDK">
+    <CodeGroup>
+      ```bash pip
+      pip install ollama
+      ```
+      ```bash poetry
+      poetry add ollama
       ```
     </CodeGroup>
   </Step>
@@ -46,7 +50,7 @@ This is a living integration. Should you need any added functionality, message u
       print(response['message']['content'])
       ...
       # End of program (e.g. main.py)
-      agentops.end_session("Success") # Success|Fail|Indeterminate
+      agentops.end_session("Success")
       ```
     </CodeGroup>
     <EnvTooltip />
