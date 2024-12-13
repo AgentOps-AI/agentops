@@ -1,5 +1,6 @@
 import nbformat as nbf
 import asyncio
+import os
 
 nb = nbf.v4.new_notebook()
 
@@ -22,7 +23,7 @@ This notebook demonstrates how to monitor and analyze Mistral model runs using A
 
 Here's an example of monitoring Mistral model runs with AgentOps:
 
-![Mistral Session Monitoring](img/mistral_session.png)
+![Mistral Session Monitoring](./img/mistral_session.png)
 
 ## Prerequisites
 
@@ -196,7 +197,7 @@ cells.extend(
 
 AgentOps provides comprehensive error tracking and debugging capabilities. Let's explore how to handle common scenarios:
 
-![Session Overview](img/session-overview.png)"""
+![Session Overview](./img/session-overview.png)"""
         ),
         nbf.v4.new_code_cell(
             '''@agentops.track_agent(name="mistral-error-handler")
@@ -236,7 +237,7 @@ AgentOps automatically tracks token usage and costs across all your Mistral API 
 - Track costs across different models
 - Identify cost-saving opportunities
 
-![Cost Analysis](img/session-waterfall.png)"""
+![Cost Analysis](./img/session-waterfall.png)"""
         ),
         nbf.v4.new_code_cell(
             '''@agentops.track_agent(name="mistral-cost-tracker")
@@ -333,5 +334,6 @@ agentops.end_session("Analysis completed")'''
 nb.cells = cells
 
 # Write the notebook
-with open("monitoring_mistral.ipynb", "w") as f:
+notebook_path = os.path.join(os.path.dirname(__file__), "monitoring_mistral.ipynb")
+with open(notebook_path, "w") as f:
     nbf.write(nb, f)
