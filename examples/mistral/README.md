@@ -2,22 +2,39 @@
 
 ![AgentOps Banner](../../docs/images/external/logo/banner-badge.png)
 
-## What is AgentOps?
-AgentOps is a comprehensive observability platform for LLM applications, providing real-time monitoring, debugging, and performance analytics for AI agents. With AgentOps, you can track model interactions, analyze performance metrics, and optimize your AI applications with ease.
+AgentOps supports Mistral's API for building and monitoring powerful AI applications!
 
-## Why Monitor Mistral AI Models?
-- Real-time performance tracking and latency analysis
-- Cost optimization and token usage monitoring
-- Error detection and debugging capabilities
-- Session replay for understanding model behavior
-- Comprehensive analytics dashboard
-- Custom event tracking and metadata analysis
+To learn more about Mistral AI, visit their [website](https://mistral.ai) or check out their [documentation](https://docs.mistral.ai).
 
-## Installation
+> [!NOTE]
+> New to LLMs? Check out our intro guide (coming soon) to learn about key concepts like context management, prompt engineering, and cost optimization!
+
+## Getting Started
+
+Let's get your Mistral monitoring set up in just a few steps:
+
+### 1. Install Required Packages
 
 ```bash
 pip install agentops mistralai
 ```
+
+### 2. Set Up Your Environment
+
+```python
+from mistralai import Mistral
+import agentops
+import os
+from dotenv import load_dotenv
+
+# Load environment variables
+load_dotenv()
+MISTRAL_API_KEY = os.getenv("MISTRAL_API_KEY") or "<your_mistral_key>"
+AGENTOPS_API_KEY = os.getenv("AGENTOPS_API_KEY") or "<your_agentops_key>"
+```
+
+> [!WARNING]
+> Remember to set API keys for both AgentOps and Mistral! Never share your API keys or commit them to version control.
 
 ## Integration Examples
 
@@ -25,12 +42,9 @@ pip install agentops mistralai
 Track your Mistral model calls with detailed performance metrics:
 
 ```python
-from mistralai import Mistral
-import agentops
-
 # Initialize clients
-agentops.init("<AGENTOPS_API_KEY>")
-client = Mistral("<MISTRAL_API_KEY>")
+agentops.init(AGENTOPS_API_KEY)
+client = Mistral(MISTRAL_API_KEY)
 
 @agentops.track_agent(name='mistral-agent')
 def get_completion(prompt):
