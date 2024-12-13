@@ -22,12 +22,13 @@ At a high level, AgentOps gives you the ability to monitor LLM calls, costs, lat
 
 ## Integrations
 - [AI21](./ai21_examples/ai21_examples.ipynb)
-- [Anthropic](./anthropic_examples/)- 
+- [Anthropic](./anthropic_examples/)-
 - [Autogen](./autogen_examples/)
 - [Cohere](./cohere_examples/cohere_example.ipynb)
 - [Crew.ai](./crew_examples/)
 - [Groq](./multi_agent_groq_example.ipynb)
 - [Langchain](./langchain_examples/langchain_examples.ipynb)
+- [LlamaIndex](./llamaindex_examples/llamaindex_examples.ipynb)
 - [LiteLLM](./litlelm_examples/litlelm_example.ipynb)
 - [Mistral](./mistral_examples/mistral_example.ipynb)
 - [MultiOn](./multion_examples/)
