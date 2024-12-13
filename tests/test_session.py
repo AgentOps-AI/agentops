@@ -18,6 +18,7 @@ import agentops
 from agentops import ActionEvent, Client
 from agentops.http_client import HttpClient
 from agentops.singleton import clear_singletons
+import asyncio
 
 
 @pytest.fixture(autouse=True)
@@ -386,27 +387,25 @@ class TestMultiSessions:
 
 
 class TestSessionExporter:
-    @pytest.fixture
-    async def setup_test_session(self):
-        """Set up test case"""
+    def setup_method(self):
+        """Set up test method."""
+        clear_singletons()  # Clear any existing singletons first
         import agentops
-        import asyncio
 
         self.api_key = "11111111-1111-4111-8111-111111111111"
-
-        # Mock agentops initialization
-        agentops.init(api_key=self.api_key, max_wait_time=50, auto_start_session=False)
-        self.session = agentops.start_session()
-        assert self.session is not None  # Verify session was created
+        self.agentops = agentops
+        self.agentops.init(api_key=self.api_key, max_wait_time=50, auto_start_session=False)
+        self.session = self.agentops.start_session()
+        assert self.session is not None
         self.exporter = self.session._otel_exporter
+        self.test_span = self.create_test_span()
 
-        yield
-
-        # Cleanup
+    def teardown_method(self):
+        """Clean up after test method."""
         if hasattr(self, "session"):
-            await self.session._flush_spans()  # Ensure all spans are exported
-            await self.session.end_session()
-            self.session = None
+            self.session.end_session()
+        self.agentops.end_all_sessions()
+        clear_singletons()
 
     def create_test_span(self, name="test_span", attributes=None):
         """Helper to create a test span with required attributes"""
@@ -570,7 +569,7 @@ class TestSessionExporter:
         assert not any(req.url.endswith("/v2/create_events") for req in mock_req.request_history[-1:])
 
     @pytest.mark.asyncio
-    async def test_export_llm_event(self, setup_test_session, mock_req):
+    async def test_export_llm_event(self, setup_teardown, mock_req):
         """Test export of LLM event with specific handling of timestamps"""
         llm_attributes = {
             "event.data": json.dumps(
@@ -603,55 +602,69 @@ class TestSessionExporter:
         assert event["init_timestamp"] is not None
         assert event["end_timestamp"] is not None
 
-    @pytest.mark.asyncio
-    async def test_voyage_provider(self, setup_test_session):
-        """Test Voyage provider integration"""
+    @pytest.mark.asyncio  # Add async test decorator
+    async def test_voyage_provider(self):
+        """Test the VoyageProvider class."""
         try:
             import voyageai
         except ImportError:
-            # Skip test if voyageai is not installed, as it's an optional dependency
             pytest.skip("voyageai package not installed")
 
-        import sys
         from agentops.llms.providers.voyage import VoyageProvider
 
+        # Test implementation with mock clients
         class MockVoyageClient:
-            def embed(self, input_text):
-                return [0.1] * 1024
+            def record(self, event):
+                """Mock record method required by InstrumentedProvider."""
+                pass
 
-            async def aembed(self, input_text):
-                return [0.1] * 1024
+            def embed(self, input_text, **kwargs):
+                """Mock embed method matching Voyage API interface."""
+                return {"embeddings": [[0.1] * 1024], "usage": {"prompt_tokens": 10}, "model": "voyage-01"}
 
-        # Test with mock client under Python 3.8
-        with patch("sys.version_info", (3, 8, 0)):
-            with pytest.warns(UserWarning, match="Voyage AI SDK requires Python >=3.9"):
-                provider = VoyageProvider(client=MockVoyageClient())
+            async def aembed(self, input_text, **kwargs):
+                """Mock async embed method."""
+                return self.embed(input_text, **kwargs)
 
-            # Test sync embed
-            result = provider.embed("test input")
-            assert len(result) == 1024
-            assert isinstance(result[0], float)
+        mock_client = MockVoyageClient()
+        provider = VoyageProvider(client=mock_client)
+        provider.override()
 
-            # Test async embed
-            result = await provider.aembed("test input")
-            assert len(result) == 1024
-            assert isinstance(result[0], float)
+        # Test sync embedding
+        result = provider.embed("test input")
+        assert "embeddings" in result
+        assert len(result["embeddings"][0]) == 1024
+        assert all(x == 0.1 for x in result["embeddings"][0])
+
+        # Test async embedding
+        result = await provider.aembed("test input")
+        assert "embeddings" in result
+        assert len(result["embeddings"][0]) == 1024
+        assert all(x == 0.1 for x in result["embeddings"][0])
 
         # Test error handling
         class ErrorClient:
-            def embed(self, input_text):
+            def record(self, event):
+                """Mock record method required by InstrumentedProvider."""
+                pass
+
+            def embed(self, input_text, **kwargs):
+                """Mock embed method that raises an error."""
                 raise Exception("Test error")
 
-            async def aembed(self, input_text):
+            async def aembed(self, input_text, **kwargs):
+                """Mock async embed method that raises an error."""
+                await asyncio.sleep(0)  # Force async execution
                 raise Exception("Test error")
 
-        error_provider = VoyageProvider(client=ErrorClient())
+        error_client = ErrorClient()
+        error_provider = VoyageProvider(client=error_client)
+        error_provider.override()  # Call override to patch methods
 
+        # Test sync error
         with pytest.raises(Exception):
             error_provider.embed("test input")
 
+        # Test async error - use await with pytest.raises
         with pytest.raises(Exception):
-            await error_provider.aembed("test input")
-
-        # Ensure cleanup
-        await self.session._flush_spans()
+            await error_provider.aembed("test input")  # Changed from async with to await

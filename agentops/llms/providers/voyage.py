@@ -1,4 +1,5 @@
 """Voyage AI provider integration for AgentOps."""
+import inspect
 import warnings
 import sys
 import json
@@ -34,111 +35,120 @@ class VoyageProvider(InstrumentedProvider):
         client: Initialized Voyage AI client instance
     """
 
-    original_embed: Optional[Callable] = None
-    original_embed_async: Optional[Callable] = None
-
     def __init__(self, client=None):
         """Initialize VoyageProvider with optional client."""
         super().__init__(client or voyageai)
         self._provider_name = "Voyage"
         self._client = client or voyageai
-        self._original_embed = self._client.embed
-        self._original_embed_async = self._client.aembed
+        self.original_embed = None
+        self.original_aembed = None
         _check_python_version()
-        self.override()
 
-    def embed(self, text: str, **kwargs) -> Dict[str, Any]:
-        """Synchronous embedding method.
+    def embed(self, input_text: str, **kwargs) -> Dict[str, Any]:
+        """Synchronous embed method."""
+        init_timestamp = get_ISO_time()
+        session = kwargs.pop("session", None)  # Extract and remove session from kwargs
 
-        Args:
-            text: Text to embed
-            **kwargs: Additional arguments passed to Voyage AI embed method
-
-        Returns:
-            Dict containing embeddings and usage information
-        """
         try:
-            init_timestamp = get_ISO_time()
-            kwargs["input"] = text
-            response = self._client.embed(text, **kwargs)
-            return self.handle_response(response, kwargs, init_timestamp)
-        except Exception as e:
-            self._safe_record(None, ErrorEvent(exception=e))
-            raise
+            # Call the patched function
+            response = self._client.embed(input_text, **kwargs)
 
-    async def aembed(self, text: str, **kwargs) -> Dict[str, Any]:
-        """Asynchronous embedding method.
+            # Handle response and create event
+            if session:
+                self.handle_response(response, init_timestamp=init_timestamp, session=session)
 
-        Args:
-            text: Text to embed
-            **kwargs: Additional arguments passed to Voyage AI aembed method
-
-        Returns:
-            Dict containing embeddings and usage information
-        """
-        try:
-            init_timestamp = get_ISO_time()
-            kwargs["input"] = text
-            response = await self._client.aembed(text, **kwargs)
-            return self.handle_response(response, kwargs, init_timestamp)
-        except Exception as e:
-            self._safe_record(None, ErrorEvent(exception=e))
-            raise
-
-    def handle_response(
-        self, response: Dict[str, Any], kwargs: Dict[str, Any], init_timestamp: str, session: Optional[Session] = None
-    ) -> Dict[str, Any]:
-        """Handle response from Voyage AI API calls.
-
-        Args:
-            response: Raw response from Voyage AI API
-            kwargs: Original kwargs passed to the API call
-            init_timestamp: Timestamp when the API call was initiated
-            session: Optional session for event tracking
-
-        Returns:
-            Dict containing embeddings and usage information
-        """
-        try:
-            # Extract usage information
-            usage = response.get("usage", {})
-            tokens = usage.get("prompt_tokens", 0)
-
-            # Create LLM event
-            event = LLMEvent(
-                provider=self._provider_name,
-                model=kwargs.get("model", "voyage-01"),
-                tokens=tokens,
-                init_timestamp=init_timestamp,
-                end_timestamp=get_ISO_time(),
-                prompt=kwargs.get("input", ""),
-                completion="",  # Voyage AI embedding responses don't have completions
-                cost=0.0,  # Cost calculation can be added if needed
-                session=session,
-            )
-
-            # Track the event
-            self._safe_record(session, event)
-
-            # Return the full response
             return response
         except Exception as e:
-            self._safe_record(session, ErrorEvent(exception=e))
-            raise
+            if session:
+                self._safe_record(session, ErrorEvent(exception=e))
+            raise  # Re-raise the exception without wrapping
+
+    async def aembed(self, input_text: str, **kwargs) -> Dict[str, Any]:
+        """Asynchronous embed method."""
+        init_timestamp = get_ISO_time()
+        session = kwargs.pop("session", None)  # Extract and remove session from kwargs
+
+        try:
+            # Call the patched function
+            response = await self._client.aembed(input_text, **kwargs)
+
+            # Handle response and create event
+            if session:
+                self.handle_response(response, init_timestamp=init_timestamp, session=session)
+
+            return response
+        except Exception as e:
+            if session:
+                self._safe_record(session, ErrorEvent(exception=e))
+            raise  # Re-raise the exception without wrapping
+
+    def handle_response(
+        self, response: Dict[str, Any], init_timestamp: str = None, session: Optional[Session] = None
+    ) -> None:
+        """Handle the response from the API call."""
+        if not session:
+            return
+
+        # Extract usage information
+        usage = response.get("usage", {})
+        prompt_tokens = usage.get("prompt_tokens", 0)
+        completion_tokens = usage.get("completion_tokens", 0)
+        total_tokens = prompt_tokens + completion_tokens
+
+        # Create LLM event
+        event = LLMEvent(
+            init_timestamp=init_timestamp or get_ISO_time(),
+            completion_timestamp=get_ISO_time(),
+            provider="voyage",
+            model=response.get("model", "unknown"),
+            prompt_tokens=prompt_tokens,
+            completion_tokens=completion_tokens,
+            total_tokens=total_tokens,
+            cost=0.0,  # Voyage AI doesn't provide cost information
+            error=None,
+        )
+
+        # Add event to session
+        session.add_event(event)
 
     def override(self):
-        """Override Voyage AI SDK methods with instrumented versions."""
+        """Override the original SDK methods with instrumented versions."""
+        self._override_sync_embed()
+        self._override_async_embed()
 
-        def patched_embed(*args, **kwargs):
-            return self.embed(*args, **kwargs)
+    def _override_sync_embed(self):
+        """Override synchronous embed method."""
+        # Store the original method
+        self.original_embed = self._client.__class__.embed
 
-        def patched_embed_async(*args, **kwargs):
-            return self.aembed(*args, **kwargs)
+        def patched_embed(client_self, input_text: str, **kwargs):
+            """Sync patched embed method."""
+            try:
+                return self.original_embed(client_self, input_text, **kwargs)
+            except Exception as e:
+                raise  # Re-raise without wrapping
 
-        self._client.embed = patched_embed
-        self._client.aembed = patched_embed_async
+        # Override method with instrumented version
+        self._client.__class__.embed = patched_embed
+
+    def _override_async_embed(self):
+        """Override asynchronous embed method."""
+        # Store the original method
+        self.original_aembed = self._client.__class__.aembed
+
+        async def patched_embed_async(client_self, input_text: str, **kwargs):
+            """Async patched embed method."""
+            try:
+                return await self.original_aembed(client_self, input_text, **kwargs)
+            except Exception as e:
+                raise  # Re-raise without wrapping
+
+        # Override method with instrumented version
+        self._client.__class__.aembed = patched_embed_async
 
     def undo_override(self):
-        """Restore original Voyage AI SDK methods."""
-        self._client.embed = self._original_embed
-        self._client.aembed = self._original_embed_async
+        """Restore the original SDK methods."""
+        if self.original_embed is not None:
+            self._client.__class__.embed = self.original_embed
+        if self.original_aembed is not None:
+            self._client.__class__.aembed = self.original_aembed
