@@ -51,9 +51,12 @@ From here, you have a number of ways you can interact with the CamelAI API!
 
 ## Simple Example; Creating a Bladewolf AI
 
-In this example, we use a csv file to short tune an LLM! We make it sounds like Bladewolf from MGR, before having it give us information.
+In this example, we use a csv file to short tune an LLM! We make it sounds like Bladewolf from MGR, before having it give us information. 
 
 [Access the Journal By Clicking Here](./camelai-simple-example.ipynb).
+
+> [!NOTE]
+> You need the Bladewolf Training CSV for this, you can find it [here](./Bladewolf-Training-Data.csv).
 
 ## Tool Example; Apex Legends Internet Search
 
