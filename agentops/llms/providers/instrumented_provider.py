@@ -1,8 +1,8 @@
 from abc import ABC, abstractmethod
 from typing import Optional
 
-from ..session import Session
-from ..event import LLMEvent
+from agentops.session import Session
+from agentops.event import LLMEvent
 
 
 class InstrumentedProvider(ABC):

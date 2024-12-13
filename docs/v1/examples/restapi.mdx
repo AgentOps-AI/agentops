@@ -26,18 +26,13 @@ mode: "wide"
 			```
 		</CodeGroup>
 	</Step>
-	<Step title="Install Crew from the AgentOps fork">
-		<Warning>
-			At this time, Crew with AgentOps integration is in pre-release. In the interim, an official fork has been
-			made available. After official support is released, this fork will be deprecated and developers will
-			be encouraged to use the core Crew SDK.
-		</Warning>
+	<Step title="Install Crew with AgentOps">
 		<CodeGroup>
 			```bash pip
-			pip install git+https://github.com/AgentOps-AI/crewAI.git@main
+			pip install 'crewai[agentops]'
 			```
 			```bash poetry
-			poetry add git+https://github.com/AgentOps-AI/crewAI.git@main
+			poetry add 'crewai[agentops]'
 			```
 		</CodeGroup>
 	</Step>
@@ -85,7 +80,7 @@ mode: "wide"
 		</Tip>
 		<div/>{/* Intentionally blank div for newline */}
 		<Frame type="glass" caption="Clickable link to session">
-			<img height="200" src="https://github.com/AgentOps-AI/agentops/blob/cf67191f13e0e2a09446a61b7393e1810b3eee95/docs/images/link-to-session.gif?raw=true" />
+			<img height="200" src="https://github.com/AgentOps-AI/agentops/blob/main/docs/images/link-to-session.gif?raw=true" />
 		</Frame>
 	</Step>
 </Steps>
