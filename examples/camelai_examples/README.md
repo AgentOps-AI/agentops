@@ -56,7 +56,8 @@ In this example, we use a csv file to short tune an LLM! We make it sounds like 
 [Access the Journal By Clicking Here](./camelai-simple-example.ipynb).
 
 > [!NOTE]  
-> You need the Bladewolf Training CSV for this; you can find it [here](./Bladewolf_Training_Data_Sheet1.csv)!
+> You need the Bladewolf Training CSV for this; you can find it [here](./Bladewolf%20Training%20Data%20-%20Sheet1.csv).
+
 
 
 
