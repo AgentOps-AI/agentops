@@ -552,7 +552,7 @@ agentops.init(AGENTOPS_API_KEY, default_tags=["CAMEL X AgentOps Single Agent wit
 ```
 </details>
 
-[You can find usage examples here!](examples/camelai_examples/camelaiguide.md).
+[You can find usage examples here!](examples/camelai_examples/README.md).
 
 
 
