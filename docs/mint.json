@@ -17,7 +17,7 @@
     "anchors": {
       "from": "#D1E5F7",
       "to": "#a9bed4"
-      
+
     }
   },
   "topbarCtaButton": {
@@ -95,6 +95,7 @@
         "v1/integrations/groq",
         "v1/integrations/langchain",
         "v1/integrations/llama_stack",
+        "v1/integrations/llamaindex",
         "v1/integrations/litellm",
         "v1/integrations/mistral",
         "v1/integrations/multion",
