@@ -1,0 +1,124 @@
+---
+title: xAI
+description: "Observe the power of Grok and Grok Vision with AgentOps"
+---
+
+import CodeTooltip from '/snippets/add-code-tooltip.mdx'
+import EnvTooltip from '/snippets/add-env-tooltip.mdx'
+
+[xAI](https://x.ai) develops the Grok and Grok Vision models. Explore their developer docs [here](https://docs.x.ai/docs).
+
+<Steps>
+  <Step title="Install the AgentOps SDK">
+    <CodeGroup>
+      ```bash pip 
+      pip install agentops
+      ```
+      ```bash poetry
+      poetry add agentops
+      ```
+    </CodeGroup>
+  </Step>
+  <Step title="Install XAI libraries">
+    <Note>
+      xAI models can be accessed via OpenAI or Anthropic clients.
+    </Note>
+    To install the OpenAI client, run:
+    <CodeGroup>
+      ```bash pip
+      pip install openai
+      ```
+      ```bash poetry
+      poetry add openai
+      ```
+    </CodeGroup>
+    To install the Anthropic client, run:
+    <CodeGroup>
+      ```bash pip
+      pip install anthropic
+      ```
+      ```bash poetry
+      poetry add anthropic
+      ```
+    </CodeGroup>
+  </Step>
+  <Step title="Add AgentOps to your code">
+    <CodeTooltip/>
+    <CodeGroup>
+      ```python python
+      import agentops
+      
+      agentops.init(<INSERT YOUR API KEY HERE>)
+
+      # Your code here...
+
+      agentops.end_session("Success")
+      ```
+    </CodeGroup>
+    <EnvTooltip />
+      <CodeGroup>
+        ```python .env
+        AGENTOPS_API_KEY=<YOUR API KEY>
+        ```
+      </CodeGroup>
+      Read more about environment variables in [Advanced Configuration](/v1/usage/advanced-configuration)
+  </Step>
+  <Step title="Run your Analysis">
+    Execute your program and visit [app.agentops.ai/drilldown](https://app.agentops.ai/drilldown) to observe your XAI analysis! 🔍
+    <Tip>
+      AgentOps automatically tracks your XAI metrics and visualizations in the Dashboard
+    </Tip>
+  </Step>
+</Steps>
+
+## Full Examples
+
+<CodeGroup>
+```python openai
+from openai import OpenAI
+
+XAI_API_KEY = "you xai api key"
+client = OpenAI(
+    api_key=XAI_API_KEY,
+    base_url="https://api.x.ai/v1",
+)
+
+completion = client.chat.completions.create(
+    model="grok-beta",
+    messages=[
+        {"role": "system", "content": "You are Grok, a chatbot inspired by the Hitchhikers Guide to the Galaxy."},
+        {"role": "user", "content": "What is the meaning of life, the universe, and everything?"},
+    ],
+)
+
+print(completion.choices[0].message)
+```
+
+```python anthropic
+from anthropic import Anthropic
+
+XAI_API_KEY = "you xai api key"
+client = Anthropic(
+    api_key=XAI_API_KEY,
+    base_url="https://api.x.ai",
+)
+message = client.messages.create(
+    model="grok-beta",
+    max_tokens=128,
+    system="You are Grok, a chatbot inspired by the Hitchhiker's Guide to the Galaxy.",
+    messages=[
+        {
+            "role": "user",
+            "content": "What is the meaning of life, the universe, and everything?",
+        },
+    ],
+)
+print(message.content)
+```
+</CodeGroup>
+
+<script type="module" src="/scripts/github_stars.js"></script>
+<script type="module" src="/scripts/scroll-img-fadein-animation.js"></script>
+<script type="module" src="/scripts/button_heartbeat_animation.js"></script>
+<script type="css" src="/styles/styles.css"></script>
+<script type="module" src="/scripts/adjust_api_dynamically.js"></script>

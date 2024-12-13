@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "agentops"
-version = "0.3.20"
+version = "0.3.21"
 authors = [
   { name="Alex Reibman", email="areibman@gmail.com" },
   { name="Shawn Qiu", email="siyangqiu@gmail.com" },
@@ -29,12 +29,6 @@ dependencies = [
     "opentelemetry-exporter-otlp-proto-http>=1.22.0,<2.0.0", # For OTLPSpanExporter
 ]
 
-[project.optional-dependencies]
-langchain = [
-    "langchain==0.2.14; python_version >= '3.8.1'"
-]
-
-
 [dependency-groups]
 dev = [
     "pytest==7.4.0",
@@ -46,11 +40,14 @@ dev = [
     "requests_mock==1.11.0",
     "ruff",
     "vcrpy>=6.0.0; python_version >= '3.8'"
-]
-
-
+ ]
 ci = [
     "tach~=0.9",
+]
+
+[project.optional-dependencies]
+langchain = [
+    "langchain==0.2.14; python_version >= '3.8.1'"
 ]
 
 
