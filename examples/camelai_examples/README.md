@@ -72,10 +72,10 @@ In this example, we look at the tool system within more depth! We will do a sear
 
 
 > [!NOTE]
-> If you want to use the tools system, be sure to check their website to find a comprehensive list of the different tools CamelAI supports!
+> If you want to use the tools system, be sure to check their website to find a comprehensive list of the different tools CamelAI supports! [You can find the tools available here!](https://docs.camel-ai.org/key_modules/tools.html#passing-tools-to-chatagent)
 
 
-[You can find the tools available here!](https://docs.camel-ai.org/key_modules/tools.html#passing-tools-to-chatagent)
+
 
 
 
