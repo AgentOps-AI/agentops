@@ -535,18 +535,17 @@ pip install agentops
 ```
 
 ```python python
-# Prompt for the OpenAI API key securely
-openai_api_key = getpass('Enter your API key: ')
-os.environ["OPENAI_API_KEY"] = openai_api_key
+#Import Dependencies
+import agentops
+import os
+from getpass import getpass
+from dotenv import load_dotenv
 
-# Prompt for the AgentOps API key securely
-agentops_api_key = getpass('Enter your API key: ')
-os.environ["AGENTOPS_API_KEY"] = agentops_api_key
+#Set Keys
+load_dotenv()
+openai_api_key = os.getenv("OPENAI_API_KEY") or "<your openai key here>"
+agentops_api_key = os.getenv("AGENTOPS_API_KEY") or "<your agentops key here>"
 
-
-# Beginning of program's code (i.e. main.py, __init__.py)
-AGENTOPS_API_KEY = os.getenv("AGENTOPS_API_KEY")
-agentops.init(AGENTOPS_API_KEY, default_tags=["CAMEL X AgentOps Single Agent with Tool Example"])
 
 
 ```
