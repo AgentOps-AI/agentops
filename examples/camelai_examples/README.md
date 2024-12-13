@@ -26,18 +26,15 @@ You can get CamelAI's API working with a few lines of code!
 import agentops
 import os
 from getpass import getpass
+from dotenv import load_dotenv
 ```
 
 ### 3. Set your API keys
 
 ```python
-# Prompt for the OpenAI API key securely
-openai_api_key = getpass('Enter your API key: ')
-os.environ["OPENAI_API_KEY"] = openai_api_key
-
-# Prompt for the AgentOps API key securely
-agentops_api_key = getpass('Enter your API key: ')
-os.environ["AGENTOPS_API_KEY"] = agentops_api_key
+load_dotenv()
+openai_api_key = os.getenv("OPENAI_API_KEY") or "<your openai key here>"
+agentops_api_key = os.getenv("AGENTOPS_API_KEY") or "<your agentops key here>"
 ```
 
 From here, you have a number of ways you can interact with the CamelAI API!
