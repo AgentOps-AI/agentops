@@ -530,8 +530,8 @@ Track agents built with the CamelAI Python SDK (>=0.32.0).
   <summary>Installation</summary>
   
 ```bash
-pip install camel-ai[all]==0.2.9
-pip install agentops==0.3.10
+pip install camel-ai[all]
+pip install agentops
 ```
 
 ```python python
