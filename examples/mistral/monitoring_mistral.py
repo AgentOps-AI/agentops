@@ -15,9 +15,13 @@
 
 import asyncio
 import os
+import sys
 from mistralai import Mistral
-import agentops
 from dotenv import load_dotenv
+
+# Add parent directory to path for agentops import
+sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
+import agentops
 
 # Load environment variables
 load_dotenv()
