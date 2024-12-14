@@ -38,6 +38,12 @@ class VoyageProvider(InstrumentedProvider):
 
     def __init__(self, client=None):
         """Initialize VoyageProvider with optional client."""
+        import sys
+        import warnings
+
+        if sys.version_info < (3, 9):
+            warnings.warn("Voyage AI requires Python >=3.9. Some functionality may not work correctly.", RuntimeWarning)
+
         super().__init__(client or voyageai)
         self._provider_name = "Voyage"
         self._client = client or voyageai
@@ -110,8 +116,8 @@ class VoyageProvider(InstrumentedProvider):
         try:
             # Extract usage information
             usage = response.get("usage", {})
-            input_tokens = usage.get("input_tokens", 0)
-            output_tokens = 0  # Embeddings don't have output tokens
+            prompt_tokens = usage.get("input_tokens", 0)
+            completion_tokens = 0  # Embeddings don't have completion tokens
 
             # Extract embedding data safely
             embeddings = []
@@ -120,20 +126,18 @@ class VoyageProvider(InstrumentedProvider):
             elif "embeddings" in response:
                 embeddings = response.get("embeddings", [])
 
-            # Create LLM event with minimal necessary data
+            # Create LLM event with correct format
             event = LLMEvent(
                 init_timestamp=init_timestamp or get_ISO_time(),
                 end_timestamp=get_ISO_time(),
-                type="llms",
-                model=response.get("model", "default"),
-                input_tokens=input_tokens,
-                output_tokens=output_tokens,
-                cost=0.0,
-                input=input_text,
-                output={"type": "embedding", "data": embeddings[0] if embeddings else []},
-                metadata={"text": input_text},
-                result={"usage": {"input_tokens": input_tokens}},
-                agent_id=check_call_stack_for_agent_id(),
+                model=response.get("model", "voyage-01"),
+                prompt=input_text,
+                prompt_tokens=prompt_tokens,
+                completion={"type": "embedding", "vector": embeddings[0] if embeddings else []},
+                completion_tokens=completion_tokens,
+                cost=0.0,  # Voyage AI doesn't provide cost information
+                params={"input_text": input_text},
+                returns={"usage": usage, "model": response.get("model", "voyage-01"), "data": response.get("data", [])},
             )
 
             session.record(event)
@@ -141,9 +145,7 @@ class VoyageProvider(InstrumentedProvider):
             error_event = ErrorEvent(
                 exception=e,
                 trigger_event=LLMEvent(
-                    init_timestamp=init_timestamp or get_ISO_time(),
-                    input=str(input_text),
-                    metadata={"error": str(e)},
+                    init_timestamp=init_timestamp or get_ISO_time(), prompt=str(input_text), model="voyage-01"
                 ),
             )
             self._safe_record(session, error_event)

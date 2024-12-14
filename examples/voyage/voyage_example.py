@@ -60,27 +60,45 @@ class MockSession:
 
 def main():
     """Run the example with proper error handling."""
-    # Initialize clients
-    ao_client = AgentopsClient()
+    # Initialize clients with proper API key checks
+    ao_client = None
+    voyage_client = None
     session = None
 
-    try:
-        session = ao_client.start_session()
-        print("Started AgentOps session")
-    except Exception as e:
-        print(f"Warning: Failed to start AgentOps session: {e}")
+    # Check for AgentOps API key
+    if "AGENTOPS_API_KEY" not in os.environ:
+        print("\nWarning: AGENTOPS_API_KEY not found in environment variables")
+        print("To use AgentOps tracking, set your API key:")
+        print("    export AGENTOPS_API_KEY='your-key-here'")
         print("Continuing with mock session for demonstration")
         session = MockSession()
-
-    # Check for API keys
-    if "AGENTOPS_API_KEY" not in os.environ:
-        print("Note: AGENTOPS_API_KEY not set. Using mock session for demonstration.")
-        if not isinstance(session, MockSession):
+    else:
+        try:
+            ao_client = AgentopsClient()
+            session = ao_client.start_session()
+            print("\nStarted AgentOps session successfully")
+        except Exception as e:
+            print(f"\nWarning: Failed to start AgentOps session: {e}")
+            print("Continuing with mock session for demonstration")
             session = MockSession()
-    if "VOYAGE_API_KEY" not in os.environ:
-        print("Note: VOYAGE_API_KEY not set. Using mock client for demonstration.")
 
-    voyage_client = MockVoyageClient()  # Use mock client for testing
+    # Check for Voyage AI API key
+    if "VOYAGE_API_KEY" not in os.environ:
+        print("\nWarning: VOYAGE_API_KEY not found in environment variables")
+        print("To use Voyage AI embeddings, set your API key:")
+        print("    export VOYAGE_API_KEY='your-key-here'")
+        print("Continuing with mock client for demonstration")
+        voyage_client = MockVoyageClient()
+    else:
+        try:
+            voyage_client = VoyageClient()
+            print("\nInitialized Voyage AI client successfully")
+        except Exception as e:
+            print(f"\nWarning: Failed to initialize Voyage AI client: {e}")
+            print("Continuing with mock client for demonstration")
+            voyage_client = MockVoyageClient()
+
+    # Initialize provider with appropriate client
     provider = VoyageProvider(client=voyage_client)
     provider.override()
 
@@ -89,20 +107,19 @@ def main():
         test_input = "Hello, Voyage!"
         result = provider.embed(test_input, session=session)
 
-        # Print event data for verification
-        print("\nEvent data:")
+        # Print event data for verification (with sensitive data redacted)
+        print("\nEvent data (redacted):")
         event_data = {
             "type": "llms",
-            "model": "default",
-            "prompt_tokens": 10,
+            "model": result.get("model", "voyage-01"),
+            "prompt_tokens": result.get("usage", {}).get("input_tokens", 0),
             "completion_tokens": 0,
             "prompt": test_input,
-            "completion": {"type": "embedding", "vector": result["data"][0]["embedding"][:5] + ["..."]},
+            "completion": {"type": "embedding", "vector": ["<vector data redacted for brevity>"]},
             "params": {"input_text": test_input},
             "returns": {
-                "usage": result["usage"],
-                "model": "default",
-                "data": [{"embedding": result["data"][0]["embedding"]}],
+                "usage": result.get("usage", {}),
+                "model": result.get("model", "voyage-01"),
             },
         }
         print(json.dumps(event_data, indent=2))
@@ -123,9 +140,8 @@ def main():
         # Clean up provider override and end session
         provider.undo_override()
         if isinstance(session, MockSession):
-            print("\nSession completed successfully!")
-            print(f"View session at: {session.session_url}")
-        elif session is not None:
+            print("\nMock session completed successfully!")
+        elif session is not None and ao_client is not None:
             try:
                 ao_client.end_session("Success", "Example completed successfully")
                 print("\nSession completed successfully!")
