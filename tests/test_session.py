@@ -635,7 +635,8 @@ class TestSessionExporter:
             def embed(self, input_text, **kwargs):
                 """Mock embed method matching Voyage API interface."""
                 return {
-                    "embeddings": [[0.1] * 1024],
+                    "data": [{"embedding": [0.1] * 1024}],  # Test data format
+                    "embeddings": [[0.2] * 1024],  # Test embeddings format
                     "usage": {"prompt_tokens": 10, "completion_tokens": 0},
                     "model": "voyage-01",
                 }
@@ -696,7 +697,12 @@ class TestSessionExporter:
             assert event.completion["type"] == "embedding"
             assert isinstance(event.completion["vector"], list)
             assert len(event.completion["vector"]) == 1024
-
+            assert event.params == {"input_text": test_input}
+            assert isinstance(event.returns, dict)
+            assert "data" in event.returns
+            assert "embeddings" in event.returns
+            assert "usage" in event.returns
+            assert "model" in event.returns
             # Verify usage information
             assert "usage" in result
             assert "prompt_tokens" in result["usage"]
@@ -744,7 +750,12 @@ class TestSessionExporter:
             assert event.completion["type"] == "embedding"
             assert isinstance(event.completion["vector"], list)
             assert len(event.completion["vector"]) == 1024
-
+            assert event.params == {"input_text": test_input}
+            assert isinstance(event.returns, dict)
+            assert "data" in event.returns
+            assert "embeddings" in event.returns
+            assert "usage" in event.returns
+            assert "model" in event.returns
             # Verify usage information
             assert "usage" in result
             assert "prompt_tokens" in result["usage"]

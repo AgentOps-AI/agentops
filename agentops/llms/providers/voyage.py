@@ -114,11 +114,9 @@ class VoyageProvider(InstrumentedProvider):
             completion_tokens = 0  # Embeddings don't have completion tokens
 
             # Extract embedding data
-            embeddings = []
-            if "data" in response and response["data"]:
-                embeddings = [response["data"][0].get("embedding", [])]
-            elif "embeddings" in response and response["embeddings"]:
-                embeddings = response["embeddings"]
+            embeddings = response.get("embeddings", [])
+            if not embeddings and "data" in response:
+                embeddings = [d.get("embedding", []) for d in response.get("data", [])]
 
             # Create LLM event with proper field values
             event = LLMEvent(
@@ -128,9 +126,9 @@ class VoyageProvider(InstrumentedProvider):
                 prompt_tokens=prompt_tokens,
                 completion_tokens=completion_tokens,
                 cost=0.0,  # Voyage AI doesn't provide cost information
-                prompt=str(input_text),  # Ensure string type
+                prompt=str(input_text),  # Use original input text
                 completion={"type": "embedding", "vector": embeddings[0] if embeddings else []},
-                params=dict(kwargs) if kwargs else {},  # Include original parameters
+                params=dict(kwargs),  # Include original parameters
                 returns=response,  # Store full response
                 agent_id=check_call_stack_for_agent_id(),
             )
