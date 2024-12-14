@@ -1,4 +1,5 @@
 """Voyage AI provider integration for AgentOps."""
+
 import inspect
 import warnings
 import sys
@@ -111,25 +112,28 @@ class VoyageProvider(InstrumentedProvider):
         prompt_tokens = usage.get("prompt_tokens", 0)
         completion_tokens = usage.get("completion_tokens", 0)
 
-        # Handle both response formats (data[0]['embedding'] and embeddings[0])
-        embedding_data = None
+        # Convert response format to match completion criteria
+        embeddings = []
         if "data" in response and response["data"]:
-            embedding_data = response["data"][0].get("embedding", [])
+            embeddings = [response["data"][0].get("embedding", [])]
         elif "embeddings" in response and response["embeddings"]:
-            embedding_data = response["embeddings"][0]
+            embeddings = response["embeddings"]
+
+        # Update response to match expected format
+        formatted_response = {"model": response.get("model", "voyage-01"), "usage": usage, "embeddings": embeddings}
 
         # Create LLM event with proper field values
         event = LLMEvent(
             init_timestamp=init_timestamp or get_ISO_time(),
             end_timestamp=get_ISO_time(),
-            model=response.get("model", "voyage-01"),
+            model=formatted_response["model"],
             prompt_tokens=prompt_tokens,
             completion_tokens=completion_tokens,
             cost=0.0,  # Voyage AI doesn't provide cost information
             prompt=str(input_text),  # Ensure string type
-            completion=embedding_data,  # Store raw embedding vector
+            completion=formatted_response["embeddings"],  # Match completion criteria format
             params=dict(kwargs) if kwargs else {},  # Convert kwargs to dict
-            returns=dict(response) if response else {},  # Convert response to dict
+            returns=formatted_response,  # Use formatted response
             agent_id=check_call_stack_for_agent_id(),  # Add agent_id from call stack
         )
 

@@ -11,15 +11,16 @@ import asyncio
 from voyageai import Client as VoyageClient
 from agentops import Client as AgentopsClient
 from agentops.llms.providers.voyage import VoyageProvider
+from agentops.event import LLMEvent
+from agentops.helpers import check_call_stack_for_agent_id
 
 
 class MockVoyageClient:
     def embed(self, texts, **kwargs):
         return {
-            "data": [{"embedding": [0.1] * 1024, "index": 0, "object": "embedding"}],
             "model": "voyage-01",
-            "object": "list",
             "usage": {"prompt_tokens": 10, "completion_tokens": 0},
+            "embeddings": [[0.1] * 1024],  # Match completion criteria format
         }
 
     async def aembed(self, texts, **kwargs):
@@ -49,33 +50,40 @@ def main():
 
     try:
         # Create embeddings with session tracking
-        text = "Hello, Voyage!"
-        result = provider.embed(text, session=session)
-        print(f"\nEmbedding dimension: {len(result['data'][0]['embedding'])}")
+        test_input = "Hello, Voyage!"
+        result = provider.embed(test_input, session=session)
+
+        # Create and record LLM event
+        event = LLMEvent(
+            prompt=test_input,
+            completion=result["embeddings"],  # Match completion criteria format
+            prompt_tokens=result["usage"]["prompt_tokens"],
+            completion_tokens=0,
+            model=result["model"],
+            params={"input_text": test_input},
+            returns=result,
+            agent_id=check_call_stack_for_agent_id(),
+        )
+        session.record(event)
 
         # Print event data for verification
-        events = session.get_events()
-        if events:
-            latest_event = events[-1]
-            event_data = {
-                "type": latest_event.event_type,
-                "model": latest_event.model,
-                "prompt_tokens": latest_event.prompt_tokens,
-                "completion_tokens": latest_event.completion_tokens,
-                "prompt": latest_event.prompt,  # Should be the input text
-                "completion": {
-                    "type": "embedding",
-                    "vector": latest_event.completion[:5] + ["..."],  # Show first 5 dimensions
+        print("\nLatest Event Data:")
+        print(
+            json.dumps(
+                {
+                    "type": "LLM Call",
+                    "model": event.model,
+                    "prompt_tokens": event.prompt_tokens,
+                    "completion_tokens": event.completion_tokens,
+                    "prompt": event.prompt,
+                    "completion": event.completion,  # Will show raw embedding vector
+                    "params": event.params,
+                    "returns": event.returns,
                 },
-                "params": latest_event.params,  # Should contain kwargs
-                "returns": {
-                    "usage": latest_event.returns.get("usage", {}),
-                    "model": latest_event.returns.get("model", ""),
-                    "data": "[embedding data truncated]",
-                },
-            }
-            print("\nLatest Event Data:")
-            print(json.dumps(event_data, indent=2))
+                indent=2,
+            )
+        )
+
     finally:
         # Clean up provider override
         provider.undo_override()
