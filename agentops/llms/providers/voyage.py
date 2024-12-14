@@ -55,7 +55,9 @@ class VoyageProvider(InstrumentedProvider):
 
             # Handle response and create event
             if session:
-                self.handle_response(response, init_timestamp=init_timestamp, session=session)
+                self.handle_response(
+                    response, init_timestamp=init_timestamp, session=session, input_text=input_text, **kwargs
+                )
 
             return response
         except Exception as e:
@@ -74,7 +76,9 @@ class VoyageProvider(InstrumentedProvider):
 
             # Handle response and create event
             if session:
-                self.handle_response(response, init_timestamp=init_timestamp, session=session)
+                self.handle_response(
+                    response, init_timestamp=init_timestamp, session=session, input_text=input_text, **kwargs
+                )
 
             return response
         except Exception as e:
@@ -83,9 +87,22 @@ class VoyageProvider(InstrumentedProvider):
             raise  # Re-raise the exception without wrapping
 
     def handle_response(
-        self, response: Dict[str, Any], init_timestamp: str = None, session: Optional[Session] = None
+        self,
+        response: Dict[str, Any],
+        init_timestamp: str = None,
+        session: Optional[Session] = None,
+        input_text: str = "",
+        **kwargs,
     ) -> None:
-        """Handle the response from the API call."""
+        """Handle the response from Voyage AI API and record event data.
+
+        Args:
+            response: The API response containing embedding data and usage information
+            init_timestamp: Optional timestamp for event initialization
+            session: Optional session for event recording
+            input_text: The original input text used for embedding
+            **kwargs: Additional keyword arguments from the original request
+        """
         if not session:
             return
 
@@ -93,23 +110,29 @@ class VoyageProvider(InstrumentedProvider):
         usage = response.get("usage", {})
         prompt_tokens = usage.get("prompt_tokens", 0)
         completion_tokens = usage.get("completion_tokens", 0)
-        total_tokens = prompt_tokens + completion_tokens
 
-        # Create LLM event
+        # Handle both response formats (data[0]['embedding'] and embeddings[0])
+        embedding_data = None
+        if "data" in response and response["data"]:
+            embedding_data = response["data"][0].get("embedding", [])
+        elif "embeddings" in response and response["embeddings"]:
+            embedding_data = response["embeddings"][0]
+
+        # Create LLM event with proper field values
         event = LLMEvent(
             init_timestamp=init_timestamp or get_ISO_time(),
-            completion_timestamp=get_ISO_time(),
-            provider="voyage",
-            model=response.get("model", "unknown"),
+            end_timestamp=get_ISO_time(),
+            model=response.get("model", "voyage-01"),
             prompt_tokens=prompt_tokens,
             completion_tokens=completion_tokens,
-            total_tokens=total_tokens,
             cost=0.0,  # Voyage AI doesn't provide cost information
-            error=None,
+            prompt=input_text,  # Set input text as prompt
+            completion={"embedding": embedding_data},  # Store embedding vector
+            params=kwargs,  # Include original parameters
+            returns=response,  # Store full response
         )
 
-        # Add event to session
-        session.add_event(event)
+        session.record(event)
 
     def override(self):
         """Override the original SDK methods with instrumented versions."""
