@@ -26,14 +26,14 @@ import agentops
 import voyageai
 from agentops.llms.providers.voyage import VoyageProvider
 
-# Check for API keys (not required for this example as we use mock client)
+# Check for API keys
 if "AGENTOPS_API_KEY" not in os.environ:
     print("Note: AGENTOPS_API_KEY not set. Using mock session for demonstration.")
-    os.environ["AGENTOPS_API_KEY"] = "your-api-key-here"  # For demonstration only
+    print("Please set your AgentOps API key in the environment variables")
 
 if "VOYAGE_API_KEY" not in os.environ:
     print("Note: VOYAGE_API_KEY not set. Using mock client for demonstration.")
-    os.environ["VOYAGE_API_KEY"] = "mock-key-for-testing"
+    print("Please set your Voyage AI API key in the environment variables")
 
 # Initialize AgentOps client and start session
 ao_client = agentops.Client()
