@@ -613,7 +613,7 @@ class TestSessionExporter:
         from agentops.llms.providers.voyage import VoyageProvider
         from agentops.session import Session
         from agentops.config import Configuration
-        from agentops.event import LLMEvent
+        from agentops.event import LLMEvent, EventType
         from uuid import uuid4
         import json
         import requests_mock
@@ -634,7 +634,11 @@ class TestSessionExporter:
 
             def embed(self, input_text, **kwargs):
                 """Mock embed method matching Voyage API interface."""
-                return {"embeddings": [[0.1] * 1024], "usage": {"prompt_tokens": 10}, "model": "voyage-01"}
+                return {
+                    "embeddings": [[0.1] * 1024],
+                    "usage": {"prompt_tokens": 10, "completion_tokens": 0},
+                    "model": "voyage-01",
+                }
 
             async def aembed(self, input_text, **kwargs):
                 """Mock async embed method."""
@@ -667,7 +671,7 @@ class TestSessionExporter:
             result = provider.embed(test_input, session=session)
             event = LLMEvent(
                 prompt=test_input,
-                completion=result["embeddings"],
+                completion={"type": "embedding", "vector": result["embeddings"][0]},
                 prompt_tokens=result["usage"]["prompt_tokens"],
                 completion_tokens=0,
                 model=result["model"],
@@ -678,7 +682,6 @@ class TestSessionExporter:
             session.record(event)
 
             # Print event data for verification
-            print("\nEvent Data:")
             print(
                 json.dumps(
                     {
@@ -702,10 +705,21 @@ class TestSessionExporter:
             assert len(result["embeddings"]) == 1
             assert len(result["embeddings"][0]) == 1024
 
+            # Verify event data format
+            assert event.event_type == EventType.LLM.value
+            assert event.model == "voyage-01"
+            assert event.prompt == test_input
+            assert isinstance(event.completion, dict)
+            assert event.completion["type"] == "embedding"
+            assert isinstance(event.completion["vector"], list)
+            assert len(event.completion["vector"]) == 1024
+
             # Verify usage information
             assert "usage" in result
             assert "prompt_tokens" in result["usage"]
             assert result["usage"]["prompt_tokens"] == 10
+            assert "completion_tokens" in result["usage"]
+            assert result["usage"]["completion_tokens"] == 0
 
             # Verify model information
             assert "model" in result
@@ -721,7 +735,7 @@ class TestSessionExporter:
             # Create and record LLM event for async embedding
             event = LLMEvent(
                 prompt=test_input,
-                completion=result["embeddings"],
+                completion={"type": "embedding", "vector": result["embeddings"][0]},
                 prompt_tokens=result["usage"]["prompt_tokens"],
                 completion_tokens=0,
                 model=result["model"],
@@ -755,11 +769,21 @@ class TestSessionExporter:
             assert isinstance(result["embeddings"], list)
             assert len(result["embeddings"]) == 1
             assert len(result["embeddings"][0]) == 1024
+            # Verify event data format
+            assert event.event_type == EventType.LLM.value
+            assert event.model == "voyage-01"
+            assert event.prompt == test_input
+            assert isinstance(event.completion, dict)
+            assert event.completion["type"] == "embedding"
+            assert isinstance(event.completion["vector"], list)
+            assert len(event.completion["vector"]) == 1024
 
             # Verify usage information
             assert "usage" in result
             assert "prompt_tokens" in result["usage"]
             assert result["usage"]["prompt_tokens"] == 10
+            assert "completion_tokens" in result["usage"]
+            assert result["usage"]["completion_tokens"] == 0
 
             # Verify model information
             assert "model" in result
@@ -839,6 +863,7 @@ class TestSessionExporter:
                 VoyageProvider()
                 assert len(w) == 1
                 assert "requires Python >=3.9" in str(w[0].message)
+                assert isinstance(w[0].message, UserWarning)  # Verify warning type
 
         # Test with Python 3.9 (no warning)
         with patch("sys.version_info", (3, 9)):

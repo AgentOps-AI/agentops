@@ -26,21 +26,25 @@ import agentops
 import voyageai
 from agentops.llms.providers.voyage import VoyageProvider
 
-# Set up AgentOps client with development key
-os.environ["AGENTOPS_API_KEY"] = os.getenv("AGENTOPS_API_KEY", "your-api-key-here")
-ao_client = agentops.Client()
+# Check for required API keys
+if "AGENTOPS_API_KEY" not in os.environ:
+    print("Warning: AGENTOPS_API_KEY not set")
+    print("Please set your AgentOps API key in the environment")
+    raise RuntimeError("Missing AGENTOPS_API_KEY")
+
+if "VOYAGE_API_KEY" not in os.environ:
+    print("Warning: VOYAGE_API_KEY not set")
+    print("Please set your Voyage AI API key in the environment")
+    raise RuntimeError("Missing VOYAGE_API_KEY")
 
 # Initialize AgentOps client and start session
+ao_client = agentops.Client()
 session = ao_client.initialize()
 if session is None:
     print("Failed to initialize AgentOps client")
     raise RuntimeError("AgentOps client initialization failed")
 
-# Set up Voyage AI client (requires API key)
-if "VOYAGE_API_KEY" not in os.environ:
-    print("Warning: VOYAGE_API_KEY not set. Using placeholder key for demonstration.")
-    os.environ["VOYAGE_API_KEY"] = "your-api-key-here"
-
+# Initialize Voyage AI client
 try:
     voyage_client = voyageai.Client()
     provider = VoyageProvider(voyage_client)

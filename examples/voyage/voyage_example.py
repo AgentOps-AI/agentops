@@ -40,6 +40,12 @@ def main():
         def get_events(self):
             return self.events
 
+    # Check for API keys (not required for this example as we use mock client)
+    if "AGENTOPS_API_KEY" not in os.environ:
+        print("Note: AGENTOPS_API_KEY not set. Using mock session for demonstration.")
+    if "VOYAGE_API_KEY" not in os.environ:
+        print("Note: VOYAGE_API_KEY not set. Using mock client for demonstration.")
+
     voyage_client = MockVoyageClient()  # Use mock client for testing
     ao_client = AgentopsClient()
     session = MockSession()  # Use mock session for offline testing
@@ -53,32 +59,19 @@ def main():
         test_input = "Hello, Voyage!"
         result = provider.embed(test_input, session=session)
 
-        # Create and record LLM event
-        event = LLMEvent(
-            prompt=test_input,
-            completion=result["embeddings"],  # Match completion criteria format
-            prompt_tokens=result["usage"]["prompt_tokens"],
-            completion_tokens=0,
-            model=result["model"],
-            params={"input_text": test_input},
-            returns=result,
-            agent_id=check_call_stack_for_agent_id(),
-        )
-        session.record(event)
-
         # Print event data for verification
         print("\nLatest Event Data:")
         print(
             json.dumps(
                 {
-                    "type": "LLM Call",
-                    "model": event.model,
-                    "prompt_tokens": event.prompt_tokens,
-                    "completion_tokens": event.completion_tokens,
-                    "prompt": event.prompt,
-                    "completion": event.completion,  # Will show raw embedding vector
-                    "params": event.params,
-                    "returns": event.returns,
+                    "type": "llms",
+                    "model": result["model"],
+                    "prompt_tokens": result["usage"]["prompt_tokens"],
+                    "completion_tokens": 0,
+                    "prompt": test_input,
+                    "completion": {"type": "embedding", "vector": result["embeddings"][0]},
+                    "params": {"input_text": test_input},
+                    "returns": result,
                 },
                 indent=2,
             )
