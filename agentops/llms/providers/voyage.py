@@ -110,26 +110,29 @@ class VoyageProvider(InstrumentedProvider):
         try:
             # Extract usage information
             usage = response.get("usage", {})
-            prompt_tokens = usage.get("prompt_tokens", 0)
-            completion_tokens = 0  # Embeddings don't have completion tokens
+            input_tokens = usage.get("input_tokens", 0)
+            output_tokens = 0  # Embeddings don't have output tokens
 
-            # Extract embedding data
-            embeddings = response.get("embeddings", [])
-            if not embeddings and "data" in response:
+            # Extract embedding data safely
+            embeddings = []
+            if "data" in response:
                 embeddings = [d.get("embedding", []) for d in response.get("data", [])]
+            elif "embeddings" in response:
+                embeddings = response.get("embeddings", [])
 
-            # Create LLM event with proper field values
+            # Create LLM event with minimal necessary data
             event = LLMEvent(
                 init_timestamp=init_timestamp or get_ISO_time(),
                 end_timestamp=get_ISO_time(),
-                model=response.get("model", "voyage-01"),
-                prompt_tokens=prompt_tokens,
-                completion_tokens=completion_tokens,
-                cost=0.0,  # Voyage AI doesn't provide cost information
-                prompt=str(input_text),  # Use original input text
-                completion={"type": "embedding", "vector": embeddings[0] if embeddings else []},
-                params=dict(kwargs),  # Include original parameters
-                returns=response,  # Store full response
+                type="llms",
+                model=response.get("model", "default"),
+                input_tokens=input_tokens,
+                output_tokens=output_tokens,
+                cost=0.0,
+                input=input_text,
+                output={"type": "embedding", "data": embeddings[0] if embeddings else []},
+                metadata={"text": input_text},
+                result={"usage": {"input_tokens": input_tokens}},
                 agent_id=check_call_stack_for_agent_id(),
             )
 
@@ -139,18 +142,12 @@ class VoyageProvider(InstrumentedProvider):
                 exception=e,
                 trigger_event=LLMEvent(
                     init_timestamp=init_timestamp or get_ISO_time(),
-                    prompt=str(input_text),
-                    params=kwargs,
+                    input=str(input_text),
+                    metadata={"error": str(e)},
                 ),
             )
             self._safe_record(session, error_event)
-            kwargs_str = pprint.pformat(kwargs)
-            response_str = pprint.pformat(response)
-            logger.warning(
-                f"Unable to parse Voyage AI embedding response. Skipping upload to AgentOps\n"
-                f"response:\n {response_str}\n"
-                f"kwargs:\n {kwargs_str}\n"
-            )
+            logger.warning("Unable to process embedding response")
 
     def override(self):
         """Override the original SDK methods with instrumented versions."""
