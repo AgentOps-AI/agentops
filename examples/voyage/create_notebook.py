@@ -27,7 +27,7 @@ import voyageai
 from agentops.llms.providers.voyage import VoyageProvider
 
 # Set up AgentOps client with development key
-os.environ["AGENTOPS_API_KEY"] = "8b95388c-ee56-499d-a940-c1d6a2ba7f0c"
+os.environ["AGENTOPS_API_KEY"] = "placeholder-key-for-example"
 ao_client = agentops.Client()
 
 # Initialize AgentOps client and start session

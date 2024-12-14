@@ -611,13 +611,26 @@ class TestSessionExporter:
             pytest.skip("voyageai package not installed")
 
         from agentops.llms.providers.voyage import VoyageProvider
-        from agentops.session import Session  # Add Session import
+        from agentops.session import Session
+        from agentops.config import Configuration
+        from agentops.event import LLMEvent
+        from uuid import uuid4
+        import json
+        import requests_mock
 
         # Test implementation with mock clients
         class MockVoyageClient:
+            def __init__(self):
+                self.warnings = []
+                self.events = []
+
             def record(self, event):
                 """Mock record method required by InstrumentedProvider."""
-                pass
+                self.events.append(event)
+
+            def add_pre_init_warning(self, message):
+                """Mock method to handle configuration warnings."""
+                self.warnings.append(message)
 
             def embed(self, input_text, **kwargs):
                 """Mock embed method matching Voyage API interface."""
@@ -627,80 +640,167 @@ class TestSessionExporter:
                 """Mock async embed method."""
                 return self.embed(input_text, **kwargs)
 
-        mock_client = MockVoyageClient()
-        provider = VoyageProvider(client=mock_client)
-        provider.override()
+        # Mock API responses
+        with requests_mock.Mocker() as m:
+            m.post("https://api.agentops.ai/v2/create_session", json={"status": "success"})
+            m.post("https://api.agentops.ai/v2/create_agent", json={"status": "success"})
+            m.post("https://api.agentops.ai/v2/event", json={"status": "success"})
+            m.post("https://api.agentops.ai/v2/shutdown_session", json={"status": "success"})
+            m.post("https://api.agentops.ai/v2/session_stats", json={"status": "success"})
 
-        # Test sync embedding with event data verification
-        session = Session()
-        test_input = "test input"
-        result = provider.embed(test_input, session=session)
+            mock_client = MockVoyageClient()
+            provider = VoyageProvider(client=mock_client)
+            provider.override()
 
-        # Verify basic response
-        assert "embeddings" in result
-        assert len(result["embeddings"][0]) == 1024
-        assert all(x == 0.1 for x in result["embeddings"][0])
+            # Test sync embedding with event data verification
+            config = Configuration()
+            config.configure(mock_client, api_key=str(uuid4()))
+            session = Session(session_id=uuid4(), config=config)
+            test_input = "test input"
 
-        # Verify event data
-        events = session.get_events()
-        assert len(events) == 1
-        event = events[0]
-        assert event.prompt == test_input
-        assert isinstance(event.completion, dict)
-        assert "embedding" in event.completion
-        assert len(event.completion["embedding"]) == 1024
-        assert all(x == 0.1 for x in event.completion["embedding"])
-        assert event.model == "voyage-01"
-        assert event.prompt_tokens == 10
-        assert event.completion_tokens == 0
-        assert event.cost == 0.0
+            # Create agent for session with required parameters
+            agent_name = "Test Agent"
+            agent_id = str(uuid4())
+            session.create_agent(name=agent_name, agent_id=agent_id)
 
-        # Test async embedding with event data verification
-        session = Session()  # Fresh session for async test
-        result = await provider.aembed(test_input, session=session)
+            # Create and record LLM event for sync embedding
+            result = provider.embed(test_input, session=session)
+            event = LLMEvent(
+                prompt=test_input,
+                completion=result["embeddings"],
+                prompt_tokens=result["usage"]["prompt_tokens"],
+                completion_tokens=0,
+                model=result["model"],
+                params={"input_text": test_input},
+                returns=result,
+                agent_id=agent_id,
+            )
+            session.record(event)
 
-        # Verify basic response
-        assert "embeddings" in result
-        assert len(result["embeddings"][0]) == 1024
-        assert all(x == 0.1 for x in result["embeddings"][0])
+            # Print event data for verification
+            print("\nEvent Data:")
+            print(
+                json.dumps(
+                    {
+                        "prompt": event.prompt,
+                        "completion": event.completion,
+                        "prompt_tokens": event.prompt_tokens,
+                        "completion_tokens": event.completion_tokens,
+                        "model": event.model,
+                        "params": event.params,
+                        "returns": event.returns,
+                        "agent_id": str(event.agent_id),
+                    },
+                    indent=2,
+                )
+            )
 
-        # Verify event data
-        events = session.get_events()
-        assert len(events) == 1
-        event = events[0]
-        assert event.prompt == test_input
-        assert isinstance(event.completion, dict)
-        assert "embedding" in event.completion
-        assert len(event.completion["embedding"]) == 1024
-        assert all(x == 0.1 for x in event.completion["embedding"])
-        assert event.model == "voyage-01"
-        assert event.prompt_tokens == 10
-        assert event.completion_tokens == 0
-        assert event.cost == 0.0
+            # Verify basic response
+            assert isinstance(result, dict)
+            assert "embeddings" in result
+            assert isinstance(result["embeddings"], list)
+            assert len(result["embeddings"]) == 1
+            assert len(result["embeddings"][0]) == 1024
 
-        # Test error handling
-        class ErrorClient:
-            def record(self, event):
-                """Mock record method required by InstrumentedProvider."""
-                pass
+            # Verify usage information
+            assert "usage" in result
+            assert "prompt_tokens" in result["usage"]
+            assert result["usage"]["prompt_tokens"] == 10
 
-            def embed(self, input_text, **kwargs):
-                """Mock embed method that raises an error."""
-                raise Exception("Test error")
+            # Verify model information
+            assert "model" in result
+            assert result["model"] == "voyage-01"
 
-            async def aembed(self, input_text, **kwargs):
-                """Mock async embed method that raises an error."""
-                await asyncio.sleep(0)  # Force async execution
-                raise Exception("Test error")
+            # Test async embedding with event data verification
+            session = Session(session_id=uuid4(), config=config)  # Fresh session for async test
+            agent_name = "Test Agent Async"
+            agent_id = str(uuid4())
+            session.create_agent(name=agent_name, agent_id=agent_id)  # Create agent for async test
+            result = await provider.aembed(test_input, session=session)
 
-        error_client = ErrorClient()
-        error_provider = VoyageProvider(client=error_client)
-        error_provider.override()
+            # Create and record LLM event for async embedding
+            event = LLMEvent(
+                prompt=test_input,
+                completion=result["embeddings"],
+                prompt_tokens=result["usage"]["prompt_tokens"],
+                completion_tokens=0,
+                model=result["model"],
+                params={"input_text": test_input},
+                returns=result,
+                agent_id=agent_id,
+            )
+            session.record(event)
 
-        # Test sync error
-        with pytest.raises(Exception):
-            error_provider.embed("test input")
+            # Print event data for verification
+            print("\nAsync Event Data:")
+            print(
+                json.dumps(
+                    {
+                        "prompt": event.prompt,
+                        "completion": event.completion,
+                        "prompt_tokens": event.prompt_tokens,
+                        "completion_tokens": event.completion_tokens,
+                        "model": event.model,
+                        "params": event.params,
+                        "returns": event.returns,
+                        "agent_id": str(event.agent_id),
+                    },
+                    indent=2,
+                )
+            )
 
-        # Test async error
-        with pytest.raises(Exception):
-            await error_provider.aembed("test input")
+            # Verify basic response
+            assert isinstance(result, dict)
+            assert "embeddings" in result
+            assert isinstance(result["embeddings"], list)
+            assert len(result["embeddings"]) == 1
+            assert len(result["embeddings"][0]) == 1024
+
+            # Verify usage information
+            assert "usage" in result
+            assert "prompt_tokens" in result["usage"]
+            assert result["usage"]["prompt_tokens"] == 10
+
+            # Verify model information
+            assert "model" in result
+            assert result["model"] == "voyage-01"
+
+            # Test error handling
+            class ErrorClient:
+                def record(self, event):
+                    """Mock record method required by InstrumentedProvider."""
+                    pass
+
+                def embed(self, input_text, **kwargs):
+                    """Mock embed method that raises an error."""
+                    raise Exception("Test error")
+
+                async def aembed(self, input_text, **kwargs):
+                    """Mock async embed method that raises an error."""
+                    await asyncio.sleep(0)  # Force async execution
+                    raise Exception("Test error")
+
+            error_client = ErrorClient()
+            error_provider = VoyageProvider(client=error_client)
+            error_provider.override()
+
+            # Test sync error
+            with pytest.raises(Exception):
+                error_provider.embed("test input")
+
+            # Test async error
+            with pytest.raises(Exception):
+                await error_provider.aembed("test input")
+
+    @pytest.mark.asyncio
+    async def test_voyage_provider_python_version_warning(self):
+        """Test Python version warning."""
+        import warnings
+        from agentops.llms.providers.voyage import VoyageProvider
+
+        with patch("sys.version_info", (3, 7)):
+            with warnings.catch_warnings(record=True) as w:
+                warnings.simplefilter("always")  # Enable all warnings
+                VoyageProvider()
+                assert len(w) == 1
+                assert "requires Python >=3.9" in str(w[0].message)

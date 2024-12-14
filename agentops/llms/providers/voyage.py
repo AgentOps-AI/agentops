@@ -126,10 +126,12 @@ class VoyageProvider(InstrumentedProvider):
             prompt_tokens=prompt_tokens,
             completion_tokens=completion_tokens,
             cost=0.0,  # Voyage AI doesn't provide cost information
-            prompt=input_text,  # Set input text as prompt
-            completion={"embedding": embedding_data},  # Store embedding vector
-            params=kwargs,  # Include original parameters
-            returns=response,  # Store full response
+            prompt=str(input_text),  # Ensure string type
+            completion={
+                "embedding": embedding_data.tolist() if hasattr(embedding_data, "tolist") else list(embedding_data)
+            },  # Convert to list
+            params=dict(kwargs) if kwargs else {},  # Convert kwargs to dict
+            returns=dict(response) if response else {},  # Convert response to dict
         )
 
         # Print event data for verification
