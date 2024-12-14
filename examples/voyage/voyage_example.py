@@ -59,23 +59,9 @@ def main():
         test_input = "Hello, Voyage!"
         result = provider.embed(test_input, session=session)
 
-        # Print event data for verification
-        print("\nLatest Event Data:")
-        print(
-            json.dumps(
-                {
-                    "type": "llms",
-                    "model": result["model"],
-                    "prompt_tokens": result["usage"]["prompt_tokens"],
-                    "completion_tokens": 0,
-                    "prompt": test_input,
-                    "completion": {"type": "embedding", "vector": result["embeddings"][0]},
-                    "params": {"input_text": test_input},
-                    "returns": result,
-                },
-                indent=2,
-            )
-        )
+        # Print minimal output for verification
+        print(f"Embedding dimension: {len(result['embeddings'][0])}")
+        print(f"Token usage: {result['usage']}")
 
     finally:
         # Clean up provider override

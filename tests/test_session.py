@@ -681,23 +681,6 @@ class TestSessionExporter:
             )
             session.record(event)
 
-            # Print event data for verification
-            print(
-                json.dumps(
-                    {
-                        "prompt": event.prompt,
-                        "completion": event.completion,
-                        "prompt_tokens": event.prompt_tokens,
-                        "completion_tokens": event.completion_tokens,
-                        "model": event.model,
-                        "params": event.params,
-                        "returns": event.returns,
-                        "agent_id": str(event.agent_id),
-                    },
-                    indent=2,
-                )
-            )
-
             # Verify basic response
             assert isinstance(result, dict)
             assert "embeddings" in result
@@ -746,22 +729,6 @@ class TestSessionExporter:
             session.record(event)
 
             # Print event data for verification
-            print("\nAsync Event Data:")
-            print(
-                json.dumps(
-                    {
-                        "prompt": event.prompt,
-                        "completion": event.completion,
-                        "prompt_tokens": event.prompt_tokens,
-                        "completion_tokens": event.completion_tokens,
-                        "model": event.model,
-                        "params": event.params,
-                        "returns": event.returns,
-                        "agent_id": str(event.agent_id),
-                    },
-                    indent=2,
-                )
-            )
 
             # Verify basic response
             assert isinstance(result, dict)
