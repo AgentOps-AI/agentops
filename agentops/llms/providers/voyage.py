@@ -127,32 +127,13 @@ class VoyageProvider(InstrumentedProvider):
             completion_tokens=completion_tokens,
             cost=0.0,  # Voyage AI doesn't provide cost information
             prompt=str(input_text),  # Ensure string type
-            completion={
-                "embedding": embedding_data.tolist() if hasattr(embedding_data, "tolist") else list(embedding_data)
-            },  # Convert to list
+            completion=embedding_data,  # Store raw embedding vector
             params=dict(kwargs) if kwargs else {},  # Convert kwargs to dict
             returns=dict(response) if response else {},  # Convert response to dict
+            agent_id=check_call_stack_for_agent_id(),  # Add agent_id from call stack
         )
 
-        # Print event data for verification
-        print("\nEvent Data:")
-        print(
-            json.dumps(
-                {
-                    "type": "LLM Call",
-                    "model": event.model,
-                    "prompt": event.prompt,
-                    "completion": event.completion,
-                    "params": event.params,
-                    "returns": event.returns,
-                    "prompt_tokens": event.prompt_tokens,
-                    "completion_tokens": event.completion_tokens,
-                    "cost": event.cost,
-                },
-                indent=2,
-            )
-        )
-
+        # Record the event
         session.record(event)
 
     def override(self):

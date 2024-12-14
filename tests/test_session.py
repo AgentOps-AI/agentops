@@ -767,18 +767,18 @@ class TestSessionExporter:
 
             # Test error handling
             class ErrorClient:
-                def record(self, event):
-                    """Mock record method required by InstrumentedProvider."""
-                    pass
+                """Client that raises errors for testing error handling."""
 
-                def embed(self, input_text, **kwargs):
-                    """Mock embed method that raises an error."""
-                    raise Exception("Test error")
+                def record(self, *args, **kwargs):
+                    raise ValueError("Test error")
 
-                async def aembed(self, input_text, **kwargs):
-                    """Mock async embed method that raises an error."""
-                    await asyncio.sleep(0)  # Force async execution
-                    raise Exception("Test error")
+                def embed(self, input_text: str, **kwargs):
+                    """Raise error for sync embedding."""
+                    raise ValueError("Test embedding error")
+
+                async def aembed(self, input_text: str, **kwargs):
+                    """Raise error for async embedding."""
+                    raise ValueError("Test async embedding error")
 
             error_client = ErrorClient()
             error_provider = VoyageProvider(client=error_client)
@@ -793,14 +793,56 @@ class TestSessionExporter:
                 await error_provider.aembed("test input")
 
     @pytest.mark.asyncio
+    async def test_voyage_provider_error_handling(self):
+        """Test VoyageProvider error handling for both sync and async methods."""
+        from agentops.llms.providers.voyage import VoyageProvider
+        from agentops.event import ErrorEvent
+
+        # Initialize provider with error client
+        error_client = self.ErrorClient()
+        provider = VoyageProvider(client=error_client)
+        session = self.client.initialize()
+
+        # Test sync error handling
+        with pytest.raises(ValueError, match="Test embedding error"):
+            provider.embed("test text", session=session)
+
+        # Verify error event was recorded
+        events = session.get_events()
+        assert len(events) == 1
+        assert isinstance(events[0], ErrorEvent)
+        assert "Test embedding error" in str(events[0].exception)
+
+        # Test async error handling
+        with pytest.raises(ValueError, match="Test async embedding error"):
+            await provider.aembed("test text", session=session)
+
+        # Verify error event was recorded
+        events = session.get_events()
+        assert len(events) == 2
+        assert isinstance(events[1], ErrorEvent)
+        assert "Test async embedding error" in str(events[1].exception)
+
+        # Clean up
+        self.client.end_session("Error", "Test completed with expected errors")
+
+    @pytest.mark.asyncio
     async def test_voyage_provider_python_version_warning(self):
-        """Test Python version warning."""
+        """Test Python version warning for Voyage AI provider."""
         import warnings
         from agentops.llms.providers.voyage import VoyageProvider
 
+        # Mock Python version to 3.7
         with patch("sys.version_info", (3, 7)):
             with warnings.catch_warnings(record=True) as w:
                 warnings.simplefilter("always")  # Enable all warnings
                 VoyageProvider()
                 assert len(w) == 1
                 assert "requires Python >=3.9" in str(w[0].message)
+
+        # Test with Python 3.9 (no warning)
+        with patch("sys.version_info", (3, 9)):
+            with warnings.catch_warnings(record=True) as w:
+                warnings.simplefilter("always")
+                VoyageProvider()
+                assert len(w) == 0  # No warning should be raised

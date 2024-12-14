@@ -27,16 +27,21 @@ class MockVoyageClient:
 
 
 def main():
-    # Set AgentOps API key
-    os.environ["AGENTOPS_API_KEY"] = "8b95388c-ee56-499d-a940-c1d6a2ba7f0c"
+    # Initialize clients with mock session for offline testing
+    class MockSession:
+        def __init__(self):
+            self.events = []
+            self.session_url = "mock-session-url"
 
-    # Initialize clients
-    voyage_client = MockVoyageClient()
+        def record(self, event):
+            self.events.append(event)
+
+        def get_events(self):
+            return self.events
+
+    voyage_client = MockVoyageClient()  # Use mock client for testing
     ao_client = AgentopsClient()
-
-    # Initialize session
-    session = ao_client.initialize()
-    print(f"Session URL: {session.session_url}")
+    session = MockSession()  # Use mock session for offline testing
 
     # Set up Voyage provider with mock client
     provider = VoyageProvider(client=voyage_client)
@@ -52,14 +57,29 @@ def main():
         events = session.get_events()
         if events:
             latest_event = events[-1]
+            event_data = {
+                "type": latest_event.event_type,
+                "model": latest_event.model,
+                "prompt_tokens": latest_event.prompt_tokens,
+                "completion_tokens": latest_event.completion_tokens,
+                "prompt": latest_event.prompt,  # Should be the input text
+                "completion": {
+                    "type": "embedding",
+                    "vector": latest_event.completion[:5] + ["..."],  # Show first 5 dimensions
+                },
+                "params": latest_event.params,  # Should contain kwargs
+                "returns": {
+                    "usage": latest_event.returns.get("usage", {}),
+                    "model": latest_event.returns.get("model", ""),
+                    "data": "[embedding data truncated]",
+                },
+            }
             print("\nLatest Event Data:")
-            print(json.dumps(latest_event, indent=2))
+            print(json.dumps(event_data, indent=2))
     finally:
         # Clean up provider override
         provider.undo_override()
-        # End session
-        ao_client.end_session("Success", "Example completed successfully")
-        print(f"\nSession ended. View session at: {session.session_url}")
+        print("\nExample completed successfully")
 
 
 if __name__ == "__main__":
