@@ -19,8 +19,8 @@ This notebook demonstrates how to use the Voyage AI provider with AgentOps for e
 ## Environment Setup
 ```bash
 # Set your API keys as environment variables
-export AGENTOPS_API_KEY='your-key-here'
-export VOYAGE_API_KEY='your-key-here'
+export AGENTOPS_API_KEY=<your_key>
+export VOYAGE_API_KEY=<your_key>
 ```"""
     )
 )

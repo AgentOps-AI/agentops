@@ -41,15 +41,19 @@ class MockSession:
         try:
             event_data = {
                 "type": "llms",
-                "model": "default",
-                "input_tokens": 10,
-                "output_tokens": 0,
-                "input": getattr(event, "input", ""),
-                "output": {
+                "model": "voyage-01",
+                "prompt_tokens": 10,
+                "completion_tokens": 0,
+                "prompt": "<redacted>",
+                "completion": {
                     "type": "embedding",
-                    "data": ["<vector data redacted>"],
+                    "vector": "<redacted>",
                 },
-                "metadata": {"text": getattr(event, "input", "")},
+                "params": {"input_text": "<redacted>"},
+                "returns": {
+                    "usage": {"prompt_tokens": 10},
+                    "model": "voyage-01",
+                },
             }
             print("\nEvent data (redacted):")
             print(json.dumps(event_data, indent=2))
@@ -112,11 +116,11 @@ def main():
         event_data = {
             "type": "llms",
             "model": result.get("model", "voyage-01"),
-            "prompt_tokens": result.get("usage", {}).get("input_tokens", 0),
+            "prompt_tokens": result.get("usage", {}).get("prompt_tokens", 0),
             "completion_tokens": 0,
-            "prompt": test_input,
-            "completion": {"type": "embedding", "vector": ["<vector data redacted for brevity>"]},
-            "params": {"input_text": test_input},
+            "prompt": "<redacted>",
+            "completion": {"type": "embedding", "vector": "<redacted>"},
+            "params": {"input_text": "<redacted>"},
             "returns": {
                 "usage": result.get("usage", {}),
                 "model": result.get("model", "voyage-01"),

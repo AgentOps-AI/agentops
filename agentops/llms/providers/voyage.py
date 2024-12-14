@@ -69,7 +69,13 @@ class VoyageProvider(InstrumentedProvider):
             return response
         except Exception as e:
             if session:
-                self._safe_record(session, ErrorEvent(exception=e))
+                self._safe_record(
+                    session,
+                    ErrorEvent(
+                        exception=e,
+                        trigger_event=LLMEvent(init_timestamp=init_timestamp, prompt="<redacted>", model="voyage-01"),
+                    ),
+                )
             raise  # Re-raise the exception without wrapping
 
     async def aembed(self, input_text: str, **kwargs) -> Dict[str, Any]:
@@ -90,7 +96,13 @@ class VoyageProvider(InstrumentedProvider):
             return response
         except Exception as e:
             if session:
-                self._safe_record(session, ErrorEvent(exception=e))
+                self._safe_record(
+                    session,
+                    ErrorEvent(
+                        exception=e,
+                        trigger_event=LLMEvent(init_timestamp=init_timestamp, prompt="<redacted>", model="voyage-01"),
+                    ),
+                )
             raise  # Re-raise the exception without wrapping
 
     def handle_response(
@@ -145,7 +157,7 @@ class VoyageProvider(InstrumentedProvider):
             error_event = ErrorEvent(
                 exception=e,
                 trigger_event=LLMEvent(
-                    init_timestamp=init_timestamp or get_ISO_time(), prompt=str(input_text), model="voyage-01"
+                    init_timestamp=init_timestamp or get_ISO_time(), prompt="<redacted>", model="voyage-01"
                 ),
             )
             self._safe_record(session, error_event)
