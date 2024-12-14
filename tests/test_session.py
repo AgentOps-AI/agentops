@@ -602,15 +602,16 @@ class TestSessionExporter:
         assert event["init_timestamp"] is not None
         assert event["end_timestamp"] is not None
 
-    @pytest.mark.asyncio  # Add async test decorator
+    @pytest.mark.asyncio
     async def test_voyage_provider(self):
-        """Test the VoyageProvider class."""
+        """Test the VoyageProvider class with event data verification."""
         try:
             import voyageai
         except ImportError:
             pytest.skip("voyageai package not installed")
 
         from agentops.llms.providers.voyage import VoyageProvider
+        from agentops.session import Session  # Add Session import
 
         # Test implementation with mock clients
         class MockVoyageClient:
@@ -630,17 +631,52 @@ class TestSessionExporter:
         provider = VoyageProvider(client=mock_client)
         provider.override()
 
-        # Test sync embedding
-        result = provider.embed("test input")
+        # Test sync embedding with event data verification
+        session = Session()
+        test_input = "test input"
+        result = provider.embed(test_input, session=session)
+
+        # Verify basic response
         assert "embeddings" in result
         assert len(result["embeddings"][0]) == 1024
         assert all(x == 0.1 for x in result["embeddings"][0])
 
-        # Test async embedding
-        result = await provider.aembed("test input")
+        # Verify event data
+        events = session.get_events()
+        assert len(events) == 1
+        event = events[0]
+        assert event.prompt == test_input
+        assert isinstance(event.completion, dict)
+        assert "embedding" in event.completion
+        assert len(event.completion["embedding"]) == 1024
+        assert all(x == 0.1 for x in event.completion["embedding"])
+        assert event.model == "voyage-01"
+        assert event.prompt_tokens == 10
+        assert event.completion_tokens == 0
+        assert event.cost == 0.0
+
+        # Test async embedding with event data verification
+        session = Session()  # Fresh session for async test
+        result = await provider.aembed(test_input, session=session)
+
+        # Verify basic response
         assert "embeddings" in result
         assert len(result["embeddings"][0]) == 1024
         assert all(x == 0.1 for x in result["embeddings"][0])
+
+        # Verify event data
+        events = session.get_events()
+        assert len(events) == 1
+        event = events[0]
+        assert event.prompt == test_input
+        assert isinstance(event.completion, dict)
+        assert "embedding" in event.completion
+        assert len(event.completion["embedding"]) == 1024
+        assert all(x == 0.1 for x in event.completion["embedding"])
+        assert event.model == "voyage-01"
+        assert event.prompt_tokens == 10
+        assert event.completion_tokens == 0
+        assert event.cost == 0.0
 
         # Test error handling
         class ErrorClient:
@@ -659,12 +695,12 @@ class TestSessionExporter:
 
         error_client = ErrorClient()
         error_provider = VoyageProvider(client=error_client)
-        error_provider.override()  # Call override to patch methods
+        error_provider.override()
 
         # Test sync error
         with pytest.raises(Exception):
             error_provider.embed("test input")
 
-        # Test async error - use await with pytest.raises
+        # Test async error
         with pytest.raises(Exception):
-            await error_provider.aembed("test input")  # Changed from async with to await
+            await error_provider.aembed("test input")

@@ -132,6 +132,25 @@ class VoyageProvider(InstrumentedProvider):
             returns=response,  # Store full response
         )
 
+        # Print event data for verification
+        print("\nEvent Data:")
+        print(
+            json.dumps(
+                {
+                    "type": "LLM Call",
+                    "model": event.model,
+                    "prompt": event.prompt,
+                    "completion": event.completion,
+                    "params": event.params,
+                    "returns": event.returns,
+                    "prompt_tokens": event.prompt_tokens,
+                    "completion_tokens": event.completion_tokens,
+                    "cost": event.cost,
+                },
+                indent=2,
+            )
+        )
+
         session.record(event)
 
     def override(self):
