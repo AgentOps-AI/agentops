@@ -1,97 +1,104 @@
-# Voyage AI Integration
+---
+title: Voyage AI
+description: "AgentOps provides first class support for Voyage AI's models"
+---
 
-<img src="https://github.com/AgentOps-AI/agentops/blob/main/docs/images/external/voyage/voyage-logo.png?raw=true" width="250px" style="max-width: 100%; height: auto;"/>
+import CodeTooltip from '/snippets/add-code-tooltip.mdx'
+import EnvTooltip from '/snippets/add-env-tooltip.mdx'
 
-AgentOps provides seamless integration with Voyage AI's embedding models, allowing you to track and monitor your embedding operations while maintaining high performance.
+[Voyage AI](https://voyageai.com) provides state-of-the-art embedding models. Explore their [documentation](https://docs.voyageai.com) to learn more.
 
-## Requirements
+## Steps to Integrate Voyage AI with AgentOps
 
-- Python >= 3.9 (Voyage AI SDK requirement)
-- AgentOps library
-- Voyage AI API key
+<Steps>
+  <Step title="Install the AgentOps SDK">
+    <CodeGroup>
+      ```bash pip 
+      pip install agentops
+      ```
+      ```bash poetry
+      poetry add agentops
+      ```
+    </CodeGroup>
+  </Step>
+  <Step title="Install the Voyage AI SDK">
+    <CodeGroup>
+      ```bash pip
+      pip install voyageai
+      ```
+      ```bash poetry
+      poetry add voyageai
+      ```
+    </CodeGroup>
+  </Step>
+  <Step title="Initialize AgentOps and develop with Voyage">
+    <CodeTooltip/>
+    <CodeGroup>
+      ```python python
+      import voyageai
+      import agentops
+      
+      agentops.init(<INSERT YOUR API KEY HERE>)
+      client = voyageai.Client(api_key="your_voyage_api_key")
+      
+      # Your code here...
+      
+      agentops.end_session('Success')
+      ```
+    </CodeGroup>
+    <EnvTooltip />
+    <CodeGroup>
+      ```python .env
+      AGENTOPS_API_KEY=<YOUR API KEY>
+      ```
+    </CodeGroup>
+    Read more about environment variables in [Advanced Configuration](/v1/usage/advanced-configuration)
+  </Step>
+</Steps>
 
-## Installation
+## Full Examples
 
-```bash
-pip install agentops voyageai
-```
+<CodeGroup>
+  ```python sync
+  import voyageai
+  import agentops
 
-## Basic Usage
+  agentops.init(<INSERT YOUR API KEY HERE>)
+  client = voyageai.Client(api_key="your_voyage_api_key")
 
-Initialize the Voyage AI provider with your client:
+  # Create embeddings
+  embeddings = client.embed(
+      texts=["Hello world!", "Goodbye world!"],
+      model="voyage-large-2"
+  )
 
-```python
-import voyageai
-from agentops.llms.providers.voyage import VoyageProvider
+  print(embeddings)
+  agentops.end_session('Success')
+  ```
 
-# Initialize clients
-voyage_client = voyageai.Client()
-provider = VoyageProvider(voyage_client)
-```
+  ```python async
+  import voyageai
+  import agentops
+  import asyncio
 
-Generate embeddings and track usage:
+  async def main():
+      agentops.init(<INSERT YOUR API KEY HERE>)
+      client = voyageai.AsyncClient(api_key="your_voyage_api_key")
 
-```python
-# Create embeddings
-text = "The quick brown fox jumps over the lazy dog."
-result = provider.embed(text)
+      embeddings = await client.embed(
+          texts=["Hello world!", "Goodbye world!"],
+          model="voyage-large-2"
+      )
 
-print(f"Embedding dimension: {len(result['embeddings'][0])}")
-print(f"Token usage: {result['usage']}")
-```
+      print(embeddings)
+      agentops.end_session('Success')
 
-## Async Support
+  asyncio.run(main())
+  ```
+</CodeGroup>
 
-The provider supports asynchronous operations for better performance:
-
-```python
-import asyncio
-
-async def process_multiple_texts():
-    texts = [
-        "First example text",
-        "Second example text",
-        "Third example text"
-    ]
-
-    # Process texts concurrently
-    tasks = [provider.aembed(text) for text in texts]
-    results = await asyncio.gather(*tasks)
-
-    return results
-
-# Run async example
-results = await process_multiple_texts()
-```
-
-## Error Handling
-
-The provider includes comprehensive error handling:
-
-```python
-# Handle invalid input
-try:
-    result = provider.embed(None)
-except ValueError as e:
-    print(f"Caught ValueError: {e}")
-
-# Handle API errors
-try:
-    result = provider.embed("test", invalid_param=True)
-except Exception as e:
-    print(f"Caught API error: {e}")
-```
-
-## Python Version Compatibility
-
-The Voyage AI SDK requires Python 3.9 or higher. When using an incompatible Python version, the provider will log a warning:
-
-```python
-import sys
-if sys.version_info < (3, 9):
-    print("Warning: Voyage AI SDK requires Python >=3.9")
-```
-
-## Example Notebook
-
-For a complete example, check out our [Jupyter notebook](https://github.com/AgentOps-AI/agentops/blob/main/examples/voyage/voyage_example.ipynb) demonstrating all features of the Voyage AI integration.
+<script type="module" src="/scripts/github_stars.js"></script>
+<script type="module" src="/scripts/scroll-img-fadein-animation.js"></script>
+<script type="module" src="/scripts/button_heartbeat_animation.js"></script>
+<script type="css" src="/styles/styles.css"></script>
+<script type="module" src="/scripts/adjust_api_dynamically.js"></script>
