@@ -576,6 +576,44 @@ await main()
 ```
 </details>
 
+
+
+### CamelAI ﹨
+
+Track agents built with the CamelAI Python SDK (>=0.32.0).
+
+- [CamelAI integration guide](https://docs.camel-ai.org/cookbooks/agents_tracking.html#)
+- [Official CamelAI documentation](https://docs.camel-ai.org/index.html)
+
+<details>
+  <summary>Installation</summary>
+  
+```bash
+pip install camel-ai[all]
+pip install agentops
+```
+
+```python python
+#Import Dependencies
+import agentops
+import os
+from getpass import getpass
+from dotenv import load_dotenv
+
+#Set Keys
+load_dotenv()
+openai_api_key = os.getenv("OPENAI_API_KEY") or "<your openai key here>"
+agentops_api_key = os.getenv("AGENTOPS_API_KEY") or "<your agentops key here>"
+
+
+
+```
+</details>
+
+[You can find usage examples here!](examples/camelai_examples/README.md).
+
+
+
 ### LiteLLM 🚅
 
 AgentOps provides support for LiteLLM(>=1.3.1), allowing you to call 100+ LLMs using the same Input/Output Format. 
