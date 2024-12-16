@@ -1,70 +1,153 @@
-# CamelAI and AgentOps
+---
+title: 'CAMEL AI Example'
+description: 'Using CAMEL AI for Multi-Agent Simulation'
+mode: "wide"
+---
+_View Notebook on <a href={'https://github.com/AgentOps-AI/agentops/blob/main/examples/camel_examples/camelai-multi-agent-example.ipynb'} target={'_blank'}>Github</a>_
 
-AgentOps supports CamelAI's API for conversing with their LLM backend!
+# CAMEL AI Multi Agent Example
+In this example, we will use CamelAI to simulate tools! We'll demonstrate a scenario where we determine how many melee hits it takes to beat an enemy with a blue shield in Apex Legends. The character "Pathfinder" from Apex Legends will provide the answer.
 
-To start, learn more about CamelAI [here!](https://www.camel-ai.org)
-If you want to get down to the gritty details, look [here](https://docs.camel-ai.org) for their documentation.
-
-
-> [!NOTE]
-> If it's your first time developing for an LLM, be sure to look at our intro to LLMs (coming soon)! Here, we explain generic functions such as giving the AI a memory to exploring novel concepts like summarizing chunks at regular intervals to keep some context while saving memory!
-
-## Getting Started
-
-You can get CamelAI's API working with a few lines of code!
-
-### 1. Import agentops and anthropic to your environment
+First let's install the required packages:
 
 ```python
 %pip install camel-ai[all]
 %pip install agentops
 ```
 
-### 2. Setup import statements
+Then import the necessary libraries:
 
 ```python
 import agentops
 import os
 from getpass import getpass
 from dotenv import load_dotenv
+from typing import List
+from colorama import Fore
+
+# Camel imports
+from camel.agents.chat_agent import FunctionCallingRecord
+from camel.models import ModelFactory
+from camel.societies import RolePlaying
+from camel.types import ModelPlatformType, ModelType
+from camel.utils import print_text_animated
+from camel.toolkits import SearchToolkit, MathToolkit
 ```
 
-### 3. Set your API keys
+Next, we'll set our API keys. There are several ways to do this, the code below is just the most foolproof way for the purposes of this notebook. It accounts for both users who use environment variables and those who just want to set the API Key here in this notebook.
+
+[Get an AgentOps API key](https://agentops.ai/settings/projects)
+
+1. Create an environment variable in a .env file or other method. By default, the AgentOps `init()` function will look for an environment variable named `AGENTOPS_API_KEY`. Or...
+
+2. Replace `<your_agentops_key>` below and pass in the optional `api_key` parameter to the AgentOps `init(api_key=...)` function. Remember not to commit your API key to a public repo!
 
 ```python
 load_dotenv()
-openai_api_key = os.getenv("OPENAI_API_KEY") or "<your openai key here>"
-agentops_api_key = os.getenv("AGENTOPS_API_KEY") or "<your agentops key here>"
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY") or "<your openai key here>"
+AGENTOPS_API_KEY = os.getenv("AGENTOPS_API_KEY") or "<your agentops key here>"
 ```
 
-From here, you have a number of ways you can interact with the CamelAI API!
+Now we will initialize our AgentOps client:
 
-## Examples
+```python
+agentops.init(default_tags=["camel", "multi-agent", "example"])
+```
 
-> [!NOTE]
-> You can download these journals directly and try them on Google Colab or Kaggle!
+Let's set our task prompt and configure our tools. You can see all available tools in the [CAMEL AI documentation](https://docs.camel-ai.org/key_modules/tools.html).
 
+```python
+task_prompt = (
+    "We are in the Apex Legends Games. Determine the amount of"
+    "meele hits it will take to beat someone with a blue shield."
+    "You should answer as if you are Pathfinder from the Apex Games."
+)
 
-> [!WARNING]
-> Remember; you need to set an API key for both Agentops and OpenAI!
+tools = [
+    *MathToolkit().get_tools(),
+    *SearchToolkit().get_tools(),
+]
+```
 
+We will now create our Camel AI session which is of [`RolePlaying`](https://docs.camel-ai.org/key_modules/society.html#roleplaying) type. Here we will set the assistant and user role names, as well as the model and tools for each agent:
 
-## Simple Example; Creating a Bladewolf AI
+```python
+search_session = RolePlaying(
+    assistant_role_name="Searcher",
+    user_role_name="Pathfinder",
+    assistant_agent_kwargs=dict(
+        model=ModelFactory.create(
+            model_platform=ModelPlatformType.OPENAI,
+            model_type=ModelType.GPT_4O_MINI,
+        ),
+        tools=tools,
+    ),
+    user_agent_kwargs=dict(
+        model=ModelFactory.create(
+            model_platform=ModelPlatformType.OPENAI,
+            model_type=ModelType.GPT_4O_MINI,
+        ),
+    ),
+    task_prompt=task_prompt,
+    with_task_specify=False,
+)
+```
 
-In this example, we use a csv file to short tune an LLM! We make it sounds like Bladewolf from MGR, before having it give us information. 
+Now we can start our chat loop. We'll set a maximum of 50 messages to prevent the session from running indefinitely:
 
-[Access the Journal By Clicking Here](https://github.com/AgentOps-AI/agentops/blob/main/examples/camelai_examples/camelai-simple-example.ipynb).
+```python
+n = 0
+input_msg = search_session.init_chat()
+while n < 50:
+    n += 1
+    assistant_response, user_response = search_session.step(input_msg)
 
-> [!NOTE]  
-> You need the Bladewolf Training CSV for this; you can find it [here](https://github.com/AgentOps-AI/agentops/blob/main/examples/camelai_examples/Bladewolf%20Training%20Data%20-%20Sheet1.csv).
+    if assistant_response.terminated:
+        print(
+            Fore.GREEN
+            + (
+                "AI Assistant terminated. Reason: "
+                f"{assistant_response.info['termination_reasons']}."
+            )
+        )
+        break
+    if user_response.terminated:
+        print(
+            Fore.GREEN
+            + (
+                "AI User terminated. "
+                f"Reason: {user_response.info['termination_reasons']}."
+            )
+        )
+        break
 
+    # Print output from the user
+    print_text_animated(
+        Fore.BLUE + f"AI User:\\n\\n{user_response.msg.content}\\n"
+    )
 
-## Tool Example; Apex Legends Internet Search
+    # Print output from the assistant, including any function execution information
+    print_text_animated(Fore.GREEN + "AI Assistant:")
+    tool_calls: List[FunctionCallingRecord] = assistant_response.info[
+        'tool_calls'
+    ]
+    for func_record in tool_calls:
+        print_text_animated(f"{func_record}")
+    print_text_animated(f"{assistant_response.msg.content}\\n")
 
-In this example, we look at the tool system within more depth! We will do a search to understand how Apex's melee damage and shields work before determining how many meelee attacks it will take to break a blue shield.
+    if "CAMEL_TASK_DONE" in user_response.msg.content:
+        break
 
-[Access the Journal By Clicking Here](https://github.com/AgentOps-AI/agentops/blob/main/examples/camelai_examples/camelai-multi-agent-example.ipynb)
+    input_msg = assistant_response.msg
+```
 
+Awesome! We've successfully completed our session.
 
-> [!NOTE]
-> If you want to use the tools system, be sure to check their website to find a comprehensive list of the different tools CamelAI supports! [You can find the tools available here!](https://docs.camel-ai.org/key_modules/tools.html#passing-tools-to-chatagent)
+Now we will end the session with a success message. We can also end the session with a failure or indeterminate status. By default, the session will be marked as indeterminate.
+
+```python
+agentops.end_session("Success")
+```
+
+## Check your session
+You can now check your run on [AgentOps](https://app.agentops.ai) to see the recorded session with all the interactions between the agents and tool usage.
