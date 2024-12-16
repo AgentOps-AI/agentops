@@ -1,10 +1,8 @@
 # Anthropic and AgentOps
 
-AgentOps supports Anthropic's API for conversing with their LLM backend!
+AgentOps provides first party support for observing Anthropic's API.
 
-To start, learn more about Antropic [here!](https://www.anthropic.com)
-If you want to get down to the gritty details, look [here](https://docs.anthropic.com/en/docs/welcome) for their documentation.
-
+Explore [Anthropic's](https://www.anthropic.com) documentation [here.](https://docs.anthropic.com/en/docs/welcome) to get started.
 
 > [!NOTE]
 > If it's your first time developing for an LLM, be sure to look at our intro to LLMs (coming soon)! Here, we explain generic functions such as giving the AI a memory to exploring novel concepts like summarizing chunks at regular intervals to keep some context while saving memory!
@@ -42,49 +40,31 @@ From here, you have a number of ways you can interact with the Anthropic API!
 ## Examples
 
 > [!NOTE]
-> You can download these journals directly and try them on Google Colab or Kaggle!
+> You need to set an API key for both Agentops and Anthropic!
 
-
-> [!WARNING]
-> Remember; you need to set an API key for both Agentops and Anthropic!
-
-
-## Sync Example; Nier Storyteller
+## Sync Example - Nier Storyteller
 
 In this example, we generate a sentence from three parts before having Anthropic generate a short story based off it!
 
-[Access the Journal By Clicking Here](./anthropic-example-sync.ipynb).
+Access the example [here.](./anthropic-example-sync.ipynb).
 
-## Async Example; Titan Support Protocol
+## Async Example - Titan Support Protocol
 
 In this example, we generate a script line for a mech based on it's health and the type. At the same time, we generate 4 UUIDs. We finally wait for both functions to finish before printing them for the user.
 
-[Access the Journal By Clicking Here](./anthropic-example-async.ipynb)
+Access the example [here.](./anthropic-example-async.ipynb)
 
-## Tool Example; Cyberware
+## Tool Example - Cyberware
 
 In this example, we have the LLM call a simulated tool which gives one random piece of Cyberware based on the user's requested company. From there, the AI tells the user if the cyberware is good for the user's intended purpose. (combatant, hacker, etc.).
 
-[Access the Journal By Clicking Here](./antrophic-example-tool.ipynb)
+Access the example [here.](./antrophic-example-tool.ipynb)
 
-
-
-
-> [!WARNING]
-> If you want to use the tools system, please look at the journal below! This gives examples related to knowing when a tool was used, some practices for calling a function from an API and returning it among other things! Using it is NOT the same as the other examples!
-
-
-## Tool Deepdive; VEGA Hell Combat System
+## Tool Deepdive - VEGA Hell Combat System
 
 In this example, we look at the tool system through a deeper dive; we will use our LLM assistant, VEGA, to get three missions from an API and determine which deserves priority. Then, we will send a number of enemies we want to scan for during combat while also getting our weapons inventory (using two tools at the same time). VEGA will tell us the bet way in which to combat these enemies through a combat strategy.
 
-[Access the Journal By Clicking Here](./agentops-anthropic-understanding-tools.ipynb)
+Access the example [here.](./agentops-anthropic-understanding-tools.ipynb)
 
-
-[You should also look at Anthropic's Tool Documents!](https://docs.anthropic.com/en/docs/build-with-claude/tool-use)
-
-
-
-
-
-
+> [!NOTE]
+> You can explore Anthropic's Tool Calling documentation [here](https://docs.anthropic.com/en/docs/build-with-claude/tool-use) to learn how to use it, some examples and pricing.

@@ -26,8 +26,6 @@ jobs:
           stale-pr-message: |
             This pull request has been automatically marked as stale because it has not had any activity in the last 14 days.
             
-            @${{ github.event.pull_request.user.login }} please review this PR and make any necessary updates.
-            
             If no updates are made within 7 days, this PR will be automatically closed.
           
           close-pr-message: |
