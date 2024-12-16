@@ -1,12 +1,12 @@
 ---
 title: 'Camel AI'
-description: 'Track and analyze CAMEL agents including LLMs and Tools usage with AgentOps'
+description: 'Track and analyze CAMEL agents with AgentOps'
 ---
 
 import CodeTooltip from '/snippets/add-code-tooltip.mdx'
 import EnvTooltip from '/snippets/add-env-tooltip.mdx'
 
-[CAMEL](https://www.camel-ai.org/) is the first large language model (LLM) multi-agent framework and an open-source community dedicated to finding the scaling law of agents. CAMEL has comprehensive [documentation](https://docs.camel-ai.org/) available as well as a great [quickstart](https://docs.camel-ai.org/getting_started/installation.html) guide.
+[CAMEL-AI](https://www.camel-ai.org/) is the first large language model (LLM) multi-agent framework and an open-source community dedicated to finding the scaling law of agents. Checkout their comprehensive documentation [here](https://docs.camel-ai.org/).
 
 ## Adding AgentOps to CAMEL agents
 
@@ -21,7 +21,7 @@ import EnvTooltip from '/snippets/add-env-tooltip.mdx'
 			```
 		</CodeGroup>
 	</Step>
-	<Step title="Install CAMEL">
+	<Step title="Install CAMEL-AI with all dependencies">
 		<CodeGroup>
 			```bash pip
 			pip install "camel-ai[all]==0.2.11"
@@ -31,14 +31,15 @@ import EnvTooltip from '/snippets/add-env-tooltip.mdx'
 			```
 		</CodeGroup>
 	</Step>
-	<Step title="Add 3 lines of code">
+	<Step title="Add AgentOps code to your code">
 		<CodeTooltip/>
 			<CodeGroup>
 				```python python
 				import agentops
 				agentops.init(<INSERT YOUR API KEY HERE>)
-				...
-				# MUST END SESSION at end of program
+
+				# your code here
+
 				agentops.end_session("Success") # Success|Fail|Indeterminate
 				```
 			</CodeGroup>
@@ -62,9 +63,10 @@ import EnvTooltip from '/snippets/add-env-tooltip.mdx'
 	</Step>
 </Steps>
 
-## Single Agent Example with Tools
+## Full Examples
+### Single Agent Example with Tools
 
-Here's a simple example of tracking a CAMEL single agent with tools using AgentOps:
+Here's a simple example of tracking a single CAMEL agent with tools using AgentOps:
 
 ```python
 import agentops
@@ -109,37 +111,9 @@ print(response)
 agentops.end_session("Success")
 ```
 
-## Multi-Agent Example
+### Multi-Agent Example
 
-For more complex scenarios, CAMEL supports multi-agent interactions. Here's how to track multiple agents:
-
-```python
-import agentops
-from typing import List
-from camel.agents.chat_agent import FunctionCallingRecord
-from camel.societies import RolePlaying
-from camel.types import ModelPlatformType, ModelType
-
-# Initialize AgentOps with multi-agent tag
-agentops.start_session(tags=["CAMEL X AgentOps Multi-agent"])
-
-# Import toolkits after AgentOps init
-from camel.toolkits import SearchToolkit, MathToolkit
-
-# Set up your task
-task_prompt = (
-    "Assume now is 2024 in the Gregorian calendar, "
-    "estimate the current age of University of Oxford "
-    "and then add 10 more years to this age, "
-    "and get the current weather of the city where "
-    "the University is located."
-)
-
-# The rest of your multi-agent implementation...
-# See our example notebook for the complete implementation
-```
-
-For complete examples including multi-agent setups and advanced configurations, check out our [example notebooks](https://github.com/AgentOps-AI/agentops/tree/main/examples/camel_examples).
+Check out the example notebook [here](https://github.com/AgentOps-AI/agentops/tree/main/examples/camel_examples/camelai-multi-agent-example.ipynb) to see how to track multi-agent setups.
 
 <script type="module" src="/scripts/github_stars.js"></script>
 <script type="module" src="/scripts/scroll-img-fadein-animation.js"></script>
