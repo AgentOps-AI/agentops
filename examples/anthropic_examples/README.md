@@ -4,7 +4,6 @@ AgentOps provides first party support for observing Anthropic's API.
 
 Explore [Anthropic's](https://www.anthropic.com) documentation [here.](https://docs.anthropic.com/en/docs/welcome) to get started.
 
-
 > [!NOTE]
 > If it's your first time developing for an LLM, be sure to look at our intro to LLMs (coming soon)! Here, we explain generic functions such as giving the AI a memory to exploring novel concepts like summarizing chunks at regular intervals to keep some context while saving memory!
 
@@ -42,7 +41,6 @@ From here, you have a number of ways you can interact with the Anthropic API!
 
 > [!NOTE]
 > You need to set an API key for both Agentops and Anthropic!
-
 
 ## Sync Example - Nier Storyteller
 
