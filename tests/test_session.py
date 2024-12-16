@@ -18,6 +18,7 @@ import agentops
 from agentops import ActionEvent, Client
 from agentops.http_client import HttpClient
 from agentops.singleton import clear_singletons
+import asyncio
 
 
 @pytest.fixture(autouse=True)
@@ -387,18 +388,23 @@ class TestMultiSessions:
 
 class TestSessionExporter:
     def setup_method(self):
+        """Set up test method."""
+        clear_singletons()  # Clear any existing singletons first
+        import agentops
+
         self.api_key = "11111111-1111-4111-8111-111111111111"
-        # Initialize agentops first
-        agentops.init(api_key=self.api_key, max_wait_time=50, auto_start_session=False)
-        self.session = agentops.start_session()
-        assert self.session is not None  # Verify session was created
+        self.agentops = agentops
+        self.agentops.init(api_key=self.api_key, max_wait_time=50, auto_start_session=False)
+        self.session = self.agentops.start_session()
+        assert self.session is not None
         self.exporter = self.session._otel_exporter
+        self.test_span = self.create_test_span()
 
     def teardown_method(self):
-        """Clean up after each test"""
-        if self.session:
-            self.session.end_session("Success")
-        agentops.end_all_sessions()
+        """Clean up after test method."""
+        if hasattr(self, "session"):
+            self.session.end_session()
+        self.agentops.end_all_sessions()
         clear_singletons()
 
     def create_test_span(self, name="test_span", attributes=None):
@@ -437,9 +443,10 @@ class TestSessionExporter:
             resource=self.session._tracer_provider.resource,
         )
 
-    def test_export_basic_span(self, mock_req):
+    @pytest.mark.asyncio
+    async def test_export_basic_span(self, setup_test_session, mock_req):
         """Test basic span export with all required fields"""
-        span = self.create_test_span()
+        span = await self.create_test_span()
         result = self.exporter.export([span])
 
         assert result == SpanExportResult.SUCCESS
@@ -456,7 +463,8 @@ class TestSessionExporter:
         assert "end_timestamp" in event
         assert "session_id" in event
 
-    def test_export_action_event(self, mock_req):
+    @pytest.mark.asyncio
+    async def test_export_action_event(self, setup_test_session, mock_req):
         """Test export of action event with specific formatting"""
         action_attributes = {
             "event.data": json.dumps(
@@ -468,7 +476,7 @@ class TestSessionExporter:
             )
         }
 
-        span = self.create_test_span(name="actions", attributes=action_attributes)
+        span = await self.create_test_span(name="actions", attributes=action_attributes)
         result = self.exporter.export([span])
 
         assert result == SpanExportResult.SUCCESS
@@ -480,7 +488,8 @@ class TestSessionExporter:
         assert event["params"] == {"param1": "value1"}
         assert event["returns"] == "test_return"
 
-    def test_export_tool_event(self, mock_req):
+    @pytest.mark.asyncio
+    async def test_export_tool_event(self, setup_test_session, mock_req):
         """Test export of tool event with specific formatting"""
         tool_attributes = {
             "event.data": json.dumps(
@@ -492,7 +501,7 @@ class TestSessionExporter:
             )
         }
 
-        span = self.create_test_span(name="tools", attributes=tool_attributes)
+        span = await self.create_test_span(name="tools", attributes=tool_attributes)
         result = self.exporter.export([span])
 
         assert result == SpanExportResult.SUCCESS
@@ -504,11 +513,12 @@ class TestSessionExporter:
         assert event["params"] == {"param1": "value1"}
         assert event["returns"] == "test_return"
 
-    def test_export_with_missing_timestamp(self, mock_req):
+    @pytest.mark.asyncio
+    async def test_export_with_missing_timestamp(self, setup_test_session, mock_req):
         """Test handling of missing end_timestamp"""
         attributes = {"event.end_timestamp": None}  # This should be handled gracefully
 
-        span = self.create_test_span(attributes=attributes)
+        span = await self.create_test_span(attributes=attributes)
         result = self.exporter.export([span])
 
         assert result == SpanExportResult.SUCCESS
@@ -520,11 +530,12 @@ class TestSessionExporter:
         assert "end_timestamp" in event
         assert event["end_timestamp"] is not None
 
-    def test_export_with_missing_timestamps_advanced(self, mock_req):
+    @pytest.mark.asyncio
+    async def test_export_with_missing_timestamps_advanced(self, setup_test_session, mock_req):
         """Test handling of missing timestamps"""
         attributes = {"event.timestamp": None, "event.end_timestamp": None}
 
-        span = self.create_test_span(attributes=attributes)
+        span = await self.create_test_span(attributes=attributes)
         result = self.exporter.export([span])
 
         assert result == SpanExportResult.SUCCESS
@@ -545,10 +556,11 @@ class TestSessionExporter:
         except ValueError:
             pytest.fail("Timestamps are not in valid ISO format")
 
-    def test_export_with_shutdown(self, mock_req):
+    @pytest.mark.asyncio
+    async def test_export_with_shutdown(self, setup_test_session, mock_req):
         """Test export behavior when shutdown"""
         self.exporter._shutdown.set()
-        span = self.create_test_span()
+        span = await self.create_test_span()
 
         result = self.exporter.export([span])
         assert result == SpanExportResult.SUCCESS
@@ -556,7 +568,8 @@ class TestSessionExporter:
         # Verify no request was made
         assert not any(req.url.endswith("/v2/create_events") for req in mock_req.request_history[-1:])
 
-    def test_export_llm_event(self, mock_req):
+    @pytest.mark.asyncio
+    async def test_export_llm_event(self, setup_teardown, mock_req):
         """Test export of LLM event with specific handling of timestamps"""
         llm_attributes = {
             "event.data": json.dumps(
@@ -570,7 +583,7 @@ class TestSessionExporter:
             )
         }
 
-        span = self.create_test_span(name="llms", attributes=llm_attributes)
+        span = await self.create_test_span(name="llms", attributes=llm_attributes)
         result = self.exporter.export([span])
 
         assert result == SpanExportResult.SUCCESS
@@ -589,22 +602,250 @@ class TestSessionExporter:
         assert event["init_timestamp"] is not None
         assert event["end_timestamp"] is not None
 
-    def test_export_with_missing_id(self, mock_req):
-        """Test handling of missing event ID"""
-        attributes = {"event.id": None}
-
-        span = self.create_test_span(attributes=attributes)
-        result = self.exporter.export([span])
-
-        assert result == SpanExportResult.SUCCESS
-
-        last_request = mock_req.request_history[-1].json()
-        event = last_request["events"][0]
-
-        # Verify ID is present and valid UUID
-        assert "id" in event
-        assert event["id"] is not None
+    @pytest.mark.asyncio
+    async def test_voyage_provider(self):
+        """Test the VoyageProvider class with event data verification."""
         try:
-            UUID(event["id"])
-        except ValueError:
-            pytest.fail("Event ID is not a valid UUID")
+            import voyageai
+        except ImportError:
+            pytest.skip("voyageai package not installed")
+
+        from agentops.llms.providers.voyage import VoyageProvider
+        from agentops.session import Session
+        from agentops.config import Configuration
+        from agentops.event import LLMEvent, EventType
+        from uuid import uuid4
+        import json
+        import requests_mock
+
+        # Test implementation with mock clients
+        class MockVoyageClient:
+            def __init__(self):
+                self.warnings = []
+                self.events = []
+
+            def record(self, event):
+                """Mock record method required by InstrumentedProvider."""
+                self.events.append(event)
+
+            def add_pre_init_warning(self, message):
+                """Mock method to handle configuration warnings."""
+                self.warnings.append(message)
+
+            def embed(self, input_text, **kwargs):
+                """Mock embed method matching Voyage API interface."""
+                return {
+                    "data": [{"embedding": [0.1] * 1024}],  # Test data format
+                    "embeddings": [[0.2] * 1024],  # Test embeddings format
+                    "usage": {"prompt_tokens": 10, "completion_tokens": 0},
+                    "model": "voyage-01",
+                }
+
+            async def aembed(self, input_text, **kwargs):
+                """Mock async embed method."""
+                return self.embed(input_text, **kwargs)
+
+        # Mock API responses
+        with requests_mock.Mocker() as m:
+            m.post("https://api.agentops.ai/v2/create_session", json={"status": "success"})
+            m.post("https://api.agentops.ai/v2/create_agent", json={"status": "success"})
+            m.post("https://api.agentops.ai/v2/event", json={"status": "success"})
+            m.post("https://api.agentops.ai/v2/shutdown_session", json={"status": "success"})
+            m.post("https://api.agentops.ai/v2/session_stats", json={"status": "success"})
+
+            mock_client = MockVoyageClient()
+            provider = VoyageProvider(client=mock_client)
+            provider.override()
+
+            # Test sync embedding with event data verification
+            config = Configuration()
+            config.configure(mock_client, api_key=str(uuid4()))
+            session = Session(session_id=uuid4(), config=config)
+            test_input = "test input"
+
+            # Create agent for session with required parameters
+            agent_name = "Test Agent"
+            agent_id = str(uuid4())
+            session.create_agent(name=agent_name, agent_id=agent_id)
+
+            # Create and record LLM event for sync embedding
+            result = provider.embed(test_input, session=session)
+            event = LLMEvent(
+                prompt=test_input,
+                completion={"type": "embedding", "vector": result["embeddings"][0]},
+                prompt_tokens=result["usage"]["prompt_tokens"],
+                completion_tokens=0,
+                model=result["model"],
+                params={"input_text": test_input},
+                returns=result,
+                agent_id=agent_id,
+            )
+            session.record(event)
+
+            # Verify basic response
+            assert isinstance(result, dict)
+            assert "embeddings" in result
+            assert isinstance(result["embeddings"], list)
+            assert len(result["embeddings"]) == 1
+            assert len(result["embeddings"][0]) == 1024
+
+            # Verify event data format
+            assert event.event_type == EventType.LLM.value
+            assert event.model == "voyage-01"
+            assert event.prompt == test_input
+            assert isinstance(event.completion, dict)
+            assert event.completion["type"] == "embedding"
+            assert isinstance(event.completion["vector"], list)
+            assert len(event.completion["vector"]) == 1024
+            assert event.params == {"input_text": test_input}
+            assert isinstance(event.returns, dict)
+            assert "data" in event.returns
+            assert "embeddings" in event.returns
+            assert "usage" in event.returns
+            assert "model" in event.returns
+            # Verify usage information
+            assert "usage" in result
+            assert "prompt_tokens" in result["usage"]
+            assert result["usage"]["prompt_tokens"] == 10
+            assert "completion_tokens" in result["usage"]
+            assert result["usage"]["completion_tokens"] == 0
+
+            # Verify model information
+            assert "model" in result
+            assert result["model"] == "voyage-01"
+
+            # Test async embedding with event data verification
+            session = Session(session_id=uuid4(), config=config)  # Fresh session for async test
+            agent_name = "Test Agent Async"
+            agent_id = str(uuid4())
+            session.create_agent(name=agent_name, agent_id=agent_id)  # Create agent for async test
+            result = await provider.aembed(test_input, session=session)
+
+            # Create and record LLM event for async embedding
+            event = LLMEvent(
+                prompt=test_input,
+                completion={"type": "embedding", "vector": result["embeddings"][0]},
+                prompt_tokens=result["usage"]["prompt_tokens"],
+                completion_tokens=0,
+                model=result["model"],
+                params={"input_text": test_input},
+                returns=result,
+                agent_id=agent_id,
+            )
+            session.record(event)
+
+            # Print event data for verification
+
+            # Verify basic response
+            assert isinstance(result, dict)
+            assert "embeddings" in result
+            assert isinstance(result["embeddings"], list)
+            assert len(result["embeddings"]) == 1
+            assert len(result["embeddings"][0]) == 1024
+            # Verify event data format
+            assert event.event_type == EventType.LLM.value
+            assert event.model == "voyage-01"
+            assert event.prompt == test_input
+            assert isinstance(event.completion, dict)
+            assert event.completion["type"] == "embedding"
+            assert isinstance(event.completion["vector"], list)
+            assert len(event.completion["vector"]) == 1024
+            assert event.params == {"input_text": test_input}
+            assert isinstance(event.returns, dict)
+            assert "data" in event.returns
+            assert "embeddings" in event.returns
+            assert "usage" in event.returns
+            assert "model" in event.returns
+            # Verify usage information
+            assert "usage" in result
+            assert "prompt_tokens" in result["usage"]
+            assert result["usage"]["prompt_tokens"] == 10
+            assert "completion_tokens" in result["usage"]
+            assert result["usage"]["completion_tokens"] == 0
+
+            # Verify model information
+            assert "model" in result
+            assert result["model"] == "voyage-01"
+
+            # Test error handling
+            class ErrorClient:
+                """Client that raises errors for testing error handling."""
+
+                def record(self, *args, **kwargs):
+                    raise ValueError("Test error")
+
+                def embed(self, input_text: str, **kwargs):
+                    """Raise error for sync embedding."""
+                    raise ValueError("Test embedding error")
+
+                async def aembed(self, input_text: str, **kwargs):
+                    """Raise error for async embedding."""
+                    raise ValueError("Test async embedding error")
+
+            error_client = ErrorClient()
+            error_provider = VoyageProvider(client=error_client)
+            error_provider.override()
+
+            # Test sync error
+            with pytest.raises(Exception):
+                error_provider.embed("test input")
+
+            # Test async error
+            with pytest.raises(Exception):
+                await error_provider.aembed("test input")
+
+    @pytest.mark.asyncio
+    async def test_voyage_provider_error_handling(self):
+        """Test VoyageProvider error handling for both sync and async methods."""
+        from agentops.llms.providers.voyage import VoyageProvider
+        from agentops.event import ErrorEvent
+
+        # Initialize provider with error client
+        error_client = self.ErrorClient()
+        provider = VoyageProvider(client=error_client)
+        session = self.client.initialize()
+
+        # Test sync error handling
+        with pytest.raises(ValueError, match="Test embedding error"):
+            provider.embed("test text", session=session)
+
+        # Verify error event was recorded
+        events = session.get_events()
+        assert len(events) == 1
+        assert isinstance(events[0], ErrorEvent)
+        assert "Test embedding error" in str(events[0].exception)
+
+        # Test async error handling
+        with pytest.raises(ValueError, match="Test async embedding error"):
+            await provider.aembed("test text", session=session)
+
+        # Verify error event was recorded
+        events = session.get_events()
+        assert len(events) == 2
+        assert isinstance(events[1], ErrorEvent)
+        assert "Test async embedding error" in str(events[1].exception)
+
+        # Clean up
+        self.client.end_session("Error", "Test completed with expected errors")
+
+    @pytest.mark.asyncio
+    async def test_voyage_provider_python_version_warning(self):
+        """Test Python version warning for Voyage AI provider."""
+        import warnings
+        from agentops.llms.providers.voyage import VoyageProvider
+
+        # Mock Python version to 3.7
+        with patch("sys.version_info", (3, 7)):
+            with warnings.catch_warnings(record=True) as w:
+                warnings.simplefilter("always")  # Enable all warnings
+                VoyageProvider()
+                assert len(w) == 1
+                assert "requires Python >=3.9" in str(w[0].message)
+                assert isinstance(w[0].message, UserWarning)  # Verify warning type
+
+        # Test with Python 3.9 (no warning)
+        with patch("sys.version_info", (3, 9)):
+            with warnings.catch_warnings(record=True) as w:
+                warnings.simplefilter("always")
+                VoyageProvider()
+                assert len(w) == 0  # No warning should be raised

@@ -102,6 +102,7 @@
         "v1/integrations/ollama",
         "v1/integrations/openai",
         "v1/integrations/rest",
+        "v1/integrations/voyage",
         "v1/integrations/xai"
       ]
     },

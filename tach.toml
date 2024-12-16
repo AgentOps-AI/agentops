@@ -1,0 +1,6 @@
+[modules]
+path = "agentops"
+depends_on = []
+
+[dependency-group.ci]
+tach = "~=0.9"
