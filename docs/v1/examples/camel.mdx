@@ -8,16 +8,19 @@ _View Notebook on <a href={'https://github.com/AgentOps-AI/agentops/blob/main/ex
 {/*  SOURCE_FILE: examples/camel_examples/camelai-multi-agent-example.ipynb  */}
 
 # CAMEL AI Multi Agent Example
-In this example, we will use CamelAI to simulate tools! We'll demonstrate a scenario where we determine how many melee hits it takes to beat an enemy with a blue shield in Apex Legends. The character "Pathfinder" from Apex Legends will provide the answer.
 
-First let's install the required packages:
+In this example, we will use CamelAI to simulate tools! In this case, we will best determine how many shots it takes to beat an enemy with a blue shield in Apex Legeneds using melee only. The character "Pathfinder" from Apex Legends will answer.
+
+First let's install the required packages for this example.
+
 
 ```python
 %pip install camel-ai[all]
 %pip install agentops
 ```
 
-Then import the necessary libraries:
+Next we import the necessary libraries
+
 
 ```python
 import agentops
@@ -44,19 +47,25 @@ Next, we'll set our API keys. There are several ways to do this, the code below 
 
 2. Replace `<your_agentops_key>` below and pass in the optional `api_key` parameter to the AgentOps `init(api_key=...)` function. Remember not to commit your API key to a public repo!
 
+
 ```python
 load_dotenv()
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY") or "<your openai key here>"
 AGENTOPS_API_KEY = os.getenv("AGENTOPS_API_KEY") or "<your agentops key here>"
 ```
 
-Now we will initialize our AgentOps client:
+Now we will initialize our AgentOps client.
+
 
 ```python
 agentops.init(default_tags=["camel", "multi-agent", "example"])
 ```
 
-Let's set our task prompt and configure our tools. You can see all available tools in the [CAMEL AI documentation](https://docs.camel-ai.org/key_modules/tools.html).
+Let's start with setting our task prompt and setting our tools.
+
+You can look at the link below to see all available tools:
+https://docs.camel-ai.org/key_modules/tools.html
+
 
 ```python
 task_prompt = (
@@ -71,7 +80,8 @@ tools = [
 ]
 ```
 
-We will now create our Camel AI session which is of [`RolePlaying`](https://docs.camel-ai.org/key_modules/society.html#roleplaying) type. Here we will set the assistant and user role names, as well as the model and tools for each agent:
+We will now create our Camel AI session which is of [`RolePlaying`](https://docs.camel-ai.org/key_modules/society.html#roleplaying) type. Here we will set the assistant and user role names, as well as the model and tools for each agent.
+
 
 ```python
 search_session = RolePlaying(
@@ -95,7 +105,27 @@ search_session = RolePlaying(
 )
 ```
 
-Now we can start our chat loop. We'll set a maximum of 50 messages to prevent the session from running indefinitely:
+Let's print out the Assistant System Message and User Task Prompt.
+
+
+```python
+print(
+    Fore.GREEN
+    + f"AI Assistant System Message:\n{search_session.assistant_sys_msg}\n"
+)
+print(Fore.BLUE + f"AI User System Message:\n{search_session.user_sys_msg}\n")
+
+print(Fore.YELLOW + f"Original Task Prompt:\n{task_prompt}\n")
+print(
+    Fore.CYAN
+    + "Specified Task Prompt:"
+    + f"\n{search_session.specified_task_prompt}\n"
+)
+print(Fore.RED + f"Final Task Prompt:\n{search_session.task_prompt}\n")
+```
+
+Now we will initiate our Camel AI session and begin the chat loop. You can see that we have set the number of messages to 50. This is to prevent the session from running indefinitely.
+
 
 ```python
 n = 0
@@ -125,7 +155,7 @@ while n < 50:
 
     # Print output from the user
     print_text_animated(
-        Fore.BLUE + f"AI User:\\n\\n{user_response.msg.content}\\n"
+        Fore.BLUE + f"AI User:\n\n{user_response.msg.content}\n"
     )
 
     # Print output from the assistant, including any function execution information
@@ -135,7 +165,7 @@ while n < 50:
     ]
     for func_record in tool_calls:
         print_text_animated(f"{func_record}")
-    print_text_animated(f"{assistant_response.msg.content}\\n")
+    print_text_animated(f"{assistant_response.msg.content}\n")
 
     if "CAMEL_TASK_DONE" in user_response.msg.content:
         break
@@ -147,9 +177,12 @@ Awesome! We've successfully completed our session.
 
 Now we will end the session with a success message. We can also end the session with a failure or indeterminate status. By default, the session will be marked as indeterminate.
 
+
 ```python
 agentops.end_session("Success")
 ```
 
 ## Check your session
-You can now check your run on [AgentOps](https://app.agentops.ai) to see the recorded session with all the interactions between the agents and tool usage.
+Finally, check your run on [AgentOps](https://app.agentops.ai)
+
+Now if we look in the AgentOps dashboard, you will see a session recorded with the LLM calls and tool usage.
