@@ -36,16 +36,18 @@ class OllamaProvider(InstrumentedProvider):
                     "role": message.get("role"),
                     "content": message.get("content", ""),
                     "tool_calls": None,
-                    "function_call": None
+                    "function_call": None,
                 }
             else:
                 llm_event.completion["content"] += message.get("content", "")
 
         if inspect.isgenerator(response):
+
             def generator():
                 for chunk in response:
                     handle_stream_chunk(chunk)
                     yield chunk
+
             return generator()
 
         llm_event.end_timestamp = get_ISO_time()
@@ -57,7 +59,7 @@ class OllamaProvider(InstrumentedProvider):
             "role": response["message"].get("role"),
             "content": response["message"].get("content", ""),
             "tool_calls": None,
-            "function_call": None
+            "function_call": None,
         }
 
         self._safe_record(session, llm_event)
