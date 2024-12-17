@@ -89,7 +89,7 @@ import EnvTooltip from '/snippets/add-env-tooltip.mdx'
   agentops.init(<INSERT YOUR API KEY HERE>)
   client = OpenAI()
 
-  response = client.chat.completions.create((
+  response = client.chat.completions.create(
       model="gpt-4o-mini",
       messages=[{
           "role": "user",
