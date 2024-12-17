@@ -35,6 +35,9 @@ if "crewai" in sys.modules:
 
     Client().add_default_tags(["crewai"])
 
+if "taskweaver" in sys.modules:
+    Client().add_default_tags(["taskweaver"])
+
 
 def init(
     api_key: Optional[str] = None,
