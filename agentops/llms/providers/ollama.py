@@ -18,6 +18,8 @@ class OllamaProvider(InstrumentedProvider):
 
     def handle_response(self, response, kwargs, init_timestamp, session: Optional[Session] = None) -> dict:
         llm_event = LLMEvent(init_timestamp=init_timestamp, params=kwargs)
+        if session is not None:
+            llm_event.session_id = session.session_id
 
         def handle_stream_chunk(chunk: dict):
             message = chunk.get("message", {"role": None, "content": ""})
@@ -29,7 +31,7 @@ class OllamaProvider(InstrumentedProvider):
                 llm_event.returns["message"] = llm_event.completion
                 llm_event.prompt = kwargs["messages"]
                 llm_event.agent_id = check_call_stack_for_agent_id()
-                self.client.record(llm_event)
+                self._safe_record(session, llm_event)
 
             if llm_event.completion is None:
                 llm_event.completion = {
@@ -103,7 +105,7 @@ class OllamaProvider(InstrumentedProvider):
             # Call the original function with its original arguments
             init_timestamp = get_ISO_time()
             result = original_func["ollama.Client.chat"](*args, **kwargs)
-            return self.handle_response(result, kwargs, init_timestamp)
+            return self.handle_response(result, kwargs, init_timestamp, session=kwargs.get("session", None))
 
         # Override the original method with the patched one
         Client.chat = patched_function
@@ -111,13 +113,14 @@ class OllamaProvider(InstrumentedProvider):
     def _override_chat_async_client(self):
         from ollama import AsyncClient
 
+        original_func = {}
         original_func["ollama.AsyncClient.chat"] = AsyncClient.chat
 
         async def patched_function(*args, **kwargs):
             # Call the original function with its original arguments
             init_timestamp = get_ISO_time()
             result = await original_func["ollama.AsyncClient.chat"](*args, **kwargs)
-            return self.handle_response(result, kwargs, init_timestamp)
+            return self.handle_response(result, kwargs, init_timestamp, session=kwargs.get("session", None))
 
         # Override the original method with the patched one
         AsyncClient.chat = patched_function
