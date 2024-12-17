@@ -153,6 +153,33 @@ Stores the configuration settings for AgentOps clients.
 This callback handler is intended to be used as an option in place of AgentOps auto-instrumenting. This is only useful
 when using LangChain as your LLM calling library.
 
+### Exporting Session Data
+
+You can export session data and statistics using our REST APIs. These endpoints require authentication using your API key and a valid session JWT token.
+
+#### Get Session Stats
+Retrieve statistics for a specific session:
+
+```bash
+curl -X GET 'https://api.agentops.ai/v2/sessions/<session_id>/stats' \
+  -H 'Authorization: Bearer <jwt_token>' \
+  -H 'X-Agentops-Api-Key: <your_api_key>'
+```
+
+#### Export Session Data
+Export complete session data including all events:
+
+```bash
+curl -X GET 'https://api.agentops.ai/v2/sessions/<session_id>/export' \
+  -H 'Authorization: Bearer <jwt_token>' \
+  -H 'X-Agentops-Api-Key: <your_api_key>'
+```
+
+The export endpoint returns:
+- Session metadata
+- Session statistics
+- All associated events (actions, LLM calls, tools, errors)
+
 <script type="module" src="/scripts/github_stars.js"></script>
 <script type="module" src="/scripts/scroll-img-fadein-animation.js"></script>
 <script type="module" src="/scripts/button_heartbeat_animation.js"></script>
