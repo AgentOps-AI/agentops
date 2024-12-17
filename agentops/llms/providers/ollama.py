@@ -23,7 +23,6 @@ class OllamaProvider(InstrumentedProvider):
             message = chunk.get("message", {"role": None, "content": ""})
 
             if chunk.get("done"):
-                llm_event.completion["content"] += message.get("content")
                 llm_event.end_timestamp = get_ISO_time()
                 llm_event.model = f'ollama/{chunk.get("model")}'
                 llm_event.returns = chunk
@@ -33,26 +32,33 @@ class OllamaProvider(InstrumentedProvider):
                 self.client.record(llm_event)
 
             if llm_event.completion is None:
-                llm_event.completion = message
+                llm_event.completion = {
+                    "role": message.get("role"),
+                    "content": message.get("content", ""),
+                    "tool_calls": None,
+                    "function_call": None
+                }
             else:
-                llm_event.completion["content"] += message.get("content")
+                llm_event.completion["content"] += message.get("content", "")
 
         if inspect.isgenerator(response):
-
             def generator():
                 for chunk in response:
                     handle_stream_chunk(chunk)
                     yield chunk
-
             return generator()
 
         llm_event.end_timestamp = get_ISO_time()
-
         llm_event.model = f'ollama/{response["model"]}'
         llm_event.returns = response
         llm_event.agent_id = check_call_stack_for_agent_id()
         llm_event.prompt = kwargs["messages"]
-        llm_event.completion = response["message"]
+        llm_event.completion = {
+            "role": response["message"].get("role"),
+            "content": response["message"].get("content", ""),
+            "tool_calls": None,
+            "function_call": None
+        }
 
         self._safe_record(session, llm_event)
         return response
