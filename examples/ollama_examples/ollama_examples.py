@@ -11,19 +11,14 @@
 
 # In[ ]:
 
-
-
-
 # Then import them
 
 # In[2]:
-
 
 import ollama
 import agentops
 import os
 from dotenv import load_dotenv
-
 
 # Next, we'll set our API keys. For Ollama, we'll need to make sure Ollama is running locally.
 # [Get an AgentOps API key](https://agentops.ai/settings/projects)
@@ -33,30 +28,21 @@ from dotenv import load_dotenv
 
 # In[3]:
 
-
 # Let's load our environment variables
 load_dotenv()
 
 AGENTOPS_API_KEY = os.getenv("AGENTOPS_API_KEY") or "<your_agentops_key>"
 
-
-# In[ ]:
-
-
 # Initialize AgentOps with some default tags
 agentops.init(AGENTOPS_API_KEY, default_tags=["ollama-example"])
-
 
 # Now let's make some basic calls to Ollama. Make sure you have pulled the model first, use the following or replace with whichever model you want to use.
 
 # In[ ]:
 
-
 ollama.pull("mistral")
 
-
 # In[ ]:
-
 
 # Basic completion,
 response = ollama.chat(
@@ -70,11 +56,9 @@ response = ollama.chat(
 )
 print(response["message"]["content"])
 
-
 # Let's try streaming responses as well
 
 # In[ ]:
-
 
 # Streaming Example
 stream = ollama.chat(
@@ -91,9 +75,7 @@ stream = ollama.chat(
 for chunk in stream:
     print(chunk["message"]["content"], end="")
 
-
 # In[ ]:
-
 
 # Conversation Example
 messages = [
@@ -114,13 +96,11 @@ messages = [
 response = ollama.chat(model="mistral", messages=messages)
 print(response["message"]["content"])
 
-
 # > 💡 **Note**: In production environments, you should add proper error handling around the Ollama calls and use `agentops.end_session("Error")` when exceptions occur.
 
 # Finally, let's end our AgentOps session
 
 # In[ ]:
-
 
 agentops.end_session("Success")
 
