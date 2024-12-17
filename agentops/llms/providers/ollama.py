@@ -61,8 +61,6 @@ class OllamaProvider(InstrumentedProvider):
             "tool_calls": None,
             "function_call": None,
         }
-
-
         self._safe_record(session, llm_event)
         return response
 
