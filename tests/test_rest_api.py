@@ -7,6 +7,7 @@ from typing import Dict, Optional
 import requests_mock
 from datetime import datetime, timezone
 
+
 class TestRestApi:
     def __init__(self):
         self.api_key = "11111111-1111-4111-8111-111111111111"  # Mock API key in UUID format
@@ -63,7 +64,11 @@ class TestRestApi:
 
         now = datetime.now(timezone.utc).isoformat()
 
-        payload = {"events": [{"event_type": "test", "session_id": self.session_id, "init_timestamp": now, "end_timestamp": now}]}
+        payload = {
+            "events": [
+                {"event_type": "test", "session_id": self.session_id, "init_timestamp": now, "end_timestamp": now}
+            ]
+        }
 
         response = self._make_request("POST", "/v2/create_events", payload, use_jwt=True)
 
@@ -77,7 +82,12 @@ class TestRestApi:
 
         now = datetime.now(timezone.utc).isoformat()
 
-        payload = {"session_id": self.session_id, "end_timestamp": now, "end_state": "Success", "end_state_reason": "Test completed"}
+        payload = {
+            "session_id": self.session_id,
+            "end_timestamp": now,
+            "end_state": "Success",
+            "end_state_reason": "Test completed",
+        }
 
         response = self._make_request("POST", "/v2/update_session", payload, use_jwt=True)
 
