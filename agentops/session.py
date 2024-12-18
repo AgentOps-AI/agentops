@@ -128,10 +128,9 @@ class SessionExporter(SpanExporter):
                 # Only make HTTP request if we have events and not shutdown
                 if events:
                     try:
-                        payload = json.dumps({"events": events}).encode("utf-8")
                         res = HttpClient.post(
                             self.endpoint,
-                            payload=payload,
+                            json_data={"events": events},
                             api_key=self.session.config.api_key,
                             jwt=self.session.jwt,
                         )
@@ -442,7 +441,7 @@ class Session:
 
             HttpClient.post(
                 f"{self.config.endpoint}/v2/create_events",
-                json.dumps(payload).encode("utf-8"),
+                json_data=payload,
                 jwt=self.jwt,
             )
         except Exception as e:
@@ -451,11 +450,10 @@ class Session:
     def _reauthorize_jwt(self) -> Union[str, None]:
         with self._lock:
             payload = {"session_id": self.session_id}
-            serialized_payload = json.dumps(filter_unjsonable(payload)).encode("utf-8")
             res = HttpClient.post(
                 f"{self.config.endpoint}/v2/reauthorize_jwt",
-                serialized_payload,
-                self.config.api_key,
+                json_data=payload,
+                api_key=self.config.api_key,
             )
 
             logger.debug(res.body)
@@ -480,8 +478,7 @@ class Session:
 
         response = HttpClient.post(
             "/v2/start_session",
-            api_key=self._config.api_key,
-            json={
+            json_data={
                 "session": {
                     "session_id": str(self.session_id),
                     "tags": self.tags or [],
@@ -489,6 +486,7 @@ class Session:
                     "start_time": get_ISO_time(),
                 }
             },
+            api_key=self._config.api_key,
         )
 
         if response.status == "success":
@@ -506,7 +504,7 @@ class Session:
             try:
                 res = HttpClient.post(
                     f"{self.config.endpoint}/v2/update_session",
-                    json.dumps(filter_unjsonable(payload)).encode("utf-8"),
+                    json_data=filter_unjsonable(payload),
                     api_key=self.config.api_key,
                     jwt=self.jwt,
                 )
@@ -529,11 +527,10 @@ class Session:
             "name": name,
         }
 
-        serialized_payload = safe_serialize(payload).encode("utf-8")
         try:
             HttpClient.post(
                 f"{self.config.endpoint}/v2/create_agent",
-                serialized_payload,
+                json_data=payload,
                 api_key=self.config.api_key,
                 jwt=self.jwt,
             )
@@ -555,7 +552,7 @@ class Session:
         try:
             response = HttpClient.post(
                 f"{self.config.endpoint}/v2/update_session",
-                json.dumps(filter_unjsonable(payload)).encode("utf-8"),
+                json_data=filter_unjsonable(payload),
                 api_key=self.config.api_key,
                 jwt=self.jwt,
             )

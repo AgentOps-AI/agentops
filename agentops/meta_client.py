@@ -38,7 +38,7 @@ class MetaClient(type):
             try:
                 HttpClient.post(
                     "https://api.agentops.ai/v2/developer_errors",
-                    safe_serialize(developer_error).encode("utf-8"),
+                    json_data=developer_error,
                     api_key=api_key,
                 )
             except:
