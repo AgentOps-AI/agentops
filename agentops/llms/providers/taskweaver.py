@@ -115,103 +115,131 @@ class TaskWeaverProvider(InstrumentedProvider):
         return response
 
     def override(self):
-        # Import all potential LLM service implementations
-        from taskweaver.llm.openai import OpenAIService
-        from taskweaver.llm.anthropic import AnthropicService
-        from taskweaver.llm.azure_ml import AzureMLService
-        from taskweaver.llm.groq import GroqService
-        from taskweaver.llm.ollama import OllamaService
-        from taskweaver.llm.qwen import QWenService
-        from taskweaver.llm.zhipuai import ZhipuAIService
-        
-        logger.info("[OVERRIDE] Starting to patch LLM services")
-        
-        services = [
-            OpenAIService,
-            AnthropicService,
-            AzureMLService,
-            GroqService,
-            OllamaService,
-            QWenService,
-            ZhipuAIService
-        ]
-        
-        for service_class in services:
-            try:
-                logger.info(f"[OVERRIDE] Attempting to patch {service_class.__name__}")
+        try:
+            from taskweaver.llm.openai import OpenAIService
+            from taskweaver.llm.anthropic import AnthropicService
+            from taskweaver.llm.azure_ml import AzureMLService
+            from taskweaver.llm.groq import GroqService
+            from taskweaver.llm.ollama import OllamaService
+            from taskweaver.llm.qwen import QWenService
+            from taskweaver.llm.zhipuai import ZhipuAIService
+            from taskweaver.llm.base import CompletionService
+
+            # List all services that need to be patched
+            services = [
+                OpenAIService,  # Handles "openai", "azure", "azure_ad"
+                AnthropicService,
+                AzureMLService,
+                GroqService,
+                OllamaService,
+                QWenService,
+                ZhipuAIService
+            ]
+
+            logger.info("[OVERRIDE] Starting to patch LLM services")
+
+            def patched_chat_completion(service_self, messages, stream=True, temperature=None, max_tokens=None, top_p=None, stop=None, **kwargs) -> Generator:
+                logger.info(f"[PATCHED] Starting patched chat completion for {service_self.__class__.__name__}")
+                logger.info(f"[PATCHED] Stream mode: {stream}")
                 
-                if hasattr(service_class, 'chat_completion'):
-                    original = service_class.chat_completion
-                    
-                    def patched_chat_completion(service_self, messages, stream=True, temperature=None, max_tokens=None, top_p=None, stop=None, **kwargs) -> Generator:
-                        logger.info(f"[PATCHED] Starting patched chat completion for {service_self.__class__.__name__}")
-                        logger.info(f"[PATCHED] Stream mode: {stream}")
-                        
-                        init_timestamp = get_ISO_time()
-                        session = kwargs.pop("session", None)
-                        logger.info(f"[PATCHED] Session: {session}")
-                        
-                        logger.info(f"[PATCHED] Calling original with messages: {messages}")
-                        result = original(
-                            service_self, 
-                            messages=messages,
-                            stream=stream,
-                            temperature=temperature,
-                            max_tokens=max_tokens,
-                            top_p=top_p,
-                            stop=stop,
-                            **kwargs
-                        )
-                        logger.info(f"[PATCHED] Got result type: {type(result)}")
-                        
-                        if stream:
-                            logger.info("[PATCHED] Handling streaming response")
-                            accumulated_response = {"role": "assistant", "content": ""}
-                            for response in result:
-                                logger.info(f"[PATCHED] Stream chunk: {response}")
-                                if isinstance(response, dict) and "content" in response:
-                                    accumulated_response["content"] += response["content"]
-                                else:
-                                    accumulated_response["content"] += str(response)
-                                yield response
-                            
-                            logger.info(f"[PATCHED] Recording accumulated response: {accumulated_response}")
-                            self.handle_response(accumulated_response, kwargs, init_timestamp, session=session)
+                init_timestamp = get_ISO_time()
+                session = kwargs.pop("session", None)
+                logger.info(f"[PATCHED] Session: {session}")
+                
+                # Get model information from service instance
+                model_name = "unknown"
+                if hasattr(service_self, "config"):
+                    config = service_self.config
+                    if hasattr(config, "model"):
+                        model_name = config.model or "unknown"
+                    elif hasattr(config, "llm_module_config") and hasattr(config.llm_module_config, "model"):
+                        model_name = config.llm_module_config.model or "unknown"
+                
+                original_messages = messages.copy()
+                logger.info(f"[PATCHED] Calling original with messages: {messages}")
+                
+                result = original(
+                    service_self, 
+                    messages=messages,
+                    stream=stream,
+                    temperature=temperature,
+                    max_tokens=max_tokens,
+                    top_p=top_p,
+                    stop=stop,
+                    **kwargs
+                )
+                logger.info(f"[PATCHED] Got result type: {type(result)}")
+                
+                if stream:
+                    logger.info("[PATCHED] Handling streaming response")
+                    accumulated_response = {"role": "assistant", "content": ""}
+                    for response in result:
+                        logger.info(f"[PATCHED] Stream chunk: {response}")
+                        if isinstance(response, dict) and "content" in response:
+                            accumulated_response["content"] += response["content"]
                         else:
-                            logger.info("[PATCHED] Handling non-streaming response")
-                            response = next(result) if hasattr(result, '__next__') else result
-                            logger.info(f"[PATCHED] Non-stream response: {response}")
-                            self.handle_response(response, kwargs, init_timestamp, session=session)
-                            return response
+                            accumulated_response["content"] += str(response)
+                        yield response
                     
-                    service_class.chat_completion = patched_chat_completion
-                    logger.info(f"[OVERRIDE] Successfully patched {service_class.__name__}")
-                
-            except Exception as e:
-                logger.error(f"[OVERRIDE] Failed to patch {service_class.__name__}: {str(e)}", exc_info=True)
+                    logger.info(f"[PATCHED] Recording accumulated response: {accumulated_response}")
+                    kwargs["messages"] = original_messages
+                    kwargs["model"] = model_name
+                    self.handle_response(accumulated_response, kwargs, init_timestamp, session=session)
+                else:
+                    logger.info("[PATCHED] Handling non-streaming response")
+                    response = next(result) if hasattr(result, '__next__') else result
+                    logger.info(f"[PATCHED] Non-stream response: {response}")
+                    kwargs["messages"] = original_messages
+                    kwargs["model"] = model_name
+                    self.handle_response(response, kwargs, init_timestamp, session=session)
+                    return response
+
+            # Patch all services
+            for service_class in services:
+                try:
+                    logger.info(f"[OVERRIDE] Attempting to patch {service_class.__name__}")
+                    if not hasattr(service_class, '_original_chat_completion'):
+                        original = service_class.chat_completion
+                        service_class._original_chat_completion = original
+                        service_class.chat_completion = patched_chat_completion
+                        logger.info(f"[OVERRIDE] Successfully patched {service_class.__name__}")
+                except Exception as e:
+                    logger.error(f"[OVERRIDE] Failed to patch {service_class.__name__}: {str(e)}", exc_info=True)
+
+        except Exception as e:
+            logger.error(f"[OVERRIDE] Failed to patch services: {str(e)}", exc_info=True)
 
     def undo_override(self):
-        # Similar imports as override method
-        from taskweaver.llm.openai import OpenAIService
-        from taskweaver.llm.anthropic import AnthropicService
-        from taskweaver.llm.azure_ml import AzureMLService
-        from taskweaver.llm.groq import GroqService
-        from taskweaver.llm.ollama import OllamaService
-        from taskweaver.llm.qwen import QWenService
-        from taskweaver.llm.zhipuai import ZhipuAIService
-        
-        services = [
-            OpenAIService,
-            AnthropicService,
-            AzureMLService,
-            GroqService,
-            OllamaService,
-            QWenService,
-            ZhipuAIService
-        ]
-        
-        for service_class in services:
-            if hasattr(service_class, '_original_chat_completion'):
-                service_class.chat_completion = service_class._original_chat_completion
-                delattr(service_class, '_original_chat_completion')
-                logger.info(f"[UNDO] Restored original methods for {service_class.__name__}")
+        try:
+            from taskweaver.llm.openai import OpenAIService
+            from taskweaver.llm.anthropic import AnthropicService
+            from taskweaver.llm.azure_ml import AzureMLService
+            from taskweaver.llm.groq import GroqService
+            from taskweaver.llm.ollama import OllamaService
+            from taskweaver.llm.qwen import QWenService
+            from taskweaver.llm.zhipuai import ZhipuAIService
+
+            # Map service classes to their identifying characteristics
+            service_mapping = {
+                "openai": OpenAIService,  # Handles "openai", "azure", "azure_ad"
+                "azure": OpenAIService,
+                "azure_ad": OpenAIService,
+                "anthropic": AnthropicService,
+                "azure_ml": AzureMLService,
+                "groq": GroqService,
+                "ollama": OllamaService,
+                "qwen": QWenService,
+                "zhipuai": ZhipuAIService
+            }
+
+            # Check each service for patching and undo if found
+            for service_name, service_class in service_mapping.items():
+                if hasattr(service_class, '_original_chat_completion'):
+                    service_class.chat_completion = service_class._original_chat_completion
+                    delattr(service_class, '_original_chat_completion')
+                    logger.info(f"[UNDO] Restored original methods for {service_class.__name__}")
+                    # Break after finding the patched service since we only patch one
+                    break
+
+        except Exception as e:
+            logger.error(f"[UNDO] Failed to restore original methods: {str(e)}", exc_info=True)
