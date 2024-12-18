@@ -15,7 +15,7 @@ import threading
 import traceback
 from decimal import Decimal
 from functools import cached_property
-from typing import List, Optional, Tuple, Union
+from typing import Any, Dict, List, Optional, Set, Tuple, Union
 from uuid import UUID, uuid4
 
 from termcolor import colored
@@ -247,7 +247,7 @@ class Client(metaclass=MetaClient):
         end_state_reason: Optional[str] = None,
         video: Optional[str] = None,
         is_auto_end: Optional[bool] = None,
-    ) -> Optional[Decimal]:
+    ) -> Optional[Dict[str, Any]]:
         """
         End the current session with the AgentOps service.
 
@@ -258,17 +258,15 @@ class Client(metaclass=MetaClient):
             is_auto_end (bool, optional): is this an automatic use of end_session and should be skipped with skip_auto_end_session
 
         Returns:
-            Decimal: The token cost of the session. Returns 0 if the cost is unknown.
+            Dict[str, Any]: Session statistics including duration, cost, and event counts.
         """
         session = self._safe_get_session()
         if session is None:
-            return
+            return None
         if is_auto_end and self._config.skip_auto_end_session:
-            return
+            return None
 
-        token_cost = session.end_session(end_state=end_state, end_state_reason=end_state_reason, video=video)
-
-        return token_cost
+        return session.end_session(end_state=end_state, end_state_reason=end_state_reason, video=video)
 
     def create_agent(
         self,
