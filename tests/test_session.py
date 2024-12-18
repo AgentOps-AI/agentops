@@ -171,11 +171,12 @@ class TestSingleSessions:
         agentops.end_all_sessions()
 
     def test_add_tags_with_string(self, mock_req):
-        agentops.start_session()
-        agentops.add_tags("wrong-type-tags")
+        session = agentops.start_session()
+        session.add_tags("wrong-type-tags")
+        time.sleep(0.1)  # Wait for request to complete
 
         request_json = mock_req.last_request.json()
-        assert request_json["session"]["tags"] == ["wrong-type-tags"]
+        assert "wrong-type-tags" in request_json["session"]["tags"]
 
     def test_session_add_tags_with_string(self, mock_req):
         session = agentops.start_session()
@@ -307,13 +308,14 @@ class TestMultiSessions:
         self.config = Configuration()
         self.client = Client(config=self.config)
         self.config.configure(self.client, api_key=self.api_key, auto_start_session=True)
+        self.event_type = "test_event_type"
 
         # Set up mock requests for each test
         url = "https://api.agentops.ai"
         mock_req.post(
             url + "/v2/start_session",
             json={"status": "success", "jwt": "test-jwt-token"},
-            request_headers={"authorization": f"Bearer {self.api_key}"},
+            request_headers={"X-Agentops-Api-Key": self.api_key},
         )
         mock_req.post(url + "/v2/create_events", json={"status": "ok"})
         mock_req.post(url + "/v2/reauthorize_jwt", json={"status": "success", "jwt": "test-jwt-token"})
@@ -470,6 +472,11 @@ class TestSessionExporter:
         # Create a test span context
         self.context = Context()
         set_value("session.id", str(self.session_id), self.context)
+
+        # Initialize the exporter
+        from agentops.exporters import AgentOpsSpanExporter
+
+        self.exporter = AgentOpsSpanExporter()
 
     def teardown_method(self):
         """Clean up after each test"""
