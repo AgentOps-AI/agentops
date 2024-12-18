@@ -465,34 +465,40 @@ class Session:
             self.jwt = jwt
             return jwt
 
-    def _start_session(self) -> None:
-        """Start a new session."""
-        if not self._config.api_key:
-            raise ValueError("API key is required to start a session")
+    def _start_session(self) -> bool:
+        """Start the session by making a request to the server."""
+        if self._is_running:
+            return True
 
-        if self.is_running:
-            return
+        try:
+            response = HttpClient.post(
+                "/sessions/start",  # Remove /v2 prefix since HttpClient will add it in test mode
+                json_data={
+                    "session": {
+                        "session_id": str(self._session_id),
+                        "inherited_session_id": self._inherited_session_id,
+                        "tags": self._tags or [],
+                        "host_env": self._host_env,
+                        "start_time": get_ISO_time(),
+                    }
+                },
+                headers={"x-agentops-api-key": self._api_key},
+            )
 
-        self.start_time = datetime.now(timezone.utc)
-        self.is_running = True
+            if response.success:
+                self._jwt = response.data.get("jwt")
+                self._session_url = response.data.get("session_url")
+                print(f"🖇 AgentOps: Session Replay: {self._session_url}")
+                self._is_running = True
+                self._start_time = datetime.now(timezone.utc)
+                return True
+            else:
+                logger.error("Failed to start session")
+                return False
 
-        response = HttpClient.post(
-            "/v2/start_session",
-            json_data={
-                "session": {
-                    "session_id": str(self.session_id),
-                    "tags": self.tags or [],
-                    "inherited_session_id": self.inherited_session_id,
-                    "start_time": get_ISO_time(),
-                }
-            },
-            api_key=self._config.api_key,
-        )
-
-        if response.status == "success":
-            self.jwt = response.body.get("jwt")
-            self.session_url = response.body.get("session_url")
-            print(f"🖇 AgentOps: Session Replay: {self.session_url}")
+        except Exception as e:
+            logger.error(f"Failed to start session: {str(e)}")
+            return False
 
     def _update_session(self) -> None:
         """Update session state on the server"""

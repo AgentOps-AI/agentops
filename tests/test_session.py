@@ -35,7 +35,7 @@ def setup_teardown(mock_req):
 def mock_req():
     """Set up mock requests."""
     with requests_mock.Mocker() as m:
-        base_url = "http://localhost/v2"  # Use localhost for test mode
+        base_url = "http://localhost"  # Use localhost for test mode without /v2 prefix
         api_key = "2a458d3f-5bd7-4798-b862-7d9a54515689"
         jwts = ["some_jwt", "some_jwt2", "some_jwt3"]  # Add multiple JWT tokens
         session_counter = {"count": 0}  # Counter for tracking session number
@@ -55,28 +55,29 @@ def mock_req():
 
         # Mock v2 endpoints with consistent paths and response format
         m.post(
-            f"{base_url}/sessions/start",
+            f"{base_url}/v2/sessions/start",
             json=lambda request, context: {
                 "success": True,
                 "jwt": get_next_jwt(request),
+                "session_id": "test-session-id",
                 "session_url": "https://app.agentops.ai/session/123",
             },
             additional_matcher=match_headers,
         )
         m.post(
-            f"{base_url}/sessions/test-session-id/events", json={"success": True}, additional_matcher=match_headers
+            f"{base_url}/v2/sessions/test-session-id/events", json={"success": True}, additional_matcher=match_headers
         )
         m.post(
-            f"{base_url}/sessions/test-session-id/jwt",
+            f"{base_url}/v2/sessions/test-session-id/jwt",
             json=lambda request, context: {"success": True, "jwt": get_next_jwt(request)},
             additional_matcher=match_headers,
         )
         m.post(
-            f"{base_url}/sessions/test-session-id/update",
+            f"{base_url}/v2/sessions/test-session-id/update",
             json={"success": True, "token_cost": 5},
             additional_matcher=match_headers,
         )
-        m.post(f"{base_url}/sessions/test-session-id/end", json={"success": True}, additional_matcher=match_headers)
+        m.post(f"{base_url}/v2/sessions/test-session-id/end", json={"success": True}, additional_matcher=match_headers)
         yield m
 
 
@@ -96,6 +97,7 @@ class TestSingleSessions:
         """Set up test environment"""
         clear_singletons()  # Reset singleton state
         agentops.end_all_sessions()  # Ensure clean state
+        HttpClient.set_base_url("")  # Reset base URL for testing
         self.api_key = "2a458d3f-5bd7-4798-b862-7d9a54515689"
         self.event_type = "test_event_type"
         self.config = Configuration()
