@@ -2,9 +2,9 @@
 # coding: utf-8
 
 # # OpenAI Sync Example
-# 
+#
 # We are going to create a simple chatbot that creates stories based on a prompt. The chatbot will use the gpt-4o-mini LLM to generate the story using a user prompt.
-# 
+#
 # We will track the chatbot with AgentOps and see how it performs!
 
 # First let's install the required packages
@@ -12,8 +12,8 @@
 # In[ ]:
 
 
-get_ipython().run_line_magic('pip', 'install -U openai')
-get_ipython().run_line_magic('pip', 'install -U agentops')
+get_ipython().run_line_magic("pip", "install -U openai")
+get_ipython().run_line_magic("pip", "install -U agentops")
 
 
 # Then import them
@@ -21,6 +21,7 @@ get_ipython().run_line_magic('pip', 'install -U agentops')
 # In[1]:
 
 
+# ruff: noqa: E402
 from openai import OpenAI
 import agentops
 import os
@@ -46,7 +47,7 @@ agentops.init(AGENTOPS_API_KEY, default_tags=["openai-sync-example"])
 
 
 # And we are all set! Note the seesion url above. We will use it to track the chatbot.
-# 
+#
 # Let's create a simple chatbot that generates stories.
 
 # In[4]:
@@ -94,7 +95,7 @@ stream = client.chat.completions.create(
 )
 
 for chunk in stream:
-  print(chunk.choices[0].delta.content or "", end="")
+    print(chunk.choices[0].delta.content or "", end="")
 
 
 # Note that the response is a generator that yields chunks of the story. We can track this with AgentOps by navigating to the session url and viewing the run.
@@ -106,5 +107,5 @@ agentops.end_session(end_state="Success", end_state_reason="The story was genera
 
 
 # We end the session with a success state and a success reason. This is useful if you want to track the success or failure of the chatbot. In that case you can set the end state to failure and provide a reason. By default the session will have an indeterminate end state.
-# 
+#
 # All done!

@@ -12,8 +12,8 @@ from dotenv import load_dotenv
 # Set up logging
 logging.basicConfig(
     level=logging.DEBUG,  # Change to DEBUG to see more detailed output
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-    handlers=[logging.StreamHandler()]
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+    handlers=[logging.StreamHandler()],
 )
 logger = logging.getLogger(__name__)
 
@@ -45,14 +45,13 @@ try:
     # Set up messages for story generation
     messages = [
         {"role": "system", "content": "You are a creative storyteller."},
-        {"role": "user", "content": "Write a short story about a cyber-warrior trapped in the imperial era."}
+        {"role": "user", "content": "Write a short story about a cyber-warrior trapped in the imperial era."},
     ]
 
     # Test non-streaming completion
     print("Generating story with Fireworks LLM...")
     response = client.chat.completions.create(
-        model="accounts/fireworks/models/llama-v3p1-8b-instruct",
-        messages=messages
+        model="accounts/fireworks/models/llama-v3p1-8b-instruct", messages=messages
     )
     print("\nLLM Response:")
     print(response.choices[0].message.content)
@@ -63,15 +62,13 @@ try:
     # Test streaming completion
     print("\nGenerating story with streaming enabled...")
     stream = client.chat.completions.create(
-        model="accounts/fireworks/models/llama-v3p1-8b-instruct",
-        messages=messages,
-        stream=True
+        model="accounts/fireworks/models/llama-v3p1-8b-instruct", messages=messages, stream=True
     )
 
     print("\nStreaming LLM Response:")
     for chunk in stream:
         try:
-            if hasattr(chunk, 'choices') and chunk.choices and hasattr(chunk.choices[0].delta, 'content'):
+            if hasattr(chunk, "choices") and chunk.choices and hasattr(chunk.choices[0].delta, "content"):
                 content = chunk.choices[0].delta.content
             else:
                 content = chunk
@@ -88,7 +85,7 @@ try:
     try:
         session_stats = session.end_session(
             end_state=EndState.SUCCESS.value,  # Use .value to get the enum value
-            end_state_reason="Successfully generated stories using both streaming and non-streaming modes."
+            end_state_reason="Successfully generated stories using both streaming and non-streaming modes.",
         )
         print("\nSession Statistics:")
         if isinstance(session_stats, dict):
@@ -102,16 +99,12 @@ try:
 
 except Exception as e:
     logger.error(f"An error occurred: {str(e)}", exc_info=True)
-    if 'session' in locals():
+    if "session" in locals():
         try:
-            session.end_session(
-                end_state=EndState.FAIL,
-                end_state_reason=f"Error occurred: {str(e)}"
-            )
+            session.end_session(end_state=EndState.FAIL, end_state_reason=f"Error occurred: {str(e)}")
         except Exception as end_error:
             logger.error(f"Error ending session: {str(end_error)}", exc_info=True)
     raise
 
 finally:
     print("\nScript execution completed.")
-

@@ -7,7 +7,9 @@ nb = nbf.v4.new_notebook()
 cells = []
 
 # Cell 1: Imports and initialization
-cells.append(nbf.v4.new_code_cell('''
+cells.append(
+    nbf.v4.new_code_cell(
+        """
 import os
 from dotenv import load_dotenv
 from fireworks.client import Fireworks
@@ -38,10 +40,14 @@ messages = [
     {"role": "system", "content": "You are a creative storyteller."},
     {"role": "user", "content": "Write a short story about a cyber-warrior trapped in the imperial era."}
 ]
-'''))
+"""
+    )
+)
 
 # Cell 2: Non-streaming completion
-cells.append(nbf.v4.new_code_cell('''
+cells.append(
+    nbf.v4.new_code_cell(
+        """
 # Test non-streaming completion
 print("Generating story with Fireworks LLM...")
 response = client.chat.completions.create(
@@ -52,10 +58,14 @@ print("\\nLLM Response:")
 print(response.choices[0].message.content)
 print("\\nEvent tracking details:")
 print(f"Session URL: {session.session_url}")
-'''))
+"""
+    )
+)
 
 # Cell 3: Streaming completion
-cells.append(nbf.v4.new_code_cell('''
+cells.append(
+    nbf.v4.new_code_cell(
+        """
 # Test streaming completion
 print("\\nGenerating story with streaming enabled...")
 stream = client.chat.completions.create(
@@ -70,10 +80,14 @@ for chunk in stream:
         print(chunk.choices[0].delta.content, end="")
 print("\\n\\nEvent tracking details:")
 print(f"Session URL: {session.session_url}")
-'''))
+"""
+    )
+)
 
 # Cell 4: End session with detailed stats
-cells.append(nbf.v4.new_code_cell('''
+cells.append(
+    nbf.v4.new_code_cell(
+        """
 # End session and show detailed stats
 print("\\nEnding AgentOps session...")
 try:
@@ -92,12 +106,14 @@ try:
 except Exception as e:
     print(f"Error ending session: {str(e)}")
     print("Session URL for debugging:", session.session_url)
-'''))
+"""
+    )
+)
 
 
 # Add cells to notebook
 nb.cells = cells
 
 # Write the notebook
-with open('fireworks_example.ipynb', 'w') as f:
+with open("fireworks_example.ipynb", "w") as f:
     nbf.write(nb, f)

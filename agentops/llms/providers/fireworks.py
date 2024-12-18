@@ -9,6 +9,7 @@ from .instrumented_provider import InstrumentedProvider
 
 logger = logging.getLogger(__name__)
 
+
 class FireworksProvider(InstrumentedProvider):
     """Provider for Fireworks.ai API."""
 
@@ -33,13 +34,18 @@ class FireworksProvider(InstrumentedProvider):
 
         try:
             # Handle streaming response
-            if kwargs.get('stream', False):
+            if kwargs.get("stream", False):
+
                 async def async_generator(stream):
                     async for chunk in stream:
                         try:
                             # Parse the chunk data
-                            if hasattr(chunk, 'choices') and chunk.choices:
-                                content = chunk.choices[0].delta.content if hasattr(chunk.choices[0].delta, 'content') else None
+                            if hasattr(chunk, "choices") and chunk.choices:
+                                content = (
+                                    chunk.choices[0].delta.content
+                                    if hasattr(chunk.choices[0].delta, "content")
+                                    else None
+                                )
                             else:
                                 # Handle raw string chunks from streaming response
                                 content = chunk
@@ -50,12 +56,12 @@ class FireworksProvider(InstrumentedProvider):
                                     event_type=EventType.LLM.value,
                                     init_timestamp=init_timestamp,
                                     end_timestamp=get_ISO_time(),
-                                    model=kwargs.get('model', 'unknown'),
-                                    prompt=str(kwargs.get('messages', [])),
+                                    model=kwargs.get("model", "unknown"),
+                                    prompt=str(kwargs.get("messages", [])),
                                     completion="[Streaming Response]",
                                     prompt_tokens=0,
                                     completion_tokens=0,
-                                    cost=0.0
+                                    cost=0.0,
                                 )
                                 if self._session:
                                     self._session.record(event)
@@ -69,8 +75,12 @@ class FireworksProvider(InstrumentedProvider):
                     for chunk in stream:
                         try:
                             # Parse the chunk data
-                            if hasattr(chunk, 'choices') and chunk.choices:
-                                content = chunk.choices[0].delta.content if hasattr(chunk.choices[0].delta, 'content') else None
+                            if hasattr(chunk, "choices") and chunk.choices:
+                                content = (
+                                    chunk.choices[0].delta.content
+                                    if hasattr(chunk.choices[0].delta, "content")
+                                    else None
+                                )
                             else:
                                 # Handle raw string chunks from streaming response
                                 content = chunk
@@ -81,12 +91,12 @@ class FireworksProvider(InstrumentedProvider):
                                     event_type=EventType.LLM.value,
                                     init_timestamp=init_timestamp,
                                     end_timestamp=get_ISO_time(),
-                                    model=kwargs.get('model', 'unknown'),
-                                    prompt=str(kwargs.get('messages', [])),
+                                    model=kwargs.get("model", "unknown"),
+                                    prompt=str(kwargs.get("messages", [])),
                                     completion="[Streaming Response]",
                                     prompt_tokens=0,
                                     completion_tokens=0,
-                                    cost=0.0
+                                    cost=0.0,
                                 )
                                 if self._session:
                                     self._session.record(event)
@@ -96,26 +106,26 @@ class FireworksProvider(InstrumentedProvider):
                             logger.error(f"Error processing streaming chunk: {str(e)}")
                             continue
 
-                if hasattr(response, '__aiter__'):
+                if hasattr(response, "__aiter__"):
                     return async_generator(response)
                 else:
                     return generator(response)
 
             # Handle non-streaming response
-            if hasattr(response, 'choices') and response.choices:
-                content = response.choices[0].message.content if hasattr(response.choices[0], 'message') else ""
+            if hasattr(response, "choices") and response.choices:
+                content = response.choices[0].message.content if hasattr(response.choices[0], "message") else ""
 
                 # Create event data for non-streaming response
                 event = LLMEvent(
                     event_type=EventType.LLM.value,
                     init_timestamp=init_timestamp,
                     end_timestamp=get_ISO_time(),
-                    model=kwargs.get('model', 'unknown'),
-                    prompt=str(kwargs.get('messages', [])),
+                    model=kwargs.get("model", "unknown"),
+                    prompt=str(kwargs.get("messages", [])),
                     completion=content,
                     prompt_tokens=0,
                     completion_tokens=0,
-                    cost=0.0
+                    cost=0.0,
                 )
                 if self._session:
                     self._session.record(event)
@@ -133,7 +143,7 @@ class FireworksProvider(InstrumentedProvider):
 
         # Store original methods
         self._original_completion = self.client.chat.completions.create
-        self._original_async_completion = getattr(self.client.chat.completions, 'acreate', None)
+        self._original_async_completion = getattr(self.client.chat.completions, "acreate", None)
 
         # Override methods
         self._override_fireworks_completion()
