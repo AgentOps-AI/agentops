@@ -6,6 +6,7 @@ from agentops import record_action
 from datetime import datetime
 from agentops.singleton import clear_singletons
 import contextlib
+from agentops.http_client import HttpClient
 
 jwts = ["some_jwt", "some_jwt2", "some_jwt3"]
 
@@ -13,14 +14,16 @@ jwts = ["some_jwt", "some_jwt2", "some_jwt3"]
 @pytest.fixture(autouse=True)
 def setup_teardown():
     clear_singletons()
+    HttpClient.set_base_url("")  # Reset base URL for testing
     yield
     agentops.end_all_sessions()  # teardown part
 
 
 @pytest.fixture(autouse=True, scope="function")
 def mock_req():
+    """Set up mock requests."""
     with requests_mock.Mocker() as m:
-        base_url = "/v2"
+        base_url = "http://localhost/v2"  # Use localhost for test mode
         api_key = "2a458d3f-5bd7-4798-b862-7d9a54515689"
         jwts = ["some_jwt", "some_jwt2", "some_jwt3"]
         session_counter = {"count": 0}

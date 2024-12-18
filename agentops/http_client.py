@@ -57,6 +57,14 @@ class Response:
 
 class HttpClient:
     _session: Optional[requests.Session] = None
+    _base_url: str = "https://api.agentops.ai"
+    _test_mode: bool = False
+
+    @classmethod
+    def set_base_url(cls, url: str) -> None:
+        """Set the base URL for all HTTP requests"""
+        cls._base_url = url
+        cls._test_mode = not url  # Enable test mode when base URL is empty
 
     @classmethod
     def get_session(cls) -> requests.Session:
@@ -136,7 +144,13 @@ class HttpClient:
             else:
                 data = payload if payload is not None else b"{}"
 
-            res = session.post(url, data=data, headers=headers, timeout=20)
+            # Handle URL based on test mode
+            if cls._test_mode:
+                full_url = f"http://localhost{url}"  # Use localhost for test mode
+            else:
+                full_url = f"{cls._base_url}{url}" if url.startswith("/") else url
+
+            res = session.post(full_url, data=data, headers=headers, timeout=20)
             result.parse(res)
 
         except requests.exceptions.Timeout:
@@ -183,7 +197,12 @@ class HttpClient:
         try:
             headers = cls._prepare_headers(api_key, None, jwt, header)
             session = cls.get_session()
-            res = session.get(url, headers=headers, timeout=20)
+            # Handle URL based on test mode
+            if cls._test_mode:
+                full_url = f"http://localhost{url}"  # Use localhost for test mode
+            else:
+                full_url = f"{cls._base_url}{url}" if url.startswith("/") else url
+            res = session.get(full_url, headers=headers, timeout=20)
             result.parse(res)
 
         except requests.exceptions.Timeout:

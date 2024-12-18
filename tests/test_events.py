@@ -1,22 +1,26 @@
 import time
-import requests_mock
 import pytest
+import requests_mock
+
 import agentops
-from agentops import ActionEvent, ErrorEvent
+from agentops import Event, ActionEvent, ErrorEvent
+from agentops.http_client import HttpClient
 from agentops.singleton import clear_singletons
 
 
 @pytest.fixture(autouse=True)
 def setup_teardown():
     clear_singletons()
+    HttpClient.set_base_url("")  # Reset base URL for testing
     yield
     agentops.end_all_sessions()  # teardown part
 
 
 @pytest.fixture(autouse=True, scope="function")
 def mock_req():
+    """Set up mock requests."""
     with requests_mock.Mocker() as m:
-        base_url = "/v2"
+        base_url = "http://localhost/v2"  # Use localhost for test mode
         api_key = "2a458d3f-5bd7-4798-b862-7d9a54515689"
 
         def match_headers(request):
@@ -31,7 +35,11 @@ def mock_req():
             json={"success": True, "jwt": "test-jwt-token", "session_url": "https://app.agentops.ai/session/123"},
             additional_matcher=match_headers,
         )
-        m.post(f"{base_url}/sessions/test-session-id/events", json={"success": True}, additional_matcher=match_headers)
+        m.post(
+            f"{base_url}/sessions/test-session-id/events",
+            json={"success": True},
+            additional_matcher=match_headers,
+        )
         m.post(
             f"{base_url}/sessions/test-session-id/jwt",
             json={"success": True, "jwt": "test-jwt-token"},
@@ -42,8 +50,11 @@ def mock_req():
             json={"success": True, "token_cost": 5},
             additional_matcher=match_headers,
         )
-        m.post(f"{base_url}/sessions/test-session-id/end", json={"success": True}, additional_matcher=match_headers)
-        m.post("https://pypi.org/pypi/agentops/json", status_code=404)
+        m.post(
+            f"{base_url}/sessions/test-session-id/end",
+            json={"success": True},
+            additional_matcher=match_headers,
+        )
         yield m
 
 
