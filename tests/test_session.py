@@ -76,11 +76,7 @@ class TestSingleSessions:
         self.api_key = "2a458d3f-5bd7-4798-b862-7d9a54515689"
         self.event_type = "test_event_type"
         self.client = Client()
-        self.client.configure(
-            api_key=self.api_key,
-            max_wait_time=50,
-            auto_start_session=True
-        )
+        self.client.configure(api_key=self.api_key, max_wait_time=50, auto_start_session=True)
 
     def test_session(self, mock_req):
         session = self.client.initialize()
