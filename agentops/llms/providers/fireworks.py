@@ -1,4 +1,6 @@
 import logging
+import time
+import asyncio
 from typing import Optional, AsyncGenerator
 import pprint
 from agentops.session import Session
@@ -28,131 +30,99 @@ class FireworksProvider(InstrumentedProvider):
         self._session = session
         logger.debug(f"Set session {session.session_id} for {self._provider_name} provider")
 
-    def handle_response(self, response, kwargs, init_timestamp, session: Optional[Session] = None) -> dict:
+    async def handle_response(self, response, kwargs, init_timestamp, session: Optional[Session] = None) -> dict:
         """Handle the response from the Fireworks API."""
-        if session:
-            self._session = session
-            logger.debug(f"Updated session to {session.session_id} for {self._provider_name} provider")
-
         try:
+            # Use existing session if provided, otherwise use provider's session
+            current_session = session if session else self._session
+            if not current_session:
+                logger.warning("No session available for event tracking")
+                return response
+
             # Pass ChatML messages directly to LLMEvent
             messages = kwargs.get("messages", [])
             logger.debug(f"Using ChatML messages: {messages}")
 
+            # Create base LLMEvent
+            event = LLMEvent(
+                model=kwargs.get("model", ""),
+                prompt=messages,  # Pass ChatML messages directly
+                init_timestamp=init_timestamp,
+                end_timestamp=time.time(),
+                completion="",  # Will be updated for streaming responses
+                prompt_tokens=0,  # Will be updated based on response
+                completion_tokens=0,
+                cost=0.0,
+            )
+
             # Handle streaming response
             if kwargs.get("stream", False):
-                # Create single LLMEvent for streaming response
-                stream_event = LLMEvent(
-                    event_type=EventType.LLM.value,
-                    init_timestamp=init_timestamp,
-                    model=kwargs.get("model", "unknown"),
-                    prompt=messages,  # Pass ChatML directly
-                    prompt_tokens=0,
-                    completion_tokens=0,
-                    cost=0.0,
-                )
-
-                async def async_generator(stream):
-                    """Handle async streaming response."""
-                    self._accumulated_content = ""
-                    async for chunk in stream:
-                        try:
+                async def async_generator(stream_response):
+                    accumulated_content = ""
+                    try:
+                        async for chunk in stream_response:
                             if hasattr(chunk, "choices") and chunk.choices:
-                                content = (
-                                    chunk.choices[0].delta.content
-                                    if hasattr(chunk.choices[0].delta, "content")
-                                    else None
-                                )
-                            else:
-                                content = chunk
+                                content = chunk.choices[0].delta.content if hasattr(chunk.choices[0].delta, "content") else ""
+                                if content:
+                                    accumulated_content += content
+                                    yield chunk
+                        # Update event with final accumulated content
+                        event.completion = accumulated_content
+                        event.end_timestamp = time.time()
+                        if current_session:
+                            current_session.record_event(event)
+                            logger.info("Recorded streaming LLM event")
+                    except Exception as e:
+                        logger.error(f"Error in async_generator: {str(e)}")
+                        raise
 
-                            if content:
-                                self._accumulated_content += content
-                                # Only create event when stream is finished
-                                if hasattr(chunk.choices[0], "finish_reason") and chunk.choices[0].finish_reason:
-                                    stream_event.completion = self._accumulated_content
-                                    stream_event.end_timestamp = get_ISO_time()
-                                    if self._session:
-                                        self._session.record(stream_event)
-                                        logger.debug(f"Recorded complete streaming response for session {self._session.session_id}")
-                                    self._accumulated_content = ""  # Reset for next stream
-                                yield content
-                        except Exception as e:
-                            logger.error(f"Error in async streaming: {str(e)}")
-                            raise
-
-                def generator(stream):
-                    """Handle synchronous streaming response."""
-                    self._accumulated_content = ""
-                    for chunk in stream:
-                        try:
+                def generator(stream_response):
+                    accumulated_content = ""
+                    try:
+                        for chunk in stream_response:
                             if hasattr(chunk, "choices") and chunk.choices:
-                                content = (
-                                    chunk.choices[0].delta.content
-                                    if hasattr(chunk.choices[0].delta, "content")
-                                    else None
-                                )
-                            else:
-                                content = chunk
-
-                            if content:
-                                self._accumulated_content += content
-                                # Only create event when stream is finished
-                                if hasattr(chunk.choices[0], "finish_reason") and chunk.choices[0].finish_reason:
-                                    stream_event.completion = self._accumulated_content
-                                    stream_event.end_timestamp = get_ISO_time()
-                                    if self._session:
-                                        self._session.record(stream_event)
-                                        logger.debug(f"Recorded complete streaming response for session {self._session.session_id}")
-                                    self._accumulated_content = ""  # Reset for next stream
-                                yield content
-                        except Exception as e:
-                            logger.error(f"Error in sync streaming: {str(e)}")
-                            raise
+                                content = chunk.choices[0].delta.content if hasattr(chunk.choices[0].delta, "content") else ""
+                                if content:
+                                    accumulated_content += content
+                                    yield chunk
+                        # Update event with final accumulated content
+                        event.completion = accumulated_content
+                        event.end_timestamp = time.time()
+                        if current_session:
+                            current_session.record_event(event)
+                            logger.info("Recorded streaming LLM event")
+                    except Exception as e:
+                        logger.error(f"Error in generator: {str(e)}")
+                        raise
 
                 if hasattr(response, "__aiter__"):
-                    return async_generator(response)
+                    return async_generator(response)  # Return async generator
                 else:
-                    return generator(response)
+                    return generator(response)  # Return sync generator
 
             # Handle non-streaming response
             if hasattr(response, "choices") and response.choices:
-                content = response.choices[0].message.content if hasattr(response.choices[0], "message") else ""
-
-                # Create LLMEvent for non-streaming response
-                non_stream_event = LLMEvent(
-                    event_type=EventType.LLM.value,
-                    init_timestamp=init_timestamp,
-                    end_timestamp=get_ISO_time(),
-                    model=kwargs.get("model", "unknown"),
-                    prompt=messages,  # Pass ChatML directly
-                    completion=content,
-                    prompt_tokens=0,
-                    completion_tokens=0,
-                    cost=0.0,
-                )
-
-                if self._session:
-                    self._session.record(non_stream_event)
-                    logger.debug(f"Recorded non-streaming response for session {self._session.session_id}")
+                event.completion = response.choices[0].message.content
+                event.end_timestamp = time.time()
+                if current_session:
+                    current_session.record_event(event)
+                    logger.info("Recorded non-streaming LLM event")
 
             return response
 
         except Exception as e:
-            logger.error(f"Error handling Fireworks response: {str(e)}")
+            logger.error(f"Error handling response: {str(e)}")
             raise
 
     def override(self):
         """Override Fireworks API methods with instrumented versions."""
-        logger.info(f"Overriding {self._provider_name} provider methods")
+        logger.info("Overriding Fireworks provider methods")
+        if not self._original_completion:
+            self._original_completion = self.client.chat.completions.create
+            self._override_fireworks_completion()
 
-        # Store original methods
-        self._original_completion = self.client.chat.completions.create
-        self._original_async_completion = getattr(self.client.chat.completions, "acreate", None)
-
-        # Override methods
-        self._override_fireworks_completion()
-        if self._original_async_completion:
+        if not self._original_async_completion:
+            self._original_async_completion = self.client.chat.completions.acreate
             self._override_fireworks_async_completion()
 
     def _override_fireworks_completion(self):
@@ -162,9 +132,14 @@ class FireworksProvider(InstrumentedProvider):
 
         def patched_function(*args, **kwargs):
             try:
-                init_timestamp = get_ISO_time()
+                init_timestamp = time.time()
                 response = original_create(*args, **kwargs)
-                return provider.handle_response(response, kwargs, init_timestamp, provider._session)
+                if kwargs.get("stream", False):
+                    return provider.handle_response(response, kwargs, init_timestamp, provider._session)
+                else:
+                    loop = asyncio.new_event_loop()
+                    asyncio.set_event_loop(loop)
+                    return loop.run_until_complete(provider.handle_response(response, kwargs, init_timestamp, provider._session))
             except Exception as e:
                 logger.error(f"Error in Fireworks completion: {str(e)}")
                 raise
@@ -178,9 +153,13 @@ class FireworksProvider(InstrumentedProvider):
 
         async def patched_function(*args, **kwargs):
             try:
-                init_timestamp = get_ISO_time()
+                init_timestamp = time.time()
                 response = await original_acreate(*args, **kwargs)
-                return provider.handle_response(response, kwargs, init_timestamp, provider._session)
+
+                if kwargs.get("stream", False):
+                    return await provider.handle_response(response, kwargs, init_timestamp, provider._session)
+                else:
+                    return await provider.handle_response(response, kwargs, init_timestamp, provider._session)
             except Exception as e:
                 logger.error(f"Error in Fireworks async completion: {str(e)}")
                 raise

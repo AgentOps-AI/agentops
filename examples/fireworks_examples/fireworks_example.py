@@ -3,6 +3,7 @@
 
 import os
 import logging
+import asyncio
 from fireworks.client import Fireworks
 import agentops
 from agentops.enums import EndState
@@ -28,9 +29,15 @@ try:
     # Initialize AgentOps client and start session
     print("Initializing AgentOps client...")
     ao_client = agentops.Client()
-    ao_client.initialize()
+    ao_client.initialize()  # Initialize before starting session
     session = ao_client.start_session()
+
+    if not session:
+        raise RuntimeError("Failed to create AgentOps session")
+
     print(f"AgentOps initialized. Session URL: {session.session_url}")
+    print("Session ID:", session.session_id)
+    print("Session tracking enabled:", bool(session))
 
     # Initialize Fireworks client
     print("Initializing Fireworks client...")
@@ -50,52 +57,83 @@ try:
         {"role": "user", "content": "Write a short story about a cyber-warrior trapped in the imperial era."},
     ]
 
-    # Test non-streaming completion
-    print("Generating story with Fireworks LLM...")
+    # 1. Test synchronous non-streaming completion
+    print("\n1. Generating story with synchronous non-streaming completion...")
     response = client.chat.completions.create(
         model="accounts/fireworks/models/llama-v3p1-8b-instruct", messages=messages
     )
-    print("\nLLM Response:")
+    print("\nSync Non-streaming Response:")
     print(response.choices[0].message.content)
-    print("\nEvent tracking details:")
-    print(f"Session URL: {session.session_url}")
-    print("Check the AgentOps dashboard to see the tracked LLM event.")
+    print("\nEvent recorded for sync non-streaming completion")
 
-    # Test streaming completion
-    print("\nGenerating story with streaming enabled...")
+    # 2. Test asynchronous non-streaming completion
+    print("\n2. Generating story with asynchronous non-streaming completion...")
+    async def async_completion():
+        response = await client.chat.completions.acreate(
+            model="accounts/fireworks/models/llama-v3p1-8b-instruct", messages=messages
+        )
+        print("\nAsync Non-streaming Response:")
+        print(response.choices[0].message.content)
+        print("\nEvent recorded for async non-streaming completion")
+
+    asyncio.run(async_completion())
+
+    # 3. Test synchronous streaming completion
+    print("\n3. Generating story with synchronous streaming...")
     stream = client.chat.completions.create(
         model="accounts/fireworks/models/llama-v3p1-8b-instruct", messages=messages, stream=True
     )
 
-    print("\nStreaming LLM Response:")
-    for chunk in stream:
-        try:
+    print("\nSync Streaming Response:")
+    try:
+        if asyncio.iscoroutine(stream):
+            stream = asyncio.run(stream)
+        for chunk in stream:
             if hasattr(chunk, "choices") and chunk.choices and hasattr(chunk.choices[0].delta, "content"):
                 content = chunk.choices[0].delta.content
-            else:
-                content = chunk
-            if content:
-                print(content, end="", flush=True)
+                if content:
+                    print(content, end="", flush=True)
+    except Exception as e:
+        logger.error(f"Error processing streaming response: {str(e)}")
+    print()  # New line after streaming
+
+    # 4. Test asynchronous streaming completion
+    print("\n4. Generating story with asynchronous streaming...")
+    async def async_streaming():
+        try:
+            stream = await client.chat.completions.acreate(
+                model="accounts/fireworks/models/llama-v3p1-8b-instruct", messages=messages, stream=True
+            )
+            print("\nAsync Streaming Response:")
+            async for chunk in stream:
+                if hasattr(chunk, "choices") and chunk.choices and hasattr(chunk.choices[0].delta, "content"):
+                    content = chunk.choices[0].delta.content
+                    if content:
+                        print(content, end="", flush=True)
         except Exception as e:
-            logger.error(f"Error processing chunk: {str(e)}")
-            continue
-    print("\n\nEvent tracking details:")
-    print(f"Session URL: {session.session_url}")
+            logger.error(f"Error in async streaming: {str(e)}")
+        print()  # New line after streaming
+
+    asyncio.run(async_streaming())
 
     # End session and show detailed stats
     print("\nEnding AgentOps session...")
     try:
-        session_stats = session.end_session(end_state="Success")
         print("\nSession Statistics:")
+        print(f"Session ID before end: {session.session_id}")  # Debug logging
+        session_stats = session.end_session(end_state=EndState.SUCCESS)
+        print(f"Session ID after end: {session.session_id}")  # Debug logging
         if isinstance(session_stats, dict):
-            print(f"Duration: {session_stats.get('Duration', 'N/A')}")
-            print(f"Cost: ${float(session_stats.get('Cost', 0.00)):.2f}")  # Convert to float before formatting
-            print(f"LLM Events: {session_stats.get('LLM calls', 0)}")
-            print(f"Tool Events: {session_stats.get('Tool calls', 0)}")
-            print(f"Action Events: {session_stats.get('Actions', 0)}")
-            print(f"Error Events: {session_stats.get('Errors', 0)}")
+            print(f"Duration: {session_stats.get('duration', 'N/A')}")
+            print(f"Cost: ${float(session_stats.get('cost', 0.00)):.2f}")
+            print(f"LLM Events: {session_stats.get('llm_events', 0)}")
+            print(f"Tool Events: {session_stats.get('tool_events', 0)}")
+            print(f"Action Events: {session_stats.get('action_events', 0)}")
+            print(f"Error Events: {session_stats.get('error_events', 0)}")
+            print(f"Session URL: {session.session_url}")  # Add session URL to output
         else:
             print("No session statistics available")
+            print("Session URL for debugging:", session.session_url)
     except Exception as e:
         print(f"Error ending session: {str(e)}")
         print("Session URL for debugging:", session.session_url)
@@ -111,3 +149,4 @@ except Exception as e:
 
 finally:
     print("\nScript execution completed.")
+
