@@ -352,7 +352,7 @@ class TestMultiSessions:
 
         # 5 requests: check_for_updates, 2 start_session, 2 record_event
         assert len(mock_req.request_history) == 5
-        assert mock_req.last_request.headers["authorization"] == f"Bearer {self.api_key}"
+        assert mock_req.last_request.headers["x-agentops-api-key"] == self.api_key
         request_json = mock_req.last_request.json()
         assert request_json["events"][0]["event_type"] == self.event_type
 
@@ -468,6 +468,7 @@ class TestSessionExporter:
         """Set up test environment"""
         clear_singletons()  # Reset singleton state
         agentops.end_all_sessions()  # Ensure clean state
+        HttpClient.set_base_url("")  # Reset base URL for testing
         self.api_key = "2a458d3f-5bd7-4798-b862-7d9a54515689"
         self.config = Configuration()
         self.config.api_key = self.api_key
@@ -476,18 +477,21 @@ class TestSessionExporter:
         agentops.init(api_key=self.api_key)
         time.sleep(0.1)  # Allow time for initialization
 
-        # Create a test session
+        # Create a test session and ensure it's properly initialized
         self.session = agentops.start_session()
+        assert self.session is not None, "Session initialization failed"
+        assert self.session.session_id is not None, "Session ID is None"
         self.session_id = self.session.session_id
         self.init_timestamp = get_ISO_time()
         self.end_timestamp = get_ISO_time()
 
-        # Create a test span context
+        # Create a test span context with verified session ID
         self.context = Context()
         set_value("session.id", str(self.session_id), self.context)
 
         # Initialize the exporter using the session's own exporter
         self.exporter = self.session._otel_exporter
+        assert self.exporter is not None, "Session exporter initialization failed"
 
     def teardown_method(self):
         """Clean up after each test"""

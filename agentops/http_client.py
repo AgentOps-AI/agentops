@@ -128,12 +128,12 @@ class HttpClient:
         api_key: Optional[str] = None,
         parent_key: Optional[str] = None,
         jwt: Optional[str] = None,
-        header: Optional[Dict[str, str]] = None,
+        headers: Optional[Dict[str, str]] = None,  # Renamed from header to headers
     ) -> Response:
         """Make HTTP POST request using connection pooling"""
         result = Response()
         try:
-            headers = cls._prepare_headers(api_key, parent_key, jwt, header)
+            headers = cls._prepare_headers(api_key, parent_key, jwt, headers)  # Updated parameter name
             session = cls.get_session()
 
             # Handle either json_data or payload parameter
@@ -193,12 +193,12 @@ class HttpClient:
         url: str,
         api_key: Optional[str] = None,
         jwt: Optional[str] = None,
-        header: Optional[Dict[str, str]] = None,
+        headers: Optional[Dict[str, str]] = None,  # Renamed from header to headers
     ) -> Response:
         """Make HTTP GET request using connection pooling"""
         result = Response()
         try:
-            headers = cls._prepare_headers(api_key, None, jwt, header)
+            headers = cls._prepare_headers(api_key, None, jwt, headers)  # Updated parameter name
             session = cls.get_session()
             # Handle URL based on test mode
             if cls._test_mode:

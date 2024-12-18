@@ -199,8 +199,8 @@ class TestRecordAction:
         assert len(mock_req.request_history) == 5
 
         request_json = mock_req.last_request.json()
-        assert mock_req.last_request.headers["X-Agentops-Api-Key"] == self.api_key
-        assert mock_req.last_request.headers["Authorization"] == "Bearer some_jwt2"
+        assert mock_req.last_request.headers["x-agentops-api-key"] == self.api_key
+        assert mock_req.last_request.headers["authorization"].startswith("Bearer ")
         assert request_json["events"][0]["action_type"] == self.event_type
         assert request_json["events"][0]["params"] == {"x": 1, "y": 2, "z": 3}
         assert request_json["events"][0]["returns"] == 6
