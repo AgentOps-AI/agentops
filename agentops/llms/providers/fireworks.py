@@ -139,14 +139,40 @@ class FireworksProvider(InstrumentedProvider):
             try:
                 init_timestamp = time.time()
                 response = original_create(*args, **kwargs)
+
+                # For streaming responses, handle directly without event loop
                 if kwargs.get("stream", False):
-                    return provider.handle_response(response, kwargs, init_timestamp, provider._session)
-                else:
-                    loop = asyncio.new_event_loop()
-                    asyncio.set_event_loop(loop)
-                    return loop.run_until_complete(
-                        provider.handle_response(response, kwargs, init_timestamp, provider._session)
+                    event = LLMEvent(
+                        model=kwargs.get("model", ""),
+                        prompt=kwargs.get("messages", []),  # Pass ChatML messages directly
+                        init_timestamp=init_timestamp,
+                        end_timestamp=time.time(),
+                        completion="[Streaming Response]",
+                        prompt_tokens=0,
+                        completion_tokens=0,
+                        cost=0.0,
                     )
+                    if provider._session:
+                        provider._session.record(event)
+                        logger.info("Recorded streaming LLM event")
+                    return response
+
+                # For non-streaming responses, handle synchronously
+                if hasattr(response, "choices") and response.choices:
+                    event = LLMEvent(
+                        model=kwargs.get("model", ""),
+                        prompt=kwargs.get("messages", []),  # Pass ChatML messages directly
+                        init_timestamp=init_timestamp,
+                        end_timestamp=time.time(),
+                        completion=response.choices[0].message.content,
+                        prompt_tokens=0,
+                        completion_tokens=0,
+                        cost=0.0,
+                    )
+                    if provider._session:
+                        provider._session.record(event)
+                        logger.info("Recorded non-streaming LLM event")
+                return response
             except Exception as e:
                 logger.error(f"Error in Fireworks completion: {str(e)}")
                 raise
@@ -161,12 +187,73 @@ class FireworksProvider(InstrumentedProvider):
         async def patched_function(*args, **kwargs):
             try:
                 init_timestamp = time.time()
-                response = await original_acreate(*args, **kwargs)
+                response_generator = await original_acreate(*args, **kwargs)
+                is_streaming = kwargs.get("stream", False)
 
-                if kwargs.get("stream", False):
-                    return await provider.handle_response(response, kwargs, init_timestamp, provider._session)
+                if is_streaming:
+                    # For streaming responses, create and record initial event
+                    event = LLMEvent(
+                        model=kwargs.get("model", ""),
+                        prompt=kwargs.get("messages", []),
+                        init_timestamp=init_timestamp,
+                        end_timestamp=time.time(),
+                        completion="[Streaming Response]",
+                        prompt_tokens=0,
+                        completion_tokens=0,
+                        cost=0.0,
+                    )
+                    if provider._session:
+                        provider._session.record(event)
+                        logger.info("Recorded streaming LLM event")
+
+                    # Create async generator wrapper
+                    async def stream_wrapper():
+                        accumulated_content = ""
+                        async for chunk in response_generator:
+                            if hasattr(chunk, "choices") and chunk.choices:
+                                content = chunk.choices[0].delta.content if hasattr(chunk.choices[0].delta, "content") else ""
+                                if content:
+                                    accumulated_content += content
+                                    yield chunk
+                        # Update event with final content
+                        event.completion = accumulated_content
+                        event.end_timestamp = time.time()
+                        if provider._session:
+                            provider._session.record(event)
+                            logger.info("Updated streaming LLM event with final content")
+
+                    return stream_wrapper()
                 else:
-                    return await provider.handle_response(response, kwargs, init_timestamp, provider._session)
+                    # For non-streaming responses, collect all chunks
+                    accumulated_content = ""
+                    async for chunk in response_generator:
+                        if hasattr(chunk, "choices") and chunk.choices:
+                            content = chunk.choices[0].delta.content if hasattr(chunk.choices[0].delta, "content") else ""
+                            if content:
+                                accumulated_content += content
+
+                    # Create and record event
+                    event = LLMEvent(
+                        model=kwargs.get("model", ""),
+                        prompt=kwargs.get("messages", []),
+                        init_timestamp=init_timestamp,
+                        end_timestamp=time.time(),
+                        completion=accumulated_content,
+                        prompt_tokens=0,
+                        completion_tokens=0,
+                        cost=0.0,
+                    )
+                    if provider._session:
+                        provider._session.record(event)
+                        logger.info("Recorded non-streaming LLM event")
+
+                    # Create a response-like object
+                    class AsyncResponse:
+                        def __init__(self, content):
+                            self.choices = [type('Choice', (), {'message': type('Message', (), {'content': content})()})]
+
+                    return AsyncResponse(accumulated_content)
+
             except Exception as e:
                 logger.error(f"Error in Fireworks async completion: {str(e)}")
                 raise
