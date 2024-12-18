@@ -505,7 +505,8 @@ class Session:
                     api_key=self.config.api_key,
                 )
             except ApiServerException as e:
-                return logger.error(f"Could not start session - {e}")
+                logger.error(f"Could not start session - {e}")
+                return False
 
             logger.debug(res.body)
 
