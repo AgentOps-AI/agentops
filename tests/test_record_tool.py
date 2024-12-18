@@ -28,9 +28,8 @@ def mock_req():
 
         def match_headers(request):
             headers = {k.lower(): v for k, v in request.headers.items()}
-            return (
-                headers.get("x-agentops-api-key") == api_key
-                and (headers.get("authorization", "").startswith("Bearer ") or request.path == "/v2/start_session")
+            return headers.get("x-agentops-api-key") == api_key and (
+                headers.get("authorization", "").startswith("Bearer ") or request.path == "/v2/start_session"
             )
 
         def get_next_jwt(request):
