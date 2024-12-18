@@ -22,16 +22,26 @@ When you create a session, you'll use your API key and receive a JWT token in re
 
 <CodeGroup>
 ```bash curl
-curl -X POST https://api.agentops.ai/create_session \
-  -H "Content-Type: application/json" \
+curl -X POST https://api.agentops.ai/v2/create_session \
+  -H "Content-Type: application/json; charset=UTF-8" \
+  -H "Accept: */*" \
   -H "X-Agentops-Api-Key: your_api_key" \
   -d '{
-    "id": "550e8400-e29b-41d4-a716-446655440000",
-    "init_timestamp": "2024-03-14T12:00:00Z"
+    "session": {
+      "session_id": "550e8400-e29b-41d4-a716-446655440000",
+      "init_timestamp": "2024-03-14T12:00:00Z",
+      "tags": ["production"],
+      "host_env": {
+        "OS": {
+          "OS": "Windows",
+          "OS Release": "11"
+        }
+      }
+    }
   }'
 ```
 
-```json Success Response
+```json Success Response (200 OK)
 {
   "status": "success",
   "jwt": "eyJhbGciOiJIUzI1NiIs...",
@@ -39,11 +49,17 @@ curl -X POST https://api.agentops.ai/create_session \
 }
 ```
 
-```bash Error Response
-HTTP/1.1 401 Unauthorized
+```json Error Response (401 Unauthorized)
 {
   "error": "Invalid API key",
   "message": "Please check your API key and try again"
+}
+```
+
+```json Error Response (400 Bad Request)
+{
+  "error": "Invalid request",
+  "message": "Missing required fields or invalid format"
 }
 ```
 </CodeGroup>
@@ -54,22 +70,42 @@ Use the JWT token in the Authorization header for all subsequent requests:
 
 <CodeGroup>
 ```bash Example Request
-curl -X POST https://api.agentops.ai/create_events \
+curl -X POST https://api.agentops.ai/v2/create_events \
   -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIs..." \
-  -H "Content-Type: application/json" \
+  -H "Content-Type: application/json; charset=UTF-8" \
+  -H "Accept: */*" \
   -d '{
     "events": [{
-      "type": "llm",
-      "init_timestamp": "2024-03-14T12:01:00Z"
+      "event_type": "llm",
+      "init_timestamp": "2024-03-14T12:01:00Z",
+      "end_timestamp": "2024-03-14T12:01:02Z",
+      "session_id": "550e8400-e29b-41d4-a716-446655440000",
+      "model": "gpt-4",
+      "prompt": [
+        {"role": "system", "content": "You are a helpful assistant"},
+        {"role": "user", "content": "Analyze this data..."}
+      ],
+      "completion": {
+        "role": "assistant",
+        "content": "Based on the data..."
+      },
+      "prompt_tokens": 150,
+      "completion_tokens": 80
     }]
   }'
 ```
 
-```bash Error Response
-HTTP/1.1 401 Unauthorized
+```json Error Response (401 Unauthorized)
 {
   "error": "Invalid or expired JWT",
-  "message": "Please reauthorize using /reauthorize_jwt"
+  "message": "Please reauthorize using /v2/reauthorize_jwt"
+}
+```
+
+```json Error Response (429 Too Many Requests)
+{
+  "error": "Rate limit exceeded",
+  "message": "Please try again later"
 }
 ```
 </CodeGroup>
@@ -81,20 +117,42 @@ JWTs expire after 24 hours. When a token expires, use your API key to get a new 
 <CodeGroup>
 ```bash curl
 curl -X POST https://api.agentops.ai/v2/reauthorize_jwt \
-  -H "Content-Type: application/json" \
+  -H "Content-Type: application/json; charset=UTF-8" \
+  -H "Accept: */*" \
   -H "X-Agentops-Api-Key: your_api_key" \
   -d '{
     "session_id": "550e8400-e29b-41d4-a716-446655440000"
   }'
 ```
 
-```json Success Response
+```json Success Response (200 OK)
 {
   "status": "success",
   "jwt": "eyJhbGciOiJIUzI1NiIs..."
 }
 ```
+
+```json Error Response (401 Unauthorized)
+{
+  "error": "Invalid API key",
+  "message": "Please check your API key and try again"
+}
+```
 </CodeGroup>
+
+## Error Handling
+
+The API uses standard HTTP status codes:
+
+| Status Code | Description |
+|------------|-------------|
+| 200 | Success |
+| 400 | Invalid Request - Check request format and required fields |
+| 401 | Unauthorized - Invalid or missing API key/JWT |
+| 408 | Request Timeout |
+| 413 | Payload Too Large |
+| 429 | Too Many Requests - Rate limit exceeded |
+| 500 | Internal Server Error |
 
 ## Session Management
 
@@ -115,11 +173,12 @@ Start a new monitoring session using your generated session ID:
 <CodeGroup>
 ```bash curl
 curl -X POST https://api.agentops.ai/v2/create_session \
-  -H "Content-Type: application/json" \
+  -H "Content-Type: application/json; charset=UTF-8" \
+  -H "Accept: */*" \
   -H "X-Agentops-Api-Key: your_api_key" \
   -d '{
     "session": {
-      "id": "550e8400-e29b-41d4-a716-446655440000",
+      "session_id": "550e8400-e29b-41d4-a716-446655440000",
       "init_timestamp": "2024-03-14T12:00:00Z",
       "tags": ["production", "customer-service"],
       "host_env": {
@@ -155,7 +214,7 @@ X-Agentops-Api-Key: your_api_key
 
 {
   "session": {
-    "id": "550e8400-e29b-41d4-a716-446655440000",
+    "session_id": "550e8400-e29b-41d4-a716-446655440000",
     "init_timestamp": "2024-03-14T12:00:00Z",
     "tags": ["production", "customer-service"],
     "host_env": {
@@ -192,11 +251,12 @@ Update an existing session (e.g., when it ends):
 <CodeGroup>
 ```bash curl
 curl -X POST https://api.agentops.ai/v2/update_session \
-  -H "Content-Type: application/json" \
+  -H "Content-Type: application/json; charset=UTF-8" \
+  -H "Accept: */*" \
   -H "Authorization: Bearer your_jwt_token" \
   -d '{
     "session": {
-      "id": "550e8400-e29b-41d4-a716-446655440000",
+      "session_id": "550e8400-e29b-41d4-a716-446655440000",
       "end_timestamp": "2024-03-14T12:05:00Z",
       "end_state": "Success",
       "end_state_reason": "Task successfully completed",
@@ -212,7 +272,7 @@ Authorization: Bearer your_jwt_token
 
 {
   "session": {
-    "id": "550e8400-e29b-41d4-a716-446655440000",
+    "session_id": "550e8400-e29b-41d4-a716-446655440000",
     "end_timestamp": "2024-03-14T12:05:00Z",
     "end_state": "Success",
     "end_state_reason": "Task successfully completed",
@@ -231,14 +291,16 @@ Track LLM calls, tool usage, or other events:
 <CodeGroup>
 ```bash curl
 curl -X POST https://api.agentops.ai/v2/create_events \
-  -H "Content-Type: application/json" \
+  -H "Content-Type: application/json; charset=UTF-8" \
+  -H "Accept: */*" \
   -H "Authorization: Bearer your_jwt_token" \
   -d '{
     "events": [
       {
-        "type": "llm",
+        "event_type": "llm",
         "init_timestamp": "2024-03-14T12:01:00Z",
         "end_timestamp": "2024-03-14T12:01:02Z",
+        "session_id": "550e8400-e29b-41d4-a716-446655440000",
         "model": "gpt-4",
         "prompt": [
           {"role": "system", "content": "You are a helpful assistant"},
@@ -252,7 +314,7 @@ curl -X POST https://api.agentops.ai/v2/create_events \
         "completion_tokens": 80
       },
       {
-        "type": "tool",
+        "event_type": "tool",
         "name": "database_query",
         "init_timestamp": "2024-03-14T12:01:03Z",
         "end_timestamp": "2024-03-14T12:01:04Z",
@@ -271,9 +333,10 @@ Authorization: Bearer your_jwt_token
 {
   "events": [
     {
-      "type": "llm",
+      "event_type": "llm",
       "init_timestamp": "2024-03-14T12:01:00Z",
       "end_timestamp": "2024-03-14T12:01:02Z",
+      "session_id": "550e8400-e29b-41d4-a716-446655440000",
       "model": "gpt-4",
       "prompt": [
         {"role": "system", "content": "You are a helpful assistant"},
@@ -287,7 +350,7 @@ Authorization: Bearer your_jwt_token
       "completion_tokens": 80
     },
     {
-      "type": "tool",
+      "event_type": "tool",
       "name": "database_query",
       "init_timestamp": "2024-03-14T12:01:03Z",
       "end_timestamp": "2024-03-14T12:01:04Z",
@@ -306,7 +369,8 @@ Update existing events (e.g., adding completion information):
 <CodeGroup>
 ```bash curl
 curl -X POST https://api.agentops.ai/v2/update_events \
-  -H "Content-Type: application/json" \
+  -H "Content-Type: application/json; charset=UTF-8" \
+  -H "Accept: */*" \
   -H "Authorization: Bearer your_jwt_token" \
   -d '{
     "events": [
@@ -347,7 +411,8 @@ Register a new agent in a session:
 <CodeGroup>
 ```bash curl
 curl -X POST https://api.agentops.ai/v2/create_agent \
-  -H "Content-Type: application/json" \
+  -H "Content-Type: application/json; charset=UTF-8" \
+  -H "Accept: */*" \
   -H "Authorization: Bearer your_jwt_token" \
   -d '{
     "id": "agent-123",
@@ -376,34 +441,68 @@ Here's a complete example using Python's requests library:
 import requests
 import uuid
 from datetime import datetime, timezone
+import json
 
 # Configuration
 API_KEY = "your_api_key"
 BASE_URL = "https://api.agentops.ai"
+HEADERS = {
+    "Content-Type": "application/json; charset=UTF-8",
+    "Accept": "*/*"
+}
+
+def handle_response(response):
+    """Handle API response and common errors"""
+    try:
+        response.raise_for_status()
+        return response.json()
+    except requests.exceptions.HTTPError as e:
+        if response.status_code == 401:
+            print("Authentication error. Check your API key or JWT token.")
+        elif response.status_code == 429:
+            print("Rate limit exceeded. Please try again later.")
+        elif response.status_code == 400:
+            print("Invalid request format:", response.json().get("message"))
+        else:
+            print(f"HTTP error occurred: {e}")
+        return None
+    except Exception as e:
+        print(f"An error occurred: {e}")
+        return None
 
 # Create session
 session_id = str(uuid.uuid4())
-response = requests.post(
+create_session_headers = {**HEADERS, "X-Agentops-Api-Key": API_KEY}
+session_response = requests.post(
     f"{BASE_URL}/v2/create_session",
-    headers={"X-Agentops-Api-Key": API_KEY},
+    headers=create_session_headers,
     json={
         "session": {
-            "id": session_id,
+            "session_id": session_id,
             "init_timestamp": datetime.now(timezone.utc).isoformat(),
             "tags": ["example"]
         }
     }
 )
-jwt_token = response.json()["jwt"]
+
+session_data = handle_response(session_response)
+if not session_data:
+    print("Failed to create session")
+    exit(1)
+
+jwt_token = session_data["jwt"]
 
 # Track LLM call
-requests.post(
+event_headers = {**HEADERS, "Authorization": f"Bearer {jwt_token}"}
+event_response = requests.post(
     f"{BASE_URL}/v2/create_events",
-    headers={"Authorization": f"Bearer {jwt_token}"},
+    headers=event_headers,
     json={
         "events": [{
-            "type": "llm",
+            "event_type": "llm",
             "init_timestamp": datetime.now(timezone.utc).isoformat(),
+            "end_timestamp": datetime.now(timezone.utc).isoformat(),
+            "session_id": session_id,
             "model": "gpt-4",
             "prompt": "Hello, world!",
             "completion": "Hi there!",
@@ -413,17 +512,24 @@ requests.post(
     }
 )
 
+if not handle_response(event_response):
+    print("Failed to create event")
+    exit(1)
+
 # End session
-requests.post(
+end_response = requests.post(
     f"{BASE_URL}/v2/update_session",
-    headers={"Authorization": f"Bearer {jwt_token}"},
+    headers=event_headers,
     json={
         "session": {
-            "id": session_id,
+            "session_id": session_id,
             "end_timestamp": datetime.now(timezone.utc).isoformat(),
-            "end_state": "completed"
+            "end_state": "Success"
         }
     }
 )
+
+if not handle_response(end_response):
+    print("Failed to end session")
 ```
 </CodeGroup>
