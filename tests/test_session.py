@@ -42,7 +42,7 @@ def mock_req():
 
         m.post(
             url + "/v2/start_session",
-            json={"status": "success", "jwt": "test-jwt-token"},
+            json={"status": "success", "jwt": "test-jwt-token", "session_url": "https://app.agentops.ai/session/123"},
             additional_matcher=match_headers,
         )
         m.post(url + "/v2/create_events", json={"status": "ok"}, additional_matcher=match_headers)
@@ -53,6 +53,16 @@ def mock_req():
         )
         m.post(
             url + "/v2/update_session", json={"status": "success", "token_cost": 5}, additional_matcher=match_headers
+        )
+        m.post(
+            url + "/v2/end_session",
+            json={"message": "Session ended"},
+            additional_matcher=match_headers,
+        )
+        m.post(
+            url + "/v2/export_session",
+            json={"message": "Session exported"},
+            additional_matcher=match_headers,
         )
         yield m
 
