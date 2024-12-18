@@ -194,6 +194,7 @@ class Session:
         inherited_session_id: Optional[str] = None,
         auto_start: bool = True,
         video: Optional[str] = None,
+        host_env: Optional[dict] = None,
     ):
         """Initialize a new session."""
         self._config = config or Configuration()
@@ -206,6 +207,7 @@ class Session:
         self.is_running = False
         self.tags: List[str] = tags or []
         self.video: Optional[str] = video
+        self.host_env = host_env
         self.jwt = None
         self._session_url = ""
         self.token_cost: Decimal = Decimal(0)
