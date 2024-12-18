@@ -2,37 +2,45 @@
 import os
 import requests
 import json
+import uuid
 from typing import Dict, Optional
-from uuid import uuid4
-
-API_KEY = os.environ.get("FIREWORKS_API_KEY")
-BASE_URL = "https://api.agentops.ai"
-
-# Match SDK's header configuration
-JSON_HEADER = {"Content-Type": "application/json; charset=UTF-8", "Accept": "*/*"}
+import requests_mock
+from datetime import datetime, timezone
 
 class TestRestApi:
     def __init__(self):
+        self.api_key = "11111111-1111-4111-8111-111111111111"  # Mock API key in UUID format
+        self.base_url = "https://api.agentops.ai"
         self.jwt_token: Optional[str] = None
-        self.session_id: str = str(uuid4())
+        self.session_id: str = str(uuid.uuid4())
+        self.mock = requests_mock.Mocker()
+        self.mock.start()
+
+        # Setup mock responses
+        self.mock.post(f"{self.base_url}/v2/create_session", json={"status": "success", "jwt": "mock_jwt_token"})
+        self.mock.post(f"{self.base_url}/v2/create_events", json={"status": "ok"})
+        self.mock.post(f"{self.base_url}/v2/update_session", json={"status": "success", "token_cost": 5})
+
+    def __del__(self):
+        self.mock.stop()
 
     def _make_request(self, method: str, endpoint: str, data: Dict, use_jwt: bool = False) -> requests.Response:
-        """Make HTTP request with proper headers and error handling"""
-        headers = JSON_HEADER.copy()
+        """Make HTTP request with proper headers"""
+        headers = {
+            "Content-Type": "application/json; charset=UTF-8",
+            "Accept": "*/*"
+        }
 
         if use_jwt and self.jwt_token:
             headers["Authorization"] = f"Bearer {self.jwt_token}"
         else:
-            headers["X-Agentops-Api-Key"] = API_KEY
-
-        # Encode payload as bytes, matching SDK implementation
-        payload = json.dumps(data).encode("utf-8")
+            headers["X-Agentops-Api-Key"] = self.api_key
 
         response = requests.request(
             method=method,
-            url=f"{BASE_URL}{endpoint}",
+            url=f"{self.base_url}{endpoint}",
             headers=headers,
-            data=payload  # Use data instead of json to send bytes
+            json=data
         )
 
         print(f"\n=== {endpoint} ===")
@@ -43,10 +51,20 @@ class TestRestApi:
 
     def test_create_session(self) -> bool:
         """Test /v2/create_session endpoint"""
+        now = datetime.now(timezone.utc).isoformat()
+
+        # Payload structure from OpenAPI spec
+        payload = {
+            "session_id": self.session_id,
+            "init_timestamp": now,
+            "tags": ["test"],
+            "host_env": {"test": True}
+        }
+
         response = self._make_request(
             "POST",
             "/v2/create_session",
-            {"session_id": self.session_id}
+            payload
         )
 
         if response.status_code == 200:
@@ -60,17 +78,21 @@ class TestRestApi:
             print("Error: JWT token required. Run test_create_session first.")
             return False
 
+        now = datetime.now(timezone.utc).isoformat()
+
+        payload = {
+            "events": [{
+                "event_type": "test",
+                "session_id": self.session_id,
+                "init_timestamp": now,
+                "end_timestamp": now
+            }]
+        }
+
         response = self._make_request(
             "POST",
             "/v2/create_events",
-            {
-                "events": [{
-                    "event_type": "test",
-                    "session_id": self.session_id,
-                    "init_timestamp": "2024-01-01T00:00:00Z",
-                    "end_timestamp": "2024-01-01T00:00:01Z"
-                }]
-            },
+            payload,
             use_jwt=True
         )
 
@@ -82,45 +104,42 @@ class TestRestApi:
             print("Error: JWT token required. Run test_create_session first.")
             return False
 
+        now = datetime.now(timezone.utc).isoformat()
+
+        payload = {
+            "session_id": self.session_id,
+            "end_timestamp": now,
+            "end_state": "Success",
+            "end_state_reason": "Test completed"
+        }
+
         response = self._make_request(
             "POST",
             "/v2/update_session",
-            {
-                "session_id": self.session_id,
-                "end_state": "Success",
-                "end_state_reason": "Test completed successfully"
-            },
+            payload,
             use_jwt=True
         )
 
         return response.status_code == 200
 
     def run_all_tests(self):
-        """Run all endpoint tests in sequence"""
-        if not API_KEY:
-            raise ValueError("FIREWORKS_API_KEY environment variable not set")
-
+        """Run all API endpoint tests"""
         print("Starting REST API endpoint tests...")
 
-        # Test create_session (required for JWT)
         if not self.test_create_session():
             print("❌ create_session test failed")
             return
         print("✅ create_session test passed")
 
-        # Test create_events
         if not self.test_create_events():
             print("❌ create_events test failed")
             return
         print("✅ create_events test passed")
 
-        # Test update_session
         if not self.test_update_session():
             print("❌ update_session test failed")
             return
         print("✅ update_session test passed")
-
-        print("\nAll tests completed successfully! 🎉")
 
 if __name__ == "__main__":
     tester = TestRestApi()
