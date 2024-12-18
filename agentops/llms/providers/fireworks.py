@@ -212,9 +212,7 @@ class FireworksProvider(InstrumentedProvider):
                         async for chunk in response_generator:
                             if hasattr(chunk, "choices") and chunk.choices:
                                 content = (
-                                    chunk.choices[0].delta.content
-                                    if hasattr(chunk.choices[0].delta, "content")
-                                    else ""
+                                    chunk.choices[0].delta.content if hasattr(chunk.choices[0].delta, "content") else ""
                                 )
                                 if content:
                                     accumulated_content += content
@@ -233,9 +231,7 @@ class FireworksProvider(InstrumentedProvider):
                     async for chunk in response_generator:
                         if hasattr(chunk, "choices") and chunk.choices:
                             content = (
-                                chunk.choices[0].delta.content
-                                if hasattr(chunk.choices[0].delta, "content")
-                                else ""
+                                chunk.choices[0].delta.content if hasattr(chunk.choices[0].delta, "content") else ""
                             )
                             if content:
                                 accumulated_content += content
