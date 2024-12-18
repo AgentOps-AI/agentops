@@ -157,6 +157,27 @@ when using LangChain as your LLM calling library.
 
 You can export session data and statistics using our REST APIs. These endpoints require authentication using your API key and a valid session JWT token.
 
+#### Obtaining API Key
+1. Log in to your [AgentOps Dashboard](https://app.agentops.ai)
+2. Navigate to Settings > API Keys
+3. Click "Create New API Key"
+4. Copy and securely store your API key
+   - Note: API keys cannot be viewed again after creation
+   - Store the key in your environment variables as `AGENTOPS_API_KEY`
+
+#### Obtaining JWT Token
+The JWT token is automatically generated when you start a session using the SDK. You can retrieve it programmatically:
+
+```python
+import agentops
+
+# Initialize AgentOps with your API key
+session_id = agentops.init(api_key="your_api_key")
+
+# Get the JWT token for your session
+jwt_token = agentops.get_session_jwt(session_id)
+```
+
 #### Get Session Stats
 Retrieve statistics for a specific session:
 
