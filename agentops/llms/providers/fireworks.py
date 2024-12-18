@@ -19,7 +19,8 @@ class FireworksProvider(InstrumentedProvider):
         self._original_completion = None
         self._original_async_completion = None
         self._session = None  # Initialize session attribute
-        self._accumulated_content = ""  # Add accumulator for streaming responses
+        self._accumulated_content = ""  # Track accumulated content for streaming
+        self._init_timestamp = None  # Track stream start time
         logger.info(f"Initializing {self._provider_name} provider")
 
     def set_session(self, session: Session):
@@ -34,10 +35,9 @@ class FireworksProvider(InstrumentedProvider):
             logger.debug(f"Updated session to {session.session_id} for {self._provider_name} provider")
 
         try:
-            # Format prompt properly
+            # Pass ChatML messages directly to LLMEvent
             messages = kwargs.get("messages", [])
-            formatted_prompt = "\n".join([f"{msg['role']}: {msg['content']}" for msg in messages])
-            logger.debug(f"Formatted prompt: {formatted_prompt}")
+            logger.debug(f"Using ChatML messages: {messages}")
 
             # Handle streaming response
             if kwargs.get("stream", False):
@@ -46,13 +46,14 @@ class FireworksProvider(InstrumentedProvider):
                     event_type=EventType.LLM.value,
                     init_timestamp=init_timestamp,
                     model=kwargs.get("model", "unknown"),
-                    prompt=formatted_prompt,
+                    prompt=messages,  # Pass ChatML directly
                     prompt_tokens=0,
                     completion_tokens=0,
                     cost=0.0,
                 )
 
                 async def async_generator(stream):
+                    """Handle async streaming response."""
                     self._accumulated_content = ""
                     async for chunk in stream:
                         try:
@@ -67,21 +68,21 @@ class FireworksProvider(InstrumentedProvider):
 
                             if content:
                                 self._accumulated_content += content
-                                # Record event only when we have the complete response
+                                # Only create event when stream is finished
                                 if hasattr(chunk.choices[0], "finish_reason") and chunk.choices[0].finish_reason:
                                     stream_event.completion = self._accumulated_content
                                     stream_event.end_timestamp = get_ISO_time()
                                     if self._session:
                                         self._session.record(stream_event)
-                                        logger.debug(
-                                            f"Recorded streaming response for session {self._session.session_id}"
-                                        )
+                                        logger.debug(f"Recorded complete streaming response for session {self._session.session_id}")
+                                    self._accumulated_content = ""  # Reset for next stream
                                 yield content
                         except Exception as e:
-                            logger.error(f"Error processing streaming chunk: {str(e)}")
-                            continue
+                            logger.error(f"Error in async streaming: {str(e)}")
+                            raise
 
                 def generator(stream):
+                    """Handle synchronous streaming response."""
                     self._accumulated_content = ""
                     for chunk in stream:
                         try:
@@ -96,19 +97,18 @@ class FireworksProvider(InstrumentedProvider):
 
                             if content:
                                 self._accumulated_content += content
-                                # Record event only when we have the complete response
+                                # Only create event when stream is finished
                                 if hasattr(chunk.choices[0], "finish_reason") and chunk.choices[0].finish_reason:
                                     stream_event.completion = self._accumulated_content
                                     stream_event.end_timestamp = get_ISO_time()
                                     if self._session:
                                         self._session.record(stream_event)
-                                        logger.debug(
-                                            f"Recorded streaming response for session {self._session.session_id}"
-                                        )
+                                        logger.debug(f"Recorded complete streaming response for session {self._session.session_id}")
+                                    self._accumulated_content = ""  # Reset for next stream
                                 yield content
                         except Exception as e:
-                            logger.error(f"Error processing streaming chunk: {str(e)}")
-                            continue
+                            logger.error(f"Error in sync streaming: {str(e)}")
+                            raise
 
                 if hasattr(response, "__aiter__"):
                     return async_generator(response)
@@ -125,7 +125,7 @@ class FireworksProvider(InstrumentedProvider):
                     init_timestamp=init_timestamp,
                     end_timestamp=get_ISO_time(),
                     model=kwargs.get("model", "unknown"),
-                    prompt=formatted_prompt,
+                    prompt=messages,  # Pass ChatML directly
                     completion=content,
                     prompt_tokens=0,
                     completion_tokens=0,
