@@ -105,7 +105,7 @@ class TestSingleSessions:
 
         # Verify session creation request
         create_req = mock_req.request_history[0]
-        assert create_req.headers["X-Agentops-Api-Key"] == self.api_key
+        assert create_req.headers["x-agentops-api-key"] == self.api_key
 
         # Add test event
         session.record(Event("test_event"))
@@ -118,7 +118,7 @@ class TestSingleSessions:
         update_req = mock_req.request_history[-1]
         request_json = json.loads(update_req.text)
         assert request_json["session"]["end_state"] == "Success"
-        assert update_req.headers["X-Agentops-Api-Key"] == self.api_key
+        assert update_req.headers["x-agentops-api-key"] == self.api_key
 
     def test_add_tags(self, mock_req):
         """Test adding tags to a session"""
@@ -137,7 +137,7 @@ class TestSingleSessions:
         request_json = json.loads(update_req.text)
         assert request_json["session"]["end_state"] == "Success"
         assert all(tag in request_json["session"]["tags"] for tag in tags)
-        assert update_req.headers["X-Agentops-Api-Key"] == self.api_key
+        assert update_req.headers["x-agentops-api-key"] == self.api_key
 
     def test_tags(self, mock_req):
         # Arrange
@@ -154,7 +154,7 @@ class TestSingleSessions:
 
         # 4 requests: check_for_updates, start_session, record_event, end_session
         assert len(mock_req.request_history) == 4
-        assert mock_req.last_request.headers["X-Agentops-Api-Key"] == self.api_key
+        assert mock_req.last_request.headers["x-agentops-api-key"] == self.api_key
         request_json = mock_req.last_request.json()
         assert request_json["session"]["end_state"] == end_state
         assert request_json["session"]["tags"] == tags
@@ -307,7 +307,7 @@ class TestSingleSessions:
 class TestMultiSessions:
     """Test multiple session functionality."""
 
-    def setup_method(self, mock_req):
+    def setup_method(self):
         """Set up test environment."""
         clear_singletons()
         agentops.end_all_sessions()
@@ -318,16 +318,8 @@ class TestMultiSessions:
         self.config.configure(self.client, api_key=self.api_key, auto_start_session=True)
         self.event_type = "test_event_type"
 
-        # Set up mock requests for each test
-        url = "https://api.agentops.ai"
-        mock_req.post(
-            f"{url}/v2/start_session",
-            json={"status": "success", "jwt": "test-jwt-token", "session_url": "https://app.agentops.ai/session/123"},
-            request_headers={"X-Agentops-Api-Key": self.api_key},
-        )
-        mock_req.post(f"{url}/v2/create_events", json={"status": "success"})
-        mock_req.post(f"{url}/v2/reauthorize_jwt", json={"status": "success", "jwt": "test-jwt-token"})
-        mock_req.post(f"{url}/v2/update_session", json={"status": "success", "token_cost": 5})
+        # Mock requests will be handled by the fixture
+        # The fixture is automatically applied due to autouse=True
 
     def test_two_sessions(self, mock_req):
         session_1 = self.client.start_session()

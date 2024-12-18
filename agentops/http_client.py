@@ -95,19 +95,19 @@ class HttpClient:
         custom_headers: Optional[dict] = None,
     ) -> dict:
         """Prepare headers for the request"""
-        headers = JSON_HEADER.copy()
+        headers = {k.lower(): v for k, v in JSON_HEADER.items()}
 
         if api_key is not None:
-            headers["X-Agentops-Api-Key"] = api_key
+            headers["x-agentops-api-key"] = api_key
 
         if parent_key is not None:
-            headers["X-Agentops-Parent-Key"] = parent_key
+            headers["x-agentops-parent-key"] = parent_key
 
         if jwt is not None:
-            headers["Authorization"] = f"Bearer {jwt}"
+            headers["authorization"] = f"Bearer {jwt}"
 
         if custom_headers is not None:
-            headers.update(custom_headers)
+            headers.update({k.lower(): v for k, v in custom_headers.items()})
 
         return headers
 

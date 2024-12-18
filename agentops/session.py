@@ -370,7 +370,7 @@ class Session:
         self.tags = list(set(self.tags))  # Remove duplicates
         self._update_session()
 
-    def set_tags(self, tags: List[str]) -> None:
+    def set_tags(self, tags: Union[str, List[str]]) -> None:
         """
         Replace session tags at runtime.
         """
@@ -653,10 +653,8 @@ class Session:
         return f"https://app.agentops.ai/drilldown?session_id={self.session_id}"
 
     @property
-    def jwt_token(self) -> str:
-        """Returns the JWT token for this session for API authentication."""
-        if not self.jwt:
-            raise ValueError("Session JWT not available. Ensure session is initialized.")
+    def jwt_token(self) -> Optional[str]:
+        """Get the JWT token for this session."""
         return self.jwt
 
     # @session_url.setter
