@@ -31,7 +31,7 @@ def mock_req():
 
         m.post(
             url + "/v2/start_session",
-            json={"status": "success", "jwt": "test-jwt-token"},
+            json={"status": "success", "jwt": "test-jwt-token", "session_url": "https://app.agentops.ai/session/123"},
             additional_matcher=match_headers,
         )
         m.post(url + "/v2/create_events", json={"status": "ok"}, additional_matcher=match_headers)
@@ -43,14 +43,21 @@ def mock_req():
         m.post(
             url + "/v2/update_session", json={"status": "success", "token_cost": 5}, additional_matcher=match_headers
         )
-        m.post("https://pypi.org/pypi/agentops/json", status_code=404)
+        m.post(
+            url + "/v2/end_session",
+            json={"message": "Session ended"},
+            additional_matcher=match_headers,
+        )
         yield m
 
 
 class TestRecordTool:
     def setup_method(self):
+        """Set up test environment"""
+        clear_singletons()  # Reset singleton state
+        agentops.end_all_sessions()  # Ensure clean state
         self.url = "https://api.agentops.ai"
-        self.api_key = "11111111-1111-4111-8111-111111111111"
+        self.api_key = "2a458d3f-5bd7-4798-b862-7d9a54515689"
         self.tool_name = "test_tool_name"
         agentops.init(self.api_key, max_wait_time=5, auto_start_session=False)
 

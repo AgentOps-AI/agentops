@@ -19,6 +19,8 @@ from agentops import ActionEvent, Client, Event
 from agentops.http_client import HttpClient
 from agentops.singleton import clear_singletons
 from agentops.config import Configuration
+from agentops.utils import get_ISO_time
+from opentelemetry.trace import Context, set_value
 
 
 @pytest.fixture(autouse=True)
@@ -86,10 +88,10 @@ class TestSingleSessions:
         self.api_key = "2a458d3f-5bd7-4798-b862-7d9a54515689"
         self.event_type = "test_event_type"
         self.client = Client()
-        self.client.configure(api_key=self.api_key, max_wait_time=50, auto_start_session=True)
+        agentops.init(self.api_key, max_wait_time=50, auto_start_session=True)
 
     def test_session(self, mock_req):
-        session = self.client.initialize()
+        session = agentops.start_session()
         assert session is not None
         assert session.is_running
 
@@ -452,25 +454,22 @@ class TestMultiSessions:
 
 
 class TestSessionExporter:
-    def setup_method(self, mock_req):
-        clear_singletons()
-        agentops.end_all_sessions()
-
+    def setup_method(self):
+        """Set up test environment"""
+        clear_singletons()  # Reset singleton state
+        agentops.end_all_sessions()  # Ensure clean state
         self.api_key = "2a458d3f-5bd7-4798-b862-7d9a54515689"
-        self.config = Configuration()
-        self.client = Client(config=self.config)
-        self.config.configure(self.client, api_key=self.api_key, auto_start_session=True)
+        agentops.init(self.api_key, max_wait_time=50, auto_start_session=True)
 
-        # Set up mock requests for each test
-        url = "https://api.agentops.ai"
-        mock_req.post(
-            url + "/v2/start_session",
-            json={"status": "success", "jwt": "test-jwt-token"},
-            request_headers={"authorization": f"Bearer {self.api_key}"},
-        )
-        mock_req.post(url + "/v2/create_events", json={"status": "ok"})
-        mock_req.post(url + "/v2/reauthorize_jwt", json={"status": "success", "jwt": "test-jwt-token"})
-        mock_req.post(url + "/v2/update_session", json={"status": "success", "token_cost": 5})
+        # Create a test session
+        self.session = agentops.start_session()
+        self.session_id = self.session.session_id
+        self.init_timestamp = get_ISO_time()
+        self.end_timestamp = get_ISO_time()
+
+        # Create a test span context
+        self.context = Context()
+        set_value("session.id", str(self.session_id), self.context)
 
     def teardown_method(self):
         """Clean up after each test"""

@@ -30,7 +30,7 @@ def mock_req():
 
         m.post(
             url + "/v2/start_session",
-            json={"status": "success", "jwt": "test-jwt-token"},
+            json={"status": "success", "jwt": "test-jwt-token", "session_url": "https://app.agentops.ai/session/123"},
             additional_matcher=match_headers,
         )
         m.post(url + "/v2/create_events", json={"status": "ok"}, additional_matcher=match_headers)
@@ -55,8 +55,11 @@ class BasicAgent:
 
 class TestPreInit:
     def setup_method(self):
+        """Set up test environment"""
+        clear_singletons()  # Reset singleton state
+        agentops.end_all_sessions()  # Ensure clean state
         self.url = "https://api.agentops.ai"
-        self.api_key = "11111111-1111-4111-8111-111111111111"
+        self.api_key = "2a458d3f-5bd7-4798-b862-7d9a54515689"
 
     def test_track_agent(self, mock_req):
         agent = BasicAgent()
