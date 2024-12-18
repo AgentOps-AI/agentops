@@ -36,36 +36,45 @@ def mock_req():
     with requests_mock.Mocker() as m:
         url = "https://api.agentops.ai"
         api_key = "2a458d3f-5bd7-4798-b862-7d9a54515689"
+        jwts = ["some_jwt", "some_jwt2", "some_jwt3"]  # Add multiple JWT tokens
+        session_counter = {"count": 0}  # Counter for tracking session number
 
         def match_headers(request):
-            return request.headers.get("X-Agentops-Api-Key") == api_key and (
-                request.headers.get("Authorization", "").startswith("Bearer ") or request.path == "/v2/start_session"
+            headers = {k.lower(): v for k, v in request.headers.items()}
+            return (
+                headers.get("x-agentops-api-key") == api_key
+                and (headers.get("authorization", "").startswith("Bearer ") or request.path == "/v2/start_session")
             )
+
+        def get_next_jwt(request):
+            if request.path == "/v2/start_session":
+                jwt = jwts[session_counter["count"] % len(jwts)]
+                session_counter["count"] += 1
+                return jwt
+            return jwts[0]
 
         m.post(
             url + "/v2/start_session",
-            json={"status": "success", "jwt": "some_jwt", "session_url": "https://app.agentops.ai/session/123"},
+            json=lambda request, context: {
+                "status": "success",
+                "jwt": get_next_jwt(request),
+                "session_url": "https://app.agentops.ai/session/123",
+            },
             additional_matcher=match_headers,
         )
         m.post(url + "/v2/create_events", json={"status": "success"}, additional_matcher=match_headers)
         m.post(
             url + "/v2/reauthorize_jwt",
-            json={"status": "success", "jwt": "some_jwt"},
+            json=lambda request, context: {"status": "success", "jwt": get_next_jwt(request)},
             additional_matcher=match_headers,
         )
         m.post(
-            url + "/v2/update_session", json={"status": "success", "token_cost": 5}, additional_matcher=match_headers
-        )
-        m.post(
-            url + "/v2/end_session",
-            json={"message": "Session ended"},
+            url + "/v2/update_session",
+            json={"status": "success", "token_cost": 5},
             additional_matcher=match_headers,
         )
-        m.post(
-            url + "/v2/export_session",
-            json={"message": "Session exported"},
-            additional_matcher=match_headers,
-        )
+        m.post(url + "/v2/end_session", json={"message": "Session ended"}, additional_matcher=match_headers)
+        m.post(url + "/v2/export_session", json={"message": "Session exported"}, additional_matcher=match_headers)
         yield m
 
 
