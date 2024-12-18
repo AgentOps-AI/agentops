@@ -56,9 +56,9 @@ class TestSingleSessions:
         from agentops.singleton import clear_singletons
         clear_singletons()  # Reset singleton state
         agentops.end_all_sessions()  # Ensure clean state
-        self.api_key = "11111111-1111-4111-111111111111"
+        self.api_key = "2a458d3f-5bd7-4798-b862-7d9a54515689"  # Use provided valid API key
         self.event_type = "test_event_type"
-        self.client = agentops.init(api_key=self.api_key, max_wait_time=50, auto_start_session=False)
+        self.client = agentops.init(api_key=self.api_key, max_wait_time=50, auto_start_session=True)
 
     def test_session(self, mock_req):
         agentops.start_session()
@@ -255,7 +255,7 @@ class TestSingleSessions:
         self.client = agentops.init(api_key=self.api_key, max_wait_time=50, auto_start_session=True)
 
         # Get current session
-        session = agentops.get_current_session()
+        session = agentops.get_session()
         assert session is not None, "Session should be automatically started"
 
         # Test getting JWT from current session

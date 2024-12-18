@@ -306,34 +306,31 @@ def create_agent(name: str, agent_id: Optional[str] = None):
     return Client().create_agent(name=name, agent_id=agent_id)
 
 
-def get_session(session_id: str):
-    """
-    Get an active (not ended) session from the AgentOps service
-
-    Args:
-        session_id (str): the session id for the session to be retreived
-    """
-    Client().unsuppress_logs()
-
+def get_session(session_id: Optional[str] = None) -> Optional[Session]:
+    """Get a session by ID or the current session if no ID is provided."""
     return Client().get_session(session_id)
 
+def get_current_session() -> Optional[Session]:
+    """Get the current active session."""
+    return Client().get_session()
 
 def get_session_jwt(session_id: Optional[str] = None) -> str:
     """
     Get the JWT token for a session.
 
     Args:
-        session_id (str, optional): The session ID. If not provided, uses the current session.
+        session_id (str, optional): The ID of the session to get the JWT token for.
+            If not provided, uses the current session.
 
     Returns:
         str: The JWT token for the session.
 
     Raises:
-        ValueError: If no session exists or session JWT is not available.
+        ValueError: If no session is found with the given ID or if no current session exists.
     """
-    session = Client().get_session(session_id)
-    if not session:
-        raise ValueError("No session found. Start a session using agentops.start_session()")
+    session = get_session(session_id)
+    if session is None:
+        raise ValueError("No session found" + (f" with ID {session_id}" if session_id else ""))
     return session.jwt_token
 
 
