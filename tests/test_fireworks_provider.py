@@ -99,9 +99,9 @@ class TestFireworksProvider:
     @pytest.mark.asyncio
     async def test_async_completion(self):
         # Mock response for async non-streaming completion
-        mock_response = MockAsyncGenerator(
-            [MockFireworksResponse("Hello! How can I help you?", is_streaming=True)]
-        )
+        mock_response = MockAsyncGenerator([
+            MockFireworksResponse("Hello! How can I help you?", is_streaming=True),
+        ])
         self.mock_client.chat.completions.acreate = AsyncMock(return_value=mock_response)
 
         # Initialize session and override
