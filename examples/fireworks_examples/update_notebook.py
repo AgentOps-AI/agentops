@@ -125,16 +125,9 @@ async def async_completion():
     print(response.choices[0].message.content)
     print("\\nEvent recorded for async non-streaming completion")
 
-# Run async function using asyncio.run()
-try:
-    asyncio.run(async_completion())
-except RuntimeError as e:
-    if "Cannot run the event loop while another loop is running" in str(e):
-        # If we're already in an event loop, create a new one
-        loop = asyncio.get_event_loop()
-        loop.run_until_complete(async_completion())
-    else:
-        raise"""
+# Get the current event loop and run the async function
+loop = asyncio.get_event_loop()
+loop.run_until_complete(async_completion())"""
     )
 )
 
@@ -183,20 +176,14 @@ async def async_streaming():
                 content = chunk.choices[0].delta.content
                 if content:
                     print(content, end="", flush=True)
+        print("\\nEvent recorded for async streaming completion")
     except Exception as e:
         logger.error(f"Error in async streaming: {str(e)}")
-    print()  # New line after streaming
+        raise
 
-# Run async function using asyncio.run()
-try:
-    asyncio.run(async_streaming())
-except RuntimeError as e:
-    if "Cannot run the event loop while another loop is running" in str(e):
-        # If we're already in an event loop, create a new one
-        loop = asyncio.get_event_loop()
-        loop.run_until_complete(async_streaming())
-    else:
-        raise"""
+# Get the current event loop and run the async function
+loop = asyncio.get_event_loop()
+loop.run_until_complete(async_streaming())"""
     )
 )
 
