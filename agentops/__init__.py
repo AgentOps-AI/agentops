@@ -318,6 +318,25 @@ def get_session(session_id: str):
     return Client().get_session(session_id)
 
 
+def get_session_jwt(session_id: Optional[str] = None) -> str:
+    """
+    Get the JWT token for a session.
+
+    Args:
+        session_id (str, optional): The session ID. If not provided, uses the current session.
+
+    Returns:
+        str: The JWT token for the session.
+
+    Raises:
+        ValueError: If no session exists or session JWT is not available.
+    """
+    session = Client().get_session(session_id)
+    if not session:
+        raise ValueError("No session found. Start a session using agentops.start_session()")
+    return session.jwt_token
+
+
 # Mostly used for unit testing -
 # prevents unexpected sessions on new tests
 def end_all_sessions() -> None:

@@ -53,9 +53,10 @@ class TestNonInitializedSessions:
 
 class TestSingleSessions:
     def setup_method(self):
+        agentops.end_all_sessions()  # Ensure clean state
         self.api_key = "11111111-1111-4111-8111-111111111111"
         self.event_type = "test_event_type"
-        agentops.init(api_key=self.api_key, max_wait_time=50, auto_start_session=False)
+        self.client = agentops.init(api_key=self.api_key, max_wait_time=50, auto_start_session=False)
 
     def test_session(self, mock_req):
         agentops.start_session()
@@ -239,6 +240,29 @@ class TestSingleSessions:
 
         # Check cost format (mock returns token_cost: 5)
         assert analytics["Cost"] == "5.000000"
+
+        # End session and cleanup
+        session.end_session(end_state="Success")
+        agentops.end_all_sessions()
+
+    def test_get_session_jwt(self):
+        """Test retrieving JWT token from a session."""
+        # Use the setup_method fixture which handles initialization
+        session = self.client.start_session()
+
+        # Test getting JWT from current session
+        jwt = agentops.get_session_jwt()
+        assert jwt == session.jwt_token
+        assert isinstance(jwt, str)
+        assert len(jwt) > 0
+
+        # Test getting JWT with specific session ID
+        specific_jwt = agentops.get_session_jwt(session_id=session.session_id)
+        assert specific_jwt == jwt
+
+        # Test error case with invalid session ID
+        with pytest.raises(ValueError, match="No session found"):
+            agentops.get_session_jwt(session_id="nonexistent-session")
 
         # End session and cleanup
         session.end_session(end_state="Success")

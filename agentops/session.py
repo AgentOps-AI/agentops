@@ -650,6 +650,13 @@ class Session:
         assert self.session_id, "Session ID is required to generate a session URL"
         return f"https://app.agentops.ai/drilldown?session_id={self.session_id}"
 
+    @property
+    def jwt_token(self) -> str:
+        """Returns the JWT token for this session for API authentication."""
+        if not self.jwt:
+            raise ValueError("Session JWT not available. Ensure session is initialized.")
+        return self.jwt
+
     # @session_url.setter
     # def session_url(self, url: str):
     #     pass
