@@ -18,10 +18,14 @@ def setup_teardown():
 class MockFireworksResponse:
     def __init__(self, content, is_streaming=False):
         self.choices = [
-            type('Choice', (), {
-                'message': type('Message', (), {'content': content})() if not is_streaming else None,
-                'delta': type('Delta', (), {'content': content}) if is_streaming else None
-            })()
+            type(
+                "Choice",
+                (),
+                {
+                    "message": type("Message", (), {"content": content})() if not is_streaming else None,
+                    "delta": type("Delta", (), {"content": content}) if is_streaming else None,
+                },
+            )()
         ]
 
 
@@ -99,9 +103,11 @@ class TestFireworksProvider:
     @pytest.mark.asyncio
     async def test_async_completion(self):
         # Mock response for async non-streaming completion
-        mock_response = MockAsyncGenerator([
-            MockFireworksResponse("Hello! How can I help you?", is_streaming=True),
-        ])
+        mock_response = MockAsyncGenerator(
+            [
+                MockFireworksResponse("Hello! How can I help you?", is_streaming=True),
+            ]
+        )
         self.mock_client.chat.completions.acreate = AsyncMock(return_value=mock_response)
 
         # Initialize session and override
@@ -172,9 +178,7 @@ class TestFireworksProvider:
         self.provider.override()
 
         # Make completion request
-        self.mock_client.chat.completions.create(
-            model="fireworks-llama", messages=self.test_messages, stream=False
-        )
+        self.mock_client.chat.completions.create(model="fireworks-llama", messages=self.test_messages, stream=False)
 
         # Verify event was recorded
         events = session._events
