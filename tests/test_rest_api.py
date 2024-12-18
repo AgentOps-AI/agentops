@@ -26,10 +26,7 @@ class TestRestApi:
 
     def _make_request(self, method: str, endpoint: str, data: Dict, use_jwt: bool = False) -> requests.Response:
         """Make HTTP request with proper headers"""
-        headers = {
-            "Content-Type": "application/json; charset=UTF-8",
-            "Accept": "*/*"
-        }
+        headers = {"Content-Type": "application/json; charset=UTF-8", "Accept": "*/*"}
 
         if use_jwt and self.jwt_token:
             headers["Authorization"] = f"Bearer {self.jwt_token}"
