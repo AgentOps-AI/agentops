@@ -19,8 +19,8 @@ from agentops import ActionEvent, Client, Event
 from agentops.http_client import HttpClient
 from agentops.singleton import clear_singletons
 from agentops.config import Configuration
-from agentops.utils import get_ISO_time
-from opentelemetry.trace import Context, set_value
+from agentops.helpers import get_ISO_time
+from opentelemetry.context import Context, set_value
 
 
 @pytest.fixture(autouse=True)
