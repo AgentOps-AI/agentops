@@ -8,6 +8,9 @@ from uuid import uuid4
 API_KEY = os.environ.get("FIREWORKS_API_KEY")
 BASE_URL = "https://api.agentops.ai"
 
+# Match SDK's header configuration
+JSON_HEADER = {"Content-Type": "application/json; charset=UTF-8", "Accept": "*/*"}
+
 class TestRestApi:
     def __init__(self):
         self.jwt_token: Optional[str] = None
@@ -15,20 +18,21 @@ class TestRestApi:
 
     def _make_request(self, method: str, endpoint: str, data: Dict, use_jwt: bool = False) -> requests.Response:
         """Make HTTP request with proper headers and error handling"""
-        headers = {
-            "Content-Type": "application/json"
-        }
+        headers = JSON_HEADER.copy()
 
         if use_jwt and self.jwt_token:
             headers["Authorization"] = f"Bearer {self.jwt_token}"
         else:
             headers["X-Agentops-Api-Key"] = API_KEY
 
+        # Encode payload as bytes, matching SDK implementation
+        payload = json.dumps(data).encode("utf-8")
+
         response = requests.request(
             method=method,
             url=f"{BASE_URL}{endpoint}",
             headers=headers,
-            json=data
+            data=payload  # Use data instead of json to send bytes
         )
 
         print(f"\n=== {endpoint} ===")
