@@ -17,26 +17,31 @@ def setup_teardown():
     agentops.end_all_sessions()  # teardown part
 
 
-@contextlib.contextmanager
 @pytest.fixture(autouse=True, scope="function")
 def mock_req():
     with requests_mock.Mocker() as m:
         url = "https://api.agentops.ai"
-        m.post(url + "/v2/create_events", json={"status": "ok"})
+        api_key = "2a458d3f-5bd7-4798-b862-7d9a54515689"
 
-        # Use iter to create an iterator that can return the jwt values
-        jwt_tokens = iter(jwts)
+        def match_headers(request):
+            return (
+                request.headers.get("X-Agentops-Api-Key") == api_key
+                and (
+                    request.headers.get("Authorization", "").startswith("Bearer ")
+                    or request.path == "/v2/start_session"
+                )
+            )
 
-        # Use an inner function to change the response for each request
-        def create_session_response(request, context):
-            context.status_code = 200
-            return {"status": "success", "jwt": next(jwt_tokens)}
-
-        m.post(url + "/v2/create_session", json=create_session_response)
-        m.post(url + "/v2/create_events", json={"status": "ok"})
-        m.post(url + "/v2/update_session", json={"status": "success", "token_cost": 5})
-        m.post(url + "/v2/developer_errors", json={"status": "ok"})
+        m.post(
+            url + "/v2/start_session",
+            json={"status": "success", "jwt": "test-jwt-token"},
+            additional_matcher=match_headers,
+        )
+        m.post(url + "/v2/create_events", json={"status": "ok"}, additional_matcher=match_headers)
+        m.post(url + "/v2/reauthorize_jwt", json={"status": "success", "jwt": "test-jwt-token"}, additional_matcher=match_headers)
+        m.post(url + "/v2/update_session", json={"status": "success", "token_cost": 5}, additional_matcher=match_headers)
         m.post("https://pypi.org/pypi/agentops/json", status_code=404)
+        yield m
 
         yield m
 

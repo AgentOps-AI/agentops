@@ -33,15 +33,25 @@ def mock_req():
     """Set up mock requests."""
     with requests_mock.Mocker() as m:
         url = "https://api.agentops.ai"
-        # Mock session endpoints
+        api_key = "2a458d3f-5bd7-4798-b862-7d9a54515689"
+
+        def match_headers(request):
+            return (
+                request.headers.get("X-Agentops-Api-Key") == api_key
+                and (
+                    request.headers.get("Authorization", "").startswith("Bearer ")
+                    or request.path == "/v2/start_session"
+                )
+            )
+
         m.post(
             url + "/v2/start_session",
             json={"status": "success", "jwt": "test-jwt-token"},
-            request_headers={"authorization": "Bearer 2a458d3f-5bd7-4798-b862-7d9a54515689"},
+            additional_matcher=match_headers,
         )
-        m.post(url + "/v2/create_events", json={"status": "ok"})
-        m.post(url + "/v2/reauthorize_jwt", json={"status": "success", "jwt": "test-jwt-token"})
-        m.post(url + "/v2/update_session", json={"status": "success", "token_cost": 5})
+        m.post(url + "/v2/create_events", json={"status": "ok"}, additional_matcher=match_headers)
+        m.post(url + "/v2/reauthorize_jwt", json={"status": "success", "jwt": "test-jwt-token"}, additional_matcher=match_headers)
+        m.post(url + "/v2/update_session", json={"status": "success", "token_cost": 5}, additional_matcher=match_headers)
         yield m
 
 
@@ -64,14 +74,6 @@ class TestSingleSessions:
         self.event_type = "test_event_type"
         self.client = agentops.init(api_key=self.api_key, max_wait_time=50, auto_start_session=True)
 
-        # Set up mock requests for each test
-        url = "https://api.agentops.ai"
-        mock_req.post(
-            url + "/v2/start_session",
-            json={"status": "success", "jwt": "test-jwt-token"},
-            request_headers={"authorization": f"Bearer {self.api_key}"},
-        )
-        mock_req.post(url + "/v2/create_events", json={"status": "ok"})
 
     def test_session(self, mock_req):
         session = self.client.start_session()
@@ -297,6 +299,9 @@ class TestMultiSessions:
             json={"status": "success", "jwt": "test-jwt-token"},
             request_headers={"authorization": f"Bearer {self.api_key}"},
         )
+        mock_req.post(url + "/v2/create_events", json={"status": "ok"})
+        mock_req.post(url + "/v2/reauthorize_jwt", json={"status": "success", "jwt": "test-jwt-token"})
+        mock_req.post(url + "/v2/update_session", json={"status": "success", "token_cost": 5})
 
     def test_two_sessions(self, mock_req):
         session_1 = self.client.start_session()
