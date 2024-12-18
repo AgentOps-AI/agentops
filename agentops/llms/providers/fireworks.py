@@ -73,7 +73,9 @@ class FireworksProvider(InstrumentedProvider):
                                     stream_event.end_timestamp = get_ISO_time()
                                     if self._session:
                                         self._session.record(stream_event)
-                                        logger.debug(f"Recorded streaming response for session {self._session.session_id}")
+                                        logger.debug(
+                                            f"Recorded streaming response for session {self._session.session_id}"
+                                        )
                                 yield content
                         except Exception as e:
                             logger.error(f"Error processing streaming chunk: {str(e)}")
@@ -100,7 +102,9 @@ class FireworksProvider(InstrumentedProvider):
                                     stream_event.end_timestamp = get_ISO_time()
                                     if self._session:
                                         self._session.record(stream_event)
-                                        logger.debug(f"Recorded streaming response for session {self._session.session_id}")
+                                        logger.debug(
+                                            f"Recorded streaming response for session {self._session.session_id}"
+                                        )
                                 yield content
                         except Exception as e:
                             logger.error(f"Error processing streaming chunk: {str(e)}")
