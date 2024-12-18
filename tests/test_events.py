@@ -16,14 +16,16 @@ def setup_teardown():
 @pytest.fixture(autouse=True, scope="function")
 def mock_req():
     with requests_mock.Mocker() as m:
-        base_url = "https://api.agentops.ai/v2"
+        base_url = "/v2"
         api_key = "2a458d3f-5bd7-4798-b862-7d9a54515689"
 
         def match_headers(request):
-            return request.headers.get("X-Agentops-Api-Key") == api_key and (
-                request.headers.get("Authorization", "").startswith("Bearer ") or request.path == "/v2/sessions/start"
+            headers = {k.lower(): v for k, v in request.headers.items()}
+            return headers.get("x-agentops-api-key") == api_key and (
+                headers.get("authorization", "").startswith("Bearer ") or request.path == "/v2/sessions/start"
             )
 
+        # Mock v2 endpoints with consistent paths and response format
         m.post(
             f"{base_url}/sessions/start",
             json={"success": True, "jwt": "test-jwt-token", "session_url": "https://app.agentops.ai/session/123"},

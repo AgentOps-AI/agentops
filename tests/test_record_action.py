@@ -20,7 +20,7 @@ def setup_teardown():
 @pytest.fixture(autouse=True, scope="function")
 def mock_req():
     with requests_mock.Mocker() as m:
-        base_url = "https://api.agentops.ai/v2"
+        base_url = "/v2"
         api_key = "2a458d3f-5bd7-4798-b862-7d9a54515689"
         jwts = ["some_jwt", "some_jwt2", "some_jwt3"]
         session_counter = {"count": 0}
@@ -38,6 +38,7 @@ def mock_req():
                 return jwt
             return jwts[0]
 
+        # Mock v2 endpoints with consistent paths and response format
         m.post(
             f"{base_url}/sessions/start",
             json=lambda request, context: {
@@ -50,7 +51,7 @@ def mock_req():
         m.post(f"{base_url}/sessions/test-session-id/events", json={"success": True}, additional_matcher=match_headers)
         m.post(
             f"{base_url}/sessions/test-session-id/jwt",
-            json={"success": True, "jwt": get_next_jwt},
+            json={"success": True, "jwt": "test-jwt-token"},
             additional_matcher=match_headers,
         )
         m.post(

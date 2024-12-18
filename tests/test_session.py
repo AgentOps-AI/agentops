@@ -42,11 +42,11 @@ def mock_req():
         def match_headers(request):
             headers = {k.lower(): v for k, v in request.headers.items()}
             return headers.get("x-agentops-api-key") == api_key and (
-                headers.get("authorization", "").startswith("Bearer ") or request.path == "/v2/start_session"
+                headers.get("authorization", "").startswith("Bearer ") or request.path == "/v2/sessions/start"
             )
 
         def get_next_jwt(request):
-            if request.path == "/v2/start_session":
+            if request.path == "/v2/sessions/start":
                 jwt = jwts[session_counter["count"] % len(jwts)]
                 session_counter["count"] += 1
                 return jwt
@@ -55,27 +55,26 @@ def mock_req():
         m.post(
             f"{base_url}/sessions/start",
             json=lambda request, context: {
-                "status": "success",
+                "success": True,
                 "jwt": get_next_jwt(request),
                 "session_url": "https://app.agentops.ai/session/123",
             },
             additional_matcher=match_headers,
         )
         m.post(
-            f"{base_url}/sessions/test-session-id/events", json={"status": "success"}, additional_matcher=match_headers
+            f"{base_url}/sessions/test-session-id/events", json={"success": True}, additional_matcher=match_headers
         )
         m.post(
-            f"{base_url}/reauthorize_jwt",
-            json=lambda request, context: {"status": "success", "jwt": get_next_jwt(request)},
+            f"{base_url}/sessions/test-session-id/jwt",
+            json=lambda request, context: {"success": True, "jwt": get_next_jwt(request)},
             additional_matcher=match_headers,
         )
         m.post(
-            f"{base_url}/update_session",
-            json={"status": "success", "token_cost": 5},
+            f"{base_url}/sessions/test-session-id/update",
+            json={"success": True, "token_cost": 5},
             additional_matcher=match_headers,
         )
-        m.post(f"{base_url}/end_session", json={"message": "Session ended"}, additional_matcher=match_headers)
-        m.post(f"{base_url}/export_session", json={"message": "Session exported"}, additional_matcher=match_headers)
+        m.post(f"{base_url}/sessions/test-session-id/end", json={"success": True}, additional_matcher=match_headers)
         yield m
 
 

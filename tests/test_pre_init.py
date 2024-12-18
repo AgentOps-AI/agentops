@@ -21,7 +21,7 @@ def setup_teardown():
 def mock_req():
     """Set up mock requests."""
     with requests_mock.Mocker() as m:
-        base_url = "https://api.agentops.ai/v2"
+        base_url = "/v2"
         api_key = "2a458d3f-5bd7-4798-b862-7d9a54515689"
 
         def match_headers(request):
@@ -30,7 +30,7 @@ def mock_req():
                 headers.get("authorization", "").startswith("Bearer ") or request.path == "/v2/sessions/start"
             )
 
-        # Mock v2 endpoints
+        # Mock v2 endpoints with consistent paths and response format
         m.post(
             f"{base_url}/sessions/start",
             json={"success": True, "jwt": "test-jwt-token", "session_url": "https://app.agentops.ai/session/123"},
