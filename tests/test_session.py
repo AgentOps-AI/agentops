@@ -69,21 +69,27 @@ class TestNonInitializedSessions:
 
 
 class TestSingleSessions:
-    def setup_method(self, mock_req):
+    def setup_method(self):
+        """Set up test environment"""
         clear_singletons()  # Reset singleton state
         agentops.end_all_sessions()  # Ensure clean state
         self.api_key = "2a458d3f-5bd7-4798-b862-7d9a54515689"
         self.event_type = "test_event_type"
-        self.client = agentops.init(api_key=self.api_key, max_wait_time=50, auto_start_session=True)
+        self.client = Client()
+        self.client.configure(
+            api_key=self.api_key,
+            max_wait_time=50,
+            auto_start_session=True
+        )
 
     def test_session(self, mock_req):
-        session = self.client.start_session()
+        session = self.client.initialize()
         assert session is not None
         assert session.is_running
 
         # Verify session creation request
         create_req = mock_req.request_history[0]
-        assert create_req.headers["authorization"] == f"Bearer {self.api_key}"
+        assert create_req.headers["X-Agentops-Api-Key"] == self.api_key
 
         # Add test event
         session.record(Event("test_event"))
@@ -96,10 +102,11 @@ class TestSingleSessions:
         update_req = mock_req.request_history[-1]
         request_json = json.loads(update_req.text)
         assert request_json["session"]["end_state"] == "Success"
-        assert update_req.headers["authorization"] == f"Bearer {self.api_key}"
+        assert update_req.headers["X-Agentops-Api-Key"] == self.api_key
 
     def test_add_tags(self, mock_req):
-        session = self.client.start_session()
+        """Test adding tags to a session"""
+        session = self.client.initialize()
         assert session is not None
 
         # Add tags
@@ -114,7 +121,7 @@ class TestSingleSessions:
         request_json = json.loads(update_req.text)
         assert request_json["session"]["end_state"] == "Success"
         assert all(tag in request_json["session"]["tags"] for tag in tags)
-        assert update_req.headers["authorization"] == f"Bearer {self.api_key}"
+        assert update_req.headers["X-Agentops-Api-Key"] == self.api_key
 
     def test_tags(self, mock_req):
         # Arrange
@@ -261,7 +268,7 @@ class TestSingleSessions:
     def test_get_session_jwt(self, mock_req):
         """Test getting JWT token from session."""
         # Start a session
-        session = self.client.start_session()
+        session = self.client.initialize()
         assert session is not None, "Session should be automatically started"
         assert session.is_running
 
@@ -277,7 +284,7 @@ class TestSingleSessions:
         update_req = mock_req.request_history[-1]
         request_json = json.loads(update_req.text)
         assert request_json["session"]["end_state"] == "Success"
-        assert update_req.headers["authorization"] == f"Bearer {self.api_key}"
+        assert update_req.headers["X-Agentops-Api-Key"] == self.api_key
 
 
 class TestMultiSessions:

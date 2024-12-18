@@ -45,8 +45,6 @@ def mock_req():
         m.post("https://pypi.org/pypi/agentops/json", status_code=404)
         yield m
 
-        yield m
-
 
 class TestRecordAction:
     def setup_method(self):
