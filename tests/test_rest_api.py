@@ -112,6 +112,7 @@ class TestRestApi:
             return
         print("✅ update_session test passed")
 
+
 if __name__ == "__main__":
     tester = TestRestApi()
     tester.run_all_tests()
