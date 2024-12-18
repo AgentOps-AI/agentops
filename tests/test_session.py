@@ -34,7 +34,7 @@ def setup_teardown(mock_req):
 def mock_req():
     """Set up mock requests."""
     with requests_mock.Mocker() as m:
-        url = "https://api.agentops.ai"
+        base_url = "https://api.agentops.ai/v2"
         api_key = "2a458d3f-5bd7-4798-b862-7d9a54515689"
         jwts = ["some_jwt", "some_jwt2", "some_jwt3"]  # Add multiple JWT tokens
         session_counter = {"count": 0}  # Counter for tracking session number
@@ -53,7 +53,7 @@ def mock_req():
             return jwts[0]
 
         m.post(
-            url + "/v2/start_session",
+            f"{base_url}/sessions/start",
             json=lambda request, context: {
                 "status": "success",
                 "jwt": get_next_jwt(request),
@@ -61,19 +61,19 @@ def mock_req():
             },
             additional_matcher=match_headers,
         )
-        m.post(url + "/v2/create_events", json={"status": "success"}, additional_matcher=match_headers)
+        m.post(f"{base_url}/sessions/test-session-id/events", json={"status": "success"}, additional_matcher=match_headers)
         m.post(
-            url + "/v2/reauthorize_jwt",
+            f"{base_url}/reauthorize_jwt",
             json=lambda request, context: {"status": "success", "jwt": get_next_jwt(request)},
             additional_matcher=match_headers,
         )
         m.post(
-            url + "/v2/update_session",
+            f"{base_url}/update_session",
             json={"status": "success", "token_cost": 5},
             additional_matcher=match_headers,
         )
-        m.post(url + "/v2/end_session", json={"message": "Session ended"}, additional_matcher=match_headers)
-        m.post(url + "/v2/export_session", json={"message": "Session exported"}, additional_matcher=match_headers)
+        m.post(f"{base_url}/end_session", json={"message": "Session ended"}, additional_matcher=match_headers)
+        m.post(f"{base_url}/export_session", json={"message": "Session exported"}, additional_matcher=match_headers)
         yield m
 
 
