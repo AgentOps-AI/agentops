@@ -57,12 +57,15 @@ class FireworksProvider(InstrumentedProvider):
 
             # Handle streaming response
             if kwargs.get("stream", False):
+
                 async def async_generator(stream_response):
                     accumulated_content = ""
                     try:
                         async for chunk in stream_response:
                             if hasattr(chunk, "choices") and chunk.choices:
-                                content = chunk.choices[0].delta.content if hasattr(chunk.choices[0].delta, "content") else ""
+                                content = (
+                                    chunk.choices[0].delta.content if hasattr(chunk.choices[0].delta, "content") else ""
+                                )
                                 if content:
                                     accumulated_content += content
                                     yield chunk
@@ -81,7 +84,9 @@ class FireworksProvider(InstrumentedProvider):
                     try:
                         for chunk in stream_response:
                             if hasattr(chunk, "choices") and chunk.choices:
-                                content = chunk.choices[0].delta.content if hasattr(chunk.choices[0].delta, "content") else ""
+                                content = (
+                                    chunk.choices[0].delta.content if hasattr(chunk.choices[0].delta, "content") else ""
+                                )
                                 if content:
                                     accumulated_content += content
                                     yield chunk
@@ -139,7 +144,9 @@ class FireworksProvider(InstrumentedProvider):
                 else:
                     loop = asyncio.new_event_loop()
                     asyncio.set_event_loop(loop)
-                    return loop.run_until_complete(provider.handle_response(response, kwargs, init_timestamp, provider._session))
+                    return loop.run_until_complete(
+                        provider.handle_response(response, kwargs, init_timestamp, provider._session)
+                    )
             except Exception as e:
                 logger.error(f"Error in Fireworks completion: {str(e)}")
                 raise

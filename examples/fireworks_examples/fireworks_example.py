@@ -68,6 +68,7 @@ try:
 
     # 2. Test asynchronous non-streaming completion
     print("\n2. Generating story with asynchronous non-streaming completion...")
+
     async def async_completion():
         response = await client.chat.completions.acreate(
             model="accounts/fireworks/models/llama-v3p1-8b-instruct", messages=messages
@@ -99,6 +100,7 @@ try:
 
     # 4. Test asynchronous streaming completion
     print("\n4. Generating story with asynchronous streaming...")
+
     async def async_streaming():
         try:
             stream = await client.chat.completions.acreate(
@@ -149,4 +151,3 @@ except Exception as e:
 
 finally:
     print("\nScript execution completed.")
-
