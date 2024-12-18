@@ -19,6 +19,7 @@ class FireworksProvider(InstrumentedProvider):
         self._original_completion = None
         self._original_async_completion = None
         self._session = None  # Initialize session attribute
+        self._accumulated_content = ""  # Add accumulator for streaming responses
         logger.info(f"Initializing {self._provider_name} provider")
 
     def set_session(self, session: Session):
@@ -33,13 +34,28 @@ class FireworksProvider(InstrumentedProvider):
             logger.debug(f"Updated session to {session.session_id} for {self._provider_name} provider")
 
         try:
+            # Format prompt properly
+            messages = kwargs.get("messages", [])
+            formatted_prompt = "\n".join([f"{msg['role']}: {msg['content']}" for msg in messages])
+            logger.debug(f"Formatted prompt: {formatted_prompt}")
+
             # Handle streaming response
             if kwargs.get("stream", False):
+                # Create single LLMEvent for streaming response
+                stream_event = LLMEvent(
+                    event_type=EventType.LLM.value,
+                    init_timestamp=init_timestamp,
+                    model=kwargs.get("model", "unknown"),
+                    prompt=formatted_prompt,
+                    prompt_tokens=0,
+                    completion_tokens=0,
+                    cost=0.0,
+                )
 
                 async def async_generator(stream):
+                    self._accumulated_content = ""
                     async for chunk in stream:
                         try:
-                            # Parse the chunk data
                             if hasattr(chunk, "choices") and chunk.choices:
                                 content = (
                                     chunk.choices[0].delta.content
@@ -47,34 +63,26 @@ class FireworksProvider(InstrumentedProvider):
                                     else None
                                 )
                             else:
-                                # Handle raw string chunks from streaming response
                                 content = chunk
 
                             if content:
-                                # Create event data for streaming chunk
-                                event = LLMEvent(
-                                    event_type=EventType.LLM.value,
-                                    init_timestamp=init_timestamp,
-                                    end_timestamp=get_ISO_time(),
-                                    model=kwargs.get("model", "unknown"),
-                                    prompt=str(kwargs.get("messages", [])),
-                                    completion="[Streaming Response]",
-                                    prompt_tokens=0,
-                                    completion_tokens=0,
-                                    cost=0.0,
-                                )
-                                if self._session:
-                                    self._session.record(event)
-                                    logger.debug(f"Recorded streaming chunk for session {self._session.session_id}")
+                                self._accumulated_content += content
+                                # Record event only when we have the complete response
+                                if hasattr(chunk.choices[0], "finish_reason") and chunk.choices[0].finish_reason:
+                                    stream_event.completion = self._accumulated_content
+                                    stream_event.end_timestamp = get_ISO_time()
+                                    if self._session:
+                                        self._session.record(stream_event)
+                                        logger.debug(f"Recorded streaming response for session {self._session.session_id}")
                                 yield content
                         except Exception as e:
                             logger.error(f"Error processing streaming chunk: {str(e)}")
                             continue
 
                 def generator(stream):
+                    self._accumulated_content = ""
                     for chunk in stream:
                         try:
-                            # Parse the chunk data
                             if hasattr(chunk, "choices") and chunk.choices:
                                 content = (
                                     chunk.choices[0].delta.content
@@ -82,25 +90,17 @@ class FireworksProvider(InstrumentedProvider):
                                     else None
                                 )
                             else:
-                                # Handle raw string chunks from streaming response
                                 content = chunk
 
                             if content:
-                                # Create event data for streaming chunk
-                                event = LLMEvent(
-                                    event_type=EventType.LLM.value,
-                                    init_timestamp=init_timestamp,
-                                    end_timestamp=get_ISO_time(),
-                                    model=kwargs.get("model", "unknown"),
-                                    prompt=str(kwargs.get("messages", [])),
-                                    completion="[Streaming Response]",
-                                    prompt_tokens=0,
-                                    completion_tokens=0,
-                                    cost=0.0,
-                                )
-                                if self._session:
-                                    self._session.record(event)
-                                    logger.debug(f"Recorded streaming chunk for session {self._session.session_id}")
+                                self._accumulated_content += content
+                                # Record event only when we have the complete response
+                                if hasattr(chunk.choices[0], "finish_reason") and chunk.choices[0].finish_reason:
+                                    stream_event.completion = self._accumulated_content
+                                    stream_event.end_timestamp = get_ISO_time()
+                                    if self._session:
+                                        self._session.record(stream_event)
+                                        logger.debug(f"Recorded streaming response for session {self._session.session_id}")
                                 yield content
                         except Exception as e:
                             logger.error(f"Error processing streaming chunk: {str(e)}")
@@ -115,20 +115,21 @@ class FireworksProvider(InstrumentedProvider):
             if hasattr(response, "choices") and response.choices:
                 content = response.choices[0].message.content if hasattr(response.choices[0], "message") else ""
 
-                # Create event data for non-streaming response
-                event = LLMEvent(
+                # Create LLMEvent for non-streaming response
+                non_stream_event = LLMEvent(
                     event_type=EventType.LLM.value,
                     init_timestamp=init_timestamp,
                     end_timestamp=get_ISO_time(),
                     model=kwargs.get("model", "unknown"),
-                    prompt=str(kwargs.get("messages", [])),
+                    prompt=formatted_prompt,
                     completion=content,
                     prompt_tokens=0,
                     completion_tokens=0,
                     cost=0.0,
                 )
+
                 if self._session:
-                    self._session.record(event)
+                    self._session.record(non_stream_event)
                     logger.debug(f"Recorded non-streaming response for session {self._session.session_id}")
 
             return response

@@ -11,7 +11,7 @@ from dotenv import load_dotenv
 
 # Set up logging
 logging.basicConfig(
-    level=logging.DEBUG,  # Change to DEBUG to see more detailed output
+    level=logging.DEBUG,  # Set to DEBUG to see formatted prompt
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
     handlers=[logging.StreamHandler()],
 )
@@ -25,9 +25,11 @@ if not FIREWORKS_API_KEY:
     raise ValueError("FIREWORKS_API_KEY environment variable is not set")
 
 try:
-    # Initialize AgentOps in development mode
-    print("Initializing AgentOps in development mode...")
-    session = agentops.init(api_key=None)
+    # Initialize AgentOps client and start session
+    print("Initializing AgentOps client...")
+    ao_client = agentops.Client()
+    ao_client.initialize()
+    session = ao_client.start_session()
     print(f"AgentOps initialized. Session URL: {session.session_url}")
 
     # Initialize Fireworks client
@@ -38,7 +40,7 @@ try:
     # Initialize and register Fireworks provider
     print("Registering Fireworks provider...")
     provider = FireworksProvider(client)
-    provider.set_session(session)  # Set the session before overriding
+    provider.set_session(session)
     provider.override()
     print("Fireworks provider registered.")
 
@@ -83,14 +85,15 @@ try:
     # End session and show detailed stats
     print("\nEnding AgentOps session...")
     try:
-        session_stats = session.end_session(
-            end_state=EndState.SUCCESS.value,  # Use .value to get the enum value
-            end_state_reason="Successfully generated stories using both streaming and non-streaming modes.",
-        )
+        session_stats = session.end_session(end_state="Success")
         print("\nSession Statistics:")
         if isinstance(session_stats, dict):
-            for key, value in session_stats.items():
-                print(f"{key}: {value}")
+            print(f"Duration: {session_stats.get('Duration', 'N/A')}")
+            print(f"Cost: ${float(session_stats.get('Cost', 0.00)):.2f}")  # Convert to float before formatting
+            print(f"LLM Events: {session_stats.get('LLM calls', 0)}")
+            print(f"Tool Events: {session_stats.get('Tool calls', 0)}")
+            print(f"Action Events: {session_stats.get('Actions', 0)}")
+            print(f"Error Events: {session_stats.get('Errors', 0)}")
         else:
             print("No session statistics available")
     except Exception as e:
@@ -108,3 +111,4 @@ except Exception as e:
 
 finally:
     print("\nScript execution completed.")
+
