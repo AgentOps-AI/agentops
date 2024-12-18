@@ -197,7 +197,7 @@ class Session:
         host_env: Optional[dict] = None,
     ):
         """Initialize a new session."""
-        self._config = config or Configuration()
+        self.config = config or Configuration()
         self.session_id = str(session_id) if session_id else str(uuid.uuid4())
         self.inherited_session_id = inherited_session_id
         self.init_timestamp = get_ISO_time()
@@ -209,7 +209,7 @@ class Session:
         self.video: Optional[str] = video
         self.host_env = host_env
         self.jwt = None
-        self._session_url = ""
+        self.session_url = None
         self.token_cost: Decimal = Decimal(0)
         self._lock = threading.Lock()
         self._end_session_lock = threading.Lock()
@@ -231,17 +231,17 @@ class Session:
         # Configure span processor
         self._span_processor = BatchSpanProcessor(
             self._otel_exporter,
-            max_queue_size=self._config.max_queue_size,
-            schedule_delay_millis=self._config.max_wait_time,
+            max_queue_size=self.config.max_queue_size,
+            schedule_delay_millis=self.config.max_wait_time,
             max_export_batch_size=min(
-                max(self._config.max_queue_size // 20, 1),
-                min(self._config.max_queue_size, 32),
+                max(self.config.max_queue_size // 20, 1),
+                min(self.config.max_queue_size, 32),
             ),
             export_timeout_millis=20000,
         )
         self._tracer_provider.add_span_processor(self._span_processor)
 
-        if auto_start and self._config.auto_start_session:
+        if auto_start and self.config.auto_start_session:
             self._start_session()
 
     def end_session(
@@ -467,7 +467,7 @@ class Session:
 
     def _start_session(self) -> bool:
         """Start the session by making a request to the server."""
-        if self._is_running:
+        if self.is_running:
             return True
 
         try:
@@ -475,21 +475,21 @@ class Session:
                 "/sessions/start",  # Remove /v2 prefix since HttpClient will add it in test mode
                 json_data={
                     "session": {
-                        "session_id": str(self._session_id),
-                        "inherited_session_id": self._inherited_session_id,
-                        "tags": self._tags or [],
-                        "host_env": self._host_env,
+                        "session_id": str(self.session_id),
+                        "inherited_session_id": self.inherited_session_id,
+                        "tags": self.tags or [],
+                        "host_env": self.host_env,
                         "start_time": get_ISO_time(),
                     }
                 },
-                headers={"x-agentops-api-key": self._api_key},
+                headers={"x-agentops-api-key": self.config.api_key},
             )
 
             if response.success:
-                self._jwt = response.data.get("jwt")
-                self._session_url = response.data.get("session_url")
-                print(f"🖇 AgentOps: Session Replay: {self._session_url}")
-                self._is_running = True
+                self.jwt = response.data.get("jwt")
+                self.session_url = response.data.get("session_url")
+                print(f"🖇 AgentOps: Session Replay: {self.session_url}")
+                self.is_running = True
                 self._start_time = datetime.now(timezone.utc)
                 return True
             else:
