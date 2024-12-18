@@ -209,7 +209,7 @@ class Session:
         self.video: Optional[str] = video
         self.host_env = host_env
         self.jwt = None
-        self.session_url = None
+        self._session_url = None  # Private attribute for session_url property
         self.token_cost: Decimal = Decimal(0)
         self._lock = threading.Lock()
         self._end_session_lock = threading.Lock()
@@ -621,17 +621,20 @@ class Session:
     @property
     def session_url(self) -> str:
         """Returns the URL for this session in the AgentOps dashboard."""
-        assert self.session_id, "Session ID is required to generate a session URL"
-        return f"https://app.agentops.ai/drilldown?session_id={self.session_id}"
+        if not self._session_url:
+            assert self.session_id, "Session ID is required to generate a session URL"
+            return f"https://app.agentops.ai/drilldown?session_id={self.session_id}"
+        return self._session_url
+
+    @session_url.setter
+    def session_url(self, url: Optional[str]) -> None:
+        """Set the session URL."""
+        self._session_url = url
 
     @property
     def jwt_token(self) -> Optional[str]:
         """Get the JWT token for this session."""
         return self.jwt
-
-    # @session_url.setter
-    # def session_url(self, url: str):
-    #     pass
 
 
 active_sessions: List[Session] = []

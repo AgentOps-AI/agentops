@@ -75,6 +75,7 @@ class TestRecordAction:
         agentops.end_all_sessions()  # Ensure clean state
         HttpClient.set_base_url("")  # Reset base URL for testing
         self.api_key = "2a458d3f-5bd7-4798-b862-7d9a54515689"
+        agentops.init(self.api_key, auto_start_session=False)  # Initialize with API key
         self.event_type = "test_event_type"
 
     def test_record_action_decorator(self, mock_req):
