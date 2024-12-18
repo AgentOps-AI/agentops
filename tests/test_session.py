@@ -95,8 +95,10 @@ class TestSingleSessions:
         agentops.end_all_sessions()  # Ensure clean state
         self.api_key = "2a458d3f-5bd7-4798-b862-7d9a54515689"
         self.event_type = "test_event_type"
-        self.client = Client()
-        agentops.init(self.api_key, max_wait_time=50, auto_start_session=True)
+        self.config = Configuration()
+        self.config.api_key = self.api_key
+        self.config.auto_start_session = True
+        self.client = Client(config=self.config)
 
     def test_session(self, mock_req):
         session = agentops.start_session()
@@ -308,15 +310,15 @@ class TestMultiSessions:
     """Test multiple session functionality."""
 
     def setup_method(self):
-        """Set up test environment."""
+        """Set up test environment for multiple sessions"""
         clear_singletons()
         agentops.end_all_sessions()
-
         self.api_key = "2a458d3f-5bd7-4798-b862-7d9a54515689"
-        self.config = Configuration()
-        self.client = Client(config=self.config)
-        self.config.configure(self.client, api_key=self.api_key, auto_start_session=True)
         self.event_type = "test_event_type"
+        self.config = Configuration()
+        self.config.api_key = self.api_key
+        self.config.auto_start_session = True
+        self.client = Client(config=self.config)
 
         # Mock requests will be handled by the fixture
         # The fixture is automatically applied due to autouse=True

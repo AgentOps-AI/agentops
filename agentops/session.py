@@ -1,9 +1,30 @@
+"""Session management for AgentOps.
+
+This module provides session management functionality for the AgentOps SDK.
+It includes OpenTelemetry integration for event tracking and monitoring.
+
+OTEL Guidelines:
+- Maintain a single TracerProvider for the application runtime
+- Have one global TracerProvider in the Client class
+- Resource should be initialized once per application and shared across all telemetry
+- Each Session gets its own Tracer with session-specific context
+- Allow multiple sessions to share the provider while maintaining their own context
+
+Resource Notes:
+    Resource represents the entity producing telemetry - in our case, that's the
+    AgentOps SDK application itself. Session-specific information should be
+    attributes on the spans themselves. A Resource is meant to identify the
+    service/process/application, while Sessions are units of work within that
+    application.
+"""
 from __future__ import annotations
 
 import asyncio
 import functools
 import json
+import logging
 import threading
+import uuid
 from datetime import datetime, timezone
 from decimal import ROUND_HALF_UP, Decimal
 from typing import Any, Dict, List, Optional, Sequence, Union
@@ -23,44 +44,12 @@ from termcolor import colored
 
 from .config import Configuration
 from .enums import EndState
-from .event import ErrorEvent, Event
+from .event import Event, ErrorEvent
 from .exceptions import ApiServerException
-from .helpers import filter_unjsonable, get_ISO_time, safe_serialize
 from .http_client import HttpClient, Response
-from .log_config import logger
+from .utils import get_ISO_time, filter_unjsonable, safe_serialize
 
-"""
-OTEL Guidelines:
-
-
-
-- Maintain a single TracerProvider for the application runtime
-    - Have one global TracerProvider in the Client class
-
-- According to the OpenTelemetry Python documentation, Resource should be initialized once per application and shared across all telemetry (traces, metrics, logs).
-- Each Session gets its own Tracer (with session-specific context)
-- Allow multiple sessions to share the provider while maintaining their own context
-
-
-
-:: Resource
-
-    ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
-    Captures information about the entity producing telemetry as Attributes.
-    For example, a process producing telemetry that is running in a container
-    on Kubernetes has a process name, a pod name, a namespace, and possibly
-    a deployment name. All these attributes can be included in the Resource.
-    ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
-
-    The key insight from the documentation is:
-
-    - Resource represents the entity producing telemetry - in our case, that's the AgentOps SDK application itself
-    - Session-specific information should be attributes on the spans themselves
-        - A Resource is meant to identify the service/process/application1
-        - Sessions are units of work within that application
-        - The documentation example about "process name, pod name, namespace" refers to where the code is running, not the work it's doing
-
-"""
+logger = logging.getLogger(__name__)
 
 
 class SessionExporter(SpanExporter):
@@ -199,25 +188,29 @@ class Session:
 
     def __init__(
         self,
-        session_id: UUID,
-        config: Configuration,
+        session_id: Optional[Union[UUID, str]] = None,
+        config: Optional[Configuration] = None,
         tags: Optional[List[str]] = None,
-        host_env: Optional[dict] = None,
+        inherited_session_id: Optional[str] = None,
+        auto_start: bool = True,
+        video: Optional[str] = None,
     ):
+        """Initialize a new session."""
+        self._config = config or Configuration()
+        self.session_id = str(session_id) if session_id else str(uuid.uuid4())
+        self.inherited_session_id = inherited_session_id
+        self.init_timestamp = get_ISO_time()
         self.end_timestamp = None
         self.end_state: Optional[str] = "Indeterminate"
-        self.session_id = session_id
-        self.init_timestamp = get_ISO_time()
-        self.tags: List[str] = tags or []
-        self.video: Optional[str] = None
         self.end_state_reason: Optional[str] = None
-        self.host_env = host_env
-        self.config = config
+        self.is_running = False
+        self.tags: List[str] = tags or []
+        self.video: Optional[str] = video
         self.jwt = None
+        self._session_url = ""
+        self.token_cost: Decimal = Decimal(0)
         self._lock = threading.Lock()
         self._end_session_lock = threading.Lock()
-        self.token_cost: Decimal = Decimal(0)
-        self._session_url: str = ""
         self.event_counts = {
             "llms": 0,
             "tools": 0,
@@ -225,66 +218,46 @@ class Session:
             "errors": 0,
             "apis": 0,
         }
-        # self.session_url: Optional[str] = None
 
-        # Start session first to get JWT
-        self.is_running = self._start_session()
-        if not self.is_running:
-            return
-
-        # Initialize OTEL components with a more controlled processor
+        # Initialize OTEL components
         self._tracer_provider = TracerProvider()
         self._otel_tracer = self._tracer_provider.get_tracer(
-            f"agentops.session.{str(session_id)}",
+            f"agentops.session.{self.session_id}",
         )
         self._otel_exporter = SessionExporter(session=self)
 
-        # Use smaller batch size and shorter delay to reduce buffering
+        # Configure span processor
         self._span_processor = BatchSpanProcessor(
             self._otel_exporter,
-            max_queue_size=self.config.max_queue_size,
-            schedule_delay_millis=self.config.max_wait_time,
+            max_queue_size=self._config.max_queue_size,
+            schedule_delay_millis=self._config.max_wait_time,
             max_export_batch_size=min(
-                max(self.config.max_queue_size // 20, 1),
-                min(self.config.max_queue_size, 32),
+                max(self._config.max_queue_size // 20, 1),
+                min(self._config.max_queue_size, 32),
             ),
             export_timeout_millis=20000,
         )
-
         self._tracer_provider.add_span_processor(self._span_processor)
 
-    def set_video(self, video: str) -> None:
-        """
-        Sets a url to the video recording of the session.
-
-        Args:
-            video (str): The url of the video recording
-        """
-        self.video = video
-
-    def _flush_spans(self) -> bool:
-        """
-        Flush pending spans for this specific session with timeout.
-        Returns True if flush was successful, False otherwise.
-        """
-        if not hasattr(self, "_span_processor"):
-            return True
-
-        try:
-            success = self._span_processor.force_flush(timeout_millis=self.config.max_wait_time)
-            if not success:
-                logger.warning("Failed to flush all spans before session end")
-            return success
-        except Exception as e:
-            logger.warning(f"Error flushing spans: {e}")
-            return False
+        if auto_start and self._config.auto_start_session:
+            self._start_session()
 
     def end_session(
         self,
-        end_state: str = "Success",  # Changed default from "Indeterminate" to "Success"
+        end_state: str = "Success",
         end_state_reason: Optional[str] = None,
         video: Optional[str] = None,
     ) -> Union[Decimal, None]:
+        """End the session and return the total token cost.
+
+        Args:
+            end_state (str, optional): The final state. Defaults to "Success".
+            end_state_reason (str, optional): Reason for ending. Defaults to None.
+            video (str, optional): URL to session recording. Defaults to None.
+
+        Returns:
+            Union[Decimal, None]: Total token cost or None if session not running.
+        """
         with self._end_session_lock:
             if not self.is_running:
                 return None
@@ -352,39 +325,37 @@ class Session:
                 )
             return self.token_cost
 
-    def add_tags(self, tags: List[str]) -> None:
-        """
-        Append to session tags at runtime.
-        """
-        if not self.is_running:
-            return
+    def add_tags(self, tags: Union[str, List[str]]) -> None:
+        """Add tags to the session.
 
+        Args:
+            tags (Union[str, List[str]]): A string or list of strings to add as tags.
+        """
         if isinstance(tags, str):
-            tags = [tags]
+            new_tags = [tags]
+        elif isinstance(tags, (list, tuple)):
+            new_tags = [str(tag) for tag in tags]  # Ensure all tags are strings
+        else:
+            raise ValueError("Tags must be a string or list of strings")
 
-        if not isinstance(tags, list) or not all(isinstance(tag, str) for tag in tags):
-            logger.warning("Tags must be a list of strings")
-            return
-
-        self.tags.extend(tags)
+        self.tags.extend(new_tags)
         self.tags = list(set(self.tags))  # Remove duplicates
-        self._update_session()
+
+        if self.is_running:
+            self._update_session()
 
     def set_tags(self, tags: Union[str, List[str]]) -> None:
         """
         Replace session tags at runtime.
         """
-        if not self.is_running:
-            return
-
         if isinstance(tags, str):
-            tags = [tags]
+            self.tags = [tags]
+        elif isinstance(tags, (list, tuple)):
+            self.tags = [str(tag) for tag in tags]  # Ensure all tags are strings
+        else:
+            raise ValueError("Tags must be a string or list of strings")
 
-        if not isinstance(tags, list) or not all(isinstance(tag, str) for tag in tags):
-            logger.warning("Tags must be a list of strings")
-            return
-
-        self.tags = list(set(tags))  # Remove duplicates
+        self.tags = list(set(self.tags))  # Remove duplicates
         self._update_session()
 
     def record(self, event: Union[Event, ErrorEvent], flush_now=False):
@@ -493,39 +464,34 @@ class Session:
             self.jwt = jwt
             return jwt
 
-    def _start_session(self):
-        with self._lock:
-            payload = {"session": self.__dict__}
-            serialized_payload = json.dumps(filter_unjsonable(payload)).encode("utf-8")
+    def _start_session(self) -> None:
+        """Start a new session."""
+        if not self._config.api_key:
+            raise ValueError("API key is required to start a session")
 
-            try:
-                res = HttpClient.post(
-                    f"{self.config.endpoint}/v2/start_session",
-                    serialized_payload,
-                    api_key=self.config.api_key,
-                )
-            except ApiServerException as e:
-                logger.error(f"Could not start session - {e}")
-                return False
+        if self.is_running:
+            return
 
-            logger.debug(res.body)
+        self.start_time = datetime.now(timezone.utc)
+        self.is_running = True
 
-            if res.code != 200:
-                return False
+        response = HttpClient.post(
+            "/v2/start_session",
+            api_key=self._config.api_key,
+            json={
+                "session": {
+                    "session_id": str(self.session_id),
+                    "tags": self.tags or [],
+                    "inherited_session_id": self.inherited_session_id,
+                    "start_time": get_ISO_time(),
+                }
+            },
+        )
 
-            jwt = res.body.get("jwt", None)
-            self.jwt = jwt
-            if jwt is None:
-                return False
-
-            logger.info(
-                colored(
-                    f"\x1b[34mSession Replay: {self.session_url}\x1b[0m",
-                    "blue",
-                )
-            )
-
-            return True
+        if response.status == "success":
+            self.jwt = response.body.get("jwt")
+            self.session_url = response.body.get("session_url")
+            print(f"🖇 AgentOps: Session Replay: {self.session_url}")
 
     def _update_session(self) -> None:
         """Update session state on the server"""
