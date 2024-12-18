@@ -146,7 +146,10 @@ class HttpClient:
 
             # Handle URL based on test mode
             if cls._test_mode:
-                full_url = f"http://localhost{url}"  # Use localhost for test mode
+                # Ensure URL starts with /v2 for test mode
+                if not url.startswith("/v2"):
+                    url = f"/v2{url}" if url.startswith("/") else f"/v2/{url}"
+                full_url = f"http://localhost{url}"
             else:
                 full_url = f"{cls._base_url}{url}" if url.startswith("/") else url
 
@@ -199,7 +202,10 @@ class HttpClient:
             session = cls.get_session()
             # Handle URL based on test mode
             if cls._test_mode:
-                full_url = f"http://localhost{url}"  # Use localhost for test mode
+                # Ensure URL starts with /v2 for test mode
+                if not url.startswith("/v2"):
+                    url = f"/v2{url}" if url.startswith("/") else f"/v2/{url}"
+                full_url = f"http://localhost{url}"
             else:
                 full_url = f"{cls._base_url}{url}" if url.startswith("/") else url
             res = session.get(full_url, headers=headers, timeout=20)
