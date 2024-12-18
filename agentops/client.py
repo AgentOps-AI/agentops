@@ -82,14 +82,15 @@ class Client(metaclass=MetaClient):
 
     def initialize(self) -> Union[Session, None]:
         if self.is_initialized:
-            return
+            return None
 
         self.unsuppress_logs()
-        if self._config.api_key is None:
-            return logger.error(
+        if not self._config.api_key:
+            logger.error(
                 "Could not initialize AgentOps client - API Key is missing."
                 + "\n\t    Find your API key at https://app.agentops.ai/settings/projects"
             )
+            return None
 
         self._handle_unclean_exits()
         self._initialized = True
@@ -101,8 +102,11 @@ class Client(metaclass=MetaClient):
         session = None
         if self._config.auto_start_session:
             session = self.start_session()
+            if not session or not session.is_running:
+                logger.error("Failed to automatically start session")
+                return None
 
-        if session:
+        if session and self._pre_init_queue["agents"]:
             for agent_args in self._pre_init_queue["agents"]:
                 session.create_agent(name=agent_args["name"], agent_id=agent_args["agent_id"])
             self._pre_init_queue["agents"] = []
@@ -361,29 +365,35 @@ class Client(metaclass=MetaClient):
         ] = session
 
     def _safe_get_session(self) -> Optional[Session]:
-        if not self.is_initialized:
+        """Get the current session or start a new one if auto_start_session is enabled."""
+        if not self._sessions:
+            if self._config.auto_start_session:
+                return self.start_session()
             return None
-        if len(self._sessions) == 1:
-            return self._sessions[0]
 
         if len(self._sessions) > 1:
-            calling_function = inspect.stack()[2].function  # Using index 2 because we have a wrapper at index 1
-            return logger.warning(
-                f"Multiple sessions detected. You must use session.{calling_function}(). More info: https://docs.agentops.ai/v1/concepts/core-concepts#session-management"
-            )
+            logger.warning("Multiple sessions detected. Use get_session(session_id) to specify which session to use.")
+            return None
 
-        return None
+        return self._sessions[0] if self._sessions else None
 
-    def get_session(self, session_id: str):
+    def get_session(self, session_id: Optional[str] = None) -> Optional[Session]:
         """
-        Get an active (not ended) session from the AgentOps service
+        Get an active (not ended) session from the AgentOps service.
 
         Args:
-            session_id (str): the session id for the session to be retreived
+            session_id (Optional[str]): The session ID to retrieve. If None, returns the current session.
+
+        Returns:
+            Optional[Session]: The requested session or None if not found.
         """
+        if session_id is None:
+            return self._safe_get_session()
+
         for session in self._sessions:
-            if session.session_id == session_id:
+            if str(session.session_id) == str(session_id):
                 return session
+        return None
 
     def unsuppress_logs(self):
         logging_level = os.getenv("AGENTOPS_LOGGING_LEVEL", "INFO")

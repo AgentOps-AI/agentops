@@ -310,9 +310,11 @@ def get_session(session_id: Optional[str] = None) -> Optional[Session]:
     """Get a session by ID or the current session if no ID is provided."""
     return Client().get_session(session_id)
 
+
 def get_current_session() -> Optional[Session]:
     """Get the current active session."""
     return Client().get_session()
+
 
 def get_session_jwt(session_id: Optional[str] = None) -> str:
     """

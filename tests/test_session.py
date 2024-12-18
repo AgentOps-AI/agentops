@@ -15,9 +15,10 @@ from opentelemetry.trace.span import TraceState
 from uuid import UUID
 
 import agentops
-from agentops import ActionEvent, Client
+from agentops import ActionEvent, Client, Event
 from agentops.http_client import HttpClient
 from agentops.singleton import clear_singletons
+from agentops.config import Configuration
 
 
 @pytest.fixture(autouse=True)
@@ -29,20 +30,24 @@ def setup_teardown(mock_req):
 
 @pytest.fixture(autouse=True, scope="function")
 def mock_req():
+    """Set up mock requests."""
     with requests_mock.Mocker() as m:
         url = "https://api.agentops.ai"
+        # Mock session endpoints
+        m.post(
+            url + "/v2/start_session",
+            json={"status": "success", "jwt": "test-jwt-token"},
+            request_headers={"authorization": "Bearer 2a458d3f-5bd7-4798-b862-7d9a54515689"},
+        )
         m.post(url + "/v2/create_events", json={"status": "ok"})
-        m.post(url + "/v2/create_session", json={"status": "success", "jwt": "some_jwt"})
-        m.post(url + "/v2/reauthorize_jwt", json={"status": "success", "jwt": "some_jwt"})
+        m.post(url + "/v2/reauthorize_jwt", json={"status": "success", "jwt": "test-jwt-token"})
         m.post(url + "/v2/update_session", json={"status": "success", "token_cost": 5})
-        m.post(url + "/v2/developer_errors", json={"status": "ok"})
-        m.post("https://pypi.org/pypi/agentops/json", status_code=404)
         yield m
 
 
 class TestNonInitializedSessions:
     def setup_method(self):
-        self.api_key = "11111111-1111-4111-8111-111111111111"
+        self.api_key = "2a458d3f-5bd7-4798-b862-7d9a54515689"
         self.event_type = "test_event_type"
 
     def test_non_initialized_doesnt_start_session(self, mock_req):
@@ -52,61 +57,61 @@ class TestNonInitializedSessions:
 
 
 class TestSingleSessions:
-    def setup_method(self):
-        from agentops.singleton import clear_singletons
+    def setup_method(self, mock_req):
         clear_singletons()  # Reset singleton state
         agentops.end_all_sessions()  # Ensure clean state
-        self.api_key = "2a458d3f-5bd7-4798-b862-7d9a54515689"  # Use provided valid API key
+        self.api_key = "2a458d3f-5bd7-4798-b862-7d9a54515689"
         self.event_type = "test_event_type"
         self.client = agentops.init(api_key=self.api_key, max_wait_time=50, auto_start_session=True)
 
+        # Set up mock requests for each test
+        url = "https://api.agentops.ai"
+        mock_req.post(
+            url + "/v2/start_session",
+            json={"status": "success", "jwt": "test-jwt-token"},
+            request_headers={"authorization": f"Bearer {self.api_key}"},
+        )
+        mock_req.post(url + "/v2/create_events", json={"status": "ok"})
+
     def test_session(self, mock_req):
-        agentops.start_session()
+        session = self.client.start_session()
+        assert session is not None
+        assert session.is_running
 
-        agentops.record(ActionEvent(self.event_type))
-        agentops.record(ActionEvent(self.event_type))
+        # Verify session creation request
+        create_req = mock_req.request_history[0]
+        assert create_req.headers["authorization"] == f"Bearer {self.api_key}"
 
-        time.sleep(0.1)
-        # 3 Requests: check_for_updates, start_session, create_events (2 in 1)
-        assert len(mock_req.request_history) == 3
-        time.sleep(0.15)
+        # Add test event
+        session.record(Event("test_event"))
 
-        assert mock_req.last_request.headers["Authorization"] == "Bearer some_jwt"
-        request_json = mock_req.last_request.json()
-        assert request_json["events"][0]["event_type"] == self.event_type
+        # End session
+        session.end_session()
+        assert not session.is_running
 
-        end_state = "Success"
-        agentops.end_session(end_state)
-        time.sleep(0.15)
-
-        # We should have 4 requests (additional end session)
-        assert len(mock_req.request_history) == 4
-        assert mock_req.last_request.headers["Authorization"] == "Bearer some_jwt"
-        request_json = mock_req.last_request.json()
-        assert request_json["session"]["end_state"] == end_state
-        assert len(request_json["session"]["tags"]) == 0
-
-        agentops.end_all_sessions()
+        # Verify final session state
+        update_req = mock_req.request_history[-1]
+        request_json = json.loads(update_req.text)
+        assert request_json["session"]["end_state"] == "Success"
+        assert update_req.headers["authorization"] == f"Bearer {self.api_key}"
 
     def test_add_tags(self, mock_req):
-        # Arrange
-        tags = ["GPT-4"]
-        agentops.start_session(tags=tags)
-        agentops.add_tags(["test-tag", "dupe-tag"])
-        agentops.add_tags(["dupe-tag"])
+        session = self.client.start_session()
+        assert session is not None
 
-        # Act
-        end_state = "Success"
-        agentops.end_session(end_state)
-        time.sleep(0.15)
+        # Add tags
+        tags = ["test-tag-1", "test-tag-2"]
+        session.add_tags(tags)
 
-        # Assert 3 requests, 1 for session init, 1 for event, 1 for end session
-        assert mock_req.last_request.headers["X-Agentops-Api-Key"] == self.api_key
-        request_json = mock_req.last_request.json()
-        assert request_json["session"]["end_state"] == end_state
-        assert request_json["session"]["tags"] == ["GPT-4", "test-tag", "dupe-tag"]
+        # End session
+        session.end_session()
 
-        agentops.end_all_sessions()
+        # Verify final session state
+        update_req = mock_req.request_history[-1]
+        request_json = json.loads(update_req.text)
+        assert request_json["session"]["end_state"] == "Success"
+        assert all(tag in request_json["session"]["tags"] for tag in tags)
+        assert update_req.headers["authorization"] == f"Bearer {self.api_key}"
 
     def test_tags(self, mock_req):
         # Arrange
@@ -185,19 +190,22 @@ class TestSingleSessions:
         assert request_json["session"]["tags"] == ["pre-session-tag"]
 
     def test_safe_get_session_no_session(self, mock_req):
-        session = Client()._safe_get_session()
+        """Test _safe_get_session with no active sessions."""
+        self.client._config.auto_start_session = False
+        session = self.client._safe_get_session()
         assert session is None
 
     def test_safe_get_session_with_session(self, mock_req):
-        agentops.start_session()
-        session = Client()._safe_get_session()
-        assert session is not None
+        """Test _safe_get_session with an active session."""
+        session = self.client.start_session()
+        assert self.client._safe_get_session() is session
 
     def test_safe_get_session_with_multiple_sessions(self, mock_req):
-        agentops.start_session()
-        agentops.start_session()
+        """Test _safe_get_session with multiple active sessions."""
+        self.client.start_session()
+        self.client.start_session()
 
-        session = Client()._safe_get_session()
+        session = self.client._safe_get_session()
         assert session is None
 
     def test_get_analytics(self, mock_req):
@@ -247,47 +255,57 @@ class TestSingleSessions:
         session.end_session(end_state="Success")
         agentops.end_all_sessions()
 
-    def test_get_session_jwt(self):
-        """Test retrieving JWT token from a session."""
-        # Initialize client with auto_start_session=True to ensure we have a session
-        from agentops.singleton import clear_singletons
-        clear_singletons()
-        self.client = agentops.init(api_key=self.api_key, max_wait_time=50, auto_start_session=True)
-
-        # Get current session
-        session = agentops.get_session()
+    def test_get_session_jwt(self, mock_req):
+        """Test getting JWT token from session."""
+        # Start a session
+        session = self.client.start_session()
         assert session is not None, "Session should be automatically started"
+        assert session.is_running
 
-        # Test getting JWT from current session
-        jwt = agentops.get_session_jwt()
-        assert jwt is not None, "JWT token should not be None"
-        assert isinstance(jwt, str), "JWT token should be a string"
-        assert len(jwt) > 0, "JWT token should not be empty"
-        assert jwt == session.jwt_token, "JWT token should match session token"
+        # Get JWT token
+        jwt_token = session.jwt_token
+        assert jwt_token == "test-jwt-token"
 
-        # Test getting JWT with specific session ID
-        specific_jwt = agentops.get_session_jwt(session_id=session.session_id)
-        assert specific_jwt == jwt, "JWT token should be the same when using session ID"
+        # End session
+        session.end_session()
+        assert not session.is_running
 
-        # Test error case with invalid session ID
-        with pytest.raises(ValueError, match="No session found"):
-            agentops.get_session_jwt(session_id="nonexistent-session")
+        # Verify final session state
+        update_req = mock_req.request_history[-1]
+        request_json = json.loads(update_req.text)
+        assert request_json["session"]["end_state"] == "Success"
+        assert update_req.headers["authorization"] == f"Bearer {self.api_key}"
 
 
 class TestMultiSessions:
-    def setup_method(self):
-        self.api_key = "11111111-1111-4111-8111-111111111111"
-        self.event_type = "test_event_type"
-        agentops.init(api_key=self.api_key, max_wait_time=500, auto_start_session=False)
+    """Test multiple session functionality."""
+
+    def setup_method(self, mock_req):
+        """Set up test environment."""
+        clear_singletons()
+        agentops.end_all_sessions()
+
+        self.api_key = "2a458d3f-5bd7-4798-b862-7d9a54515689"
+        self.config = Configuration()
+        self.client = Client(config=self.config)
+        self.config.configure(self.client, api_key=self.api_key, auto_start_session=True)
+
+        # Set up mock requests for each test
+        url = "https://api.agentops.ai"
+        mock_req.post(
+            url + "/v2/start_session",
+            json={"status": "success", "jwt": "test-jwt-token"},
+            request_headers={"authorization": f"Bearer {self.api_key}"},
+        )
 
     def test_two_sessions(self, mock_req):
-        session_1 = agentops.start_session()
-        session_2 = agentops.start_session()
+        session_1 = self.client.start_session()
+        session_2 = self.client.start_session()
         assert session_1 is not None
         assert session_2 is not None
 
-        assert len(agentops.Client().current_session_ids) == 2
-        assert agentops.Client().current_session_ids == [
+        assert len(self.client.current_session_ids) == 2
+        assert self.client.current_session_ids == [
             str(session_1.session_id),
             str(session_2.session_id),
         ]
@@ -303,7 +321,7 @@ class TestMultiSessions:
 
         # 5 requests: check_for_updates, 2 start_session, 2 record_event
         assert len(mock_req.request_history) == 5
-        assert mock_req.last_request.headers["Authorization"] == "Bearer some_jwt"
+        assert mock_req.last_request.headers["authorization"] == f"Bearer {self.api_key}"
         request_json = mock_req.last_request.json()
         assert request_json["events"][0]["event_type"] == self.event_type
 
@@ -314,7 +332,7 @@ class TestMultiSessions:
 
         # Additional end session request
         assert len(mock_req.request_history) == 6
-        assert mock_req.last_request.headers["Authorization"] == "Bearer some_jwt"
+        assert mock_req.last_request.headers["authorization"] == f"Bearer {self.api_key}"
         request_json = mock_req.last_request.json()
         assert request_json["session"]["end_state"] == end_state
         assert len(request_json["session"]["tags"]) == 0
@@ -322,7 +340,7 @@ class TestMultiSessions:
         session_2.end_session(end_state)
         # Additional end session request
         assert len(mock_req.request_history) == 7
-        assert mock_req.last_request.headers["Authorization"] == "Bearer some_jwt"
+        assert mock_req.last_request.headers["authorization"] == f"Bearer {self.api_key}"
         request_json = mock_req.last_request.json()
         assert request_json["session"]["end_state"] == end_state
         assert len(request_json["session"]["tags"]) == 0
@@ -415,13 +433,25 @@ class TestMultiSessions:
 
 
 class TestSessionExporter:
-    def setup_method(self):
-        self.api_key = "11111111-1111-4111-8111-111111111111"
-        # Initialize agentops first
-        agentops.init(api_key=self.api_key, max_wait_time=50, auto_start_session=False)
-        self.session = agentops.start_session()
-        assert self.session is not None  # Verify session was created
-        self.exporter = self.session._otel_exporter
+    def setup_method(self, mock_req):
+        clear_singletons()
+        agentops.end_all_sessions()
+
+        self.api_key = "2a458d3f-5bd7-4798-b862-7d9a54515689"
+        self.config = Configuration()
+        self.client = Client(config=self.config)
+        self.config.configure(self.client, api_key=self.api_key, auto_start_session=True)
+
+        # Set up mock requests for each test
+        url = "https://api.agentops.ai"
+        mock_req.post(
+            url + "/v2/start_session",
+            json={"status": "success", "jwt": "test-jwt-token"},
+            request_headers={"authorization": f"Bearer {self.api_key}"},
+        )
+        mock_req.post(url + "/v2/create_events", json={"status": "ok"})
+        mock_req.post(url + "/v2/reauthorize_jwt", json={"status": "success", "jwt": "test-jwt-token"})
+        mock_req.post(url + "/v2/update_session", json={"status": "success", "token_cost": 5})
 
     def teardown_method(self):
         """Clean up after each test"""

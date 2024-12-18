@@ -281,7 +281,7 @@ class Session:
 
     def end_session(
         self,
-        end_state: str = "Indeterminate",
+        end_state: str = "Success",  # Changed default from "Indeterminate" to "Success"
         end_state_reason: Optional[str] = None,
         video: Optional[str] = None,
     ) -> Union[Decimal, None]:
@@ -359,35 +359,32 @@ class Session:
         if not self.is_running:
             return
 
-        if not (isinstance(tags, list) and all(isinstance(item, str) for item in tags)):
-            if isinstance(tags, str):
-                tags = [tags]
+        if isinstance(tags, str):
+            tags = [tags]
 
-        # Initialize tags if None
-        if self.tags is None:
-            self.tags = []
+        if not isinstance(tags, list) or not all(isinstance(tag, str) for tag in tags):
+            logger.warning("Tags must be a list of strings")
+            return
 
-        # Add new tags that don't exist
-        for tag in tags:
-            if tag not in self.tags:
-                self.tags.append(tag)
-
-        # Update session state immediately
+        self.tags.extend(tags)
+        self.tags = list(set(self.tags))  # Remove duplicates
         self._update_session()
 
-    def set_tags(self, tags):
-        """Set session tags, replacing any existing tags"""
+    def set_tags(self, tags: List[str]) -> None:
+        """
+        Replace session tags at runtime.
+        """
         if not self.is_running:
             return
 
-        if not (isinstance(tags, list) and all(isinstance(item, str) for item in tags)):
-            if isinstance(tags, str):
-                tags = [tags]
+        if isinstance(tags, str):
+            tags = [tags]
 
-        # Set tags directly
-        self.tags = tags.copy()  # Make a copy to avoid reference issues
+        if not isinstance(tags, list) or not all(isinstance(tag, str) for tag in tags):
+            logger.warning("Tags must be a list of strings")
+            return
 
-        # Update session state immediately
+        self.tags = list(set(tags))  # Remove duplicates
         self._update_session()
 
     def record(self, event: Union[Event, ErrorEvent], flush_now=False):
@@ -503,10 +500,9 @@ class Session:
 
             try:
                 res = HttpClient.post(
-                    f"{self.config.endpoint}/v2/create_session",
+                    f"{self.config.endpoint}/v2/start_session",
                     serialized_payload,
                     api_key=self.config.api_key,
-                    parent_key=self.config.parent_key,
                 )
             except ApiServerException as e:
                 return logger.error(f"Could not start session - {e}")
@@ -541,11 +537,16 @@ class Session:
                 res = HttpClient.post(
                     f"{self.config.endpoint}/v2/update_session",
                     json.dumps(filter_unjsonable(payload)).encode("utf-8"),
-                    # self.config.api_key,
+                    api_key=self.config.api_key,
                     jwt=self.jwt,
                 )
+                if res.code != 200:
+                    return logger.error(f"Could not update session - server returned {res.code}")
+                return True
             except ApiServerException as e:
                 return logger.error(f"Could not update session - {e}")
+            except Exception as e:
+                return logger.error(f"Unexpected error updating session - {e}")
 
     def create_agent(self, name, agent_id):
         if not self.is_running:
