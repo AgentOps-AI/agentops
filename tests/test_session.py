@@ -44,13 +44,13 @@ def mock_req():
 
         m.post(
             url + "/v2/start_session",
-            json={"status": "success", "jwt": "test-jwt-token", "session_url": "https://app.agentops.ai/session/123"},
+            json={"status": "success", "jwt": "some_jwt", "session_url": "https://app.agentops.ai/session/123"},
             additional_matcher=match_headers,
         )
-        m.post(url + "/v2/create_events", json={"status": "ok"}, additional_matcher=match_headers)
+        m.post(url + "/v2/create_events", json={"status": "success"}, additional_matcher=match_headers)
         m.post(
             url + "/v2/reauthorize_jwt",
-            json={"status": "success", "jwt": "test-jwt-token"},
+            json={"status": "success", "jwt": "some_jwt"},
             additional_matcher=match_headers,
         )
         m.post(
@@ -313,13 +313,13 @@ class TestMultiSessions:
         # Set up mock requests for each test
         url = "https://api.agentops.ai"
         mock_req.post(
-            url + "/v2/start_session",
-            json={"status": "success", "jwt": "test-jwt-token"},
+            f"{url}/v2/start_session",
+            json={"status": "success", "jwt": "test-jwt-token", "session_url": "https://app.agentops.ai/session/123"},
             request_headers={"X-Agentops-Api-Key": self.api_key},
         )
-        mock_req.post(url + "/v2/create_events", json={"status": "ok"})
-        mock_req.post(url + "/v2/reauthorize_jwt", json={"status": "success", "jwt": "test-jwt-token"})
-        mock_req.post(url + "/v2/update_session", json={"status": "success", "token_cost": 5})
+        mock_req.post(f"{url}/v2/create_events", json={"status": "success"})
+        mock_req.post(f"{url}/v2/reauthorize_jwt", json={"status": "success", "jwt": "test-jwt-token"})
+        mock_req.post(f"{url}/v2/update_session", json={"status": "success", "token_cost": 5})
 
     def test_two_sessions(self, mock_req):
         session_1 = self.client.start_session()
@@ -473,10 +473,8 @@ class TestSessionExporter:
         self.context = Context()
         set_value("session.id", str(self.session_id), self.context)
 
-        # Initialize the exporter
-        from agentops.exporters import AgentOpsSpanExporter
-
-        self.exporter = AgentOpsSpanExporter()
+        # Initialize the exporter using the session's own exporter
+        self.exporter = self.session._otel_exporter
 
     def teardown_method(self):
         """Clean up after each test"""
