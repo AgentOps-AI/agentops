@@ -70,7 +70,7 @@ class FireworksProvider(InstrumentedProvider):
                         event.completion = accumulated_content
                         event.end_timestamp = time.time()
                         if current_session:
-                            current_session.record_event(event)
+                            current_session.record(event)
                             logger.info("Recorded streaming LLM event")
                     except Exception as e:
                         logger.error(f"Error in async_generator: {str(e)}")
@@ -89,7 +89,7 @@ class FireworksProvider(InstrumentedProvider):
                         event.completion = accumulated_content
                         event.end_timestamp = time.time()
                         if current_session:
-                            current_session.record_event(event)
+                            current_session.record(event)
                             logger.info("Recorded streaming LLM event")
                     except Exception as e:
                         logger.error(f"Error in generator: {str(e)}")
@@ -105,7 +105,7 @@ class FireworksProvider(InstrumentedProvider):
                 event.completion = response.choices[0].message.content
                 event.end_timestamp = time.time()
                 if current_session:
-                    current_session.record_event(event)
+                    current_session.record(event)
                     logger.info("Recorded non-streaming LLM event")
 
             return response
