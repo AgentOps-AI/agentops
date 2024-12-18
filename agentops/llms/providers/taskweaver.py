@@ -116,25 +116,9 @@ class TaskWeaverProvider(InstrumentedProvider):
 
     def override(self):
         try:
-            from taskweaver.llm.openai import OpenAIService
-            from taskweaver.llm.anthropic import AnthropicService
-            from taskweaver.llm.azure_ml import AzureMLService
-            from taskweaver.llm.groq import GroqService
-            from taskweaver.llm.ollama import OllamaService
-            from taskweaver.llm.qwen import QWenService
-            from taskweaver.llm.zhipuai import ZhipuAIService
-            from taskweaver.llm.base import CompletionService
+            from taskweaver.llm import llm_completion_config_map
 
-            # List all services that need to be patched
-            services = [
-                OpenAIService,  # Handles "openai", "azure", "azure_ad"
-                AnthropicService,
-                AzureMLService,
-                GroqService,
-                OllamaService,
-                QWenService,
-                ZhipuAIService
-            ]
+            service_names, service_classes = zip(*llm_completion_config_map.items())
 
             logger.info("[OVERRIDE] Starting to patch LLM services")
 
@@ -195,45 +179,26 @@ class TaskWeaverProvider(InstrumentedProvider):
                     return response
 
             # Patch all services
-            for service_class in services:
+            for service in service_classes:
                 try:
-                    logger.info(f"[OVERRIDE] Attempting to patch {service_class.__name__}")
-                    if not hasattr(service_class, '_original_chat_completion'):
-                        original = service_class.chat_completion
-                        service_class._original_chat_completion = original
-                        service_class.chat_completion = patched_chat_completion
-                        logger.info(f"[OVERRIDE] Successfully patched {service_class.__name__}")
+                    logger.info(f"[OVERRIDE] Attempting to patch {service.__name__}")
+                    if not hasattr(service, '_original_chat_completion'):
+                        original = service.chat_completion
+                        service._original_chat_completion = original
+                        service.chat_completion = patched_chat_completion
+                        logger.info(f"[OVERRIDE] Successfully patched {service.__name__}")
                 except Exception as e:
-                    logger.error(f"[OVERRIDE] Failed to patch {service_class.__name__}: {str(e)}", exc_info=True)
+                    logger.error(f"[OVERRIDE] Failed to patch {service.__name__}: {str(e)}", exc_info=True)
 
         except Exception as e:
             logger.error(f"[OVERRIDE] Failed to patch services: {str(e)}", exc_info=True)
 
     def undo_override(self):
         try:
-            from taskweaver.llm.openai import OpenAIService
-            from taskweaver.llm.anthropic import AnthropicService
-            from taskweaver.llm.azure_ml import AzureMLService
-            from taskweaver.llm.groq import GroqService
-            from taskweaver.llm.ollama import OllamaService
-            from taskweaver.llm.qwen import QWenService
-            from taskweaver.llm.zhipuai import ZhipuAIService
-
-            # Map service classes to their identifying characteristics
-            service_mapping = {
-                "openai": OpenAIService,  # Handles "openai", "azure", "azure_ad"
-                "azure": OpenAIService,
-                "azure_ad": OpenAIService,
-                "anthropic": AnthropicService,
-                "azure_ml": AzureMLService,
-                "groq": GroqService,
-                "ollama": OllamaService,
-                "qwen": QWenService,
-                "zhipuai": ZhipuAIService
-            }
+            from taskweaver.llm import llm_completion_config_map
 
             # Check each service for patching and undo if found
-            for service_name, service_class in service_mapping.items():
+            for service_name, service_class in llm_completion_config_map.items():
                 if hasattr(service_class, '_original_chat_completion'):
                     service_class.chat_completion = service_class._original_chat_completion
                     delattr(service_class, '_original_chat_completion')
