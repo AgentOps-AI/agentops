@@ -36,12 +36,7 @@ class TestRestApi:
         else:
             headers["X-Agentops-Api-Key"] = self.api_key
 
-        response = requests.request(
-            method=method,
-            url=f"{self.base_url}{endpoint}",
-            headers=headers,
-            json=data
-        )
+        response = requests.request(method=method, url=f"{self.base_url}{endpoint}", headers=headers, json=data)
 
         print(f"\n=== {endpoint} ===")
         print(f"Status: {response.status_code}")
@@ -54,18 +49,9 @@ class TestRestApi:
         now = datetime.now(timezone.utc).isoformat()
 
         # Payload structure from OpenAPI spec
-        payload = {
-            "session_id": self.session_id,
-            "init_timestamp": now,
-            "tags": ["test"],
-            "host_env": {"test": True}
-        }
+        payload = {"session_id": self.session_id, "init_timestamp": now, "tags": ["test"], "host_env": {"test": True}}
 
-        response = self._make_request(
-            "POST",
-            "/v2/create_session",
-            payload
-        )
+        response = self._make_request("POST", "/v2/create_session", payload)
 
         if response.status_code == 200:
             self.jwt_token = response.json().get("jwt")
@@ -80,21 +66,9 @@ class TestRestApi:
 
         now = datetime.now(timezone.utc).isoformat()
 
-        payload = {
-            "events": [{
-                "event_type": "test",
-                "session_id": self.session_id,
-                "init_timestamp": now,
-                "end_timestamp": now
-            }]
-        }
+        payload = {"events": [{"event_type": "test", "session_id": self.session_id, "init_timestamp": now, "end_timestamp": now}]}
 
-        response = self._make_request(
-            "POST",
-            "/v2/create_events",
-            payload,
-            use_jwt=True
-        )
+        response = self._make_request("POST", "/v2/create_events", payload, use_jwt=True)
 
         return response.status_code == 200
 
@@ -106,19 +80,9 @@ class TestRestApi:
 
         now = datetime.now(timezone.utc).isoformat()
 
-        payload = {
-            "session_id": self.session_id,
-            "end_timestamp": now,
-            "end_state": "Success",
-            "end_state_reason": "Test completed"
-        }
+        payload = {"session_id": self.session_id, "end_timestamp": now, "end_state": "Success", "end_state_reason": "Test completed"}
 
-        response = self._make_request(
-            "POST",
-            "/v2/update_session",
-            payload,
-            use_jwt=True
-        )
+        response = self._make_request("POST", "/v2/update_session", payload, use_jwt=True)
 
         return response.status_code == 200
 
