@@ -56,13 +56,18 @@ class TestEvents:
 
         event = ActionEvent()
         time.sleep(0.15)
-        agentops.record(event)
-
-        assert event.init_timestamp != event.end_timestamp
+        try:
+            agentops.record(event)
+            assert event.init_timestamp != event.end_timestamp
+        except Exception as e:
+            pytest.fail(f"Record failed: {str(e)}")
 
     def test_record_error_event(self, mock_req):
         agentops.init(api_key=self.api_key)
 
         event = ErrorEvent(logs=None)
         time.sleep(0.15)
-        agentops.record(event)
+        try:
+            agentops.record(event)
+        except Exception as e:
+            pytest.fail(f"Record failed: {str(e)}")

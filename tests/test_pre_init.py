@@ -71,14 +71,16 @@ class TestPreInit:
 
         # Assert
         # start session and create agent
-        agentops.end_session(end_state="Success")
+        try:
+            agentops.end_session(end_state="Success")
 
-        # Wait for flush
-        time.sleep(1.5)
+            # Wait for flush
+            time.sleep(1.5)
 
-        # 4 requests: check_for_updates, create_session, create_agent, update_session
-        assert len(mock_req.request_history) == 4
-
-        assert mock_req.request_history[-2].headers["X-Agentops-Api-Key"] == self.api_key
+            # 4 requests: check_for_updates, create_session, create_agent, update_session
+            assert len(mock_req.request_history) == 4
+            assert mock_req.request_history[-2].headers["x-agentops-api-key"] == self.api_key
+        except Exception as e:
+            pytest.fail(f"Test failed: {str(e)}")
 
         mock_req.reset()
