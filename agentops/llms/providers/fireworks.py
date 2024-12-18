@@ -1,213 +1,181 @@
-import inspect
+import logging
+from typing import Optional, AsyncGenerator
 import pprint
-from typing import Optional
-
-from agentops.llms.providers.instrumented_provider import InstrumentedProvider
-from agentops.time_travel import fetch_completion_override_from_time_travel_cache
-from agentops.event import ActionEvent, ErrorEvent, LLMEvent
 from agentops.session import Session
-from agentops.log_config import logger
-from agentops.helpers import check_call_stack_for_agent_id, get_ISO_time
-from agentops.singleton import singleton
+from agentops.helpers import get_ISO_time
+from agentops.event import LLMEvent
+from agentops.enums import EventType
+from .instrumented_provider import InstrumentedProvider
 
+logger = logging.getLogger(__name__)
 
-@singleton
 class FireworksProvider(InstrumentedProvider):
-    original_create = None
-    original_create_async = None
+    """Provider for Fireworks.ai API."""
 
     def __init__(self, client):
         super().__init__(client)
         self._provider_name = "Fireworks"
+        self._original_completion = None
+        self._original_async_completion = None
+        self._session = None  # Initialize session attribute
+        logger.info(f"Initializing {self._provider_name} provider")
+
+    def set_session(self, session: Session):
+        """Set the session for event tracking."""
+        self._session = session
+        logger.debug(f"Set session {session.session_id} for {self._provider_name} provider")
 
     def handle_response(self, response, kwargs, init_timestamp, session: Optional[Session] = None) -> dict:
-        """Handle responses for Fireworks API (OpenAI-compatible interface)"""
-        from fireworks.client import AsyncStream, Stream
-        from fireworks.types.chat import ChatCompletionChunk
+        """Handle the response from the Fireworks API."""
+        if session:
+            self._session = session
+            logger.debug(f"Updated session to {session.session_id} for {self._provider_name} provider")
 
-        llm_event = LLMEvent(init_timestamp=init_timestamp, params=kwargs)
-        if session is not None:
-            llm_event.session_id = session.session_id
-
-        def handle_stream_chunk(chunk: ChatCompletionChunk):
-            # NOTE: prompt/completion usage not returned in response when streaming
-            # We take the first ChatCompletionChunk and accumulate the deltas from all subsequent chunks
-            if llm_event.returns == None:
-                llm_event.returns = chunk
-
-            try:
-                accumulated_delta = llm_event.returns.choices[0].delta
-                llm_event.agent_id = check_call_stack_for_agent_id()
-                llm_event.model = chunk.model
-                llm_event.prompt = kwargs["messages"]
-
-                # NOTE: We assume for completion only choices[0] is relevant
-                choice = chunk.choices[0]
-
-                if choice.delta.content:
-                    accumulated_delta.content += choice.delta.content
-
-                if choice.delta.role:
-                    accumulated_delta.role = choice.delta.role
-
-                if choice.delta.tool_calls:
-                    accumulated_delta.tool_calls = choice.delta.tool_calls
-
-                if choice.delta.function_call:
-                    accumulated_delta.function_call = choice.delta.function_call
-
-                if choice.finish_reason:
-                    # Streaming is done. Record LLMEvent
-                    llm_event.returns.choices[0].finish_reason = choice.finish_reason
-                    llm_event.completion = {
-                        "role": accumulated_delta.role,
-                        "content": accumulated_delta.content,
-                        "function_call": accumulated_delta.function_call,
-                        "tool_calls": accumulated_delta.tool_calls,
-                    }
-                    llm_event.end_timestamp = get_ISO_time()
-
-                    self._safe_record(session, llm_event)
-            except Exception as e:
-                self._safe_record(session, ErrorEvent(trigger_event=llm_event, exception=e))
-
-                kwargs_str = pprint.pformat(kwargs)
-                chunk = pprint.pformat(chunk)
-                logger.warning(
-                    f"Unable to parse a chunk for LLM call. Skipping upload to AgentOps\n"
-                    f"chunk:\n {chunk}\n"
-                    f"kwargs:\n {kwargs_str}\n"
-                )
-
-        # if the response is a generator, decorate the generator
-        if isinstance(response, Stream):
-            def generator():
-                for chunk in response:
-                    handle_stream_chunk(chunk)
-                    yield chunk
-            return generator()
-
-        # For asynchronous AsyncStream
-        elif isinstance(response, AsyncStream):
-            async def async_generator():
-                async for chunk in response:
-                    handle_stream_chunk(chunk)
-                    yield chunk
-            return async_generator()
-
-        # v1.0.0+ responses are objects
         try:
-            llm_event.returns = response
-            llm_event.agent_id = check_call_stack_for_agent_id()
-            llm_event.prompt = kwargs["messages"]
-            llm_event.prompt_tokens = response.usage.prompt_tokens
-            llm_event.completion = response.choices[0].message.model_dump()
-            llm_event.completion_tokens = response.usage.completion_tokens
-            llm_event.model = response.model
+            # Handle streaming response
+            if kwargs.get('stream', False):
+                async def async_generator(stream):
+                    async for chunk in stream:
+                        try:
+                            # Parse the chunk data
+                            if hasattr(chunk, 'choices') and chunk.choices:
+                                content = chunk.choices[0].delta.content if hasattr(chunk.choices[0].delta, 'content') else None
+                            else:
+                                # Handle raw string chunks from streaming response
+                                content = chunk
 
-            self._safe_record(session, llm_event)
+                            if content:
+                                # Create event data for streaming chunk
+                                event = LLMEvent(
+                                    event_type=EventType.LLM.value,
+                                    init_timestamp=init_timestamp,
+                                    end_timestamp=get_ISO_time(),
+                                    model=kwargs.get('model', 'unknown'),
+                                    prompt=str(kwargs.get('messages', [])),
+                                    completion="[Streaming Response]",
+                                    prompt_tokens=0,
+                                    completion_tokens=0,
+                                    cost=0.0
+                                )
+                                if self._session:
+                                    self._session.record(event)
+                                    logger.debug(f"Recorded streaming chunk for session {self._session.session_id}")
+                                yield content
+                        except Exception as e:
+                            logger.error(f"Error processing streaming chunk: {str(e)}")
+                            continue
+
+                def generator(stream):
+                    for chunk in stream:
+                        try:
+                            # Parse the chunk data
+                            if hasattr(chunk, 'choices') and chunk.choices:
+                                content = chunk.choices[0].delta.content if hasattr(chunk.choices[0].delta, 'content') else None
+                            else:
+                                # Handle raw string chunks from streaming response
+                                content = chunk
+
+                            if content:
+                                # Create event data for streaming chunk
+                                event = LLMEvent(
+                                    event_type=EventType.LLM.value,
+                                    init_timestamp=init_timestamp,
+                                    end_timestamp=get_ISO_time(),
+                                    model=kwargs.get('model', 'unknown'),
+                                    prompt=str(kwargs.get('messages', [])),
+                                    completion="[Streaming Response]",
+                                    prompt_tokens=0,
+                                    completion_tokens=0,
+                                    cost=0.0
+                                )
+                                if self._session:
+                                    self._session.record(event)
+                                    logger.debug(f"Recorded streaming chunk for session {self._session.session_id}")
+                                yield content
+                        except Exception as e:
+                            logger.error(f"Error processing streaming chunk: {str(e)}")
+                            continue
+
+                if hasattr(response, '__aiter__'):
+                    return async_generator(response)
+                else:
+                    return generator(response)
+
+            # Handle non-streaming response
+            if hasattr(response, 'choices') and response.choices:
+                content = response.choices[0].message.content if hasattr(response.choices[0], 'message') else ""
+
+                # Create event data for non-streaming response
+                event = LLMEvent(
+                    event_type=EventType.LLM.value,
+                    init_timestamp=init_timestamp,
+                    end_timestamp=get_ISO_time(),
+                    model=kwargs.get('model', 'unknown'),
+                    prompt=str(kwargs.get('messages', [])),
+                    completion=content,
+                    prompt_tokens=0,
+                    completion_tokens=0,
+                    cost=0.0
+                )
+                if self._session:
+                    self._session.record(event)
+                    logger.debug(f"Recorded non-streaming response for session {self._session.session_id}")
+
+            return response
+
         except Exception as e:
-            self._safe_record(session, ErrorEvent(trigger_event=llm_event, exception=e))
-
-            kwargs_str = pprint.pformat(kwargs)
-            response = pprint.pformat(response)
-            logger.warning(
-                f"Unable to parse response for LLM call. Skipping upload to AgentOps\n"
-                f"response:\n {response}\n"
-                f"kwargs:\n {kwargs_str}\n"
-            )
-
-        return response
+            logger.error(f"Error handling Fireworks response: {str(e)}")
+            raise
 
     def override(self):
-        self._override_fireworks_completion()
-        self._override_fireworks_async_completion()
+        """Override Fireworks API methods with instrumented versions."""
+        logger.info(f"Overriding {self._provider_name} provider methods")
 
+        # Store original methods
+        self._original_completion = self.client.chat.completions.create
+        self._original_async_completion = getattr(self.client.chat.completions, 'acreate', None)
+
+        # Override methods
+        self._override_fireworks_completion()
+        if self._original_async_completion:
+            self._override_fireworks_async_completion()
 
     def _override_fireworks_completion(self):
-        from fireworks.resources.chat import completions
-        from fireworks.types.chat import ChatCompletion, ChatCompletionChunk
-
-        # Store the original method
-        self.original_create = completions.Completions.create
+        """Override synchronous completion method."""
+        original_create = self._original_completion
+        provider = self
 
         def patched_function(*args, **kwargs):
-            init_timestamp = get_ISO_time()
-            session = kwargs.get("session", None)
-            if "session" in kwargs.keys():
-                del kwargs["session"]
+            try:
+                init_timestamp = get_ISO_time()
+                response = original_create(*args, **kwargs)
+                return provider.handle_response(response, kwargs, init_timestamp, provider._session)
+            except Exception as e:
+                logger.error(f"Error in Fireworks completion: {str(e)}")
+                raise
 
-            completion_override = fetch_completion_override_from_time_travel_cache(kwargs)
-            if completion_override:
-                result_model = None
-                pydantic_models = (ChatCompletion, ChatCompletionChunk)
-                for pydantic_model in pydantic_models:
-                    try:
-                        result_model = pydantic_model.model_validate_json(completion_override)
-                        break
-                    except Exception as e:
-                        pass
-
-                if result_model is None:
-                    logger.error(
-                        f"Time Travel: Pydantic validation failed for {pydantic_models} \n"
-                        f"Time Travel: Completion override was:\n"
-                        f"{pprint.pformat(completion_override)}"
-                    )
-                    return None
-                return self.handle_response(result_model, kwargs, init_timestamp, session=session)
-
-            # Call the original function with its original arguments
-            result = self.original_create(*args, **kwargs)
-            return self.handle_response(result, kwargs, init_timestamp, session=session)
-
-        # Override the original method with the patched one
-        completions.Completions.create = patched_function
+        self.client.chat.completions.create = patched_function
 
     def _override_fireworks_async_completion(self):
-        from fireworks.resources.chat import completions
-        from fireworks.types.chat import ChatCompletion, ChatCompletionChunk
-
-        # Store the original method
-        self.original_create_async = completions.AsyncCompletions.create
+        """Override asynchronous completion method."""
+        original_acreate = self._original_async_completion
+        provider = self
 
         async def patched_function(*args, **kwargs):
-            init_timestamp = get_ISO_time()
+            try:
+                init_timestamp = get_ISO_time()
+                response = await original_acreate(*args, **kwargs)
+                return provider.handle_response(response, kwargs, init_timestamp, provider._session)
+            except Exception as e:
+                logger.error(f"Error in Fireworks async completion: {str(e)}")
+                raise
 
-            session = kwargs.get("session", None)
-            if "session" in kwargs.keys():
-                del kwargs["session"]
-
-            completion_override = fetch_completion_override_from_time_travel_cache(kwargs)
-            if completion_override:
-                result_model = None
-                pydantic_models = (ChatCompletion, ChatCompletionChunk)
-                for pydantic_model in pydantic_models:
-                    try:
-                        result_model = pydantic_model.model_validate_json(completion_override)
-                        break
-                    except Exception as e:
-                        pass
-
-                if result_model is None:
-                    logger.error(
-                        f"Time Travel: Pydantic validation failed for {pydantic_models} \n"
-                        f"Time Travel: Completion override was:\n"
-                        f"{pprint.pformat(completion_override)}"
-                    )
-                    return None
-                return self.handle_response(result_model, kwargs, init_timestamp, session=session)
-
-            # Call the original function with its original arguments
-            result = await self.original_create_async(*args, **kwargs)
-            return self.handle_response(result, kwargs, init_timestamp, session=session)
-
-        # Override the original method with the patched one
-        completions.AsyncCompletions.create = patched_function
+        self.client.chat.completions.acreate = patched_function
 
     def undo_override(self):
-        if self.original_create is not None and self.original_create_async is not None:
-            from fireworks.resources.chat import completions
-
-            completions.AsyncCompletions.create = self.original_create_async
-            completions.Completions.create = self.original_create
+        """Restore original Fireworks API methods."""
+        logger.info(f"Restoring original {self._provider_name} provider methods")
+        if self._original_completion:
+            self.client.chat.completions.create = self._original_completion
+        if self._original_async_completion:
+            self.client.chat.completions.acreate = self._original_async_completion
