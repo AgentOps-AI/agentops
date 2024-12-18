@@ -61,7 +61,9 @@ def mock_req():
             },
             additional_matcher=match_headers,
         )
-        m.post(f"{base_url}/sessions/test-session-id/events", json={"status": "success"}, additional_matcher=match_headers)
+        m.post(
+            f"{base_url}/sessions/test-session-id/events", json={"status": "success"}, additional_matcher=match_headers
+        )
         m.post(
             f"{base_url}/reauthorize_jwt",
             json=lambda request, context: {"status": "success", "jwt": get_next_jwt(request)},

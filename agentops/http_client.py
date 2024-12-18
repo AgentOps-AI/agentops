@@ -116,7 +116,7 @@ class HttpClient:
         cls,
         url: str,
         payload: Optional[bytes] = None,
-        json: Optional[Dict[str, Any]] = None,
+        json_data: Optional[Dict[str, Any]] = None,
         api_key: Optional[str] = None,
         parent_key: Optional[str] = None,
         jwt: Optional[str] = None,
@@ -128,12 +128,13 @@ class HttpClient:
             headers = cls._prepare_headers(api_key, parent_key, jwt, header)
             session = cls.get_session()
 
-            # Handle either json or payload parameter
-            if json is not None:
+            # Handle either json_data or payload parameter
+            if json_data is not None:
                 import json as json_module  # Import locally to avoid naming conflict
-                data = json_module.dumps(json).encode('utf-8')
+
+                data = json_module.dumps(json_data).encode("utf-8")
             else:
-                data = payload if payload is not None else b'{}'
+                data = payload if payload is not None else b"{}"
 
             res = session.post(url, data=data, headers=headers, timeout=20)
             result.parse(res)

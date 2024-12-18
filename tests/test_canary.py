@@ -36,7 +36,9 @@ def mock_req():
             additional_matcher=match_headers,
         )
         m.post(
-            f"{base_url}/sessions/test-session-id/update", json={"success": True, "token_cost": 5}, additional_matcher=match_headers
+            f"{base_url}/sessions/test-session-id/update",
+            json={"success": True, "token_cost": 5},
+            additional_matcher=match_headers,
         )
         m.post("https://pypi.org/pypi/agentops/json", status_code=404)
         yield m

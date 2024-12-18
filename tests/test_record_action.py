@@ -48,8 +48,16 @@ def mock_req():
             additional_matcher=match_headers,
         )
         m.post(f"{base_url}/sessions/test-session-id/events", json={"success": True}, additional_matcher=match_headers)
-        m.post(f"{base_url}/sessions/test-session-id/jwt", json={"success": True, "jwt": get_next_jwt}, additional_matcher=match_headers)
-        m.post(f"{base_url}/sessions/test-session-id/update", json={"success": True, "token_cost": 5}, additional_matcher=match_headers)
+        m.post(
+            f"{base_url}/sessions/test-session-id/jwt",
+            json={"success": True, "jwt": get_next_jwt},
+            additional_matcher=match_headers,
+        )
+        m.post(
+            f"{base_url}/sessions/test-session-id/update",
+            json={"success": True, "token_cost": 5},
+            additional_matcher=match_headers,
+        )
         m.post(f"{base_url}/sessions/test-session-id/end", json={"success": True}, additional_matcher=match_headers)
 
         yield m
