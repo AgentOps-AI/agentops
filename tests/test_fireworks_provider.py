@@ -48,7 +48,7 @@ class TestFireworksProvider:
         self.provider = FireworksProvider(self.mock_client)
         self.test_messages = [
             {"role": "system", "content": "You are a helpful assistant."},
-            {"role": "user", "content": "Hello!"}
+            {"role": "user", "content": "Hello!"},
         ]
 
     def test_sync_completion(self):
@@ -63,9 +63,7 @@ class TestFireworksProvider:
 
         # Test non-streaming completion
         response = self.mock_client.chat.completions.create(
-            model="fireworks-llama",
-            messages=self.test_messages,
-            stream=False
+            model="fireworks-llama", messages=self.test_messages, stream=False
         )
 
         assert response.choices[0].message.content == "Hello! How can I help you?"
@@ -76,7 +74,7 @@ class TestFireworksProvider:
         chunks = [
             MockFireworksResponse("Hello", is_streaming=True),
             MockFireworksResponse("! How", is_streaming=True),
-            MockFireworksResponse(" can I help?", is_streaming=True)
+            MockFireworksResponse(" can I help?", is_streaming=True),
         ]
         self.mock_client.chat.completions.create.return_value = iter(chunks)
 
@@ -87,9 +85,7 @@ class TestFireworksProvider:
 
         # Test streaming completion
         response = self.mock_client.chat.completions.create(
-            model="fireworks-llama",
-            messages=self.test_messages,
-            stream=True
+            model="fireworks-llama", messages=self.test_messages, stream=True
         )
 
         accumulated = ""
@@ -103,9 +99,9 @@ class TestFireworksProvider:
     @pytest.mark.asyncio
     async def test_async_completion(self):
         # Mock response for async non-streaming completion
-        mock_response = MockAsyncGenerator([
-            MockFireworksResponse("Hello! How can I help you?", is_streaming=True)
-        ])
+        mock_response = MockAsyncGenerator(
+            [MockFireworksResponse("Hello! How can I help you?", is_streaming=True)]
+        )
         self.mock_client.chat.completions.acreate = AsyncMock(return_value=mock_response)
 
         # Initialize session and override
@@ -115,9 +111,7 @@ class TestFireworksProvider:
 
         # Test async non-streaming completion
         response = await self.mock_client.chat.completions.acreate(
-            model="fireworks-llama",
-            messages=self.test_messages,
-            stream=False
+            model="fireworks-llama", messages=self.test_messages, stream=False
         )
 
         assert response.choices[0].message.content == "Hello! How can I help you?"
@@ -128,7 +122,7 @@ class TestFireworksProvider:
         chunks = [
             MockFireworksResponse("Hello", is_streaming=True),
             MockFireworksResponse("! How", is_streaming=True),
-            MockFireworksResponse(" can I help?", is_streaming=True)
+            MockFireworksResponse(" can I help?", is_streaming=True),
         ]
         mock_response = MockAsyncGenerator(chunks)
         self.mock_client.chat.completions.acreate = AsyncMock(return_value=mock_response)
@@ -140,9 +134,7 @@ class TestFireworksProvider:
 
         # Test async streaming completion
         response = await self.mock_client.chat.completions.acreate(
-            model="fireworks-llama",
-            messages=self.test_messages,
-            stream=True
+            model="fireworks-llama", messages=self.test_messages, stream=True
         )
 
         accumulated = ""
@@ -181,9 +173,7 @@ class TestFireworksProvider:
 
         # Make completion request
         self.mock_client.chat.completions.create(
-            model="fireworks-llama",
-            messages=self.test_messages,
-            stream=False
+            model="fireworks-llama", messages=self.test_messages, stream=False
         )
 
         # Verify event was recorded

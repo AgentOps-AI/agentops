@@ -211,7 +211,11 @@ class FireworksProvider(InstrumentedProvider):
                         accumulated_content = ""
                         async for chunk in response_generator:
                             if hasattr(chunk, "choices") and chunk.choices:
-                                content = chunk.choices[0].delta.content if hasattr(chunk.choices[0].delta, "content") else ""
+                                content = (
+                                    chunk.choices[0].delta.content
+                                    if hasattr(chunk.choices[0].delta, "content")
+                                    else ""
+                                )
                                 if content:
                                     accumulated_content += content
                                     yield chunk
@@ -228,7 +232,11 @@ class FireworksProvider(InstrumentedProvider):
                     accumulated_content = ""
                     async for chunk in response_generator:
                         if hasattr(chunk, "choices") and chunk.choices:
-                            content = chunk.choices[0].delta.content if hasattr(chunk.choices[0].delta, "content") else ""
+                            content = (
+                                chunk.choices[0].delta.content
+                                if hasattr(chunk.choices[0].delta, "content")
+                                else ""
+                            )
                             if content:
                                 accumulated_content += content
 
@@ -250,7 +258,9 @@ class FireworksProvider(InstrumentedProvider):
                     # Create a response-like object
                     class AsyncResponse:
                         def __init__(self, content):
-                            self.choices = [type('Choice', (), {'message': type('Message', (), {'content': content})()})]
+                            self.choices = [
+                                type("Choice", (), {"message": type("Message", (), {"content": content})()})
+                            ]
 
                     return AsyncResponse(accumulated_content)
 
