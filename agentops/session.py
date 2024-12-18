@@ -46,8 +46,8 @@ from .config import Configuration
 from .enums import EndState
 from .event import Event, ErrorEvent
 from .exceptions import ApiServerException
+from .helpers import get_ISO_time, filter_unjsonable, safe_serialize
 from .http_client import HttpClient, Response
-from .utils import get_ISO_time, filter_unjsonable, safe_serialize
 
 logger = logging.getLogger(__name__)
 
