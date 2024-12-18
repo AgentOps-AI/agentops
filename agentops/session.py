@@ -128,9 +128,10 @@ class SessionExporter(SpanExporter):
                 # Only make HTTP request if we have events and not shutdown
                 if events:
                     try:
+                        payload = json.dumps({"events": events}).encode("utf-8")
                         res = HttpClient.post(
                             self.endpoint,
-                            json.dumps({"events": events}).encode("utf-8"),
+                            payload=payload,
                             api_key=self.session.config.api_key,
                             jwt=self.session.jwt,
                         )
