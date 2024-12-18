@@ -53,8 +53,10 @@ class TestNonInitializedSessions:
 
 class TestSingleSessions:
     def setup_method(self):
+        from agentops.singleton import clear_singletons
+        clear_singletons()  # Reset singleton state
         agentops.end_all_sessions()  # Ensure clean state
-        self.api_key = "11111111-1111-4111-8111-111111111111"
+        self.api_key = "11111111-1111-4111-111111111111"
         self.event_type = "test_event_type"
         self.client = agentops.init(api_key=self.api_key, max_wait_time=50, auto_start_session=False)
 
@@ -247,26 +249,29 @@ class TestSingleSessions:
 
     def test_get_session_jwt(self):
         """Test retrieving JWT token from a session."""
-        # Use the setup_method fixture which handles initialization
-        session = self.client.start_session()
+        # Initialize client with auto_start_session=True to ensure we have a session
+        from agentops.singleton import clear_singletons
+        clear_singletons()
+        self.client = agentops.init(api_key=self.api_key, max_wait_time=50, auto_start_session=True)
+
+        # Get current session
+        session = agentops.get_current_session()
+        assert session is not None, "Session should be automatically started"
 
         # Test getting JWT from current session
         jwt = agentops.get_session_jwt()
-        assert jwt == session.jwt_token
-        assert isinstance(jwt, str)
-        assert len(jwt) > 0
+        assert jwt is not None, "JWT token should not be None"
+        assert isinstance(jwt, str), "JWT token should be a string"
+        assert len(jwt) > 0, "JWT token should not be empty"
+        assert jwt == session.jwt_token, "JWT token should match session token"
 
         # Test getting JWT with specific session ID
         specific_jwt = agentops.get_session_jwt(session_id=session.session_id)
-        assert specific_jwt == jwt
+        assert specific_jwt == jwt, "JWT token should be the same when using session ID"
 
         # Test error case with invalid session ID
         with pytest.raises(ValueError, match="No session found"):
             agentops.get_session_jwt(session_id="nonexistent-session")
-
-        # End session and cleanup
-        session.end_session(end_state="Success")
-        agentops.end_all_sessions()
 
 
 class TestMultiSessions:
