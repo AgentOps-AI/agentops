@@ -1,5 +1,5 @@
 import json
-from typing import AsyncGenerator, Dict, List, Optional, Union
+from typing import Any, AsyncGenerator, Dict, List, Optional, Union
 from dataclasses import dataclass
 import asyncio
 import httpx
@@ -10,6 +10,7 @@ from agentops.helpers import get_ISO_time, check_call_stack_for_agent_id
 from .instrumented_provider import InstrumentedProvider
 from agentops.singleton import singleton
 
+
 @dataclass
 class Choice:
     message: dict = None
@@ -17,12 +18,15 @@ class Choice:
     finish_reason: str = None
     index: int = 0
 
+
 @dataclass
 class ChatResponse:
     model: str
     choices: list[Choice]
 
+
 original_func = {}
+
 
 @singleton
 class OllamaProvider(InstrumentedProvider):
@@ -41,11 +45,9 @@ class OllamaProvider(InstrumentedProvider):
 
         # Create event data
         event_data = {
-            "model": f"ollama/{model}",
+            "model": model,  # Use the raw model name from request
             "params": request_data,
-            "returns": {
-                "model": model,
-            },
+            "returns": response_data,  # Include full response data
             "init_timestamp": init_timestamp,
             "end_timestamp": end_timestamp,
             "prompt": request_data.get("messages", []),
@@ -55,7 +57,6 @@ class OllamaProvider(InstrumentedProvider):
         }
 
         if error:
-            event_data["returns"]["error"] = error
             event_data["completion"] = error
         else:
             # Extract completion from response
@@ -63,13 +64,12 @@ class OllamaProvider(InstrumentedProvider):
                 message = response_data.get("message", {})
                 if isinstance(message, dict):
                     content = message.get("content", "")
-                    event_data["returns"]["content"] = content
                     event_data["completion"] = content
 
         # Create and emit LLM event
         if session:
             event = LLMEvent(**event_data)
-            session.record(event)  # Changed from add_event to record
+            session.record(event)
 
         return event_data
 
@@ -81,18 +81,20 @@ class OllamaProvider(InstrumentedProvider):
 
     def undo_override(self):
         import ollama
-        if hasattr(self, '_original_chat'):
+
+        if hasattr(self, "_original_chat"):
             ollama.chat = self._original_chat
-        if hasattr(self, '_original_client_chat'):
+        if hasattr(self, "_original_client_chat"):
             ollama.Client.chat = self._original_client_chat
-        if hasattr(self, '_original_async_chat'):
+        if hasattr(self, "_original_async_chat"):
             ollama.AsyncClient.chat = self._original_async_chat
 
-    def __init__(self, http_client=None, client=None):
+    def __init__(self, http_client=None, client=None, model=None):
         """Initialize the Ollama provider."""
         super().__init__(client=client)
         self.base_url = "http://localhost:11434"  # Ollama runs locally by default
         self.timeout = 60.0  # Default timeout in seconds
+        self.model = model  # Store default model
 
         # Initialize HTTP client if not provided
         if http_client is None:
@@ -107,6 +109,7 @@ class OllamaProvider(InstrumentedProvider):
 
     def _override_chat(self):
         import ollama
+
         self._original_chat = ollama.chat
 
         def patched_function(*args, **kwargs):
@@ -119,6 +122,7 @@ class OllamaProvider(InstrumentedProvider):
 
     def _override_chat_client(self):
         from ollama import Client
+
         self._original_client_chat = Client.chat
 
         def patched_function(self_client, *args, **kwargs):
@@ -131,6 +135,7 @@ class OllamaProvider(InstrumentedProvider):
 
     def _override_chat_async_client(self):
         from ollama import AsyncClient
+
         self._original_async_chat = AsyncClient.chat
 
         async def patched_function(self_client, *args, **kwargs):
@@ -143,17 +148,17 @@ class OllamaProvider(InstrumentedProvider):
 
     async def chat_completion(
         self,
-        model: str,
         messages: List[Dict[str, str]],
+        model: Optional[str] = None,
         stream: bool = False,
-        session=None,
+        session: Optional[Session] = None,
         **kwargs,
     ) -> Union[ChatResponse, AsyncGenerator[ChatResponse, None]]:
         """Send a chat completion request to the Ollama API."""
+        model = model or self.model
         init_timestamp = get_ISO_time()
 
-        # Prepare request data
-        data = {
+        request_data = {
             "model": model,
             "messages": messages,
             "stream": stream,
@@ -163,89 +168,82 @@ class OllamaProvider(InstrumentedProvider):
         try:
             response = await self.http_client.post(
                 f"{self.base_url}/api/chat",
-                json=data,
-                timeout=self.timeout,
+                json=request_data,
             )
+            response_data = await response.json()
 
-            if response.status_code != 200:
-                error_data = await response.json()
-                self.handle_response(error_data, data, init_timestamp, session)
-                raise Exception(error_data.get("error", "Unknown error"))
+            # Check for error response
+            if "error" in response_data:
+                error_message = response_data["error"]
+                # Format error message consistently for model not found errors
+                if "not found" in error_message.lower():
+                    error_message = f'model "{model}" not found'
+
+                # Record error event
+                if session:
+                    error_event = ErrorEvent(details=error_message, error_type="ModelError")
+                    session.record(error_event)
+                raise Exception(error_message)
 
             if stream:
-                return self.stream_generator(response, data, init_timestamp, session)
-            else:
-                response_data = await response.json()
-                self.handle_response(response_data, data, init_timestamp, session)
-                return ChatResponse(
-                    model=model,
-                    choices=[
-                        Choice(
-                            message=response_data["message"],
-                            finish_reason="stop"
-                        )
-                    ]
-                )
+                return self.stream_generator(response, request_data, init_timestamp, session)
+
+            # Record event for non-streaming response
+            self.handle_response(response_data, request_data, init_timestamp, session)
+
+            return ChatResponse(model=model, choices=[Choice(message=response_data["message"], finish_reason="stop")])
 
         except Exception as e:
-            error_data = {"error": str(e)}
-            self.handle_response(error_data, data, init_timestamp, session)
-            raise
+            error_msg = str(e)
+            # Format error message consistently for model not found errors
+            if "not found" in error_msg.lower() and 'model "' not in error_msg:
+                error_msg = f'model "{model}" not found'
 
-    async def stream_generator(self, response, data, init_timestamp, session):
-        """Generate streaming responses from Ollama API."""
-        accumulated_content = ""
+            # Create error event
+            error_event = ErrorEvent(details=error_msg, error_type="ModelError")
+            if session:
+                session.record(error_event)
+            raise Exception(error_msg)
+
+    async def stream_generator(
+        self,
+        response: Any,
+        request_data: dict,
+        init_timestamp: str,
+        session: Optional[Session] = None,
+    ) -> AsyncGenerator[ChatResponse, None]:
+        """Generate streaming responses from the Ollama API."""
         try:
+            current_content = ""
             async for line in response.aiter_lines():
-                if not line.strip():
+                if not line:
                     continue
 
-                try:
-                    chunk_data = json.loads(line)
-                    if not isinstance(chunk_data, dict):
-                        continue
+                chunk = json.loads(line)
+                content = chunk.get("message", {}).get("content", "")
+                current_content += content
 
-                    message = chunk_data.get("message", {})
-                    if not isinstance(message, dict):
-                        continue
+                if chunk.get("done", False):
+                    # Record the final event with complete response
+                    event_data = {
+                        "model": request_data.get("model", "unknown"),  # Use raw model name
+                        "params": request_data,
+                        "returns": chunk,
+                        "prompt": request_data.get("messages", []),
+                        "completion": current_content,
+                        "prompt_tokens": None,
+                        "completion_tokens": None,
+                        "cost": None,
+                    }
+                    if session:
+                        session.record(LLMEvent(**event_data))
 
-                    content = message.get("content", "")
-                    if not content:
-                        continue
-
-                    accumulated_content += content
-
-                    # Create chunk response with model parameter
-                    chunk_response = ChatResponse(
-                        model=data["model"],  # Include model from request data
-                        choices=[
-                            Choice(
-                                delta={"content": content},
-                                finish_reason=None if not chunk_data.get("done") else "stop"
-                            )
-                        ]
-                    )
-                    yield chunk_response
-
-                except json.JSONDecodeError:
-                    continue
-
-            # Emit event after streaming is complete
-            if accumulated_content:
-                self.handle_response(
-                    {
-                        "message": {
-                            "role": "assistant",
-                            "content": accumulated_content
-                        }
-                    },
-                    data,
-                    init_timestamp,
-                    session
+                yield ChatResponse(
+                    model=request_data.get("model", "unknown"),  # Add model parameter
+                    choices=[Choice(message={"role": "assistant", "content": content}, finish_reason=None)],
                 )
-
         except Exception as e:
-            # Handle streaming errors
-            error_data = {"error": str(e)}
-            self.handle_response(error_data, data, init_timestamp, session)
+            # Create error event with correct model information
+            error_event = ErrorEvent(details=str(e), error_type="ModelError")
+            session.record(error_event)
             raise
