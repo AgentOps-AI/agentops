@@ -9,6 +9,55 @@ from agentops.singleton import singleton
 from .instrumented_provider import InstrumentedProvider
 
 
+class StreamWrapper:
+    """Wrapper for Anthropic stream responses to support context managers."""
+    def __init__(self, response, provider, kwargs, init_timestamp, session=None):
+        self.response = response
+        self.provider = provider
+        self.kwargs = kwargs
+        self.init_timestamp = init_timestamp
+        self.session = session
+        self.llm_event = None
+
+    def __enter__(self):
+        """Enter the context manager."""
+        self.llm_event = LLMEvent(init_timestamp=self.init_timestamp, params=self.kwargs)
+        if self.session is not None:
+            self.llm_event.session_id = self.session.session_id
+        self.llm_event.agent_id = check_call_stack_for_agent_id()
+        self.llm_event.model = self.kwargs["model"]
+        self.llm_event.prompt = self.kwargs["messages"]
+        self.llm_event.completion = {
+            "role": "assistant",
+            "content": "",
+        }
+        return self.response
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        """Exit the context manager."""
+        self.llm_event.end_timestamp = get_ISO_time()
+        self.provider._safe_record(self.session, self.llm_event)
+
+    async def __aenter__(self):
+        """Enter the async context manager."""
+        self.llm_event = LLMEvent(init_timestamp=self.init_timestamp, params=self.kwargs)
+        if self.session is not None:
+            self.llm_event.session_id = self.session.session_id
+        self.llm_event.agent_id = check_call_stack_for_agent_id()
+        self.llm_event.model = self.kwargs["model"]
+        self.llm_event.prompt = self.kwargs["messages"]
+        self.llm_event.completion = {
+            "role": "assistant",
+            "content": "",
+        }
+        return await self.response
+
+    async def __aexit__(self, exc_type, exc_val, exc_tb):
+        """Exit the async context manager."""
+        self.llm_event.end_timestamp = get_ISO_time()
+        self.provider._safe_record(self.session, self.llm_event)
+
+
 @singleton
 class AnthropicProvider(InstrumentedProvider):
     """Anthropic provider for AgentOps."""
@@ -22,68 +71,23 @@ class AnthropicProvider(InstrumentedProvider):
 
     def create_stream(self, **kwargs):
         """Create a streaming context manager for Anthropic messages"""
-        return self.client.messages.create(**kwargs)
+        init_timestamp = get_ISO_time()
+        response = self.client.messages.create(**kwargs)
+        return StreamWrapper(response, self, kwargs, init_timestamp, self.session)
 
     def __call__(self, messages, model="claude-3-sonnet-20240229", stream=False, **kwargs):
         """Call the Anthropic provider with messages."""
         kwargs["messages"] = messages
         kwargs["model"] = model
         kwargs["stream"] = stream
+        return self.create_stream(**kwargs)
 
-        init_timestamp = get_ISO_time()
-        response = self.create_stream(**kwargs)
-        return self.handle_response(response, kwargs, init_timestamp, session=self.session)
-
-    def handle_response(self, response, kwargs, init_timestamp, session=None):
-        """Handle the response from Anthropic."""
-        if not kwargs.get("stream", False):
-            return response
-
-        llm_event = LLMEvent(init_timestamp=init_timestamp, params=kwargs)
-        if session is not None:
-            llm_event.session_id = session.session_id
-
-        llm_event.agent_id = check_call_stack_for_agent_id()
-        llm_event.model = kwargs["model"]
-        llm_event.prompt = kwargs["messages"]
-        llm_event.completion = {
-            "role": "assistant",
-            "content": "",
-        }
-
-        def handle_stream_chunk(chunk):
-            """Handle a single chunk from the stream."""
-            if hasattr(chunk, "delta") and hasattr(chunk.delta, "text"):
-                text = chunk.delta.text
-                llm_event.completion["content"] += text
-                return text
-            return ""
-
-        def generator():
-            """Generate text from sync stream."""
-            try:
-                for chunk in response:
-                    text = handle_stream_chunk(chunk)
-                    if text:
-                        yield text
-            finally:
-                llm_event.end_timestamp = get_ISO_time()
-                self._safe_record(session, llm_event)
-
-        async def async_generator():
-            """Generate text from async stream."""
-            try:
-                async for chunk in response:
-                    text = handle_stream_chunk(chunk)
-                    if text:
-                        yield text
-            finally:
-                llm_event.end_timestamp = get_ISO_time()
-                self._safe_record(session, llm_event)
-
-        if asyncio.iscoroutine(response) or asyncio.isfuture(response):
-            return async_generator()
-        return generator()
+    def handle_stream_chunk(self, chunk):
+        """Handle a single chunk from the stream."""
+        if hasattr(chunk, "delta") and hasattr(chunk.delta, "text"):
+            text = chunk.delta.text
+            return text
+        return ""
 
     def override(self):
         """Override Anthropic's message creation methods."""
@@ -94,18 +98,14 @@ class AnthropicProvider(InstrumentedProvider):
         self.original_create_async = AsyncMessages.create
 
         def patched_function(*args, **kwargs):
-            init_timestamp = get_ISO_time()
             session = kwargs.pop("session", None)
-            result = self.original_create(*args, **kwargs)
-            return self.handle_response(result, kwargs, init_timestamp, session=session)
+            return self.create_stream(**kwargs)
 
         async def patched_async_function(*args, **kwargs):
-            init_timestamp = get_ISO_time()
             session = kwargs.pop("session", None)
-            result = await self.original_create_async(*args, **kwargs)
-            if kwargs.get("stream", False):
-                return self.handle_response(result, kwargs, init_timestamp, session=session)
-            return result
+            init_timestamp = get_ISO_time()
+            response = await self.original_create_async(*args, **kwargs)
+            return StreamWrapper(response, self, kwargs, init_timestamp, session)
 
         # Override the original methods
         Messages.create = patched_function
