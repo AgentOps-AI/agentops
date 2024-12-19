@@ -90,16 +90,21 @@ class StreamWrapper:
         if asyncio.iscoroutine(self.response):
             self.response = await self.response
 
-        if hasattr(self.response, "text_stream"):
-            async for text in self.response.text_stream:
-                self.llm_event.completion["content"] += text
-                yield text
-        else:
-            async for chunk in self.response:
-                if hasattr(chunk, "delta") and hasattr(chunk.delta, "text"):
-                    text = chunk.delta.text
+        # Iterate over stream events and yield text from text events
+        async for event in self.response:
+            if hasattr(event, "type"):
+                if event.type == "text":
+                    text = event.text
                     self.llm_event.completion["content"] += text
                     yield text
+                elif event.type == "content_block_stop":
+                    # Handle content block completion if needed
+                    continue
+            elif hasattr(event, "delta") and hasattr(event.delta, "text"):
+                # Fallback for older streaming format
+                text = event.delta.text
+                self.llm_event.completion["content"] += text
+                yield text
 
 
 @singleton
