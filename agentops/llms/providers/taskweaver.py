@@ -32,9 +32,7 @@ class TaskWeaverProvider(InstrumentedProvider):
             self._safe_record(session, action_event)
         except Exception as e:
             error_event = ErrorEvent(
-                trigger_event=action_event,
-                exception=e,
-                details={"response": str(response), "kwargs": str(kwargs)}
+                trigger_event=action_event, exception=e, details={"response": str(response), "kwargs": str(kwargs)}
             )
             self._safe_record(session, error_event)
             kwargs_str = pprint.pformat(kwargs)
@@ -45,7 +43,7 @@ class TaskWeaverProvider(InstrumentedProvider):
                 f"kwargs:\n {kwargs_str}\n"
             )
 
-        try:   
+        try:
             llm_event.init_timestamp = init_timestamp
             llm_event.params = kwargs
             llm_event.returns = response_dict
@@ -55,12 +53,10 @@ class TaskWeaverProvider(InstrumentedProvider):
             llm_event.completion = response_dict.get("message", "")
             llm_event.end_timestamp = get_ISO_time()
             self._safe_record(session, llm_event)
-            
+
         except Exception as e:
             error_event = ErrorEvent(
-                trigger_event=llm_event,
-                exception=e,
-                details={"response": str(response), "kwargs": str(kwargs)}
+                trigger_event=llm_event, exception=e, details={"response": str(response), "kwargs": str(kwargs)}
             )
             self._safe_record(session, error_event)
             kwargs_str = pprint.pformat(kwargs)
@@ -80,12 +76,13 @@ class TaskWeaverProvider(InstrumentedProvider):
 
             def create_patched_chat_completion(original_method):
                 """Create a new patched chat_completion function with bound original method"""
+
                 def patched_chat_completion(service, *args, **kwargs):
                     init_timestamp = get_ISO_time()
                     session = kwargs.get("session", None)
                     if "session" in kwargs.keys():
                         del kwargs["session"]
-                    
+
                     result = original_method(service, *args, **kwargs)
                     kwargs.update(
                         {
@@ -111,14 +108,16 @@ class TaskWeaverProvider(InstrumentedProvider):
                         return self.handle_response(accumulated_content, kwargs, init_timestamp, session=session)
                     else:
                         return self.handle_response(result, kwargs, init_timestamp, session=session)
-                
+
                 return patched_chat_completion
 
             for service_name, service_class in llm_completion_config_map.items():
                 if not hasattr(service_class, "_original_chat_completion"):
                     service_class._original_chat_completion = service_class.chat_completion
-                    service_class.chat_completion = create_patched_chat_completion(service_class._original_chat_completion)
-                    
+                    service_class.chat_completion = create_patched_chat_completion(
+                        service_class._original_chat_completion
+                    )
+
         except Exception as e:
             logger.error(f"Failed to patch method: {str(e)}", exc_info=True)
 
