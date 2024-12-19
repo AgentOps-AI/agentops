@@ -20,6 +20,7 @@ import agentops
 from dotenv import load_dotenv
 import os
 import random
+import asyncio
 
 # Setup environment and API keys
 load_dotenv()
@@ -92,36 +93,36 @@ third = [
 generatedsentence = f"{random.choice(first)} {random.choice(second)} {random.choice(third)}."
 
 # Create a story using the context handler pattern for streaming
-print("Generated prompt:", generatedsentence)
-print("\nGenerating story...\n")
+async def generate_story():
+    print("Generated prompt:", generatedsentence)
+    print("\nGenerating story...\n")
 
-with client.messages.create(
-    max_tokens=2400,
-    model="claude-3-sonnet-20240229",
-    messages=[
-        {
-            "role": "user",
-            "content": "Create a story based on the three sentence fragments given to you, it has been combined into one below.",
-        },
-        {
-            "role": "assistant",
-            "content": "{A foolish doll} {died in a world} {of ended dreams.}",
-        },
-        {"role": "assistant", "content": defaultstory},
-        {
-            "role": "user",
-            "content": "Create a story based on the three sentence fragments given to you, it has been combined into one below.",
-        },
-        {"role": "assistant", "content": generatedsentence},
-    ],
-    stream=True,
-) as response:
-    for chunk in response:
-        if hasattr(chunk, "delta") and hasattr(chunk.delta, "text"):
-            print(chunk.delta.text, end="", flush=True)
+    async with client.messages.create(
+        max_tokens=2400,
+        model="claude-3-sonnet-20240229",
+        messages=[
+            {
+                "role": "user",
+                "content": "Create a story based on the three sentence fragments given to you, it has been combined into one below.",
+            },
+            {
+                "role": "assistant",
+                "content": "{A foolish doll} {died in a world} {of ended dreams.}",
+            },
+            {"role": "assistant", "content": defaultstory},
+            {
+                "role": "user",
+                "content": "Create a story based on the three sentence fragments given to you, it has been combined into one below.",
+            },
+            {"role": "assistant", "content": generatedsentence},
+        ],
+        stream=True,
+    ) as response:
+        async for text in response.text_stream:
+            print(text, end="", flush=True)
 
-print("\n\nStory generation complete!")
-
-# End the AgentOps session with success status
-agentops.end_session("Success")
+if __name__ == "__main__":
+    asyncio.run(generate_story())
+    print("\n\nStory generation complete!")
+    agentops.end_session("Success")
 

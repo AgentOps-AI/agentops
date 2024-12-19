@@ -20,6 +20,8 @@ class StreamWrapper:
         self.session = session
         self.llm_event = None
         self._text_stream = None
+        if hasattr(response, "text_stream"):
+            self._text_stream = response.text_stream
 
     def __enter__(self):
         """Enter the context manager."""
@@ -75,12 +77,16 @@ class StreamWrapper:
     @property
     def text_stream(self):
         """Get the text stream from the response."""
+        if self._text_stream is None and hasattr(self.response, "text_stream"):
+            self._text_stream = self.response.text_stream
         return self._text_stream
 
     async def __aiter__(self):
         """Async iterate over the stream chunks."""
         if asyncio.iscoroutine(self.response):
             self.response = await self.response
+        if self.text_stream is None:
+            raise ValueError("No text_stream available for async iteration")
         async for text in self.text_stream:
             self.llm_event.completion["content"] += text
             yield text
@@ -99,18 +105,18 @@ class AnthropicProvider(InstrumentedProvider):
         self._provider_name = "Anthropic"
         self.session = None
 
-    def create_stream(self, **kwargs):
+    async def create_stream(self, **kwargs):
         """Create a streaming context manager for Anthropic messages"""
         init_timestamp = get_ISO_time()
-        response = self.client.messages.create(**kwargs)
+        response = await self.client.messages.create(**kwargs)
         return StreamWrapper(response, self, kwargs, init_timestamp, self.session)
 
-    def __call__(self, messages, model="claude-3-sonnet-20240229", stream=False, **kwargs):
+    async def __call__(self, messages, model="claude-3-sonnet-20240229", stream=False, **kwargs):
         """Call the Anthropic provider with messages."""
         kwargs["messages"] = messages
         kwargs["model"] = model
         kwargs["stream"] = stream
-        return self.create_stream(**kwargs)
+        return await self.create_stream(**kwargs)
 
     def handle_response(self, response, kwargs, init_timestamp, session: Optional[Session] = None) -> dict:
         """Handle the response from Anthropic."""

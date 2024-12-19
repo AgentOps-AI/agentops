@@ -85,8 +85,8 @@ async def generate_message():
             },
         ],
         stream=True,
-    ) as stream:
-        async for text in stream.text_stream:
+    ) as response:
+        async for text in response.text_stream:
             message += text
             print(text, end="", flush=True)
     return message
