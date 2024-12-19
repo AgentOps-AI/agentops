@@ -69,15 +69,21 @@ class TaskWeaverEventHandler(SessionEventHandlerBase):
                 self._message_buffer[post_id] = self._message_buffer.get(post_id, "") + msg
             else:
                 agentops.record(
-                    agentops.LLMEvent(
-                        prompt=self._message_buffer.get(post_id, ""),
-                        completion=extra.get("message", ""),
-                        model=extra.get("model", None),
-                        prompt_tokens=extra.get("prompt_tokens", None),
-                        completion_tokens=extra.get("completion_tokens", None),
-                        agent_id=agent_id,
+                    agentops.ActionEvent(
+                        action_type="post_message_update",
+                        params={
+                            "post_id": post_id,
+                            "round_id": round_id,
+                            "agent_id": agent_id,
+                            "is_end": is_end,
+                            "model": extra.get("model", None),
+                            "prompt": self._message_buffer.get(post_id, ""),
+                        },
+                        returns=extra.get("message", "")
                     )
                 )
+
+            if is_end:
                 self._message_buffer.pop(post_id, None)
 
         elif type == PostEventType.post_attachment_update:
