@@ -54,15 +54,16 @@ class TestFireworksProvider:
             {"role": "system", "content": "You are a helpful assistant."},
             {"role": "user", "content": "Hello!"},
         ]
+        # Initialize session at setup
+        self.session = agentops.init(api_key=self.api_key)
 
     def test_sync_completion(self):
         # Mock response for non-streaming completion
         mock_response = MockFireworksResponse("Hello! How can I help you?")
         self.mock_client.chat.completions.create.return_value = mock_response
 
-        # Initialize session and override
-        session = agentops.init(api_key=self.api_key)
-        self.provider.set_session(session)
+        # Use session from setup
+        self.provider.set_session(self.session)
         self.provider.override()
 
         # Test non-streaming completion
@@ -82,9 +83,8 @@ class TestFireworksProvider:
         ]
         self.mock_client.chat.completions.create.return_value = iter(chunks)
 
-        # Initialize session and override
-        session = agentops.init(api_key=self.api_key)
-        self.provider.set_session(session)
+        # Use session from setup
+        self.provider.set_session(self.session)
         self.provider.override()
 
         # Test streaming completion
@@ -110,9 +110,8 @@ class TestFireworksProvider:
         )
         self.mock_client.chat.completions.acreate = AsyncMock(return_value=mock_response)
 
-        # Initialize session and override
-        session = agentops.init(api_key=self.api_key)
-        self.provider.set_session(session)
+        # Use session from setup
+        self.provider.set_session(self.session)
         self.provider.override()
 
         # Test async non-streaming completion
@@ -133,9 +132,8 @@ class TestFireworksProvider:
         mock_response = MockAsyncGenerator(chunks)
         self.mock_client.chat.completions.acreate = AsyncMock(return_value=mock_response)
 
-        # Initialize session and override
-        session = agentops.init(api_key=self.api_key)
-        self.provider.set_session(session)
+        # Use session from setup
+        self.provider.set_session(self.session)
         self.provider.override()
 
         # Test async streaming completion
@@ -171,16 +169,15 @@ class TestFireworksProvider:
         mock_response = MockFireworksResponse("Hello! How can I help you?")
         self.mock_client.chat.completions.create.return_value = mock_response
 
-        # Initialize session and override
-        session = agentops.init(api_key=self.api_key)
-        self.provider.set_session(session)
+        # Use session from setup
+        self.provider.set_session(self.session)
         self.provider.override()
 
         # Make completion request
         self.mock_client.chat.completions.create(model="fireworks-llama", messages=self.test_messages, stream=False)
 
         # Verify event was recorded
-        events = session._events
+        events = self.session._events
         assert len(events) > 0
         assert any(isinstance(event, LLMEvent) for event in events)
         llm_event = next(event for event in events if isinstance(event, LLMEvent))
