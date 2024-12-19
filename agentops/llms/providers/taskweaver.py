@@ -2,7 +2,7 @@ import pprint
 from typing import Optional
 import json
 
-from agentops.event import ErrorEvent, LLMEvent
+from agentops.event import ErrorEvent, LLMEvent, ActionEvent
 from agentops.session import Session
 from agentops.log_config import logger
 from agentops.helpers import get_ISO_time, check_call_stack_for_agent_id
@@ -21,9 +21,31 @@ class TaskWeaverProvider(InstrumentedProvider):
     def handle_response(self, response, kwargs, init_timestamp, session: Optional[Session] = None) -> dict:
         """Handle responses for TaskWeaver"""
         llm_event = LLMEvent(init_timestamp=init_timestamp, params=kwargs)
+        action_event = ActionEvent(init_timestamp=init_timestamp)
 
         try:
             response_dict = response.get("response", {})
+
+            action_event.params = kwargs.get("json_schema", None)
+            action_event.returns = response_dict
+            action_event.end_timestamp = get_ISO_time()
+            self._safe_record(session, action_event)
+        except Exception as e:
+            error_event = ErrorEvent(
+                trigger_event=action_event,
+                exception=e,
+                details={"response": str(response), "kwargs": str(kwargs)}
+            )
+            self._safe_record(session, error_event)
+            kwargs_str = pprint.pformat(kwargs)
+            response_str = pprint.pformat(response)
+            logger.error(
+                f"Unable to parse response for Action call. Skipping upload to AgentOps\n"
+                f"response:\n {response_str}\n"
+                f"kwargs:\n {kwargs_str}\n"
+            )
+
+        try:   
             llm_event.init_timestamp = init_timestamp
             llm_event.params = kwargs
             llm_event.returns = response_dict
@@ -53,65 +75,49 @@ class TaskWeaverProvider(InstrumentedProvider):
 
     def override(self):
         """Override TaskWeaver's chat completion methods"""
-        global original_chat_completion
-
         try:
-            from taskweaver.llm.openai import OpenAIService
-            from taskweaver.llm.anthropic import AnthropicService
-            from taskweaver.llm.azure_ml import AzureMLService
-            from taskweaver.llm.groq import GroqService
-            from taskweaver.llm.ollama import OllamaService
-            from taskweaver.llm.qwen import QWenService
-            from taskweaver.llm.zhipuai import ZhipuAIService
+            from taskweaver.llm import llm_completion_config_map
 
-            # Create our own mapping of services
-            service_mapping = {
-                "openai": OpenAIService,
-                "azure": OpenAIService,
-                "azure_ad": OpenAIService,
-                "anthropic": AnthropicService,
-                "azure_ml": AzureMLService,
-                "groq": GroqService,
-                "ollama": OllamaService,
-                "qwen": QWenService,
-                "zhipuai": ZhipuAIService
-            }
+            def create_patched_chat_completion(original_method):
+                """Create a new patched chat_completion function with bound original method"""
+                def patched_chat_completion(service, *args, **kwargs):
+                    init_timestamp = get_ISO_time()
+                    session = kwargs.get("session", None)
+                    if "session" in kwargs.keys():
+                        del kwargs["session"]
+                    
+                    result = original_method(service, *args, **kwargs)
+                    kwargs.update(
+                        {
+                            "model": self._get_model_name(service),
+                            "messages": args[0],
+                            "stream": args[1],
+                            "temperature": args[2],
+                            "max_tokens": args[3],
+                            "top_p": args[4],
+                            "stop": args[5],
+                        }
+                    )
 
-            def patched_chat_completion(service, *args, **kwargs):
-                init_timestamp = get_ISO_time()
-                session = kwargs.get("session", None)
-                if "session" in kwargs.keys():
-                    del kwargs["session"]
+                    if kwargs["stream"]:
+                        accumulated_content = ""
+                        for chunk in result:
+                            if isinstance(chunk, dict) and "content" in chunk:
+                                accumulated_content += chunk["content"]
+                            else:
+                                accumulated_content += chunk
+                            yield chunk
+                        accumulated_content = json.loads(accumulated_content)
+                        return self.handle_response(accumulated_content, kwargs, init_timestamp, session=session)
+                    else:
+                        return self.handle_response(result, kwargs, init_timestamp, session=session)
                 
-                result = original_chat_completion(service, *args, **kwargs)
-                kwargs.update(
-                    {
-                        "model": self._get_model_name(service),
-                        "messages": args[0],
-                        "stream": args[1],
-                        "temperature": args[2],
-                        "max_tokens": args[3],
-                        "top_p": args[4],
-                        "stop": args[5],
-                    }
-                )
+                return patched_chat_completion
 
-                if kwargs["stream"]:
-                    accumulated_content = ""
-                    for chunk in result:
-                        if isinstance(chunk, dict) and "content" in chunk:
-                            accumulated_content += chunk["content"]
-                        else:
-                            accumulated_content += chunk
-                        yield chunk
-                    accumulated_content = json.loads(accumulated_content)
-                    return self.handle_response(accumulated_content, kwargs, init_timestamp, session=session)
-                else:
-                    return self.handle_response(result, kwargs, init_timestamp, session=session)
-
-            for service_name, service_class in service_mapping.items():
-                original_chat_completion = service_class.chat_completion
-                service_class.chat_completion = patched_chat_completion
+            for service_name, service_class in llm_completion_config_map.items():
+                if not hasattr(service_class, "_original_chat_completion"):
+                    service_class._original_chat_completion = service_class.chat_completion
+                    service_class.chat_completion = create_patched_chat_completion(service_class._original_chat_completion)
                     
         except Exception as e:
             logger.error(f"Failed to patch method: {str(e)}", exc_info=True)
@@ -119,30 +125,11 @@ class TaskWeaverProvider(InstrumentedProvider):
     def undo_override(self):
         """Restore original TaskWeaver chat completion methods"""
         try:
-            from taskweaver.llm.openai import OpenAIService
-            from taskweaver.llm.anthropic import AnthropicService
-            from taskweaver.llm.azure_ml import AzureMLService
-            from taskweaver.llm.groq import GroqService
-            from taskweaver.llm.ollama import OllamaService
-            from taskweaver.llm.qwen import QWenService
-            from taskweaver.llm.zhipuai import ZhipuAIService
+            from taskweaver.llm import llm_completion_config_map
 
-            # Create our own mapping of services
-            service_mapping = {
-                "openai": OpenAIService,
-                "azure": OpenAIService,
-                "azure_ad": OpenAIService,
-                "anthropic": AnthropicService,
-                "azure_ml": AzureMLService,
-                "groq": GroqService,
-                "ollama": OllamaService,
-                "qwen": QWenService,
-                "zhipuai": ZhipuAIService
-            }
-
-            if original_chat_completion is not None:
-                for service_name, service_class in service_mapping.items():
-                    service_class.chat_completion = original_chat_completion
+            for service_name, service_class in llm_completion_config_map.items():
+                service_class.chat_completion = service_class._original_chat_completion
+                delattr(service_class, "_original_chat_completion")
 
         except Exception as e:
             logger.error(f"Failed to restore original method: {str(e)}", exc_info=True)
