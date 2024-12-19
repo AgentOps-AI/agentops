@@ -85,9 +85,8 @@ async def generate_message():
             },
         ],
         stream=True,
-    ) as response:
-        async for chunk in response:
-            text = chunk.text if hasattr(chunk, "text") else chunk
+    ) as stream:
+        async for text in stream.text_stream:
             message += text
             print(text, end="", flush=True)
     return message
