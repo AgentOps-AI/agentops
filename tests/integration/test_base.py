@@ -2,6 +2,7 @@ import pytest
 import asyncio
 import json
 from unittest.mock import AsyncMock, MagicMock
+from uuid import uuid4
 
 from agentops.session import Session
 from agentops.client import Client
@@ -15,7 +16,10 @@ class BaseProviderTest:
         """Set up test method."""
         # Initialize mock client and session
         self.mock_req = AsyncMock()
-        self.session = Session(client=Client(api_key="test-key"))
+        client = Client()
+        client.configure(api_key="test-key")
+        config = client._config
+        self.session = Session(session_id=uuid4(), config=config)
         self.session.client.http_client = self.mock_req
 
     async def teardown_method(self, method):
