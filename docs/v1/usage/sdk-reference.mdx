@@ -153,11 +153,11 @@ Stores the configuration settings for AgentOps clients.
 This callback handler is intended to be used as an option in place of AgentOps auto-instrumenting. This is only useful
 when using LangChain as your LLM calling library.
 
-### Exporting Session Data
+### Authentication and Session Management
 
-You can export session data and statistics using our REST APIs. These endpoints require authentication using your API key and a valid session JWT token.
+#### API Key Authentication
+You can obtain an API key to authenticate with AgentOps services:
 
-#### Obtaining API Key
 1. Log in to your [AgentOps Dashboard](https://app.agentops.ai)
 2. Navigate to Settings > API Keys
 3. Click "Create New API Key"
@@ -165,18 +165,23 @@ You can export session data and statistics using our REST APIs. These endpoints 
    - Note: API keys cannot be viewed again after creation
    - Store the key in your environment variables as `AGENTOPS_API_KEY`
 
-#### Obtaining JWT Token
-The JWT token is automatically generated when you start a session using the SDK. You can retrieve it programmatically:
+#### Session JWT Authentication
+For session-specific operations, you'll need both your API key and a JWT token. The JWT token is automatically generated when you start a session. Here's how to retrieve it:
 
 ```python
 import agentops
 
 # Initialize AgentOps with your API key
-session_id = agentops.init(api_key="your_api_key")
+session = agentops.init(api_key="your_api_key")  # or use AGENTOPS_API_KEY env var
 
 # Get the JWT token for your session
-jwt_token = agentops.get_session_jwt(session_id)
+jwt_token = agentops.get_session_jwt()  # gets JWT for current session
+
+# Or get JWT for a specific session by ID
+jwt_token = agentops.get_session_jwt(session_id="your-session-id")
 ```
+
+The JWT token is required for session-specific API endpoints and is used alongside your API key for authentication.
 
 #### Get Session Stats
 Retrieve statistics for a specific session:
