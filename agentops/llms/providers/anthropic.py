@@ -5,6 +5,7 @@ from anthropic import Anthropic
 
 from agentops.event import LLMEvent
 from agentops.helpers import get_ISO_time, check_call_stack_for_agent_id
+from agentops.session import Session
 from agentops.singleton import singleton
 from .instrumented_provider import InstrumentedProvider
 
@@ -31,7 +32,7 @@ class StreamWrapper:
             "role": "assistant",
             "content": "",
         }
-        return self.response
+        return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         """Exit the context manager."""
@@ -50,12 +51,30 @@ class StreamWrapper:
             "role": "assistant",
             "content": "",
         }
-        return await self.response
+        return self
 
     async def __aexit__(self, exc_type, exc_val, exc_tb):
         """Exit the async context manager."""
         self.llm_event.end_timestamp = get_ISO_time()
         self.provider._safe_record(self.session, self.llm_event)
+
+    def __iter__(self):
+        """Iterate over the stream chunks."""
+        for chunk in self.response:
+            if hasattr(chunk, "delta") and hasattr(chunk.delta, "text"):
+                text = chunk.delta.text
+                self.llm_event.completion["content"] += text
+                yield chunk
+        return
+
+    async def __aiter__(self):
+        """Async iterate over the stream chunks."""
+        async for chunk in self.response:
+            if hasattr(chunk, "delta") and hasattr(chunk.delta, "text"):
+                text = chunk.delta.text
+                self.llm_event.completion["content"] += text
+                yield chunk
+        return
 
 
 @singleton
@@ -68,6 +87,7 @@ class AnthropicProvider(InstrumentedProvider):
         """Initialize the Anthropic provider."""
         super().__init__(client)
         self._provider_name = "Anthropic"
+        self.session = None
 
     def create_stream(self, **kwargs):
         """Create a streaming context manager for Anthropic messages"""
@@ -81,6 +101,27 @@ class AnthropicProvider(InstrumentedProvider):
         kwargs["model"] = model
         kwargs["stream"] = stream
         return self.create_stream(**kwargs)
+
+    def handle_response(self, response, kwargs, init_timestamp, session: Optional[Session] = None) -> dict:
+        """Handle the response from Anthropic."""
+        if not kwargs.get("stream", False):
+            # For non-streaming responses, create and record the event immediately
+            llm_event = LLMEvent(init_timestamp=init_timestamp, params=kwargs)
+            if session is not None:
+                llm_event.session_id = session.session_id
+            llm_event.agent_id = check_call_stack_for_agent_id()
+            llm_event.model = kwargs["model"]
+            llm_event.prompt = kwargs["messages"]
+            llm_event.completion = {
+                "role": "assistant",
+                "content": response.content,
+            }
+            llm_event.end_timestamp = get_ISO_time()
+            self._safe_record(session, llm_event)
+            return response
+
+        # For streaming responses, return a StreamWrapper
+        return StreamWrapper(response, self, kwargs, init_timestamp, session)
 
     def handle_stream_chunk(self, chunk):
         """Handle a single chunk from the stream."""
@@ -99,13 +140,15 @@ class AnthropicProvider(InstrumentedProvider):
 
         def patched_function(*args, **kwargs):
             session = kwargs.pop("session", None)
-            return self.create_stream(**kwargs)
+            init_timestamp = get_ISO_time()
+            response = self.original_create(*args, **kwargs)
+            return self.handle_response(response, kwargs, init_timestamp, session)
 
         async def patched_async_function(*args, **kwargs):
             session = kwargs.pop("session", None)
             init_timestamp = get_ISO_time()
             response = await self.original_create_async(*args, **kwargs)
-            return StreamWrapper(response, self, kwargs, init_timestamp, session)
+            return self.handle_response(response, kwargs, init_timestamp, session)
 
         # Override the original methods
         Messages.create = patched_function

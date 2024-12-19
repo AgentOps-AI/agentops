@@ -95,7 +95,7 @@ generatedsentence = f"{random.choice(first)} {random.choice(second)} {random.cho
 print("Generated prompt:", generatedsentence)
 print("\nGenerating story...\n")
 
-response = client.messages.create(
+with client.messages.create(
     max_tokens=2400,
     model="claude-3-sonnet-20240229",
     messages=[
@@ -115,11 +115,10 @@ response = client.messages.create(
         {"role": "assistant", "content": generatedsentence},
     ],
     stream=True,
-)
-
-for chunk in response:
-    if hasattr(chunk, "delta") and hasattr(chunk.delta, "text"):
-        print(chunk.delta.text, end="", flush=True)
+) as response:
+    for chunk in response:
+        if hasattr(chunk, "delta") and hasattr(chunk.delta, "text"):
+            print(chunk.delta.text, end="", flush=True)
 
 print("\n\nStory generation complete!")
 
