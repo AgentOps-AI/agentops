@@ -94,8 +94,24 @@ agentops.init(inherited_session_id=<id>)
 
 Both processes will now contribute data to the same session.
 
+## Session Authentication
+Each session is assigned a unique JWT token that can be used to authenticate session-specific API requests. You can retrieve the JWT token for a session using `agentops.get_session_jwt()`:
+
+```python
+import agentops
+
+# Get JWT for current session
+session = agentops.init()
+jwt_token = agentops.get_session_jwt()
+
+# Or get JWT for a specific session
+jwt_token = agentops.get_session_jwt(session_id="your-session-id")
+```
+
+This JWT token is required alongside your API key when making session-specific API requests.
+
 ## Session Analytics
-You can retrieve the analytics for a session by calling `session.get_analytics()`. 
+You can retrieve the analytics for a session by calling `session.get_analytics()`.
 
 The example below shows how to record events and retrieve analytics.
 
