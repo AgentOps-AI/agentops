@@ -66,13 +66,17 @@ class StreamWrapper:
         self.provider._safe_record(self.session, self.llm_event)
 
     def __iter__(self):
-        """Iterate over the stream chunks."""
-        for chunk in self.response:
-            if hasattr(chunk, "delta") and hasattr(chunk.delta, "text"):
-                text = chunk.delta.text
+        """Iterate over the response chunks."""
+        if hasattr(self.response, "text_stream"):
+            for text in self.response.text_stream:
                 self.llm_event.completion["content"] += text
-                yield chunk
-        return
+                yield text
+        else:
+            for chunk in self.response:
+                if hasattr(chunk, "delta") and hasattr(chunk.delta, "text"):
+                    text = chunk.delta.text
+                    self.llm_event.completion["content"] += text
+                    yield text
 
     @property
     def text_stream(self):
@@ -85,12 +89,17 @@ class StreamWrapper:
         """Async iterate over the stream chunks."""
         if asyncio.iscoroutine(self.response):
             self.response = await self.response
-        if self.text_stream is None:
-            raise ValueError("No text_stream available for async iteration")
-        async for text in self.text_stream:
-            self.llm_event.completion["content"] += text
-            yield text
-        return
+
+        if hasattr(self.response, "text_stream"):
+            async for text in self.response.text_stream:
+                self.llm_event.completion["content"] += text
+                yield text
+        else:
+            async for chunk in self.response:
+                if hasattr(chunk, "delta") and hasattr(chunk.delta, "text"):
+                    text = chunk.delta.text
+                    self.llm_event.completion["content"] += text
+                    yield text
 
 
 @singleton

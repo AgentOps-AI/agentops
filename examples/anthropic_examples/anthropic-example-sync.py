@@ -118,8 +118,9 @@ async def generate_story():
         ],
         stream=True,
     ) as response:
-        async for text in response.text_stream:
-            print(text, end="", flush=True)
+        for text in response:
+            if hasattr(text, "delta") and hasattr(text.delta, "text"):
+                print(text.delta.text, end="", flush=True)
 
 if __name__ == "__main__":
     asyncio.run(generate_story())
