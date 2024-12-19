@@ -16,6 +16,14 @@ class BaseProviderTest:
         """Set up test method."""
         # Initialize mock client and session
         self.mock_req = AsyncMock()
+
+        # Mock successful event recording response
+        mock_response = AsyncMock()
+        mock_response.status = 200
+        mock_response.json.return_value = {"status": "success"}
+        self.mock_req.post.return_value = mock_response
+
+        # Configure client and session
         client = Client()
         client.configure(api_key="test-key")
         config = client._config

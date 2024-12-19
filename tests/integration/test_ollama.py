@@ -58,9 +58,10 @@ class TestOllamaProvider(BaseProviderTest):
     @pytest.mark.asyncio
     async def teardown_method(self, method):
         """Cleanup after each test."""
-        await super().teardown_method(method)  # Call parent teardown first
-        if self.session:
+        if hasattr(self, "session"):
             await self.session.end_session(end_state=EndState.SUCCESS.value)
+        if hasattr(self, "provider"):
+            await super().teardown_method(method)  # Call parent teardown last
 
     @pytest.mark.asyncio
     async def test_completion(self):
