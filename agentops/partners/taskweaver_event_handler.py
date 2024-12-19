@@ -57,9 +57,9 @@ class TaskWeaverEventHandler(SessionEventHandlerBase):
                     params={
                         "post_id": post_id,
                         "round_id": round_id,
+                        "agent_id": agent_id,
                     },
                     returns=msg,
-                    agent_id=agent_id,
                 )
             )
 
@@ -102,8 +102,8 @@ class TaskWeaverEventHandler(SessionEventHandlerBase):
                             "attachment_type": str(attachment_type),
                             "post_id": post_id,
                             "round_id": round_id,
+                            "agent_id": agent_id,
                         },
-                        agent_id=agent_id,
                     )
                 )
 
@@ -131,7 +131,6 @@ class TaskWeaverEventHandler(SessionEventHandlerBase):
                     error_type="post_error",
                     details=msg,
                     logs={"post_id": post_id, "round_id": round_id},
-                    agent_id=agent_id,
                 )
             )
 
@@ -139,9 +138,12 @@ class TaskWeaverEventHandler(SessionEventHandlerBase):
             agentops.record(
                 agentops.ActionEvent(
                     action_type="post_end",
-                    params={"post_id": post_id, "round_id": round_id},
+                    params={
+                        "post_id": post_id,
+                        "round_id": round_id,
+                        "agent_id": agent_id
+                    },
                     returns=msg,
-                    agent_id=agent_id,
                 )
             )
 
