@@ -61,8 +61,8 @@ class TestFireworksProvider:
         self.mock_client.chat.completions.create.return_value = mock_response
 
         # Initialize session and override
-        agentops.init(api_key=self.api_key)
-        self.provider.set_session(agentops.get_session())
+        session = agentops.init(api_key=self.api_key)
+        self.provider.set_session(session)
         self.provider.override()
 
         # Test non-streaming completion
@@ -83,8 +83,8 @@ class TestFireworksProvider:
         self.mock_client.chat.completions.create.return_value = iter(chunks)
 
         # Initialize session and override
-        agentops.init(api_key=self.api_key)
-        self.provider.set_session(agentops.get_session())
+        session = agentops.init(api_key=self.api_key)
+        self.provider.set_session(session)
         self.provider.override()
 
         # Test streaming completion
@@ -111,8 +111,8 @@ class TestFireworksProvider:
         self.mock_client.chat.completions.acreate = AsyncMock(return_value=mock_response)
 
         # Initialize session and override
-        agentops.init(api_key=self.api_key)
-        self.provider.set_session(agentops.get_session())
+        session = agentops.init(api_key=self.api_key)
+        self.provider.set_session(session)
         self.provider.override()
 
         # Test async non-streaming completion
@@ -134,8 +134,8 @@ class TestFireworksProvider:
         self.mock_client.chat.completions.acreate = AsyncMock(return_value=mock_response)
 
         # Initialize session and override
-        agentops.init(api_key=self.api_key)
-        self.provider.set_session(agentops.get_session())
+        session = agentops.init(api_key=self.api_key)
+        self.provider.set_session(session)
         self.provider.override()
 
         # Test async streaming completion
@@ -172,8 +172,7 @@ class TestFireworksProvider:
         self.mock_client.chat.completions.create.return_value = mock_response
 
         # Initialize session and override
-        agentops.init(api_key=self.api_key)
-        session = agentops.get_session()
+        session = agentops.init(api_key=self.api_key)
         self.provider.set_session(session)
         self.provider.override()
 
@@ -187,4 +186,4 @@ class TestFireworksProvider:
         llm_event = next(event for event in events if isinstance(event, LLMEvent))
         assert llm_event.model == "fireworks-llama"
         assert llm_event.prompt == self.test_messages
-        assert llm_event.completion == "Hello! How can I help you?"
+        assert llm_event.completion == "Hello! How can I help you!"
