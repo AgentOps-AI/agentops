@@ -75,14 +75,11 @@ class TestRestApi:
                     "model": "gpt-4",
                     "prompt": [
                         {"role": "system", "content": "You are a helpful assistant"},
-                        {"role": "user", "content": "Analyze this data..."}
+                        {"role": "user", "content": "Analyze this data..."},
                     ],
-                    "completion": {
-                        "role": "assistant",
-                        "content": "Based on the data..."
-                    },
+                    "completion": {"role": "assistant", "content": "Based on the data..."},
                     "prompt_tokens": 150,
-                    "completion_tokens": 80
+                    "completion_tokens": 80,
                 },
                 {
                     "id": str(uuid.uuid4()),
@@ -92,8 +89,8 @@ class TestRestApi:
                     "end_timestamp": now,
                     "session_id": self.session_id,
                     "input": "SELECT * FROM users",
-                    "output": "Retrieved 5 users"
-                }
+                    "output": "Retrieved 5 users",
+                },
             ]
         }
 
