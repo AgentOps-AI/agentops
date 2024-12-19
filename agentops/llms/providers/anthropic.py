@@ -71,11 +71,10 @@ class StreamWrapper:
         """Async iterate over the stream chunks."""
         if asyncio.iscoroutine(self.response):
             self.response = await self.response
-        async for chunk in self.response:
-            if hasattr(chunk, "delta") and hasattr(chunk.delta, "text"):
-                text = chunk.delta.text
-                self.llm_event.completion["content"] += text
-                yield chunk
+        async for chunk in self.response.text_stream:
+            text = chunk
+            self.llm_event.completion["content"] += text
+            yield chunk
         return
 
 
