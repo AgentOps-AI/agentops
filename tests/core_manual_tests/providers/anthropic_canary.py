@@ -12,7 +12,7 @@ async_anthropic_client = anthropic.AsyncAnthropic()
 # Test 1: Basic non-streaming response
 response = anthropic_client.messages.create(
     max_tokens=1024,
-    model="claude-3-5-sonnet-20240620",
+    model="claude-3-sonnet-20240229",
     messages=[
         {
             "role": "user",
@@ -24,7 +24,7 @@ response = anthropic_client.messages.create(
 # Test 2: Legacy streaming pattern
 stream_response = anthropic_client.messages.create(
     max_tokens=1024,
-    model="claude-3-5-sonnet-20240620",
+    model="claude-3-sonnet-20240229",
     messages=[
         {
             "role": "user",
@@ -44,7 +44,7 @@ for event in stream_response:
 # Test 3: Sync context handler streaming pattern
 with anthropic_client.messages.create(
     max_tokens=1024,
-    model="claude-3-5-sonnet-20240620",
+    model="claude-3-sonnet-20240229",
     messages=[
         {
             "role": "user",
@@ -64,7 +64,7 @@ async def async_test():
     # Test 4.1: Basic async response
     async_response = await async_anthropic_client.messages.create(
         max_tokens=1024,
-        model="claude-3-5-sonnet-20240620",
+        model="claude-3-sonnet-20240229",
         messages=[
             {
                 "role": "user",
@@ -77,7 +77,7 @@ async def async_test():
     # Test 4.2: Async context handler streaming pattern
     async with async_anthropic_client.messages.create(
         max_tokens=1024,
-        model="claude-3-5-sonnet-20240620",
+        model="claude-3-sonnet-20240229",
         messages=[
             {
                 "role": "user",
@@ -100,7 +100,7 @@ agentops.stop_instrumenting()
 
 untracked_response = anthropic_client.messages.create(
     max_tokens=1024,
-    model="claude-3-5-sonnet-20240620",
+    model="claude-3-sonnet-20240229",
     messages=[
         {
             "role": "user",
