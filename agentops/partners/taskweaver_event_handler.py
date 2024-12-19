@@ -40,7 +40,7 @@ class TaskWeaverEventHandler(SessionEventHandlerBase):
             agentops.record(agentops.ActionEvent(action_type="round_start", params={"round_id": round_id}, returns=msg))
 
         elif type == RoundEventType.round_error:
-            agentops.record(agentops.ErrorEvent(error_type="round_error", details=msg, logs={"round_id": round_id}))
+            agentops.record(agentops.ErrorEvent(error_type="round_error", details={"message": msg, "round_id": round_id}))
 
         elif type == RoundEventType.round_end:
             agentops.record(agentops.ActionEvent(action_type="round_end", params={"round_id": round_id}, returns=msg))
@@ -77,9 +77,8 @@ class TaskWeaverEventHandler(SessionEventHandlerBase):
                             "agent_id": agent_id,
                             "is_end": is_end,
                             "model": extra.get("model", None),
-                            "prompt": self._message_buffer.get(post_id, ""),
                         },
-                        returns=extra.get("message", "")
+                        returns=self._message_buffer.get(post_id, "")
                     )
                 )
 
@@ -135,8 +134,7 @@ class TaskWeaverEventHandler(SessionEventHandlerBase):
             agentops.record(
                 agentops.ErrorEvent(
                     error_type="post_error",
-                    details=msg,
-                    logs={"post_id": post_id, "round_id": round_id},
+                    details={"message": msg, "post_id": post_id, "round_id": round_id},
                 )
             )
 
