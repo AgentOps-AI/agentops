@@ -5,13 +5,18 @@ from dotenv import load_dotenv
 import json
 import requests
 
+# import agentops
+
 load_dotenv()
+
+# agentops.init()
 
 # Initialize OpenAI client
 client = openai.OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 WEATHER_API_KEY = os.getenv("OPENWEATHER_API_KEY")
 
 
+# @agentops.record_tool(tool_name="get_weather")
 def get_weather(city: str) -> Dict:
     """Get current weather data for a city."""
     base_url = "http://api.openweathermap.org/data/2.5/weather"
@@ -95,6 +100,7 @@ def main():
 
         if destination.lower() == "quit":
             print("\nGoodbye!")
+            agentops.end_session("User quit")
             break
 
         # Get and display weather
