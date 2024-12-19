@@ -94,21 +94,67 @@ agentops.init(inherited_session_id=<id>)
 
 Both processes will now contribute data to the same session.
 
-## Session Authentication
-Each session is assigned a unique JWT token that can be used to authenticate session-specific API requests. You can retrieve the JWT token for a session using `agentops.get_session_jwt()`:
+## Session Data Export
+AgentOps provides REST endpoints to export your session data and statistics. These endpoints allow you to retrieve detailed information about your sessions programmatically.
 
-```python
-import agentops
+### Authentication
+All data export requests require two headers:
+- `X-Agentops-Api-Key`: Your AgentOps API key
+- `Authorization`: Bearer token from session initialization
 
-# Get JWT for current session
-session = agentops.init()
-jwt_token = agentops.get_session_jwt()
+### Available Endpoints
 
-# Or get JWT for a specific session
-jwt_token = agentops.get_session_jwt(session_id="your-session-id")
+#### Get Session Statistics
+```http
+GET /v2/sessions/<session_id>/stats
 ```
 
-This JWT token is required alongside your API key when making session-specific API requests.
+Returns statistics for the specified session including:
+- Event counts
+- Duration
+- Costs
+- Token usage
+- Other session metrics
+
+#### Export Complete Session Data
+```http
+GET /v2/sessions/<session_id>/export
+```
+
+Returns comprehensive session data including:
+- Session metadata
+- Statistics
+- All recorded events:
+  - Actions
+  - LLM calls
+  - Tool usage
+  - Errors
+
+### Example Usage
+```python
+import requests
+
+# Your AgentOps API key
+api_key = "your-api-key"
+# Bearer token from session initialization
+bearer_token = "your-bearer-token"
+session_id = "your-session-id"
+
+headers = {
+    "X-Agentops-Api-Key": api_key,
+    "Authorization": f"Bearer {bearer_token}"
+}
+
+# Get session stats
+stats_url = f"https://api.agentops.ai/v2/sessions/{session_id}/stats"
+stats_response = requests.get(stats_url, headers=headers)
+stats = stats_response.json()
+
+# Export complete session data
+export_url = f"https://api.agentops.ai/v2/sessions/{session_id}/export"
+export_response = requests.get(export_url, headers=headers)
+session_data = export_response.json()
+```
 
 ## Session Analytics
 You can retrieve the analytics for a session by calling `session.get_analytics()`.

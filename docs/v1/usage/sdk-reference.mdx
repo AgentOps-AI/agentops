@@ -101,21 +101,15 @@ Retrieve the API key used by the client.
 
 ---
 
-### `get_session_jwt()`
+### `set_parent_key()`
 
-Retrieve the JWT token for the current or specified session.
+Set the parent API key which has visibility over projects it is a parent of.
 
 **Parameters**:
 
-- `session_id` (str, optional): The ID of the session to get the JWT for. If not provided, uses the current session.
-
-**Returns**:
-
-- JWT token as a string.
+- `parent_key` (str): The API key of the parent organization to set.
 
 ---
-
-### `set_parent_key()`
 
 Set the parent API key which has visibility over projects it is a parent of.
 
