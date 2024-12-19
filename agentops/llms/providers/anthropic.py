@@ -69,6 +69,8 @@ class StreamWrapper:
 
     async def __aiter__(self):
         """Async iterate over the stream chunks."""
+        if asyncio.iscoroutine(self.response):
+            self.response = await self.response
         async for chunk in self.response:
             if hasattr(chunk, "delta") and hasattr(chunk.delta, "text"):
                 text = chunk.delta.text
