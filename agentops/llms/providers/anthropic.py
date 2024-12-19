@@ -23,6 +23,40 @@ class AnthropicProvider(InstrumentedProvider):
         self.tool_event = {}
         self.tool_id = ""
 
+    def create_stream(self, **kwargs):
+        """Create a streaming context manager for Anthropic messages"""
+        return self.client.messages.create(**kwargs)
+
+    def __call__(self, messages, model="claude-3-sonnet-20240229", stream=False, **kwargs):
+        """Call the Anthropic provider with messages.
+
+        Args:
+            messages: List of message dictionaries
+            model: Model name to use
+            stream: Whether to use streaming mode
+            **kwargs: Additional arguments to pass to the client
+
+        Returns:
+            For non-streaming: The text response
+            For streaming: A context manager that yields text chunks
+        """
+        if not stream:
+            response = self.client.messages.create(
+                model=model,
+                messages=messages,
+                stream=False,
+                **kwargs
+            )
+            return response.content[0].text
+
+        # New streaming implementation using context manager
+        return self.create_stream(
+            model=model,
+            messages=messages,
+            stream=True,
+            **kwargs
+        )
+
     def handle_response(self, response, kwargs, init_timestamp, session: Optional[Session] = None):
         """Handle responses for Anthropic"""
         import anthropic.resources.beta.messages.messages as beta_messages
@@ -34,9 +68,51 @@ class AnthropicProvider(InstrumentedProvider):
         if session is not None:
             llm_event.session_id = session.session_id
 
+        # Add context manager support for streaming
+        if hasattr(response, "__enter__"):
+            # Initialize LLM event with common fields
+            llm_event.agent_id = check_call_stack_for_agent_id()
+            llm_event.model = kwargs["model"]
+            llm_event.prompt = kwargs["messages"]
+            llm_event.completion = {
+                "role": "assistant",
+                "content": "",
+            }
+
+            # Handle sync streaming with context manager
+            if not hasattr(response, "__aenter__"):
+
+                def context_manager():
+                    with response as stream:
+                        for text in stream.text_stream:
+                            llm_event.completion["content"] += text
+                            yield Message(
+                                type="content_block_delta",
+                                delta={"type": "text_delta", "text": text},
+                                message={"role": "assistant", "content": text},
+                            )
+                        llm_event.end_timestamp = get_ISO_time()
+                        self._safe_record(session, llm_event)
+
+                return context_manager()
+
+            # Handle async streaming with context manager
+            async def async_context_manager():
+                async with response as stream:
+                    async for text in stream.text_stream:
+                        llm_event.completion["content"] += text
+                        yield Message(
+                            type="content_block_delta",
+                            delta={"type": "text_delta", "text": text},
+                            message={"role": "assistant", "content": text},
+                        )
+                    llm_event.end_timestamp = get_ISO_time()
+                    self._safe_record(session, llm_event)
+
+            return async_context_manager()
+
         def handle_stream_chunk(chunk: Message):
             try:
-                # We take the first chunk and accumulate the deltas from all subsequent chunks to build one full chat completion
                 if chunk.type == "message_start":
                     llm_event.returns = chunk
                     llm_event.agent_id = check_call_stack_for_agent_id()
@@ -45,40 +121,31 @@ class AnthropicProvider(InstrumentedProvider):
                     llm_event.prompt_tokens = chunk.message.usage.input_tokens
                     llm_event.completion = {
                         "role": chunk.message.role,
-                        "content": "",  # Always returned as [] in this instance type
+                        "content": "",
                     }
-
                 elif chunk.type == "content_block_start":
                     if chunk.content_block.type == "text":
                         llm_event.completion["content"] += chunk.content_block.text
-
                     elif chunk.content_block.type == "tool_use":
                         self.tool_id = chunk.content_block.id
                         self.tool_event[self.tool_id] = ToolEvent(
                             name=chunk.content_block.name,
                             logs={"type": chunk.content_block.type, "input": ""},
                         )
-
                 elif chunk.type == "content_block_delta":
                     if chunk.delta.type == "text_delta":
                         llm_event.completion["content"] += chunk.delta.text
-
                     elif chunk.delta.type == "input_json_delta":
                         self.tool_event[self.tool_id].logs["input"] += chunk.delta.partial_json
-
                 elif chunk.type == "content_block_stop":
                     pass
-
                 elif chunk.type == "message_delta":
                     llm_event.completion_tokens = chunk.usage.output_tokens
-
                 elif chunk.type == "message_stop":
                     llm_event.end_timestamp = get_ISO_time()
                     self._safe_record(session, llm_event)
-
             except Exception as e:
                 self._safe_record(session, ErrorEvent(trigger_event=llm_event, exception=e))
-
                 kwargs_str = pprint.pformat(kwargs)
                 chunk = pprint.pformat(chunk)
                 logger.warning(
@@ -87,7 +154,6 @@ class AnthropicProvider(InstrumentedProvider):
                     f"kwargs:\n {kwargs_str}\n",
                 )
 
-        # if the response is a generator, decorate the generator
         if isinstance(response, Stream):
 
             def generator():
@@ -97,7 +163,6 @@ class AnthropicProvider(InstrumentedProvider):
 
             return generator()
 
-        # For asynchronous AsyncStream
         if isinstance(response, AsyncStream):
 
             async def async_generator():
@@ -107,7 +172,6 @@ class AnthropicProvider(InstrumentedProvider):
 
             return async_generator()
 
-        # For async AsyncMessages
         if isinstance(response, AsyncMessages):
 
             async def async_generator():
@@ -117,51 +181,21 @@ class AnthropicProvider(InstrumentedProvider):
 
             return async_generator()
 
-        # Handle object responses
         try:
-            # Naively handle AttributeError("'LegacyAPIResponse' object has no attribute 'model_dump'")
             if hasattr(response, "model_dump"):
-                # This bets on the fact that the response object has a model_dump method
                 llm_event.returns = response.model_dump()
                 llm_event.prompt_tokens = response.usage.input_tokens
                 llm_event.completion_tokens = response.usage.output_tokens
-
                 llm_event.completion = {
                     "role": "assistant",
                     "content": response.content[0].text,
                 }
                 llm_event.model = response.model
-
             else:
-                """Handle raw response data from the Anthropic API.
-
-                The raw response has the following structure:
-                {
-                    'id': str,              # Message ID (e.g. 'msg_018Gk9N2pcWaYLS7mxXbPD5i')
-                    'type': str,            # Type of response (e.g. 'message')
-                    'role': str,            # Role of responder (e.g. 'assistant')
-                    'model': str,           # Model used (e.g. 'claude-3-5-sonnet-20241022')
-                    'content': List[Dict],  # List of content blocks with 'type' and 'text'
-                    'stop_reason': str,     # Reason for stopping (e.g. 'end_turn')
-                    'stop_sequence': Any,   # Stop sequence used, if any
-                    'usage': {              # Token usage statistics
-                        'input_tokens': int,
-                        'output_tokens': int
-                    }
-                }
-
-                Note: We import Anthropic types here since the package must be installed
-                for raw responses to be available; doing so in the global scope would
-                result in dependencies error since this provider is not lazily imported (tests fail)
-                """
                 from anthropic import APIResponse
                 from anthropic._legacy_response import LegacyAPIResponse
 
-                assert isinstance(response, (APIResponse, LegacyAPIResponse)), (
-                    f"Expected APIResponse or LegacyAPIResponse, got {type(response)}. "
-                    "This is likely caused by changes in the Anthropic SDK and the integrations with AgentOps needs update."
-                    "Please open an issue at https://github.com/AgentOps-AI/agentops/issues"
-                )
+                assert isinstance(response, (APIResponse, LegacyAPIResponse))
                 response_data = json.loads(response.text)
                 llm_event.returns = response_data
                 llm_event.model = response_data["model"]
@@ -176,7 +210,6 @@ class AnthropicProvider(InstrumentedProvider):
             llm_event.end_timestamp = get_ISO_time()
             llm_event.prompt = kwargs["messages"]
             llm_event.agent_id = check_call_stack_for_agent_id()
-
             self._safe_record(session, llm_event)
         except Exception as e:
             self._safe_record(session, ErrorEvent(trigger_event=llm_event, exception=e))
