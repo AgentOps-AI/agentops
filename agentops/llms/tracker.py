@@ -16,6 +16,7 @@ from .providers.openai import OpenAiProvider
 from .providers.anthropic import AnthropicProvider
 from .providers.mistral import MistralProvider
 from .providers.ai21 import AI21Provider
+from .providers.fireworks import FireworksProvider
 
 original_func = {}
 original_create = None
@@ -47,6 +48,9 @@ class LlmTracker:
         },
         "mistralai": {
             "1.0.1": ("chat.complete", "chat.stream"),
+        },
+        "fireworks-ai": {
+            "0.1.0": ("chat.completions.create",),
         },
         "ai21": {
             "2.0.0": (
@@ -155,6 +159,15 @@ class LlmTracker:
                     else:
                         logger.warning(f"Only AI21>=2.0.0 supported. v{module_version} found.")
 
+                if api == "fireworks-ai":
+                    module_version = version(api)
+
+                    if Version(module_version) >= parse("0.1.0"):
+                        provider = FireworksProvider(self.client)
+                        provider.override()
+                    else:
+                        logger.warning(f"Only Fireworks>=0.1.0 supported. v{module_version} found.")
+
                 if api == "llama_stack_client":
                     module_version = version(api)
 
@@ -174,3 +187,4 @@ class LlmTracker:
         MistralProvider(self.client).undo_override()
         AI21Provider(self.client).undo_override()
         LlamaStackClientProvider(self.client).undo_override()
+        FireworksProvider(self.client).undo_override()

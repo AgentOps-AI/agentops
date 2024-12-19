@@ -284,7 +284,7 @@ class Session:
         end_state: str = "Indeterminate",
         end_state_reason: Optional[str] = None,
         video: Optional[str] = None,
-    ) -> Union[Decimal, None]:
+    ) -> Union[Dict[str, Any], None]:
         with self._end_session_lock:
             if not self.is_running:
                 return None
@@ -324,8 +324,9 @@ class Session:
                     finally:
                         del self._span_processor
 
-                # 5. Final session update
-                if not (analytics_stats := self.get_analytics()):
+                # 5. Final session update and get analytics
+                analytics_stats = self.get_analytics()
+                if not analytics_stats:
                     return None
 
                 analytics = (
@@ -341,6 +342,7 @@ class Session:
 
             except Exception as e:
                 logger.exception(f"Error during session end: {e}")
+                return None
             finally:
                 active_sessions.remove(self)  # First thing, get rid of the session
 
@@ -350,7 +352,7 @@ class Session:
                         "blue",
                     )
                 )
-            return self.token_cost
+            return analytics_stats
 
     def add_tags(self, tags: List[str]) -> None:
         """
