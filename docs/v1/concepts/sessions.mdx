@@ -98,9 +98,8 @@ Both processes will now contribute data to the same session.
 AgentOps provides REST endpoints to export your session data and statistics. These endpoints allow you to retrieve detailed information about your sessions programmatically.
 
 ### Authentication
-All data export requests require two headers:
+All data export requests require a single header:
 - `X-Agentops-Api-Key`: Your AgentOps API key
-- `Authorization`: Bearer token from session initialization
 
 ### Available Endpoints
 
@@ -136,13 +135,10 @@ import requests
 
 # Your AgentOps API key
 api_key = "your-api-key"
-# Bearer token from session initialization
-bearer_token = "your-bearer-token"
 session_id = "your-session-id"
 
 headers = {
-    "X-Agentops-Api-Key": api_key,
-    "Authorization": f"Bearer {bearer_token}"
+    "X-Agentops-Api-Key": api_key
 }
 
 # Get session stats
