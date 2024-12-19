@@ -24,7 +24,7 @@ class BaseProviderTest:
 
     async def teardown_method(self, method):
         """Clean up after test."""
-        if hasattr(self, 'provider'):
+        if hasattr(self, "provider"):
             self.provider.undo_override()
 
     async def async_verify_events(self, session, expected_count=1):
