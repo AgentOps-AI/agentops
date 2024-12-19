@@ -19,8 +19,8 @@ class BaseProviderTest:
         client = Client()
         client.configure(api_key="test-key")
         config = client._config
+        config.http_client = self.mock_req  # Set mock on config instead of session
         self.session = Session(session_id=uuid4(), config=config)
-        self.session.client.http_client = self.mock_req
 
     async def teardown_method(self, method):
         """Clean up after test."""
