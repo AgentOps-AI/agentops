@@ -53,7 +53,7 @@ class TestOllamaProvider(BaseProviderTest):
         self.mock_client.post = mock_post
 
         # Initialize provider with mock client
-        self.provider = OllamaProvider(http_client=self.mock_client, client=self.session.client, model="llama2")
+        self.provider = OllamaProvider(http_client=self.mock_client, client=self.session, model="llama2")
 
     @pytest.mark.asyncio
     async def teardown_method(self, method):
