@@ -41,21 +41,11 @@ class AnthropicProvider(InstrumentedProvider):
             For streaming: A context manager that yields text chunks
         """
         if not stream:
-            response = self.client.messages.create(
-                model=model,
-                messages=messages,
-                stream=False,
-                **kwargs
-            )
+            response = self.client.messages.create(model=model, messages=messages, stream=False, **kwargs)
             return response.content[0].text
 
         # New streaming implementation using context manager
-        return self.create_stream(
-            model=model,
-            messages=messages,
-            stream=True,
-            **kwargs
-        )
+        return self.create_stream(model=model, messages=messages, stream=True, **kwargs)
 
     def handle_response(self, response, kwargs, init_timestamp, session: Optional[Session] = None):
         """Handle responses for Anthropic"""
