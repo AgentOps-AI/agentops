@@ -58,7 +58,7 @@ Health = random.choice(TitanHealth)
 
 async def generate_message():
     """Generate a Titan message using async context manager for streaming."""
-    async with client.messages.create(
+    response = await client.messages.create(
         max_tokens=1024,
         model="claude-3-sonnet-20240229",
         messages=[
@@ -84,11 +84,12 @@ async def generate_message():
             },
         ],
         stream=True,
-    ) as stream:
-        message = ""
-        async for text in stream.text_stream:
-            message += text
-        return message
+    )
+
+    message = ""
+    async for text in response:
+        message += text
+    return message
 
 
 async def generate_uuids():
@@ -118,3 +119,4 @@ if __name__ == "__main__":
     asyncio.run(main())
     # End the AgentOps session with success status
     agentops.end_session("Success")
+

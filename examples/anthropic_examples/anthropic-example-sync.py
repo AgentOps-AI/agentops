@@ -95,7 +95,7 @@ generatedsentence = f"{random.choice(first)} {random.choice(second)} {random.cho
 print("Generated prompt:", generatedsentence)
 print("\nGenerating story...\n")
 
-with client.messages.create(
+response = client.messages.create(
     max_tokens=2400,
     model="claude-3-sonnet-20240229",
     messages=[
@@ -115,11 +115,13 @@ with client.messages.create(
         {"role": "assistant", "content": generatedsentence},
     ],
     stream=True,
-) as stream:
-    for text in stream.text_stream:
-        print(text, end="", flush=True)
+)
+
+for text in response:
+    print(text, end="", flush=True)
 
 print("\n\nStory generation complete!")
 
 # End the AgentOps session with success status
 agentops.end_session("Success")
+
