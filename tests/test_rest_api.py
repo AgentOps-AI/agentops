@@ -66,7 +66,34 @@ class TestRestApi:
 
         payload = {
             "events": [
-                {"event_type": "test", "session_id": self.session_id, "init_timestamp": now, "end_timestamp": now}
+                {
+                    "id": str(uuid.uuid4()),
+                    "event_type": "llm",
+                    "init_timestamp": now,
+                    "end_timestamp": now,
+                    "session_id": self.session_id,
+                    "model": "gpt-4",
+                    "prompt": [
+                        {"role": "system", "content": "You are a helpful assistant"},
+                        {"role": "user", "content": "Analyze this data..."}
+                    ],
+                    "completion": {
+                        "role": "assistant",
+                        "content": "Based on the data..."
+                    },
+                    "prompt_tokens": 150,
+                    "completion_tokens": 80
+                },
+                {
+                    "id": str(uuid.uuid4()),
+                    "event_type": "tool",
+                    "name": "database_query",
+                    "init_timestamp": now,
+                    "end_timestamp": now,
+                    "session_id": self.session_id,
+                    "input": "SELECT * FROM users",
+                    "output": "Retrieved 5 users"
+                }
             ]
         }
 

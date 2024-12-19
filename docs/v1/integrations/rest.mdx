@@ -297,6 +297,7 @@ curl -X POST https://api.agentops.ai/v2/create_events \
   -d '{
     "events": [
       {
+        "id": "550e8400-e29b-41d4-a716-446655440001",
         "event_type": "llm",
         "init_timestamp": "2024-03-14T12:01:00Z",
         "end_timestamp": "2024-03-14T12:01:02Z",
@@ -314,6 +315,7 @@ curl -X POST https://api.agentops.ai/v2/create_events \
         "completion_tokens": 80
       },
       {
+        "id": "550e8400-e29b-41d4-a716-446655440002",
         "event_type": "tool",
         "name": "database_query",
         "init_timestamp": "2024-03-14T12:01:03Z",
@@ -324,6 +326,7 @@ curl -X POST https://api.agentops.ai/v2/create_events \
     ]
   }'
 ```
+</CodeGroup>
 
 ```bash Request
 POST https://api.agentops.ai/v2/create_events
@@ -333,6 +336,7 @@ Authorization: Bearer your_jwt_token
 {
   "events": [
     {
+      "id": "550e8400-e29b-41d4-a716-446655440001",
       "event_type": "llm",
       "init_timestamp": "2024-03-14T12:01:00Z",
       "end_timestamp": "2024-03-14T12:01:02Z",
@@ -350,6 +354,7 @@ Authorization: Bearer your_jwt_token
       "completion_tokens": 80
     },
     {
+      "id": "550e8400-e29b-41d4-a716-446655440002",
       "event_type": "tool",
       "name": "database_query",
       "init_timestamp": "2024-03-14T12:01:03Z",
@@ -359,8 +364,6 @@ Authorization: Bearer your_jwt_token
     }
   ]
 }
-```
-</CodeGroup>
 
 ### Update Events
 
@@ -499,6 +502,7 @@ event_response = requests.post(
     headers=event_headers,
     json={
         "events": [{
+            "id": str(uuid.uuid4()),  # Required field for actions table
             "event_type": "llm",
             "init_timestamp": datetime.now(timezone.utc).isoformat(),
             "end_timestamp": datetime.now(timezone.utc).isoformat(),
