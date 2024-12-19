@@ -117,8 +117,9 @@ response = client.messages.create(
     stream=True,
 )
 
-for text in response:
-    print(text, end="", flush=True)
+for chunk in response:
+    if hasattr(chunk, "delta") and hasattr(chunk.delta, "text"):
+        print(chunk.delta.text, end="", flush=True)
 
 print("\n\nStory generation complete!")
 

@@ -12,6 +12,8 @@ from .instrumented_provider import InstrumentedProvider
 @singleton
 class AnthropicProvider(InstrumentedProvider):
     """Anthropic provider for AgentOps."""
+    original_create = None
+    original_create_async = None
 
     def __init__(self, client):
         """Initialize the Anthropic provider."""
@@ -23,17 +25,7 @@ class AnthropicProvider(InstrumentedProvider):
         return self.client.messages.create(**kwargs)
 
     def __call__(self, messages, model="claude-3-sonnet-20240229", stream=False, **kwargs):
-        """Call the Anthropic provider with messages.
-
-        Args:
-            messages (list): List of messages to send to the provider
-            model (str): Model to use
-            stream (bool): Whether to stream the response
-            **kwargs: Additional arguments to pass to the provider
-
-        Returns:
-            Union[str, Iterator[str], AsyncIterator[str]]: Response from the provider
-        """
+        """Call the Anthropic provider with messages."""
         kwargs["messages"] = messages
         kwargs["model"] = model
         kwargs["stream"] = stream
@@ -61,7 +53,7 @@ class AnthropicProvider(InstrumentedProvider):
 
         def handle_stream_chunk(chunk):
             """Handle a single chunk from the stream."""
-            if chunk.type == "content_block_delta" and chunk.delta.type == "text_delta":
+            if hasattr(chunk, "delta") and hasattr(chunk.delta, "text"):
                 text = chunk.delta.text
                 llm_event.completion["content"] += text
                 return text
@@ -92,3 +84,36 @@ class AnthropicProvider(InstrumentedProvider):
         if asyncio.iscoroutine(response) or asyncio.isfuture(response):
             return async_generator()
         return generator()
+
+    def override(self):
+        """Override Anthropic's message creation methods."""
+        from anthropic.resources import Messages, AsyncMessages
+
+        # Store the original methods
+        self.original_create = Messages.create
+        self.original_create_async = AsyncMessages.create
+
+        def patched_function(*args, **kwargs):
+            init_timestamp = get_ISO_time()
+            session = kwargs.pop("session", None)
+            result = self.original_create(*args, **kwargs)
+            return self.handle_response(result, kwargs, init_timestamp, session=session)
+
+        async def patched_async_function(*args, **kwargs):
+            init_timestamp = get_ISO_time()
+            session = kwargs.pop("session", None)
+            result = await self.original_create_async(*args, **kwargs)
+            if kwargs.get("stream", False):
+                return self.handle_response(result, kwargs, init_timestamp, session=session)
+            return result
+
+        # Override the original methods
+        Messages.create = patched_function
+        AsyncMessages.create = patched_async_function
+
+    def undo_override(self):
+        """Restore original Anthropic message creation methods."""
+        if self.original_create is not None and self.original_create_async is not None:
+            from anthropic.resources import Messages, AsyncMessages
+            Messages.create = self.original_create
+            AsyncMessages.create = self.original_create_async

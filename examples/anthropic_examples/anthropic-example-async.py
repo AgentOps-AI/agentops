@@ -58,7 +58,8 @@ Health = random.choice(TitanHealth)
 
 async def generate_message():
     """Generate a Titan message using async context manager for streaming."""
-    response = await client.messages.create(
+    message = ""
+    async with client.messages.create(
         max_tokens=1024,
         model="claude-3-sonnet-20240229",
         messages=[
@@ -84,11 +85,12 @@ async def generate_message():
             },
         ],
         stream=True,
-    )
-
-    message = ""
-    async for text in response:
-        message += text
+    ) as response:
+        async for chunk in response:
+            if hasattr(chunk, "delta") and hasattr(chunk.delta, "text"):
+                text = chunk.delta.text
+                message += text
+                print(text, end="", flush=True)
     return message
 
 
