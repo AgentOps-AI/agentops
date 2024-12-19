@@ -19,6 +19,7 @@ class StreamWrapper:
         self.init_timestamp = init_timestamp
         self.session = session
         self.llm_event = None
+        self._text_stream = None
 
     def __enter__(self):
         """Enter the context manager."""
@@ -32,6 +33,8 @@ class StreamWrapper:
             "role": "assistant",
             "content": "",
         }
+        if hasattr(self.response, "text_stream"):
+            self._text_stream = self.response.text_stream
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):
@@ -51,6 +54,8 @@ class StreamWrapper:
             "role": "assistant",
             "content": "",
         }
+        if hasattr(self.response, "text_stream"):
+            self._text_stream = self.response.text_stream
         return self
 
     async def __aexit__(self, exc_type, exc_val, exc_tb):
@@ -67,11 +72,16 @@ class StreamWrapper:
                 yield chunk
         return
 
+    @property
+    def text_stream(self):
+        """Get the text stream from the response."""
+        return self._text_stream
+
     async def __aiter__(self):
         """Async iterate over the stream chunks."""
         if asyncio.iscoroutine(self.response):
             self.response = await self.response
-        async for text in self.response.text_stream:
+        async for text in self.text_stream:
             self.llm_event.completion["content"] += text
             yield text
         return
