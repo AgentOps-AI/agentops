@@ -3,17 +3,20 @@ from typing import Any, AsyncIterator, Dict, Iterator, Optional, Union
 
 from anthropic import Anthropic
 
-from ...utils import get_ISO_time
-from ..base import BaseProvider
+from agentops.event import LLMEvent
+from agentops.helpers import get_ISO_time, check_call_stack_for_agent_id
+from agentops.singleton import singleton
+from .instrumented_provider import InstrumentedProvider
 
 
-class AnthropicProvider(BaseProvider):
+@singleton
+class AnthropicProvider(InstrumentedProvider):
     """Anthropic provider for AgentOps."""
 
-    def __init__(self, session=None, api_key=None):
+    def __init__(self, client):
         """Initialize the Anthropic provider."""
-        super().__init__(session)
-        self.client = Anthropic(api_key=api_key)
+        super().__init__(client)
+        self._provider_name = "Anthropic"
 
     def create_stream(self, **kwargs):
         """Create a streaming context manager for Anthropic messages"""
@@ -35,16 +38,26 @@ class AnthropicProvider(BaseProvider):
         kwargs["model"] = model
         kwargs["stream"] = stream
 
+        init_timestamp = get_ISO_time()
         response = self.create_stream(**kwargs)
-        return self.handle_response(response, stream=stream)
+        return self.handle_response(response, kwargs, init_timestamp, session=self.session)
 
-    def handle_response(self, response, stream=False):
+    def handle_response(self, response, kwargs, init_timestamp, session=None):
         """Handle the response from Anthropic."""
-        if not stream:
+        if not kwargs.get("stream", False):
             return response
 
-        llm_event = self.create_llm_event()
-        llm_event.start_timestamp = get_ISO_time()
+        llm_event = LLMEvent(init_timestamp=init_timestamp, params=kwargs)
+        if session is not None:
+            llm_event.session_id = session.session_id
+
+        llm_event.agent_id = check_call_stack_for_agent_id()
+        llm_event.model = kwargs["model"]
+        llm_event.prompt = kwargs["messages"]
+        llm_event.completion = {
+            "role": "assistant",
+            "content": "",
+        }
 
         def handle_stream_chunk(chunk):
             """Handle a single chunk from the stream."""
@@ -63,7 +76,7 @@ class AnthropicProvider(BaseProvider):
                         yield text
             finally:
                 llm_event.end_timestamp = get_ISO_time()
-                self.session.add_event(llm_event)
+                self._safe_record(session, llm_event)
 
         async def async_generator():
             """Generate text from async stream."""
@@ -74,7 +87,7 @@ class AnthropicProvider(BaseProvider):
                         yield text
             finally:
                 llm_event.end_timestamp = get_ISO_time()
-                self.session.add_event(llm_event)
+                self._safe_record(session, llm_event)
 
         if asyncio.iscoroutine(response) or asyncio.isfuture(response):
             return async_generator()
