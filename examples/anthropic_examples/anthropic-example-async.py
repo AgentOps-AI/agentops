@@ -17,7 +17,7 @@ import random
 import uuid
 from dotenv import load_dotenv
 import agentops
-from anthropic import Anthropic
+from anthropic import Anthropic, AsyncAnthropic
 from agentops import Client
 from agentops.llms.providers.anthropic import AnthropicProvider
 
@@ -26,7 +26,12 @@ load_dotenv()
 anthropic_api_key = os.getenv("ANTHROPIC_API_KEY")
 if not anthropic_api_key:
     raise ValueError("ANTHROPIC_API_KEY environment variable is not set")
+
+# Initialize clients with explicit API key
 anthropic_client = Anthropic(api_key=anthropic_api_key)
+async_anthropic_client = AsyncAnthropic(api_key=anthropic_api_key)
+
+# Initialize AgentOps client
 ao_client = Client()
 ao_client.configure(api_key=os.getenv("AGENTOPS_API_KEY"), default_tags=["anthropic-async"])
 ao_client.initialize()
@@ -61,8 +66,11 @@ Health = random.choice(TitanHealth)
 
 async def generate_message(personality, health_status):
     """Generate a message based on personality and health status."""
-    # Create provider with explicit API key
-    provider = AnthropicProvider(client=anthropic_client)
+    # Create provider with explicit sync and async clients
+    provider = AnthropicProvider(
+        client=anthropic_client,
+        async_client=async_anthropic_client
+    )
 
     prompt = f"""Given the following Titan personality and health status, generate a short combat log message (1-2 sentences):
     Personality: {personality}
@@ -83,6 +91,8 @@ async def generate_message(personality, health_status):
         async for text in stream.text_stream:
             print(text, end="", flush=True)
         print()
+
+    return "Message generation complete"
 
 
 async def generate_uuids():

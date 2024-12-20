@@ -57,22 +57,24 @@ class StreamWrapper:
 
     async def __aenter__(self):
         """Enter async context."""
-        self.stream = self.response  # Store the response as stream
+        # Initialize event if not already done
+        if not hasattr(self, "event"):
+            self.event = LLMEvent(
+                provider=self.provider_name,
+                session=self.session,
+                model=self.model,
+                prompt=self.prompt,
+                completion="",
+                tokens_prompt=0,
+                tokens_completion=0,
+                tokens_total=0,
+            )
+
+        # Store the stream response
+        self.stream = self.response
+        # Enter stream context if it's awaitable
         if hasattr(self.stream, "__aenter__"):
             await self.stream.__aenter__()
-
-        # Initialize event if session exists
-        if self.session is not None:
-            self._init_event = LLMEvent(
-                init_timestamp=self.init_timestamp,
-                params=self.kwargs,
-                model=self.kwargs.get("model", ""),
-                prompt=self.kwargs.get("messages", []),
-                thread_id=None,  # Optional, can be set if needed
-                completion=""  # Will be updated in __aexit__
-            )
-            self.session.add_event(self._init_event)
-
         return self
 
     async def __aexit__(self, exc_type, exc_val, exc_tb):
@@ -198,8 +200,8 @@ class AnthropicProvider(InstrumentedProvider):
     async def create_stream_async(self, **kwargs):
         """Create an async streaming context."""
         init_timestamp = get_ISO_time()
-        kwargs.pop("stream", None)  # Remove stream parameter if present
-        response = self.async_client.messages.stream(**kwargs)  # Use stream() for async streaming
+        kwargs["stream"] = True  # Ensure streaming is enabled
+        response = self.async_client.messages.create(**kwargs)
         return StreamWrapper(response, self, kwargs, init_timestamp, self.session)
 
     def __call__(self, messages, model="claude-3-sonnet-20240229", stream=False, **kwargs):
