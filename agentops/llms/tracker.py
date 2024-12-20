@@ -16,6 +16,7 @@ from .providers.openai import OpenAiProvider
 from .providers.anthropic import AnthropicProvider
 from .providers.mistral import MistralProvider
 from .providers.ai21 import AI21Provider
+from .providers.taskweaver import TaskWeaverProvider
 
 original_func = {}
 original_create = None
@@ -53,6 +54,9 @@ class LlmTracker:
                 "chat.completions.create",
                 "client.answer.create",
             ),
+        },
+        "taskweaver": {
+            "0.0.1": ("chat_completion", "chat_completion_stream"),
         },
     }
 
@@ -164,6 +168,15 @@ class LlmTracker:
                     else:
                         logger.warning(f"Only LlamaStackClient>=0.0.53 supported. v{module_version} found.")
 
+                if api == "taskweaver":
+                    module_version = version(api)
+
+                    if Version(module_version) >= parse("0.0.1"):
+                        provider = TaskWeaverProvider(self.client)
+                        provider.override()
+                    else:
+                        logger.warning(f"Only TaskWeaver>=0.0.1 supported. v{module_version} found.")
+
     def stop_instrumenting(self):
         OpenAiProvider(self.client).undo_override()
         GroqProvider(self.client).undo_override()
@@ -174,3 +187,4 @@ class LlmTracker:
         MistralProvider(self.client).undo_override()
         AI21Provider(self.client).undo_override()
         LlamaStackClientProvider(self.client).undo_override()
+        TaskWeaverProvider(self.client).undo_override()
