@@ -24,7 +24,8 @@ from agentops.llms.providers.anthropic import AnthropicProvider
 # Setup environment and API keys
 load_dotenv()
 anthropic_client = Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY"))
-ao_client = Client(api_key=os.getenv("AGENTOPS_API_KEY"), default_tags=["anthropic-async"])
+ao_client = Client()
+ao_client.configure(api_key=os.getenv("AGENTOPS_API_KEY"), default_tags=["anthropic-async"])
 
 """
 Titan Personalities:
