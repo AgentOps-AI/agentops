@@ -13,26 +13,37 @@ from .instrumented_provider import InstrumentedProvider
 class StreamWrapper:
     """Wrapper for Anthropic stream responses to support context managers."""
 
-    def __init__(self, response, provider, kwargs, init_timestamp, session=None):
+    def __init__(self, response, provider, kwargs, init_timestamp=None, session=None):
+        """Initialize StreamWrapper."""
         self.response = response
         self.provider = provider
         self.provider_name = "anthropic"  # Set provider name explicitly
         self.kwargs = kwargs
-        self.init_timestamp = init_timestamp
+        self.init_timestamp = init_timestamp or get_ISO_time()
         self.session = session
-        self.llm_event = {
-            "type": "llm",
-            "provider": "anthropic",
-            "model": kwargs.get("model", "claude-3-sonnet-20240229"),
-            "messages": kwargs.get("messages", []),
-            "completion": {"content": ""},
-            "start_timestamp": init_timestamp,
-            "end_timestamp": None,
-        }
+
+        # Extract model and messages from kwargs
+        self.model = kwargs.get("model", "")
+        self.prompt = kwargs.get("messages", [])
+
+        # Initialize token counters
+        self.tokens_prompt = 0
+        self.tokens_completion = 0
+        self.tokens_total = 0
+
+        # Initialize completion accumulator
+        self.completion = ""
+
+        # Initialize text stream from response
         self._text_stream = None
-        self._final_message_snapshot = None  # Added for proper message state tracking
         if hasattr(response, "text_stream"):
             self._text_stream = response.text_stream
+        elif hasattr(response, "stream"):
+            self._text_stream = response.stream
+
+        # Initialize event if session exists
+        if self.session is not None:
+            self._init_event()
 
     def __enter__(self):
         """Enter the context manager."""
