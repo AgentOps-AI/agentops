@@ -177,6 +177,7 @@ class AnthropicProvider(InstrumentedProvider):
         self.session = None
         self.client = client or Anthropic()
         self.async_client = async_client or AsyncAnthropic(api_key=self.client.api_key)
+        self.name = "anthropic"  # Add name attribute
 
     def create_stream(self, **kwargs):
         """Create a streaming context manager for Anthropic messages."""
