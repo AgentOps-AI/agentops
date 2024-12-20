@@ -16,6 +16,7 @@ class StreamWrapper:
     def __init__(self, response, provider, kwargs, init_timestamp, session=None):
         self.response = response
         self.provider = provider
+        self.provider_name = "anthropic"  # Set provider name explicitly
         self.kwargs = kwargs
         self.init_timestamp = init_timestamp
         self.session = session
@@ -65,10 +66,14 @@ class StreamWrapper:
                 model=self.model,
                 prompt=self.prompt,
                 completion="",
-                tokens_prompt=0,
-                tokens_completion=0,
-                tokens_total=0,
+                tokens_prompt=self.tokens_prompt,
+                tokens_completion=self.tokens_completion,
+                tokens_total=self.tokens_total,
+                init_timestamp=self.init_timestamp,
+                params=self.kwargs
             )
+            if self.session is not None:
+                self.session.add_event(self.event)
 
         # Store the stream response
         self.stream = self.response
