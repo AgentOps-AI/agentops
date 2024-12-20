@@ -113,8 +113,8 @@ class TaskWeaverEventHandler(SessionEventHandlerBase):
                         },
                     )
                 )
-
-            self._attachment_buffer[attachment_id]["content"] += msg
+            
+            self._attachment_buffer[attachment_id]["content"] += str(msg)
 
             if is_end:
                 buffer = self._attachment_buffer[attachment_id]
