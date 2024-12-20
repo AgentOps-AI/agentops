@@ -162,11 +162,7 @@ class StreamWrapper:
                     self._accumulate_event(text)
                     yield text
         elif hasattr(self.response, "text_stream"):
-            async for chunk in self.response.text_stream:
-                if hasattr(chunk, "delta"):
-                    text = chunk.delta.text or ""
-                else:
-                    text = chunk.text or ""
+            async for text in self.response.text_stream:
                 if text:  # Only accumulate non-empty text
                     self._accumulate_event(text)
                     yield text
@@ -202,9 +198,10 @@ class AnthropicProvider(InstrumentedProvider):
 
     async def create_stream_async(self, **kwargs):
         """Create an async streaming context."""
+        init_timestamp = get_ISO_time()
         kwargs["stream"] = True
-        response = await self.async_client.messages.create(**kwargs)
-        return StreamWrapper(response, self, kwargs, get_ISO_time(), self.session)
+        response = await self.async_client.messages.create(**kwargs)  # Need to await here for async client
+        return StreamWrapper(response, self, kwargs, init_timestamp, self.session)
 
     def __call__(self, messages, model="claude-3-sonnet-20240229", stream=False, **kwargs):
         """Call the Anthropic provider with messages."""
