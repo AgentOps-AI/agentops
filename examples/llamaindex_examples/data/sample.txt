@@ -1,0 +1,22 @@
+# AgentOps LlamaIndex Integration Example
+
+This document demonstrates the integration between AgentOps and LlamaIndex for monitoring and observability of LLM applications.
+
+## Key Features
+1. Document Loading: LlamaIndex can efficiently load and process various document formats
+2. Vector Indexing: Documents are indexed for quick retrieval and semantic search
+3. Query Processing: Natural language queries are processed against the indexed documents
+4. Observability: AgentOps provides comprehensive monitoring of all LLM operations
+
+## Benefits
+- Real-time monitoring of LLM interactions
+- Cost tracking and optimization
+- Performance metrics and analytics
+- Error detection and debugging
+- Session replay capabilities
+
+## Use Cases
+- Document question-answering systems
+- Knowledge base search and retrieval
+- Content summarization and analysis
+- Information extraction pipelines
