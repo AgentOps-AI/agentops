@@ -17,6 +17,7 @@ class TaskWeaverProvider(InstrumentedProvider):
     def __init__(self, client):
         super().__init__(client)
         self._provider_name = "TaskWeaver"
+        self.client.add_default_tags(["taskweaver"])
 
     def handle_response(self, response, kwargs, init_timestamp, session: Optional[Session] = None) -> dict:
         """Handle responses for TaskWeaver"""
