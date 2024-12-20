@@ -70,11 +70,10 @@ async def generate_message(provider, personality, health):
         async with provider.create_stream_async(
             max_tokens=1024,
             model="claude-3-sonnet-20240229",
-            messages=[{"role": "user", "content": prompt}],
-            stream=True
+            messages=[{"role": "user", "content": prompt}]
         ) as stream:
             message = ""
-            async for text in stream.text_stream:
+            async for text in stream:
                 print(text, end="", flush=True)
                 message += text
             print()  # Add newline after message
@@ -94,9 +93,8 @@ async def main():
     session = ao_client.start_session()
 
     try:
-        # Initialize Anthropic client and provider
-        anthropic_client = anthropic.Client(api_key=os.getenv("ANTHROPIC_API_KEY"))
-        provider = AnthropicProvider(client=anthropic_client, session=session)
+        # Initialize Anthropic provider
+        provider = AnthropicProvider(session=session)
 
         # Define Titan personality and health status
         personality = "Ronin is a swift and aggressive melee specialist who thrives on close-quarters hit-and-run tactics. He talks like a Samurai might."
@@ -115,7 +113,7 @@ async def main():
 
     except Exception as e:
         print(f"Error in Titan Support Protocol: {e}")
-        session.end_session(end_state=EndState.ERROR)
+        session.end_session(end_state=EndState.FAIL)
 
 
 if __name__ == "__main__":

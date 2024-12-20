@@ -70,9 +70,8 @@ def generate_story():
     session = ao_client.start_session()
 
     try:
-        # Initialize Anthropic client and provider
-        anthropic_client = anthropic.Client(api_key=os.getenv("ANTHROPIC_API_KEY"))
-        provider = AnthropicProvider(client=anthropic_client, session=session)
+        # Initialize Anthropic provider
+        provider = AnthropicProvider(session=session)
 
         # Generate a random prompt
         prompt = f"A {random.choice(first)} {random.choice(second)} {random.choice(third)}."
@@ -89,10 +88,9 @@ def generate_story():
                     "content": "Create a story based on the following prompt. Make it dark and atmospheric, similar to NieR:Automata's style.",
                 },
                 {"role": "assistant", "content": prompt},
-            ],
-            stream=True
+            ]
         ) as stream:
-            for text in stream.text_stream:
+            for text in stream:
                 print(text, end="", flush=True)
             print("\nStory generation complete!")
 
@@ -100,7 +98,7 @@ def generate_story():
         session.end_session(end_state=EndState.SUCCESS)
     except Exception as e:
         print(f"Error generating story: {e}")
-        session.end_session(end_state=EndState.ERROR)
+        session.end_session(end_state=EndState.FAIL)
 
 if __name__ == "__main__":
     generate_story()

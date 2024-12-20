@@ -212,9 +212,14 @@ class StreamWrapper:
 
     async def __stream_text__(self):
         """Stream text content from the response."""
-        async with self.response as stream:
-            async for chunk in stream:
-                if hasattr(chunk, "type"):
+        try:
+            async for chunk in self.response:
+                if hasattr(chunk, "delta") and hasattr(chunk.delta, "text"):
+                    text = chunk.delta.text
+                    if text:
+                        self._accumulate_event(text)
+                        yield text
+                elif hasattr(chunk, "type"):
                     if chunk.type == "content_block_delta":
                         text = chunk.delta.text if hasattr(chunk.delta, "text") else ""
                     elif chunk.type == "message_delta":
@@ -223,12 +228,12 @@ class StreamWrapper:
                             self._final_message_snapshot = chunk.message
                     else:
                         text = ""
-                else:
-                    text = chunk.text if hasattr(chunk, "text") else ""
-
-                if text:  # Only accumulate non-empty text
-                    self.completion += text
-                    yield text
+                    if text:
+                        self._accumulate_event(text)
+                        yield text
+        except Exception as e:
+            print(f"Error in stream: {e}")
+            raise
 
     async def __aiter__(self):
         """Return self as an async iterator."""
@@ -250,9 +255,12 @@ class AnthropicProvider(InstrumentedProvider):
         super().__init__(client)
         self._provider_name = "Anthropic"
         # Initialize sync client
-        self.client = client or Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY"))
+        if client is None:
+            self.client = Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY"))
+        else:
+            self.client = client
         # Ensure async client uses the same API key
-        api_key = self.client.api_key or os.getenv("ANTHROPIC_API_KEY")
+        api_key = getattr(self.client, 'api_key', None) or os.getenv("ANTHROPIC_API_KEY")
         self.async_client = async_client if async_client is not None else AsyncAnthropic(api_key=api_key)
         # Get session from either client, prioritizing the sync client
         self.session = getattr(client, 'session', None) or getattr(async_client, 'session', None)
@@ -261,14 +269,18 @@ class AnthropicProvider(InstrumentedProvider):
     def create_stream(self, **kwargs):
         """Create a streaming context manager for Anthropic messages."""
         init_timestamp = get_ISO_time()
+        # Ensure stream=True is set
+        kwargs['stream'] = True
+        # Use messages API
         response = self.client.messages.create(**kwargs)
         return StreamWrapper(response, self, kwargs, init_timestamp, self.session)
 
     async def create_stream_async(self, **kwargs):
-        """Create an async streaming context."""
+        """Create an async streaming context manager for Anthropic messages."""
         init_timestamp = get_ISO_time()
-        kwargs["stream"] = True  # Ensure streaming is enabled
-        response = self.async_client.messages.create(**kwargs)
+        # Ensure stream=True is set
+        kwargs['stream'] = True
+        response = await self.async_client.messages.create(**kwargs)
         return StreamWrapper(response, self, kwargs, init_timestamp, self.session)
 
     def __call__(self, messages, model="claude-3-sonnet-20240229", stream=False, **kwargs):
