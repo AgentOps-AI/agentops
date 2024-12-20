@@ -68,8 +68,7 @@ async def generate_message(provider, personality, health_status):
     stream = await provider.create_stream_async(
         max_tokens=1024,
         model="claude-3-sonnet-20240229",
-        messages=messages,
-        stream=True,
+        messages=messages
     )
     async with stream:
         async for text in stream.text_stream:

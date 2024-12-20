@@ -187,7 +187,7 @@ class AnthropicProvider(InstrumentedProvider):
     async def create_stream_async(self, **kwargs):
         """Create an async streaming context."""
         init_timestamp = get_ISO_time()
-        kwargs["stream"] = True
+        kwargs.pop("stream", None)  # Remove stream parameter if present
         response = self.async_client.messages.stream(**kwargs)  # Use stream() for async streaming
         return StreamWrapper(response, self, kwargs, init_timestamp, self.session)
 
