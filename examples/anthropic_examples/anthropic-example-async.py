@@ -17,6 +17,7 @@ from dotenv import load_dotenv
 import anthropic
 from agentops import Client
 from agentops.llms.providers.anthropic import AnthropicProvider
+from agentops.session import EndState
 
 # Setup environment and API keys
 load_dotenv()
@@ -65,13 +66,11 @@ async def generate_message(provider, personality, health):
     Generate a short status report (2-3 sentences) that reflects both your personality and current health status.
     Keep the tone consistent with a military combat AI but influenced by your unique personality."""
 
-    messages = [{"role": "user", "content": prompt}]
-
     try:
         async with provider.create_stream_async(
             max_tokens=1024,
             model="claude-3-sonnet-20240229",
-            messages=messages,
+            messages=[{"role": "user", "content": prompt}],
             stream=True
         ) as stream:
             message = ""
@@ -96,8 +95,8 @@ async def main():
 
     try:
         # Initialize Anthropic client and provider
-        client = anthropic.Client(api_key=os.getenv("ANTHROPIC_API_KEY"))
-        provider = AnthropicProvider(client=client, session=session)
+        anthropic_client = anthropic.Client(api_key=os.getenv("ANTHROPIC_API_KEY"))
+        provider = AnthropicProvider(client=anthropic_client, session=session)
 
         # Define Titan personality and health status
         personality = "Ronin is a swift and aggressive melee specialist who thrives on close-quarters hit-and-run tactics. He talks like a Samurai might."
@@ -107,16 +106,16 @@ async def main():
         print(f"Health Status: {health}")
         print("\nCombat log incoming from encrypted area")
 
-        # Generate message and UUIDs concurrently
+        # Generate Titan status message
         message = await generate_message(provider, personality, health)
         print(f"\nTitan Status Report: {message}")
 
         # End session with success status
-        ao_client.end_session(end_state="success")
+        session.end_session(end_state=EndState.SUCCESS)
 
     except Exception as e:
         print(f"Error in Titan Support Protocol: {e}")
-        ao_client.end_session(end_state="error")
+        session.end_session(end_state=EndState.ERROR)
 
 
 if __name__ == "__main__":

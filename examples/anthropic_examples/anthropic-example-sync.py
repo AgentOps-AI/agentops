@@ -12,6 +12,7 @@ import anthropic
 from dotenv import load_dotenv
 from agentops import Client
 from agentops.llms.providers.anthropic import AnthropicProvider
+from agentops.session import EndState
 
 # Load environment variables
 load_dotenv()
@@ -70,27 +71,25 @@ def generate_story():
 
     try:
         # Initialize Anthropic client and provider
-        client = anthropic.Client(api_key=os.getenv("ANTHROPIC_API_KEY"))
-        provider = AnthropicProvider(client=client, session=session)
+        anthropic_client = anthropic.Client(api_key=os.getenv("ANTHROPIC_API_KEY"))
+        provider = AnthropicProvider(client=anthropic_client, session=session)
 
         # Generate a random prompt
         prompt = f"A {random.choice(first)} {random.choice(second)} {random.choice(third)}."
         print(f"Generated prompt: {prompt}\n")
         print("Generating story...\n")
 
-        messages = [
-            {
-                "role": "user",
-                "content": "Create a story based on the following prompt. Make it dark and atmospheric, similar to NieR:Automata's style.",
-            },
-            {"role": "assistant", "content": prompt},
-        ]
-
-        # Stream the story generation
+        # Create message with provider's streaming
         with provider.create_stream(
             max_tokens=2048,
             model="claude-3-sonnet-20240229",
-            messages=messages,
+            messages=[
+                {
+                    "role": "user",
+                    "content": "Create a story based on the following prompt. Make it dark and atmospheric, similar to NieR:Automata's style.",
+                },
+                {"role": "assistant", "content": prompt},
+            ],
             stream=True
         ) as stream:
             for text in stream.text_stream:
@@ -98,10 +97,10 @@ def generate_story():
             print("\nStory generation complete!")
 
         # End session with success status
-        ao_client.end_session(end_state="success")
+        session.end_session(end_state=EndState.SUCCESS)
     except Exception as e:
         print(f"Error generating story: {e}")
-        ao_client.end_session(end_state="error")
+        session.end_session(end_state=EndState.ERROR)
 
 if __name__ == "__main__":
     generate_story()
