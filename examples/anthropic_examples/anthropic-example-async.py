@@ -94,7 +94,7 @@ async def main():
     print("Health Status:", Health)
     print("\nCombat log incoming from encrypted area")
 
-    provider = AnthropicProvider()
+    provider = AnthropicProvider(client=ao_client)
     # Run both functions concurrently and properly unpack results
     titan_message, uuids = await asyncio.gather(
         generate_message(provider, Personality, Health),

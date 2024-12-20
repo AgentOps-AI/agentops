@@ -81,13 +81,21 @@ class StreamWrapper:
 
     def _accumulate_event(self, text):
         """Accumulate text in the event."""
-        if not hasattr(self.llm_event, "completion"):
-            self.llm_event.completion = {"content": ""}
-        self.llm_event.completion["content"] += text
+        if isinstance(self.llm_event, dict):
+            if "completion" not in self.llm_event:
+                self.llm_event["completion"] = {"content": ""}
+            self.llm_event["completion"]["content"] += text
+        else:
+            if not hasattr(self.llm_event, "completion"):
+                self.llm_event.completion = {"content": ""}
+            self.llm_event.completion["content"] += text
 
     def _get_final_text(self):
         """Get the final accumulated text."""
-        return self.llm_event.completion["content"] if hasattr(self.llm_event, "completion") else ""
+        if isinstance(self.llm_event, dict):
+            return self.llm_event["completion"]["content"] if "completion" in self.llm_event else ""
+        else:
+            return self.llm_event.completion["content"] if hasattr(self.llm_event, "completion") else ""
 
     def __iter__(self):
         """Iterate over the stream chunks."""
