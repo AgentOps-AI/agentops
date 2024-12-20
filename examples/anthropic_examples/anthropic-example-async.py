@@ -16,18 +16,15 @@ import os
 import random
 import uuid
 from dotenv import load_dotenv
-
+import agentops
+from anthropic import Anthropic
 from agentops import Client
 from agentops.llms.providers.anthropic import AnthropicProvider
 
 # Setup environment and API keys
 load_dotenv()
-ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY") or "<your_anthropic_key>"
-AGENTOPS_API_KEY = os.getenv("AGENTOPS_API_KEY") or "<your_agentops_key>"
-# Initialize AgentOps client
-ao_client = Client()
-ao_client.configure(api_key=AGENTOPS_API_KEY, default_tags=["anthropic-async"])
-# PLACEHOLDER: Titan personality and health status presets
+anthropic_client = Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY"))
+ao_client = Client(api_key=os.getenv("AGENTOPS_API_KEY"), default_tags=["anthropic-async"])
 
 """
 Titan Personalities:
@@ -94,7 +91,7 @@ async def main():
     print("Health Status:", Health)
     print("\nCombat log incoming from encrypted area")
 
-    provider = AnthropicProvider(client=ao_client)
+    provider = AnthropicProvider(client=ao_client, async_client=anthropic_client)
     # Run both functions concurrently and properly unpack results
     titan_message, uuids = await asyncio.gather(
         generate_message(provider, Personality, Health),
