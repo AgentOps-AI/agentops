@@ -56,28 +56,27 @@ class StreamWrapper:
         self.provider._safe_record(self.session, self.llm_event)
 
     async def __aenter__(self):
-        """Enter the async context manager."""
-        if asyncio.iscoroutine(self.response):
-            self.response = await self.response
-        if not self.llm_event:
-            self.llm_event = {
-                "type": "llm",
-                "provider": "anthropic",
-                "model": self.kwargs.get("model", "claude-3-sonnet-20240229"),
-                "messages": self.kwargs.get("messages", []),
-                "completion": {"content": ""},
-                "start_timestamp": self.init_timestamp,
-                "end_timestamp": None,
-            }
+        """Enter async context."""
+        self._final_message_snapshot = None
+        self._accumulated_text = ""
+        self._accumulated_events = []
+        self._init_event = {
+            "type": "llm",
+            "provider": self.provider.name,
+            "model": self.kwargs.get("model", ""),
+            "prompt": self.kwargs.get("messages", []),
+            "completion": "",
+            "timestamp": self.init_timestamp,
+        }
+        self.session.add_event(self._init_event)
         return self
 
     async def __aexit__(self, exc_type, exc_val, exc_tb):
-        """Exit the async context manager."""
+        """Exit async context."""
         if self._final_message_snapshot:
-            self.llm_event["completion"]["content"] = self._get_final_text()
-        self.llm_event["end_timestamp"] = get_ISO_time()
-        self.provider._safe_record(self.session, self.llm_event)
-        return None
+            self._init_event["completion"] = self._get_final_text()
+            self.session.update_event(self._init_event)
+        return False
 
     def _accumulate_event(self, text):
         """Accumulate text in the event."""
@@ -141,28 +140,17 @@ class StreamWrapper:
 
     async def __stream_text__(self):
         """Stream text content from the response."""
-        if isinstance(self.response, AsyncStream):
-            async for chunk in self.response:
-                if hasattr(chunk, "type"):
-                    if chunk.type == "message_start":
-                        continue
-                    elif chunk.type == "content_block_start":
-                        continue
-                    elif chunk.type == "content_block_delta":
-                        text = chunk.delta.text if hasattr(chunk.delta, "text") else ""
-                    elif chunk.type == "message_delta":
-                        text = chunk.delta.text if hasattr(chunk.delta, "text") else ""
-                        if hasattr(chunk, "message"):
-                            self._final_message_snapshot = chunk.message
-                    else:
-                        text = ""
+        async with self.response as stream:
+            async for chunk in stream:
+                if chunk.type == "content_block_delta":
+                    text = chunk.delta.text if hasattr(chunk.delta, "text") else ""
+                elif chunk.type == "message_delta":
+                    text = chunk.delta.text if hasattr(chunk.delta, "text") else ""
+                    if hasattr(chunk, "message"):
+                        self._final_message_snapshot = chunk.message
                 else:
-                    text = chunk.text if hasattr(chunk, "text") else ""
-                if text:  # Only accumulate non-empty text
-                    self._accumulate_event(text)
-                    yield text
-        elif hasattr(self.response, "text_stream"):
-            async for text in self.response.text_stream:
+                    text = ""
+
                 if text:  # Only accumulate non-empty text
                     self._accumulate_event(text)
                     yield text
@@ -200,7 +188,7 @@ class AnthropicProvider(InstrumentedProvider):
         """Create an async streaming context."""
         init_timestamp = get_ISO_time()
         kwargs["stream"] = True
-        response = await self.async_client.messages.create(**kwargs)  # Need to await here for async client
+        response = self.async_client.messages.stream(**kwargs)  # Use stream() for async streaming
         return StreamWrapper(response, self, kwargs, init_timestamp, self.session)
 
     def __call__(self, messages, model="claude-3-sonnet-20240229", stream=False, **kwargs):
