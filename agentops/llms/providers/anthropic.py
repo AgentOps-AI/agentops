@@ -1,4 +1,5 @@
 import asyncio
+import os
 from typing import Any, AsyncIterator, Dict, Iterator, Optional, Union
 
 from anthropic import Anthropic, AsyncAnthropic, AsyncStream, Stream
@@ -41,50 +42,52 @@ class StreamWrapper:
         elif hasattr(response, "stream"):
             self._text_stream = response.stream
 
-        # Initialize event if session exists
+        # Initialize message snapshot for context exit
+        self._final_message_snapshot = None
+        self._current_message = None
+
+        # Initialize event
+        self._init_event()
+
+    def _init_event(self):
+        """Initialize LLM event."""
+        self.event = LLMEvent(
+            init_timestamp=self.init_timestamp,
+            params=self.kwargs,
+            model=self.model,
+            prompt=self.prompt,
+            completion="",
+            prompt_tokens=self.tokens_prompt,
+            completion_tokens=self.tokens_completion,
+            cost=None
+        )
         if self.session is not None:
-            self._init_event()
+            self.event.session_id = self.session.session_id
+            self.session.add_event(self.event)
 
     def __enter__(self):
-        """Enter the context manager."""
-        self.llm_event = LLMEvent(init_timestamp=self.init_timestamp, params=self.kwargs)
-        if self.session is not None:
-            self.llm_event.session_id = self.session.session_id
-        self.llm_event.agent_id = check_call_stack_for_agent_id()
-        self.llm_event.model = self.kwargs["model"]
-        self.llm_event.prompt = self.kwargs["messages"]
-        self.llm_event.completion = {
-            "role": "assistant",
-            "content": "",
-        }
+        """Enter context manager."""
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):
-        """Exit the context manager."""
+        """Exit context manager."""
         if self._final_message_snapshot:
-            # Use accumulated message state for final content
-            self.llm_event.completion["content"] = self._get_final_text()
-        self.llm_event.end_timestamp = get_ISO_time()
-        self.provider._safe_record(self.session, self.llm_event)
+            self.completion = self._final_message_snapshot.get("content", "")
+            if self.session is not None:
+                self.event.completion = {
+                    "role": "assistant",
+                    "content": self.completion
+                }
+                self.event.completion_tokens = self.tokens_completion
+                self.event.end_timestamp = get_ISO_time()
+                self.session.update_event(self.event)
+        self.response.close()
 
     async def __aenter__(self):
         """Enter async context."""
-        # Initialize event if not already done
-        if not hasattr(self, "event"):
-            self.event = LLMEvent(
-                provider=self.provider_name,
-                session=self.session,
-                model=self.model,
-                prompt=self.prompt,
-                completion="",
-                tokens_prompt=self.tokens_prompt,
-                tokens_completion=self.tokens_completion,
-                tokens_total=self.tokens_total,
-                init_timestamp=self.init_timestamp,
-                params=self.kwargs
-            )
-            if self.session is not None:
-                self.session.add_event(self.event)
+        # If response is a coroutine, await it first
+        if asyncio.iscoroutine(self.response):
+            self.response = await self.response
 
         # Store the stream response
         self.stream = self.response
@@ -98,21 +101,31 @@ class StreamWrapper:
         if hasattr(self.stream, "__aexit__"):
             await self.stream.__aexit__(exc_type, exc_val, exc_tb)
 
-        if self._final_message_snapshot and self.session is not None:
-            self._init_event.completion = self._get_final_text()
-            self.session.update_event(self._init_event)
-        return False
+        if self._final_message_snapshot:
+            self.completion = self._final_message_snapshot.get("content", "")
+            if self.session is not None:
+                self.event.completion = {
+                    "role": "assistant",
+                    "content": self.completion
+                }
+                self.event.completion_tokens = self.tokens_completion
+                self.event.end_timestamp = get_ISO_time()
+                self.session.update_event(self.event)
+
+        # Close the response if it has aclose method
+        if hasattr(self.response, "aclose"):
+            await self.response.aclose()
+        elif hasattr(self.response, "close"):
+            self.response.close()
 
     def _accumulate_event(self, text):
         """Accumulate text in the event."""
-        if isinstance(self.llm_event, dict):
-            if "completion" not in self.llm_event:
-                self.llm_event["completion"] = {"content": ""}
-            self.llm_event["completion"]["content"] += text
-        else:
-            if not hasattr(self.llm_event, "completion"):
-                self.llm_event.completion = {"content": ""}
-            self.llm_event.completion["content"] += text
+        if not hasattr(self, 'event'):
+            self._init_event()
+        if not hasattr(self.event, "completion"):
+            self.event.completion = {"role": "assistant", "content": ""}
+        self.event.completion["content"] += text
+        self.completion += text
 
     def _get_final_text(self):
         """Get the final accumulated text."""
@@ -122,27 +135,34 @@ class StreamWrapper:
             return self.llm_event.completion["content"] if hasattr(self.llm_event, "completion") else ""
 
     def __iter__(self):
-        """Iterate over the stream chunks."""
-        if isinstance(self.response, (Stream, AsyncStream)):
+        """Iterate over the response."""
+        # Initialize event if not already done
+        if not hasattr(self, 'event'):
+            self._init_event()
+            if self.session is not None:
+                self.session.add_event(self.event)
+
+        try:
             for chunk in self.response:
-                if hasattr(chunk, "type"):
-                    if chunk.type == "message_start":
-                        continue
-                    elif chunk.type == "content_block_start":
-                        continue
-                    elif chunk.type == "content_block_delta":
-                        text = chunk.delta.text if hasattr(chunk.delta, "text") else ""
-                    elif chunk.type == "message_delta":
-                        text = chunk.delta.text if hasattr(chunk.delta, "text") else ""
-                        if hasattr(chunk, "message"):
-                            self._final_message_snapshot = chunk.message
+                if hasattr(chunk, "delta") and hasattr(chunk.delta, "text"):
+                    text = chunk.delta.text
+                    if text:
+                        self._accumulate_event(text)
+                        yield text
+                elif hasattr(chunk, "message") and hasattr(chunk.message, "content"):
+                    content = chunk.message.content
+                    if isinstance(content, list) and content:
+                        text = content[0].text if hasattr(content[0], "text") else ""
                     else:
-                        text = ""
-                else:
-                    text = chunk.text if hasattr(chunk, "text") else ""
-                if text:  # Only accumulate non-empty text
-                    self._accumulate_event(text)
-                    yield text
+                        text = content
+                    if text:
+                        self._accumulate_event(text)
+                        yield text
+                    # Store final message snapshot for completion
+                    self._final_message_snapshot = chunk.message
+        except Exception as e:
+            print(f"Error in stream: {e}")
+            raise
 
     @property
     def text_stream(self):
@@ -167,17 +187,20 @@ class StreamWrapper:
         """Stream text content from the response."""
         async with self.response as stream:
             async for chunk in stream:
-                if chunk.type == "content_block_delta":
-                    text = chunk.delta.text if hasattr(chunk.delta, "text") else ""
-                elif chunk.type == "message_delta":
-                    text = chunk.delta.text if hasattr(chunk.delta, "text") else ""
-                    if hasattr(chunk, "message"):
-                        self._final_message_snapshot = chunk.message
+                if hasattr(chunk, "type"):
+                    if chunk.type == "content_block_delta":
+                        text = chunk.delta.text if hasattr(chunk.delta, "text") else ""
+                    elif chunk.type == "message_delta":
+                        text = chunk.delta.text if hasattr(chunk.delta, "text") else ""
+                        if hasattr(chunk, "message"):
+                            self._final_message_snapshot = chunk.message
+                    else:
+                        text = ""
                 else:
-                    text = ""
+                    text = chunk.text if hasattr(chunk, "text") else ""
 
                 if text:  # Only accumulate non-empty text
-                    self._accumulate_event(text)
+                    self.completion += text
                     yield text
 
     async def __aiter__(self):
@@ -200,9 +223,10 @@ class AnthropicProvider(InstrumentedProvider):
         super().__init__(client)
         self._provider_name = "Anthropic"
         # Initialize sync client
-        self.client = client or Anthropic()
-        # Ensure async client uses the same API key as sync client
-        self.async_client = async_client if async_client is not None else AsyncAnthropic(api_key=self.client.api_key)
+        self.client = client or Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY"))
+        # Ensure async client uses the same API key
+        api_key = self.client.api_key or os.getenv("ANTHROPIC_API_KEY")
+        self.async_client = async_client if async_client is not None else AsyncAnthropic(api_key=api_key)
         # Get session from either client, prioritizing the sync client
         self.session = getattr(client, 'session', None) or getattr(async_client, 'session', None)
         self.name = "anthropic"
