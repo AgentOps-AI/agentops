@@ -82,13 +82,14 @@ class StreamWrapper:
                 self.completion = self._final_message_snapshot.get("content", "")
 
             if self.session is not None:
-                self.event.completion = {
-                    "role": "assistant",
-                    "content": self.completion
-                }
+                # Update event with final completion and tokens
+                self.event.completion = self.completion
                 self.event.completion_tokens = self.tokens_completion
                 self.event.end_timestamp = get_ISO_time()
+                self.event.total_tokens = self.tokens_prompt + self.tokens_completion
+                # Update the session with the final event state
                 self.session.update_event(self.event)
+
         self.response.close()
 
     async def __aenter__(self):

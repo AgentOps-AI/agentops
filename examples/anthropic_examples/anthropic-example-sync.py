@@ -2,46 +2,19 @@
 # coding: utf-8
 
 """
-Anthropic Sync Example
-
-We are going to create a program called "Nier Storyteller". In short, it uses a message
-system similar to Nier Automata's to generate a one sentence summary before creating
-a short story.
-
-Example:
-{A foolish doll} {died in a world} {of ended dreams.} turns into "In a forgotten land
-where sunlight barely touched the ground, a little doll wandered through the remains
-of shattered dreams. Its porcelain face, cracked and wea..."
+Anthropic Sync Example - Story Generator
+This example demonstrates sync streaming with the Anthropic API using AgentOps.
 """
 
-# First, we start by importing Agentops and Anthropic
-from anthropic import Anthropic
-import agentops
-from dotenv import load_dotenv
 import os
 import random
+import anthropic
+from dotenv import load_dotenv
+from agentops import Client
+from agentops.llms.providers.anthropic import AnthropicProvider
 
-# Setup environment and API keys
+# Load environment variables
 load_dotenv()
-ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY") or "ANTHROPIC KEY HERE"
-AGENTOPS_API_KEY = os.getenv("AGENTOPS_API_KEY") or "AGENTOPS KEY HERE"
-
-# Initialize Anthropic client and AgentOps session
-client = Anthropic(api_key=ANTHROPIC_API_KEY)
-agentops.init(AGENTOPS_API_KEY, default_tags=["anthropic-example"])
-
-"""
-As of writing, claude-3-5-sonnet-20240620 has a 150k word, 680k character length with
-an 8192 context length. This allows us to set an example for the script.
-
-We have three roles:
-- user (the person speaking)
-- assistant (the AI itself)
-- computer (the way the LLM gets references from)
-"""
-
-# Set default story as a script
-defaultstory = """In a forgotten land where sunlight barely touched the ground, a little doll wandered through the remains of shattered dreams. Its porcelain face, cracked and weathered, reflected the emptiness that hung in the air like a lingering fog. The doll's painted eyes, now chipped and dull, stared into the distance, searching for something—anything—that still held life. It had once belonged to a child who dreamt of endless adventures, of castles in the clouds and whispered secrets under starry skies. But those dreams had long since crumbled to dust, leaving behind nothing but a hollow world where even hope dared not tread. The doll, a relic of a life that had faded, trudged through the darkness, its tiny feet stumbling over broken wishes and forgotten stories. Each step took more effort than the last, as if the world itself pulled at the doll's limbs, weary and bitter. It reached a place where the ground fell away into an abyss of despair, the edge crumbling under its weight. The doll paused, teetering on the brink. It reached out, as though to catch a fading dream, but there was nothing left to hold onto. With a faint crack, its brittle body gave way, and the doll tumbled silently into the void. And so, in a world where dreams had died, the foolish little doll met its end. There were no tears, no mourning. Only the soft, empty echo of its fall, fading into the darkness, as the land of ended dreams swallowed the last trace of what once was."""
 
 # Define sentence fragment lists for story generation
 first = [
@@ -88,43 +61,47 @@ third = [
     "in a blood-soaked battlefield",
 ]
 
-# Generate a random sentence
-generatedsentence = f"{random.choice(first)} {random.choice(second)} {random.choice(third)}."
-
-
-# Create a story using the context handler pattern for streaming
 def generate_story():
     """Generate a story using the Anthropic API with streaming."""
-    print("Generated prompt:", generatedsentence)
-    print("\nGenerating story...\n")
+    # Initialize AgentOps client and start session
+    ao_client = Client()
+    ao_client.start_session()
 
-    with client.messages.create(
-        max_tokens=2400,
-        model="claude-3-sonnet-20240229",
-        messages=[
+    try:
+        # Initialize Anthropic client and provider
+        client = anthropic.Client(api_key=os.getenv("ANTHROPIC_API_KEY"))
+        provider = AnthropicProvider(client=client, session=ao_client.session)
+
+        # Generate a random prompt
+        prompt = f"A {random.choice(first)} {random.choice(second)} {random.choice(third)}."
+        print(f"Generated prompt: {prompt}\n")
+        print("Generating story...\n")
+
+        messages = [
             {
                 "role": "user",
-                "content": "Create a story based on the three sentence fragments given to you, it has been combined into one below.",
+                "content": "Create a story based on the following prompt. Make it dark and atmospheric, similar to NieR:Automata's style.",
             },
-            {
-                "role": "assistant",
-                "content": "{A foolish doll} {died in a world} {of ended dreams.}",
-            },
-            {"role": "assistant", "content": defaultstory},
-            {
-                "role": "user",
-                "content": "Create a story based on the three sentence fragments given to you, it has been combined into one below.",
-            },
-            {"role": "assistant", "content": generatedsentence},
-        ],
-        stream=True,
-    ) as stream:
-        for text in stream.text_stream:
-            print(text, end="", flush=True)
+            {"role": "assistant", "content": prompt},
+        ]
 
+        # Stream the story generation
+        with provider.create_stream(
+            max_tokens=2048,
+            model="claude-3-sonnet-20240229",
+            messages=messages,
+            stream=True
+        ) as stream:
+            for text in stream.text_stream:
+                print(text, end="", flush=True)
+            print("\nStory generation complete!")
+
+        # End session with success status
+        ao_client.end_session(status="success")
+    except Exception as e:
+        print(f"Error generating story: {e}")
+        ao_client.end_session(status="error")
 
 if __name__ == "__main__":
     generate_story()
-    print("\n\nStory generation complete!")
-    agentops.end_session("Success")
 

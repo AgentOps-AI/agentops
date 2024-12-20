@@ -89,8 +89,9 @@ async def main():
     """Main function to run the Titan Support Protocol."""
     print("Initializing Titan Support Protocol...\n")
 
-    # Initialize AgentOps client
+    # Initialize AgentOps client and start session
     ao_client = Client()
+    ao_client.start_session()
 
     # Initialize Anthropic client and provider
     client = anthropic.Client(api_key=os.getenv("ANTHROPIC_API_KEY"))
