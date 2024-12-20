@@ -11,25 +11,21 @@ generating verification UUIDs.
 """
 
 # Import required libraries
-import asyncio
 import os
-import random
+import asyncio
 import uuid
+import random
 from dotenv import load_dotenv
 import agentops
-from anthropic import Anthropic, AsyncAnthropic
+from anthropic import Anthropic
 from agentops import Client
 from agentops.llms.providers.anthropic import AnthropicProvider
 
 # Setup environment and API keys
 load_dotenv()
-anthropic_api_key = os.getenv("ANTHROPIC_API_KEY")
-if not anthropic_api_key:
-    raise ValueError("ANTHROPIC_API_KEY environment variable is not set")
 
 # Initialize clients with explicit API key
-anthropic_client = Anthropic(api_key=anthropic_api_key)
-async_anthropic_client = AsyncAnthropic(api_key=anthropic_api_key)
+anthropic_client = Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY"))
 
 # Initialize AgentOps client
 ao_client = Client()
@@ -64,35 +60,32 @@ Personality = random.choice(TitanPersonality)
 Health = random.choice(TitanHealth)
 
 
-async def generate_message(personality, health_status):
-    """Generate a message based on personality and health status."""
-    # Create provider with explicit sync and async clients
-    provider = AnthropicProvider(
-        client=anthropic_client,
-        async_client=async_anthropic_client
-    )
+async def generate_message(provider, personality, health):
+    """Generate a Titan status message using the Anthropic API."""
+    prompt = f"""You are a Titan from Titanfall. Your personality is: {personality}
+    Your current health status is: {health}
 
-    prompt = f"""Given the following Titan personality and health status, generate a short combat log message (1-2 sentences):
-    Personality: {personality}
-    Health Status: {health_status}
-
-    The message should reflect both the personality and current health status."""
+    Generate a short status report (2-3 sentences) that reflects both your personality and current health status.
+    Keep the tone consistent with a military combat AI but influenced by your unique personality."""
 
     messages = [{"role": "user", "content": prompt}]
 
-    stream = await provider.create_stream_async(
-        messages=messages,
-        model="claude-3-opus-20240229",
-        max_tokens=1024,
-        stream=True
-    )
-
-    async with stream:
-        async for text in stream.text_stream:
-            print(text, end="", flush=True)
-        print()
-
-    return "Message generation complete"
+    try:
+        async with provider.create_stream_async(
+            max_tokens=1024,
+            model="claude-3-sonnet-20240229",
+            messages=messages,
+            stream=True
+        ) as stream:
+            message = ""
+            async for text in stream.text_stream:
+                print(text, end="", flush=True)
+                message += text
+            print()  # Add newline after message
+            return message
+    except Exception as e:
+        print(f"Error generating message: {e}")
+        return "Error: Unable to generate Titan status report."
 
 
 async def generate_uuids():

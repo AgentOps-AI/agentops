@@ -72,7 +72,15 @@ class StreamWrapper:
     def __exit__(self, exc_type, exc_val, exc_tb):
         """Exit context manager."""
         if self._final_message_snapshot:
-            self.completion = self._final_message_snapshot.get("content", "")
+            if hasattr(self._final_message_snapshot, "content"):
+                content = self._final_message_snapshot.content
+                if isinstance(content, list) and content:
+                    self.completion = content[0].text if hasattr(content[0], "text") else ""
+                else:
+                    self.completion = content
+            elif hasattr(self._final_message_snapshot, "get"):
+                self.completion = self._final_message_snapshot.get("content", "")
+
             if self.session is not None:
                 self.event.completion = {
                     "role": "assistant",
@@ -122,17 +130,35 @@ class StreamWrapper:
         """Accumulate text in the event."""
         if not hasattr(self, 'event'):
             self._init_event()
+
+        # Initialize completion if needed
         if not hasattr(self.event, "completion"):
             self.event.completion = {"role": "assistant", "content": ""}
-        self.event.completion["content"] += text
+        elif isinstance(self.event.completion, str):
+            # Convert string completion to dict format
+            self.event.completion = {"role": "assistant", "content": self.event.completion}
+
+        # Accumulate text
+        if isinstance(self.event.completion, dict):
+            if "content" not in self.event.completion:
+                self.event.completion["content"] = ""
+            self.event.completion["content"] += text
+        else:
+            # Fallback to direct string concatenation
+            self.event.completion += text
+
+        # Always accumulate in completion property
         self.completion += text
 
     def _get_final_text(self):
         """Get the final accumulated text."""
-        if isinstance(self.llm_event, dict):
-            return self.llm_event["completion"]["content"] if "completion" in self.llm_event else ""
-        else:
-            return self.llm_event.completion["content"] if hasattr(self.llm_event, "completion") else ""
+        if not hasattr(self, 'event'):
+            return ""
+        if not hasattr(self.event, 'completion'):
+            return ""
+        if isinstance(self.event.completion, dict):
+            return self.event.completion.get("content", "")
+        return str(self.event.completion)
 
     def __iter__(self):
         """Iterate over the response."""
