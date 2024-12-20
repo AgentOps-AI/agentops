@@ -11,22 +11,23 @@ generating verification UUIDs.
 """
 
 # Import required libraries
-from anthropic import Anthropic
-import agentops
-from dotenv import load_dotenv
+import asyncio
 import os
 import random
-import asyncio
 import uuid
+from dotenv import load_dotenv
+
+from agentops import Client
+from agentops.llms.providers.anthropic import AnthropicProvider
 
 # Setup environment and API keys
 load_dotenv()
 ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY") or "<your_anthropic_key>"
 AGENTOPS_API_KEY = os.getenv("AGENTOPS_API_KEY") or "<your_agentops_key>"
-
-# Initialize Anthropic client and AgentOps session
-client = Anthropic(api_key=ANTHROPIC_API_KEY)
-agentops.init(AGENTOPS_API_KEY, default_tags=["anthropic-async"])
+# Initialize AgentOps client
+ao_client = Client()
+ao_client.configure(api_key=AGENTOPS_API_KEY, default_tags=["anthropic-async"])
+# PLACEHOLDER: Titan personality and health status presets
 
 """
 Titan Personalities:
@@ -56,39 +57,28 @@ Personality = random.choice(TitanPersonality)
 Health = random.choice(TitanHealth)
 
 
-async def generate_message():
-    """Generate a Titan message using async context manager for streaming."""
+async def generate_message(provider, personality, health_status):
+    """Generate a message from the Titan based on personality and health status."""
+    messages = [
+        {
+            "role": "user",
+            "content": f"You are a Titan mech with this personality: {personality}. Your health status is: {health_status}. Generate a status report in your personality's voice. Keep it under 100 words.",
+        }
+    ]
+
     message = ""
-    async with client.messages.create(
+    stream = await provider.create_stream_async(
         max_tokens=1024,
         model="claude-3-sonnet-20240229",
-        messages=[
-            {
-                "role": "user",
-                "content": "You are a Titan; a mech from Titanfall 2. Based on your titan's personality and status, generate a message for your pilot. If Near Destruction, make an all caps death message such as AVENGE ME or UNTIL NEXT TIME.",
-            },
-            {
-                "role": "assistant",
-                "content": "Personality: Legion is a relentless and heavy-hitting Titan that embodies brute strength and defensive firepower. He speaks bluntly. Status: Considerable Damage",
-            },
-            {
-                "role": "assistant",
-                "content": "Heavy damage detected. Reinforcements would be appreciated, but I can still fight.",
-            },
-            {
-                "role": "user",
-                "content": "You are a Titan; a mech from Titanfall 2. Based on your titan's personality and status, generate a message for your pilot. If Near Destruction, make an all caps death message such as AVENGE ME or UNTIL NEXT TIME.",
-            },
-            {
-                "role": "assistant",
-                "content": f"Personality: {Personality}. Status: {Health}",
-            },
-        ],
+        messages=messages,
         stream=True,
-    ) as response:
-        async for text in response.text_stream:
+    )
+    async with stream:
+        async for text in stream.text_stream:
             message += text
             print(text, end="", flush=True)
+        print()
+
     return message
 
 
@@ -104,19 +94,24 @@ async def main():
     print("Health Status:", Health)
     print("\nCombat log incoming from encrypted area")
 
-    # Start both tasks concurrently
-    uuids, message = await asyncio.gather(generate_uuids(), generate_message())
+    provider = AnthropicProvider()
+    # Run both functions concurrently and properly unpack results
+    titan_message, uuids = await asyncio.gather(
+        generate_message(provider, Personality, Health),
+        generate_uuids(),
+    )
 
     print("\nVerification matrix activated:")
     for u in uuids:
         print(u)
 
-    print("\nTitan Message:", message)
+    print("\nTitan Message:")
+    print(titan_message)
 
 
 if __name__ == "__main__":
     # Run the main function using asyncio
     asyncio.run(main())
     # End the AgentOps session with success status
-    agentops.end_session("Success")
+    ao_client.end_session("Success")
 

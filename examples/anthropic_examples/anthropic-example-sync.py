@@ -20,7 +20,6 @@ import agentops
 from dotenv import load_dotenv
 import os
 import random
-import asyncio
 
 # Setup environment and API keys
 load_dotenv()
@@ -92,12 +91,14 @@ third = [
 # Generate a random sentence
 generatedsentence = f"{random.choice(first)} {random.choice(second)} {random.choice(third)}."
 
+
 # Create a story using the context handler pattern for streaming
-async def generate_story():
+def generate_story():
+    """Generate a story using the Anthropic API with streaming."""
     print("Generated prompt:", generatedsentence)
     print("\nGenerating story...\n")
 
-    async with client.messages.create(
+    with client.messages.create(
         max_tokens=2400,
         model="claude-3-sonnet-20240229",
         messages=[
@@ -117,13 +118,13 @@ async def generate_story():
             {"role": "assistant", "content": generatedsentence},
         ],
         stream=True,
-    ) as response:
-        for text in response:
-            if hasattr(text, "delta") and hasattr(text.delta, "text"):
-                print(text.delta.text, end="", flush=True)
+    ) as stream:
+        for text in stream.text_stream:
+            print(text, end="", flush=True)
+
 
 if __name__ == "__main__":
-    asyncio.run(generate_story())
+    generate_story()
     print("\n\nStory generation complete!")
     agentops.end_session("Success")
 
