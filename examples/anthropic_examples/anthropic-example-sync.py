@@ -63,14 +63,15 @@ third = [
 
 def generate_story():
     """Generate a story using the Anthropic API with streaming."""
-    # Initialize AgentOps client and start session
+    # Initialize AgentOps client
     ao_client = Client()
-    ao_client.start_session()
+    ao_client.initialize()
+    session = ao_client.start_session()
 
     try:
         # Initialize Anthropic client and provider
         client = anthropic.Client(api_key=os.getenv("ANTHROPIC_API_KEY"))
-        provider = AnthropicProvider(client=client, session=ao_client.session)
+        provider = AnthropicProvider(client=client, session=session)
 
         # Generate a random prompt
         prompt = f"A {random.choice(first)} {random.choice(second)} {random.choice(third)}."
@@ -97,10 +98,10 @@ def generate_story():
             print("\nStory generation complete!")
 
         # End session with success status
-        ao_client.end_session(status="success")
+        ao_client.end_session(end_state="success")
     except Exception as e:
         print(f"Error generating story: {e}")
-        ao_client.end_session(status="error")
+        ao_client.end_session(end_state="error")
 
 if __name__ == "__main__":
     generate_story()

@@ -89,28 +89,34 @@ async def main():
     """Main function to run the Titan Support Protocol."""
     print("Initializing Titan Support Protocol...\n")
 
-    # Initialize AgentOps client and start session
+    # Initialize AgentOps client
     ao_client = Client()
-    ao_client.start_session()
+    ao_client.initialize()
+    session = ao_client.start_session()
 
-    # Initialize Anthropic client and provider
-    client = anthropic.Client(api_key=os.getenv("ANTHROPIC_API_KEY"))
-    provider = AnthropicProvider(client=client, session=ao_client.session)
+    try:
+        # Initialize Anthropic client and provider
+        client = anthropic.Client(api_key=os.getenv("ANTHROPIC_API_KEY"))
+        provider = AnthropicProvider(client=client, session=session)
 
-    # Define Titan personality and health status
-    personality = "Ronin is a swift and aggressive melee specialist who thrives on close-quarters hit-and-run tactics. He talks like a Samurai might."
-    health = "Considerable Damage"
+        # Define Titan personality and health status
+        personality = "Ronin is a swift and aggressive melee specialist who thrives on close-quarters hit-and-run tactics. He talks like a Samurai might."
+        health = "Considerable Damage"
 
-    print(f"Personality: {personality}")
-    print(f"Health Status: {health}")
-    print("\nCombat log incoming from encrypted area")
+        print(f"Personality: {personality}")
+        print(f"Health Status: {health}")
+        print("\nCombat log incoming from encrypted area")
 
-    # Generate message and UUIDs concurrently
-    message = await generate_message(provider, personality, health)
-    print(f"\nTitan Status Report: {message}")
+        # Generate message and UUIDs concurrently
+        message = await generate_message(provider, personality, health)
+        print(f"\nTitan Status Report: {message}")
 
-    # End session with success status
-    ao_client.end_session(status="success")
+        # End session with success status
+        ao_client.end_session(end_state="success")
+
+    except Exception as e:
+        print(f"Error in Titan Support Protocol: {e}")
+        ao_client.end_session(end_state="error")
 
 
 if __name__ == "__main__":
