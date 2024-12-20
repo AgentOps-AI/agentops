@@ -23,9 +23,13 @@ from agentops.llms.providers.anthropic import AnthropicProvider
 
 # Setup environment and API keys
 load_dotenv()
-anthropic_client = Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY"))
+anthropic_api_key = os.getenv("ANTHROPIC_API_KEY")
+if not anthropic_api_key:
+    raise ValueError("ANTHROPIC_API_KEY environment variable is not set")
+anthropic_client = Anthropic(api_key=anthropic_api_key)
 ao_client = Client()
 ao_client.configure(api_key=os.getenv("AGENTOPS_API_KEY"), default_tags=["anthropic-async"])
+ao_client.initialize()
 
 """
 Titan Personalities:
@@ -55,28 +59,30 @@ Personality = random.choice(TitanPersonality)
 Health = random.choice(TitanHealth)
 
 
-async def generate_message(provider, personality, health_status):
-    """Generate a message from the Titan based on personality and health status."""
-    messages = [
-        {
-            "role": "user",
-            "content": f"You are a Titan mech with this personality: {personality}. Your health status is: {health_status}. Generate a status report in your personality's voice. Keep it under 100 words.",
-        }
-    ]
+async def generate_message(personality, health_status):
+    """Generate a message based on personality and health status."""
+    # Create provider with explicit API key
+    provider = AnthropicProvider(client=anthropic_client)
 
-    message = ""
+    prompt = f"""Given the following Titan personality and health status, generate a short combat log message (1-2 sentences):
+    Personality: {personality}
+    Health Status: {health_status}
+
+    The message should reflect both the personality and current health status."""
+
+    messages = [{"role": "user", "content": prompt}]
+
     stream = await provider.create_stream_async(
+        messages=messages,
+        model="claude-3-opus-20240229",
         max_tokens=1024,
-        model="claude-3-sonnet-20240229",
-        messages=messages
+        stream=True
     )
+
     async with stream:
         async for text in stream.text_stream:
-            message += text
             print(text, end="", flush=True)
         print()
-
-    return message
 
 
 async def generate_uuids():
@@ -87,23 +93,24 @@ async def generate_uuids():
 async def main():
     """Main function to run the Titan Support Protocol."""
     print("Initializing Titan Support Protocol...\n")
-    print("Personality:", Personality)
-    print("Health Status:", Health)
-    print("\nCombat log incoming from encrypted area")
 
-    provider = AnthropicProvider(client=ao_client, async_client=anthropic_client)
-    # Run both functions concurrently and properly unpack results
+    # Display selected personality and health status
+    print(f"Personality: {Personality}")
+    print(f"Health Status: {Health}\n")
+
+    print("Combat log incoming from encrypted area")
+
+    # Generate message and UUIDs concurrently
     titan_message, uuids = await asyncio.gather(
-        generate_message(provider, Personality, Health),
-        generate_uuids(),
+        generate_message(Personality, Health),
+        generate_uuids()
     )
 
-    print("\nVerification matrix activated:")
-    for u in uuids:
-        print(u)
-
-    print("\nTitan Message:")
-    print(titan_message)
+    # Print verification matrix
+    if uuids:
+        print("\nVerification Matrix:")
+        for uuid in uuids:
+            print(f"- {uuid}")
 
 
 if __name__ == "__main__":

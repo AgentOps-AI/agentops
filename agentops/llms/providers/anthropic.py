@@ -57,24 +57,31 @@ class StreamWrapper:
 
     async def __aenter__(self):
         """Enter async context."""
-        self._final_message_snapshot = None
-        self._accumulated_text = ""
-        self._accumulated_events = []
-        self._init_event = {
-            "type": "llm",
-            "provider": self.provider.name,
-            "model": self.kwargs.get("model", ""),
-            "prompt": self.kwargs.get("messages", []),
-            "completion": "",
-            "timestamp": self.init_timestamp,
-        }
-        self.session.add_event(self._init_event)
+        self.stream = self.response  # Store the response as stream
+        if hasattr(self.stream, "__aenter__"):
+            await self.stream.__aenter__()
+
+        # Initialize event if session exists
+        if self.session is not None:
+            self._init_event = LLMEvent(
+                init_timestamp=self.init_timestamp,
+                params=self.kwargs,
+                model=self.kwargs.get("model", ""),
+                prompt=self.kwargs.get("messages", []),
+                thread_id=None,  # Optional, can be set if needed
+                completion=""  # Will be updated in __aexit__
+            )
+            self.session.add_event(self._init_event)
+
         return self
 
     async def __aexit__(self, exc_type, exc_val, exc_tb):
         """Exit async context."""
-        if self._final_message_snapshot:
-            self._init_event["completion"] = self._get_final_text()
+        if hasattr(self.stream, "__aexit__"):
+            await self.stream.__aexit__(exc_type, exc_val, exc_tb)
+
+        if self._final_message_snapshot and self.session is not None:
+            self._init_event.completion = self._get_final_text()
             self.session.update_event(self._init_event)
         return False
 
@@ -174,8 +181,10 @@ class AnthropicProvider(InstrumentedProvider):
         """Initialize the Anthropic provider."""
         super().__init__(client)
         self._provider_name = "Anthropic"
+        # Initialize sync client
         self.client = client or Anthropic()
-        self.async_client = async_client or AsyncAnthropic(api_key=self.client.api_key)
+        # Ensure async client uses the same API key as sync client
+        self.async_client = async_client if async_client is not None else AsyncAnthropic(api_key=self.client.api_key)
         # Get session from either client, prioritizing the sync client
         self.session = getattr(client, 'session', None) or getattr(async_client, 'session', None)
         self.name = "anthropic"
