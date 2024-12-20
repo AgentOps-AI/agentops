@@ -13,11 +13,8 @@ generating verification UUIDs.
 # Import required libraries
 import os
 import asyncio
-import uuid
-import random
 from dotenv import load_dotenv
-import agentops
-from anthropic import Anthropic
+import anthropic
 from agentops import Client
 from agentops.llms.providers.anthropic import AnthropicProvider
 
@@ -25,7 +22,7 @@ from agentops.llms.providers.anthropic import AnthropicProvider
 load_dotenv()
 
 # Initialize clients with explicit API key
-anthropic_client = Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY"))
+anthropic_client = anthropic.Client(api_key=os.getenv("ANTHROPIC_API_KEY"))
 
 # Initialize AgentOps client
 ao_client = Client()
@@ -56,8 +53,8 @@ TitanHealth = [
 ]
 
 # Generate random personality and health status
-Personality = random.choice(TitanPersonality)
-Health = random.choice(TitanHealth)
+Personality = "Ronin is a swift and aggressive melee specialist who thrives on close-quarters hit-and-run tactics. He talks like a Samurai might."
+Health = "Considerable Damage"
 
 
 async def generate_message(provider, personality, health):
@@ -88,37 +85,34 @@ async def generate_message(provider, personality, health):
         return "Error: Unable to generate Titan status report."
 
 
-async def generate_uuids():
-    """Generate 4 UUIDs for verification matrix."""
-    return [str(uuid.uuid4()) for _ in range(4)]
-
-
 async def main():
     """Main function to run the Titan Support Protocol."""
     print("Initializing Titan Support Protocol...\n")
 
-    # Display selected personality and health status
-    print(f"Personality: {Personality}")
-    print(f"Health Status: {Health}\n")
+    # Initialize AgentOps client
+    ao_client = Client()
 
-    print("Combat log incoming from encrypted area")
+    # Initialize Anthropic client and provider
+    client = anthropic.Client(api_key=os.getenv("ANTHROPIC_API_KEY"))
+    provider = AnthropicProvider(client=client, session=ao_client.session)
+
+    # Define Titan personality and health status
+    personality = "Ronin is a swift and aggressive melee specialist who thrives on close-quarters hit-and-run tactics. He talks like a Samurai might."
+    health = "Considerable Damage"
+
+    print(f"Personality: {personality}")
+    print(f"Health Status: {health}")
+    print("\nCombat log incoming from encrypted area")
 
     # Generate message and UUIDs concurrently
-    titan_message, uuids = await asyncio.gather(
-        generate_message(Personality, Health),
-        generate_uuids()
-    )
+    message = await generate_message(provider, personality, health)
+    print(f"\nTitan Status Report: {message}")
 
-    # Print verification matrix
-    if uuids:
-        print("\nVerification Matrix:")
-        for uuid in uuids:
-            print(f"- {uuid}")
+    # End session with success status
+    ao_client.end_session(status="success")
 
 
 if __name__ == "__main__":
     # Run the main function using asyncio
     asyncio.run(main())
-    # End the AgentOps session with success status
-    ao_client.end_session("Success")
 
