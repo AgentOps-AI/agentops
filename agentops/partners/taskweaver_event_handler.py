@@ -8,7 +8,7 @@ import agentops
 from agentops.event import ActionEvent, ErrorEvent, ToolEvent
 from datetime import datetime, timezone
 from typing import Dict, Any
-import logger
+from agentops.log_config import logger
 
 ATTACHMENT_TOOLS = [
     "thought",
