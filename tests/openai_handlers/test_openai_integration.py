@@ -7,6 +7,7 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
+
 @pytest.mark.integration
 def test_openai_integration():
     """Integration test demonstrating all four OpenAI call patterns:
@@ -14,7 +15,7 @@ def test_openai_integration():
     2. Sync (streaming)
     3. Async (non-streaming)
     4. Async (streaming)
-    
+
     Verifies that AgentOps correctly tracks all LLM calls via analytics.
     """
     # Initialize AgentOps without auto-starting session
@@ -67,6 +68,6 @@ def test_openai_integration():
 
     session.end_session("Success")
     analytics = session.get_analytics()
-    
+
     # Verify that all LLM calls were tracked
     assert analytics["LLM calls"] >= 4, f"Expected at least 4 LLM calls, but got {analytics['LLM calls']}"
