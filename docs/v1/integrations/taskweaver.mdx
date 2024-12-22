@@ -68,6 +68,10 @@ This is a basic example of how to use TaskWeaver as a library and observe it wit
 
 Ensure you have configured your project directory in the TaskWeaverApp by following the documentation mentioned in step 2.
 
+<Warning>
+  When registering the TaskWeaverEventHandler, you should either use the `session.event_emitter.register` method or pass the handler object to the `event_handler` parameter in the `send_message` method. If you use both, the events will be recorded twice, resulting in a "stuttering" effect in the recorded messages.
+</Warning>
+
 <CodeGroup>
 ```python python
 import agentops
