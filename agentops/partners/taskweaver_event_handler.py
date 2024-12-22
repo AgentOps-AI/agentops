@@ -43,17 +43,12 @@ class TaskWeaverEventHandler(SessionEventHandlerBase):
         return self._active_agents.get(role)
 
     def handle_session(self, type: SessionEventType, msg: str, extra: Any, **kwargs: Any):
-        agentops.record(
-            ActionEvent(action_type=type.value, params={"extra": extra, "message": msg})
-        )
+        agentops.record(ActionEvent(action_type=type.value, params={"extra": extra, "message": msg}))
 
     def handle_round(self, type: RoundEventType, msg: str, extra: Any, round_id: str, **kwargs: Any):
         if type == RoundEventType.round_error:
             agentops.record(
-                ErrorEvent(
-                    error_type=type.value,
-                    details={"round_id": round_id, "message": msg, "extra": extra}
-                )
+                ErrorEvent(error_type=type.value, details={"round_id": round_id, "message": msg, "extra": extra})
             )
             logger.error(f"Could not record the Round event: {msg}")
             self.cleanup_round()
@@ -100,7 +95,7 @@ class TaskWeaverEventHandler(SessionEventHandlerBase):
                     agent_id=agent_id,
                 )
             )
-        
+
         elif type == PostEventType.post_attachment_update:
             attachment_id = extra["id"]
             attachment_type = extra["type"].value
@@ -154,7 +149,7 @@ class TaskWeaverEventHandler(SessionEventHandlerBase):
                             agent_id=agent_id,
                         )
                     )
-                
+
                 self._attachment_buffer.pop(attachment_id, None)
 
         elif type == PostEventType.post_message_update:
@@ -168,7 +163,7 @@ class TaskWeaverEventHandler(SessionEventHandlerBase):
                 }
 
             self._message_buffer[post_id]["content"].append(str(msg))
-            
+
             if is_end:
                 self._message_buffer[post_id]["end_timestamp"] = datetime.now(timezone.utc).isoformat()
                 complete_message = "".join(self._message_buffer[post_id]["content"])
