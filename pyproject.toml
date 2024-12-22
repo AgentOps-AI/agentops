@@ -39,7 +39,8 @@ dev = [
     "pyfakefs",
     "requests_mock==1.11.0",
     "ruff",
-    "vcrpy>=6.0.0; python_version >= '3.8'"
+    "vcrpy>=6.0.0; python_version >= '3.8'",
+    "python-dotenv"
  ]
 ci = [
     "tach~=0.9",
