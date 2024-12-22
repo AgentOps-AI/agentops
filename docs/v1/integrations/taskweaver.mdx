@@ -84,10 +84,10 @@ handler = TaskWeaverEventHandler()
 session.event_emitter.register(handler)
 
 user_query = "Hello, what are the capabilities of TaskWeaver?"
-response_round = session.send_message(user_query, event_handler=handler)
+response_round = session.send_message(user_query)
 
 user_query = "Write me a simple calculator program in python"
-response_round = session.send_message(user_query, event_handler=handler)
+response_round = session.send_message(user_query)
 
 agentops.end_session("Success")
 ```
