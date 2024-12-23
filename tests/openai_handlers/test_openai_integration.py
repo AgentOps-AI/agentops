@@ -1,7 +1,6 @@
 import pytest
 import agentops
 import asyncio
-from agentops import record_action
 from openai import OpenAI, AsyncOpenAI
 from dotenv import load_dotenv
 
@@ -22,7 +21,6 @@ def test_openai_integration():
     agentops.init(auto_start_session=False, api_key="some_jwt")
     session = agentops.start_session()
 
-    @record_action("openai-integration-sync-no-stream")
     def sync_no_stream():
         client = OpenAI()
         client.chat.completions.create(
@@ -30,7 +28,6 @@ def test_openai_integration():
             messages=[{"role": "user", "content": "Hello from sync no stream"}],
         )
 
-    @record_action("openai-integration-sync-stream")
     def sync_stream():
         client = OpenAI()
         stream_result = client.chat.completions.create(
@@ -41,7 +38,6 @@ def test_openai_integration():
         for _ in stream_result:
             pass
 
-    @record_action("openai-integration-async-no-stream")
     async def async_no_stream():
         client = AsyncOpenAI()
         await client.chat.completions.create(
@@ -49,7 +45,6 @@ def test_openai_integration():
             messages=[{"role": "user", "content": "Hello from async no stream"}],
         )
 
-    @record_action("openai-integration-async-stream")
     async def async_stream():
         client = AsyncOpenAI()
         async_stream_result = await client.chat.completions.create(
