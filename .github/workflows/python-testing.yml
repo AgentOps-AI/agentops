@@ -41,3 +41,4 @@ jobs:
         run: tox
         env:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          AGENTOPS_API_KEY: ${{ secrets.AGENTOPS_API_KEY }}
