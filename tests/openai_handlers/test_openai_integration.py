@@ -19,7 +19,7 @@ def test_openai_integration():
     Verifies that AgentOps correctly tracks all LLM calls via analytics.
     """
     # Initialize AgentOps without auto-starting session
-    agentops.init(auto_start_session=False, api_key="some_jwt")
+    agentops.init(auto_start_session=False)
     session = agentops.start_session()
 
     def sync_no_stream():
