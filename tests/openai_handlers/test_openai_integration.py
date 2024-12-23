@@ -19,7 +19,7 @@ def test_openai_integration():
     Verifies that AgentOps correctly tracks all LLM calls via analytics.
     """
     # Initialize AgentOps without auto-starting session
-    agentops.init(auto_start_session=False)
+    agentops.init(auto_start_session=False, api_key="some_jwt")
     session = agentops.start_session()
 
     @record_action("openai-integration-sync-no-stream")
@@ -68,6 +68,6 @@ def test_openai_integration():
 
     session.end_session("Success")
     analytics = session.get_analytics()
-
+    print(analytics)
     # Verify that all LLM calls were tracked
     assert analytics["LLM calls"] >= 4, f"Expected at least 4 LLM calls, but got {analytics['LLM calls']}"
