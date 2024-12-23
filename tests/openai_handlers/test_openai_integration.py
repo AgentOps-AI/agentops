@@ -3,6 +3,7 @@ import agentops
 import asyncio
 from openai import OpenAI, AsyncOpenAI
 from dotenv import load_dotenv
+import os
 
 load_dotenv()
 
@@ -22,14 +23,14 @@ def test_openai_integration():
     session = agentops.start_session()
 
     def sync_no_stream():
-        client = OpenAI()
+        client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
         client.chat.completions.create(
             model="gpt-4o-mini",
             messages=[{"role": "user", "content": "Hello from sync no stream"}],
         )
 
     def sync_stream():
-        client = OpenAI()
+        client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
         stream_result = client.chat.completions.create(
             model="gpt-4o-mini",
             messages=[{"role": "user", "content": "Hello from sync streaming"}],
@@ -39,14 +40,14 @@ def test_openai_integration():
             pass
 
     async def async_no_stream():
-        client = AsyncOpenAI()
+        client = AsyncOpenAI(api_key=os.getenv("OPENAI_API_KEY"))
         await client.chat.completions.create(
             model="gpt-4o-mini",
             messages=[{"role": "user", "content": "Hello from async no stream"}],
         )
 
     async def async_stream():
-        client = AsyncOpenAI()
+        client = AsyncOpenAI(api_key=os.getenv("OPENAI_API_KEY"))
         async_stream_result = await client.chat.completions.create(
             model="gpt-4o-mini",
             messages=[{"role": "user", "content": "Hello from async streaming"}],
