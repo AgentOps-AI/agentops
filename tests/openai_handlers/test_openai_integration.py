@@ -24,14 +24,14 @@ def test_openai_integration():
     def sync_no_stream():
         client = OpenAI()
         client.chat.completions.create(
-            model="gpt-3.5-turbo",
+            model="gpt-4o-mini",
             messages=[{"role": "user", "content": "Hello from sync no stream"}],
         )
 
     def sync_stream():
         client = OpenAI()
         stream_result = client.chat.completions.create(
-            model="gpt-3.5-turbo",
+            model="gpt-4o-mini",
             messages=[{"role": "user", "content": "Hello from sync streaming"}],
             stream=True,
         )
@@ -41,14 +41,14 @@ def test_openai_integration():
     async def async_no_stream():
         client = AsyncOpenAI()
         await client.chat.completions.create(
-            model="gpt-3.5-turbo",
+            model="gpt-4o-mini",
             messages=[{"role": "user", "content": "Hello from async no stream"}],
         )
 
     async def async_stream():
         client = AsyncOpenAI()
         async_stream_result = await client.chat.completions.create(
-            model="gpt-3.5-turbo",
+            model="gpt-4o-mini",
             messages=[{"role": "user", "content": "Hello from async streaming"}],
             stream=True,
         )
