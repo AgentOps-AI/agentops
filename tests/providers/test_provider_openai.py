@@ -8,6 +8,9 @@ import os
 load_dotenv()
 
 
+pytestmark = [pytest.mark.vcr]
+
+
 @pytest.mark.integration
 def test_openai_integration():
     """Integration test demonstrating all four OpenAI call patterns:
