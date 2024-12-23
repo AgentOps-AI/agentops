@@ -51,6 +51,8 @@ langchain = [
     "langchain==0.2.14; python_version >= '3.8.1'"
 ]
 
+[project.scripts]
+agentops = "agentops.cli:main"
 
 [project.urls]
 Homepage = "https://github.com/AgentOps-AI/agentops"
@@ -59,12 +61,10 @@ Issues = "https://github.com/AgentOps-AI/agentops/issues"
 [tool.autopep8]
 max_line_length = 120
 
-[project.scripts]
-agentops = "agentops.cli:main"
 
 [tool.pytest.ini_options]
 asyncio_mode = "strict"
-asyncio_default_fixture_loop_scope = "function"
+asyncio_default_fixture_loop_scope = "function" # WARNING: Changing this may break tests. A `module`-scoped session might be faster, but also unstable.
 test_paths = [
     "tests",
 ]
