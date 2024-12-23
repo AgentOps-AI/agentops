@@ -21,8 +21,9 @@ on:
 
 jobs:
   build:
-
     runs-on: ubuntu-latest
+    env:
+      OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
 
     strategy:
       matrix:
@@ -33,8 +34,10 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           cache: 'pip'
-          python-version: '3.11' # Use a default Python version for running tox
+          python-version: '3.11'
       - name: Install tox
         run: pip install tox
       - name: Run tests with tox
         run: tox
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
