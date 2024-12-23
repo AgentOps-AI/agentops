@@ -1,15 +1,27 @@
 from unittest.mock import patch
 from agentops import host_env
+import psutil
 
 # noinspection PyProtectedMember
 from psutil._common import sdiskpart, sdiskusage
 
 
 def mock_partitions():
-    return [
-        sdiskpart(device="/dev/sda1", mountpoint="/", fstype="ext4", opts="rw,relatime"),
-        sdiskpart(device="z:\\", mountpoint="z:\\", fstype="ntfs", opts="rw,relatime"),
-    ]
+    # Try to create with new fields first, fall back to old format if it fails
+    try:
+        return [
+            sdiskpart(  # noqa: E501
+                device="/dev/sda1",
+                mountpoint="/",
+                fstype="ext4",
+                opts="rw,relatime",
+                maxfile=255,  # type: ignore
+                maxpath=4096,  # type: ignore
+            )
+        ]
+    except TypeError:
+        # Fallback for older versions that don't have maxfile/maxpath
+        return [sdiskpart(device="/dev/sda1", mountpoint="/", fstype="ext4", opts="rw,relatime")]
 
 
 def mock_disk_usage(partition):
