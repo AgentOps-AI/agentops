@@ -115,6 +115,7 @@ class LiteLLMProvider(InstrumentedProvider):
         # litellm uses a CustomStreamWrapper
         if isinstance(response, CustomStreamWrapper):
             if inspect.isasyncgen(response):
+
                 async def async_generator():
                     try:
                         async for chunk in response:
@@ -123,8 +124,10 @@ class LiteLLMProvider(InstrumentedProvider):
                     except Exception as e:
                         logger.warning(f"Error in async stream: {e}")
                         raise
+
                 return async_generator()
             elif hasattr(response, "__aiter__"):
+
                 async def async_generator():
                     try:
                         async for chunk in response:
@@ -133,8 +136,10 @@ class LiteLLMProvider(InstrumentedProvider):
                     except Exception as e:
                         logger.warning(f"Error in async stream: {e}")
                         raise
+
                 return async_generator()
             else:
+
                 def generator():
                     try:
                         for chunk in response:
@@ -143,6 +148,7 @@ class LiteLLMProvider(InstrumentedProvider):
                     except Exception as e:
                         logger.warning(f"Error in sync stream: {e}")
                         raise
+
                 return generator()
 
         # For asynchronous AsyncStream

@@ -34,26 +34,32 @@ from .llms.providers import (
 # Initialize providers when imported
 if "ai21" in sys.modules:
     from ai21 import AI21Client
+
     ai21.AI21Provider(client=AI21Client()).override()
 
 if "anthropic" in sys.modules:
     from anthropic import Anthropic
+
     anthropic.AnthropicProvider(client=Anthropic()).override()
 
 if "cohere" in sys.modules:
     import cohere as cohere_sdk
+
     cohere.CohereProvider(client=cohere_sdk).override()
 
 if "groq" in sys.modules:
     from groq import Groq
+
     groq.GroqProvider(client=Groq()).override()
 
 if "litellm" in sys.modules:
     import litellm as litellm_sdk
+
     litellm.LiteLLMProvider(client=litellm_sdk).override()
 
 if "mistralai" in sys.modules:
     from mistralai import Mistral
+
     mistral.MistralProvider(client=Mistral()).override()
 
 if "autogen" in sys.modules:

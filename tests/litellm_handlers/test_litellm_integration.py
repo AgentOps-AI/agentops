@@ -3,6 +3,8 @@ import pytest
 import agentops
 import asyncio
 import litellm
+
+
 @pytest.mark.integration
 def test_litellm_integration():
     """Integration test demonstrating all four LiteLLM call patterns:

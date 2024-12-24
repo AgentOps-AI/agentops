@@ -4,6 +4,8 @@ import agentops
 import asyncio
 import anthropic  # Import module to trigger provider initialization
 from anthropic import Anthropic, AsyncAnthropic
+
+
 @pytest.mark.integration
 def test_anthropic_integration():
     """Integration test demonstrating all four Anthropic call patterns:
