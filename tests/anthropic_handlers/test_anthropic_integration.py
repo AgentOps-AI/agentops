@@ -1,16 +1,13 @@
+import os
 import pytest
 import agentops
 import asyncio
-from openai import OpenAI, AsyncOpenAI
-from dotenv import load_dotenv
-import os
-
-load_dotenv()
-
+import anthropic  # Import module to trigger provider initialization
+from anthropic import Anthropic, AsyncAnthropic
 
 @pytest.mark.integration
-def test_openai_integration():
-    """Integration test demonstrating all four OpenAI call patterns:
+def test_anthropic_integration():
+    """Integration test demonstrating all four Anthropic call patterns:
     1. Sync (non-streaming)
     2. Sync (streaming)
     3. Async (non-streaming)
@@ -18,39 +15,47 @@ def test_openai_integration():
 
     Verifies that AgentOps correctly tracks all LLM calls via analytics.
     """
-    # Initialize AgentOps without auto-starting session
-    agentops.init(auto_start_session=False)
+    print("AGENTOPS_API_KEY present:", bool(os.getenv("AGENTOPS_API_KEY")))
+    print("ANTHROPIC_API_KEY present:", bool(os.getenv("ANTHROPIC_API_KEY")))
+    
+    agentops.init(auto_start_session=False, instrument_llm_calls=True)
     session = agentops.start_session()
+    print("Session created:", bool(session))
+    print("Session ID:", session.session_id if session else None)
 
     def sync_no_stream():
-        client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
-        client.chat.completions.create(
-            model="gpt-3.5-turbo",
+        client = Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY"))
+        client.messages.create(
+            model="claude-3-5-sonnet-20240620",
             messages=[{"role": "user", "content": "Hello from sync no stream"}],
+            max_tokens=20,
         )
 
     def sync_stream():
-        client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
-        stream_result = client.chat.completions.create(
-            model="gpt-3.5-turbo",
+        client = Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY"))
+        stream_result = client.messages.create(
+            model="claude-3-5-sonnet-20240620",
             messages=[{"role": "user", "content": "Hello from sync streaming"}],
+            max_tokens=20,
             stream=True,
         )
         for _ in stream_result:
             pass
 
     async def async_no_stream():
-        client = AsyncOpenAI(api_key=os.getenv("OPENAI_API_KEY"))
-        await client.chat.completions.create(
-            model="gpt-3.5-turbo",
+        client = AsyncAnthropic(api_key=os.getenv("ANTHROPIC_API_KEY"))
+        await client.messages.create(
+            model="claude-3-5-sonnet-20240620",
             messages=[{"role": "user", "content": "Hello from async no stream"}],
+            max_tokens=20,
         )
 
     async def async_stream():
-        client = AsyncOpenAI(api_key=os.getenv("OPENAI_API_KEY"))
-        async_stream_result = await client.chat.completions.create(
-            model="gpt-3.5-turbo",
+        client = AsyncAnthropic(api_key=os.getenv("ANTHROPIC_API_KEY"))
+        async_stream_result = await client.messages.create(
+            model="claude-3-5-sonnet-20240620",
             messages=[{"role": "user", "content": "Hello from async streaming"}],
+            max_tokens=20,
             stream=True,
         )
         async for _ in async_stream_result:

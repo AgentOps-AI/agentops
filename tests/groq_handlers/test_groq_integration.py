@@ -1,16 +1,14 @@
+import os
 import pytest
 import agentops
 import asyncio
-from openai import OpenAI, AsyncOpenAI
-from dotenv import load_dotenv
-import os
-
-load_dotenv()
-
+import groq  # Import module to trigger provider initialization
+from groq import Groq
+from groq.resources.chat import AsyncCompletions
 
 @pytest.mark.integration
-def test_openai_integration():
-    """Integration test demonstrating all four OpenAI call patterns:
+def test_groq_integration():
+    """Integration test demonstrating all four Groq call patterns:
     1. Sync (non-streaming)
     2. Sync (streaming)
     3. Async (non-streaming)
@@ -18,42 +16,47 @@ def test_openai_integration():
 
     Verifies that AgentOps correctly tracks all LLM calls via analytics.
     """
-    # Initialize AgentOps without auto-starting session
-    agentops.init(auto_start_session=False)
+    print("AGENTOPS_API_KEY present:", bool(os.getenv("AGENTOPS_API_KEY")))
+    print("GROQ_API_KEY present:", bool(os.getenv("GROQ_API_KEY")))
+    
+    agentops.init(auto_start_session=False, instrument_llm_calls=True)
     session = agentops.start_session()
+    print("Session created:", bool(session))
+    print("Session ID:", session.session_id if session else None)
 
     def sync_no_stream():
-        client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+        client = Groq(api_key=os.getenv("GROQ_API_KEY"))
         client.chat.completions.create(
-            model="gpt-3.5-turbo",
             messages=[{"role": "user", "content": "Hello from sync no stream"}],
+            model="mixtral-8x7b-32768",
         )
 
     def sync_stream():
-        client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+        client = Groq(api_key=os.getenv("GROQ_API_KEY"))
         stream_result = client.chat.completions.create(
-            model="gpt-3.5-turbo",
             messages=[{"role": "user", "content": "Hello from sync streaming"}],
+            model="mixtral-8x7b-32768",
             stream=True,
         )
         for _ in stream_result:
             pass
 
     async def async_no_stream():
-        client = AsyncOpenAI(api_key=os.getenv("OPENAI_API_KEY"))
-        await client.chat.completions.create(
-            model="gpt-3.5-turbo",
+        client = Groq(api_key=os.getenv("GROQ_API_KEY"))
+        result = client.chat.completions.create(
             messages=[{"role": "user", "content": "Hello from async no stream"}],
+            model="mixtral-8x7b-32768",
         )
+        return result
 
     async def async_stream():
-        client = AsyncOpenAI(api_key=os.getenv("OPENAI_API_KEY"))
-        async_stream_result = await client.chat.completions.create(
-            model="gpt-3.5-turbo",
+        client = Groq(api_key=os.getenv("GROQ_API_KEY"))
+        async_stream_result = client.chat.completions.create(
             messages=[{"role": "user", "content": "Hello from async streaming"}],
+            model="mixtral-8x7b-32768",
             stream=True,
         )
-        async for _ in async_stream_result:
+        for _ in async_stream_result:
             pass
 
     try:

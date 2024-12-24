@@ -145,14 +145,12 @@ class AI21Provider(InstrumentedProvider):
     def override(self):
         self._override_completion()
         self._override_completion_async()
-        self._override_answer()
-        self._override_answer_async()
 
     def _override_completion(self):
-        from ai21.clients.studio.resources.chat import ChatCompletions
+        from ai21.clients.studio.ai21_client import AI21Client
 
-        global original_create
-        original_create = ChatCompletions.create
+        # Store original method
+        self.original_create = AI21Client.chat.completions.create
 
         def patched_function(*args, **kwargs):
             # Call the original function with its original arguments
@@ -160,17 +158,17 @@ class AI21Provider(InstrumentedProvider):
             session = kwargs.get("session", None)
             if "session" in kwargs.keys():
                 del kwargs["session"]
-            result = original_create(*args, **kwargs)
+            result = self.original_create(*args, **kwargs)
             return self.handle_response(result, kwargs, init_timestamp, session=session)
 
         # Override the original method with the patched one
-        ChatCompletions.create = patched_function
+        AI21Client.chat.completions.create = patched_function
 
     def _override_completion_async(self):
-        from ai21.clients.studio.resources.chat import AsyncChatCompletions
+        from ai21.clients.studio.async_ai21_client import AsyncAI21Client
 
-        global original_create_async
-        original_create_async = AsyncChatCompletions.create
+        # Store original method
+        self.original_create_async = AsyncAI21Client.chat.completions.create
 
         async def patched_function(*args, **kwargs):
             # Call the original function with its original arguments
@@ -178,65 +176,21 @@ class AI21Provider(InstrumentedProvider):
             session = kwargs.get("session", None)
             if "session" in kwargs.keys():
                 del kwargs["session"]
-            result = await original_create_async(*args, **kwargs)
+            result = await self.original_create_async(*args, **kwargs)
             return self.handle_response(result, kwargs, init_timestamp, session=session)
 
         # Override the original method with the patched one
-        AsyncChatCompletions.create = patched_function
+        AsyncAI21Client.chat.completions.create = patched_function
 
-    def _override_answer(self):
-        from ai21.clients.studio.resources.studio_answer import StudioAnswer
-
-        global original_answer
-        original_answer = StudioAnswer.create
-
-        def patched_function(*args, **kwargs):
-            # Call the original function with its original arguments
-            init_timestamp = get_ISO_time()
-
-            session = kwargs.get("session", None)
-            if "session" in kwargs.keys():
-                del kwargs["session"]
-            result = original_answer(*args, **kwargs)
-            return self.handle_response(result, kwargs, init_timestamp, session=session)
-
-        StudioAnswer.create = patched_function
-
-    def _override_answer_async(self):
-        from ai21.clients.studio.resources.studio_answer import AsyncStudioAnswer
-
-        global original_answer_async
-        original_answer_async = AsyncStudioAnswer.create
-
-        async def patched_function(*args, **kwargs):
-            # Call the original function with its original arguments
-            init_timestamp = get_ISO_time()
-
-            session = kwargs.get("session", None)
-            if "session" in kwargs.keys():
-                del kwargs["session"]
-            result = await original_answer_async(*args, **kwargs)
-            return self.handle_response(result, kwargs, init_timestamp, session=session)
-
-        AsyncStudioAnswer.create = patched_function
+    # Answer functionality removed as it's not available in current version
 
     def undo_override(self):
         if (
             self.original_create is not None
             and self.original_create_async is not None
-            and self.original_answer is not None
-            and self.original_answer_async is not None
         ):
-            from ai21.clients.studio.resources.chat import (
-                ChatCompletions,
-                AsyncChatCompletions,
-            )
-            from ai21.clients.studio.resources.studio_answer import (
-                StudioAnswer,
-                AsyncStudioAnswer,
-            )
+            from ai21.clients.studio.ai21_client import AI21Client
+            from ai21.clients.studio.async_ai21_client import AsyncAI21Client
 
-            ChatCompletions.create = self.original_create
-            AsyncChatCompletions.create = self.original_create_async
-            StudioAnswer.create = self.original_answer
-            AsyncStudioAnswer.create = self.original_answer_async
+            AI21Client.chat.completions.create = self.original_create
+            AsyncAI21Client.chat.completions.create = self.original_create_async

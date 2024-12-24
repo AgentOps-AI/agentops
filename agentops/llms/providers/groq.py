@@ -168,8 +168,14 @@ class GroqProvider(InstrumentedProvider):
         async def patched_function(*args, **kwargs):
             # Call the original function with its original arguments
             init_timestamp = get_ISO_time()
+            session = kwargs.get("session", None)
+            if "session" in kwargs.keys():
+                del kwargs["session"]
             result = await self.original_async_create(*args, **kwargs)
-            return self.handle_response(result, kwargs, init_timestamp)
+            # Convert the result to a coroutine if it's not already awaitable
+            if not hasattr(result, '__await__'):
+                result = completions.ChatCompletion.model_validate(result)
+            return self.handle_response(result, kwargs, init_timestamp, session=session)
 
         # Override the original method with the patched one
         completions.AsyncCompletions.create = patched_function

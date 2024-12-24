@@ -7,9 +7,11 @@ from agentops.event import LLMEvent, ErrorEvent
 from agentops.session import Session
 from agentops.log_config import logger
 from agentops.helpers import get_ISO_time, check_call_stack_for_agent_id
+from agentops.singleton import singleton
 from .instrumented_provider import InstrumentedProvider
 
 
+@singleton
 class MistralProvider(InstrumentedProvider):
     original_complete = None
     original_complete_async = None
@@ -22,8 +24,8 @@ class MistralProvider(InstrumentedProvider):
 
     def handle_response(self, response, kwargs, init_timestamp, session: Optional[Session] = None) -> dict:
         """Handle responses for Mistral"""
-        from mistralai import Chat
-        from mistralai.types import UNSET, UNSET_SENTINEL
+        from mistralai import Mistral
+        from mistralai.models.chat import ChatCompletionResponse, ChatCompletionStreamResponse
 
         llm_event = LLMEvent(init_timestamp=init_timestamp, params=kwargs)
         if session is not None:
@@ -50,11 +52,11 @@ class MistralProvider(InstrumentedProvider):
                 if choice.delta.role:
                     accumulated_delta.role = choice.delta.role
 
-                # Check if tool_calls is Unset and set to None if it is
-                if choice.delta.tool_calls in (UNSET, UNSET_SENTINEL):
-                    accumulated_delta.tool_calls = None
-                elif choice.delta.tool_calls:
+                # Handle tool calls if they exist
+                if hasattr(choice.delta, 'tool_calls'):
                     accumulated_delta.tool_calls = choice.delta.tool_calls
+                else:
+                    accumulated_delta.tool_calls = None
 
                 if choice.finish_reason:
                     # Streaming is done. Record LLMEvent
@@ -123,10 +125,9 @@ class MistralProvider(InstrumentedProvider):
         return response
 
     def _override_complete(self):
-        from mistralai import Chat
+        from mistralai import Mistral
 
-        global original_complete
-        original_complete = Chat.complete
+        self.original_complete = self.client.chat.complete
 
         def patched_function(*args, **kwargs):
             # Call the original function with its original arguments
@@ -134,17 +135,16 @@ class MistralProvider(InstrumentedProvider):
             session = kwargs.get("session", None)
             if "session" in kwargs.keys():
                 del kwargs["session"]
-            result = original_complete(*args, **kwargs)
+            result = self.original_complete(*args, **kwargs)
             return self.handle_response(result, kwargs, init_timestamp, session=session)
 
         # Override the original method with the patched one
-        Chat.complete = patched_function
+        self.client.chat.complete = patched_function
 
     def _override_complete_async(self):
-        from mistralai import Chat
+        from mistralai import Mistral
 
-        global original_complete_async
-        original_complete_async = Chat.complete_async
+        self.original_complete_async = self.client.chat.complete_async
 
         async def patched_function(*args, **kwargs):
             # Call the original function with its original arguments
@@ -152,17 +152,16 @@ class MistralProvider(InstrumentedProvider):
             session = kwargs.get("session", None)
             if "session" in kwargs.keys():
                 del kwargs["session"]
-            result = await original_complete_async(*args, **kwargs)
+            result = await self.original_complete_async(*args, **kwargs)
             return self.handle_response(result, kwargs, init_timestamp, session=session)
 
         # Override the original method with the patched one
-        Chat.complete_async = patched_function
+        self.client.chat.complete_async = patched_function
 
     def _override_stream(self):
-        from mistralai import Chat
+        from mistralai import Mistral
 
-        global original_stream
-        original_stream = Chat.stream
+        self.original_stream = self.client.chat.stream
 
         def patched_function(*args, **kwargs):
             # Call the original function with its original arguments
@@ -170,17 +169,16 @@ class MistralProvider(InstrumentedProvider):
             session = kwargs.get("session", None)
             if "session" in kwargs.keys():
                 del kwargs["session"]
-            result = original_stream(*args, **kwargs)
+            result = self.original_stream(*args, **kwargs)
             return self.handle_response(result, kwargs, init_timestamp, session=session)
 
         # Override the original method with the patched one
-        Chat.stream = patched_function
+        self.client.chat.stream = patched_function
 
     def _override_stream_async(self):
-        from mistralai import Chat
+        from mistralai import Mistral
 
-        global original_stream_async
-        original_stream_async = Chat.stream_async
+        self.original_stream_async = self.client.chat.stream_async
 
         async def patched_function(*args, **kwargs):
             # Call the original function with its original arguments
@@ -188,11 +186,11 @@ class MistralProvider(InstrumentedProvider):
             session = kwargs.get("session", None)
             if "session" in kwargs.keys():
                 del kwargs["session"]
-            result = await original_stream_async(*args, **kwargs)
+            result = await self.original_stream_async(*args, **kwargs)
             return self.handle_response(result, kwargs, init_timestamp, session=session)
 
         # Override the original method with the patched one
-        Chat.stream_async = patched_function
+        self.client.chat.stream_async = patched_function
 
     def override(self):
         self._override_complete()
