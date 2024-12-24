@@ -684,6 +684,7 @@ AgentOps provides support for Llama Stack Python Client(>=0.0.53), allowing you 
 Track and analyze SwarmZero agents with full observability. Set an `AGENTOPS_API_KEY` in your environment and initialize AgentOps to get started.
 
 - [SwarmZero](https://swarmzero.ai) - Advanced multi-agent framework
+- [AgentOps integration example](./examples/swarmzero_examples/)
 - [SwarmZero AI integration example](https://docs.swarmzero.ai/examples/ai-agents/build-and-monitor-a-web-search-agent)
 - [SwarmZero AI - AgentOps documentation](https://docs.swarmzero.ai/sdk/observability/agentops)
 - [Official SwarmZero Python SDK](https://github.com/swarmzero/swarmzero)
