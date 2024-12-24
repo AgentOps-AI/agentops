@@ -17,7 +17,7 @@ def test_mistral_integration():
     """
     print("AGENTOPS_API_KEY present:", bool(os.getenv("AGENTOPS_API_KEY")))
     print("MISTRAL_API_KEY present:", bool(os.getenv("MISTRAL_API_KEY")))
-    
+
     agentops.init(auto_start_session=False, instrument_llm_calls=True)
     session = agentops.start_session()
     print("Session created:", bool(session))

@@ -38,7 +38,7 @@ def test_litellm_integration():
             stream=True,
         )
         for chunk in stream_result:
-            if hasattr(chunk, 'choices') and chunk.choices[0].delta.content:
+            if hasattr(chunk, "choices") and chunk.choices[0].delta.content:
                 pass
 
     async def async_no_stream():
@@ -56,7 +56,7 @@ def test_litellm_integration():
             stream=True,
         )
         async for chunk in async_stream_result:
-            if hasattr(chunk, 'choices') and chunk.choices[0].delta.content:
+            if hasattr(chunk, "choices") and chunk.choices[0].delta.content:
                 pass
 
     try:

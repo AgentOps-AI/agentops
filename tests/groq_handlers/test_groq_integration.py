@@ -18,7 +18,7 @@ def test_groq_integration():
     """
     print("AGENTOPS_API_KEY present:", bool(os.getenv("AGENTOPS_API_KEY")))
     print("GROQ_API_KEY present:", bool(os.getenv("GROQ_API_KEY")))
-    
+
     agentops.init(auto_start_session=False, instrument_llm_calls=True)
     session = agentops.start_session()
     print("Session created:", bool(session))
