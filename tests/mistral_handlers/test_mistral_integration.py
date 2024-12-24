@@ -4,7 +4,6 @@ import agentops
 import asyncio
 import mistralai  # Import module to trigger provider initialization
 from mistralai import Mistral
-
 @pytest.mark.integration
 def test_mistral_integration():
     """Integration test demonstrating all four Mistral call patterns:
