@@ -6,7 +6,6 @@ import ai21  # Import module to trigger provider initialization
 from ai21 import AI21Client, AsyncAI21Client
 from ai21.models.chat import ChatMessage
 
-
 @pytest.mark.integration
 def test_ai21_integration():
     """Integration test demonstrating all four AI21 call patterns:
