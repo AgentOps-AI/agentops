@@ -19,53 +19,50 @@ def test_mistral_integration():
     print("AGENTOPS_API_KEY present:", bool(os.getenv("AGENTOPS_API_KEY")))
     print("MISTRAL_API_KEY present:", bool(os.getenv("MISTRAL_API_KEY")))
 
-    agentops.init(auto_start_session=False, instrument_llm_calls=True)
+    # Initialize AgentOps without auto-starting session
+    agentops.init(auto_start_session=False)
     session = agentops.start_session()
-    print("Session created:", bool(session))
-    print("Session ID:", session.session_id if session else None)
 
     def sync_no_stream():
         client = Mistral(api_key=os.getenv("MISTRAL_API_KEY"))
-        client.chat.complete(
+        client.chat.create(
             model="mistral-large-latest",
             messages=[{"role": "user", "content": "Hello from sync no stream"}],
         )
 
     def sync_stream():
         client = Mistral(api_key=os.getenv("MISTRAL_API_KEY"))
-        stream_result = client.chat.stream(
+        stream_result = client.chat.create_stream(
             model="mistral-large-latest",
             messages=[{"role": "user", "content": "Hello from sync streaming"}],
         )
         for chunk in stream_result:
-            if chunk.data.choices[0].delta.content:
+            if chunk.choices[0].delta.content:
                 pass
 
     async def async_no_stream():
         client = Mistral(api_key=os.getenv("MISTRAL_API_KEY"))
-        await client.chat.complete_async(
+        await client.chat.create_async(
             model="mistral-large-latest",
             messages=[{"role": "user", "content": "Hello from async no stream"}],
         )
 
     async def async_stream():
         client = Mistral(api_key=os.getenv("MISTRAL_API_KEY"))
-        async_stream_result = await client.chat.stream_async(
+        async_stream_result = await client.chat.create_stream_async(
             model="mistral-large-latest",
             messages=[{"role": "user", "content": "Hello from async streaming"}],
         )
         async for chunk in async_stream_result:
-            if chunk.data.choices[0].delta.content:
+            if chunk.choices[0].delta.content:
                 pass
 
-    try:
-        # Call each function
-        sync_no_stream()
-        sync_stream()
-        asyncio.run(async_no_stream())
-        asyncio.run(async_stream())
-    finally:
-        session.end_session("Success")
+    # Call each function
+    sync_no_stream()
+    sync_stream()
+    asyncio.run(async_no_stream())
+    asyncio.run(async_stream())
+    session.end_session("Success")
     analytics = session.get_analytics()
     print(analytics)
     # Verify that all LLM calls were tracked

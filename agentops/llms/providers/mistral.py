@@ -21,6 +21,7 @@ class MistralProvider(InstrumentedProvider):
 
     def __init__(self, client=None):
         from mistralai import Mistral
+
         if client is None:
             if os.getenv("MISTRAL_API_KEY") is None:
                 raise ValueError("MISTRAL_API_KEY environment variable is required")
