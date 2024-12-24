@@ -34,6 +34,8 @@ class MistralProvider(InstrumentedProvider):
         from mistralai import Mistral
         from mistralai.models.chat_completion import ChatCompletionResponse, ChatCompletionStreamResponse
 
+
+
         llm_event = LLMEvent(init_timestamp=init_timestamp, params=kwargs)
         if session is not None:
             llm_event.session_id = session.session_id
@@ -44,52 +46,40 @@ class MistralProvider(InstrumentedProvider):
             if llm_event.returns is None:
                 llm_event.returns = chunk
 
-            try:
-                accumulated_delta = llm_event.returns.choices[0].delta
-                llm_event.agent_id = check_call_stack_for_agent_id()
-                llm_event.model = "mistral/" + chunk.model
-                llm_event.prompt = kwargs["messages"]
+            accumulated_delta = llm_event.returns.choices[0].delta
+            llm_event.agent_id = check_call_stack_for_agent_id()
+            llm_event.model = "mistral/" + chunk.model
+            llm_event.prompt = kwargs["messages"]
 
-                # NOTE: We assume for completion only choices[0] is relevant
-                choice = chunk.choices[0]
+            # NOTE: We assume for completion only choices[0] is relevant
+            choice = chunk.choices[0]
 
-                if hasattr(choice.delta, "content") and choice.delta.content:
-                    if not hasattr(accumulated_delta, "content"):
-                        accumulated_delta.content = ""
-                    accumulated_delta.content += choice.delta.content
+            if hasattr(choice.delta, "content") and choice.delta.content:
+                if not hasattr(accumulated_delta, "content"):
+                    accumulated_delta.content = ""
+                accumulated_delta.content += choice.delta.content
 
-                if hasattr(choice.delta, "role") and choice.delta.role:
-                    accumulated_delta.role = choice.delta.role
+            if hasattr(choice.delta, "role") and choice.delta.role:
+                accumulated_delta.role = choice.delta.role
 
-                # Handle tool calls if they exist
-                if hasattr(choice.delta, "tool_calls"):
-                    accumulated_delta.tool_calls = choice.delta.tool_calls
-                else:
-                    accumulated_delta.tool_calls = None
+            # Handle tool calls if they exist
+            if hasattr(choice.delta, "tool_calls"):
+                accumulated_delta.tool_calls = choice.delta.tool_calls
+            else:
+                accumulated_delta.tool_calls = None
 
-                if choice.finish_reason:
-                    # Streaming is done. Record LLMEvent
-                    llm_event.returns.choices[0].finish_reason = choice.finish_reason
-                    llm_event.completion = {
-                        "role": accumulated_delta.role,
-                        "content": accumulated_delta.content,
-                        "tool_calls": accumulated_delta.tool_calls,
-                    }
-                    llm_event.prompt_tokens = chunk.usage.prompt_tokens
-                    llm_event.completion_tokens = chunk.usage.completion_tokens
-                    llm_event.end_timestamp = get_ISO_time()
-                    self._safe_record(session, llm_event)
-
-            except Exception as e:
-                self._safe_record(session, ErrorEvent(trigger_event=llm_event, exception=e))
-
-                kwargs_str = pprint.pformat(kwargs)
-                chunk = pprint.pformat(chunk)
-                logger.warning(
-                    f"Unable to parse a chunk for LLM call. Skipping upload to AgentOps\n"
-                    f"chunk:\n {chunk}\n"
-                    f"kwargs:\n {kwargs_str}\n"
-                )
+            if choice.finish_reason:
+                # Streaming is done. Record LLMEvent
+                llm_event.returns.choices[0].finish_reason = choice.finish_reason
+                llm_event.completion = {
+                    "role": accumulated_delta.role,
+                    "content": accumulated_delta.content,
+                    "tool_calls": accumulated_delta.tool_calls,
+                }
+                llm_event.prompt_tokens = chunk.usage.prompt_tokens
+                llm_event.completion_tokens = chunk.usage.completion_tokens
+                llm_event.end_timestamp = get_ISO_time()
+                self._safe_record(session, llm_event)
 
         # if the response is a generator, decorate the generator
         if inspect.isgenerator(response):
@@ -110,33 +100,23 @@ class MistralProvider(InstrumentedProvider):
 
             return async_generator()
 
-        try:
-            llm_event.returns = response
-            llm_event.agent_id = check_call_stack_for_agent_id()
-            llm_event.model = "mistral/" + response.model
-            llm_event.prompt = kwargs["messages"]
-            llm_event.prompt_tokens = response.usage.prompt_tokens
-            llm_event.completion = response.choices[0].message.model_dump()
-            llm_event.completion_tokens = response.usage.completion_tokens
-            llm_event.end_timestamp = get_ISO_time()
+        llm_event.returns = response
+        llm_event.agent_id = check_call_stack_for_agent_id()
+        llm_event.model = "mistral/" + response.model
+        llm_event.prompt = kwargs["messages"]
+        llm_event.prompt_tokens = response.usage.prompt_tokens
+        llm_event.completion = response.choices[0].message.model_dump()
+        llm_event.completion_tokens = response.usage.completion_tokens
+        llm_event.end_timestamp = get_ISO_time()
 
-            self._safe_record(session, llm_event)
-        except Exception as e:
-            self._safe_record(session, ErrorEvent(trigger_event=llm_event, exception=e))
-            kwargs_str = pprint.pformat(kwargs)
-            response = pprint.pformat(response)
-            logger.warning(
-                f"Unable to parse response for LLM call. Skipping upload to AgentOps\n"
-                f"response:\n {response}\n"
-                f"kwargs:\n {kwargs_str}\n"
-            )
+        self._safe_record(session, llm_event)
 
         return response
 
     def _override_complete(self):
         from mistralai import Mistral
 
-        self.original_complete = self.client.chat.create
+        self.original_complete = self.client.chat.complete
 
         def patched_function(*args, **kwargs):
             # Call the original function with its original arguments
@@ -148,12 +128,12 @@ class MistralProvider(InstrumentedProvider):
             return self.handle_response(result, kwargs, init_timestamp, session=session)
 
         # Override the original method with the patched one
-        self.client.chat.create = patched_function
+        self.client.chat.complete = patched_function
 
     def _override_complete_async(self):
         from mistralai import Mistral
 
-        self.original_complete_async = self.client.chat.create_async
+        self.original_complete_async = self.client.chat.complete_async
 
         async def patched_function(*args, **kwargs):
             # Call the original function with its original arguments
@@ -165,12 +145,12 @@ class MistralProvider(InstrumentedProvider):
             return self.handle_response(result, kwargs, init_timestamp, session=session)
 
         # Override the original method with the patched one
-        self.client.chat.create_async = patched_function
+        self.client.chat.complete_async = patched_function
 
     def _override_stream(self):
         from mistralai import Mistral
 
-        self.original_stream = self.client.chat.create_stream
+        self.original_stream = self.client.chat.stream
 
         def patched_function(*args, **kwargs):
             # Call the original function with its original arguments
@@ -182,12 +162,12 @@ class MistralProvider(InstrumentedProvider):
             return self.handle_response(result, kwargs, init_timestamp, session=session)
 
         # Override the original method with the patched one
-        self.client.chat.create_stream = patched_function
+        self.client.chat.stream = patched_function
 
     def _override_stream_async(self):
         from mistralai import Mistral
 
-        self.original_stream_async = self.client.chat.create_stream_async
+        self.original_stream_async = self.client.chat.stream_async
 
         async def patched_function(*args, **kwargs):
             # Call the original function with its original arguments
@@ -199,7 +179,7 @@ class MistralProvider(InstrumentedProvider):
             return self.handle_response(result, kwargs, init_timestamp, session=session)
 
         # Override the original method with the patched one
-        self.client.chat.create_stream_async = patched_function
+        self.client.chat.stream_async = patched_function
 
     def override(self):
         self._override_complete()
