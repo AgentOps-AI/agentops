@@ -1,4 +1,5 @@
 import inspect
+import os
 import pprint
 import sys
 from typing import Optional
@@ -18,14 +19,19 @@ class MistralProvider(InstrumentedProvider):
     original_stream = None
     original_stream_async = None
 
-    def __init__(self, client):
+    def __init__(self, client=None):
+        from mistralai import Mistral
+        if client is None:
+            if os.getenv("MISTRAL_API_KEY") is None:
+                raise ValueError("MISTRAL_API_KEY environment variable is required")
+            client = Mistral(api_key=os.getenv("MISTRAL_API_KEY"))
         super().__init__(client)
         self._provider_name = "Mistral"
 
     def handle_response(self, response, kwargs, init_timestamp, session: Optional[Session] = None) -> dict:
         """Handle responses for Mistral"""
         from mistralai import Mistral
-        from mistralai.models.chat import ChatCompletionResponse, ChatCompletionStreamResponse
+        from mistralai.models.chat_completion import ChatCompletionResponse, ChatCompletionStreamResponse
 
         llm_event = LLMEvent(init_timestamp=init_timestamp, params=kwargs)
         if session is not None:
@@ -35,21 +41,23 @@ class MistralProvider(InstrumentedProvider):
             # NOTE: prompt/completion usage not returned in response when streaming
             # We take the first ChatCompletionChunk and accumulate the deltas from all subsequent chunks to build one full chat completion
             if llm_event.returns is None:
-                llm_event.returns = chunk.data
+                llm_event.returns = chunk
 
             try:
                 accumulated_delta = llm_event.returns.choices[0].delta
                 llm_event.agent_id = check_call_stack_for_agent_id()
-                llm_event.model = "mistral/" + chunk.data.model
+                llm_event.model = "mistral/" + chunk.model
                 llm_event.prompt = kwargs["messages"]
 
                 # NOTE: We assume for completion only choices[0] is relevant
-                choice = chunk.data.choices[0]
+                choice = chunk.choices[0]
 
-                if choice.delta.content:
+                if hasattr(choice.delta, "content") and choice.delta.content:
+                    if not hasattr(accumulated_delta, "content"):
+                        accumulated_delta.content = ""
                     accumulated_delta.content += choice.delta.content
 
-                if choice.delta.role:
+                if hasattr(choice.delta, "role") and choice.delta.role:
                     accumulated_delta.role = choice.delta.role
 
                 # Handle tool calls if they exist
@@ -66,8 +74,8 @@ class MistralProvider(InstrumentedProvider):
                         "content": accumulated_delta.content,
                         "tool_calls": accumulated_delta.tool_calls,
                     }
-                    llm_event.prompt_tokens = chunk.data.usage.prompt_tokens
-                    llm_event.completion_tokens = chunk.data.usage.completion_tokens
+                    llm_event.prompt_tokens = chunk.usage.prompt_tokens
+                    llm_event.completion_tokens = chunk.usage.completion_tokens
                     llm_event.end_timestamp = get_ISO_time()
                     self._safe_record(session, llm_event)
 
@@ -127,7 +135,7 @@ class MistralProvider(InstrumentedProvider):
     def _override_complete(self):
         from mistralai import Mistral
 
-        self.original_complete = self.client.chat.complete
+        self.original_complete = self.client.chat.create
 
         def patched_function(*args, **kwargs):
             # Call the original function with its original arguments
@@ -139,12 +147,12 @@ class MistralProvider(InstrumentedProvider):
             return self.handle_response(result, kwargs, init_timestamp, session=session)
 
         # Override the original method with the patched one
-        self.client.chat.complete = patched_function
+        self.client.chat.create = patched_function
 
     def _override_complete_async(self):
         from mistralai import Mistral
 
-        self.original_complete_async = self.client.chat.complete_async
+        self.original_complete_async = self.client.chat.create_async
 
         async def patched_function(*args, **kwargs):
             # Call the original function with its original arguments
@@ -156,12 +164,12 @@ class MistralProvider(InstrumentedProvider):
             return self.handle_response(result, kwargs, init_timestamp, session=session)
 
         # Override the original method with the patched one
-        self.client.chat.complete_async = patched_function
+        self.client.chat.create_async = patched_function
 
     def _override_stream(self):
         from mistralai import Mistral
 
-        self.original_stream = self.client.chat.stream
+        self.original_stream = self.client.chat.create_stream
 
         def patched_function(*args, **kwargs):
             # Call the original function with its original arguments
@@ -173,12 +181,12 @@ class MistralProvider(InstrumentedProvider):
             return self.handle_response(result, kwargs, init_timestamp, session=session)
 
         # Override the original method with the patched one
-        self.client.chat.stream = patched_function
+        self.client.chat.create_stream = patched_function
 
     def _override_stream_async(self):
         from mistralai import Mistral
 
-        self.original_stream_async = self.client.chat.stream_async
+        self.original_stream_async = self.client.chat.create_stream_async
 
         async def patched_function(*args, **kwargs):
             # Call the original function with its original arguments
@@ -190,7 +198,7 @@ class MistralProvider(InstrumentedProvider):
             return self.handle_response(result, kwargs, init_timestamp, session=session)
 
         # Override the original method with the patched one
-        self.client.chat.stream_async = patched_function
+        self.client.chat.create_stream_async = patched_function
 
     def override(self):
         self._override_complete()
@@ -207,7 +215,7 @@ class MistralProvider(InstrumentedProvider):
         ):
             from mistralai import Chat
 
-            Chat.complete = self.original_complete
-            Chat.complete_async = self.original_complete_async
-            Chat.stream = self.original_stream
-            Chat.stream_async = self.original_stream_async
+            self.client.chat.complete = self.original_complete
+            self.client.chat.complete_async = self.original_complete_async
+            self.client.chat.stream = self.original_stream
+            self.client.chat.stream_async = self.original_stream_async
