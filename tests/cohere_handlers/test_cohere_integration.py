@@ -6,6 +6,7 @@ import cohere
 from cohere.types.chat_text_generation_event import ChatTextGenerationEvent
 from cohere.types.chat_stream_start_event import ChatStreamStartEvent
 from cohere.types.chat_stream_end_event import ChatStreamEndEvent
+
 @pytest.mark.integration
 def test_cohere_integration():
     """Integration test demonstrating all four Cohere call patterns:
