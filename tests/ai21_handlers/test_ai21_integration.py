@@ -43,7 +43,7 @@ def test_ai21_integration():
             stream=True,
         )
         for chunk in response:
-            if hasattr(chunk, 'choices') and chunk.choices[0].delta.content:
+            if hasattr(chunk, "choices") and chunk.choices[0].delta.content:
                 pass
 
     async def async_no_stream():
@@ -65,7 +65,7 @@ def test_ai21_integration():
             stream=True,
         )
         async for chunk in response:
-            if hasattr(chunk, 'choices') and chunk.choices[0].delta.content:
+            if hasattr(chunk, "choices") and chunk.choices[0].delta.content:
                 pass
 
     try:

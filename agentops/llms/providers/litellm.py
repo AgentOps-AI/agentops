@@ -124,7 +124,7 @@ class LiteLLMProvider(InstrumentedProvider):
                         logger.warning(f"Error in async stream: {e}")
                         raise
                 return async_generator()
-            elif hasattr(response, '__aiter__'):
+            elif hasattr(response, "__aiter__"):
                 async def async_generator():
                     try:
                         async for chunk in response:

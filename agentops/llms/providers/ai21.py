@@ -185,10 +185,7 @@ class AI21Provider(InstrumentedProvider):
     # Answer functionality removed as it's not available in current version
 
     def undo_override(self):
-        if (
-            self.original_create is not None
-            and self.original_create_async is not None
-        ):
+        if self.original_create is not None and self.original_create_async is not None:
             from ai21.clients.studio.ai21_client import AI21Client
             from ai21.clients.studio.async_ai21_client import AsyncAI21Client
 

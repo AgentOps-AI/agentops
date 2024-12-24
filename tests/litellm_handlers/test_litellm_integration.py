@@ -3,6 +3,7 @@ import pytest
 import agentops
 import asyncio
 import litellm
+
 @pytest.mark.integration
 def test_litellm_integration():
     """Integration test demonstrating all four LiteLLM call patterns:
@@ -16,7 +17,7 @@ def test_litellm_integration():
     """
     print("AGENTOPS_API_KEY present:", bool(os.getenv("AGENTOPS_API_KEY")))
     print("ANTHROPIC_API_KEY present:", bool(os.getenv("ANTHROPIC_API_KEY")))  # LiteLLM uses Anthropic
-    
+
     agentops.init(auto_start_session=False, instrument_llm_calls=True)
     session = agentops.start_session()
     print("Session created:", bool(session))

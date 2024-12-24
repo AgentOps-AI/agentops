@@ -173,7 +173,7 @@ class GroqProvider(InstrumentedProvider):
                 del kwargs["session"]
             result = await self.original_async_create(*args, **kwargs)
             # Convert the result to a coroutine if it's not already awaitable
-            if not hasattr(result, '__await__'):
+            if not hasattr(result, "__await__"):
                 result = completions.ChatCompletion.model_validate(result)
             return self.handle_response(result, kwargs, init_timestamp, session=session)
 

@@ -53,7 +53,7 @@ class MistralProvider(InstrumentedProvider):
                     accumulated_delta.role = choice.delta.role
 
                 # Handle tool calls if they exist
-                if hasattr(choice.delta, 'tool_calls'):
+                if hasattr(choice.delta, "tool_calls"):
                     accumulated_delta.tool_calls = choice.delta.tool_calls
                 else:
                     accumulated_delta.tool_calls = None
