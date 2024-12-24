@@ -5,6 +5,7 @@ import asyncio
 import mistralai  # Import module to trigger provider initialization
 from mistralai import Mistral
 
+
 @pytest.mark.integration
 def test_mistral_integration():
     """Integration test demonstrating all four Mistral call patterns:
@@ -37,7 +38,8 @@ def test_mistral_integration():
             messages=[{"role": "user", "content": "Hello from sync streaming"}],
         )
         for chunk in stream_result:
-            print(chunk.data.choices[0].delta.content, end="")
+            if chunk.data.choices[0].delta.content:
+                pass
 
     async def async_no_stream():
         client = Mistral(api_key=os.getenv("MISTRAL_API_KEY"))
@@ -53,7 +55,8 @@ def test_mistral_integration():
             messages=[{"role": "user", "content": "Hello from async streaming"}],
         )
         async for chunk in async_stream_result:
-            print(chunk.data.choices[0].delta.content, end="")
+            if chunk.data.choices[0].delta.content:
+                pass
 
     try:
         # Call each function

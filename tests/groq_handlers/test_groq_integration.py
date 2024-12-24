@@ -6,6 +6,7 @@ import groq  # Import module to trigger provider initialization
 from groq import Groq
 from groq.resources.chat import AsyncCompletions
 
+
 @pytest.mark.integration
 def test_groq_integration():
     """Integration test demonstrating all four Groq call patterns:

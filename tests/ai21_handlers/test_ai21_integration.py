@@ -6,6 +6,7 @@ import ai21  # Import module to trigger provider initialization
 from ai21 import AI21Client, AsyncAI21Client
 from ai21.models.chat import ChatMessage
 
+
 @pytest.mark.integration
 def test_ai21_integration():
     """Integration test demonstrating all four AI21 call patterns:
@@ -18,7 +19,7 @@ def test_ai21_integration():
     """
     print("AGENTOPS_API_KEY present:", bool(os.getenv("AGENTOPS_API_KEY")))
     print("AI21_API_KEY present:", bool(os.getenv("AI21_API_KEY")))
-    
+
     agentops.init(auto_start_session=False, instrument_llm_calls=True)
     session = agentops.start_session()
     print("Session created:", bool(session))
