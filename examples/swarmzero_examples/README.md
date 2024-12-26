@@ -63,8 +63,8 @@ curl -X 'POST' \
 
 ## Dependencies
 
-- `swarmzero`: Main framework for agent development
-- `agentops`: Agent operations and monitoring
+- `swarmzero`: Framework for multi-agent development
+- `agentops`: Agent observability and monitoring
 - `tavily-python`: Web search API client
 
 ## Learn more
