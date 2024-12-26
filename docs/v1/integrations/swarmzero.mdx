@@ -123,6 +123,7 @@ AgentOps has first party support for [SwarmZero](https://swarmzero.ai) via its P
       ],
       config_path="./swarmzero_config.toml", # see https://github.com/swarmzero/swarmzero/blob/main/swarmzero_config_example.toml
       instruction="You are a helpful assistant that can search the web and extract information from a given URL.",
+      # chat_only_mode=True  # remove comment only if using `my_agent.chat()`
   )
 
   my_agent.run()  # see agent API at localhost:8000/docs
