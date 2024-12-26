@@ -18,7 +18,7 @@ This agent utilizes the Tavily API for performing web searches and is built on t
 1. Clone the repository:
 ```bash
 git clone https://github.com/swarmzero/examples.git
-cd examples/agents/web-search-agent
+cd examples/agents/web_search_agent
 ```
 
 2. Install dependencies using Poetry:
@@ -58,7 +58,7 @@ curl -X 'POST' \
 ```
 
 4. AgentOps will automatically capture the session:
-- View the [agentops.log](agentops.log) file
+- View the _agentops.log_ file
 - See the [AgentOps Dashboard](https://app.agentops.ai/drilldown)
 
 ## Dependencies
