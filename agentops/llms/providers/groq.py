@@ -168,11 +168,8 @@ class GroqProvider(InstrumentedProvider):
         async def patched_function(*args, **kwargs):
             # Call the original function with its original arguments
             init_timestamp = get_ISO_time()
-            session = kwargs.get("session", None)
-            if "session" in kwargs.keys():
-                del kwargs["session"]
             result = await self.original_async_create(*args, **kwargs)
-            return self.handle_response(result, kwargs, init_timestamp, session=session)
+            return self.handle_response(result, kwargs, init_timestamp)
 
         # Override the original method with the patched one
         completions.AsyncCompletions.create = patched_function

@@ -22,8 +22,7 @@ class MistralProvider(InstrumentedProvider):
 
     def handle_response(self, response, kwargs, init_timestamp, session: Optional[Session] = None) -> dict:
         """Handle responses for Mistral"""
-        from mistralai.client import MistralClient
-        from mistralai.models.chat_completion import ChatMessage, ChatCompletionStreamResponse, DeltaMessage
+        from mistralai import Chat
         from mistralai.types import UNSET, UNSET_SENTINEL
 
         llm_event = LLMEvent(init_timestamp=init_timestamp, params=kwargs)
@@ -86,7 +85,7 @@ class MistralProvider(InstrumentedProvider):
 
             def generator():
                 for chunk in response:
-                    handle_stream_chunk(chunk, session)
+                    handle_stream_chunk(chunk)
                     yield chunk
 
             return generator()
@@ -95,7 +94,7 @@ class MistralProvider(InstrumentedProvider):
 
             async def async_generator():
                 async for chunk in response:
-                    handle_stream_chunk(chunk, session)
+                    handle_stream_chunk(chunk)
                     yield chunk
 
             return async_generator()
@@ -124,68 +123,76 @@ class MistralProvider(InstrumentedProvider):
         return response
 
     def _override_complete(self):
-        from mistralai.client import MistralClient
+        from mistralai import Chat
 
-        def patched_function(self_client, *args, **kwargs):
+        global original_complete
+        original_complete = Chat.complete
+
+        def patched_function(*args, **kwargs):
             # Call the original function with its original arguments
             init_timestamp = get_ISO_time()
             session = kwargs.get("session", None)
             if "session" in kwargs.keys():
                 del kwargs["session"]
-            result = self.original_chat.__get__(self_client, type(self_client))(*args, **kwargs)
-            return self.handle_response(result, kwargs, init_timestamp, session=session)
-
-        # Store original method and override
-        self.original_chat = MistralClient.chat
-        MistralClient.chat = patched_function
-
-    def _override_complete_async(self):
-        from mistralai.client import MistralClient
-
-        async def patched_function(self_client, *args, **kwargs):
-            # Call the original function with its original arguments
-            init_timestamp = get_ISO_time()
-            session = kwargs.get("session", None)
-            if "session" in kwargs.keys():
-                del kwargs["session"]
-            result = await self.original_chat_async.__get__(self_client, type(self_client))(*args, **kwargs)
-            return self.handle_response(result, kwargs, init_timestamp, session=session)
-
-        # Store original method and override
-        self.original_chat_async = MistralClient.chat
-        MistralClient.chat = patched_function
-
-    def _override_stream(self):
-        from mistralai.client import MistralClient
-
-        def patched_function(self_client, *args, **kwargs):
-            init_timestamp = get_ISO_time()
-            session = kwargs.pop("session", None) if "session" in kwargs else None
-            kwargs_copy = kwargs.copy()  # Create a copy to preserve original kwargs for handle_response
-            if "session" in kwargs_copy:
-                del kwargs_copy["session"]  # Remove session from kwargs before passing to client
-            result = self_client.chat_stream(*args, **kwargs_copy)
+            result = original_complete(*args, **kwargs)
             return self.handle_response(result, kwargs, init_timestamp, session=session)
 
         # Override the original method with the patched one
-        self.original_stream = MistralClient.chat_stream
-        MistralClient.chat_stream = patched_function
+        Chat.complete = patched_function
 
-    def _override_stream_async(self):
-        from mistralai.client import MistralClient
+    def _override_complete_async(self):
+        from mistralai import Chat
 
-        async def patched_function(self_client, *args, **kwargs):
+        global original_complete_async
+        original_complete_async = Chat.complete_async
+
+        async def patched_function(*args, **kwargs):
+            # Call the original function with its original arguments
             init_timestamp = get_ISO_time()
-            session = kwargs.pop("session", None) if "session" in kwargs else None
-            kwargs_copy = kwargs.copy()  # Create a copy to preserve original kwargs for handle_response
-            if "session" in kwargs_copy:
-                del kwargs_copy["session"]  # Remove session from kwargs before passing to client
-            result = await self.original_stream_async.__get__(self_client, type(self_client))(*args, **kwargs_copy)
+            session = kwargs.get("session", None)
+            if "session" in kwargs.keys():
+                del kwargs["session"]
+            result = await original_complete_async(*args, **kwargs)
             return self.handle_response(result, kwargs, init_timestamp, session=session)
 
-        # Store original method and override
-        self.original_stream_async = MistralClient.chat_stream
-        MistralClient.chat_stream = patched_function
+        # Override the original method with the patched one
+        Chat.complete_async = patched_function
+
+    def _override_stream(self):
+        from mistralai import Chat
+
+        global original_stream
+        original_stream = Chat.stream
+
+        def patched_function(*args, **kwargs):
+            # Call the original function with its original arguments
+            init_timestamp = get_ISO_time()
+            session = kwargs.get("session", None)
+            if "session" in kwargs.keys():
+                del kwargs["session"]
+            result = original_stream(*args, **kwargs)
+            return self.handle_response(result, kwargs, init_timestamp, session=session)
+
+        # Override the original method with the patched one
+        Chat.stream = patched_function
+
+    def _override_stream_async(self):
+        from mistralai import Chat
+
+        global original_stream_async
+        original_stream_async = Chat.stream_async
+
+        async def patched_function(*args, **kwargs):
+            # Call the original function with its original arguments
+            init_timestamp = get_ISO_time()
+            session = kwargs.get("session", None)
+            if "session" in kwargs.keys():
+                del kwargs["session"]
+            result = await original_stream_async(*args, **kwargs)
+            return self.handle_response(result, kwargs, init_timestamp, session=session)
+
+        # Override the original method with the patched one
+        Chat.stream_async = patched_function
 
     def override(self):
         self._override_complete()
