@@ -296,8 +296,8 @@ class OpenAiProvider(InstrumentedProvider):
         }
 
         # Override methods and verify
-        for (cls, method), original in self.original_assistant_methods.items():
-            patched_function = create_patched_function(original)
+        for (cls, method), original_func in self.original_assistant_methods.items():
+            patched_function = create_patched_function(original_func)
             setattr(cls, method, patched_function)
 
     def undo_override(self):
