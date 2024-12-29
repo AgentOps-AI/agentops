@@ -1,0 +1,165 @@
+---
+title: SwarmZero
+description: "Build powerful web search agents with SwarmZero and AgentOps monitoring"
+---
+
+import CodeTooltip from '/snippets/add-code-tooltip.mdx'
+import EnvTooltip from '/snippets/add-env-tooltip.mdx'
+
+AgentOps has first party support for [SwarmZero](https://swarmzero.ai) via its Python SDK. Explore development with SwarmZero by visiting their [docs](https://docs.swarmzero.ai).
+
+## Steps to integrate SwarmZero with AgentOps
+
+<Steps>
+  <Step title="Install SwarmZero">
+    <CodeGroup>
+      ```bash pip 
+      pip install swarmzero
+      ```
+      ```bash poetry
+      poetry add swarmzero
+      ```
+    </CodeGroup>
+  </Step>
+  <Step title="Install the AgentOps SDK">
+    <CodeGroup>
+      ```bash pip 
+      pip install agentops
+      ```
+      ```bash poetry
+      poetry add agentops
+      ```
+    </CodeGroup>
+  </Step>
+  <Step title="Install additional dependencies">
+    <CodeGroup>
+      ```bash pip
+      pip install python-dotenv tavily-python
+      ```
+      ```bash poetry
+      poetry add python-dotenv tavily-python
+      ```
+    </CodeGroup>
+  </Step>
+  <Step title="Add AgentOps to your code">
+    <CodeTooltip/>
+      <CodeGroup>
+        ```python python
+        import os
+        import agentops
+        from dotenv import load_dotenv
+        from swarmzero import Agent
+        from tavily import TavilyClient
+
+        # Load environment variables
+        load_dotenv()
+
+        # Initialize clients
+        agentops.init(os.getenv("AGENTOPS_API_KEY"))
+        tavily_client = TavilyClient(api_key=os.getenv("TAVILY_API_KEY"))
+
+        # Your SwarmZero agent code here...
+        ```
+      </CodeGroup>
+    <EnvTooltip />
+      <CodeGroup>
+        ```python .env
+        AGENTOPS_API_KEY=<YOUR API KEY>
+        TAVILY_API_KEY=<YOUR API KEY>
+        OPENAI_API_KEY=<YOUR API KEY>
+        ```
+      </CodeGroup>
+      Read more about environment variables in [Advanced Configuration](/v1/usage/advanced-configuration)
+  </Step>
+  <Step title="Run your Agent">
+    Execute your program and visit [app.agentops.ai/drilldown](https://app.agentops.ai/drilldown) to observe your Agent! 🕵️
+    <Tip>
+      After your run, AgentOps prints a clickable url to console linking directly to your session in the Dashboard
+    </Tip>
+    <Frame type="glass" caption="Clickable link to session">
+      <img height="200" src="https://github.com/AgentOps-AI/agentops/blob/main/docs/images/external/swarmzero/swarmzero_session.png?raw=true" />
+    </Frame>
+  </Step>
+</Steps>
+
+## Full Example
+
+<CodeGroup>
+  ```python web_search_agent.py
+  import os
+  import agentops
+  from dotenv import load_dotenv
+  from swarmzero import Agent
+  from tavily import TavilyClient
+
+  load_dotenv()
+  agentops.init(os.getenv("AGENTOPS_API_KEY"))
+  tavily_client = TavilyClient(api_key=os.getenv("TAVILY_API_KEY"))
+
+  async def web_search(query: str) -> dict:
+      response = tavily_client.search(query)
+      results = []
+      for result in response["results"][:3]:
+          results.append({"title": result["title"], "url": result["url"], "content": result["content"]})
+      return results
+
+  async def extract_from_urls(urls: list[str]) -> dict:
+      response = tavily_client.extract(urls=urls)
+
+      if response["failed_results"]:
+          print(f"Failed to extract from {response['failed_results']}")
+
+      results = []
+      for result in response["results"]:
+          results.append({"url": result["url"], "raw_content": result["raw_content"]})
+
+      return results
+
+  my_agent = Agent(
+      name="workflow-assistant",
+      functions=[
+          web_search,
+          extract_from_urls,
+      ],
+      config_path="./swarmzero_config.toml", # see https://github.com/swarmzero/swarmzero/blob/main/swarmzero_config_example.toml
+      instruction="You are a helpful assistant that can search the web and extract information from a given URL.",
+      # chat_only_mode=True  # remove comment only if using `my_agent.chat()`
+  )
+
+  my_agent.run()  # see agent API at localhost:8000/docs
+
+  """
+  # chat directly without starting the agent's server
+  import asyncio
+  
+  response = asyncio.run(my_agent.chat(prompt="what is Decentralized-AI about about?"))
+  print(response)
+  """
+
+  ```
+</CodeGroup>
+
+### Using the Agent
+
+Once your agent is running, you can interact with it using HTTP requests:
+
+<CodeGroup>
+  ```bash curl
+  curl -X 'POST' \
+    'http://localhost:8000/api/v1/chat' \
+    -H 'accept: application/json' \
+    -H 'Content-Type: multipart/form-data' \
+    -F 'user_id=test_user' \
+    -F 'session_id=test_web_search_agent' \
+    -F 'chat_data={"messages":[{"role":"user","content":"what is Decentralized-AI about about?"}]}'
+  ```
+</CodeGroup>
+
+This example can be found in this [notebook](https://github.com/AgentOps-AI/agentops/blob/main/examples/swarmzero_examples/web_search_agent.ipynb)
+This full code for this example can be found in this [repository](https://github.com/swarmzero/examples/tree/main/agents/web_search_agent).
+
+<script type="module" src="/scripts/github_stars.js"></script>
+<script type="module" src="/scripts/scroll-img-fadein-animation.js"></script>
+<script type="module" src="/scripts/button_heartbeat_animation.js"></script>
+<script type="css" src="/styles/styles.css"></script>
+<script type="module" src="/scripts/adjust_api_dynamically.js"></script>
