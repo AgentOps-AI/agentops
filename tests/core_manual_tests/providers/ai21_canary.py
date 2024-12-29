@@ -52,12 +52,12 @@ def test_ai21_integration():
 
     def sync_no_stream():
         chat_client.create(
-            model="jamba-instruct", system="You are a helpful AI assistant", messages=sync_messages, maxTokens=10
+            model="jamba-1.5-mini", system="You are a helpful AI assistant", messages=sync_messages, maxTokens=10
         )
 
     def sync_stream():
         stream_response = chat_client.create(
-            model="jamba-instruct",
+            model="jamba-1.5-mini",
             system="You are a helpful AI assistant",
             messages=sync_stream_messages,
             maxTokens=10,
@@ -68,12 +68,12 @@ def test_ai21_integration():
 
     async def async_no_stream():
         await async_chat_client.create(
-            model="jamba-instruct", system="You are a helpful AI assistant", messages=async_messages, maxTokens=10
+            model="jamba-1.5-mini", system="You are a helpful AI assistant", messages=async_messages, maxTokens=10
         )
 
     async def async_stream():
         async_stream_response = await async_chat_client.create(
-            model="jamba-instruct",
+            model="jamba-1.5-mini",
             system="You are a helpful AI assistant",
             messages=async_stream_messages,
             maxTokens=10,
