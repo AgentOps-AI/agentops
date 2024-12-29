@@ -2,7 +2,7 @@ import inspect
 import json
 from datetime import datetime, timezone
 from functools import wraps
-from importlib.metadata import PackageNotFoundError, version
+
 from pprint import pformat
 from typing import Any, Optional, Union
 from uuid import UUID
@@ -11,6 +11,8 @@ from .descriptor import agentops_property
 import requests
 
 from .log_config import logger
+
+import sys
 
 
 def get_ISO_time():
@@ -193,3 +195,34 @@ class cached_property:
         value = self.func(instance)
         setattr(instance, self.func.__name__, value)
         return value
+
+
+def import_module(name: str):
+    """
+    Import registry for handling version-specific package imports.
+
+    Args:
+        name: The module path to import (e.g. 'importlib.metadata.version')
+    Returns:
+        The requested module/function
+    """
+    registry = {
+        "importlib.metadata.version": (
+            "importlib.metadata" if sys.version_info >= (3, 8) else "importlib_metadata"
+        ),
+        "importlib.metadata.PackageNotFoundError": (
+            "importlib.metadata" if sys.version_info >= (3, 8) else "importlib_metadata"
+        ),
+        "importlib.metadata.distributions": (
+            "importlib.metadata" if sys.version_info >= (3, 8) else "importlib_metadata"
+        ),
+    }
+
+    if name not in registry:
+        raise ImportError(f"No compatibility import defined for {name}")
+
+    module_path = registry[name]
+    attr = name.split(".")[-1]  # Get the last part (e.g., 'version' from 'importlib.metadata.version')
+    
+    module = __import__(module_path, fromlist=[attr])
+    return getattr(module, attr)

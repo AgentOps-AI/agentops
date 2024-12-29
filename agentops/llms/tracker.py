@@ -1,6 +1,8 @@
 import sys
 from importlib import import_module
-from importlib.metadata import version
+
+# Get version from compat
+version = import_module("importlib.metadata.version")
 
 from packaging.version import Version, parse
 

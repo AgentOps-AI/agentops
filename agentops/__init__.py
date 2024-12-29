@@ -1,17 +1,19 @@
 # agentops/__init__.py
 import sys
 from typing import Optional, List, Union
+from .helpers import import_module
+
+# Get version from compat
+version = import_module("importlib.metadata.version")
+from packaging import version
 
 from .client import Client
 from .event import Event, ActionEvent, LLMEvent, ToolEvent, ErrorEvent
 from .decorators import record_action, track_agent, record_tool, record_function
-from .helpers import check_agentops_update
+from .helpers import check_agentops_update, import_module
 from .log_config import logger
 from .session import Session
 import threading
-from importlib.metadata import version as get_version
-from packaging import version
-from .llms import tracker
 
 try:
     from .partners.langchain_callback_handler import (

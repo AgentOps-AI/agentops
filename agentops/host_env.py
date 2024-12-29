@@ -1,11 +1,15 @@
 import platform
 import psutil
 import socket
-from .helpers import get_agentops_version
+from .helpers import get_agentops_version, import_module
 from .log_config import logger
-import importlib.metadata
 import os
 import sys
+
+# Get imports for this module
+version = import_module("importlib.metadata.version")
+PackageNotFoundError = import_module("importlib.metadata.PackageNotFoundError")
+distributions = import_module("importlib.metadata.distributions")
 
 
 def get_sdk_details():
@@ -37,10 +41,9 @@ def get_sys_packages():
     sys_packages = {}
     for module in sys.modules:
         try:
-            version = importlib.metadata.version(module)
-            sys_packages[module] = version
-        except importlib.metadata.PackageNotFoundError:
-            # Skip built-in modules and those without package metadata
+            pkg_version = version(module)
+            sys_packages[module] = pkg_version
+        except PackageNotFoundError:
             continue
 
     return sys_packages
@@ -49,10 +52,7 @@ def get_sys_packages():
 def get_installed_packages():
     try:
         return {
-            # TODO: add to opt out
-            "Installed Packages": {
-                dist.metadata.get("Name"): dist.metadata.get("Version") for dist in importlib.metadata.distributions()
-            }
+            "Installed Packages": {dist.metadata.get("Name"): dist.metadata.get("Version") for dist in distributions()}
         }
     except:
         return {}
