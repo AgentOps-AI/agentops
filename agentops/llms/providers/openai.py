@@ -239,19 +239,30 @@ class OpenAiProvider(InstrumentedProvider):
             """Handle response based on return type"""
             action_event = ActionEvent(init_timestamp=init_timestamp, params=kwargs)
 
-            if session is not None:
-                action_event.session_id = session.session_id
+            try:
+                if session is not None:
+                    action_event.session_id = session.session_id
 
-            # Base ActionEvent for all API calls
-            if isinstance(response, BasePage):
-                action_event.action_type = response.__class__.__name__.split('[')[1][:-1]
-            else:
-                action_event.action_type = response.__class__.__name__
+                # Base ActionEvent for all API calls
+                if isinstance(response, BasePage):
+                    action_event.action_type = response.__class__.__name__.split('[')[1][:-1]
+                else:
+                    action_event.action_type = response.__class__.__name__
 
-            action_event.end_timestamp = get_ISO_time()
-            action_event.returns = response.model_dump() if hasattr(response, "model_dump") else str(response)
+                action_event.end_timestamp = get_ISO_time()
+                action_event.returns = response.model_dump() if hasattr(response, "model_dump") else str(response)
 
-            self._safe_record(session, action_event)
+                self._safe_record(session, action_event)
+            except Exception as e:
+                self._safe_record(session, ErrorEvent(trigger_event=action_event, exception=e))
+
+                kwargs_str = pprint.pformat(kwargs)
+                response = pprint.pformat(response)
+                logger.warning(
+                    f"Unable to parse response for Assistants API. Skipping upload to AgentOps\n"
+                    f"response:\n {response}\n"
+                    f"kwargs:\n {kwargs_str}\n"
+                )
 
             return response
 
