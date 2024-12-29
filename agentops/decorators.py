@@ -67,6 +67,10 @@ def record_action(event_name: Optional[str] = None):
                 try:
                     returns = await func(*args, **kwargs)
 
+                    # If the function returns multiple values, record them all in the same event
+                    if isinstance(returns, tuple):
+                        returns = list(returns)
+
                     event.returns = returns
 
                     # NOTE: Will likely remove in future since this is tightly coupled. Adding it to see how useful we find it for now
@@ -126,6 +130,10 @@ def record_action(event_name: Optional[str] = None):
 
                 try:
                     returns = func(*args, **kwargs)
+
+                    # If the function returns multiple values, record them all in the same event
+                    if isinstance(returns, tuple):
+                        returns = list(returns)
 
                     event.returns = returns
 
@@ -201,6 +209,10 @@ def record_tool(tool_name: Optional[str] = None):
                 try:
                     returns = await func(*args, **kwargs)
 
+                    # If the function returns multiple values, record them all in the same event
+                    if isinstance(returns, tuple):
+                        returns = list(returns)
+
                     event.returns = returns
 
                     # NOTE: Will likely remove in future since this is tightly coupled. Adding it to see how useful we find it for now
@@ -260,6 +272,10 @@ def record_tool(tool_name: Optional[str] = None):
 
                 try:
                     returns = func(*args, **kwargs)
+
+                    # If the function returns multiple values, record them all in the same event
+                    if isinstance(returns, tuple):
+                        returns = list(returns)
 
                     event.returns = returns
 
