@@ -6,6 +6,7 @@ from groq import Groq, AsyncGroq
 
 load_dotenv()
 
+
 def test_groq_integration():
     """Integration test demonstrating all four Groq call patterns:
     1. Sync (non-streaming)
@@ -22,9 +23,10 @@ def test_groq_integration():
     # Initialize client and provider
     groq_client = Groq(api_key=os.getenv("GROQ_API_KEY"))
     from agentops.llms.providers.groq import GroqProvider
+
     provider = GroqProvider(groq_client)
     provider.override()
-    
+
     # Pass session to provider
     provider.client = session
     async_groq_client = AsyncGroq(api_key=os.getenv("GROQ_API_KEY"))
@@ -35,7 +37,7 @@ def test_groq_integration():
             messages=[
                 {"role": "user", "content": "Hello from sync no stream"},
             ],
-            session=session
+            session=session,
         )
 
     def sync_stream():
@@ -45,7 +47,7 @@ def test_groq_integration():
                 {"role": "user", "content": "Hello from sync streaming"},
             ],
             stream=True,
-            session=session
+            session=session,
         )
         for _ in stream_response:
             pass
@@ -56,7 +58,7 @@ def test_groq_integration():
             messages=[
                 {"role": "user", "content": "Hello from async no stream"},
             ],
-            session=session
+            session=session,
         )
 
     async def async_stream():
@@ -66,7 +68,7 @@ def test_groq_integration():
                 {"role": "user", "content": "Hello from async streaming"},
             ],
             stream=True,
-            session=session
+            session=session,
         )
         async for _ in async_stream_response:
             pass
@@ -89,6 +91,7 @@ def test_groq_integration():
     print(analytics)
     # Verify that all LLM calls were tracked
     assert analytics["LLM calls"] >= 4, f"Expected at least 4 LLM calls, but got {analytics['LLM calls']}"
+
 
 if __name__ == "__main__":
     test_groq_integration()

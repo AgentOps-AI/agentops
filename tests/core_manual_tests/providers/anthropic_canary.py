@@ -6,6 +6,7 @@ import anthropic
 
 load_dotenv()
 
+
 def test_anthropic_integration():
     """Integration test demonstrating all four Anthropic call patterns:
     1. Sync (non-streaming)
@@ -23,9 +24,10 @@ def test_anthropic_integration():
     anthropic_client = anthropic.Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY"))
     async_anthropic_client = anthropic.AsyncAnthropic(api_key=os.getenv("ANTHROPIC_API_KEY"))
     from agentops.llms.providers.anthropic import AnthropicProvider
+
     provider = AnthropicProvider(anthropic_client)
     provider.override()
-    
+
     # Pass session to provider
     provider.client = session
 
@@ -39,7 +41,7 @@ def test_anthropic_integration():
                     "content": "Hello from sync no stream",
                 }
             ],
-            session=session
+            session=session,
         )
 
     def sync_stream():
@@ -53,7 +55,7 @@ def test_anthropic_integration():
                 }
             ],
             stream=True,
-            session=session
+            session=session,
         )
         for _ in stream_response:
             pass
@@ -68,7 +70,7 @@ def test_anthropic_integration():
                     "content": "Hello from async no stream",
                 }
             ],
-            session=session
+            session=session,
         )
 
     async def async_stream():
@@ -82,7 +84,7 @@ def test_anthropic_integration():
                 }
             ],
             stream=True,
-            session=session
+            session=session,
         )
         async for _ in async_stream_response:
             pass
@@ -105,6 +107,7 @@ def test_anthropic_integration():
     print(analytics)
     # Verify that all LLM calls were tracked
     assert analytics["LLM calls"] >= 4, f"Expected at least 4 LLM calls, but got {analytics['LLM calls']}"
+
 
 if __name__ == "__main__":
     test_anthropic_integration()

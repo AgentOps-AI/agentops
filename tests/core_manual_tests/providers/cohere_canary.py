@@ -9,6 +9,7 @@ from agentops.llms.providers.cohere import CohereProvider
 
 load_dotenv()
 
+
 def test_cohere_integration():
     """Integration test demonstrating all four Cohere call patterns:
     1. Sync (non-streaming)
@@ -34,10 +35,11 @@ def test_cohere_integration():
         co = cohere.Client(api_key=api_key)
         aco = cohere.AsyncClient(api_key=api_key)
         from agentops.llms.providers.cohere import CohereProvider
+
         provider = CohereProvider(co)
         provider.client = session  # Pass session to provider before override
         provider.override()  # This will handle both sync and async clients
-        
+
         # Set up async client with the same session
         aco.session = session
         # Ensure the async client's provider also has the session
@@ -63,7 +65,7 @@ def test_cohere_integration():
             stream = co.chat_stream(message="Hello from sync streaming", model="command", session=session)
             completion = ""
             for chunk in stream:
-                if hasattr(chunk, 'text'):
+                if hasattr(chunk, "text"):
                     completion += chunk.text
                 print(f"Received sync chunk: {chunk}")
             print(f"sync_stream completed successfully with completion: {completion}")
@@ -80,7 +82,7 @@ def test_cohere_integration():
         except asyncio.TimeoutError:
             print("Warning: async_no_stream timed out")
             raise
-        except Exception as e: 
+        except Exception as e:
             print(f"Error in async_no_stream: {str(e)}")
             raise
 
@@ -91,11 +93,7 @@ def test_cohere_integration():
                 # Ensure provider has the current session
                 provider.client = session
                 # Create a new stream with the provider to ensure proper event tracking
-                stream = await aco.chat_stream(
-                    message="Hello from async streaming",
-                    model="command",
-                    session=session
-                )
+                stream = await aco.chat_stream(message="Hello from async streaming", model="command", session=session)
                 print("Stream created, starting iteration...")
                 async for chunk in stream:
                     print(f"Received async chunk: {chunk}")
@@ -112,21 +110,21 @@ def test_cohere_integration():
         print("Starting async_no_stream...")
         await async_no_stream()
         print("Completed async_no_stream")
-        
+
         print("\nStarting first async_stream...")
         await async_stream(provider, session)
         print("Completed first async_stream")
-        
+
         print("\nStarting second async_stream...")
         await async_stream(provider, session)  # Run twice to ensure we get all LLM calls
         print("Completed second async_stream")
-        
+
         print("\nStarting third async_stream...")
         await async_stream(provider, session)  # Run thrice to ensure we get all LLM calls
         print("Completed third async_stream")
-        
+
         print("\nAll async tests completed successfully")
-        
+
         # End session and verify analytics after all tests
         session.end_session("Success")
         analytics = session.get_analytics()
@@ -143,6 +141,7 @@ def test_cohere_integration():
         raise
 
     print("\nTest completed successfully")
+
 
 if __name__ == "__main__":
     test_cohere_integration()

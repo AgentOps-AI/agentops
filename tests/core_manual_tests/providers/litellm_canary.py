@@ -6,6 +6,7 @@ import litellm
 
 load_dotenv()
 
+
 def test_litellm_integration():
     """Integration test demonstrating all four LiteLLM call patterns:
     1. Sync (non-streaming)
@@ -18,20 +19,19 @@ def test_litellm_integration():
     # Initialize AgentOps without auto-starting session
     agentops.init(auto_start_session=False)
     session = agentops.start_session()
-    
+
     # Initialize LiteLLM provider
     from agentops.llms.providers.litellm import LiteLLMProvider
+
     provider = LiteLLMProvider(None)  # LiteLLM doesn't need a client
     provider.override()
-    
+
     # Pass session to provider
     provider.client = session
 
     def sync_no_stream():
         litellm.completion(
-            model="gpt-3.5-turbo",
-            messages=[{"content": "Hello from sync no stream", "role": "user"}],
-            session=session
+            model="gpt-3.5-turbo", messages=[{"content": "Hello from sync no stream", "role": "user"}], session=session
         )
 
     def sync_stream():
@@ -39,16 +39,14 @@ def test_litellm_integration():
             model="gpt-3.5-turbo",
             messages=[{"content": "Hello from sync streaming", "role": "user"}],
             stream=True,
-            session=session
+            session=session,
         )
         for _ in stream_response:
             pass
 
     async def async_no_stream():
         await litellm.acompletion(
-            model="gpt-3.5-turbo",
-            messages=[{"content": "Hello from async no stream", "role": "user"}],
-            session=session
+            model="gpt-3.5-turbo", messages=[{"content": "Hello from async no stream", "role": "user"}], session=session
         )
 
     async def async_stream():
@@ -56,7 +54,7 @@ def test_litellm_integration():
             model="gpt-3.5-turbo",
             messages=[{"content": "Hello from async streaming", "role": "user"}],
             stream=True,
-            session=session
+            session=session,
         )
         # Handle streaming response
         if isinstance(async_stream_response, str):
@@ -83,6 +81,7 @@ def test_litellm_integration():
     print(analytics)
     # Verify that all LLM calls were tracked
     assert analytics["LLM calls"] >= 4, f"Expected at least 4 LLM calls, but got {analytics['LLM calls']}"
+
 
 if __name__ == "__main__":
     test_litellm_integration()
