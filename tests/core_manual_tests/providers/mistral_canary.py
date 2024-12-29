@@ -1,85 +1,86 @@
 import asyncio
-import os
+
 import agentops
+import os
 from dotenv import load_dotenv
-from mistralai.client import MistralClient
-from mistralai.models.chat_completion import ChatMessage
+from mistralai import Mistral
 
 load_dotenv()
+MISTRAL_API_KEY = os.getenv("MISTRAL_API_KEY")
 
-# Check for required API key
-if not os.getenv("MISTRAL_API_KEY"):
-    raise ValueError("MISTRAL_API_KEY environment variable is required")
+agentops.init(default_tags=["mistral-provider-test"])
+client = Mistral(MISTRAL_API_KEY)
 
-def test_mistral_integration():
-    """Integration test demonstrating all four Mistral call patterns:
-    1. Sync (non-streaming)
-    2. Sync (streaming)
-    3. Async (non-streaming)
-    4. Async (streaming)
+response = client.chat.complete(
+    model="open-mistral-nemo",
+    messages=[
+        {
+            "role": "user",
+            "content": "Say Hello",
+        },
+    ],
+)
 
-    Verifies that AgentOps correctly tracks all LLM calls via analytics.
-    """
-    # Initialize AgentOps without auto-starting session
-    agentops.init(auto_start_session=False)
-    session = agentops.start_session()
 
-    # Initialize client and provider
-    client = MistralClient(api_key=os.getenv("MISTRAL_API_KEY"))
-    from agentops.llms.providers.mistral import MistralProvider
-    provider = MistralProvider(client)
-    provider.override()
-    
-    # Pass session to provider
-    provider.client = session
+stream_response = client.chat.stream(
+    model="open-mistral-nemo",
+    messages=[
+        {
+            "role": "user",
+            "content": "Say Hello again",
+        }
+    ],
+)
 
-    def sync_no_stream():
-        client.chat(
-            model="mistral-tiny",
-            messages=[ChatMessage(role="user", content="Hello from sync no stream")]
-        )
+response = ""
+for event in stream_response:
+    if event.data.choices[0].finish_reason == "stop":
+        print(response)
+    else:
+        response += event.data.choices[0].delta.content
 
-    async def sync_stream():
-        stream_response = await client.chat_stream(
-            model="mistral-tiny",
-            messages=[ChatMessage(role="user", content="Hello from sync streaming")]
-        )
-        async for chunk in stream_response:
-            _ = chunk.delta.content if hasattr(chunk.delta, "content") else ""
 
-    async def async_no_stream():
-        # Mistral doesn't have async methods, use sync
-        client.chat(
-            model="mistral-tiny",
-            messages=[ChatMessage(role="user", content="Hello from async no stream")]
-        )
+async def async_test():
+    async_response = await client.chat.complete_async(
+        model="open-mistral-nemo",
+        messages=[
+            {
+                "role": "user",
+                "content": "Say Hello in the Hindi language",
+            }
+        ],
+    )
+    print(async_response.choices[0].message.content)
 
-    async def async_stream():
-        stream_response = await client.chat_stream(
-            model="mistral-tiny",
-            messages=[ChatMessage(role="user", content="Hello from async streaming")]
-        )
-        async for chunk in stream_response:
-            _ = chunk.delta.content if hasattr(chunk.delta, 'content') else ''
 
-    async def run_async_tests():
-        await async_no_stream()
-        await async_stream()
+async def async_stream_test():
+    async_stream_response = await client.chat.stream_async(
+        model="open-mistral-nemo",
+        messages=[
+            {
+                "role": "user",
+                "content": "Say Hello in the Japanese language",
+            }
+        ],
+    )
 
-    # Call each function with proper error handling
-    try:
-        sync_no_stream()
-        asyncio.run(sync_stream())
-        asyncio.run(run_async_tests())
-    except Exception as e:
-        print(f"Error during Mistral test: {str(e)}")
-        raise
+    response = ""
+    async for event in async_stream_response:
+        if event.data.choices[0].finish_reason == "stop":
+            print(response)
+        else:
+            response += event.data.choices[0].delta.content
 
-    session.end_session("Success")
-    analytics = session.get_analytics()
-    print(analytics)
-    # Verify that all LLM calls were tracked
-    assert analytics["LLM calls"] >= 4, f"Expected at least 4 LLM calls, but got {analytics['LLM calls']}"
 
-if __name__ == "__main__":
-    test_mistral_integration()
+async def main():
+    await async_test()
+    await async_stream_test()
+
+
+asyncio.run(main())
+
+agentops.end_session(end_state="Success")
+
+###
+#  Used to verify that one session is created with one LLM event
+###
