@@ -174,3 +174,21 @@ def debug_print_function_params(func):
         return func(self, *args, **kwargs)
 
     return wrapper
+
+
+class cached_property:
+    """
+    Decorator that converts a method with a single self argument into a
+    property cached on the instance.
+    See: https://github.com/AgentOps-AI/agentops/issues/612
+    """
+    def __init__(self, func):
+        self.func = func
+        self.__doc__ = func.__doc__
+
+    def __get__(self, instance, cls=None):
+        if instance is None:
+            return self
+        value = self.func(instance)
+        setattr(instance, self.func.__name__, value)
+        return value 

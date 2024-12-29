@@ -14,7 +14,6 @@ import sys
 import threading
 import traceback
 from decimal import Decimal
-from functools import cached_property
 from typing import List, Optional, Tuple, Union
 from uuid import UUID, uuid4
 
@@ -28,7 +27,7 @@ from .log_config import logger
 from .meta_client import MetaClient
 from .session import Session, active_sessions
 from .singleton import conditional_singleton
-
+from .helpers import cached_property
 
 @conditional_singleton
 class Client(metaclass=MetaClient):
