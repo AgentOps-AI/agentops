@@ -245,7 +245,7 @@ class OpenAiProvider(InstrumentedProvider):
 
                 # Base ActionEvent for all API calls
                 if isinstance(response, BasePage):
-                    action_event.action_type = response.__class__.__name__.split('[')[1][:-1]
+                    action_event.action_type = response.__class__.__name__.split("[")[1][:-1]
                 else:
                     action_event.action_type = response.__class__.__name__
 
@@ -269,7 +269,7 @@ class OpenAiProvider(InstrumentedProvider):
         def create_patched_function(original_func):
             def patched_function(*args, **kwargs):
                 init_timestamp = get_ISO_time()
-                
+
                 session = kwargs.get("session", None)
                 if "session" in kwargs.keys():
                     del kwargs["session"]
@@ -288,13 +288,11 @@ class OpenAiProvider(InstrumentedProvider):
             beta.Threads: ["create", "retrieve", "update", "delete"],
             beta.threads.Messages: ["create", "retrieve", "update", "list"],
             beta.threads.Runs: ["create", "retrieve", "update", "list", "submit_tool_outputs", "cancel"],
-            beta.threads.runs.steps.Steps: ["retrieve", "list"]
+            beta.threads.runs.steps.Steps: ["retrieve", "list"],
         }
 
         self.original_assistant_methods = {
-            (cls, method): getattr(cls, method)
-            for cls, methods in assistant_api_methods.items()
-            for method in methods
+            (cls, method): getattr(cls, method) for cls, methods in assistant_api_methods.items() for method in methods
         }
 
         # Override methods and verify
@@ -305,6 +303,7 @@ class OpenAiProvider(InstrumentedProvider):
     def undo_override(self):
         if self.original_create is not None and self.original_create_async is not None:
             from openai.resources.chat import completions
+
             completions.AsyncCompletions.create = self.original_create_async
             completions.Completions.create = self.original_create
 
