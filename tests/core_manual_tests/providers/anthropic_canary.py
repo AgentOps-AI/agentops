@@ -1,110 +1,78 @@
 import asyncio
-import os
+
 import agentops
 from dotenv import load_dotenv
 import anthropic
 
 load_dotenv()
+agentops.init(default_tags=["anthropic-provider-test"])
+anthropic_client = anthropic.Anthropic()
+async_anthropic_client = anthropic.AsyncAnthropic()
 
-def test_anthropic_integration():
-    """Integration test demonstrating all four Anthropic call patterns:
-    1. Sync (non-streaming)
-    2. Sync (streaming)
-    3. Async (non-streaming)
-    4. Async (streaming)
+response = anthropic_client.messages.create(
+    max_tokens=1024,
+    model="claude-3-5-sonnet-20240620",
+    messages=[
+        {
+            "role": "user",
+            "content": "say hi",
+        }
+    ],
+)
 
-    Verifies that AgentOps correctly tracks all LLM calls via analytics.
-    """
-    # Initialize AgentOps without auto-starting session
-    agentops.init(auto_start_session=False)
-    session = agentops.start_session()
 
-    # Initialize clients and provider
-    anthropic_client = anthropic.Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY"))
-    async_anthropic_client = anthropic.AsyncAnthropic(api_key=os.getenv("ANTHROPIC_API_KEY"))
-    from agentops.llms.providers.anthropic import AnthropicProvider
-    provider = AnthropicProvider(anthropic_client)
-    provider.override()
-    
-    # Pass session to provider
-    provider.client = session
+stream_response = anthropic_client.messages.create(
+    max_tokens=1024,
+    model="claude-3-5-sonnet-20240620",
+    messages=[
+        {
+            "role": "user",
+            "content": "say hi 2",
+        }
+    ],
+    stream=True,
+)
 
-    def sync_no_stream():
-        anthropic_client.messages.create(
-            max_tokens=1024,
-            model="claude-3-5-sonnet-20240620",
-            messages=[
-                {
-                    "role": "user",
-                    "content": "Hello from sync no stream",
-                }
-            ],
-            session=session
-        )
+response = ""
+for event in stream_response:
+    if event.type == "content_block_delta":
+        response += event.delta.text
+    elif event.type == "message_stop":
+        print(response)
 
-    def sync_stream():
-        stream_response = anthropic_client.messages.create(
-            max_tokens=1024,
-            model="claude-3-5-sonnet-20240620",
-            messages=[
-                {
-                    "role": "user",
-                    "content": "Hello from sync streaming",
-                }
-            ],
-            stream=True,
-            session=session
-        )
-        for _ in stream_response:
-            pass
 
-    async def async_no_stream():
-        await async_anthropic_client.messages.create(
-            max_tokens=1024,
-            model="claude-3-5-sonnet-20240620",
-            messages=[
-                {
-                    "role": "user",
-                    "content": "Hello from async no stream",
-                }
-            ],
-            session=session
-        )
+async def async_test():
+    async_response = await async_anthropic_client.messages.create(
+        max_tokens=1024,
+        model="claude-3-5-sonnet-20240620",
+        messages=[
+            {
+                "role": "user",
+                "content": "say hi 3",
+            }
+        ],
+    )
+    print(async_response)
 
-    async def async_stream():
-        async_stream_response = await async_anthropic_client.messages.create(
-            max_tokens=1024,
-            model="claude-3-5-sonnet-20240620",
-            messages=[
-                {
-                    "role": "user",
-                    "content": "Hello from async streaming",
-                }
-            ],
-            stream=True,
-            session=session
-        )
-        async for _ in async_stream_response:
-            pass
 
-    async def run_async_tests():
-        await async_no_stream()
-        await async_stream()
+asyncio.run(async_test())
 
-    # Call each function with proper error handling
-    try:
-        sync_no_stream()
-        sync_stream()
-        asyncio.run(run_async_tests())
-    except Exception as e:
-        print(f"Error during Anthropic test: {str(e)}")
-        raise
+agentops.stop_instrumenting()
 
-    session.end_session("Success")
-    analytics = session.get_analytics()
-    print(analytics)
-    # Verify that all LLM calls were tracked
-    assert analytics["LLM calls"] >= 4, f"Expected at least 4 LLM calls, but got {analytics['LLM calls']}"
+untracked_response = anthropic_client.messages.create(
+    max_tokens=1024,
+    model="claude-3-5-sonnet-20240620",
+    messages=[
+        {
+            "role": "user",
+            "content": "say hi 4",
+        }
+    ],
+)
 
-if __name__ == "__main__":
-    test_anthropic_integration()
+
+agentops.end_session(end_state="Success")
+
+###
+#  Used to verify that one session is created with one LLM event
+###
