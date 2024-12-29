@@ -29,6 +29,7 @@ from .session import Session, active_sessions
 from .singleton import conditional_singleton
 from .helpers import cached_property
 
+
 @conditional_singleton
 class Client(metaclass=MetaClient):
     def __init__(self):

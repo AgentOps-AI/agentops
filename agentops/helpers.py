@@ -182,6 +182,7 @@ class cached_property:
     property cached on the instance.
     See: https://github.com/AgentOps-AI/agentops/issues/612
     """
+
     def __init__(self, func):
         self.func = func
         self.__doc__ = func.__doc__
@@ -191,4 +192,4 @@ class cached_property:
             return self
         value = self.func(instance)
         setattr(instance, self.func.__name__, value)
-        return value 
+        return value
