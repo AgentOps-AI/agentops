@@ -238,30 +238,53 @@ class OpenAiProvider(InstrumentedProvider):
         def handle_response(response, kwargs, init_timestamp, session: Optional[Session] = None) -> dict:
             """Handle response based on return type"""
             action_event = ActionEvent(init_timestamp=init_timestamp, params=kwargs)
+            if session is not None:
+                action_event.session_id = session.session_id
 
             try:
-                if session is not None:
-                    action_event.session_id = session.session_id
-
-                # Base ActionEvent for all API calls
-                if isinstance(response, BasePage):
-                    action_event.action_type = response.__class__.__name__.split("[")[1][:-1]
-                else:
-                    action_event.action_type = response.__class__.__name__
-
+                # Set action type and returns
+                action_event.action_type = (
+                    response.__class__.__name__.split('[')[1][:-1] 
+                    if isinstance(response, BasePage) 
+                    else response.__class__.__name__
+                )
+                action_event.returns = response.model_dump() if hasattr(response, "model_dump") else response
                 action_event.end_timestamp = get_ISO_time()
-                action_event.returns = response.model_dump()
-
                 self._safe_record(session, action_event)
-            except Exception as e:
-                self._safe_record(session, ErrorEvent(trigger_event=action_event, exception=e))
 
-                kwargs_str = pprint.pformat(kwargs)
-                response = pprint.pformat(response)
-                logger.warning(
-                    f"Unable to parse response for Assistants API. Skipping upload to AgentOps\n"
-                    f"response:\n {response}\n"
-                    f"kwargs:\n {kwargs_str}\n"
+                # Create LLMEvent if usage data exists
+                response_dict = response.model_dump() if hasattr(response, "model_dump") else {}
+                
+                if "usage" in response_dict:
+                    llm_event = LLMEvent(init_timestamp=init_timestamp, params=kwargs)
+                    if session is not None:
+                        llm_event.session_id = session.session_id
+
+                    llm_event.model = response_dict.get("model")
+                    llm_event.prompt_tokens = response_dict["usage"]["prompt_tokens"]
+                    llm_event.completion_tokens = response_dict["usage"]["completion_tokens"]
+                    llm_event.end_timestamp = get_ISO_time()
+                    self._safe_record(session, llm_event)
+
+                elif "data" in response_dict:
+                    for item in response_dict["data"]:
+                        if "usage" in item:
+                            llm_event = LLMEvent(init_timestamp=init_timestamp, params=kwargs)
+                            if session is not None:
+                                llm_event.session_id = session.session_id
+
+                            llm_event.prompt_tokens = item["usage"]["prompt_tokens"]
+                            llm_event.completion_tokens = item["usage"]["completion_tokens"]
+                            llm_event.end_timestamp = get_ISO_time()
+                            self._safe_record(session, llm_event)
+
+            except Exception as e:
+                self._safe_record(
+                    session, 
+                    ErrorEvent(
+                        trigger_event=action_event,
+                        exception=e
+                    )
                 )
 
             return response
