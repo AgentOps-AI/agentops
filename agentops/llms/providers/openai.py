@@ -255,7 +255,7 @@ class OpenAiProvider(InstrumentedProvider):
                 # Create LLMEvent if usage data exists
                 response_dict = response.model_dump() if hasattr(response, "model_dump") else {}
 
-                if "usage" in response_dict:
+                if "usage" in response_dict and response_dict["usage"] is not None:
                     llm_event = LLMEvent(init_timestamp=init_timestamp, params=kwargs)
                     if session is not None:
                         llm_event.session_id = session.session_id
@@ -268,7 +268,7 @@ class OpenAiProvider(InstrumentedProvider):
 
                 elif "data" in response_dict:
                     for item in response_dict["data"]:
-                        if "usage" in item:
+                        if "usage" in item and item["usage"] is not None:
                             llm_event = LLMEvent(init_timestamp=init_timestamp, params=kwargs)
                             if session is not None:
                                 llm_event.session_id = session.session_id
