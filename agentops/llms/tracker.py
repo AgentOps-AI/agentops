@@ -4,8 +4,6 @@ from importlib.metadata import version
 
 from packaging.version import Version, parse
 
-from agentops.llms.llama_stack_client import LlamaStackClientProvider
-
 from ..log_config import logger
 
 from .providers.cohere import CohereProvider
@@ -16,6 +14,7 @@ from .providers.openai import OpenAiProvider
 from .providers.anthropic import AnthropicProvider
 from .providers.mistral import MistralProvider
 from .providers.ai21 import AI21Provider
+from .providers.llama_stack_client import LlamaStackClientProvider
 from .providers.taskweaver import TaskWeaverProvider
 
 original_func = {}
