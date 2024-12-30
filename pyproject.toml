@@ -10,7 +10,8 @@ authors = [
   { name="Shawn Qiu", email="siyangqiu@gmail.com" },
   { name="Braelyn Boynton", email="bboynton97@gmail.com" },
   { name="Howard Gil", email="howardbgil@gmail.com" },
-  { name="Constantin Teodorescu", email="teocns@gmail.com"}
+  { name="Constantin Teodorescu", email="teocns@gmail.com" },
+  { name="Pratyush Shukla", email="ps4534@nyu.edu" }
 ]
 description = "Observability and DevTool Platform for AI Agents"
 readme = "README.md"
