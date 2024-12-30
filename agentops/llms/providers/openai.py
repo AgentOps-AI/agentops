@@ -250,7 +250,7 @@ class OpenAiProvider(InstrumentedProvider):
                     action_event.action_type = response.__class__.__name__
 
                 action_event.end_timestamp = get_ISO_time()
-                action_event.returns = response.model_dump() if hasattr(response, "model_dump") else str(response)
+                action_event.returns = response.model_dump()
 
                 self._safe_record(session, action_event)
             except Exception as e:
