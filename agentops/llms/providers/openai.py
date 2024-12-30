@@ -244,8 +244,8 @@ class OpenAiProvider(InstrumentedProvider):
             try:
                 # Set action type and returns
                 action_event.action_type = (
-                    response.__class__.__name__.split('[')[1][:-1] 
-                    if isinstance(response, BasePage) 
+                    response.__class__.__name__.split("[")[1][:-1]
+                    if isinstance(response, BasePage)
                     else response.__class__.__name__
                 )
                 action_event.returns = response.model_dump() if hasattr(response, "model_dump") else response
@@ -254,7 +254,7 @@ class OpenAiProvider(InstrumentedProvider):
 
                 # Create LLMEvent if usage data exists
                 response_dict = response.model_dump() if hasattr(response, "model_dump") else {}
-                
+
                 if "usage" in response_dict:
                     llm_event = LLMEvent(init_timestamp=init_timestamp, params=kwargs)
                     if session is not None:
@@ -279,12 +279,14 @@ class OpenAiProvider(InstrumentedProvider):
                             self._safe_record(session, llm_event)
 
             except Exception as e:
-                self._safe_record(
-                    session, 
-                    ErrorEvent(
-                        trigger_event=action_event,
-                        exception=e
-                    )
+                self._safe_record(session, ErrorEvent(trigger_event=action_event, exception=e))
+
+                kwargs_str = pprint.pformat(kwargs)
+                response = pprint.pformat(response)
+                logger.warning(
+                    f"Unable to parse response for Assistants API. Skipping upload to AgentOps\n"
+                    f"response:\n {response}\n"
+                    f"kwargs:\n {kwargs_str}\n"
                 )
 
             return response
