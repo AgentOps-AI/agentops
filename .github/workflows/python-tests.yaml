@@ -1,0 +1,69 @@
+# :: Use nektos/act to run this locally
+# :: Example: 
+# :: `act push -j python-tests --matrix python-version:3.10 --container-architecture linux/amd64`
+name: Python Tests
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - 'agentops/**/*.py'
+      - 'agentops/**/*.ipynb'
+      - 'tests/**/*.py'
+      - 'tests/**/*.ipynb'
+  pull_request:
+    branches:
+      - main
+    paths:
+      - 'agentops/**/*.py'
+      - 'agentops/**/*.ipynb'
+      - 'tests/**/*.py'
+      - 'tests/**/*.ipynb'
+
+jobs:
+  python-tests:
+    runs-on: ubuntu-latest
+    env:
+      OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+
+    strategy:
+      matrix:
+        python-version: ["3.9", "3.10", "3.11", "3.12", "3.13"]
+      fail-fast: false
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup UV
+        uses: astral-sh/setup-uv@v5
+        continue-on-error: true
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache-prefix: uv-${{ matrix.python-version }}
+          enable-cache: true
+          cache-dependency-glob: "**/pyproject.toml"
+
+      - name: Install dependencies
+        run: |
+          uv sync --group test --group dev
+
+      - name: Run tests with coverage
+        timeout-minutes: 10
+        run: |
+          uv run -m pytest tests/ -v --cov=agentops --cov-report=xml
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          AGENTOPS_API_KEY: ${{ secrets.AGENTOPS_API_KEY }}
+          PYTHONUNBUFFERED: "1"
+
+      # Only upload coverage report for python3.11
+      - name: Upload coverage to Codecov
+        if: ${{matrix.python-version == '3.11'}}
+        uses: codecov/codecov-action@v5
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          files: ./coverage.xml
+          flags: unittests
+          name: codecov-umbrella
+          fail_ci_if_error: true # Should we?
