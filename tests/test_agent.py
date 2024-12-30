@@ -1,5 +1,6 @@
 from unittest import TestCase
 from uuid import uuid4
+from typing import Optional
 
 from agentops import track_agent
 from agentops.descriptor import agentops_property
@@ -99,6 +100,7 @@ class TrackAgentTests(TestCase):
     def test_track_agent_with_pydantic_model(self):
         """Test setting agentops_agent_name with actual Pydantic BaseModel"""
         try:
+            from typing import Optional
             from pydantic import BaseModel, Field, model_validator
         except ImportError:
             self.skipTest("Pydantic not installed, skipping Pydantic model test")
@@ -106,8 +108,8 @@ class TrackAgentTests(TestCase):
         @track_agent()
         class TestAgentModel(BaseModel):
             role: str = Field(default="test_role")
-            agentops_agent_name: str | None = None
-            agentops_agent_id: str | None = None
+            agentops_agent_name: Optional[str] = None
+            agentops_agent_id: Optional[str] = None
 
             @model_validator(mode="after")
             def set_agent_name(self):

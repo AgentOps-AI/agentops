@@ -1,9 +1,7 @@
 import inspect
 import pprint
-import sys
-from typing import Any, AsyncGenerator, Dict, Optional, List
+from typing import Any, AsyncGenerator, Dict, Optional, List, Union
 import logging
-from typing import Union
 
 from agentops.event import LLMEvent, ErrorEvent, ToolEvent
 from agentops.session import Session
