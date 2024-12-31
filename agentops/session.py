@@ -534,7 +534,9 @@ class Session:
         """Update session state on the server"""
         if not self.is_running:
             return
-        with self._lock:  # TODO: Determine whether we really need to lock here: are incoming calls coming from other threads?
+
+        # TODO: Determine whether we really need to lock here: are incoming calls coming from other threads?
+        with self._lock:
             payload = {"session": self.__dict__}
 
             try:
