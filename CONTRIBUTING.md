@@ -2,7 +2,7 @@
 
 Thanks for checking out AgentOps. We're building tools to help developers like you make AI agents that actually work reliably. If you've ever tried to build an agent system, you know the pain - they're a nightmare to debug, impossible to monitor, and when something goes wrong... good luck figuring out why.
 
-We created AgentOps to solve these headaches, and we'd love your help making it even better. Our SDK hooks into all the major Python frameworks (AutoGen, CrewAI, LangChain) and LLM providers (OpenAI, Anthropic, Cohere, etc.) to give you visibility into what your agents are actually doing.
+We created AgentOps to solve these headaches, and we'd love your help making it even better. Our SDK hooks into all the major Python frameworks (AG2, CrewAI, LangChain) and LLM providers (OpenAI, Anthropic, Cohere, etc.) to give you visibility into what your agents are actually doing.
 
 ## How You Can Help
 
