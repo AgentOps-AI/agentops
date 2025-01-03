@@ -16,6 +16,7 @@ class OpenAiProvider(InstrumentedProvider):
     original_create = None
     original_create_async = None
     original_assistant_methods = None
+    assistants_run_steps = {}
 
     def __init__(self, client):
         super().__init__(client)
@@ -255,6 +256,10 @@ class OpenAiProvider(InstrumentedProvider):
                 # Create LLMEvent if usage data exists
                 response_dict = response.model_dump() if hasattr(response, "model_dump") else {}
 
+                if "id" in response_dict and response_dict.get("id").startswith("run"):
+                    if response_dict["id"] not in self.assistants_run_steps:
+                        self.assistants_run_steps[response_dict.get("id")] = {"model": response_dict.get("model")}
+
                 if "usage" in response_dict and response_dict["usage"] is not None:
                     llm_event = LLMEvent(init_timestamp=init_timestamp, params=kwargs)
                     if session is not None:
@@ -273,6 +278,7 @@ class OpenAiProvider(InstrumentedProvider):
                             if session is not None:
                                 llm_event.session_id = session.session_id
 
+                            llm_event.model = self.assistants_run_steps[item["run_id"]]["model"]
                             llm_event.prompt_tokens = item["usage"]["prompt_tokens"]
                             llm_event.completion_tokens = item["usage"]["completion_tokens"]
                             llm_event.end_timestamp = get_ISO_time()
