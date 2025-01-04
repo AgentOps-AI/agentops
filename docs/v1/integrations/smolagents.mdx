@@ -1,0 +1,82 @@
+---
+title: smolagents
+description: "Track HuggingFace's smolagents with AgentOps seamlessly"
+---
+
+import EnvTooltip from '/snippets/add-env-tooltip.mdx'
+
+[smolagents](https://github.com/huggingface/smolagents) is a framework for building and running AI agents from [HuggingFace](https://huggingface.co/).
+Checkout their [docs](https://huggingface.co/docs/smolagents/index) to get started with creating your own agents.
+
+## Integrating AgentOps with smolagents
+
+<Steps>
+  <Step title="Install the AgentOps SDK">
+    <CodeGroup>
+      ```bash pip 
+      pip install agentops
+      ```
+      ```bash poetry
+      poetry add agentops
+      ```
+    </CodeGroup>
+  </Step>
+  <Step title="Install smolagents">
+    <CodeGroup>
+      ```bash pip
+      pip install smolagents
+      ```
+      ```bash poetry
+      poetry add smolagents
+      ```
+    </CodeGroup>
+  </Step>
+  <Step title="Initialize AgentOps and use LiteLLM in your code">
+    <Note>
+      AgentOps tracks calls from smolagents via LiteLLM currently.
+    </Note>
+    <CodeGroup>
+      ```python python
+      import agentops
+      from smolagents import LiteLLMModel
+
+      agentops.init(<INSERT YOUR API KEY HERE>)
+      model = LiteLLMModel(<model_name>)
+      
+      # Your code here...
+
+      agentops.end_session('Success')
+      ```
+    </CodeGroup>
+    <EnvTooltip />
+      <CodeGroup>
+        ```python .env
+        AGENTOPS_API_KEY=<YOUR API KEY>
+        ```
+      </CodeGroup>
+      Read more about environment variables in [Advanced Configuration](/v1/usage/advanced-configuration)
+  </Step>
+  <Step title="Run your Agent">
+    Execute your program and visit [app.agentops.ai/drilldown](https://app.agentops.ai/drilldown) to observe your Agent! 🕵️
+    <Tip>
+      After your run, AgentOps prints a clickable url to console linking directly to your session in the Dashboard
+    </Tip>
+    <div/>
+    <Frame type="glass" caption="Clickable link to session">
+      <img height="200" src="https://raw.githubusercontent.com/AgentOps-AI/agentops/refs/heads/main/docs/images/external/app_screenshots/session-replay.png?raw=true" />
+    </Frame>
+  </Step>
+</Steps>
+
+## Full Examples
+
+You can refer to the following examples -
+
+- [Text to SQL](https://github.com/AgentOps-AI/agentops/blob/main/examples/smolagents_examples/text_to_sql.ipynb)
+- [Multi-Agent System](https://github.com/AgentOps-AI/agentops/blob/main/examples/smolagents_examples/multi_smolagents_system.ipynb)
+
+<script type="module" src="/scripts/github_stars.js"></script>
+<script type="module" src="/scripts/scroll-img-fadein-animation.js"></script>
+<script type="module" src="/scripts/button_heartbeat_animation.js"></script>
+<script type="css" src="/styles/styles.css"></script>
+<script type="module" src="/scripts/adjust_api_dynamically.js"></script>
