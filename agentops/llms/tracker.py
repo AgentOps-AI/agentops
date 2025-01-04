@@ -26,7 +26,41 @@ class LlmTracker:
     SUPPORTED_APIS = {
         "litellm": {"1.3.1": ("openai_chat_completions.completion",)},
         "openai": {
-            "1.0.0": ("chat.completions.create",),
+            "1.0.0": (
+                "chat.completions.create",
+                # Assistants
+                "beta.assistants.create",
+                "beta.assistants.retrieve",
+                "beta.assistants.update",
+                "beta.assistants.delete",
+                "beta.assistants.list",
+                "beta.assistants.files.create",
+                "beta.assistants.files.retrieve",
+                "beta.assistants.files.delete",
+                "beta.assistants.files.list",
+                # Threads
+                "beta.threads.create",
+                "beta.threads.retrieve",
+                "beta.threads.update",
+                "beta.threads.delete",
+                # Messages
+                "beta.threads.messages.create",
+                "beta.threads.messages.retrieve",
+                "beta.threads.messages.update",
+                "beta.threads.messages.list",
+                "beta.threads.messages.files.retrieve",
+                "beta.threads.messages.files.list",
+                # Runs
+                "beta.threads.runs.create",
+                "beta.threads.runs.retrieve",
+                "beta.threads.runs.update",
+                "beta.threads.runs.list",
+                "beta.threads.runs.cancel",
+                "beta.threads.runs.submit_tool_outputs",
+                # Run Steps
+                "beta.threads.runs.steps.Steps.retrieve",
+                "beta.threads.runs.steps.Steps.list",
+            ),
             "0.0.0": (
                 "ChatCompletion.create",
                 "ChatCompletion.acreate",

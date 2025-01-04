@@ -1,4 +1,3 @@
-import inspect
 import pprint
 from typing import Optional
 
@@ -16,6 +15,8 @@ from agentops.singleton import singleton
 class OpenAiProvider(InstrumentedProvider):
     original_create = None
     original_create_async = None
+    original_assistant_methods = None
+    assistants_run_steps = {}
 
     def __init__(self, client):
         super().__init__(client)
@@ -138,6 +139,7 @@ class OpenAiProvider(InstrumentedProvider):
     def override(self):
         self._override_openai_v1_completion()
         self._override_openai_v1_async_completion()
+        self._override_openai_assistants_beta()
 
     def _override_openai_v1_completion(self):
         from openai.resources.chat import completions
@@ -228,9 +230,114 @@ class OpenAiProvider(InstrumentedProvider):
         # Override the original method with the patched one
         completions.AsyncCompletions.create = patched_function
 
+    def _override_openai_assistants_beta(self):
+        """Override OpenAI Assistants API methods"""
+        from openai._legacy_response import LegacyAPIResponse
+        from openai.resources import beta
+        from openai.pagination import BasePage
+
+        def handle_response(response, kwargs, init_timestamp, session: Optional[Session] = None) -> dict:
+            """Handle response based on return type"""
+            action_event = ActionEvent(init_timestamp=init_timestamp, params=kwargs)
+            if session is not None:
+                action_event.session_id = session.session_id
+
+            try:
+                # Set action type and returns
+                action_event.action_type = (
+                    response.__class__.__name__.split("[")[1][:-1]
+                    if isinstance(response, BasePage)
+                    else response.__class__.__name__
+                )
+                action_event.returns = response.model_dump() if hasattr(response, "model_dump") else response
+                action_event.end_timestamp = get_ISO_time()
+                self._safe_record(session, action_event)
+
+                # Create LLMEvent if usage data exists
+                response_dict = response.model_dump() if hasattr(response, "model_dump") else {}
+
+                if "id" in response_dict and response_dict.get("id").startswith("run"):
+                    if response_dict["id"] not in self.assistants_run_steps:
+                        self.assistants_run_steps[response_dict.get("id")] = {"model": response_dict.get("model")}
+
+                if "usage" in response_dict and response_dict["usage"] is not None:
+                    llm_event = LLMEvent(init_timestamp=init_timestamp, params=kwargs)
+                    if session is not None:
+                        llm_event.session_id = session.session_id
+
+                    llm_event.model = response_dict.get("model")
+                    llm_event.prompt_tokens = response_dict["usage"]["prompt_tokens"]
+                    llm_event.completion_tokens = response_dict["usage"]["completion_tokens"]
+                    llm_event.end_timestamp = get_ISO_time()
+                    self._safe_record(session, llm_event)
+
+                elif "data" in response_dict:
+                    for item in response_dict["data"]:
+                        if "usage" in item and item["usage"] is not None:
+                            llm_event = LLMEvent(init_timestamp=init_timestamp, params=kwargs)
+                            if session is not None:
+                                llm_event.session_id = session.session_id
+
+                            llm_event.model = self.assistants_run_steps[item["run_id"]]["model"]
+                            llm_event.prompt_tokens = item["usage"]["prompt_tokens"]
+                            llm_event.completion_tokens = item["usage"]["completion_tokens"]
+                            llm_event.end_timestamp = get_ISO_time()
+                            self._safe_record(session, llm_event)
+
+            except Exception as e:
+                self._safe_record(session, ErrorEvent(trigger_event=action_event, exception=e))
+
+                kwargs_str = pprint.pformat(kwargs)
+                response = pprint.pformat(response)
+                logger.warning(
+                    f"Unable to parse response for Assistants API. Skipping upload to AgentOps\n"
+                    f"response:\n {response}\n"
+                    f"kwargs:\n {kwargs_str}\n"
+                )
+
+            return response
+
+        def create_patched_function(original_func):
+            def patched_function(*args, **kwargs):
+                init_timestamp = get_ISO_time()
+
+                session = kwargs.get("session", None)
+                if "session" in kwargs.keys():
+                    del kwargs["session"]
+
+                response = original_func(*args, **kwargs)
+                if isinstance(response, LegacyAPIResponse):
+                    return response
+
+                return handle_response(response, kwargs, init_timestamp, session=session)
+
+            return patched_function
+
+        # Store and patch Assistant API methods
+        assistant_api_methods = {
+            beta.Assistants: ["create", "retrieve", "update", "delete", "list"],
+            beta.Threads: ["create", "retrieve", "update", "delete"],
+            beta.threads.Messages: ["create", "retrieve", "update", "list"],
+            beta.threads.Runs: ["create", "retrieve", "update", "list", "submit_tool_outputs", "cancel"],
+            beta.threads.runs.steps.Steps: ["retrieve", "list"],
+        }
+
+        self.original_assistant_methods = {
+            (cls, method): getattr(cls, method) for cls, methods in assistant_api_methods.items() for method in methods
+        }
+
+        # Override methods and verify
+        for (cls, method), original_func in self.original_assistant_methods.items():
+            patched_function = create_patched_function(original_func)
+            setattr(cls, method, patched_function)
+
     def undo_override(self):
         if self.original_create is not None and self.original_create_async is not None:
             from openai.resources.chat import completions
 
             completions.AsyncCompletions.create = self.original_create_async
             completions.Completions.create = self.original_create
+
+        if self.original_assistant_methods is not None:
+            for (cls, method), original in self.original_assistant_methods.items():
+                setattr(cls, method, original)
