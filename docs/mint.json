@@ -6,20 +6,33 @@
     "light": "/images/external/logo/banner-badge-docs-resized-black.png"
   },
   "favicon": "/favicon.png",
+  "modeToggle": { "default": "light" },
   "colors": {
-    "primary": "#a9bed4",
-    "light": "#D1E5F7",
-    "dark": "#2b3033",
+    "primary": "#8051f9",
+    "light": "#8051f9",
+    "dark": "#B19CD7",
     "background": {
-      "light": "#f5faff",
+      "light": "#EBE8FC",
       "dark": "#18191a"
     },
     "anchors": {
-      "from": "#D1E5F7",
-      "to": "#a9bed4"
-
+      "from": "#8051f9",
+      "to": "#8051f9"
     }
   },
+  "font": {
+    "headings": {
+      "family": "AgentOps-Bold",
+      "url": "example.woff2",
+      "format": "woff2"
+    },
+    "body": {
+      "family": "AgentOps-Regular",
+      "url": "example.woff2",
+      "format": "woff2"
+    }
+  },
+  "backgroundImage": "/images/background.svg",
   "topbarCtaButton": {
     "name": "Your Dashboard",
     "url": "https://app.agentops.ai"
