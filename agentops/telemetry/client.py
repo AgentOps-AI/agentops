@@ -4,6 +4,8 @@ from uuid import UUID
 from opentelemetry.sdk.trace import TracerProvider
 from opentelemetry.sdk.trace.export import BatchSpanProcessor
 
+from agentops.config import Configuration
+from agentops.log_config import logger
 from .config import OTELConfig
 from .exporter import ExportManager
 from .manager import OTELManager
@@ -23,14 +25,19 @@ class ClientTelemetry:
         self._session_exporters: Dict[UUID, ExportManager] = {}
         self._otel_config: Optional[OTELConfig] = None
 
-    def initialize(self, config: OTELConfig, otel_config: Optional[OTELConfig] = None) -> Union["Session", None]:
+    def initialize(self, config: Configuration, otel_config: Optional[OTELConfig] = None) -> None:
         """Initialize telemetry components"""
+        # Create OTEL config from Configuration if needed
+        if otel_config is None:
+            logger.warning("OTEL config is not provided, using default EMPTY config")
+            otel_config = OTELConfig()
+
         # Create the OTEL manager instance
         self._otel_manager = OTELManager(
-            config=config,
-            exporters=otel_config.additional_exporters if otel_config else None,
-            resource_attributes=otel_config.resource_attributes if otel_config else None,
-            sampler=otel_config.sampler if otel_config else None
+            config=otel_config,
+            exporters=otel_config.additional_exporters,
+            resource_attributes=otel_config.resource_attributes,
+            sampler=otel_config.sampler
         )
         self._otel_config = otel_config
 
@@ -90,3 +97,19 @@ class ClientTelemetry:
         for exporter in self._session_exporters.values():
             exporter.shutdown()
         self._session_exporters.clear()
+
+    def force_flush(self) -> bool:
+        """Force flush all processors"""
+        if not self._otel_manager:
+            return True
+        
+        success = True
+        for processor in self._otel_manager._processors:
+            try:
+                if not processor.force_flush():
+                    success = False
+            except Exception as e:
+                logger.error(f"Error flushing processor: {e}")
+                success = False
+        
+        return success

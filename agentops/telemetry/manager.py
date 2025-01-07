@@ -65,11 +65,13 @@ class OTELManager:
             Configured TracerProvider instance
         """
         # Set up resource attributes
-        resource_attributes: ResourceAttributes = {
-            SERVICE_NAME: service_name,
+        resource_attributes = {
+            ResourceAttributes.SERVICE_NAME: service_name,
             "session.id": session_id,
         }
         resource_attributes.update(self._resource_attributes)
+        
+        # Create resource with attributes
         resource = Resource.create(attributes=resource_attributes)
 
         # Create provider with resource and sampling config
