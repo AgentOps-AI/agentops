@@ -202,24 +202,19 @@ class Session:
         self,
         session_id: UUID,
         config: Configuration,
-        client: Optional[ClientTelemetry] = None, # Not mandatory, we can use the Client singleton to retrieve the telemetry client
+        client: Optional[ClientTelemetry] = None,
         tags: Optional[List[str]] = None,
         host_env: Optional[dict] = None,
     ):
-        self.end_timestamp = None
-        self.end_state: Optional[str] = "Indeterminate"
+        """Initialize session with telemetry handled by ClientTelemetry"""
         self.session_id = session_id
-        self.init_timestamp = get_ISO_time()
-        self.tags: List[str] = tags or []
-        self.video: Optional[str] = None
-        self.end_state_reason: Optional[str] = None
-        self.host_env = host_env
         self.config = config
-        self.jwt = None
-        self._lock = threading.Lock()
-        self._end_session_lock = threading.Lock()
-        self.token_cost: Decimal = Decimal(0)
-        self._session_url: str = ""
+        self.tags = tags or []
+        self.init_timestamp = get_ISO_time()
+        self.end_timestamp = None
+        self.end_state = EndState.INDETERMINATE.value
+        self.end_state_reason = None
+        self.token_cost = Decimal(0)
         self.event_counts = {
             "llms": 0,
             "tools": 0,
@@ -227,17 +222,20 @@ class Session:
             "errors": 0,
             "apis": 0,
         }
-        # self.session_url: Optional[str] = None
+        self._lock = threading.Lock()
+        self.is_running = True
+        self.jwt = None
 
         # Start session first to get JWT
-        self.is_running = self._start_session()
-        if not self.is_running:
-            return
+        if not self._start_session():
+            raise Exception("Failed to start session")
 
-        client = client or Client()._telemetry
         # Get session-specific tracer from client telemetry
-        self._otel_tracer = client.get_session_tracer(
-            session_id=self.session_id, config=self.config, jwt=self.jwt
+        self._telemetry_client = client or Client()._telemetry
+        self._otel_tracer = self._telemetry_client.get_session_tracer(
+            session_id=self.session_id,
+            config=self.config,
+            jwt=self.jwt
         )
 
     def set_video(self, video: str) -> None:
