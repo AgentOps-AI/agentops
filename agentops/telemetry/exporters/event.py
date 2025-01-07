@@ -9,7 +9,7 @@ from opentelemetry.util.types import Attributes
 
 from agentops.http_client import HttpClient
 from agentops.log_config import logger
-from agentops.telemetry.converter import attrs
+import agentops.telemetry.attributes as attrs
 
 
 class EventExporter(SpanExporter):
