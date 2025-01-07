@@ -23,7 +23,8 @@ from .helpers import filter_unjsonable, get_ISO_time, safe_serialize
 from .http_client import HttpClient, Response
 from .log_config import logger
 from .telemetry.client import ClientTelemetry
-from .telemetry.converter import attrs, EventToSpanConverter
+from .telemetry.encoders import EventToSpanEncoder
+import agentops.telemetry.attributes as attrs
 
 class Session:
     """
