@@ -47,3 +47,25 @@ class TestEvents:
         event = ErrorEvent(logs=None)
         time.sleep(0.15)
         agentops.record(event)
+
+    def test_record_timestamp(self):
+        """Test that error event timestamp is properly set"""
+        error = ErrorEvent()
+        assert error.init_timestamp is not None
+        assert error.end_timestamp is not None
+        # Test backward compatibility
+        assert error.timestamp == error.init_timestamp
+
+    def test_record_error_event(self):
+        """Test error event creation and recording"""
+        trigger = ActionEvent(action_type="test_action")
+        error = ErrorEvent(
+            trigger_event=trigger,
+            error_type="TestError",
+            details="Test error details"
+        )
+        assert error.init_timestamp is not None
+        assert error.end_timestamp is not None
+        assert error.trigger_event == trigger
+        assert error.error_type == "TestError"
+        assert error.details == "Test error details"

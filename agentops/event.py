@@ -105,7 +105,7 @@ class ToolEvent(Event):
 
 
 @dataclass
-class ErrorEvent:
+class ErrorEvent(Event):
     """
     For recording any errors e.g. ones related to agent execution
 
@@ -115,21 +115,30 @@ class ErrorEvent:
     code(str, optional): A code that can be used to identify the error e.g. 501.
     details(str, optional): Detailed information about the error.
     logs(str, optional): For detailed information/logging related to the error.
-    timestamp(str): A timestamp indicating when the error occurred. Defaults to the time when this ErrorEvent was instantiated.
-
     """
-
+    # Inherit common Event fields
+    event_type: str = field(default=EventType.ERROR.value)
+    
+    # Error-specific fields
     trigger_event: Optional[Event] = None
     exception: Optional[BaseException] = None
     error_type: Optional[str] = None
     code: Optional[str] = None
     details: Optional[Union[str, Dict[str, str]]] = None
     logs: Optional[str] = field(default_factory=traceback.format_exc)
-    timestamp: str = field(default_factory=get_ISO_time)
 
     def __post_init__(self):
-        self.event_type = EventType.ERROR.value
+        """Process exception if provided"""
         if self.exception:
             self.error_type = self.error_type or type(self.exception).__name__
             self.details = self.details or str(self.exception)
             self.exception = None  # removes exception from serialization
+            
+        # Ensure end timestamp is set
+        if not self.end_timestamp:
+            self.end_timestamp = get_ISO_time()
+        
+    @property
+    def timestamp(self) -> str:
+        """Maintain backward compatibility with old code expecting timestamp"""
+        return self.init_timestamp
