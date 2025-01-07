@@ -25,6 +25,7 @@ class Event:
     end_timestamp(str): A timestamp indicating when the event ended. Defaults to the time when this Event was instantiated.
     agent_id(UUID, optional): The unique identifier of the agent that triggered the event.
     id(UUID): A unique identifier for the event. Defaults to a new UUID.
+    session_id(UUID, optional): The unique identifier of the session that the event belongs to.
 
     foo(x=1) {
         ...
@@ -43,6 +44,7 @@ class Event:
     end_timestamp: Optional[str] = None
     agent_id: Optional[UUID] = field(default_factory=check_call_stack_for_agent_id)
     id: UUID = field(default_factory=uuid4)
+    session_id: Optional[UUID] = None
 
 
 @dataclass

@@ -183,6 +183,7 @@ class EventToSpanConverter:
             AgentOpsAttributes.EVENT_START_TIME: event.init_timestamp if hasattr(event, 'init_timestamp') else event.timestamp,
             AgentOpsAttributes.EVENT_END_TIME: getattr(event, 'end_timestamp', None),
             AgentOpsAttributes.EVENT_ID: str(event.id),
+            AgentOpsAttributes.SESSION_ID: str(event.session_id) if event.session_id else None,
         })
         
         # Add agent ID if present

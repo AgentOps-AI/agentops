@@ -340,6 +340,9 @@ class Session:
         if not self.is_running:
             return
 
+        # Set session_id on the event itself
+        event.session_id = self.session_id
+
         # Create session context
         token = set_value("session.id", str(self.session_id))
 
@@ -355,6 +358,11 @@ class Session:
                 span_def.attributes.update({
                     AgentOpsAttributes.SESSION_ID: str(self.session_id),
                     AgentOpsAttributes.SESSION_TAGS: ",".join(self.tags) if self.tags else "",
+                    # Add session_id to event data
+                    AgentOpsAttributes.EVENT_DATA: json.dumps({
+                        "session_id": str(self.session_id),
+                        **span_def.attributes.get(AgentOpsAttributes.EVENT_DATA, {})
+                    })
                 })
                 
                 with self._otel_tracer.start_as_current_span(
