@@ -17,7 +17,7 @@ class Configuration:
         self.auto_start_session: bool = True
         self.skip_auto_end_session: bool = False
         self.env_data_opt_out: bool = False
-        self.otel: OTELConfig = OTELConfig()  # Default OTEL configuration
+        self.telemetry: OTELConfig = OTELConfig()  # Default OTEL configuration
 
     def configure(
         self,
@@ -32,7 +32,7 @@ class Configuration:
         auto_start_session: Optional[bool] = None,
         skip_auto_end_session: Optional[bool] = None,
         env_data_opt_out: Optional[bool] = None,
-        otel: Optional[OTELConfig] = None,  # New parameter
+        telemetry: Optional[OTELConfig] = None,  # New parameter
     ):
         if api_key is not None:
             try:
@@ -77,5 +77,5 @@ class Configuration:
             self.env_data_opt_out = env_data_opt_out
 
         # OTEL configuration
-        if otel is not None:
-            self.otel = otel
+        if telemetry is not None:
+            self.telemetry = telemetry

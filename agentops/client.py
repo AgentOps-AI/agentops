@@ -69,6 +69,7 @@ class Client(metaclass=MetaClient):
         auto_start_session: Optional[bool] = None,
         skip_auto_end_session: Optional[bool] = None,
         env_data_opt_out: Optional[bool] = None,
+        otel: Optional[OTELConfig] = None,
     ):
         if self.has_sessions:
             return logger.warning(
@@ -87,6 +88,7 @@ class Client(metaclass=MetaClient):
             auto_start_session=auto_start_session,
             skip_auto_end_session=skip_auto_end_session,
             env_data_opt_out=env_data_opt_out,
+            telemetry=otel,
         )
 
     def initialize(self) -> Union[Session, None]:
@@ -107,7 +109,7 @@ class Client(metaclass=MetaClient):
                 self._llm_tracker.override_api()
 
             # Initialize telemetry with configuration
-            self.telemetry.initialize(self._config.otel)
+            self.telemetry.initialize(self._config.telemetry)
 
             session = None
             if self._config.auto_start_session:

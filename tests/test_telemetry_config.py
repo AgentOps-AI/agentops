@@ -13,10 +13,10 @@ def test_configuration_with_otel():
     otel_config = OTELConfig(additional_exporters=[exporter])
     
     config = Configuration()
-    config.configure(None, otel=otel_config)
+    config.configure(None, telemetry=otel_config)
     
-    assert config.otel == otel_config
-    assert config.otel.additional_exporters == [exporter]
+    assert config.telemetry == otel_config
+    assert config.telemetry.additional_exporters == [exporter]
 
 
 def test_init_accepts_telemetry_config():
@@ -75,7 +75,7 @@ def test_multiple_exporters_in_config():
     
     telemetry = OTELConfig(additional_exporters=[exporter1, exporter2])
     config = Configuration()
-    config.configure(None, otel=telemetry)
+    config.configure(None, telemetry=telemetry)
     
-    assert len(config.otel.additional_exporters) == 2
-    assert config.otel.additional_exporters == [exporter1, exporter2] 
+    assert len(config.telemetry.additional_exporters) == 2
+    assert config.telemetry.additional_exporters == [exporter1, exporter2] 

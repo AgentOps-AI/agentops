@@ -26,7 +26,7 @@ class ClientTelemetry:
         self._session_exporters: Dict[UUID, ExportManager] = {}
         self.config: Optional[OTELConfig] = None
 
-    def initialize(self, config: Configuration) -> None:
+    def initialize(self, config: OTELConfig) -> None:
         """Initialize telemetry components"""
         # Check for environment variables if no exporters configured
         if not config.otel.additional_exporters:
