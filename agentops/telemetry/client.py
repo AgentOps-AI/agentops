@@ -29,30 +29,30 @@ class ClientTelemetry:
     def initialize(self, config: OTELConfig) -> None:
         """Initialize telemetry components"""
         # Check for environment variables if no exporters configured
-        if not config.otel.additional_exporters:
+        if not config.additional_exporters:
             endpoint = os.environ.get("OTEL_EXPORTER_OTLP_ENDPOINT")
             service_name = os.environ.get("OTEL_SERVICE_NAME")
             
-            if service_name and not config.otel.resource_attributes:
-                config.otel.resource_attributes = {"service.name": service_name}
+            if service_name and not config.resource_attributes:
+                config.resource_attributes = {"service.name": service_name}
             
             if endpoint:
                 from opentelemetry.exporter.otlp.proto.grpc.trace_exporter import OTLPSpanExporter
-                config.otel.additional_exporters = [OTLPSpanExporter(endpoint=endpoint)]
+                config.additional_exporters = [OTLPSpanExporter(endpoint=endpoint)]
                 logger.info("Using OTEL configuration from environment variables")
         
         # Validate exporters
-        if config.otel.additional_exporters:
-            for exporter in config.otel.additional_exporters:
+        if config.additional_exporters:
+            for exporter in config.additional_exporters:
                 if not isinstance(exporter, SpanExporter):
                     raise ValueError(f"Invalid exporter type: {type(exporter)}. Must be a SpanExporter")
         
         # Create the OTEL manager instance
         self._otel_manager = OTELManager(
-            config=config.otel,
-            exporters=config.otel.additional_exporters,
-            resource_attributes=config.otel.resource_attributes,
-            sampler=config.otel.sampler
+            config=config,
+            exporters=config.additional_exporters,
+            resource_attributes=config.resource_attributes,
+            sampler=config.sampler
         )
         self.config = config
 
