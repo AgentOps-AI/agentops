@@ -27,7 +27,7 @@ from .telemetry import OTELConfig
 from .telemetry.client import ClientTelemetry
 from .telemetry.exporter import ExportManager
 from .telemetry.manager import OTELManager
-from .telemetry.converter import AgentOpsAttributes
+from .telemetry.converter import AgentOpsAttributes, EventToSpanConverter
 
 """
 OTEL Guidelines:
@@ -391,54 +391,27 @@ class Session:
         try:
             token = attach(token)
             
-            # Create base attributes with session context
-            attributes = {
-                AgentOpsAttributes.EVENT_ID: str(event.id),
-                AgentOpsAttributes.EVENT_TYPE: event.event_type,
-                AgentOpsAttributes.EVENT_START_TIME: event.init_timestamp,
-                AgentOpsAttributes.EVENT_END_TIME: event.end_timestamp,
-                AgentOpsAttributes.SESSION_ID: str(self.session_id),
-                AgentOpsAttributes.SESSION_TAGS: ",".join(self.tags) if self.tags else "",
-                AgentOpsAttributes.EVENT_DATA: json.dumps({
-                    "session_id": str(self.session_id),  # Session owns the relationship
-                    **self._format_event_data(event)
+            # Get span definitions from converter
+            span_definitions = EventToSpanConverter.convert_event(event)
+            
+            # Create spans based on definitions
+            for span_def in span_definitions:
+                # Add session context to span attributes
+                span_def.attributes.update({
+                    AgentOpsAttributes.SESSION_ID: str(self.session_id),
+                    AgentOpsAttributes.SESSION_TAGS: ",".join(self.tags) if self.tags else "",
                 })
-            }
+                
+                with self._otel_tracer.start_as_current_span(
+                    name=span_def.name,
+                    attributes=span_def.attributes,
+                    kind=span_def.kind
+                ) as span:
+                    if event.event_type in self.event_counts:
+                        self.event_counts[event.event_type] += 1
 
-            # Add agent ID if present
-            if hasattr(event, 'agent_id') and event.agent_id:
-                attributes[AgentOpsAttributes.AGENT_ID] = str(event.agent_id)
-
-            # Add event-specific data
-            if isinstance(event, ErrorEvent):
-                attributes.update({
-                    AgentOpsAttributes.ERROR: True,
-                    AgentOpsAttributes.ERROR_TYPE: event.error_type,
-                    AgentOpsAttributes.ERROR_DETAILS: event.details,
-                    AgentOpsAttributes.ERROR_CODE: event.code,
-                    AgentOpsAttributes.ERROR_STACKTRACE: event.logs,
-                })
-                if event.trigger_event:
-                    attributes.update({
-                        AgentOpsAttributes.TRIGGER_EVENT_ID: str(event.trigger_event.id),
-                        AgentOpsAttributes.TRIGGER_EVENT_TYPE: event.trigger_event.event_type,
-                    })
-            else:
-                # Add common Event attributes
-                if event.params:
-                    attributes[AgentOpsAttributes.EVENT_PARAMS] = json.dumps(event.params)
-                if event.returns:
-                    attributes[AgentOpsAttributes.EVENT_RETURNS] = json.dumps(event.returns)
-
-            with self._otel_tracer.start_as_current_span(
-                name=event.event_type,
-                attributes=attributes,
-            ) as span:
-                if event.event_type in self.event_counts:
-                    self.event_counts[event.event_type] += 1
-
-                if flush_now and hasattr(self, "_span_processor"):
-                    self._span_processor.force_flush()
+                    if flush_now and hasattr(self, "_span_processor"):
+                        self._span_processor.force_flush()
         finally:
             detach(token)
 
@@ -643,6 +616,51 @@ class Session:
     # @session_url.setter
     # def session_url(self, url: str):
     #     pass
+
+    def _format_event_data(self, event: Union[Event, ErrorEvent]) -> Dict[str, Any]:
+        """
+        Format event data for telemetry export.
+        Extracts relevant fields from event and ensures they're JSON-serializable.
+        """
+        # Get base event fields from Event class
+        event_data = {
+            "event_type": event.event_type,
+            "params": event.params,
+            "returns": event.returns,
+            "init_timestamp": event.init_timestamp,
+            "end_timestamp": event.end_timestamp,
+        }
+
+        # Add event-type specific fields
+        if isinstance(event, ErrorEvent):
+            event_data.update({
+                "error_type": event.error_type,
+                "code": event.code,
+                "details": event.details,
+                "logs": event.logs,
+            })
+        elif isinstance(event, ActionEvent):
+            event_data.update({
+                "action_type": event.action_type,
+                "logs": event.logs,
+                "screenshot": event.screenshot,
+            })
+        elif isinstance(event, ToolEvent):
+            event_data.update({
+                "name": event.name,
+                "logs": event.logs,
+            })
+        elif isinstance(event, LLMEvent):
+            event_data.update({
+                "model": event.model,
+                "prompt": event.prompt,
+                "completion": event.completion,
+                "prompt_tokens": event.prompt_tokens,
+                "completion_tokens": event.completion_tokens,
+            })
+
+        # Filter out None values and ensure JSON-serializable
+        return {k: v for k, v in filter_unjsonable(event_data).items() if v is not None}
 
 
 active_sessions: List[Session] = []
