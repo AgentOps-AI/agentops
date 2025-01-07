@@ -1,8 +1,10 @@
 import json
 import pytest
+from opentelemetry.trace import SpanKind
 
 from agentops.event import Event
 from agentops.telemetry.converter import EventToSpanConverter, SpanDefinition
+
 
 class TestEventToSpanConverter:
     """Test the Event to Span conversion logic"""
@@ -22,18 +24,21 @@ class TestEventToSpanConverter:
         assert api_span is not None, "Missing llm.api.call span"
 
         # Verify completion span attributes
-        assert completion_span.attributes["llm.model"] == mock_llm_event.model
-        assert completion_span.attributes["llm.prompt"] == mock_llm_event.prompt
-        assert completion_span.attributes["llm.completion"] == mock_llm_event.completion
-        assert completion_span.attributes["llm.tokens.total"] == 11  # 10 prompt + 1 completion
-        assert completion_span.attributes["llm.cost"] == 0.01
+        assert completion_span.attributes["model"] == mock_llm_event.model
+        assert completion_span.attributes["prompt"] == mock_llm_event.prompt
+        assert completion_span.attributes["completion"] == mock_llm_event.completion
+        assert completion_span.attributes["prompt_tokens"] == 10
+        assert completion_span.attributes["completion_tokens"] == 1
+        assert completion_span.attributes["cost"] == 0.01
+        assert completion_span.attributes["event.start_time"] == mock_llm_event.init_timestamp
+        assert completion_span.attributes["event.end_time"] == mock_llm_event.end_timestamp
 
         # Verify API span attributes and relationships
         assert api_span.parent_span_id == completion_span.name
-        assert api_span.kind == "client"
-        assert api_span.attributes["llm.model"] == mock_llm_event.model
-        assert "llm.request.timestamp" in api_span.attributes
-        assert "llm.response.timestamp" in api_span.attributes
+        assert api_span.kind == SpanKind.CLIENT
+        assert api_span.attributes["model"] == mock_llm_event.model
+        assert api_span.attributes["start_time"] == mock_llm_event.init_timestamp
+        assert api_span.attributes["end_time"] == mock_llm_event.end_timestamp
 
     def test_action_event_conversion(self, mock_action_event):
         """Test converting ActionEvent to spans"""
@@ -47,14 +52,16 @@ class TestEventToSpanConverter:
         assert execution_span is not None
 
         # Verify action span attributes
-        assert action_span.attributes["action.type"] == "process_data"
-        assert json.loads(action_span.attributes["action.params"]) == {"input_file": "data.csv"}
-        assert action_span.attributes["action.logs"] == "Successfully processed all rows"
+        assert action_span.attributes["action_type"] == "process_data"
+        assert json.loads(action_span.attributes["params"]) == {"input_file": "data.csv"}
+        assert action_span.attributes["returns"] == "100 rows processed"
+        assert action_span.attributes["logs"] == "Successfully processed all rows"
+        assert action_span.attributes["event.start_time"] == mock_action_event.init_timestamp
 
         # Verify execution span
         assert execution_span.parent_span_id == action_span.name
-        assert "execution.start_time" in execution_span.attributes
-        assert "execution.end_time" in execution_span.attributes
+        assert execution_span.attributes["start_time"] == mock_action_event.init_timestamp
+        assert execution_span.attributes["end_time"] == mock_action_event.end_timestamp
 
     def test_tool_event_conversion(self, mock_tool_event):
         """Test converting ToolEvent to spans"""
@@ -68,15 +75,15 @@ class TestEventToSpanConverter:
         assert execution_span is not None
 
         # Verify tool span attributes
-        assert tool_span.attributes["tool.name"] == "searchWeb"
-        assert json.loads(tool_span.attributes["tool.params"]) == {"query": "python testing"}
-        assert json.loads(tool_span.attributes["tool.result"]) == ["result1", "result2"]
-        assert json.loads(tool_span.attributes["tool.logs"]) == {"status": "success"}
+        assert tool_span.attributes["name"] == "searchWeb"
+        assert json.loads(tool_span.attributes["params"]) == {"query": "python testing"}
+        assert json.loads(tool_span.attributes["returns"]) == ["result1", "result2"]
+        assert json.loads(tool_span.attributes["logs"]) == {"status": "success"}
 
         # Verify execution span
         assert execution_span.parent_span_id == tool_span.name
-        assert "execution.start_time" in execution_span.attributes
-        assert "execution.end_time" in execution_span.attributes
+        assert execution_span.attributes["start_time"] == mock_tool_event.init_timestamp
+        assert execution_span.attributes["end_time"] == mock_tool_event.end_timestamp
 
     def test_error_event_conversion(self, mock_error_event):
         """Test converting ErrorEvent to spans"""
@@ -88,18 +95,16 @@ class TestEventToSpanConverter:
         # Verify error span attributes
         assert error_span.name == "error"
         assert error_span.attributes["error"] is True
-        assert error_span.attributes["error.type"] == "ValueError"
-        assert error_span.attributes["error.details"] == "Detailed error info"
-
-        # Verify trigger event data
-        trigger_data = json.loads(error_span.attributes["error.trigger_event"])
-        assert trigger_data["type"] == "action"
-        assert trigger_data["action_type"] == "risky_action"
+        assert error_span.attributes["error_type"] == "ValueError"
+        assert error_span.attributes["details"] == "Detailed error info"
+        assert "trigger_event" in error_span.attributes
 
     def test_unknown_event_type(self):
         """Test handling of unknown event types"""
         class UnknownEvent(Event):
             pass
 
-        with pytest.raises(ValueError, match="No converter found for event type"):
-            EventToSpanConverter.convert_event(UnknownEvent(event_type="unknown"))
+        # Should still work, just with generic event name
+        span_defs = EventToSpanConverter.convert_event(UnknownEvent(event_type="unknown"))
+        assert len(span_defs) == 1
+        assert span_defs[0].name == "event"

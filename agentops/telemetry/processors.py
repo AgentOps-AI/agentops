@@ -11,7 +11,8 @@ from opentelemetry.sdk.trace import ReadableSpan, Span, SpanProcessor, TracerPro
 from opentelemetry.sdk.trace.export import SpanExporter
 from opentelemetry.trace import Span as OTELSpan
 
-from ..helpers import filter_unjsonable, get_ISO_time
+from agentops.helpers import filter_unjsonable, get_ISO_time
+from agentops.telemetry.converter import EventToSpanConverter
 
 
 class EventProcessor:
@@ -54,11 +55,7 @@ class EventProcessor:
 
     def process_event(self, event: Any, tags: Optional[List[str]] = None, flush_now: bool = False) -> Optional[Span]:
         """
-        Process and format an event into an OpenTelemetry span.
-        
-        The span will automatically be processed by all span processors registered with
-        the tracer provider. This is the key to the design - we don't need to manually
-        handle different processors here, they're all managed by the provider.
+        Process and format an event into OpenTelemetry spans using EventToSpanConverter.
         
         Args:
             event: The event to process
@@ -66,7 +63,7 @@ class EventProcessor:
             flush_now: Whether to force flush the span immediately
         
         Returns:
-            The created span, which will be automatically processed by all registered processors
+            The primary span created for the event
         """
         # Ensure required attributes
         if not hasattr(event, "id"):
@@ -76,38 +73,58 @@ class EventProcessor:
         if not hasattr(event, "end_timestamp") or event.end_timestamp is None:
             event.end_timestamp = get_ISO_time()
 
+        # For error events, use the current span if it exists
+        if hasattr(event, "error_type"):
+            current_span = trace.get_current_span()
+            if current_span and current_span.is_recording():
+                current_span.set_attribute("error", True)
+                current_span.set_attribute("error.type", event.error_type)
+                current_span.set_attribute("error.details", event.details)
+                if hasattr(event, "trigger_event") and event.trigger_event:
+                    current_span.set_attribute("trigger_event.id", str(event.trigger_event.id))
+                    current_span.set_attribute("trigger_event.type", event.trigger_event.event_type)
+                return current_span
+
         # Create session context
         token = set_value("session.id", str(self.session_id))
-
         try:
             token = attach(token)
-            event_data = self._format_event_data(event)
-
-            # Create and configure span
-            with self._tracer.start_as_current_span(
-                name=event.event_type,
-                attributes={
+            
+            # Get span definitions from converter
+            span_definitions = EventToSpanConverter.convert_event(event)
+            primary_span = None
+            
+            # Create spans based on definitions
+            for span_def in span_definitions:
+                context = None
+                if span_def.parent_span_id and primary_span:
+                    context = trace.set_span_in_context(primary_span)
+                    
+                # Add common attributes
+                span_def.attributes.update({
                     "event.id": str(event.id),
-                    "event.type": event.event_type,
-                    "event.timestamp": event.init_timestamp,
-                    "event.end_timestamp": event.end_timestamp,
                     "session.id": str(self.session_id),
                     "session.tags": ",".join(tags) if tags else "",
-                    "event.data": json.dumps(event_data),
-                },
-            ) as span:
-                # Update event counts
-                if event.event_type in self.event_counts:
-                    self.event_counts[event.event_type] += 1
-
-                # Handle error events
-                if hasattr(event, "error_type"):
-                    span.set_attribute("error", True)
-                    if hasattr(event, "trigger_event") and event.trigger_event:
-                        span.set_attribute("trigger_event.id", str(event.trigger_event.id))
-                        span.set_attribute("trigger_event.type", event.trigger_event.event_type)
-
-                return span
+                    "event.timestamp": event.init_timestamp,
+                    "event.end_timestamp": event.end_timestamp,
+                })
+                
+                with self._tracer.start_span(
+                    name=span_def.name,
+                    kind=span_def.kind,
+                    attributes=span_def.attributes,
+                    context=context,
+                ) as span:
+                    if not primary_span:
+                        primary_span = span
+                        # Update event counts for primary span
+                        if event.event_type in self.event_counts:
+                            self.event_counts[event.event_type] += 1
+                    
+                    if flush_now:
+                        span.end()
+                        
+            return primary_span
 
         finally:
             detach(token)
@@ -165,12 +182,22 @@ class LiveSpanProcessor(SpanProcessor):
             raise ValueError("Invalid span type")
             
         context = span.get_span_context()
+        
+        # Combine existing attributes with in-flight attributes
+        attributes = dict(span.attributes or {})
+        attributes.update({
+            "agentops.in_flight": True,
+            "agentops.event_type": span.attributes.get("event.type", "unknown"),
+            "agentops.duration_ms": (time.time_ns() - span.start_time) / 1e6,
+        })
+        
+        # Create new ReadableSpan with all attributes
         readable = ReadableSpan(
             name=span.name,
             context=context,
             parent=None,  # Parent context handled separately
             resource=span.resource,
-            attributes=span.attributes,
+            attributes=attributes,  # Use combined attributes
             events=span.events,
             links=span.links,
             kind=span.kind,
@@ -180,13 +207,6 @@ class LiveSpanProcessor(SpanProcessor):
             instrumentation_scope=span.instrumentation_scope,
         )
         
-        # Add custom attributes for in-flight spans
-        readable.attributes.update({
-            "agentops.in_flight": True,
-            "agentops.event_type": span.attributes.get("event.type", "unknown"),
-            "agentops.duration_ms": (time.time_ns() - span.start_time) / 1e6,
-        })
-        
         return readable
 
     def on_start(self, span: OTELSpan, parent_context: Optional[Context] = None) -> None:
@@ -194,8 +214,12 @@ class LiveSpanProcessor(SpanProcessor):
         context = span.get_span_context()
         if not context or not context.trace_flags.sampled:
             return
+            
         with self._lock:
             self._in_flight[context.span_id] = span
+            # Export immediately when span starts
+            readable = self._readable_span(span)
+            self.span_exporter.export([readable])
 
     def on_end(self, span: ReadableSpan) -> None:
         """Handle span end event"""

@@ -1,15 +1,62 @@
 """
-Converters for OpenTelemetry integration.
-Handles conversion from AgentOps events to OpenTelemetry spans and other telemetry data types.
+Converts AgentOps events to OpenTelemetry spans following semantic conventions.
 """
 
-from dataclasses import asdict
-import json
+from dataclasses import fields
 from typing import Any, Dict, List, Optional
-from uuid import uuid4
+from uuid import UUID
+import json
+
+from opentelemetry.trace import SpanKind
+from opentelemetry.semconv.trace import SpanAttributes
+from opentelemetry.util.types import AttributeValue
+
+
+# AgentOps semantic conventions
+class AgentOpsAttributes:
+    """Semantic conventions for AgentOps spans"""
+    # Common attributes
+    TIME_START = "time.start"
+    TIME_END = "time.end"
+    ERROR = "error"
+    ERROR_TYPE = "error.type"
+    ERROR_MESSAGE = "error.message"
+    ERROR_STACKTRACE = "error.stacktrace"
+    
+    # LLM attributes
+    LLM_MODEL = "llm.model"
+    LLM_PROMPT = "llm.prompt"
+    LLM_COMPLETION = "llm.completion"
+    LLM_TOKENS_TOTAL = "llm.tokens.total"
+    LLM_TOKENS_PROMPT = "llm.tokens.prompt"
+    LLM_TOKENS_COMPLETION = "llm.tokens.completion"
+    LLM_COST = "llm.cost"
+    
+    # Action attributes
+    ACTION_TYPE = "action.type"
+    ACTION_PARAMS = "action.params"
+    ACTION_RESULT = "action.result"
+    ACTION_LOGS = "action.logs"
+    
+    # Tool attributes
+    TOOL_NAME = "tool.name"
+    TOOL_PARAMS = "tool.params"
+    TOOL_RESULT = "tool.result"
+    TOOL_LOGS = "tool.logs"
+
 
 from agentops.event import ActionEvent, ErrorEvent, Event, LLMEvent, ToolEvent
-from agentops.helpers import get_ISO_time
+
+
+def span_safe(value: Any) -> AttributeValue:
+    """Convert value to OTEL-compatible attribute value"""
+    if isinstance(value, (str, int, float, bool)) or value is None:
+        return value
+    if isinstance(value, UUID):
+        return str(value)
+    if isinstance(value, (dict, list)):
+        return json.dumps(value)
+    return str(value)
 
 
 class SpanDefinition:
@@ -17,149 +64,157 @@ class SpanDefinition:
     def __init__(
         self,
         name: str,
-        attributes: Dict[str, Any],
+        attributes: Dict[str, AttributeValue],
         parent_span_id: Optional[str] = None,
-        kind: Optional[str] = None
+        kind: Optional[SpanKind] = None
     ):
         self.name = name
-        self.attributes = attributes
+        self.attributes = {k: span_safe(v) for k, v in attributes.items()}
         self.parent_span_id = parent_span_id
         self.kind = kind
 
 
 class EventToSpanConverter:
-    """Converts AgentOps events to OpenTelemetry span definitions"""
+    """Converts AgentOps events to OpenTelemetry spans"""
+
+    # Field name mappings for semantic conventions
+    FIELD_MAPPINGS = {
+        'init_timestamp': AgentOpsAttributes.TIME_START,
+        'end_timestamp': AgentOpsAttributes.TIME_END,
+        'error_type': AgentOpsAttributes.ERROR_TYPE,
+        'details': AgentOpsAttributes.ERROR_MESSAGE,
+        'logs': AgentOpsAttributes.ERROR_STACKTRACE,
+        
+        # LLM fields
+        'model': AgentOpsAttributes.LLM_MODEL,
+        'prompt': AgentOpsAttributes.LLM_PROMPT,
+        'completion': AgentOpsAttributes.LLM_COMPLETION,
+        'prompt_tokens': AgentOpsAttributes.LLM_TOKENS_PROMPT,
+        'completion_tokens': AgentOpsAttributes.LLM_TOKENS_COMPLETION,
+        'cost': AgentOpsAttributes.LLM_COST,
+        
+        # Action fields
+        'action_type': AgentOpsAttributes.ACTION_TYPE,
+        'params': AgentOpsAttributes.ACTION_PARAMS,
+        'returns': AgentOpsAttributes.ACTION_RESULT,
+        'logs': AgentOpsAttributes.ACTION_LOGS,
+        
+        # Tool fields
+        'name': AgentOpsAttributes.TOOL_NAME,
+    }
 
     @staticmethod
     def convert_event(event: Event) -> List[SpanDefinition]:
-        """
-        Convert an event into one or more span definitions.
-        Different event types may produce different numbers of spans.
-        
-        Args:
-            event: The event to convert
-            
-        Returns:
-            List of SpanDefinition objects
-            
-        Raises:
-            ValueError: If no converter is found for the event type
-        """
+        """Convert an event into its corresponding span(s)"""
+        main_span = SpanDefinition(
+            name=EventToSpanConverter._get_span_name(event),
+            attributes=EventToSpanConverter._get_span_attributes(event),
+            kind=EventToSpanConverter._get_span_kind(event)
+        )
+
+        spans = [main_span]
+        child_span = EventToSpanConverter._create_child_span(event, main_span.name)
+        if child_span:
+            spans.append(child_span)
+
+        return spans
+
+    @staticmethod
+    def _get_span_name(event: Event) -> str:
+        """Get semantic span name"""
         if isinstance(event, LLMEvent):
-            return EventToSpanConverter._convert_llm_event(event)
+            return "llm.completion"
         elif isinstance(event, ActionEvent):
-            return EventToSpanConverter._convert_action_event(event)
+            return "agent.action"
         elif isinstance(event, ToolEvent):
-            return EventToSpanConverter._convert_tool_event(event)
+            return "agent.tool"
         elif isinstance(event, ErrorEvent):
-            return EventToSpanConverter._convert_error_event(event)
-        else:
-            raise ValueError(f"No converter found for event type: {type(event)}")
+            return "error"
+        return "event"
 
     @staticmethod
-    def _convert_llm_event(event: LLMEvent) -> List[SpanDefinition]:
-        """Convert LLM event into completion and API call spans"""
-        # Create main completion span
-        completion_span = SpanDefinition(
-            name="llm.completion",
-            attributes={
-                "llm.model": event.model,
-                "llm.prompt": event.prompt,
-                "llm.completion": event.completion,
-                "llm.tokens.total": (event.prompt_tokens or 0) + (event.completion_tokens or 0),
-                "llm.cost": event.cost,
-                "event.timestamp": event.init_timestamp,
-                "event.end_timestamp": event.end_timestamp,
-            }
-        )
-
-        # Create child API call span
-        api_span = SpanDefinition(
-            name="llm.api.call",
-            attributes={
-                "llm.request.timestamp": event.init_timestamp,
-                "llm.response.timestamp": event.end_timestamp,
-                "llm.model": event.model,
-            },
-            parent_span_id=completion_span.name,
-            kind="client"
-        )
-
-        return [completion_span, api_span]
+    def _get_span_kind(event: Event) -> Optional[SpanKind]:
+        """Get OTEL span kind"""
+        if isinstance(event, LLMEvent):
+            return SpanKind.CLIENT
+        elif isinstance(event, ErrorEvent):
+            return SpanKind.INTERNAL
+        return SpanKind.INTERNAL
 
     @staticmethod
-    def _convert_action_event(event: ActionEvent) -> List[SpanDefinition]:
-        """Convert action event into action and execution spans"""
-        # Create main action span
-        action_span = SpanDefinition(
-            name="agent.action",
-            attributes={
-                "action.type": event.action_type,
-                "action.params": json.dumps(event.params or {}),
-                "action.result": json.dumps(event.returns or {}),
-                "action.logs": event.logs,
-                "event.timestamp": event.init_timestamp,
-            }
-        )
+    def _get_span_attributes(event: Event) -> Dict[str, AttributeValue]:
+        """Extract span attributes using OTEL conventions"""
+        attributes = {}
+        event_type = event.__class__.__name__.lower().replace('event', '')
+        
+        # Add common timing attributes first
+        attributes.update({
+            "event.start_time": event.init_timestamp if hasattr(event, 'init_timestamp') else event.timestamp,
+            "event.end_time": getattr(event, 'end_timestamp', None)
+        })
+        
+        # Dynamically add all event fields with proper prefixing
+        for field in fields(event):
+            value = getattr(event, field.name, None)
+            if value is not None:
+                # Map to OTEL semantic convention if available
+                if field.name in EventToSpanConverter.FIELD_MAPPINGS:
+                    attr_name = EventToSpanConverter.FIELD_MAPPINGS[field.name]
+                    attributes[attr_name] = value
+                    # Add unprefixed version for backward compatibility
+                    attributes[field.name] = value
+                else:
+                    # Use event-type prefixing for custom fields
+                    attr_name = f"{event_type}.{field.name}"
+                    attributes[attr_name] = value
+                    # Add unprefixed version for backward compatibility
+                    attributes[field.name] = value
 
-        # Create child execution span
-        execution_span = SpanDefinition(
-            name="action.execution",
-            attributes={
-                "execution.start_time": event.init_timestamp,
-                "execution.end_time": event.end_timestamp,
-            },
-            parent_span_id=action_span.name
-        )
+        # Add computed fields
+        if isinstance(event, LLMEvent):
+            attributes["llm.tokens.total"] = (event.prompt_tokens or 0) + (event.completion_tokens or 0)
 
-        return [action_span, execution_span]
+        # Add error flag for error events
+        if isinstance(event, ErrorEvent):
+            attributes[AgentOpsAttributes.ERROR] = True
 
-    @staticmethod
-    def _convert_tool_event(event: ToolEvent) -> List[SpanDefinition]:
-        """Convert tool event into tool and execution spans"""
-        # Create main tool span
-        tool_span = SpanDefinition(
-            name="agent.tool",
-            attributes={
-                "tool.name": event.name,
-                "tool.params": json.dumps(event.params or {}),
-                "tool.result": json.dumps(event.returns or {}),
-                "tool.logs": json.dumps(event.logs or {}),
-                "event.timestamp": event.init_timestamp,
-            }
-        )
-
-        # Create child execution span
-        execution_span = SpanDefinition(
-            name="tool.execution",
-            attributes={
-                "execution.start_time": event.init_timestamp,
-                "execution.end_time": event.end_timestamp,
-            },
-            parent_span_id=tool_span.name
-        )
-
-        return [tool_span, execution_span]
+        return attributes
 
     @staticmethod
-    def _convert_error_event(event: ErrorEvent) -> List[SpanDefinition]:
-        """Convert error event into a single error span"""
-        # Create error span with trigger event data
-        trigger_data = {}
-        if event.trigger_event:
-            trigger_data = {
-                "type": event.trigger_event.event_type,
-                "action_type": getattr(event.trigger_event, "action_type", None),
-                "name": getattr(event.trigger_event, "name", None),
-            }
-
-        return [SpanDefinition(
-            name="error",
-            attributes={
-                "error": True,
-                "error.type": event.error_type,
-                "error.details": event.details,
-                "error.trigger_event": json.dumps(trigger_data),
-                "event.timestamp": event.timestamp,
-            }
-        )] 
+    def _create_child_span(event: Event, parent_span_id: str) -> Optional[SpanDefinition]:
+        """Create child span using OTEL conventions"""
+        event_type = event.__class__.__name__.lower().replace('event', '')
+        
+        if isinstance(event, (ActionEvent, ToolEvent)):
+            return SpanDefinition(
+                name=f"{event_type}.execution",
+                attributes={
+                    # Add both prefixed and unprefixed versions
+                    "start_time": event.init_timestamp,
+                    "end_time": event.end_timestamp,
+                    AgentOpsAttributes.TIME_START: event.init_timestamp,
+                    AgentOpsAttributes.TIME_END: event.end_timestamp,
+                    f"{event_type}.execution.start_time": event.init_timestamp,
+                    f"{event_type}.execution.end_time": event.end_timestamp
+                },
+                parent_span_id=parent_span_id,
+                kind=SpanKind.INTERNAL
+            )
+        elif isinstance(event, LLMEvent):
+            return SpanDefinition(
+                name="llm.api.call",
+                attributes={
+                    # Add both prefixed and unprefixed versions
+                    "model": event.model,
+                    "start_time": event.init_timestamp,
+                    "end_time": event.end_timestamp,
+                    AgentOpsAttributes.LLM_MODEL: event.model,
+                    AgentOpsAttributes.TIME_START: event.init_timestamp,
+                    AgentOpsAttributes.TIME_END: event.end_timestamp,
+                    "llm.request.timestamp": event.init_timestamp,
+                    "llm.response.timestamp": event.end_timestamp
+                },
+                parent_span_id=parent_span_id,
+                kind=SpanKind.CLIENT
+            )
+        return None 

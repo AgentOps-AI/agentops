@@ -59,12 +59,20 @@ class ExportManager(SpanExporter):
                         success = self._send_batch(events)
                         if success:
                             return SpanExportResult.SUCCESS
+                        
+                        # If not successful but not the last attempt, wait and retry
+                        if attempt < self._retry_count - 1:
+                            self._wait_before_retry(attempt)
+                            continue
+                            
                     except Exception as e:
-                        if attempt == self._retry_count - 1:
-                            logger.error(f"Failed to export spans after {self._retry_count} attempts: {e}")
-                            return SpanExportResult.FAILURE
-                        self._wait_before_retry(attempt)
+                        logger.error(f"Export attempt {attempt + 1} failed: {e}")
+                        if attempt < self._retry_count - 1:
+                            self._wait_before_retry(attempt)
+                            continue
+                        return SpanExportResult.FAILURE
 
+                # If we've exhausted all retries without success
                 return SpanExportResult.FAILURE
 
             except Exception as e:

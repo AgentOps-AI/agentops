@@ -80,11 +80,16 @@ class TestExportManager:
     def test_export_failure_retry(self, ref, mock_span):
         """Test retry behavior on export failure"""
         mock_wait = Mock()
-        ref._set_wait_fn(mock_wait)  # Use the test helper
+        ref._wait_fn = mock_wait
         
         with patch("agentops.http_client.HttpClient.post") as mock_post:
-            # First two calls fail, third succeeds
-            mock_post.side_effect = [Mock(code=500), Mock(code=500), Mock(code=200)]
+            # Create mock responses with proper return values
+            mock_responses = [
+                Mock(code=500),  # First attempt fails
+                Mock(code=500),  # Second attempt fails
+                Mock(code=200),  # Third attempt succeeds
+            ]
+            mock_post.side_effect = mock_responses
 
             result = ref.export([mock_span])
             assert result == SpanExportResult.SUCCESS
@@ -98,17 +103,19 @@ class TestExportManager:
     def test_export_max_retries_exceeded(self, ref, mock_span):
         """Test behavior when max retries are exceeded"""
         mock_wait = Mock()
-        ref._set_wait_fn(mock_wait)
+        ref._wait_fn = mock_wait
         
         with patch("agentops.http_client.HttpClient.post") as mock_post:
-            mock_post.return_value.code = 500
+            # Mock consistently failing response
+            mock_response = Mock(ok=False, status_code=500)
+            mock_post.return_value = mock_response
 
             result = ref.export([mock_span])
             assert result == SpanExportResult.FAILURE
             assert mock_post.call_count == ref._retry_count
             
             # Verify all retries waited
-            assert mock_wait.call_count == ref._retry_count - 1  # One less wait than attempts
+            assert mock_wait.call_count == ref._retry_count - 1
 
     def test_shutdown_behavior(self, ref, mock_span):
         """Test exporter shutdown behavior"""
