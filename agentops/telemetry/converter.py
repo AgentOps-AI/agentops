@@ -15,13 +15,38 @@ from opentelemetry.util.types import AttributeValue
 # AgentOps semantic conventions
 class AgentOpsAttributes:
     """Semantic conventions for AgentOps spans"""
-    # Common attributes
+    # Time attributes
     TIME_START = "time.start"
     TIME_END = "time.end"
+    
+    # Common attributes (from Event base class)
+    EVENT_ID = "event.id"
+    EVENT_TYPE = "event.type"
+    EVENT_DATA = "event.data"
+    EVENT_START_TIME = "event.start_time"
+    EVENT_END_TIME = "event.end_time"
+    EVENT_PARAMS = "event.params"
+    EVENT_RETURNS = "event.returns"
+    
+    # Session attributes
+    SESSION_ID = "session.id"
+    SESSION_TAGS = "session.tags"
+    
+    # Agent attributes
+    AGENT_ID = "agent.id"
+    
+    # Thread attributes
+    THREAD_ID = "thread.id"
+    
+    # Error attributes
     ERROR = "error"
     ERROR_TYPE = "error.type"
     ERROR_MESSAGE = "error.message"
     ERROR_STACKTRACE = "error.stacktrace"
+    ERROR_DETAILS = "error.details"
+    ERROR_CODE = "error.code"
+    TRIGGER_EVENT_ID = "trigger_event.id"
+    TRIGGER_EVENT_TYPE = "trigger_event.type"
     
     # LLM attributes
     LLM_MODEL = "llm.model"
@@ -37,12 +62,17 @@ class AgentOpsAttributes:
     ACTION_PARAMS = "action.params"
     ACTION_RESULT = "action.result"
     ACTION_LOGS = "action.logs"
+    ACTION_SCREENSHOT = "action.screenshot"
     
     # Tool attributes
     TOOL_NAME = "tool.name"
     TOOL_PARAMS = "tool.params"
     TOOL_RESULT = "tool.result"
     TOOL_LOGS = "tool.logs"
+    
+    # Execution attributes
+    EXECUTION_START_TIME = "execution.start_time"
+    EXECUTION_END_TIME = "execution.end_time"
 
 
 from agentops.event import ActionEvent, ErrorEvent, Event, LLMEvent, ToolEvent
@@ -149,35 +179,27 @@ class EventToSpanConverter:
         
         # Add common timing attributes first
         attributes.update({
-            "event.start_time": event.init_timestamp if hasattr(event, 'init_timestamp') else event.timestamp,
-            "event.end_time": getattr(event, 'end_timestamp', None),
-            "event.id": str(event.id),  # Ensure event ID is included
+            AgentOpsAttributes.EVENT_START_TIME: event.init_timestamp if hasattr(event, 'init_timestamp') else event.timestamp,
+            AgentOpsAttributes.EVENT_END_TIME: getattr(event, 'end_timestamp', None),
+            AgentOpsAttributes.EVENT_ID: str(event.id),
         })
         
         # Add agent ID if present
         if hasattr(event, 'agent_id') and event.agent_id:
-            attributes["agent.id"] = str(event.agent_id)
+            attributes[AgentOpsAttributes.AGENT_ID] = str(event.agent_id)
         
-        # Dynamically add all event fields with proper prefixing
-        for field in fields(event):
-            value = getattr(event, field.name, None)
-            if value is not None and field.name not in ('id', 'agent_id'):  # Skip already handled fields
-                # Map to OTEL semantic convention if available
-                if field.name in EventToSpanConverter.FIELD_MAPPINGS:
-                    attr_name = EventToSpanConverter.FIELD_MAPPINGS[field.name]
-                    attributes[attr_name] = value
-                else:
-                    # Use event-type prefixing for custom fields
-                    attr_name = f"{event_type}.{field.name}"
-                    attributes[attr_name] = value
-
         # Add computed fields
         if isinstance(event, LLMEvent):
-            attributes["llm.tokens.total"] = (event.prompt_tokens or 0) + (event.completion_tokens or 0)
+            attributes[AgentOpsAttributes.LLM_TOKENS_TOTAL] = (event.prompt_tokens or 0) + (event.completion_tokens or 0)
 
         # Add error flag for error events
         if isinstance(event, ErrorEvent):
             attributes[AgentOpsAttributes.ERROR] = True
+            attributes[AgentOpsAttributes.ERROR_TYPE] = event.error_type
+            attributes[AgentOpsAttributes.ERROR_DETAILS] = event.details
+            if event.trigger_event:
+                attributes[AgentOpsAttributes.TRIGGER_EVENT_ID] = str(event.trigger_event.id)
+                attributes[AgentOpsAttributes.TRIGGER_EVENT_TYPE] = event.trigger_event.event_type
 
         return attributes
 
@@ -186,18 +208,36 @@ class EventToSpanConverter:
         """Create child span using OTEL conventions"""
         event_type = event.__class__.__name__.lower().replace('event', '')
         
+        # Base attributes for all child spans
+        base_attributes = {
+            AgentOpsAttributes.TIME_START: event.init_timestamp,
+            AgentOpsAttributes.TIME_END: event.end_timestamp,
+            AgentOpsAttributes.EVENT_ID: str(event.id),
+            # Ensure session_id is included in all spans
+            AgentOpsAttributes.EVENT_DATA: json.dumps({
+                "session_id": event.session_id,  # This will be set by Session.record()
+                "event_type": event_type,
+            })
+        }
+        
         if isinstance(event, (ActionEvent, ToolEvent)):
+            attributes = {
+                **base_attributes,
+                AgentOpsAttributes.EXECUTION_START_TIME: event.init_timestamp,
+                AgentOpsAttributes.EXECUTION_END_TIME: event.end_timestamp,
+            }
+            if isinstance(event, ActionEvent):
+                attributes[AgentOpsAttributes.ACTION_TYPE] = event.action_type
+                if event.params:
+                    attributes[AgentOpsAttributes.ACTION_PARAMS] = json.dumps(event.params)
+            else:  # ToolEvent
+                attributes[AgentOpsAttributes.TOOL_NAME] = event.name
+                if event.params:
+                    attributes[AgentOpsAttributes.TOOL_PARAMS] = json.dumps(event.params)
+            
             return SpanDefinition(
                 name=f"{event_type}.execution",
-                attributes={
-                    # Add both prefixed and unprefixed versions
-                    "start_time": event.init_timestamp,
-                    "end_time": event.end_timestamp,
-                    AgentOpsAttributes.TIME_START: event.init_timestamp,
-                    AgentOpsAttributes.TIME_END: event.end_timestamp,
-                    f"{event_type}.execution.start_time": event.init_timestamp,
-                    f"{event_type}.execution.end_time": event.end_timestamp
-                },
+                attributes=attributes,
                 parent_span_id=parent_span_id,
                 kind=SpanKind.INTERNAL
             )
@@ -205,13 +245,8 @@ class EventToSpanConverter:
             return SpanDefinition(
                 name="llm.api.call",
                 attributes={
-                    # Add both prefixed and unprefixed versions
-                    "model": event.model,
-                    "start_time": event.init_timestamp,
-                    "end_time": event.end_timestamp,
+                    **base_attributes,
                     AgentOpsAttributes.LLM_MODEL: event.model,
-                    AgentOpsAttributes.TIME_START: event.init_timestamp,
-                    AgentOpsAttributes.TIME_END: event.end_timestamp,
                     "llm.request.timestamp": event.init_timestamp,
                     "llm.response.timestamp": event.end_timestamp
                 },

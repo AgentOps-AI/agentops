@@ -27,6 +27,7 @@ from .telemetry import OTELConfig
 from .telemetry.client import ClientTelemetry
 from .telemetry.exporter import ExportManager
 from .telemetry.manager import OTELManager
+from .telemetry.converter import AgentOpsAttributes
 
 """
 OTEL Guidelines:
@@ -398,45 +399,47 @@ class Session:
         try:
             token = attach(token)
 
-            # Create a copy of event data to modify
-            event_data = dict(filter_unjsonable(event.__dict__))
+            # Create base attributes
+            attributes = {
+                AgentOpsAttributes.EVENT_ID: str(event.id),
+                AgentOpsAttributes.EVENT_TYPE: event.event_type,
+                AgentOpsAttributes.EVENT_START_TIME: event.init_timestamp,
+                AgentOpsAttributes.EVENT_END_TIME: event.end_timestamp,
+                AgentOpsAttributes.SESSION_ID: str(self.session_id),
+                AgentOpsAttributes.SESSION_TAGS: ",".join(self.tags) if self.tags else "",
+            }
 
-            # Add required fields based on event type
+            # Add agent ID if present
+            if hasattr(event, 'agent_id') and event.agent_id:
+                attributes[AgentOpsAttributes.AGENT_ID] = str(event.agent_id)
+
+            # Add event-specific data
             if isinstance(event, ErrorEvent):
-                event_data["error_type"] = getattr(event, "error_type", event.event_type)
-            elif event.event_type == "actions":
-                # Ensure action events have action_type
-                if "action_type" not in event_data:
-                    event_data["action_type"] = event_data.get("name", "unknown_action")
-                if "name" not in event_data:
-                    event_data["name"] = event_data.get("action_type", "unknown_action")
-            elif event.event_type == "tools":
-                # Ensure tool events have name
-                if "name" not in event_data:
-                    event_data["name"] = event_data.get("tool_name", "unknown_tool")
-                if "tool_name" not in event_data:
-                    event_data["tool_name"] = event_data.get("name", "unknown_tool")
+                attributes.update({
+                    AgentOpsAttributes.ERROR: True,
+                    AgentOpsAttributes.ERROR_TYPE: event.error_type,
+                    AgentOpsAttributes.ERROR_DETAILS: event.details,
+                    AgentOpsAttributes.ERROR_CODE: event.code,
+                    AgentOpsAttributes.ERROR_STACKTRACE: event.logs,
+                })
+                if event.trigger_event:
+                    attributes.update({
+                        AgentOpsAttributes.TRIGGER_EVENT_ID: str(event.trigger_event.id),
+                        AgentOpsAttributes.TRIGGER_EVENT_TYPE: event.trigger_event.event_type,
+                    })
+            else:
+                # Add common Event attributes
+                if event.params:
+                    attributes[AgentOpsAttributes.EVENT_PARAMS] = json.dumps(event.params)
+                if event.returns:
+                    attributes[AgentOpsAttributes.EVENT_RETURNS] = json.dumps(event.returns)
 
             with self._otel_tracer.start_as_current_span(
                 name=event.event_type,
-                attributes={
-                    "event.id": str(event.id),
-                    "event.type": event.event_type,
-                    "event.timestamp": event.init_timestamp or get_ISO_time(),
-                    "event.end_timestamp": event.end_timestamp or get_ISO_time(),
-                    "session.id": str(self.session_id),
-                    "session.tags": ",".join(self.tags) if self.tags else "",
-                    "event.data": json.dumps(event_data),
-                },
+                attributes=attributes,
             ) as span:
                 if event.event_type in self.event_counts:
                     self.event_counts[event.event_type] += 1
-
-                if isinstance(event, ErrorEvent):
-                    span.set_attribute("error", True)
-                    if hasattr(event, "trigger_event") and event.trigger_event:
-                        span.set_attribute("trigger_event.id", str(event.trigger_event.id))
-                        span.set_attribute("trigger_event.type", event.trigger_event.event_type)
 
                 if flush_now and hasattr(self, "_span_processor"):
                     self._span_processor.force_flush()

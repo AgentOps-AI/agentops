@@ -9,6 +9,7 @@ from opentelemetry.util.types import Attributes
 
 from agentops.http_client import HttpClient
 from agentops.log_config import logger
+from agentops.telemetry.converter import AgentOpsAttributes
 
 
 class ExportManager(SpanExporter):
@@ -85,29 +86,33 @@ class ExportManager(SpanExporter):
         for span in spans:
             try:
                 # Get base event data
-                event_data = json.loads(span.attributes.get("event.data", "{}"))
+                event_data = json.loads(span.attributes.get(AgentOpsAttributes.EVENT_DATA, "{}"))
                 
                 # Ensure required fields
                 event = {
-                    "id": span.attributes.get("event.id"),
+                    "id": span.attributes.get(AgentOpsAttributes.EVENT_ID),
                     "event_type": span.name,
-                    "init_timestamp": span.attributes.get("event.timestamp"),
-                    "end_timestamp": span.attributes.get("event.end_timestamp"),
+                    "init_timestamp": span.attributes.get(AgentOpsAttributes.EVENT_START_TIME),
+                    "end_timestamp": span.attributes.get(AgentOpsAttributes.EVENT_END_TIME),
+                    # Always include session_id from the exporter
                     "session_id": str(self.session_id),
                 }
 
                 # Add agent ID if present
-                agent_id = span.attributes.get("agent.id")
+                agent_id = span.attributes.get(AgentOpsAttributes.AGENT_ID)
                 if agent_id:
                     event["agent_id"] = agent_id
 
-                # Add event-specific data
+                # Add event-specific data, but ensure session_id isn't overwritten
+                event_data["session_id"] = str(self.session_id)
                 event.update(event_data)
 
                 # Apply custom formatters
                 for formatter in self._custom_formatters:
                     try:
                         event = formatter(event)
+                        # Ensure session_id isn't removed by formatters
+                        event["session_id"] = str(self.session_id)
                     except Exception as e:
                         logger.error(f"Custom formatter failed: {e}")
 
