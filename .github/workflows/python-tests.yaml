@@ -41,8 +41,8 @@ jobs:
         continue-on-error: true
         with:
           python-version: ${{ matrix.python-version }}
-          cache-prefix: uv-${{ matrix.python-version }}
           enable-cache: true
+          cache-suffix: uv-${{ matrix.python-version }}
           cache-dependency-glob: "**/pyproject.toml"
 
       - name: Install dependencies
