@@ -80,3 +80,27 @@ class LoggingHandler(_LoggingHandler):
         root_logger.setLevel(logging.INFO)
 
         return logger_provider
+
+def set_log_handler(handler: logging.Handler, logger_name: str = "agentops") -> None:
+    """
+    Configure an AgentOps-specific logger with the provided handler.
+    
+    Args:
+        handler: The logging handler to set
+        logger_name: The name of the logger to configure (defaults to "agentops")
+    """
+    # Get AgentOps-specific logger instead of root logger
+    logger = logging.getLogger(logger_name)
+    logger.propagate = False  # Prevent duplicate logging
+    
+    # Remove existing handlers of the same type to avoid duplicates
+    for existing_handler in logger.handlers[:]:
+        if isinstance(existing_handler, type(handler)):
+            logger.removeHandler(existing_handler)
+        
+    # Add the new handler
+    logger.addHandler(handler)
+    
+    # Only set level if not already set
+    if logger.level == logging.NOTSET:
+        logger.setLevel(logging.INFO)
