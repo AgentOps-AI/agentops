@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import Dict, List, Optional
+from typing import Callable, Dict, List, Optional
 
 from opentelemetry.sdk.trace.export import SpanExporter
 from opentelemetry.sdk.trace.sampling import Sampler
@@ -13,7 +13,7 @@ class OTELConfig:
     resource_attributes: Optional[Dict] = None
     sampler: Optional[Sampler] = None
     retry_config: Optional[Dict] = None
-    custom_formatters: Optional[List[callable]] = None
+    custom_formatters: Optional[List[Callable]] = None
     enable_metrics: bool = False
     metric_readers: Optional[List] = None
     enable_in_flight: bool = True

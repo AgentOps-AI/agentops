@@ -1,7 +1,7 @@
 from typing import Dict, List, Optional
 
 from opentelemetry import trace
-from opentelemetry.sdk.resources import SERVICE_NAME, Resource
+from opentelemetry.sdk.resources import SERVICE_NAME, Resource, ResourceAttributes
 from opentelemetry.sdk.trace import TracerProvider, SpanProcessor
 from opentelemetry.sdk.trace.export import BatchSpanProcessor, SpanExporter
 from opentelemetry.sdk.trace.sampling import ParentBased, Sampler, TraceIdRatioBased
@@ -64,12 +64,12 @@ class OTELManager:
             Configured TracerProvider instance
         """
         # Set up resource attributes
-        resource_attributes = {
+        resource_attributes: ResourceAttributes = {
             SERVICE_NAME: service_name,
             "session.id": session_id,
         }
         resource_attributes.update(self._resource_attributes)
-        resource = Resource.create(resource_attributes)
+        resource = Resource.create(attributes=resource_attributes)
 
         # Create provider with resource and sampling config
         self._tracer_provider = TracerProvider(
@@ -136,3 +136,24 @@ class OTELManager:
                 pass  # Ensure we continue cleanup even if one processor fails
         self._processors = []
         self._tracer_provider = None
+
+    def configure(
+        self,
+        additional_exporters: Optional[List[SpanExporter]] = None,
+        resource_attributes: Optional[Dict] = None,
+        sampler: Optional[Sampler] = None,
+    ) -> None:
+        """
+        Configure the OTEL manager with additional settings.
+        
+        Args:
+            additional_exporters: Additional span exporters to use
+            resource_attributes: Custom resource attributes to add
+            sampler: Custom sampling strategy
+        """
+        if additional_exporters:
+            self._exporters.extend(additional_exporters)
+        if resource_attributes:
+            self._resource_attributes.update(resource_attributes)
+        if sampler:
+            self._sampler = sampler
