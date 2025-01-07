@@ -111,15 +111,16 @@ class ExportManager(SpanExporter):
     def _send_batch(self, events: List[Dict]) -> bool:
         """Send a batch of events to the AgentOps backend"""
         try:
+            endpoint = self.endpoint.rstrip('/') + '/v2/create_events'
             response = HttpClient.post(
-                self.endpoint,
+                endpoint,
                 json.dumps({"events": events}).encode("utf-8"),
                 api_key=self.api_key,
                 jwt=self.jwt,
             )
             return response.code == 200
         except Exception as e:
-            logger.error(f"Error sending batch: {e}")
+            logger.error(f"Error sending batch: {str(e)}", exc_info=e)
             return False
 
     def _wait_before_retry(self, attempt: int):
