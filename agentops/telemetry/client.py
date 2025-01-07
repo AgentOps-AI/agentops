@@ -15,16 +15,18 @@ from .processors import LiveSpanProcessor
 
 if TYPE_CHECKING:
     from agentops.session import Session
+    from agentops.client import Client
 
 
 class ClientTelemetry:
     """Manages telemetry at the agentops.Client level, shared across sessions"""
 
-    def __init__(self):
+    def __init__(self,client: "Client"):
         self._otel_manager: Optional[OTELManager] = None
         self._tracer_provider: Optional[TracerProvider] = None
         self._session_exporters: Dict[UUID, ExportManager] = {}
         self.config: Optional[OTELConfig] = None
+        self.client = client
 
     def initialize(self, config: OTELConfig) -> None:
         """Initialize telemetry components"""
@@ -64,12 +66,15 @@ class ClientTelemetry:
 
     def get_session_tracer(self, session_id: UUID, jwt: str):
         """Get or create a tracer for a specific session"""
+        if not self.client:
+            raise RuntimeError("Client not initialized")
+        
         # Create session-specific exporter
         exporter = ExportManager(
             session_id=session_id,
-            endpoint=self.config.endpoint,
+            endpoint=self.client._config.endpoint,
             jwt=jwt,
-            api_key=self.config.api_key,
+            api_key=self.client._config.api_key,
             retry_config=self.config.retry_config if self.config else None,
             custom_formatters=self.config.custom_formatters if self.config else None,
         )
@@ -80,11 +85,11 @@ class ClientTelemetry:
         # Add both batch and in-flight processors
         batch_processor = BatchSpanProcessor(
             exporter,
-            max_queue_size=self.config.max_queue_size,
-            schedule_delay_millis=config.max_wait_time,
+            max_queue_size=self.client._config.max_queue_size,
+            schedule_delay_millis=self.client._config.max_wait_time,
             max_export_batch_size=min(
-                max(self.config.max_queue_size // 20, 1),
-                min(self.config.max_queue_size, 32),
+                max(self.client._config.max_queue_size // 20, 1),
+                min(self.client._config.max_queue_size, 32),
             ),
             export_timeout_millis=20000,
         )

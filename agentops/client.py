@@ -48,7 +48,7 @@ class Client(metaclass=MetaClient):
         self._config = Configuration()
         self._pre_init_queue = {"agents": []}
         self._host_env = None  # Cache host env data
-        self.telemetry = ClientTelemetry()
+        self.telemetry = ClientTelemetry(self)
 
         self.configure(
             api_key=os.environ.get("AGENTOPS_API_KEY"),
