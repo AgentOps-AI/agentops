@@ -196,11 +196,18 @@ class Session:
         # Get session-specific tracer from client telemetry
         from agentops.client import Client
         self._telemetry_client = client or Client()._telemetry
+        
+        # Get tracer from client
         self._otel_tracer = self._telemetry_client.get_session_tracer(
             session_id=self.session_id,
             config=self.config,
             jwt=self.jwt or ""
         )
+
+        # For test compatibility
+        self._tracer_provider = self._telemetry_client._tracer_provider
+        # Use existing span processor from client
+        self._span_processor = self._telemetry_client._session_exporters[self.session_id]
 
     def set_video(self, video: str) -> None:
         """
@@ -243,37 +250,21 @@ class Session:
                 return None
 
             try:
-                # Force flush any pending spans before ending session
-                if hasattr(self, "_span_processor"):
-                    self._span_processor.force_flush(timeout_millis=5000)
+                # Force flush any pending spans
+                if self._telemetry_client:
+                    self._telemetry_client.force_flush()
 
-                # 1. Set shutdown flag on exporter first
-                if hasattr(self, "_otel_exporter"):
-                    self._otel_exporter.shutdown()
-
-                # 2. Set session end state
+                # Set session end state
                 self.end_timestamp = get_ISO_time()
                 self.end_state = end_state
                 self.end_state_reason = end_state_reason
                 if video is not None:
                     self.video = video
 
-                # 3. Mark session as not running before cleanup
+                # Mark session as not running
                 self.is_running = False
 
-                # 4. Clean up OTEL components
-                if hasattr(self, "_span_processor"):
-                    try:
-                        # Force flush any pending spans
-                        self._span_processor.force_flush(timeout_millis=5000)
-                        # Shutdown the processor
-                        self._span_processor.shutdown()
-                    except Exception as e:
-                        logger.warning(f"Error during span processor cleanup: {e}")
-                    finally:
-                        del self._span_processor
-
-                # 5. Final session update
+                # Get analytics before cleanup
                 if not (analytics_stats := self.get_analytics()):
                     return None
 
@@ -288,21 +279,23 @@ class Session:
                 )
                 logger.info(analytics)
 
+                # Clean up telemetry
+                if self._telemetry_client:
+                    self._telemetry_client.cleanup_session(self.session_id)
+
+                return self.token_cost
+
             except Exception as e:
                 logger.exception(f"Error during session end: {e}")
+                return None
             finally:
-                active_sessions.remove(self)  # First thing, get rid of the session
-
+                active_sessions.remove(self)
                 logger.info(
                     colored(
                         f"\x1b[34mSession Replay: {self.session_url}\x1b[0m",
                         "blue",
                     )
                 )
-            return self.token_cost
-
-        # Clean up telemetry through client
-        client._telemetry.cleanup_session(self.session_id)
 
     def add_tags(self, tags: List[str]) -> None:
         """
