@@ -201,7 +201,7 @@ class Session:
         self,
         session_id: UUID,
         config: Configuration,
-        client: ClientTelemetry,
+        client: Optional[ClientTelemetry] = None, # Not mandatory, we can use the Client singleton to retrieve the telemetry client
         tags: Optional[List[str]] = None,
         host_env: Optional[dict] = None,
     ):
@@ -233,6 +233,7 @@ class Session:
         if not self.is_running:
             return
 
+        client = client or Client()._telemetry
         # Get session-specific tracer from client telemetry
         self._otel_tracer = client.get_session_tracer(
             session_id=self.session_id, config=self.config, jwt=self.jwt
