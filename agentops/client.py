@@ -20,6 +20,8 @@ from uuid import UUID, uuid4
 
 from termcolor import colored
 
+from agentops.telemetry.config import OTELConfig
+
 from .config import Configuration
 from .event import ErrorEvent, Event
 from .host_env import get_host_env
@@ -28,10 +30,16 @@ from .log_config import logger
 from .meta_client import MetaClient
 from .session import Session, active_sessions
 from .singleton import conditional_singleton
+from .telemetry import ClientTelemetry
 
 
 @conditional_singleton
 class Client(metaclass=MetaClient):
+    """
+    This is the AgentOps core Client.
+    It's the entrypoint to all core functionality.
+    """
+
     def __init__(self):
         self._pre_init_messages: List[str] = []
         self._initialized: bool = False
@@ -40,6 +48,7 @@ class Client(metaclass=MetaClient):
         self._config = Configuration()
         self._pre_init_queue = {"agents": []}
         self._host_env = None  # Cache host env data
+        self._telemetry = ClientTelemetry()
 
         self.configure(
             api_key=os.environ.get("AGENTOPS_API_KEY"),
@@ -80,7 +89,7 @@ class Client(metaclass=MetaClient):
             env_data_opt_out=env_data_opt_out,
         )
 
-    def initialize(self) -> Union[Session, None]:
+    def initialize(self, otel_config: Optional[OTELConfig] = None) -> Union[Session, None]:
         if self.is_initialized:
             return
 
@@ -106,6 +115,9 @@ class Client(metaclass=MetaClient):
             for agent_args in self._pre_init_queue["agents"]:
                 session.create_agent(name=agent_args["name"], agent_id=agent_args["agent_id"])
             self._pre_init_queue["agents"] = []
+
+        # Initialize telemetry
+        self._telemetry.initialize(self._config, otel_config)
 
         return session
 

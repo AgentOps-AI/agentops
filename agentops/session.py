@@ -13,12 +13,7 @@ from opentelemetry import trace
 from opentelemetry.context import attach, detach, set_value
 from opentelemetry.sdk.resources import SERVICE_NAME, Resource
 from opentelemetry.sdk.trace import ReadableSpan, TracerProvider
-from opentelemetry.sdk.trace.export import (
-    BatchSpanProcessor,
-    ConsoleSpanExporter,
-    SpanExporter,
-    SpanExportResult,
-)
+from opentelemetry.sdk.trace.export import BatchSpanProcessor, ConsoleSpanExporter, SpanExporter, SpanExportResult
 from termcolor import colored
 
 from .config import Configuration
@@ -28,6 +23,10 @@ from .exceptions import ApiServerException
 from .helpers import filter_unjsonable, get_ISO_time, safe_serialize
 from .http_client import HttpClient, Response
 from .log_config import logger
+from .telemetry import OTELConfig
+from .telemetry.client import ClientTelemetry
+from .telemetry.exporter import ExportManager
+from .telemetry.manager import OTELManager
 
 """
 OTEL Guidelines:
@@ -172,6 +171,7 @@ class Session:
     Args:
         session_id (UUID): The session id is used to record particular runs.
         config (Configuration): The configuration object for the session.
+        client (ClientTelemetry): The client telemetry object for the session.
         tags (List[str], optional): Tags that can be used for grouping or sorting later. Examples could be ["GPT-4"].
         host_env (dict, optional): A dictionary containing host and environment data.
 
@@ -201,6 +201,7 @@ class Session:
         self,
         session_id: UUID,
         config: Configuration,
+        client: ClientTelemetry,
         tags: Optional[List[str]] = None,
         host_env: Optional[dict] = None,
     ):
@@ -232,26 +233,10 @@ class Session:
         if not self.is_running:
             return
 
-        # Initialize OTEL components with a more controlled processor
-        self._tracer_provider = TracerProvider()
-        self._otel_tracer = self._tracer_provider.get_tracer(
-            f"agentops.session.{str(session_id)}",
+        # Get session-specific tracer from client telemetry
+        self._otel_tracer = client.get_session_tracer(
+            session_id=self.session_id, config=self.config, jwt=self.jwt
         )
-        self._otel_exporter = SessionExporter(session=self)
-
-        # Use smaller batch size and shorter delay to reduce buffering
-        self._span_processor = BatchSpanProcessor(
-            self._otel_exporter,
-            max_queue_size=self.config.max_queue_size,
-            schedule_delay_millis=self.config.max_wait_time,
-            max_export_batch_size=min(
-                max(self.config.max_queue_size // 20, 1),
-                min(self.config.max_queue_size, 32),
-            ),
-            export_timeout_millis=20000,
-        )
-
-        self._tracer_provider.add_span_processor(self._span_processor)
 
     def set_video(self, video: str) -> None:
         """
@@ -351,6 +336,9 @@ class Session:
                     )
                 )
             return self.token_cost
+
+        # Clean up telemetry through client
+        client._telemetry.cleanup_session(self.session_id)
 
     def add_tags(self, tags: List[str]) -> None:
         """
