@@ -189,19 +189,81 @@ class EventToSpanConverter:
         # Add agent ID if present
         if hasattr(event, 'agent_id') and event.agent_id:
             attributes[AgentOpsAttributes.AGENT_ID] = str(event.agent_id)
+            attributes['agent_id'] = str(event.agent_id)
         
-        # Add computed fields
+        # Add LLM-specific attributes
         if isinstance(event, LLMEvent):
-            attributes[AgentOpsAttributes.LLM_TOKENS_TOTAL] = (event.prompt_tokens or 0) + (event.completion_tokens or 0)
+            llm_attrs = {
+                AgentOpsAttributes.LLM_MODEL: event.model,
+                AgentOpsAttributes.LLM_PROMPT: event.prompt,
+                AgentOpsAttributes.LLM_COMPLETION: event.completion,
+                AgentOpsAttributes.LLM_TOKENS_PROMPT: event.prompt_tokens,
+                AgentOpsAttributes.LLM_TOKENS_COMPLETION: event.completion_tokens,
+                AgentOpsAttributes.LLM_COST: event.cost,
+                AgentOpsAttributes.LLM_TOKENS_TOTAL: (event.prompt_tokens or 0) + (event.completion_tokens or 0),
+                # Add simple keys for backward compatibility
+                'model': event.model,
+                'prompt': event.prompt,
+                'completion': event.completion,
+                'prompt_tokens': event.prompt_tokens,
+                'completion_tokens': event.completion_tokens,
+                'cost': event.cost,
+            }
+            attributes.update(llm_attrs)
+
+        # Add action-specific attributes
+        elif isinstance(event, ActionEvent):
+            action_attrs = {
+                AgentOpsAttributes.ACTION_TYPE: event.action_type,
+                AgentOpsAttributes.ACTION_PARAMS: event.params,
+                AgentOpsAttributes.ACTION_RESULT: event.returns,
+                AgentOpsAttributes.ACTION_LOGS: event.logs,
+                # Add simple keys for backward compatibility
+                'action_type': event.action_type,
+                'params': event.params,
+                'returns': event.returns,
+                'logs': event.logs,
+            }
+            attributes.update(action_attrs)
+
+        # Add tool-specific attributes
+        elif isinstance(event, ToolEvent):
+            tool_attrs = {
+                AgentOpsAttributes.TOOL_NAME: event.name,
+                AgentOpsAttributes.TOOL_PARAMS: event.params,
+                AgentOpsAttributes.TOOL_RESULT: event.returns,
+                AgentOpsAttributes.TOOL_LOGS: event.logs,
+                # Add simple keys for backward compatibility
+                'name': event.name,
+                'params': event.params,
+                'returns': event.returns,
+                'logs': event.logs,
+            }
+            attributes.update(tool_attrs)
 
         # Add error flag for error events
-        if isinstance(event, ErrorEvent):
-            attributes[AgentOpsAttributes.ERROR] = True
-            attributes[AgentOpsAttributes.ERROR_TYPE] = event.error_type
-            attributes[AgentOpsAttributes.ERROR_DETAILS] = event.details
+        elif isinstance(event, ErrorEvent):
+            error_attrs = {
+                AgentOpsAttributes.ERROR: True,
+                AgentOpsAttributes.ERROR_TYPE: event.error_type,
+                AgentOpsAttributes.ERROR_DETAILS: event.details,
+                # Add simple keys for backward compatibility
+                'error': True,
+                'error_type': event.error_type,
+                'details': event.details,
+                'trigger_event': event.trigger_event,
+            }
+            attributes.update(error_attrs)
+            
             if event.trigger_event:
-                attributes[AgentOpsAttributes.TRIGGER_EVENT_ID] = str(event.trigger_event.id)
-                attributes[AgentOpsAttributes.TRIGGER_EVENT_TYPE] = event.trigger_event.event_type
+                trigger_attrs = {
+                    AgentOpsAttributes.TRIGGER_EVENT_ID: str(event.trigger_event.id),
+                    AgentOpsAttributes.TRIGGER_EVENT_TYPE: event.trigger_event.event_type,
+                    # Add simple keys for backward compatibility
+                    'trigger_event_id': str(event.trigger_event.id),
+                    'trigger_event_type': event.trigger_event.event_type,
+                }
+                attributes.update(trigger_attrs)
 
         return attributes
 
@@ -218,6 +280,10 @@ class EventToSpanConverter:
             AgentOpsAttributes.TIME_START: event.init_timestamp,
             AgentOpsAttributes.TIME_END: event.end_timestamp,
             AgentOpsAttributes.EVENT_ID: str(event.id),
+            # Simple keys for backward compatibility
+            'start_time': event.init_timestamp,
+            'end_time': event.end_timestamp,
+            'event_id': str(event.id),
             # Get session_id from context
             AgentOpsAttributes.EVENT_DATA: json.dumps({
                 "session_id": str(session_id),
@@ -230,15 +296,32 @@ class EventToSpanConverter:
                 **base_attributes,
                 AgentOpsAttributes.EXECUTION_START_TIME: event.init_timestamp,
                 AgentOpsAttributes.EXECUTION_END_TIME: event.end_timestamp,
+                # Simple keys for backward compatibility
+                'start_time': event.init_timestamp,
+                'end_time': event.end_timestamp,
             }
             if isinstance(event, ActionEvent):
-                attributes[AgentOpsAttributes.ACTION_TYPE] = event.action_type
+                action_attrs = {
+                    AgentOpsAttributes.ACTION_TYPE: event.action_type,
+                    'action_type': event.action_type,  # Simple key
+                }
                 if event.params:
-                    attributes[AgentOpsAttributes.ACTION_PARAMS] = json.dumps(event.params)
+                    action_attrs.update({
+                        AgentOpsAttributes.ACTION_PARAMS: json.dumps(event.params),
+                        'params': json.dumps(event.params),  # Simple key
+                    })
+                attributes.update(action_attrs)
             else:  # ToolEvent
-                attributes[AgentOpsAttributes.TOOL_NAME] = event.name
+                tool_attrs = {
+                    AgentOpsAttributes.TOOL_NAME: event.name,
+                    'name': event.name,  # Simple key
+                }
                 if event.params:
-                    attributes[AgentOpsAttributes.TOOL_PARAMS] = json.dumps(event.params)
+                    tool_attrs.update({
+                        AgentOpsAttributes.TOOL_PARAMS: json.dumps(event.params),
+                        'params': json.dumps(event.params),  # Simple key
+                    })
+                attributes.update(tool_attrs)
             
             return SpanDefinition(
                 name=f"{event_type}.execution",
@@ -247,14 +330,18 @@ class EventToSpanConverter:
                 kind=SpanKind.INTERNAL
             )
         elif isinstance(event, LLMEvent):
+            llm_attrs = {
+                **base_attributes,
+                AgentOpsAttributes.LLM_MODEL: event.model,
+                'model': event.model,  # Simple key
+                "llm.request.timestamp": event.init_timestamp,
+                "llm.response.timestamp": event.end_timestamp,
+                'request_timestamp': event.init_timestamp,  # Simple key
+                'response_timestamp': event.end_timestamp,  # Simple key
+            }
             return SpanDefinition(
                 name="llm.api.call",
-                attributes={
-                    **base_attributes,
-                    AgentOpsAttributes.LLM_MODEL: event.model,
-                    "llm.request.timestamp": event.init_timestamp,
-                    "llm.response.timestamp": event.end_timestamp
-                },
+                attributes=llm_attrs,
                 parent_span_id=parent_span_id,
                 kind=SpanKind.CLIENT
             )
