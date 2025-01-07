@@ -1,0 +1,10 @@
+fastapi
+uvicorn
+celery
+redis
+protobuf
+opentelemetry-proto
+opentelemetry-api
+opentelemetry-sdk
+opentelemetry-exporter-otlp-proto-grpc
+opentelemetry-exporter-otlp-proto-http
