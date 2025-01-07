@@ -1,59 +1,97 @@
+import time
 import uuid
-from typing import Generator
+from dataclasses import dataclass
+from typing import Dict, Any, Optional
 
 import pytest
-
-from agentops.config import Configuration
-from agentops.telemetry.exporter import ExportManager
-from agentops.telemetry.manager import OTELManager
-from agentops.telemetry.metrics import TelemetryMetrics
-from agentops.telemetry.processors import EventProcessor
+from opentelemetry.trace import SpanContext, TraceFlags
 
 
-@pytest.fixture
-def config() -> Configuration:
-    """Provide a test configuration"""
-    return Configuration(api_key="test-key")
+@dataclass
+class TestSpan:
+    """Test span implementation for testing, avoiding OpenTelemetry dependencies where possible"""
+    name: str
+    attributes: Dict[str, Any]
+    context: Optional[SpanContext] = None
+    parent_span_id: Optional[str] = None
+    kind: Optional[str] = None
+    _start_time: int = field(default_factory=lambda: time.time_ns())
+    _end_time: Optional[int] = None
 
+    def __post_init__(self):
+        if self.context is None:
+            # Create a deterministic span context for testing
+            self.context = SpanContext(
+                trace_id=uuid.uuid4().int & ((1 << 128) - 1),  # 128-bit trace id
+                span_id=uuid.uuid4().int & ((1 << 64) - 1),    # 64-bit span id
+                trace_flags=TraceFlags(TraceFlags.SAMPLED),
+                is_remote=False,
+            )
 
-@pytest.fixture
-def session_id() -> uuid.UUID:
-    """Provide a test session ID"""
-    return uuid.uuid4()
+    def end(self, end_time: Optional[int] = None):
+        """End the span with optional end time"""
+        self._end_time = end_time or time.time_ns()
 
-
-@pytest.fixture
-def otel_manager(config: Configuration) -> Generator[OTELManager, None, None]:
-    """Provide a configured OTEL manager"""
-    manager = OTELManager(config)
-    yield manager
-    manager.shutdown()
-
-
-@pytest.fixture
-def tracer(otel_manager: OTELManager, session_id: uuid.UUID):
-    """Provide a configured tracer"""
-    provider = otel_manager.initialize("test-service", str(session_id))
-    return otel_manager.get_tracer("test-tracer")
+    def get_span_context(self):
+        """Get span context - matches OpenTelemetry Span interface"""
+        return self.context
 
 
 @pytest.fixture
-def exporter(session_id: uuid.UUID) -> ExportManager:
-    """Provide a configured exporter"""
-    return ExportManager(
-        session_id=session_id, endpoint="http://localhost:8000/v2/create_events", jwt="test-jwt", api_key="test-key"
+def test_span():
+    """Create a basic test span"""
+    def _create_span(name: str, attributes: Optional[Dict[str, Any]] = None) -> TestSpan:
+        return TestSpan(name=name, attributes=attributes or {})
+    return _create_span
+
+
+@pytest.fixture
+def mock_llm_event():
+    """Creates an LLMEvent for testing"""
+    from agentops.event import LLMEvent
+    return LLMEvent(
+        prompt="What is the meaning of life?",
+        completion="42",
+        model="gpt-4",
+        prompt_tokens=10,
+        completion_tokens=1,
+        cost=0.01,
     )
 
 
 @pytest.fixture
-def processor(session_id: uuid.UUID, tracer) -> EventProcessor:
-    """Provide a configured event processor"""
-    return EventProcessor(session_id, tracer)
+def mock_action_event():
+    """Creates an ActionEvent for testing"""
+    from agentops.event import ActionEvent
+    return ActionEvent(
+        action_type="process_data",
+        params={"input_file": "data.csv"},
+        returns="100 rows processed",
+        logs="Successfully processed all rows",
+    )
 
 
 @pytest.fixture
-def metrics() -> Generator[TelemetryMetrics, None, None]:
-    """Provide configured metrics"""
-    metrics = TelemetryMetrics("test-service")
-    yield metrics
-    metrics.shutdown()
+def mock_tool_event():
+    """Creates a ToolEvent for testing"""
+    from agentops.event import ToolEvent
+    return ToolEvent(
+        name="searchWeb",
+        params={"query": "python testing"},
+        returns=["result1", "result2"],
+        logs={"status": "success"},
+    )
+
+
+@pytest.fixture
+def mock_error_event():
+    """Creates an ErrorEvent for testing"""
+    from agentops.event import ActionEvent, ErrorEvent
+    trigger = ActionEvent(action_type="risky_action")
+    error = ValueError("Something went wrong")
+    return ErrorEvent(
+        trigger_event=trigger,
+        exception=error,
+        error_type="ValueError",
+        details="Detailed error info"
+    )
