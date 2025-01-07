@@ -3,6 +3,9 @@ from datetime import datetime
 from typing import Any, Dict, TypedDict
 from uuid import UUID, uuid4
 
+from agentops.event import Event
+from agentops.helpers import get_ISO_time
+
 
 class GenericSpanDict(TypedDict):
     trace_id: str
@@ -12,7 +15,7 @@ class GenericSpanDict(TypedDict):
     attributes: Dict[str, Any]
 
 
-def to_trace(event: Any) -> GenericSpanDict:
+def to_trace(event: Event) -> GenericSpanDict:
     """Convert a dataclass event into a trace-compatible dictionary"""
     if not is_dataclass(event):
         raise ValueError("Can only convert dataclass instances")
@@ -50,4 +53,6 @@ if __name__ == "__main__":
 
     from agentops.event import LLMEvent
 
-    print(to_trace(LLMEvent(id=uuid4(), timestamp=datetime.now(), data={})))
+    import pprint
+
+    pprint.pprint(to_trace(LLMEvent(id=uuid4(), init_timestamp=get_ISO_time(), params={})))
