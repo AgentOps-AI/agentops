@@ -1,8 +1,9 @@
 from typing import TYPE_CHECKING, Dict, Optional, Union
 from uuid import UUID
+import os
 
 from opentelemetry.sdk.trace import TracerProvider
-from opentelemetry.sdk.trace.export import BatchSpanProcessor
+from opentelemetry.sdk.trace.export import BatchSpanProcessor, SpanExporter
 
 from agentops.config import Configuration
 from agentops.log_config import logger
@@ -23,40 +24,54 @@ class ClientTelemetry:
         self._otel_manager: Optional[OTELManager] = None
         self._tracer_provider: Optional[TracerProvider] = None
         self._session_exporters: Dict[UUID, ExportManager] = {}
-        self._otel_config: Optional[OTELConfig] = None
+        self.config: Optional[OTELConfig] = None
 
-    def initialize(self, config: Configuration, otel_config: Optional[OTELConfig] = None) -> None:
+    def initialize(self, config: Configuration) -> None:
         """Initialize telemetry components"""
-        # Create OTEL config from Configuration if needed
-        if otel_config is None:
-            logger.warning("OTEL config is not provided, using default EMPTY config")
-            otel_config = OTELConfig()
-
+        # Check for environment variables if no exporters configured
+        if not config.otel.additional_exporters:
+            endpoint = os.environ.get("OTEL_EXPORTER_OTLP_ENDPOINT")
+            service_name = os.environ.get("OTEL_SERVICE_NAME")
+            
+            if service_name and not config.otel.resource_attributes:
+                config.otel.resource_attributes = {"service.name": service_name}
+            
+            if endpoint:
+                from opentelemetry.exporter.otlp.proto.grpc.trace_exporter import OTLPSpanExporter
+                config.otel.additional_exporters = [OTLPSpanExporter(endpoint=endpoint)]
+                logger.info("Using OTEL configuration from environment variables")
+        
+        # Validate exporters
+        if config.otel.additional_exporters:
+            for exporter in config.otel.additional_exporters:
+                if not isinstance(exporter, SpanExporter):
+                    raise ValueError(f"Invalid exporter type: {type(exporter)}. Must be a SpanExporter")
+        
         # Create the OTEL manager instance
         self._otel_manager = OTELManager(
-            config=otel_config,
-            exporters=otel_config.additional_exporters,
-            resource_attributes=otel_config.resource_attributes,
-            sampler=otel_config.sampler
+            config=config.otel,
+            exporters=config.otel.additional_exporters,
+            resource_attributes=config.otel.resource_attributes,
+            sampler=config.otel.sampler
         )
-        self._otel_config = otel_config
+        self.config = config
 
         # Initialize the tracer provider with global service info
         self._tracer_provider = self._otel_manager.initialize(
             service_name="agentops",
-            session_id="global"  # Use a global session ID for client-level telemetry
+            session_id="global"
         )
 
-    def get_session_tracer(self, session_id: UUID, config, jwt: str):
+    def get_session_tracer(self, session_id: UUID, jwt: str):
         """Get or create a tracer for a specific session"""
         # Create session-specific exporter
         exporter = ExportManager(
             session_id=session_id,
-            endpoint=config.endpoint,
+            endpoint=self.config.endpoint,
             jwt=jwt,
-            api_key=config.api_key,
-            retry_config=self._otel_config.retry_config if self._otel_config else None,
-            custom_formatters=self._otel_config.custom_formatters if self._otel_config else None,
+            api_key=self.config.api_key,
+            retry_config=self.config.retry_config if self.config else None,
+            custom_formatters=self.config.custom_formatters if self.config else None,
         )
 
         # Store exporter reference
@@ -65,11 +80,11 @@ class ClientTelemetry:
         # Add both batch and in-flight processors
         batch_processor = BatchSpanProcessor(
             exporter,
-            max_queue_size=config.max_queue_size,
+            max_queue_size=self.config.max_queue_size,
             schedule_delay_millis=config.max_wait_time,
             max_export_batch_size=min(
-                max(config.max_queue_size // 20, 1),
-                min(config.max_queue_size, 32),
+                max(self.config.max_queue_size // 20, 1),
+                min(self.config.max_queue_size, 32),
             ),
             export_timeout_millis=20000,
         )

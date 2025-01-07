@@ -2,6 +2,7 @@ from typing import List, Optional
 from uuid import UUID
 
 from .log_config import logger
+from .telemetry.config import OTELConfig
 
 
 class Configuration:
@@ -16,6 +17,7 @@ class Configuration:
         self.auto_start_session: bool = True
         self.skip_auto_end_session: bool = False
         self.env_data_opt_out: bool = False
+        self.otel: OTELConfig = OTELConfig()  # Default OTEL configuration
 
     def configure(
         self,
@@ -30,6 +32,7 @@ class Configuration:
         auto_start_session: Optional[bool] = None,
         skip_auto_end_session: Optional[bool] = None,
         env_data_opt_out: Optional[bool] = None,
+        otel: Optional[OTELConfig] = None,  # New parameter
     ):
         if api_key is not None:
             try:
@@ -72,3 +75,7 @@ class Configuration:
 
         if env_data_opt_out is not None:
             self.env_data_opt_out = env_data_opt_out
+
+        # OTEL configuration
+        if otel is not None:
+            self.otel = otel

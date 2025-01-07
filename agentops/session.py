@@ -195,12 +195,11 @@ class Session:
 
         # Get session-specific tracer from client telemetry
         from agentops.client import Client
-        self._telemetry_client = client or Client()._telemetry
+        self._telemetry_client = client or Client().telemetry
         
         # Get tracer from client
         self._otel_tracer = self._telemetry_client.get_session_tracer(
             session_id=self.session_id,
-            config=self.config,
             jwt=self.jwt or ""
         )
 

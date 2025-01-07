@@ -2,6 +2,8 @@
 import sys
 from typing import Optional, List, Union
 
+from agentops.telemetry.config import OTELConfig
+
 from .client import Client
 from .event import Event, ActionEvent, LLMEvent, ToolEvent, ErrorEvent
 from .decorators import record_action, track_agent, record_tool, record_function
@@ -48,6 +50,7 @@ def init(
     auto_start_session: Optional[bool] = None,
     inherited_session_id: Optional[str] = None,
     skip_auto_end_session: Optional[bool] = None,
+    telemetry: Optional[OTELConfig] = None,  # OTEL configuration
 ) -> Union[Session, None]:
     """
     Initializes the AgentOps singleton pattern.
@@ -69,6 +72,8 @@ def init(
         inherited_session_id (optional, str): Init Agentops with an existing Session
         skip_auto_end_session (optional, bool): Don't automatically end session based on your framework's decision-making
             (i.e. Crew determining when tasks are complete and ending the session)
+        exporters (List[SpanExporter], optional): Additional OpenTelemetry exporters for sending
+            telemetry data to external systems.
     Attributes:
     """
     Client().unsuppress_logs()
@@ -84,6 +89,7 @@ def init(
         if default_tags is None:
             default_tags = tags
 
+    # Create OTEL config if exporters provided
     Client().configure(
         api_key=api_key,
         parent_key=parent_key,
@@ -94,6 +100,7 @@ def init(
         instrument_llm_calls=instrument_llm_calls,
         auto_start_session=auto_start_session,
         skip_auto_end_session=skip_auto_end_session,
+        otel=telemetry,  # Pass OTEL config through
     )
 
     if inherited_session_id is not None:

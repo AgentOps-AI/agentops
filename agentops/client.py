@@ -48,7 +48,7 @@ class Client(metaclass=MetaClient):
         self._config = Configuration()
         self._pre_init_queue = {"agents": []}
         self._host_env = None  # Cache host env data
-        self._telemetry = ClientTelemetry()
+        self.telemetry = ClientTelemetry()
 
         self.configure(
             api_key=os.environ.get("AGENTOPS_API_KEY"),
@@ -89,37 +89,31 @@ class Client(metaclass=MetaClient):
             env_data_opt_out=env_data_opt_out,
         )
 
-    def initialize(self, otel_config: Optional[OTELConfig] = None) -> Union[Session, None]:
-        if self.is_initialized:
-            return
+    def initialize(self) -> Union[Session, None]:
+        """Initialize the client"""
+        if not self.is_initialized:
+            self.unsuppress_logs()
+            if self._config.api_key is None:
+                return logger.error(
+                    "Could not initialize AgentOps client - API Key is missing."
+                    + "\n\t    Find your API key at https://app.agentops.ai/settings/projects"
+                )
 
-        self.unsuppress_logs()
-        if self._config.api_key is None:
-            return logger.error(
-                "Could not initialize AgentOps client - API Key is missing."
-                + "\n\t    Find your API key at https://app.agentops.ai/settings/projects"
-            )
+            self._handle_unclean_exits()
+            self._initialized = True
 
-        self._handle_unclean_exits()
-        self._initialized = True
+            if self._config.instrument_llm_calls:
+                self._llm_tracker = LlmTracker(self)
+                self._llm_tracker.override_api()
 
-        if self._config.instrument_llm_calls:
-            self._llm_tracker = LlmTracker(self)
-            self._llm_tracker.override_api()
+            # Initialize telemetry with configuration
+            self.telemetry.initialize(self._config.otel)
 
-        session = None
-        if self._config.auto_start_session:
-            session = self.start_session()
+            session = None
+            if self._config.auto_start_session:
+                session = self.start_session()
 
-        if session:
-            for agent_args in self._pre_init_queue["agents"]:
-                session.create_agent(name=agent_args["name"], agent_id=agent_args["agent_id"])
-            self._pre_init_queue["agents"] = []
-
-        # Initialize telemetry
-        self._telemetry.initialize(self._config, otel_config)
-
-        return session
+            return session
 
     def _initialize_autogen_logger(self) -> None:
         try:
@@ -236,7 +230,7 @@ class Client(metaclass=MetaClient):
             session_tags.update(tags)
 
         session = Session(
-            client=self._telemetry,
+            client=self.telemetry,
             session_id=session_id,
             tags=list(session_tags),
             host_env=self.host_env,
