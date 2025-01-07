@@ -11,22 +11,18 @@ from uuid import UUID, uuid4
 
 from opentelemetry import trace
 from opentelemetry.context import attach, detach, set_value
-from opentelemetry.sdk.resources import SERVICE_NAME, Resource
-from opentelemetry.sdk.trace import ReadableSpan, TracerProvider
-from opentelemetry.sdk.trace.export import BatchSpanProcessor, ConsoleSpanExporter, SpanExporter, SpanExportResult
+from opentelemetry.sdk.trace import ReadableSpan
+from opentelemetry.sdk.trace.export import SpanExporter, SpanExportResult
 from termcolor import colored
 
 from .config import Configuration
 from .enums import EndState
-from .event import ErrorEvent, Event
+from .event import ActionEvent, ErrorEvent, Event, LLMEvent, ToolEvent
 from .exceptions import ApiServerException
 from .helpers import filter_unjsonable, get_ISO_time, safe_serialize
 from .http_client import HttpClient, Response
 from .log_config import logger
-from .telemetry import OTELConfig
 from .telemetry.client import ClientTelemetry
-from .telemetry.exporter import ExportManager
-from .telemetry.manager import OTELManager
 from .telemetry.converter import AgentOpsAttributes, EventToSpanConverter
 
 """
@@ -223,6 +219,7 @@ class Session:
             "apis": 0,
         }
         self._lock = threading.Lock()
+        self._end_session_lock = threading.Lock()
         self.is_running = True
         self.jwt = None
 
@@ -231,11 +228,12 @@ class Session:
             raise Exception("Failed to start session")
 
         # Get session-specific tracer from client telemetry
+        from agentops.client import Client
         self._telemetry_client = client or Client()._telemetry
         self._otel_tracer = self._telemetry_client.get_session_tracer(
             session_id=self.session_id,
             config=self.config,
-            jwt=self.jwt
+            jwt=self.jwt or ""
         )
 
     def set_video(self, video: str) -> None:
@@ -403,13 +401,13 @@ class Session:
                 with self._otel_tracer.start_as_current_span(
                     name=span_def.name,
                     attributes=span_def.attributes,
-                    kind=span_def.kind
+                    kind=span_def.kind or trace.SpanKind.INTERNAL
                 ) as span:
                     if event.event_type in self.event_counts:
                         self.event_counts[event.event_type] += 1
 
-                    if flush_now and hasattr(self, "_span_processor"):
-                        self._span_processor.force_flush()
+                    if flush_now:
+                        self._telemetry_client.force_flush()
         finally:
             detach(token)
 
