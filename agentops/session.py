@@ -25,40 +25,6 @@ from .log_config import logger
 from .telemetry.client import ClientTelemetry
 from .telemetry.converter import AgentOpsAttributes, EventToSpanConverter
 
-"""
-OTEL Guidelines:
-
-
-
-- Maintain a single TracerProvider for the application runtime
-    - Have one global TracerProvider in the Client class
-
-- According to the OpenTelemetry Python documentation, Resource should be initialized once per application and shared across all telemetry (traces, metrics, logs).
-- Each Session gets its own Tracer (with session-specific context)
-- Allow multiple sessions to share the provider while maintaining their own context
-
-
-
-:: Resource
-
-    ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
-    Captures information about the entity producing telemetry as Attributes.
-    For example, a process producing telemetry that is running in a container
-    on Kubernetes has a process name, a pod name, a namespace, and possibly
-    a deployment name. All these attributes can be included in the Resource.
-    ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
-
-    The key insight from the documentation is:
-
-    - Resource represents the entity producing telemetry - in our case, that's the AgentOps SDK application itself
-    - Session-specific information should be attributes on the spans themselves
-        - A Resource is meant to identify the service/process/application1
-        - Sessions are units of work within that application
-        - The documentation example about "process name, pod name, namespace" refers to where the code is running, not the work it's doing
-
-"""
-
-
 class SessionExporter(SpanExporter):
     """
     Manages publishing events for Session
