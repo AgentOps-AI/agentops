@@ -88,16 +88,16 @@ class TestEventProcessor:
 
     def test_process_error_event(self, processor, mock_error_event, test_exporter):
         """Test processing an error event creates correct span"""
-        with processor._tracer.start_as_current_span("error") as span:  # Changed from "errors"
-            # Set error status while span is active
+        # This creates span #1
+        with processor._tracer.start_as_current_span("error") as span:
             span.set_status(Status(StatusCode.ERROR))
             
-            # Process the event
+            # This creates span #2
             processor.process_event(mock_error_event)
         
         processor._tracer_provider.force_flush()
         
-        # Verify exported span
+        # Test expects only 1 span
         assert len(test_exporter.exported_spans) == 1
         error_span = test_exporter.exported_spans[0]
         

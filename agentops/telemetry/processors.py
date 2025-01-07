@@ -13,6 +13,7 @@ from opentelemetry.trace import Span as OTELSpan
 
 from agentops.helpers import filter_unjsonable, get_ISO_time
 from agentops.telemetry.converter import EventToSpanConverter
+from agentops.event import ErrorEvent
 
 
 class EventProcessor:
@@ -63,8 +64,11 @@ class EventProcessor:
         if not hasattr(event, "end_timestamp") or event.end_timestamp is None:
             event.end_timestamp = get_ISO_time()
         if not hasattr(event, "session_id"):
-            event.session_id = self.session_id  # Ensure session_id is set
+            event.session_id = self.session_id
 
+        # Get current span if it exists
+        current_span = trace.get_current_span()
+        
         # Create session context
         token = set_value("session.id", str(self.session_id))
         try:
@@ -72,9 +76,16 @@ class EventProcessor:
             
             # Get span definitions from converter
             span_definitions = EventToSpanConverter.convert_event(event)
-            primary_span = None
             
-            # Create spans based on definitions
+            # If we have a current span and this is an error event, update the current span
+            if isinstance(event, ErrorEvent) and current_span and current_span.is_recording():
+                # Update current span with error attributes
+                for key, value in span_definitions[0].attributes.items():
+                    current_span.set_attribute(key, value)
+                return current_span
+            
+            # Otherwise create new spans as before
+            primary_span = None
             for span_def in span_definitions:
                 context = None
                 if span_def.parent_span_id and primary_span:
@@ -87,10 +98,6 @@ class EventProcessor:
                     "session.tags": ",".join(tags) if tags else "",
                     "event.timestamp": event.init_timestamp,
                     "event.end_timestamp": event.end_timestamp,
-                    "event.data": json.dumps({
-                        "session_id": str(self.session_id),  # Include in event data
-                        **self._format_event_data(event)
-                    })
                 })
                 
                 with self._tracer.start_span(
@@ -101,7 +108,6 @@ class EventProcessor:
                 ) as span:
                     if not primary_span:
                         primary_span = span
-                        # Update event counts for primary span
                         if event.event_type in self.event_counts:
                             self.event_counts[event.event_type] += 1
                     
