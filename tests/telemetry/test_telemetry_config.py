@@ -12,28 +12,6 @@ from agentops.config import Configuration
 from agentops.telemetry.client import ClientTelemetry
 
 
-class InstrumentationTester:
-    """Helper class for testing OTEL instrumentation"""
-    def __init__(self):
-        self.tracer_provider = TracerProvider()
-        self.memory_exporter = InMemorySpanExporter()
-        span_processor = SimpleSpanProcessor(self.memory_exporter)
-        self.tracer_provider.add_span_processor(span_processor)
-        
-        # Reset and set global tracer provider
-        trace_api.set_tracer_provider(self.tracer_provider)
-        self.memory_exporter.clear()
-
-    def get_finished_spans(self):
-        return self.memory_exporter.get_finished_spans()
-
-
-@pytest.fixture
-def instrumentation():
-    """Fixture providing instrumentation testing utilities"""
-    return InstrumentationTester()
-
-
 def test_configuration_with_otel():
     """Test that Configuration properly stores OTEL config"""
     exporter = OTLPSpanExporter(endpoint="http://localhost:4317")
