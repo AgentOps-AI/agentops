@@ -1,3 +1,18 @@
+"""
+AgentOps Logging Configuration
+
+This module serves as the single source of truth for AgentOps logging configuration.
+It provides:
+1. Base configuration for AgentOps loggers
+2. Integration with loguru when available
+3. Standard formatting and log levels
+
+Other modules should:
+- Import and use the 'logger' instance from this module
+- Use set_log_handler() from telemetry.log_handler for OTEL integration
+- Avoid directly configuring the root logger
+"""
+
 import logging
 import os
 import re
@@ -109,6 +124,9 @@ if LOGURU_AVAILABLE:
     # Only handle AgentOps logs
     logger.addHandler(InterceptHandler())
 
+    # Add a note about telemetry integration
+    loguru_logger.info("Loguru detected - OTEL logging will be integrated with loguru")
+
 else:
     # Fallback to standard logging setup
     logger = logging.getLogger("agentops")
@@ -137,3 +155,6 @@ else:
         formatter = AgentOpsLogFileFormatter("%(asctime)s - %(levelname)s - %(message)s")
         file_handler.setFormatter(formatter)
         logger.addHandler(file_handler)
+
+    # Add a note about telemetry integration
+    logger.info("Using standard Python logging with OTEL integration")

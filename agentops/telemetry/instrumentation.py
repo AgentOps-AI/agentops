@@ -19,8 +19,8 @@ from opentelemetry.sdk.trace import TracerProvider
 
 from agentops.http_client import HttpClient
 
-from .logging import set_log_handler
-from .processors import InFlightSpanProcessor
+from .log_handler import LoggingHandler, set_log_handler
+from .processors import LiveSpanProcessor
 
 if TYPE_CHECKING:
     from opentelemetry.sdk._logs import LoggerProvider
@@ -101,8 +101,9 @@ def _setup_logger_provider(resource: Resource, headers: dict[str, str], telemetr
     )
     logger_provider.add_log_record_processor(SimpleLogRecordProcessor(otlp_exporter))
     set_logger_provider(logger_provider)
+    
+    # Create and configure handler for AgentOps-specific logger
     log_handler = LoggingHandler(level=logging.NOTSET, logger_provider=logger_provider)
-
-    set_log_handler(log_handler)
+    set_log_handler(log_handler, "agentops.telemetry")  # Use a more specific logger name
 
     return logger_provider
