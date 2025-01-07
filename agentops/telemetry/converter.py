@@ -10,6 +10,7 @@ import json
 from opentelemetry.trace import SpanKind
 from opentelemetry.semconv.trace import SpanAttributes
 from opentelemetry.util.types import AttributeValue
+from opentelemetry import trace
 
 
 # AgentOps semantic conventions
@@ -208,14 +209,17 @@ class EventToSpanConverter:
         """Create child span using OTEL conventions"""
         event_type = event.__class__.__name__.lower().replace('event', '')
         
+        # Get session_id from context
+        session_id = trace.get_current_span().get_span_context().trace_id
+        
         # Base attributes for all child spans
         base_attributes = {
             AgentOpsAttributes.TIME_START: event.init_timestamp,
             AgentOpsAttributes.TIME_END: event.end_timestamp,
             AgentOpsAttributes.EVENT_ID: str(event.id),
-            # Ensure session_id is included in all spans
+            # Get session_id from context
             AgentOpsAttributes.EVENT_DATA: json.dumps({
-                "session_id": event.session_id,  # This will be set by Session.record()
+                "session_id": str(session_id),
                 "event_type": event_type,
             })
         }

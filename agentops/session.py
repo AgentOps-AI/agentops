@@ -385,21 +385,13 @@ class Session:
         if not self.is_running:
             return
 
-        # Ensure event has all required base attributes
-        if not hasattr(event, "id"):
-            event.id = uuid4()
-        if not hasattr(event, "init_timestamp"):
-            event.init_timestamp = get_ISO_time()
-        if not hasattr(event, "end_timestamp") or event.end_timestamp is None:
-            event.end_timestamp = get_ISO_time()
-
         # Create session context
         token = set_value("session.id", str(self.session_id))
 
         try:
             token = attach(token)
-
-            # Create base attributes
+            
+            # Create base attributes with session context
             attributes = {
                 AgentOpsAttributes.EVENT_ID: str(event.id),
                 AgentOpsAttributes.EVENT_TYPE: event.event_type,
@@ -407,6 +399,10 @@ class Session:
                 AgentOpsAttributes.EVENT_END_TIME: event.end_timestamp,
                 AgentOpsAttributes.SESSION_ID: str(self.session_id),
                 AgentOpsAttributes.SESSION_TAGS: ",".join(self.tags) if self.tags else "",
+                AgentOpsAttributes.EVENT_DATA: json.dumps({
+                    "session_id": str(self.session_id),  # Session owns the relationship
+                    **self._format_event_data(event)
+                })
             }
 
             # Add agent ID if present
