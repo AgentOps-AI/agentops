@@ -7,6 +7,7 @@ from opentelemetry.sdk.trace.export import BatchSpanProcessor, SpanExporter
 from opentelemetry.sdk.trace.sampling import ParentBased, Sampler, TraceIdRatioBased
 
 from agentops.config import Configuration
+from agentops.telemetry.config import OTELConfig
 
 
 class OTELManager:
@@ -30,7 +31,7 @@ class OTELManager:
 
     def __init__(
         self,
-        config: Configuration,
+        config: OTELConfig,
         exporters: Optional[List[SpanExporter]] = None,
         resource_attributes: Optional[Dict] = None,
         sampler: Optional[Sampler] = None,
@@ -86,6 +87,9 @@ class OTELManager:
             )
             self._tracer_provider.add_span_processor(processor)
             self._processors.append(processor)
+
+        # Set as global tracer provider
+        trace.set_tracer_provider(self._tracer_provider)
 
         return self._tracer_provider
 

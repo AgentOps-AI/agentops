@@ -1,4 +1,4 @@
-from typing import Dict, Optional
+from typing import TYPE_CHECKING, Dict, Optional, Union
 from uuid import UUID
 
 from opentelemetry.sdk.trace import TracerProvider
@@ -10,6 +10,10 @@ from .manager import OTELManager
 from .processors import LiveSpanProcessor
 
 
+if TYPE_CHECKING:
+    from agentops.session import Session
+
+
 class ClientTelemetry:
     """Manages telemetry at the agentops.Client level, shared across sessions"""
 
@@ -19,20 +23,22 @@ class ClientTelemetry:
         self._session_exporters: Dict[UUID, ExportManager] = {}
         self._otel_config: Optional[OTELConfig] = None
 
-    def initialize(self, config, otel_config: Optional[OTELConfig] = None):
-        """Initialize telemetry with configuration"""
+    def initialize(self, config: OTELConfig, otel_config: Optional[OTELConfig] = None) -> Union["Session", None]:
+        """Initialize telemetry components"""
+        # Create the OTEL manager instance
+        self._otel_manager = OTELManager(
+            config=config,
+            exporters=otel_config.additional_exporters if otel_config else None,
+            resource_attributes=otel_config.resource_attributes if otel_config else None,
+            sampler=otel_config.sampler if otel_config else None
+        )
         self._otel_config = otel_config
-        self._otel_manager = OTELManager(config)
 
-        if otel_config:
-            self._otel_manager.configure(
-                additional_exporters=otel_config.additional_exporters,
-                resource_attributes=otel_config.resource_attributes,
-                sampler=otel_config.sampler,
-            )
-
-        # Initialize shared tracer provider
-        self._tracer_provider = self._otel_manager.initialize(service_name="agentops.client", session_id="global")
+        # Initialize the tracer provider with global service info
+        self._tracer_provider = self._otel_manager.initialize(
+            service_name="agentops",
+            session_id="global"  # Use a global session ID for client-level telemetry
+        )
 
     def get_session_tracer(self, session_id: UUID, config, jwt: str):
         """Get or create a tracer for a specific session"""

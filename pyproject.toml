@@ -96,6 +96,8 @@ faulthandler_timeout = 30  # Reduced from 60
 timeout = 60  # Reduced from 300
 disable_socket = true  # Add this to prevent hanging on socket cleanup
 
+log_level = "DEBUG"
+
 [tool.ruff]
 line-length = 120
 

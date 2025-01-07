@@ -150,25 +150,26 @@ class EventToSpanConverter:
         # Add common timing attributes first
         attributes.update({
             "event.start_time": event.init_timestamp if hasattr(event, 'init_timestamp') else event.timestamp,
-            "event.end_time": getattr(event, 'end_timestamp', None)
+            "event.end_time": getattr(event, 'end_timestamp', None),
+            "event.id": str(event.id),  # Ensure event ID is included
         })
+        
+        # Add agent ID if present
+        if hasattr(event, 'agent_id') and event.agent_id:
+            attributes["agent.id"] = str(event.agent_id)
         
         # Dynamically add all event fields with proper prefixing
         for field in fields(event):
             value = getattr(event, field.name, None)
-            if value is not None:
+            if value is not None and field.name not in ('id', 'agent_id'):  # Skip already handled fields
                 # Map to OTEL semantic convention if available
                 if field.name in EventToSpanConverter.FIELD_MAPPINGS:
                     attr_name = EventToSpanConverter.FIELD_MAPPINGS[field.name]
                     attributes[attr_name] = value
-                    # Add unprefixed version for backward compatibility
-                    attributes[field.name] = value
                 else:
                     # Use event-type prefixing for custom fields
                     attr_name = f"{event_type}.{field.name}"
                     attributes[attr_name] = value
-                    # Add unprefixed version for backward compatibility
-                    attributes[field.name] = value
 
         # Add computed fields
         if isinstance(event, LLMEvent):

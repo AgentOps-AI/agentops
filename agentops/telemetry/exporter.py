@@ -84,16 +84,25 @@ class ExportManager(SpanExporter):
         events = []
         for span in spans:
             try:
+                # Get base event data
                 event_data = json.loads(span.attributes.get("event.data", "{}"))
-
+                
+                # Ensure required fields
                 event = {
                     "id": span.attributes.get("event.id"),
                     "event_type": span.name,
                     "init_timestamp": span.attributes.get("event.timestamp"),
                     "end_timestamp": span.attributes.get("event.end_timestamp"),
                     "session_id": str(self.session_id),
-                    **event_data,
                 }
+
+                # Add agent ID if present
+                agent_id = span.attributes.get("agent.id")
+                if agent_id:
+                    event["agent_id"] = agent_id
+
+                # Add event-specific data
+                event.update(event_data)
 
                 # Apply custom formatters
                 for formatter in self._custom_formatters:

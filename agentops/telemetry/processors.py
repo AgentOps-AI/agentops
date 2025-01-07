@@ -54,17 +54,7 @@ class EventProcessor:
         }
 
     def process_event(self, event: Any, tags: Optional[List[str]] = None, flush_now: bool = False) -> Optional[Span]:
-        """
-        Process and format an event into OpenTelemetry spans using EventToSpanConverter.
-        
-        Args:
-            event: The event to process
-            tags: Optional list of tags to attach to the span
-            flush_now: Whether to force flush the span immediately
-        
-        Returns:
-            The primary span created for the event
-        """
+        """Process and format an event into OpenTelemetry spans"""
         # Ensure required attributes
         if not hasattr(event, "id"):
             event.id = uuid4()
@@ -72,18 +62,8 @@ class EventProcessor:
             event.init_timestamp = get_ISO_time()
         if not hasattr(event, "end_timestamp") or event.end_timestamp is None:
             event.end_timestamp = get_ISO_time()
-
-        # For error events, use the current span if it exists
-        if hasattr(event, "error_type"):
-            current_span = trace.get_current_span()
-            if current_span and current_span.is_recording():
-                current_span.set_attribute("error", True)
-                current_span.set_attribute("error.type", event.error_type)
-                current_span.set_attribute("error.details", event.details)
-                if hasattr(event, "trigger_event") and event.trigger_event:
-                    current_span.set_attribute("trigger_event.id", str(event.trigger_event.id))
-                    current_span.set_attribute("trigger_event.type", event.trigger_event.event_type)
-                return current_span
+        if not hasattr(event, "session_id"):
+            event.session_id = self.session_id  # Ensure session_id is set
 
         # Create session context
         token = set_value("session.id", str(self.session_id))
@@ -107,6 +87,10 @@ class EventProcessor:
                     "session.tags": ",".join(tags) if tags else "",
                     "event.timestamp": event.init_timestamp,
                     "event.end_timestamp": event.end_timestamp,
+                    "event.data": json.dumps({
+                        "session_id": str(self.session_id),  # Include in event data
+                        **self._format_event_data(event)
+                    })
                 })
                 
                 with self._tracer.start_span(
@@ -125,7 +109,6 @@ class EventProcessor:
                         span.end()
                         
             return primary_span
-
         finally:
             detach(token)
 
