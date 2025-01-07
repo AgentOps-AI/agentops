@@ -34,7 +34,8 @@ dependencies = [
     "opentelemetry-api>=1.22.0,<2.0.0",
     "opentelemetry-sdk>=1.22.0,<2.0.0",
     "opentelemetry-exporter-otlp-proto-http>=1.22.0,<2.0.0",
-    "opentelemetry-exporter-otlp-proto-grpc>=1.0.0,<2.0.0"
+    "opentelemetry-exporter-otlp-proto-grpc>=1.0.0,<2.0.0",
+    "setuptools", # needed by pkg_resources
 ]
 
 [dependency-groups]
@@ -61,6 +62,7 @@ dev = [
     "python-dotenv", # Environment management for secure testing
     # Agent integration testing
     "pytest-sugar>=1.0.0",
+    "pdbpp"
 ]
 ci = [
     "tach~=0.9"         # Task runner for CI/CD pipelines
