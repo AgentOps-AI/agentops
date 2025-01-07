@@ -12,68 +12,7 @@ from opentelemetry.semconv.trace import SpanAttributes
 from opentelemetry.util.types import AttributeValue
 from opentelemetry import trace
 
-
-# AgentOps semantic conventions
-class AgentOpsAttributes:
-    """Semantic conventions for AgentOps spans"""
-    # Time attributes
-    TIME_START = "time.start"
-    TIME_END = "time.end"
-    
-    # Common attributes (from Event base class)
-    EVENT_ID = "event.id"
-    EVENT_TYPE = "event.type"
-    EVENT_DATA = "event.data"
-    EVENT_START_TIME = "event.start_time"
-    EVENT_END_TIME = "event.end_time"
-    EVENT_PARAMS = "event.params"
-    EVENT_RETURNS = "event.returns"
-    
-    # Session attributes
-    SESSION_ID = "session.id"
-    SESSION_TAGS = "session.tags"
-    
-    # Agent attributes
-    AGENT_ID = "agent.id"
-    
-    # Thread attributes
-    THREAD_ID = "thread.id"
-    
-    # Error attributes
-    ERROR = "error"
-    ERROR_TYPE = "error.type"
-    ERROR_MESSAGE = "error.message"
-    ERROR_STACKTRACE = "error.stacktrace"
-    ERROR_DETAILS = "error.details"
-    ERROR_CODE = "error.code"
-    TRIGGER_EVENT_ID = "trigger_event.id"
-    TRIGGER_EVENT_TYPE = "trigger_event.type"
-    
-    # LLM attributes
-    LLM_MODEL = "llm.model"
-    LLM_PROMPT = "llm.prompt"
-    LLM_COMPLETION = "llm.completion"
-    LLM_TOKENS_TOTAL = "llm.tokens.total"
-    LLM_TOKENS_PROMPT = "llm.tokens.prompt"
-    LLM_TOKENS_COMPLETION = "llm.tokens.completion"
-    LLM_COST = "llm.cost"
-    
-    # Action attributes
-    ACTION_TYPE = "action.type"
-    ACTION_PARAMS = "action.params"
-    ACTION_RESULT = "action.result"
-    ACTION_LOGS = "action.logs"
-    ACTION_SCREENSHOT = "action.screenshot"
-    
-    # Tool attributes
-    TOOL_NAME = "tool.name"
-    TOOL_PARAMS = "tool.params"
-    TOOL_RESULT = "tool.result"
-    TOOL_LOGS = "tool.logs"
-    
-    # Execution attributes
-    EXECUTION_START_TIME = "execution.start_time"
-    EXECUTION_END_TIME = "execution.end_time"
+import agentops.telemetry.attributes as attrs
 
 
 from agentops.event import ActionEvent, ErrorEvent, Event, LLMEvent, ToolEvent
@@ -110,28 +49,28 @@ class EventToSpanConverter:
 
     # Field name mappings for semantic conventions
     FIELD_MAPPINGS = {
-        'init_timestamp': AgentOpsAttributes.TIME_START,
-        'end_timestamp': AgentOpsAttributes.TIME_END,
-        'error_type': AgentOpsAttributes.ERROR_TYPE,
-        'details': AgentOpsAttributes.ERROR_MESSAGE,
-        'logs': AgentOpsAttributes.ERROR_STACKTRACE,
+        'init_timestamp': attrs.TIME_START,
+        'end_timestamp': attrs.TIME_END,
+        'error_type': attrs.ERROR_TYPE,
+        'details': attrs.ERROR_MESSAGE,
+        'logs': attrs.ERROR_STACKTRACE,
         
         # LLM fields
-        'model': AgentOpsAttributes.LLM_MODEL,
-        'prompt': AgentOpsAttributes.LLM_PROMPT,
-        'completion': AgentOpsAttributes.LLM_COMPLETION,
-        'prompt_tokens': AgentOpsAttributes.LLM_TOKENS_PROMPT,
-        'completion_tokens': AgentOpsAttributes.LLM_TOKENS_COMPLETION,
-        'cost': AgentOpsAttributes.LLM_COST,
+        'model': attrs.LLM_MODEL,
+        'prompt': attrs.LLM_PROMPT,
+        'completion': attrs.LLM_COMPLETION,
+        'prompt_tokens': attrs.LLM_TOKENS_PROMPT,
+        'completion_tokens': attrs.LLM_TOKENS_COMPLETION,
+        'cost': attrs.LLM_COST,
         
         # Action fields
-        'action_type': AgentOpsAttributes.ACTION_TYPE,
-        'params': AgentOpsAttributes.ACTION_PARAMS,
-        'returns': AgentOpsAttributes.ACTION_RESULT,
-        'logs': AgentOpsAttributes.ACTION_LOGS,
+        'action_type': attrs.ACTION_TYPE,
+        'params': attrs.ACTION_PARAMS,
+        'returns': attrs.ACTION_RESULT,
+        'logs': attrs.ACTION_LOGS,
         
         # Tool fields
-        'name': AgentOpsAttributes.TOOL_NAME,
+        'name': attrs.TOOL_NAME,
     }
 
     @staticmethod
@@ -180,27 +119,27 @@ class EventToSpanConverter:
         
         # Add common timing attributes first
         attributes.update({
-            AgentOpsAttributes.EVENT_START_TIME: event.init_timestamp if hasattr(event, 'init_timestamp') else event.timestamp,
-            AgentOpsAttributes.EVENT_END_TIME: getattr(event, 'end_timestamp', None),
-            AgentOpsAttributes.EVENT_ID: str(event.id),
-            AgentOpsAttributes.SESSION_ID: str(event.session_id) if event.session_id else None,
+            attrs.EVENT_START_TIME: event.init_timestamp if hasattr(event, 'init_timestamp') else event.timestamp,
+            attrs.EVENT_END_TIME: getattr(event, 'end_timestamp', None),
+            attrs.EVENT_ID: str(event.id),
+            attrs.SESSION_ID: str(event.session_id) if event.session_id else None,
         })
         
         # Add agent ID if present
         if hasattr(event, 'agent_id') and event.agent_id:
-            attributes[AgentOpsAttributes.AGENT_ID] = str(event.agent_id)
+            attributes[attrs.AGENT_ID] = str(event.agent_id)
             attributes['agent_id'] = str(event.agent_id)
         
         # Add LLM-specific attributes
         if isinstance(event, LLMEvent):
             llm_attrs = {
-                AgentOpsAttributes.LLM_MODEL: event.model,
-                AgentOpsAttributes.LLM_PROMPT: event.prompt,
-                AgentOpsAttributes.LLM_COMPLETION: event.completion,
-                AgentOpsAttributes.LLM_TOKENS_PROMPT: event.prompt_tokens,
-                AgentOpsAttributes.LLM_TOKENS_COMPLETION: event.completion_tokens,
-                AgentOpsAttributes.LLM_COST: event.cost,
-                AgentOpsAttributes.LLM_TOKENS_TOTAL: (event.prompt_tokens or 0) + (event.completion_tokens or 0),
+                attrs.LLM_MODEL: event.model,
+                attrs.LLM_PROMPT: event.prompt,
+                attrs.LLM_COMPLETION: event.completion,
+                attrs.LLM_TOKENS_PROMPT: event.prompt_tokens,
+                attrs.LLM_TOKENS_COMPLETION: event.completion_tokens,
+                attrs.LLM_COST: event.cost,
+                attrs.LLM_TOKENS_TOTAL: (event.prompt_tokens or 0) + (event.completion_tokens or 0),
                 # Add simple keys for backward compatibility
                 'model': event.model,
                 'prompt': event.prompt,
@@ -214,10 +153,10 @@ class EventToSpanConverter:
         # Add action-specific attributes
         elif isinstance(event, ActionEvent):
             action_attrs = {
-                AgentOpsAttributes.ACTION_TYPE: event.action_type,
-                AgentOpsAttributes.ACTION_PARAMS: event.params,
-                AgentOpsAttributes.ACTION_RESULT: event.returns,
-                AgentOpsAttributes.ACTION_LOGS: event.logs,
+                attrs.ACTION_TYPE: event.action_type,
+                attrs.ACTION_PARAMS: event.params,
+                attrs.ACTION_RESULT: event.returns,
+                attrs.ACTION_LOGS: event.logs,
                 # Add simple keys for backward compatibility
                 'action_type': event.action_type,
                 'params': event.params,
@@ -229,10 +168,10 @@ class EventToSpanConverter:
         # Add tool-specific attributes
         elif isinstance(event, ToolEvent):
             tool_attrs = {
-                AgentOpsAttributes.TOOL_NAME: event.name,
-                AgentOpsAttributes.TOOL_PARAMS: event.params,
-                AgentOpsAttributes.TOOL_RESULT: event.returns,
-                AgentOpsAttributes.TOOL_LOGS: event.logs,
+                attrs.TOOL_NAME: event.name,
+                attrs.TOOL_PARAMS: event.params,
+                attrs.TOOL_RESULT: event.returns,
+                attrs.TOOL_LOGS: event.logs,
                 # Add simple keys for backward compatibility
                 'name': event.name,
                 'params': event.params,
@@ -244,9 +183,9 @@ class EventToSpanConverter:
         # Add error flag for error events
         elif isinstance(event, ErrorEvent):
             error_attrs = {
-                AgentOpsAttributes.ERROR: True,
-                AgentOpsAttributes.ERROR_TYPE: event.error_type,
-                AgentOpsAttributes.ERROR_DETAILS: event.details,
+                attrs.ERROR: True,
+                attrs.ERROR_TYPE: event.error_type,
+                attrs.ERROR_DETAILS: event.details,
                 # Add simple keys for backward compatibility
                 'error': True,
                 'error_type': event.error_type,
@@ -257,8 +196,8 @@ class EventToSpanConverter:
             
             if event.trigger_event:
                 trigger_attrs = {
-                    AgentOpsAttributes.TRIGGER_EVENT_ID: str(event.trigger_event.id),
-                    AgentOpsAttributes.TRIGGER_EVENT_TYPE: event.trigger_event.event_type,
+                    attrs.TRIGGER_EVENT_ID: str(event.trigger_event.id),
+                    attrs.TRIGGER_EVENT_TYPE: event.trigger_event.event_type,
                     # Add simple keys for backward compatibility
                     'trigger_event_id': str(event.trigger_event.id),
                     'trigger_event_type': event.trigger_event.event_type,
@@ -277,15 +216,15 @@ class EventToSpanConverter:
         
         # Base attributes for all child spans
         base_attributes = {
-            AgentOpsAttributes.TIME_START: event.init_timestamp,
-            AgentOpsAttributes.TIME_END: event.end_timestamp,
-            AgentOpsAttributes.EVENT_ID: str(event.id),
+            attrs.TIME_START: event.init_timestamp,
+            attrs.TIME_END: event.end_timestamp,
+            attrs.EVENT_ID: str(event.id),
             # Simple keys for backward compatibility
             'start_time': event.init_timestamp,
             'end_time': event.end_timestamp,
             'event_id': str(event.id),
             # Get session_id from context
-            AgentOpsAttributes.EVENT_DATA: json.dumps({
+            attrs.EVENT_DATA: json.dumps({
                 "session_id": str(session_id),
                 "event_type": event_type,
             })
@@ -294,31 +233,31 @@ class EventToSpanConverter:
         if isinstance(event, (ActionEvent, ToolEvent)):
             attributes = {
                 **base_attributes,
-                AgentOpsAttributes.EXECUTION_START_TIME: event.init_timestamp,
-                AgentOpsAttributes.EXECUTION_END_TIME: event.end_timestamp,
+                attrs.EXECUTION_START_TIME: event.init_timestamp,
+                attrs.EXECUTION_END_TIME: event.end_timestamp,
                 # Simple keys for backward compatibility
                 'start_time': event.init_timestamp,
                 'end_time': event.end_timestamp,
             }
             if isinstance(event, ActionEvent):
                 action_attrs = {
-                    AgentOpsAttributes.ACTION_TYPE: event.action_type,
+                    attrs.ACTION_TYPE: event.action_type,
                     'action_type': event.action_type,  # Simple key
                 }
                 if event.params:
                     action_attrs.update({
-                        AgentOpsAttributes.ACTION_PARAMS: json.dumps(event.params),
+                        attrs.ACTION_PARAMS: json.dumps(event.params),
                         'params': json.dumps(event.params),  # Simple key
                     })
                 attributes.update(action_attrs)
             else:  # ToolEvent
                 tool_attrs = {
-                    AgentOpsAttributes.TOOL_NAME: event.name,
+                    attrs.TOOL_NAME: event.name,
                     'name': event.name,  # Simple key
                 }
                 if event.params:
                     tool_attrs.update({
-                        AgentOpsAttributes.TOOL_PARAMS: json.dumps(event.params),
+                        attrs.TOOL_PARAMS: json.dumps(event.params),
                         'params': json.dumps(event.params),  # Simple key
                     })
                 attributes.update(tool_attrs)
@@ -332,7 +271,7 @@ class EventToSpanConverter:
         elif isinstance(event, LLMEvent):
             llm_attrs = {
                 **base_attributes,
-                AgentOpsAttributes.LLM_MODEL: event.model,
+                attrs.LLM_MODEL: event.model,
                 'model': event.model,  # Simple key
                 "llm.request.timestamp": event.init_timestamp,
                 "llm.response.timestamp": event.end_timestamp,

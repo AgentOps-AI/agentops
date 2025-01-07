@@ -8,7 +8,7 @@ from opentelemetry.sdk.trace.export import BatchSpanProcessor, SpanExporter
 from agentops.config import Configuration
 from agentops.log_config import logger
 from .config import OTELConfig
-from .exporter import ExportManager
+from .exporter import EventExporter
 from .manager import OTELManager
 from .processors import LiveSpanProcessor
 
@@ -24,7 +24,7 @@ class ClientTelemetry:
     def __init__(self,client: "Client"):
         self._otel_manager: Optional[OTELManager] = None
         self._tracer_provider: Optional[TracerProvider] = None
-        self._session_exporters: Dict[UUID, ExportManager] = {}
+        self._session_exporters: Dict[UUID, EventExporter] = {}
         self.config: Optional[OTELConfig] = None
         self.client = client
 
@@ -87,7 +87,7 @@ class ClientTelemetry:
             raise RuntimeError("Client not initialized")
         
         # Create session-specific exporter
-        exporter = ExportManager(
+        exporter = EventExporter(
             session_id=session_id,
             endpoint=self.client._config.endpoint,
             jwt=jwt,

@@ -8,7 +8,7 @@ import pytest
 from opentelemetry.sdk.trace import ReadableSpan
 from opentelemetry.sdk.trace.export import SpanExportResult
 
-from agentops.telemetry.exporter import ExportManager
+from agentops.telemetry.exporter import EventExporter
 
 
 @pytest.fixture
@@ -26,13 +26,13 @@ def mock_span():
 
 @pytest.fixture
 def ref():
-    return ExportManager(
+    return EventExporter(
         session_id=uuid.uuid4(), endpoint="http://test-endpoint/v2/create_events", jwt="test-jwt", api_key="test-key"
     )
 
 
 class TestExportManager:
-    def test_initialization(self, ref: ExportManager):
+    def test_initialization(self, ref: EventExporter):
         """Test exporter initialization"""
         assert not ref._shutdown.is_set()
         assert isinstance(ref._export_lock, type(threading.Lock()))

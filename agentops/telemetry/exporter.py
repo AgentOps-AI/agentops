@@ -9,10 +9,10 @@ from opentelemetry.util.types import Attributes
 
 from agentops.http_client import HttpClient
 from agentops.log_config import logger
-from agentops.telemetry.converter import AgentOpsAttributes
+from agentops.telemetry.converter import attrs
 
 
-class ExportManager(SpanExporter):
+class EventExporter(SpanExporter):
     """
     Manages export strategies and batching for AgentOps telemetry
     """
@@ -86,20 +86,20 @@ class ExportManager(SpanExporter):
         for span in spans:
             try:
                 # Get base event data
-                event_data = json.loads(span.attributes.get(AgentOpsAttributes.EVENT_DATA, "{}"))
+                event_data = json.loads(span.attributes.get(attrs.EVENT_DATA, "{}"))
                 
                 # Ensure required fields
                 event = {
-                    "id": span.attributes.get(AgentOpsAttributes.EVENT_ID),
+                    "id": span.attributes.get(attrs.EVENT_ID),
                     "event_type": span.name,
-                    "init_timestamp": span.attributes.get(AgentOpsAttributes.EVENT_START_TIME),
-                    "end_timestamp": span.attributes.get(AgentOpsAttributes.EVENT_END_TIME),
+                    "init_timestamp": span.attributes.get(attrs.EVENT_START_TIME),
+                    "end_timestamp": span.attributes.get(attrs.EVENT_END_TIME),
                     # Always include session_id from the exporter
                     "session_id": str(self.session_id),
                 }
 
                 # Add agent ID if present
-                agent_id = span.attributes.get(AgentOpsAttributes.AGENT_ID)
+                agent_id = span.attributes.get(attrs.AGENT_ID)
                 if agent_id:
                     event["agent_id"] = agent_id
 

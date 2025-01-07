@@ -23,109 +23,7 @@ from .helpers import filter_unjsonable, get_ISO_time, safe_serialize
 from .http_client import HttpClient, Response
 from .log_config import logger
 from .telemetry.client import ClientTelemetry
-from .telemetry.converter import AgentOpsAttributes, EventToSpanConverter
-
-class SessionExporter(SpanExporter):
-    """
-    Manages publishing events for Session
-    """
-
-    def __init__(self, session: Session, **kwargs):
-        self.session = session
-        self._shutdown = threading.Event()
-        self._export_lock = threading.Lock()
-        super().__init__(**kwargs)
-
-    @property
-    def endpoint(self):
-        return f"{self.session.config.endpoint}/v2/create_events"
-
-    def export(self, spans: Sequence[ReadableSpan]) -> SpanExportResult:
-        if self._shutdown.is_set():
-            return SpanExportResult.SUCCESS
-
-        with self._export_lock:
-            try:
-                # Skip if no spans to export
-                if not spans:
-                    return SpanExportResult.SUCCESS
-
-                events = []
-                for span in spans:
-                    event_data = json.loads(span.attributes.get("event.data", "{}"))
-
-                    # Format event data based on event type
-                    if span.name == "actions":
-                        formatted_data = {
-                            "action_type": event_data.get("action_type", event_data.get("name", "unknown_action")),
-                            "params": event_data.get("params", {}),
-                            "returns": event_data.get("returns"),
-                        }
-                    elif span.name == "tools":
-                        formatted_data = {
-                            "name": event_data.get("name", event_data.get("tool_name", "unknown_tool")),
-                            "params": event_data.get("params", {}),
-                            "returns": event_data.get("returns"),
-                        }
-                    else:
-                        formatted_data = event_data
-
-                    formatted_data = {**event_data, **formatted_data}
-                    # Get timestamps, providing defaults if missing
-                    current_time = datetime.now(timezone.utc).isoformat()
-                    init_timestamp = span.attributes.get("event.timestamp")
-                    end_timestamp = span.attributes.get("event.end_timestamp")
-
-                    # Handle missing timestamps
-                    if init_timestamp is None:
-                        init_timestamp = current_time
-                    if end_timestamp is None:
-                        end_timestamp = current_time
-
-                    # Get event ID, generate new one if missing
-                    event_id = span.attributes.get("event.id")
-                    if event_id is None:
-                        event_id = str(uuid4())
-
-                    events.append(
-                        {
-                            "id": event_id,
-                            "event_type": span.name,
-                            "init_timestamp": init_timestamp,
-                            "end_timestamp": end_timestamp,
-                            **formatted_data,
-                            "session_id": str(self.session.session_id),
-                        }
-                    )
-
-                # Only make HTTP request if we have events and not shutdown
-                if events:
-                    try:
-                        res = HttpClient.post(
-                            self.endpoint,
-                            json.dumps({"events": events}).encode("utf-8"),
-                            api_key=self.session.config.api_key,
-                            jwt=self.session.jwt,
-                        )
-                        return SpanExportResult.SUCCESS if res.code == 200 else SpanExportResult.FAILURE
-                    except Exception as e:
-                        logger.error(f"Failed to send events: {e}")
-                        return SpanExportResult.FAILURE
-
-                return SpanExportResult.SUCCESS
-
-            except Exception as e:
-                logger.error(f"Failed to export spans: {e}")
-                return SpanExportResult.FAILURE
-
-    def force_flush(self, timeout_millis: Optional[int] = None) -> bool:
-        return True
-
-    def shutdown(self) -> None:
-        """Handle shutdown gracefully"""
-        self._shutdown.set()
-        # Don't call session.end_session() here to avoid circular dependencies
-
+from .telemetry.converter import attrs, EventToSpanConverter
 
 class Session:
     """
@@ -355,12 +253,12 @@ class Session:
             for span_def in span_definitions:
                 # Add session context to span attributes
                 span_def.attributes.update({
-                    AgentOpsAttributes.SESSION_ID: str(self.session_id),
-                    AgentOpsAttributes.SESSION_TAGS: ",".join(self.tags) if self.tags else "",
+                    attrs.SESSION_ID: str(self.session_id),
+                    attrs.SESSION_TAGS: ",".join(self.tags) if self.tags else "",
                     # Add session_id to event data
-                    AgentOpsAttributes.EVENT_DATA: json.dumps({
+                    attrs.EVENT_DATA: json.dumps({
                         "session_id": str(self.session_id),
-                        **span_def.attributes.get(AgentOpsAttributes.EVENT_DATA, {})
+                        **span_def.attributes.get(attrs.EVENT_DATA, {})
                     })
                 })
                 
