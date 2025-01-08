@@ -60,7 +60,7 @@ class EventProcessor(SpanProcessor):
         parent_context: Optional[Context] = None
     ) -> None:
         """Process span start, adding session context and common attributes"""
-        if not span.is_recording():
+        if not span.is_recording() or not hasattr(span, 'context') or span.context is None:
             return
 
         # Add session context
@@ -86,6 +86,10 @@ class EventProcessor(SpanProcessor):
 
     def on_end(self, span: ReadableSpan) -> None:
         """Process span end, handling error events and forwarding to wrapped processor"""
+        # Check for None context first
+        if not span.context:
+            return
+            
         if not span.context.trace_flags.sampled:
             return
 
