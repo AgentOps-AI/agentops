@@ -233,7 +233,6 @@ class Client(metaclass=MetaClient):
             session_tags.update(tags)
 
         session = Session(
-            client=self.telemetry,
             session_id=session_id,
             tags=list(session_tags),
             host_env=self.host_env,
