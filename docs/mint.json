@@ -102,6 +102,8 @@
         "v1/integrations/ollama",
         "v1/integrations/openai",
         "v1/integrations/rest",
+        "v1/integrations/smolagents",
+        "v1/integrations/swarmzero",
         "v1/integrations/taskweaver",
         "v1/integrations/xai"
       ]
