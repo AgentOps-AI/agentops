@@ -16,8 +16,6 @@ class OTELConfig:
     custom_formatters: Optional[List[Callable]] = None
     enable_metrics: bool = False
     metric_readers: Optional[List] = None
-    enable_in_flight: bool = True
-    in_flight_interval: float = 1.0
     max_queue_size: int = 512
     max_wait_time: int = 5000
     endpoint: str = "https://api.agentops.ai"

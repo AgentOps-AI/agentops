@@ -10,7 +10,7 @@ from agentops.log_config import logger
 from .config import OTELConfig
 from .exporters import EventExporter
 from .manager import OTELManager
-from .processors import LiveSpanProcessor
+from .processors import EventProcessor
 
 
 if TYPE_CHECKING:
@@ -99,7 +99,7 @@ class ClientTelemetry:
         # Store exporter reference
         self._session_exporters[session_id] = exporter
 
-        # Add both batch and in-flight processors
+        # Create batch processor for efficient export
         batch_processor = BatchSpanProcessor(
             exporter,
             max_queue_size=self.client._config.max_queue_size,
@@ -111,11 +111,14 @@ class ClientTelemetry:
             export_timeout_millis=20000,
         )
 
-        # Add in-flight processor for long-running operations
-        inflight_processor = LiveSpanProcessor(exporter)
+        # Create event processor that wraps the batch processor
+        event_processor = EventProcessor(
+            session_id=session_id,
+            processor=batch_processor
+        )
 
-        self._otel_manager.add_processor(batch_processor)
-        self._otel_manager.add_processor(inflight_processor)
+        # Add processor to manager
+        self._otel_manager.add_processor(event_processor)
 
         # Return session-specific tracer
         return self._tracer_provider.get_tracer(f"agentops.session.{str(session_id)}")
