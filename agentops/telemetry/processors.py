@@ -17,29 +17,65 @@ from agentops.event import ErrorEvent
 
 
 class EventProcessor:
-    """
-    Handles event processing and formatting for AgentOps telemetry.
+    """Handles event processing and formatting for AgentOps telemetry.
     
-    This class follows the OpenTelemetry pattern where:
-    1. A TracerProvider manages span processors and creates tracers
-    2. Tracers create spans
-    3. Spans are automatically processed by all processors registered with the provider
-    
-    This design ensures:
-    - Loose coupling: Processors don't need to know about each other
-    - Flexibility: Processors can be added/removed via the provider
-    - Standard compliance: Follows OpenTelemetry's recommended architecture
+    The EventProcessor converts AgentOps events into OpenTelemetry spans and manages
+    their lifecycle. It follows the OpenTelemetry pattern:
+
+    Event Flow:
+        [AgentOps Events] -> [EventProcessor] -> [OpenTelemetry Spans]
+                                             -> [Span Processors] -> [Exporters]
+
+    Architecture:
+        +----------------+     +------------------+     +------------------+
+        |  AgentOps     |     |   EventProcessor |     | OpenTelemetry   |
+        |   Events      |     |                  |     |                  |
+        | (LLM/Action/  | --> | 1. Convert Event | --> |  - Spans        |
+        |  Tool/Error)  |     | 2. Create Spans  |     |  - Processors   |
+        |               |     | 3. Add Context   |     |  - Exporters    |
+        +----------------+     +------------------+     +------------------+
+
+    Key Features:
+        - Converts AgentOps events into OpenTelemetry spans
+        - Maintains event hierarchy through span relationships
+        - Adds session context and common attributes
+        - Handles error events by updating existing spans
+        - Tracks event counts by type
+        
+    Event Type Mapping:
+        - LLMEvent -> llm.completion span
+        - ActionEvent -> agent.action span
+        - ToolEvent -> agent.tool span
+        - ErrorEvent -> error attributes on parent span
+
+    Example Usage:
+        processor = EventProcessor(session_id=UUID(...))
+        
+        # Process an LLM event
+        llm_event = LLMEvent(...)
+        processor.process_event(llm_event)
+        
+        # Process an error event
+        error_event = ErrorEvent(...)
+        processor.process_event(error_event)
     """
 
     def __init__(self, session_id: UUID, tracer_provider: Optional[TracerProvider] = None):
-        """
-        Initialize the event processor with a session ID and optional tracer provider.
+        """Initialize the event processor with a session ID and optional tracer provider.
         
         Args:
-            session_id: Unique identifier for the telemetry session
+            session_id: Unique identifier for the telemetry session. Used to group
+                      related spans under the same trace.
             tracer_provider: Optional TracerProvider. If not provided, creates a new one.
-                           In production, you typically want to pass in a configured provider
-                           with the desired span processors already registered.
+                           In production, you typically want to pass in a configured 
+                           provider with span processors already registered.
+
+        The tracer_provider setup follows this pattern:
+            +------------------+     +------------------+     +-------------+
+            | TracerProvider   | --> | SpanProcessor(s) | --> | Exporter(s) |
+            | - Creates spans  |     | - Batch/Simple   |     | - OTLP     |
+            | - Manages proc.  |     | - Custom         |     | - Console  |
+            +------------------+     +------------------+     +-------------+
         """
         self.session_id = session_id
         # Use provided provider or create new one. In production, you should pass in
