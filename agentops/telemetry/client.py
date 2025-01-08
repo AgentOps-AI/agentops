@@ -1,155 +1,136 @@
-from typing import TYPE_CHECKING, Dict, Optional, Union
+from __future__ import annotations
+
+from typing import Dict, List, Optional
 from uuid import UUID
-import os
 
-from opentelemetry.sdk.trace import TracerProvider
-from opentelemetry.sdk.trace.export import BatchSpanProcessor, SpanExporter
+from opentelemetry import trace
+from opentelemetry.sdk.resources import Resource
+from opentelemetry.sdk.trace import TracerProvider, SpanProcessor
+from opentelemetry.sdk.trace.export import BatchSpanProcessor
+from opentelemetry.sdk.trace.sampling import ParentBased, Sampler, TraceIdRatioBased
 
-from agentops.config import Configuration
-from agentops.log_config import logger
 from .config import OTELConfig
-from .exporters import EventExporter
-from .manager import OTELManager
+from .exporters.session import SessionExporter
 from .processors import EventProcessor
 
 
-if TYPE_CHECKING:
-    from agentops.session import Session
-    from agentops.client import Client
+class TelemetryManager:
+    """Manages OpenTelemetry instrumentation for AgentOps.
+    
+    Responsibilities:
+    1. Configure and manage TracerProvider
+    2. Handle resource attributes and sampling
+    3. Manage session-specific exporters and processors
+    4. Coordinate telemetry lifecycle
+    
+    Architecture:
+        TelemetryManager
+            |
+            |-- TracerProvider (configured with sampling)
+            |-- Resource (service info and attributes)
+            |-- SessionExporters (per session)
+            |-- EventProcessors (per session)
+    """
 
-
-class ClientTelemetry:
-    """Manages telemetry at the agentops.Client level, shared across sessions"""
-
-    def __init__(self,client: "Client"):
-        self._otel_manager: Optional[OTELManager] = None
-        self._tracer_provider: Optional[TracerProvider] = None
-        self._session_exporters: Dict[UUID, EventExporter] = {}
+    def __init__(self) -> None:
+        self._provider: Optional[TracerProvider] = None
+        self._session_exporters: Dict[UUID, SessionExporter] = {}
+        self._processors: List[SpanProcessor] = []
         self.config: Optional[OTELConfig] = None
-        self.client = client
 
     def initialize(self, config: OTELConfig) -> None:
-        """Initialize telemetry components"""
-        # Create a deep copy of the config
-        config_copy = OTELConfig(
-            additional_exporters=list(config.additional_exporters) if config.additional_exporters else None,
-            resource_attributes=dict(config.resource_attributes) if config.resource_attributes else None,
-            sampler=config.sampler,
-            retry_config=dict(config.retry_config) if config.retry_config else None,
-            custom_formatters=list(config.custom_formatters) if config.custom_formatters else None,
-            enable_metrics=config.enable_metrics,
-            metric_readers=list(config.metric_readers) if config.metric_readers else None,
-            enable_in_flight=config.enable_in_flight,
-            in_flight_interval=config.in_flight_interval,
-            max_queue_size=config.max_queue_size,
-            max_wait_time=config.max_wait_time,
-            endpoint=config.endpoint,
-            api_key=config.api_key
-        )
-
-        # Only check environment variables if no exporters are explicitly configured
-        if config_copy.additional_exporters is None:
-            endpoint = os.environ.get("OTEL_EXPORTER_OTLP_ENDPOINT")
-            service_name = os.environ.get("OTEL_SERVICE_NAME")
+        """Initialize telemetry infrastructure.
+        
+        Args:
+            config: OTEL configuration
             
-            if service_name and not config_copy.resource_attributes:
-                config_copy.resource_attributes = {"service.name": service_name}
+        Raises:
+            ValueError: If config is None
+        """
+        if not config:
+            raise ValueError("Config is required")
             
-            if endpoint:
-                from opentelemetry.exporter.otlp.proto.grpc.trace_exporter import OTLPSpanExporter
-                config_copy.additional_exporters = [OTLPSpanExporter(endpoint=endpoint)]
-                logger.info("Using OTEL configuration from environment variables")
+        self.config = config
         
-        # Validate exporters
-        if config_copy.additional_exporters:
-            for exporter in config_copy.additional_exporters:
-                if not isinstance(exporter, SpanExporter):
-                    raise ValueError(f"Invalid exporter type: {type(exporter)}. Must be a SpanExporter")
+        # Create resource with service info
+        resource = Resource.create({
+            "service.name": "agentops",
+            **(config.resource_attributes or {})
+        })
         
-        # Create the OTEL manager instance
-        self._otel_manager = OTELManager(
-            config=config_copy,
-            exporters=config_copy.additional_exporters,
-            resource_attributes=config_copy.resource_attributes,
-            sampler=config_copy.sampler
+        # Create provider with sampling
+        sampler = config.sampler or ParentBased(TraceIdRatioBased(0.5))
+        self._provider = TracerProvider(
+            resource=resource,
+            sampler=sampler
         )
-        self.config = config_copy
-
-        # Initialize the tracer provider with global service info
-        self._tracer_provider = self._otel_manager.initialize(
-            service_name="agentops",
-            session_id="global"
-        )
-
-    def get_session_tracer(self, session_id: UUID, jwt: str):
-        """Get or create a tracer for a specific session"""
-        if not self.client:
-            raise RuntimeError("Client not initialized")
         
-        # Create session-specific exporter
-        exporter = EventExporter(
+        # Set as global provider
+        trace.set_tracer_provider(self._provider)
+
+    def create_session_tracer(self, session_id: UUID, jwt: str) -> trace.Tracer:
+        """Create tracer for a new session.
+        
+        Args:
+            session_id: UUID for the session
+            jwt: JWT token for authentication
+            
+        Returns:
+            Configured tracer for the session
+            
+        Raises:
+            RuntimeError: If telemetry is not initialized
+        """
+        if not self._provider:
+            raise RuntimeError("Telemetry not initialized")
+        if not self.config:
+            raise RuntimeError("Config not initialized")
+
+        # Create session exporter and processor
+        exporter = SessionExporter(
             session_id=session_id,
-            endpoint=self.client._config.endpoint,
+            endpoint=self.config.endpoint,
             jwt=jwt,
-            api_key=self.client._config.api_key,
-            retry_config=self.config.retry_config if self.config else None,
-            custom_formatters=self.config.custom_formatters if self.config else None,
+            api_key=self.config.api_key
         )
-
-        # Store exporter reference
         self._session_exporters[session_id] = exporter
 
-        # Create batch processor for efficient export
+        # Create processors
         batch_processor = BatchSpanProcessor(
             exporter,
-            max_queue_size=self.client._config.max_queue_size,
-            schedule_delay_millis=self.client._config.max_wait_time,
-            max_export_batch_size=min(
-                max(self.client._config.max_queue_size // 20, 1),
-                min(self.client._config.max_queue_size, 32),
-            ),
-            export_timeout_millis=20000,
+            max_queue_size=self.config.max_queue_size,
+            schedule_delay_millis=self.config.max_wait_time
         )
 
-        # Create event processor that wraps the batch processor
         event_processor = EventProcessor(
             session_id=session_id,
             processor=batch_processor
         )
 
-        # Add processor to manager
-        self._otel_manager.add_processor(event_processor)
+        # Add processor
+        self._provider.add_span_processor(event_processor)
+        self._processors.append(event_processor)
 
-        # Return session-specific tracer
-        return self._tracer_provider.get_tracer(f"agentops.session.{str(session_id)}")
+        # Return session tracer
+        return self._provider.get_tracer(f"agentops.session.{session_id}")
 
-    def cleanup_session(self, session_id: UUID):
-        """Clean up telemetry resources for a session"""
+    def cleanup_session(self, session_id: UUID) -> None:
+        """Clean up session telemetry resources.
+        
+        Args:
+            session_id: UUID of session to clean up
+        """
         if session_id in self._session_exporters:
             exporter = self._session_exporters[session_id]
             exporter.shutdown()
             del self._session_exporters[session_id]
 
-    def shutdown(self):
-        """Shutdown all telemetry"""
-        if self._otel_manager:
-            self._otel_manager.shutdown()
+    def shutdown(self) -> None:
+        """Shutdown all telemetry resources."""
+        if self._provider:
+            self._provider.shutdown()
+            self._provider = None
         for exporter in self._session_exporters.values():
             exporter.shutdown()
         self._session_exporters.clear()
-
-    def force_flush(self) -> bool:
-        """Force flush all processors"""
-        if not self._otel_manager:
-            return True
-        
-        success = True
-        for processor in self._otel_manager._processors:
-            try:
-                if not processor.force_flush():
-                    success = False
-            except Exception as e:
-                logger.error(f"Error flushing processor: {e}")
-                success = False
-        
-        return success
+        self._processors.clear()
