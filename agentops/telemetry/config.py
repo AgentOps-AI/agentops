@@ -17,6 +17,7 @@ class OTELConfig:
     enable_metrics: bool = False
     metric_readers: Optional[List] = None
     max_queue_size: int = 512
+    max_export_batch_size: int = 256
     max_wait_time: int = 5000
     endpoint: str = "https://api.agentops.ai"
     api_key: Optional[str] = None

@@ -109,6 +109,7 @@ class TelemetryManager:
         batch_processor = BatchSpanProcessor(
             exporter,
             max_queue_size=self.config.max_queue_size,
+            max_export_batch_size=self.config.max_export_batch_size,
             schedule_delay_millis=self.config.max_wait_time
         )
 
