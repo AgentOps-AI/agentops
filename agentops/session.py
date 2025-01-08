@@ -5,23 +5,21 @@ from datetime import datetime
 from decimal import ROUND_HALF_UP, Decimal
 from typing import Any, Dict, List, Optional, Union
 from uuid import UUID
+import threading
+import json
 
 from termcolor import colored
 
 from .config import Configuration
 from .enums import EndState
 from .event import Event, ErrorEvent
-from .helpers import get_ISO_time
+from .helpers import get_ISO_time, filter_unjsonable
 from .log_config import logger
-from .http_client import HttpClient, Response
+from .http_client import HttpClient
 from .exceptions import ApiServerException
-from .helpers import filter_unjsonable, safe_serialize
 
-import threading
-from typing import Dict, Optional, Union
-from uuid import UUID
-from decimal import Decimal
-import json
+# Global list to track active sessions
+active_sessions: List[Session] = []
 
 @dataclass
 class Session:
@@ -58,12 +56,16 @@ class Session:
 
     def __post_init__(self):
         """Initialize session manager and start session"""
-        self._manager = SessionManager(self)
+        self._lock = threading.Lock()
+        self._end_session_lock = threading.Lock()
         
         # Start session to get JWT
-        if not self._manager.start_session():
+        if not self._start_session():
             self.is_running = False
             raise Exception("Failed to start session")
+
+        # Add to global active sessions list
+        active_sessions.append(self)
 
         logger.info(
             colored(
@@ -71,6 +73,35 @@ class Session:
                 "blue",
             )
         )
+
+    def _start_session(self) -> bool:
+        """Initialize session and get JWT"""
+        with self._lock:
+            payload = {"session": self.__dict__}
+            serialized_payload = json.dumps(filter_unjsonable(payload)).encode("utf-8")
+
+            try:
+                res = HttpClient.post(
+                    f"{self.config.endpoint}/v2/create_session",
+                    serialized_payload,
+                    api_key=self.config.api_key,
+                    parent_key=self.config.parent_key,
+                )
+            except ApiServerException as e:
+                logger.error(f"Could not start session - {e}")
+                return False
+
+            logger.debug(res.body)
+
+            if res.code != 200:
+                return False
+
+            jwt = res.body.get("jwt", None)
+            self.jwt = jwt
+            if jwt is None:
+                return False
+
+            return True
 
     def record(self, event: Union[Event, ErrorEvent]) -> None:
         """Record an event"""
@@ -110,6 +141,42 @@ class Session:
         assert self.session_id, "Session ID is required"
         return f"https://app.agentops.ai/drilldown?session_id={self.session_id}"
 
+    def end_session(
+        self,
+        end_state: str = EndState.INDETERMINATE.value,
+        end_state_reason: Optional[str] = None,
+        video: Optional[str] = None,
+    ) -> Optional[Decimal]:
+        """End the session"""
+        if not self.is_running:
+            return None
+
+        with self._end_session_lock:
+            self.is_running = False
+            self.end_state = end_state
+            self.end_state_reason = end_state_reason
+            self.video = video
+            self.end_timestamp = get_ISO_time()
+
+            # Remove from active sessions
+            if self in active_sessions:
+                active_sessions.remove(self)
+
+            # Update session on server
+            payload = {"session": self.__dict__}
+            try:
+                res = HttpClient.post(
+                    f"{self.config.endpoint}/v2/update_session",
+                    json.dumps(filter_unjsonable(payload)).encode("utf-8"),
+                    jwt=self.jwt,
+                )
+                if res.code == 200 and "token_cost" in res.body:
+                    self.token_cost = Decimal(str(res.body["token_cost"]))
+                    return self.token_cost
+            except ApiServerException as e:
+                logger.error(f"Could not end session - {e}")
+
+            return None
 
 class SessionManager:
     """Handles session operations and state management"""
