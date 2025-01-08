@@ -16,30 +16,21 @@ from .encoders import EventToSpanEncoder
 
 @dataclass
 class EventProcessor(SpanProcessor):
-    """A processor that converts AgentOps events into OpenTelemetry spans.
+    """Processes spans for AgentOps events.
     
-    This processor wraps another processor and adds AgentOps-specific functionality:
-    - Converting events to spans
-    - Adding session context and common attributes
-    - Tracking event counts
-    - Handling error events
-
+    Responsibilities:
+    1. Add session context to spans
+    2. Track event counts
+    3. Handle error propagation
+    4. Forward spans to wrapped processor
+    
     Architecture:
-        +----------------+     +------------------+     +------------------+
-        |  AgentOps     |     |   EventProcessor |     | OpenTelemetry   |
-        |   Events      |     |                  |     |                  |
-        | (LLM/Action/  | --> | 1. Convert Event | --> |  - Spans        |
-        |  Tool/Error)  |     | 2. Create Spans  |     |  - Processors   |
-        |               |     | 3. Add Context   |     |  - Exporters    |
-        +----------------+     +------------------+     +------------------+
-
-    Example Usage:
-        provider = TracerProvider()
-        processor = EventProcessor(
-            session_id=UUID(...),
-            processor=BatchSpanProcessor(OTLPSpanExporter())
-        )
-        provider.add_span_processor(processor)
+        EventProcessor
+            |
+            |-- Session Context
+            |-- Event Counting
+            |-- Error Handling
+            |-- Wrapped Processor
     """
 
     session_id: UUID
@@ -59,7 +50,12 @@ class EventProcessor(SpanProcessor):
         span: Span, 
         parent_context: Optional[Context] = None
     ) -> None:
-        """Process span start, adding session context and common attributes"""
+        """Process span start, adding session context and common attributes.
+        
+        Args:
+            span: The span being started
+            parent_context: Optional parent context
+        """
         if not span.is_recording() or not hasattr(span, 'context') or span.context is None:
             return
 
@@ -85,7 +81,11 @@ class EventProcessor(SpanProcessor):
             detach(token)
 
     def on_end(self, span: ReadableSpan) -> None:
-        """Process span end, handling error events and forwarding to wrapped processor"""
+        """Process span end, handling error events and forwarding to wrapped processor.
+        
+        Args:
+            span: The span being ended
+        """
         # Check for None context first
         if not span.context:
             return
@@ -106,9 +106,16 @@ class EventProcessor(SpanProcessor):
         self.processor.on_end(span)
 
     def shutdown(self) -> None:
-        """Shutdown the processor"""
+        """Shutdown the processor."""
         self.processor.shutdown()
 
-    def force_flush(self, timeout_millis: int = 30000) -> bool:
-        """Force flush the processor"""
+    def force_flush(self, timeout_millis: Optional[int] = None) -> bool:
+        """Force flush the processor.
+        
+        Args:
+            timeout_millis: Optional timeout in milliseconds
+            
+        Returns:
+            bool: True if flush succeeded
+        """
         return self.processor.force_flush(timeout_millis)

@@ -5,6 +5,7 @@ import pytest
 from opentelemetry.sdk.trace import ReadableSpan, Span
 from opentelemetry.trace import SpanContext, TraceFlags, Status, StatusCode
 from opentelemetry.sdk.trace.export import BatchSpanProcessor
+from opentelemetry.context import Context
 
 from agentops.telemetry.processors import EventProcessor
 

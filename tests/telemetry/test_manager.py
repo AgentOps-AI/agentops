@@ -6,29 +6,31 @@ from opentelemetry import trace
 from opentelemetry.sdk.trace import TracerProvider
 from opentelemetry.sdk.trace.sampling import ParentBased, TraceIdRatioBased
 
-from agentops.telemetry.manager import TelemetryManager
+from agentops.telemetry.client import TelemetryManager
 from agentops.telemetry.config import OTELConfig
 from agentops.telemetry.exporters.session import SessionExporter
 from agentops.telemetry.processors import EventProcessor
 
 
 @pytest.fixture
-def config():
+def config() -> OTELConfig:
     """Create test config"""
     return OTELConfig(
         endpoint="https://test.agentops.ai",
-        api_key="test-key"
+        api_key="test-key",
+        max_queue_size=100,
+        max_wait_time=1000
     )
 
 
 @pytest.fixture
-def manager():
+def manager() -> TelemetryManager:
     """Create test manager"""
     return TelemetryManager()
 
 
 class TestTelemetryManager:
-    def test_initialization(self, manager: TelemetryManager, config: OTELConfig):
+    def test_initialization(self, manager: TelemetryManager, config: OTELConfig) -> None:
         """Test manager initialization"""
         manager.initialize(config)
         
@@ -39,11 +41,14 @@ class TestTelemetryManager:
         # Verify global provider was set
         assert trace.get_tracer_provider() == manager._provider
 
-    def test_initialization_with_custom_resource(self, manager: TelemetryManager):
+    def test_initialization_with_custom_resource(self, manager: TelemetryManager) -> None:
         """Test initialization with custom resource attributes"""
         config = OTELConfig(
             endpoint="https://test.agentops.ai",
-            resource_attributes={"custom.attr": "value"}
+            api_key="test-key",
+            resource_attributes={"custom.attr": "value"},
+            max_queue_size=100,
+            max_wait_time=1000
         )
         
         manager.initialize(config)
@@ -52,7 +57,7 @@ class TestTelemetryManager:
         assert resource.attributes["service.name"] == "agentops"
         assert resource.attributes["custom.attr"] == "value"
 
-    def test_create_session_tracer(self, manager: TelemetryManager, config: OTELConfig):
+    def test_create_session_tracer(self, manager: TelemetryManager, config: OTELConfig) -> None:
         """Test session tracer creation"""
         manager.initialize(config)
         session_id = uuid4()
@@ -70,7 +75,7 @@ class TestTelemetryManager:
         # Verify tracer was created
         assert tracer.instrumentation_info.name == f"agentops.session.{session_id}"
 
-    def test_cleanup_session(self, manager: TelemetryManager, config: OTELConfig):
+    def test_cleanup_session(self, manager: TelemetryManager, config: OTELConfig) -> None:
         """Test session cleanup"""
         manager.initialize(config)
         session_id = uuid4()
@@ -86,7 +91,7 @@ class TestTelemetryManager:
             
         assert session_id not in manager._session_exporters
 
-    def test_shutdown(self, manager: TelemetryManager, config: OTELConfig):
+    def test_shutdown(self, manager: TelemetryManager, config: OTELConfig) -> None:
         """Test manager shutdown"""
         manager.initialize(config)
         session_id = uuid4()
@@ -104,12 +109,13 @@ class TestTelemetryManager:
         assert not manager._processors
         assert manager._provider is None
 
-    def test_error_handling(self, manager: TelemetryManager):
+    def test_error_handling(self, manager: TelemetryManager) -> None:
         """Test error handling"""
         # Test initialization without config
-        with pytest.raises(ValueError):
-            manager.initialize(None)
+        with pytest.raises(ValueError, match="Config is required"):
+            manager.initialize(None)  # type: ignore
         
         # Test creating tracer without initialization
-        with pytest.raises(RuntimeError):
-            manager.create_session_tracer(uuid4(), "test-jwt") 
+        with pytest.raises(RuntimeError, match="Telemetry not initialized"):
+            manager.create_session_tracer(uuid4(), "test-jwt")
+ 

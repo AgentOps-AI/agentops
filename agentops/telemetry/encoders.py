@@ -2,124 +2,177 @@
 Generic encoder for converting dataclasses to OpenTelemetry spans.
 """
 
-from dataclasses import is_dataclass, fields
-from typing import Any, Dict, Optional, Type, TypeVar
-from uuid import UUID
+from __future__ import annotations
+
+from dataclasses import dataclass
+from typing import Any, Dict, List, Optional, Sequence
 import json
 
 from opentelemetry.trace import SpanKind
-from opentelemetry.util.types import AttributeValue
 from opentelemetry.semconv.trace import SpanAttributes
 
-from agentops.event import Event
+from ..event import Event, LLMEvent, ActionEvent, ToolEvent, ErrorEvent
+from ..enums import EventType
 
 
-T = TypeVar('T')
-
-def span_safe(value: Any) -> AttributeValue:
-    """Convert value to OTEL-compatible attribute value"""
-    if isinstance(value, (str, int, float, bool)) or value is None:
-        return value
-    if isinstance(value, UUID):
-        return str(value)
-    if isinstance(value, (dict, list)):
-        return json.dumps(value)
-    return str(value)
-
-class DataclassSpanEncoder:
-    """Encodes dataclasses into OpenTelemetry spans using field names as attributes"""
-    
-    @staticmethod
-    def get_span_name(obj: Any) -> str:
-        """Generate span name from class name"""
-        return obj.__class__.__name__.lower()
-
-    @staticmethod
-    def get_span_attributes(obj: Any) -> Dict[str, AttributeValue]:
-        """Convert all dataclass fields to span attributes"""
-        if not is_dataclass(obj):
-            raise ValueError(f"Object {obj} is not a dataclass")
-
-        attributes = {}
-        for field in fields(obj):
-            value = getattr(obj, field.name)
-            if value is not None:  # Skip None values
-                attributes[field.name] = span_safe(value)
-        
-        return attributes
-
-    @staticmethod
-    def encode(obj: Any, kind: Optional[SpanKind] = None) -> 'SpanDefinition':
-        """Encode a dataclass instance into a SpanDefinition"""
-        return SpanDefinition(
-            name=DataclassSpanEncoder.get_span_name(obj),
-            attributes=DataclassSpanEncoder.get_span_attributes(obj),
-            kind=kind or SpanKind.INTERNAL
-        )
-
-class EventToSpanEncoder(DataclassSpanEncoder):
-    """Encodes AgentOps events into OpenTelemetry spans with semantic conventions"""
-
-    @staticmethod
-    def get_span_attributes(obj: Event) -> Dict[str, AttributeValue]:
-        """Convert event fields to span attributes with semantic conventions"""
-        # Get base attributes from dataclass
-        base_attributes = DataclassSpanEncoder.get_span_attributes(obj)
-        
-        # Common attributes for all events
-        attributes = {
-            SpanAttributes.CODE_NAMESPACE: obj.__class__.__name__,
-            'event_type': base_attributes.get('event_type'),
-            'init_timestamp': base_attributes.get('init_timestamp'),
-            'end_timestamp': base_attributes.get('end_timestamp'),
-            'id': base_attributes.get('id'),
-            'params': base_attributes.get('params'),
-            'returns': base_attributes.get('returns'),
-        }
-
-        # Add agent_id if present
-        if 'agent_id' in base_attributes:
-            attributes['agent_id'] = base_attributes['agent_id']
-
-        # Add any remaining fields dynamically
-        for key, value in base_attributes.items():
-            if key not in attributes and value is not None:
-                attributes[key] = value
-
-        return attributes
-
-    @staticmethod
-    def get_span_kind(obj: Event) -> SpanKind:
-        """Determine appropriate span kind based on event type"""
-        # Map event types to span kinds
-        event_type = obj.__class__.__name__.lower()
-        
-        # LLM events are client calls to external services
-        if 'llm' in event_type:
-            return SpanKind.CLIENT
-            
-        # Default to INTERNAL for other event types
-        return SpanKind.INTERNAL
-
-    @staticmethod
-    def encode(obj: Event, kind: Optional[SpanKind] = None) -> 'SpanDefinition':
-        """Encode an event into a SpanDefinition with appropriate span kind"""
-        return SpanDefinition(
-            name=obj.__class__.__name__.lower(),
-            attributes=EventToSpanEncoder.get_span_attributes(obj),
-            kind=kind or EventToSpanEncoder.get_span_kind(obj)
-        )
-
+@dataclass
 class SpanDefinition:
-    """Defines how a span should be created"""
-    def __init__(
-        self,
-        name: str,
-        attributes: Dict[str, AttributeValue],
-        kind: SpanKind = SpanKind.INTERNAL,
-        parent_span_id: Optional[str] = None,
-    ):
-        self.name = name
-        self.attributes = attributes
-        self.kind = kind
-        self.parent_span_id = parent_span_id
+    """Definition of a span to be created.
+    
+    This class represents a span before it is created, containing
+    all the necessary information to create the span.
+    """
+    name: str
+    attributes: Dict[str, Any]
+    kind: SpanKind = SpanKind.INTERNAL
+    parent_span_id: Optional[str] = None
+
+
+class SpanDefinitions(Sequence[SpanDefinition]):
+    """A sequence of span definitions that supports len() and iteration."""
+    
+    def __init__(self, *spans: SpanDefinition):
+        self._spans = list(spans)
+
+    def __len__(self) -> int:
+        return len(self._spans)
+
+    def __iter__(self):
+        return iter(self._spans)
+
+    def __getitem__(self, index: int) -> SpanDefinition:
+        return self._spans[index]
+
+
+class EventToSpanEncoder:
+    """Encodes AgentOps events into OpenTelemetry span definitions."""
+
+    @classmethod
+    def encode(cls, event: Event) -> SpanDefinitions:
+        """Convert an event into span definitions.
+        
+        Args:
+            event: The event to convert
+            
+        Returns:
+            A sequence of span definitions
+        """
+        if isinstance(event, LLMEvent):
+            return cls._encode_llm_event(event)
+        elif isinstance(event, ActionEvent):
+            return cls._encode_action_event(event)
+        elif isinstance(event, ToolEvent):
+            return cls._encode_tool_event(event)
+        elif isinstance(event, ErrorEvent):
+            return cls._encode_error_event(event)
+        else:
+            return cls._encode_generic_event(event)
+
+    @classmethod
+    def _encode_llm_event(cls, event: LLMEvent) -> SpanDefinitions:
+        completion_span = SpanDefinition(
+            name="llm.completion",
+            attributes={
+                "model": event.model,
+                "prompt": event.prompt,
+                "completion": event.completion,
+                "prompt_tokens": event.prompt_tokens,
+                "completion_tokens": event.completion_tokens,
+                "cost": event.cost,
+                "event.start_time": event.init_timestamp,
+                "event.end_time": event.end_timestamp,
+                SpanAttributes.CODE_NAMESPACE: event.__class__.__name__,
+                "event_type": "llms"
+            }
+        )
+
+        api_span = SpanDefinition(
+            name="llm.api.call",
+            kind=SpanKind.CLIENT,
+            parent_span_id=completion_span.name,
+            attributes={
+                "model": event.model,
+                "start_time": event.init_timestamp,
+                "end_time": event.end_timestamp
+            }
+        )
+
+        return SpanDefinitions(completion_span, api_span)
+
+    @classmethod
+    def _encode_action_event(cls, event: ActionEvent) -> SpanDefinitions:
+        action_span = SpanDefinition(
+            name="agent.action",
+            attributes={
+                "action_type": event.action_type,
+                "params": json.dumps(event.params),
+                "returns": event.returns,
+                "logs": event.logs,
+                "event.start_time": event.init_timestamp,
+                SpanAttributes.CODE_NAMESPACE: event.__class__.__name__,
+                "event_type": "actions"
+            }
+        )
+
+        execution_span = SpanDefinition(
+            name="action.execution",
+            parent_span_id=action_span.name,
+            attributes={
+                "start_time": event.init_timestamp,
+                "end_time": event.end_timestamp
+            }
+        )
+
+        return SpanDefinitions(action_span, execution_span)
+
+    @classmethod
+    def _encode_tool_event(cls, event: ToolEvent) -> SpanDefinitions:
+        tool_span = SpanDefinition(
+            name="agent.tool",
+            attributes={
+                "name": event.name,
+                "params": json.dumps(event.params),
+                "returns": json.dumps(event.returns),
+                "logs": json.dumps(event.logs),
+                SpanAttributes.CODE_NAMESPACE: event.__class__.__name__,
+                "event_type": "tools"
+            }
+        )
+
+        execution_span = SpanDefinition(
+            name="tool.execution",
+            parent_span_id=tool_span.name,
+            attributes={
+                "start_time": event.init_timestamp,
+                "end_time": event.end_timestamp
+            }
+        )
+
+        return SpanDefinitions(tool_span, execution_span)
+
+    @classmethod
+    def _encode_error_event(cls, event: ErrorEvent) -> SpanDefinitions:
+        error_span = SpanDefinition(
+            name="error",
+            attributes={
+                "error": True,
+                "error_type": event.error_type,
+                "details": event.details,
+                "trigger_event": event.trigger_event,
+                SpanAttributes.CODE_NAMESPACE: event.__class__.__name__,
+                "event_type": "errors"
+            }
+        )
+        return SpanDefinitions(error_span)
+
+    @classmethod
+    def _encode_generic_event(cls, event: Event) -> SpanDefinitions:
+        """Handle unknown event types with basic attributes."""
+        span = SpanDefinition(
+            name="event",
+            attributes={
+                SpanAttributes.CODE_NAMESPACE: event.__class__.__name__,
+                "event_type": getattr(event, "event_type", "unknown")
+            }
+        )
+        return SpanDefinitions(span)
