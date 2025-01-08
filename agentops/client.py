@@ -18,6 +18,7 @@ from functools import cached_property
 from typing import List, Optional, Tuple, Union
 from uuid import UUID, uuid4
 
+from agentops.telemetry.manager import TelemetryManager
 from termcolor import colored
 
 from agentops.telemetry.config import OTELConfig
@@ -30,7 +31,7 @@ from .log_config import logger
 from .meta_client import MetaClient
 from .session import Session, active_sessions
 from .singleton import conditional_singleton
-from .telemetry import ClientTelemetry
+from .telemetry import TelemetryManager
 
 
 @conditional_singleton
@@ -48,7 +49,7 @@ class Client(metaclass=MetaClient):
         self._config = Configuration()
         self._pre_init_queue = {"agents": []}
         self._host_env = None  # Cache host env data
-        self.telemetry = ClientTelemetry(self)
+        self.telemetry = TelemetryManager(self)
 
         self.configure(
             api_key=os.environ.get("AGENTOPS_API_KEY"),
