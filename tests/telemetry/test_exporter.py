@@ -8,7 +8,7 @@ import pytest
 from opentelemetry.sdk.trace import ReadableSpan
 from opentelemetry.sdk.trace.export import SpanExportResult
 
-from agentops.telemetry.exporter import EventExporter
+from agentops.telemetry.exporters.event import EventExporter
 
 
 @pytest.fixture

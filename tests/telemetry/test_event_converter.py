@@ -3,7 +3,7 @@ import pytest
 from opentelemetry.trace import SpanKind
 
 from agentops.event import Event
-from agentops.telemetry.converter import EventToSpanEncoder, SpanDefinition
+from agentops.telemetry.encoders import EventToSpanEncoder, SpanDefinition
 
 
 class TestEventToSpanEncoder:

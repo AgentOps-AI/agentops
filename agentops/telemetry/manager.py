@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Dict, List, Optional
+from typing import TYPE_CHECKING, Dict, List, Optional
 from uuid import UUID
 
 from opentelemetry import trace
@@ -12,6 +12,11 @@ from opentelemetry.sdk.trace.sampling import ParentBased, Sampler, TraceIdRatioB
 from .config import OTELConfig
 from .exporters.session import SessionExporter
 from .processors import EventProcessor
+
+
+
+if TYPE_CHECKING:
+    from agentops.client import Client
 
 
 class TelemetryManager:
@@ -32,11 +37,16 @@ class TelemetryManager:
             |-- EventProcessors (per session)
     """
 
-    def __init__(self) -> None:
+    def __init__(self, client: Optional[Client] = None) -> None:
         self._provider: Optional[TracerProvider] = None
         self._session_exporters: Dict[UUID, SessionExporter] = {}
         self._processors: List[SpanProcessor] = []
         self.config: Optional[OTELConfig] = None
+
+        if not client:
+            from agentops.client import Client
+            client = Client()
+        self.client = client
 
     def initialize(self, config: OTELConfig) -> None:
         """Initialize telemetry infrastructure.
