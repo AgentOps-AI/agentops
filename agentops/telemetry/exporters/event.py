@@ -14,7 +14,7 @@ import agentops.telemetry.attributes as attrs
 
 class EventExporter(SpanExporter):
     """
-    Manages export strategies and batching for AgentOps telemetry
+    Exports agentops.event.Event to AgentOps servers.
     """
 
     def __init__(

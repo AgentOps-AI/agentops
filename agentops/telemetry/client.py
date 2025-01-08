@@ -8,7 +8,7 @@ from opentelemetry.sdk.trace.export import BatchSpanProcessor, SpanExporter
 from agentops.config import Configuration
 from agentops.log_config import logger
 from .config import OTELConfig
-from .exporter import EventExporter
+from .exporters import EventExporter
 from .manager import OTELManager
 from .processors import LiveSpanProcessor
 
