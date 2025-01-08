@@ -3,7 +3,7 @@
 # :: `act push -j python-tests --matrix python-version:3.10 --container-architecture linux/amd64`
 name: Python Tests
 on:
-  workflow_dispatch:
+  workflow_dispatch: {}
   push:
     branches:
       - main
@@ -16,6 +16,7 @@ on:
     branches:
       - main
     paths:
+      - 'pyproject.toml'
       - 'agentops/**/*.py'
       - 'agentops/**/*.ipynb'
       - 'tests/**/*.py'
@@ -40,8 +41,8 @@ jobs:
         continue-on-error: true
         with:
           python-version: ${{ matrix.python-version }}
-          cache-prefix: uv-${{ matrix.python-version }}
           enable-cache: true
+          cache-suffix: uv-${{ matrix.python-version }}
           cache-dependency-glob: "**/pyproject.toml"
 
       - name: Install dependencies
