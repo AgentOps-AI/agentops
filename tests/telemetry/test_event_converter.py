@@ -3,15 +3,15 @@ import pytest
 from opentelemetry.trace import SpanKind
 
 from agentops.event import Event
-from agentops.telemetry.converter import EventToSpanConverter, SpanDefinition
+from agentops.telemetry.converter import EventToSpanEncoder, SpanDefinition
 
 
-class TestEventToSpanConverter:
+class TestEventToSpanEncoder:
     """Test the Event to Span conversion logic"""
 
     def test_llm_event_conversion(self, mock_llm_event):
         """Test converting LLMEvent to spans"""
-        span_defs = EventToSpanConverter.convert_event(mock_llm_event)
+        span_defs = EventToSpanEncoder.encode(mock_llm_event)
 
         # Verify we get exactly two spans for LLM events
         assert len(span_defs) == 2, f"Expected 2 spans for LLM event, got {len(span_defs)}"
@@ -42,7 +42,7 @@ class TestEventToSpanConverter:
 
     def test_action_event_conversion(self, mock_action_event):
         """Test converting ActionEvent to spans"""
-        span_defs = EventToSpanConverter.convert_event(mock_action_event)
+        span_defs = EventToSpanEncoder.encode(mock_action_event)
 
         assert len(span_defs) == 2
         action_span = next((s for s in span_defs if s.name == "agent.action"), None)
@@ -65,7 +65,7 @@ class TestEventToSpanConverter:
 
     def test_tool_event_conversion(self, mock_tool_event):
         """Test converting ToolEvent to spans"""
-        span_defs = EventToSpanConverter.convert_event(mock_tool_event)
+        span_defs = EventToSpanEncoder.encode(mock_tool_event)
 
         assert len(span_defs) == 2
         tool_span = next((s for s in span_defs if s.name == "agent.tool"), None)
@@ -87,7 +87,7 @@ class TestEventToSpanConverter:
 
     def test_error_event_conversion(self, mock_error_event):
         """Test converting ErrorEvent to spans"""
-        span_defs = EventToSpanConverter.convert_event(mock_error_event)
+        span_defs = EventToSpanEncoder.encode(mock_error_event)
 
         assert len(span_defs) == 1
         error_span = span_defs[0]
@@ -105,6 +105,6 @@ class TestEventToSpanConverter:
             pass
 
         # Should still work, just with generic event name
-        span_defs = EventToSpanConverter.convert_event(UnknownEvent(event_type="unknown"))
+        span_defs = EventToSpanEncoder.encode(UnknownEvent(event_type="unknown"))
         assert len(span_defs) == 1
         assert span_defs[0].name == "event"
