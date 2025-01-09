@@ -34,9 +34,6 @@ dependencies = [
     "opentelemetry-api>=1.22.0,<2.0.0",
     "opentelemetry-sdk>=1.22.0,<2.0.0",
     "opentelemetry-exporter-otlp-proto-http>=1.22.0,<2.0.0",
-    # "typing-extensions>=4.9.0; python_version >= '3.8'",
-    # "pydantic>=2.7.4,<3.0.0; python_version < '3.13'",
-    # "pydantic-core>=2.23.4; python_version >= '3.8' and python_version < '3.13'"
 ]
 
 [dependency-groups]
@@ -79,6 +76,10 @@ Issues = "https://github.com/AgentOps-AI/agentops/issues"
 [tool.uv]
 compile-bytecode = true  # Enable bytecode compilation for better performance
 default-groups = ["test", "dev"]  # Default groups to install for development
+constraint-dependencies = [
+    "pydantic>=2.8.0; python_version>='3.13'",  # Ensure Python 3.13 compatibility
+    "typing-extensions; python_version>='3.13'"  # Required for Pydantic with Python 3.13
+]
 
 [tool.autopep8]
 max_line_length = 120
