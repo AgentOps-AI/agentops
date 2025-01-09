@@ -8,168 +8,155 @@ flowchart TB
         Client[AgentOps Client]
         Session[Session]
         Events[Events]
-        LLMTracker[LLM Tracker]
+        TelemetryManager[Telemetry Manager]
     end
 
     subgraph OpenTelemetry
         TracerProvider[Tracer Provider]
-        MeterProvider[Meter Provider]
-        Processors[Span/Metric Processors]
-        OTLP[OTLP Exporters]
-    end
-
-    subgraph Backends
-        Collector[OTEL Collector]
-        Backends[Observability Backends]
+        EventProcessor[Event Processor]
+        SessionExporter[Session Exporter]
+        BatchProcessor[Batch Processor]
     end
 
     Client --> Session
     Session --> Events
-    Client --> LLMTracker
-
-    %% OTEL Integration Points
-    Events --> TracerProvider
-    LLMTracker --> MeterProvider
-    TracerProvider --> Processors
-    MeterProvider --> Processors
-    Processors --> OTLP
-    OTLP --> Collector
-    Collector --> Backends
+    Events --> TelemetryManager
+    
+    TelemetryManager --> TracerProvider
+    TracerProvider --> EventProcessor
+    EventProcessor --> BatchProcessor
+    BatchProcessor --> SessionExporter
 ```
 
-## Component Mapping
+## Component Overview
+
+### TelemetryManager (`manager.py`)
+- Central configuration and management of OpenTelemetry setup
+- Handles TracerProvider lifecycle
+- Manages session-specific exporters and processors
+- Coordinates telemetry initialization and shutdown
+
+### EventProcessor (`processors.py`)
+- Processes spans for AgentOps events
+- Adds session context to spans
+- Tracks event counts
+- Handles error propagation
+- Forwards spans to wrapped processor
+
+### SessionExporter (`exporters/session.py`)
+- Exports session spans and their child event spans
+- Maintains session hierarchy
+- Handles batched export of spans
+- Manages retry logic and error handling
+
+### EventToSpanEncoder (`encoders.py`)
+- Converts AgentOps events into OpenTelemetry span definitions
+- Handles different event types (LLM, Action, Tool, Error)
+- Maintains proper span relationships
+
+## Event to Span Mapping
 
 ```mermaid
 classDiagram
-    class AgentOpsEvent {
-        +EventType event_type
-        +Dict params
+    class Event {
         +UUID id
+        +EventType event_type
         +timestamp init_timestamp
         +timestamp end_timestamp
     }
 
-    class OTELSpan {
-        +SpanContext context
+    class SpanDefinition {
+        +str name
+        +Dict attributes
         +SpanKind kind
-        +str name
-        +Dict attributes
-        +timestamp start_time
-        +timestamp end_time
+        +str parent_span_id
     }
 
-    class OTELMetric {
-        +str name
-        +str description
-        +str unit
-        +MetricType type
-        +Dict attributes
+    class EventTypes {
+        LLMEvent
+        ActionEvent
+        ToolEvent
+        ErrorEvent
     }
 
-    AgentOpsEvent --> OTELSpan : maps to
-    LLMTracker --> OTELMetric : generates
+    Event <|-- EventTypes
+    Event --> SpanDefinition : encoded to
 ```
 
-## Data Flow
+## Usage Example
 
-```mermaid
-sequenceDiagram
-    participant App
-    participant AgentOps
-    participant OTEL
-    participant Collector
-    
-    App->>AgentOps: record_event()
-    AgentOps->>OTEL: create_span()
-    OTEL->>OTEL: add_attributes()
-    OTEL->>OTEL: batch_processor
-    OTEL->>Collector: export_batch()
-    Collector-->>OTEL: acknowledge
-```
-
-## Implementation Guide
-
-1. **Resource Configuration**
 ```python
-from opentelemetry.sdk.resources import Resource, SERVICE_NAME
+from agentops.telemetry import OTELConfig, TelemetryManager
 
-resource = Resource(attributes={
-    SERVICE_NAME: "agentops",
-    "library.name": "agentops",
-    "library.version": "1.0.0"
-})
-```
-
-2. **Tracer Setup**
-```python
-from opentelemetry.sdk.trace import TracerProvider
-from opentelemetry.sdk.trace.export import BatchSpanProcessor
-from opentelemetry.exporter.otlp.proto.grpc.trace_exporter import OTLPSpanExporter
-
-tracer_provider = TracerProvider(resource=resource)
-otlp_exporter = OTLPSpanExporter(endpoint="<collector-endpoint>")
-span_processor = BatchSpanProcessor(otlp_exporter)
-tracer_provider.add_span_processor(span_processor)
-```
-
-3. **Metrics Setup**
-```python
-from opentelemetry.sdk.metrics import MeterProvider
-from opentelemetry.sdk.metrics.export import PeriodicExportingMetricReader
-from opentelemetry.exporter.otlp.proto.grpc.metric_exporter import OTLPMetricExporter
-
-metric_reader = PeriodicExportingMetricReader(
-    OTLPMetricExporter(endpoint="<collector-endpoint>")
+# Configure telemetry
+config = OTELConfig(
+    endpoint="https://api.agentops.ai",
+    api_key="your-api-key",
+    enable_metrics=True
 )
-meter_provider = MeterProvider(
-    resource=resource,
-    metric_readers=[metric_reader]
+
+# Initialize telemetry manager
+manager = TelemetryManager()
+manager.initialize(config)
+
+# Create session tracer
+tracer = manager.create_session_tracer(
+    session_id=session_id,
+    jwt=jwt_token
 )
 ```
 
-## Key Metrics & Spans
+## Configuration Options
 
-```mermaid
-graph LR
-    subgraph Metrics
-        A[llm.calls.count]
-        B[llm.tokens.total]
-        C[llm.latency]
-    end
+The `OTELConfig` class supports:
+- Custom exporters
+- Resource attributes
+- Sampling configuration
+- Retry settings
+- Custom formatters
+- Metrics configuration
+- Batch processing settings
 
-    subgraph Spans
-        D[action.execution]
-        E[tool.usage]
-        F[llm.completion]
-    end
+## Key Features
 
-    subgraph Attributes
-        G[session.id]
-        H[agent.id]
-        I[event.type]
-    end
-```
+1. **Session-Based Tracing**
+   - Each session creates a unique trace
+   - Events are tracked as spans within the session
+   - Maintains proper parent-child relationships
+
+2. **Automatic Context Management**
+   - Session context propagation
+   - Event type tracking
+   - Error handling and status propagation
+
+3. **Flexible Export Options**
+   - Batched export support
+   - Retry logic for failed exports
+   - Custom formatters for span data
+
+4. **Resource Attribution**
+   - Service name and version tracking
+   - Environment information
+   - Deployment-specific tags
 
 ## Best Practices
 
-1. **Resource Attribution**
+1. **Configuration**
    - Always set service name and version
-   - Include environment information
-   - Add deployment-specific tags
+   - Configure appropriate batch sizes
+   - Set reasonable retry limits
 
-2. **Span Management**
-   - Use context managers for automatic span lifecycle
-   - Add error handling and status codes
-   - Include relevant attributes for filtering
+2. **Error Handling**
+   - Use error events for failures
+   - Include relevant error details
+   - Maintain error context
 
-3. **Metric Collection**
-   - Use appropriate metric types (counter, histogram, gauge)
-   - Add dimension tags for better querying
-   - Configure appropriate aggregation intervals
+3. **Resource Management**
+   - Clean up sessions when done
+   - Properly shutdown telemetry
+   - Monitor resource usage
 
 4. **Performance**
-   - Use batch processors for spans and metrics
-   - Configure appropriate batch sizes and export intervals
-   - Enable sampling for high-volume deployments
-
-Would you like me to elaborate on any specific aspect of this integration architecture?
+   - Use appropriate batch sizes
+   - Configure export intervals
+   - Monitor queue sizes
