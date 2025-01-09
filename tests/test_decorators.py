@@ -12,10 +12,10 @@ from agentops.helpers import filter_unjsonable
 
 class TestDecorators:
     # Test data
-    Point = namedtuple('Point', ['x', 'y'])
-    Person = namedtuple('Person', ['name', 'age'])
+    Point = namedtuple("Point", ["x", "y"])
+    Person = namedtuple("Person", ["name", "age"])
     # Custom namedtuple to test specific subclass behavior mentioned in PR
-    CustomTuple = namedtuple('CustomTuple', ['data'])
+    CustomTuple = namedtuple("CustomTuple", ["data"])
 
     @pytest.fixture(autouse=True)
     def setup(self):
@@ -100,15 +100,11 @@ class TestDecorators:
 
         # Test with regular tuple
         direct_tuple = (1, "test")
-        event1 = ActionEvent(
-            action_type="test_action",
-            params={"test": "params"},
-            returns=direct_tuple
-        )
+        event1 = ActionEvent(action_type="test_action", params={"test": "params"}, returns=direct_tuple)
         event1_dict = filter_unjsonable(event1.__dict__)
         event1_json = json.dumps(event1_dict)
         assert event1_json, "Event with tuple returns should be JSON serializable"
-        
+
         # Verify the serialized data structure
         event1_data = json.loads(event1_json)
         assert isinstance(event1_data["returns"], list), "JSON naturally converts tuples to lists"
@@ -116,15 +112,11 @@ class TestDecorators:
 
         # Test with named tuple
         named_tuple = self.Point(x=1, y=2)
-        event2 = ActionEvent(
-            action_type="test_action",
-            params={"test": "params"},
-            returns=named_tuple
-        )
+        event2 = ActionEvent(action_type="test_action", params={"test": "params"}, returns=named_tuple)
         event2_dict = filter_unjsonable(event2.__dict__)
         event2_json = json.dumps(event2_dict)
         assert event2_json, "Event with named tuple returns should be JSON serializable"
-        
+
         # Verify the serialized data structure
         event2_data = json.loads(event2_json)
         assert isinstance(event2_data["returns"], list), "JSON naturally converts named tuples to lists"
@@ -132,16 +124,12 @@ class TestDecorators:
 
         # Test with custom tuple subclass
         custom_tuple = self.CustomTuple(data={"key": "value"})
-        event3 = ActionEvent(
-            action_type="test_action",
-            params={"test": "params"},
-            returns=custom_tuple
-        )
+        event3 = ActionEvent(action_type="test_action", params={"test": "params"}, returns=custom_tuple)
         event3_dict = filter_unjsonable(event3.__dict__)
         event3_json = json.dumps(event3_dict)
         assert event3_json, "Event with custom tuple subclass should be JSON serializable"
-        
+
         # Verify the serialized data structure
         event3_data = json.loads(event3_json)
         assert isinstance(event3_data["returns"], list), "JSON naturally converts custom tuples to lists"
-        assert event3_data["returns"] == [{"key": "value"}], "Custom tuple data should be preserved in JSON" 
+        assert event3_data["returns"] == [{"key": "value"}], "Custom tuple data should be preserved in JSON"
