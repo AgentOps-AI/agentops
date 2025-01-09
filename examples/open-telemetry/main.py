@@ -3,10 +3,15 @@ from opentelemetry.proto.collector.trace.v1 import trace_service_pb2
 from celery import Celery
 from pydantic import BaseModel
 from typing import Dict, Any
+import psycopg2
+from psycopg2.extras import Json
+import jwt
 import logging
 import json
 import gzip
 import io
+import os
+from datetime import datetime
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -14,6 +19,15 @@ logger = logging.getLogger(__name__)
 
 app = FastAPI(title="Span Processing Service")
 celery_app = Celery('tasks', broker='redis://redis:6379/0')
+
+# Database connection parameters
+DB_PARAMS = {
+    "dbname": os.getenv("POSTGRES_DB", "agentops_dev"),
+    "user": os.getenv("POSTGRES_USER", "postgres"),
+    "password": os.getenv("POSTGRES_PASSWORD", "postgres"),
+    "host": os.getenv("POSTGRES_HOST", "postgres"),
+    "port": os.getenv("POSTGRES_PORT", "5432")
+}
 
 class SpanData(BaseModel):
     trace_id: str
@@ -86,19 +100,61 @@ async def ingest_spans(request: Request):
 @celery_app.task(bind=True, max_retries=3)
 def process_span(self, trace_id: str, span_id: str, name: str, attributes: dict):
     try:
-        # Your processing logic here
-        # For example:
-        logger.info(f"Processing span: {name} (trace_id: {trace_id}, span_id: {span_id})")
-        # Add your storage/processing logic here
+        # Extract JWT and API key from attributes
+        jwt_token = attributes.get("jwt")
+        api_key = attributes.get("api_key")
 
-        # Just dump the span payload
-        json.dumps({
+        if not jwt_token or not api_key:
+            raise Exception("Missing authentication credentials in span attributes")
+
+        try:
+            # Verify JWT token
+            # Note: JWT_SECRET should be properly configured in production
+            payload = jwt.decode(
+                jwt_token, 
+                os.getenv("JWT_SECRET", "development-secret"),
+                algorithms=["HS256"]
+            )
+            organization_id = payload.get("organization_id")
+            user_id = payload.get("user_id")
+
+            if not organization_id or not user_id:
+                raise Exception("Invalid JWT payload: missing required claims")
+
+        except jwt.InvalidTokenError as e:
+            logger.error(f"JWT verification failed: {str(e)}")
+            raise Exception("Invalid JWT token")
+
+        # Prepare event data
+        event_data = {
             "trace_id": trace_id,
             "span_id": span_id,
             "name": name,
-            "attributes": attributes
-        }, indent=2)
-        
+            "attributes": Json(attributes),  # Use psycopg2.extras.Json for JSONB
+            "created_at": datetime.utcnow(),
+            "organization_id": organization_id,
+            "user_id": user_id
+        }
+
+        # Store in database
+        with psycopg2.connect(**DB_PARAMS) as conn:
+            with conn.cursor() as cur:
+                cur.execute("""
+                    INSERT INTO events (
+                        trace_id, span_id, name, attributes, 
+                        created_at, organization_id, user_id
+                    ) VALUES (
+                        %(trace_id)s, %(span_id)s, %(name)s, %(attributes)s,
+                        %(created_at)s, %(organization_id)s, %(user_id)s
+                    ) RETURNING id
+                """, event_data)
+                
+                event_id = cur.fetchone()[0]
+                conn.commit()
+
+        logger.info(f"Successfully stored span {span_id} with event ID {event_id}")
+        return {"success": True, "event_id": event_id}
+
     except Exception as e:
         logger.error(f"Error processing span {span_id}: {str(e)}")
         raise self.retry(exc=e, countdown=2 ** self.request.retries)
