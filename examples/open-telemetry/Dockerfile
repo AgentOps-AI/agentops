@@ -7,12 +7,21 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
     && rm -rf /var/lib/apt/lists/*
 
+# Create a non-root user
+RUN useradd -m celery_user
+
 # Copy requirements first to leverage Docker cache
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
 # Copy application code
 COPY . .
+
+# Change ownership of the workdir
+RUN chown -R celery_user:celery_user /app
+
+# Switch to non-root user
+USER celery_user
 
 # Expose the application port
 EXPOSE 8000

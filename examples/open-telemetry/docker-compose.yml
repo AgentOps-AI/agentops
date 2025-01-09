@@ -30,9 +30,39 @@ services:
     build: .
     command: celery -A main.celery_app worker --loglevel=info
     depends_on:
-      - redis
-      - processing-service
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_started
+      processing-service:
+        condition: service_started
     environment:
       - CELERY_BROKER_URL=redis://redis:6379/0
+      - POSTGRES_HOST=postgres
+      - POSTGRES_DB=agentops_dev
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_PORT=5432
     volumes:
-      - .:/app 
+      - .:/app
+
+  postgres:
+    image: postgres:14
+    environment:
+      POSTGRES_DB: agentops_dev
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
