@@ -92,7 +92,7 @@ class AutogenLogger(BaseLogger):
         event.function = function  # TODO: this is not a parameter
         event.params = args
         event.returns = returns
-        event.name = getattr(function, "_name")
+        event.name = getattr(function, "__name__")
         agentops.record(event)
 
     def log_new_wrapper(
