@@ -3,7 +3,7 @@ from __future__ import annotations
 import threading
 from datetime import datetime
 from decimal import Decimal
-from typing import TYPE_CHECKING, Optional, Union, Dict, List
+from typing import TYPE_CHECKING, Optional, Union, Dict, List, Any
 
 from termcolor import colored
 from agentops.enums import EndState
@@ -46,7 +46,7 @@ class SessionManager:
             if not self._state._api:
                 return False
 
-            success, jwt = self._state._api.create_session(dict(self._state), self._state.config.parent_key)
+            success, jwt = self._state._api.create_session(self._serialize_session(), self._state.config.parent_key)
             if success:
                 self._state.jwt = jwt
                 self._state._api.jwt = jwt  # Update JWT on API client
@@ -139,7 +139,7 @@ class SessionManager:
         if not self._state._api:
             return None
 
-        response = self._state._api.update_session()
+        response = self._state._api.update_session(self._serialize_session())
         if not response:
             return None
 
@@ -154,6 +154,24 @@ class SessionManager:
             "Errors": self._state.event_counts["errors"],
             "Duration": formatted_duration,
             "Cost": self._format_token_cost(self._state.token_cost),
+        }
+
+    def _serialize_session(self) -> Dict[str, Any]:
+        """Convert session to API-friendly dict format"""
+        # Get only the public fields we want to send to API
+        return {
+            "session_id": str(self._state.session_id),
+            "tags": self._state.tags,
+            "host_env": self._state.host_env,
+            "token_cost": float(self._state.token_cost),
+            "end_state": self._state.end_state,
+            "end_state_reason": self._state.end_state_reason,
+            "end_timestamp": self._state.end_timestamp,
+            "jwt": self._state.jwt,
+            "video": self._state.video,
+            "event_counts": self._state.event_counts,
+            "init_timestamp": self._state.init_timestamp,
+            "is_running": self._state.is_running
         }
 
     def _format_duration(self, start_time: str, end_time: str) -> str:

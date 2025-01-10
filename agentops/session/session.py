@@ -101,15 +101,6 @@ class Session:
             return self._manager._get_analytics()
         return None
 
-    # Serialization support
-    def __iter__(self):
-        return iter(self.__dict__().items())
-
-    def __dict__(self):
-        filtered_dict = {k: v for k, v in asdict(self).items() if not k.startswith("_") and not callable(v)}
-        filtered_dict["session_id"] = str(self.session_id)
-        return filtered_dict
-
     @property
     def session_url(self) -> str:
         return f"https://app.agentops.ai/drilldown?session_id={self.session_id}"

@@ -1,16 +1,22 @@
 import json
 import threading
-from typing import Callable, Dict, List, Optional, Sequence
-from uuid import UUID
+from typing import Callable, Dict, List, Optional, Sequence, Any, cast
+from uuid import UUID, uuid4
 
 from opentelemetry.sdk.trace import ReadableSpan
 from opentelemetry.sdk.trace.export import SpanExporter, SpanExportResult
 from opentelemetry.util.types import Attributes
 
-from agentops.api.base import ApiClient
+from agentops.api.session import SessionApiClient
+from agentops.helpers import get_ISO_time
 from agentops.log_config import logger
 import agentops.telemetry.attributes as attrs
 
+EVENT_DATA = "event.data"
+EVENT_ID = "event.id"
+EVENT_START_TIME = "event.timestamp"
+EVENT_END_TIME = "event.end_timestamp"
+AGENT_ID = "agent.id"
 
 class EventExporter(SpanExporter):
     """
@@ -27,9 +33,12 @@ class EventExporter(SpanExporter):
         custom_formatters: Optional[List[Callable]] = None,
     ):
         self.session_id = session_id
-        self.endpoint = endpoint
-        self.jwt = jwt
-        self.api_key = api_key
+        self._api = SessionApiClient(
+            endpoint=endpoint,
+            session_id=session_id,
+            api_key=api_key,
+            jwt=jwt
+        )
         self._export_lock = threading.Lock()
         self._shutdown = threading.Event()
         self._wait_event = threading.Event()
@@ -80,26 +89,31 @@ class EventExporter(SpanExporter):
                 logger.error(f"Error during span export: {e}")
                 return SpanExportResult.FAILURE
 
-    def _format_spans(self, spans: Sequence[ReadableSpan]) -> List[Dict]:
+    def _format_spans(self, spans: Sequence[ReadableSpan]) -> List[Dict[str, Any]]:
         """Format spans into AgentOps event format with custom formatters"""
         events = []
         for span in spans:
             try:
                 # Get base event data
-                event_data = json.loads(span.attributes.get(attrs.EVENT_DATA, "{}"))
+                attrs_dict = span.attributes or {}
+                event_data_str = attrs_dict.get(EVENT_DATA, "{}")
+                if isinstance(event_data_str, (str, bytes, bytearray)):
+                    event_data = json.loads(event_data_str)
+                else:
+                    event_data = {}
                 
                 # Ensure required fields
                 event = {
-                    "id": span.attributes.get(attrs.EVENT_ID),
+                    "id": attrs_dict.get(EVENT_ID) or str(uuid4()),
                     "event_type": span.name,
-                    "init_timestamp": span.attributes.get(attrs.EVENT_START_TIME),
-                    "end_timestamp": span.attributes.get(attrs.EVENT_END_TIME),
+                    "init_timestamp": attrs_dict.get(EVENT_START_TIME) or get_ISO_time(),
+                    "end_timestamp": attrs_dict.get(EVENT_END_TIME) or get_ISO_time(),
                     # Always include session_id from the exporter
                     "session_id": str(self.session_id),
                 }
 
                 # Add agent ID if present
-                agent_id = span.attributes.get(attrs.AGENT_ID)
+                agent_id = attrs_dict.get(AGENT_ID)
                 if agent_id:
                     event["agent_id"] = agent_id
 
@@ -125,26 +139,7 @@ class EventExporter(SpanExporter):
     def _send_batch(self, events: List[Dict]) -> bool:
         """Send a batch of events to the AgentOps backend"""
         try:
-            # Don't append /v2/create_events if it's already in the endpoint
-            endpoint = self.endpoint
-            if not endpoint.endswith('/v2/create_events'):
-                endpoint = endpoint.rstrip('/') + '/v2/create_events'
-            
-            # Add Authorization header with Bearer token
-            headers = {
-                "X-Agentops-Api-Key": self.api_key,
-            }
-            if self.jwt:
-                headers["Authorization"] = f"Bearer {self.jwt}"
-
-            response = HttpClient.post(
-                endpoint,
-                json.dumps({"events": events}).encode("utf-8"),
-                api_key=self.api_key,
-                jwt=self.jwt,
-                header=headers
-            )
-            return response.code == 200
+            return self._api.create_events(events)
         except Exception as e:
             logger.error(f"Error sending batch: {str(e)}", exc_info=e)
             return False

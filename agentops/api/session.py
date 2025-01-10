@@ -50,7 +50,7 @@ class SessionApiClient(ApiClient):
             logger.error(f"Could not update session - {e}")
             return None
 
-    def create_events(self, events: List[Union[Event, dict]]) -> bool:
+    def create_events(self, events: List[Dict[str, Any]]) -> bool:
         """Send events to API"""
         try:
             headers = self._prepare_headers(
@@ -64,6 +64,22 @@ class SessionApiClient(ApiClient):
             
         except ApiServerException as e:
             logger.error(f"Could not create events - {e}")
+            return False
+
+    def create_agent(self, name: str, agent_id: str) -> bool:
+        """Create a new agent"""
+        try:
+            headers = self._prepare_headers(
+                api_key=self.api_key,
+                jwt=self.jwt,
+                custom_headers={"X-Session-ID": str(self.session_id)}
+            )
+            
+            res = self._post("/v2/create_agent", {"id": agent_id, "name": name}, headers)
+            return res.status_code == 200
+            
+        except ApiServerException as e:
+            logger.error(f"Could not create agent - {e}")
             return False
             
     def _post(self, path: str, data: Dict[str, Any], headers: Dict[str, str]) -> requests.Response:

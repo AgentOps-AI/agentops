@@ -11,6 +11,7 @@ from opentelemetry.sdk.trace.export import SpanExporter, SpanExportResult
 from agentops.helpers import filter_unjsonable, get_ISO_time
 from agentops.api.base import ApiClient
 from agentops.log_config import logger
+from agentops.api.session import SessionApiClient
 
 if TYPE_CHECKING:
     from agentops.session import Session
@@ -43,24 +44,23 @@ class SessionExporter(SpanExporter):
         if session:
             self.session = session
             self.session_id = session.session_id
-            self._endpoint = session.config.endpoint
-            self.jwt = session.jwt
-            self.api_key = session.config.api_key
+            self._api = session._api
         else:
-            if not all([session_id, endpoint, jwt, api_key]):
+            if not all([session_id, endpoint, api_key]):
                 raise ValueError("Must provide either session object or all individual parameters")
             self.session = None
             self.session_id = session_id
-            self._endpoint = endpoint
-            self.jwt = jwt
-            self.api_key = api_key
+            assert session_id is not None  # for type checker
+            assert endpoint is not None  # for type checker
+            assert api_key is not None  # for type checker
+            self._api = SessionApiClient(
+                endpoint=endpoint,
+                session_id=session_id,
+                api_key=api_key,
+                jwt=jwt or ""  # jwt can be empty string if not provided
+            )
 
         super().__init__(**kwargs)
-
-    @property
-    def endpoint(self):
-        """Get the full endpoint URL."""
-        return f"{self._endpoint}/v2/create_events"
 
     def export(self, spans: Sequence[ReadableSpan]) -> SpanExportResult:
         if self._shutdown.is_set():
@@ -73,7 +73,12 @@ class SessionExporter(SpanExporter):
 
                 events = []
                 for span in spans:
-                    event_data = json.loads(span.attributes.get("event.data", "{}"))
+                    attrs = span.attributes or {}
+                    event_data_str = attrs.get("event.data", "{}")
+                    if isinstance(event_data_str, (str, bytes, bytearray)):
+                        event_data = json.loads(event_data_str)
+                    else:
+                        event_data = {}
 
                     # Format event data based on event type
                     if span.name == "actions":
@@ -94,9 +99,9 @@ class SessionExporter(SpanExporter):
                     formatted_data = {**event_data, **formatted_data}
 
                     # Get timestamps and ID, providing defaults
-                    init_timestamp = span.attributes.get("event.timestamp") or get_ISO_time()
-                    end_timestamp = span.attributes.get("event.end_timestamp") or get_ISO_time()
-                    event_id = span.attributes.get("event.id") or str(uuid4())
+                    init_timestamp = attrs.get("event.timestamp") or get_ISO_time()
+                    end_timestamp = attrs.get("event.end_timestamp") or get_ISO_time()
+                    event_id = attrs.get("event.id") or str(uuid4())
 
                     events.append(
                         filter_unjsonable(
@@ -114,21 +119,8 @@ class SessionExporter(SpanExporter):
                 # Only make HTTP request if we have events and not shutdown
                 if events:
                     try:
-                        # Add Authorization header with Bearer token
-                        headers = {
-                            "X-Agentops-Api-Key": self.api_key,
-                        }
-                        if self.jwt:
-                            headers["Authorization"] = f"Bearer {self.jwt}"
-
-                        res = HttpClient.post(
-                            self.endpoint,
-                            json.dumps({"events": events}).encode("utf-8"),
-                            api_key=self.api_key,
-                            jwt=self.jwt,
-                            header=headers
-                        )
-                        return SpanExportResult.SUCCESS if res.code == 200 else SpanExportResult.FAILURE
+                        success = self._api.create_events(events)
+                        return SpanExportResult.SUCCESS if success else SpanExportResult.FAILURE
                     except Exception as e:
                         logger.error(f"Failed to send events: {e}")
                         return SpanExportResult.FAILURE
