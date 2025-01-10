@@ -141,10 +141,7 @@ class EventExporter(SpanExporter):
     def _send_batch(self, events: List[Dict[str, Any]]) -> bool:
         """Send a batch of events to the AgentOps backend"""
         try:
-            success = self._api.create_events(events)
-            if not success:
-                logger.error("Failed to send events batch")
-            return success
+            return self._api.create_events(events)
         except Exception as e:
             logger.error(f"Error sending batch: {str(e)}", exc_info=e)
             return False

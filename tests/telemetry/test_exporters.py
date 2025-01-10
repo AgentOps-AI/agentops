@@ -54,54 +54,49 @@ class TestEventExporter:
 
     def test_export_single_span(self, event_exporter, mock_span):
         """Test exporting a single span"""
-        with patch("agentops.api.base.ApiClient.post") as mock_post:
-            mock_post.return_value.code = 200
+        with patch("agentops.api.session.SessionApiClient.create_events") as mock_create:
+            mock_create.return_value = True
 
             result = event_exporter.export([mock_span])
             assert result == SpanExportResult.SUCCESS
 
             # Verify request
-            mock_post.assert_called_once()
-            call_args = mock_post.call_args[0]
-            payload = json.loads(call_args[1].decode("utf-8"))
+            mock_create.assert_called_once()
+            call_args = mock_create.call_args[0]
+            events = call_args[0]
 
-            assert len(payload["events"]) == 1
-            assert payload["events"][0]["event_type"] == "test_span"
+            assert len(events) == 1
+            assert events[0]["event_type"] == "test_span"
 
     def test_export_multiple_spans(self, event_exporter, mock_span):
         """Test exporting multiple spans"""
         spans = [mock_span, mock_span]
 
-        with patch("agentops.api.base.ApiClient.post") as mock_post:
-            mock_post.return_value.code = 200
+        with patch("agentops.api.session.SessionApiClient.create_events") as mock_create:
+            mock_create.return_value = True
 
             result = event_exporter.export(spans)
             assert result == SpanExportResult.SUCCESS
 
             # Verify request
-            mock_post.assert_called_once()
-            call_args = mock_post.call_args[0]
-            payload = json.loads(call_args[1].decode("utf-8"))
+            mock_create.assert_called_once()
+            call_args = mock_create.call_args[0]
+            events = call_args[0]
 
-            assert len(payload["events"]) == 2
+            assert len(events) == 2
 
     def test_export_failure_retry(self, event_exporter, mock_span):
         """Test retry behavior on export failure"""
         mock_wait = Mock()
         event_exporter._wait_fn = mock_wait
         
-        with patch("agentops.api.base.ApiClient.post") as mock_post:
+        with patch("agentops.api.session.SessionApiClient.create_events") as mock_create:
             # Create mock responses with proper return values
-            mock_responses = [
-                Mock(code=500),  # First attempt fails
-                Mock(code=500),  # Second attempt fails
-                Mock(code=200),  # Third attempt succeeds
-            ]
-            mock_post.side_effect = mock_responses
+            mock_create.side_effect = [False, False, True]
 
             result = event_exporter.export([mock_span])
             assert result == SpanExportResult.SUCCESS
-            assert mock_post.call_count == 3
+            assert mock_create.call_count == 3
 
             # Verify exponential backoff delays
             assert mock_wait.call_count == 2
@@ -113,14 +108,13 @@ class TestEventExporter:
         mock_wait = Mock()
         event_exporter._wait_fn = mock_wait
         
-        with patch("agentops.api.base.ApiClient.post") as mock_post:
+        with patch("agentops.api.session.SessionApiClient.create_events") as mock_create:
             # Mock consistently failing response
-            mock_response = Mock(code=500)
-            mock_post.return_value = mock_response
+            mock_create.return_value = False
 
             result = event_exporter.export([mock_span])
             assert result == SpanExportResult.FAILURE
-            assert mock_post.call_count == event_exporter._retry_count
+            assert mock_create.call_count == event_exporter._retry_count
             
             # Verify all retries waited
             assert mock_wait.call_count == event_exporter._retry_count - 1
@@ -136,25 +130,20 @@ class TestEventExporter:
 
     def test_retry_logic(self, event_exporter, mock_span):
         """Verify retry behavior works as expected"""
-        with patch("agentops.api.base.ApiClient.post") as mock_post:
+        with patch("agentops.api.session.SessionApiClient.create_events") as mock_create:
             # Create mock responses with proper return values
-            mock_responses = [
-                Mock(code=500),  # First attempt fails
-                Mock(code=500),  # Second attempt fails
-                Mock(code=200),  # Third attempt succeeds
-            ]
-            mock_post.side_effect = mock_responses
+            mock_create.side_effect = [False, False, True]
             
             result = event_exporter.export([mock_span])
             assert result == SpanExportResult.SUCCESS
-            assert mock_post.call_count == 3
+            assert mock_create.call_count == 3
 
-            # Verify the endpoint was called correctly
-            for call in mock_post.call_args_list:
-                assert call[0][0] == event_exporter.endpoint
-                payload = json.loads(call[0][1].decode("utf-8"))
-                assert "events" in payload
-                assert len(payload["events"]) == 1
+            # Verify the events were sent correctly
+            for call in mock_create.call_args_list:
+                events = call[0][0]
+                assert len(events) == 1
+                assert "event_type" in events[0]
+                assert events[0]["event_type"] == "test_span"
 
 
 class TestSessionExporter:
@@ -177,6 +166,8 @@ class TestSessionExporter:
     def session_exporter(self):
         """Create a SessionExporter instance for testing"""
         from agentops.session import Session
+        from agentops.api.session import SessionApiClient
+        
         mock_config = Mock()
         mock_config.endpoint = "http://test-endpoint"
         mock_config.api_key = "test-key"
@@ -186,47 +177,52 @@ class TestSessionExporter:
         mock_session.jwt = "test-jwt"
         mock_session.config = mock_config
         
+        # Create a real API client for the session
+        mock_session._api = SessionApiClient(
+            endpoint=mock_config.endpoint,
+            session_id=mock_session.session_id,
+            api_key=mock_config.api_key,
+            jwt=mock_session.jwt
+        )
+        
         return SessionExporter(session=mock_session)
 
-    def test_event_formatting(self, exporter, test_span):
+    def test_event_formatting(self, session_exporter, test_span):
         """Verify events are formatted correctly"""
-        with patch("agentops.api.base.ApiClient.post") as mock_post:
-            mock_post.return_value.code = 200
-            result = exporter.export([test_span])
+        with patch("agentops.api.session.SessionApiClient.create_events") as mock_create:
+            mock_create.return_value = True
+            result = session_exporter.export([test_span])
             assert result == SpanExportResult.SUCCESS
             
             # Verify the formatted event
-            call_args = mock_post.call_args[0]
-            payload = json.loads(call_args[1].decode("utf-8"))
-            assert len(payload["events"]) == 1
-            event = payload["events"][0]
+            mock_create.assert_called_once()
+            call_args = mock_create.call_args[0]
+            events = call_args[0]
+            assert len(events) == 1
+            event = events[0]
             assert "id" in event
             assert "event_type" in event
             assert "session_id" in event
 
     def test_retry_logic(self, session_exporter, test_span):
         """Verify retry behavior works as expected"""
-        with patch("agentops.api.base.ApiClient.post") as mock_post:
-            mock_responses = [
-                Mock(code=500),  # First attempt fails
-                Mock(code=500),  # Second attempt fails
-                Mock(code=200),  # Third attempt succeeds
-            ]
-            mock_post.side_effect = mock_responses
+        with patch("agentops.api.session.SessionApiClient.create_events") as mock_create:
+            mock_create.side_effect = [False, False, True]
             
             result = session_exporter.export([test_span])
             assert result == SpanExportResult.SUCCESS
-            assert mock_post.call_count == 3
+            assert mock_create.call_count == 3
 
-    def test_batch_processing(self, exporter, test_span):
+    def test_batch_processing(self, session_exporter, test_span):
         """Verify batch processing works correctly"""
-        with patch("agentops.api.base.ApiClient.post") as mock_post:
-            mock_post.return_value.code = 200
+        with patch("agentops.api.session.SessionApiClient.create_events") as mock_create:
+            mock_create.return_value = True
             spans = [test_span for _ in range(5)]
-            result = exporter.export(spans)
+            result = session_exporter.export(spans)
             assert result == SpanExportResult.SUCCESS
             
             # Verify batch was sent correctly
-            call_args = mock_post.call_args[0]
-            payload = json.loads(call_args[1].decode("utf-8"))
-            assert len(payload["events"]) == 5 
+            mock_create.assert_called_once()
+            call_args = mock_create.call_args[0]
+            events = call_args[0]
+            assert len(events) == 5 
