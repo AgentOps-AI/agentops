@@ -19,15 +19,48 @@ if TYPE_CHECKING:
 class SessionExporter(SpanExporter):
     """Manages publishing events for Session"""
 
-    def __init__(self, session: Session, **kwargs):
-        self.session = session
+    def __init__(
+        self,
+        session: Optional[Session] = None,
+        session_id: Optional[UUID] = None,
+        endpoint: Optional[str] = None,
+        jwt: Optional[str] = None,
+        api_key: Optional[str] = None,
+        **kwargs
+    ):
+        """Initialize SessionExporter with either a Session object or individual parameters.
+        
+        Args:
+            session: Session object containing all required parameters
+            session_id: UUID for the session (if not using session object)
+            endpoint: API endpoint (if not using session object)
+            jwt: JWT token for authentication (if not using session object)
+            api_key: API key for authentication (if not using session object)
+        """
         self._shutdown = threading.Event()
         self._export_lock = threading.Lock()
+
+        if session:
+            self.session = session
+            self.session_id = session.session_id
+            self._endpoint = session.config.endpoint
+            self.jwt = session.jwt
+            self.api_key = session.config.api_key
+        else:
+            if not all([session_id, endpoint, jwt, api_key]):
+                raise ValueError("Must provide either session object or all individual parameters")
+            self.session = None
+            self.session_id = session_id
+            self._endpoint = endpoint
+            self.jwt = jwt
+            self.api_key = api_key
+
         super().__init__(**kwargs)
 
     @property
     def endpoint(self):
-        return f"{self.session.config.endpoint}/v2/create_events"
+        """Get the full endpoint URL."""
+        return f"{self._endpoint}/v2/create_events"
 
     def export(self, spans: Sequence[ReadableSpan]) -> SpanExportResult:
         if self._shutdown.is_set():
@@ -73,7 +106,7 @@ class SessionExporter(SpanExporter):
                                 "init_timestamp": init_timestamp,
                                 "end_timestamp": end_timestamp,
                                 **formatted_data,
-                                "session_id": str(self.session.session_id),
+                                "session_id": str(self.session_id),
                             }
                         )
                     )
@@ -81,11 +114,19 @@ class SessionExporter(SpanExporter):
                 # Only make HTTP request if we have events and not shutdown
                 if events:
                     try:
+                        # Add Authorization header with Bearer token
+                        headers = {
+                            "Authorization": f"Bearer {self.jwt}" if self.jwt else None,
+                            "X-Agentops-Api-Key": self.api_key
+                        }
+                        headers = {k: v for k, v in headers.items() if v is not None}
+
                         res = HttpClient.post(
                             self.endpoint,
                             json.dumps({"events": events}).encode("utf-8"),
-                            api_key=self.session.config.api_key,
-                            jwt=self.session.jwt,
+                            api_key=self.api_key,
+                            jwt=self.jwt,
+                            header=headers
                         )
                         return SpanExportResult.SUCCESS if res.code == 200 else SpanExportResult.FAILURE
                     except Exception as e:

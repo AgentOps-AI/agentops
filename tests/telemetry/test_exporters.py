@@ -134,7 +134,7 @@ class TestEventExporter:
         result = event_exporter.export([mock_span])
         assert result == SpanExportResult.SUCCESS
 
-    def test_retry_logic(self, exporter, test_span):
+    def test_retry_logic(self, event_exporter, mock_span):
         """Verify retry behavior works as expected"""
         with patch("agentops.http_client.HttpClient.post") as mock_post:
             # Create mock responses with proper return values
@@ -145,13 +145,13 @@ class TestEventExporter:
             ]
             mock_post.side_effect = mock_responses
             
-            result = exporter.export([test_span])
+            result = event_exporter.export([mock_span])
             assert result == SpanExportResult.SUCCESS
             assert mock_post.call_count == 3
 
             # Verify the endpoint was called correctly
             for call in mock_post.call_args_list:
-                assert call[0][0] == exporter.endpoint
+                assert call[0][0] == event_exporter.endpoint
                 payload = json.loads(call[0][1].decode("utf-8"))
                 assert "events" in payload
                 assert len(payload["events"]) == 1
@@ -174,11 +174,11 @@ class TestSessionExporter:
         return span
     
     @pytest.fixture
-    def exporter(self):
-        """Create a SessionExporter with mocked session"""
+    def session_exporter(self):
+        """Create a SessionExporter instance for testing"""
         from agentops.session import Session
         mock_config = Mock()
-        mock_config.endpoint = "http://test"
+        mock_config.endpoint = "http://test-endpoint"
         mock_config.api_key = "test-key"
         
         mock_session = Mock(spec=Session)
@@ -204,7 +204,7 @@ class TestSessionExporter:
             assert "event_type" in event
             assert "session_id" in event
 
-    def test_retry_logic(self, exporter, test_span):
+    def test_retry_logic(self, session_exporter, test_span):
         """Verify retry behavior works as expected"""
         with patch("agentops.http_client.HttpClient.post") as mock_post:
             mock_responses = [
@@ -214,7 +214,7 @@ class TestSessionExporter:
             ]
             mock_post.side_effect = mock_responses
             
-            result = exporter.export([test_span])
+            result = session_exporter.export([test_span])
             assert result == SpanExportResult.SUCCESS
             assert mock_post.call_count == 3
 

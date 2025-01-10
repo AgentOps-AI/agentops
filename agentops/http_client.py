@@ -115,63 +115,30 @@ class HttpClient:
     def post(
         cls,
         url: str,
-        payload: bytes,
+        data: bytes,
         api_key: Optional[str] = None,
         parent_key: Optional[str] = None,
         jwt: Optional[str] = None,
-        header: Optional[Dict[str, str]] = None,
+        header: Optional[Dict[str, str]] = None
     ) -> Response:
-        """Make HTTP POST request using connection pooling"""
-        result = Response()
-        try:
-            headers = cls._prepare_headers(api_key, parent_key, jwt, header)
-            session = cls.get_session()
-            res = session.post(url, data=payload, headers=headers, timeout=20)
-            result.parse(res)
-
-        except requests.exceptions.Timeout:
-            result.code = 408
-            result.status = HttpStatus.TIMEOUT
-            raise ApiServerException("Could not reach API server - connection timed out")
-        except requests.exceptions.HTTPError as e:
-            try:
-                result.parse(e.response)
-            except Exception:
-                result = Response()
-                result.code = e.response.status_code
-                result.status = Response.get_status(e.response.status_code)
-                result.body = {"error": str(e)}
-                raise ApiServerException(f"HTTPError: {e}")
-        except requests.exceptions.RequestException as e:
-            result.body = {"error": str(e)}
-            raise ApiServerException(f"RequestException: {e}")
-
-        if result.code == 401:
-            raise ApiServerException(
-                f"API server: invalid API key: {api_key}. Find your API key at https://app.agentops.ai/settings/projects"
-            )
-        if result.code == 400:
-            if "message" in result.body:
-                raise ApiServerException(f"API server: {result.body['message']}")
-            else:
-                raise ApiServerException(f"API server: {result.body}")
-        if result.code == 500:
-            raise ApiServerException("API server: - internal server error")
-
-        return result
+        """Make POST request with proper headers"""
+        headers = cls._prepare_headers(api_key, parent_key, jwt, header)
+        response = requests.post(url, data=data, headers=headers)
+        return Response(Response.get_status(response.status_code), response.json() if response.text else None)
 
     @classmethod
     def get(
         cls,
         url: str,
         api_key: Optional[str] = None,
+        parent_key: Optional[str] = None,
         jwt: Optional[str] = None,
         header: Optional[Dict[str, str]] = None,
     ) -> Response:
         """Make HTTP GET request using connection pooling"""
         result = Response()
         try:
-            headers = cls._prepare_headers(api_key, None, jwt, header)
+            headers = cls._prepare_headers(api_key, parent_key, jwt, header)
             session = cls.get_session()
             res = session.get(url, headers=headers, timeout=20)
             result.parse(res)

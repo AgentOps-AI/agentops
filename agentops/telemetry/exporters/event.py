@@ -125,7 +125,11 @@ class EventExporter(SpanExporter):
     def _send_batch(self, events: List[Dict]) -> bool:
         """Send a batch of events to the AgentOps backend"""
         try:
-            endpoint = self.endpoint.rstrip('/') + '/v2/create_events'
+            # Don't append /v2/create_events if it's already in the endpoint
+            endpoint = self.endpoint
+            if not endpoint.endswith('/v2/create_events'):
+                endpoint = endpoint.rstrip('/') + '/v2/create_events'
+            
             response = HttpClient.post(
                 endpoint,
                 json.dumps({"events": events}).encode("utf-8"),

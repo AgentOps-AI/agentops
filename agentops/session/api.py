@@ -85,11 +85,10 @@ class SessionApi:
         header = {}
 
         if needs_api_key:
-            # Add API key to both kwargs and header
             kwargs["api_key"] = self.config.api_key
             header["X-Agentops-Api-Key"] = self.config.api_key
 
-        if needs_parent_key:
+        if needs_parent_key and self.config.parent_key:
             kwargs["parent_key"] = self.config.parent_key
 
         if self.session.jwt:
