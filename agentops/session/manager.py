@@ -77,7 +77,7 @@ class SessionManager:
                 self._state.tags.extend(t for t in tags if t not in self._state.tags)
 
             if self._state._api:
-                self._state._api.update_session()
+                self._state._api.update_session({"tags": self._state.tags})
 
     def set_tags(self, tags: Union[str, List[str]]) -> None:
         """Set session tags"""
@@ -88,7 +88,7 @@ class SessionManager:
                 self._state.tags = list(tags)
 
             if self._state._api:
-                self._state._api.update_session()
+                self._state._api.update_session({"tags": self._state.tags})
 
     def record_event(self, event: Union["Event", "ErrorEvent"], flush_now: bool = False) -> None:
         """Update event counts and record event"""

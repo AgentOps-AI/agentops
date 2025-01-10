@@ -4,6 +4,7 @@ import json
 import threading
 from typing import TYPE_CHECKING, Optional, Sequence
 from uuid import UUID, uuid4
+import time
 
 from opentelemetry.sdk.trace import ReadableSpan
 from opentelemetry.sdk.trace.export import SpanExporter, SpanExportResult
@@ -118,12 +119,29 @@ class SessionExporter(SpanExporter):
 
                 # Only make HTTP request if we have events and not shutdown
                 if events:
-                    try:
-                        success = self._api.create_events(events)
-                        return SpanExportResult.SUCCESS if success else SpanExportResult.FAILURE
-                    except Exception as e:
-                        logger.error(f"Failed to send events: {e}")
-                        return SpanExportResult.FAILURE
+                    retry_count = 3  # Match EventExporter retry count
+                    for attempt in range(retry_count):
+                        try:
+                            success = self._api.create_events(events)
+                            if success:
+                                return SpanExportResult.SUCCESS
+                            
+                            # If not successful but not the last attempt, wait and retry
+                            if attempt < retry_count - 1:
+                                delay = 1.0 * (2**attempt)  # Exponential backoff
+                                time.sleep(delay)
+                                continue
+                                
+                        except Exception as e:
+                            logger.error(f"Export attempt {attempt + 1} failed: {e}")
+                            if attempt < retry_count - 1:
+                                delay = 1.0 * (2**attempt)  # Exponential backoff
+                                time.sleep(delay)
+                                continue
+                            return SpanExportResult.FAILURE
+
+                    # If we've exhausted all retries without success
+                    return SpanExportResult.FAILURE
 
                 return SpanExportResult.SUCCESS
 

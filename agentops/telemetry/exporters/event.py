@@ -63,6 +63,8 @@ class EventExporter(SpanExporter):
                     return SpanExportResult.SUCCESS
 
                 events = self._format_spans(spans)
+                if not events:  # Skip if no events were formatted
+                    return SpanExportResult.SUCCESS
 
                 for attempt in range(self._retry_count):
                     try:
@@ -136,10 +138,13 @@ class EventExporter(SpanExporter):
 
         return events
 
-    def _send_batch(self, events: List[Dict]) -> bool:
+    def _send_batch(self, events: List[Dict[str, Any]]) -> bool:
         """Send a batch of events to the AgentOps backend"""
         try:
-            return self._api.create_events(events)
+            success = self._api.create_events(events)
+            if not success:
+                logger.error("Failed to send events batch")
+            return success
         except Exception as e:
             logger.error(f"Error sending batch: {str(e)}", exc_info=e)
             return False
