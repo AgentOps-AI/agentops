@@ -16,7 +16,7 @@ from uuid import UUID
 
 import agentops
 from agentops import ActionEvent, Client
-from agentops.http_client import HttpClient
+from agentops.api.base import ApiClient
 from agentops.singleton import clear_singletons
 
 

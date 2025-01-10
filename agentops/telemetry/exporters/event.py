@@ -7,7 +7,7 @@ from opentelemetry.sdk.trace import ReadableSpan
 from opentelemetry.sdk.trace.export import SpanExporter, SpanExportResult
 from opentelemetry.util.types import Attributes
 
-from agentops.http_client import HttpClient
+from agentops.api.base import ApiClient
 from agentops.log_config import logger
 import agentops.telemetry.attributes as attrs
 

@@ -54,7 +54,7 @@ class TestEventExporter:
 
     def test_export_single_span(self, event_exporter, mock_span):
         """Test exporting a single span"""
-        with patch("agentops.http_client.HttpClient.post") as mock_post:
+        with patch("agentops.api.base.ApiClient.post") as mock_post:
             mock_post.return_value.code = 200
 
             result = event_exporter.export([mock_span])
@@ -72,7 +72,7 @@ class TestEventExporter:
         """Test exporting multiple spans"""
         spans = [mock_span, mock_span]
 
-        with patch("agentops.http_client.HttpClient.post") as mock_post:
+        with patch("agentops.api.base.ApiClient.post") as mock_post:
             mock_post.return_value.code = 200
 
             result = event_exporter.export(spans)
@@ -90,7 +90,7 @@ class TestEventExporter:
         mock_wait = Mock()
         event_exporter._wait_fn = mock_wait
         
-        with patch("agentops.http_client.HttpClient.post") as mock_post:
+        with patch("agentops.api.base.ApiClient.post") as mock_post:
             # Create mock responses with proper return values
             mock_responses = [
                 Mock(code=500),  # First attempt fails
@@ -113,7 +113,7 @@ class TestEventExporter:
         mock_wait = Mock()
         event_exporter._wait_fn = mock_wait
         
-        with patch("agentops.http_client.HttpClient.post") as mock_post:
+        with patch("agentops.api.base.ApiClient.post") as mock_post:
             # Mock consistently failing response
             mock_response = Mock(code=500)
             mock_post.return_value = mock_response
@@ -136,7 +136,7 @@ class TestEventExporter:
 
     def test_retry_logic(self, event_exporter, mock_span):
         """Verify retry behavior works as expected"""
-        with patch("agentops.http_client.HttpClient.post") as mock_post:
+        with patch("agentops.api.base.ApiClient.post") as mock_post:
             # Create mock responses with proper return values
             mock_responses = [
                 Mock(code=500),  # First attempt fails
@@ -190,7 +190,7 @@ class TestSessionExporter:
 
     def test_event_formatting(self, exporter, test_span):
         """Verify events are formatted correctly"""
-        with patch("agentops.http_client.HttpClient.post") as mock_post:
+        with patch("agentops.api.base.ApiClient.post") as mock_post:
             mock_post.return_value.code = 200
             result = exporter.export([test_span])
             assert result == SpanExportResult.SUCCESS
@@ -206,7 +206,7 @@ class TestSessionExporter:
 
     def test_retry_logic(self, session_exporter, test_span):
         """Verify retry behavior works as expected"""
-        with patch("agentops.http_client.HttpClient.post") as mock_post:
+        with patch("agentops.api.base.ApiClient.post") as mock_post:
             mock_responses = [
                 Mock(code=500),  # First attempt fails
                 Mock(code=500),  # Second attempt fails
@@ -220,7 +220,7 @@ class TestSessionExporter:
 
     def test_batch_processing(self, exporter, test_span):
         """Verify batch processing works correctly"""
-        with patch("agentops.http_client.HttpClient.post") as mock_post:
+        with patch("agentops.api.base.ApiClient.post") as mock_post:
             mock_post.return_value.code = 200
             spans = [test_span for _ in range(5)]
             result = exporter.export(spans)

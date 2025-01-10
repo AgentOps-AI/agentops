@@ -2,7 +2,7 @@ from .log_config import logger
 import traceback
 
 from .host_env import get_host_env
-from .http_client import HttpClient
+from .api.base import ApiClient
 from .helpers import safe_serialize, get_agentops_version
 
 from os import environ

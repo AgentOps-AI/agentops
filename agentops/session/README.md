@@ -7,7 +7,7 @@ This package contains the core session management functionality for AgentOps.
 ```mermaid
 graph TD
     S[Session] --> |delegates to| M[SessionManager]
-    M --> |uses| A[SessionApi]
+    M --> |uses| A[SessionApiClient]
     M --> |uses| T[SessionTelemetry]
     T --> |uses| E[SessionExporter]
     M --> |manages| R[Registry]
@@ -26,7 +26,7 @@ graph TD
 - Coordinates between API, telemetry, and registry
 - Manages session analytics and event counts
 
-### SessionApi (`api.py`)
+### SessionApiClient (`api.py`)
 - Handles all HTTP communication with AgentOps API
 - Manages authentication headers and JWT
 - Serializes session state for API calls
@@ -53,7 +53,7 @@ sequenceDiagram
     participant C as Client
     participant S as Session
     participant M as SessionManager
-    participant A as SessionApi
+    participant A as SessionApiClient
     participant T as SessionTelemetry
     participant E as SessionExporter
 

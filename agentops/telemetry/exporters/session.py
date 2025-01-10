@@ -9,7 +9,7 @@ from opentelemetry.sdk.trace import ReadableSpan
 from opentelemetry.sdk.trace.export import SpanExporter, SpanExportResult
 
 from agentops.helpers import filter_unjsonable, get_ISO_time
-from agentops.http_client import HttpClient
+from agentops.api.base import ApiClient
 from agentops.log_config import logger
 
 if TYPE_CHECKING:

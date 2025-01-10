@@ -1,7 +1,7 @@
 import json
 import yaml
 import os
-from .http_client import HttpClient
+from .api.base import ApiClient
 from .exceptions import ApiServerException
 from .singleton import singleton
 
