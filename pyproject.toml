@@ -44,6 +44,7 @@ test = [
     "openai>=1.0.0,<2.0.0",
     "langchain",
     "pytest-cov",
+    "fastapi[standard]",
 ]
 
 dev = [
