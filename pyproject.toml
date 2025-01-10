@@ -1,10 +1,10 @@
 [build-system]
-requires = ["setuptools>=61.0", "wheel"]
-build-backend = "setuptools.build_meta"
+requires = ["hatchling"]
+build-backend = "hatchling.build"
 
 [project]
 name = "agentops"
-version = "0.3.21"
+version = "0.3.23"
 authors = [
   { name="Alex Reibman", email="areibman@gmail.com" },
   { name="Shawn Qiu", email="siyangqiu@gmail.com" },
@@ -31,9 +31,12 @@ dependencies = [
     "psutil>=5.9.8,<6.1.0",
     "termcolor>=2.3.0,<2.5.0",
     "PyYAML>=5.3,<7.0",
-    "opentelemetry-api>=1.22.0,<2.0.0",
-    "opentelemetry-sdk>=1.22.0,<2.0.0",
-    "opentelemetry-exporter-otlp-proto-http>=1.22.0,<2.0.0",
+    "opentelemetry-api==1.22.0; python_version<'3.10'",
+    "opentelemetry-api>=1.27.0; python_version>='3.10'",
+    "opentelemetry-sdk==1.22.0; python_version<'3.10'",
+    "opentelemetry-sdk>=1.27.0; python_version>='3.10'",
+    "opentelemetry-exporter-otlp-proto-http==1.22.0; python_version<'3.10'",
+    "opentelemetry-exporter-otlp-proto-http>=1.27.0; python_version>='3.10'",
 ]
 
 [dependency-groups]
@@ -78,7 +81,15 @@ compile-bytecode = true  # Enable bytecode compilation for better performance
 default-groups = ["test", "dev"]  # Default groups to install for development
 constraint-dependencies = [
     "pydantic>=2.8.0; python_version>='3.13'",  # Ensure Python 3.13 compatibility
-    "typing-extensions; python_version>='3.13'"  # Required for Pydantic with Python 3.13
+    "typing-extensions; python_version>='3.13'",  # Required for Pydantic with Python 3.13
+    # For Python 3.9, use original OpenTelemetry versions
+    "opentelemetry-api==1.22.0; python_version<'3.10'",
+    "opentelemetry-sdk==1.22.0; python_version<'3.10'",
+    "opentelemetry-exporter-otlp-proto-http==1.22.0; python_version<'3.10'",
+    # For Python ≥3.10 (where autogen-core might be present), use newer versions
+    "opentelemetry-api>=1.27.0; python_version>='3.10'",
+    "opentelemetry-sdk>=1.27.0; python_version>='3.10'",
+    "opentelemetry-exporter-otlp-proto-http>=1.27.0; python_version>='3.10'"
 ]
 
 [tool.autopep8]
@@ -143,5 +154,25 @@ exclude = [
     "tests/core_manual_tests",
 ]
 
-[tool.setuptools]
+[tool.hatch.build.targets.wheel]
 packages = ["agentops"]
+
+[tool.hatch.build]
+exclude = [
+  "docs/*",
+  "examples/*",
+  "tests/*",
+  ".github/*",
+  "*.gif",
+  "*.png",
+  "dist/*",
+  "build/*",
+  ".pytest_cache",
+  ".ruff_cache",
+  "__pycache__",
+  "*.pyc"
+]
+
+[tool.hatch.metadata]
+allow-direct-references = true
+
