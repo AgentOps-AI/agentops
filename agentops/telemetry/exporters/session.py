@@ -116,10 +116,10 @@ class SessionExporter(SpanExporter):
                     try:
                         # Add Authorization header with Bearer token
                         headers = {
-                            "Authorization": f"Bearer {self.jwt}" if self.jwt else None,
-                            "X-Agentops-Api-Key": self.api_key
+                            "X-Agentops-Api-Key": self.api_key,
                         }
-                        headers = {k: v for k, v in headers.items() if v is not None}
+                        if self.jwt:
+                            headers["Authorization"] = f"Bearer {self.jwt}"
 
                         res = HttpClient.post(
                             self.endpoint,

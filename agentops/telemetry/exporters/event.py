@@ -130,11 +130,19 @@ class EventExporter(SpanExporter):
             if not endpoint.endswith('/v2/create_events'):
                 endpoint = endpoint.rstrip('/') + '/v2/create_events'
             
+            # Add Authorization header with Bearer token
+            headers = {
+                "X-Agentops-Api-Key": self.api_key,
+            }
+            if self.jwt:
+                headers["Authorization"] = f"Bearer {self.jwt}"
+
             response = HttpClient.post(
                 endpoint,
                 json.dumps({"events": events}).encode("utf-8"),
                 api_key=self.api_key,
                 jwt=self.jwt,
+                header=headers
             )
             return response.code == 200
         except Exception as e:

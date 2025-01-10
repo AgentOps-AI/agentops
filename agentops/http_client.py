@@ -106,7 +106,15 @@ class HttpClient:
         if jwt is not None:
             headers["Authorization"] = f"Bearer {jwt}"
 
-        if custom_headers is not None:
+        if custom_headers:
+            # Don't let custom headers override critical headers
+            custom_headers = custom_headers.copy()
+            if jwt is not None:
+                custom_headers.pop("Authorization", None)
+            if api_key is not None:
+                custom_headers.pop("X-Agentops-Api-Key", None)
+            if parent_key is not None:
+                custom_headers.pop("X-Agentops-Parent-Key", None)
             headers.update(custom_headers)
 
         return headers
@@ -122,8 +130,14 @@ class HttpClient:
         header: Optional[Dict[str, str]] = None
     ) -> Response:
         """Make POST request with proper headers"""
-        headers = cls._prepare_headers(api_key, parent_key, jwt, header)
-        response = requests.post(url, data=data, headers=headers)
+        # Use session for connection pooling
+        session = cls.get_session()
+        
+        # Prepare headers with all authentication info
+        headers = cls._prepare_headers(api_key, parent_key, jwt, header or {})
+        
+        # Make request with prepared headers
+        response = session.post(url, data=data, headers=headers)
         return Response(Response.get_status(response.status_code), response.json() if response.text else None)
 
     @classmethod

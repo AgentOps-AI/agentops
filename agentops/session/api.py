@@ -82,11 +82,9 @@ class SessionApi:
         serialized = safe_serialize(payload).encode("utf-8")
 
         kwargs = {}
-        header = {}
 
         if needs_api_key:
             kwargs["api_key"] = self.config.api_key
-            header["X-Agentops-Api-Key"] = self.config.api_key
 
         if needs_parent_key and self.config.parent_key:
             kwargs["parent_key"] = self.config.parent_key
@@ -95,9 +93,6 @@ class SessionApi:
             kwargs["jwt"] = self.session.jwt
 
         if hasattr(self.session, "session_id"):
-            header["X-Session-ID"] = str(self.session.session_id)
-
-        if header:
-            kwargs["header"] = header
+            kwargs["header"] = {"X-Session-ID": str(self.session.session_id)}
 
         return HttpClient.post(url, serialized, **kwargs)
