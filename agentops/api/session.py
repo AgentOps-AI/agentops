@@ -26,7 +26,7 @@ class SessionApiClient(ApiClient):
                 custom_headers={"X-Session-ID": str(self.session_id)}
             )
             
-            res = self._post("/v2/create_session", {"session": session_data}, headers)
+            res = self.post("/v2/create_session", {"session": session_data}, headers)
             jwt = res.json().get("jwt")
             return bool(jwt), jwt
             
@@ -34,7 +34,7 @@ class SessionApiClient(ApiClient):
             logger.error(f"Could not create session - {e}")
             return False, None
 
-    def update_session(self, session_data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+    def update_session(self, session_data: Optional[Dict[str, Any]] = None) -> Optional[Dict[str, Any]]:
         """Update session state"""
         try:
             headers = self._prepare_headers(
@@ -43,7 +43,7 @@ class SessionApiClient(ApiClient):
                 custom_headers={"X-Session-ID": str(self.session_id)}
             )
             
-            res = self._post("/v2/update_session", {"session": session_data}, headers)
+            res = self.post("/v2/update_session", {"session": session_data or {}}, headers)
             return res.json()
             
         except ApiServerException as e:
@@ -59,7 +59,7 @@ class SessionApiClient(ApiClient):
                 custom_headers={"X-Session-ID": str(self.session_id)}
             )
             
-            res = self._post("/v2/create_events", {"events": events}, headers)
+            res = self.post("/v2/create_events", {"events": events}, headers)
             return res.status_code == 200
             
         except ApiServerException as e:
@@ -75,7 +75,7 @@ class SessionApiClient(ApiClient):
                 custom_headers={"X-Session-ID": str(self.session_id)}
             )
             
-            res = self._post("/v2/create_agent", {"id": agent_id, "name": name}, headers)
+            res = self.post("/v2/create_agent", {"id": agent_id, "name": name}, headers)
             return res.status_code == 200
             
         except ApiServerException as e:

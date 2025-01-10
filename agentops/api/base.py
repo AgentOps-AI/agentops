@@ -69,4 +69,10 @@ class ApiClient:
                 safe_headers.pop(protected, None)
             headers.update(safe_headers)
             
-        return headers 
+        return headers
+
+    def post(self, path: str, data: Dict[str, Any], headers: Dict[str, str]) -> requests.Response:
+        """Make POST request"""
+        url = f"{self.endpoint}{path}"
+        session = self.get_session()
+        return session.post(url, json=data, headers=headers) 
