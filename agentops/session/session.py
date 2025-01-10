@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from dataclasses import asdict, dataclass, field
 from decimal import Decimal
-from typing import TYPE_CHECKING, Dict, List, Optional, Union
+from typing import TYPE_CHECKING, Dict, List, Optional, Union, Any
 from uuid import UUID
 
 from agentops.config import Configuration
@@ -32,6 +32,10 @@ class Session:
     )
     init_timestamp: str = field(default_factory=get_ISO_time)
     is_running: bool = field(default=True)
+    _telemetry: Any = field(init=False, repr=False, default=None)
+    _api: Any = field(init=False, repr=False, default=None)
+    _manager: Any = field(init=False, repr=False, default=None)
+    _otel_exporter: Any = field(init=False, repr=False, default=None)
 
     def __post_init__(self):
         """Initialize session manager"""
@@ -41,9 +45,20 @@ class Session:
         elif self.tags is None:
             self.tags = []
 
+        # Initialize API client
+        from ..api.session import SessionApiClient
+        
+        if not self.config.api_key:
+            raise ValueError("API key is required")
+            
+        self._api = SessionApiClient(
+            endpoint=self.config.endpoint,
+            session_id=self.session_id,
+            api_key=self.config.api_key
+        )
+
         # Then initialize manager
         from .manager import SessionManager
-
         self._manager = SessionManager(self)
         self.is_running = self._manager.start_session()
 
@@ -80,20 +95,11 @@ class Session:
             return self._manager.create_agent(name, agent_id)
         return None
 
-    def get_analytics(self) -> Optional[Dict[str, str]]:
+    def get_analytics(self) -> Optional[Dict[str, Union[int, str]]]:
         """Get session analytics"""
         if self._manager:
             return self._manager._get_analytics()
         return None
-
-    # Serialization support
-    def __iter__(self):
-        return iter(self.__dict__().items())
-
-    def __dict__(self):
-        filtered_dict = {k: v for k, v in asdict(self).items() if not k.startswith("_") and not callable(v)}
-        filtered_dict["session_id"] = str(self.session_id)
-        return filtered_dict
 
     @property
     def session_url(self) -> str:

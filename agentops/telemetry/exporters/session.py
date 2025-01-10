@@ -4,13 +4,15 @@ import json
 import threading
 from typing import TYPE_CHECKING, Optional, Sequence
 from uuid import UUID, uuid4
+import time
 
 from opentelemetry.sdk.trace import ReadableSpan
 from opentelemetry.sdk.trace.export import SpanExporter, SpanExportResult
 
 from agentops.helpers import filter_unjsonable, get_ISO_time
-from agentops.http_client import HttpClient
+from agentops.api.base import ApiClient
 from agentops.log_config import logger
+from agentops.api.session import SessionApiClient
 
 if TYPE_CHECKING:
     from agentops.session import Session
@@ -19,15 +21,47 @@ if TYPE_CHECKING:
 class SessionExporter(SpanExporter):
     """Manages publishing events for Session"""
 
-    def __init__(self, session: Session, **kwargs):
-        self.session = session
+    def __init__(
+        self,
+        session: Optional[Session] = None,
+        session_id: Optional[UUID] = None,
+        endpoint: Optional[str] = None,
+        jwt: Optional[str] = None,
+        api_key: Optional[str] = None,
+        **kwargs
+    ):
+        """Initialize SessionExporter with either a Session object or individual parameters.
+        
+        Args:
+            session: Session object containing all required parameters
+            session_id: UUID for the session (if not using session object)
+            endpoint: API endpoint (if not using session object)
+            jwt: JWT token for authentication (if not using session object)
+            api_key: API key for authentication (if not using session object)
+        """
         self._shutdown = threading.Event()
         self._export_lock = threading.Lock()
-        super().__init__(**kwargs)
 
-    @property
-    def endpoint(self):
-        return f"{self.session.config.endpoint}/v2/create_events"
+        if session:
+            self.session = session
+            self.session_id = session.session_id
+            self._api = session._api
+        else:
+            if not all([session_id, endpoint, api_key]):
+                raise ValueError("Must provide either session object or all individual parameters")
+            self.session = None
+            self.session_id = session_id
+            assert session_id is not None  # for type checker
+            assert endpoint is not None  # for type checker
+            assert api_key is not None  # for type checker
+            self._api = SessionApiClient(
+                endpoint=endpoint,
+                session_id=session_id,
+                api_key=api_key,
+                jwt=jwt or ""  # jwt can be empty string if not provided
+            )
+
+        super().__init__(**kwargs)
 
     def export(self, spans: Sequence[ReadableSpan]) -> SpanExportResult:
         if self._shutdown.is_set():
@@ -40,7 +74,12 @@ class SessionExporter(SpanExporter):
 
                 events = []
                 for span in spans:
-                    event_data = json.loads(span.attributes.get("event.data", "{}"))
+                    attrs = span.attributes or {}
+                    event_data_str = attrs.get("event.data", "{}")
+                    if isinstance(event_data_str, (str, bytes, bytearray)):
+                        event_data = json.loads(event_data_str)
+                    else:
+                        event_data = {}
 
                     # Format event data based on event type
                     if span.name == "actions":
@@ -61,9 +100,9 @@ class SessionExporter(SpanExporter):
                     formatted_data = {**event_data, **formatted_data}
 
                     # Get timestamps and ID, providing defaults
-                    init_timestamp = span.attributes.get("event.timestamp") or get_ISO_time()
-                    end_timestamp = span.attributes.get("event.end_timestamp") or get_ISO_time()
-                    event_id = span.attributes.get("event.id") or str(uuid4())
+                    init_timestamp = attrs.get("event.timestamp") or get_ISO_time()
+                    end_timestamp = attrs.get("event.end_timestamp") or get_ISO_time()
+                    event_id = attrs.get("event.id") or str(uuid4())
 
                     events.append(
                         filter_unjsonable(
@@ -73,24 +112,36 @@ class SessionExporter(SpanExporter):
                                 "init_timestamp": init_timestamp,
                                 "end_timestamp": end_timestamp,
                                 **formatted_data,
-                                "session_id": str(self.session.session_id),
+                                "session_id": str(self.session_id),
                             }
                         )
                     )
 
                 # Only make HTTP request if we have events and not shutdown
                 if events:
-                    try:
-                        res = HttpClient.post(
-                            self.endpoint,
-                            json.dumps({"events": events}).encode("utf-8"),
-                            api_key=self.session.config.api_key,
-                            jwt=self.session.jwt,
-                        )
-                        return SpanExportResult.SUCCESS if res.code == 200 else SpanExportResult.FAILURE
-                    except Exception as e:
-                        logger.error(f"Failed to send events: {e}")
-                        return SpanExportResult.FAILURE
+                    retry_count = 3  # Match EventExporter retry count
+                    for attempt in range(retry_count):
+                        try:
+                            success = self._api.create_events(events)
+                            if success:
+                                return SpanExportResult.SUCCESS
+                            
+                            # If not successful but not the last attempt, wait and retry
+                            if attempt < retry_count - 1:
+                                delay = 1.0 * (2**attempt)  # Exponential backoff
+                                time.sleep(delay)
+                                continue
+                                
+                        except Exception as e:
+                            logger.error(f"Export attempt {attempt + 1} failed: {e}")
+                            if attempt < retry_count - 1:
+                                delay = 1.0 * (2**attempt)  # Exponential backoff
+                                time.sleep(delay)
+                                continue
+                            return SpanExportResult.FAILURE
+
+                    # If we've exhausted all retries without success
+                    return SpanExportResult.FAILURE
 
                 return SpanExportResult.SUCCESS
 
