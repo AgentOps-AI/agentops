@@ -1,10 +1,11 @@
 import pytest
 from pathlib import Path
 
+
 @pytest.fixture(scope="module")
 def vcr_config():
     """Configure VCR.py for recording HTTP interactions.
-    
+
     This fixture sets up VCR.py with:
     - YAML serialization
     - Cassette storage in fixtures/recordings
@@ -22,10 +23,8 @@ def vcr_config():
         ("x-api-key", "REDACTED"),
         ("api-key", "REDACTED"),
         ("bearer", "REDACTED"),
-
         # AgentOps API keys
         ("x-agentops-api-key", "REDACTED"),
-        
         # LLM service API keys
         ("openai-api-key", "REDACTED"),
         ("anthropic-api-key", "REDACTED"),
@@ -40,23 +39,20 @@ def vcr_config():
         ("x-claude-api-key", "REDACTED"),
         ("x-railway-request-id", "REDACTED"),
         ("X-Railway-Request-Id", "REDACTED"),
-        
         # Authentication tokens
         ("x-api-token", "REDACTED"),
-        ("api-token", "REDACTED"), 
+        ("api-token", "REDACTED"),
         ("x-auth-token", "REDACTED"),
         ("x-session-token", "REDACTED"),
-        
         # OpenAI specific headers
         ("openai-organization", "REDACTED"),
         ("x-request-id", "REDACTED"),
         ("__cf_bm", "REDACTED"),
         ("_cfuvid", "REDACTED"),
         ("cf-ray", "REDACTED"),
-        
         # Rate limit headers
         ("x-ratelimit-limit-requests", "REDACTED"),
-        ("x-ratelimit-limit-tokens", "REDACTED"), 
+        ("x-ratelimit-limit-tokens", "REDACTED"),
         ("x-ratelimit-remaining-requests", "REDACTED"),
         ("x-ratelimit-remaining-tokens", "REDACTED"),
         ("x-ratelimit-reset-requests", "REDACTED"),
@@ -65,9 +61,9 @@ def vcr_config():
 
     def filter_response_headers(response):
         """Filter sensitive headers from response."""
-        headers = response['headers']
+        headers = response["headers"]
         headers_lower = {k.lower(): k for k in headers}  # Map of lowercase -> original header names
-        
+
         for header, replacement in sensitive_headers:
             header_lower = header.lower()
             if header_lower in headers_lower:
@@ -84,16 +80,13 @@ def vcr_config():
         "record_mode": "once",
         "ignore_localhost": True,
         "ignore_hosts": ["pypi.org"],
-        
         # Header filtering for requests and responses
         "filter_headers": sensitive_headers,
         "before_record_response": filter_response_headers,
-        
         # Add these new options
         "decode_compressed_response": True,
         "record_on_exception": True,
         "allow_playback_repeats": True,
-        
         # # Body filtering for system information
         # "filter_post_data_parameters": [
         #     ("host_env", "REDACTED_ENV_INFO"),
@@ -106,7 +99,7 @@ def vcr_config():
         #     ("Virtual Environment", "REDACTED_VENV_INFO"),
         #     ("Hostname", "REDACTED_HOSTNAME")
         # ],
-        # 
+        #
         # # Custom before_record function to filter response bodies
         # "before_record_response": lambda response: {
         #     **response,

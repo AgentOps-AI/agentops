@@ -19,8 +19,8 @@ def hide_available_pkg(monkeypatch):
     import_orig = builtins.__import__
 
     def mocked_import(name, *args, **kwargs):
-        if name == 'pkg':
+        if name == "pkg":
             raise ImportError()
         return import_orig(name, *args, **kwargs)
 
-    monkeypatch.setattr(builtins, '__import__', mocked_import)
+    monkeypatch.setattr(builtins, "__import__", mocked_import)
