@@ -2,7 +2,7 @@ import pytest
 from pathlib import Path
 
 
-@pytest.fixture(scope="module")
+@pytest.fixture(scope="session")
 def vcr_config():
     """Configure VCR.py for recording HTTP interactions.
 
