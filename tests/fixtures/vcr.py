@@ -79,13 +79,20 @@ def vcr_config():
         "match_on": ["uri", "method", "body"],
         "record_mode": "once",
         "ignore_localhost": True,
-        "ignore_hosts": ["pypi.org"],
+        "ignore_hosts": [
+            "pypi.org",
+            # Add OTEL endpoints to ignore list
+            "localhost:4317",  # Default OTLP gRPC endpoint
+            "localhost:4318",  # Default OTLP HTTP endpoint
+            "127.0.0.1:4317",
+            "127.0.0.1:4318",
+        ],
         # Header filtering for requests and responses
         "filter_headers": sensitive_headers,
         "before_record_response": filter_response_headers,
         # Add these new options
         "decode_compressed_response": True,
-        "record_on_exception": True,
+        "record_on_exception": False,
         "allow_playback_repeats": True,
         # # Body filtering for system information
         # "filter_post_data_parameters": [
