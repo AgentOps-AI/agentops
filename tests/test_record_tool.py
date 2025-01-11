@@ -1,21 +1,14 @@
-import pytest
-import requests_mock
+import contextlib
 import time
-import agentops
-from agentops import record_tool
 from datetime import datetime
 
-from agentops.singleton import clear_singletons
-import contextlib
+import pytest
+import requests_mock
+
+import agentops
+from agentops import record_tool
 
 jwts = ["some_jwt", "some_jwt2", "some_jwt3"]
-
-
-@pytest.fixture(autouse=True)
-def setup_teardown():
-    clear_singletons()
-    yield
-    agentops.end_all_sessions()  # teardown part
 
 
 @contextlib.contextmanager

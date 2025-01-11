@@ -10,13 +10,6 @@ import contextlib
 jwts = ["some_jwt", "some_jwt2", "some_jwt3"]
 
 
-@pytest.fixture(autouse=True)
-def setup_teardown():
-    clear_singletons()
-    yield
-    agentops.end_all_sessions()  # teardown part
-
-
 @contextlib.contextmanager
 @pytest.fixture(autouse=True, scope="function")
 def mock_req():

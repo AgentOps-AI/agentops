@@ -1,6 +1,6 @@
 import uuid
 
-from agentops.singleton import singleton, conditional_singleton, clear_singletons
+from agentops.singleton import clear_singletons, conditional_singleton, singleton
 
 
 @singleton

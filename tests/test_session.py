@@ -1,30 +1,22 @@
 import json
 import time
+from datetime import datetime, timezone
 from typing import Dict, Optional, Sequence
 from unittest.mock import MagicMock, Mock, patch
-from datetime import datetime, timezone
+from uuid import UUID
 
 import pytest
 import requests_mock
 from opentelemetry import trace
 from opentelemetry.sdk.trace import ReadableSpan
-from opentelemetry.trace import SpanContext, SpanKind
 from opentelemetry.sdk.trace.export import SpanExportResult
-from opentelemetry.trace import Status, StatusCode
+from opentelemetry.trace import SpanContext, SpanKind, Status, StatusCode
 from opentelemetry.trace.span import TraceState
-from uuid import UUID
 
 import agentops
 from agentops import ActionEvent, Client
 from agentops.http_client import HttpClient
 from agentops.singleton import clear_singletons
-
-
-@pytest.fixture(autouse=True)
-def setup_teardown(mock_req):
-    clear_singletons()
-    yield
-    agentops.end_all_sessions()  # teardown part
 
 
 @pytest.fixture(autouse=True, scope="function")

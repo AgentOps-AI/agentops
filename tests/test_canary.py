@@ -1,16 +1,10 @@
+import time
+
 import pytest
 import requests_mock
-import time
+
 import agentops
 from agentops import ActionEvent
-from agentops.singleton import clear_singletons
-
-
-@pytest.fixture(autouse=True)
-def setup_teardown():
-    clear_singletons()
-    yield
-    agentops.end_all_sessions()  # teardown part
 
 
 @pytest.fixture(autouse=True, scope="function")
