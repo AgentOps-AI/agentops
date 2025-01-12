@@ -1,6 +1,18 @@
 # :: Use nektos/act to run this locally
 # :: Example: 
 # :: `act push -j python-tests --matrix python-version:3.10 --container-architecture linux/amd64`
+#
+# This workflow runs two separate test suites:
+# 1. Unit Tests (python-tests job):
+#    - Runs across Python 3.9 to 3.13
+#    - Located in tests/unit directory
+#    - Coverage report uploaded to Codecov for Python 3.11 only
+#
+# 2. Integration Tests (integration-tests job):
+#    - Runs only on Python 3.13
+#    - Located in tests/integration directory
+#    - Longer timeout (15 min vs 10 min for unit tests)
+#    - Separate cache for dependencies
 name: Python Tests
 on:
   workflow_dispatch: {}
@@ -23,7 +35,7 @@ on:
       - 'tests/**/*.ipynb'
 
 jobs:
-  python-tests:
+  unit-tests:
     runs-on: ubuntu-latest
     env:
       OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
@@ -49,10 +61,10 @@ jobs:
         run: |
           uv sync --group test --group dev
 
-      - name: Run tests with coverage
+      - name: Run unit tests with coverage
         timeout-minutes: 10
         run: |
-          uv run -m pytest tests/ -v --cov=agentops --cov-report=xml
+          uv run -m pytest tests/unit -v --cov=agentops --cov-report=xml
         env:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
           AGENTOPS_API_KEY: ${{ secrets.AGENTOPS_API_KEY }}
@@ -68,3 +80,33 @@ jobs:
           flags: unittests
           name: codecov-umbrella
           fail_ci_if_error: true # Should we?
+
+  integration-tests:
+    runs-on: ubuntu-latest
+    env:
+      OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup UV
+        uses: astral-sh/setup-uv@v5
+        continue-on-error: true
+        with:
+          python-version: "3.13"
+          enable-cache: true
+          cache-suffix: uv-3.13-integration
+          cache-dependency-glob: "**/pyproject.toml"
+
+      - name: Install dependencies
+        run: |
+          uv sync --group test --group dev
+
+      - name: Run integration tests
+        timeout-minutes: 15
+        run: |
+          uv run -m pytest tests/integration -v --cov=agentops --cov-report=xml
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          AGENTOPS_API_KEY: ${{ secrets.AGENTOPS_API_KEY }}
+          PYTHONUNBUFFERED: "1"
