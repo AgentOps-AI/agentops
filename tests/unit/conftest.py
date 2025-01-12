@@ -1,5 +1,7 @@
 import contextlib
-from typing import Iterator
+import uuid
+from collections import defaultdict
+from typing import Dict, Iterator, List
 
 import pytest
 import requests_mock
@@ -9,8 +11,20 @@ import agentops
 from agentops.singleton import clear_singletons
 from tests.fixtures.event import llm_event_spy
 
-# Common JWT tokens used across tests
-JWTS = ["some_jwt", "some_jwt2", "some_jwt3"]
+
+@pytest.fixture
+def jwt():
+    """Fixture that provides unique JWTs per session within a test"""
+    session_jwts = defaultdict(lambda: str(uuid.uuid4()))
+    session_count = 0
+
+    def get_jwt():
+        nonlocal session_count
+        jwt = session_jwts[session_count]
+        session_count += 1
+        return jwt
+
+    return get_jwt
 
 
 @pytest.fixture(autouse=True)
@@ -23,38 +37,6 @@ def setup_teardown():
     agentops.end_all_sessions()  # teardown part
 
 
-# @contextlib.contextmanager
-# @pytest.fixture(autouse=True)
-# def mock_req() -> Iterator[requests_mock.Mocker]:
-#     """
-#     Centralized request mocking for all tests.
-#     Mocks common API endpoints with standard responses.
-#     """
-#     with requests_mock.Mocker() as m:
-#         url = "https://api.agentops.ai"
-#
-#         # Mock API endpoints
-#         m.post(url + "/v2/create_events", json={"status": "ok"})
-#         m.post(url + "/v2/developer_errors", json={"status": "ok"})
-#         m.post(url + "/v2/update_session", json={"status": "success", "token_cost": 5})
-#         m.post("https://pypi.org/pypi/agentops/json", status_code=404)
-#
-#         # Use iterator for JWT tokens in session creation
-#         jwt_tokens = iter(JWTS)
-#
-#         def create_session_response(request, context):
-#             context.status_code = 200
-#             try:
-#                 return {"status": "success", "jwt": next(jwt_tokens)}
-#             except StopIteration:
-#                 return {"status": "success", "jwt": "some_jwt"}  # Fallback JWT
-#
-#         m.post(url + "/v2/create_session", json=create_session_response)
-#         m.post(url + "/v2/reauthorize_jwt", json={"status": "success", "jwt": "some_jwt"})
-#
-#         yield m
-
-
 @pytest.fixture(scope="session")
 def api_key() -> str:
     """Standard API key for testing"""
@@ -65,3 +47,38 @@ def api_key() -> str:
 def base_url() -> str:
     """Base API URL"""
     return "https://api.agentops.ai"
+
+
+@pytest.fixture(autouse=True)
+def mock_req(base_url, jwt):
+    """
+    Mocks AgentOps backend API requests.
+    """
+    with requests_mock.Mocker() as m:
+        # Map session IDs to their JWTs
+        m.session_jwts = {}
+        
+        m.post(base_url + "/v2/create_events", json={"status": "ok"})
+
+        def create_session_response(request, context):
+            context.status_code = 200
+            # Extract session_id from the request
+            session_id = request.json()["session"]["session_id"]
+            # Use the jwt fixture to get consistent JWTs
+            m.session_jwts[session_id] = jwt()
+            return {"status": "success", "jwt": m.session_jwts[session_id]}
+
+        def reauthorize_jwt_response(request, context):
+            context.status_code = 200
+            # Extract session_id from the request
+            session_id = request.json()["session_id"]
+            # Return the same JWT for this session
+            return {"status": "success", "jwt": m.session_jwts[session_id]}
+
+        m.post(base_url + "/v2/create_session", json=create_session_response)
+        m.post(base_url + "/v2/update_session", json={"status": "success", "token_cost": 5})
+        m.post(base_url + "/v2/developer_errors", json={"status": "ok"})
+        m.post(base_url + "/v2/reauthorize_jwt", json=reauthorize_jwt_response)
+        m.post(base_url + "/v2/create_agent", json={"status": "success"})
+
+        yield m
