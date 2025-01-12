@@ -69,9 +69,9 @@ jobs:
         
         if [[ "${{ github.event.inputs.test_mode }}" == "dry-run" ]]; then
           echo "🔍 Performing dry run..."
-          uv publish --dry-run
+          uv publish --check-url https://pypi.org/pypi
         elif [[ "${{ github.event.inputs.test_mode }}" == "testpypi" ]]; then
-          uv publish --repository https://test.pypi.org/legacy/ --token $TEST_PYPI_TOKEN
+          uv publish --publish-url https://test.pypi.org/legacy/ --token $TEST_PYPI_TOKEN
         elif [[ "${{ github.event.inputs.test_mode }}" == "build-only" ]]; then
           echo "✅ Build completed successfully. Skipping publish."
         elif [[ "${{ github.event_name }}" == "release" ]]; then
