@@ -57,7 +57,7 @@ def mock_req(base_url, jwt):
     with requests_mock.Mocker() as m:
         # Map session IDs to their JWTs
         m.session_jwts = {}
-        
+
         m.post(base_url + "/v2/create_events", json={"status": "ok"})
 
         def create_session_response(request, context):
