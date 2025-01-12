@@ -1,36 +1,13 @@
+import contextlib
+import time
+from datetime import datetime
+
 import pytest
 import requests_mock
-import time
+
 import agentops
 from agentops import record_action, track_agent
-from datetime import datetime
 from agentops.singleton import clear_singletons
-import contextlib
-
-jwts = ["some_jwt", "some_jwt2", "some_jwt3"]
-
-
-@pytest.fixture(autouse=True)
-def setup_teardown():
-    clear_singletons()
-    yield
-    agentops.end_all_sessions()  # teardown part
-
-
-@contextlib.contextmanager
-@pytest.fixture(autouse=True, scope="function")
-def mock_req():
-    with requests_mock.Mocker() as m:
-        url = "https://api.agentops.ai"
-        m.post(url + "/v2/create_agent", json={"status": "success"})
-        m.post(url + "/v2/update_session", json={"status": "success", "token_cost": 5})
-        m.post(url + "/v2/create_session", json={"status": "success", "jwt": "some_jwt"})
-        m.post("https://pypi.org/pypi/agentops/json", status_code=404)
-
-        m.post(url + "/v2/create_events", json={"status": "ok"})
-        m.post(url + "/v2/developer_errors", json={"status": "ok"})
-
-        yield m
 
 
 @track_agent(name="TestAgent")
