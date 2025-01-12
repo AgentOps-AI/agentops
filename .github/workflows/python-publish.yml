@@ -8,17 +8,12 @@
 #   Test with dry run (no actual publish):
 #     gh workflow run "Upload Python Package" --ref main --field test_mode=dry-run
 #   
-#   Test publish to TestPyPI (requires TEST_PYPI_API_TOKEN secret):
+#   Test publish to TestPyPI (requires TEST_PYPI_API_TOKEN):
 #     gh workflow run "Upload Python Package" --ref main --field test_mode=testpypi
 #
 # To check workflow status:
 #     gh run list --workflow "Upload Python Package"
 #     gh run view <run-id>
-
-# This workflow uses actions that are not certified by GitHub.
-# They are provided by a third-party and are governed by
-# separate terms of service, privacy policy, and support
-# documentation.
 
 name: Upload Python Package
 
@@ -49,11 +44,14 @@ jobs:
       url: ${{ github.event_name == 'release' && 'https://pypi.org/p/agentops' || 'https://test.pypi.org/p/agentops' }}
     steps:
     - uses: actions/checkout@v4
-    
+        
     - name: Setup UV
       uses: astral-sh/setup-uv@v5
       with:
-        python-version: '3.x'
+        python-version: "3.11"  # Specify exact version
+        cache-dependency-glob: |
+          **/pyproject.toml
+          **/requirements*.txt
         
     - name: Build and publish
       env:
