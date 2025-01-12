@@ -62,7 +62,7 @@ jobs:
           uv sync --group test --group dev
 
       - name: Run unit tests with coverage
-        timeout-minutes: 10
+        timeout-minutes: 5
         run: |
           uv run -m pytest tests/unit -v --cov=agentops --cov-report=xml
         env:
@@ -103,7 +103,7 @@ jobs:
           uv sync --group test --group dev
 
       - name: Run integration tests
-        timeout-minutes: 15
+        timeout-minutes: 5
         run: |
           uv run -m pytest tests/integration -v --cov=agentops --cov-report=xml
         env:
