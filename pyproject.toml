@@ -1,6 +1,6 @@
 [build-system]
-requires = ["setuptools>=61.0", "wheel"]
-build-backend = "setuptools.build_meta"
+requires = ["hatchling"]
+build-backend = "hatchling.build"
 
 [project]
 name = "agentops"
@@ -154,5 +154,9 @@ exclude = [
     "tests/core_manual_tests",
 ]
 
-[tool.setuptools]
+[tool.hatch.build.targets.wheel]
 packages = ["agentops"]
+
+[tool.hatch.metadata]
+allow-direct-references = true
+
