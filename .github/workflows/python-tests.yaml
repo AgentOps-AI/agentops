@@ -1,6 +1,6 @@
 # :: Use nektos/act to run this locally
 # :: Example: 
-# :: `act push -j python-tests --matrix python-version:3.10 --container-architecture linux/amd64`
+# :: `act push -j unit-tests --matrix python-version:3.10 --container-architecture linux/amd64`
 #
 # This workflow runs two separate test suites:
 # 1. Unit Tests (python-tests job):
@@ -13,6 +13,7 @@
 #    - Located in tests/integration directory
 #    - Longer timeout (15 min vs 10 min for unit tests)
 #    - Separate cache for dependencies
+
 name: Python Tests
 on:
   workflow_dispatch: {}
@@ -39,6 +40,8 @@ jobs:
     runs-on: ubuntu-latest
     env:
       OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+      AGENTOPS_API_KEY: ${{ secrets.AGENTOPS_API_KEY }}
+      PYTHONUNBUFFERED: "1"
 
     strategy:
       matrix:
@@ -65,10 +68,6 @@ jobs:
         timeout-minutes: 5
         run: |
           uv run -m pytest tests/unit -v --cov=agentops --cov-report=xml
-        env:
-          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-          AGENTOPS_API_KEY: ${{ secrets.AGENTOPS_API_KEY }}
-          PYTHONUNBUFFERED: "1"
 
       # Only upload coverage report for python3.11
       - name: Upload coverage to Codecov
@@ -85,6 +84,8 @@ jobs:
     runs-on: ubuntu-latest
     env:
       OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+      AGENTOPS_API_KEY: ${{ secrets.AGENTOPS_API_KEY }}
+      PYTHONUNBUFFERED: "1"
 
     steps:
       - uses: actions/checkout@v4
@@ -105,8 +106,4 @@ jobs:
       - name: Run integration tests
         timeout-minutes: 5
         run: |
-          uv run -m pytest tests/integration -v --cov=agentops --cov-report=xml
-        env:
-          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-          AGENTOPS_API_KEY: ${{ secrets.AGENTOPS_API_KEY }}
-          PYTHONUNBUFFERED: "1"
+          uv run pytest tests/integration
