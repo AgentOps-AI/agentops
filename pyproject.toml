@@ -157,6 +157,22 @@ exclude = [
 [tool.hatch.build.targets.wheel]
 packages = ["agentops"]
 
+[tool.hatch.build]
+exclude = [
+  "docs/*",
+  "examples/*",
+  "tests/*",
+  ".github/*",
+  "*.gif",
+  "*.png",
+  "dist/*",
+  "build/*",
+  ".pytest_cache",
+  ".ruff_cache",
+  "__pycache__",
+  "*.pyc"
+]
+
 [tool.hatch.metadata]
 allow-direct-references = true
 
