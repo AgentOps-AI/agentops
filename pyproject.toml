@@ -1,10 +1,10 @@
 [build-system]
-requires = ["setuptools>=61.0", "wheel"]
-build-backend = "setuptools.build_meta"
+requires = ["hatchling"]
+build-backend = "hatchling.build"
 
 [project]
 name = "agentops"
-version = "0.3.22"
+version = "0.3.23"
 authors = [
   { name="Alex Reibman", email="areibman@gmail.com" },
   { name="Shawn Qiu", email="siyangqiu@gmail.com" },
@@ -154,5 +154,25 @@ exclude = [
     "tests/core_manual_tests",
 ]
 
-[tool.setuptools]
+[tool.hatch.build.targets.wheel]
 packages = ["agentops"]
+
+[tool.hatch.build]
+exclude = [
+  "docs/*",
+  "examples/*",
+  "tests/*",
+  ".github/*",
+  "*.gif",
+  "*.png",
+  "dist/*",
+  "build/*",
+  ".pytest_cache",
+  ".ruff_cache",
+  "__pycache__",
+  "*.pyc"
+]
+
+[tool.hatch.metadata]
+allow-direct-references = true
+

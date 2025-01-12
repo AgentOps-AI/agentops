@@ -1,39 +1,81 @@
 # This workflow will upload a Python Package using Twine when a release is created
 # For more information see: https://docs.github.com/en/actions/automating-builds-and-tests/building-and-testing-python#publishing-to-package-registries
 
-# This workflow uses actions that are not certified by GitHub.
-# They are provided by a third-party and are governed by
-# separate terms of service, privacy policy, and support
-# documentation.
+# To run this workflow manually using GitHub CLI:
+#   Test build only:
+#     gh workflow run "Upload Python Package" --ref main --field test_mode=build-only
+#   
+#   Test with dry run (no actual publish):
+#     gh workflow run "Upload Python Package" --ref main --field test_mode=dry-run
+#   
+#   Test publish to TestPyPI (requires TEST_PYPI_API_TOKEN):
+#     gh workflow run "Upload Python Package" --ref main --field test_mode=testpypi
+#
+# To check workflow status:
+#     gh run list --workflow "Upload Python Package"
+#     gh run view <run-id>
 
 name: Upload Python Package
 
 on:
   release:
     types: [published]
+  workflow_dispatch:
+    inputs:
+      test_mode:
+        description: 'Test mode (dry-run, testpypi, build-only)'
+        required: true
+        default: 'dry-run'
+        type: choice
+        options:
+          - dry-run
+          - testpypi
+          - build-only
 
 permissions:
   contents: read
+  id-token: write  # Required for trusted publishing
 
 jobs:
   deploy:
-
     runs-on: ubuntu-latest
-
+    environment:
+      name: ${{ github.event_name == 'release' && 'pypi' || 'test' }}
+      url: ${{ github.event_name == 'release' && 'https://pypi.org/p/agentops' || 'https://test.pypi.org/p/agentops' }}
     steps:
-    - uses: actions/checkout@v3
-    - name: Set up Python
-      uses: actions/setup-python@v3
+    - uses: actions/checkout@v4
+        
+    - name: Setup UV
+      uses: astral-sh/setup-uv@v5
       with:
-        python-version: '3.x'
-    - name: Install dependencies
+        python-version: "3.11"  # Specify exact version
+        cache-dependency-glob: |
+          **/pyproject.toml
+          **/requirements*.txt
+        
+    - name: Build and publish
+      env:
+        PYPI_TOKEN: ${{ secrets.PYPI_API_TOKEN }}
+        TEST_PYPI_TOKEN: ${{ secrets.TEST_PYPI_API_TOKEN }}
       run: |
-        python -m pip install --upgrade pip
-        pip install build
-    - name: Build package
-      run: python -m build
-    - name: Publish package
-      uses: pypa/gh-action-pypi-publish@27b31702a0e7fc50959f5ad993c78deac1bdfc29
-      with:
-        user: __token__
-        password: ${{ secrets.PYPI_API_TOKEN }}
+        uv pip install build
+        uv build
+        
+        # Extra safety check
+        if [[ "${{ github.event_name }}" == "workflow_dispatch" && "${{ github.event.inputs.test_mode }}" == "testpypi" ]]; then
+          echo "⚠️ Publishing to TestPyPI..."
+          sleep 5  # Give time to cancel if needed
+        fi
+        
+        if [[ "${{ github.event.inputs.test_mode }}" == "dry-run" ]]; then
+          echo "🔍 Performing dry run..."
+          uv publish --check-url https://pypi.org/pypi
+        elif [[ "${{ github.event.inputs.test_mode }}" == "testpypi" ]]; then
+          uv publish --publish-url https://test.pypi.org/legacy/ --token $TEST_PYPI_TOKEN
+        elif [[ "${{ github.event.inputs.test_mode }}" == "build-only" ]]; then
+          echo "✅ Build completed successfully. Skipping publish."
+        elif [[ "${{ github.event_name }}" == "release" ]]; then
+          echo "⚠️ Publishing to PyPI in 10 seconds... (Ctrl+C to cancel)"
+          sleep 10
+          uv publish --token $PYPI_TOKEN
+        fi
