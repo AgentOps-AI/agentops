@@ -94,26 +94,4 @@ def vcr_config():
         "decode_compressed_response": True,
         "record_on_exception": False,
         "allow_playback_repeats": True,
-        # # Body filtering for system information
-        # "filter_post_data_parameters": [
-        #     ("host_env", "REDACTED_ENV_INFO"),
-        #     ("OS", "REDACTED_OS_INFO"),
-        #     ("CPU", "REDACTED_CPU_INFO"),
-        #     ("RAM", "REDACTED_RAM_INFO"),
-        #     ("Disk", "REDACTED_DISK_INFO"),
-        #     ("Installed Packages", "REDACTED_PACKAGES_INFO"),
-        #     ("Project Working Directory", "REDACTED_DIR_INFO"),
-        #     ("Virtual Environment", "REDACTED_VENV_INFO"),
-        #     ("Hostname", "REDACTED_HOSTNAME")
-        # ],
-        #
-        # # Custom before_record function to filter response bodies
-        # "before_record_response": lambda response: {
-        #     **response,
-        #     "body": {
-        #         "string": response["body"]["string"].replace(
-        #             str(Path.home()), "REDACTED_HOME_PATH"
-        #         )
-        #     } if isinstance(response.get("body", {}).get("string"), str) else response["body"]
-        # }
     }
