@@ -42,7 +42,14 @@ dependencies = [
 [dependency-groups]
 test = [
     "openai>=1.0.0",
-    "langchain",
+    "anthropic",
+    "cohere",
+    "litellm",
+    "ai21>=2.0.0,<3.0.0",
+    "groq",
+    "mistral",
+    "ollama",
+    # "langchain",
     "pytest-cov",
     "fastapi[standard]",
 ]
