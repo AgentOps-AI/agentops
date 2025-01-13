@@ -52,6 +52,7 @@ test = [
     # "langchain",
     "pytest-cov",
     "fastapi[standard]",
+    "mistralai"
 ]
 
 dev = [
