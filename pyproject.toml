@@ -55,6 +55,7 @@ dev = [
     "pytest-mock", # Mocking capabilities for isolating agent components
     "pyfakefs", # File system testing
     "pytest-recording", # Alternative to pytest-vcr with better Python 3.x support
+    # TODO: Use release version after vcrpy is released with this fix.
     "vcrpy @ git+https://github.com/kevin1024/vcrpy.git@5f1b20c4ca4a18c1fc8cfe049d7df12ca0659c9b",
     # Code quality and type checking
     "ruff", # Fast Python linter for maintaining code quality
