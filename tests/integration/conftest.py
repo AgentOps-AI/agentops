@@ -1,8 +1,7 @@
 import pytest
-
 import agentops
 from tests.fixtures.vcr import vcr_config
-
+from tests.fixtures.providers import *
 
 @pytest.fixture
 def agentops_session():
