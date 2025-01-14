@@ -87,4 +87,13 @@ def mistral_client():
 @pytest.fixture
 def litellm_client():
     """Initialize LiteLLM client."""
+
+    openai_key = os.getenv("OPENAI_API_KEY", "test-api-key")
+    anthropic_key = os.getenv("ANTHROPIC_API_KEY", "test-api-key")
+    openrouter_key = os.getenv("OPENROUTER_API_KEY", "test-api-key")
+
+    litellm.openai_key = openai_key
+    litellm.anthropic_key = anthropic_key
+    litellm.openrouter_key = openrouter_key
+
     return litellm
