@@ -135,11 +135,11 @@ class OpenAiProvider(InstrumentedProvider):
             )
 
         return response
-    
+
     def handle_assistant_response(self, response, kwargs, init_timestamp, session: Optional[Session] = None) -> dict:
         """Handle response based on return type"""
         from openai.pagination import BasePage
-        
+
         action_event = ActionEvent(init_timestamp=init_timestamp, params=kwargs)
         if session is not None:
             action_event.session_id = session.session_id

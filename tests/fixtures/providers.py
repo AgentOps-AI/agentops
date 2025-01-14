@@ -13,13 +13,15 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
+
 # Test messages for different providers
 @pytest.fixture
 def test_messages():
     return [
         {"role": "system", "content": "You are a helpful assistant."},
-        {"role": "user", "content": "Write a short greeting."}
+        {"role": "user", "content": "Write a short greeting."},
     ]
+
 
 @pytest.fixture
 def ai21_test_messages():
@@ -31,6 +33,7 @@ def ai21_test_messages():
         ),
     ]
 
+
 # Client fixtures
 @pytest.fixture
 def openai_client():
@@ -40,6 +43,7 @@ def openai_client():
         pytest.skip("OPENAI_API_KEY not found in environment variables")
     return OpenAI(api_key=api_key)
 
+
 @pytest.fixture
 def anthropic_client():
     """Initialize Anthropic client."""
@@ -47,6 +51,7 @@ def anthropic_client():
     if not api_key:
         pytest.skip("ANTHROPIC_API_KEY not found in environment variables")
     return Anthropic(api_key=api_key)
+
 
 @pytest.fixture
 def ai21_client():
@@ -56,6 +61,7 @@ def ai21_client():
         pytest.skip("AI21_API_KEY not found in environment variables")
     return AI21Client(api_key=api_key)
 
+
 @pytest.fixture
 def ai21_async_client():
     """Initialize AI21 async client."""
@@ -63,6 +69,7 @@ def ai21_async_client():
     if not api_key:
         pytest.skip("AI21_API_KEY not found in environment variables")
     return AsyncAI21Client(api_key=api_key)
+
 
 @pytest.fixture
 def cohere_client():
@@ -72,6 +79,7 @@ def cohere_client():
         pytest.skip("COHERE_API_KEY not found in environment variables")
     return CohereClient(api_key=api_key)
 
+
 @pytest.fixture
 def groq_client():
     """Initialize Groq client."""
@@ -80,6 +88,7 @@ def groq_client():
         pytest.skip("GROQ_API_KEY not found in environment variables")
     return Groq(api_key=api_key)
 
+
 @pytest.fixture
 def mistral_client():
     """Initialize Mistral client."""
@@ -87,6 +96,7 @@ def mistral_client():
     if not api_key:
         pytest.skip("MISTRAL_API_KEY not found in environment variables")
     return Mistral(api_key=api_key)
+
 
 @pytest.fixture
 def litellm_client():
