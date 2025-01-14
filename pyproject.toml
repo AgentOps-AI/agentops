@@ -47,12 +47,11 @@ test = [
     "litellm",
     "ai21>=2.0.0,<3.0.0",
     "groq",
-    "mistral",
     "ollama",
+    "mistralai",
     # "langchain",
     "pytest-cov",
     "fastapi[standard]",
-    "mistralai"
 ]
 
 dev = [
