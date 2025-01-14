@@ -57,3 +57,11 @@ TOOL_LOGS = "tool.logs"
 # Execution attributes
 EXECUTION_START_TIME = "execution.start_time"
 EXECUTION_END_TIME = "execution.end_time"
+
+# Log attributes
+LOG_SEVERITY = "log.severity"
+LOG_MESSAGE = "log.message"
+LOG_TIMESTAMP = "log.timestamp"
+LOG_THREAD_ID = "log.thread_id"
+LOG_SESSION_ID = "log.session_id"
+LOG_CONTEXT = "log.context"

@@ -8,6 +8,7 @@ from uuid import UUID
 from agentops.config import Configuration
 from agentops.enums import EndState
 from agentops.helpers import get_ISO_time
+from .log_capture import LogCapture
 
 if TYPE_CHECKING:
     from agentops.event import Event, ErrorEvent
@@ -36,6 +37,7 @@ class Session:
     _api: Any = field(init=False, repr=False, default=None)
     _manager: Any = field(init=False, repr=False, default=None)
     _otel_exporter: Any = field(init=False, repr=False, default=None)
+    _log_capture: LogCapture = field(init=False, repr=False, default=None)
 
     def __post_init__(self):
         """Initialize session manager"""
@@ -47,20 +49,21 @@ class Session:
 
         # Initialize API client
         from ..api.session import SessionApiClient
-        
+
         if not self.config.api_key:
             raise ValueError("API key is required")
-            
+
         self._api = SessionApiClient(
-            endpoint=self.config.endpoint,
-            session_id=self.session_id,
-            api_key=self.config.api_key
+            endpoint=self.config.endpoint, session_id=self.session_id, api_key=self.config.api_key
         )
 
         # Then initialize manager
         from .manager import SessionManager
+
         self._manager = SessionManager(self)
         self.is_running = self._manager.start_session()
+
+        self._log_capture = LogCapture(self)
 
     # Public API - All delegate to manager
     def add_tags(self, tags: Union[str, List[str]]) -> None:
@@ -109,3 +112,11 @@ class Session:
     def _tracer_provider(self):
         """For testing compatibility"""
         return self._telemetry._tracer_provider if self._telemetry else None
+
+    def start_log_capture(self):
+        """Start capturing terminal output"""
+        self._log_capture.start()
+
+    def stop_log_capture(self):
+        """Stop capturing terminal output"""
+        self._log_capture.stop()
