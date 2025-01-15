@@ -8,79 +8,82 @@ flowchart TB
         Client[AgentOps Client]
         Session[Session]
         Events[Events]
+        LogCapture[LogCapture]
         TelemetryManager[Telemetry Manager]
     end
 
     subgraph OpenTelemetry
         TracerProvider[Tracer Provider]
         EventProcessor[Event Processor]
-        SessionExporter[Session Exporter]
+        LogProcessor[Log Processor]
+        EventToSpanEncoder[Event To Span Encoder]
         BatchProcessor[Batch Processor]
+        SessionExporter[Session Exporter]
+        EventExporter[Event Exporter]
     end
 
     Client --> Session
     Session --> Events
+    Session --> LogCapture
+    LogCapture --> LogProcessor
     Events --> TelemetryManager
     
     TelemetryManager --> TracerProvider
     TracerProvider --> EventProcessor
-    EventProcessor --> BatchProcessor
+    EventProcessor --> EventToSpanEncoder
+    LogProcessor --> EventToSpanEncoder
+    EventToSpanEncoder --> BatchProcessor
     BatchProcessor --> SessionExporter
+    BatchProcessor --> EventExporter
 ```
 
 ## Component Overview
 
 ### TelemetryManager (`manager.py`)
 - Central configuration and management of OpenTelemetry setup
-- Handles TracerProvider lifecycle
+- Handles TracerProvider lifecycle and sampling configuration
 - Manages session-specific exporters and processors
 - Coordinates telemetry initialization and shutdown
+- Configures logging telemetry
 
 ### EventProcessor (`processors.py`)
 - Processes spans for AgentOps events
 - Adds session context to spans
-- Tracks event counts
+- Tracks event counts by type
 - Handles error propagation
 - Forwards spans to wrapped processor
 
-### SessionExporter (`exporters/session.py`)
-- Exports session spans and their child event spans
-- Maintains session hierarchy
-- Handles batched export of spans
-- Manages retry logic and error handling
+### SessionExporter & EventExporter (`exporters/`)
+- Exports session spans and events
+- Implements retry logic with exponential backoff
+- Supports custom formatters
+- Handles batched export
+- Manages error handling and recovery
 
 ### EventToSpanEncoder (`encoders.py`)
-- Converts AgentOps events into OpenTelemetry span definitions
+- Converts AgentOps events into OpenTelemetry spans
 - Handles different event types (LLM, Action, Tool, Error)
 - Maintains proper span relationships
+- Supports custom attribute mapping
 
-## Event to Span Mapping
+## Configuration Options
 
-```mermaid
-classDiagram
-    class Event {
-        +UUID id
-        +EventType event_type
-        +timestamp init_timestamp
-        +timestamp end_timestamp
-    }
-
-    class SpanDefinition {
-        +str name
-        +Dict attributes
-        +SpanKind kind
-        +str parent_span_id
-    }
-
-    class EventTypes {
-        LLMEvent
-        ActionEvent
-        ToolEvent
-        ErrorEvent
-    }
-
-    Event <|-- EventTypes
-    Event --> SpanDefinition : encoded to
+The `OTELConfig` class supports:
+```python
+@dataclass
+class OTELConfig:
+    additional_exporters: Optional[List[SpanExporter]] = None
+    resource_attributes: Optional[Dict] = None
+    sampler: Optional[Sampler] = None
+    retry_config: Optional[Dict] = None
+    custom_formatters: Optional[List[Callable]] = None
+    enable_metrics: bool = False
+    metric_readers: Optional[List] = None
+    max_queue_size: int = 512
+    max_export_batch_size: int = 256
+    max_wait_time: int = 5000
+    endpoint: str = "https://api.agentops.ai"
+    api_key: Optional[str] = None
 ```
 
 ## Usage Example
@@ -88,10 +91,15 @@ classDiagram
 ```python
 from agentops.telemetry import OTELConfig, TelemetryManager
 
-# Configure telemetry
+# Configure telemetry with retry and custom formatting
 config = OTELConfig(
     endpoint="https://api.agentops.ai",
     api_key="your-api-key",
+    retry_config={
+        "retry_count": 3,
+        "retry_delay": 1.0
+    },
+    custom_formatters=[your_formatter_function],
     enable_metrics=True
 )
 
@@ -105,58 +113,3 @@ tracer = manager.create_session_tracer(
     jwt=jwt_token
 )
 ```
-
-## Configuration Options
-
-The `OTELConfig` class supports:
-- Custom exporters
-- Resource attributes
-- Sampling configuration
-- Retry settings
-- Custom formatters
-- Metrics configuration
-- Batch processing settings
-
-## Key Features
-
-1. **Session-Based Tracing**
-   - Each session creates a unique trace
-   - Events are tracked as spans within the session
-   - Maintains proper parent-child relationships
-
-2. **Automatic Context Management**
-   - Session context propagation
-   - Event type tracking
-   - Error handling and status propagation
-
-3. **Flexible Export Options**
-   - Batched export support
-   - Retry logic for failed exports
-   - Custom formatters for span data
-
-4. **Resource Attribution**
-   - Service name and version tracking
-   - Environment information
-   - Deployment-specific tags
-
-## Best Practices
-
-1. **Configuration**
-   - Always set service name and version
-   - Configure appropriate batch sizes
-   - Set reasonable retry limits
-
-2. **Error Handling**
-   - Use error events for failures
-   - Include relevant error details
-   - Maintain error context
-
-3. **Resource Management**
-   - Clean up sessions when done
-   - Properly shutdown telemetry
-   - Monitor resource usage
-
-4. **Performance**
-   - Use appropriate batch sizes
-   - Configure export intervals
-   - Monitor queue sizes
