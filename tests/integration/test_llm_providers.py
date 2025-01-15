@@ -301,40 +301,30 @@ def test_ollama_provider(test_messages: List[Dict[str, Any]]):
     import ollama
     from ollama import AsyncClient
 
-    try:
-        # Test if Ollama server is running
-        ollama.list()
-    except Exception as e:
-        pytest.skip(f"Ollama server not running: {e}")
+    # Sync chat
+    response = ollama.chat(
+        model="llama3.2:1b",
+        messages=test_messages,
+    )
+    assert response["message"]["content"]
 
-    try:
-        # Sync chat
-        response = ollama.chat(
+    # Stream chat
+    stream = ollama.chat(
+        model="llama3.2:1b",
+        messages=test_messages,
+        stream=True,
+    )
+    content = collect_stream_content(stream, "ollama")
+    assert len(content) > 0
+
+    # Async chat
+    async def async_test():
+        client = AsyncClient()
+        response = await client.chat(
             model="llama3.2:1b",
             messages=test_messages,
         )
-        assert response["message"]["content"]
+        return response
 
-        # Stream chat
-        stream = ollama.chat(
-            model="llama3.2:1b",
-            messages=test_messages,
-            stream=True,
-        )
-        content = collect_stream_content(stream, "ollama")
-        assert len(content) > 0
-
-        # Async chat
-        async def async_test():
-            client = AsyncClient()
-            response = await client.chat(
-                model="llama3.2:1b",
-                messages=test_messages,
-            )
-            return response
-
-        async_response = asyncio.run(async_test())
-        assert async_response["message"]["content"]
-
-    except Exception as e:
-        pytest.skip(f"Ollama test failed: {e}")
+    async_response = asyncio.run(async_test())
+    assert async_response["message"]["content"]
