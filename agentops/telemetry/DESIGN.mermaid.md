@@ -4,6 +4,7 @@ flowchart TB
         Session["Session"]
         Events["Events (LLM/Action/Tool/Error)"]
         LLMTracker["LLM Tracker"]
+        LogCapture["LogCapture"]
     end
 
     subgraph Providers["LLM Providers"]
@@ -15,7 +16,12 @@ flowchart TB
 
     subgraph TelemetrySystem["Telemetry System"]
         TelemetryManager["TelemetryManager"]
-        EventProcessor["EventProcessor"]
+        
+        subgraph Processors["Processors"]
+            EventProcessor["EventProcessor"]
+            LogProcessor["LogProcessor"]
+        end
+        
         SpanEncoder["EventToSpanEncoder"]
         BatchProcessor["BatchSpanProcessor"]
     end
@@ -32,13 +38,18 @@ flowchart TB
 
     %% Flow connections
     Session -->|Creates| Events
+    Session -->|Initializes| LogCapture
+    LogCapture -->|Captures| StdOut["stdout/stderr"]
+    LogCapture -->|Queues Logs| LogProcessor
+    
     LLMTracker -->|Instruments| Providers
     Providers -->|Generates| Events
     Events -->|Processed by| TelemetryManager
     
-    TelemetryManager -->|Creates| EventProcessor
+    TelemetryManager -->|Creates| Processors
     EventProcessor -->|Converts via| SpanEncoder
-    EventProcessor -->|Batches via| BatchProcessor
+    LogProcessor -->|Converts via| SpanEncoder
+    EventProcessor & LogProcessor -->|Forward to| BatchProcessor
     
     BatchProcessor -->|Exports via| SessionExporter
     BatchProcessor -->|Exports via| EventExporter
