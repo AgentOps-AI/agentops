@@ -57,8 +57,7 @@ def test_openai_provider(openai_client, test_messages: List[Dict[str, Any]]):
 
 
 ## Assistants API Tests
-# @pytest.mark.vcr()
-@pytest.mark.skip("For some reason this is not being recorded and the test is not behaving correctly")
+@pytest.mark.vcr()
 async def test_openai_assistants_provider(openai_client):
     """Test OpenAI Assistants API integration for all overridden methods."""
 
@@ -107,21 +106,8 @@ async def test_openai_assistants_provider(openai_client):
     run = openai_client.beta.threads.runs.create(thread_id=thread.id, assistant_id=assistant.id)
     assert run.id.startswith("run_")
 
-    # Monitor run status with timeout
-    async def check_run_status():
-        while True:
-            run_status = openai_client.beta.threads.runs.retrieve(thread_id=thread.id, run_id=run.id)
-            print(f"Current run status: {run_status.status}")  # Print status for debugging
-            if run_status.status in ["completed", "failed", "cancelled", "expired"]:
-                return run_status
-            await asyncio.sleep(1)
-
-    try:
-        run_status = await asyncio.wait_for(check_run_status(), timeout=10)  # Shorter timeout
-    except TimeoutError:
-        # Cancel the run if it's taking too long
-        openai_client.beta.threads.runs.cancel(thread_id=thread.id, run_id=run.id)
-        pytest.skip("Assistant run timed out and was cancelled")
+    while run.status not in ["completed", "failed"]:
+        run = openai_client.beta.threads.runs.retrieve(thread_id=thread.id, run_id=run.id)
 
     # Get run steps
     run_steps = openai_client.beta.threads.runs.steps.list(thread_id=thread.id, run_id=run.id)
