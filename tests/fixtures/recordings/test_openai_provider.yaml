@@ -1,0 +1,270 @@
+interactions:
+- request:
+    body: '{"messages": [{"role": "system", "content": "You are a helpful assistant."},
+      {"role": "user", "content": "Write a short greeting."}], "model": "gpt-4o-mini",
+      "temperature": 0.5}'
+    headers:
+      accept:
+      - application/json
+      accept-encoding:
+      - gzip, deflate
+      authorization:
+      - REDACTED
+      connection:
+      - keep-alive
+      content-length:
+      - '177'
+      content-type:
+      - application/json
+      host:
+      - api.openai.com
+      user-agent:
+      - OpenAI/Python 1.59.7
+      x-stainless-arch:
+      - REDACTED
+      x-stainless-async:
+      - REDACTED
+      x-stainless-lang:
+      - REDACTED
+      x-stainless-os:
+      - REDACTED
+      x-stainless-package-version:
+      - 1.59.7
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - REDACTED
+      x-stainless-runtime-version:
+      - REDACTED
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    body:
+      string: "{\n  \"id\": \"chatcmpl-ApkAbxV6BBqNLiaQQ6a5HCEwXLmAA\",\n  \"object\":
+        \"chat.completion\",\n  \"created\": 1736895569,\n  \"model\": \"gpt-4o-mini-2024-07-18\",\n
+        \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
+        \"assistant\",\n        \"content\": \"Hello! I hope you\u2019re having a
+        wonderful day. If there\u2019s anything you need or want to chat about, I\u2019m
+        here to help!\",\n        \"refusal\": null\n      },\n      \"logprobs\":
+        null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
+        22,\n    \"completion_tokens\": 30,\n    \"total_tokens\": 52,\n    \"prompt_tokens_details\":
+        {\n      \"cached_tokens\": 0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\":
+        {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\":
+        0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\":
+        \"default\",\n  \"system_fingerprint\": \"fp_72ed7ab54c\"\n}\n"
+    headers:
+      CF-Cache-Status:
+      - DYNAMIC
+      CF-RAY: REDACTED
+      Connection:
+      - keep-alive
+      Content-Type:
+      - application/json
+      Date:
+      - Tue, 14 Jan 2025 22:59:29 GMT
+      Server:
+      - cloudflare
+      Set-Cookie:
+      - __cf_bm=nTeqBB.FJ5L9.tbK3OsjnVgVy7JPWjJ9RZnapxrmcLM-1736895569-1.0.1.1-vCajXrvKFmqMzUrU9zgBZJ77gDpRA.cbrXEeDgDrsAu3arBGzLXq57EGoqyUKccq78JSRukW3JgDJ9rCV1.kcA;
+        path=/; expires=Tue, 14-Jan-25 23:29:29 GMT; domain=.api.openai.com; HttpOnly;
+        Secure; SameSite=None
+      - _cfuvid=1c1CTy6EGeF_f8IKNuP8XGQ5Dhogd_43ONVfCynasWg-1736895569861-0.0.1.1-604800000;
+        path=/; domain=.api.openai.com; HttpOnly; Secure; SameSite=None
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - nosniff
+      access-control-expose-headers:
+      - X-Request-ID
+      alt-svc:
+      - h3=":443"; ma=86400
+      content-length:
+      - '900'
+      openai-organization: REDACTED
+      openai-processing-ms:
+      - '673'
+      openai-version:
+      - '2020-10-01'
+      strict-transport-security:
+      - max-age=31536000; includeSubDomains; preload
+      x-ratelimit-limit-requests: REDACTED
+      x-ratelimit-limit-tokens: REDACTED
+      x-ratelimit-remaining-requests: REDACTED
+      x-ratelimit-remaining-tokens: REDACTED
+      x-ratelimit-reset-requests: REDACTED
+      x-ratelimit-reset-tokens: REDACTED
+      x-request-id: REDACTED
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"messages": [{"role": "system", "content": "You are a helpful assistant."},
+      {"role": "user", "content": "Write a short greeting."}], "model": "gpt-4o-mini",
+      "stream": true, "temperature": 0.5}'
+    headers:
+      accept:
+      - application/json
+      accept-encoding:
+      - gzip, deflate
+      authorization:
+      - REDACTED
+      connection:
+      - keep-alive
+      content-length:
+      - '193'
+      content-type:
+      - application/json
+      cookie:
+      - __cf_bm=nTeqBB.FJ5L9.tbK3OsjnVgVy7JPWjJ9RZnapxrmcLM-1736895569-1.0.1.1-vCajXrvKFmqMzUrU9zgBZJ77gDpRA.cbrXEeDgDrsAu3arBGzLXq57EGoqyUKccq78JSRukW3JgDJ9rCV1.kcA;
+        _cfuvid=1c1CTy6EGeF_f8IKNuP8XGQ5Dhogd_43ONVfCynasWg-1736895569861-0.0.1.1-604800000
+      host:
+      - api.openai.com
+      user-agent:
+      - OpenAI/Python 1.59.7
+      x-stainless-arch:
+      - REDACTED
+      x-stainless-async:
+      - REDACTED
+      x-stainless-lang:
+      - REDACTED
+      x-stainless-os:
+      - REDACTED
+      x-stainless-package-version:
+      - 1.59.7
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - REDACTED
+      x-stainless-runtime-version:
+      - REDACTED
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    body:
+      string: 'data: {"id":"chatcmpl-ApkAcllY6kSBAXEp65QnRYCC1clJq","object":"chat.completion.chunk","created":1736895570,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_72ed7ab54c","choices":[{"index":0,"delta":{"role":"assistant","content":"","refusal":null},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-ApkAcllY6kSBAXEp65QnRYCC1clJq","object":"chat.completion.chunk","created":1736895570,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_72ed7ab54c","choices":[{"index":0,"delta":{"content":"Hello"},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-ApkAcllY6kSBAXEp65QnRYCC1clJq","object":"chat.completion.chunk","created":1736895570,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_72ed7ab54c","choices":[{"index":0,"delta":{"content":"!"},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-ApkAcllY6kSBAXEp65QnRYCC1clJq","object":"chat.completion.chunk","created":1736895570,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_72ed7ab54c","choices":[{"index":0,"delta":{"content":"
+        I"},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-ApkAcllY6kSBAXEp65QnRYCC1clJq","object":"chat.completion.chunk","created":1736895570,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_72ed7ab54c","choices":[{"index":0,"delta":{"content":"
+        hope"},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-ApkAcllY6kSBAXEp65QnRYCC1clJq","object":"chat.completion.chunk","created":1736895570,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_72ed7ab54c","choices":[{"index":0,"delta":{"content":"
+        this"},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-ApkAcllY6kSBAXEp65QnRYCC1clJq","object":"chat.completion.chunk","created":1736895570,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_72ed7ab54c","choices":[{"index":0,"delta":{"content":"
+        message"},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-ApkAcllY6kSBAXEp65QnRYCC1clJq","object":"chat.completion.chunk","created":1736895570,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_72ed7ab54c","choices":[{"index":0,"delta":{"content":"
+        finds"},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-ApkAcllY6kSBAXEp65QnRYCC1clJq","object":"chat.completion.chunk","created":1736895570,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_72ed7ab54c","choices":[{"index":0,"delta":{"content":"
+        you"},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-ApkAcllY6kSBAXEp65QnRYCC1clJq","object":"chat.completion.chunk","created":1736895570,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_72ed7ab54c","choices":[{"index":0,"delta":{"content":"
+        well"},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-ApkAcllY6kSBAXEp65QnRYCC1clJq","object":"chat.completion.chunk","created":1736895570,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_72ed7ab54c","choices":[{"index":0,"delta":{"content":"."},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-ApkAcllY6kSBAXEp65QnRYCC1clJq","object":"chat.completion.chunk","created":1736895570,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_72ed7ab54c","choices":[{"index":0,"delta":{"content":"
+        W"},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-ApkAcllY6kSBAXEp65QnRYCC1clJq","object":"chat.completion.chunk","created":1736895570,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_72ed7ab54c","choices":[{"index":0,"delta":{"content":"ishing"},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-ApkAcllY6kSBAXEp65QnRYCC1clJq","object":"chat.completion.chunk","created":1736895570,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_72ed7ab54c","choices":[{"index":0,"delta":{"content":"
+        you"},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-ApkAcllY6kSBAXEp65QnRYCC1clJq","object":"chat.completion.chunk","created":1736895570,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_72ed7ab54c","choices":[{"index":0,"delta":{"content":"
+        a"},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-ApkAcllY6kSBAXEp65QnRYCC1clJq","object":"chat.completion.chunk","created":1736895570,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_72ed7ab54c","choices":[{"index":0,"delta":{"content":"
+        day"},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-ApkAcllY6kSBAXEp65QnRYCC1clJq","object":"chat.completion.chunk","created":1736895570,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_72ed7ab54c","choices":[{"index":0,"delta":{"content":"
+        filled"},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-ApkAcllY6kSBAXEp65QnRYCC1clJq","object":"chat.completion.chunk","created":1736895570,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_72ed7ab54c","choices":[{"index":0,"delta":{"content":"
+        with"},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-ApkAcllY6kSBAXEp65QnRYCC1clJq","object":"chat.completion.chunk","created":1736895570,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_72ed7ab54c","choices":[{"index":0,"delta":{"content":"
+        joy"},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-ApkAcllY6kSBAXEp65QnRYCC1clJq","object":"chat.completion.chunk","created":1736895570,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_72ed7ab54c","choices":[{"index":0,"delta":{"content":"
+        and"},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-ApkAcllY6kSBAXEp65QnRYCC1clJq","object":"chat.completion.chunk","created":1736895570,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_72ed7ab54c","choices":[{"index":0,"delta":{"content":"
+        positivity"},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-ApkAcllY6kSBAXEp65QnRYCC1clJq","object":"chat.completion.chunk","created":1736895570,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_72ed7ab54c","choices":[{"index":0,"delta":{"content":"!"},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-ApkAcllY6kSBAXEp65QnRYCC1clJq","object":"chat.completion.chunk","created":1736895570,"model":"gpt-4o-mini-2024-07-18","service_tier":"default","system_fingerprint":"fp_72ed7ab54c","choices":[{"index":0,"delta":{},"logprobs":null,"finish_reason":"stop"}]}
+
+
+        data: [DONE]
+
+
+        '
+    headers:
+      CF-Cache-Status:
+      - DYNAMIC
+      CF-RAY: REDACTED
+      Connection:
+      - keep-alive
+      Content-Type:
+      - text/event-stream; charset=utf-8
+      Date:
+      - Tue, 14 Jan 2025 22:59:30 GMT
+      Server:
+      - cloudflare
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - nosniff
+      access-control-expose-headers:
+      - X-Request-ID
+      alt-svc:
+      - h3=":443"; ma=86400
+      openai-organization: REDACTED
+      openai-processing-ms:
+      - '115'
+      openai-version:
+      - '2020-10-01'
+      strict-transport-security:
+      - max-age=31536000; includeSubDomains; preload
+      x-ratelimit-limit-requests: REDACTED
+      x-ratelimit-limit-tokens: REDACTED
+      x-ratelimit-remaining-requests: REDACTED
+      x-ratelimit-remaining-tokens: REDACTED
+      x-ratelimit-reset-requests: REDACTED
+      x-ratelimit-reset-tokens: REDACTED
+      x-request-id: REDACTED
+    status:
+      code: 200
+      message: OK
+version: 1

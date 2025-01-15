@@ -1,0 +1,543 @@
+interactions:
+- request:
+    body: '{"model": "jamba-1.5-mini", "messages": [{"role": "system", "content":
+      "You are an expert mathematician."}, {"role": "user", "content": "Write a summary
+      of 5 lines on the Shockley diode equation."}], "stream": false}'
+    headers:
+      accept:
+      - '*/*'
+      accept-encoding:
+      - gzip, deflate
+      authorization:
+      - REDACTED
+      connection:
+      - keep-alive
+      content-length:
+      - '216'
+      content-type:
+      - application/json
+      host:
+      - api.ai21.com
+      user-agent:
+      - AI21 studio SDK 2.15.2 Python 3.10.16 Operating System macOS-15.2-arm64-arm-64bit
+    method: POST
+    uri: https://api.ai21.com/studio/v1/chat/completions
+  response:
+    body:
+      string: '{"id":"chatcmpl-549f4199-3264-729e-a529-cda4502f0f48","choices":[{"index":0,"message":{"role":"assistant","content":"The
+        Shockley diode equation, also known as the diode law, describes the current-voltage
+        characteristics of a diode. It is given by $$I = I_S \\left( e^{\\frac{V}{n
+        V_T}} - 1 \\right)$$\n\n, where $$I$$\n\n is the diode current, $$I_S$$\n\n
+        is the reverse saturation current, $$V$$\n\n is the applied voltage, $$n$$\n\n
+        is the ideality factor, and $$V_T$$\n\n is the thermal voltage. The equation
+        highlights the exponential relationship between the voltage across the diode
+        and the current through it, with the ideality factor $$n$$\n\n accounting
+        for deviations from ideal behavior. This model is fundamental in understanding
+        semiconductor diode operation in circuits.","tool_calls":null},"logprobs":null,"finish_reason":"stop"}],"usage":{"prompt_tokens":30,"completion_tokens":162,"total_tokens":192}}'
+    headers:
+      CF-Cache-Status:
+      - DYNAMIC
+      CF-RAY: REDACTED
+      Connection:
+      - keep-alive
+      Content-Type:
+      - application/json
+      Date:
+      - Tue, 14 Jan 2025 22:01:34 GMT
+      Server:
+      - cloudflare
+      Strict-Transport-Security:
+      - max-age=15552000; includeSubDomains
+      Transfer-Encoding:
+      - chunked
+      content-length:
+      - '919'
+      request-id:
+      - 549f4199-3264-729e-a529-cda4502f0f48
+      via:
+      - 1.1 google
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"model": "jamba-1.5-mini", "messages": [{"role": "system", "content":
+      "You are an expert mathematician."}, {"role": "user", "content": "Write a summary
+      of 5 lines on the Shockley diode equation."}], "stream": true}'
+    headers:
+      accept:
+      - '*/*'
+      accept-encoding:
+      - gzip, deflate
+      authorization:
+      - REDACTED
+      connection:
+      - keep-alive
+      content-length:
+      - '215'
+      content-type:
+      - application/json
+      host:
+      - api.ai21.com
+      user-agent:
+      - AI21 studio SDK 2.15.2 Python 3.10.16 Operating System macOS-15.2-arm64-arm-64bit
+    method: POST
+    uri: https://api.ai21.com/studio/v1/chat/completions
+  response:
+    body:
+      string: "data: {\"id\": \"chatcmpl-fb9ce6f7-20dc-d385-5fb2-90e86a364bc9\", \"choices\":
+        [{\"index\": 0, \"delta\": {\"role\": \"assistant\"}, \"logprobs\": null,
+        \"finish_reason\": null}]}\r\n\r\ndata: {\"id\": \"chatcmpl-fb9ce6f7-20dc-d385-5fb2-90e86a364bc9\",
+        \"choices\": [{\"index\": 0, \"delta\": {\"content\": \"The\"}, \"logprobs\":
+        null, \"finish_reason\": null}]}\r\n\r\ndata: {\"id\": \"chatcmpl-fb9ce6f7-20dc-d385-5fb2-90e86a364bc9\",
+        \"choices\": [{\"index\": 0, \"delta\": {\"content\": \" Shock\"}, \"logprobs\":
+        null, \"finish_reason\": null}]}\r\n\r\ndata: {\"id\": \"chatcmpl-fb9ce6f7-20dc-d385-5fb2-90e86a364bc9\",
+        \"choices\": [{\"index\": 0, \"delta\": {\"content\": \"ley\"}, \"logprobs\":
+        null, \"finish_reason\": null}]}\r\n\r\ndata: {\"id\": \"chatcmpl-fb9ce6f7-20dc-d385-5fb2-90e86a364bc9\",
+        \"choices\": [{\"index\": 0, \"delta\": {\"content\": \" diode\"}, \"logprobs\":
+        null, \"finish_reason\": null}]}\r\n\r\ndata: {\"id\": \"chatcmpl-fb9ce6f7-20dc-d385-5fb2-90e86a364bc9\",
+        \"choices\": [{\"index\": 0, \"delta\": {\"content\": \" equation\"}, \"logprobs\":
+        null, \"finish_reason\": null}]}\r\n\r\ndata: {\"id\": \"chatcmpl-fb9ce6f7-20dc-d385-5fb2-90e86a364bc9\",
+        \"choices\": [{\"index\": 0, \"delta\": {\"content\": \",\"}, \"logprobs\":
+        null, \"finish_reason\": null}]}\r\n\r\ndata: {\"id\": \"chatcmpl-fb9ce6f7-20dc-d385-5fb2-90e86a364bc9\",
+        \"choices\": [{\"index\": 0, \"delta\": {\"content\": \" also\"}, \"logprobs\":
+        null, \"finish_reason\": null}]}\r\n\r\ndata: {\"id\": \"chatcmpl-fb9ce6f7-20dc-d385-5fb2-90e86a364bc9\",
+        \"choices\": [{\"index\": 0, \"delta\": {\"content\": \" known\"}, \"logprobs\":
+        null, \"finish_reason\": null}]}\r\n\r\ndata: {\"id\": \"chatcmpl-fb9ce6f7-20dc-d385-5fb2-90e86a364bc9\",
+        \"choices\": [{\"index\": 0, \"delta\": {\"content\": \" as\"}, \"logprobs\":
+        null, \"finish_reason\": null}]}\r\n\r\ndata: {\"id\": \"chatcmpl-fb9ce6f7-20dc-d385-5fb2-90e86a364bc9\",
+        \"choices\": [{\"index\": 0, \"delta\": {\"content\": \" the\"}, \"logprobs\":
+        null, \"finish_reason\": null}]}\r\n\r\ndata: {\"id\": \"chatcmpl-fb9ce6f7-20dc-d385-5fb2-90e86a364bc9\",
+        \"choices\": [{\"index\": 0, \"delta\": {\"content\": \" diode\"}, \"logprobs\":
+        null, \"finish_reason\": null}]}\r\n\r\ndata: {\"id\": \"chatcmpl-fb9ce6f7-20dc-d385-5fb2-90e86a364bc9\",
+        \"choices\": [{\"index\": 0, \"delta\": {\"content\": \" law\"}, \"logprobs\":
+        null, \"finish_reason\": null}]}\r\n\r\ndata: {\"id\": \"chatcmpl-fb9ce6f7-20dc-d385-5fb2-90e86a364bc9\",
+        \"choices\": [{\"index\": 0, \"delta\": {\"content\": \",\"}, \"logprobs\":
+        null, \"finish_reason\": null}]}\r\n\r\ndata: {\"id\": \"chatcmpl-fb9ce6f7-20dc-d385-5fb2-90e86a364bc9\",
+        \"choices\": [{\"index\": 0, \"delta\": {\"content\": \" describes\"}, \"logprobs\":
+        null, \"finish_reason\": null}]}\r\n\r\ndata: {\"id\": \"chatcmpl-fb9ce6f7-20dc-d385-5fb2-90e86a364bc9\",
+        \"choices\": [{\"index\": 0, \"delta\": {\"content\": \" the\"}, \"logprobs\":
+        null, \"finish_reason\": null}]}\r\n\r\ndata: {\"id\": \"chatcmpl-fb9ce6f7-20dc-d385-5fb2-90e86a364bc9\",
+        \"choices\": [{\"index\": 0, \"delta\": {\"content\": \" current\"}, \"logprobs\":
+        null, \"finish_reason\": null}]}\r\n\r\ndata: {\"id\": \"chatcmpl-fb9ce6f7-20dc-d385-5fb2-90e86a364bc9\",
+        \"choices\": [{\"index\": 0, \"delta\": {\"content\": \"-\"}, \"logprobs\":
+        null, \"finish_reason\": null}]}\r\n\r\ndata: {\"id\": \"chatcmpl-fb9ce6f7-20dc-d385-5fb2-90e86a364bc9\",
+        \"choices\": [{\"index\": 0, \"delta\": {\"content\": \"voltage\"}, \"logprobs\":
+        null, \"finish_reason\": null}]}\r\n\r\ndata: {\"id\": \"chatcmpl-fb9ce6f7-20dc-d385-5fb2-90e86a364bc9\",
+        \"choices\": [{\"index\": 0, \"delta\": {\"content\": \" characteristic\"},
+        \"logprobs\": null, \"finish_reason\": null}]}\r\n\r\ndata: {\"id\": \"chatcmpl-fb9ce6f7-20dc-d385-5fb2-90e86a364bc9\",
+        \"choices\": [{\"index\": 0, \"delta\": {\"content\": \" of\"}, \"logprobs\":
+        null, \"finish_reason\": null}]}\r\n\r\ndata: {\"id\": \"chatcmpl-fb9ce6f7-20dc-d385-5fb2-90e86a364bc9\",
+        \"choices\": [{\"index\": 0, \"delta\": {\"content\": \" a\"}, \"logprobs\":
+        null, \"finish_reason\": null}]}\r\n\r\ndata: {\"id\": \"chatcmpl-fb9ce6f7-20dc-d385-5fb2-90e86a364bc9\",
+        \"choices\": [{\"index\": 0, \"delta\": {\"content\": \" diode\"}, \"logprobs\":
+        null, \"finish_reason\": null}]}\r\n\r\ndata: {\"id\": \"chatcmpl-fb9ce6f7-20dc-d385-5fb2-90e86a364bc9\",
+        \"choices\": [{\"index\": 0, \"delta\": {\"content\": \".\"}, \"logprobs\":
+        null, \"finish_reason\": null}]}\r\n\r\ndata: {\"id\": \"chatcmpl-fb9ce6f7-20dc-d385-5fb2-90e86a364bc9\",
+        \"choices\": [{\"index\": 0, \"delta\": {\"content\": \" It\"}, \"logprobs\":
+        null, \"finish_reason\": null}]}\r\n\r\ndata: {\"id\": \"chatcmpl-fb9ce6f7-20dc-d385-5fb2-90e86a364bc9\",
+        \"choices\": [{\"index\": 0, \"delta\": {\"content\": \" is\"}, \"logprobs\":
+        null, \"finish_reason\": null}]}\r\n\r\ndata: {\"id\": \"chatcmpl-fb9ce6f7-20dc-d385-5fb2-90e86a364bc9\",
+        \"choices\": [{\"index\": 0, \"delta\": {\"content\": \" given\"}, \"logprobs\":
+        null, \"finish_reason\": null}]}\r\n\r\ndata: {\"id\": \"chatcmpl-fb9ce6f7-20dc-d385-5fb2-90e86a364bc9\",
+        \"choices\": [{\"index\": 0, \"delta\": {\"content\": \" by\"}, \"logprobs\":
+        null, \"finish_reason\": null}]}\r\n\r\ndata: {\"id\": \"chatcmpl-fb9ce6f7-20dc-d385-5fb2-90e86a364bc9\",
+        \"choices\": [{\"index\": 0, \"delta\": {\"content\": \" $$\"}, \"logprobs\":
+        null, \"finish_reason\": null}]}\r\n\r\ndata: {\"id\": \"chatcmpl-fb9ce6f7-20dc-d385-5fb2-90e86a364bc9\",
+        \"choices\": [{\"index\": 0, \"delta\": {\"content\": \"I\"}, \"logprobs\":
+        null, \"finish_reason\": null}]}\r\n\r\ndata: {\"id\": \"chatcmpl-fb9ce6f7-20dc-d385-5fb2-90e86a364bc9\",
+        \"choices\": [{\"index\": 0, \"delta\": {\"content\": \" =\"}, \"logprobs\":
+        null, \"finish_reason\": null}]}\r\n\r\ndata: {\"id\": \"chatcmpl-fb9ce6f7-20dc-d385-5fb2-90e86a364bc9\",
+        \"choices\": [{\"index\": 0, \"delta\": {\"content\": \" I\"}, \"logprobs\":
+        null, \"finish_reason\": null}]}\r\n\r\ndata: {\"id\": \"chatcmpl-fb9ce6f7-20dc-d385-5fb2-90e86a364bc9\",
+        \"choices\": [{\"index\": 0, \"delta\": {\"content\": \"_\"}, \"logprobs\":
+        null, \"finish_reason\": null}]}\r\n\r\ndata: {\"id\": \"chatcmpl-fb9ce6f7-20dc-d385-5fb2-90e86a364bc9\",
+        \"choices\": [{\"index\": 0, \"delta\": {\"content\": \"S\"}, \"logprobs\":
+        null, \"finish_reason\": null}]}\r\n\r\ndata: {\"id\": \"chatcmpl-fb9ce6f7-20dc-d385-5fb2-90e86a364bc9\",
+        \"choices\": [{\"index\": 0, \"delta\": {\"content\": \" \\\\\"}, \"logprobs\":
+        null, \"finish_reason\": null}]}\r\n\r\ndata: {\"id\": \"chatcmpl-fb9ce6f7-20dc-d385-5fb2-90e86a364bc9\",
+        \"choices\": [{\"index\": 0, \"delta\": {\"content\": \"left\"}, \"logprobs\":
+        null, \"finish_reason\": null}]}\r\n\r\ndata: {\"id\": \"chatcmpl-fb9ce6f7-20dc-d385-5fb2-90e86a364bc9\",
+        \"choices\": [{\"index\": 0, \"delta\": {\"content\": \"(\"}, \"logprobs\":
+        null, \"finish_reason\": null}]}\r\n\r\ndata: {\"id\": \"chatcmpl-fb9ce6f7-20dc-d385-5fb2-90e86a364bc9\",
+        \"choices\": [{\"index\": 0, \"delta\": {\"content\": \" e\"}, \"logprobs\":
+        null, \"finish_reason\": null}]}\r\n\r\ndata: {\"id\": \"chatcmpl-fb9ce6f7-20dc-d385-5fb2-90e86a364bc9\",
+        \"choices\": [{\"index\": 0, \"delta\": {\"content\": \"^{\\\\\"}, \"logprobs\":
+        null, \"finish_reason\": null}]}\r\n\r\ndata: {\"id\": \"chatcmpl-fb9ce6f7-20dc-d385-5fb2-90e86a364bc9\",
+        \"choices\": [{\"index\": 0, \"delta\": {\"content\": \"frac\"}, \"logprobs\":
+        null, \"finish_reason\": null}]}\r\n\r\ndata: {\"id\": \"chatcmpl-fb9ce6f7-20dc-d385-5fb2-90e86a364bc9\",
+        \"choices\": [{\"index\": 0, \"delta\": {\"content\": \"{\"}, \"logprobs\":
+        null, \"finish_reason\": null}]}\r\n\r\ndata: {\"id\": \"chatcmpl-fb9ce6f7-20dc-d385-5fb2-90e86a364bc9\",
+        \"choices\": [{\"index\": 0, \"delta\": {\"content\": \"V\"}, \"logprobs\":
+        null, \"finish_reason\": null}]}\r\n\r\ndata: {\"id\": \"chatcmpl-fb9ce6f7-20dc-d385-5fb2-90e86a364bc9\",
+        \"choices\": [{\"index\": 0, \"delta\": {\"content\": \"}{\"}, \"logprobs\":
+        null, \"finish_reason\": null}]}\r\n\r\ndata: {\"id\": \"chatcmpl-fb9ce6f7-20dc-d385-5fb2-90e86a364bc9\",
+        \"choices\": [{\"index\": 0, \"delta\": {\"content\": \"n\"}, \"logprobs\":
+        null, \"finish_reason\": null}]}\r\n\r\ndata: {\"id\": \"chatcmpl-fb9ce6f7-20dc-d385-5fb2-90e86a364bc9\",
+        \"choices\": [{\"index\": 0, \"delta\": {\"content\": \" V\"}, \"logprobs\":
+        null, \"finish_reason\": null}]}\r\n\r\ndata: {\"id\": \"chatcmpl-fb9ce6f7-20dc-d385-5fb2-90e86a364bc9\",
+        \"choices\": [{\"index\": 0, \"delta\": {\"content\": \"_\"}, \"logprobs\":
+        null, \"finish_reason\": null}]}\r\n\r\ndata: {\"id\": \"chatcmpl-fb9ce6f7-20dc-d385-5fb2-90e86a364bc9\",
+        \"choices\": [{\"index\": 0, \"delta\": {\"content\": \"T\"}, \"logprobs\":
+        null, \"finish_reason\": null}]}\r\n\r\ndata: {\"id\": \"chatcmpl-fb9ce6f7-20dc-d385-5fb2-90e86a364bc9\",
+        \"choices\": [{\"index\": 0, \"delta\": {\"content\": \"}}\"}, \"logprobs\":
+        null, \"finish_reason\": null}]}\r\n\r\ndata: {\"id\": \"chatcmpl-fb9ce6f7-20dc-d385-5fb2-90e86a364bc9\",
+        \"choices\": [{\"index\": 0, \"delta\": {\"content\": \" -\"}, \"logprobs\":
+        null, \"finish_reason\": null}]}\r\n\r\ndata: {\"id\": \"chatcmpl-fb9ce6f7-20dc-d385-5fb2-90e86a364bc9\",
+        \"choices\": [{\"index\": 0, \"delta\": {\"content\": \" \"}, \"logprobs\":
+        null, \"finish_reason\": null}]}\r\n\r\ndata: {\"id\": \"chatcmpl-fb9ce6f7-20dc-d385-5fb2-90e86a364bc9\",
+        \"choices\": [{\"index\": 0, \"delta\": {\"content\": \"1\"}, \"logprobs\":
+        null, \"finish_reason\": null}]}\r\n\r\ndata: {\"id\": \"chatcmpl-fb9ce6f7-20dc-d385-5fb2-90e86a364bc9\",
+        \"choices\": [{\"index\": 0, \"delta\": {\"content\": \" \\\\\"}, \"logprobs\":
+        null, \"finish_reason\": null}]}\r\n\r\ndata: {\"id\": \"chatcmpl-fb9ce6f7-20dc-d385-5fb2-90e86a364bc9\",
+        \"choices\": [{\"index\": 0, \"delta\": {\"content\": \"right\"}, \"logprobs\":
+        null, \"finish_reason\": null}]}\r\n\r\ndata: {\"id\": \"chatcmpl-fb9ce6f7-20dc-d385-5fb2-90e86a364bc9\",
+        \"choices\": [{\"index\": 0, \"delta\": {\"content\": \")$$\"}, \"logprobs\":
+        null, \"finish_reason\": null}]}\r\n\r\ndata: {\"id\": \"chatcmpl-fb9ce6f7-20dc-d385-5fb2-90e86a364bc9\",
+        \"choices\": [{\"index\": 0, \"delta\": {\"content\": \"\\n\"}, \"logprobs\":
+        null, \"finish_reason\": null}]}\r\n\r\ndata: {\"id\": \"chatcmpl-fb9ce6f7-20dc-d385-5fb2-90e86a364bc9\",
+        \"choices\": [{\"index\": 0, \"delta\": {\"content\": \"\\n\"}, \"logprobs\":
+        null, \"finish_reason\": null}]}\r\n\r\ndata: {\"id\": \"chatcmpl-fb9ce6f7-20dc-d385-5fb2-90e86a364bc9\",
+        \"choices\": [{\"index\": 0, \"delta\": {\"content\": \",\"}, \"logprobs\":
+        null, \"finish_reason\": null}]}\r\n\r\ndata: {\"id\": \"chatcmpl-fb9ce6f7-20dc-d385-5fb2-90e86a364bc9\",
+        \"choices\": [{\"index\": 0, \"delta\": {\"content\": \" where\"}, \"logprobs\":
+        null, \"finish_reason\": null}]}\r\n\r\ndata: {\"id\": \"chatcmpl-fb9ce6f7-20dc-d385-5fb2-90e86a364bc9\",
+        \"choices\": [{\"index\": 0, \"delta\": {\"content\": \" $$\"}, \"logprobs\":
+        null, \"finish_reason\": null}]}\r\n\r\ndata: {\"id\": \"chatcmpl-fb9ce6f7-20dc-d385-5fb2-90e86a364bc9\",
+        \"choices\": [{\"index\": 0, \"delta\": {\"content\": \"I\"}, \"logprobs\":
+        null, \"finish_reason\": null}]}\r\n\r\ndata: {\"id\": \"chatcmpl-fb9ce6f7-20dc-d385-5fb2-90e86a364bc9\",
+        \"choices\": [{\"index\": 0, \"delta\": {\"content\": \"$$\"}, \"logprobs\":
+        null, \"finish_reason\": null}]}\r\n\r\ndata: {\"id\": \"chatcmpl-fb9ce6f7-20dc-d385-5fb2-90e86a364bc9\",
+        \"choices\": [{\"index\": 0, \"delta\": {\"content\": \"\\n\"}, \"logprobs\":
+        null, \"finish_reason\": null}]}\r\n\r\ndata: {\"id\": \"chatcmpl-fb9ce6f7-20dc-d385-5fb2-90e86a364bc9\",
+        \"choices\": [{\"index\": 0, \"delta\": {\"content\": \"\\n\"}, \"logprobs\":
+        null, \"finish_reason\": null}]}\r\n\r\ndata: {\"id\": \"chatcmpl-fb9ce6f7-20dc-d385-5fb2-90e86a364bc9\",
+        \"choices\": [{\"index\": 0, \"delta\": {\"content\": \" is\"}, \"logprobs\":
+        null, \"finish_reason\": null}]}\r\n\r\ndata: {\"id\": \"chatcmpl-fb9ce6f7-20dc-d385-5fb2-90e86a364bc9\",
+        \"choices\": [{\"index\": 0, \"delta\": {\"content\": \" the\"}, \"logprobs\":
+        null, \"finish_reason\": null}]}\r\n\r\ndata: {\"id\": \"chatcmpl-fb9ce6f7-20dc-d385-5fb2-90e86a364bc9\",
+        \"choices\": [{\"index\": 0, \"delta\": {\"content\": \" diode\"}, \"logprobs\":
+        null, \"finish_reason\": null}]}\r\n\r\ndata: {\"id\": \"chatcmpl-fb9ce6f7-20dc-d385-5fb2-90e86a364bc9\",
+        \"choices\": [{\"index\": 0, \"delta\": {\"content\": \" current\"}, \"logprobs\":
+        null, \"finish_reason\": null}]}\r\n\r\ndata: {\"id\": \"chatcmpl-fb9ce6f7-20dc-d385-5fb2-90e86a364bc9\",
+        \"choices\": [{\"index\": 0, \"delta\": {\"content\": \",\"}, \"logprobs\":
+        null, \"finish_reason\": null}]}\r\n\r\ndata: {\"id\": \"chatcmpl-fb9ce6f7-20dc-d385-5fb2-90e86a364bc9\",
+        \"choices\": [{\"index\": 0, \"delta\": {\"content\": \" $$\"}, \"logprobs\":
+        null, \"finish_reason\": null}]}\r\n\r\ndata: {\"id\": \"chatcmpl-fb9ce6f7-20dc-d385-5fb2-90e86a364bc9\",
+        \"choices\": [{\"index\": 0, \"delta\": {\"content\": \"I\"}, \"logprobs\":
+        null, \"finish_reason\": null}]}\r\n\r\ndata: {\"id\": \"chatcmpl-fb9ce6f7-20dc-d385-5fb2-90e86a364bc9\",
+        \"choices\": [{\"index\": 0, \"delta\": {\"content\": \"_\"}, \"logprobs\":
+        null, \"finish_reason\": null}]}\r\n\r\ndata: {\"id\": \"chatcmpl-fb9ce6f7-20dc-d385-5fb2-90e86a364bc9\",
+        \"choices\": [{\"index\": 0, \"delta\": {\"content\": \"S\"}, \"logprobs\":
+        null, \"finish_reason\": null}]}\r\n\r\ndata: {\"id\": \"chatcmpl-fb9ce6f7-20dc-d385-5fb2-90e86a364bc9\",
+        \"choices\": [{\"index\": 0, \"delta\": {\"content\": \"$$\"}, \"logprobs\":
+        null, \"finish_reason\": null}]}\r\n\r\ndata: {\"id\": \"chatcmpl-fb9ce6f7-20dc-d385-5fb2-90e86a364bc9\",
+        \"choices\": [{\"index\": 0, \"delta\": {\"content\": \"\\n\"}, \"logprobs\":
+        null, \"finish_reason\": null}]}\r\n\r\ndata: {\"id\": \"chatcmpl-fb9ce6f7-20dc-d385-5fb2-90e86a364bc9\",
+        \"choices\": [{\"index\": 0, \"delta\": {\"content\": \"\\n\"}, \"logprobs\":
+        null, \"finish_reason\": null}]}\r\n\r\ndata: {\"id\": \"chatcmpl-fb9ce6f7-20dc-d385-5fb2-90e86a364bc9\",
+        \"choices\": [{\"index\": 0, \"delta\": {\"content\": \" is\"}, \"logprobs\":
+        null, \"finish_reason\": null}]}\r\n\r\ndata: {\"id\": \"chatcmpl-fb9ce6f7-20dc-d385-5fb2-90e86a364bc9\",
+        \"choices\": [{\"index\": 0, \"delta\": {\"content\": \" the\"}, \"logprobs\":
+        null, \"finish_reason\": null}]}\r\n\r\ndata: {\"id\": \"chatcmpl-fb9ce6f7-20dc-d385-5fb2-90e86a364bc9\",
+        \"choices\": [{\"index\": 0, \"delta\": {\"content\": \" reverse\"}, \"logprobs\":
+        null, \"finish_reason\": null}]}\r\n\r\ndata: {\"id\": \"chatcmpl-fb9ce6f7-20dc-d385-5fb2-90e86a364bc9\",
+        \"choices\": [{\"index\": 0, \"delta\": {\"content\": \" saturation\"}, \"logprobs\":
+        null, \"finish_reason\": null}]}\r\n\r\ndata: {\"id\": \"chatcmpl-fb9ce6f7-20dc-d385-5fb2-90e86a364bc9\",
+        \"choices\": [{\"index\": 0, \"delta\": {\"content\": \" current\"}, \"logprobs\":
+        null, \"finish_reason\": null}]}\r\n\r\ndata: {\"id\": \"chatcmpl-fb9ce6f7-20dc-d385-5fb2-90e86a364bc9\",
+        \"choices\": [{\"index\": 0, \"delta\": {\"content\": \",\"}, \"logprobs\":
+        null, \"finish_reason\": null}]}\r\n\r\ndata: {\"id\": \"chatcmpl-fb9ce6f7-20dc-d385-5fb2-90e86a364bc9\",
+        \"choices\": [{\"index\": 0, \"delta\": {\"content\": \" $$\"}, \"logprobs\":
+        null, \"finish_reason\": null}]}\r\n\r\ndata: {\"id\": \"chatcmpl-fb9ce6f7-20dc-d385-5fb2-90e86a364bc9\",
+        \"choices\": [{\"index\": 0, \"delta\": {\"content\": \"V\"}, \"logprobs\":
+        null, \"finish_reason\": null}]}\r\n\r\ndata: {\"id\": \"chatcmpl-fb9ce6f7-20dc-d385-5fb2-90e86a364bc9\",
+        \"choices\": [{\"index\": 0, \"delta\": {\"content\": \"$$\"}, \"logprobs\":
+        null, \"finish_reason\": null}]}\r\n\r\ndata: {\"id\": \"chatcmpl-fb9ce6f7-20dc-d385-5fb2-90e86a364bc9\",
+        \"choices\": [{\"index\": 0, \"delta\": {\"content\": \"\\n\"}, \"logprobs\":
+        null, \"finish_reason\": null}]}\r\n\r\ndata: {\"id\": \"chatcmpl-fb9ce6f7-20dc-d385-5fb2-90e86a364bc9\",
+        \"choices\": [{\"index\": 0, \"delta\": {\"content\": \"\\n\"}, \"logprobs\":
+        null, \"finish_reason\": null}]}\r\n\r\ndata: {\"id\": \"chatcmpl-fb9ce6f7-20dc-d385-5fb2-90e86a364bc9\",
+        \"choices\": [{\"index\": 0, \"delta\": {\"content\": \" is\"}, \"logprobs\":
+        null, \"finish_reason\": null}]}\r\n\r\ndata: {\"id\": \"chatcmpl-fb9ce6f7-20dc-d385-5fb2-90e86a364bc9\",
+        \"choices\": [{\"index\": 0, \"delta\": {\"content\": \" the\"}, \"logprobs\":
+        null, \"finish_reason\": null}]}\r\n\r\ndata: {\"id\": \"chatcmpl-fb9ce6f7-20dc-d385-5fb2-90e86a364bc9\",
+        \"choices\": [{\"index\": 0, \"delta\": {\"content\": \" voltage\"}, \"logprobs\":
+        null, \"finish_reason\": null}]}\r\n\r\ndata: {\"id\": \"chatcmpl-fb9ce6f7-20dc-d385-5fb2-90e86a364bc9\",
+        \"choices\": [{\"index\": 0, \"delta\": {\"content\": \" across\"}, \"logprobs\":
+        null, \"finish_reason\": null}]}\r\n\r\ndata: {\"id\": \"chatcmpl-fb9ce6f7-20dc-d385-5fb2-90e86a364bc9\",
+        \"choices\": [{\"index\": 0, \"delta\": {\"content\": \" the\"}, \"logprobs\":
+        null, \"finish_reason\": null}]}\r\n\r\ndata: {\"id\": \"chatcmpl-fb9ce6f7-20dc-d385-5fb2-90e86a364bc9\",
+        \"choices\": [{\"index\": 0, \"delta\": {\"content\": \" diode\"}, \"logprobs\":
+        null, \"finish_reason\": null}]}\r\n\r\ndata: {\"id\": \"chatcmpl-fb9ce6f7-20dc-d385-5fb2-90e86a364bc9\",
+        \"choices\": [{\"index\": 0, \"delta\": {\"content\": \",\"}, \"logprobs\":
+        null, \"finish_reason\": null}]}\r\n\r\ndata: {\"id\": \"chatcmpl-fb9ce6f7-20dc-d385-5fb2-90e86a364bc9\",
+        \"choices\": [{\"index\": 0, \"delta\": {\"content\": \" $$\"}, \"logprobs\":
+        null, \"finish_reason\": null}]}\r\n\r\ndata: {\"id\": \"chatcmpl-fb9ce6f7-20dc-d385-5fb2-90e86a364bc9\",
+        \"choices\": [{\"index\": 0, \"delta\": {\"content\": \"n\"}, \"logprobs\":
+        null, \"finish_reason\": null}]}\r\n\r\ndata: {\"id\": \"chatcmpl-fb9ce6f7-20dc-d385-5fb2-90e86a364bc9\",
+        \"choices\": [{\"index\": 0, \"delta\": {\"content\": \"$$\"}, \"logprobs\":
+        null, \"finish_reason\": null}]}\r\n\r\ndata: {\"id\": \"chatcmpl-fb9ce6f7-20dc-d385-5fb2-90e86a364bc9\",
+        \"choices\": [{\"index\": 0, \"delta\": {\"content\": \"\\n\"}, \"logprobs\":
+        null, \"finish_reason\": null}]}\r\n\r\ndata: {\"id\": \"chatcmpl-fb9ce6f7-20dc-d385-5fb2-90e86a364bc9\",
+        \"choices\": [{\"index\": 0, \"delta\": {\"content\": \"\\n\"}, \"logprobs\":
+        null, \"finish_reason\": null}]}\r\n\r\ndata: {\"id\": \"chatcmpl-fb9ce6f7-20dc-d385-5fb2-90e86a364bc9\",
+        \"choices\": [{\"index\": 0, \"delta\": {\"content\": \" is\"}, \"logprobs\":
+        null, \"finish_reason\": null}]}\r\n\r\ndata: {\"id\": \"chatcmpl-fb9ce6f7-20dc-d385-5fb2-90e86a364bc9\",
+        \"choices\": [{\"index\": 0, \"delta\": {\"content\": \" the\"}, \"logprobs\":
+        null, \"finish_reason\": null}]}\r\n\r\ndata: {\"id\": \"chatcmpl-fb9ce6f7-20dc-d385-5fb2-90e86a364bc9\",
+        \"choices\": [{\"index\": 0, \"delta\": {\"content\": \" ide\"}, \"logprobs\":
+        null, \"finish_reason\": null}]}\r\n\r\ndata: {\"id\": \"chatcmpl-fb9ce6f7-20dc-d385-5fb2-90e86a364bc9\",
+        \"choices\": [{\"index\": 0, \"delta\": {\"content\": \"ality\"}, \"logprobs\":
+        null, \"finish_reason\": null}]}\r\n\r\ndata: {\"id\": \"chatcmpl-fb9ce6f7-20dc-d385-5fb2-90e86a364bc9\",
+        \"choices\": [{\"index\": 0, \"delta\": {\"content\": \" factor\"}, \"logprobs\":
+        null, \"finish_reason\": null}]}\r\n\r\ndata: {\"id\": \"chatcmpl-fb9ce6f7-20dc-d385-5fb2-90e86a364bc9\",
+        \"choices\": [{\"index\": 0, \"delta\": {\"content\": \",\"}, \"logprobs\":
+        null, \"finish_reason\": null}]}\r\n\r\ndata: {\"id\": \"chatcmpl-fb9ce6f7-20dc-d385-5fb2-90e86a364bc9\",
+        \"choices\": [{\"index\": 0, \"delta\": {\"content\": \" and\"}, \"logprobs\":
+        null, \"finish_reason\": null}]}\r\n\r\ndata: {\"id\": \"chatcmpl-fb9ce6f7-20dc-d385-5fb2-90e86a364bc9\",
+        \"choices\": [{\"index\": 0, \"delta\": {\"content\": \" $$\"}, \"logprobs\":
+        null, \"finish_reason\": null}]}\r\n\r\ndata: {\"id\": \"chatcmpl-fb9ce6f7-20dc-d385-5fb2-90e86a364bc9\",
+        \"choices\": [{\"index\": 0, \"delta\": {\"content\": \"V\"}, \"logprobs\":
+        null, \"finish_reason\": null}]}\r\n\r\ndata: {\"id\": \"chatcmpl-fb9ce6f7-20dc-d385-5fb2-90e86a364bc9\",
+        \"choices\": [{\"index\": 0, \"delta\": {\"content\": \"_\"}, \"logprobs\":
+        null, \"finish_reason\": null}]}\r\n\r\ndata: {\"id\": \"chatcmpl-fb9ce6f7-20dc-d385-5fb2-90e86a364bc9\",
+        \"choices\": [{\"index\": 0, \"delta\": {\"content\": \"T\"}, \"logprobs\":
+        null, \"finish_reason\": null}]}\r\n\r\ndata: {\"id\": \"chatcmpl-fb9ce6f7-20dc-d385-5fb2-90e86a364bc9\",
+        \"choices\": [{\"index\": 0, \"delta\": {\"content\": \"$$\"}, \"logprobs\":
+        null, \"finish_reason\": null}]}\r\n\r\ndata: {\"id\": \"chatcmpl-fb9ce6f7-20dc-d385-5fb2-90e86a364bc9\",
+        \"choices\": [{\"index\": 0, \"delta\": {\"content\": \"\\n\"}, \"logprobs\":
+        null, \"finish_reason\": null}]}\r\n\r\ndata: {\"id\": \"chatcmpl-fb9ce6f7-20dc-d385-5fb2-90e86a364bc9\",
+        \"choices\": [{\"index\": 0, \"delta\": {\"content\": \"\\n\"}, \"logprobs\":
+        null, \"finish_reason\": null}]}\r\n\r\ndata: {\"id\": \"chatcmpl-fb9ce6f7-20dc-d385-5fb2-90e86a364bc9\",
+        \"choices\": [{\"index\": 0, \"delta\": {\"content\": \" is\"}, \"logprobs\":
+        null, \"finish_reason\": null}]}\r\n\r\ndata: {\"id\": \"chatcmpl-fb9ce6f7-20dc-d385-5fb2-90e86a364bc9\",
+        \"choices\": [{\"index\": 0, \"delta\": {\"content\": \" the\"}, \"logprobs\":
+        null, \"finish_reason\": null}]}\r\n\r\ndata: {\"id\": \"chatcmpl-fb9ce6f7-20dc-d385-5fb2-90e86a364bc9\",
+        \"choices\": [{\"index\": 0, \"delta\": {\"content\": \" thermal\"}, \"logprobs\":
+        null, \"finish_reason\": null}]}\r\n\r\ndata: {\"id\": \"chatcmpl-fb9ce6f7-20dc-d385-5fb2-90e86a364bc9\",
+        \"choices\": [{\"index\": 0, \"delta\": {\"content\": \" voltage\"}, \"logprobs\":
+        null, \"finish_reason\": null}]}\r\n\r\ndata: {\"id\": \"chatcmpl-fb9ce6f7-20dc-d385-5fb2-90e86a364bc9\",
+        \"choices\": [{\"index\": 0, \"delta\": {\"content\": \".\"}, \"logprobs\":
+        null, \"finish_reason\": null}]}\r\n\r\ndata: {\"id\": \"chatcmpl-fb9ce6f7-20dc-d385-5fb2-90e86a364bc9\",
+        \"choices\": [{\"index\": 0, \"delta\": {\"content\": \" The\"}, \"logprobs\":
+        null, \"finish_reason\": null}]}\r\n\r\ndata: {\"id\": \"chatcmpl-fb9ce6f7-20dc-d385-5fb2-90e86a364bc9\",
+        \"choices\": [{\"index\": 0, \"delta\": {\"content\": \" equation\"}, \"logprobs\":
+        null, \"finish_reason\": null}]}\r\n\r\ndata: {\"id\": \"chatcmpl-fb9ce6f7-20dc-d385-5fb2-90e86a364bc9\",
+        \"choices\": [{\"index\": 0, \"delta\": {\"content\": \" accounts\"}, \"logprobs\":
+        null, \"finish_reason\": null}]}\r\n\r\ndata: {\"id\": \"chatcmpl-fb9ce6f7-20dc-d385-5fb2-90e86a364bc9\",
+        \"choices\": [{\"index\": 0, \"delta\": {\"content\": \" for\"}, \"logprobs\":
+        null, \"finish_reason\": null}]}\r\n\r\ndata: {\"id\": \"chatcmpl-fb9ce6f7-20dc-d385-5fb2-90e86a364bc9\",
+        \"choices\": [{\"index\": 0, \"delta\": {\"content\": \" the\"}, \"logprobs\":
+        null, \"finish_reason\": null}]}\r\n\r\ndata: {\"id\": \"chatcmpl-fb9ce6f7-20dc-d385-5fb2-90e86a364bc9\",
+        \"choices\": [{\"index\": 0, \"delta\": {\"content\": \" exponential\"}, \"logprobs\":
+        null, \"finish_reason\": null}]}\r\n\r\ndata: {\"id\": \"chatcmpl-fb9ce6f7-20dc-d385-5fb2-90e86a364bc9\",
+        \"choices\": [{\"index\": 0, \"delta\": {\"content\": \" increase\"}, \"logprobs\":
+        null, \"finish_reason\": null}]}\r\n\r\ndata: {\"id\": \"chatcmpl-fb9ce6f7-20dc-d385-5fb2-90e86a364bc9\",
+        \"choices\": [{\"index\": 0, \"delta\": {\"content\": \" in\"}, \"logprobs\":
+        null, \"finish_reason\": null}]}\r\n\r\ndata: {\"id\": \"chatcmpl-fb9ce6f7-20dc-d385-5fb2-90e86a364bc9\",
+        \"choices\": [{\"index\": 0, \"delta\": {\"content\": \" current\"}, \"logprobs\":
+        null, \"finish_reason\": null}]}\r\n\r\ndata: {\"id\": \"chatcmpl-fb9ce6f7-20dc-d385-5fb2-90e86a364bc9\",
+        \"choices\": [{\"index\": 0, \"delta\": {\"content\": \" with\"}, \"logprobs\":
+        null, \"finish_reason\": null}]}\r\n\r\ndata: {\"id\": \"chatcmpl-fb9ce6f7-20dc-d385-5fb2-90e86a364bc9\",
+        \"choices\": [{\"index\": 0, \"delta\": {\"content\": \" increasing\"}, \"logprobs\":
+        null, \"finish_reason\": null}]}\r\n\r\ndata: {\"id\": \"chatcmpl-fb9ce6f7-20dc-d385-5fb2-90e86a364bc9\",
+        \"choices\": [{\"index\": 0, \"delta\": {\"content\": \" forward\"}, \"logprobs\":
+        null, \"finish_reason\": null}]}\r\n\r\ndata: {\"id\": \"chatcmpl-fb9ce6f7-20dc-d385-5fb2-90e86a364bc9\",
+        \"choices\": [{\"index\": 0, \"delta\": {\"content\": \" voltage\"}, \"logprobs\":
+        null, \"finish_reason\": null}]}\r\n\r\ndata: {\"id\": \"chatcmpl-fb9ce6f7-20dc-d385-5fb2-90e86a364bc9\",
+        \"choices\": [{\"index\": 0, \"delta\": {\"content\": \",\"}, \"logprobs\":
+        null, \"finish_reason\": null}]}\r\n\r\ndata: {\"id\": \"chatcmpl-fb9ce6f7-20dc-d385-5fb2-90e86a364bc9\",
+        \"choices\": [{\"index\": 0, \"delta\": {\"content\": \" while\"}, \"logprobs\":
+        null, \"finish_reason\": null}]}\r\n\r\ndata: {\"id\": \"chatcmpl-fb9ce6f7-20dc-d385-5fb2-90e86a364bc9\",
+        \"choices\": [{\"index\": 0, \"delta\": {\"content\": \" the\"}, \"logprobs\":
+        null, \"finish_reason\": null}]}\r\n\r\ndata: {\"id\": \"chatcmpl-fb9ce6f7-20dc-d385-5fb2-90e86a364bc9\",
+        \"choices\": [{\"index\": 0, \"delta\": {\"content\": \" term\"}, \"logprobs\":
+        null, \"finish_reason\": null}]}\r\n\r\ndata: {\"id\": \"chatcmpl-fb9ce6f7-20dc-d385-5fb2-90e86a364bc9\",
+        \"choices\": [{\"index\": 0, \"delta\": {\"content\": \" $$\"}, \"logprobs\":
+        null, \"finish_reason\": null}]}\r\n\r\ndata: {\"id\": \"chatcmpl-fb9ce6f7-20dc-d385-5fb2-90e86a364bc9\",
+        \"choices\": [{\"index\": 0, \"delta\": {\"content\": \"e\"}, \"logprobs\":
+        null, \"finish_reason\": null}]}\r\n\r\ndata: {\"id\": \"chatcmpl-fb9ce6f7-20dc-d385-5fb2-90e86a364bc9\",
+        \"choices\": [{\"index\": 0, \"delta\": {\"content\": \"^{\\\\\"}, \"logprobs\":
+        null, \"finish_reason\": null}]}\r\n\r\ndata: {\"id\": \"chatcmpl-fb9ce6f7-20dc-d385-5fb2-90e86a364bc9\",
+        \"choices\": [{\"index\": 0, \"delta\": {\"content\": \"frac\"}, \"logprobs\":
+        null, \"finish_reason\": null}]}\r\n\r\ndata: {\"id\": \"chatcmpl-fb9ce6f7-20dc-d385-5fb2-90e86a364bc9\",
+        \"choices\": [{\"index\": 0, \"delta\": {\"content\": \"{\"}, \"logprobs\":
+        null, \"finish_reason\": null}]}\r\n\r\ndata: {\"id\": \"chatcmpl-fb9ce6f7-20dc-d385-5fb2-90e86a364bc9\",
+        \"choices\": [{\"index\": 0, \"delta\": {\"content\": \"V\"}, \"logprobs\":
+        null, \"finish_reason\": null}]}\r\n\r\ndata: {\"id\": \"chatcmpl-fb9ce6f7-20dc-d385-5fb2-90e86a364bc9\",
+        \"choices\": [{\"index\": 0, \"delta\": {\"content\": \"}{\"}, \"logprobs\":
+        null, \"finish_reason\": null}]}\r\n\r\ndata: {\"id\": \"chatcmpl-fb9ce6f7-20dc-d385-5fb2-90e86a364bc9\",
+        \"choices\": [{\"index\": 0, \"delta\": {\"content\": \"n\"}, \"logprobs\":
+        null, \"finish_reason\": null}]}\r\n\r\ndata: {\"id\": \"chatcmpl-fb9ce6f7-20dc-d385-5fb2-90e86a364bc9\",
+        \"choices\": [{\"index\": 0, \"delta\": {\"content\": \" V\"}, \"logprobs\":
+        null, \"finish_reason\": null}]}\r\n\r\ndata: {\"id\": \"chatcmpl-fb9ce6f7-20dc-d385-5fb2-90e86a364bc9\",
+        \"choices\": [{\"index\": 0, \"delta\": {\"content\": \"_\"}, \"logprobs\":
+        null, \"finish_reason\": null}]}\r\n\r\ndata: {\"id\": \"chatcmpl-fb9ce6f7-20dc-d385-5fb2-90e86a364bc9\",
+        \"choices\": [{\"index\": 0, \"delta\": {\"content\": \"T\"}, \"logprobs\":
+        null, \"finish_reason\": null}]}\r\n\r\ndata: {\"id\": \"chatcmpl-fb9ce6f7-20dc-d385-5fb2-90e86a364bc9\",
+        \"choices\": [{\"index\": 0, \"delta\": {\"content\": \"}}\"}, \"logprobs\":
+        null, \"finish_reason\": null}]}\r\n\r\ndata: {\"id\": \"chatcmpl-fb9ce6f7-20dc-d385-5fb2-90e86a364bc9\",
+        \"choices\": [{\"index\": 0, \"delta\": {\"content\": \" -\"}, \"logprobs\":
+        null, \"finish_reason\": null}]}\r\n\r\ndata: {\"id\": \"chatcmpl-fb9ce6f7-20dc-d385-5fb2-90e86a364bc9\",
+        \"choices\": [{\"index\": 0, \"delta\": {\"content\": \" \"}, \"logprobs\":
+        null, \"finish_reason\": null}]}\r\n\r\ndata: {\"id\": \"chatcmpl-fb9ce6f7-20dc-d385-5fb2-90e86a364bc9\",
+        \"choices\": [{\"index\": 0, \"delta\": {\"content\": \"1\"}, \"logprobs\":
+        null, \"finish_reason\": null}]}\r\n\r\ndata: {\"id\": \"chatcmpl-fb9ce6f7-20dc-d385-5fb2-90e86a364bc9\",
+        \"choices\": [{\"index\": 0, \"delta\": {\"content\": \"$$\"}, \"logprobs\":
+        null, \"finish_reason\": null}]}\r\n\r\ndata: {\"id\": \"chatcmpl-fb9ce6f7-20dc-d385-5fb2-90e86a364bc9\",
+        \"choices\": [{\"index\": 0, \"delta\": {\"content\": \"\\n\"}, \"logprobs\":
+        null, \"finish_reason\": null}]}\r\n\r\ndata: {\"id\": \"chatcmpl-fb9ce6f7-20dc-d385-5fb2-90e86a364bc9\",
+        \"choices\": [{\"index\": 0, \"delta\": {\"content\": \"\\n\"}, \"logprobs\":
+        null, \"finish_reason\": null}]}\r\n\r\ndata: {\"id\": \"chatcmpl-fb9ce6f7-20dc-d385-5fb2-90e86a364bc9\",
+        \"choices\": [{\"index\": 0, \"delta\": {\"content\": \" ensures\"}, \"logprobs\":
+        null, \"finish_reason\": null}]}\r\n\r\ndata: {\"id\": \"chatcmpl-fb9ce6f7-20dc-d385-5fb2-90e86a364bc9\",
+        \"choices\": [{\"index\": 0, \"delta\": {\"content\": \" the\"}, \"logprobs\":
+        null, \"finish_reason\": null}]}\r\n\r\ndata: {\"id\": \"chatcmpl-fb9ce6f7-20dc-d385-5fb2-90e86a364bc9\",
+        \"choices\": [{\"index\": 0, \"delta\": {\"content\": \" current\"}, \"logprobs\":
+        null, \"finish_reason\": null}]}\r\n\r\ndata: {\"id\": \"chatcmpl-fb9ce6f7-20dc-d385-5fb2-90e86a364bc9\",
+        \"choices\": [{\"index\": 0, \"delta\": {\"content\": \" is\"}, \"logprobs\":
+        null, \"finish_reason\": null}]}\r\n\r\ndata: {\"id\": \"chatcmpl-fb9ce6f7-20dc-d385-5fb2-90e86a364bc9\",
+        \"choices\": [{\"index\": 0, \"delta\": {\"content\": \" very\"}, \"logprobs\":
+        null, \"finish_reason\": null}]}\r\n\r\ndata: {\"id\": \"chatcmpl-fb9ce6f7-20dc-d385-5fb2-90e86a364bc9\",
+        \"choices\": [{\"index\": 0, \"delta\": {\"content\": \" small\"}, \"logprobs\":
+        null, \"finish_reason\": null}]}\r\n\r\ndata: {\"id\": \"chatcmpl-fb9ce6f7-20dc-d385-5fb2-90e86a364bc9\",
+        \"choices\": [{\"index\": 0, \"delta\": {\"content\": \" for\"}, \"logprobs\":
+        null, \"finish_reason\": null}]}\r\n\r\ndata: {\"id\": \"chatcmpl-fb9ce6f7-20dc-d385-5fb2-90e86a364bc9\",
+        \"choices\": [{\"index\": 0, \"delta\": {\"content\": \" reverse\"}, \"logprobs\":
+        null, \"finish_reason\": null}]}\r\n\r\ndata: {\"id\": \"chatcmpl-fb9ce6f7-20dc-d385-5fb2-90e86a364bc9\",
+        \"choices\": [{\"index\": 0, \"delta\": {\"content\": \" volt\"}, \"logprobs\":
+        null, \"finish_reason\": null}]}\r\n\r\ndata: {\"id\": \"chatcmpl-fb9ce6f7-20dc-d385-5fb2-90e86a364bc9\",
+        \"choices\": [{\"index\": 0, \"delta\": {\"content\": \"ages\"}, \"logprobs\":
+        null, \"finish_reason\": null}]}\r\n\r\ndata: {\"id\": \"chatcmpl-fb9ce6f7-20dc-d385-5fb2-90e86a364bc9\",
+        \"choices\": [{\"index\": 0, \"delta\": {\"content\": \".\"}, \"logprobs\":
+        null, \"finish_reason\": null}]}\r\n\r\ndata: {\"id\": \"chatcmpl-fb9ce6f7-20dc-d385-5fb2-90e86a364bc9\",
+        \"choices\": [{\"index\": 0, \"delta\": {\"content\": \" This\"}, \"logprobs\":
+        null, \"finish_reason\": null}]}\r\n\r\ndata: {\"id\": \"chatcmpl-fb9ce6f7-20dc-d385-5fb2-90e86a364bc9\",
+        \"choices\": [{\"index\": 0, \"delta\": {\"content\": \" model\"}, \"logprobs\":
+        null, \"finish_reason\": null}]}\r\n\r\ndata: {\"id\": \"chatcmpl-fb9ce6f7-20dc-d385-5fb2-90e86a364bc9\",
+        \"choices\": [{\"index\": 0, \"delta\": {\"content\": \",\"}, \"logprobs\":
+        null, \"finish_reason\": null}]}\r\n\r\ndata: {\"id\": \"chatcmpl-fb9ce6f7-20dc-d385-5fb2-90e86a364bc9\",
+        \"choices\": [{\"index\": 0, \"delta\": {\"content\": \" developed\"}, \"logprobs\":
+        null, \"finish_reason\": null}]}\r\n\r\ndata: {\"id\": \"chatcmpl-fb9ce6f7-20dc-d385-5fb2-90e86a364bc9\",
+        \"choices\": [{\"index\": 0, \"delta\": {\"content\": \" by\"}, \"logprobs\":
+        null, \"finish_reason\": null}]}\r\n\r\ndata: {\"id\": \"chatcmpl-fb9ce6f7-20dc-d385-5fb2-90e86a364bc9\",
+        \"choices\": [{\"index\": 0, \"delta\": {\"content\": \" William\"}, \"logprobs\":
+        null, \"finish_reason\": null}]}\r\n\r\ndata: {\"id\": \"chatcmpl-fb9ce6f7-20dc-d385-5fb2-90e86a364bc9\",
+        \"choices\": [{\"index\": 0, \"delta\": {\"content\": \" Shock\"}, \"logprobs\":
+        null, \"finish_reason\": null}]}\r\n\r\ndata: {\"id\": \"chatcmpl-fb9ce6f7-20dc-d385-5fb2-90e86a364bc9\",
+        \"choices\": [{\"index\": 0, \"delta\": {\"content\": \"ley\"}, \"logprobs\":
+        null, \"finish_reason\": null}]}\r\n\r\ndata: {\"id\": \"chatcmpl-fb9ce6f7-20dc-d385-5fb2-90e86a364bc9\",
+        \"choices\": [{\"index\": 0, \"delta\": {\"content\": \",\"}, \"logprobs\":
+        null, \"finish_reason\": null}]}\r\n\r\ndata: {\"id\": \"chatcmpl-fb9ce6f7-20dc-d385-5fb2-90e86a364bc9\",
+        \"choices\": [{\"index\": 0, \"delta\": {\"content\": \" is\"}, \"logprobs\":
+        null, \"finish_reason\": null}]}\r\n\r\ndata: {\"id\": \"chatcmpl-fb9ce6f7-20dc-d385-5fb2-90e86a364bc9\",
+        \"choices\": [{\"index\": 0, \"delta\": {\"content\": \" fundamental\"}, \"logprobs\":
+        null, \"finish_reason\": null}]}\r\n\r\ndata: {\"id\": \"chatcmpl-fb9ce6f7-20dc-d385-5fb2-90e86a364bc9\",
+        \"choices\": [{\"index\": 0, \"delta\": {\"content\": \" in\"}, \"logprobs\":
+        null, \"finish_reason\": null}]}\r\n\r\ndata: {\"id\": \"chatcmpl-fb9ce6f7-20dc-d385-5fb2-90e86a364bc9\",
+        \"choices\": [{\"index\": 0, \"delta\": {\"content\": \" understanding\"},
+        \"logprobs\": null, \"finish_reason\": null}]}\r\n\r\ndata: {\"id\": \"chatcmpl-fb9ce6f7-20dc-d385-5fb2-90e86a364bc9\",
+        \"choices\": [{\"index\": 0, \"delta\": {\"content\": \" and\"}, \"logprobs\":
+        null, \"finish_reason\": null}]}\r\n\r\ndata: {\"id\": \"chatcmpl-fb9ce6f7-20dc-d385-5fb2-90e86a364bc9\",
+        \"choices\": [{\"index\": 0, \"delta\": {\"content\": \" analyzing\"}, \"logprobs\":
+        null, \"finish_reason\": null}]}\r\n\r\ndata: {\"id\": \"chatcmpl-fb9ce6f7-20dc-d385-5fb2-90e86a364bc9\",
+        \"choices\": [{\"index\": 0, \"delta\": {\"content\": \" diode\"}, \"logprobs\":
+        null, \"finish_reason\": null}]}\r\n\r\ndata: {\"id\": \"chatcmpl-fb9ce6f7-20dc-d385-5fb2-90e86a364bc9\",
+        \"choices\": [{\"index\": 0, \"delta\": {\"content\": \" behavior\"}, \"logprobs\":
+        null, \"finish_reason\": null}]}\r\n\r\ndata: {\"id\": \"chatcmpl-fb9ce6f7-20dc-d385-5fb2-90e86a364bc9\",
+        \"choices\": [{\"index\": 0, \"delta\": {\"content\": \" in\"}, \"logprobs\":
+        null, \"finish_reason\": null}]}\r\n\r\ndata: {\"id\": \"chatcmpl-fb9ce6f7-20dc-d385-5fb2-90e86a364bc9\",
+        \"choices\": [{\"index\": 0, \"delta\": {\"content\": \" electronic\"}, \"logprobs\":
+        null, \"finish_reason\": null}]}\r\n\r\ndata: {\"id\": \"chatcmpl-fb9ce6f7-20dc-d385-5fb2-90e86a364bc9\",
+        \"choices\": [{\"index\": 0, \"delta\": {\"content\": \" circuits\"}, \"logprobs\":
+        null, \"finish_reason\": null}]}\r\n\r\ndata: {\"id\": \"chatcmpl-fb9ce6f7-20dc-d385-5fb2-90e86a364bc9\",
+        \"choices\": [{\"index\": 0, \"delta\": {\"content\": \".\"}, \"logprobs\":
+        null, \"finish_reason\": null}]}\r\n\r\ndata: {\"id\": \"chatcmpl-fb9ce6f7-20dc-d385-5fb2-90e86a364bc9\",
+        \"choices\": [{\"index\": 0, \"delta\": {\"content\": \"\"}, \"logprobs\":
+        null, \"finish_reason\": \"stop\"}], \"usage\": {\"prompt_tokens\": 30, \"completion_tokens\":
+        184, \"total_tokens\": 214}}\r\n\r\ndata: [DONE]\r\n\r\n"
+    headers:
+      CF-Cache-Status:
+      - DYNAMIC
+      CF-RAY: REDACTED
+      Connection:
+      - keep-alive
+      Content-Type:
+      - text/event-stream; charset=utf-8
+      Date:
+      - Tue, 14 Jan 2025 22:01:34 GMT
+      Server:
+      - cloudflare
+      Strict-Transport-Security:
+      - max-age=15552000; includeSubDomains
+      Transfer-Encoding:
+      - chunked
+      request-id:
+      - fb9ce6f7-20dc-d385-5fb2-90e86a364bc9
+      via:
+      - 1.1 google
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"model": "jamba-1.5-mini", "messages": [{"role": "system", "content":
+      "You are an expert mathematician."}, {"role": "user", "content": "Write a summary
+      of 5 lines on the Shockley diode equation."}], "stream": false}'
+    headers:
+      accept:
+      - '*/*'
+      accept-encoding:
+      - gzip, deflate
+      authorization:
+      - REDACTED
+      connection:
+      - keep-alive
+      content-length:
+      - '216'
+      content-type:
+      - application/json
+      host:
+      - api.ai21.com
+      user-agent:
+      - AI21 studio SDK 2.15.2 Python 3.10.16 Operating System macOS-15.2-arm64-arm-64bit
+    method: POST
+    uri: https://api.ai21.com/studio/v1/chat/completions
+  response:
+    body:
+      string: '{"id":"chatcmpl-e8bd0279-192b-0d7d-d28c-734d0b0b13c9","choices":[{"index":0,"message":{"role":"assistant","content":"The
+        Shockley diode equation, also known as the diode current equation, describes
+        the current $$I$$\n\n through a diode as a function of the voltage $$V$$\n\n
+        across it. It is given by $$I = I_S \\left( e^{\\frac{V}{n V_T}} - 1 \\right)$$\n\n,
+        where $$I_S$$\n\n is the reverse saturation current, $$V$$\n\n is the voltage
+        across the diode, $$n$$\n\n is the ideality factor, and $$V_T$$\n\n is the
+        thermal voltage. This equation models the exponential increase of current
+        with increasing voltage in a diode, accounting for the diode''s rectification
+        behavior. The ideality factor $$n$$\n\n adjusts the curve to fit real diode
+        characteristics, while $$V_T$$\n\n is approximately 26 millivolts at room
+        temperature.","tool_calls":null},"logprobs":null,"finish_reason":"stop"}],"usage":{"prompt_tokens":30,"completion_tokens":187,"total_tokens":217}}'
+    headers:
+      CF-Cache-Status:
+      - DYNAMIC
+      CF-RAY: REDACTED
+      Connection:
+      - keep-alive
+      Content-Type:
+      - application/json
+      Date:
+      - Tue, 14 Jan 2025 22:01:37 GMT
+      Server:
+      - cloudflare
+      Strict-Transport-Security:
+      - max-age=15552000; includeSubDomains
+      Transfer-Encoding:
+      - chunked
+      content-length:
+      - '960'
+      request-id:
+      - e8bd0279-192b-0d7d-d28c-734d0b0b13c9
+      via:
+      - 1.1 google
+    status:
+      code: 200
+      message: OK
+version: 1

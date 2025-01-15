@@ -1,43 +1,14 @@
-import pytest
-import requests_mock
+import contextlib
 import time
-import agentops
-from agentops import record_tool
 from datetime import datetime
 
-from agentops.singleton import clear_singletons
-import contextlib
+import pytest
+import requests_mock
+
+import agentops
+from agentops import record_tool
 
 jwts = ["some_jwt", "some_jwt2", "some_jwt3"]
-
-
-@pytest.fixture(autouse=True)
-def setup_teardown():
-    clear_singletons()
-    yield
-    agentops.end_all_sessions()  # teardown part
-
-
-@contextlib.contextmanager
-@pytest.fixture(autouse=True)
-def mock_req():
-    with requests_mock.Mocker() as m:
-        url = "https://api.agentops.ai"
-        m.post(url + "/v2/create_events", json={"status": "ok"})
-
-        # Use iter to create an iterator that can return the jwt values
-        jwt_tokens = iter(jwts)
-
-        # Use an inner function to change the response for each request
-        def create_session_response(request, context):
-            context.status_code = 200
-            return {"status": "success", "jwt": next(jwt_tokens)}
-
-        m.post(url + "/v2/create_session", json=create_session_response)
-        m.post(url + "/v2/update_session", json={"status": "success", "token_cost": 5})
-        m.post(url + "/v2/developer_errors", json={"status": "ok"})
-
-        yield m
 
 
 class TestRecordTool:
@@ -165,14 +136,20 @@ class TestRecordTool:
 
         request_json = mock_req.last_request.json()
         assert mock_req.last_request.headers["X-Agentops-Api-Key"] == self.api_key
-        assert mock_req.last_request.headers["Authorization"] == "Bearer some_jwt2"
+        assert (
+            mock_req.last_request.headers["Authorization"]
+            == f"Bearer {mock_req.session_jwts[str(session_2.session_id)]}"
+        )
         assert request_json["events"][0]["name"] == self.tool_name
         assert request_json["events"][0]["params"] == {"x": 1, "y": 2, "z": 3}
         assert request_json["events"][0]["returns"] == 6
 
         second_last_request_json = mock_req.request_history[-2].json()
         assert mock_req.request_history[-2].headers["X-Agentops-Api-Key"] == self.api_key
-        assert mock_req.request_history[-2].headers["Authorization"] == "Bearer some_jwt"
+        assert (
+            mock_req.request_history[-2].headers["Authorization"]
+            == f"Bearer {mock_req.session_jwts[str(session_1.session_id)]}"
+        )
         assert second_last_request_json["events"][0]["name"] == self.tool_name
         assert second_last_request_json["events"][0]["params"] == {
             "x": 1,
@@ -208,14 +185,20 @@ class TestRecordTool:
 
         request_json = mock_req.last_request.json()
         assert mock_req.last_request.headers["X-Agentops-Api-Key"] == self.api_key
-        assert mock_req.last_request.headers["Authorization"] == "Bearer some_jwt2"
+        assert (
+            mock_req.last_request.headers["Authorization"]
+            == f"Bearer {mock_req.session_jwts[str(session_2.session_id)]}"
+        )
         assert request_json["events"][0]["name"] == self.tool_name
         assert request_json["events"][0]["params"] == {"x": 1, "y": 2}
         assert request_json["events"][0]["returns"] == 3
 
         second_last_request_json = mock_req.request_history[-2].json()
         assert mock_req.request_history[-2].headers["X-Agentops-Api-Key"] == self.api_key
-        assert mock_req.request_history[-2].headers["Authorization"] == "Bearer some_jwt"
+        assert (
+            mock_req.request_history[-2].headers["Authorization"]
+            == f"Bearer {mock_req.session_jwts[str(session_1.session_id)]}"
+        )
         assert second_last_request_json["events"][0]["name"] == self.tool_name
         assert second_last_request_json["events"][0]["params"] == {
             "x": 1,
@@ -226,7 +209,7 @@ class TestRecordTool:
         session_1.end_session(end_state="Success")
         session_2.end_session(end_state="Success")
 
-    def test_require_session_if_multiple(self):
+    def test_require_session_if_multiple(self, mock_req):
         session_1 = agentops.start_session()
         session_2 = agentops.start_session()
 

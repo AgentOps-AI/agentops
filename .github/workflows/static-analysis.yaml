@@ -40,7 +40,7 @@ jobs:
         with:
           enable-cache: true
           cache-dependency-glob: "**/pyproject.toml"
-          python-version: "3.11.10"
+          python-version: "3.12.2"
 
       - name: Install packages
         run: |

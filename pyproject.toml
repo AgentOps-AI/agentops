@@ -41,30 +41,47 @@ dependencies = [
 
 [dependency-groups]
 test = [
-    "openai>=1.0.0,<2.0.0",
-    "langchain",
+    "openai>=1.0.0",
+    "anthropic",
+    "cohere",
+    "litellm",
+    "ai21>=3.0.0",
+    "groq",
+    "ollama",
+    "mistralai",
+    # ;;
+    # The below is a really hard dependency, that can be installed only between python >=3.10,<3.13.
+    # CI will fail because all tests will automatically pull this dependency group;
+    # we need a separate group specifically for integration tests which will run on pinned 3.1x
+    # ------------------------------------------------------------------------------------------------------------------------------------
+    # "crewai-tools @ git+https://github.com/crewAIInc/crewAI-tools.git@a14091abb24527c97ccfcc8539d529c8b4559a0f; python_version>='3.10'", 
+    # ------------------------------------------------------------------------------------------------------------------------------------
+    # ;;
+    "autogen<0.4.0",
     "pytest-cov",
+    "fastapi[standard]",
 ]
 
 dev = [
     # Testing essentials
-    "pytest>=7.4.0,<8.0.0",          # Testing framework with good async support
-    "pytest-depends",         # For testing complex agent workflows
-    "pytest-asyncio",         # Async test support for testing concurrent agent operations
-    "pytest-mock",           # Mocking capabilities for isolating agent components
-    "pyfakefs",             # File system testing
-    "pytest-recording",      # Alternative to pytest-vcr with better Python 3.x support
-    "vcrpy @ git+https://github.com/kevin1024/vcrpy.git@81978659f1b18bbb7040ceb324a19114e4a4f328",
+    "pytest>=8.0.0", # Testing framework with good async support
+    "pytest-depends", # For testing complex agent workflows
+    "pytest-asyncio", # Async test support for testing concurrent agent operations
+    "pytest-mock", # Mocking capabilities for isolating agent components
+    "pyfakefs", # File system testing
+    "pytest-recording", # Alternative to pytest-vcr with better Python 3.x support
+    # TODO: Use release version after vcrpy is released with this fix.
+    "vcrpy @ git+https://github.com/kevin1024/vcrpy.git@5f1b20c4ca4a18c1fc8cfe049d7df12ca0659c9b",
     # Code quality and type checking
-    "ruff",                  # Fast Python linter for maintaining code quality
-    "mypy",                # Static type checking for better reliability
-    "types-requests",      # Type stubs for requests library
-    
+    "ruff", # Fast Python linter for maintaining code quality
+    "mypy", # Static type checking for better reliability
+    "types-requests", # Type stubs for requests library
     # HTTP mocking and environment
     "requests_mock>=1.11.0", # Mock HTTP requests for testing agent external communications
-    "python-dotenv",         # Environment management for secure testing
-    
+    "python-dotenv", # Environment management for secure testing
     # Agent integration testing
+    "pytest-sugar>=1.0.0",
+    "pdbpp>=0.10.3",
 ]
 
 # CI dependencies
@@ -89,7 +106,7 @@ constraint-dependencies = [
     # For Python ≥3.10 (where autogen-core might be present), use newer versions
     "opentelemetry-api>=1.27.0; python_version>='3.10'",
     "opentelemetry-sdk>=1.27.0; python_version>='3.10'",
-    "opentelemetry-exporter-otlp-proto-http>=1.27.0; python_version>='3.10'"
+    "opentelemetry-exporter-otlp-proto-http>=1.27.0; python_version>='3.10'",
 ]
 
 [tool.autopep8]
@@ -97,11 +114,9 @@ max_line_length = 120
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
-asyncio_default_fixture_loop_scope = "function" # WARNING: Changing this may break tests. A `module`-scoped session might be faster, but also unstable.
-test_paths = [
-    "tests",
-]
-addopts = "--tb=short -p no:warnings"
+asyncio_default_fixture_loop_scope = "module" # WARNING: Changing this may break tests. A `module`-scoped session might be faster, but also unstable.
+testpaths = ["tests/unit"]  # Default to unit tests
+addopts = "--tb=short -p no:warnings --import-mode=importlib --ignore=tests/integration"  # Ignore integration by default
 pythonpath = ["."]
 faulthandler_timeout = 30  # Reduced from 60
 timeout = 60  # Reduced from 300
