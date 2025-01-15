@@ -128,6 +128,7 @@ line-length = 120
 [tool.ruff.lint]
 ignore = [
     "F401",  # Unused imports
+    "F403",  # Import * used
     "E712",  # Comparison to True/False
     "E711",  # Comparison to None
     "E722",  # Bare except
