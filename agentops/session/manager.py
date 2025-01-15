@@ -34,6 +34,7 @@ class SessionManager:
 
         # Initialize telemetry
         from .telemetry import SessionTelemetry
+
         self._telemetry = SessionTelemetry(self._state)
 
         # Store reference on session for backward compatibility
@@ -171,7 +172,7 @@ class SessionManager:
             "video": self._state.video,
             "event_counts": self._state.event_counts,
             "init_timestamp": self._state.init_timestamp,
-            "is_running": self._state.is_running
+            "is_running": self._state.is_running,
         }
 
     def _format_duration(self, start_time: str, end_time: str) -> str:

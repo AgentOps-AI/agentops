@@ -101,6 +101,7 @@ class TestEventToSpanEncoder:
 
     def test_unknown_event_type(self):
         """Test handling of unknown event types"""
+
         class UnknownEvent(Event):
             pass
 

@@ -30,10 +30,7 @@ def mock_span():
 @pytest.fixture
 def event_exporter():
     return EventExporter(
-        session_id=uuid.uuid4(), 
-        endpoint="http://test-endpoint/v2/create_events", 
-        jwt="test-jwt", 
-        api_key="test-key"
+        session_id=uuid.uuid4(), endpoint="http://test-endpoint/v2/create_events", jwt="test-jwt", api_key="test-key"
     )
 
 
@@ -89,7 +86,7 @@ class TestEventExporter:
         """Test retry behavior on export failure"""
         mock_wait = Mock()
         event_exporter._wait_fn = mock_wait
-        
+
         with patch("agentops.api.session.SessionApiClient.create_events") as mock_create:
             # Create mock responses with proper return values
             mock_create.side_effect = [False, False, True]
@@ -107,7 +104,7 @@ class TestEventExporter:
         """Test behavior when max retries are exceeded"""
         mock_wait = Mock()
         event_exporter._wait_fn = mock_wait
-        
+
         with patch("agentops.api.session.SessionApiClient.create_events") as mock_create:
             # Mock consistently failing response
             mock_create.return_value = False
@@ -115,7 +112,7 @@ class TestEventExporter:
             result = event_exporter.export([mock_span])
             assert result == SpanExportResult.FAILURE
             assert mock_create.call_count == event_exporter._retry_count
-            
+
             # Verify all retries waited
             assert mock_wait.call_count == event_exporter._retry_count - 1
 
@@ -133,7 +130,7 @@ class TestEventExporter:
         with patch("agentops.api.session.SessionApiClient.create_events") as mock_create:
             # Create mock responses with proper return values
             mock_create.side_effect = [False, False, True]
-            
+
             result = event_exporter.export([mock_span])
             assert result == SpanExportResult.SUCCESS
             assert mock_create.call_count == 3
@@ -148,7 +145,7 @@ class TestEventExporter:
 
 class TestSessionExporter:
     """Test suite for SessionExporter"""
-    
+
     @pytest.fixture
     def test_span(self):
         """Create a test span with required attributes"""
@@ -161,30 +158,30 @@ class TestSessionExporter:
             "event.end_timestamp": "2024-01-01T00:00:01Z",
         }
         return span
-    
+
     @pytest.fixture
     def session_exporter(self):
         """Create a SessionExporter instance for testing"""
         from agentops.session import Session
         from agentops.api.session import SessionApiClient
-        
+
         mock_config = Mock()
         mock_config.endpoint = "http://test-endpoint"
         mock_config.api_key = "test-key"
-        
+
         mock_session = Mock(spec=Session)
-        mock_session.session_id = UUID('00000000-0000-0000-0000-000000000000')
+        mock_session.session_id = UUID("00000000-0000-0000-0000-000000000000")
         mock_session.jwt = "test-jwt"
         mock_session.config = mock_config
-        
+
         # Create a real API client for the session
         mock_session._api = SessionApiClient(
             endpoint=mock_config.endpoint,
             session_id=mock_session.session_id,
             api_key=mock_config.api_key,
-            jwt=mock_session.jwt
+            jwt=mock_session.jwt,
         )
-        
+
         return SessionExporter(session=mock_session)
 
     def test_event_formatting(self, session_exporter, test_span):
@@ -193,7 +190,7 @@ class TestSessionExporter:
             mock_create.return_value = True
             result = session_exporter.export([test_span])
             assert result == SpanExportResult.SUCCESS
-            
+
             # Verify the formatted event
             mock_create.assert_called_once()
             call_args = mock_create.call_args[0]
@@ -208,7 +205,7 @@ class TestSessionExporter:
         """Verify retry behavior works as expected"""
         with patch("agentops.api.session.SessionApiClient.create_events") as mock_create:
             mock_create.side_effect = [False, False, True]
-            
+
             result = session_exporter.export([test_span])
             assert result == SpanExportResult.SUCCESS
             assert mock_create.call_count == 3
@@ -220,9 +217,9 @@ class TestSessionExporter:
             spans = [test_span for _ in range(5)]
             result = session_exporter.export(spans)
             assert result == SpanExportResult.SUCCESS
-            
+
             # Verify batch was sent correctly
             mock_create.assert_called_once()
             call_args = mock_create.call_args[0]
             events = call_args[0]
-            assert len(events) == 5 
+            assert len(events) == 5

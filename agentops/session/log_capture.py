@@ -10,7 +10,7 @@ from opentelemetry import trace
 
 class LogCapture:
     """Captures terminal output for a session using OpenTelemetry logging.
-    
+
     Integrates with TelemetryManager to use consistent configuration and logging setup.
     If no telemetry manager is available, creates a standalone logging setup.
     """
@@ -25,7 +25,7 @@ class LogCapture:
         self._handler = None
         self._logger_provider = None
         self._owns_handler = False  # Track if we created our own handler
-        
+
         # Configure loggers to not propagate to parent loggers
         for logger in (self._stdout_logger, self._stderr_logger):
             logger.setLevel(logging.INFO)
@@ -38,40 +38,37 @@ class LogCapture:
             return
 
         # Try to get handler from telemetry manager
-        if hasattr(self.session, '_telemetry') and self.session._telemetry:
+        if hasattr(self.session, "_telemetry") and self.session._telemetry:
             self._handler = self.session._telemetry.get_log_handler()
 
         # Create our own handler if none exists
         if not self._handler:
             self._owns_handler = True
-            
+
             # Use session's resource attributes if available
-            resource_attrs = {
-                "service.name": "agentops",
-                "session.id": str(getattr(self.session, 'id', 'unknown'))
-            }
-            
-            if (hasattr(self.session, '_telemetry') and 
-                self.session._telemetry and 
-                self.session._telemetry.config and 
-                self.session._telemetry.config.resource_attributes):
+            resource_attrs = {"service.name": "agentops", "session.id": str(getattr(self.session, "id", "unknown"))}
+
+            if (
+                hasattr(self.session, "_telemetry")
+                and self.session._telemetry
+                and self.session._telemetry.config
+                and self.session._telemetry.config.resource_attributes
+            ):
                 resource_attrs.update(self.session._telemetry.config.resource_attributes)
-            
+
             # Setup logger provider with console exporter
             resource = Resource.create(resource_attrs)
             self._logger_provider = LoggerProvider(resource=resource)
             exporter = ConsoleLogExporter()
-            self._logger_provider.add_log_record_processor(
-                BatchLogRecordProcessor(exporter)
-            )
-            
+            self._logger_provider.add_log_record_processor(BatchLogRecordProcessor(exporter))
+
             self._handler = LoggingHandler(
                 level=logging.INFO,
                 logger_provider=self._logger_provider,
             )
-            
+
             # Register with telemetry manager if available
-            if hasattr(self.session, '_telemetry') and self.session._telemetry:
+            if hasattr(self.session, "_telemetry") and self.session._telemetry:
                 self.session._telemetry.set_log_handler(self._handler)
 
         # Add handler to both loggers
@@ -101,17 +98,17 @@ class LogCapture:
         if self._handler:
             self._stdout_logger.removeHandler(self._handler)
             self._stderr_logger.removeHandler(self._handler)
-            
+
             # Only close/shutdown if we own the handler
             if self._owns_handler:
                 self._handler.close()
                 if self._logger_provider:
                     self._logger_provider.shutdown()
-                    
+
                 # Clear from telemetry manager if we created it
-                if hasattr(self.session, '_telemetry') and self.session._telemetry:
+                if hasattr(self.session, "_telemetry") and self.session._telemetry:
                     self.session._telemetry.set_log_handler(None)
-            
+
             self._handler = None
             self._logger_provider = None
 
@@ -122,6 +119,7 @@ class LogCapture:
 
     class _StdoutProxy:
         """Proxies stdout to logger"""
+
         def __init__(self, logger):
             self._logger = logger
 
@@ -134,6 +132,7 @@ class LogCapture:
 
     class _StderrProxy:
         """Proxies stderr to logger"""
+
         def __init__(self, logger):
             self._logger = logger
 
@@ -143,6 +142,7 @@ class LogCapture:
 
         def flush(self):
             pass
+
 
 if __name__ == "__main__":
     import time
@@ -159,15 +159,12 @@ if __name__ == "__main__":
 
     # Setup telemetry
     telemetry = TelemetryManager()
-    config = OTELConfig(
-        resource_attributes={"test.attribute": "demo"},
-        endpoint="http://localhost:4317"
-    )
+    config = OTELConfig(resource_attributes={"test.attribute": "demo"}, endpoint="http://localhost:4317")
     telemetry.initialize(config)
-    
+
     # Create session
     session = MockSession(id=uuid4(), _telemetry=telemetry)
-    
+
     # Create and start capture
     capture = LogCapture(session)
     capture.start()
@@ -176,11 +173,11 @@ if __name__ == "__main__":
         print("Regular stdout message")
         print("Multi-line stdout message\nwith a second line")
         sys.stderr.write("Error message to stderr\n")
-        
+
         # Show that empty lines are ignored
         print("")
         print("\n\n")
-        
+
         # Demonstrate concurrent output
         def background_prints():
             for i in range(3):
@@ -189,6 +186,7 @@ if __name__ == "__main__":
                 sys.stderr.write(f"Background error {i}\n")
 
         import threading
+
         thread = threading.Thread(target=background_prints)
         thread.start()
 
@@ -198,7 +196,7 @@ if __name__ == "__main__":
             print(f"Main thread message {i}")
 
         thread.join()
-        
+
     finally:
         # Stop capture and show normal output is restored
         capture.stop()

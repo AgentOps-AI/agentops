@@ -9,12 +9,13 @@ from agentops.event import ActionEvent, ErrorEvent, LLMEvent, ToolEvent
 
 class InstrumentationTester:
     """Helper class for testing OTEL instrumentation"""
+
     def __init__(self):
         self.tracer_provider = TracerProvider()
         self.memory_exporter = InMemorySpanExporter()
         span_processor = SimpleSpanProcessor(self.memory_exporter)
         self.tracer_provider.add_span_processor(span_processor)
-        
+
         # Reset and set global tracer provider
         trace_api.set_tracer_provider(self.tracer_provider)
         self.memory_exporter.clear()
@@ -73,12 +74,7 @@ def mock_error_event():
     """Creates an ErrorEvent for testing"""
     trigger = ActionEvent(action_type="risky_action")
     error = ValueError("Something went wrong")
-    return ErrorEvent(
-        trigger_event=trigger,
-        exception=error,
-        error_type="ValueError",
-        details="Detailed error info"
-    )
+    return ErrorEvent(trigger_event=trigger, exception=error, error_type="ValueError", details="Detailed error info")
 
 
 @pytest.fixture
@@ -102,8 +98,9 @@ def cleanup_telemetry():
     yield
     # Clean up any active telemetry
     from agentops import Client
+
     client = Client()
-    if hasattr(client, 'telemetry'):
+    if hasattr(client, "telemetry"):
         try:
             if client.telemetry._tracer_provider:
                 client.telemetry._tracer_provider.shutdown()

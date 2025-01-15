@@ -18,10 +18,11 @@ from ..enums import EventType
 @dataclass
 class SpanDefinition:
     """Definition of a span to be created.
-    
+
     This class represents a span before it is created, containing
     all the necessary information to create the span.
     """
+
     name: str
     attributes: Dict[str, Any]
     kind: SpanKind = SpanKind.INTERNAL
@@ -30,7 +31,7 @@ class SpanDefinition:
 
 class SpanDefinitions(Sequence[SpanDefinition]):
     """A sequence of span definitions that supports len() and iteration."""
-    
+
     def __init__(self, *spans: SpanDefinition):
         self._spans = list(spans)
 
@@ -50,10 +51,10 @@ class EventToSpanEncoder:
     @classmethod
     def encode(cls, event: Event) -> SpanDefinitions:
         """Convert an event into span definitions.
-        
+
         Args:
             event: The event to convert
-            
+
         Returns:
             A sequence of span definitions
         """
@@ -82,19 +83,15 @@ class EventToSpanEncoder:
                 "event.start_time": event.init_timestamp,
                 "event.end_time": event.end_timestamp,
                 SpanAttributes.CODE_NAMESPACE: event.__class__.__name__,
-                "event_type": "llms"
-            }
+                "event_type": "llms",
+            },
         )
 
         api_span = SpanDefinition(
             name="llm.api.call",
             kind=SpanKind.CLIENT,
             parent_span_id=completion_span.name,
-            attributes={
-                "model": event.model,
-                "start_time": event.init_timestamp,
-                "end_time": event.end_timestamp
-            }
+            attributes={"model": event.model, "start_time": event.init_timestamp, "end_time": event.end_timestamp},
         )
 
         return SpanDefinitions(completion_span, api_span)
@@ -110,17 +107,14 @@ class EventToSpanEncoder:
                 "logs": event.logs,
                 "event.start_time": event.init_timestamp,
                 SpanAttributes.CODE_NAMESPACE: event.__class__.__name__,
-                "event_type": "actions"
-            }
+                "event_type": "actions",
+            },
         )
 
         execution_span = SpanDefinition(
             name="action.execution",
             parent_span_id=action_span.name,
-            attributes={
-                "start_time": event.init_timestamp,
-                "end_time": event.end_timestamp
-            }
+            attributes={"start_time": event.init_timestamp, "end_time": event.end_timestamp},
         )
 
         return SpanDefinitions(action_span, execution_span)
@@ -135,17 +129,14 @@ class EventToSpanEncoder:
                 "returns": json.dumps(event.returns),
                 "logs": json.dumps(event.logs),
                 SpanAttributes.CODE_NAMESPACE: event.__class__.__name__,
-                "event_type": "tools"
-            }
+                "event_type": "tools",
+            },
         )
 
         execution_span = SpanDefinition(
             name="tool.execution",
             parent_span_id=tool_span.name,
-            attributes={
-                "start_time": event.init_timestamp,
-                "end_time": event.end_timestamp
-            }
+            attributes={"start_time": event.init_timestamp, "end_time": event.end_timestamp},
         )
 
         return SpanDefinitions(tool_span, execution_span)
@@ -160,8 +151,8 @@ class EventToSpanEncoder:
                 "details": event.details,
                 "trigger_event": event.trigger_event,
                 SpanAttributes.CODE_NAMESPACE: event.__class__.__name__,
-                "event_type": "errors"
-            }
+                "event_type": "errors",
+            },
         )
         return SpanDefinitions(error_span)
 
@@ -172,7 +163,7 @@ class EventToSpanEncoder:
             name="event",
             attributes={
                 SpanAttributes.CODE_NAMESPACE: event.__class__.__name__,
-                "event_type": getattr(event, "event_type", "unknown")
-            }
+                "event_type": getattr(event, "event_type", "unknown"),
+            },
         )
         return SpanDefinitions(span)

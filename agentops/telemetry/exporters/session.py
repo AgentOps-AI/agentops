@@ -28,10 +28,10 @@ class SessionExporter(SpanExporter):
         endpoint: Optional[str] = None,
         jwt: Optional[str] = None,
         api_key: Optional[str] = None,
-        **kwargs
+        **kwargs,
     ):
         """Initialize SessionExporter with either a Session object or individual parameters.
-        
+
         Args:
             session: Session object containing all required parameters
             session_id: UUID for the session (if not using session object)
@@ -58,7 +58,7 @@ class SessionExporter(SpanExporter):
                 endpoint=endpoint,
                 session_id=session_id,
                 api_key=api_key,
-                jwt=jwt or ""  # jwt can be empty string if not provided
+                jwt=jwt or "",  # jwt can be empty string if not provided
             )
 
         super().__init__(**kwargs)
@@ -125,13 +125,13 @@ class SessionExporter(SpanExporter):
                             success = self._api.create_events(events)
                             if success:
                                 return SpanExportResult.SUCCESS
-                            
+
                             # If not successful but not the last attempt, wait and retry
                             if attempt < retry_count - 1:
                                 delay = 1.0 * (2**attempt)  # Exponential backoff
                                 time.sleep(delay)
                                 continue
-                                
+
                         except Exception as e:
                             logger.error(f"Export attempt {attempt + 1} failed: {e}")
                             if attempt < retry_count - 1:

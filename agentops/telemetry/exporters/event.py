@@ -18,6 +18,7 @@ EVENT_START_TIME = "event.timestamp"
 EVENT_END_TIME = "event.end_timestamp"
 AGENT_ID = "agent.id"
 
+
 class EventExporter(SpanExporter):
     """
     Exports agentops.event.Event to AgentOps servers.
@@ -33,12 +34,7 @@ class EventExporter(SpanExporter):
         custom_formatters: Optional[List[Callable]] = None,
     ):
         self.session_id = session_id
-        self._api = SessionApiClient(
-            endpoint=endpoint,
-            session_id=session_id,
-            api_key=api_key,
-            jwt=jwt
-        )
+        self._api = SessionApiClient(endpoint=endpoint, session_id=session_id, api_key=api_key, jwt=jwt)
         self._export_lock = threading.Lock()
         self._shutdown = threading.Event()
         self._wait_event = threading.Event()
@@ -71,12 +67,12 @@ class EventExporter(SpanExporter):
                         success = self._send_batch(events)
                         if success:
                             return SpanExportResult.SUCCESS
-                        
+
                         # If not successful but not the last attempt, wait and retry
                         if attempt < self._retry_count - 1:
                             self._wait_before_retry(attempt)
                             continue
-                            
+
                     except Exception as e:
                         logger.error(f"Export attempt {attempt + 1} failed: {e}")
                         if attempt < self._retry_count - 1:
@@ -103,7 +99,7 @@ class EventExporter(SpanExporter):
                     event_data = json.loads(event_data_str)
                 else:
                     event_data = {}
-                
+
                 # Ensure required fields
                 event = {
                     "id": attrs_dict.get(EVENT_ID) or str(uuid4()),
