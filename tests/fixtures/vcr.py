@@ -57,6 +57,25 @@ def vcr_config():
         ("x-ratelimit-remaining-tokens", "REDACTED"),
         ("x-ratelimit-reset-requests", "REDACTED"),
         ("x-ratelimit-reset-tokens", "REDACTED"),
+        # Mistral headers
+        ("x-mistral-api-key", "REDACTED"),
+        # Groq headers
+        ("x-groq-api-key", "REDACTED"),
+        # LiteLLM headers
+        ("x-litellm-api-key", "REDACTED"),
+        # Ollama headers
+        ("x-ollama-api-key", "REDACTED"),
+        # TaskWeaver headers
+        ("x-taskweaver-api-key", "REDACTED"),
+        # Additional provider version headers
+        ("anthropic-version", "REDACTED"),
+        ("cohere-version", "REDACTED"),
+        ("x-stainless-lang", "REDACTED"),
+        ("x-stainless-arch", "REDACTED"),
+        ("x-stainless-os", "REDACTED"),
+        ("x-stainless-async", "REDACTED"),
+        ("x-stainless-runtime", "REDACTED"),
+        ("x-stainless-runtime-version", "REDACTED"),
     ]
 
     def filter_response_headers(response):

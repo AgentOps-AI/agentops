@@ -136,6 +136,69 @@ class OpenAiProvider(InstrumentedProvider):
 
         return response
 
+    def handle_assistant_response(self, response, kwargs, init_timestamp, session: Optional[Session] = None) -> dict:
+        """Handle response based on return type"""
+        from openai.pagination import BasePage
+
+        action_event = ActionEvent(init_timestamp=init_timestamp, params=kwargs)
+        if session is not None:
+            action_event.session_id = session.session_id
+
+        try:
+            # Set action type and returns
+            action_event.action_type = (
+                response.__class__.__name__.split("[")[1][:-1]
+                if isinstance(response, BasePage)
+                else response.__class__.__name__
+            )
+            action_event.returns = response.model_dump() if hasattr(response, "model_dump") else response
+            action_event.end_timestamp = get_ISO_time()
+            self._safe_record(session, action_event)
+
+            # Create LLMEvent if usage data exists
+            response_dict = response.model_dump() if hasattr(response, "model_dump") else {}
+
+            if "id" in response_dict and response_dict.get("id").startswith("run"):
+                if response_dict["id"] not in self.assistants_run_steps:
+                    self.assistants_run_steps[response_dict.get("id")] = {"model": response_dict.get("model")}
+
+            if "usage" in response_dict and response_dict["usage"] is not None:
+                llm_event = LLMEvent(init_timestamp=init_timestamp, params=kwargs)
+                if session is not None:
+                    llm_event.session_id = session.session_id
+
+                llm_event.model = response_dict.get("model")
+                llm_event.prompt_tokens = response_dict["usage"]["prompt_tokens"]
+                llm_event.completion_tokens = response_dict["usage"]["completion_tokens"]
+                llm_event.end_timestamp = get_ISO_time()
+                self._safe_record(session, llm_event)
+
+            elif "data" in response_dict:
+                for item in response_dict["data"]:
+                    if "usage" in item and item["usage"] is not None:
+                        llm_event = LLMEvent(init_timestamp=init_timestamp, params=kwargs)
+                        if session is not None:
+                            llm_event.session_id = session.session_id
+
+                        llm_event.model = self.assistants_run_steps[item["run_id"]]["model"]
+                        llm_event.prompt_tokens = item["usage"]["prompt_tokens"]
+                        llm_event.completion_tokens = item["usage"]["completion_tokens"]
+                        llm_event.end_timestamp = get_ISO_time()
+                        self._safe_record(session, llm_event)
+
+        except Exception as e:
+            self._safe_record(session, ErrorEvent(trigger_event=action_event, exception=e))
+
+            kwargs_str = pprint.pformat(kwargs)
+            response = pprint.pformat(response)
+            logger.warning(
+                f"Unable to parse response for Assistants API. Skipping upload to AgentOps\n"
+                f"response:\n {response}\n"
+                f"kwargs:\n {kwargs_str}\n"
+            )
+
+        return response
+
     def override(self):
         self._override_openai_v1_completion()
         self._override_openai_v1_async_completion()
@@ -234,68 +297,6 @@ class OpenAiProvider(InstrumentedProvider):
         """Override OpenAI Assistants API methods"""
         from openai._legacy_response import LegacyAPIResponse
         from openai.resources import beta
-        from openai.pagination import BasePage
-
-        def handle_response(response, kwargs, init_timestamp, session: Optional[Session] = None) -> dict:
-            """Handle response based on return type"""
-            action_event = ActionEvent(init_timestamp=init_timestamp, params=kwargs)
-            if session is not None:
-                action_event.session_id = session.session_id
-
-            try:
-                # Set action type and returns
-                action_event.action_type = (
-                    response.__class__.__name__.split("[")[1][:-1]
-                    if isinstance(response, BasePage)
-                    else response.__class__.__name__
-                )
-                action_event.returns = response.model_dump() if hasattr(response, "model_dump") else response
-                action_event.end_timestamp = get_ISO_time()
-                self._safe_record(session, action_event)
-
-                # Create LLMEvent if usage data exists
-                response_dict = response.model_dump() if hasattr(response, "model_dump") else {}
-
-                if "id" in response_dict and response_dict.get("id").startswith("run"):
-                    if response_dict["id"] not in self.assistants_run_steps:
-                        self.assistants_run_steps[response_dict.get("id")] = {"model": response_dict.get("model")}
-
-                if "usage" in response_dict and response_dict["usage"] is not None:
-                    llm_event = LLMEvent(init_timestamp=init_timestamp, params=kwargs)
-                    if session is not None:
-                        llm_event.session_id = session.session_id
-
-                    llm_event.model = response_dict.get("model")
-                    llm_event.prompt_tokens = response_dict["usage"]["prompt_tokens"]
-                    llm_event.completion_tokens = response_dict["usage"]["completion_tokens"]
-                    llm_event.end_timestamp = get_ISO_time()
-                    self._safe_record(session, llm_event)
-
-                elif "data" in response_dict:
-                    for item in response_dict["data"]:
-                        if "usage" in item and item["usage"] is not None:
-                            llm_event = LLMEvent(init_timestamp=init_timestamp, params=kwargs)
-                            if session is not None:
-                                llm_event.session_id = session.session_id
-
-                            llm_event.model = self.assistants_run_steps[item["run_id"]]["model"]
-                            llm_event.prompt_tokens = item["usage"]["prompt_tokens"]
-                            llm_event.completion_tokens = item["usage"]["completion_tokens"]
-                            llm_event.end_timestamp = get_ISO_time()
-                            self._safe_record(session, llm_event)
-
-            except Exception as e:
-                self._safe_record(session, ErrorEvent(trigger_event=action_event, exception=e))
-
-                kwargs_str = pprint.pformat(kwargs)
-                response = pprint.pformat(response)
-                logger.warning(
-                    f"Unable to parse response for Assistants API. Skipping upload to AgentOps\n"
-                    f"response:\n {response}\n"
-                    f"kwargs:\n {kwargs_str}\n"
-                )
-
-            return response
 
         def create_patched_function(original_func):
             def patched_function(*args, **kwargs):
@@ -309,7 +310,7 @@ class OpenAiProvider(InstrumentedProvider):
                 if isinstance(response, LegacyAPIResponse):
                     return response
 
-                return handle_response(response, kwargs, init_timestamp, session=session)
+                return self.handle_assistant_response(response, kwargs, init_timestamp, session=session)
 
             return patched_function
 

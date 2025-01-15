@@ -1,0 +1,142 @@
+interactions:
+- request:
+    body: '{"message": "Say hello in spanish", "stream": false}'
+    headers:
+      accept:
+      - '*/*'
+      accept-encoding:
+      - gzip, deflate
+      authorization:
+      - REDACTED
+      connection:
+      - keep-alive
+      content-length:
+      - '52'
+      content-type:
+      - application/json
+      host:
+      - api.cohere.com
+      user-agent:
+      - python-httpx/0.27.2
+      x-fern-language:
+      - Python
+      x-fern-sdk-name:
+      - cohere
+      x-fern-sdk-version:
+      - 5.13.8
+    method: POST
+    uri: https://api.cohere.com/v1/chat
+  response:
+    body:
+      string: '{"response_id":"71e69e77-134e-4f12-b5c7-e25616b5c5d6","text":"Hola.","generation_id":"cefa7ac1-4039-49a0-a9e1-ee2ea41383d5","chat_history":[{"role":"USER","message":"Say
+        hello in spanish"},{"role":"CHATBOT","message":"Hola."}],"finish_reason":"COMPLETE","meta":{"api_version":{"version":"1"},"billed_units":{"input_tokens":5,"output_tokens":3},"tokens":{"input_tokens":206,"output_tokens":3}}}'
+    headers:
+      Alt-Svc:
+      - h3=":443"; ma=2592000,h3-29=":443"; ma=2592000
+      Content-Length:
+      - '393'
+      Via:
+      - 1.1 google
+      access-control-expose-headers:
+      - X-Debug-Trace-ID
+      cache-control:
+      - no-cache, no-store, no-transform, must-revalidate, private, max-age=0
+      content-type:
+      - application/json
+      date:
+      - Tue, 14 Jan 2025 22:01:37 GMT
+      expires:
+      - Thu, 01 Jan 1970 00:00:00 UTC
+      num_chars:
+      - '1198'
+      num_tokens:
+      - '8'
+      pragma:
+      - no-cache
+      server:
+      - envoy
+      vary:
+      - Origin
+      x-accel-expires:
+      - '0'
+      x-debug-trace-id:
+      - d6e85fbdb5552f572a20a4b5ea25ef2f
+      x-envoy-upstream-service-time:
+      - '127'
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"message": "Say hello in spanish", "stream": true}'
+    headers:
+      accept:
+      - '*/*'
+      accept-encoding:
+      - gzip, deflate
+      authorization:
+      - REDACTED
+      connection:
+      - keep-alive
+      content-length:
+      - '51'
+      content-type:
+      - application/json
+      host:
+      - api.cohere.com
+      user-agent:
+      - python-httpx/0.27.2
+      x-fern-language:
+      - Python
+      x-fern-sdk-name:
+      - cohere
+      x-fern-sdk-version:
+      - 5.13.8
+    method: POST
+    uri: https://api.cohere.com/v1/chat
+  response:
+    body:
+      string: '{"is_finished":false,"event_type":"stream-start","generation_id":"04f2b675-2121-401c-bebf-91166f3c0b14"}
+
+        {"is_finished":false,"event_type":"text-generation","text":"H"}
+
+        {"is_finished":false,"event_type":"text-generation","text":"ola"}
+
+        {"is_finished":false,"event_type":"text-generation","text":"."}
+
+        {"is_finished":true,"event_type":"stream-end","response":{"response_id":"6dec46f4-9c33-4f6a-baab-269d06eb49b5","text":"Hola.","generation_id":"04f2b675-2121-401c-bebf-91166f3c0b14","chat_history":[{"role":"USER","message":"Say
+        hello in spanish"},{"role":"CHATBOT","message":"Hola."}],"finish_reason":"COMPLETE","meta":{"api_version":{"version":"1"},"billed_units":{"input_tokens":5,"output_tokens":3},"tokens":{"input_tokens":206,"output_tokens":3}}},"finish_reason":"COMPLETE"}
+
+        '
+    headers:
+      Alt-Svc:
+      - h3=":443"; ma=2592000,h3-29=":443"; ma=2592000
+      Transfer-Encoding:
+      - chunked
+      Via:
+      - 1.1 google
+      access-control-expose-headers:
+      - X-Debug-Trace-ID
+      cache-control:
+      - no-cache, no-store, no-transform, must-revalidate, private, max-age=0
+      content-type:
+      - application/stream+json
+      date:
+      - Tue, 14 Jan 2025 22:01:37 GMT
+      expires:
+      - Thu, 01 Jan 1970 00:00:00 UTC
+      pragma:
+      - no-cache
+      server:
+      - envoy
+      vary:
+      - Origin
+      x-accel-expires:
+      - '0'
+      x-debug-trace-id:
+      - 36ba7fdde02f7842568e5dd334e4e895
+      x-envoy-upstream-service-time:
+      - '20'
+    status:
+      code: 200
+      message: OK
+version: 1
