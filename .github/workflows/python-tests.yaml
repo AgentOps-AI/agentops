@@ -94,9 +94,9 @@ jobs:
         uses: astral-sh/setup-uv@v5
         continue-on-error: true
         with:
-          python-version: "3.13"
+          python-version: "3.12"
           enable-cache: true
-          cache-suffix: uv-3.13-integration
+          cache-suffix: uv-3.12-integration
           cache-dependency-glob: "**/pyproject.toml"
 
       - name: Install dependencies
