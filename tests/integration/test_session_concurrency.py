@@ -41,7 +41,6 @@ def setup_agentops():
     agentops.end_all_sessions()
 
 
-@pytest.mark.vcr(match_on=["method"], record_mode="once")
 def test_concurrent_api_requests(client):
     """Test concurrent API requests to ensure proper session handling."""
 
