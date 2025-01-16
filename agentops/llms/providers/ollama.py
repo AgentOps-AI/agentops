@@ -26,7 +26,7 @@ class OllamaProvider(InstrumentedProvider):
 
             if chunk.get("done"):
                 llm_event.end_timestamp = get_ISO_time()
-                llm_event.model = f'ollama/{chunk.get("model")}'
+                llm_event.model = f"ollama/{chunk.get('model')}"
                 llm_event.returns = chunk
                 llm_event.returns["message"] = llm_event.completion
                 llm_event.prompt = kwargs["messages"]
@@ -53,7 +53,7 @@ class OllamaProvider(InstrumentedProvider):
             return generator()
 
         llm_event.end_timestamp = get_ISO_time()
-        llm_event.model = f'ollama/{response["model"]}'
+        llm_event.model = f"ollama/{response['model']}"
         llm_event.returns = response
         llm_event.agent_id = check_call_stack_for_agent_id()
         llm_event.prompt = kwargs["messages"]

@@ -100,9 +100,9 @@ def get_ram_details():
     try:
         ram_info = psutil.virtual_memory()
         return {
-            "Total": f"{ram_info.total / (1024 ** 3):.2f} GB",
-            "Available": f"{ram_info.available / (1024 ** 3):.2f} GB",
-            "Used": f"{ram_info.used / (1024 ** 3):.2f} GB",
+            "Total": f"{ram_info.total / (1024**3):.2f} GB",
+            "Available": f"{ram_info.available / (1024**3):.2f} GB",
+            "Used": f"{ram_info.used / (1024**3):.2f} GB",
             "Percentage": f"{ram_info.percent}%",
         }
     except:

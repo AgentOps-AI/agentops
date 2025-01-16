@@ -1,26 +1,24 @@
 from __future__ import annotations
 
-import logging
 import threading
 import uuid
-from typing import TYPE_CHECKING, Any, Dict, List, Tuple, Union, TypeVar, Callable
+from typing import TYPE_CHECKING, Any, Dict, List, Union, TypeVar, Callable, Optional
 
 import agentops
 from openai import AzureOpenAI, OpenAI
 from openai.types.chat import ChatCompletion
-
 from autogen.logger.base_logger import BaseLogger, LLMConfig
 
 from agentops.enums import EndState
 from agentops.helpers import get_ISO_time
-
 from agentops import LLMEvent, ToolEvent, ActionEvent
+from agentops.log_config import logger
 from uuid import uuid4
 
 if TYPE_CHECKING:
     from autogen import Agent, ConversableAgent, OpenAIWrapper
+    from agentops import Session
 
-logger = logging.getLogger(__name__)
 lock = threading.Lock()
 
 __all__ = ("AutogenLogger",)
@@ -41,6 +39,7 @@ class AutogenLogger(BaseLogger):
         for agent in self.agent_store:
             if agent["autogen_id"] == autogen_id:
                 return agent["agentops_id"]
+        return None
 
     def log_chat_completion(
         self,
@@ -55,45 +54,73 @@ class AutogenLogger(BaseLogger):
         start_time: str,
     ) -> None:
         """Records an LLMEvent to AgentOps session"""
+        try:
+            completion = response.choices[len(response.choices) - 1]
+            # Note: Autogen tokens are not included in the request and function call tokens are not counted in the completion
+            llm_event = LLMEvent(
+                prompt=request["messages"],
+                completion=completion.message.to_dict(),
+                model=response.model,
+                cost=cost,
+                returns=completion.message.to_json(),
+            )
+            llm_event.init_timestamp = start_time
+            llm_event.end_timestamp = get_ISO_time()
+            llm_event.agent_id = self._get_agentops_id_from_agent(str(id(agent)))
 
-        completion = response.choices[len(response.choices) - 1]
-
-        # Note: Autogen tokens are not included in the request and function call tokens are not counted in the completion
-        llm_event = LLMEvent(
-            prompt=request["messages"],
-            completion=completion.message.to_dict(),
-            model=response.model,
-            cost=cost,
-            returns=completion.message.to_json(),
-        )
-        llm_event.init_timestamp = start_time
-        llm_event.end_timestamp = get_ISO_time()
-        llm_event.agent_id = self._get_agentops_id_from_agent(str(id(agent)))
-        agentops.record(llm_event)
+            agentops.record(llm_event)
+        except Exception as e:
+            logger.error(f"❌ Failed to record LLM event: {str(e)}")
+            raise
 
     def log_new_agent(self, agent: ConversableAgent, init_args: Dict[str, Any]) -> None:
-        """Calls agentops.create_agent"""
-        ao_agent_id = agentops.create_agent(agent.name, str(uuid4()))
-        self.agent_store.append({"agentops_id": ao_agent_id, "autogen_id": str(id(agent))})
+        """Creates agent in current session"""
+        try:
+            ao_agent_id = agentops.create_agent(agent.name, str(uuid4()))
+            self.agent_store.append({"agentops_id": ao_agent_id, "autogen_id": str(id(agent))})
+        except Exception as e:
+            logger.error(f"❌ Failed to create agent {agent.name}: {str(e)}")
+            raise
 
     def log_event(self, source: Union[str, Agent], name: str, **kwargs: Dict[str, Any]) -> None:
         """Records an ActionEvent to AgentOps session"""
-        event = ActionEvent(action_type=name)
-        agentops_id = self._get_agentops_id_from_agent(str(id(source)))
-        event.agent_id = agentops_id
-        event.params = kwargs
-        agentops.record(event)
+        try:
+            returns = None
+            if "reply" in kwargs:
+                returns = kwargs["reply"]
+            elif "message" in kwargs:
+                returns = kwargs["message"]
+
+            event = ActionEvent(
+                agent_id=self._get_agentops_id_from_agent(str(id(source))),
+                action_type=name,
+                params=kwargs,
+                returns=returns,
+                end_timestamp=get_ISO_time(),
+            )
+
+            with lock:
+                agentops.record(event)
+        except Exception as e:
+            logger.error(f"❌ Failed to record action event: {str(e)}")
+            raise
 
     def log_function_use(self, source: Union[str, Agent], function: F, args: Dict[str, Any], returns: any):
         """Records a ToolEvent to AgentOps session"""
-        event = ToolEvent()
-        agentops_id = self._get_agentops_id_from_agent(str(id(source)))
-        event.agent_id = agentops_id
-        event.function = function  # TODO: this is not a parameter
-        event.params = args
-        event.returns = returns
-        event.name = getattr(function, "__name__")
-        agentops.record(event)
+        try:
+            function_name = getattr(function, "__name__", str(function))
+            event = ToolEvent(
+                agent_id=self._get_agentops_id_from_agent(str(id(source))),
+                name=function_name,
+                params=args,
+                returns=returns,
+                end_timestamp=get_ISO_time(),
+            )
+            with lock:
+                agentops.record(event)
+        except Exception as e:
+            logger.error(f"❌ Failed to record tool event: {str(e)}")
+            raise
 
     def log_new_wrapper(
         self,
@@ -112,7 +139,12 @@ class AutogenLogger(BaseLogger):
 
     def stop(self) -> None:
         """Ends AgentOps session"""
-        agentops.end_session(end_state=EndState.INDETERMINATE.value)
+        logger.info("🛑 Stopping AutogenLogger")
+        try:
+            agentops.end_session(end_state=EndState.INDETERMINATE.value)
+        except Exception as e:
+            logger.error(f"❌ Failed to end session: {str(e)}")
+            raise
 
     def get_connection(self) -> None:
         """Method intentionally left blank"""
