@@ -1,6 +1,12 @@
 interactions:
 - request:
-    body: null
+    body: '{"session": {"end_timestamp": "TIMESTAMP", "end_state": "Indeterminate",
+      "session_id": "SESSION_ID", "init_timestamp": "TIMESTAMP", "tags": [], "video":
+      null, "end_state_reason": null, "host_env": {"SDK": {"AgentOps SDK Version":
+      "0.3.21"}, "OS": {"OS": "Darwin"}}, "config": "", "jwt": "JWT_TOKEN", "_lock":
+      "", "_end_session_lock": "", "token_cost": "", "_session_url": "", "event_counts":
+      {"llms": 0, "tools": 0, "actions": 0, "errors": 0, "apis": 0}, "is_running":
+      false}}'
     headers:
       Accept:
       - '*/*'
@@ -9,7 +15,7 @@ interactions:
       Connection:
       - keep-alive
       Content-Length:
-      - '10803'
+      - '10906'
       Content-Type:
       - application/json; charset=UTF-8
       Keep-Alive:
@@ -22,14 +28,14 @@ interactions:
     uri: https://api.agentops.ai/v2/create_session
   response:
     body:
-      string: '{"jwt":"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzZXNzaW9uX2lkIjoiMTcwNjg5ZjAtZTI4MS00ODdjLTkzMTctOWExOTU3ZDc4OWJmIiwiZXhwIjoxNzM3MTQ2ODk1Ljc5OTY0fQ.K38gltvALNeeUckcFDPRfPaO3NOVzdbiShZF86xutTY","session_url":"https://app.agentops.ai/drilldown?session_id=170689f0-e281-487c-9317-9a1957d789bf","status":"Success"}'
+      string: '{"jwt":"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzZXNzaW9uX2lkIjoiNTU4ZjExMTUtYjMzMi00MGIyLWIyMTctYTUxYjRkOGE0ZGFjIiwiZXhwIjoxNzM3MTUxMjU3LjI4MzI2OX0.auKxEgxG6x148MSNV3wgm2H5SZ7wtq7RfFxjr9NnkxI","session_url":"https://app.agentops.ai/drilldown?session_id=558f1115-b332-40b2-b217-a51b4d8a4dac","status":"Success"}'
     headers:
       Content-Length:
-      - '310'
+      - '311'
       Content-Type:
       - application/json
       Date:
-      - Thu, 16 Jan 2025 20:48:15 GMT
+      - Thu, 16 Jan 2025 22:00:57 GMT
       Server:
       - railway-edge
       X-Railway-Request-Id:
@@ -38,7 +44,7 @@ interactions:
       code: 200
       message: OK
 - request:
-    body: null
+    body: '{"id": "AGENT_ID", "name": "user_proxy"}'
     headers:
       Accept:
       - '*/*'
@@ -69,7 +75,7 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Thu, 16 Jan 2025 20:48:16 GMT
+      - Thu, 16 Jan 2025 22:00:58 GMT
       Server:
       - railway-edge
       X-Railway-Request-Id:
@@ -78,7 +84,7 @@ interactions:
       code: 200
       message: OK
 - request:
-    body: null
+    body: '{"id": "AGENT_ID", "name": "assistant"}'
     headers:
       Accept:
       - '*/*'
@@ -109,7 +115,7 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Thu, 16 Jan 2025 20:48:16 GMT
+      - Thu, 16 Jan 2025 22:00:58 GMT
       Server:
       - railway-edge
       X-Railway-Request-Id:
@@ -118,7 +124,13 @@ interactions:
       code: 200
       message: OK
 - request:
-    body: null
+    body: '{"session": {"end_timestamp": "TIMESTAMP", "end_state": "Indeterminate",
+      "session_id": "SESSION_ID", "init_timestamp": "TIMESTAMP", "tags": [], "video":
+      null, "end_state_reason": null, "host_env": {"SDK": {"AgentOps SDK Version":
+      "0.3.21"}, "OS": {"OS": "Darwin"}}, "config": "", "jwt": "JWT_TOKEN", "_lock":
+      "", "_end_session_lock": "", "token_cost": "", "_session_url": "", "event_counts":
+      {"llms": 0, "tools": 0, "actions": 0, "errors": 0, "apis": 0}, "is_running":
+      false, "_tracer_provider": "", "_otel_tracer": "", "_otel_exporter": ""}}'
     headers:
       Accept:
       - '*/*'
@@ -127,7 +139,7 @@ interactions:
       Connection:
       - keep-alive
       Content-Length:
-      - '11101'
+      - '11205'
       Content-Type:
       - application/json; charset=UTF-8
       Keep-Alive:
@@ -142,14 +154,14 @@ interactions:
     uri: https://api.agentops.ai/v2/update_session
   response:
     body:
-      string: '{"session_url":"https://app.agentops.ai/drilldown?session_id=170689f0-e281-487c-9317-9a1957d789bf","status":"success","token_cost":"0.00"}'
+      string: '{"session_url":"https://app.agentops.ai/drilldown?session_id=558f1115-b332-40b2-b217-a51b4d8a4dac","status":"success","token_cost":"0.00"}'
     headers:
       Content-Length:
       - '138'
       Content-Type:
       - application/json
       Date:
-      - Thu, 16 Jan 2025 20:48:17 GMT
+      - Thu, 16 Jan 2025 22:00:59 GMT
       Server:
       - railway-edge
       X-Railway-Request-Id:
