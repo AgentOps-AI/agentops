@@ -179,7 +179,7 @@ class Client(metaclass=MetaClient):
         """
         return list(self._config.default_tags)
 
-    def record(self, event: Union[Event, ErrorEvent]) -> None:
+    def record(self, event: Event) -> None:
         """
         Record an event with the AgentOps service.
 
