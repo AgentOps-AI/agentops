@@ -85,6 +85,13 @@ def vcr_config():
         ("x-debug-trace-id", "REDACTED")
     ]
 
+    def before_record_request(request):
+        """Filter sensitive data from request body"""
+        if request.body:
+            # Don't match on dynamic fields in the request body
+            request.body = None
+        return request
+
     def filter_response_headers(response):
         """Filter sensitive headers from response."""
         headers = response["headers"]
@@ -101,7 +108,7 @@ def vcr_config():
         # Basic VCR configuration
         "serializer": "yaml",
         "cassette_library_dir": str(vcr_cassettes),
-        "match_on": ["uri", "method", "body"],
+        "match_on": ["uri", "method"],
         "record_mode": "once",
         "ignore_localhost": True,
         "ignore_hosts": [
@@ -114,6 +121,7 @@ def vcr_config():
         ],
         # Header filtering for requests and responses
         "filter_headers": sensitive_headers,
+        "before_record_request": before_record_request,
         "before_record_response": filter_response_headers,
         # Add these new options
         "decode_compressed_response": True,
