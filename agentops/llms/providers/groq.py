@@ -1,7 +1,7 @@
 import pprint
 from typing import Optional
 
-from .instrumented_provider import InstrumentedProvider
+from .base import BaseProvider
 from agentops.event import ErrorEvent, LLMEvent
 from agentops.session import Session
 from agentops.log_config import logger
@@ -10,7 +10,7 @@ from agentops.singleton import singleton
 
 
 @singleton
-class GroqProvider(InstrumentedProvider):
+class GroqProvider(BaseProvider):
     original_create = None
     original_async_create = None
 

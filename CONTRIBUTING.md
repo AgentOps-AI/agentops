@@ -108,7 +108,6 @@ We use the following testing packages:
 - `pytest-mock`: Mocking functionality
 - `pyfakefs`: Mock filesystem operations
 - `requests_mock==1.11.0`: Mock HTTP requests
-- `tach~=0.9`: Performance testing and dependency tracking to prevent circular dependencies
 
 ### Using Tox
 
@@ -216,15 +215,6 @@ This will:
    - Sanitize sensitive information
    - Update cassettes when API changes
 
-5. **Performance Testing**:
-   ```python
-   from tach import Tach
-
-   def test_performance():
-       with Tach('operation_name'):
-           perform_operation()
-   ```
-
 ### CI Testing Strategy
 
 We use Jupyter notebooks as integration tests for LLM providers. This approach:
@@ -274,10 +264,10 @@ We use Jupyter notebooks as integration tests for LLM providers. This approach:
 
 The `agentops/llms/` directory contains provider implementations. Each provider must:
 
-1. **Inherit from InstrumentedProvider**:
+1. **Inherit from BaseProvider**:
    ```python
    @singleton
-   class NewProvider(InstrumentedProvider):
+   class NewProvider(BaseProvider):
        def __init__(self, client):
            super().__init__(client)
            self._provider_name = "ProviderName"

@@ -2,7 +2,7 @@ import json
 import pprint
 from typing import Optional
 
-from agentops.llms.providers.instrumented_provider import InstrumentedProvider
+from agentops.llms.providers.base import BaseProvider
 from agentops.time_travel import fetch_completion_override_from_time_travel_cache
 
 from agentops.event import ErrorEvent, LLMEvent, ToolEvent
@@ -13,7 +13,7 @@ from agentops.singleton import singleton
 
 
 @singleton
-class AnthropicProvider(InstrumentedProvider):
+class AnthropicProvider(BaseProvider):
     original_create = None
     original_create_async = None
 

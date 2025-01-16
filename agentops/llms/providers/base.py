@@ -5,7 +5,7 @@ from agentops.session import Session
 from agentops.event import LLMEvent
 
 
-class InstrumentedProvider(ABC):
+class BaseProvider(ABC):
     _provider_name: str = "InstrumentedModel"
     llm_event: Optional[LLMEvent] = None
     client = None

@@ -5,14 +5,14 @@ from typing import Optional
 from agentops.event import LLMEvent
 from agentops.session import Session
 from agentops.helpers import get_ISO_time, check_call_stack_for_agent_id
-from .instrumented_provider import InstrumentedProvider
+from .base import BaseProvider
 from agentops.singleton import singleton
 
 original_func = {}
 
 
 @singleton
-class OllamaProvider(InstrumentedProvider):
+class OllamaProvider(BaseProvider):
     original_create = None
     original_create_async = None
 

@@ -84,11 +84,6 @@ dev = [
     "pdbpp>=0.10.3",
 ]
 
-# CI dependencies
-ci = [
-    "tach~=0.9"         # Task runner for CI/CD pipelines
-]
-
 [project.urls]
 Homepage = "https://github.com/AgentOps-AI/agentops"
 Issues = "https://github.com/AgentOps-AI/agentops/issues"

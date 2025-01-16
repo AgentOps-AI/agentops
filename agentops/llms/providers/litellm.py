@@ -5,13 +5,13 @@ from agentops.log_config import logger
 from agentops.event import LLMEvent, ErrorEvent
 from agentops.session import Session
 from agentops.helpers import get_ISO_time, check_call_stack_for_agent_id
-from agentops.llms.providers.instrumented_provider import InstrumentedProvider
+from agentops.llms.providers.base import BaseProvider
 from agentops.time_travel import fetch_completion_override_from_time_travel_cache
 from agentops.singleton import singleton
 
 
 @singleton
-class LiteLLMProvider(InstrumentedProvider):
+class LiteLLMProvider(BaseProvider):
     original_create = None
     original_create_async = None
     original_oai_create = None
