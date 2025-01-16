@@ -1,5 +1,6 @@
 import pytest
 from pathlib import Path
+import json
 
 
 @pytest.fixture(scope="session")
@@ -85,13 +86,6 @@ def vcr_config():
         ("x-debug-trace-id", "REDACTED")
     ]
 
-    def before_record_request(request):
-        """Filter sensitive data from request body"""
-        if request.body:
-            # Don't match on dynamic fields in the request body
-            request.body = None
-        return request
-
     def filter_response_headers(response):
         """Filter sensitive headers from response."""
         headers = response["headers"]
@@ -104,11 +98,55 @@ def vcr_config():
 
         return response
 
+    def scrub_request_body(request):
+        """Scrub sensitive and dynamic data from request body."""
+        if request.body:
+            try:
+                body_dict = json.loads(request.body)
+                
+                # Handle session creation/update requests
+                if request.uri.endswith('/v2/create_session') or request.uri.endswith('/v2/update_session'):
+                    if 'session' in body_dict:
+                        session = body_dict['session']
+                        # Standardize session fields
+                        session['session_id'] = 'SESSION_ID'
+                        session['init_timestamp'] = 'TIMESTAMP'
+                        session['end_timestamp'] = 'TIMESTAMP'
+                        session['jwt'] = 'JWT_TOKEN'
+                        
+                        # Minimize host_env to essential fields only
+                        if 'host_env' in session:
+                            session['host_env'] = {
+                                'SDK': {
+                                    'AgentOps SDK Version': session['host_env']['SDK'].get('AgentOps SDK Version')
+                                },
+                                'OS': {
+                                    'OS': session['host_env']['OS'].get('OS')
+                                }
+                            }
+                            
+                        # Reset dynamic counts and states
+                        session['event_counts'] = {
+                            'llms': 0, 'tools': 0, 'actions': 0, 
+                            'errors': 0, 'apis': 0
+                        }
+                        session['is_running'] = False
+                
+                # Handle agent creation requests
+                if request.uri.endswith('/v2/create_agent'):
+                    if 'id' in body_dict:
+                        body_dict['id'] = 'AGENT_ID'
+                
+                request.body = json.dumps(body_dict).encode()
+            except (json.JSONDecodeError, AttributeError):
+                pass
+        return request
+
     return {
         # Basic VCR configuration
         "serializer": "yaml",
         "cassette_library_dir": str(vcr_cassettes),
-        "match_on": ["uri", "method"],
+        "match_on": ["uri", "method", "body"],
         "record_mode": "once",
         "ignore_localhost": True,
         "ignore_hosts": [
@@ -121,10 +159,10 @@ def vcr_config():
         ],
         # Header filtering for requests and responses
         "filter_headers": sensitive_headers,
-        "before_record_request": before_record_request,
         "before_record_response": filter_response_headers,
         # Add these new options
         "decode_compressed_response": True,
         "record_on_exception": False,
         "allow_playback_repeats": True,
+        "before_record_request": scrub_request_body,
     }
