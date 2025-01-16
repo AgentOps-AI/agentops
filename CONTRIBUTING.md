@@ -274,10 +274,10 @@ We use Jupyter notebooks as integration tests for LLM providers. This approach:
 
 The `agentops/llms/` directory contains provider implementations. Each provider must:
 
-1. **Inherit from InstrumentedProvider**:
+1. **Inherit from BaseProvider**:
    ```python
    @singleton
-   class NewProvider(InstrumentedProvider):
+   class NewProvider(BaseProvider):
        def __init__(self, client):
            super().__init__(client)
            self._provider_name = "ProviderName"
