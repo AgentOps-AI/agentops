@@ -7,7 +7,7 @@ import pytest
 
 def collect_stream_content(stream_response: Any, provider: str) -> List[str]:
     """Collect streaming content based on provider-specific response format."""
-    collected_content = []  # Initialize the list first
+    collected_content = []
 
     handlers = {
         "openai": lambda chunk: chunk.choices[0].delta.content,
@@ -27,8 +27,8 @@ def collect_stream_content(stream_response: Any, provider: str) -> List[str]:
         raise ValueError(f"Unknown provider: {provider}")
 
     for chunk in stream_response:
-        if chunk_content := handler(chunk):  # Use different variable name
-            collected_content.append(chunk_content)  # Append to the list
+        if chunk_content := handler(chunk):
+            collected_content.append(chunk_content)
 
     return collected_content
 
