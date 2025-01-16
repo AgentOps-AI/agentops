@@ -46,6 +46,11 @@ graph TD
 - Provides global session access
 - Maintains backward compatibility with old code
 
+### LogCapture (`log_capture.py`)
+- Captures stdout/stderr using OpenTelemetry logging
+- Integrates with SessionTelemetry for consistent configuration
+- Manages log buffering and export
+
 ## Data Flow
 
 ```mermaid
