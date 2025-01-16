@@ -162,30 +162,40 @@ def vcr_config():
                 if request.uri and (request.uri.endswith('/v2/create_session') or request.uri.endswith('/v2/update_session')):
                     session = body_dict.get('session')
                     if session and isinstance(session, dict):
-                        # Standardize session fields
+                        # Standardize all dynamic fields
+                        for key in session:
+                            if key.startswith('_'):  # Internal fields
+                                session[key] = ''
+                            elif isinstance(session[key], str):  # String fields that might be dynamic
+                                if key not in ['end_state', 'OS']:  # Preserve specific fields
+                                    session[key] = ''
+                        
+                        # Standardize known fields
                         session['session_id'] = 'SESSION_ID'
                         session['init_timestamp'] = 'TIMESTAMP'
                         session['end_timestamp'] = 'TIMESTAMP'
                         session['jwt'] = 'JWT_TOKEN'
+                        session['token_cost'] = ''
+                        session['_session_url'] = ''
                         
-                        # Minimize host_env to essential fields only
-                        host_env = session.get('host_env')
-                        if host_env and isinstance(host_env, dict):
+                        # Standardize host environment
+                        if 'host_env' in session:
                             session['host_env'] = {
-                                'SDK': {
-                                    'AgentOps SDK Version': host_env.get('SDK', {}).get('AgentOps SDK Version')
-                                },
-                                'OS': {
-                                    'OS': host_env.get('OS', {}).get('OS')
-                                }
+                                'SDK': {'AgentOps SDK Version': None},
+                                'OS': {'OS': session.get('host_env', {}).get('OS', {}).get('OS', 'Darwin')}
                             }
-                            
-                        # Reset dynamic counts and states
+                        
+                        # Reset all counters and states
                         session['event_counts'] = {
                             'llms': 0, 'tools': 0, 'actions': 0, 
                             'errors': 0, 'apis': 0
                         }
                         session['is_running'] = False
+                        
+                        # Clear any dynamic lists
+                        session['tags'] = []
+                        session['video'] = None
+                        session['end_state_reason'] = None
                 
                 # Handle agent creation requests
                 if request.uri and request.uri.endswith('/v2/create_agent'):
