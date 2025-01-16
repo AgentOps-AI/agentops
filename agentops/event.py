@@ -7,11 +7,19 @@ Data Class:
 
 import traceback
 from dataclasses import dataclass, field
+from enum import Enum
 from typing import Any, Dict, List, Optional, Sequence, Union
 from uuid import UUID, uuid4
 
-from .enums import EventType
 from .helpers import check_call_stack_for_agent_id, get_ISO_time
+
+
+class EventType(Enum):
+    LLM = "llms"
+    ACTION = "actions"
+    API = "apis"
+    TOOL = "tools"
+    ERROR = "errors"
 
 
 @dataclass
@@ -19,7 +27,7 @@ class Event:
     """
     Abstract base class for events that will be recorded. Should not be instantiated directly.
 
-    event_type(str): The type of event. Defined in enums.EventType. Some values are 'llm', 'action', 'api', 'tool', 'error'.
+    event_type(str): The type of event. Defined in events.EventType. Some values are 'llm', 'action', 'api', 'tool', 'error'.
     params(dict, optional): The parameters of the function containing the triggered event, e.g. {'x': 1} in example below
     returns(str, optional): The return value of the function containing the triggered event, e.g. 2 in example below
     init_timestamp(str): A timestamp indicating when the event began. Defaults to the time when this Event was instantiated.

@@ -6,6 +6,7 @@ import json
 import threading
 from datetime import datetime, timezone
 from decimal import ROUND_HALF_UP, Decimal
+from enum import Enum
 from typing import Any, Dict, List, Optional, Sequence, Union
 from uuid import UUID, uuid4
 
@@ -13,16 +14,10 @@ from opentelemetry import trace
 from opentelemetry.context import attach, detach, set_value
 from opentelemetry.sdk.resources import SERVICE_NAME, Resource
 from opentelemetry.sdk.trace import ReadableSpan, TracerProvider
-from opentelemetry.sdk.trace.export import (
-    BatchSpanProcessor,
-    ConsoleSpanExporter,
-    SpanExporter,
-    SpanExportResult,
-)
+from opentelemetry.sdk.trace.export import BatchSpanProcessor, ConsoleSpanExporter, SpanExporter, SpanExportResult
 from termcolor import colored
 
 from .config import Configuration
-from .enums import EndState
 from .event import ErrorEvent, Event
 from .exceptions import ApiServerException
 from .helpers import filter_unjsonable, get_ISO_time, safe_serialize
@@ -61,6 +56,23 @@ OTEL Guidelines:
         - The documentation example about "process name, pod name, namespace" refers to where the code is running, not the work it's doing
 
 """
+
+
+class EndState(Enum):
+    """
+    Enum representing the possible end states of a session.
+
+    Attributes:
+        SUCCESS: Indicates the session ended successfully.
+        FAIL: Indicates the session failed.
+        INDETERMINATE (default): Indicates the session ended with an indeterminate state.
+                       This is the default state if not specified, e.g. if you forget to call end_session()
+                       at the end of your program or don't pass it the end_state parameter
+    """
+
+    SUCCESS = "Success"
+    FAIL = "Fail"
+    INDETERMINATE = "Indeterminate"  # Default
 
 
 class SessionExporter(SpanExporter):
@@ -290,7 +302,7 @@ class Session:
                 return None
 
             if not any(end_state == state.value for state in EndState):
-                logger.warning("Invalid end_state. Please use one of the EndState enums")
+                logger.warning("Invalid end_state. Please use one of the EndState")
                 return None
 
             try:
