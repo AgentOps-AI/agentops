@@ -1,4 +1,5 @@
 """Semantic conventions for AgentOps spans"""
+
 # Time attributes
 TIME_START = "time.start"
 TIME_END = "time.end"

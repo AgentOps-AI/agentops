@@ -1,4 +1,5 @@
 """Session management module"""
+
 from .session import Session
 from .registry import get_active_sessions, add_session, remove_session
 
