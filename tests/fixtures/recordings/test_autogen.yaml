@@ -15,7 +15,7 @@ interactions:
       Connection:
       - keep-alive
       Content-Length:
-      - '9451'
+      - '12002'
       Content-Type:
       - application/json; charset=UTF-8
       Keep-Alive:
@@ -28,7 +28,7 @@ interactions:
     uri: https://api.agentops.ai/v2/create_session
   response:
     body:
-      string: '{"jwt": "REDACTED", "session_url": "https://app.agentops.ai/drilldown?session_id=30292ac3-e0bf-4880-a5b8-116aada31960",
+      string: '{"jwt": "REDACTED", "session_url": "https://app.agentops.ai/drilldown?session_id=2fc8be5b-2176-49e8-9969-49fb3c951700",
         "status": "Success"}'
     headers:
       Content-Length:
@@ -36,7 +36,7 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Thu, 16 Jan 2025 22:54:16 GMT
+      - Thu, 16 Jan 2025 22:58:43 GMT
       Server:
       - railway-edge
       X-Railway-Request-Id:
@@ -76,7 +76,7 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Thu, 16 Jan 2025 22:54:17 GMT
+      - Thu, 16 Jan 2025 22:58:44 GMT
       Server:
       - railway-edge
       X-Railway-Request-Id:
@@ -116,7 +116,7 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Thu, 16 Jan 2025 22:54:18 GMT
+      - Thu, 16 Jan 2025 22:58:45 GMT
       Server:
       - railway-edge
       X-Railway-Request-Id:
@@ -140,7 +140,7 @@ interactions:
       Connection:
       - keep-alive
       Content-Length:
-      - '9750'
+      - '12301'
       Content-Type:
       - application/json; charset=UTF-8
       Keep-Alive:
@@ -155,7 +155,7 @@ interactions:
     uri: https://api.agentops.ai/v2/update_session
   response:
     body:
-      string: '{"session_url": "https://app.agentops.ai/drilldown?session_id=30292ac3-e0bf-4880-a5b8-116aada31960",
+      string: '{"session_url": "https://app.agentops.ai/drilldown?session_id=2fc8be5b-2176-49e8-9969-49fb3c951700",
         "status": "success", "token_cost": "0.00"}'
     headers:
       Content-Length:
@@ -163,7 +163,7 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Thu, 16 Jan 2025 22:54:18 GMT
+      - Thu, 16 Jan 2025 22:58:46 GMT
       Server:
       - railway-edge
       X-Railway-Request-Id:
