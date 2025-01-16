@@ -23,6 +23,18 @@ original_create_async = None
 
 
 class LlmTracker:
+    """
+    A class that handles the instrumentation of various LLM provider APIs to track and record their usage.
+    
+    This tracker supports multiple LLM providers including OpenAI, Anthropic, Cohere, Groq, Mistral, 
+    and others. It patches their API methods to collect telemetry data while maintaining the original 
+    functionality.
+
+    Attributes:
+        SUPPORTED_APIS (dict): A mapping of supported API providers to their versions and tracked methods.
+        client: The AgentOps client instance used for telemetry collection.
+    """
+
     SUPPORTED_APIS = {
         "litellm": {"1.3.1": ("openai_chat_completions.completion",)},
         "openai": {
@@ -94,11 +106,29 @@ class LlmTracker:
     }
 
     def __init__(self, client):
+        """
+        Initialize the LlmTracker with an AgentOps client.
+
+        Args:
+            client: The AgentOps client instance used for collecting and sending telemetry data.
+        """
         self.client = client
 
     def override_api(self):
         """
-        Overrides key methods of the specified API to record events.
+        Overrides key methods of the supported LLM APIs to record events.
+        
+        This method checks for installed LLM packages and their versions, then applies
+        the appropriate instrumentation based on the provider and version. It patches
+        API methods to collect telemetry while maintaining their original functionality.
+        
+        For each supported provider:
+        1. Checks if the package is installed
+        2. Verifies version compatibility
+        3. Initializes the appropriate provider class
+        4. Applies the instrumentation
+
+        If using LiteLLM, only patches LiteLLM methods and skips patching underlying providers.
         """
 
         for api in self.SUPPORTED_APIS:
@@ -211,6 +241,13 @@ class LlmTracker:
                         logger.warning(f"Only TaskWeaver>=0.0.1 supported. v{module_version} found.")
 
     def stop_instrumenting(self):
+        """
+        Removes all API instrumentation and restores original functionality.
+        
+        This method undoes all the patches applied by override_api(), returning
+        each provider's methods to their original state. This is useful for cleanup
+        or when you need to temporarily disable tracking.
+        """
         OpenAiProvider(self.client).undo_override()
         GroqProvider(self.client).undo_override()
         CohereProvider(self.client).undo_override()
