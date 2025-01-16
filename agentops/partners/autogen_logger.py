@@ -11,7 +11,7 @@ from openai.types.chat import ChatCompletion
 
 from autogen.logger.base_logger import BaseLogger, LLMConfig
 
-from agentops.enums import EndState
+from agentops.session import EndState
 from agentops.helpers import get_ISO_time
 
 from agentops import LLMEvent, ToolEvent, ActionEvent
