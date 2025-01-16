@@ -13,13 +13,16 @@ from tests.fixtures.providers import (
     openai_client,
     test_messages,
 )
+from tests.fixtures.partners import (
+    autogen_logger,
+    math_agents,
+)
 from tests.fixtures.vcr import vcr_config
 
 
 @pytest.fixture
 def agentops_session():
+    """Fixture for managing AgentOps sessions."""
     agentops.start_session()
-
     yield
-
     agentops.end_all_sessions()

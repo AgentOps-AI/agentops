@@ -76,19 +76,25 @@ def vcr_config():
         ("x-stainless-async", "REDACTED"),
         ("x-stainless-runtime", "REDACTED"),
         ("x-stainless-runtime-version", "REDACTED"),
+        # Add JWT-related headers
+        ("x-railway-request-id", "REDACTED"),
+        ("x-request-id", "REDACTED"),
+        ("x-ratelimit-remaining-tokens", "REDACTED"), 
+        ("x-ratelimit-reset-requests", "REDACTED"),
+        ("x-ratelimit-reset-tokens", "REDACTED"),
+        ("x-debug-trace-id", "REDACTED")
     ]
 
     def filter_response_headers(response):
         """Filter sensitive headers from response."""
         headers = response["headers"]
-        headers_lower = {k.lower(): k for k in headers}  # Map of lowercase -> original header names
+        headers_lower = {k.lower(): k for k in headers}
 
         for header, replacement in sensitive_headers:
             header_lower = header.lower()
             if header_lower in headers_lower:
-                # Replace using the original header name from the response
-                original_header = headers_lower[header_lower]
-                headers[original_header] = replacement
+                headers[headers_lower[header_lower]] = [replacement]
+
         return response
 
     return {
