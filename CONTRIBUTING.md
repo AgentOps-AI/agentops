@@ -108,7 +108,6 @@ We use the following testing packages:
 - `pytest-mock`: Mocking functionality
 - `pyfakefs`: Mock filesystem operations
 - `requests_mock==1.11.0`: Mock HTTP requests
-- `tach~=0.9`: Performance testing and dependency tracking to prevent circular dependencies
 
 ### Using Tox
 
@@ -215,15 +214,6 @@ This will:
    - Store in `tests/cassettes/`
    - Sanitize sensitive information
    - Update cassettes when API changes
-
-5. **Performance Testing**:
-   ```python
-   from tach import Tach
-
-   def test_performance():
-       with Tach('operation_name'):
-           perform_operation()
-   ```
 
 ### CI Testing Strategy
 
