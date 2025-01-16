@@ -1,0 +1,160 @@
+interactions:
+- request:
+    body: null
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '10803'
+      Content-Type:
+      - application/json; charset=UTF-8
+      Keep-Alive:
+      - timeout=10, max=1000
+      User-Agent:
+      - python-requests/2.32.3
+      x-agentops-api-key:
+      - REDACTED
+    method: POST
+    uri: https://api.agentops.ai/v2/create_session
+  response:
+    body:
+      string: '{"jwt":"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzZXNzaW9uX2lkIjoiMTcwNjg5ZjAtZTI4MS00ODdjLTkzMTctOWExOTU3ZDc4OWJmIiwiZXhwIjoxNzM3MTQ2ODk1Ljc5OTY0fQ.K38gltvALNeeUckcFDPRfPaO3NOVzdbiShZF86xutTY","session_url":"https://app.agentops.ai/drilldown?session_id=170689f0-e281-487c-9317-9a1957d789bf","status":"Success"}'
+    headers:
+      Content-Length:
+      - '310'
+      Content-Type:
+      - application/json
+      Date:
+      - Thu, 16 Jan 2025 20:48:15 GMT
+      Server:
+      - railway-edge
+      X-Railway-Request-Id:
+      - REDACTED
+    status:
+      code: 200
+      message: OK
+- request:
+    body: null
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '68'
+      Content-Type:
+      - application/json; charset=UTF-8
+      Keep-Alive:
+      - timeout=10, max=1000
+      User-Agent:
+      - python-requests/2.32.3
+      authorization:
+      - REDACTED
+      x-agentops-api-key:
+      - REDACTED
+    method: POST
+    uri: https://api.agentops.ai/v2/create_agent
+  response:
+    body:
+      string: '"Success"'
+    headers:
+      Content-Length:
+      - '9'
+      Content-Type:
+      - application/json
+      Date:
+      - Thu, 16 Jan 2025 20:48:16 GMT
+      Server:
+      - railway-edge
+      X-Railway-Request-Id:
+      - REDACTED
+    status:
+      code: 200
+      message: OK
+- request:
+    body: null
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '67'
+      Content-Type:
+      - application/json; charset=UTF-8
+      Keep-Alive:
+      - timeout=10, max=1000
+      User-Agent:
+      - python-requests/2.32.3
+      authorization:
+      - REDACTED
+      x-agentops-api-key:
+      - REDACTED
+    method: POST
+    uri: https://api.agentops.ai/v2/create_agent
+  response:
+    body:
+      string: '"Success"'
+    headers:
+      Content-Length:
+      - '9'
+      Content-Type:
+      - application/json
+      Date:
+      - Thu, 16 Jan 2025 20:48:16 GMT
+      Server:
+      - railway-edge
+      X-Railway-Request-Id:
+      - REDACTED
+    status:
+      code: 200
+      message: OK
+- request:
+    body: null
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '11101'
+      Content-Type:
+      - application/json; charset=UTF-8
+      Keep-Alive:
+      - timeout=10, max=1000
+      User-Agent:
+      - python-requests/2.32.3
+      authorization:
+      - REDACTED
+      x-agentops-api-key:
+      - REDACTED
+    method: POST
+    uri: https://api.agentops.ai/v2/update_session
+  response:
+    body:
+      string: '{"session_url":"https://app.agentops.ai/drilldown?session_id=170689f0-e281-487c-9317-9a1957d789bf","status":"success","token_cost":"0.00"}'
+    headers:
+      Content-Length:
+      - '138'
+      Content-Type:
+      - application/json
+      Date:
+      - Thu, 16 Jan 2025 20:48:17 GMT
+      Server:
+      - railway-edge
+      X-Railway-Request-Id:
+      - REDACTED
+    status:
+      code: 200
+      message: OK
+version: 1
