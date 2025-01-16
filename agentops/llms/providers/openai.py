@@ -1,7 +1,7 @@
 import pprint
 from typing import Optional
 
-from agentops.llms.providers.instrumented_provider import InstrumentedProvider
+from agentops.llms.providers.base import BaseProvider
 from agentops.time_travel import fetch_completion_override_from_time_travel_cache
 
 from agentops.event import ActionEvent, ErrorEvent, LLMEvent
@@ -12,7 +12,7 @@ from agentops.singleton import singleton
 
 
 @singleton
-class OpenAiProvider(InstrumentedProvider):
+class OpenAiProvider(BaseProvider):
     original_create = None
     original_create_async = None
     original_assistant_methods = None

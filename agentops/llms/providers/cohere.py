@@ -2,7 +2,7 @@ import inspect
 import pprint
 from typing import Optional
 
-from .instrumented_provider import InstrumentedProvider
+from .base import BaseProvider
 from agentops.event import ActionEvent, ErrorEvent, LLMEvent
 from agentops.session import Session
 from agentops.log_config import logger
@@ -11,7 +11,7 @@ from agentops.singleton import singleton
 
 
 @singleton
-class CohereProvider(InstrumentedProvider):
+class CohereProvider(BaseProvider):
     original_create = None
     original_create_stream = None
     original_create_async = None

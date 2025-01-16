@@ -7,10 +7,10 @@ from agentops.event import LLMEvent, ErrorEvent
 from agentops.session import Session
 from agentops.log_config import logger
 from agentops.helpers import get_ISO_time, check_call_stack_for_agent_id
-from .instrumented_provider import InstrumentedProvider
+from .base import BaseProvider
 
 
-class MistralProvider(InstrumentedProvider):
+class MistralProvider(BaseProvider):
     original_complete = None
     original_complete_async = None
     original_stream = None

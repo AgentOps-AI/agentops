@@ -6,12 +6,12 @@ from agentops.event import ErrorEvent, LLMEvent, ActionEvent
 from agentops.session import Session
 from agentops.log_config import logger
 from agentops.helpers import get_ISO_time, check_call_stack_for_agent_id
-from agentops.llms.providers.instrumented_provider import InstrumentedProvider
+from agentops.llms.providers.base import BaseProvider
 from agentops.singleton import singleton
 
 
 @singleton
-class TaskWeaverProvider(InstrumentedProvider):
+class TaskWeaverProvider(BaseProvider):
     original_chat_completion = None
 
     def __init__(self, client):
