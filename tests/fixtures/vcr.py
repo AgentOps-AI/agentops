@@ -86,28 +86,82 @@ def vcr_config():
         ("x-debug-trace-id", "REDACTED")
     ]
 
-    def filter_response_headers(response):
-        """Filter sensitive headers from response."""
-        headers = response["headers"]
-        headers_lower = {k.lower(): k for k in headers}
+    def redact_jwt_recursive(obj):
+        """Recursively redact JWT tokens from dict/list structures."""
+        if obj is None:
+            return obj
+            
+        if isinstance(obj, dict):
+            for key, value in obj.items():
+                if isinstance(key, str) and ('jwt' in key.lower()):
+                    obj[key] = 'REDACTED'
+                elif isinstance(value, str) and 'eyJ' in value:  # JWT tokens start with 'eyJ'
+                    obj[key] = 'REDACTED_JWT'
+                else:
+                    redact_jwt_recursive(value)
+        elif isinstance(obj, list):
+            for item in obj:
+                redact_jwt_recursive(item)
+        return obj
 
-        for header, replacement in sensitive_headers:
-            header_lower = header.lower()
-            if header_lower in headers_lower:
-                headers[headers_lower[header_lower]] = [replacement]
+    def filter_response_headers(response):
+        """Filter sensitive headers and body content from response."""
+        if not isinstance(response, dict):
+            raise ValueError("Response must be a dictionary")
+            
+        # Filter headers
+        headers = response.get("headers", {})
+        if headers:
+            headers_lower = {k.lower(): k for k in headers}
+
+            for header, replacement in sensitive_headers:
+                header_lower = header.lower()
+                if header_lower in headers_lower:
+                    headers[headers_lower[header_lower]] = [replacement]
+
+        # Filter response body
+        if "body" in response and isinstance(response["body"], dict):
+            body_content = response["body"].get("string")
+            if body_content is not None:
+                try:
+                    # Handle JSON response bodies
+                    if isinstance(body_content, bytes):
+                        body_str = body_content.decode('utf-8')
+                    else:
+                        body_str = str(body_content)
+                    
+                    try:
+                        body = json.loads(body_str)
+                        body = redact_jwt_recursive(body)
+                        response["body"]["string"] = json.dumps(body).encode('utf-8')
+                    except json.JSONDecodeError:
+                        # If not JSON, handle as plain text
+                        import re
+                        jwt_pattern = r'eyJ[a-zA-Z0-9_-]+\.[a-zA-Z0-9_-]+\.[a-zA-Z0-9_-]+'
+                        body_str = re.sub(jwt_pattern, 'REDACTED_JWT', body_str)
+                        response["body"]["string"] = body_str.encode('utf-8')
+                except (AttributeError, UnicodeDecodeError) as e:
+                    raise ValueError(f"Failed to process response body: {str(e)}")
 
         return response
 
     def scrub_request_body(request):
         """Scrub sensitive and dynamic data from request body."""
+        if not request or not hasattr(request, 'body'):
+            raise ValueError("Invalid request object")
+            
         if request.body:
             try:
                 body_dict = json.loads(request.body)
+                if not isinstance(body_dict, dict):
+                    raise ValueError("Request body must be a JSON object")
+                    
+                body_dict = redact_jwt_recursive(body_dict)
                 
                 # Handle session creation/update requests
-                if request.uri.endswith('/v2/create_session') or request.uri.endswith('/v2/update_session'):
-                    if 'session' in body_dict:
-                        session = body_dict['session']
+                if request.uri and (request.uri.endswith('/v2/create_session') or request.uri.endswith('/v2/update_session')):
+                    session = body_dict.get('session')
+                    if session and isinstance(session, dict):
                         # Standardize session fields
                         session['session_id'] = 'SESSION_ID'
                         session['init_timestamp'] = 'TIMESTAMP'
@@ -115,13 +169,14 @@ def vcr_config():
                         session['jwt'] = 'JWT_TOKEN'
                         
                         # Minimize host_env to essential fields only
-                        if 'host_env' in session:
+                        host_env = session.get('host_env')
+                        if host_env and isinstance(host_env, dict):
                             session['host_env'] = {
                                 'SDK': {
-                                    'AgentOps SDK Version': session['host_env']['SDK'].get('AgentOps SDK Version')
+                                    'AgentOps SDK Version': host_env.get('SDK', {}).get('AgentOps SDK Version')
                                 },
                                 'OS': {
-                                    'OS': session['host_env']['OS'].get('OS')
+                                    'OS': host_env.get('OS', {}).get('OS')
                                 }
                             }
                             
@@ -133,13 +188,14 @@ def vcr_config():
                         session['is_running'] = False
                 
                 # Handle agent creation requests
-                if request.uri.endswith('/v2/create_agent'):
+                if request.uri and request.uri.endswith('/v2/create_agent'):
                     if 'id' in body_dict:
                         body_dict['id'] = 'AGENT_ID'
                 
                 request.body = json.dumps(body_dict).encode()
-            except (json.JSONDecodeError, AttributeError):
-                pass
+            except (json.JSONDecodeError, AttributeError, UnicodeDecodeError) as e:
+                raise ValueError(f"Failed to process request body: {str(e)}")
+                
         return request
 
     return {
