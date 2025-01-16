@@ -179,7 +179,7 @@ class Client(metaclass=MetaClient):
         """
         return list(self._config.default_tags)
 
-    def record(self, event: Union[Event, ErrorEvent]) -> None:
+    def record(self, event: Event) -> None:
         """
         Record an event with the AgentOps service.
 
@@ -198,47 +198,31 @@ class Client(metaclass=MetaClient):
         self,
         tags: Optional[List[str]] = None,
         inherited_session_id: Optional[str] = None,
-    ) -> Union[Session, None]:
-        """
-        Start a new session for recording events.
-
-        Args:
-            tags (List[str], optional): Tags that can be used for grouping or sorting later.
-                e.g. ["test_run"].
-            config: (Configuration, optional): Client configuration object
-            inherited_session_id (optional, str): assign session id to match existing Session
-        """
+    ) -> Optional[Session]:
+        """Start a new session"""
         if not self.is_initialized:
-            return
+            return None
 
-        if inherited_session_id is not None:
-            try:
-                session_id = UUID(inherited_session_id)
-            except ValueError:
-                return logger.warning(f"Invalid session id: {inherited_session_id}")
-        else:
-            session_id = uuid4()
+        try:
+            session_id = UUID(inherited_session_id) if inherited_session_id else uuid4()
+        except ValueError:
+            return logger.warning(f"Invalid session id: {inherited_session_id}")
 
-        session_tags = self._config.default_tags.copy()
-        if tags is not None:
-            session_tags.update(tags)
-
+        default_tags = list(self._config.default_tags) if self._config.default_tags else []
         session = Session(
             session_id=session_id,
-            tags=list(session_tags),
-            host_env=self.host_env,
             config=self._config,
+            tags=tags or default_tags,
+            host_env=self.host_env,
         )
 
-        if not session.is_running:
-            return logger.error("Failed to start session")
+        if session.is_running:
+            # Process any queued agents
+            if self._pre_init_queue["agents"]:
+                for agent_args in self._pre_init_queue["agents"]:
+                    session.create_agent(name=agent_args["name"], agent_id=agent_args["agent_id"])
+                self._pre_init_queue["agents"].clear()
 
-        if self._pre_init_queue["agents"] and len(self._pre_init_queue["agents"]) > 0:
-            for agent_args in self._pre_init_queue["agents"]:
-                session.create_agent(name=agent_args["name"], agent_id=agent_args["agent_id"])
-            self._pre_init_queue["agents"] = []
-
-        self._sessions.append(session)
         return session
 
     def end_session(
