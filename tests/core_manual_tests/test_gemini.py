@@ -65,3 +65,89 @@ def test_gemini_error_handling():
     # Should not raise exception but log warning
     provider.override()
     provider.undo_override()
+
+
+def test_gemini_handle_response():
+    """Test handle_response method with various scenarios."""
+    model = genai.GenerativeModel("gemini-1.5-flash")
+    provider = GeminiProvider(model)
+    ao_client = agentops.init()
+
+    # Test handling response with usage metadata
+    class MockResponse:
+        def __init__(self, text, usage_metadata=None):
+            self.text = text
+            self.usage_metadata = usage_metadata
+
+    response = MockResponse(
+        "Test response",
+        usage_metadata=type("UsageMetadata", (), {
+            "prompt_token_count": 10,
+            "candidates_token_count": 20
+        })
+    )
+
+    result = provider.handle_response(
+        response,
+        {"contents": "Test prompt"},
+        "2024-01-17T00:00:00Z",
+        session=ao_client
+    )
+    assert result == response
+
+
+def test_gemini_streaming_chunks():
+    """Test streaming response handling with chunks."""
+    model = genai.GenerativeModel("gemini-1.5-flash")
+    provider = GeminiProvider(model)
+    ao_client = agentops.init()
+
+    # Mock streaming chunks
+    class MockChunk:
+        def __init__(self, text, finish_reason=None, usage_metadata=None):
+            self.text = text
+            self.finish_reason = finish_reason
+            self.usage_metadata = usage_metadata
+
+    chunks = [
+        MockChunk("Hello"),
+        MockChunk(" world", usage_metadata=type("UsageMetadata", (), {
+            "prompt_token_count": 5,
+            "candidates_token_count": 10
+        })),
+        MockChunk("!", finish_reason="stop")
+    ]
+
+    def mock_stream():
+        for chunk in chunks:
+            yield chunk
+
+    result = provider.handle_response(
+        mock_stream(),
+        {"contents": "Test prompt", "stream": True},
+        "2024-01-17T00:00:00Z",
+        session=ao_client
+    )
+
+    # Verify streaming response
+    accumulated = []
+    for chunk in result:
+        accumulated.append(chunk.text)
+    assert "".join(accumulated) == "Hello world!"
+
+
+def test_undo_override():
+    """Test undo_override functionality."""
+    model = genai.GenerativeModel("gemini-1.5-flash")
+    provider = GeminiProvider(model)
+    
+    # Store original method
+    original_generate = model.generate_content
+    
+    # Override and verify
+    provider.override()
+    assert model.generate_content != original_generate
+    
+    # Undo override and verify restoration
+    provider.undo_override()
+    assert model.generate_content == original_generate
