@@ -1,10 +1,32 @@
 import google.generativeai as genai
 import agentops
 from agentops.llms.providers.gemini import GeminiProvider
+from agentops.event import LLMEvent
 
 # Configure the API key from environment variable
 import os
 import pytest
+
+
+# Shared test utilities
+class MockChunk:
+    def __init__(self, text=None, finish_reason=None, usage_metadata=None, model=None, error=None):
+        self._text = text
+        self.finish_reason = finish_reason
+        self.usage_metadata = usage_metadata
+        self.model = model
+        self._error = error
+
+    @property
+    def text(self):
+        if self._error:
+            raise self._error
+        return self._text
+
+    @text.setter
+    def text(self, value):
+        self._text = value
+
 
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 
@@ -156,23 +178,38 @@ def test_gemini_streaming_chunks():
     provider = GeminiProvider(model)
     ao_client = agentops.init()
 
-    # Mock streaming chunks
-    class MockChunk:
-        def __init__(self, text=None, finish_reason=None, usage_metadata=None, model=None):
-            self.text = text
-            self.finish_reason = finish_reason
-            self.usage_metadata = usage_metadata
-            self.model = model
+    # Use shared MockChunk class
 
-    # Test successful streaming with usage metadata
+    # Test successful streaming with various usage metadata scenarios
     chunks = [
         MockChunk("Hello", model="gemini-1.5-flash"),
         MockChunk(
             " world",
-            usage_metadata=type("UsageMetadata", (), {"prompt_token_count": 5, "candidates_token_count": 10}),
+            usage_metadata=type(
+                "UsageMetadata",
+                (),
+                {
+                    "prompt_token_count": 5,
+                    "candidates_token_count": 10,
+                    "total_token_count": 15,
+                    "invalid_field": "test",
+                },
+            ),
             model="gemini-1.5-flash",
         ),
-        MockChunk("!", finish_reason="stop", model="gemini-1.5-flash"),
+        MockChunk(
+            "!",
+            usage_metadata=type(
+                "UsageMetadata",
+                (),
+                {
+                    "prompt_token_count": None,  # Test None token count
+                    "candidates_token_count": "invalid",  # Test invalid token count
+                },
+            ),
+            finish_reason="stop",
+            model="gemini-1.5-flash",
+        ),
     ]
 
     def mock_stream():
@@ -189,10 +226,23 @@ def test_gemini_streaming_chunks():
         accumulated.append(chunk.text)
     assert "".join(accumulated) == "Hello world!"
 
-    # Test streaming with error in chunk
+    # Test streaming with various error scenarios
     error_chunks = [
         MockChunk("Start", model="gemini-1.5-flash"),
-        MockChunk(None),  # Chunk with missing text
+        MockChunk(None, error=ValueError("Invalid chunk"), model="gemini-1.5-flash"),
+        MockChunk(
+            "Middle",
+            usage_metadata=type(
+                "UsageMetadata",
+                (),
+                {
+                    "prompt_token_count": "invalid",
+                    "candidates_token_count": None,
+                },
+            ),
+            error=AttributeError("Missing text"),
+            model="gemini-1.5-flash",
+        ),
         MockChunk("End", finish_reason="stop", model="gemini-1.5-flash"),
     ]
 
@@ -231,6 +281,102 @@ def test_gemini_streaming_chunks():
         if hasattr(chunk, "text") and chunk.text:
             accumulated.append(chunk.text)
     assert "".join(accumulated) == "After Error"
+
+
+def test_handle_response_errors():
+    """Test error handling in handle_response method with various error scenarios."""
+    model = genai.GenerativeModel("gemini-1.5-flash")
+    provider = GeminiProvider(model)
+    ao_client = agentops.init()
+
+    # Test sync response with missing attributes and session=None
+    class BrokenResponse:
+        def __init__(self):
+            pass
+
+        @property
+        def usage_metadata(self):
+            raise AttributeError("No usage metadata")
+
+    # Test with session=None
+    result = provider.handle_response(BrokenResponse(), {"contents": "test"}, "2024-01-17T00:00:00Z")
+    assert result is not None
+
+    # Test with session
+    result = provider.handle_response(BrokenResponse(), {"contents": "test"}, "2024-01-17T00:00:00Z", session=ao_client)
+    assert result is not None
+
+    result = provider.handle_response(BrokenResponse(), {"contents": "test"}, "2024-01-17T00:00:00Z", session=ao_client)
+    assert result is not None
+
+    # Test sync response with error in text property
+    class ErrorResponse:
+        @property
+        def text(self):
+            raise AttributeError("Cannot access text")
+
+        @property
+        def model(self):
+            return "gemini-1.5-flash"
+
+    result = provider.handle_response(ErrorResponse(), {"contents": "test"}, "2024-01-17T00:00:00Z", session=ao_client)
+    assert result is not None
+
+    # Test streaming response with various error scenarios
+    def error_generator():
+        yield MockChunk("Start", model="gemini-1.5-flash")
+        yield MockChunk(None, error=ValueError("Invalid chunk"), model="gemini-1.5-flash")
+        yield MockChunk("End", finish_reason="stop", model="gemini-1.5-flash")
+
+    # Test with session=None
+    result = provider.handle_response(error_generator(), {"contents": "test", "stream": True}, "2024-01-17T00:00:00Z")
+    accumulated = []
+    for chunk in result:
+        if hasattr(chunk, "text") and chunk.text:
+            accumulated.append(chunk.text)
+    assert "Start" in "".join(accumulated)
+    assert "End" in "".join(accumulated)
+
+    result = provider.handle_response(
+        error_generator(), {"contents": "test", "stream": True}, "2024-01-17T00:00:00Z", session=ao_client
+    )
+    accumulated = []
+    for chunk in result:
+        if hasattr(chunk, "text") and chunk.text:
+            accumulated.append(chunk.text)
+    assert len(accumulated) > 0
+
+
+def test_override_edge_cases():
+    """Test edge cases in override method."""
+    # Test override with None client
+    provider = GeminiProvider(None)
+    provider.override()  # Should log warning and return
+
+    # Test override with missing generate_content
+    class NoGenerateClient:
+        pass
+
+    provider = GeminiProvider(NoGenerateClient())
+    provider.override()  # Should log warning and return
+
+    # Test override with custom generate_content
+    class CustomClient:
+        def generate_content(self, *args, **kwargs):
+            return "custom response"
+
+    client = CustomClient()
+    provider = GeminiProvider(client)
+    provider.override()
+
+    # Test with various argument combinations
+    assert client.generate_content("test") is not None
+    assert client.generate_content(contents="test") is not None
+    assert client.generate_content("test", stream=True) is not None
+    assert client.generate_content(contents="test", stream=True) is not None
+
+    # Clean up
+    provider.undo_override()
 
 
 def test_undo_override():
