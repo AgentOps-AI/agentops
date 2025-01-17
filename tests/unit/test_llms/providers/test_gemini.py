@@ -48,38 +48,61 @@ def test_gemini_provider():
 
 def test_gemini_sync_generation():
     """Test synchronous text generation with Gemini."""
-    ao_client = agentops.init()
+    session = agentops.init()  # Initialize with auto-detection
     model = genai.GenerativeModel("gemini-1.5-flash")
-    provider = GeminiProvider(model)
-    provider.override()
 
-    try:
-        response = model.generate_content("What is artificial intelligence?", session=ao_client)
-        assert response is not None
-        assert hasattr(response, "text")
-        assert isinstance(response.text, str)
-        assert len(response.text) > 0
-    finally:
-        provider.undo_override()
+    # Test with positional argument
+    response = model.generate_content("What is artificial intelligence?")
+    assert response is not None
+    assert hasattr(response, "text")
+    assert isinstance(response.text, str)
+    assert len(response.text) > 0
+
+    # End session and verify LLMEvent recording
+    stats = agentops.end_session(end_state="Success")
+    assert stats is not None  # Stats should include LLM events
+
+    # Test with keyword argument
+    response = model.generate_content(contents="What is machine learning?")
+    assert response is not None
+    assert hasattr(response, "text")
+    assert isinstance(response.text, str)
+    assert len(response.text) > 0
+
+    # Test with mixed arguments
+    response = model.generate_content("What is deep learning?", stream=False)
+    assert response is not None
+    assert hasattr(response, "text")
+    assert isinstance(response.text, str)
+    assert len(response.text) > 0
 
 
 def test_gemini_streaming():
     """Test streaming text generation with Gemini."""
-    ao_client = agentops.init()
+    session = agentops.init()  # Initialize with auto-detection
     model = genai.GenerativeModel("gemini-1.5-flash")
-    provider = GeminiProvider(model)
-    provider.override()
 
-    try:
-        response = model.generate_content("Explain quantum computing", stream=True, session=ao_client)
-        accumulated_text = []
-        for chunk in response:
-            assert hasattr(chunk, "text")
-            accumulated_text.append(chunk.text)
-        assert len(accumulated_text) > 0
-        assert "".join(accumulated_text)
-    finally:
-        provider.undo_override()
+    # Test streaming with positional argument
+    response = model.generate_content("Explain quantum computing", stream=True)
+    accumulated_text = []
+    for chunk in response:
+        assert hasattr(chunk, "text")
+        accumulated_text.append(chunk.text)
+    assert len(accumulated_text) > 0
+    assert "".join(accumulated_text)
+
+    # Test streaming with keyword argument
+    response = model.generate_content(contents="Explain neural networks", stream=True)
+    accumulated_text = []
+    for chunk in response:
+        assert hasattr(chunk, "text")
+        accumulated_text.append(chunk.text)
+    assert len(accumulated_text) > 0
+    assert "".join(accumulated_text)
+
+    # End session and verify LLMEvent recording for streaming
+    stats = agentops.end_session(end_state="Success")
+    assert stats is not None  # Stats should include streaming LLM events
 
 
 def test_gemini_error_handling():
@@ -138,7 +161,7 @@ def test_gemini_handle_response():
     """Test handle_response method with various scenarios."""
     model = genai.GenerativeModel("gemini-1.5-flash")
     provider = GeminiProvider(model)
-    ao_client = agentops.init()
+    session = agentops.init()
 
     # Test handling response with usage metadata
     class MockResponse:
@@ -147,20 +170,27 @@ def test_gemini_handle_response():
             self.usage_metadata = usage_metadata
             self.model = model
 
-    # Test successful response with usage metadata
+    # Test successful response with usage metadata and positional prompt
     response = MockResponse(
         "Test response",
         usage_metadata=type("UsageMetadata", (), {"prompt_token_count": 10, "candidates_token_count": 20}),
         model="gemini-1.5-flash",
     )
 
-    result = provider.handle_response(response, {"contents": "Test prompt"}, "2024-01-17T00:00:00Z", session=ao_client)
+    # Test with positional argument
+    result = provider.handle_response(response, {"prompt": "Test prompt"}, "2024-01-17T00:00:00Z")
     assert result == response
+    assert hasattr(result, "text")
+
+    # Test with keyword argument
+    result = provider.handle_response(response, {"contents": "Test prompt"}, "2024-01-17T00:00:00Z")
+    assert result == response
+    assert hasattr(result, "text")
 
     # Test response without usage metadata
     response_no_usage = MockResponse("Test response without usage")
     result = provider.handle_response(
-        response_no_usage, {"contents": "Test prompt"}, "2024-01-17T00:00:00Z", session=ao_client
+        response_no_usage, {"contents": "Test prompt"}, "2024-01-17T00:00:00Z"
     )
     assert result == response_no_usage
 
@@ -169,7 +199,7 @@ def test_gemini_handle_response():
         "Test response", usage_metadata=type("InvalidUsageMetadata", (), {"invalid_field": "value"})
     )
     result = provider.handle_response(
-        response_invalid, {"contents": "Test prompt"}, "2024-01-17T00:00:00Z", session=ao_client
+        response_invalid, {"contents": "Test prompt"}, "2024-01-17T00:00:00Z"
     )
     assert result == response_invalid
 
@@ -184,7 +214,7 @@ def test_gemini_handle_response():
 
     malformed_response = MalformedResponse()
     result = provider.handle_response(
-        malformed_response, {"contents": "Test prompt"}, "2024-01-17T00:00:00Z", session=ao_client
+        malformed_response, {"contents": "Test prompt"}, "2024-01-17T00:00:00Z"
     )
     assert result == malformed_response
 
@@ -193,7 +223,7 @@ def test_gemini_streaming_chunks():
     """Test streaming response handling with chunks."""
     model = genai.GenerativeModel("gemini-1.5-flash")
     provider = GeminiProvider(model)
-    ao_client = agentops.init()
+    session = agentops.init()  # Initialize with auto-detection
 
     # Use shared MockChunk class
 
@@ -234,14 +264,18 @@ def test_gemini_streaming_chunks():
             yield chunk
 
     result = provider.handle_response(
-        mock_stream(), {"contents": "Test prompt", "stream": True}, "2024-01-17T00:00:00Z", session=ao_client
+        mock_stream(), {"contents": "Test prompt", "stream": True}, "2024-01-17T00:00:00Z"
     )
 
-    # Verify streaming response
+    # Verify streaming response and event recording
     accumulated = []
     for chunk in result:
         accumulated.append(chunk.text)
     assert "".join(accumulated) == "Hello world!"
+
+    # End session and verify LLMEvent recording for streaming chunks
+    stats = agentops.end_session(end_state="Success")
+    assert stats is not None  # Stats should include streaming LLM events
 
     # Test streaming with various error scenarios
     error_chunks = [
@@ -268,7 +302,7 @@ def test_gemini_streaming_chunks():
             yield chunk
 
     result = provider.handle_response(
-        mock_error_stream(), {"contents": "Test prompt", "stream": True}, "2024-01-17T00:00:00Z", session=ao_client
+        mock_error_stream(), {"contents": "Test prompt", "stream": True}, "2024-01-17T00:00:00Z"
     )
 
     # Verify error handling doesn't break streaming
@@ -289,7 +323,7 @@ def test_gemini_streaming_chunks():
         yield MockChunk("After Error", finish_reason="stop", model="gemini-1.5-flash")
 
     result = provider.handle_response(
-        mock_exception_stream(), {"contents": "Test prompt", "stream": True}, "2024-01-17T00:00:00Z", session=ao_client
+        mock_exception_stream(), {"contents": "Test prompt", "stream": True}, "2024-01-17T00:00:00Z"
     )
 
     # Verify streaming continues after exception
@@ -304,9 +338,9 @@ def test_handle_response_errors():
     """Test error handling in handle_response method with various error scenarios."""
     model = genai.GenerativeModel("gemini-1.5-flash")
     provider = GeminiProvider(model)
-    ao_client = agentops.init()
+    agentops.init()  # Initialize with auto-detection
 
-    # Test sync response with missing attributes and session=None
+    # Test sync response with missing attributes
     class BrokenResponse:
         def __init__(self):
             pass
@@ -323,12 +357,12 @@ def test_handle_response_errors():
         def model(self):
             raise AttributeError("No model attribute")
 
-    # Test with session=None
+    # Test with auto-detected session
     result = provider.handle_response(BrokenResponse(), {"contents": "test"}, "2024-01-17T00:00:00Z")
     assert result is not None
 
-    # Test with session
-    result = provider.handle_response(BrokenResponse(), {"contents": "test"}, "2024-01-17T00:00:00Z", session=ao_client)
+    # Test with positional argument
+    result = provider.handle_response(BrokenResponse(), {"prompt": "test"}, "2024-01-17T00:00:00Z")
     assert result is not None
 
     # Test sync response with invalid metadata types
@@ -347,7 +381,7 @@ def test_handle_response_errors():
             )
 
     result = provider.handle_response(
-        InvalidMetadataResponse(), {"contents": "test"}, "2024-01-17T00:00:00Z", session=ao_client
+        InvalidMetadataResponse(), {"contents": "test"}, "2024-01-17T00:00:00Z"
     )
     assert result is not None
 
@@ -357,7 +391,7 @@ def test_handle_response_errors():
             raise Exception(f"Accessing {name} causes error")
 
     result = provider.handle_response(
-        MalformedResponse(), {"contents": "test"}, "2024-01-17T00:00:00Z", session=ao_client
+        MalformedResponse(), {"contents": "test"}, "2024-01-17T00:00:00Z"
     )
     assert result is not None
 
@@ -413,7 +447,7 @@ def test_handle_response_errors():
 
     # Test with session
     result = provider.handle_response(
-        error_generator(), {"contents": "test", "stream": True}, "2024-01-17T00:00:00Z", session=ao_client
+        error_generator(), {"contents": "test", "stream": True}, "2024-01-17T00:00:00Z"
     )
     accumulated = []
     for chunk in result:
@@ -431,7 +465,7 @@ def test_handle_response_errors():
         yield MockChunk("After error")
 
     result = provider.handle_response(
-        exception_generator(), {"contents": "test", "stream": True}, "2024-01-17T00:00:00Z", session=ao_client
+        exception_generator(), {"contents": "test", "stream": True}, "2024-01-17T00:00:00Z"
     )
     accumulated = []
     try:

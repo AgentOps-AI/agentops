@@ -30,15 +30,14 @@ genai.configure(api_key=GEMINI_API_KEY)
 
 init = """\
 # Initialize AgentOps and Gemini model
-ao_client = agentops.init()
+agentops.init()  # Provider detection happens automatically
 model = genai.GenerativeModel("gemini-1.5-flash")"""
 
 sync_test = """\
 # Test synchronous generation
 print("Testing synchronous generation:")
 response = model.generate_content(
-    "What are the three laws of robotics?",
-    session=ao_client
+    "What are the three laws of robotics?"
 )
 print(response.text)"""
 
@@ -47,8 +46,7 @@ stream_test = """\
 print("\\nTesting streaming generation:")
 response = model.generate_content(
     "Explain the concept of machine learning in simple terms.",
-    stream=True,
-    session=ao_client
+    stream=True
 )
 
 for chunk in response:
@@ -58,8 +56,7 @@ print()  # Add newline after streaming output
 # Test another synchronous generation
 print("\\nTesting another synchronous generation:")
 response = model.generate_content(
-    "What is the difference between supervised and unsupervised learning?",
-    session=ao_client
+    "What is the difference between supervised and unsupervised learning?"
 )
 print(response.text)"""
 

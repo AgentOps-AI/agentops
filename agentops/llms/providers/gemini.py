@@ -1,7 +1,7 @@
 from typing import Optional, Generator, Any, Dict, Union
 
 from agentops.llms.providers.base import BaseProvider
-from agentops.event import LLMEvent
+from agentops.event import LLMEvent, ErrorEvent
 from agentops.session import Session
 from agentops.helpers import get_ISO_time, check_call_stack_for_agent_id
 from agentops.log_config import logger
@@ -44,8 +44,7 @@ class GeminiProvider(BaseProvider):
             For streaming responses: A generator yielding response chunks
 
         Note:
-            Token counts are not currently provided by the Gemini API.
-            Future versions may add token counting functionality.
+            Token counts are extracted from usage_metadata if available.
         """
         llm_event = LLMEvent(init_timestamp=init_timestamp, params=kwargs)
         if session is not None:
@@ -56,13 +55,14 @@ class GeminiProvider(BaseProvider):
             accumulated_text = []  # Use list to accumulate text chunks
 
             def handle_stream_chunk(chunk):
-                if llm_event.returns is None:
-                    llm_event.returns = chunk
-                    llm_event.agent_id = check_call_stack_for_agent_id()
-                    llm_event.model = getattr(chunk, "model", "gemini-1.5-flash")  # Default if not provided
-                    llm_event.prompt = kwargs.get("prompt") or kwargs.get("contents", [])
-
+                nonlocal llm_event
                 try:
+                    if llm_event.returns is None:
+                        llm_event.returns = chunk
+                        llm_event.agent_id = check_call_stack_for_agent_id()
+                        llm_event.model = getattr(chunk, "model", "gemini-1.5-flash")
+                        llm_event.prompt = kwargs.get("prompt", kwargs.get("contents", []))
+
                     if hasattr(chunk, "text") and chunk.text:
                         accumulated_text.append(chunk.text)
 
@@ -79,17 +79,23 @@ class GeminiProvider(BaseProvider):
                         self._safe_record(session, llm_event)
 
                 except Exception as e:
+                    if session is not None:
+                        self._safe_record(session, ErrorEvent(trigger_event=llm_event, exception=e))
                     logger.warning(
-                        f"Unable to parse chunk for Gemini LLM call. Skipping upload to AgentOps\n"
-                        f"Error: {str(e)}\n"
+                        f"Unable to parse chunk for Gemini LLM call. Error: {str(e)}\n"
                         f"Chunk: {chunk}\n"
                         f"kwargs: {kwargs}\n"
                     )
 
             def stream_handler(stream):
-                for chunk in stream:
-                    handle_stream_chunk(chunk)
-                    yield chunk
+                try:
+                    for chunk in stream:
+                        handle_stream_chunk(chunk)
+                        yield chunk
+                except Exception as e:
+                    if session is not None:
+                        self._safe_record(session, ErrorEvent(trigger_event=llm_event, exception=e))
+                    raise  # Re-raise after recording error
 
             return stream_handler(response)
 
@@ -97,7 +103,7 @@ class GeminiProvider(BaseProvider):
         try:
             llm_event.returns = response
             llm_event.agent_id = check_call_stack_for_agent_id()
-            llm_event.prompt = kwargs.get("prompt") or kwargs.get("contents", [])
+            llm_event.prompt = kwargs.get("prompt", kwargs.get("contents", []))
             llm_event.completion = response.text
             llm_event.model = getattr(response, "model", "gemini-1.5-flash")
 
@@ -110,9 +116,10 @@ class GeminiProvider(BaseProvider):
             llm_event.end_timestamp = get_ISO_time()
             self._safe_record(session, llm_event)
         except Exception as e:
+            if session is not None:
+                self._safe_record(session, ErrorEvent(trigger_event=llm_event, exception=e))
             logger.warning(
-                f"Unable to parse response for Gemini LLM call. Skipping upload to AgentOps\n"
-                f"Error: {str(e)}\n"
+                f"Unable to parse response for Gemini LLM call. Error: {str(e)}\n"
                 f"Response: {response}\n"
                 f"kwargs: {kwargs}\n"
             )
@@ -136,24 +143,33 @@ class GeminiProvider(BaseProvider):
 
         def patched_function(self, *args, **kwargs):
             init_timestamp = get_ISO_time()
-            session = kwargs.pop("session", None)  # Always try to pop session, returns None if not present
+
+            # Extract and remove session from kwargs if present
+            session = kwargs.pop("session", None)
 
             # Handle positional prompt argument
             event_kwargs = kwargs.copy()  # Create a copy for event tracking
             if args and len(args) > 0:
                 # First argument is the prompt
+                prompt = args[0]
                 if "contents" not in kwargs:
-                    kwargs["contents"] = args[0]
-                    event_kwargs["prompt"] = args[0]  # Store original prompt
+                    kwargs["contents"] = prompt
+                    event_kwargs["prompt"] = prompt  # Store original prompt for event tracking
                 args = args[1:]  # Remove prompt from args since we moved it to kwargs
 
             # Call original method and track event
-            if "generate_content" in _ORIGINAL_METHODS:
-                result = _ORIGINAL_METHODS["generate_content"](self, *args, **kwargs)
-                return provider.handle_response(result, event_kwargs, init_timestamp, session=session)
-            else:
-                logger.error("Original generate_content method not found. Cannot proceed with override.")
-                return None
+            try:
+                if "generate_content" in _ORIGINAL_METHODS:
+                    result = _ORIGINAL_METHODS["generate_content"](self, *args, **kwargs)
+                    return provider.handle_response(result, event_kwargs, init_timestamp, session=session)
+                else:
+                    logger.error("Original generate_content method not found. Cannot proceed with override.")
+                    return None
+            except Exception as e:
+                logger.error(f"Error in Gemini generate_content: {str(e)}")
+                if session is not None:
+                    provider._safe_record(session, ErrorEvent(exception=e))
+                raise  # Re-raise the exception after recording
 
         # Override the method at class level
         genai.GenerativeModel.generate_content = patched_function
