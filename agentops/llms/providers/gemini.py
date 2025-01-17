@@ -135,10 +135,17 @@ class GeminiProvider(BaseProvider):
             init_timestamp = get_ISO_time()
             session = kwargs.pop("session", None) if "session" in kwargs else None
             
+            # Handle positional content argument
+            if args:
+                kwargs["contents"] = args[0]
+                args = args[1:]  # Remove content from args
+            
+            # Ensure we have the original method
             if self.original_generate is None:
                 logger.error("Original generate_content method not found. Cannot proceed with override.")
                 return None
-                
+            
+            # Call original method and track event
             result = self.original_generate(*args, **kwargs)
             return self.handle_response(result, kwargs, init_timestamp, session=session)
         

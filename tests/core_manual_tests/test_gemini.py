@@ -16,13 +16,13 @@ provider.override()
 try:
     # Test synchronous generation
     print("\nTesting synchronous generation:")
-    response = model.generate_content("What is artificial intelligence?")
+    response = model.generate_content("What is artificial intelligence?", session=ao_client)
     print(response.text)
     print("\nResponse metadata:", response.prompt_feedback)
     
     # Test streaming generation
     print("\nTesting streaming generation:")
-    response = model.generate_content("Explain quantum computing", stream=True)
+    response = model.generate_content("Explain quantum computing", stream=True, session=ao_client)
     for chunk in response:
         print(chunk.text, end="")
     
