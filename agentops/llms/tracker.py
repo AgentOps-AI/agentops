@@ -220,6 +220,7 @@ class LlmTracker:
                     if Version(module_version) >= parse("0.1.0"):
                         import google.generativeai as genai
                         import os
+
                         api_key = os.getenv("GEMINI_API_KEY")
                         if api_key:
                             try:

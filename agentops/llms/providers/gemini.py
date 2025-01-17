@@ -134,8 +134,8 @@ class GeminiProvider(BaseProvider):
         import google.generativeai as genai
 
         # Store original method if not already stored
-        if 'generate_content' not in _ORIGINAL_METHODS:
-            _ORIGINAL_METHODS['generate_content'] = genai.GenerativeModel.generate_content
+        if "generate_content" not in _ORIGINAL_METHODS:
+            _ORIGINAL_METHODS["generate_content"] = genai.GenerativeModel.generate_content
 
         # Store provider instance for the closure
         provider = self
@@ -145,8 +145,8 @@ class GeminiProvider(BaseProvider):
             session = kwargs.pop("session", None)  # Always try to pop session, returns None if not present
 
             # Call original method and track event
-            if 'generate_content' in _ORIGINAL_METHODS:
-                result = _ORIGINAL_METHODS['generate_content'](self, *args, **kwargs)
+            if "generate_content" in _ORIGINAL_METHODS:
+                result = _ORIGINAL_METHODS["generate_content"](self, *args, **kwargs)
                 return provider.handle_response(result, kwargs, init_timestamp, session=session)
             else:
                 logger.error("Original generate_content method not found. Cannot proceed with override.")
@@ -161,6 +161,7 @@ class GeminiProvider(BaseProvider):
         Note:
             This method is called automatically by AgentOps during cleanup.
             Users should not call this method directly."""
-        if 'generate_content' in _ORIGINAL_METHODS:
+        if "generate_content" in _ORIGINAL_METHODS:
             import google.generativeai as genai
-            genai.GenerativeModel.generate_content = _ORIGINAL_METHODS['generate_content']
+
+            genai.GenerativeModel.generate_content = _ORIGINAL_METHODS["generate_content"]
