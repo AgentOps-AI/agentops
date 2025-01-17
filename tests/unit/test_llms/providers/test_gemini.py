@@ -1,6 +1,6 @@
 import google.generativeai as genai
 import agentops
-from agentops.llms.providers.gemini import GeminiProvider
+from agentops.llms.providers.gemini import GeminiProvider, _ORIGINAL_METHODS
 from agentops.event import LLMEvent
 
 # Configure the API key from environment variable
@@ -43,7 +43,7 @@ def test_gemini_provider():
     provider = GeminiProvider(model)
     assert provider.client == model
     assert provider.provider_name == "Gemini"
-    assert provider.original_generate is None
+    assert "generate_content" not in _ORIGINAL_METHODS
 
 
 def test_gemini_sync_generation():
@@ -97,20 +97,21 @@ def test_gemini_error_handling():
 
     # Test override with None client
     provider.override()  # Should log warning and return
-    assert provider.original_generate is None
+    assert "generate_content" not in _ORIGINAL_METHODS
 
     # Test override with uninitialized generate_content
     provider.client = InvalidClient()
     provider.override()  # Should log warning about missing generate_content
-    assert provider.original_generate is None
+    assert "generate_content" not in _ORIGINAL_METHODS
 
-    # Test patched function with None original_generate
+    # Test patched function with missing original method
     model = genai.GenerativeModel("gemini-1.5-flash")
     provider = GeminiProvider(model)
-    provider.original_generate = None
     provider.override()
 
-    # Should log error and return None
+    # Should log error and return None when original method is missing
+    if "generate_content" in _ORIGINAL_METHODS:
+        del _ORIGINAL_METHODS["generate_content"]
     result = model.generate_content("test prompt")
     assert result is None
 
@@ -118,10 +119,9 @@ def test_gemini_error_handling():
     provider.client = None
     provider.undo_override()  # Should handle None client gracefully
 
-    # Test undo_override with None original_generate
+    # Test undo_override with missing original method
     provider.client = model
-    provider.original_generate = None
-    provider.undo_override()  # Should handle None original_generate gracefully
+    provider.undo_override()  # Should handle missing original method gracefully
 
     # Test automatic provider detection
     agentops.init()
@@ -503,6 +503,7 @@ def test_undo_override():
     provider.undo_override()
     assert model.generate_content == original_generate
 
-    # Test undo_override when original_generate is None
-    provider.original_generate = None
+    # Test undo_override with missing original method
+    if "generate_content" in _ORIGINAL_METHODS:
+        del _ORIGINAL_METHODS["generate_content"]
     provider.undo_override()  # Should not raise any errors

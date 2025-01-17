@@ -19,12 +19,6 @@ class GeminiProvider(BaseProvider):
     is called and the google.generativeai package is imported. No manual
     initialization is required."""
 
-    """Provider for Google's Gemini API.
-
-    This provider is automatically detected and initialized when agentops.init()
-    is called and the google.generativeai package is imported. No manual
-    initialization is required."""
-
     def __init__(self, client=None):
         """Initialize the Gemini provider.
 
@@ -66,7 +60,7 @@ class GeminiProvider(BaseProvider):
                     llm_event.returns = chunk
                     llm_event.agent_id = check_call_stack_for_agent_id()
                     llm_event.model = getattr(chunk, "model", "gemini-1.5-flash")  # Default if not provided
-                    llm_event.prompt = kwargs.get("contents", [])
+                    llm_event.prompt = kwargs.get("prompt") or kwargs.get("contents", [])
 
                 try:
                     if hasattr(chunk, "text") and chunk.text:
@@ -103,7 +97,7 @@ class GeminiProvider(BaseProvider):
         try:
             llm_event.returns = response
             llm_event.agent_id = check_call_stack_for_agent_id()
-            llm_event.prompt = kwargs.get("contents", [])
+            llm_event.prompt = kwargs.get("prompt") or kwargs.get("contents", [])
             llm_event.completion = response.text
             llm_event.model = getattr(response, "model", "gemini-1.5-flash")
 
@@ -144,10 +138,19 @@ class GeminiProvider(BaseProvider):
             init_timestamp = get_ISO_time()
             session = kwargs.pop("session", None)  # Always try to pop session, returns None if not present
 
+            # Handle positional prompt argument
+            event_kwargs = kwargs.copy()  # Create a copy for event tracking
+            if args and len(args) > 0:
+                # First argument is the prompt
+                if "contents" not in kwargs:
+                    kwargs["contents"] = args[0]
+                    event_kwargs["prompt"] = args[0]  # Store original prompt
+                args = args[1:]  # Remove prompt from args since we moved it to kwargs
+
             # Call original method and track event
             if "generate_content" in _ORIGINAL_METHODS:
                 result = _ORIGINAL_METHODS["generate_content"](self, *args, **kwargs)
-                return provider.handle_response(result, kwargs, init_timestamp, session=session)
+                return provider.handle_response(result, event_kwargs, init_timestamp, session=session)
             else:
                 logger.error("Original generate_content method not found. Cannot proceed with override.")
                 return None
