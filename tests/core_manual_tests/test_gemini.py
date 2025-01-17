@@ -87,7 +87,7 @@ def test_gemini_handle_response():
     response = MockResponse(
         "Test response",
         usage_metadata=type("UsageMetadata", (), {"prompt_token_count": 10, "candidates_token_count": 20}),
-        model="gemini-1.5-flash"
+        model="gemini-1.5-flash",
     )
 
     result = provider.handle_response(response, {"contents": "Test prompt"}, "2024-01-17T00:00:00Z", session=ao_client)
@@ -95,15 +95,18 @@ def test_gemini_handle_response():
 
     # Test response without usage metadata
     response_no_usage = MockResponse("Test response without usage")
-    result = provider.handle_response(response_no_usage, {"contents": "Test prompt"}, "2024-01-17T00:00:00Z", session=ao_client)
+    result = provider.handle_response(
+        response_no_usage, {"contents": "Test prompt"}, "2024-01-17T00:00:00Z", session=ao_client
+    )
     assert result == response_no_usage
 
     # Test response with invalid usage metadata
     response_invalid = MockResponse(
-        "Test response",
-        usage_metadata=type("InvalidUsageMetadata", (), {"invalid_field": "value"})
+        "Test response", usage_metadata=type("InvalidUsageMetadata", (), {"invalid_field": "value"})
     )
-    result = provider.handle_response(response_invalid, {"contents": "Test prompt"}, "2024-01-17T00:00:00Z", session=ao_client)
+    result = provider.handle_response(
+        response_invalid, {"contents": "Test prompt"}, "2024-01-17T00:00:00Z", session=ao_client
+    )
     assert result == response_invalid
 
     # Test error handling with malformed response
@@ -116,7 +119,9 @@ def test_gemini_handle_response():
             raise AttributeError("No text attribute")
 
     malformed_response = MalformedResponse()
-    result = provider.handle_response(malformed_response, {"contents": "Test prompt"}, "2024-01-17T00:00:00Z", session=ao_client)
+    result = provider.handle_response(
+        malformed_response, {"contents": "Test prompt"}, "2024-01-17T00:00:00Z", session=ao_client
+    )
     assert result == malformed_response
 
 
@@ -140,7 +145,7 @@ def test_gemini_streaming_chunks():
         MockChunk(
             " world",
             usage_metadata=type("UsageMetadata", (), {"prompt_token_count": 5, "candidates_token_count": 10}),
-            model="gemini-1.5-flash"
+            model="gemini-1.5-flash",
         ),
         MockChunk("!", finish_reason="stop", model="gemini-1.5-flash"),
     ]

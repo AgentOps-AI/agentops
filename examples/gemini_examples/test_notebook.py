@@ -28,6 +28,7 @@ if not GEMINI_API_KEY:
     print("1. Get an API key from https://ai.google.dev/tutorials/setup")
     print("2. Set it as an environment variable: export GEMINI_API_KEY='your-key'")
     import sys
+
     sys.exit(0)  # Exit gracefully for CI
 
 genai.configure(api_key=GEMINI_API_KEY)
