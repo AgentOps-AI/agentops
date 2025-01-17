@@ -87,7 +87,7 @@ def test_gemini_error_handling():
     provider = GeminiProvider(model)
     provider.original_generate = None
     provider.override()
-    
+
     # Should log error and return None
     result = model.generate_content("test prompt")
     assert result is None
@@ -210,6 +210,27 @@ def test_gemini_streaming_chunks():
         if hasattr(chunk, "text") and chunk.text:
             accumulated.append(chunk.text)
     assert "".join(accumulated) == "StartEnd"
+
+    # Test streaming with exception in chunk processing
+    class ExceptionChunk:
+        @property
+        def text(self):
+            raise Exception("Simulated chunk processing error")
+
+    def mock_exception_stream():
+        yield ExceptionChunk()
+        yield MockChunk("After Error", finish_reason="stop", model="gemini-1.5-flash")
+
+    result = provider.handle_response(
+        mock_exception_stream(), {"contents": "Test prompt", "stream": True}, "2024-01-17T00:00:00Z", session=ao_client
+    )
+
+    # Verify streaming continues after exception
+    accumulated = []
+    for chunk in result:
+        if hasattr(chunk, "text") and chunk.text:
+            accumulated.append(chunk.text)
+    assert "".join(accumulated) == "After Error"
 
 
 def test_undo_override():
