@@ -16,15 +16,12 @@ get_ipython().run_line_magic('pip', 'install -U openai')
 get_ipython().run_line_magic('pip', 'install -U agentops')
 
 
-# Then import them
-
-# In[1]:
-
-
 from openai import OpenAI
 import agentops
 import os
 from dotenv import load_dotenv
+
+# Then continue with the example
 
 
 # Next, we'll grab our API keys. You can use dotenv like below or however else you like to load environment variables

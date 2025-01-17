@@ -69,8 +69,9 @@ def test_gemini_version_checking():
     client = MagicMock()
     tracker = LlmTracker(client)
 
-    with patch('agentops.llms.tracker.version') as mock_version, \
-         patch('google.generativeai.GenerativeModel.generate_content') as mock_generate:
+    with patch("agentops.llms.tracker.version") as mock_version, patch(
+        "google.generativeai.GenerativeModel.generate_content"
+    ) as mock_generate:
         # Test unsupported version
         mock_version.return_value = "0.0.9"
         tracker.override_api()
@@ -214,7 +215,7 @@ def test_gemini_error_handling():
     provider.override()  # Should handle invalid client gracefully
 
     # Test API configuration errors
-    with patch('google.generativeai.configure') as mock_configure:
+    with patch("google.generativeai.configure") as mock_configure:
         mock_configure.side_effect = Exception("API config error")
         provider.override()
         assert "generate_content" not in _ORIGINAL_METHODS

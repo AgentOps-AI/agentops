@@ -53,9 +53,9 @@ client = Anthropic(api_key=ANTHROPIC_API_KEY)
 
 agentops.init(AGENTOPS_API_KEY, default_tags=["anthropic-example"])
 
-Remember that story we made earlier? As of writing, claude-3-5-sonnet-20240620 (the version we will be using) has a 150k word, 680k character length. We also get an 8192 context length. This is great because we can actually set an example for the script! 
-
-Let's assume we have user (the person speaking), assistant (the AI itself) for now and computer (the way the LLM gets references from).
+# Remember that story we made earlier? As of writing, claude-3-5-sonnet-20240620 (the version we will be using) has a 150k word, 680k character length. We also get an 8192 context length. This is great because we can actually set an example for the script! 
+# 
+# Let's assume we have user (the person speaking), assistant (the AI itself) for now and computer (the way the LLM gets references from).
 # Let's set a default story as a script!
 
 # In[10]:
