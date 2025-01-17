@@ -137,6 +137,19 @@ class GeminiProvider(BaseProvider):
             This method is called automatically by AgentOps during initialization.
             Users should not call this method directly."""
         import google.generativeai as genai
+        import os
+
+        # Configure Gemini API key
+        api_key = os.getenv("GEMINI_API_KEY")
+        if not api_key:
+            logger.warning("GEMINI_API_KEY environment variable is required for Gemini integration")
+            return
+
+        try:
+            genai.configure(api_key=api_key)
+        except Exception as e:
+            logger.warning(f"Failed to configure Gemini API: {str(e)}")
+            return
 
         # Store original method if not already stored
         if "generate_content" not in _ORIGINAL_METHODS:
