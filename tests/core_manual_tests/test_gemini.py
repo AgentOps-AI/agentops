@@ -125,12 +125,11 @@ def test_gemini_error_handling():
 
     # Test automatic provider detection
     agentops.init()
-    
     # Test that the provider is properly cleaned up
     original_method = model.generate_content
     response = model.generate_content("test cleanup")
     assert response is not None  # Provider should be working
-    
+
     agentops.stop_instrumenting()
     assert model.generate_content == original_method  # Original method should be restored
 
@@ -316,6 +315,14 @@ def test_handle_response_errors():
         def usage_metadata(self):
             raise AttributeError("No usage metadata")
 
+        @property
+        def text(self):
+            raise AttributeError("No text attribute")
+
+        @property
+        def model(self):
+            raise AttributeError("No model attribute")
+
     # Test with session=None
     result = provider.handle_response(BrokenResponse(), {"contents": "test"}, "2024-01-17T00:00:00Z")
     assert result is not None
@@ -324,26 +331,68 @@ def test_handle_response_errors():
     result = provider.handle_response(BrokenResponse(), {"contents": "test"}, "2024-01-17T00:00:00Z", session=ao_client)
     assert result is not None
 
-    result = provider.handle_response(BrokenResponse(), {"contents": "test"}, "2024-01-17T00:00:00Z", session=ao_client)
+    # Test sync response with invalid metadata types
+    class InvalidMetadataResponse:
+        def __init__(self):
+            self.text = "Test response"
+            self.model = "gemini-1.5-flash"
+            self.usage_metadata = type(
+                "InvalidMetadata",
+                (),
+                {
+                    "prompt_token_count": "invalid",
+                    "candidates_token_count": None,
+                    "invalid_field": "test",
+                },
+            )
+
+    result = provider.handle_response(
+        InvalidMetadataResponse(), {"contents": "test"}, "2024-01-17T00:00:00Z", session=ao_client
+    )
     assert result is not None
 
-    # Test sync response with error in text property
-    class ErrorResponse:
-        @property
-        def text(self):
-            raise AttributeError("Cannot access text")
+    # Test sync response with malformed response object
+    class MalformedResponse:
+        def __getattr__(self, name):
+            raise Exception(f"Accessing {name} causes error")
 
-        @property
-        def model(self):
-            return "gemini-1.5-flash"
-
-    result = provider.handle_response(ErrorResponse(), {"contents": "test"}, "2024-01-17T00:00:00Z", session=ao_client)
+    result = provider.handle_response(MalformedResponse(), {"contents": "test"}, "2024-01-17T00:00:00Z", session=ao_client)
     assert result is not None
 
     # Test streaming response with various error scenarios
     def error_generator():
+        # Test normal chunk
         yield MockChunk("Start", model="gemini-1.5-flash")
+        # Test chunk with missing text
+        yield MockChunk(None, model="gemini-1.5-flash")
+        # Test chunk with error on text access
         yield MockChunk(None, error=ValueError("Invalid chunk"), model="gemini-1.5-flash")
+        # Test chunk with invalid metadata
+        yield MockChunk(
+            "Middle",
+            usage_metadata=type(
+                "InvalidMetadata",
+                (),
+                {
+                    "prompt_token_count": "invalid",
+                    "candidates_token_count": None,
+                },
+            ),
+            model="gemini-1.5-flash",
+        )
+        # Test chunk with missing model
+        yield MockChunk("More", model=None)
+        # Test chunk with error on model access
+        class ErrorModelChunk:
+            @property
+            def model(self):
+                raise AttributeError("No model")
+            
+            @property
+            def text(self):
+                return "Error model"
+        yield ErrorModelChunk()
+        # Test final chunk
         yield MockChunk("End", finish_reason="stop", model="gemini-1.5-flash")
 
     # Test with session=None
@@ -351,18 +400,43 @@ def test_handle_response_errors():
     accumulated = []
     for chunk in result:
         if hasattr(chunk, "text") and chunk.text:
-            accumulated.append(chunk.text)
+            try:
+                accumulated.append(chunk.text)
+            except Exception:
+                pass
     assert "Start" in "".join(accumulated)
     assert "End" in "".join(accumulated)
 
+    # Test with session
     result = provider.handle_response(
         error_generator(), {"contents": "test", "stream": True}, "2024-01-17T00:00:00Z", session=ao_client
     )
     accumulated = []
     for chunk in result:
         if hasattr(chunk, "text") and chunk.text:
-            accumulated.append(chunk.text)
+            try:
+                accumulated.append(chunk.text)
+            except Exception:
+                pass
     assert len(accumulated) > 0
+
+    # Test streaming with exception in generator
+    def exception_generator():
+        yield MockChunk("Before error")
+        raise Exception("Generator error")
+        yield MockChunk("After error")
+
+    result = provider.handle_response(
+        exception_generator(), {"contents": "test", "stream": True}, "2024-01-17T00:00:00Z", session=ao_client
+    )
+    accumulated = []
+    try:
+        for chunk in result:
+            if hasattr(chunk, "text") and chunk.text:
+                accumulated.append(chunk.text)
+    except Exception as e:
+        assert str(e) == "Generator error"
+    assert "Before error" in "".join(accumulated)
 
 
 def test_override_edge_cases():

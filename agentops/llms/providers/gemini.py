@@ -11,7 +11,7 @@ from agentops.singleton import singleton
 @singleton
 class GeminiProvider(BaseProvider):
     """Provider for Google's Gemini API.
-    
+
     This provider is automatically detected and initialized when agentops.init()
     is called and the google.generativeai package is imported. No manual
     initialization is required."""
@@ -130,7 +130,7 @@ class GeminiProvider(BaseProvider):
 
     def override(self):
         """Override Gemini's generate_content method to track LLM events.
-        
+
         Note:
             This method is called automatically by AgentOps during initialization.
             Users should not call this method directly."""
@@ -168,7 +168,7 @@ class GeminiProvider(BaseProvider):
 
     def undo_override(self):
         """Restore original Gemini methods.
-        
+
         Note:
             This method is called automatically by AgentOps during cleanup.
             Users should not call this method directly."""
