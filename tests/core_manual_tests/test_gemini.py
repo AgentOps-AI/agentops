@@ -75,17 +75,46 @@ def test_gemini_handle_response():
 
     # Test handling response with usage metadata
     class MockResponse:
-        def __init__(self, text, usage_metadata=None):
+        def __init__(self, text, usage_metadata=None, model=None):
             self.text = text
             self.usage_metadata = usage_metadata
+            self.model = model
 
+    # Test successful response with usage metadata
     response = MockResponse(
         "Test response",
         usage_metadata=type("UsageMetadata", (), {"prompt_token_count": 10, "candidates_token_count": 20}),
+        model="gemini-1.5-flash"
     )
 
     result = provider.handle_response(response, {"contents": "Test prompt"}, "2024-01-17T00:00:00Z", session=ao_client)
     assert result == response
+
+    # Test response without usage metadata
+    response_no_usage = MockResponse("Test response without usage")
+    result = provider.handle_response(response_no_usage, {"contents": "Test prompt"}, "2024-01-17T00:00:00Z", session=ao_client)
+    assert result == response_no_usage
+
+    # Test response with invalid usage metadata
+    response_invalid = MockResponse(
+        "Test response",
+        usage_metadata=type("InvalidUsageMetadata", (), {"invalid_field": "value"})
+    )
+    result = provider.handle_response(response_invalid, {"contents": "Test prompt"}, "2024-01-17T00:00:00Z", session=ao_client)
+    assert result == response_invalid
+
+    # Test error handling with malformed response
+    class MalformedResponse:
+        def __init__(self):
+            pass
+        
+        @property
+        def text(self):
+            raise AttributeError("No text attribute")
+
+    malformed_response = MalformedResponse()
+    result = provider.handle_response(malformed_response, {"contents": "Test prompt"}, "2024-01-17T00:00:00Z", session=ao_client)
+    assert result == malformed_response
 
 
 def test_gemini_streaming_chunks():
@@ -96,17 +125,21 @@ def test_gemini_streaming_chunks():
 
     # Mock streaming chunks
     class MockChunk:
-        def __init__(self, text, finish_reason=None, usage_metadata=None):
+        def __init__(self, text=None, finish_reason=None, usage_metadata=None, model=None):
             self.text = text
             self.finish_reason = finish_reason
             self.usage_metadata = usage_metadata
+            self.model = model
 
+    # Test successful streaming with usage metadata
     chunks = [
-        MockChunk("Hello"),
+        MockChunk("Hello", model="gemini-1.5-flash"),
         MockChunk(
-            " world", usage_metadata=type("UsageMetadata", (), {"prompt_token_count": 5, "candidates_token_count": 10})
+            " world",
+            usage_metadata=type("UsageMetadata", (), {"prompt_token_count": 5, "candidates_token_count": 10}),
+            model="gemini-1.5-flash"
         ),
-        MockChunk("!", finish_reason="stop"),
+        MockChunk("!", finish_reason="stop", model="gemini-1.5-flash"),
     ]
 
     def mock_stream():
@@ -122,6 +155,28 @@ def test_gemini_streaming_chunks():
     for chunk in result:
         accumulated.append(chunk.text)
     assert "".join(accumulated) == "Hello world!"
+
+    # Test streaming with error in chunk
+    error_chunks = [
+        MockChunk("Start", model="gemini-1.5-flash"),
+        MockChunk(None),  # Chunk with missing text
+        MockChunk("End", finish_reason="stop", model="gemini-1.5-flash"),
+    ]
+
+    def mock_error_stream():
+        for chunk in error_chunks:
+            yield chunk
+
+    result = provider.handle_response(
+        mock_error_stream(), {"contents": "Test prompt", "stream": True}, "2024-01-17T00:00:00Z", session=ao_client
+    )
+
+    # Verify error handling doesn't break streaming
+    accumulated = []
+    for chunk in result:
+        if hasattr(chunk, "text") and chunk.text:
+            accumulated.append(chunk.text)
+    assert "".join(accumulated) == "StartEnd"
 
 
 def test_undo_override():
