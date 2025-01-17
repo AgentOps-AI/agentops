@@ -2,8 +2,13 @@ import google.generativeai as genai
 import agentops
 from agentops.llms.providers.gemini import GeminiProvider
 
-# Configure the API key
-genai.configure(api_key="AIzaSyCRrIbBqHnL4t1_Qrk88P1k3-jo-_N2YGk")
+# Configure the API key from environment variable
+import os
+
+GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
+if not GEMINI_API_KEY:
+    raise ValueError("GEMINI_API_KEY environment variable is required")
+genai.configure(api_key=GEMINI_API_KEY)
 
 # Initialize AgentOps and model
 ao_client = agentops.init()
