@@ -11,6 +11,7 @@ if not GEMINI_API_KEY:
     raise ValueError("GEMINI_API_KEY environment variable is required")
 genai.configure(api_key=GEMINI_API_KEY)
 
+
 def test_gemini_provider():
     """Test GeminiProvider initialization and override."""
     model = genai.GenerativeModel("gemini-1.5-flash")
@@ -18,6 +19,7 @@ def test_gemini_provider():
     assert provider.client == model
     assert provider.provider_name == "Gemini"
     assert provider.original_generate is None
+
 
 def test_gemini_sync_generation():
     """Test synchronous text generation with Gemini."""
@@ -34,6 +36,7 @@ def test_gemini_sync_generation():
         assert len(response.text) > 0
     finally:
         provider.undo_override()
+
 
 def test_gemini_streaming():
     """Test streaming text generation with Gemini."""
@@ -53,11 +56,12 @@ def test_gemini_streaming():
     finally:
         provider.undo_override()
 
+
 def test_gemini_error_handling():
     """Test error handling in GeminiProvider."""
     provider = GeminiProvider(None)
     assert provider.client is None
-    
+
     # Should not raise exception but log warning
     provider.override()
     provider.undo_override()
