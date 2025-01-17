@@ -113,7 +113,7 @@ def test_gemini_handle_response():
     class MalformedResponse:
         def __init__(self):
             pass
-        
+
         @property
         def text(self):
             raise AttributeError("No text attribute")
