@@ -55,9 +55,7 @@ print(response.text)
 
 # Test streaming generation
 print("\nTesting streaming generation:")
-response = model.generate_content(
-    "Explain the concept of machine learning in simple terms.", stream=True
-)
+response = model.generate_content("Explain the concept of machine learning in simple terms.", stream=True)
 
 for chunk in response:
     print(chunk.text, end="")
@@ -65,9 +63,7 @@ print()  # Add newline after streaming output
 
 # Test another synchronous generation
 print("\nTesting another synchronous generation:")
-response = model.generate_content(
-    "What is the difference between supervised and unsupervised learning?"
-)
+response = model.generate_content("What is the difference between supervised and unsupervised learning?")
 print(response.text)
 
 

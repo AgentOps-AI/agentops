@@ -189,18 +189,14 @@ def test_gemini_handle_response():
 
     # Test response without usage metadata
     response_no_usage = MockResponse("Test response without usage")
-    result = provider.handle_response(
-        response_no_usage, {"contents": "Test prompt"}, "2024-01-17T00:00:00Z"
-    )
+    result = provider.handle_response(response_no_usage, {"contents": "Test prompt"}, "2024-01-17T00:00:00Z")
     assert result == response_no_usage
 
     # Test response with invalid usage metadata
     response_invalid = MockResponse(
         "Test response", usage_metadata=type("InvalidUsageMetadata", (), {"invalid_field": "value"})
     )
-    result = provider.handle_response(
-        response_invalid, {"contents": "Test prompt"}, "2024-01-17T00:00:00Z"
-    )
+    result = provider.handle_response(response_invalid, {"contents": "Test prompt"}, "2024-01-17T00:00:00Z")
     assert result == response_invalid
 
     # Test error handling with malformed response
@@ -213,9 +209,7 @@ def test_gemini_handle_response():
             raise AttributeError("No text attribute")
 
     malformed_response = MalformedResponse()
-    result = provider.handle_response(
-        malformed_response, {"contents": "Test prompt"}, "2024-01-17T00:00:00Z"
-    )
+    result = provider.handle_response(malformed_response, {"contents": "Test prompt"}, "2024-01-17T00:00:00Z")
     assert result == malformed_response
 
 
@@ -380,9 +374,7 @@ def test_handle_response_errors():
                 },
             )
 
-    result = provider.handle_response(
-        InvalidMetadataResponse(), {"contents": "test"}, "2024-01-17T00:00:00Z"
-    )
+    result = provider.handle_response(InvalidMetadataResponse(), {"contents": "test"}, "2024-01-17T00:00:00Z")
     assert result is not None
 
     # Test sync response with malformed response object
@@ -390,9 +382,7 @@ def test_handle_response_errors():
         def __getattr__(self, name):
             raise Exception(f"Accessing {name} causes error")
 
-    result = provider.handle_response(
-        MalformedResponse(), {"contents": "test"}, "2024-01-17T00:00:00Z"
-    )
+    result = provider.handle_response(MalformedResponse(), {"contents": "test"}, "2024-01-17T00:00:00Z")
     assert result is not None
 
     # Test streaming response with various error scenarios
@@ -446,9 +436,7 @@ def test_handle_response_errors():
     assert "End" in "".join(accumulated)
 
     # Test with session
-    result = provider.handle_response(
-        error_generator(), {"contents": "test", "stream": True}, "2024-01-17T00:00:00Z"
-    )
+    result = provider.handle_response(error_generator(), {"contents": "test", "stream": True}, "2024-01-17T00:00:00Z")
     accumulated = []
     for chunk in result:
         if hasattr(chunk, "text") and chunk.text:
