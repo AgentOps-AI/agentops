@@ -20,9 +20,16 @@ from agentops.llms.providers.gemini import GeminiProvider
 import os
 
 # Use environment variable for API key
+# Check for API key
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
 if not GEMINI_API_KEY:
-    raise ValueError("GEMINI_API_KEY environment variable is required")
+    print("⚠️ Warning: GEMINI_API_KEY environment variable is not set.")
+    print("To run this example, you need to:")
+    print("1. Get an API key from https://ai.google.dev/tutorials/setup")
+    print("2. Set it as an environment variable: export GEMINI_API_KEY='your-key'")
+    import sys
+    sys.exit(0)  # Exit gracefully for CI
+
 genai.configure(api_key=GEMINI_API_KEY)
 
 
