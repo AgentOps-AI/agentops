@@ -356,7 +356,9 @@ def test_handle_response_errors():
         def __getattr__(self, name):
             raise Exception(f"Accessing {name} causes error")
 
-    result = provider.handle_response(MalformedResponse(), {"contents": "test"}, "2024-01-17T00:00:00Z", session=ao_client)
+    result = provider.handle_response(
+        MalformedResponse(), {"contents": "test"}, "2024-01-17T00:00:00Z", session=ao_client
+    )
     assert result is not None
 
     # Test streaming response with various error scenarios
@@ -382,15 +384,17 @@ def test_handle_response_errors():
         )
         # Test chunk with missing model
         yield MockChunk("More", model=None)
+
         # Test chunk with error on model access
         class ErrorModelChunk:
             @property
             def model(self):
                 raise AttributeError("No model")
-            
+
             @property
             def text(self):
                 return "Error model"
+
         yield ErrorModelChunk()
         # Test final chunk
         yield MockChunk("End", finish_reason="stop", model="gemini-1.5-flash")
