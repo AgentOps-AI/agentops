@@ -4,36 +4,60 @@ from agentops.llms.providers.gemini import GeminiProvider
 
 # Configure the API key from environment variable
 import os
+import pytest
 
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 if not GEMINI_API_KEY:
     raise ValueError("GEMINI_API_KEY environment variable is required")
 genai.configure(api_key=GEMINI_API_KEY)
 
-# Initialize AgentOps and model
-ao_client = agentops.init()
-model = genai.GenerativeModel("gemini-1.5-flash")
+def test_gemini_provider():
+    """Test GeminiProvider initialization and override."""
+    model = genai.GenerativeModel("gemini-1.5-flash")
+    provider = GeminiProvider(model)
+    assert provider.client == model
+    assert provider.provider_name == "Gemini"
+    assert provider.original_generate is None
 
-# Initialize and override Gemini provider
-provider = GeminiProvider(model)
-provider.override()
+def test_gemini_sync_generation():
+    """Test synchronous text generation with Gemini."""
+    ao_client = agentops.init()
+    model = genai.GenerativeModel("gemini-1.5-flash")
+    provider = GeminiProvider(model)
+    provider.override()
 
-try:
-    # Test synchronous generation
-    print("\nTesting synchronous generation:")
-    response = model.generate_content("What is artificial intelligence?", session=ao_client)
-    print(response.text)
-    print("\nResponse metadata:", response.prompt_feedback)
+    try:
+        response = model.generate_content("What is artificial intelligence?", session=ao_client)
+        assert response is not None
+        assert hasattr(response, "text")
+        assert isinstance(response.text, str)
+        assert len(response.text) > 0
+    finally:
+        provider.undo_override()
+
+def test_gemini_streaming():
+    """Test streaming text generation with Gemini."""
+    ao_client = agentops.init()
+    model = genai.GenerativeModel("gemini-1.5-flash")
+    provider = GeminiProvider(model)
+    provider.override()
+
+    try:
+        response = model.generate_content("Explain quantum computing", stream=True, session=ao_client)
+        accumulated_text = []
+        for chunk in response:
+            assert hasattr(chunk, "text")
+            accumulated_text.append(chunk.text)
+        assert len(accumulated_text) > 0
+        assert "".join(accumulated_text)
+    finally:
+        provider.undo_override()
+
+def test_gemini_error_handling():
+    """Test error handling in GeminiProvider."""
+    provider = GeminiProvider(None)
+    assert provider.client is None
     
-    # Test streaming generation
-    print("\nTesting streaming generation:")
-    response = model.generate_content("Explain quantum computing", stream=True, session=ao_client)
-    for chunk in response:
-        print(chunk.text, end="")
-    
-    # End session and check stats
-    agentops.end_session(end_state="Success", end_state_reason="Gemini integration test completed successfully")
-
-finally:
-    # Clean up
+    # Should not raise exception but log warning
+    provider.override()
     provider.undo_override()

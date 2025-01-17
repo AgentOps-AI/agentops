@@ -2,7 +2,7 @@
 # coding: utf-8
 
 # # Gemini API Example with AgentOps
-# 
+#
 # This notebook demonstrates how to use AgentOps with Google's Gemini API for both synchronous and streaming text generation.
 
 # In[ ]:
@@ -43,10 +43,7 @@ provider.override()
 
 # Test synchronous generation
 print("Testing synchronous generation:")
-response = model.generate_content(
-    "What are the three laws of robotics?",
-    session=ao_client
-)
+response = model.generate_content("What are the three laws of robotics?", session=ao_client)
 print(response.text)
 
 
@@ -56,9 +53,7 @@ print(response.text)
 # Test streaming generation
 print("\nTesting streaming generation:")
 response = model.generate_content(
-    "Explain the concept of machine learning in simple terms.",
-    stream=True,
-    session=ao_client
+    "Explain the concept of machine learning in simple terms.", stream=True, session=ao_client
 )
 
 for chunk in response:
@@ -68,8 +63,7 @@ print()  # Add newline after streaming output
 # Test another synchronous generation
 print("\nTesting another synchronous generation:")
 response = model.generate_content(
-    "What is the difference between supervised and unsupervised learning?",
-    session=ao_client
+    "What is the difference between supervised and unsupervised learning?", session=ao_client
 )
 print(response.text)
 
@@ -78,10 +72,7 @@ print(response.text)
 
 
 # End session and check stats
-agentops.end_session(
-    end_state="Success",
-    end_state_reason="Gemini integration example completed successfully"
-)
+agentops.end_session(end_state="Success", end_state_reason="Gemini integration example completed successfully")
 
 
 # In[ ]:
@@ -89,4 +80,3 @@ agentops.end_session(
 
 # Clean up
 provider.undo_override()
-

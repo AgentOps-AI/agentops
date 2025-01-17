@@ -10,12 +10,12 @@ intro_md = """\
 This notebook demonstrates how to use AgentOps with Google's Gemini API for both synchronous and streaming text generation."""
 
 # Create code cells
-imports = '''\
+imports = """\
 import google.generativeai as genai
 import agentops
-from agentops.llms.providers.gemini import GeminiProvider'''
+from agentops.llms.providers.gemini import GeminiProvider"""
 
-setup = '''\
+setup = """\
 # Configure the Gemini API
 import os
 
@@ -27,27 +27,27 @@ genai.configure(api_key=GEMINI_API_KEY)
 # Note: In production, use environment variables:
 # import os
 # GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
-# genai.configure(api_key=GEMINI_API_KEY)'''
+# genai.configure(api_key=GEMINI_API_KEY)"""
 
-init = '''\
+init = """\
 # Initialize AgentOps and Gemini model
 ao_client = agentops.init()
 model = genai.GenerativeModel("gemini-1.5-flash")
 
 # Initialize and override Gemini provider
 provider = GeminiProvider(model)
-provider.override()'''
+provider.override()"""
 
-sync_test = '''\
+sync_test = """\
 # Test synchronous generation
 print("Testing synchronous generation:")
 response = model.generate_content(
     "What are the three laws of robotics?",
     session=ao_client
 )
-print(response.text)'''
+print(response.text)"""
 
-stream_test = '''\
+stream_test = """\
 # Test streaming generation
 print("\\nTesting streaming generation:")
 response = model.generate_content(
@@ -66,31 +66,33 @@ response = model.generate_content(
     "What is the difference between supervised and unsupervised learning?",
     session=ao_client
 )
-print(response.text)'''
+print(response.text)"""
 
-end_session = '''\
+end_session = """\
 # End session and check stats
 agentops.end_session(
     end_state="Success",
     end_state_reason="Gemini integration example completed successfully"
-)'''
+)"""
 
-cleanup = '''\
+cleanup = """\
 # Clean up
-provider.undo_override()'''
+provider.undo_override()"""
 
 # Add cells to notebook
-nb.cells.extend([
-    nbf.v4.new_markdown_cell(intro_md),
-    nbf.v4.new_code_cell(imports),
-    nbf.v4.new_code_cell(setup),
-    nbf.v4.new_code_cell(init),
-    nbf.v4.new_code_cell(sync_test),
-    nbf.v4.new_code_cell(stream_test),
-    nbf.v4.new_code_cell(end_session),
-    nbf.v4.new_code_cell(cleanup)
-])
+nb.cells.extend(
+    [
+        nbf.v4.new_markdown_cell(intro_md),
+        nbf.v4.new_code_cell(imports),
+        nbf.v4.new_code_cell(setup),
+        nbf.v4.new_code_cell(init),
+        nbf.v4.new_code_cell(sync_test),
+        nbf.v4.new_code_cell(stream_test),
+        nbf.v4.new_code_cell(end_session),
+        nbf.v4.new_code_cell(cleanup),
+    ]
+)
 
 # Write the notebook to a file
-with open('examples/gemini_examples/gemini_example_sync.ipynb', 'w') as f:
+with open("examples/gemini_examples/gemini_example_sync.ipynb", "w") as f:
     nbf.write(nb, f)
