@@ -62,11 +62,36 @@ def test_gemini_streaming():
 
 def test_gemini_error_handling():
     """Test error handling in GeminiProvider."""
+    # Test initialization with None client
     provider = GeminiProvider(None)
     assert provider.client is None
 
-    # Should not raise exception but log warning
+    # Test initialization with invalid client
+    class InvalidClient:
+        pass
+
+    with pytest.raises(ValueError, match="Client must have generate_content method"):
+        GeminiProvider(InvalidClient())
+
+    # Test override with None client
+    provider.override()  # Should log warning and return
+    assert provider.original_generate is None
+
+    # Test override with uninitialized generate_content
+    provider.client = InvalidClient()
+    provider.override()  # Should log warning about missing generate_content
+    assert provider.original_generate is None
+
+    # Test patched function with None original_generate
+    model = genai.GenerativeModel("gemini-1.5-flash")
+    provider = GeminiProvider(model)
+    provider.original_generate = None
     provider.override()
+    
+    # Should log error and return None
+    result = model.generate_content("test prompt")
+    assert result is None
+
     provider.undo_override()
 
 
@@ -199,6 +224,22 @@ def test_undo_override():
     provider.override()
     assert model.generate_content != original_generate
 
+    # Test with positional arguments
+    response = model.generate_content("test with positional arg")
+    assert response is not None
+
+    # Test with keyword arguments
+    response = model.generate_content(contents="test with kwargs")
+    assert response is not None
+
+    # Test with both positional and keyword arguments
+    response = model.generate_content("test prompt", stream=False)
+    assert response is not None
+
     # Undo override and verify restoration
     provider.undo_override()
     assert model.generate_content == original_generate
+
+    # Test undo_override when original_generate is None
+    provider.original_generate = None
+    provider.undo_override()  # Should not raise any errors
