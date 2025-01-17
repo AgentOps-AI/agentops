@@ -16,7 +16,7 @@ class GeminiProvider(BaseProvider):
     is called and the google.generativeai package is imported. No manual
     initialization is required."""
 
-    original_generate = None
+    _original_generate = None
 
     def __init__(self, client=None):
         """Initialize the Gemini provider.
@@ -127,17 +127,20 @@ class GeminiProvider(BaseProvider):
         import google.generativeai as genai
 
         # Store original method if not already stored
-        if self.original_generate is None:
-            self.original_generate = genai.GenerativeModel.generate_content
+        if GeminiProvider._original_generate is None:
+            GeminiProvider._original_generate = genai.GenerativeModel.generate_content
+
+        # Store provider instance for the closure
+        provider = self
 
         def patched_function(self, *args, **kwargs):
             init_timestamp = get_ISO_time()
             session = kwargs.pop("session", None)  # Always try to pop session, returns None if not present
 
             # Call original method and track event
-            if self.original_generate:
-                result = self.original_generate(self, *args, **kwargs)
-                return self.handle_response(result, kwargs, init_timestamp, session=session)
+            if GeminiProvider._original_generate:
+                result = GeminiProvider._original_generate(self, *args, **kwargs)
+                return provider.handle_response(result, kwargs, init_timestamp, session=session)
             else:
                 logger.error("Original generate_content method not found. Cannot proceed with override.")
                 return None
@@ -151,6 +154,6 @@ class GeminiProvider(BaseProvider):
         Note:
             This method is called automatically by AgentOps during cleanup.
             Users should not call this method directly."""
-        if self.original_generate is not None:
+        if GeminiProvider._original_generate is not None:
             import google.generativeai as genai
-            genai.GenerativeModel.generate_content = self.original_generate
+            genai.GenerativeModel.generate_content = GeminiProvider._original_generate
