@@ -10,7 +10,6 @@
 
 import google.generativeai as genai
 import agentops
-from agentops.llms.providers.gemini import GeminiProvider
 
 
 # In[ ]:
@@ -40,10 +39,6 @@ genai.configure(api_key=GEMINI_API_KEY)
 # Initialize AgentOps and Gemini model
 ao_client = agentops.init()
 model = genai.GenerativeModel("gemini-1.5-flash")
-
-# Initialize and override Gemini provider
-provider = GeminiProvider(model)
-provider.override()
 
 
 # In[ ]:
@@ -86,5 +81,4 @@ agentops.end_session(end_state="Success", end_state_reason="Gemini integration e
 # In[ ]:
 
 
-# Clean up
-provider.undo_override()
+# No cleanup needed - AgentOps handles provider cleanup automatically

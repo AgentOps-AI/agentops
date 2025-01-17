@@ -114,7 +114,25 @@ def test_gemini_error_handling():
     result = model.generate_content("test prompt")
     assert result is None
 
-    provider.undo_override()
+    # Test undo_override with None client
+    provider.client = None
+    provider.undo_override()  # Should handle None client gracefully
+
+    # Test undo_override with None original_generate
+    provider.client = model
+    provider.original_generate = None
+    provider.undo_override()  # Should handle None original_generate gracefully
+
+    # Test automatic provider detection
+    agentops.init()
+    
+    # Test that the provider is properly cleaned up
+    original_method = model.generate_content
+    response = model.generate_content("test cleanup")
+    assert response is not None  # Provider should be working
+    
+    agentops.stop_instrumenting()
+    assert model.generate_content == original_method  # Original method should be restored
 
 
 def test_gemini_handle_response():

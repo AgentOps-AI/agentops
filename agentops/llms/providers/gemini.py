@@ -10,7 +10,11 @@ from agentops.singleton import singleton
 
 @singleton
 class GeminiProvider(BaseProvider):
-    """Provider for Google's Gemini API."""
+    """Provider for Google's Gemini API.
+    
+    This provider is automatically detected and initialized when agentops.init()
+    is called and the google.generativeai package is imported. No manual
+    initialization is required."""
 
     original_generate = None
 
@@ -125,7 +129,11 @@ class GeminiProvider(BaseProvider):
         return response
 
     def override(self):
-        """Override Gemini's generate_content method to track LLM events."""
+        """Override Gemini's generate_content method to track LLM events.
+        
+        Note:
+            This method is called automatically by AgentOps during initialization.
+            Users should not call this method directly."""
         if not self.client:
             logger.warning("Client is not initialized. Skipping override.")
             return
@@ -159,6 +167,10 @@ class GeminiProvider(BaseProvider):
         self.client.generate_content = patched_function
 
     def undo_override(self):
-        """Restore original Gemini methods."""
-        if self.original_generate is not None:
+        """Restore original Gemini methods.
+        
+        Note:
+            This method is called automatically by AgentOps during cleanup.
+            Users should not call this method directly."""
+        if self.original_generate is not None and self.client is not None:
             self.client.generate_content = self.original_generate

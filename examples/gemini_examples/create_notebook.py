@@ -12,8 +12,7 @@ This notebook demonstrates how to use AgentOps with Google's Gemini API for both
 # Create code cells
 imports = """\
 import google.generativeai as genai
-import agentops
-from agentops.llms.providers.gemini import GeminiProvider"""
+import agentops"""
 
 setup = """\
 # Configure the Gemini API
@@ -32,11 +31,7 @@ genai.configure(api_key=GEMINI_API_KEY)
 init = """\
 # Initialize AgentOps and Gemini model
 ao_client = agentops.init()
-model = genai.GenerativeModel("gemini-1.5-flash")
-
-# Initialize and override Gemini provider
-provider = GeminiProvider(model)
-provider.override()"""
+model = genai.GenerativeModel("gemini-1.5-flash")"""
 
 sync_test = """\
 # Test synchronous generation
@@ -76,8 +71,7 @@ agentops.end_session(
 )"""
 
 cleanup = """\
-# Clean up
-provider.undo_override()"""
+# No cleanup needed - AgentOps handles provider cleanup automatically"""
 
 # Add cells to notebook
 nb.cells.extend(
