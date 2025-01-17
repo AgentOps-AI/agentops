@@ -28,6 +28,16 @@ class GeminiProvider(BaseProvider):
         super().__init__(client)
         self._provider_name = "Gemini"
 
+    def _extract_token_counts(self, usage_metadata, llm_event):
+        """Extract token counts from usage metadata.
+
+        Args:
+            usage_metadata: The usage metadata object from Gemini response
+            llm_event: The LLMEvent to update with token counts
+        """
+        llm_event.prompt_tokens = getattr(usage_metadata, "prompt_token_count", None)
+        llm_event.completion_tokens = getattr(usage_metadata, "candidates_token_count", None)
+
     def handle_response(
         self, response, kwargs, init_timestamp, session: Optional[Session] = None
     ) -> Union[Any, Generator[Any, None, None]]:
@@ -68,9 +78,7 @@ class GeminiProvider(BaseProvider):
 
                     # Extract token counts if available
                     if hasattr(chunk, "usage_metadata"):
-                        usage = chunk.usage_metadata
-                        llm_event.prompt_tokens = getattr(usage, "prompt_token_count", None)
-                        llm_event.completion_tokens = getattr(usage, "candidates_token_count", None)
+                        self._extract_token_counts(chunk.usage_metadata, llm_event)
 
                     # If this is the last chunk
                     if hasattr(chunk, "finish_reason") and chunk.finish_reason:
@@ -79,12 +87,11 @@ class GeminiProvider(BaseProvider):
                         self._safe_record(session, llm_event)
 
                 except Exception as e:
-                    if session is not None:
-                        self._safe_record(session, ErrorEvent(trigger_event=llm_event, exception=e))
+                    self._safe_record(session, ErrorEvent(trigger_event=llm_event, exception=e))
                     logger.warning(
                         f"Unable to parse chunk for Gemini LLM call. Error: {str(e)}\n"
-                        f"Chunk: {chunk}\n"
-                        f"kwargs: {kwargs}\n"
+                        f"Response: {chunk}\n"
+                        f"Arguments: {kwargs}\n"
                     )
 
             def stream_handler(stream):
@@ -109,19 +116,16 @@ class GeminiProvider(BaseProvider):
 
             # Extract token counts from usage metadata if available
             if hasattr(response, "usage_metadata"):
-                usage = response.usage_metadata
-                llm_event.prompt_tokens = getattr(usage, "prompt_token_count", None)
-                llm_event.completion_tokens = getattr(usage, "candidates_token_count", None)
+                self._extract_token_counts(response.usage_metadata, llm_event)
 
             llm_event.end_timestamp = get_ISO_time()
             self._safe_record(session, llm_event)
         except Exception as e:
-            if session is not None:
-                self._safe_record(session, ErrorEvent(trigger_event=llm_event, exception=e))
+            self._safe_record(session, ErrorEvent(trigger_event=llm_event, exception=e))
             logger.warning(
                 f"Unable to parse response for Gemini LLM call. Error: {str(e)}\n"
                 f"Response: {response}\n"
-                f"kwargs: {kwargs}\n"
+                f"Arguments: {kwargs}\n"
             )
 
         return response
