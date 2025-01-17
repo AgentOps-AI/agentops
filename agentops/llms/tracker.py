@@ -218,8 +218,16 @@ class LlmTracker:
                     module_version = version(api)
 
                     if Version(module_version) >= parse("0.1.0"):
-                        provider = GeminiProvider(self.client)
-                        provider.override()
+                        import google.generativeai as genai
+                        import os
+                        api_key = os.getenv("GEMINI_API_KEY")
+                        if api_key:
+                            genai.configure(api_key=api_key)
+                            model = genai.GenerativeModel("gemini-1.5-flash")
+                            provider = GeminiProvider(model)
+                            provider.override()
+                        else:
+                            logger.warning("GEMINI_API_KEY environment variable is required for Gemini integration")
                     else:
                         logger.warning(f"Only google.generativeai>=0.1.0 supported. v{module_version} found.")
 
