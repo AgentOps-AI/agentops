@@ -81,18 +81,10 @@ def test_gemini_handle_response():
 
     response = MockResponse(
         "Test response",
-        usage_metadata=type("UsageMetadata", (), {
-            "prompt_token_count": 10,
-            "candidates_token_count": 20
-        })
+        usage_metadata=type("UsageMetadata", (), {"prompt_token_count": 10, "candidates_token_count": 20}),
     )
 
-    result = provider.handle_response(
-        response,
-        {"contents": "Test prompt"},
-        "2024-01-17T00:00:00Z",
-        session=ao_client
-    )
+    result = provider.handle_response(response, {"contents": "Test prompt"}, "2024-01-17T00:00:00Z", session=ao_client)
     assert result == response
 
 
@@ -111,11 +103,10 @@ def test_gemini_streaming_chunks():
 
     chunks = [
         MockChunk("Hello"),
-        MockChunk(" world", usage_metadata=type("UsageMetadata", (), {
-            "prompt_token_count": 5,
-            "candidates_token_count": 10
-        })),
-        MockChunk("!", finish_reason="stop")
+        MockChunk(
+            " world", usage_metadata=type("UsageMetadata", (), {"prompt_token_count": 5, "candidates_token_count": 10})
+        ),
+        MockChunk("!", finish_reason="stop"),
     ]
 
     def mock_stream():
@@ -123,10 +114,7 @@ def test_gemini_streaming_chunks():
             yield chunk
 
     result = provider.handle_response(
-        mock_stream(),
-        {"contents": "Test prompt", "stream": True},
-        "2024-01-17T00:00:00Z",
-        session=ao_client
+        mock_stream(), {"contents": "Test prompt", "stream": True}, "2024-01-17T00:00:00Z", session=ao_client
     )
 
     # Verify streaming response
@@ -140,14 +128,14 @@ def test_undo_override():
     """Test undo_override functionality."""
     model = genai.GenerativeModel("gemini-1.5-flash")
     provider = GeminiProvider(model)
-    
+
     # Store original method
     original_generate = model.generate_content
-    
+
     # Override and verify
     provider.override()
     assert model.generate_content != original_generate
-    
+
     # Undo override and verify restoration
     provider.undo_override()
     assert model.generate_content == original_generate
