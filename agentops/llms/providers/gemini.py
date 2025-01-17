@@ -70,8 +70,8 @@ class GeminiProvider(BaseProvider):
                     if llm_event.returns is None:
                         llm_event.returns = chunk
                         llm_event.agent_id = check_call_stack_for_agent_id()
-                        llm_event.model = getattr(chunk, "model", "gemini-1.5-flash")
-                        llm_event.prompt = kwargs.get("prompt", kwargs.get("contents", []))
+                        llm_event.model = getattr(chunk, "model", None) or "gemini-1.5-flash"
+                        llm_event.prompt = kwargs.get("prompt", kwargs.get("contents", None)) or []
 
                     if hasattr(chunk, "text") and chunk.text:
                         accumulated_text.append(chunk.text)
@@ -110,9 +110,9 @@ class GeminiProvider(BaseProvider):
         try:
             llm_event.returns = response
             llm_event.agent_id = check_call_stack_for_agent_id()
-            llm_event.prompt = kwargs.get("prompt", kwargs.get("contents", []))
+            llm_event.prompt = kwargs.get("prompt", kwargs.get("contents", None)) or []
             llm_event.completion = response.text
-            llm_event.model = getattr(response, "model", "gemini-1.5-flash")
+            llm_event.model = getattr(response, "model", None) or "gemini-1.5-flash"
 
             # Extract token counts from usage metadata if available
             if hasattr(response, "usage_metadata"):

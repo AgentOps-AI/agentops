@@ -69,7 +69,8 @@ def test_gemini_version_checking():
     client = MagicMock()
     tracker = LlmTracker(client)
 
-    with patch('agentops.llms.tracker.version') as mock_version:
+    with patch('agentops.llms.tracker.version') as mock_version, \
+         patch('google.generativeai.GenerativeModel.generate_content') as mock_generate:
         # Test unsupported version
         mock_version.return_value = "0.0.9"
         tracker.override_api()
@@ -84,6 +85,16 @@ def test_gemini_version_checking():
         mock_version.return_value = "0.2.0"
         tracker.override_api()
         assert "generate_content" in _ORIGINAL_METHODS
+
+        # Test error handling
+        mock_version.side_effect = Exception("Version error")
+        tracker.override_api()
+        assert "generate_content" not in _ORIGINAL_METHODS
+
+        # Test missing package
+        mock_version.side_effect = ModuleNotFoundError("Package not found")
+        tracker.override_api()
+        assert "generate_content" not in _ORIGINAL_METHODS
 
 
 def test_gemini_sync_generation():

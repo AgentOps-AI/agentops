@@ -218,11 +218,8 @@ class LlmTracker:
                     module_version = version(api)
 
                     if Version(module_version) >= parse("0.1.0"):
-                        try:
-                            provider = GeminiProvider(self.client)
-                            provider.override()
-                        except Exception as e:
-                            logger.warning(f"Failed to initialize Gemini provider: {str(e)}")
+                        provider = GeminiProvider(self.client)
+                        provider.override()
                     else:
                         logger.warning(f"Only google.generativeai>=0.1.0 supported. v{module_version} found.")
 
