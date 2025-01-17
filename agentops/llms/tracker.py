@@ -224,7 +224,7 @@ class LlmTracker:
                         if api_key:
                             genai.configure(api_key=api_key)
                             model = genai.GenerativeModel("gemini-1.5-flash")
-                            provider = GeminiProvider(model)
+                            provider = GeminiProvider()
                             provider.override()
                         else:
                             logger.warning("GEMINI_API_KEY environment variable is required for Gemini integration")

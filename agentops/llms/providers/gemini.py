@@ -18,24 +18,14 @@ class GeminiProvider(BaseProvider):
 
     original_generate = None
 
-    def __init__(self, client):
+    def __init__(self, client=None):
         """Initialize the Gemini provider.
 
         Args:
-            client: A configured google.generativeai client instance
-
-        Raises:
-            ValueError: If client is not properly configured
+            client: Optional client instance. If not provided, will be set during override.
         """
-        if not client:
-            raise ValueError("Client must be provided")
-
         super().__init__(client)
         self._provider_name = "Gemini"
-
-        # Verify client has required methods
-        if not hasattr(client, "generate_content"):
-            raise ValueError("Client must have generate_content method")
 
     def handle_response(
         self, response, kwargs, init_timestamp, session: Optional[Session] = None
@@ -134,37 +124,26 @@ class GeminiProvider(BaseProvider):
         Note:
             This method is called automatically by AgentOps during initialization.
             Users should not call this method directly."""
-        if not self.client:
-            logger.warning("Client is not initialized. Skipping override.")
-            return
-
-        if not hasattr(self.client, "generate_content"):
-            logger.warning("Client does not have generate_content method. Skipping override.")
-            return
+        import google.generativeai as genai
 
         # Store original method if not already stored
         if self.original_generate is None:
-            self.original_generate = self.client.generate_content
+            self.original_generate = genai.GenerativeModel.generate_content
 
-        def patched_function(*args, **kwargs):
+        def patched_function(self, *args, **kwargs):
             init_timestamp = get_ISO_time()
-            session = kwargs.pop("session", None) if "session" in kwargs else None
-
-            # Handle positional content argument
-            if args:
-                kwargs["contents"] = args[0]
-                args = args[1:]  # Remove content from args
+            session = kwargs.pop("session", None)  # Always try to pop session, returns None if not present
 
             # Call original method and track event
             if self.original_generate:
-                result = self.original_generate(*args, **kwargs)
+                result = self.original_generate(self, *args, **kwargs)
                 return self.handle_response(result, kwargs, init_timestamp, session=session)
             else:
                 logger.error("Original generate_content method not found. Cannot proceed with override.")
                 return None
 
-        # Override the method
-        self.client.generate_content = patched_function
+        # Override the method at class level
+        genai.GenerativeModel.generate_content = patched_function
 
     def undo_override(self):
         """Restore original Gemini methods.
@@ -172,5 +151,6 @@ class GeminiProvider(BaseProvider):
         Note:
             This method is called automatically by AgentOps during cleanup.
             Users should not call this method directly."""
-        if self.original_generate is not None and self.client is not None:
-            self.client.generate_content = self.original_generate
+        if self.original_generate is not None:
+            import google.generativeai as genai
+            genai.GenerativeModel.generate_content = self.original_generate
