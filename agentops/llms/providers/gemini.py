@@ -16,7 +16,7 @@ class GeminiProvider(BaseProvider):
     is called and the google.generativeai package is imported. No manual
     initialization is required."""
 
-    _original_generate = None
+    _original_generate = None  # Store as class attribute
 
     def __init__(self, client=None):
         """Initialize the Gemini provider.
