@@ -222,10 +222,12 @@ class LlmTracker:
                         import os
                         api_key = os.getenv("GEMINI_API_KEY")
                         if api_key:
-                            genai.configure(api_key=api_key)
-                            model = genai.GenerativeModel("gemini-1.5-flash")
-                            provider = GeminiProvider()
-                            provider.override()
+                            try:
+                                genai.configure(api_key=api_key)
+                                provider = GeminiProvider()
+                                provider.override()
+                            except Exception as e:
+                                logger.warning(f"Failed to initialize Gemini provider: {str(e)}")
                         else:
                             logger.warning("GEMINI_API_KEY environment variable is required for Gemini integration")
                     else:

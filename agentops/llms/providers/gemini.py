@@ -7,6 +7,9 @@ from agentops.helpers import get_ISO_time, check_call_stack_for_agent_id
 from agentops.log_config import logger
 from agentops.singleton import singleton
 
+# Store original methods at module level
+_ORIGINAL_METHODS = {}
+
 
 @singleton
 class GeminiProvider(BaseProvider):
@@ -16,7 +19,11 @@ class GeminiProvider(BaseProvider):
     is called and the google.generativeai package is imported. No manual
     initialization is required."""
 
-    _original_generate = None  # Store as class attribute
+    """Provider for Google's Gemini API.
+
+    This provider is automatically detected and initialized when agentops.init()
+    is called and the google.generativeai package is imported. No manual
+    initialization is required."""
 
     def __init__(self, client=None):
         """Initialize the Gemini provider.
@@ -127,8 +134,8 @@ class GeminiProvider(BaseProvider):
         import google.generativeai as genai
 
         # Store original method if not already stored
-        if GeminiProvider._original_generate is None:
-            GeminiProvider._original_generate = genai.GenerativeModel.generate_content
+        if 'generate_content' not in _ORIGINAL_METHODS:
+            _ORIGINAL_METHODS['generate_content'] = genai.GenerativeModel.generate_content
 
         # Store provider instance for the closure
         provider = self
@@ -138,8 +145,8 @@ class GeminiProvider(BaseProvider):
             session = kwargs.pop("session", None)  # Always try to pop session, returns None if not present
 
             # Call original method and track event
-            if GeminiProvider._original_generate:
-                result = GeminiProvider._original_generate(self, *args, **kwargs)
+            if 'generate_content' in _ORIGINAL_METHODS:
+                result = _ORIGINAL_METHODS['generate_content'](self, *args, **kwargs)
                 return provider.handle_response(result, kwargs, init_timestamp, session=session)
             else:
                 logger.error("Original generate_content method not found. Cannot proceed with override.")
@@ -154,6 +161,6 @@ class GeminiProvider(BaseProvider):
         Note:
             This method is called automatically by AgentOps during cleanup.
             Users should not call this method directly."""
-        if GeminiProvider._original_generate is not None:
+        if 'generate_content' in _ORIGINAL_METHODS:
             import google.generativeai as genai
-            genai.GenerativeModel.generate_content = GeminiProvider._original_generate
+            genai.GenerativeModel.generate_content = _ORIGINAL_METHODS['generate_content']
