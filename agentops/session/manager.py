@@ -7,18 +7,18 @@ from typing import TYPE_CHECKING, Any, Dict, List, Optional, Union
 
 from termcolor import colored
 
+from agentops.event import ErrorEvent, Event
 from agentops.helpers import get_ISO_time
 from agentops.log_config import logger
 
-from .session import EndState
+from .api import SessionApiClient
+from .log_capture import LogCapture
+from .registry import add_session, remove_session
+from .session import EndState, Session
+from .telemetry import SessionTelemetry
 
 if TYPE_CHECKING:
-    from agentops.event import ErrorEvent, Event
-
-    from .api import SessionApiClient
-    from .registry import add_session, remove_session
     from .session import Session
-    from .telemetry import SessionTelemetry
 
 
 class SessionManager:
@@ -28,6 +28,11 @@ class SessionManager:
         self._state = session
         self._lock = threading.Lock()
         self._end_session_lock = threading.Lock()
+
+        # Initialize API client
+        self._api = SessionApiClient(
+            endpoint=self._state.config.endpoint, session_id=self._state.session_id, api_key=self._state.config.api_key
+        )
 
         # Import at runtime to avoid circular imports
         from .registry import add_session, remove_session
@@ -39,6 +44,9 @@ class SessionManager:
         from .telemetry import SessionTelemetry
 
         self._telemetry = SessionTelemetry(self._state)
+
+        # Initialize log capture
+        self._log_capture = LogCapture(self._state)
 
         # Store reference on session for backward compatibility
         self._state._telemetry = self._telemetry
@@ -213,3 +221,11 @@ class SessionManager:
             f"{colored('Errors:', attrs=['bold'])} {str(stats['Errors'])}"
         )
         logger.info(analytics)
+
+    def start_log_capture(self):
+        """Start capturing terminal output"""
+        self._log_capture.start()
+
+    def stop_log_capture(self):
+        """Stop capturing terminal output"""
+        self._log_capture.stop()

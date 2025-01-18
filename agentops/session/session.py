@@ -1,16 +1,15 @@
 from __future__ import annotations
 
-from dataclasses import asdict, dataclass, field
+from dataclasses import dataclass, field
 from decimal import Decimal
 from enum import Enum
-from typing import TYPE_CHECKING, Any, Dict, List, Optional, Union
+from typing import TYPE_CHECKING, Dict, List, Optional, Union
 from uuid import UUID
 
 from agentops.config import Configuration
 from agentops.helpers import get_ISO_time
-from agentops.session.api import SessionApiClient
 
-from .log_capture import LogCapture
+from .manager import SessionManager
 
 if TYPE_CHECKING:
     from agentops.event import ErrorEvent, Event
@@ -52,11 +51,7 @@ class Session:
     )
     init_timestamp: str = field(default_factory=get_ISO_time)
     is_running: bool = field(default=True)
-    _telemetry: Any = field(init=False, repr=False, default=None)
-    _api: SessionApiClient = field(init=False, repr=False, default=None)
-    _manager: Any = field(init=False, repr=False, default=None)
-    _otel_exporter: Any = field(init=False, repr=False, default=None)
-    _log_capture: LogCapture = field(init=False, repr=False, default=None)
+    _manager: SessionManager = field(init=False, repr=False)
 
     def __post_init__(self):
         """Initialize session manager"""
@@ -66,24 +61,14 @@ class Session:
         elif self.tags is None:
             self.tags = []
 
-        # Initialize API client
-
         if not self.config.api_key:
             raise ValueError("API key is required")
 
-        self._api = SessionApiClient(
-            endpoint=self.config.endpoint, session_id=self.session_id, api_key=self.config.api_key
-        )
-
-        # Then initialize manager
-        from .manager import SessionManager
+        # Initialize manager
 
         self._manager = SessionManager(self)
         self.is_running = self._manager.start_session()
 
-        self._log_capture = LogCapture(self)
-
-    # Public API - All delegate to manager
     def add_tags(self, tags: Union[str, List[str]]) -> None:
         """Add tags to session"""
         if self.is_running and self._manager:
@@ -129,12 +114,14 @@ class Session:
     @property
     def _tracer_provider(self):
         """For testing compatibility"""
-        return self._telemetry._tracer_provider if self._telemetry else None
+        return self._manager._telemetry._tracer_provider if self._manager else None
 
     def start_log_capture(self):
         """Start capturing terminal output"""
-        self._log_capture.start()
+        if self._manager:
+            self._manager.start_log_capture()
 
     def stop_log_capture(self):
         """Stop capturing terminal output"""
-        self._log_capture.stop()
+        if self._manager:
+            self._manager.stop_log_capture()
