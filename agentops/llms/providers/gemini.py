@@ -1,4 +1,4 @@
-from typing import Optional, Generator, Any, Dict, Union
+from typing import Optional, Any, Dict, Union
 
 from agentops.llms.providers.base import BaseProvider
 from agentops.event import LLMEvent, ErrorEvent
@@ -7,12 +7,11 @@ from agentops.helpers import get_ISO_time, check_call_stack_for_agent_id
 from agentops.log_config import logger
 from agentops.singleton import singleton
 
-# Store original methods at module level
-_ORIGINAL_METHODS = {}
-
-
 @singleton
 class GeminiProvider(BaseProvider):
+    original_generate_content = None
+    original_generate_content_async = None
+
     """Provider for Google's Gemini API.
 
     This provider is automatically detected and initialized when agentops.init()
@@ -46,21 +45,21 @@ class GeminiProvider(BaseProvider):
         llm_event = LLMEvent(init_timestamp=init_timestamp, params=kwargs)
         if session is not None:
             llm_event.session_id = session.session_id
+        
+        accumulated_content = ""
 
         def handle_stream_chunk(chunk):
-            nonlocal llm_event
+            nonlocal llm_event, accumulated_content
             try:
                 if llm_event.returns is None:
                     llm_event.returns = chunk
                     llm_event.agent_id = check_call_stack_for_agent_id()
                     llm_event.model = getattr(chunk, "model", None) or "gemini-1.5-flash"
                     llm_event.prompt = kwargs.get("prompt", kwargs.get("contents", None)) or []
-                    # Initialize accumulated text
-                    llm_event.accumulated_text = ""
 
-                # Accumulate text from each chunk
+                # Accumulate text from chunk
                 if hasattr(chunk, "text") and chunk.text:
-                    llm_event.accumulated_text += chunk.text
+                    accumulated_content += chunk.text
 
                 # Extract token counts if available
                 if hasattr(chunk, "usage_metadata"):
@@ -69,7 +68,7 @@ class GeminiProvider(BaseProvider):
 
                 # If this is the last chunk
                 if hasattr(chunk, "finish_reason") and chunk.finish_reason:
-                    llm_event.completion = llm_event.accumulated_text
+                    llm_event.completion = accumulated_content
                     llm_event.end_timestamp = get_ISO_time()
                     self._safe_record(session, llm_event)
 
@@ -115,65 +114,67 @@ class GeminiProvider(BaseProvider):
         return response
 
     def override(self):
-        """Override Gemini's generate_content method to track LLM events.
+        """Override Gemini's generate_content method to track LLM events."""
+        self._override_gemini_generate_content()
+        self._override_gemini_generate_content_async()
 
-        Note:
-            This method is called automatically by AgentOps during initialization.
-            Users should not call this method directly."""
+    def _override_gemini_generate_content(self):
+        """Override synchronous generate_content method"""
         import google.generativeai as genai
-        import os
-
-        # Configure Gemini API key
-        api_key = os.getenv("GEMINI_API_KEY")
-        if not api_key:
-            logger.warning("GEMINI_API_KEY environment variable is required for Gemini integration")
-            return
-
-        try:
-            genai.configure(api_key=api_key)
-        except Exception as e:
-            logger.warning(f"Failed to configure Gemini API: {str(e)}")
-            return
 
         # Store original method if not already stored
-        if "generate_content" not in _ORIGINAL_METHODS:
-            _ORIGINAL_METHODS["generate_content"] = genai.GenerativeModel.generate_content
+        if self.original_generate_content is None:
+            self.original_generate_content = genai.GenerativeModel.generate_content
 
-        # Store provider instance for the closure
-        provider = self
+        provider = self  # Store provider instance for closure
 
-        def patched_function(self, *args, **kwargs):
+        def patched_function(model_self, *args, **kwargs):
             init_timestamp = get_ISO_time()
-
-            # Extract and remove session from kwargs if present
             session = kwargs.pop("session", None)
 
             # Handle positional prompt argument
-            event_kwargs = kwargs.copy()  # Create a copy for event tracking
+            event_kwargs = kwargs.copy()
             if args and len(args) > 0:
-                # First argument is the prompt
                 prompt = args[0]
                 if "contents" not in kwargs:
                     kwargs["contents"] = prompt
-                    event_kwargs["prompt"] = prompt  # Store original prompt for event tracking
-                args = args[1:]  # Remove prompt from args since we moved it to kwargs
+                    event_kwargs["prompt"] = prompt
+                args = args[1:]
 
-            # Call original method and track event
-            try:
-                if "generate_content" in _ORIGINAL_METHODS:
-                    result = _ORIGINAL_METHODS["generate_content"](self, *args, **kwargs)
-                    return provider.handle_response(result, event_kwargs, init_timestamp, session=session)
-                else:
-                    logger.error("Original generate_content method not found. Cannot proceed with override.")
-                    return None
-            except Exception as e:
-                logger.error(f"Error in Gemini generate_content: {str(e)}")
-                if session is not None:
-                    provider._safe_record(session, ErrorEvent(exception=e))
-                raise  # Re-raise the exception after recording
+            result = provider.original_generate_content(model_self, *args, **kwargs)
+            return provider.handle_response(result, event_kwargs, init_timestamp, session=session)
 
         # Override the method at class level
         genai.GenerativeModel.generate_content = patched_function
+
+    def _override_gemini_generate_content_async(self):
+        """Override asynchronous generate_content method"""
+        import google.generativeai as genai
+
+        # Store original async method if not already stored
+        if self.original_generate_content_async is None:
+            self.original_generate_content_async = genai.GenerativeModel.generate_content_async
+
+        provider = self  # Store provider instance for closure
+
+        async def patched_function(model_self, *args, **kwargs):
+            init_timestamp = get_ISO_time()
+            session = kwargs.pop("session", None)
+
+            # Handle positional prompt argument
+            event_kwargs = kwargs.copy()
+            if args and len(args) > 0:
+                prompt = args[0]
+                if "contents" not in kwargs:
+                    kwargs["contents"] = prompt
+                    event_kwargs["prompt"] = prompt
+                args = args[1:]
+
+            result = await provider.original_generate_content_async(model_self, *args, **kwargs)
+            return provider.handle_response(result, event_kwargs, init_timestamp, session=session)
+
+        # Override the async method at class level
+        genai.GenerativeModel.generate_content_async = patched_function
 
     def undo_override(self):
         """Restore original Gemini methods.
@@ -181,7 +182,12 @@ class GeminiProvider(BaseProvider):
         Note:
             This method is called automatically by AgentOps during cleanup.
             Users should not call this method directly."""
-        if "generate_content" in _ORIGINAL_METHODS:
-            import google.generativeai as genai
+        import google.generativeai as genai
 
-            genai.GenerativeModel.generate_content = _ORIGINAL_METHODS["generate_content"]
+        if self.original_generate_content is not None:
+            genai.GenerativeModel.generate_content = self.original_generate_content
+            self.original_generate_content = None
+
+        if self.original_generate_content_async is not None:
+            genai.GenerativeModel.generate_content_async = self.original_generate_content_async
+            self.original_generate_content_async = None
