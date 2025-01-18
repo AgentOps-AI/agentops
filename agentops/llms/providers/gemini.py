@@ -7,6 +7,7 @@ from agentops.helpers import get_ISO_time, check_call_stack_for_agent_id
 from agentops.log_config import logger
 from agentops.singleton import singleton
 
+
 @singleton
 class GeminiProvider(BaseProvider):
     original_generate_content = None
@@ -27,9 +28,7 @@ class GeminiProvider(BaseProvider):
         super().__init__(client)
         self._provider_name = "Gemini"
 
-    def handle_response(
-        self, response, kwargs, init_timestamp, session: Optional[Session] = None
-    ) -> dict:
+    def handle_response(self, response, kwargs, init_timestamp, session: Optional[Session] = None) -> dict:
         """Handle responses from Gemini API for both sync and streaming modes.
 
         Args:
@@ -45,7 +44,7 @@ class GeminiProvider(BaseProvider):
         llm_event = LLMEvent(init_timestamp=init_timestamp, params=kwargs)
         if session is not None:
             llm_event.session_id = session.session_id
-        
+
         accumulated_content = ""
 
         def handle_stream_chunk(chunk):
@@ -82,10 +81,12 @@ class GeminiProvider(BaseProvider):
 
         # For streaming responses
         if kwargs.get("stream", False):
+
             def generator():
                 for chunk in response:
                     handle_stream_chunk(chunk)
                     yield chunk
+
             return generator()
 
         # For synchronous responses
