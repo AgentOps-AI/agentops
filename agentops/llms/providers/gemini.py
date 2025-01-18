@@ -28,19 +28,9 @@ class GeminiProvider(BaseProvider):
         super().__init__(client)
         self._provider_name = "Gemini"
 
-    def _extract_token_counts(self, usage_metadata, llm_event):
-        """Extract token counts from usage metadata.
-
-        Args:
-            usage_metadata: The usage metadata object from Gemini response
-            llm_event: The LLMEvent to update with token counts
-        """
-        llm_event.prompt_tokens = getattr(usage_metadata, "prompt_token_count", None)
-        llm_event.completion_tokens = getattr(usage_metadata, "candidates_token_count", None)
-
     def handle_response(
         self, response, kwargs, init_timestamp, session: Optional[Session] = None
-    ) -> Union[Any, Generator[Any, None, None]]:
+    ) -> dict:
         """Handle responses from Gemini API for both sync and streaming modes.
 
         Args:
@@ -52,59 +42,52 @@ class GeminiProvider(BaseProvider):
         Returns:
             For sync responses: The original response object
             For streaming responses: A generator yielding response chunks
-
-        Note:
-            Token counts are extracted from usage_metadata if available.
         """
         llm_event = LLMEvent(init_timestamp=init_timestamp, params=kwargs)
         if session is not None:
             llm_event.session_id = session.session_id
 
+        def handle_stream_chunk(chunk):
+            nonlocal llm_event
+            try:
+                if llm_event.returns is None:
+                    llm_event.returns = chunk
+                    llm_event.agent_id = check_call_stack_for_agent_id()
+                    llm_event.model = getattr(chunk, "model", None) or "gemini-1.5-flash"
+                    llm_event.prompt = kwargs.get("prompt", kwargs.get("contents", None)) or []
+                    # Initialize accumulated text
+                    llm_event.accumulated_text = ""
+
+                # Accumulate text from each chunk
+                if hasattr(chunk, "text") and chunk.text:
+                    llm_event.accumulated_text += chunk.text
+
+                # Extract token counts if available
+                if hasattr(chunk, "usage_metadata"):
+                    llm_event.prompt_tokens = getattr(chunk.usage_metadata, "prompt_token_count", None)
+                    llm_event.completion_tokens = getattr(chunk.usage_metadata, "candidates_token_count", None)
+
+                # If this is the last chunk
+                if hasattr(chunk, "finish_reason") and chunk.finish_reason:
+                    llm_event.completion = llm_event.accumulated_text
+                    llm_event.end_timestamp = get_ISO_time()
+                    self._safe_record(session, llm_event)
+
+            except Exception as e:
+                self._safe_record(session, ErrorEvent(trigger_event=llm_event, exception=e))
+                logger.warning(
+                    f"Unable to parse chunk for Gemini LLM call. Error: {str(e)}\n"
+                    f"Response: {chunk}\n"
+                    f"Arguments: {kwargs}\n"
+                )
+
         # For streaming responses
         if kwargs.get("stream", False):
-            accumulated_text = []  # Use list to accumulate text chunks
-
-            def handle_stream_chunk(chunk):
-                nonlocal llm_event
-                try:
-                    if llm_event.returns is None:
-                        llm_event.returns = chunk
-                        llm_event.agent_id = check_call_stack_for_agent_id()
-                        llm_event.model = getattr(chunk, "model", None) or "gemini-1.5-flash"
-                        llm_event.prompt = kwargs.get("prompt", kwargs.get("contents", None)) or []
-
-                    if hasattr(chunk, "text") and chunk.text:
-                        accumulated_text.append(chunk.text)
-
-                    # Extract token counts if available
-                    if hasattr(chunk, "usage_metadata"):
-                        self._extract_token_counts(chunk.usage_metadata, llm_event)
-
-                    # If this is the last chunk
-                    if hasattr(chunk, "finish_reason") and chunk.finish_reason:
-                        llm_event.completion = "".join(accumulated_text)
-                        llm_event.end_timestamp = get_ISO_time()
-                        self._safe_record(session, llm_event)
-
-                except Exception as e:
-                    self._safe_record(session, ErrorEvent(trigger_event=llm_event, exception=e))
-                    logger.warning(
-                        f"Unable to parse chunk for Gemini LLM call. Error: {str(e)}\n"
-                        f"Response: {chunk}\n"
-                        f"Arguments: {kwargs}\n"
-                    )
-
-            def stream_handler(stream):
-                try:
-                    for chunk in stream:
-                        handle_stream_chunk(chunk)
-                        yield chunk
-                except Exception as e:
-                    if session is not None:
-                        self._safe_record(session, ErrorEvent(trigger_event=llm_event, exception=e))
-                    raise  # Re-raise after recording error
-
-            return stream_handler(response)
+            def generator():
+                for chunk in response:
+                    handle_stream_chunk(chunk)
+                    yield chunk
+            return generator()
 
         # For synchronous responses
         try:
@@ -116,7 +99,8 @@ class GeminiProvider(BaseProvider):
 
             # Extract token counts from usage metadata if available
             if hasattr(response, "usage_metadata"):
-                self._extract_token_counts(response.usage_metadata, llm_event)
+                llm_event.prompt_tokens = getattr(response.usage_metadata, "prompt_token_count", None)
+                llm_event.completion_tokens = getattr(response.usage_metadata, "candidates_token_count", None)
 
             llm_event.end_timestamp = get_ISO_time()
             self._safe_record(session, llm_event)
