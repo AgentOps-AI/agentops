@@ -12,7 +12,7 @@ from opentelemetry.sdk.trace.export import SpanExporter, SpanExportResult
 from agentops._api import ApiClient
 from agentops.helpers import filter_unjsonable, get_ISO_time
 from agentops.log_config import logger
-from agentops.session.session import SessionApiClient
+from agentops.session.api import SessionApiClient
 
 if TYPE_CHECKING:
     from agentops.session import Session
@@ -28,6 +28,7 @@ class SessionExporter(SpanExporter):
         endpoint: Optional[str] = None,
         jwt: Optional[str] = None,
         api_key: Optional[str] = None,
+        api_client: Optional[SessionApiClient] = None,
         **kwargs,
     ):
         """Initialize SessionExporter with either a Session object or individual parameters.
@@ -42,23 +43,23 @@ class SessionExporter(SpanExporter):
         self._shutdown = threading.Event()
         self._export_lock = threading.Lock()
 
-        if session:
+        if api_client:
+            self._api = api_client
+            self.session_id = session_id
+        elif session:
             self.session = session
             self.session_id = session.session_id
-            self._api = session._api
+            self._api = session.api
         else:
             if not all([session_id, endpoint, api_key]):
                 raise ValueError("Must provide either session object or all individual parameters")
             self.session = None
             self.session_id = session_id
-            assert session_id is not None  # for type checker
-            assert endpoint is not None  # for type checker
-            assert api_key is not None  # for type checker
             self._api = SessionApiClient(
                 endpoint=endpoint,
                 session_id=session_id,
                 api_key=api_key,
-                jwt=jwt or "",  # jwt can be empty string if not provided
+                jwt=jwt or "",
             )
 
         super().__init__(**kwargs)

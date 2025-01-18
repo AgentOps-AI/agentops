@@ -14,7 +14,6 @@ from agentops.log_config import logger
 from .api import SessionApiClient
 from .log_capture import LogCapture
 from .registry import add_session, remove_session
-from .session import EndState, Session
 from .telemetry import SessionTelemetry
 
 if TYPE_CHECKING:
@@ -29,21 +28,21 @@ class SessionManager:
         self._lock = threading.Lock()
         self._end_session_lock = threading.Lock()
 
-        # Initialize API client
-        self._api = SessionApiClient(
-            endpoint=self._state.config.endpoint, session_id=self._state.session_id, api_key=self._state.config.api_key
-        )
-
         # Import at runtime to avoid circular imports
         from .registry import add_session, remove_session
-
         self._add_session = add_session
         self._remove_session = remove_session
 
-        # Initialize telemetry
-        from .telemetry import SessionTelemetry
+        # Initialize API client first - single source of truth
+        self._api = SessionApiClient(
+            endpoint=self._state.config.endpoint,
+            session_id=self._state.session_id,
+            api_key=self._state.config.api_key
+        )
 
-        self._telemetry = SessionTelemetry(self._state)
+        # Initialize telemetry with our API client
+        from .telemetry import SessionTelemetry
+        self._telemetry = SessionTelemetry(self._state, api_client=self._api)
 
         # Initialize log capture
         self._log_capture = LogCapture(self._state)
@@ -52,16 +51,18 @@ class SessionManager:
         self._state._telemetry = self._telemetry
         self._state._otel_exporter = self._telemetry._exporter
 
+    @property
+    def api(self) -> SessionApiClient:
+        """Get API client"""
+        return self._api
+
     def start_session(self) -> bool:
         """Start and initialize session"""
         with self._lock:
-            if not self._state._api:
-                return False
-
-            success, jwt = self._state._api.create_session(self._serialize_session(), self._state.config.parent_key)
+            success, jwt = self._api.create_session(self._serialize_session(), self._state.config.parent_key)
             if success:
                 self._state.jwt = jwt
-                self._state._api.jwt = jwt  # Update JWT on API client
+                self._api.jwt = jwt  # Update JWT on API client
                 self._add_session(self._state)
             return success
 

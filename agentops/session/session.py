@@ -125,3 +125,8 @@ class Session:
         """Stop capturing terminal output"""
         if self._manager:
             self._manager.stop_log_capture()
+
+    @property
+    def api(self):
+        """Get API client for backward compatibility"""
+        return self._manager.api

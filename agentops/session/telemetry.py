@@ -9,6 +9,7 @@ from opentelemetry.sdk.trace import TracerProvider
 from opentelemetry.sdk.trace.export import BatchSpanProcessor
 
 from agentops.helpers import filter_unjsonable, get_ISO_time
+from agentops.session.api import SessionApiClient
 
 if TYPE_CHECKING:
     from agentops.event import ErrorEvent, Event
@@ -18,12 +19,13 @@ if TYPE_CHECKING:
 class SessionTelemetry:
     """Handles telemetry setup and event recording"""
 
-    def __init__(self, session: "Session"):
+    def __init__(self, session: "Session", api_client: SessionApiClient):
         self.session = session
+        self._api_client = api_client
         self._setup_telemetry()
 
     def _setup_telemetry(self):
-        """Initialize OpenTelemetry components"""
+        """Initialize OpenTelemetry"""
         self._tracer_provider = TracerProvider()
         self._otel_tracer = self._tracer_provider.get_tracer(
             f"agentops.session.{str(self.session.session_id)}",
@@ -31,7 +33,7 @@ class SessionTelemetry:
 
         from agentops.telemetry.exporters.session import SessionExporter
 
-        self._exporter = SessionExporter(session=self.session)
+        self._exporter = SessionExporter(api_client=self._api_client, session_id=self.session.session_id)
 
         # Configure batch processor
         self._span_processor = BatchSpanProcessor(
