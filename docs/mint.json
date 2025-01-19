@@ -93,6 +93,7 @@
         "v1/integrations/camel",
         "v1/integrations/cohere",
         "v1/integrations/crewai",
+        "v1/integrations/gemini",
         "v1/integrations/groq",
         "v1/integrations/langchain",
         "v1/integrations/llama_stack",

@@ -16,6 +16,7 @@ from .providers.mistral import MistralProvider
 from .providers.ai21 import AI21Provider
 from .providers.llama_stack_client import LlamaStackClientProvider
 from .providers.taskweaver import TaskWeaverProvider
+from .providers.gemini import GeminiProvider
 
 original_func = {}
 original_create = None
@@ -24,6 +25,9 @@ original_create_async = None
 
 class LlmTracker:
     SUPPORTED_APIS = {
+        "google.generativeai": {
+            "0.1.0": ("GenerativeModel.generate_content", "GenerativeModel.generate_content_stream"),
+        },
         "litellm": {"1.3.1": ("openai_chat_completions.completion",)},
         "openai": {
             "1.0.0": (
@@ -210,6 +214,15 @@ class LlmTracker:
                     else:
                         logger.warning(f"Only TaskWeaver>=0.0.1 supported. v{module_version} found.")
 
+                if api == "google.generativeai":
+                    module_version = version(api)
+
+                    if Version(module_version) >= parse("0.1.0"):
+                        provider = GeminiProvider(self.client)
+                        provider.override()
+                    else:
+                        logger.warning(f"Only google.generativeai>=0.1.0 supported. v{module_version} found.")
+
     def stop_instrumenting(self):
         OpenAiProvider(self.client).undo_override()
         GroqProvider(self.client).undo_override()
@@ -221,3 +234,4 @@ class LlmTracker:
         AI21Provider(self.client).undo_override()
         LlamaStackClientProvider(self.client).undo_override()
         TaskWeaverProvider(self.client).undo_override()
+        GeminiProvider(self.client).undo_override()

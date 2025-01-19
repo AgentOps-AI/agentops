@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "agentops"
-version = "0.3.23"
+version = "0.3.24"
 authors = [
   { name="Alex Reibman", email="areibman@gmail.com" },
   { name="Shawn Qiu", email="siyangqiu@gmail.com" },
@@ -49,6 +49,7 @@ test = [
     "groq",
     "ollama",
     "mistralai",
+    "google-generativeai>=0.1.0",
     # ;;
     # The below is a really hard dependency, that can be installed only between python >=3.10,<3.13.
     # CI will fail because all tests will automatically pull this dependency group;
