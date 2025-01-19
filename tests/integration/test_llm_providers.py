@@ -235,14 +235,14 @@ def test_groq_provider(groq_client, test_messages: List[Dict[str, Any]]):
     """Test Groq provider integration."""
     # Sync completion
     response = groq_client.chat.completions.create(
-        model="llama3-70b-8192",
+        model="llama-3.3-70b-versatile",
         messages=test_messages,
     )
     assert response.choices[0].message.content
 
     # Stream completion
     stream = groq_client.chat.completions.create(
-        model="llama3-70b-8192",
+        model="llama-3.3-70b-versatile",
         messages=test_messages,
         stream=True,
     )
