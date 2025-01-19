@@ -15,6 +15,7 @@ def collect_stream_content(stream_response: Any, provider: str) -> List[str]:
         "cohere": lambda event: event.text if event.event_type == "text-generation" else None,
         "ai21": lambda chunk: chunk.choices[0].delta.content,
         "groq": lambda chunk: chunk.choices[0].delta.content,
+        "gemini": lambda chunk: chunk.text if hasattr(chunk, "text") else None,
         "mistral": lambda event: event.data.choices[0].delta.content
         if hasattr(event.data.choices[0].delta, "content")
         else None,
@@ -194,6 +195,38 @@ def test_cohere_provider(cohere_client):
     stream = cohere_client.chat_stream(message="Say hello in spanish")
     content = collect_stream_content(stream, "cohere")
     assert len(content) > 0
+
+
+# Gemini Tests
+@pytest.mark.vcr()
+def test_gemini_provider(gemini_client, test_messages):
+    """Test Gemini provider integration."""
+    # Convert messages to Gemini format
+    gemini_messages = []
+    for msg in test_messages:
+        if msg["role"] != "system":  # Gemini doesn't support system messages directly
+            gemini_messages.append(msg["content"])
+    
+    # Sync completion
+    response = gemini_client.generate_content(gemini_messages)
+    assert response.text
+    
+    # Stream completion
+    stream = gemini_client.generate_content(
+        gemini_messages,
+        stream=True
+    )
+    
+    content = collect_stream_content(stream, "gemini")
+    assert len(content) > 0
+    
+    # Test async completion
+    async def async_test():
+        response = await gemini_client.generate_content_async(gemini_messages)
+        return response
+    
+    async_response = asyncio.run(async_test())
+    assert async_response.text
 
 
 # Groq Tests

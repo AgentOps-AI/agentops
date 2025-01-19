@@ -36,6 +36,8 @@ def vcr_config():
         ("replicate-api-token", "REDACTED"),
         ("huggingface-api-key", "REDACTED"),
         ("x-huggingface-api-key", "REDACTED"),
+        ("gemini-api-key", "REDACTED"),
+        ("x-gemini-api-key", "REDACTED"),
         ("claude-api-key", "REDACTED"),
         ("x-claude-api-key", "REDACTED"),
         ("x-railway-request-id", "REDACTED"),

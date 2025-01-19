@@ -7,6 +7,7 @@ from tests.fixtures.providers import (
     ai21_test_messages,
     anthropic_client,
     cohere_client,
+    gemini_client,
     groq_client,
     litellm_client,
     mistral_client,

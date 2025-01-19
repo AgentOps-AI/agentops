@@ -87,6 +87,16 @@ def mistral_client():
     api_key = os.getenv("MISTRAL_API_KEY", "test-api-key")
     return Mistral(api_key=api_key)
 
+@pytest.fixture
+def gemini_client():
+    """Initialize Google's Gemini client."""
+    import google.generativeai as genai
+    
+    api_key = os.getenv("GEMINI_API_KEY", "test-api-key")
+    genai.configure(api_key=api_key)
+    
+    return genai.GenerativeModel('gemini-1.5-flash')
+
 
 @pytest.fixture
 def litellm_client():
