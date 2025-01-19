@@ -45,7 +45,7 @@ test = [
     "anthropic",
     "cohere",
     "litellm",
-    "ai21>=3.0.0",
+    "ai21>=2.0.0, <3.0.0",
     "groq",
     "ollama",
     "mistralai",
