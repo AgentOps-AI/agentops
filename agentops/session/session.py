@@ -114,7 +114,7 @@ class Session:
     @property
     def _tracer_provider(self):
         """For testing compatibility"""
-        return self._manager._telemetry._tracer_provider if self._manager else None
+        return self._manager.telemetry._tracer_provider if self._manager else None
 
     def start_log_capture(self):
         """Start capturing terminal output"""
@@ -130,3 +130,8 @@ class Session:
     def api(self):
         """Get API client for backward compatibility"""
         return self._manager.api
+
+    @property
+    def exporter(self):
+        """Get exporter for backward compatibility"""
+        return self._manager.telemetry._exporter

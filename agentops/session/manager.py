@@ -3,6 +3,7 @@ from __future__ import annotations
 import threading
 from datetime import datetime
 from decimal import Decimal
+from functools import cached_property
 from typing import TYPE_CHECKING, Any, Dict, List, Optional, Union
 
 from termcolor import colored
@@ -28,42 +29,31 @@ class SessionManager:
         self._lock = threading.Lock()
         self._end_session_lock = threading.Lock()
 
-        # Import at runtime to avoid circular imports
-        from .registry import add_session, remove_session
-        self._add_session = add_session
-        self._remove_session = remove_session
-
-        # Initialize API client first - single source of truth
-        self._api = SessionApiClient(
-            endpoint=self._state.config.endpoint,
-            session_id=self._state.session_id,
-            api_key=self._state.config.api_key
-        )
-
-        # Initialize telemetry with our API client
-        from .telemetry import SessionTelemetry
-        self._telemetry = SessionTelemetry(self._state, api_client=self._api)
-
         # Initialize log capture
         self._log_capture = LogCapture(self._state)
 
-        # Store reference on session for backward compatibility
-        self._state._telemetry = self._telemetry
-        self._state._otel_exporter = self._telemetry._exporter
-
-    @property
+    @cached_property
     def api(self) -> SessionApiClient:
         """Get API client"""
-        return self._api
+        return SessionApiClient(
+            endpoint=self._state.config.endpoint, session_id=self._state.session_id, api_key=self._state.config.api_key
+        )
+
+    @cached_property
+    def telemetry(self) -> SessionTelemetry:
+        # Initialize telemetry with our API client
+        from .telemetry import SessionTelemetry
+
+        return SessionTelemetry(self._state, api_client=self.api)
 
     def start_session(self) -> bool:
         """Start and initialize session"""
         with self._lock:
-            success, jwt = self._api.create_session(self._serialize_session(), self._state.config.parent_key)
+            success, jwt = self.api.create_session(self._serialize_session(), self._state.config.parent_key)
             if success:
                 self._state.jwt = jwt
-                self._api.jwt = jwt  # Update JWT on API client
-                self._add_session(self._state)
+                self.api.jwt = jwt  # Update JWT on API client
+                add_session(self._state)
             return success
 
     def create_agent(self, name: str, agent_id: Optional[str] = None) -> Optional[str]:
@@ -74,10 +64,10 @@ class SessionManager:
 
                 agent_id = str(uuid4())
 
-            if not self._state._api:
+            if not self._state.api:
                 return None
 
-            success = self._state._api.create_agent(name=name, agent_id=agent_id)
+            success = self._state.api.create_agent(name=name, agent_id=agent_id)
             return agent_id if success else None
 
     def add_tags(self, tags: Union[str, List[str]]) -> None:
@@ -89,8 +79,8 @@ class SessionManager:
             elif isinstance(tags, list):
                 self._state.tags.extend(t for t in tags if t not in self._state.tags)
 
-            if self._state._api:
-                self._state._api.update_session({"tags": self._state.tags})
+            if self._state.api:
+                self._state.api.update_session({"tags": self._state.tags})
 
     def set_tags(self, tags: Union[str, List[str]]) -> None:
         """Set session tags"""
@@ -100,8 +90,8 @@ class SessionManager:
             elif isinstance(tags, list):
                 self._state.tags = list(tags)
 
-            if self._state._api:
-                self._state._api.update_session({"tags": self._state.tags})
+            if self._state.api:
+                self._state.api.update_session({"tags": self._state.tags})
 
     def record_event(self, event: Union["Event", "ErrorEvent"], flush_now: bool = False) -> None:
         """Update event counts and record event"""
@@ -111,8 +101,8 @@ class SessionManager:
                 self._state.event_counts[event.event_type] += 1
 
             # Record via telemetry
-            if self._telemetry:
-                self._telemetry.record_event(event, flush_now)
+            if self.telemetry:
+                self.telemetry.record_event(event, flush_now)
 
     def end_session(
         self, end_state: str, end_state_reason: Optional[str], video: Optional[str]
@@ -124,8 +114,8 @@ class SessionManager:
 
             try:
                 # Flush any pending telemetry
-                if self._telemetry:
-                    self._telemetry.flush(timeout_millis=5000)
+                if self.telemetry:
+                    self.telemetry.flush(timeout_millis=5000)
 
                 self._state.end_timestamp = get_ISO_time()
                 self._state.end_state = end_state
@@ -135,7 +125,7 @@ class SessionManager:
 
                 if analytics := self._get_analytics():
                     self._log_analytics(analytics)
-                    self._remove_session(self._state)
+                    remove_session(self._state)
                     return self._state.token_cost
                 return None
             except Exception as e:
@@ -149,10 +139,10 @@ class SessionManager:
 
         formatted_duration = self._format_duration(self._state.init_timestamp, self._state.end_timestamp)
 
-        if not self._state._api:
+        if not self._state.api:
             return None
 
-        response = self._state._api.update_session(self._serialize_session())
+        response = self._state.api.update_session(self._serialize_session())
         if not response:
             return None
 
