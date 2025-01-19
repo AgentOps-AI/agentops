@@ -11,6 +11,8 @@ from tests.fixtures.providers import (
     litellm_client,
     mistral_client,
     openai_client,
+    taskweaver_app,
+    taskweaver_client,
     test_messages,
 )
 from tests.fixtures.partners import (
