@@ -222,6 +222,7 @@ def vcr_config():
             "localhost:4318",  # Default OTLP HTTP endpoint
             "127.0.0.1:4317",
             "127.0.0.1:4318",
+            "huggingface.co"
         ],
         # Header filtering for requests and responses
         "filter_headers": sensitive_headers,
