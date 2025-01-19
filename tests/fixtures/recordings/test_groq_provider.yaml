@@ -39,15 +39,19 @@ interactions:
     uri: https://api.groq.com/openai/v1/chat/completions
   response:
     body:
-      string: '{"id":"chatcmpl-2af4c427-2bd9-4cd3-96f6-b606fdbb3861","object":"chat.completion","created":1736892098,"model":"llama3-70b-8192","choices":[{"index":0,"message":{"role":"assistant","content":"Hello!
-        It''s nice to meet you. I''m here to help with any questions or tasks you
-        may have. How can I assist you today?"},"logprobs":null,"finish_reason":"stop"}],"usage":{"queue_time":0.01813716,"prompt_tokens":26,"prompt_time":0.006384788,"completion_tokens":31,"completion_time":0.088571429,"total_tokens":57,"total_time":0.094956217},"system_fingerprint":"fp_7ab5f7e105","x_groq":{"id":"req_01jhkdc9s1fkms5t70nkenz0cd"}}
-
-        '
+      string: '{"id": "chatcmpl-2af4c427-2bd9-4cd3-96f6-b606fdbb3861", "object": "chat.completion",
+        "created": 1736892098, "model": "llama3-70b-8192", "choices": [{"index": 0,
+        "message": {"role": "assistant", "content": "Hello! It''s nice to meet you.
+        I''m here to help with any questions or tasks you may have. How can I assist
+        you today?"}, "logprobs": null, "finish_reason": "stop"}], "usage": {"queue_time":
+        0.01813716, "prompt_tokens": 26, "prompt_time": 0.006384788, "completion_tokens":
+        31, "completion_time": 0.088571429, "total_tokens": 57, "total_time": 0.094956217},
+        "system_fingerprint": "fp_7ab5f7e105", "x_groq": {"id": "req_01jhkdc9s1fkms5t70nkenz0cd"}}'
     headers:
       CF-Cache-Status:
       - DYNAMIC
-      CF-Ray: REDACTED
+      CF-Ray:
+      - REDACTED
       Cache-Control:
       - private, max-age=0, no-store, no-cache, must-revalidate
       Connection:
@@ -74,13 +78,20 @@ interactions:
       - '613'
       x-groq-region:
       - us-west-1
-      x-ratelimit-limit-requests: REDACTED
-      x-ratelimit-limit-tokens: REDACTED
-      x-ratelimit-remaining-requests: REDACTED
-      x-ratelimit-remaining-tokens: REDACTED
-      x-ratelimit-reset-requests: REDACTED
-      x-ratelimit-reset-tokens: REDACTED
-      x-request-id: REDACTED
+      x-ratelimit-limit-requests:
+      - REDACTED
+      x-ratelimit-limit-tokens:
+      - REDACTED
+      x-ratelimit-remaining-requests:
+      - REDACTED
+      x-ratelimit-remaining-tokens:
+      - REDACTED
+      x-ratelimit-reset-requests:
+      - REDACTED
+      x-ratelimit-reset-tokens:
+      - REDACTED
+      x-request-id:
+      - REDACTED
     status:
       code: 200
       message: OK
@@ -291,7 +302,8 @@ interactions:
     headers:
       CF-Cache-Status:
       - DYNAMIC
-      CF-Ray: REDACTED
+      CF-Ray:
+      - REDACTED
       Cache-Control:
       - no-cache
       Connection:
@@ -312,13 +324,270 @@ interactions:
       - h3=":443"; ma=86400
       x-groq-region:
       - us-west-1
-      x-ratelimit-limit-requests: REDACTED
-      x-ratelimit-limit-tokens: REDACTED
-      x-ratelimit-remaining-requests: REDACTED
-      x-ratelimit-remaining-tokens: REDACTED
-      x-ratelimit-reset-requests: REDACTED
-      x-ratelimit-reset-tokens: REDACTED
-      x-request-id: REDACTED
+      x-ratelimit-limit-requests:
+      - REDACTED
+      x-ratelimit-limit-tokens:
+      - REDACTED
+      x-ratelimit-remaining-requests:
+      - REDACTED
+      x-ratelimit-remaining-tokens:
+      - REDACTED
+      x-ratelimit-reset-requests:
+      - REDACTED
+      x-ratelimit-reset-tokens:
+      - REDACTED
+      x-request-id:
+      - REDACTED
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"messages": [{"role": "system", "content": "You are a helpful assistant."},
+      {"role": "user", "content": "Write a short greeting."}], "model": "llama-3.3-70b-versatile"}'
+    headers:
+      accept:
+      - application/json
+      accept-encoding:
+      - gzip, deflate
+      authorization:
+      - REDACTED
+      connection:
+      - keep-alive
+      content-length:
+      - '169'
+      content-type:
+      - application/json
+      host:
+      - api.groq.com
+      user-agent:
+      - Groq/Python 0.15.0
+      x-stainless-arch:
+      - REDACTED
+      x-stainless-async:
+      - REDACTED
+      x-stainless-lang:
+      - REDACTED
+      x-stainless-os:
+      - REDACTED
+      x-stainless-package-version:
+      - 0.15.0
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - REDACTED
+      x-stainless-runtime-version:
+      - REDACTED
+    method: POST
+    uri: https://api.groq.com/openai/v1/chat/completions
+  response:
+    body:
+      string: '{"id": "chatcmpl-6cf0d6fe-87a0-4e9a-b445-79b2eed47bbc", "object": "chat.completion",
+        "created": 1737293844, "model": "llama-3.3-70b-versatile", "choices": [{"index":
+        0, "message": {"role": "assistant", "content": "Hello, it''s nice to meet
+        you. Is there something I can help you with today?"}, "logprobs": null, "finish_reason":
+        "stop"}], "usage": {"queue_time": 0.526516886, "prompt_tokens": 46, "prompt_time":
+        0.012112661, "completion_tokens": 20, "completion_time": 0.100698985, "total_tokens":
+        66, "total_time": 0.112811646}, "system_fingerprint": "fp_c0cfa69934", "x_groq":
+        {"id": "req_01jhzcgk0yfc5bbjfyrtt6rsqp"}}'
+    headers:
+      CF-Cache-Status:
+      - DYNAMIC
+      CF-Ray:
+      - REDACTED
+      Cache-Control:
+      - private, max-age=0, no-store, no-cache, must-revalidate
+      Connection:
+      - keep-alive
+      Content-Type:
+      - application/json
+      Date:
+      - Sun, 19 Jan 2025 13:37:24 GMT
+      Server:
+      - cloudflare
+      Set-Cookie:
+      - __cf_bm=qFaVUB5iW1LI..EnEOZABv479cX2NKcnIO9XbHXxzx8-1737293844-1.0.1.1-wjdzMztTACMALQj8o4mZD5Glv6DuRVy4t49YkQqRqrovVwQ5NReNwNn6AMlcKxZGrGc3fOpPRqjizC4SxKHJbQ;
+        path=/; expires=Sun, 19-Jan-25 14:07:24 GMT; domain=.groq.com; HttpOnly; Secure;
+        SameSite=None
+      Transfer-Encoding:
+      - chunked
+      Vary:
+      - Origin, Accept-Encoding
+      Via:
+      - 1.1 google
+      alt-svc:
+      - h3=":443"; ma=86400
+      content-length:
+      - '581'
+      x-groq-region:
+      - us-west-1
+      x-ratelimit-limit-requests:
+      - REDACTED
+      x-ratelimit-limit-tokens:
+      - REDACTED
+      x-ratelimit-remaining-requests:
+      - REDACTED
+      x-ratelimit-remaining-tokens:
+      - REDACTED
+      x-ratelimit-reset-requests:
+      - REDACTED
+      x-ratelimit-reset-tokens:
+      - REDACTED
+      x-request-id:
+      - REDACTED
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"messages": [{"role": "system", "content": "You are a helpful assistant."},
+      {"role": "user", "content": "Write a short greeting."}], "model": "llama-3.3-70b-versatile",
+      "stream": true}'
+    headers:
+      accept:
+      - application/json
+      accept-encoding:
+      - gzip, deflate
+      authorization:
+      - REDACTED
+      connection:
+      - keep-alive
+      content-length:
+      - '185'
+      content-type:
+      - application/json
+      cookie:
+      - __cf_bm=qFaVUB5iW1LI..EnEOZABv479cX2NKcnIO9XbHXxzx8-1737293844-1.0.1.1-wjdzMztTACMALQj8o4mZD5Glv6DuRVy4t49YkQqRqrovVwQ5NReNwNn6AMlcKxZGrGc3fOpPRqjizC4SxKHJbQ
+      host:
+      - api.groq.com
+      user-agent:
+      - Groq/Python 0.15.0
+      x-stainless-arch:
+      - REDACTED
+      x-stainless-async:
+      - REDACTED
+      x-stainless-lang:
+      - REDACTED
+      x-stainless-os:
+      - REDACTED
+      x-stainless-package-version:
+      - 0.15.0
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - REDACTED
+      x-stainless-runtime-version:
+      - REDACTED
+    method: POST
+    uri: https://api.groq.com/openai/v1/chat/completions
+  response:
+    body:
+      string: 'data: {"id":"chatcmpl-5cd656da-4c2b-4095-bce3-031986a23761","object":"chat.completion.chunk","created":1737293844,"model":"llama-3.3-70b-versatile","system_fingerprint":"fp_fcc3b74982","choices":[{"index":0,"delta":{"role":"assistant","content":""},"logprobs":null,"finish_reason":null}],"x_groq":{"id":"req_01jhzcgkx2et2awe1fvd3y4dpw"}}
+
+
+        data: {"id":"chatcmpl-5cd656da-4c2b-4095-bce3-031986a23761","object":"chat.completion.chunk","created":1737293844,"model":"llama-3.3-70b-versatile","system_fingerprint":"fp_fcc3b74982","choices":[{"index":0,"delta":{"content":"Hello"},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-5cd656da-4c2b-4095-bce3-031986a23761","object":"chat.completion.chunk","created":1737293844,"model":"llama-3.3-70b-versatile","system_fingerprint":"fp_fcc3b74982","choices":[{"index":0,"delta":{"content":","},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-5cd656da-4c2b-4095-bce3-031986a23761","object":"chat.completion.chunk","created":1737293844,"model":"llama-3.3-70b-versatile","system_fingerprint":"fp_fcc3b74982","choices":[{"index":0,"delta":{"content":"
+        it"},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-5cd656da-4c2b-4095-bce3-031986a23761","object":"chat.completion.chunk","created":1737293844,"model":"llama-3.3-70b-versatile","system_fingerprint":"fp_fcc3b74982","choices":[{"index":0,"delta":{"content":"''s"},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-5cd656da-4c2b-4095-bce3-031986a23761","object":"chat.completion.chunk","created":1737293844,"model":"llama-3.3-70b-versatile","system_fingerprint":"fp_fcc3b74982","choices":[{"index":0,"delta":{"content":"
+        nice"},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-5cd656da-4c2b-4095-bce3-031986a23761","object":"chat.completion.chunk","created":1737293844,"model":"llama-3.3-70b-versatile","system_fingerprint":"fp_fcc3b74982","choices":[{"index":0,"delta":{"content":"
+        to"},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-5cd656da-4c2b-4095-bce3-031986a23761","object":"chat.completion.chunk","created":1737293844,"model":"llama-3.3-70b-versatile","system_fingerprint":"fp_fcc3b74982","choices":[{"index":0,"delta":{"content":"
+        meet"},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-5cd656da-4c2b-4095-bce3-031986a23761","object":"chat.completion.chunk","created":1737293844,"model":"llama-3.3-70b-versatile","system_fingerprint":"fp_fcc3b74982","choices":[{"index":0,"delta":{"content":"
+        you"},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-5cd656da-4c2b-4095-bce3-031986a23761","object":"chat.completion.chunk","created":1737293844,"model":"llama-3.3-70b-versatile","system_fingerprint":"fp_fcc3b74982","choices":[{"index":0,"delta":{"content":"."},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-5cd656da-4c2b-4095-bce3-031986a23761","object":"chat.completion.chunk","created":1737293844,"model":"llama-3.3-70b-versatile","system_fingerprint":"fp_fcc3b74982","choices":[{"index":0,"delta":{"content":"
+        How"},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-5cd656da-4c2b-4095-bce3-031986a23761","object":"chat.completion.chunk","created":1737293844,"model":"llama-3.3-70b-versatile","system_fingerprint":"fp_fcc3b74982","choices":[{"index":0,"delta":{"content":"
+        can"},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-5cd656da-4c2b-4095-bce3-031986a23761","object":"chat.completion.chunk","created":1737293844,"model":"llama-3.3-70b-versatile","system_fingerprint":"fp_fcc3b74982","choices":[{"index":0,"delta":{"content":"
+        I"},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-5cd656da-4c2b-4095-bce3-031986a23761","object":"chat.completion.chunk","created":1737293844,"model":"llama-3.3-70b-versatile","system_fingerprint":"fp_fcc3b74982","choices":[{"index":0,"delta":{"content":"
+        assist"},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-5cd656da-4c2b-4095-bce3-031986a23761","object":"chat.completion.chunk","created":1737293844,"model":"llama-3.3-70b-versatile","system_fingerprint":"fp_fcc3b74982","choices":[{"index":0,"delta":{"content":"
+        you"},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-5cd656da-4c2b-4095-bce3-031986a23761","object":"chat.completion.chunk","created":1737293844,"model":"llama-3.3-70b-versatile","system_fingerprint":"fp_fcc3b74982","choices":[{"index":0,"delta":{"content":"
+        today"},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-5cd656da-4c2b-4095-bce3-031986a23761","object":"chat.completion.chunk","created":1737293844,"model":"llama-3.3-70b-versatile","system_fingerprint":"fp_fcc3b74982","choices":[{"index":0,"delta":{"content":"?"},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-5cd656da-4c2b-4095-bce3-031986a23761","object":"chat.completion.chunk","created":1737293844,"model":"llama-3.3-70b-versatile","system_fingerprint":"fp_fcc3b74982","choices":[{"index":0,"delta":{},"logprobs":null,"finish_reason":"stop"}],"x_groq":{"id":"req_01jhzcgkx2et2awe1fvd3y4dpw","usage":{"queue_time":0.50562272,"prompt_tokens":46,"prompt_time":0.008745809,"completion_tokens":17,"completion_time":0.061818182,"total_tokens":63,"total_time":0.070563991}}}
+
+
+        data: [DONE]
+
+
+        '
+    headers:
+      CF-Cache-Status:
+      - DYNAMIC
+      CF-Ray:
+      - REDACTED
+      Cache-Control:
+      - no-cache
+      Connection:
+      - keep-alive
+      Content-Type:
+      - text/event-stream
+      Date:
+      - Sun, 19 Jan 2025 13:37:25 GMT
+      Server:
+      - cloudflare
+      Transfer-Encoding:
+      - chunked
+      Vary:
+      - Origin, Accept-Encoding
+      Via:
+      - 1.1 google
+      alt-svc:
+      - h3=":443"; ma=86400
+      x-groq-region:
+      - us-west-1
+      x-ratelimit-limit-requests:
+      - REDACTED
+      x-ratelimit-limit-tokens:
+      - REDACTED
+      x-ratelimit-remaining-requests:
+      - REDACTED
+      x-ratelimit-remaining-tokens:
+      - REDACTED
+      x-ratelimit-reset-requests:
+      - REDACTED
+      x-ratelimit-reset-tokens:
+      - REDACTED
+      x-request-id:
+      - REDACTED
     status:
       code: 200
       message: OK
