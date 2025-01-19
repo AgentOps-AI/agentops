@@ -1,7 +1,9 @@
 import os
+import json
 import pytest
-from typing import Any, List
 import litellm
+import tempfile
+from pathlib import Path
 from openai import OpenAI
 from anthropic import Anthropic
 from ai21 import AI21Client, AsyncAI21Client
@@ -10,6 +12,8 @@ from groq import Groq
 from mistralai import Mistral
 from ai21.models.chat import ChatMessage
 from dotenv import load_dotenv
+from taskweaver.app.app import TaskWeaverApp
+from taskweaver.llm import LLMApi
 
 load_dotenv()
 
@@ -90,10 +94,39 @@ def litellm_client():
 
     openai_key = os.getenv("OPENAI_API_KEY", "test-api-key")
     anthropic_key = os.getenv("ANTHROPIC_API_KEY", "test-api-key")
-    openrouter_key = os.getenv("OPENROUTER_API_KEY", "test-api-key")
 
     litellm.openai_key = openai_key
     litellm.anthropic_key = anthropic_key
-    litellm.openrouter_key = openrouter_key
 
     return litellm
+
+
+@pytest.fixture(scope="function")
+def taskweaver_app():
+    """Initialize TaskWeaver app with minimal config."""
+    # Create a temporary directory for TaskWeaver project
+    with tempfile.TemporaryDirectory() as temp_dir:
+        app_dir = Path(temp_dir)
+        
+        # Create config file
+        config_file = app_dir / "taskweaver_config.json"
+        config = {
+            "llm.type": "openai",
+            "llm.api_type": "openai",
+            "llm.api_key": os.getenv("OPENAI_API_KEY", "test-api-key"),
+            "llm.api_base": "https://api.openai.com/v1",
+            "llm.model": "gpt-4o-mini",
+        }
+        
+        with open(config_file, "w") as f:
+            json.dump(config, f, indent=4)
+        
+        # Initialize TaskWeaver app
+        app = TaskWeaverApp(app_dir=str(app_dir))
+        yield app
+
+
+@pytest.fixture
+def taskweaver_client(taskweaver_app):
+    """Get LLM interface from TaskWeaver app."""
+    return taskweaver_app.app_injector.get(LLMApi)

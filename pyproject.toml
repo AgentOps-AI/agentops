@@ -58,6 +58,7 @@ test = [
     # "crewai-tools @ git+https://github.com/crewAIInc/crewAI-tools.git@a14091abb24527c97ccfcc8539d529c8b4559a0f; python_version>='3.10'", 
     # ------------------------------------------------------------------------------------------------------------------------------------
     # ;;
+    "taskweaver @ git+https://github.com/microsoft/TaskWeaver@v0.0.1; python_version>='3.10'",
     "autogen<0.4.0",
     "pytest-cov",
     "fastapi[standard]",

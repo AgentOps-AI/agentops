@@ -1,6 +1,6 @@
 import asyncio
-from asyncio import TimeoutError
 from typing import Any, Dict, List
+import json
 
 import pytest
 
@@ -261,7 +261,7 @@ def test_litellm_provider(litellm_client, test_messages: List[Dict[str, Any]]):
 
     # Stream completion
     stream_response = litellm_client.completion(
-        model="anthropic/claude-3-5-sonnet-latest",
+        model="openai/gpt-4o-mini",
         messages=test_messages,
         stream=True,
     )
@@ -271,7 +271,7 @@ def test_litellm_provider(litellm_client, test_messages: List[Dict[str, Any]]):
     # Async completion
     async def async_test():
         async_response = await litellm_client.acompletion(
-            model="openrouter/deepseek/deepseek-chat",
+            model="anthropic/claude-3-5-sonnet-latest",
             messages=test_messages,
         )
         return async_response
@@ -314,3 +314,37 @@ def test_ollama_provider(test_messages: List[Dict[str, Any]]):
 
     async_response = asyncio.run(async_test())
     assert async_response["message"]["content"]
+
+
+# TaskWeaver Tests
+@pytest.mark.vcr()
+def test_taskweaver_provider(taskweaver_client, test_messages):
+    """Test TaskWeaver provider integration."""
+    # Test with code execution messages
+    code_messages = [
+        {"role": "system", "content": "You are a Python coding assistant."},
+        {"role": "user", "content": "Write a function to calculate factorial. Answer in the JSON format."}
+    ]
+    
+    response = taskweaver_client.chat_completion(
+        messages=code_messages,
+        temperature=0,
+        max_tokens=200,
+        top_p=1.0,
+    )
+
+    assert isinstance(response, dict)
+    assert "content" in response
+    
+    # Convert 'content' from string to dictionary
+    content = json.loads(response["content"])
+
+    assert "function" in content
+
+    assert "name" in content["function"]
+    assert "description" in content["function"]
+    assert "parameters" in content["function"]
+    assert "returns" in content["function"]
+    assert "code" in content["function"]
+
+    assert "def factorial" in content["function"]["code"]
