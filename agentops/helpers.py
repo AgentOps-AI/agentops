@@ -115,24 +115,39 @@ def get_agentops_version():
 
 
 def check_agentops_update():
+    """
+    Check if the installed version of agentops is the latest available on PyPI.
+    Returns True if an update is available, False if up to date, None if check fails.
+    """
     try:
         response = requests.get("https://pypi.org/pypi/agentops/json")
+        if response.status_code != 200:
+            return None
 
-        if response.status_code == 200:
-            json_data = response.json()
-            latest_version = json_data["info"]["version"]
+        json_data = response.json()
+        latest_version = json_data["info"]["version"]
 
+        try:
+            current_version = version("agentops")
+        except PackageNotFoundError:
+            return None
+
+        if latest_version != current_version:
             try:
-                current_version = version("agentops")
-            except PackageNotFoundError:
-                return None
-
-            if not latest_version == current_version:
                 logger.warning(
-                    " WARNING: agentops is out of date. Please update with the command: 'pip install --upgrade agentops'"
+                    "WARNING: agentops is out of date. Please update with the command: 'pip install --upgrade agentops'"
                 )
+            except Exception:
+                # Fail silently if logging fails (e.g. during test teardown)
+                pass
+            return True
+        return False
+
     except Exception as e:
-        logger.debug(f"Failed to check for updates: {e}")
+        try:
+            logger.debug(f"Failed to check for updates: {e}")
+        except Exception:
+            pass
         return None
 
 
