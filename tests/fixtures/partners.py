@@ -5,7 +5,7 @@ import agentops
 
 
 @pytest.fixture
-def autogen_logger(agentops_session):
+def autogen_logger():
     """Fixture for AutogenLogger with auto start/stop."""
     logger = AutogenLogger()
     logger.start()
@@ -16,9 +16,6 @@ def autogen_logger(agentops_session):
 @pytest.fixture
 def math_agents(openai_client, autogen_logger):
     """Math agent group with calculator tool and all configurations."""
-    # Initialize AgentOps
-    agentops.init()
-
     # Base configuration for all agents
     base_config = {
         "max_consecutive_auto_reply": 0,  # Disable auto-reply
