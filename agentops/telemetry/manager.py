@@ -96,9 +96,8 @@ class TelemetryManager:
         # Create resource with service info
         resource = Resource.create({"service.name": "agentops", **(config.resource_attributes or {})})
 
-        # Create provider with sampling
-        sampler = config.sampler or ParentBased(TraceIdRatioBased(0.5))
-        self._provider = TracerProvider(resource=resource, sampler=sampler)
+        # Create provider
+        self._provider = TracerProvider(resource=resource)
 
         # Set up logging handler with the same resource
         from opentelemetry.sdk._logs import LoggerProvider, LoggingHandler
