@@ -82,23 +82,23 @@ def vcr_config():
         # Add JWT-related headers
         ("x-railway-request-id", "REDACTED"),
         ("x-request-id", "REDACTED"),
-        ("x-ratelimit-remaining-tokens", "REDACTED"), 
+        ("x-ratelimit-remaining-tokens", "REDACTED"),
         ("x-ratelimit-reset-requests", "REDACTED"),
         ("x-ratelimit-reset-tokens", "REDACTED"),
-        ("x-debug-trace-id", "REDACTED")
+        ("x-debug-trace-id", "REDACTED"),
     ]
 
     def redact_jwt_recursive(obj):
         """Recursively redact JWT tokens from dict/list structures."""
         if obj is None:
             return obj
-            
+
         if isinstance(obj, dict):
             for key, value in obj.items():
-                if isinstance(key, str) and ('jwt' in key.lower()):
-                    obj[key] = 'REDACTED'
-                elif isinstance(value, str) and 'eyJ' in value:  # JWT tokens start with 'eyJ'
-                    obj[key] = 'REDACTED_JWT'
+                if isinstance(key, str) and ("jwt" in key.lower()):
+                    obj[key] = "REDACTED"
+                elif isinstance(value, str) and "eyJ" in value:  # JWT tokens start with 'eyJ'
+                    obj[key] = "REDACTED_JWT"
                 else:
                     redact_jwt_recursive(value)
         elif isinstance(obj, list):
@@ -110,7 +110,7 @@ def vcr_config():
         """Filter sensitive headers and body content from response."""
         if not isinstance(response, dict):
             raise ValueError("Response must be a dictionary")
-            
+
         # Filter headers
         headers = response.get("headers", {})
         if headers:
@@ -128,20 +128,21 @@ def vcr_config():
                 try:
                     # Handle JSON response bodies
                     if isinstance(body_content, bytes):
-                        body_str = body_content.decode('utf-8')
+                        body_str = body_content.decode("utf-8")
                     else:
                         body_str = str(body_content)
-                    
+
                     try:
                         body = json.loads(body_str)
                         body = redact_jwt_recursive(body)
-                        response["body"]["string"] = json.dumps(body).encode('utf-8')
+                        response["body"]["string"] = json.dumps(body).encode("utf-8")
                     except json.JSONDecodeError:
                         # If not JSON, handle as plain text
                         import re
-                        jwt_pattern = r'eyJ[a-zA-Z0-9_-]+\.[a-zA-Z0-9_-]+\.[a-zA-Z0-9_-]+'
-                        body_str = re.sub(jwt_pattern, 'REDACTED_JWT', body_str)
-                        response["body"]["string"] = body_str.encode('utf-8')
+
+                        jwt_pattern = r"eyJ[a-zA-Z0-9_-]+\.[a-zA-Z0-9_-]+\.[a-zA-Z0-9_-]+"
+                        body_str = re.sub(jwt_pattern, "REDACTED_JWT", body_str)
+                        response["body"]["string"] = body_str.encode("utf-8")
                 except (AttributeError, UnicodeDecodeError) as e:
                     raise ValueError(f"Failed to process response body: {str(e)}")
 
@@ -149,65 +150,64 @@ def vcr_config():
 
     def scrub_request_body(request):
         """Scrub sensitive and dynamic data from request body."""
-        if not request or not hasattr(request, 'body'):
+        if not request or not hasattr(request, "body"):
             raise ValueError("Invalid request object")
-            
+
         if request.body:
             try:
                 body_dict = json.loads(request.body)
                 if not isinstance(body_dict, dict):
                     raise ValueError("Request body must be a JSON object")
-                    
+
                 body_dict = redact_jwt_recursive(body_dict)
-                
+
                 # Handle session creation/update requests
-                if request.uri and (request.uri.endswith('/v2/create_session') or request.uri.endswith('/v2/update_session')):
-                    session = body_dict.get('session')
+                if request.uri and (
+                    request.uri.endswith("/v2/create_session") or request.uri.endswith("/v2/update_session")
+                ):
+                    session = body_dict.get("session")
                     if session and isinstance(session, dict):
                         # Standardize all dynamic fields
                         for key in session:
-                            if key.startswith('_'):  # Internal fields
-                                session[key] = ''
+                            if key.startswith("_"):  # Internal fields
+                                session[key] = ""
                             elif isinstance(session[key], str):  # String fields that might be dynamic
-                                if key not in ['end_state', 'OS']:  # Preserve specific fields
-                                    session[key] = ''
-                        
+                                if key not in ["end_state", "OS"]:  # Preserve specific fields
+                                    session[key] = ""
+
                         # Standardize known fields
-                        session['session_id'] = 'SESSION_ID'
-                        session['init_timestamp'] = 'TIMESTAMP'
-                        session['end_timestamp'] = 'TIMESTAMP'
-                        session['jwt'] = 'JWT_TOKEN'
-                        session['token_cost'] = ''
-                        session['_session_url'] = ''
-                        
+                        session["session_id"] = "SESSION_ID"
+                        session["init_timestamp"] = "TIMESTAMP"
+                        session["end_timestamp"] = "TIMESTAMP"
+                        session["jwt"] = "JWT_TOKEN"
+                        session["token_cost"] = ""
+                        session["_session_url"] = ""
+
                         # Standardize host environment
-                        if 'host_env' in session:
-                            session['host_env'] = {
-                                'SDK': {'AgentOps SDK Version': None},
-                                'OS': {'OS': session.get('host_env', {}).get('OS', {}).get('OS', 'Darwin')}
+                        if "host_env" in session:
+                            session["host_env"] = {
+                                "SDK": {"AgentOps SDK Version": None},
+                                "OS": {"OS": session.get("host_env", {}).get("OS", {}).get("OS", "Darwin")},
                             }
-                        
+
                         # Reset all counters and states
-                        session['event_counts'] = {
-                            'llms': 0, 'tools': 0, 'actions': 0, 
-                            'errors': 0, 'apis': 0
-                        }
-                        session['is_running'] = False
-                        
+                        session["event_counts"] = {"llms": 0, "tools": 0, "actions": 0, "errors": 0, "apis": 0}
+                        session["is_running"] = False
+
                         # Clear any dynamic lists
-                        session['tags'] = []
-                        session['video'] = None
-                        session['end_state_reason'] = None
-                
+                        session["tags"] = []
+                        session["video"] = None
+                        session["end_state_reason"] = None
+
                 # Handle agent creation requests
-                if request.uri and request.uri.endswith('/v2/create_agent'):
-                    if 'id' in body_dict:
-                        body_dict['id'] = 'AGENT_ID'
-                
+                if request.uri and request.uri.endswith("/v2/create_agent"):
+                    if "id" in body_dict:
+                        body_dict["id"] = "AGENT_ID"
+
                 request.body = json.dumps(body_dict).encode()
             except (json.JSONDecodeError, AttributeError, UnicodeDecodeError) as e:
                 raise ValueError(f"Failed to process request body: {str(e)}")
-                
+
         return request
 
     return {
@@ -224,7 +224,7 @@ def vcr_config():
             "localhost:4318",  # Default OTLP HTTP endpoint
             "127.0.0.1:4317",
             "127.0.0.1:4318",
-            "huggingface.co"
+            "huggingface.co",
         ],
         # Header filtering for requests and responses
         "filter_headers": sensitive_headers,

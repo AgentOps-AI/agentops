@@ -3,6 +3,7 @@ from agentops.partners.autogen_logger import AutogenLogger
 from autogen import UserProxyAgent, AssistantAgent, register_function
 import agentops
 
+
 @pytest.fixture
 def autogen_logger(agentops_session):
     """Fixture for AutogenLogger with auto start/stop."""
@@ -11,12 +12,13 @@ def autogen_logger(agentops_session):
     yield logger
     logger.stop()
 
+
 @pytest.fixture
 def math_agents(openai_client, autogen_logger):
     """Math agent group with calculator tool and all configurations."""
     # Initialize AgentOps
     agentops.init()
-    
+
     # Base configuration for all agents
     base_config = {
         "max_consecutive_auto_reply": 0,  # Disable auto-reply
@@ -26,11 +28,13 @@ def math_agents(openai_client, autogen_logger):
 
     # LLM configuration for math assistant
     llm_config = {
-        "config_list": [{
-            "model": "gpt-4",
-            "api_key": openai_client.api_key,
-            "timeout": 10,
-        }],
+        "config_list": [
+            {
+                "model": "gpt-4",
+                "api_key": openai_client.api_key,
+                "timeout": 10,
+            }
+        ],
         "timeout": 10,
         "temperature": 0,  # Deterministic for testing
     }
@@ -39,17 +43,16 @@ def math_agents(openai_client, autogen_logger):
     user_proxy = UserProxyAgent(
         name="user_proxy",
         human_input_mode="NEVER",
-        is_termination_msg=lambda x: "TERMINATE" in x.get("content", "") 
-                                   or x.get("content", "") == "",
-        **base_config
+        is_termination_msg=lambda x: "TERMINATE" in x.get("content", "") or x.get("content", "") == "",
+        **base_config,
     )
-    
+
     # Create assistant agent
     assistant = AssistantAgent(
         name="assistant",
         system_message="You are a math assistant. Use the calculator tool when needed. Return TERMINATE when done.",
         llm_config=llm_config,
-        max_consecutive_auto_reply=1
+        max_consecutive_auto_reply=1,
     )
 
     # Register agents with logger
@@ -70,22 +73,13 @@ def math_agents(openai_client, autogen_logger):
             raise ValueError("Invalid operator")
 
     # Register calculator with both agents
-    assistant.register_for_llm(
-        name="calculator",
-        description="A simple calculator"
-    )(calculator)
-    
-    user_proxy.register_for_execution(
-        name="calculator"
-    )(calculator)
+    assistant.register_for_llm(name="calculator", description="A simple calculator")(calculator)
+
+    user_proxy.register_for_execution(name="calculator")(calculator)
 
     # Register function between agents
     register_function(
-        calculator,
-        caller=assistant,
-        executor=user_proxy,
-        name="calculator",
-        description="A simple calculator"
+        calculator, caller=assistant, executor=user_proxy, name="calculator", description="A simple calculator"
     )
-    
-    return user_proxy, assistant 
+
+    return user_proxy, assistant

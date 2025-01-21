@@ -87,15 +87,16 @@ def mistral_client():
     api_key = os.getenv("MISTRAL_API_KEY", "test-api-key")
     return Mistral(api_key=api_key)
 
+
 @pytest.fixture
 def gemini_client():
     """Initialize Google's Gemini client."""
     import google.generativeai as genai
-    
+
     api_key = os.getenv("GEMINI_API_KEY", "test-api-key")
     genai.configure(api_key=api_key)
-    
-    return genai.GenerativeModel('gemini-1.5-flash')
+
+    return genai.GenerativeModel("gemini-1.5-flash")
 
 
 @pytest.fixture
@@ -117,7 +118,7 @@ def taskweaver_app():
     # Create a temporary directory for TaskWeaver project
     with tempfile.TemporaryDirectory() as temp_dir:
         app_dir = Path(temp_dir)
-        
+
         # Create config file
         config_file = app_dir / "taskweaver_config.json"
         config = {
@@ -127,10 +128,10 @@ def taskweaver_app():
             "llm.api_base": "https://api.openai.com/v1",
             "llm.model": "gpt-4o-mini",
         }
-        
+
         with open(config_file, "w") as f:
             json.dump(config, f, indent=4)
-        
+
         # Initialize TaskWeaver app
         app = TaskWeaverApp(app_dir=str(app_dir))
         yield app

@@ -206,25 +206,22 @@ def test_gemini_provider(gemini_client, test_messages):
     for msg in test_messages:
         if msg["role"] != "system":  # Gemini doesn't support system messages directly
             gemini_messages.append(msg["content"])
-    
+
     # Sync completion
     response = gemini_client.generate_content(gemini_messages)
     assert response.text
-    
+
     # Stream completion
-    stream = gemini_client.generate_content(
-        gemini_messages,
-        stream=True
-    )
-    
+    stream = gemini_client.generate_content(gemini_messages, stream=True)
+
     content = collect_stream_content(stream, "gemini")
     assert len(content) > 0
-    
+
     # Test async completion
     async def async_test():
         response = await gemini_client.generate_content_async(gemini_messages)
         return response
-    
+
     async_response = asyncio.run(async_test())
     assert async_response.text
 
@@ -356,9 +353,9 @@ def test_taskweaver_provider(taskweaver_client, test_messages):
     # Test with code execution messages
     code_messages = [
         {"role": "system", "content": "You are a Python coding assistant."},
-        {"role": "user", "content": "Write a function to calculate factorial. Answer in the JSON format."}
+        {"role": "user", "content": "Write a function to calculate factorial. Answer in the JSON format."},
     ]
-    
+
     response = taskweaver_client.chat_completion(
         messages=code_messages,
         temperature=0,
@@ -368,7 +365,7 @@ def test_taskweaver_provider(taskweaver_client, test_messages):
 
     assert isinstance(response, dict)
     assert "content" in response
-    
+
     # Convert 'content' from string to dictionary
     content = json.loads(response["content"])
 
