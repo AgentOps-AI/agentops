@@ -171,4 +171,435 @@ interactions:
     status:
       code: 200
       message: OK
+- request:
+    body: '{"messages": [{"content": "You are a math assistant. Use the calculator
+      tool when needed. Return TERMINATE when done.", "role": "system"}, {"content":
+      "What is 2 + 2?", "role": "user", "name": "user_proxy"}], "model": "gpt-4",
+      "stream": false, "temperature": 0, "tools": [{"type": "function", "function":
+      {"description": "A simple calculator", "name": "calculator", "parameters": {"type":
+      "object", "properties": {"a": {"type": "integer", "description": "a"}, "b":
+      {"type": "integer", "description": "b"}, "operator": {"type": "string", "description":
+      "operator"}}, "required": ["a", "b", "operator"]}}}]}'
+    headers:
+      accept:
+      - application/json
+      accept-encoding:
+      - gzip, deflate
+      authorization:
+      - REDACTED
+      connection:
+      - keep-alive
+      content-length:
+      - '605'
+      content-type:
+      - application/json
+      host:
+      - api.openai.com
+      user-agent:
+      - OpenAI/Python 1.59.7
+      x-stainless-arch:
+      - REDACTED
+      x-stainless-async:
+      - REDACTED
+      x-stainless-lang:
+      - REDACTED
+      x-stainless-os:
+      - REDACTED
+      x-stainless-package-version:
+      - 1.59.7
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - REDACTED
+      x-stainless-runtime-version:
+      - REDACTED
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    body:
+      string: '{"id": "chatcmpl-As42h2K3sm413SuT40cPyKvF7idIT", "object": "chat.completion",
+        "created": 1737448615, "model": "gpt-4-0613", "choices": [{"index": 0, "message":
+        {"role": "assistant", "content": null, "tool_calls": [{"id": "call_ecFDWTNlhpZtB7wrVlHztvei",
+        "type": "function", "function": {"name": "calculator", "arguments": "{\n  \"a\":
+        2,\n  \"b\": 2,\n  \"operator\": \"+\"\n}"}}], "refusal": null}, "logprobs":
+        null, "finish_reason": "tool_calls"}], "usage": {"prompt_tokens": 88, "completion_tokens":
+        29, "total_tokens": 117, "prompt_tokens_details": {"cached_tokens": 0, "audio_tokens":
+        0}, "completion_tokens_details": {"reasoning_tokens": 0, "audio_tokens": 0,
+        "accepted_prediction_tokens": 0, "rejected_prediction_tokens": 0}}, "service_tier":
+        "default", "system_fingerprint": null}'
+    headers:
+      CF-Cache-Status:
+      - DYNAMIC
+      CF-RAY:
+      - REDACTED
+      Connection:
+      - keep-alive
+      Content-Type:
+      - application/json
+      Date:
+      - Tue, 21 Jan 2025 08:36:56 GMT
+      Server:
+      - cloudflare
+      Set-Cookie:
+      - __cf_bm=PpEXg6vgyNAN7WUSBQpH1tvgVwtO37K0ew9GlnCz_FU-1737448616-1.0.1.1-XCgG8UzjKFsmpTX8qKp1TSl0k2o_7CTLCTbAOWOPqMVgZCkvEzK9lFLTmLHhCfKCy_IXwKvdFj4z4wdto39qnQ;
+        path=/; expires=Tue, 21-Jan-25 09:06:56 GMT; domain=.api.openai.com; HttpOnly;
+        Secure; SameSite=None
+      - _cfuvid=P761hOcApVI5tb3gVbbSj.Z0rBbOd6VbCC5PkHbBYuA-1737448616634-0.0.1.1-604800000;
+        path=/; domain=.api.openai.com; HttpOnly; Secure; SameSite=None
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - nosniff
+      access-control-expose-headers:
+      - X-Request-ID
+      alt-svc:
+      - h3=":443"; ma=86400
+      content-length:
+      - '1067'
+      openai-organization:
+      - REDACTED
+      openai-processing-ms:
+      - '1552'
+      openai-version:
+      - '2020-10-01'
+      strict-transport-security:
+      - max-age=31536000; includeSubDomains; preload
+      x-ratelimit-limit-requests:
+      - REDACTED
+      x-ratelimit-limit-tokens:
+      - REDACTED
+      x-ratelimit-remaining-requests:
+      - REDACTED
+      x-ratelimit-remaining-tokens:
+      - REDACTED
+      x-ratelimit-reset-requests:
+      - REDACTED
+      x-ratelimit-reset-tokens:
+      - REDACTED
+      x-request-id:
+      - REDACTED
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"messages": [{"content": "You are a math assistant. Use the calculator
+      tool when needed. Return TERMINATE when done.", "role": "system"}, {"content":
+      "What is (1423 - 123) / 3 + (32 + 23) * 5?", "role": "user", "name": "user_proxy"}],
+      "model": "gpt-4", "stream": false, "temperature": 0, "tools": [{"type": "function",
+      "function": {"description": "A simple calculator", "name": "calculator", "parameters":
+      {"type": "object", "properties": {"a": {"type": "integer", "description": "a"},
+      "b": {"type": "integer", "description": "b"}, "operator": {"type": "string",
+      "description": "operator"}}, "required": ["a", "b", "operator"]}}}]}'
+    headers:
+      accept:
+      - application/json
+      accept-encoding:
+      - gzip, deflate
+      authorization:
+      - REDACTED
+      connection:
+      - keep-alive
+      content-length:
+      - '632'
+      content-type:
+      - application/json
+      cookie:
+      - __cf_bm=PpEXg6vgyNAN7WUSBQpH1tvgVwtO37K0ew9GlnCz_FU-1737448616-1.0.1.1-XCgG8UzjKFsmpTX8qKp1TSl0k2o_7CTLCTbAOWOPqMVgZCkvEzK9lFLTmLHhCfKCy_IXwKvdFj4z4wdto39qnQ;
+        _cfuvid=P761hOcApVI5tb3gVbbSj.Z0rBbOd6VbCC5PkHbBYuA-1737448616634-0.0.1.1-604800000
+      host:
+      - api.openai.com
+      user-agent:
+      - OpenAI/Python 1.59.7
+      x-stainless-arch:
+      - REDACTED
+      x-stainless-async:
+      - REDACTED
+      x-stainless-lang:
+      - REDACTED
+      x-stainless-os:
+      - REDACTED
+      x-stainless-package-version:
+      - 1.59.7
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - REDACTED
+      x-stainless-runtime-version:
+      - REDACTED
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    body:
+      string: '{"id": "chatcmpl-As42idz8FBIAfECwBtgeGXpHu82yf", "object": "chat.completion",
+        "created": 1737448616, "model": "gpt-4-0613", "choices": [{"index": 0, "message":
+        {"role": "assistant", "content": null, "tool_calls": [{"id": "call_TLoj935HTL4mPERqNBdr5Xy8",
+        "type": "function", "function": {"name": "calculator", "arguments": "{\n  \"a\":
+        1423,\n  \"b\": 123,\n  \"operator\": \"-\"\n}"}}], "refusal": null}, "logprobs":
+        null, "finish_reason": "tool_calls"}], "usage": {"prompt_tokens": 103, "completion_tokens":
+        29, "total_tokens": 132, "prompt_tokens_details": {"cached_tokens": 0, "audio_tokens":
+        0}, "completion_tokens_details": {"reasoning_tokens": 0, "audio_tokens": 0,
+        "accepted_prediction_tokens": 0, "rejected_prediction_tokens": 0}}, "service_tier":
+        "default", "system_fingerprint": null}'
+    headers:
+      CF-Cache-Status:
+      - DYNAMIC
+      CF-RAY:
+      - REDACTED
+      Connection:
+      - keep-alive
+      Content-Type:
+      - application/json
+      Date:
+      - Tue, 21 Jan 2025 08:36:58 GMT
+      Server:
+      - cloudflare
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - nosniff
+      access-control-expose-headers:
+      - X-Request-ID
+      alt-svc:
+      - h3=":443"; ma=86400
+      content-length:
+      - '1073'
+      openai-organization:
+      - REDACTED
+      openai-processing-ms:
+      - '1695'
+      openai-version:
+      - '2020-10-01'
+      strict-transport-security:
+      - max-age=31536000; includeSubDomains; preload
+      x-ratelimit-limit-requests:
+      - REDACTED
+      x-ratelimit-limit-tokens:
+      - REDACTED
+      x-ratelimit-remaining-requests:
+      - REDACTED
+      x-ratelimit-remaining-tokens:
+      - REDACTED
+      x-ratelimit-reset-requests:
+      - REDACTED
+      x-ratelimit-reset-tokens:
+      - REDACTED
+      x-request-id:
+      - REDACTED
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"messages": [{"content": "You are a math assistant. Use the calculator
+      tool when needed. Return TERMINATE when done.", "role": "system"}, {"content":
+      "What is 123 @ 456?", "role": "user", "name": "user_proxy"}], "model": "gpt-4",
+      "stream": false, "temperature": 0, "tools": [{"type": "function", "function":
+      {"description": "A simple calculator", "name": "calculator", "parameters": {"type":
+      "object", "properties": {"a": {"type": "integer", "description": "a"}, "b":
+      {"type": "integer", "description": "b"}, "operator": {"type": "string", "description":
+      "operator"}}, "required": ["a", "b", "operator"]}}}]}'
+    headers:
+      accept:
+      - application/json
+      accept-encoding:
+      - gzip, deflate
+      authorization:
+      - REDACTED
+      connection:
+      - keep-alive
+      content-length:
+      - '609'
+      content-type:
+      - application/json
+      cookie:
+      - __cf_bm=PpEXg6vgyNAN7WUSBQpH1tvgVwtO37K0ew9GlnCz_FU-1737448616-1.0.1.1-XCgG8UzjKFsmpTX8qKp1TSl0k2o_7CTLCTbAOWOPqMVgZCkvEzK9lFLTmLHhCfKCy_IXwKvdFj4z4wdto39qnQ;
+        _cfuvid=P761hOcApVI5tb3gVbbSj.Z0rBbOd6VbCC5PkHbBYuA-1737448616634-0.0.1.1-604800000
+      host:
+      - api.openai.com
+      user-agent:
+      - OpenAI/Python 1.59.7
+      x-stainless-arch:
+      - REDACTED
+      x-stainless-async:
+      - REDACTED
+      x-stainless-lang:
+      - REDACTED
+      x-stainless-os:
+      - REDACTED
+      x-stainless-package-version:
+      - 1.59.7
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - REDACTED
+      x-stainless-runtime-version:
+      - REDACTED
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    body:
+      string: '{"id": "chatcmpl-As42m7LjODdR82aaM6v7pEd6vHPgF", "object": "chat.completion",
+        "created": 1737448620, "model": "gpt-4-0613", "choices": [{"index": 0, "message":
+        {"role": "assistant", "content": "I''m sorry, but I didn''t understand the
+        operation you want to perform with the numbers 123 and 456. Could you please
+        specify if you want to add, subtract, multiply, or divide these numbers?",
+        "refusal": null}, "logprobs": null, "finish_reason": "stop"}], "usage": {"prompt_tokens":
+        88, "completion_tokens": 45, "total_tokens": 133, "prompt_tokens_details":
+        {"cached_tokens": 0, "audio_tokens": 0}, "completion_tokens_details": {"reasoning_tokens":
+        0, "audio_tokens": 0, "accepted_prediction_tokens": 0, "rejected_prediction_tokens":
+        0}}, "service_tier": "default", "system_fingerprint": null}'
+    headers:
+      CF-Cache-Status:
+      - DYNAMIC
+      CF-RAY:
+      - REDACTED
+      Connection:
+      - keep-alive
+      Content-Type:
+      - application/json
+      Date:
+      - Tue, 21 Jan 2025 08:37:02 GMT
+      Server:
+      - cloudflare
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - nosniff
+      access-control-expose-headers:
+      - X-Request-ID
+      alt-svc:
+      - h3=":443"; ma=86400
+      content-length:
+      - '946'
+      openai-organization:
+      - REDACTED
+      openai-processing-ms:
+      - '2069'
+      openai-version:
+      - '2020-10-01'
+      strict-transport-security:
+      - max-age=31536000; includeSubDomains; preload
+      x-ratelimit-limit-requests:
+      - REDACTED
+      x-ratelimit-limit-tokens:
+      - REDACTED
+      x-ratelimit-remaining-requests:
+      - REDACTED
+      x-ratelimit-remaining-tokens:
+      - REDACTED
+      x-ratelimit-reset-requests:
+      - REDACTED
+      x-ratelimit-reset-tokens:
+      - REDACTED
+      x-request-id:
+      - REDACTED
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"messages": [{"content": "You are a math assistant. Use the calculator
+      tool when needed. Return TERMINATE when done.", "role": "system"}, {"content":
+      "What is 1 + 1? Return TERMINATE when done.", "role": "user", "name": "user_proxy"}],
+      "model": "gpt-4", "stream": false, "temperature": 0, "tools": [{"type": "function",
+      "function": {"description": "A simple calculator", "name": "calculator", "parameters":
+      {"type": "object", "properties": {"a": {"type": "integer", "description": "a"},
+      "b": {"type": "integer", "description": "b"}, "operator": {"type": "string",
+      "description": "operator"}}, "required": ["a", "b", "operator"]}}}]}'
+    headers:
+      accept:
+      - application/json
+      accept-encoding:
+      - gzip, deflate
+      authorization:
+      - REDACTED
+      connection:
+      - keep-alive
+      content-length:
+      - '633'
+      content-type:
+      - application/json
+      cookie:
+      - __cf_bm=PpEXg6vgyNAN7WUSBQpH1tvgVwtO37K0ew9GlnCz_FU-1737448616-1.0.1.1-XCgG8UzjKFsmpTX8qKp1TSl0k2o_7CTLCTbAOWOPqMVgZCkvEzK9lFLTmLHhCfKCy_IXwKvdFj4z4wdto39qnQ;
+        _cfuvid=P761hOcApVI5tb3gVbbSj.Z0rBbOd6VbCC5PkHbBYuA-1737448616634-0.0.1.1-604800000
+      host:
+      - api.openai.com
+      user-agent:
+      - OpenAI/Python 1.59.7
+      x-stainless-arch:
+      - REDACTED
+      x-stainless-async:
+      - REDACTED
+      x-stainless-lang:
+      - REDACTED
+      x-stainless-os:
+      - REDACTED
+      x-stainless-package-version:
+      - 1.59.7
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - REDACTED
+      x-stainless-runtime-version:
+      - REDACTED
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    body:
+      string: '{"id": "chatcmpl-As42oDi4Xfs27rO1Wfdd2iavShg94", "object": "chat.completion",
+        "created": 1737448622, "model": "gpt-4-0613", "choices": [{"index": 0, "message":
+        {"role": "assistant", "content": null, "tool_calls": [{"id": "call_MeYwJ6b4ncFqOfzrM4kVcyxu",
+        "type": "function", "function": {"name": "calculator", "arguments": "{\n  \"a\":
+        1,\n  \"b\": 1,\n  \"operator\": \"+\"\n}"}}], "refusal": null}, "logprobs":
+        null, "finish_reason": "tool_calls"}], "usage": {"prompt_tokens": 94, "completion_tokens":
+        29, "total_tokens": 123, "prompt_tokens_details": {"cached_tokens": 0, "audio_tokens":
+        0}, "completion_tokens_details": {"reasoning_tokens": 0, "audio_tokens": 0,
+        "accepted_prediction_tokens": 0, "rejected_prediction_tokens": 0}}, "service_tier":
+        "default", "system_fingerprint": null}'
+    headers:
+      CF-Cache-Status:
+      - DYNAMIC
+      CF-RAY:
+      - REDACTED
+      Connection:
+      - keep-alive
+      Content-Type:
+      - application/json
+      Date:
+      - Tue, 21 Jan 2025 08:37:04 GMT
+      Server:
+      - cloudflare
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - nosniff
+      access-control-expose-headers:
+      - X-Request-ID
+      alt-svc:
+      - h3=":443"; ma=86400
+      content-length:
+      - '1067'
+      openai-organization:
+      - REDACTED
+      openai-processing-ms:
+      - '1647'
+      openai-version:
+      - '2020-10-01'
+      strict-transport-security:
+      - max-age=31536000; includeSubDomains; preload
+      x-ratelimit-limit-requests:
+      - REDACTED
+      x-ratelimit-limit-tokens:
+      - REDACTED
+      x-ratelimit-remaining-requests:
+      - REDACTED
+      x-ratelimit-remaining-tokens:
+      - REDACTED
+      x-ratelimit-reset-requests:
+      - REDACTED
+      x-ratelimit-reset-tokens:
+      - REDACTED
+      x-request-id:
+      - REDACTED
+    status:
+      code: 200
+      message: OK
 version: 1
