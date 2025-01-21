@@ -1,6 +1,7 @@
 import pytest
 from agentops.partners.autogen_logger import AutogenLogger
 
+
 @pytest.mark.vcr
 def test_autogen(autogen_logger, math_agents):
     """Test complete AutogenLogger integration with math agents"""
