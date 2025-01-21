@@ -2,7 +2,7 @@ from .log_config import logger
 import traceback
 
 from .host_env import get_host_env
-from .http_client import HttpClient
+from ._api import ApiClient
 from .helpers import safe_serialize, get_agentops_version
 
 from os import environ
@@ -36,7 +36,7 @@ class MetaClient(type):
             if session:
                 developer_error["session_id"] = session.session_id
             try:
-                HttpClient.post(
+                ApiClient.post(
                     "https://api.agentops.ai/v2/developer_errors",
                     safe_serialize(developer_error).encode("utf-8"),
                     api_key=api_key,

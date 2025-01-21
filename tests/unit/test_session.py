@@ -15,7 +15,7 @@ from opentelemetry.trace.span import TraceState
 
 import agentops
 from agentops import ActionEvent, Client
-from agentops.http_client import HttpClient
+from agentops._api import ApiClient
 from agentops.singleton import clear_singletons
 
 
