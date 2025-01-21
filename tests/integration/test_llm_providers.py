@@ -198,7 +198,8 @@ def test_cohere_provider(cohere_client):
 
 
 # Gemini Tests
-@pytest.mark.vcr()
+# @pytest.mark.vcr()
+@pytest.mark.skip(reason="Gemini tests require gRPC transport not supported by VCR")
 def test_gemini_provider(gemini_client, test_messages):
     """Test Gemini provider integration."""
     # Convert messages to Gemini format
