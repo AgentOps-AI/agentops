@@ -76,3 +76,10 @@ class ApiClient:
         url = f"{self.endpoint}{path}"
         session = self.get_session()
         return session.post(url, json=data, headers=headers)
+    
+
+    def get(self, path: str, headers: Dict[str, str]) -> requests.Response:
+        """Make GET request"""
+        url = f"{self.endpoint}{path}"
+        session = self.get_session()
+        return session.get(url, headers=headers)
