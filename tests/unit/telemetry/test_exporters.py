@@ -51,7 +51,7 @@ class TestEventExporter:
 
     def test_export_single_span(self, event_exporter, mock_span):
         """Test exporting a single span"""
-        with patch("agentops.api.session.SessionApiClient.create_events") as mock_create:
+        with patch("agentops.session.api.SessionApiClient.create_events") as mock_create:
             mock_create.return_value = True
 
             result = event_exporter.export([mock_span])
@@ -69,7 +69,7 @@ class TestEventExporter:
         """Test exporting multiple spans"""
         spans = [mock_span, mock_span]
 
-        with patch("agentops.api.session.SessionApiClient.create_events") as mock_create:
+        with patch("agentops.session.api.SessionApiClient.create_events") as mock_create:
             mock_create.return_value = True
 
             result = event_exporter.export(spans)
@@ -87,7 +87,7 @@ class TestEventExporter:
         mock_wait = Mock()
         event_exporter._wait_fn = mock_wait
 
-        with patch("agentops.api.session.SessionApiClient.create_events") as mock_create:
+        with patch("agentops.session.api.SessionApiClient.create_events") as mock_create:
             # Create mock responses with proper return values
             mock_create.side_effect = [False, False, True]
 
@@ -105,7 +105,7 @@ class TestEventExporter:
         mock_wait = Mock()
         event_exporter._wait_fn = mock_wait
 
-        with patch("agentops.api.session.SessionApiClient.create_events") as mock_create:
+        with patch("agentops.session.api.SessionApiClient.create_events") as mock_create:
             # Mock consistently failing response
             mock_create.return_value = False
 
@@ -127,7 +127,7 @@ class TestEventExporter:
 
     def test_retry_logic(self, event_exporter, mock_span):
         """Verify retry behavior works as expected"""
-        with patch("agentops.api.session.SessionApiClient.create_events") as mock_create:
+        with patch("agentops.session.api.SessionApiClient.create_events") as mock_create:
             # Create mock responses with proper return values
             mock_create.side_effect = [False, False, True]
 
@@ -163,7 +163,7 @@ class TestSessionExporter:
     def session_exporter(self):
         """Create a SessionExporter instance for testing"""
         from agentops.session import Session
-        from agentops.api.session import SessionApiClient
+        from agentops.session.api import SessionApiClient
 
         mock_config = Mock()
         mock_config.endpoint = "http://test-endpoint"
@@ -186,7 +186,7 @@ class TestSessionExporter:
 
     def test_event_formatting(self, session_exporter, test_span):
         """Verify events are formatted correctly"""
-        with patch("agentops.api.session.SessionApiClient.create_events") as mock_create:
+        with patch("agentops.session.api.SessionApiClient.create_events") as mock_create:
             mock_create.return_value = True
             result = session_exporter.export([test_span])
             assert result == SpanExportResult.SUCCESS
@@ -203,7 +203,7 @@ class TestSessionExporter:
 
     def test_retry_logic(self, session_exporter, test_span):
         """Verify retry behavior works as expected"""
-        with patch("agentops.api.session.SessionApiClient.create_events") as mock_create:
+        with patch("agentops.session.api.SessionApiClient.create_events") as mock_create:
             mock_create.side_effect = [False, False, True]
 
             result = session_exporter.export([test_span])
@@ -212,7 +212,7 @@ class TestSessionExporter:
 
     def test_batch_processing(self, session_exporter, test_span):
         """Verify batch processing works correctly"""
-        with patch("agentops.api.session.SessionApiClient.create_events") as mock_create:
+        with patch("agentops.session.api.SessionApiClient.create_events") as mock_create:
             mock_create.return_value = True
             spans = [test_span for _ in range(5)]
             result = session_exporter.export(spans)
