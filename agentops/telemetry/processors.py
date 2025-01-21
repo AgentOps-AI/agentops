@@ -15,12 +15,11 @@ from agentops.helpers import get_ISO_time
 from .encoders import EventToSpanEncoder
 
 
-@dataclass
 class EventProcessor(SpanProcessor):
     """Processes spans for AgentOps events.
 
     Responsibilities:
-    1. Add session context to spans
+    1. Add entity context to spans
     2. Track event counts
     3. Handle error propagation
     4. Forward spans to wrapped processor
@@ -28,20 +27,19 @@ class EventProcessor(SpanProcessor):
     Architecture:
         EventProcessor
             |
-            |-- Session Context
+            |-- Entity Context
             |-- Event Counting
             |-- Error Handling
             |-- Wrapped Processor
     """
 
-    session_id: UUID
-    processor: SpanProcessor
-    event_counts: Dict[str, int] = field(
-        default_factory=lambda: {"llms": 0, "tools": 0, "actions": 0, "errors": 0, "apis": 0}
-    )
+    def __init__(self, entity_id: UUID, processor: SpanProcessor):
+        self.entity_id = entity_id
+        self.processor = processor
+        self.event_counts = {"llms": 0, "tools": 0, "actions": 0, "errors": 0, "apis": 0}
 
     def on_start(self, span: Span, parent_context: Optional[Context] = None) -> None:
-        """Process span start, adding session context and common attributes.
+        """Process span start, adding entity context and common attributes.
 
         Args:
             span: The span being started
@@ -50,15 +48,15 @@ class EventProcessor(SpanProcessor):
         if not span.is_recording() or not hasattr(span, "context") or span.context is None:
             return
 
-        # Add session context
-        token = set_value("session.id", str(self.session_id))
+        # Add entity context
+        token = set_value("entity.id", str(self.entity_id))
         try:
             token = attach(token)
 
             # Add common attributes
             span.set_attributes(
                 {
-                    "session.id": str(self.session_id),
+                    "entity.id": str(self.entity_id),
                     "event.timestamp": get_ISO_time(),
                 }
             )
