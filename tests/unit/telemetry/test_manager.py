@@ -5,6 +5,7 @@ import pytest
 from opentelemetry import trace
 from opentelemetry.sdk.trace import TracerProvider
 from opentelemetry.sdk.trace.sampling import ParentBased, TraceIdRatioBased
+from opentelemetry.sdk.trace.export import SpanExporter
 
 from agentops.telemetry.manager import TelemetryManager
 from agentops.telemetry.config import OTELConfig
@@ -60,55 +61,54 @@ class TestTelemetryManager:
         assert resource.attributes["service.name"] == "agentops"
         assert resource.attributes["custom.attr"] == "value"
 
-    def test_create_session_tracer(self, manager: TelemetryManager, config: OTELConfig) -> None:
-        """Test session tracer creation"""
+    def test_create_tracer(self, manager: TelemetryManager, config: OTELConfig) -> None:
+        """Test tracer creation"""
         manager.initialize(config)
         session_id = uuid4()
 
-        tracer = manager.create_session_tracer(session_id, "test-jwt")
+        # Create mock exporter
+        mock_exporter = Mock(spec=SpanExporter)
+        tracer = manager.create_tracer(session_id, mock_exporter)
 
-        # Verify exporter was created
-        assert session_id in manager._session_exporters
-        assert isinstance(manager._session_exporters[session_id], SessionExporter)
+        # Verify exporter was stored
+        assert session_id in manager._exporters
+        assert manager._exporters[session_id] == mock_exporter
 
         # Verify processor was added
         assert len(manager._processors) == 1
         assert isinstance(manager._processors[0], SessionSpanProcessor)
 
-        # Skip tracer name verification since it's an implementation detail
-        # The important part is that the tracer is properly configured with exporters and processors
-
-    def test_cleanup_session(self, manager: TelemetryManager, config: OTELConfig) -> None:
-        """Test session cleanup"""
+    def test_cleanup_tracer(self, manager: TelemetryManager, config: OTELConfig) -> None:
+        """Test tracer cleanup"""
         manager.initialize(config)
         session_id = uuid4()
 
-        # Create session
-        manager.create_session_tracer(session_id, "test-jwt")
-        exporter = manager._session_exporters[session_id]
-
+        # Create tracer
+        mock_exporter = Mock(spec=SpanExporter)
+        manager.create_tracer(session_id, mock_exporter)
+        
         # Clean up
-        with patch.object(exporter, "shutdown") as mock_shutdown:
-            manager.cleanup_session(session_id)
+        with patch.object(mock_exporter, "shutdown") as mock_shutdown:
+            manager.cleanup_tracer(session_id)
             mock_shutdown.assert_called_once()
 
-        assert session_id not in manager._session_exporters
+        assert session_id not in manager._exporters
 
     def test_shutdown(self, manager: TelemetryManager, config: OTELConfig) -> None:
         """Test manager shutdown"""
         manager.initialize(config)
         session_id = uuid4()
 
-        # Create session
-        manager.create_session_tracer(session_id, "test-jwt")
-        exporter = manager._session_exporters[session_id]
+        # Create tracer
+        mock_exporter = Mock(spec=SpanExporter)
+        manager.create_tracer(session_id, mock_exporter)
 
         # Shutdown
-        with patch.object(exporter, "shutdown") as mock_shutdown:
+        with patch.object(mock_exporter, "shutdown") as mock_shutdown:
             manager.shutdown()
             assert mock_shutdown.called
 
-        assert not manager._session_exporters
+        assert not manager._exporters
         assert not manager._processors
         assert manager._provider is None
 
@@ -120,4 +120,4 @@ class TestTelemetryManager:
 
         # Test creating tracer without initialization
         with pytest.raises(RuntimeError, match="Telemetry not initialized"):
-            manager.create_session_tracer(uuid4(), "test-jwt")
+            manager.create_tracer(uuid4(), Mock(spec=SpanExporter))

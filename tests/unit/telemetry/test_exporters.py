@@ -186,8 +186,7 @@ class TestSessionExporter:
 
     def test_event_formatting(self, session_exporter, test_span):
         """Verify events are formatted correctly"""
-        with patch("agentops.session.api.SessionApiClient.create_events") as mock_create:
-            mock_create.return_value = True
+        with patch.object(session_exporter._api, "create_events", return_value=True) as mock_create:
             result = session_exporter.export([test_span])
             assert result == SpanExportResult.SUCCESS
 
@@ -203,7 +202,7 @@ class TestSessionExporter:
 
     def test_retry_logic(self, session_exporter, test_span):
         """Verify retry behavior works as expected"""
-        with patch("agentops.session.api.SessionApiClient.create_events") as mock_create:
+        with patch.object(session_exporter._api, "create_events") as mock_create:
             mock_create.side_effect = [False, False, True]
 
             result = session_exporter.export([test_span])
@@ -212,8 +211,7 @@ class TestSessionExporter:
 
     def test_batch_processing(self, session_exporter, test_span):
         """Verify batch processing works correctly"""
-        with patch("agentops.session.api.SessionApiClient.create_events") as mock_create:
-            mock_create.return_value = True
+        with patch.object(session_exporter._api, "create_events", return_value=True) as mock_create:
             spans = [test_span for _ in range(5)]
             result = session_exporter.export(spans)
             assert result == SpanExportResult.SUCCESS
