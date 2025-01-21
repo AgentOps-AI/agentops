@@ -33,7 +33,7 @@ flowchart TB
 
     subgraph Telemetry["Telemetry System"]
         SessionTelemetry["SessionTelemetry"]
-        EventProcessor["EventProcessor"]
+        SessionSpanProcessor["SessionSpanProcessor"]
         LogProcessor["LogProcessor"]
         BatchProcessor["BatchSpanProcessor"]
         SessionExporter["SessionExporter"]
@@ -61,7 +61,7 @@ flowchart TB
     
     %% Telemetry Flow
     SessionManager -->|initializes| SessionTelemetry
-    SessionTelemetry -->|processes| EventProcessor & LogProcessor
-    EventProcessor & LogProcessor -->|send to| BatchProcessor
+    SessionTelemetry -->|processes| SessionSpanProcessor & LogProcessor
+    SessionSpanProcessor & LogProcessor -->|send to| BatchProcessor
     BatchProcessor -->|exports via| SessionExporter
     SessionExporter -->|uses| SessionAPI

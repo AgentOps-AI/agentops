@@ -14,7 +14,7 @@ flowchart TB
 
     subgraph OpenTelemetry
         TracerProvider[Tracer Provider]
-        EventProcessor[Event Processor]
+        SessionSpanProcessor[Event Processor]
         LogProcessor[Log Processor]
         EventToSpanEncoder[Event To Span Encoder]
         BatchProcessor[Batch Processor]
@@ -29,8 +29,8 @@ flowchart TB
     Events --> TelemetryManager
     
     TelemetryManager --> TracerProvider
-    TracerProvider --> EventProcessor
-    EventProcessor --> EventToSpanEncoder
+    TracerProvider --> SessionSpanProcessor
+    SessionSpanProcessor --> EventToSpanEncoder
     LogProcessor --> EventToSpanEncoder
     EventToSpanEncoder --> BatchProcessor
     BatchProcessor --> SessionExporter
@@ -46,7 +46,7 @@ flowchart TB
 - Coordinates telemetry initialization and shutdown
 - Configures logging telemetry
 
-### EventProcessor (`processors.py`)
+### SessionSpanProcessor (`processors.py`)
 - Processes spans for AgentOps events
 - Adds session context to spans
 - Tracks event counts by type

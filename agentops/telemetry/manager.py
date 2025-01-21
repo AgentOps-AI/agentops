@@ -12,7 +12,7 @@ from opentelemetry.sdk.trace.export import BatchSpanProcessor, SpanExporter
 from opentelemetry.sdk.trace.sampling import ParentBased, Sampler, TraceIdRatioBased
 
 from .config import OTELConfig
-from .processors import EventProcessor
+from .processors import SessionSpanProcessor
 
 if TYPE_CHECKING:
     from opentelemetry.sdk._logs import LoggingHandler
@@ -36,7 +36,7 @@ class TelemetryManager:
             |-- TracerProvider (configured with sampling)
             |-- Resource (service info and attributes)
             |-- SpanExporters
-            |-- EventProcessors
+            |-- SessionSpanProcessors
             |-- LoggingHandler (OTLP logging)
     """
 
@@ -132,7 +132,7 @@ class TelemetryManager:
         )
 
         # Wrap with event processor
-        event_processor = EventProcessor(entity_id=entity_id, processor=batch_processor)
+        event_processor = SessionSpanProcessor(entity_id=entity_id, processor=batch_processor)
 
         # Add processors
         self._provider.add_span_processor(event_processor)

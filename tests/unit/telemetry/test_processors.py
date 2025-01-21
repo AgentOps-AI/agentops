@@ -7,7 +7,7 @@ from opentelemetry.trace import SpanContext, TraceFlags, Status, StatusCode
 from opentelemetry.sdk.trace.export import BatchSpanProcessor
 from opentelemetry.context import Context
 
-from agentops.telemetry.processors import EventProcessor
+from agentops.telemetry.processors import SessionSpanProcessor
 
 
 @pytest.fixture
@@ -52,14 +52,14 @@ def mock_span() -> Mock:
 
 
 @pytest.fixture
-def processor(mock_span_exporter) -> EventProcessor:
+def processor(mock_span_exporter) -> SessionSpanProcessor:
     """Create a processor for testing"""
     batch_processor = BatchSpanProcessor(mock_span_exporter)
-    return EventProcessor(session_id=123, processor=batch_processor)
+    return SessionSpanProcessor(session_id=123, processor=batch_processor)
 
 
-class TestEventProcessor:
-    def test_initialization(self, processor: EventProcessor, mock_span_exporter: Mock) -> None:
+class TestSessionSpanProcessor:
+    def test_initialization(self, processor: SessionSpanProcessor, mock_span_exporter: Mock) -> None:
         """Test processor initialization"""
         assert processor.session_id == 123
         assert isinstance(processor.processor, BatchSpanProcessor)
@@ -71,7 +71,7 @@ class TestEventProcessor:
             "apis": 0,
         }
 
-    def test_span_processing_lifecycle(self, processor: EventProcessor, mock_span: Mock) -> None:
+    def test_span_processing_lifecycle(self, processor: SessionSpanProcessor, mock_span: Mock) -> None:
         """Test complete span lifecycle"""
         mock_span.attributes["event.type"] = "llms"
 
@@ -85,7 +85,7 @@ class TestEventProcessor:
         readable_span = mock_span._readable_span()
         processor.on_end(readable_span)
 
-    def test_unsampled_span_ignored(self, processor: EventProcessor) -> None:
+    def test_unsampled_span_ignored(self, processor: SessionSpanProcessor) -> None:
         """Test that unsampled spans are ignored"""
         unsampled_span = Mock(spec=Span)
         unsampled_span.context = Mock(spec=SpanContext, trace_flags=TraceFlags(TraceFlags.DEFAULT))
@@ -94,7 +94,7 @@ class TestEventProcessor:
         processor.on_start(unsampled_span)
         assert not unsampled_span.set_attributes.called
 
-    def test_span_without_context(self, processor: EventProcessor) -> None:
+    def test_span_without_context(self, processor: SessionSpanProcessor) -> None:
         """Test handling of spans without context"""
         span_without_context = Mock(spec=Span)
         span_without_context.context = None
@@ -124,7 +124,7 @@ class TestEventProcessor:
             processor.on_end(normal_span._readable_span())
             mock_on_end.assert_called_once_with(normal_span._readable_span())
 
-    def test_concurrent_spans(self, processor: EventProcessor) -> None:
+    def test_concurrent_spans(self, processor: SessionSpanProcessor) -> None:
         """Test handling multiple spans concurrently"""
         spans: List[Mock] = [create_mock_span(i) for i in range(3)]
 
@@ -135,7 +135,7 @@ class TestEventProcessor:
         for span in reversed(spans):
             processor.on_end(span._readable_span())
 
-    def test_error_span_handling(self, processor: EventProcessor) -> None:
+    def test_error_span_handling(self, processor: SessionSpanProcessor) -> None:
         """Test handling of error spans"""
         # Create parent span with proper attribute handling
         parent_span = create_mock_span(1)
@@ -158,7 +158,7 @@ class TestEventProcessor:
                 (("error.message", "Test error"), {}),
             ]
 
-    def test_event_counting(self, processor: EventProcessor) -> None:
+    def test_event_counting(self, processor: SessionSpanProcessor) -> None:
         """Test event counting for different event types"""
         for event_type in processor.event_counts.keys():
             span = create_mock_span()
@@ -167,20 +167,20 @@ class TestEventProcessor:
             processor.on_start(span)
             assert processor.event_counts[event_type] == 1
 
-    def test_processor_shutdown(self, processor: EventProcessor) -> None:
+    def test_processor_shutdown(self, processor: SessionSpanProcessor) -> None:
         """Test processor shutdown"""
         with patch.object(processor.processor, "shutdown") as mock_shutdown:
             processor.shutdown()
             mock_shutdown.assert_called_once()
 
-    def test_force_flush(self, processor: EventProcessor) -> None:
+    def test_force_flush(self, processor: SessionSpanProcessor) -> None:
         """Test force flush"""
         with patch.object(processor.processor, "force_flush") as mock_flush:
             mock_flush.return_value = True
             assert processor.force_flush() is True
             mock_flush.assert_called_once()
 
-    def test_span_attributes_preserved(self, processor: EventProcessor, mock_span: Mock) -> None:
+    def test_span_attributes_preserved(self, processor: SessionSpanProcessor, mock_span: Mock) -> None:
         """Test that existing span attributes are preserved"""
         mock_span.attributes = {"custom.attr": "value"}
         processor.on_start(mock_span)

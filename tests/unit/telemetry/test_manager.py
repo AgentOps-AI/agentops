@@ -9,7 +9,7 @@ from opentelemetry.sdk.trace.sampling import ParentBased, TraceIdRatioBased
 from agentops.telemetry.manager import TelemetryManager
 from agentops.telemetry.config import OTELConfig
 from agentops.telemetry.exporters.session import SessionExporter
-from agentops.telemetry.processors import EventProcessor
+from agentops.telemetry.processors import SessionSpanProcessor
 
 
 @pytest.fixture
@@ -73,7 +73,7 @@ class TestTelemetryManager:
 
         # Verify processor was added
         assert len(manager._processors) == 1
-        assert isinstance(manager._processors[0], EventProcessor)
+        assert isinstance(manager._processors[0], SessionSpanProcessor)
 
         # Skip tracer name verification since it's an implementation detail
         # The important part is that the tracer is properly configured with exporters and processors

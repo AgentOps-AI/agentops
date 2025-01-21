@@ -18,7 +18,7 @@ flowchart TB
         TelemetryManager["TelemetryManager"]
         
         subgraph Processors["Processors"]
-            EventProcessor["EventProcessor"]
+            SessionSpanProcessor["SessionSpanProcessor"]
             LogProcessor["LogProcessor"]
         end
         
@@ -47,9 +47,9 @@ flowchart TB
     Events -->|Processed by| TelemetryManager
     
     TelemetryManager -->|Creates| Processors
-    EventProcessor -->|Converts via| SpanEncoder
+    SessionSpanProcessor -->|Converts via| SpanEncoder
     LogProcessor -->|Converts via| SpanEncoder
-    EventProcessor & LogProcessor -->|Forward to| BatchProcessor
+    SessionSpanProcessor & LogProcessor -->|Forward to| BatchProcessor
     
     BatchProcessor -->|Exports via| SessionExporter
     BatchProcessor -->|Exports via| EventExporter
