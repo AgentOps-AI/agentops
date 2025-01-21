@@ -1,10 +1,10 @@
 from __future__ import annotations
 
+import time
 from dataclasses import dataclass, field
-from threading import Lock, Event, Thread
+from threading import Event, Lock, Thread
 from typing import Any, Dict, List, Optional
 from uuid import UUID, uuid4
-import time
 
 from opentelemetry import trace
 from opentelemetry.context import Context, attach, detach, set_value
@@ -23,7 +23,7 @@ class SessionSpanProcessor(SpanProcessor):
     Responsibilities:
     1. Add session context to spans
     2. Track event counts
-    3. Handle error propagation 
+    3. Handle error propagation
     4. Export in-flight spans periodically
     5. Forward spans to wrapped processor
 
@@ -37,11 +37,11 @@ class SessionSpanProcessor(SpanProcessor):
             |-- Wrapped Processor
     """
 
-    def __init__(self, entity_id: UUID, processor: SpanProcessor):
-        self.entity_id = entity_id
+    def __init__(self, session_id: UUID, processor: SpanProcessor):
+        self.session_id = session_id
         self.processor = processor
         self.event_counts = {"llms": 0, "tools": 0, "actions": 0, "errors": 0, "apis": 0}
-        
+
         # Track in-flight spans
         self._in_flight: Dict[int, Span] = {}
         self._lock = Lock()
@@ -70,14 +70,14 @@ class SessionSpanProcessor(SpanProcessor):
             return
 
         # Add entity context
-        token = set_value("entity.id", str(self.entity_id))
+        token = set_value("entity.id", str(self.session_id))
         try:
             token = attach(token)
 
             # Add common attributes
             span.set_attributes(
                 {
-                    "entity.id": str(self.entity_id),
+                    "session.id": str(self.session_id),
                     "event.timestamp": get_ISO_time(),
                 }
             )

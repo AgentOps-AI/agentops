@@ -105,11 +105,11 @@ class TelemetryManager:
         # Set as global provider
         trace.set_tracer_provider(self._provider)
 
-    def create_tracer(self, entity_id: UUID, exporter: SpanExporter) -> trace.Tracer:
+    def create_tracer(self, session_id: UUID, exporter: SpanExporter) -> trace.Tracer:
         """Create tracer with a specific exporter.
 
         Args:
-            entity_id: UUID for the entity being traced
+            session_id: UUID for the entity being traced
             exporter: SpanExporter implementation to use
 
         Returns:
@@ -132,26 +132,26 @@ class TelemetryManager:
         )
 
         # Wrap with event processor
-        event_processor = SessionSpanProcessor(entity_id=entity_id, processor=batch_processor)
+        event_processor = SessionSpanProcessor(session_id=session_id, processor=batch_processor)
 
         # Add processors
         self._provider.add_span_processor(event_processor)
         self._processors.append(event_processor)
-        self._exporters[entity_id] = exporter
+        self._exporters[session_id] = exporter
 
         # Return tracer
-        return self._provider.get_tracer(f"agentops.tracer.{entity_id}")
+        return self._provider.get_tracer(f"agentops.tracer.{session_id}")
 
-    def cleanup_tracer(self, entity_id: UUID) -> None:
+    def cleanup_tracer(self, session_id: UUID) -> None:
         """Clean up tracer telemetry resources.
 
         Args:
-            entity_id: UUID of entity to clean up
+            session_id: UUID of entity to clean up
         """
-        if entity_id in self._exporters:
-            exporter = self._exporters[entity_id]
+        if session_id in self._exporters:
+            exporter = self._exporters[session_id]
             exporter.shutdown()
-            del self._exporters[entity_id]
+            del self._exporters[session_id]
 
     def shutdown(self) -> None:
         """Shutdown all telemetry resources."""
