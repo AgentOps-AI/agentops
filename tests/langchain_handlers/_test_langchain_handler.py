@@ -14,55 +14,90 @@ load_dotenv()
 AGENTOPS_API_KEY = os.environ.get("AGENTOPS_API_KEY")
 OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY")
 
-agentops_handler = AgentOpsLangchainCallbackHandler(api_key=AGENTOPS_API_KEY, default_tags=["Langchain", "Sync Handler Test"])
+# Sync test
+def run_sync_test():
+    agentops_handler = AgentOpsLangchainCallbackHandler(
+        api_key=AGENTOPS_API_KEY, 
+        default_tags=["Langchain", "Sync Handler Test"]
+    )
 
-llm = ChatOpenAI(openai_api_key=OPENAI_API_KEY, callbacks=[agentops_handler], model="gpt-4o-mini")
+    llm = ChatOpenAI(
+        openai_api_key=OPENAI_API_KEY, 
+        callbacks=[agentops_handler], 
+        model="gpt-4o-mini",
+        streaming=False  # Disable streaming for sync handler
+    )
 
+    @tool
+    def find_movie(genre) -> str:
+        """Find available movies"""
+        if genre == "drama":
+            return "Dune 2"
+        else:
+            return "Pineapple Express"
 
-@tool
-def find_movie(genre) -> str:
-    """Find available movies"""
-    # raise ValueError("This is an intentional error for testing.")
-    if genre == "drama":
-        return "Dune 2"
-    else:
-        return "Pineapple Express"
+    tools = [find_movie]
+    for t in tools:
+        t.callbacks = [agentops_handler]
 
+    prompt = ChatPromptTemplate.from_messages([
+        ("system", "You are a helpful assistant. Respond only in Spanish."),
+        ("user", "{input}"),
+        ("system", "Here is the current conversation state:\n{agent_scratchpad}"),
+    ])
 
-tools = [find_movie]
+    agent = create_openai_tools_agent(llm, tools, prompt)
+    agent_executor = AgentExecutor(agent=agent, tools=tools, callbacks=[agentops_handler])
 
-for t in tools:
-    t.callbacks = [agentops_handler]
+    return agent_executor.invoke({"input": "What comedies are playing?"})
 
-########
-# Sync
-########
+# Async test
+async def run_async_test():
+    agentops_handler = AgentOpsAsyncLangchainCallbackHandler(
+        api_key=AGENTOPS_API_KEY, 
+        default_tags=["Langchain", "Async Handler Test"]
+    )
 
-prompt = ChatPromptTemplate([
-    ("system", "You are a helpful assistant. Respond only in Spanish."),
-    ("user", "{input}"),
-    ("system", "Here is the current conversation state:\n{agent_scratchpad}"),
-])
+    llm = ChatOpenAI(
+        openai_api_key=OPENAI_API_KEY, 
+        callbacks=[agentops_handler], 
+        model="gpt-4o-mini",
+        streaming=True
+    )
 
-agent = create_openai_tools_agent(llm, tools, prompt)
-agent_executor = AgentExecutor(agent=agent, tools=tools)
+    @tool
+    def find_movie(genre) -> str:
+        """Find available movies"""
+        if genre == "drama":
+            return "Dune 2"
+        else:
+            return "Pineapple Express"
 
-agent_executor.invoke({"input": "What comedies are playing?"}, config={"callback": [agentops_handler]})
+    tools = [find_movie]
+    for t in tools:
+        t.callbacks = [agentops_handler]
 
+    prompt = ChatPromptTemplate.from_messages([
+        ("system", "You are a helpful assistant. Respond only in Spanish."),
+        ("user", "{input}"),
+        ("system", "Here is the current conversation state:\n{agent_scratchpad}"),
+    ])
 
-########
-# Async
-########
+    agent = create_openai_tools_agent(llm, tools, prompt)
+    agent_executor = AgentExecutor(agent=agent, tools=tools, callbacks=[agentops_handler])
 
-agentops_handler = AgentOpsAsyncLangchainCallbackHandler(api_key=AGENTOPS_API_KEY, default_tags=["Langchain", "Async Handler Test"])
+    return await agent_executor.ainvoke({"input": "What comedies are playing?"})
 
-llm = ChatOpenAI(openai_api_key=OPENAI_API_KEY, callbacks=[agentops_handler], model="gpt-4o-mini", streaming=True)
+async def main():
+    # Run sync test
+    print("Running sync test...")
+    sync_result = run_sync_test()
+    print(f"Sync test result: {sync_result}\n")
 
-agent = create_openai_tools_agent(llm, tools, prompt)
-agent_executor = AgentExecutor(agent=agent, tools=tools)
+    # Run async test
+    print("Running async test...")
+    async_result = await run_async_test()
+    print(f"Async test result: {async_result}")
 
-async def run_async():
-    await agent_executor.ainvoke({"input": "What comedies are playing?"}, config={"callback": [agentops_handler]})
-
-
-asyncio.run(run_async())
+if __name__ == "__main__":
+    asyncio.run(main())
