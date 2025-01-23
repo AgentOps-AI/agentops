@@ -30,3 +30,14 @@ def llm_event_spy(agentops_client, mocker: "MockerFixture") -> dict[str, "Mocker
         "openai": mocker.spy(OpenAiProvider(agentops_client), "handle_response"),
         "anthropic": mocker.spy(AnthropicProvider(agentops_client), "handle_response"),
     }
+
+
+@pytest.fixture(scope="function")
+def event_spy(mocker: "MockerFixture"):
+    """Fixture that spies on Event initialization.
+
+    Returns a spy object that tracks calls to Event.__init__
+    """
+    from agentops.event import Event
+
+    return mocker.spy(Event, "__init__")
