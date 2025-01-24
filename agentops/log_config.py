@@ -43,7 +43,7 @@ class AgentOpsLogFileFormatter(logging.Formatter):
 
 
 ANSI_ESCAPE_PATTERN = re.compile(r"\x1b\[[0-9;]*m")
-log_to_file = os.environ.get("AGENTOPS_LOGGING_TO_FILE", "True").lower() == "true"
+log_to_file = os.environ.get("AGENTOPS_LOGGING_TO_FILE", "False").lower() == "true"
 if log_to_file:
     file_handler = logging.FileHandler("agentops.log", mode="w")
     file_handler.setLevel(logging.DEBUG)
