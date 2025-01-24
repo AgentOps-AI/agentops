@@ -454,14 +454,6 @@ class LangchainCallbackHandler(BaseCallbackHandler):
         # Always append the new token to the existing completion
         llm_event.completion += token
 
-        # Recprd ActionEvent to track the token
-        action_event = ActionEvent(
-            params={"token": token, "run_id": run_id, "parent_run_id": parent_run_id, "tags": tags, "kwargs": kwargs},
-            returns=chunk,
-            action_type="on_llm_new_token",
-        )
-        self.ao_client.record(action_event)
-
     @property
     def current_session_ids(self):
         return self.ao_client.current_session_ids
@@ -604,14 +596,6 @@ class AsyncLangchainCallbackHandler(AsyncCallbackHandler):
         llm_event = self.events.llm[str(run_id)]
         # Always append the new token to the existing completion
         llm_event.completion += token
-
-        # Recprd ActionEvent to track the token
-        action_event = ActionEvent(
-            params={"token": token, "run_id": run_id, "parent_run_id": parent_run_id, "tags": tags, "kwargs": kwargs},
-            returns=chunk,
-            action_type="on_llm_new_token",
-        )
-        self.ao_client.record(action_event)
 
     @debug_print_function_params
     async def on_llm_error(
