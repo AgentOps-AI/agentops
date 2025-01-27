@@ -217,15 +217,21 @@ class LogCapture:
         def __init__(self, capture):
             self._capture = capture
             self._logger = capture._stdout_logger
+            self._original_stdout = capture._stdout
 
         def write(self, text):
             if text.strip():  # Only log non-empty strings
                 self._capture.stdout_line_count += 1
                 self._capture.log_level_counts["INFO"] += 1
-                self._logger.info(text.rstrip())
+                # Get raw console output with ANSI codes
+                raw_text = text if isinstance(text, str) else str(text)
+                # Write to original stdout for display
+                self._original_stdout.write(raw_text)
+                # Log the raw text with ANSI codes preserved
+                self._logger.info(raw_text, extra={"raw": True, "preserve_color": True})
 
         def flush(self):
-            pass
+            self._original_stdout.flush()
 
     class _StderrProxy:
         """Proxies stderr to logger"""
@@ -233,15 +239,19 @@ class LogCapture:
         def __init__(self, capture):
             self._capture = capture
             self._logger = capture._stderr_logger
+            self._original_stderr = capture._stderr
 
         def write(self, text):
             if text.strip():  # Only log non-empty strings
                 self._capture.stderr_line_count += 1
                 self._capture.log_level_counts["ERROR"] += 1
-                self._logger.error(text.rstrip())
+                # Write to original stderr for display
+                self._original_stderr.write(text)
+                # Log the raw text with ANSI codes preserved
+                self._logger.error(text, extra={"raw": True, "preserve_color": True})
 
         def flush(self):
-            pass
+            self._original_stderr.flush()
 
 
 if __name__ == "__main__":
@@ -270,37 +280,26 @@ if __name__ == "__main__":
     # Create and start capture
     capture = LogCapture(session_id=session.session_id)
     capture.start()
-
     try:
-        print("Regular stdout message")
-        print("Multi-line stdout message\nwith a second line")
-        sys.stderr.write("Error message to stderr\n")
-
-        # Show that empty lines are ignored
-        print("")
-        print("\n\n")
-
-        # Demonstrate concurrent output
-        def background_prints():
-            for i in range(3):
-                time.sleep(0.5)
-                print(f"Background message {i}")
-                sys.stderr.write(f"Background error {i}\n")
-
-        import threading
-
-        thread = threading.Thread(target=background_prints)
-        thread.start()
-
-        # Main thread output
-        for i in range(3):
-            time.sleep(0.7)
-            print(f"Main thread message {i}")
-
-        thread.join()
+        # Test Rich formatting
+        from rich.console import Console
+        console = Console(force_terminal=True)
+        rprint = console.print
+        rprint("[red]This is red text[/red]")
+        rprint("[blue]Blue[/blue] and [green]green[/green] mixed")
+        rprint("[bold red]Bold red[/bold red] and [italic blue]italic blue[/italic blue]")
+        
+        # Test raw ANSI codes
+        print("\033[31mDirect red ANSI\033[0m\n")
+        print("\033[34mBlue\033[0m and \033[32mgreen\033[0m mixed ANSI\n")
+        print("\033[1;31mBold red ANSI\033[0m\n")
+        
+        # Test stderr with colors
+        sys.stderr.write("\033[35mMagenta error\033[0m\n")
+        sys.stderr.write("\033[33mYellow warning\033[0m\n")
 
     finally:
         # Stop capture and show normal output is restored
         capture.stop()
-        print("\nCapture stopped - this prints normally to stdout")
-        sys.stderr.write("This error goes normally to stderr\n")
+        # print("\nCapture stopped - this prints normally to stdout")
+        # sys.stderr.write("This error goes normally to stderr\n")
