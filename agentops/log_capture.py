@@ -78,8 +78,11 @@ class LogCapture:
 
     def start(self):
         """Start capturing output using OTEL logging handler"""
-        if self._stdout is not None or not self.session:
+        if self._stdout is not None:
             return
+
+        if not self.session:
+            raise ValueError(f"No active session found with ID {self.session_id}")
 
         from agentops.helpers import get_ISO_time
 
