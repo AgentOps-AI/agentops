@@ -257,6 +257,78 @@ class LogCapture:
             self._original_stderr.flush()
 
 
+class SessionLogHandler(LoggingHandler):
+    """A logging handler that captures logs for a specific session without altering output.
+    
+    This handler captures logs and associates them with a specific session, while allowing
+    normal logging behavior to continue unaffected.
+    """
+    
+    def __init__(self, session_id: UUID, logger_provider=None):
+        super().__init__(level=logging.INFO, logger_provider=logger_provider)
+        self.session_id = session_id
+        self.log_counts: Dict[str, int] = {
+            "INFO": 0,
+            "WARNING": 0,
+            "ERROR": 0,
+            "DEBUG": 0,
+            "CRITICAL": 0
+        }
+    
+    def emit(self, record: logging.LogRecord) -> None:
+        """Emit a log record, capturing it for the session without altering normal output."""
+        try:
+            # Count the log by level
+            self.log_counts[record.levelname] += 1
+            
+            # Create the log event with ANSI codes preserved
+            msg = self.format(record)
+            
+            # Let the parent class handle sending to OTEL
+            super().emit(record)
+            
+        except Exception:
+            self.handleError(record)
+
+
+def install_session_handler(session: "Session") -> Optional[SessionLogHandler]:
+    """Install a logging handler for a specific session.
+    
+    Args:
+        session: The session to install the handler for
+        
+    Returns:
+        The installed handler, or None if installation failed
+    """
+    try:
+        # Create handler with session's logger provider
+        handler = SessionLogHandler(
+            session_id=session.session_id,
+            logger_provider=session._logger_provider
+        )
+        
+        # Add handler to root logger to capture all logs
+        logging.getLogger().addHandler(handler)
+        
+        return handler
+        
+    except Exception as e:
+        logging.error(f"Failed to install session log handler: {e}")
+        return None
+
+
+def remove_session_handler(handler: SessionLogHandler) -> None:
+    """Remove a session's logging handler.
+    
+    Args:
+        handler: The handler to remove
+    """
+    try:
+        logging.getLogger().removeHandler(handler)
+    except Exception as e:
+        logging.error(f"Failed to remove session log handler: {e}")
+
+
 if __name__ == "__main__":
     import os
     import sys

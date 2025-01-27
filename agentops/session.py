@@ -3,22 +3,25 @@ from __future__ import annotations
 import asyncio
 import functools
 import json
+import logging
 import threading
 from datetime import datetime, timezone
 from decimal import ROUND_HALF_UP, Decimal
 from enum import Enum
-from typing import Any, Dict, List, Optional, Sequence, Union
+from typing import Any, Dict, List, Optional, Sequence, Union, cast
 from uuid import UUID, uuid4
 
 from opentelemetry import trace
 from opentelemetry.context import attach, detach, set_value
+from opentelemetry.sdk._logs import LoggerProvider, LoggingHandler, LogRecord
+from opentelemetry.sdk._logs.export import BatchLogRecordProcessor, LogExporter, LogExportResult
 from opentelemetry.sdk.resources import SERVICE_NAME, Resource
 from opentelemetry.sdk.trace import ReadableSpan, TracerProvider
 from opentelemetry.sdk.trace.export import BatchSpanProcessor, ConsoleSpanExporter, SpanExporter, SpanExportResult
 from termcolor import colored
 
 from .config import Configuration
-from .event import ErrorEvent, Event
+from .event import ErrorEvent, Event, EventType
 from .exceptions import ApiServerException
 from .helpers import filter_unjsonable, get_ISO_time, safe_serialize
 from .http_client import HttpClient, Response
@@ -177,6 +180,45 @@ class SessionExporter(SpanExporter):
         # Don't call session.end_session() here to avoid circular dependencies
 
 
+class SessionLogExporter(LogExporter):
+    """
+    Exports logs for a specific session to the AgentOps backend.
+    """
+
+    def __init__(self, session):
+        self.session = session
+        self._shutdown = False
+
+    def export(self, batch: Sequence[LogRecord]) -> LogExportResult:
+        """
+        Export the log records to the AgentOps backend.
+        """
+        if self._shutdown:
+            return LogExportResult.SUCCESS
+
+        try:
+            # TODO: Implement actual export logic
+            # For now, just print to console
+            for record in batch:
+                print(f"[Session {self.session.session_id}] {record.body}")
+            return LogExportResult.SUCCESS
+        except Exception as e:
+            print(f"Failed to export logs: {e}")
+            return LogExportResult.FAILURE
+
+    def force_flush(self, timeout_millis: Optional[int] = None) -> bool:
+        """
+        Force flush any pending logs.
+        """
+        return True
+
+    def shutdown(self) -> None:
+        """
+        Shuts down the exporter.
+        """
+        self._shutdown = True
+
+
 class Session:
     """
     Represents a session of events, with a start and end state.
@@ -265,6 +307,19 @@ class Session:
 
         self._tracer_provider.add_span_processor(self._span_processor)
 
+        # Initialize logging components
+        resource = Resource.create({SERVICE_NAME: f"agentops.session.{str(session_id)}"})
+        self._logger_provider = LoggerProvider(resource=resource)
+        self._log_exporter = SessionLogExporter(session=self)
+        self._log_processor = BatchLogRecordProcessor(self._log_exporter)
+
+        # Create and install session-specific logging handler
+        self._log_handler = LoggingHandler(
+            level=logging.INFO,
+            logger_provider=self._logger_provider,
+        )
+        logger.addHandler(self._log_handler)
+
     def set_video(self, video: str) -> None:
         """
         Sets a url to the video recording of the session.
@@ -336,7 +391,28 @@ class Session:
                     finally:
                         del self._span_processor
 
-                # 5. Final session update
+                # 5. Clean up logging components
+                if hasattr(self, "_log_handler"):
+                    try:
+                        # Remove and close the log handler
+                        logger.removeHandler(self._log_handler)
+                        self._log_handler.close()
+                    except Exception as e:
+                        logger.warning(f"Error during log handler cleanup: {e}")
+                    finally:
+                        del self._log_handler
+
+                if hasattr(self, "_log_processor"):
+                    try:
+                        # Force flush and shutdown the log processor
+                        self._log_processor.force_flush(timeout_millis=5000)
+                        self._log_processor.shutdown()
+                    except Exception as e:
+                        logger.warning(f"Error during log processor cleanup: {e}")
+                    finally:
+                        del self._log_processor
+
+                # 6. Final session update
                 if not (analytics_stats := self.get_analytics()):
                     return None
 
@@ -422,44 +498,63 @@ class Session:
             token = attach(token)
 
             # Create a copy of event data to modify
-            event_data = dict(filter_unjsonable(event.__dict__))
+            event_data = {}
+            for key, value in event.__dict__.items():
+                if value is not None:
+                    event_data[key] = value
 
             # Add required fields based on event type
             if isinstance(event, ErrorEvent):
                 event_data["error_type"] = getattr(event, "error_type", event.event_type)
-            elif event.event_type == "actions":
+            elif isinstance(event.event_type, EventType) and event.event_type == EventType.ACTION:
                 # Ensure action events have action_type
-                if "action_type" not in event_data:
-                    event_data["action_type"] = event_data.get("name", "unknown_action")
-                if "name" not in event_data:
-                    event_data["name"] = event_data.get("action_type", "unknown_action")
-            elif event.event_type == "tools":
+                if "action_type" not in event_data and "name" in event_data:
+                    event_data["action_type"] = event_data["name"]
+                elif "name" not in event_data and "action_type" in event_data:
+                    event_data["name"] = event_data["action_type"]
+                else:
+                    event_data.setdefault("action_type", "unknown_action")
+                    event_data.setdefault("name", "unknown_action")
+            elif isinstance(event.event_type, EventType) and event.event_type == EventType.TOOL:
                 # Ensure tool events have name
-                if "name" not in event_data:
-                    event_data["name"] = event_data.get("tool_name", "unknown_tool")
-                if "tool_name" not in event_data:
-                    event_data["tool_name"] = event_data.get("name", "unknown_tool")
+                if "name" not in event_data and "tool_name" in event_data:
+                    event_data["name"] = event_data["tool_name"]
+                elif "tool_name" not in event_data and "name" in event_data:
+                    event_data["tool_name"] = event_data["name"]
+                else:
+                    event_data.setdefault("name", "unknown_tool")
+                    event_data.setdefault("tool_name", "unknown_tool")
+
+            # Convert event type to string for span name
+            event_type_str = (
+                event.event_type.value if isinstance(event.event_type, EventType) else str(event.event_type)
+            )
 
             with self._otel_tracer.start_as_current_span(
-                name=event.event_type,
+                name=event_type_str,
                 attributes={
                     "event.id": str(event.id),
-                    "event.type": event.event_type,
+                    "event.type": event_type_str,
                     "event.timestamp": event.init_timestamp or get_ISO_time(),
                     "event.end_timestamp": event.end_timestamp or get_ISO_time(),
                     "session.id": str(self.session_id),
                     "session.tags": ",".join(self.tags) if self.tags else "",
-                    "event.data": json.dumps(event_data),
+                    "event.data": safe_serialize(event_data),
                 },
             ) as span:
-                if event.event_type in self.event_counts:
-                    self.event_counts[event.event_type] += 1
+                if event_type_str in self.event_counts:
+                    self.event_counts[event_type_str] += 1
 
                 if isinstance(event, ErrorEvent):
                     span.set_attribute("error", True)
                     if hasattr(event, "trigger_event") and event.trigger_event:
                         span.set_attribute("trigger_event.id", str(event.trigger_event.id))
-                        span.set_attribute("trigger_event.type", event.trigger_event.event_type)
+                        trigger_event_type = (
+                            event.trigger_event.event_type.value
+                            if isinstance(event.trigger_event.event_type, EventType)
+                            else str(event.trigger_event.event_type)
+                        )
+                        span.set_attribute("trigger_event.type", trigger_event_type)
 
                 if flush_now and hasattr(self, "_span_processor"):
                     self._span_processor.force_flush()
@@ -492,55 +587,53 @@ class Session:
     def _reauthorize_jwt(self) -> Union[str, None]:
         with self._lock:
             payload = {"session_id": self.session_id}
-            serialized_payload = json.dumps(filter_unjsonable(payload)).encode("utf-8")
-            res = HttpClient.post(
-                f"{self.config.endpoint}/v2/reauthorize_jwt",
-                serialized_payload,
-                self.config.api_key,
-            )
-
-            logger.debug(res.body)
-
-            if res.code != 200:
+            try:
+                serialized_payload = safe_serialize(payload).encode("utf-8")
+                res = HttpClient.post(
+                    f"{self.config.endpoint}/v2/reauthorize_jwt",
+                    serialized_payload,
+                    self.config.api_key,
+                )
+                if not res:
+                    return None
+                jwt = res.body.get("jwt")
+                self.jwt = jwt
+                return jwt
+            except Exception as e:
+                logger.error(f"Failed to reauthorize JWT: {e}")
                 return None
-
-            jwt = res.body.get("jwt", None)
-            self.jwt = jwt
-            return jwt
 
     def _start_session(self):
         with self._lock:
             payload = {"session": self.__dict__}
-            serialized_payload = json.dumps(filter_unjsonable(payload)).encode("utf-8")
-
             try:
+                serialized_payload = safe_serialize(payload).encode("utf-8")
                 res = HttpClient.post(
                     f"{self.config.endpoint}/v2/create_session",
                     serialized_payload,
                     api_key=self.config.api_key,
                     parent_key=self.config.parent_key,
                 )
+                if not res:
+                    return False
+                jwt = res.body.get("jwt")
+                self.jwt = jwt
+                if jwt is None:
+                    return False
+
+                logger.info(
+                    colored(
+                        f"\x1b[34mSession Replay: {self.session_url}\x1b[0m",
+                        "blue",
+                    )
+                )
+
+                return True
             except ApiServerException as e:
                 return logger.error(f"Could not start session - {e}")
-
-            logger.debug(res.body)
-
-            if res.code != 200:
+            except Exception as e:
+                logger.error(f"Failed to start session: {e}")
                 return False
-
-            jwt = res.body.get("jwt", None)
-            self.jwt = jwt
-            if jwt is None:
-                return False
-
-            logger.info(
-                colored(
-                    f"\x1b[34mSession Replay: {self.session_url}\x1b[0m",
-                    "blue",
-                )
-            )
-
-            return True
 
     def _update_session(self) -> None:
         """Update session state on the server"""
