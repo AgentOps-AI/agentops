@@ -670,3 +670,20 @@ class Session:
 
 
 active_sessions: List[Session] = []
+
+
+def add_session(session: "Session") -> None:
+    """Add session to active sessions list"""
+    if session not in active_sessions:
+        active_sessions.append(session)
+
+
+def remove_session(session: "Session") -> None:
+    """Remove session from active sessions list"""
+    if session in active_sessions:
+        active_sessions.remove(session)
+
+
+def get_active_sessions() -> List["Session"]:
+    """Get list of active sessions"""
+    return active_sessions
