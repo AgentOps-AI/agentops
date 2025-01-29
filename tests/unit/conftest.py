@@ -46,7 +46,7 @@ def api_key() -> str:
 @pytest.fixture(scope="session")
 def base_url() -> str:
     """Base API URL"""
-    return "https://api.agentops.ai"
+    return agentops.Client()._config.endpoint
 
 
 @pytest.fixture(autouse=True)
