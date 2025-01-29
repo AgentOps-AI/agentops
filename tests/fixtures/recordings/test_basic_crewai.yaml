@@ -1,0 +1,199 @@
+interactions:
+- request:
+    body: !!binary |
+      CvUJCiQKIgoMc2VydmljZS5uYW1lEhIKEGNyZXdBSS10ZWxlbWV0cnkSzAkKEgoQY3Jld2FpLnRl
+      bGVtZXRyeRKkBwoQKGyWinI9UrzHNQnQdAzFTBIItaJSFJ8zukAqDENyZXcgQ3JlYXRlZDABObhl
+      FZzCOx8YQaiFHpzCOx8YShsKDmNyZXdhaV92ZXJzaW9uEgkKBzAuMTAwLjBKGgoOcHl0aG9uX3Zl
+      cnNpb24SCAoGMy4xMi4ySi4KCGNyZXdfa2V5EiIKIGNiMTExOTRlNWM0ODFjOTFiMGZlZjcwZTNj
+      NmRlNjQ0SjEKB2NyZXdfaWQSJgokNWQ4YWQwMDMtMjBmMy00OGRiLTkyN2MtNWIwZDUwZjQ4MDdk
+      ShwKDGNyZXdfcHJvY2VzcxIMCgpzZXF1ZW50aWFsShEKC2NyZXdfbWVtb3J5EgIQAEoaChRjcmV3
+      X251bWJlcl9vZl90YXNrcxICGAFKGwoVY3Jld19udW1iZXJfb2ZfYWdlbnRzEgIYAUrRAgoLY3Jl
+      d19hZ2VudHMSwQIKvgJbeyJrZXkiOiAiYzBjMTI1MTE1ZTE4NWYxMzFlYjIyYjUxMTUxYmZjNDki
+      LCAiaWQiOiAiYTA0YzU5ZGMtZWRmYi00MGJhLWJjZTctYWUxOTYxNzFlZWM0IiwgInJvbGUiOiAi
+      UmVzZWFyY2hlciIsICJ2ZXJib3NlPyI6IGZhbHNlLCAibWF4X2l0ZXIiOiAyMCwgIm1heF9ycG0i
+      OiBudWxsLCAiZnVuY3Rpb25fY2FsbGluZ19sbG0iOiAiIiwgImxsbSI6ICJncHQtNG8tbWluaSIs
+      ICJkZWxlZ2F0aW9uX2VuYWJsZWQ/IjogZmFsc2UsICJhbGxvd19jb2RlX2V4ZWN1dGlvbj8iOiBm
+      YWxzZSwgIm1heF9yZXRyeV9saW1pdCI6IDIsICJ0b29sc19uYW1lcyI6IFtdfV1K/wEKCmNyZXdf
+      dGFza3MS8AEK7QFbeyJrZXkiOiAiMjc2NGQyNDFiNDA2M2JkMTg1NmEwMjI1MzQyMjQwYTgiLCAi
+      aWQiOiAiNDA3MmQ3NTYtYWYwYi00NjNkLThhMzYtZDAzZGMwNTgzNTQ5IiwgImFzeW5jX2V4ZWN1
+      dGlvbj8iOiBmYWxzZSwgImh1bWFuX2lucHV0PyI6IGZhbHNlLCAiYWdlbnRfcm9sZSI6ICJSZXNl
+      YXJjaGVyIiwgImFnZW50X2tleSI6ICJjMGMxMjUxMTVlMTg1ZjEzMWViMjJiNTExNTFiZmM0OSIs
+      ICJ0b29sc19uYW1lcyI6IFtdfV16AhgBhQEAAQAAEo4CChCKvd3qtnyR+yLsyfqo4mowEgi+KZ5Q
+      65dU0yoMVGFzayBDcmVhdGVkMAE5YBMznMI7HxhBOG0znMI7HxhKLgoIY3Jld19rZXkSIgogY2Ix
+      MTE5NGU1YzQ4MWM5MWIwZmVmNzBlM2M2ZGU2NDRKMQoHY3Jld19pZBImCiQ1ZDhhZDAwMy0yMGYz
+      LTQ4ZGItOTI3Yy01YjBkNTBmNDgwN2RKLgoIdGFza19rZXkSIgogMjc2NGQyNDFiNDA2M2JkMTg1
+      NmEwMjI1MzQyMjQwYThKMQoHdGFza19pZBImCiQ0MDcyZDc1Ni1hZjBiLTQ2M2QtOGEzNi1kMDNk
+      YzA1ODM1NDl6AhgBhQEAAQAA
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '1272'
+      Content-Type:
+      - application/x-protobuf
+      User-Agent:
+      - OTel-OTLP-Exporter-Python/1.29.0
+    method: POST
+    uri: https://telemetry.crewai.com:4319/v1/traces
+  response:
+    body:
+      string: "\n\0"
+    headers:
+      Content-Length:
+      - '2'
+      Content-Type:
+      - application/x-protobuf
+      Date:
+      - Wed, 29 Jan 2025 18:01:34 GMT
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"messages": [{"role": "system", "content": "You are Researcher. An experienced
+      researcher with a passion for uncovering insights\nYour personal goal is: Conduct
+      foundational research\nTo give my best complete final answer to the task respond
+      using the exact following format:\n\nThought: I now can give a great answer\nFinal
+      Answer: Your final answer must be the great and the most complete as possible,
+      it must be outcome described.\n\nI MUST use these formats, my job depends on
+      it!"}, {"role": "user", "content": "\nCurrent Task: Compose the report...\n\nThis
+      is the expect criteria for your final answer: Final Report\nyou MUST return
+      the actual complete content as the final answer, not a summary.\n\nBegin! This
+      is VERY important to you, use the tools available and give your best Final Answer,
+      your job depends on it!\n\nThought:"}], "model": "gpt-4o-mini", "stop": ["\nObservation:"]}'
+    headers:
+      accept:
+      - application/json
+      accept-encoding:
+      - gzip, deflate
+      authorization:
+      - REDACTED
+      connection:
+      - keep-alive
+      content-length:
+      - '893'
+      content-type:
+      - application/json
+      host:
+      - api.openai.com
+      user-agent:
+      - OpenAI/Python 1.59.7
+      x-stainless-arch:
+      - REDACTED
+      x-stainless-async:
+      - REDACTED
+      x-stainless-lang:
+      - REDACTED
+      x-stainless-os:
+      - REDACTED
+      x-stainless-package-version:
+      - 1.59.7
+      x-stainless-raw-response:
+      - 'true'
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - REDACTED
+      x-stainless-runtime-version:
+      - REDACTED
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    body:
+      string: "{\n  \"id\": \"chatcmpl-Av6fRuYszajNkC3L5SHpHptEH3Upc\",\n  \"object\":
+        \"chat.completion\",\n  \"created\": 1738173689,\n  \"model\": \"gpt-4o-mini-2024-07-18\",\n
+        \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
+        \"assistant\",\n        \"content\": \"I now can give a great answer  \\nFinal
+        Answer: \\n\\n**Final Report: Comprehensive Analysis of Market Trends and
+        Insights**\\n\\n**1. Introduction**\\nThis report aims to provide a thorough
+        analysis of the current market trends and consumer behavior in our designated
+        industry. The information compiled herein stems from various reputable sources
+        and is intended to inform strategic planning and decision-making moving forward.
+        \\n\\n**2. Methodology**\\nTo ensure a robust analysis, a combination of qualitative
+        and quantitative methods was utilized. Surveys, interviews, and focus groups
+        were conducted to gather insights from a diverse consumer sample, while secondary
+        data was extracted from industry reports, market publications, and online
+        databases.\\n\\n**3. Key Findings**\\n\\n**3.1 Market Overview**\\n- The market
+        has seen a growth rate of approximately 7% annually in the last five years,
+        driven by technological advancements and changing consumer preferences.\\n-
+        Significant players dominating the market include Company A, Company B, and
+        Company C, controlling approximately 60% of the total market share.\\n\\n**3.2
+        Consumer Behavior**\\n- A shift towards sustainability has been observed,
+        with 65% of consumers expressing willingness to pay a premium for eco-friendly
+        products.\\n- Digital purchasing channels have surged, with an increase of
+        40% in e-commerce transactions over the past year.\\n\\n**3.3 Competitive
+        Landscape**\\n- An analysis of competitors revealed varying strategies, with
+        Company A focusing on innovation, while Company B enhances customer loyalty
+        through rewards programs.\\n- Emerging competitors are leveraging social media
+        marketing effectively, targeting younger demographics.\\n\\n**4. Recommendations**\\n-
+        To capitalize on the growing trend of sustainability, it is recommended that
+        the company invest in greener product lines and enhance supply chain transparency.\\n-
+        Developing a robust online presence and utilizing influencer marketing can
+        capture the attention of the younger consumer base and boost online sales.\\n\\n**5.
+        Conclusion**\\nIn conclusion, the market presents abundant opportunities for
+        growth, particularly by aligning product offerings with consumer values such
+        as sustainability and convenience. By implementing the recommendations outlined
+        in this report, the business is well-positioned to enhance its market position
+        and drive future success.\\n\\n**6. Appendices**\\n- Appendix A: Survey Data
+        and Analysis\\n- Appendix B: Consumer Interview Transcripts\\n- Appendix C:
+        Competitor Analysis Tables\\n\\n**7. References**\\nA comprehensive list of
+        the sources utilized in the formation of this report will be provided separately
+        to ensure the integrity of the research process.\\n\\nThis report serves not
+        just as a reflection of current market dynamics, but as a strategic guide
+        for actionable pathways to ensure sustainability and competitiveness in the
+        market.\",\n        \"refusal\": null\n      },\n      \"logprobs\": null,\n
+        \     \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
+        163,\n    \"completion_tokens\": 507,\n    \"total_tokens\": 670,\n    \"prompt_tokens_details\":
+        {\n      \"cached_tokens\": 0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\":
+        {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\":
+        0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\":
+        \"default\",\n  \"system_fingerprint\": \"fp_bd83329f63\"\n}\n"
+    headers:
+      CF-Cache-Status:
+      - DYNAMIC
+      CF-RAY: REDACTED
+      Connection:
+      - keep-alive
+      Content-Type:
+      - application/json
+      Date:
+      - Wed, 29 Jan 2025 18:01:38 GMT
+      Server:
+      - cloudflare
+      Set-Cookie:
+      - __cf_bm=9Hx3qGRtFxls4QPg0U.9htSGTFNgaI9MNdztZZD.88g-1738173698-1.0.1.1-QrGeKno5mfqLs9gbpqreCD9G_vj_Gipo00Hmn_JWlbJZwJWSirvZMSFOEtYqgO89EgT5H82ZuThyqXHtXdjBvg;
+        path=/; expires=Wed, 29-Jan-25 18:31:38 GMT; domain=.api.openai.com; HttpOnly;
+        Secure; SameSite=None
+      - _cfuvid=kNItpNpLHflk3RPwUUnfZwebDp1DON65rmEY6uweBBs-1738173698264-0.0.1.1-604800000;
+        path=/; domain=.api.openai.com; HttpOnly; Secure; SameSite=None
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - nosniff
+      access-control-expose-headers:
+      - X-Request-ID
+      alt-svc:
+      - h3=":443"; ma=86400
+      content-length:
+      - '3679'
+      openai-organization: REDACTED
+      openai-processing-ms:
+      - '8965'
+      openai-version:
+      - '2020-10-01'
+      strict-transport-security:
+      - max-age=31536000; includeSubDomains; preload
+      x-ratelimit-limit-requests: REDACTED
+      x-ratelimit-limit-tokens: REDACTED
+      x-ratelimit-remaining-requests: REDACTED
+      x-ratelimit-remaining-tokens: REDACTED
+      x-ratelimit-reset-requests: REDACTED
+      x-ratelimit-reset-tokens: REDACTED
+      x-request-id: REDACTED
+    status:
+      code: 200
+      message: OK
+version: 1
