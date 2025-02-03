@@ -112,21 +112,30 @@ class HttpClient:
         return headers
 
     @classmethod
-    def post(
+    def _make_request(
         cls,
+        method: str,
         url: str,
-        payload: bytes,
         api_key: Optional[str] = None,
         parent_key: Optional[str] = None,
         jwt: Optional[str] = None,
         header: Optional[Dict[str, str]] = None,
+        payload: Optional[bytes] = None,
     ) -> Response:
-        """Make HTTP POST request using connection pooling"""
+        """Make HTTP request using connection pooling"""
         result = Response()
         try:
             headers = cls._prepare_headers(api_key, parent_key, jwt, header)
             session = cls.get_session()
-            res = session.post(url, data=payload, headers=headers, timeout=20)
+            
+            kwargs = {
+                "headers": headers,
+                "timeout": 20
+            }
+            if payload is not None:
+                kwargs["data"] = payload
+
+            res = getattr(session, method.lower())(url, **kwargs)
             result.parse(res)
 
         except requests.exceptions.Timeout:
@@ -168,41 +177,41 @@ class HttpClient:
         jwt: Optional[str] = None,
         header: Optional[Dict[str, str]] = None,
     ) -> Response:
-        """Make HTTP GET request using connection pooling"""
-        result = Response()
-        try:
-            headers = cls._prepare_headers(api_key, None, jwt, header)
-            session = cls.get_session()
-            res = session.get(url, headers=headers, timeout=20)
-            result.parse(res)
+        """Make HTTP GET request"""
+        return cls._make_request("GET", url, api_key=api_key, jwt=jwt, header=header)
 
-        except requests.exceptions.Timeout:
-            result.code = 408
-            result.status = HttpStatus.TIMEOUT
-            raise ApiServerException("Could not reach API server - connection timed out")
-        except requests.exceptions.HTTPError as e:
-            try:
-                result.parse(e.response)
-            except Exception:
-                result = Response()
-                result.code = e.response.status_code
-                result.status = Response.get_status(e.response.status_code)
-                result.body = {"error": str(e)}
-                raise ApiServerException(f"HTTPError: {e}")
-        except requests.exceptions.RequestException as e:
-            result.body = {"error": str(e)}
-            raise ApiServerException(f"RequestException: {e}")
+    @classmethod
+    def post(
+        cls,
+        url: str,
+        payload: bytes,
+        api_key: Optional[str] = None,
+        parent_key: Optional[str] = None,
+        jwt: Optional[str] = None,
+        header: Optional[Dict[str, str]] = None,
+    ) -> Response:
+        """Make HTTP POST request"""
+        return cls._make_request("POST", url, api_key=api_key, parent_key=parent_key, jwt=jwt, header=header, payload=payload)
 
-        if result.code == 401:
-            raise ApiServerException(
-                f"API server: invalid API key: {api_key}. Find your API key at https://app.agentops.ai/settings/projects"
-            )
-        if result.code == 400:
-            if "message" in result.body:
-                raise ApiServerException(f"API server: {result.body['message']}")
-            else:
-                raise ApiServerException(f"API server: {result.body}")
-        if result.code == 500:
-            raise ApiServerException("API server: - internal server error")
+    @classmethod
+    def put(
+        cls,
+        url: str,
+        payload: bytes,
+        api_key: Optional[str] = None,
+        jwt: Optional[str] = None,
+        header: Optional[Dict[str, str]] = None,
+    ) -> Response:
+        """Make HTTP PUT request"""
+        return cls._make_request("PUT", url, api_key=api_key, jwt=jwt, header=header, payload=payload)
 
-        return result
+    @classmethod
+    def delete(
+        cls,
+        url: str,
+        api_key: Optional[str] = None,
+        jwt: Optional[str] = None,
+        header: Optional[Dict[str, str]] = None,
+    ) -> Response:
+        """Make HTTP DELETE request"""
+        return cls._make_request("DELETE", url, api_key=api_key, jwt=jwt, header=header)
