@@ -188,6 +188,7 @@ class SessionLogExporter(LogExporter):
     def __init__(self, session):
         self.session = session
         self._shutdown = False
+        self.endpoint = f"{session.config.endpoint}/v3/logs/{session.session_id}"
 
     def export(self, batch: Sequence[LogRecord]) -> LogExportResult:
         """
@@ -197,13 +198,26 @@ class SessionLogExporter(LogExporter):
             return LogExportResult.SUCCESS
 
         try:
-            # TODO: Implement actual export logic
-            # For now, just print to console
-            for record in batch:
-                print(f"[Session {self.session.session_id}] {record.body}")
-            return LogExportResult.SUCCESS
+            # Format logs for API
+            log_data = {
+                "logs": [record.body for record in batch],
+                "start_time": self.session.init_timestamp,
+                "end_time": self.session.end_timestamp,
+                "is_capturing": not self._shutdown
+            }
+
+            # Send logs to API
+            res = HttpClient.put(
+                self.endpoint,
+                json.dumps(log_data).encode("utf-8"),
+                api_key=self.session.config.api_key,
+                jwt=self.session.jwt
+            )
+
+            return LogExportResult.SUCCESS if res.code == 200 else LogExportResult.FAILURE
+
         except Exception as e:
-            print(f"Failed to export logs: {e}")
+            logger.error(f"Failed to export logs: {e}")
             return LogExportResult.FAILURE
 
     def force_flush(self, timeout_millis: Optional[int] = None) -> bool:
