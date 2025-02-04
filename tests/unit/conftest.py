@@ -86,3 +86,19 @@ def mock_req(base_url, jwt):
         m.put(logs_pattern, json={"status": "success"})
 
         yield m
+
+
+@pytest.fixture
+def agentops_init():
+    agentops.init()
+
+
+@pytest.fixture
+def agentops_session(agentops_init):
+    session = agentops.start_session()
+
+    assert session, "Failed agentops.start_session() returned None."
+
+    yield session
+
+    agentops.end_all_sessions()
