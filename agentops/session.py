@@ -183,12 +183,22 @@ class SessionExporter(SpanExporter):
 class SessionLogExporter(LogExporter):
     """
     Exports logs for a specific session to the AgentOps backend.
+
+    The flow is:
+    1. A log message is created
+    2. The LoggingHandler captures it
+    3. The LoggingHandler sends it to the LoggerProvider
+    4. The LoggerProvider passes it to the BatchLogRecordProcessor
+    5. The BatchLogRecordProcessor buffers the log records
+    6. When conditions are met (batch size/time/flush), the BatchLogRecordProcessor calls `export()` on the SessionLogExporter
+
     """
 
-    def __init__(self, session):
+    session: Session
+
+    def __init__(self, session: Session):
         self.session = session
         self._shutdown = False
-        self.endpoint = f"{session.config.endpoint}/v3/logs/{session.session_id}"
 
     def export(self, batch: Sequence[LogRecord]) -> LogExportResult:
         """
@@ -203,15 +213,15 @@ class SessionLogExporter(LogExporter):
                 "logs": [record.body for record in batch],
                 "start_time": self.session.init_timestamp,
                 "end_time": self.session.end_timestamp,
-                "is_capturing": not self._shutdown
+                "is_capturing": not self._shutdown,
             }
 
             # Send logs to API
             res = HttpClient.put(
-                self.endpoint,
+                f"{self.session.config.endpoint}/v3/logs/{self.session.session_id}",
                 json.dumps(log_data).encode("utf-8"),
                 api_key=self.session.config.api_key,
-                jwt=self.session.jwt
+                jwt=self.session.jwt,
             )
 
             return LogExportResult.SUCCESS if res.code == 200 else LogExportResult.FAILURE
