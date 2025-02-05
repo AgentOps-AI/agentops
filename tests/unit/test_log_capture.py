@@ -10,7 +10,7 @@ from opentelemetry.sdk._logs.export import BatchLogRecordProcessor, ConsoleLogEx
 from opentelemetry.sdk.resources import Resource
 from rich.console import Console
 
-from agentops.instrumentation import set_log_handler
+from agentops.log_config import logger as agentops_logger
 from agentops.log_capture import LogCapture
 
 
@@ -20,14 +20,23 @@ def session_id():
 
 
 @pytest.fixture
-def mock_session(session_id):
-    """Create a mock session"""
-
+def mock_session(session_id, logger_provider):
+    """Create a mock session with logging components"""
     class MockSession:
-        def __init__(self, session_id):
+        def __init__(self, session_id, logger_provider):
             self.session_id = session_id
+            self._log_handler = LoggingHandler(
+                level=logging.INFO,
+                logger_provider=logger_provider,
+            )
+            # Add handler to logger
+            agentops_logger.addHandler(self._log_handler)
 
-    return MockSession(session_id)
+        def cleanup(self):
+            # Remove handler from logger
+            agentops_logger.removeHandler(self._log_handler)
+
+    return MockSession(session_id, logger_provider)
 
 
 @pytest.fixture
@@ -45,20 +54,15 @@ def logger_provider():
 
 
 @pytest.fixture
-def capture(session_id, logger_provider, mock_session):
+def capture(session_id, mock_session):
     """Set up LogCapture with OpenTelemetry logging"""
-    handler = LoggingHandler(
-        level=logging.INFO,
-        logger_provider=logger_provider,
-    )
-    set_log_handler(handler)
-
     # Mock the session registry to return our mock session
     with patch("agentops.session.get_active_sessions", return_value=[mock_session]):
         capture = LogCapture(session_id=session_id)
         yield capture
 
-    set_log_handler(None)  # Clean up
+    # Clean up
+    mock_session.cleanup()
 
 
 def test_basic_stdout_capture(capture):
