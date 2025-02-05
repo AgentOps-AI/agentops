@@ -29,6 +29,32 @@ The module provides functions to:
 - Clean up telemetry components when a session ends
 """
 
+# Map of session_id to LoggingHandler
+_session_handlers: Dict[UUID, LoggingHandler] = {}
+
+def get_session_handler(session_id: UUID) -> Optional[LoggingHandler]:
+    """Get the logging handler for a specific session.
+    
+    Args:
+        session_id: The UUID of the session
+        
+    Returns:
+        The session's LoggingHandler if it exists, None otherwise
+    """
+    return _session_handlers.get(session_id)
+
+def set_session_handler(session_id: UUID, handler: Optional[LoggingHandler]) -> None:
+    """Set or remove the logging handler for a session.
+    
+    Args:
+        session_id: The UUID of the session
+        handler: The handler to set, or None to remove
+    """
+    if handler is None:
+        _session_handlers.pop(session_id, None)
+    else:
+        _session_handlers[session_id] = handler
+
 def setup_session_telemetry(session_id: str, log_exporter) -> tuple[LoggingHandler, BatchLogRecordProcessor]:
     """Set up OpenTelemetry logging components for a new session.
     
@@ -45,9 +71,6 @@ def setup_session_telemetry(session_id: str, log_exporter) -> tuple[LoggingHandl
         Tuple containing:
         - LoggingHandler: Handler that should be added to the logger
         - BatchLogRecordProcessor: Processor that batches and exports logs
-        
-    Used by:
-        Session class during initialization to set up logging for the new session
     """
     # Create logging components
     resource = Resource.create({SERVICE_NAME: f"agentops.session.{session_id}"})
@@ -55,10 +78,15 @@ def setup_session_telemetry(session_id: str, log_exporter) -> tuple[LoggingHandl
     
     # Create processor and handler
     log_processor = BatchLogRecordProcessor(log_exporter)
+    logger_provider.add_log_record_processor(log_processor)  # Add processor to provider
+    
     log_handler = LoggingHandler(
         level=logging.INFO,
         logger_provider=logger_provider,
     )
+    
+    # Register handler with session
+    set_session_handler(UUID(session_id), log_handler)
     
     return log_handler, log_processor
 
@@ -84,6 +112,12 @@ def cleanup_session_telemetry(log_handler: LoggingHandler, log_processor: BatchL
         # Remove and close handler
         logger.removeHandler(log_handler)
         log_handler.close()
+        
+        # Remove from session handlers
+        for session_id, handler in list(_session_handlers.items()):
+            if handler is log_handler:
+                set_session_handler(session_id, None)
+                break
         
         # Shutdown processor
         log_processor.force_flush(timeout_millis=5000)

@@ -9,7 +9,7 @@ from opentelemetry.sdk._logs import LoggerProvider, LoggingHandler
 from opentelemetry.sdk._logs.export import BatchLogRecordProcessor, ConsoleLogExporter
 from opentelemetry.sdk.resources import Resource
 
-from agentops.instrumentation import get_log_handler, set_log_handler
+from agentops.instrumentation import get_session_handler, set_session_handler
 
 if TYPE_CHECKING:
     from agentops.session import Session
@@ -89,8 +89,8 @@ class LogCapture:
         self.start_time = get_ISO_time()
         self.is_capturing = True
 
-        # Try to get handler from telemetry manager
-        get_log_handler()
+        # Try to get handler from session
+        self._handler = get_session_handler(self.session_id)
 
         # Create our own handler if none exists
         if not self._handler:
@@ -112,8 +112,8 @@ class LogCapture:
                 logger_provider=self._logger_provider,
             )
 
-            # Register with telemetry manager if available
-            set_log_handler(self._handler)
+            # Register with session
+            set_session_handler(self.session_id, self._handler)
 
         # Add handler to both loggers
         self._stdout_logger.addHandler(self._handler)
@@ -155,7 +155,7 @@ class LogCapture:
                     self._logger_provider.shutdown()
 
                     # Clear from telemetry manager if we created it
-                    set_log_handler(None)
+                    set_session_handler(self.session_id, None)
 
             self._handler = None
             self._logger_provider = None
