@@ -15,18 +15,6 @@ from agentops.session import add_session
 
 class TestSessionTelemetry:
     @pytest.fixture
-    def mock_session(self, base_url):
-        """Create a mock session with required attributes"""
-        session = Mock()
-        session.session_id = uuid4()
-        session.jwt = "test_jwt"
-        session.config = Mock()
-        session.config.endpoint = base_url
-        # Add session to registry so LogCapture can find it
-        add_session(session)
-        return session
-
-    @pytest.fixture
     def session_id(self):
         return str(uuid4())
 
@@ -35,10 +23,10 @@ class TestSessionTelemetry:
         """Get initial number of handlers on the logger"""
         return len(logger.handlers)
 
-    def test_setup_telemetry_components(self, session_id, mock_req, mock_session):
+    def test_setup_telemetry_components(self, session_id, mock_req, agentops_session):
         """Test that telemetry setup creates and returns the expected components"""
         # Set up telemetry with real exporter
-        log_exporter = SessionLogExporter(session=mock_session)
+        log_exporter = SessionLogExporter(session=agentops_session)
         log_handler, log_processor = setup_session_telemetry(session_id, log_exporter)
 
         # Verify components are created with correct types
@@ -52,10 +40,10 @@ class TestSessionTelemetry:
         # Clean up
         cleanup_session_telemetry(log_handler, log_processor)
 
-    def test_handler_installation_and_cleanup(self, session_id, mock_req, mock_session, initial_handler_count):
+    def test_handler_installation_and_cleanup(self, session_id, mock_req, agentops_session, initial_handler_count):
         """Test that handler is properly installed and removed"""
         # Set up telemetry
-        log_exporter = SessionLogExporter(session=mock_session)
+        log_exporter = SessionLogExporter(session=agentops_session)
         log_handler, log_processor = setup_session_telemetry(session_id, log_exporter)
         logger.addHandler(log_handler)
 
@@ -70,17 +58,17 @@ class TestSessionTelemetry:
         assert len(logger.handlers) == initial_handler_count
         assert log_handler not in logger.handlers
 
-    def test_logging_with_telemetry(self, mock_req, mock_session):
+    def test_logging_with_telemetry(self, mock_req, agentops_session):
         """Test that logs are captured and exported"""
         # Create and start log capture
-        capture = LogCapture(session_id=mock_session.session_id)
+        capture = LogCapture(session_id=agentops_session.session_id)
         capture.start()
 
         try:
-            session_id = str(mock_session.session_id)
+            session_id = str(agentops_session.session_id)
             print(f"\nSession ID: {session_id}")
             
-            log_exporter = SessionLogExporter(session=mock_session)
+            log_exporter = SessionLogExporter(session=agentops_session)
             log_handler, log_processor = setup_session_telemetry(session_id, log_exporter)
             logger.addHandler(log_handler)
 
@@ -96,8 +84,8 @@ class TestSessionTelemetry:
 
             # Debug: Print all request URLs and mock setup
             print("\nMock setup:")
-            print(f"Base URL: {mock_session.config.endpoint}")
-            print(f"Expected endpoint: {mock_session.config.endpoint}/v3/logs/{session_id}")
+            print(f"Base URL: {agentops_session.config.endpoint}")
+            print(f"Expected endpoint: {agentops_session.config.endpoint}/v3/logs/{session_id}")
             print("\nRequest history:")
             for req in mock_req.request_history:
                 print(f"Method: {req.method}, URL: {req.url}")
@@ -113,10 +101,10 @@ class TestSessionTelemetry:
             capture.stop()
             cleanup_session_telemetry(log_handler, log_processor)
 
-    def test_cleanup_prevents_further_logging(self, session_id, mock_req, mock_session):
+    def test_cleanup_prevents_further_logging(self, session_id, mock_req, agentops_session):
         """Test that cleanup prevents further log exports"""
         # Set up telemetry
-        log_exporter = SessionLogExporter(session=mock_session)
+        log_exporter = SessionLogExporter(session=agentops_session)
         log_handler, log_processor = setup_session_telemetry(session_id, log_exporter)
         logger.addHandler(log_handler)
 
@@ -135,13 +123,13 @@ class TestSessionTelemetry:
         final_request_count = len([r for r in mock_req.request_history if r.url.endswith(f"/v3/logs/{session_id}")])
         assert final_request_count == initial_request_count
 
-    def test_multiple_sessions_isolation(self, mock_req, mock_session):
+    def test_multiple_sessions_isolation(self, mock_req, agentops_session):
         """Test that multiple sessions maintain logging isolation"""
         # Set up two sessions
         session_id_1 = str(uuid4())
         session_id_2 = str(uuid4())
         
-        log_exporter = SessionLogExporter(session=mock_session)
+        log_exporter = SessionLogExporter(session=agentops_session)
         handler1, processor1 = setup_session_telemetry(session_id_1, log_exporter)
         handler2, processor2 = setup_session_telemetry(session_id_2, log_exporter)
         
