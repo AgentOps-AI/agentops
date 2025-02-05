@@ -25,8 +25,8 @@ from .event import ErrorEvent, Event, EventType
 from .exceptions import ApiServerException
 from .helpers import filter_unjsonable, get_ISO_time, safe_serialize
 from .http_client import HttpClient, Response
+from .instrumentation import cleanup_session_telemetry, setup_session_telemetry
 from .log_config import logger
-from .instrumentation import setup_session_telemetry, cleanup_session_telemetry
 
 """
 OTEL Guidelines:
@@ -202,25 +202,17 @@ class SessionLogExporter(LogExporter):
         self._shutdown = False
 
     def export(self, batch: Sequence[LogRecord]) -> LogExportResult:
-        """
-        Export the log records to the AgentOps backend.
-        """
+        """Export the log records to the AgentOps backend."""
         if self._shutdown:
             return LogExportResult.SUCCESS
 
         try:
             # Format logs for API
-            log_data = {
-                "logs": [record.body for record in batch],
-                "start_time": self.session.init_timestamp,
-                "end_time": self.session.end_timestamp,
-                "is_capturing": not self._shutdown,
-            }
 
             # Send logs to API
             res = HttpClient.put(
                 f"{self.session.config.endpoint}/v3/logs/{self.session.session_id}",
-                json.dumps(log_data).encode("utf-8"),
+                safe_serialize(batch).encode("utf-8"),
                 api_key=self.session.config.api_key,
                 jwt=self.session.jwt,
             )
@@ -228,7 +220,7 @@ class SessionLogExporter(LogExporter):
             return LogExportResult.SUCCESS if res.code == 200 else LogExportResult.FAILURE
 
         except Exception as e:
-            logger.error(f"Failed to export logs: {e}")
+            logger.exception("Failed to export logs", exc_info=e)
             return LogExportResult.FAILURE
 
     def force_flush(self, timeout_millis: Optional[int] = None) -> bool:
@@ -334,10 +326,7 @@ class Session:
 
         # Initialize logging components
         self._log_exporter = SessionLogExporter(session=self)
-        self._log_handler, self._log_processor = setup_session_telemetry(
-            str(session_id),
-            self._log_exporter
-        )
+        self._log_handler, self._log_processor = setup_session_telemetry(str(session_id), self._log_exporter)
         logger.addHandler(self._log_handler)
 
     def set_video(self, video: str) -> None:
