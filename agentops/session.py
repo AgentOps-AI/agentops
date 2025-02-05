@@ -25,8 +25,8 @@ from .event import ErrorEvent, Event, EventType
 from .exceptions import ApiServerException
 from .helpers import filter_unjsonable, get_ISO_time, safe_serialize
 from .http_client import HttpClient, Response
-from .instrumentation import cleanup_session_telemetry, setup_session_telemetry
 from .log_config import logger
+from .instrumentation import setup_session_telemetry, cleanup_session_telemetry
 
 """
 OTEL Guidelines:
@@ -326,7 +326,10 @@ class Session:
 
         # Initialize logging components
         self._log_exporter = SessionLogExporter(session=self)
-        self._log_handler, self._log_processor = setup_session_telemetry(str(session_id), self._log_exporter)
+        self._log_handler, self._log_processor = setup_session_telemetry(
+            str(session_id),
+            self._log_exporter
+        )
         logger.addHandler(self._log_handler)
 
     def set_video(self, video: str) -> None:
