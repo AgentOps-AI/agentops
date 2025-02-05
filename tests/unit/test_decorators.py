@@ -1,3 +1,4 @@
+import uuid
 import pytest
 from collections import namedtuple
 from typing import Tuple
@@ -96,7 +97,7 @@ class TestDecorators:
         This demonstrates @teocns's point that JSON serialization works fine with tuples,
         as they are naturally converted to lists during JSON serialization."""
         config = Client()._config
-        session = Session(session_id="test_session", config=config)
+        session = Session(session_id=uuid.uuid4(), config=config)
 
         # Test with regular tuple
         direct_tuple = (1, "test")
