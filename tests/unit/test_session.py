@@ -773,31 +773,39 @@ class TestSessionLogging:
         clear_singletons()
 
     @pytest.fixture
-    def logger(self):
+    def agentops_logger(self):
         from agentops.log_config import logger
 
         return logger
 
-    def test_log_handler_installation(self, logger):
-        """Test that a log handler is correctly installed when session starts"""
-        # Check that the session has the required logging components
-        # Verify the log handler is in the root logger's handlers
-        assert any(isinstance(handler, LoggingHandler) for handler in logger.handlers)
+    def test_log_handler_installation(self, agentops_logger):
+        """Test that the session's specific log handler is correctly installed"""
+        # Get the handler that was created for this session
+        session_handler = self.session._log_handler
+        
+        # Verify the handler exists and is a LoggingHandler
+        assert isinstance(session_handler, LoggingHandler), "Session should have a LoggingHandler instance"
+        
+        # Verify this specific handler is in the logger's handlers
+        assert session_handler in agentops_logger.handlers, "Session's specific LoggingHandler should be in logger's handlers"
+        
+        # Count how many times this specific handler appears
+        handler_count = sum(1 for h in agentops_logger.handlers if h is session_handler)
+        assert handler_count == 1, "Session's LoggingHandler should appear exactly once in logger's handlers"
 
-    # def test_log_handler_removal_on_session_end(self):
-    #     """Test that the log handler is removed when session ends"""
-    #     # Get initial handler count
-    #     initial_handlers = len(logger.handlers)
-
-    #     # End the session
-    #     self.session.end_session("Success")
-
-    #     # Verify handler was removed
-    #     assert len(logger.handlers) == initial_handlers - 1
-    #     assert not any(
-    #         isinstance(handler, LoggingHandler)
-    #         for handler in logger.handlers
-    #     )
+    def test_log_handler_removal_on_session_end(self, agentops_logger):
+        """Test that the session's specific log handler is removed when session ends"""
+        # Get the handler that was created for this session
+        this_session_logging_handler = self.session._log_handler
+        
+        # Verify handler exists before ending session
+        assert this_session_logging_handler in agentops_logger.handlers, "Session handler should be present before ending session"
+        
+        # End the session
+        self.session.end_session("Success")
+        
+        # Verify the specific handler was removed
+        assert this_session_logging_handler not in agentops_logger.handlers, "Session handler should be removed after ending session"
 
     # def test_logging_with_session(self, mock_req):
     #     """Test that logging works with an active session"""
