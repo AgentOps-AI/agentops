@@ -26,6 +26,7 @@ from .exceptions import ApiServerException
 from .helpers import filter_unjsonable, get_ISO_time, safe_serialize
 from .http_client import HttpClient, Response
 from .log_config import logger
+from .instrumentation import setup_session_telemetry, cleanup_session_telemetry
 
 """
 OTEL Guidelines:
@@ -332,15 +333,10 @@ class Session:
         self._tracer_provider.add_span_processor(self._span_processor)
 
         # Initialize logging components
-        resource = Resource.create({SERVICE_NAME: f"agentops.session.{str(session_id)}"})
-        self._logger_provider = LoggerProvider(resource=resource)
         self._log_exporter = SessionLogExporter(session=self)
-        self._log_processor = BatchLogRecordProcessor(self._log_exporter)
-
-        # Create and install session-specific logging handler
-        self._log_handler = LoggingHandler(
-            level=logging.INFO,
-            logger_provider=self._logger_provider,
+        self._log_handler, self._log_processor = setup_session_telemetry(
+            str(session_id),
+            self._log_exporter
         )
         logger.addHandler(self._log_handler)
 
@@ -416,25 +412,8 @@ class Session:
                         del self._span_processor
 
                 # 5. Clean up logging components
-                if hasattr(self, "_log_handler"):
-                    try:
-                        # Remove and close the log handler
-                        logger.removeHandler(self._log_handler)
-                        self._log_handler.close()
-                    except Exception as e:
-                        logger.warning(f"Error during log handler cleanup: {e}")
-                    finally:
-                        del self._log_handler
-
-                if hasattr(self, "_log_processor"):
-                    try:
-                        # Force flush and shutdown the log processor
-                        self._log_processor.force_flush(timeout_millis=5000)
-                        self._log_processor.shutdown()
-                    except Exception as e:
-                        logger.warning(f"Error during log processor cleanup: {e}")
-                    finally:
-                        del self._log_processor
+                if hasattr(self, "_log_handler") and hasattr(self, "_log_processor"):
+                    cleanup_session_telemetry(self._log_handler, self._log_processor)
 
                 # 6. Final session update
                 if not (analytics_stats := self.get_analytics()):
