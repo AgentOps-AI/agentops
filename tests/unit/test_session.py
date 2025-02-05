@@ -18,6 +18,8 @@ from opentelemetry.trace.span import TraceState
 import agentops
 from agentops import ActionEvent, Client
 from agentops.http_client import HttpClient
+from agentops.instrumentation import cleanup_session_telemetry, setup_session_telemetry
+from agentops.session import SessionLogExporter
 from agentops.singleton import clear_singletons
 
 
@@ -630,10 +632,15 @@ class TestSessionLogExporter:
         agentops.init(api_key=self.api_key, max_wait_time=50, auto_start_session=False)
         self.session = agentops.start_session()
         assert self.session is not None
-        self.log_exporter = self.session._log_exporter
+
+        # Set up logging components through instrumentation
+        self.log_exporter = SessionLogExporter(session=self.session)
+        self.log_handler, self.log_processor = setup_session_telemetry(str(self.session.session_id), self.log_exporter)
 
     def teardown_method(self):
         """Clean up after each test"""
+        if hasattr(self, "log_handler") and hasattr(self, "log_processor"):
+            cleanup_session_telemetry(self.log_handler, self.log_processor)
         if self.session:
             self.session.end_session("Success")
         agentops.end_all_sessions()
@@ -650,7 +657,7 @@ class TestSessionLogExporter:
             severity_text="INFO",
             severity_number=9,
             body="Test log message",
-            resource=self.session._logger_provider.resource,
+            resource=self.log_handler._logger_provider.resource,
             attributes={},
         )
 
@@ -679,7 +686,7 @@ class TestSessionLogExporter:
                 severity_text="INFO",
                 severity_number=9,
                 body=f"Test message {i}",
-                resource=self.session._logger_provider.resource,
+                resource=self.log_handler._logger_provider.resource,
                 attributes={},
             )
             for i in range(3)
@@ -712,7 +719,7 @@ class TestSessionLogExporter:
             severity_text="INFO",
             severity_number=9,
             body="Test log message",
-            resource=self.session._logger_provider.resource,
+            resource=self.log_handler._logger_provider.resource,
             attributes={},
         )
 
@@ -734,7 +741,7 @@ class TestSessionLogExporter:
             severity_text="INFO",
             severity_number=9,
             body="Test log message",
-            resource=self.session._logger_provider.resource,
+            resource=self.log_handler._logger_provider.resource,
             attributes={},
         )
 
@@ -774,10 +781,6 @@ class TestSessionLogging:
     def test_log_handler_installation(self, logger):
         """Test that a log handler is correctly installed when session starts"""
         # Check that the session has the required logging components
-        assert hasattr(self.session, "_logger_provider")
-        assert hasattr(self.session, "_log_handler")
-        assert hasattr(self.session, "_log_processor")
-
         # Verify the log handler is in the root logger's handlers
         assert any(isinstance(handler, LoggingHandler) for handler in logger.handlers)
 
