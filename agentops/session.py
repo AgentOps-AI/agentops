@@ -8,12 +8,13 @@ import threading
 from datetime import datetime, timezone
 from decimal import ROUND_HALF_UP, Decimal
 from enum import Enum
-from typing import Any, Dict, List, Optional, Sequence, Union, cast
+from typing import Any, Dict, Generator, List, Optional, Sequence, Union, cast
 from uuid import UUID, uuid4
 
 from opentelemetry import trace
 from opentelemetry.context import attach, detach, set_value
 from opentelemetry.sdk._logs import LoggerProvider, LoggingHandler, LogRecord
+from opentelemetry.sdk._logs._internal import LogData
 from opentelemetry.sdk._logs.export import BatchLogRecordProcessor, LogExporter, LogExportResult
 from opentelemetry.sdk.resources import SERVICE_NAME, Resource
 from opentelemetry.sdk.trace import ReadableSpan, TracerProvider
@@ -25,8 +26,8 @@ from .event import ErrorEvent, Event, EventType
 from .exceptions import ApiServerException
 from .helpers import filter_unjsonable, get_ISO_time, safe_serialize
 from .http_client import HttpClient, Response
+from .instrumentation import cleanup_session_telemetry, setup_session_telemetry
 from .log_config import logger
-from .instrumentation import setup_session_telemetry, cleanup_session_telemetry
 
 """
 OTEL Guidelines:
@@ -201,27 +202,37 @@ class SessionLogExporter(LogExporter):
         self.session = session
         self._shutdown = False
 
-    def export(self, batch: Sequence[LogRecord]) -> LogExportResult:
+    def export(self, batch: Sequence[LogData]) -> LogExportResult:
         """Export the log records to the AgentOps backend."""
         if self._shutdown:
             return LogExportResult.SUCCESS
 
-        try:
-            # Format logs for API
+        # try:
+        if not batch:
+            return LogExportResult.SUCCESS
 
-            # Send logs to API
-            res = HttpClient.put(
-                f"{self.session.config.endpoint}/v3/logs/{self.session.session_id}",
-                safe_serialize(batch).encode("utf-8"),
-                api_key=self.session.config.api_key,
-                jwt=self.session.jwt,
-            )
+        def __serialize(_entry: Union[LogRecord, LogData]) -> Dict[str, Any]:
+            # Why double encoding? [This is a quick workaround]
+            # Turns out safe_serialize() is not yet good enough to handle a variety of objects
+            # For instance: 'attributes': '<<non-serializable: BoundedAttributes>>'
+            if isinstance(_entry, LogRecord):
+                return json.loads(_entry.to_json())
+            elif isinstance(_entry, LogData):
+                return json.loads(_entry.log_record.to_json())
 
-            return LogExportResult.SUCCESS if res.code == 200 else LogExportResult.FAILURE
+        # Send logs to API as a single JSON array
+        res = HttpClient.put(
+            f"{self.session.config.endpoint}/v3/logs/{self.session.session_id}",
+            (json.dumps([__serialize(it) for it in batch])).encode("utf-8"),
+            api_key=self.session.config.api_key,
+            jwt=self.session.jwt,
+        )
 
-        except Exception as e:
-            logger.exception("Failed to export logs", exc_info=e)
-            return LogExportResult.FAILURE
+        return LogExportResult.SUCCESS if res.code == 200 else LogExportResult.FAILURE
+
+        # except Exception as e:
+        #     logger.exception("Failed to export logs", exc_info=e)
+        #     return LogExportResult.FAILURE
 
     def force_flush(self, timeout_millis: Optional[int] = None) -> bool:
         """
@@ -326,10 +337,7 @@ class Session:
 
         # Initialize logging components
         self._log_exporter = SessionLogExporter(session=self)
-        self._log_handler, self._log_processor = setup_session_telemetry(
-            str(session_id),
-            self._log_exporter
-        )
+        self._log_handler, self._log_processor = setup_session_telemetry(str(session_id), self._log_exporter)
         logger.addHandler(self._log_handler)
 
     def set_video(self, video: str) -> None:
