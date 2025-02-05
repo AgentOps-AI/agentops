@@ -86,7 +86,7 @@ def setup_session_telemetry(session_id: str, log_exporter) -> tuple[LoggingHandl
     )
     
     # Register handler with session
-    set_session_handler(UUID(session_id), log_handler)
+    set_session_handler(session_id, log_handler)
     
     return log_handler, log_processor
 
