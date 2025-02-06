@@ -84,6 +84,7 @@ def mock_req(base_url, jwt):
         # Use explicit regex pattern for logs endpoint to match any URL and session ID
         logs_pattern = re.compile(r".*/v3/logs/[0-9a-f-]{8}-[0-9a-f-]{4}-[0-9a-f-]{4}-[0-9a-f-]{4}-[0-9a-f-]{12}")
         m.put(logs_pattern, json={"status": "success"})
+        m.get(logs_pattern, json={"status": "success"})
 
         yield m
 
