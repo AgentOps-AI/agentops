@@ -315,6 +315,7 @@ class TestMultiSessions:
         assert len(request_json["session"]["tags"]) == 0
 
     def test_add_tags(self, mock_req):
+        """Test adding tags to multiple sessions"""
         # Arrange
         session_1_tags = ["session-1"]
         session_2_tags = ["session-2"]
@@ -333,13 +334,19 @@ class TestMultiSessions:
         session_2.end_session(end_state)
         time.sleep(0.15)
 
-        # Assert 3 requests, 1 for session init, 1 for event, 1 for end session
-        req1 = mock_req.request_history[-1].json()
-        req2 = mock_req.request_history[-2].json()
+        # Find update session requests
+        update_requests = [r for r in mock_req.request_history if "/v2/update_session" in r.url]
+        assert len(update_requests) >= 2
 
-        session_1_req = req1 if req1["session"]["session_id"] == session_1.session_id else req2
-        session_2_req = req2 if req2["session"]["session_id"] == session_2.session_id else req1
+        # Get the last two update requests
+        req1 = update_requests[-1].json()
+        req2 = update_requests[-2].json()
 
+        # Match requests to sessions
+        session_1_req = req1 if req1["session"]["session_id"] == str(session_1.session_id) else req2
+        session_2_req = req2 if req2["session"]["session_id"] == str(session_2.session_id) else req1
+
+        # Assert
         assert session_1_req["session"]["end_state"] == end_state
         assert session_2_req["session"]["end_state"] == end_state
 
