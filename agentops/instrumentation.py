@@ -144,8 +144,10 @@ class SessionTracer:
         self.tracer_provider = TracerProvider(resource=resource)
         self.tracer = self.tracer_provider.get_tracer(f"agentops.session.{str(session_id)}")
 
+        from agentops.session.registry import get_session_by_id
+
         # Set up exporter
-        self.exporter = SessionExporter(session=self)
+        self.exporter = SessionExporter(session=get_session_by_id(session_id))
         self.span_processor = BatchSpanProcessor(
             self.exporter,
             max_queue_size=config.max_queue_size,
@@ -174,94 +176,6 @@ class SessionTracer:
                 logger.warning(f"Error during exporter cleanup: {e}")
 
 
-def setup_otel_listeners():
-    """Set up OpenTelemetry listeners for session events"""
-
-    @session_started.connect
-    def handle_session_start(sender):
-        """Initialize session tracer when session starts"""
-        tracer = SessionTracer(sender.session_id, sender.config)
-        sender._tracer = tracer
-        # The tracer provider is accessed through the tracer object
-        # No need to set it separately on the session
-
-        with sender._tracer.tracer.start_as_current_span(
-            name="session.start",
-            attributes={
-                "session.id": str(sender.session_id),
-                "session.tags": ",".join(sender.tags) if sender.tags else "",
-                "session.init_timestamp": sender.init_timestamp,
-            },
-        ) as span:
-            span.set_attribute("session.start", True)
-
-    @session_ended.connect
-    def handle_session_end(sender, end_state: str, end_state_reason: Optional[str]):
-        """Clean up tracer when session ends"""
-        if not hasattr(sender, "_tracer"):
-            return
-
-        with sender._tracer.tracer.start_as_current_span(
-            name="session.end",
-            attributes={
-                "session.id": str(sender.session_id),
-                "session.end_state": end_state,
-                "session.end_state_reason": end_state_reason or "",
-                "session.end_timestamp": sender.end_timestamp or get_ISO_time(),
-            },
-        ) as span:
-            span.set_attribute("session.end", True)
-
-        sender._tracer.cleanup()
-
-    @event_recorded.connect
-    def handle_event_record(sender, event: Union[Event, ErrorEvent], flush_now: bool = False):
-        """Create span for recorded event"""
-        if not hasattr(sender, "_tracer"):
-            return
-
-        # Ensure event has required attributes
-        if not hasattr(event, "id"):
-            event.id = uuid4()
-        if not hasattr(event, "init_timestamp"):
-            event.init_timestamp = get_ISO_time()
-        if not hasattr(event, "end_timestamp") or event.end_timestamp is None:
-            event.end_timestamp = get_ISO_time()
-
-        # Create event span
-        event_data = {k: v for k, v in event.__dict__.items() if v is not None}
-
-        # Add type-specific fields
-        if isinstance(event, ErrorEvent):
-            event_data["error_type"] = getattr(event, "error_type", event.event_type)
-        elif isinstance(event.event_type, EventType):
-            if event.event_type == EventType.ACTION:
-                _normalize_action_event(event_data)
-            elif event.event_type == EventType.TOOL:
-                _normalize_tool_event(event_data)
-
-        event_type = event.event_type.value if isinstance(event.event_type, EventType) else str(event.event_type)
-
-        with sender._tracer.tracer.start_as_current_span(
-            name=event_type,
-            attributes={
-                "event.id": str(event.id),
-                "event.type": event_type,
-                "event.timestamp": event.init_timestamp,
-                "event.end_timestamp": event.end_timestamp,
-                "session.id": str(sender.session_id),
-                "session.tags": ",".join(sender.tags) if sender.tags else "",
-                "event.data": safe_serialize(event_data),
-            },
-        ):
-            if event_type in sender.event_counts:
-                sender.event_counts[event_type] += 1
-
-        # Handle manual flush if requested
-        if flush_now:
-            sender._tracer.span_processor.force_flush()
-
-
 def _normalize_action_event(event_data: dict) -> None:
     """Normalize action event fields"""
     if "action_type" not in event_data and "name" in event_data:
@@ -282,3 +196,91 @@ def _normalize_tool_event(event_data: dict) -> None:
     else:
         event_data.setdefault("name", "unknown_tool")
         event_data.setdefault("tool_name", "unknown_tool")
+
+
+@session_started.connect
+def handle_session_start(sender):
+    """Initialize session tracer when session starts"""
+    tracer = SessionTracer(sender.session_id, sender.config)
+    sender._tracer = tracer
+    # The tracer provider is accessed through the tracer object
+    # No need to set it separately on the session
+
+    with sender._tracer.tracer.start_as_current_span(
+        name="session.start",
+        attributes={
+            "session.id": str(sender.session_id),
+            "session.tags": ",".join(sender.tags) if sender.tags else "",
+            "session.init_timestamp": sender.init_timestamp,
+        },
+    ) as span:
+        span.set_attribute("session.start", True)
+
+
+@session_ended.connect
+def handle_session_end(sender, end_state: str, end_state_reason: Optional[str]):
+    """Clean up tracer when session ends"""
+    if not hasattr(sender, "_tracer"):
+        return
+
+    with sender._tracer.tracer.start_as_current_span(
+        name="session.end",
+        attributes={
+            "session.id": str(sender.session_id),
+            "session.end_state": end_state,
+            "session.end_state_reason": end_state_reason or "",
+            "session.end_timestamp": sender.end_timestamp or get_ISO_time(),
+        },
+    ) as span:
+        span.set_attribute("session.end", True)
+
+    sender._tracer.cleanup()
+
+
+@event_recorded.connect
+def handle_event_record(sender, event: Union[Event, ErrorEvent], flush_now: bool = False):
+    logger.debug(f"Event recorded: {event}")
+    """Create span for recorded event"""
+    if not hasattr(sender, "_tracer"):
+        return
+
+    # Ensure event has required attributes
+    if not hasattr(event, "id"):
+        event.id = uuid4()
+    if not hasattr(event, "init_timestamp"):
+        event.init_timestamp = get_ISO_time()
+    if not hasattr(event, "end_timestamp") or event.end_timestamp is None:
+        event.end_timestamp = get_ISO_time()
+
+    # Create event span
+    event_data = {k: v for k, v in event.__dict__.items() if v is not None}
+
+    # Add type-specific fields
+    if isinstance(event, ErrorEvent):
+        event_data["error_type"] = getattr(event, "error_type", event.event_type)
+    elif isinstance(event.event_type, EventType):
+        if event.event_type == EventType.ACTION:
+            _normalize_action_event(event_data)
+        elif event.event_type == EventType.TOOL:
+            _normalize_tool_event(event_data)
+
+    event_type = event.event_type.value if isinstance(event.event_type, EventType) else str(event.event_type)
+
+    with sender._tracer.tracer.start_as_current_span(
+        name=event_type,
+        attributes={
+            "event.id": str(event.id),
+            "event.type": event_type,
+            "event.timestamp": event.init_timestamp,
+            "event.end_timestamp": event.end_timestamp,
+            "session.id": str(sender.session_id),
+            "session.tags": ",".join(sender.tags) if sender.tags else "",
+            "event.data": safe_serialize(event_data),
+        },
+    ):
+        if event_type in sender.event_counts:
+            sender.event_counts[event_type] += 1
+
+    # Handle manual flush if requested
+    if flush_now:
+        sender._tracer.span_processor.force_flush()

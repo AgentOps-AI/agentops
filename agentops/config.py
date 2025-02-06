@@ -1,3 +1,5 @@
+import os
+import sys
 from typing import List, Optional
 from uuid import UUID
 
@@ -72,3 +74,6 @@ class Configuration:
 
         if env_data_opt_out is not None:
             self.env_data_opt_out = env_data_opt_out
+
+
+TESTING = "pytest" in sys.modules

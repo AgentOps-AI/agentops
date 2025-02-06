@@ -27,6 +27,7 @@ from agentops.event import ErrorEvent, Event
 from agentops.exceptions import ApiServerException
 from agentops.helpers import filter_unjsonable, get_ISO_time, safe_serialize
 from agentops.http_client import HttpClient, Response
+from agentops.instrumentation import cleanup_session_telemetry, setup_session_telemetry
 from agentops.log_config import logger
 from agentops.session.events import (
     event_recorded,
@@ -40,7 +41,6 @@ from agentops.session.events import (
 )
 
 from .exporters import SessionExporter, SessionLogExporter
-from .registry import add_session, remove_session
 
 
 class EndState(Enum):
@@ -112,7 +112,6 @@ class Session:
         self._end_session_lock = threading.Lock()
 
         # Initialize default values for manager-set attributes
-        self._tracer = None
         self._log_handler = None
         self._log_processor = None
         self._log_exporter = None
@@ -126,36 +125,37 @@ class Session:
 
     def _initialize(self) -> bool:
         """Initialize session components"""
-        try:
-            # Get JWT from API
-            if not self._get_jwt():
-                return False
-
-            # Initialize logging
-            if not self._setup_logging():
-                return False
-
-            # Signal session start - this will initialize tracing via listeners
-            session_started.send(self)
-
-            self.is_running = True
-
-            logger.info(colored(f"\x1b[34mSession Replay: {self.session_url}\x1b[0m", "blue"))
-            return True
-
-        except Exception as e:
-            logger.error(f"Failed to initialize session: {e}")
+        # try:
+        # Get JWT from API
+        if not self._get_jwt():
             return False
+
+        # Initialize logging
+        if not self._setup_logging():
+            return False
+
+        # Signal session start - this will initialize tracing via listeners
+        session_started.send(self)
+
+        self.is_running = True
+
+        logger.info(colored(f"\x1b[34mSession Replay: {self.session_url}\x1b[0m", "blue"))
+        return True
+
+        # except Exception as e:
+        #     breakpoint()
+        #     logger.error(f"Failed to initialize session: {e}")
+        #     return False
 
     def _get_jwt(self) -> bool:
         """Get JWT from API server"""
-        payload = {"session": self.session.__dict__}
+        payload = {"session": self.__dict__}
         try:
             res = HttpClient.post(
-                f"{self.session.config.endpoint}/v2/create_session",
+                f"{self.config.endpoint}/v2/create_session",
                 safe_serialize(payload).encode("utf-8"),
-                api_key=self.session.config.api_key,
-                parent_key=self.session.config.parent_key,
+                api_key=self.config.api_key,
+                parent_key=self.config.parent_key,
             )
             if not res:
                 logger.error("Failed to get response from API server")
@@ -165,7 +165,7 @@ class Session:
                 logger.error("No JWT in API response")
                 return False
 
-            self.session.jwt = jwt
+            self.jwt = jwt
             return True
 
         except Exception as e:
@@ -284,10 +284,6 @@ class Session:
 
     def _cleanup(self) -> None:
         """Clean up all session components"""
-        # Clean up tracing
-        if hasattr(self, "_tracer"):
-            self._tracer.cleanup()
-
         # Clean up logging
         if self._log_handler and self._log_processor:
             cleanup_session_telemetry(self._log_handler, self._log_processor)

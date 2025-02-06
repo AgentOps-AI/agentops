@@ -28,7 +28,6 @@ from .log_config import logger
 from .meta_client import MetaClient
 from .session import Session, active_sessions
 from .singleton import conditional_singleton
-from .instrumentation import setup_otel_listeners
 
 
 @conditional_singleton
@@ -48,9 +47,6 @@ class Client(metaclass=MetaClient):
             endpoint=os.environ.get("AGENTOPS_API_ENDPOINT"),
             env_data_opt_out=os.environ.get("AGENTOPS_ENV_DATA_OPT_OUT", "False").lower() == "true",
         )
-
-        # Initialize OpenTelemetry listeners
-        setup_otel_listeners()
 
     def configure(
         self,

@@ -12,6 +12,7 @@ from opentelemetry.sdk._logs.export import LogExporter, LogExportResult
 from opentelemetry.sdk.trace import ReadableSpan
 from opentelemetry.sdk.trace.export import SpanExporter, SpanExportResult
 
+from agentops.config import TESTING
 from agentops.http_client import HttpClient
 from agentops.log_config import logger
 
@@ -25,6 +26,7 @@ class SessionExporter(SpanExporter):
     """
 
     def __init__(self, session: Session, **kwargs):
+        breakpoint()
         self.session = session
         self._shutdown = threading.Event()
         self._export_lock = threading.Lock()
@@ -81,6 +83,7 @@ class SessionExporter(SpanExporter):
                     if event_id is None:
                         event_id = str(uuid4())
 
+                    breakpoint()
                     events.append(
                         {
                             "id": event_id,
@@ -104,12 +107,16 @@ class SessionExporter(SpanExporter):
                         return SpanExportResult.SUCCESS if res.code == 200 else SpanExportResult.FAILURE
                     except Exception as e:
                         logger.error(f"Failed to send events: {e}")
+                        if TESTING:
+                            raise e
                         return SpanExportResult.FAILURE
 
                 return SpanExportResult.SUCCESS
 
             except Exception as e:
                 logger.error(f"Failed to export spans: {e}")
+                if TESTING:
+                    raise e
                 return SpanExportResult.FAILURE
 
     def force_flush(self, timeout_millis: Optional[int] = None) -> bool:
@@ -146,32 +153,34 @@ class SessionLogExporter(LogExporter):
         if self._shutdown:
             return LogExportResult.SUCCESS
 
-        # try:
-        if not batch:
-            return LogExportResult.SUCCESS
+        try:
+            if not batch:
+                return LogExportResult.SUCCESS
 
-        def __serialize(_entry: Union[LogRecord, LogData]) -> Dict[str, Any]:
-            # Why double encoding? [This is a quick workaround]
-            # Turns out safe_serialize() is not yet good enough to handle a variety of objects
-            # For instance: 'attributes': '<<non-serializable: BoundedAttributes>>'
-            if isinstance(_entry, LogRecord):
-                return json.loads(_entry.to_json())
-            elif isinstance(_entry, LogData):
-                return json.loads(_entry.log_record.to_json())
+            def __serialize(_entry: Union[LogRecord, LogData]) -> Dict[str, Any]:
+                # Why double encoding? [This is a quick workaround]
+                # Turns out safe_serialize() is not yet good enough to handle a variety of objects
+                # For instance: 'attributes': '<<non-serializable: BoundedAttributes>>'
+                if isinstance(_entry, LogRecord):
+                    return json.loads(_entry.to_json())
+                elif isinstance(_entry, LogData):
+                    return json.loads(_entry.log_record.to_json())
 
-        # Send logs to API as a single JSON array
-        res = HttpClient.put(
-            f"{self.session.config.endpoint}/v3/logs/{self.session.session_id}",
-            (json.dumps([__serialize(it) for it in batch])).encode("utf-8"),
-            api_key=self.session.config.api_key,
-            jwt=self.session.jwt,
-        )
+            # Send logs to API as a single JSON array
+            res = HttpClient.put(
+                f"{self.session.config.endpoint}/v3/logs/{self.session.session_id}",
+                (json.dumps([__serialize(it) for it in batch])).encode("utf-8"),
+                api_key=self.session.config.api_key,
+                jwt=self.session.jwt,
+            )
 
-        return LogExportResult.SUCCESS if res.code == 200 else LogExportResult.FAILURE
+            return LogExportResult.SUCCESS if res.code == 200 else LogExportResult.FAILURE
 
-        # except Exception as e:
-        #     logger.exception("Failed to export logs", exc_info=e)
-        #     return LogExportResult.FAILURE
+        except Exception as e:
+            logger.error("Failed to export logs", exc_info=e)
+            if TESTING:
+                raise e
+            return LogExportResult.FAILURE
 
     def force_flush(self, timeout_millis: Optional[int] = None) -> bool:
         """
