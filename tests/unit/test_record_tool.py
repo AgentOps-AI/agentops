@@ -12,8 +12,8 @@ jwts = ["some_jwt", "some_jwt2", "some_jwt3"]
 
 
 class TestRecordTool:
-    def setup_method(self):
-        self.url = "https://api.agentops.ai"
+    def setup_method(self, base_url):
+        self.url = base_url
         self.api_key = "11111111-1111-4111-8111-111111111111"
         self.tool_name = "test_tool_name"
         agentops.init(self.api_key, max_wait_time=5, auto_start_session=False)
