@@ -82,7 +82,7 @@ def mock_req(base_url, jwt):
         m.post(base_url + "/v2/reauthorize_jwt", json=reauthorize_jwt_response)
         m.post(base_url + "/v2/create_agent", json={"status": "success"})
         # Use explicit regex pattern for logs endpoint to match any URL and session ID
-        logs_pattern = re.compile(r'.*/v3/logs/[0-9a-f-]{8}-[0-9a-f-]{4}-[0-9a-f-]{4}-[0-9a-f-]{4}-[0-9a-f-]{12}')
+        logs_pattern = re.compile(r".*/v3/logs/[0-9a-f-]{8}-[0-9a-f-]{4}-[0-9a-f-]{4}-[0-9a-f-]{4}-[0-9a-f-]{12}")
         m.put(logs_pattern, json={"status": "success"})
 
         yield m

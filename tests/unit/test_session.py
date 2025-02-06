@@ -714,7 +714,7 @@ class TestSessionLogExporter:
         lr_data = last_request.json()
         assert len(lr_data) == 3
         assert lr_data[0]["body"] == "Test message 0"
-        assert lr_data[1]["body"] == "Test message 1" 
+        assert lr_data[1]["body"] == "Test message 1"
         assert lr_data[2]["body"] == "Test message 2"
 
     def test_log_export_after_shutdown(self, mock_req):
@@ -763,7 +763,7 @@ class TestSessionLogExporter:
 
         # Verify the request includes session metadata
         last_request = mock_req.last_request.json()[0]
-        last_request['body'] == 'Test log message'
+        last_request["body"] == "Test log message"
 
 
 class TestSessionLogging:

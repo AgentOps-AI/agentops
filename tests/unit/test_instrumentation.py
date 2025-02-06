@@ -67,7 +67,7 @@ class TestSessionTelemetry:
         try:
             session_id = str(agentops_session.session_id)
             print(f"\nSession ID: {session_id}")
-            
+
             log_exporter = SessionLogExporter(session=agentops_session)
             log_handler, log_processor = setup_session_telemetry(session_id, log_exporter)
             logger.addHandler(log_handler)
@@ -89,12 +89,13 @@ class TestSessionTelemetry:
             print("\nRequest history:")
             for req in mock_req.request_history:
                 print(f"Method: {req.method}, URL: {req.url}")
-                if hasattr(req, 'text'):
+                if hasattr(req, "text"):
                     print(f"Body: {req.text}")
 
             # Verify the request was made to the logs endpoint
-            assert any(req.url.endswith(f"/v3/logs/{session_id}") for req in mock_req.request_history), \
-                f"No request found for /v3/logs/{session_id} in {[req.url for req in mock_req.request_history]}"
+            assert any(
+                req.url.endswith(f"/v3/logs/{session_id}") for req in mock_req.request_history
+            ), f"No request found for /v3/logs/{session_id} in {[req.url for req in mock_req.request_history]}"
 
         finally:
             # Clean up
@@ -128,11 +129,11 @@ class TestSessionTelemetry:
         # Set up two sessions
         session_id_1 = str(uuid4())
         session_id_2 = str(uuid4())
-        
+
         log_exporter = SessionLogExporter(session=agentops_session)
         handler1, processor1 = setup_session_telemetry(session_id_1, log_exporter)
         handler2, processor2 = setup_session_telemetry(session_id_2, log_exporter)
-        
+
         logger.addHandler(handler1)
         logger.addHandler(handler2)
 
@@ -148,4 +149,4 @@ class TestSessionTelemetry:
         assert handler2 in logger.handlers
 
         # Clean up the other session
-        cleanup_session_telemetry(handler2, processor2) 
+        cleanup_session_telemetry(handler2, processor2)

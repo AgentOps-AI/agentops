@@ -127,11 +127,8 @@ class HttpClient:
         try:
             headers = cls._prepare_headers(api_key, parent_key, jwt, header)
             session = cls.get_session()
-            
-            kwargs = {
-                "headers": headers,
-                "timeout": 20
-            }
+
+            kwargs = {"headers": headers, "timeout": 20}
             if payload is not None:
                 kwargs["data"] = payload
 
@@ -191,7 +188,9 @@ class HttpClient:
         header: Optional[Dict[str, str]] = None,
     ) -> Response:
         """Make HTTP POST request"""
-        return cls._make_request("POST", url, api_key=api_key, parent_key=parent_key, jwt=jwt, header=header, payload=payload)
+        return cls._make_request(
+            "POST", url, api_key=api_key, parent_key=parent_key, jwt=jwt, header=header, payload=payload
+        )
 
     @classmethod
     def put(

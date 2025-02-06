@@ -22,6 +22,7 @@ def session_id():
 @pytest.fixture
 def mock_session(session_id, logger_provider):
     """Create a mock session with logging components"""
+
     class MockSession:
         def __init__(self, session_id, logger_provider):
             self.session_id = session_id
