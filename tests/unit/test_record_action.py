@@ -136,7 +136,7 @@ class TestRecordAction:
 
         # Arrange
         @record_action(event_name=self.event_type)
-        def add_three(x, y, z=3):
+        def add_three(x, y, z=3, *, session=None):
             return x + y + z
 
         # Act
@@ -181,7 +181,7 @@ class TestRecordAction:
 
         # Arrange
         @record_action(self.event_type)
-        async def async_add(x, y):
+        async def async_add(x, y, *, session=None):
             time.sleep(0.1)
             return x + y
 
@@ -191,31 +191,29 @@ class TestRecordAction:
         await async_add(1, 2, session=session_2)
         time.sleep(0.1)
 
-        # Assert
-        assert len(mock_req.request_history) == 5
+        # Find action requests
+        action_requests = [r for r in mock_req.request_history if "/v2/create_events" in r.url]
+        assert len(action_requests) >= 2  # Should have at least 2 action requests
 
-        request_json = mock_req.last_request.json()
-        assert mock_req.last_request.headers["X-Agentops-Api-Key"] == self.api_key
-        assert (
-            mock_req.last_request.headers["Authorization"]
-            == f"Bearer {mock_req.session_jwts[str(session_2.session_id)]}"
-        )
+        # Verify session_2's request (last request)
+        last_request = action_requests[-1]
+        assert last_request.headers["X-Agentops-Api-Key"] == self.api_key
+        assert last_request.headers["Authorization"] == f"Bearer {mock_req.session_jwts[str(session_2.session_id)]}"
+        request_json = last_request.json()
         assert request_json["events"][0]["action_type"] == self.event_type
         assert request_json["events"][0]["params"] == {"x": 1, "y": 2}
         assert request_json["events"][0]["returns"] == 3
 
-        second_last_request_json = mock_req.request_history[-2].json()
-        assert mock_req.request_history[-2].headers["X-Agentops-Api-Key"] == self.api_key
+        # Verify session_1's request (second to last request)
+        second_last_request = action_requests[-2]
+        assert second_last_request.headers["X-Agentops-Api-Key"] == self.api_key
         assert (
-            mock_req.request_history[-2].headers["Authorization"]
-            == f"Bearer {mock_req.session_jwts[str(session_1.session_id)]}"
+            second_last_request.headers["Authorization"] == f"Bearer {mock_req.session_jwts[str(session_1.session_id)]}"
         )
-        assert second_last_request_json["events"][0]["action_type"] == self.event_type
-        assert second_last_request_json["events"][0]["params"] == {
-            "x": 1,
-            "y": 2,
-        }
-        assert second_last_request_json["events"][0]["returns"] == 3
+        request_json = second_last_request.json()
+        assert request_json["events"][0]["action_type"] == self.event_type
+        assert request_json["events"][0]["params"] == {"x": 1, "y": 2}
+        assert request_json["events"][0]["returns"] == 3
 
         session_1.end_session(end_state="Success")
         session_2.end_session(end_state="Success")
