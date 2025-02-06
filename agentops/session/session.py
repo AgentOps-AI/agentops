@@ -22,7 +22,7 @@ from blinker import Signal
 from opentelemetry.trace import Tracer
 from termcolor import colored
 
-from agentops.config import Configuration
+from agentops.config import TESTING, Configuration
 from agentops.event import ErrorEvent, Event
 from agentops.exceptions import ApiServerException
 from agentops.helpers import filter_unjsonable, get_ISO_time, safe_serialize
@@ -125,27 +125,28 @@ class Session:
 
     def _initialize(self) -> bool:
         """Initialize session components"""
-        # try:
-        # Get JWT from API
-        if not self._get_jwt():
+        try:
+            # Get JWT from API
+            if not self._get_jwt():
+                return False
+
+            # Initialize logging
+            if not self._setup_logging():
+                return False
+
+            # Signal session start - this will initialize tracing via listeners
+            session_started.send(self)
+
+            self.is_running = True
+
+            logger.info(colored(f"\x1b[34mSession Replay: {self.session_url}\x1b[0m", "blue"))
+            return True
+
+        except Exception as e:
+            if TESTING:
+                raise e
+            logger.error(f"Failed to initialize session: {e}")
             return False
-
-        # Initialize logging
-        if not self._setup_logging():
-            return False
-
-        # Signal session start - this will initialize tracing via listeners
-        session_started.send(self)
-
-        self.is_running = True
-
-        logger.info(colored(f"\x1b[34mSession Replay: {self.session_url}\x1b[0m", "blue"))
-        return True
-
-        # except Exception as e:
-        #     breakpoint()
-        #     logger.error(f"Failed to initialize session: {e}")
-        #     return False
 
     def _get_jwt(self) -> bool:
         """Get JWT from API server"""
@@ -257,9 +258,6 @@ class Session:
                 # Clean up trace components
                 self._cleanup()
 
-                # Signal session has ended
-                session_ended.send(self, end_state=end_state, end_state_reason=end_state_reason)
-
                 # Log final analytics
                 if analytics_stats := self.get_analytics():
                     logger.info(
@@ -278,11 +276,10 @@ class Session:
                 logger.exception(f"Error during session end: {e}")
             finally:
                 self.is_running = False
-                remove_session(self)
+                session_ended.send(self, end_state=end_state, end_state_reason=end_state_reason)
 
             return None
 
-    def _cleanup(self) -> None:
         """Clean up all session components"""
         # Clean up logging
         if self._log_handler and self._log_processor:
@@ -498,3 +495,11 @@ class Session:
         Kept for backward compatibility.
         """
         return self.end(*args, **kwargs)
+
+    def __repr__(self) -> str:
+        """Return a string representation of the Session."""
+        status = "Running" if self.is_running else "Ended"
+        tag_str = f", tags={self.tags}" if self.tags else ""
+        end_state_str = f", end_state={self.end_state}" if not self.is_running else ""
+
+        return f"Session(id={self.session_id}, status={status}" f"{tag_str}{end_state_str})"

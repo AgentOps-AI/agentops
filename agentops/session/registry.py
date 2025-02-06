@@ -2,7 +2,7 @@
 
 from typing import TYPE_CHECKING, List
 
-from agentops.session.events import session_ended, session_started
+from .events import session_ended, session_started
 
 if TYPE_CHECKING:
     from .session import Session
@@ -38,6 +38,7 @@ def get_session_by_id(session_id: str) -> "Session":
 
 @session_started.connect
 def on_session_started(sender):
+    breakpoint()
     """Initialize session tracer when session starts"""
     _active_sessions.append(sender)
 
@@ -45,4 +46,5 @@ def on_session_started(sender):
 @session_ended.connect
 def on_session_ended(sender):
     """Remove session from active sessions list when session ends"""
+    breakpoint()
     _active_sessions.remove(sender)

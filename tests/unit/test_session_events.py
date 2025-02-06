@@ -16,6 +16,7 @@ from agentops.session.events import (
 )
 from agentops.event import Event
 from agentops.singleton import clear_singletons
+from agentops.session.registry import get_active_sessions
 
 @pytest.fixture(autouse=True)
 def setup_teardown():
@@ -55,8 +56,8 @@ def test_session_lifecycle_signals(mock_req):
         received_signals.append(('starting', session_id))
     
     @session_started.connect
-    def on_session_started(sender, session_id, **kwargs):
-        received_signals.append(('started', session_id))
+    def on_session_started(sender, **kwargs):
+        received_signals.append(('started', sender.session_id))
     
     @session_ending.connect
     def on_session_ending(sender, end_state, end_state_reason, **kwargs):
@@ -168,4 +169,68 @@ def test_signals_not_emitted_after_session_end(mock_req):
     
     # Verify no signals were received after end
     assert all(signal[0] != 'event_recorded' for signal in received_signals)
-    assert all(signal[0] != 'updated' for signal in received_signals) 
+    assert all(signal[0] != 'updated' for signal in received_signals)
+
+def test_session_registration(mock_req):
+    """Test that sessions are properly registered when started"""
+    # Create and start session
+    session_id = uuid4()
+    config = Configuration()
+    config.api_key = "test-key"
+    session = Session(session_id=session_id, config=config)
+    
+    # Verify session is not in active sessions before start
+    active_sessions = get_active_sessions()
+    assert len(active_sessions) == 0
+    
+    # Start session
+    session._start_session()
+    
+    # Verify session is in active sessions
+    active_sessions = get_active_sessions()
+    assert len(active_sessions) == 1
+    assert active_sessions[0].session_id == session.session_id
+    
+    # End session and verify it's removed
+    session.end(end_state="Success")
+    active_sessions = get_active_sessions()
+    assert len(active_sessions) == 0
+
+def test_multiple_session_registration(mock_req):
+    """Test that multiple sessions can be registered"""
+    # Create and start multiple sessions
+    config = Configuration()
+    config.api_key = "test-key"
+    
+    session1 = Session(session_id=uuid4(), config=config)
+    
+    # Verify no sessions registered yet
+    active_sessions = get_active_sessions()
+    assert len(active_sessions) == 0
+    
+    session1._start_session()
+    
+    # Verify first session registered
+    active_sessions = get_active_sessions()
+    assert len(active_sessions) == 1
+    assert active_sessions[0].session_id == session1.session_id
+    
+    session2 = Session(session_id=uuid4(), config=config)
+    session2._start_session()
+    
+    # Verify both sessions are registered
+    active_sessions = get_active_sessions()
+    assert len(active_sessions) == 2
+    session_ids = {s.session_id for s in active_sessions}
+    assert session1.session_id in session_ids
+    assert session2.session_id in session_ids
+    
+    # End sessions and verify they're removed
+    session1.end(end_state="Success")
+    active_sessions = get_active_sessions()
+    assert len(active_sessions) == 1
+    assert active_sessions[0].session_id == session2.session_id
+    
+    session2.end(end_state="Success")
+    active_sessions = get_active_sessions()
+    assert len(active_sessions) == 0 
