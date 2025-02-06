@@ -16,14 +16,16 @@ from agentops.session.events import (
 )
 from agentops.event import Event
 from agentops.singleton import clear_singletons
-from agentops.session.registry import get_active_sessions
+from agentops.session.registry import get_active_sessions, clear_registry
 
 @pytest.fixture(autouse=True)
 def setup_teardown():
     """Setup and teardown for each test"""
     clear_singletons()
+    clear_registry()  # Clear registry before each test
     yield
     clear_singletons()
+    clear_registry()  # Clear registry after each test
 
 @pytest.fixture(autouse=True)
 def cleanup_signals():

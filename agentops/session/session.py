@@ -3,6 +3,7 @@ from __future__ import annotations
 import functools
 import json
 import threading
+from dataclasses import dataclass, field
 from datetime import datetime
 from decimal import ROUND_HALF_UP, Decimal
 from enum import Enum
@@ -39,6 +40,7 @@ from agentops.session.events import (
     session_starting,
     session_updated,
 )
+from agentops.session.registry import add_session, remove_session
 
 from .exporters import SessionExporter, SessionLogExporter
 
@@ -60,68 +62,46 @@ class EndState(Enum):
     INDETERMINATE = "Indeterminate"  # Default
 
 
+@dataclass
 class Session:
-    """
-    Represents a trace of events in an application run.
+    """Data container for session state with minimal public API"""
 
-    A Session is fundamentally an OpenTelemetry trace that can produce various types of spans:
-    - Event spans (actions, tools, LLM calls, etc)
-    - Log spans
-    - Session lifecycle spans (start, update, end)
+    session_id: UUID
+    config: Configuration
+    tags: List[str] = field(default_factory=list)
+    host_env: Optional[dict] = None
+    token_cost: Decimal = field(default_factory=lambda: Decimal(0))
+    end_state: str = field(default_factory=lambda: EndState.INDETERMINATE.value)
+    end_state_reason: Optional[str] = None
+    end_timestamp: Optional[str] = None
+    jwt: Optional[str] = None
+    video: Optional[str] = None
+    event_counts: Dict[str, int] = field(
+        default_factory=lambda: {"llms": 0, "tools": 0, "actions": 0, "errors": 0, "apis": 0}
+    )
+    init_timestamp: str = field(default_factory=get_ISO_time)
+    is_running: bool = field(default=True)
 
-    Args:
-        session_id (UUID): Unique identifier for this trace
-        config (Configuration): Configuration for telemetry and API endpoints
-        tags (List[str], optional): Tags for filtering/grouping traces
-        host_env (dict, optional): Host environment data to attach to the trace
-    """
-
-    _tracer: Tracer  # Privately set by the SessionTracer
-
-    def __init__(
-        self,
-        session_id: UUID,
-        config: Configuration,
-        tags: Optional[List[str]] = None,
-        host_env: Optional[dict] = None,
-    ):
-        # Signal session initialization starting
-        session_initializing.send(self, session_id=session_id)
-
-        # Core trace attributes
-        self.session_id = session_id
-        self.init_timestamp = get_ISO_time()
-        self.end_timestamp = None
-        self.end_state: Optional[str] = EndState.INDETERMINATE.value
-        self.end_state_reason: Optional[str] = None
-        self.tags: List[str] = tags or []
-        self.host_env = host_env
-        self.video: Optional[str] = None
-
-        # Configuration and state
-        self.config = config
-        self.is_running = False
-        self.jwt = None
-        self.token_cost: Decimal = Decimal(0)
-
-        # Span counters
-        self.event_counts = {"llms": 0, "tools": 0, "actions": 0, "errors": 0, "apis": 0}
-
-        # Thread safety
+    def __post_init__(self):
+        """Initialize session components after dataclass initialization"""
         self._lock = threading.Lock()
         self._end_session_lock = threading.Lock()
-
-        # Initialize default values for manager-set attributes
         self._log_handler = None
         self._log_processor = None
         self._log_exporter = None
 
         # Initialize session
-        if not self._initialize():
-            return
+        session_initializing.send(self, session_id=self.session_id)
 
-        # Signal session initialization completed
-        session_initialized.send(self, session_id=self.session_id)
+        try:
+            init_success = self._initialize()
+        except Exception:
+            init_success = False
+
+        if init_success:
+            session_initialized.send(self, session_id=self.session_id)
+        else:
+            self.is_running = False
 
     def _initialize(self) -> bool:
         """Initialize session components"""
@@ -134,8 +114,13 @@ class Session:
             if not self._setup_logging():
                 return False
 
+            breakpoint()
+
+            # Initialize tracer before sending session_started
+            self._tracer = None  # Will be set by SessionTracer during session_started
+
             # Signal session start - this will initialize tracing via listeners
-            session_started.send(self)
+            session_initialized.send(self)
 
             self.is_running = True
 

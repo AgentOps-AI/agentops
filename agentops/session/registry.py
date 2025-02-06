@@ -1,13 +1,15 @@
 """Registry for tracking active sessions"""
 
+import logging
 from typing import TYPE_CHECKING, List
 
-from .events import session_ended, session_started
+from .events import session_ended, session_initialized, session_started
 
 if TYPE_CHECKING:
     from .session import Session
 
 _active_sessions = []  # type: List["Session"]
+logger = logging.getLogger(__name__)
 
 
 def add_session(session: "Session") -> None:
@@ -20,6 +22,14 @@ def remove_session(session: "Session") -> None:
     """Remove session from active sessions list"""
     if session in _active_sessions:
         _active_sessions.remove(session)
+        logger.debug(f"Removed session {session.session_id} from registry")
+    else:
+        logger.debug(f"Session {session.session_id} not found in registry when trying to remove")
+
+
+def clear_registry() -> None:
+    """Clear all sessions from registry - primarily for testing"""
+    _active_sessions.clear()
 
 
 def get_active_sessions() -> List["Session"]:
@@ -28,23 +38,22 @@ def get_active_sessions() -> List["Session"]:
 
 
 def get_session_by_id(session_id: str) -> "Session":
-    session_id = str(session_id)
     """Get session by ID"""
+    session_id = str(session_id)
     for session in _active_sessions:
-        if session.session_id == session_id:
+        if str(session.session_id) == session_id:
             return session
     raise ValueError(f"Session with ID {session_id} not found")
 
 
-@session_started.connect
-def on_session_started(sender):
-    breakpoint()
-    """Initialize session tracer when session starts"""
-    _active_sessions.append(sender)
+@session_initialized.connect
+def on_session_initialized(sender, **kwargs):
+    """Add session to registry when initialized"""
+    add_session(sender)
 
 
 @session_ended.connect
-def on_session_ended(sender):
+def on_session_ended(sender, **kwargs):
     """Remove session from active sessions list when session ends"""
-    breakpoint()
-    _active_sessions.remove(sender)
+    logger.debug(f"Session ended signal received for {sender.session_id}")
+    remove_session(sender)

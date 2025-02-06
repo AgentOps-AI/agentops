@@ -26,7 +26,6 @@ class SessionExporter(SpanExporter):
     """
 
     def __init__(self, session: Session, **kwargs):
-        breakpoint()
         self.session = session
         self._shutdown = threading.Event()
         self._export_lock = threading.Lock()
@@ -83,7 +82,6 @@ class SessionExporter(SpanExporter):
                     if event_id is None:
                         event_id = str(uuid4())
 
-                    breakpoint()
                     events.append(
                         {
                             "id": event_id,
