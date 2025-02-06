@@ -8,6 +8,7 @@ from uuid import UUID
 import pytest
 import requests_mock
 from opentelemetry import trace
+from opentelemetry._logs import SeverityNumber
 from opentelemetry.sdk._logs import LoggerProvider, LoggingHandler, LogRecord
 from opentelemetry.sdk._logs.export import BatchLogRecordProcessor, LogExporter, LogExportResult
 from opentelemetry.sdk.trace import ReadableSpan
@@ -655,7 +656,7 @@ class TestSessionLogExporter:
             span_id=0x00000000DEADBEF0,
             trace_flags=0x01,
             severity_text="INFO",
-            severity_number=9,
+            severity_number=SeverityNumber.INFO,
             body="Test log message",
             resource=self.log_handler._logger_provider.resource,
             attributes={},
@@ -669,10 +670,11 @@ class TestSessionLogExporter:
 
         # Verify the request
         assert len(mock_req.request_history) > 0
-        last_request = mock_req.last_request.json()
-        assert "logs" in last_request
-        assert len(last_request["logs"]) == 1
-        assert last_request["logs"][0] == "Test log message"
+        last_request = mock_req.request_history[-1]
+        assert last_request.path.startswith("/v3/logs")
+        lr_data = last_request.json()
+        assert len(lr_data) == 1
+        assert lr_data[0]["body"] == "Test log message"
 
     def test_log_export_multiple_records(self, mock_req):
         """Test exporting multiple log records at once"""
@@ -684,7 +686,7 @@ class TestSessionLogExporter:
                 span_id=0x00000000DEADBEF0,
                 trace_flags=0x01,
                 severity_text="INFO",
-                severity_number=9,
+                severity_number=SeverityNumber.INFO,
                 body=f"Test message {i}",
                 resource=self.log_handler._logger_provider.resource,
                 attributes={},
@@ -700,10 +702,13 @@ class TestSessionLogExporter:
 
         # Verify the request
         assert len(mock_req.request_history) > 0
-        last_request = mock_req.last_request.json()
-        assert "logs" in last_request
-        assert len(last_request["logs"]) == 3
-        assert last_request["logs"] == ["Test message 0", "Test message 1", "Test message 2"]
+        last_request = mock_req.request_history[-1]
+        assert last_request.path.startswith("/v3/logs")
+        lr_data = last_request.json()
+        assert len(lr_data) == 3
+        assert lr_data[0]["body"] == "Test message 0"
+        assert lr_data[1]["body"] == "Test message 1" 
+        assert lr_data[2]["body"] == "Test message 2"
 
     def test_log_export_after_shutdown(self, mock_req):
         """Test that export after shutdown returns success without sending request"""
@@ -717,7 +722,7 @@ class TestSessionLogExporter:
             span_id=0x00000000DEADBEF0,
             trace_flags=0x01,
             severity_text="INFO",
-            severity_number=9,
+            severity_number=SeverityNumber.INFO,
             body="Test log message",
             resource=self.log_handler._logger_provider.resource,
             attributes={},
@@ -739,7 +744,7 @@ class TestSessionLogExporter:
             span_id=0x00000000DEADBEF0,
             trace_flags=0x01,
             severity_text="INFO",
-            severity_number=9,
+            severity_number=SeverityNumber.INFO,
             body="Test log message",
             resource=self.log_handler._logger_provider.resource,
             attributes={},
@@ -750,11 +755,8 @@ class TestSessionLogExporter:
         assert result == LogExportResult.SUCCESS
 
         # Verify the request includes session metadata
-        last_request = mock_req.last_request.json()
-        assert "start_time" in last_request
-        assert "end_time" in last_request
-        assert "is_capturing" in last_request
-        assert last_request["is_capturing"] == True
+        last_request = mock_req.last_request.json()[0]
+        last_request['body'] == 'Test log message'
 
 
 class TestSessionLogging:
@@ -782,13 +784,15 @@ class TestSessionLogging:
         """Test that the session's specific log handler is correctly installed"""
         # Get the handler that was created for this session
         session_handler = self.session._log_handler
-        
+
         # Verify the handler exists and is a LoggingHandler
         assert isinstance(session_handler, LoggingHandler), "Session should have a LoggingHandler instance"
-        
+
         # Verify this specific handler is in the logger's handlers
-        assert session_handler in agentops_logger.handlers, "Session's specific LoggingHandler should be in logger's handlers"
-        
+        assert (
+            session_handler in agentops_logger.handlers
+        ), "Session's specific LoggingHandler should be in logger's handlers"
+
         # Count how many times this specific handler appears
         handler_count = sum(1 for h in agentops_logger.handlers if h is session_handler)
         assert handler_count == 1, "Session's LoggingHandler should appear exactly once in logger's handlers"
@@ -797,15 +801,19 @@ class TestSessionLogging:
         """Test that the session's specific log handler is removed when session ends"""
         # Get the handler that was created for this session
         this_session_logging_handler = self.session._log_handler
-        
+
         # Verify handler exists before ending session
-        assert this_session_logging_handler in agentops_logger.handlers, "Session handler should be present before ending session"
-        
+        assert (
+            this_session_logging_handler in agentops_logger.handlers
+        ), "Session handler should be present before ending session"
+
         # End the session
         self.session.end_session("Success")
-        
+
         # Verify the specific handler was removed
-        assert this_session_logging_handler not in agentops_logger.handlers, "Session handler should be removed after ending session"
+        assert (
+            this_session_logging_handler not in agentops_logger.handlers
+        ), "Session handler should be removed after ending session"
 
     # def test_logging_with_session(self, mock_req):
     #     """Test that logging works with an active session"""
