@@ -1,13 +1,12 @@
-
 import json
+
 import pytest
 from opentelemetry.trace import SpanKind
 
 from agentops.event import Event
 from agentops.session.encoders import EventToSpanEncoder, SpanDefinition
 
-
-pytestmark = [pytest.mark.skip]
+# pytestmark = [pytest.mark.skip]
 
 
 class TestEventToSpanEncoder:
@@ -17,15 +16,10 @@ class TestEventToSpanEncoder:
         """Test converting LLMEvent to spans"""
         span_defs = EventToSpanEncoder.encode(mock_llm_event)
 
-        # Verify we get exactly two spans for LLM events
-        assert len(span_defs) == 2, f"Expected 2 spans for LLM event, got {len(span_defs)}"
+        assert len(span_defs) == 1
+        completion_span = span_defs[0]
 
-        # Find the spans by name
-        completion_span = next((s for s in span_defs if s.name == "llm.completion"), None)
-        api_span = next((s for s in span_defs if s.name == "llm.api.call"), None)
-
-        assert completion_span is not None, "Missing llm.completion span"
-        assert api_span is not None, "Missing llm.api.call span"
+        assert completion_span.name == "llm.completion"
 
         # Verify completion span attributes
         assert completion_span.attributes["model"] == mock_llm_event.model
@@ -37,23 +31,14 @@ class TestEventToSpanEncoder:
         assert completion_span.attributes["event.start_time"] == mock_llm_event.init_timestamp
         assert completion_span.attributes["event.end_time"] == mock_llm_event.end_timestamp
 
-        # Verify API span attributes and relationships
-        assert api_span.parent_span_id == completion_span.name
-        assert api_span.kind == SpanKind.CLIENT
-        assert api_span.attributes["model"] == mock_llm_event.model
-        assert api_span.attributes["start_time"] == mock_llm_event.init_timestamp
-        assert api_span.attributes["end_time"] == mock_llm_event.end_timestamp
-
     def test_action_event_conversion(self, mock_action_event):
         """Test converting ActionEvent to spans"""
         span_defs = EventToSpanEncoder.encode(mock_action_event)
 
-        assert len(span_defs) == 2
-        action_span = next((s for s in span_defs if s.name == "agent.action"), None)
-        execution_span = next((s for s in span_defs if s.name == "action.execution"), None)
+        assert len(span_defs) == 1
+        action_span = span_defs[0]
 
-        assert action_span is not None
-        assert execution_span is not None
+        assert action_span.name == "agent.action"
 
         # Verify action span attributes
         assert action_span.attributes["action_type"] == "process_data"
@@ -62,32 +47,20 @@ class TestEventToSpanEncoder:
         assert action_span.attributes["logs"] == "Successfully processed all rows"
         assert action_span.attributes["event.start_time"] == mock_action_event.init_timestamp
 
-        # Verify execution span
-        assert execution_span.parent_span_id == action_span.name
-        assert execution_span.attributes["start_time"] == mock_action_event.init_timestamp
-        assert execution_span.attributes["end_time"] == mock_action_event.end_timestamp
-
     def test_tool_event_conversion(self, mock_tool_event):
         """Test converting ToolEvent to spans"""
         span_defs = EventToSpanEncoder.encode(mock_tool_event)
 
-        assert len(span_defs) == 2
-        tool_span = next((s for s in span_defs if s.name == "agent.tool"), None)
-        execution_span = next((s for s in span_defs if s.name == "tool.execution"), None)
+        assert len(span_defs) == 1
+        tool_span = span_defs[0]
 
-        assert tool_span is not None
-        assert execution_span is not None
+        assert tool_span.name == "agent.tool"
 
         # Verify tool span attributes
         assert tool_span.attributes["name"] == "searchWeb"
         assert json.loads(tool_span.attributes["params"]) == {"query": "python testing"}
         assert json.loads(tool_span.attributes["returns"]) == ["result1", "result2"]
         assert json.loads(tool_span.attributes["logs"]) == {"status": "success"}
-
-        # Verify execution span
-        assert execution_span.parent_span_id == tool_span.name
-        assert execution_span.attributes["start_time"] == mock_tool_event.init_timestamp
-        assert execution_span.attributes["end_time"] == mock_tool_event.end_timestamp
 
     def test_error_event_conversion(self, mock_error_event):
         """Test converting ErrorEvent to spans"""

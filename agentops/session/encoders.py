@@ -91,15 +91,7 @@ class EventToSpanEncoder:
                 "event.id": str(event.id),
             },
         )
-
-        api_span = SpanDefinition(
-            name="llm.api.call",
-            kind=SpanKind.CLIENT,
-            parent_span_id=completion_span.name,
-            attributes={"model": event.model, "start_time": event.init_timestamp, "end_time": event.end_timestamp},
-        )
-
-        return SpanDefinitions(completion_span, api_span)
+        return SpanDefinitions(completion_span)
 
     @classmethod
     def _encode_action_event(cls, event: ActionEvent) -> SpanDefinitions:
@@ -147,14 +139,7 @@ class EventToSpanEncoder:
                 "event.id": str(event.id),
             },
         )
-
-        execution_span = SpanDefinition(
-            name="tool.execution",
-            parent_span_id=tool_span.name,
-            attributes={"start_time": event.init_timestamp, "end_time": event.end_timestamp},
-        )
-
-        return SpanDefinitions(tool_span, execution_span)
+        return SpanDefinitions(tool_span)
 
     @classmethod
     def _encode_error_event(cls, event: ErrorEvent) -> SpanDefinitions:

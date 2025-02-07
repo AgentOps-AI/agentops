@@ -56,6 +56,10 @@ class SessionExporter(SpanExporter):
                     event_data = EventToSpanEncoder.decode_span_to_event_data(span)
                     logger.debug(f"Converted to event data: {event_data}")
                     
+                    # Remove session parameter if present in action events
+                    if event_data.get('event_type') == 'actions' and 'params' in event_data:
+                        event_data['params'].pop('session', None)
+                    
                     # Add session ID
                     event_data["session_id"] = str(self.session.session_id)
                     
