@@ -8,10 +8,10 @@ from agentops import record_action
 
 
 class TestRecordAction:
-    def setup_method(self, base_url):
-        self.url = base_url
-        self.api_key = "11111111-1111-4111-8111-111111111111"
-        self.event_type = "test_event_type"
+    @pytest.fixture(autouse=True)
+    def setup(self, api_key):
+        self.api_key = api_key
+        self.event_type = "test_event"
         agentops.init(self.api_key, max_wait_time=50, auto_start_session=False)
         from agentops.session.registry import clear_registry
         clear_registry()  # Clear any leftover sessions from previous tests
