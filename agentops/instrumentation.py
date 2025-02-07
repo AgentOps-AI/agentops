@@ -22,6 +22,7 @@ from agentops.http_client import HttpClient
 from agentops.log_config import logger
 from agentops.session.events import event_recorded, session_ended, session_started, session_updated
 from agentops.session.exporters import SessionExporter, SessionLogExporter
+from agentops.session.encoders import EventToSpanEncoder
 
 if TYPE_CHECKING:
     from agentops.client import Client
@@ -250,42 +251,20 @@ def on_event_record(sender, event: Union[Event, ErrorEvent], flush_now: bool = F
             
     assert getattr(sender, "_tracer", None) is not None, "Tracer not initialized"
 
-    # Ensure event has required attributes
-    if not hasattr(event, "id"):
-        event.id = uuid4()
-    if not hasattr(event, "init_timestamp"):
-        event.init_timestamp = get_ISO_time()
-    if not hasattr(event, "end_timestamp") or event.end_timestamp is None:
-        event.end_timestamp = get_ISO_time()
+    # Use encoder to create span definitions
+    span_definitions = EventToSpanEncoder.encode(event)
 
-    # Create event span
-    event_data = {k: v for k, v in event.__dict__.items() if v is not None}
-
-    # Add type-specific fields
-    if isinstance(event, ErrorEvent):
-        event_data["error_type"] = getattr(event, "error_type", event.event_type)
-    elif isinstance(event.event_type, EventType):
-        if event.event_type == EventType.ACTION:
-            _normalize_action_event(event_data)
-        elif event.event_type == EventType.TOOL:
-            _normalize_tool_event(event_data)
-
-    event_type = event.event_type.value if isinstance(event.event_type, EventType) else str(event.event_type)
-
-    with sender._tracer.tracer.start_as_current_span(
-        name=event_type,
-        attributes={
-            "event.id": str(event.id),
-            "event.type": event_type,
-            "event.timestamp": event.init_timestamp,
-            "event.end_timestamp": event.end_timestamp,
-            "session.id": str(sender.session_id),
-            "session.tags": ",".join(sender.tags) if sender.tags else "",
-            "event.data": safe_serialize(event_data),
-        },
-    ):
-        if event_type in sender.event_counts:
-            sender.event_counts[event_type] += 1
+    # Create spans from definitions
+    for span_def in span_definitions:
+        with sender._tracer.tracer.start_as_current_span(
+            name=span_def.name,
+            kind=span_def.kind,
+            attributes=span_def.attributes,
+        ) as span:
+            # Update event counts if applicable
+            event_type = span_def.attributes.get("event_type")
+            if event_type in sender.event_counts:
+                sender.event_counts[event_type] += 1
 
     # Handle manual flush if requested
     if flush_now:
