@@ -202,10 +202,12 @@ def _normalize_tool_event(event_data: dict) -> None:
 @session_started.connect
 def on_session_start(sender):
     """Initialize session tracer when session starts"""
+    # Initialize tracer when session starts - this is the proper time
     tracer = SessionTracer(sender.session_id, sender.config)
     sender._tracer = tracer
 
-    with sender._tracer.tracer.start_as_current_span(
+    # Record session start span
+    with tracer.tracer.start_as_current_span(
         name="session.start",
         attributes={
             "session.id": str(sender.session_id),
@@ -219,8 +221,7 @@ def on_session_start(sender):
 @session_ended.connect
 def on_session_end(sender, end_state: str, end_state_reason: Optional[str]):
     """Clean up tracer when session ends"""
-    assert getattr(sender, "_tracer", None) is not None, "Tracer not initialized"
-
+    # By this point tracer should exist since session was started
     with sender._tracer.tracer.start_as_current_span(
         name="session.end",
         attributes={
@@ -237,18 +238,15 @@ def on_session_end(sender, end_state: str, end_state_reason: Optional[str]):
 
 @event_recorded.connect
 def on_event_record(sender, event: Event, flush_now: bool = False):
-    logger.debug(f"Event recorded: {event}")
     """Create span for recorded event"""
+    logger.debug(f"Event recorded: {event}")
 
     # If sender is None, try to get default session
     if sender is None:
         from agentops.session.registry import get_default_session
-
         sender = get_default_session()
         if sender is None:
             raise ValueError("No active session found")
-
-    assert getattr(sender, "_tracer", None) is not None, "Tracer not initialized"
 
     # Use encoder to create span definitions
     span_definitions = EventToSpanEncoder.encode(event)

@@ -89,10 +89,9 @@ class Session:
         self._log_handler = None
         self._log_processor = None
         self._log_exporter = None
+        self._tracer = None  # Initialize tracer attribute
 
         # Initialize session
-        session_initializing.send(self, session_id=self.session_id)
-
         try:
             init_success = self._initialize()
         except Exception:
@@ -107,6 +106,12 @@ class Session:
     def _initialize(self) -> bool:
         """Initialize session components"""
         try:
+            # Signal session is initializing
+            session_initializing.send(self, session_id=self.session_id)
+
+            # Signal session is initialized (this adds to registry)
+            session_initialized.send(self, session_id=self.session_id)
+
             # Get JWT from API
             if not self._get_jwt():
                 return False
@@ -114,15 +119,6 @@ class Session:
             # Initialize logging
             if not self._setup_logging():
                 return False
-
-            # Signal session initialized (this adds to registry)
-            session_initialized.send(self)
-
-            # Signal session start - this will initialize tracing via listeners
-            session_starting.send(self)
-            session_started.send(self)
-
-            self.is_running = True
 
             logger.info(colored(f"\x1b[34mSession Replay: {self.session_url}\x1b[0m", "blue"))
             return True
@@ -265,11 +261,6 @@ class Session:
 
             return None
 
-        """Clean up all session components"""
-        # Clean up logging
-        if self._log_handler and self._log_processor:
-            cleanup_session_telemetry(self._log_handler, self._log_processor)
-
     def _send_event(self, event):
         """Direct event sending for testing"""
         try:
@@ -313,43 +304,18 @@ class Session:
                 return None
 
     def _start_session(self):
+        """Start the session after initialization"""
         with self._lock:
             # Signal session is starting
             session_starting.send(self, session_id=self.session_id)
 
-            payload = {"session": self.__dict__}
-            try:
-                serialized_payload = safe_serialize(payload).encode("utf-8")
-                res = HttpClient.post(
-                    f"{self.config.endpoint}/v2/create_session",
-                    serialized_payload,
-                    api_key=self.config.api_key,
-                    parent_key=self.config.parent_key,
-                )
-                if not res:
-                    return False
-                jwt = res.body.get("jwt")
-                self.jwt = jwt
-                if jwt is None:
-                    return False
+            # Set running state
+            self.is_running = True
 
-                # Set running state and emit started signal
-                self.is_running = True
-                session_started.send(self, session_id=self.session_id)
+            # Signal session has started - this will initialize tracing via listeners
+            session_started.send(self, session_id=self.session_id)
 
-                logger.info(
-                    colored(
-                        f"\x1b[34mSession Replay: {self.session_url}\x1b[0m",
-                        "blue",
-                    )
-                )
-
-                return True
-            except ApiServerException as e:
-                return logger.error(f"Could not start session - {e}")
-            except Exception as e:
-                logger.error(f"Failed to start session: {e}")
-                return False
+            return True
 
     def _update_session(self) -> None:
         """Update session state on the server"""

@@ -1,7 +1,8 @@
 """Registry for tracking active sessions"""
 
 import logging
-from typing import TYPE_CHECKING, List, Optional
+from typing import TYPE_CHECKING, List, Optional, Union
+from uuid import UUID
 
 from .events import session_ended, session_initialized, session_started
 
@@ -41,18 +42,18 @@ def get_active_sessions() -> List["Session"]:
     return _active_sessions
 
 
-def get_session_by_id(session_id: str) -> "Session":
+def get_session_by_id(session_id: Union[str, UUID]) -> "Session":
     """Get session by ID"""
-    session_id = str(session_id)
+    session_id_str = str(session_id)  # Convert UUID to string if needed
     for session in _active_sessions:
-        if str(session.session_id) == session_id:
+        if str(session.session_id) == session_id_str:
             return session
     raise ValueError(f"Session with ID {session_id} not found")
 
 
 def get_default_session() -> Optional["Session"]:
     """Get the default session to use when none is specified.
-    
+
     Returns the only active session if there is exactly one,
     otherwise returns None.
     """
