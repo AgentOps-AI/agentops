@@ -62,6 +62,36 @@ class EndState(Enum):
     INDETERMINATE = "Indeterminate"  # Default
 
 
+# Session state management via signals
+@session_initializing.connect
+def on_session_initializing(sender, session_id, **kwargs):
+    """Handle session initialization"""
+    sender.is_running = False
+
+@session_starting.connect
+def on_session_starting(sender, session_id, **kwargs):
+    """Handle session starting"""
+    pass
+
+@session_started.connect
+def on_session_started(sender, session_id, **kwargs):
+    """Handle session started"""
+    sender.is_running = True
+
+@session_ending.connect
+def on_session_ending(sender, end_state, end_state_reason, **kwargs):
+    """Handle session ending"""
+    sender.end_timestamp = get_ISO_time()
+    sender.end_state = end_state
+    sender.end_state_reason = end_state_reason
+
+@session_ended.connect
+def on_session_ended(sender, end_state, end_state_reason, **kwargs):
+    """Handle session ended"""
+    sender.is_running = False
+    remove_session(sender)
+
+
 @dataclass
 class Session:
     """Data container for session state with minimal public API"""
@@ -80,7 +110,7 @@ class Session:
         default_factory=lambda: {"llms": 0, "tools": 0, "actions": 0, "errors": 0, "apis": 0}
     )
     init_timestamp: str = field(default_factory=get_ISO_time)
-    is_running: bool = field(default=True)
+    is_running: bool = field(default=False)  # Now managed by signal handlers
 
     def __post_init__(self):
         """Initialize session components after dataclass initialization"""
@@ -89,7 +119,7 @@ class Session:
         self._log_handler = None
         self._log_processor = None
         self._log_exporter = None
-        self._tracer = None  # Initialize tracer attribute
+        self._tracer = None
 
         # Initialize session
         try:
@@ -101,16 +131,18 @@ class Session:
             self.is_running = False
 
     def _cleanup(self):
-        pass
+        """Clean up session resources"""
+        if self._log_handler and self._log_processor:
+            cleanup_session_telemetry(self._log_handler, self._log_processor)
+        self._log_handler = None
+        self._log_processor = None
+        self._log_exporter = None
 
     def _initialize(self) -> bool:
         """Initialize session components"""
         try:
             # Signal session is initializing
             session_initializing.send(self, session_id=self.session_id)
-
-            # Signal session is initialized (this adds to registry)
-            session_initialized.send(self, session_id=self.session_id)
 
             # Get JWT from API
             if not self._get_jwt():
@@ -119,6 +151,9 @@ class Session:
             # Initialize logging
             if not self._setup_logging():
                 return False
+
+            # Signal session is initialized
+            session_initialized.send(self, session_id=self.session_id)
 
             logger.info(colored(f"\x1b[34mSession Replay: {self.session_url}\x1b[0m", "blue"))
             return True
@@ -229,10 +264,6 @@ class Session:
                 # Signal session is ending
                 session_ending.send(self, end_state=end_state, end_state_reason=end_state_reason)
 
-                # Update trace state
-                self.end_timestamp = get_ISO_time()
-                self.end_state = end_state
-                self.end_state_reason = end_state_reason
                 if video is not None:
                     self.video = video
 
@@ -256,7 +287,7 @@ class Session:
             except Exception as e:
                 logger.exception(f"Error during session end: {e}")
             finally:
-                self.is_running = False
+                # Signal session has ended
                 session_ended.send(self, end_state=end_state, end_state_reason=end_state_reason)
 
             return None
@@ -304,13 +335,15 @@ class Session:
                 return None
 
     def _start_session(self):
-        """Start the session after initialization"""
+        """
+        Manually starts the session
+        This method should only be responsible to send signals (`session_starting` and `session_started`)
+
+        !! No additional logic goes here !!
+        """
         with self._lock:
             # Signal session is starting
             session_starting.send(self, session_id=self.session_id)
-
-            # Set running state
-            self.is_running = True
 
             # Signal session has started - this will initialize tracing via listeners
             session_started.send(self, session_id=self.session_id)
@@ -332,7 +365,6 @@ class Session:
                 HttpClient.post(
                     f"{self.config.endpoint}/v2/update_session",
                     json.dumps(filter_unjsonable(payload)).encode("utf-8"),
-                    # self.config.api_key,
                     jwt=self.jwt,
                 )
             except ApiServerException as e:
