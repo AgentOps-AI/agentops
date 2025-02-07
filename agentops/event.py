@@ -46,7 +46,7 @@ class Event:
     }
     """
 
-    event_type: EventType
+    event_type: Union[EventType, str]  # Allow both EventType enum and string
     params: Optional[dict] = None
     returns: Optional[Union[str, List[str]]] = None
     init_timestamp: str = field(default_factory=get_ISO_time)
@@ -54,6 +54,22 @@ class Event:
     agent_id: Optional[UUID] = field(default_factory=check_call_stack_for_agent_id)
     id: UUID = field(default_factory=uuid4)
     session_id: Optional[UUID] = None
+
+    def __post_init__(self):
+        # Convert string event_type to enum value if possible
+        if isinstance(self.event_type, str):
+            try:
+                self.event_type = EventType(self.event_type)
+            except ValueError:
+                # If not a standard event type, keep as string
+                pass
+
+    @property
+    def event_type_str(self) -> str:
+        """Get event type as string, whether it's an enum or string"""
+        if isinstance(self.event_type, EventType):
+            return self.event_type.value
+        return self.event_type
 
 
 @dataclass
@@ -66,11 +82,16 @@ class ActionEvent(Event):
     screenshot(str, optional): url to snapshot if agent interacts with UI
     """
 
-    event_type: str = EventType.ACTION.value
-    # TODO: Should not be optional, but non-default argument 'agent_id' follows default argument error
+    event_type: Union[EventType, str] = field(default=EventType.ACTION.value)
     action_type: Optional[str] = None
     logs: Optional[Union[str, Sequence[Any]]] = None
     screenshot: Optional[str] = None
+
+    def __post_init__(self):
+        super().__post_init__()  # Call parent's post init
+        # If action_type is not set but name is in params, use that
+        if self.action_type is None and self.params and "name" in self.params:
+            self.action_type = self.params["name"]
 
 
 @dataclass

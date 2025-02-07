@@ -204,8 +204,6 @@ def on_session_start(sender):
     """Initialize session tracer when session starts"""
     tracer = SessionTracer(sender.session_id, sender.config)
     sender._tracer = tracer
-    # The tracer provider is accessed through the tracer object
-    # No need to set it separately on the session
 
     with sender._tracer.tracer.start_as_current_span(
         name="session.start",
@@ -256,6 +254,10 @@ def on_event_record(sender, event: Union[Event, ErrorEvent], flush_now: bool = F
 
     # Create spans from definitions
     for span_def in span_definitions:
+        # Ensure event type is set in attributes
+        if "event_type" not in span_def.attributes and hasattr(event, "event_type"):
+            span_def.attributes["event_type"] = event.event_type
+            
         with sender._tracer.tracer.start_as_current_span(
             name=span_def.name,
             kind=span_def.kind,

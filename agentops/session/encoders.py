@@ -7,11 +7,16 @@ from __future__ import annotations
 import json
 from dataclasses import dataclass
 from typing import Any, Dict, List, Optional, Sequence
+from uuid import uuid4
 
 from opentelemetry.semconv.trace import SpanAttributes
 from opentelemetry.trace import SpanKind
+from opentelemetry.sdk.trace import ReadableSpan
+
+from agentops.log_config import logger
 
 from ..event import ActionEvent, ErrorEvent, Event, EventType, LLMEvent, ToolEvent
+from ..helpers import get_ISO_time
 
 
 @dataclass
@@ -82,7 +87,8 @@ class EventToSpanEncoder:
                 "event.start_time": event.init_timestamp,
                 "event.end_time": event.end_timestamp,
                 SpanAttributes.CODE_NAMESPACE: event.__class__.__name__,
-                "event_type": "llms",
+                "event_type": event.event_type_str,
+                "event.id": str(event.id),
             },
         )
 
@@ -97,26 +103,34 @@ class EventToSpanEncoder:
 
     @classmethod
     def _encode_action_event(cls, event: ActionEvent) -> SpanDefinitions:
+        # For ActionEvents, event_type should be used if action_type is not set
+        event_type = event.action_type or event.event_type_str
+        
+        # Build attributes dict, filtering out None values
+        attributes = {
+            "event_type": event_type,  # This will never be None
+            "event.id": str(event.id),
+            "event.start_time": event.init_timestamp,
+            SpanAttributes.CODE_NAMESPACE: event.__class__.__name__,
+            "action_type": event_type,  # Keep them in sync
+        }
+        
+        # Only add non-None optional values
+        if event.params is not None:
+            attributes["params"] = json.dumps(event.params)
+        if event.returns is not None:
+            attributes["returns"] = event.returns
+        if event.logs is not None:
+            attributes["logs"] = event.logs
+
+        logger.debug(f"Span attributes: {attributes}")
+        
         action_span = SpanDefinition(
             name="agent.action",
-            attributes={
-                "action_type": event.action_type,
-                "params": json.dumps(event.params),
-                "returns": event.returns,
-                "logs": event.logs,
-                "event.start_time": event.init_timestamp,
-                SpanAttributes.CODE_NAMESPACE: event.__class__.__name__,
-                "event_type": "actions",
-            },
+            attributes=attributes,
         )
 
-        execution_span = SpanDefinition(
-            name="action.execution",
-            parent_span_id=action_span.name,
-            attributes={"start_time": event.init_timestamp, "end_time": event.end_timestamp},
-        )
-
-        return SpanDefinitions(action_span, execution_span)
+        return SpanDefinitions(action_span)
 
     @classmethod
     def _encode_tool_event(cls, event: ToolEvent) -> SpanDefinitions:
@@ -124,11 +138,12 @@ class EventToSpanEncoder:
             name="agent.tool",
             attributes={
                 "name": event.name,
-                "params": json.dumps(event.params),
+                "params": json.dumps(event.params) if event.params is not None else None,
                 "returns": json.dumps(event.returns),
                 "logs": json.dumps(event.logs),
                 SpanAttributes.CODE_NAMESPACE: event.__class__.__name__,
-                "event_type": "tools",
+                "event_type": event.event_type_str,
+                "event.id": str(event.id),
             },
         )
 
@@ -158,11 +173,56 @@ class EventToSpanEncoder:
     @classmethod
     def _encode_generic_event(cls, event: Event) -> SpanDefinitions:
         """Handle unknown event types with basic attributes."""
+        attributes = {
+            SpanAttributes.CODE_NAMESPACE: event.__class__.__name__,
+            "event_type": event.event_type_str,  # Required
+            "event.id": str(event.id),           # Required
+        }
+
+        # Only add non-None values
+        if event.params is not None:
+            attributes["params"] = json.dumps(event.params)
+        if event.returns is not None:
+            attributes["returns"] = json.dumps(event.returns)
+
         span = SpanDefinition(
             name="event",
-            attributes={
-                SpanAttributes.CODE_NAMESPACE: event.__class__.__name__,
-                "event_type": getattr(event, "event_type", "unknown"),
-            },
+            attributes=attributes,
         )
         return SpanDefinitions(span)
+
+    @classmethod
+    def decode_span_to_event_data(cls, span: ReadableSpan) -> dict:
+        """Convert a span back into event data for export."""
+        logger.debug(f"Decoding span with attributes: {span.attributes}")
+        
+        event_data = {}
+        
+        # Copy attributes, properly filtering and transforming
+        for key, value in span.attributes.items():
+            # Skip internal attributes
+            if key.startswith("event.") or key == "code.namespace":
+                continue
+            # Skip session.* attributes if this isn't a session event
+            if key.startswith("session.") and not any(x in span.attributes for x in ["session.start", "session.end"]):
+                continue
+            # Add the value if it's not None
+            if value is not None:
+                # Parse JSON strings back into dicts for params
+                if key == "params" and isinstance(value, str):
+                    try:
+                        event_data[key] = json.loads(value)
+                    except json.JSONDecodeError:
+                        event_data[key] = value
+                else:
+                    event_data[key] = value
+
+        # Add required metadata with proper timestamp format
+        event_data.update({
+            "id": span.attributes.get("event.id", str(uuid4())),
+            "init_timestamp": span.attributes.get("event.start_time") or get_ISO_time(),
+            "end_timestamp": span.attributes.get("event.end_time"),
+        })
+        
+        logger.debug(f"Decoded event data: {event_data}")
+        return event_data

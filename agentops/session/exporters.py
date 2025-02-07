@@ -15,6 +15,7 @@ from opentelemetry.sdk.trace.export import SpanExporter, SpanExportResult
 from agentops.config import TESTING
 from agentops.http_client import HttpClient
 from agentops.log_config import logger
+from agentops.session.encoders import EventToSpanEncoder
 
 if TYPE_CHECKING:
     from agentops.session import Session
@@ -46,52 +47,27 @@ class SessionExporter(SpanExporter):
                     return SpanExportResult.SUCCESS
 
                 events = []
+                session_events = []  # Separate list for session events
+                
                 for span in spans:
-                    event_data = json.loads(span.attributes.get("event.data", "{}"))
-
-                    # Format event data based on event type
-                    if span.name == "actions":
-                        formatted_data = {
-                            "action_type": event_data.get("action_type", event_data.get("name", "unknown_action")),
-                            "params": event_data.get("params", {}),
-                            "returns": event_data.get("returns"),
-                        }
-                    elif span.name == "tools":
-                        formatted_data = {
-                            "name": event_data.get("name", event_data.get("tool_name", "unknown_tool")),
-                            "params": event_data.get("params", {}),
-                            "returns": event_data.get("returns"),
-                        }
+                    logger.debug(f"Exporting span: {span.attributes}")
+                    
+                    # Convert span back to event data using the encoder
+                    event_data = EventToSpanEncoder.decode_span_to_event_data(span)
+                    logger.debug(f"Converted to event data: {event_data}")
+                    
+                    # Add session ID
+                    event_data["session_id"] = str(self.session.session_id)
+                    
+                    # Separate session events from regular events
+                    if "session.start" in span.attributes or "session.end" in span.attributes:
+                        session_events.append(event_data)
                     else:
-                        formatted_data = event_data
+                        events.append(event_data)
 
-                    formatted_data = {**event_data, **formatted_data}
-                    # Get timestamps, providing defaults if missing
-                    current_time = datetime.now(timezone.utc).isoformat()
-                    init_timestamp = span.attributes.get("event.timestamp")
-                    end_timestamp = span.attributes.get("event.end_timestamp")
-
-                    # Handle missing timestamps
-                    if init_timestamp is None:
-                        init_timestamp = current_time
-                    if end_timestamp is None:
-                        end_timestamp = current_time
-
-                    # Get event ID, generate new one if missing
-                    event_id = span.attributes.get("event.id")
-                    if event_id is None:
-                        event_id = str(uuid4())
-
-                    events.append(
-                        {
-                            "id": event_id,
-                            "event_type": span.name,
-                            "init_timestamp": init_timestamp,
-                            "end_timestamp": end_timestamp,
-                            **formatted_data,
-                            "session_id": str(self.session.session_id),
-                        }
-                    )
+                # Regular events first, then session events
+                events.extend(session_events)
+                logger.debug(f"Final events to export: {events}")
 
                 # Only make HTTP request if we have events and not shutdown
                 if events:
