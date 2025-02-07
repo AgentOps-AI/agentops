@@ -13,6 +13,8 @@ class TestRecordAction:
         self.api_key = "11111111-1111-4111-8111-111111111111"
         self.event_type = "test_event_type"
         agentops.init(self.api_key, max_wait_time=50, auto_start_session=False)
+        from agentops.session.registry import clear_registry
+        clear_registry()  # Clear any leftover sessions from previous tests
 
     def test_record_action_decorator(self, mock_req):
         agentops.start_session()

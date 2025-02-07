@@ -201,7 +201,6 @@ def _normalize_tool_event(event_data: dict) -> None:
 @session_started.connect
 def on_session_start(sender):
     """Initialize session tracer when session starts"""
-    breakpoint()
     tracer = SessionTracer(sender.session_id, sender.config)
     sender._tracer = tracer
     # The tracer provider is accessed through the tracer object
@@ -241,6 +240,14 @@ def on_session_end(sender, end_state: str, end_state_reason: Optional[str]):
 def on_event_record(sender, event: Union[Event, ErrorEvent], flush_now: bool = False):
     logger.debug(f"Event recorded: {event}")
     """Create span for recorded event"""
+    
+    # If sender is None, try to get default session
+    if sender is None:
+        from agentops.session.registry import get_default_session
+        sender = get_default_session()
+        if sender is None:
+            raise ValueError("No active session found")
+            
     assert getattr(sender, "_tracer", None) is not None, "Tracer not initialized"
 
     # Ensure event has required attributes

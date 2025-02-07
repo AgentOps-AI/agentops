@@ -26,7 +26,7 @@ from .host_env import get_host_env
 from .llms.tracker import LlmTracker
 from .log_config import logger
 from .meta_client import MetaClient
-from .session import Session, active_sessions
+from .session import Session
 from .singleton import conditional_singleton
 
 
@@ -36,7 +36,6 @@ class Client(metaclass=MetaClient):
         self._pre_init_messages: List[str] = []
         self._initialized: bool = False
         self._llm_tracker: Optional[LlmTracker] = None
-        self._sessions: List[Session] = active_sessions
         self._config = Configuration()
         self._pre_init_queue = {"agents": []}
         self._host_env = None  # Cache host env data
@@ -238,7 +237,6 @@ class Client(metaclass=MetaClient):
                 session.create_agent(name=agent_args["name"], agent_id=agent_args["agent_id"])
             self._pre_init_queue["agents"] = []
 
-        self._sessions.append(session)
         return session
 
     def end_session(
@@ -419,7 +417,11 @@ class Client(metaclass=MetaClient):
 
     @property
     def is_multi_session(self) -> bool:
-        return len(self._sessions) > 1
+        """Returns True if multiple sessions are active"""
+        from agentops.session.registry import get_active_sessions
+        active_sessions = get_active_sessions()
+        logger.debug(f"Client.is_multi_session checking active sessions: {len(active_sessions)}")
+        return len(active_sessions) > 1
 
     @property
     def session_count(self) -> int:
@@ -441,3 +443,9 @@ class Client(metaclass=MetaClient):
     def host_env(self):
         """Cache and reuse host environment data"""
         return get_host_env(self._config.env_data_opt_out)
+
+    @property
+    def _sessions(self) -> List[Session]:
+        """Get sessions from registry"""
+        from agentops.session.registry import get_active_sessions
+        return get_active_sessions()

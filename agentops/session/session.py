@@ -98,10 +98,9 @@ class Session:
         except Exception:
             init_success = False
 
-        if init_success:
-            session_initialized.send(self, session_id=self.session_id)
-        else:
+        if not init_success:
             self.is_running = False
+
     def _cleanup(self):
         pass
 
@@ -116,11 +115,12 @@ class Session:
             if not self._setup_logging():
                 return False
 
-            # Initialize tracer before sending session_started
-            self._tracer = None  # Will be set by SessionTracer during session_started
+            # Signal session initialized (this adds to registry)
+            session_initialized.send(self)
 
             # Signal session start - this will initialize tracing via listeners
-            session_initialized.send(self)
+            session_starting.send(self)
+            session_started.send(self)
 
             self.is_running = True
 
