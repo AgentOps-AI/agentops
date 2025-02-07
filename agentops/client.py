@@ -111,7 +111,6 @@ class Client(metaclass=MetaClient):
     def _initialize_autogen_logger(self) -> None:
         try:
             import autogen
-
             from .partners.autogen_logger import AutogenLogger
 
             autogen.runtime_logging.start(logger=AutogenLogger())

@@ -20,9 +20,9 @@ from agentops.event import ErrorEvent, Event, EventType
 from agentops.helpers import get_ISO_time, safe_serialize
 from agentops.http_client import HttpClient
 from agentops.log_config import logger
+from agentops.session.encoders import EventToSpanEncoder
 from agentops.session.events import event_recorded, session_ended, session_started, session_updated
 from agentops.session.exporters import SessionExporter, SessionLogExporter
-from agentops.session.encoders import EventToSpanEncoder
 
 if TYPE_CHECKING:
     from agentops.client import Client
@@ -236,17 +236,18 @@ def on_session_end(sender, end_state: str, end_state_reason: Optional[str]):
 
 
 @event_recorded.connect
-def on_event_record(sender, event: Union[Event, ErrorEvent], flush_now: bool = False):
+def on_event_record(sender, event: Event, flush_now: bool = False):
     logger.debug(f"Event recorded: {event}")
     """Create span for recorded event"""
-    
+
     # If sender is None, try to get default session
     if sender is None:
         from agentops.session.registry import get_default_session
+
         sender = get_default_session()
         if sender is None:
             raise ValueError("No active session found")
-            
+
     assert getattr(sender, "_tracer", None) is not None, "Tracer not initialized"
 
     # Use encoder to create span definitions
@@ -257,7 +258,7 @@ def on_event_record(sender, event: Union[Event, ErrorEvent], flush_now: bool = F
         # Ensure event type is set in attributes
         if "event_type" not in span_def.attributes and hasattr(event, "event_type"):
             span_def.attributes["event_type"] = event.event_type
-            
+
         with sender._tracer.tracer.start_as_current_span(
             name=span_def.name,
             kind=span_def.kind,
