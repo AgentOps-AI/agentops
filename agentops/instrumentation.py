@@ -199,8 +199,9 @@ def _normalize_tool_event(event_data: dict) -> None:
 
 
 @session_started.connect
-def handle_session_start(sender):
+def on_session_start(sender):
     """Initialize session tracer when session starts"""
+    breakpoint()
     tracer = SessionTracer(sender.session_id, sender.config)
     sender._tracer = tracer
     # The tracer provider is accessed through the tracer object
@@ -218,10 +219,9 @@ def handle_session_start(sender):
 
 
 @session_ended.connect
-def handle_session_end(sender, end_state: str, end_state_reason: Optional[str]):
+def on_session_end(sender, end_state: str, end_state_reason: Optional[str]):
     """Clean up tracer when session ends"""
-    if not hasattr(sender, "_tracer"):
-        return
+    assert getattr(sender, "_tracer", None) is not None, "Tracer not initialized"
 
     with sender._tracer.tracer.start_as_current_span(
         name="session.end",
@@ -238,11 +238,10 @@ def handle_session_end(sender, end_state: str, end_state_reason: Optional[str]):
 
 
 @event_recorded.connect
-def handle_event_record(sender, event: Union[Event, ErrorEvent], flush_now: bool = False):
+def on_event_record(sender, event: Union[Event, ErrorEvent], flush_now: bool = False):
     logger.debug(f"Event recorded: {event}")
     """Create span for recorded event"""
-    if not hasattr(sender, "_tracer"):
-        return
+    assert getattr(sender, "_tracer", None) is not None, "Tracer not initialized"
 
     # Ensure event has required attributes
     if not hasattr(event, "id"):

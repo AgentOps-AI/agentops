@@ -21,6 +21,7 @@ from agentops import ActionEvent, Client
 from agentops.http_client import HttpClient
 from agentops.instrumentation import cleanup_session_telemetry, setup_session_telemetry
 from agentops.session import SessionLogExporter
+from agentops.session.session import Session
 from agentops.singleton import clear_singletons
 
 
@@ -409,6 +410,8 @@ class TestMultiSessions:
 
 
 class TestSessionExporter:
+    session: Session
+
     def setup_method(self):
         self.api_key = "11111111-1111-4111-8111-111111111111"
         # Initialize agentops first
@@ -457,7 +460,7 @@ class TestSessionExporter:
             attributes=base_attributes,
             events=[],
             links=[],
-            resource=self.session._tracer_provider.resource,
+            resource=self.session._tracer.tracer_provider.resource,
         )
 
     def test_export_basic_span(self, mock_req):

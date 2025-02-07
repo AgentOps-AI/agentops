@@ -102,6 +102,8 @@ class Session:
             session_initialized.send(self, session_id=self.session_id)
         else:
             self.is_running = False
+    def _cleanup(self):
+        pass
 
     def _initialize(self) -> bool:
         """Initialize session components"""
@@ -113,8 +115,6 @@ class Session:
             # Initialize logging
             if not self._setup_logging():
                 return False
-
-            breakpoint()
 
             # Initialize tracer before sending session_started
             self._tracer = None  # Will be set by SessionTracer during session_started
