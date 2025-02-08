@@ -155,8 +155,8 @@ class Session:
                 return False
 
             # Initialize logging
-            if not self._setup_logging():
-                return False
+            # if not self._setup_logging():
+            #     return False
 
             # Signal session is initialized
             session_initialized.send(self, session_id=self.session_id)

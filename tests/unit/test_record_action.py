@@ -7,7 +7,6 @@ import agentops
 from agentops import record_action
 
 
-@pytest.mark.usefixtures('api_key', 'base_url')
 class TestRecordAction:
     @pytest.fixture(autouse=True)
     def setup(self, api_key, base_url):
@@ -15,8 +14,6 @@ class TestRecordAction:
         self.api_key = api_key
         self.event_type = "test_event"
         agentops.init(self.api_key, max_wait_time=50, auto_start_session=False)
-        from agentops.session.registry import clear_registry
-        clear_registry()  # Clear any leftover sessions from previous tests
 
     def test_record_action_decorator(self, mock_req):
         agentops.start_session()

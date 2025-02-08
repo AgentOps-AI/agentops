@@ -1,19 +1,15 @@
 import contextlib
+import re
 import uuid
 from collections import defaultdict
 from typing import Dict, Iterator, List
-import re
 
-from agentops.event import ErrorEvent
-from agentops.event import ActionEvent
-from agentops.event import ToolEvent
-from agentops.event import ActionEvent
-from agentops.event import LLMEvent
 import pytest
 import requests_mock
 from pytest import Config, Session
 
 import agentops
+from agentops.event import ActionEvent, ErrorEvent, LLMEvent, ToolEvent
 from agentops.singleton import clear_singletons
 from tests.fixtures.event import llm_event_spy
 
@@ -95,8 +91,8 @@ def mock_req(base_url, jwt):
 
 
 @pytest.fixture
-def agentops_init():
-    agentops.init()
+def agentops_init(api_key, base_url):
+    agentops.init(api_key=api_key, endpoint=base_url)
 
 
 @pytest.fixture
@@ -108,8 +104,6 @@ def agentops_session(agentops_init):
     yield session
 
     agentops.end_all_sessions()
-
-
 
 
 @pytest.fixture
@@ -153,4 +147,3 @@ def mock_error_event():
     trigger = ActionEvent(action_type="risky_action")
     error = ValueError("Something went wrong")
     return ErrorEvent(trigger_event=trigger, exception=error, error_type="ValueError", details="Detailed error info")
-

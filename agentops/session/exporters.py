@@ -90,6 +90,7 @@ class SessionExporter(BaseSessionExporter, SpanExporter):
 
             # Remove session parameter if present in action events
             if event_data.get("event_type") == "actions" and "params" in event_data:
+                breakpoint()
                 event_data["params"].pop("session", None)
 
             # Add session ID
