@@ -207,7 +207,6 @@ class Client(metaclass=MetaClient):
             config: (Configuration, optional): Client configuration object
             inherited_session_id (optional, str): assign session id to match existing Session
         """
-        breakpoint()
         if not self.is_initialized:
             return
 
@@ -230,8 +229,7 @@ class Client(metaclass=MetaClient):
             config=self._config,
         )
 
-        if not session.is_running:
-            return logger.error("Failed to start session")
+        assert session.is_running, "Failed to start session - `is_running` is False"
 
         if self._pre_init_queue["agents"] and len(self._pre_init_queue["agents"]) > 0:
             for agent_args in self._pre_init_queue["agents"]:

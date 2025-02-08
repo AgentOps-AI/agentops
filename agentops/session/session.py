@@ -88,6 +88,7 @@ def on_session_ended(sender, end_state, end_state_reason, **kwargs):
     """Handle session ended"""
     sender._set_running(False)
 
+
 @dataclass
 class Session:
     """Data container for session state with minimal public API"""
@@ -341,17 +342,18 @@ class Session:
                 logger.error(f"Failed to reauthorize JWT: {e}")
                 return None
 
-    def _start_session(self):
+    def _start_session(self) -> bool:
         """
         Manually starts the session
         This method should only be responsible to send signals (`session_starting` and `session_started`)
         """
         with self._lock:
-            breakpoint()
             payload = {"session": asdict(self)}
-            serialized_payload = json.dumps(filter_unjsonable(payload)).encode("utf-8")
+            logger.debug(f"Prepared session payload: {payload}")
 
             try:
+                serialized_payload = json.dumps(filter_unjsonable(payload)).encode("utf-8")
+                logger.debug("Sending create session request with payload: %s", serialized_payload)
                 res = HttpClient.post(
                     f"{self.config.endpoint}/v2/create_session",
                     serialized_payload,
@@ -359,17 +361,22 @@ class Session:
                     parent_key=self.config.parent_key,
                 )
             except ApiServerException as e:
-                return logger.error(f"Could not start session - {e}")
-
-            logger.debug(res.body)
+                logger.error(f"Could not start session - {e}")
+                return False
+            logger.debug(f"Received response: {res.body}")
 
             if res.code != 200:
+                logger.debug(f"Received non-200 status code: {res.code}")
                 return False
 
             jwt = res.body.get("jwt", None)
             self.jwt = jwt
             if jwt is None:
+                logger.debug("No JWT received in response")
                 return False
+            logger.debug("Successfully received and set JWT")
+
+            session_started.send(self)  # Sets is_running=True
 
             logger.info(
                 colored(
@@ -378,6 +385,7 @@ class Session:
                 )
             )
 
+            logger.debug("Session started successfully")
             return True
 
     def _update_session(self) -> None:
@@ -396,6 +404,7 @@ class Session:
                     f"{self.config.endpoint}/v2/update_session",
                     json.dumps(filter_unjsonable(payload)).encode("utf-8"),
                     jwt=self.jwt,
+                    api_key=self.config.api_key  # Add API key here
                 )
             except ApiServerException as e:
                 return logger.error(f"Could not update session - {e}")
@@ -442,6 +451,7 @@ class Session:
                 f"{self.config.endpoint}/v2/update_session",
                 json.dumps(filter_unjsonable(payload)).encode("utf-8"),
                 jwt=self.jwt,
+                api_key=self.config.api_key  # Add API key here
             )
         except ApiServerException as e:
             return logger.error(f"Could not end session - {e}")
