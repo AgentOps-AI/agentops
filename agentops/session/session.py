@@ -72,7 +72,8 @@ def on_session_initializing(sender, session_id, **kwargs):
 @session_ending.connect
 def on_session_ending(sender, end_state, end_state_reason, **kwargs):
     """Handle session ending"""
-    sender.end_timestamp = get_ISO_time()
+    # Always set end_timestamp when session is ending
+    sender.end_timestamp = sender.end_timestamp or get_ISO_time()
     sender.end_state = end_state
     sender.end_state_reason = end_state_reason
 
@@ -404,7 +405,7 @@ class Session:
                     f"{self.config.endpoint}/v2/update_session",
                     json.dumps(filter_unjsonable(payload)).encode("utf-8"),
                     jwt=self.jwt,
-                    api_key=self.config.api_key  # Add API key here
+                    api_key=self.config.api_key,  # Add API key here
                 )
             except ApiServerException as e:
                 return logger.error(f"Could not update session - {e}")
@@ -427,6 +428,7 @@ class Session:
                 f"{self.config.endpoint}/v2/create_agent",
                 serialized_payload,
                 jwt=self.jwt,
+                api_key=self.config.api_key,
             )
         except ApiServerException as e:
             return logger.error(f"Could not create agent - {e}")
@@ -451,7 +453,7 @@ class Session:
                 f"{self.config.endpoint}/v2/update_session",
                 json.dumps(filter_unjsonable(payload)).encode("utf-8"),
                 jwt=self.jwt,
-                api_key=self.config.api_key  # Add API key here
+                api_key=self.config.api_key,  # Add API key here
             )
         except ApiServerException as e:
             return logger.error(f"Could not end session - {e}")
