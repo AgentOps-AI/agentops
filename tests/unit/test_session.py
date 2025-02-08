@@ -635,6 +635,24 @@ class TestSessionExporter:
         except ValueError:
             pytest.fail("Event ID is not a valid UUID")
 
+    def test_timestamps_required(self, mock_req):
+        """Test that timestamps are always set when creating events"""
+        # Create event with explicit timestamps
+        current_time = get_ISO_time()
+        span = self.create_test_span(attributes={
+            "event.start_time": current_time,
+            "event.end_time": current_time
+        })
+        result = self.exporter.export([span])
+
+        assert result == SpanExportResult.SUCCESS
+        last_request = mock_req.request_history[-1].json()
+        event = last_request["events"][0]
+
+        # Verify timestamps match what we set
+        assert event["init_timestamp"] == current_time
+        assert event["end_timestamp"] == current_time
+
 
 class TestSessionLogExporter:
     def setup_method(self):
