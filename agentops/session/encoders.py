@@ -85,7 +85,7 @@ class EventToSpanEncoder:
                 "completion_tokens": event.completion_tokens,
                 "cost": event.cost,
                 "event.start_time": event.init_timestamp,
-                "event.end_time": event.end_timestamp,
+                "event.end_timestamp": event.end_timestamp or "",
                 SpanAttributes.CODE_NAMESPACE: event.__class__.__name__,
                 "event_type": event.event_type_str,
                 "event.id": str(event.id),
@@ -103,7 +103,7 @@ class EventToSpanEncoder:
             "event_type": event_type,  # This will never be None
             "event.id": str(event.id),
             "event.start_time": event.init_timestamp,
-            "event.end_time": event.end_timestamp,
+            "event.end_timestamp": event.end_timestamp or "",
             SpanAttributes.CODE_NAMESPACE: event.__class__.__name__,
             "action_type": event_type,  # Keep them in sync
         }
