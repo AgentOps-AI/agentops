@@ -7,9 +7,11 @@ import agentops
 from agentops import record_action
 
 
+@pytest.mark.usefixtures('api_key', 'base_url')
 class TestRecordAction:
     @pytest.fixture(autouse=True)
-    def setup(self, api_key):
+    def setup(self, api_key, base_url):
+        self.url = base_url
         self.api_key = api_key
         self.event_type = "test_event"
         agentops.init(self.api_key, max_wait_time=50, auto_start_session=False)
