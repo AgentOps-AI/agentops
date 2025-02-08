@@ -18,6 +18,7 @@ from opentelemetry.trace.span import TraceState
 
 import agentops
 from agentops import ActionEvent, Client
+from agentops.helpers import get_ISO_time
 from agentops.http_client import HttpClient
 from agentops.instrumentation import cleanup_session_telemetry, setup_session_telemetry
 from agentops.session import SessionLogExporter
@@ -432,12 +433,15 @@ class TestSessionExporter:
         if attributes is None:
             attributes = {}
 
+        # Get current time for timestamps
+        current_time = datetime.now(timezone.utc).isoformat()
+
         # Ensure required attributes are present
         base_attributes = {
             "event.id": str(UUID(int=1)),
             "event.type": "test_type",
-            "event.timestamp": datetime.now(timezone.utc).isoformat(),
-            "event.end_timestamp": datetime.now(timezone.utc).isoformat(),
+            "event.timestamp": attributes.get("event.timestamp", current_time),  # Default to current time if not overridden
+            "event.end_timestamp": attributes.get("event.end_timestamp", current_time),  # Default to current time if not overridden
             "event.data": json.dumps({"test": "data"}),
             "session.id": str(self.session.session_id),
         }

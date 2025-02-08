@@ -9,9 +9,9 @@ from dataclasses import dataclass
 from typing import Any, Dict, List, Optional, Sequence
 from uuid import uuid4
 
+from opentelemetry.sdk.trace import ReadableSpan
 from opentelemetry.semconv.trace import SpanAttributes
 from opentelemetry.trace import SpanKind
-from opentelemetry.sdk.trace import ReadableSpan
 
 from agentops.log_config import logger
 
@@ -97,7 +97,7 @@ class EventToSpanEncoder:
     def _encode_action_event(cls, event: ActionEvent) -> SpanDefinitions:
         # For ActionEvents, event_type should be used if action_type is not set
         event_type = event.action_type or event.event_type_str
-        
+
         # Build attributes dict, filtering out None values
         attributes = {
             "event_type": event_type,  # This will never be None
@@ -107,7 +107,7 @@ class EventToSpanEncoder:
             SpanAttributes.CODE_NAMESPACE: event.__class__.__name__,
             "action_type": event_type,  # Keep them in sync
         }
-        
+
         # Only add non-None optional values
         if event.params is not None:
             attributes["params"] = json.dumps(event.params)
@@ -117,7 +117,7 @@ class EventToSpanEncoder:
             attributes["logs"] = event.logs
 
         logger.debug(f"Span attributes: {attributes}")
-        
+
         action_span = SpanDefinition(
             name="agent.action",
             attributes=attributes,
@@ -162,7 +162,7 @@ class EventToSpanEncoder:
         attributes = {
             SpanAttributes.CODE_NAMESPACE: event.__class__.__name__,
             "event_type": event.event_type_str,  # Required
-            "event.id": str(event.id),           # Required
+            "event.id": str(event.id),  # Required
         }
 
         # Only add non-None values
@@ -181,9 +181,9 @@ class EventToSpanEncoder:
     def decode_span_to_event_data(cls, span: ReadableSpan) -> dict:
         """Convert a span back into event data for export."""
         logger.debug(f"Decoding span with attributes: {span.attributes}")
-        
+
         event_data = {}
-        
+
         # Parse event.data if present
         if "event.data" in span.attributes:
             try:
@@ -191,13 +191,13 @@ class EventToSpanEncoder:
                 event_data.update(data)
             except json.JSONDecodeError:
                 logger.warning("Failed to parse event.data JSON")
-        
+
         # Copy attributes, properly filtering and transforming
         for key, value in span.attributes.items():
             # Skip internal attributes except event.type which we need
             if (key.startswith("event.") and key != "event.type") or key == "code.namespace":
                 continue
-            # Skip session.* attributes if this isn't a session event  
+            # Skip session.* attributes if this isn't a session event
             if key.startswith("session.") and not any(x in span.attributes for x in ["session.start", "session.end"]):
                 continue
             # Skip event.data since we already processed it
@@ -218,13 +218,15 @@ class EventToSpanEncoder:
                     event_data[key] = value
 
         # Add required metadata with proper timestamp format
-        event_data.update({
-            "id": span.attributes.get("event.id", str(uuid4())),
-            "init_timestamp": span.attributes.get("event.start_time") or get_ISO_time(),
-            "end_timestamp": span.attributes.get("event.end_time"),
-            # Add event_type if not already present
-            "event_type": span.attributes.get("event.type", span.attributes.get("event_type", "unknown"))
-        })
-        
+        event_data.update(
+            {
+                "id": span.attributes.get("event.id", str(uuid4())),
+                "init_timestamp": span.attributes.get("event.start_time"),
+                "end_timestamp": span.attributes.get("event.end_time"),
+                # Add event_type if not already present
+                "event_type": span.attributes.get("event.type", span.attributes.get("event_type", "unknown")),
+            }
+        )
+
         logger.debug(f"Decoded event data: {event_data}")
         return event_data
