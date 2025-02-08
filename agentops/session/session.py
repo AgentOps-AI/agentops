@@ -174,7 +174,7 @@ class Session:
 
     def _get_jwt(self) -> bool:
         """Get JWT from API server"""
-        payload = {"session": self.__dict__}
+        payload = {"session": asdict(self)}
         try:
             res = HttpClient.post(
                 f"{self.config.endpoint}/v2/create_session",
@@ -311,7 +311,7 @@ class Session:
                         "event_type": event.event_type,
                         "init_timestamp": event.init_timestamp,
                         "end_timestamp": event.end_timestamp,
-                        "data": filter_unjsonable(event.__dict__),
+                        "data": filter_unjsonable(asdict(event)),
                     }
                 ]
             }
@@ -398,7 +398,7 @@ class Session:
             # Emit session updated signal
             session_updated.send(self, session_id=self.session_id)
 
-            payload = {"session": self.__dict__}
+            payload = {"session": asdict(self)}
 
             try:
                 HttpClient.post(
@@ -447,7 +447,7 @@ class Session:
 
     def _get_response(self) -> Optional[Response]:
         """Get response from API server"""
-        payload = {"session": self.__dict__}
+        payload = {"session": asdict(self)}
         try:
             response = HttpClient.post(
                 f"{self.config.endpoint}/v2/update_session",
