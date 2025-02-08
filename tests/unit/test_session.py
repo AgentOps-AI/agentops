@@ -418,7 +418,7 @@ class TestSessionExporter:
         agentops.init(api_key=self.api_key, max_wait_time=50, auto_start_session=False)
         self.session = agentops.start_session()
         assert self.session is not None  # Verify session was created
-        self.exporter = self.session._tracer
+        self.exporter = self.session._tracer.exporter
 
     def teardown_method(self):
         """Clean up after each test"""

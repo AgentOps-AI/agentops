@@ -184,13 +184,24 @@ class EventToSpanEncoder:
         
         event_data = {}
         
+        # Parse event.data if present
+        if "event.data" in span.attributes:
+            try:
+                data = json.loads(span.attributes["event.data"])
+                event_data.update(data)
+            except json.JSONDecodeError:
+                logger.warning("Failed to parse event.data JSON")
+        
         # Copy attributes, properly filtering and transforming
         for key, value in span.attributes.items():
-            # Skip internal attributes
-            if key.startswith("event.") or key == "code.namespace":
+            # Skip internal attributes except event.type which we need
+            if (key.startswith("event.") and key != "event.type") or key == "code.namespace":
                 continue
-            # Skip session.* attributes if this isn't a session event
+            # Skip session.* attributes if this isn't a session event  
             if key.startswith("session.") and not any(x in span.attributes for x in ["session.start", "session.end"]):
+                continue
+            # Skip event.data since we already processed it
+            if key == "event.data":
                 continue
             # Add the value if it's not None
             if value is not None:
@@ -200,6 +211,9 @@ class EventToSpanEncoder:
                         event_data[key] = json.loads(value)
                     except json.JSONDecodeError:
                         event_data[key] = value
+                # Handle event.type specially
+                elif key == "event.type":
+                    event_data["event_type"] = value
                 else:
                     event_data[key] = value
 
@@ -208,6 +222,8 @@ class EventToSpanEncoder:
             "id": span.attributes.get("event.id", str(uuid4())),
             "init_timestamp": span.attributes.get("event.start_time") or get_ISO_time(),
             "end_timestamp": span.attributes.get("event.end_time"),
+            # Add event_type if not already present
+            "event_type": span.attributes.get("event.type", span.attributes.get("event_type", "unknown"))
         })
         
         logger.debug(f"Decoded event data: {event_data}")
