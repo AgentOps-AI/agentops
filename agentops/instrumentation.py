@@ -244,6 +244,7 @@ def on_event_record(sender, event: Event, flush_now: bool = False):
     # If sender is None, try to get default session
     if sender is None:
         from agentops.session.registry import get_default_session
+
         sender = get_default_session()
         if sender is None:
             raise ValueError("No active session found")

@@ -111,6 +111,7 @@ class Client(metaclass=MetaClient):
     def _initialize_autogen_logger(self) -> None:
         try:
             import autogen
+
             from .partners.autogen_logger import AutogenLogger
 
             autogen.runtime_logging.start(logger=AutogenLogger())
@@ -206,6 +207,7 @@ class Client(metaclass=MetaClient):
             config: (Configuration, optional): Client configuration object
             inherited_session_id (optional, str): assign session id to match existing Session
         """
+        breakpoint()
         if not self.is_initialized:
             return
 
@@ -418,6 +420,7 @@ class Client(metaclass=MetaClient):
     def is_multi_session(self) -> bool:
         """Returns True if multiple sessions are active"""
         from agentops.session.registry import get_active_sessions
+
         active_sessions = get_active_sessions()
         logger.debug(f"Client.is_multi_session checking active sessions: {len(active_sessions)}")
         return len(active_sessions) > 1
@@ -447,4 +450,5 @@ class Client(metaclass=MetaClient):
     def _sessions(self) -> List[Session]:
         """Get sessions from registry"""
         from agentops.session.registry import get_active_sessions
+
         return get_active_sessions()

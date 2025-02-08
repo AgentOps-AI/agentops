@@ -3,7 +3,7 @@ from __future__ import annotations
 import functools
 import json
 import threading
-from dataclasses import dataclass, field
+from dataclasses import asdict, dataclass, field
 from datetime import datetime
 from decimal import ROUND_HALF_UP, Decimal
 from enum import Enum
@@ -66,17 +66,8 @@ class EndState(Enum):
 @session_initializing.connect
 def on_session_initializing(sender, session_id, **kwargs):
     """Handle session initialization"""
-    sender.is_running = False
+    sender._set_running(False)  # Ensure we start in a known state
 
-@session_starting.connect
-def on_session_starting(sender, session_id, **kwargs):
-    """Handle session starting"""
-    pass
-
-@session_started.connect
-def on_session_started(sender, session_id, **kwargs):
-    """Handle session started"""
-    sender.is_running = True
 
 @session_ending.connect
 def on_session_ending(sender, end_state, end_state_reason, **kwargs):
@@ -85,12 +76,17 @@ def on_session_ending(sender, end_state, end_state_reason, **kwargs):
     sender.end_state = end_state
     sender.end_state_reason = end_state_reason
 
+
+@session_started.connect
+def on_session_started(sender, **kwargs):
+    """Handle session started"""
+    sender._set_running(True)
+
+
 @session_ended.connect
 def on_session_ended(sender, end_state, end_state_reason, **kwargs):
     """Handle session ended"""
-    sender.is_running = False
-    remove_session(sender)
-
+    sender._set_running(False)
 
 @dataclass
 class Session:
@@ -110,7 +106,8 @@ class Session:
         default_factory=lambda: {"llms": 0, "tools": 0, "actions": 0, "errors": 0, "apis": 0}
     )
     init_timestamp: str = field(default_factory=get_ISO_time)
-    is_running: bool = field(default=False)  # Now managed by signal handlers
+    is_running: bool = field(default=False)
+    _has_started: bool = field(default=False, init=False)  # New private field to track if session was ever started
 
     def __post_init__(self):
         """Initialize session components after dataclass initialization"""
@@ -123,12 +120,22 @@ class Session:
 
         # Initialize session
         try:
-            init_success = self._initialize()
-        except Exception:
-            init_success = False
+            session_initializing.send(self, session_id=self.session_id)
+            success = self._initialize()
+            if not success:
+                self.end(EndState.FAIL.value, "Failed to initialize session")
+        except Exception as e:
+            logger.error(f"Failed to initialize session: {e}")
+            self.end(EndState.FAIL.value, f"Exception during initialization: {str(e)}")
 
-        if not init_success:
-            self.is_running = False
+    def _set_running(self, value: bool) -> None:
+        """Helper method to safely set is_running state"""
+        if value and self._has_started:
+            raise AssertionError("Session can only be started once")
+
+        self.is_running = value
+        if value:
+            self._has_started = True
 
     def _cleanup(self):
         """Clean up session resources"""
@@ -141,9 +148,6 @@ class Session:
     def _initialize(self) -> bool:
         """Initialize session components"""
         try:
-            # Signal session is initializing
-            session_initializing.send(self, session_id=self.session_id)
-
             # Get JWT from API
             if not self._get_jwt():
                 return False
@@ -156,7 +160,9 @@ class Session:
             session_initialized.send(self, session_id=self.session_id)
 
             logger.info(colored(f"\x1b[34mSession Replay: {self.session_url}\x1b[0m", "blue"))
-            return True
+
+            # Start the session after initialization
+            return self._start_session()
 
         except Exception as e:
             if TESTING:
@@ -261,7 +267,7 @@ class Session:
                 return None
 
             try:
-                # Signal session is ending
+                # Signal session is ending - this will set is_running=False
                 session_ending.send(self, end_state=end_state, end_state_reason=end_state_reason)
 
                 if video is not None:
@@ -282,15 +288,16 @@ class Session:
                         f"{colored('Errors:', attrs=['bold'])} {analytics_stats['Errors']}"
                     )
                     logger.info(colored(f"\x1b[34mSession Replay: {self.session_url}\x1b[0m", "blue"))
-                    return self.token_cost
+
+                    token_cost = self.token_cost
+                    # Signal session has ended after cleanup
+                    return token_cost
 
             except Exception as e:
                 logger.exception(f"Error during session end: {e}")
+                # Ensure session_ended is still sent even if there's an error
             finally:
-                # Signal session has ended
                 session_ended.send(self, end_state=end_state, end_state_reason=end_state_reason)
-
-            return None
 
     def _send_event(self, event):
         """Direct event sending for testing"""
@@ -338,15 +345,38 @@ class Session:
         """
         Manually starts the session
         This method should only be responsible to send signals (`session_starting` and `session_started`)
-
-        !! No additional logic goes here !!
         """
         with self._lock:
-            # Signal session is starting
-            session_starting.send(self, session_id=self.session_id)
+            breakpoint()
+            payload = {"session": asdict(self)}
+            serialized_payload = json.dumps(filter_unjsonable(payload)).encode("utf-8")
 
-            # Signal session has started - this will initialize tracing via listeners
-            session_started.send(self, session_id=self.session_id)
+            try:
+                res = HttpClient.post(
+                    f"{self.config.endpoint}/v2/create_session",
+                    serialized_payload,
+                    api_key=self.config.api_key,
+                    parent_key=self.config.parent_key,
+                )
+            except ApiServerException as e:
+                return logger.error(f"Could not start session - {e}")
+
+            logger.debug(res.body)
+
+            if res.code != 200:
+                return False
+
+            jwt = res.body.get("jwt", None)
+            self.jwt = jwt
+            if jwt is None:
+                return False
+
+            logger.info(
+                colored(
+                    f"\x1b[34mSession Replay: {self.session_url}\x1b[0m",
+                    "blue",
+                )
+            )
 
             return True
 
@@ -371,6 +401,7 @@ class Session:
                 return logger.error(f"Could not update session - {e}")
 
     def create_agent(self, name, agent_id):
+        """Create a new agent in the session"""
         if not self.is_running:
             return
         if agent_id is None:
@@ -386,7 +417,6 @@ class Session:
             HttpClient.post(
                 f"{self.config.endpoint}/v2/create_agent",
                 serialized_payload,
-                api_key=self.config.api_key,
                 jwt=self.jwt,
             )
         except ApiServerException as e:
@@ -395,6 +425,8 @@ class Session:
         return agent_id
 
     def patch(self, func):
+        """Decorator to patch a function with the session"""
+
         @functools.wraps(func)
         def wrapper(*args, **kwargs):
             kwargs["session"] = self
@@ -403,12 +435,12 @@ class Session:
         return wrapper
 
     def _get_response(self) -> Optional[Response]:
+        """Get response from API server"""
         payload = {"session": self.__dict__}
         try:
             response = HttpClient.post(
                 f"{self.config.endpoint}/v2/update_session",
                 json.dumps(filter_unjsonable(payload)).encode("utf-8"),
-                api_key=self.config.api_key,
                 jwt=self.jwt,
             )
         except ApiServerException as e:
@@ -418,6 +450,7 @@ class Session:
         return response
 
     def _format_duration(self, start_time, end_time) -> str:
+        """Format duration between two timestamps"""
         start = datetime.fromisoformat(start_time.replace("Z", "+00:00"))
         end = datetime.fromisoformat(end_time.replace("Z", "+00:00"))
         duration = end - start
@@ -435,12 +468,14 @@ class Session:
         return " ".join(parts)
 
     def _get_token_cost(self, response: Response) -> Decimal:
+        """Get token cost from response"""
         token_cost = response.body.get("token_cost", "unknown")
         if token_cost == "unknown" or token_cost is None:
             return Decimal(0)
         return Decimal(token_cost)
 
     def _format_token_cost(self, token_cost: Decimal) -> str:
+        """Format token cost for display"""
         return (
             "{:.2f}".format(token_cost)
             if token_cost == 0
@@ -448,6 +483,7 @@ class Session:
         )
 
     def get_analytics(self) -> Optional[Dict[str, Any]]:
+        """Get session analytics"""
         if not self.end_timestamp:
             self.end_timestamp = get_ISO_time()
 
@@ -481,8 +517,14 @@ class Session:
 
     def __repr__(self) -> str:
         """Return a string representation of the Session."""
-        status = "Running" if self.is_running else "Ended"
+        if self.is_running:
+            status = "Running"
+        elif self.end_timestamp:
+            status = "Ended"
+        else:
+            status = "Not Started"
+
         tag_str = f", tags={self.tags}" if self.tags else ""
-        end_state_str = f", end_state={self.end_state}" if not self.is_running else ""
+        end_state_str = f", end_state={self.end_state}" if self.end_timestamp else ""
 
         return f"Session(id={self.session_id}, status={status}" f"{tag_str}{end_state_str})"
