@@ -205,8 +205,8 @@ class EventToSpanEncoder:
                 continue
             # Add the value if it's not None
             if value is not None:
-                # Parse JSON strings back into dicts for params
-                if key == "params" and isinstance(value, str):
+                # Parse JSON strings back into dicts/values for params and returns
+                if key in ["params", "returns"] and isinstance(value, str):
                     try:
                         event_data[key] = json.loads(value)
                     except json.JSONDecodeError:
@@ -218,15 +218,13 @@ class EventToSpanEncoder:
                     event_data[key] = value
 
         # Add required metadata with proper timestamp format
-        event_data.update(
-            {
-                "id": span.attributes.get("event.id", str(uuid4())),
-                "init_timestamp": span.attributes.get("event.start_time"),
-                "end_timestamp": span.attributes.get("event.end_time"),
-                # Add event_type if not already present
-                "event_type": span.attributes.get("event.type", span.attributes.get("event_type", "unknown")),
-            }
-        )
+        event_data.update({
+            "id": span.attributes.get("event.id", str(uuid4())),
+            "init_timestamp": str(span.attributes.get("event.start_time", "")),
+            "end_timestamp": str(span.attributes.get("event.end_time", "")),
+            # Add event_type if not already present
+            "event_type": span.attributes.get("event.type", span.attributes.get("event_type", "unknown")),
+        })
 
         logger.debug(f"Decoded event data: {event_data}")
         return event_data
