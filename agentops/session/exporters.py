@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from abc import ABC, abstractmethod
 import json
 import threading
 from datetime import datetime, timezone
@@ -21,7 +22,7 @@ if TYPE_CHECKING:
     from agentops.session import Session
 
 
-class BaseSessionExporter:
+class BaseExporter(ABC):
     """Base class for session exporters with common functionality"""
 
     def __init__(self, session: Session):
@@ -46,6 +47,7 @@ class BaseSessionExporter:
                     raise e
                 return self.get_failure_result()
 
+    @abstractmethod
     def _export(self, data: Sequence[Any]):
         """To be implemented by subclasses"""
         raise NotImplementedError
@@ -62,7 +64,7 @@ class BaseSessionExporter:
         return True
 
 
-class SessionExporter(BaseSessionExporter, SpanExporter):
+class EventExporter(BaseExporter, SpanExporter):
     """
     Manages publishing events for Session
     """
@@ -89,9 +91,6 @@ class SessionExporter(BaseSessionExporter, SpanExporter):
             logger.debug(f"Converted to event data: {event_data}")
 
             # Remove session parameter if present in action events
-            if event_data.get("event_type") == "actions" and "params" in event_data:
-                breakpoint()
-                event_data["params"].pop("session", None)
 
             # Add session ID
             event_data["session_id"] = str(self.session.session_id)
@@ -109,6 +108,7 @@ class SessionExporter(BaseSessionExporter, SpanExporter):
         # Only make HTTP request if we have events
         if events:
             try:
+                breakpoint()
                 res = HttpClient.post(
                     self.endpoint,
                     json.dumps({"events": events}).encode("utf-8"),
@@ -130,7 +130,7 @@ class SessionExporter(BaseSessionExporter, SpanExporter):
         # Don't call session.end_session() here to avoid circular dependencies
 
 
-class SessionLogExporter(BaseSessionExporter, LogExporter):
+class SessionLogExporter(BaseExporter, LogExporter):
     """
     Exports logs for a specific session to the AgentOps backend.
 

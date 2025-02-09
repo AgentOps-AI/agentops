@@ -22,7 +22,7 @@ from agentops.http_client import HttpClient
 from agentops.log_config import logger
 from agentops.session.encoders import EventToSpanEncoder
 from agentops.session.events import event_recorded, session_ended, session_started, session_updated
-from agentops.session.exporters import SessionExporter, SessionLogExporter
+from agentops.session.exporters import EventExporter, SessionLogExporter
 
 if TYPE_CHECKING:
     from agentops.client import Client
@@ -148,7 +148,7 @@ class SessionTracer:
         from agentops.session.registry import get_session_by_id
 
         # Set up exporter
-        self.exporter = SessionExporter(session=get_session_by_id(session_id))
+        self.exporter = EventExporter(session=get_session_by_id(session_id))
         self.span_processor = BatchSpanProcessor(
             self.exporter,
             max_queue_size=config.max_queue_size,

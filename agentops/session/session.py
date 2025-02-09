@@ -42,7 +42,7 @@ from agentops.session.events import (
 )
 from agentops.session.registry import add_session, remove_session
 
-from .exporters import SessionExporter, SessionLogExporter
+from .exporters import EventExporter, SessionLogExporter
 
 
 class EndState(Enum):
