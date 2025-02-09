@@ -108,7 +108,6 @@ class EventExporter(BaseExporter, SpanExporter):
         # Only make HTTP request if we have events
         if events:
             try:
-                breakpoint()
                 res = HttpClient.post(
                     self.endpoint,
                     json.dumps({"events": events}).encode("utf-8"),
