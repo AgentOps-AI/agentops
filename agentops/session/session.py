@@ -445,22 +445,6 @@ class Session:
 
         return wrapper
 
-    def _get_response(self) -> Optional[Response]:
-        """Get response from API server"""
-        payload = {"session": asdict(self)}
-        try:
-            response = HttpClient.post(
-                f"{self.config.endpoint}/v2/update_session",
-                json.dumps(filter_unjsonable(payload)).encode("utf-8"),
-                jwt=self.jwt,
-                api_key=self.config.api_key,  # Add API key here
-            )
-        except ApiServerException as e:
-            return logger.error(f"Could not end session - {e}")
-
-        logger.debug(response.body)
-        return response
-
     def _format_duration(self, start_time, end_time) -> str:
         """Format duration between two timestamps"""
         start = datetime.fromisoformat(start_time.replace("Z", "+00:00"))
@@ -501,7 +485,7 @@ class Session:
 
         formatted_duration = self._format_duration(self.init_timestamp, self.end_timestamp)
 
-        if (response := self._get_response()) is None:
+        if (response := self._update_session()) is None:
             return None
 
         self.token_cost = self._get_token_cost(response)
