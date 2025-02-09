@@ -6,10 +6,12 @@ from typing import Dict, Iterator, List
 
 import pytest
 import requests_mock
+from opentelemetry.sdk.trace.export import SimpleSpanProcessor
 from pytest import Config, Session
 
 import agentops
 from agentops.event import ActionEvent, ErrorEvent, LLMEvent, ToolEvent
+from agentops.instrumentation import SessionTracer
 from agentops.singleton import clear_singletons
 from tests.fixtures.event import llm_event_spy
 
@@ -82,6 +84,7 @@ def mock_req(base_url, jwt):
         m.post(base_url + "/v2/developer_errors", json={"status": "ok"})
         m.post(base_url + "/v2/reauthorize_jwt", json=reauthorize_jwt_response)
         m.post(base_url + "/v2/create_agent", json={"status": "success"})
+        m.post(base_url + "/v2/create_events", json={"status": "success"})
         # Use explicit regex pattern for logs endpoint to match any URL and session ID
         logs_pattern = re.compile(r".*/v3/logs/[0-9a-f-]{8}-[0-9a-f-]{4}-[0-9a-f-]{4}-[0-9a-f-]{4}-[0-9a-f-]{12}")
         m.put(logs_pattern, json={"status": "success"})
@@ -147,3 +150,11 @@ def mock_error_event():
     trigger = ActionEvent(action_type="risky_action")
     error = ValueError("Something went wrong")
     return ErrorEvent(trigger_event=trigger, exception=error, error_type="ValueError", details="Detailed error info")
+
+
+@pytest.fixture
+def sync_tracer(mocker):
+    """Fixture to make SessionTracer use SimpleSpanProcessor for synchronous export during tests"""
+
+    with mocker.patch("agentops.instrumentation.SessionTracer.exporter_cls", return_value=SimpleSpanProcessor):
+        yield

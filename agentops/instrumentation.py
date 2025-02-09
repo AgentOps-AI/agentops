@@ -11,7 +11,7 @@ from opentelemetry.sdk._logs import LoggerProvider, LoggingHandler
 from opentelemetry.sdk._logs.export import BatchLogRecordProcessor
 from opentelemetry.sdk.resources import SERVICE_NAME, Resource
 from opentelemetry.sdk.trace import SpanProcessor, TracerProvider
-from opentelemetry.sdk.trace.export import BatchSpanProcessor, SpanExporter
+from opentelemetry.sdk.trace.export import BatchSpanProcessor, SimpleSpanProcessor, SpanExporter
 from opentelemetry.sdk.trace.sampling import ParentBased, Sampler, TraceIdRatioBased
 from termcolor import colored
 
@@ -139,6 +139,14 @@ def cleanup_session_telemetry(log_handler: LoggingHandler, log_processor: BatchL
 class SessionTracer:
     """Manages OpenTelemetry tracing for a session"""
 
+    @classmethod
+    def exporter_cls(cls) -> type[BatchSpanProcessor] | type[SimpleSpanProcessor]:
+        """
+        Return the exporter class to use for the session.
+        The reason we use this class is for ease of mocking in tests.
+        """
+        return BatchSpanProcessor
+
     def __init__(self, session_id: UUID, config: Configuration):
         # Create session-specific resource and tracer
         resource = Resource.create({SERVICE_NAME: f"agentops.session.{str(session_id)}", "session.id": str(session_id)})
@@ -149,16 +157,21 @@ class SessionTracer:
 
         # Set up exporter
         self.exporter = EventExporter(session=get_session_by_id(session_id))
-        self.span_processor = BatchSpanProcessor(
-            self.exporter,
-            max_queue_size=config.max_queue_size,
-            schedule_delay_millis=config.max_wait_time,
-            max_export_batch_size=min(
-                max(config.max_queue_size // 20, 1),
-                min(config.max_queue_size, 32),
-            ),
-            export_timeout_millis=20000,
-        )
+        
+        processor_cls = self.exporter_cls()
+        if processor_cls == SimpleSpanProcessor:
+            self.span_processor = processor_cls(self.exporter)
+        else:
+            self.span_processor = processor_cls(
+                self.exporter,
+                max_queue_size=config.max_queue_size,
+                schedule_delay_millis=config.max_wait_time,
+                max_export_batch_size=min(
+                    max(config.max_queue_size // 20, 1),
+                    min(config.max_queue_size, 32),
+                ),
+                export_timeout_millis=20000,
+            )
         self.tracer_provider.add_span_processor(self.span_processor)
 
     def cleanup(self):
