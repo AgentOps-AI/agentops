@@ -11,10 +11,6 @@ from agentops import record_tool
 jwts = ["some_jwt", "some_jwt2", "some_jwt3"]
 
 
-
-pytestmark = [pytest.mark.usefixtures('sync_tracer')]
-
-
 class TestRecordTool:
     @pytest.fixture(autouse=True)
     def setup(self, api_key, base_url):
