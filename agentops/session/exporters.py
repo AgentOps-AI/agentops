@@ -39,14 +39,14 @@ class BaseSessionExporter:
                 if not data:
                     return self.get_success_result()
 
-                return self._do_export(data)
+                return self._export(data)
             except Exception as e:
                 logger.error(f"Export failed: {e}")
                 if TESTING:
                     raise e
                 return self.get_failure_result()
 
-    def _do_export(self, data: Sequence[Any]):
+    def _export(self, data: Sequence[Any]):
         """To be implemented by subclasses"""
         raise NotImplementedError
 
@@ -77,7 +77,7 @@ class SessionExporter(BaseSessionExporter, SpanExporter):
     def get_failure_result(self):
         return SpanExportResult.FAILURE
 
-    def _do_export(self, spans: Sequence[ReadableSpan]) -> SpanExportResult:
+    def _export(self, spans: Sequence[ReadableSpan]) -> SpanExportResult:
         events = []
         session_events = []  # Separate list for session events
 
@@ -149,7 +149,7 @@ class SessionLogExporter(BaseSessionExporter, LogExporter):
     def get_failure_result(self):
         return LogExportResult.FAILURE
 
-    def _do_export(self, batch: Sequence[LogData]) -> LogExportResult:
+    def _export(self, batch: Sequence[LogData]) -> LogExportResult:
         """Export the log records to the AgentOps backend."""
 
         def __serialize(_entry: Union[LogRecord, LogData]) -> Dict[str, Any]:
