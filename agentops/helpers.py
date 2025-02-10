@@ -1,16 +1,16 @@
-from enum import Enum
 import inspect
 import json
 from datetime import datetime, timezone
+from enum import Enum
 from functools import wraps
 from importlib.metadata import PackageNotFoundError, version
 from pprint import pformat
 from typing import Any, Optional, Union
 from uuid import UUID
-from .descriptor import agentops_property
 
 import requests
 
+from .descriptor import agentops_property
 from .log_config import logger
 
 
@@ -22,6 +22,11 @@ def get_ISO_time():
         str: The current UTC time as a string in ISO 8601 format.
     """
     return datetime.now(timezone.utc).isoformat()
+
+
+def iso_to_unix_nano(iso_time: str) -> int:
+    dt = datetime.fromisoformat(iso_time)
+    return int(dt.timestamp() * 1_000_000_000)
 
 
 def is_jsonable(x):
