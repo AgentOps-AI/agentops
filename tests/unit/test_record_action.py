@@ -15,9 +15,7 @@ class TestRecordAction:
         self.event_type = "test_event"
         agentops.init(self.api_key, max_wait_time=50, auto_start_session=False)
 
-    def test_record_action_decorator(self, mock_req):
-        agentops.start_session()
-
+    def test_record_action_decorator(self, mock_req, agentops_session):
         @record_action(event_name=self.event_type)
         def add_two(x, y):
             return x + y
@@ -39,16 +37,15 @@ class TestRecordAction:
 
         agentops.end_session(end_state="Success")
 
-    def test_record_action_default_name(self, mock_req):
-        agentops.start_session()
-
+    def test_record_action_default_name(self, mock_req, agentops_session):
         @record_action()
         def add_two(x, y):
             return x + y
 
         # Act
         add_two(3, 4)
-        time.sleep(0.1)
+
+        agentops_session._tracer.force_flush()
 
         # Find the record_action request
         action_requests = [r for r in mock_req.request_history if "/v2/create_events" in r.url]
@@ -63,21 +60,19 @@ class TestRecordAction:
 
         agentops.end_session(end_state="Success")
 
-    def test_record_action_decorator_multiple(self, mock_req):
-        agentops.start_session()
-
+    def test_record_action_decorator_multiple(self, mock_req, agentops_session):
         # Arrange
         @record_action(event_name=self.event_type)
         def add_three(x, y, z=3):
             return x + y + z
 
         # Act
-        breakpoint()
         add_three(1, 2)
-        breakpoint()
         add_three(1, 2, 4)
 
-        time.sleep(1.5)
+        agentops_session._tracer.force_flush()
+
+        # time.sleep(1.5)
 
         # Find the record_action request
         action_requests = [r for r in mock_req.request_history if "/v2/create_events" in r.url]
@@ -98,9 +93,7 @@ class TestRecordAction:
         agentops.end_session(end_state="Success")
 
     @pytest.mark.asyncio
-    async def test_async_action_call(self, mock_req):
-        agentops.start_session()
-
+    async def test_async_action_call(self, mock_req, agentops_session):
         @record_action(self.event_type)
         async def async_add(x, y):
             time.sleep(0.1)
@@ -108,8 +101,8 @@ class TestRecordAction:
 
         # Act
         result = await async_add(3, 4)
-        time.sleep(0.1)
 
+        agentops_session._tracer.force_flush()
         # Assert
         assert result == 7
 
@@ -144,9 +137,10 @@ class TestRecordAction:
 
         # Act
         add_three(1, 2, session=session_1)
-        time.sleep(0.1)
         add_three(1, 2, 3, session=session_2)
-        time.sleep(0.1)
+
+        session_1._tracer.force_flush()
+        session_2._tracer.force_flush()
 
         # Find action requests
         action_requests = [r for r in mock_req.request_history if "/v2/create_events" in r.url]

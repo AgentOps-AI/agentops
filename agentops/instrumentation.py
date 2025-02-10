@@ -193,6 +193,10 @@ class SessionTracer:
             except Exception as e:
                 logger.warning(f"Error during exporter cleanup: {e}")
 
+    def force_flush(self):
+        """Force flush spans"""
+        self.span_processor.force_flush(timeout_millis=5000)
+
 
 def _on_session_start(sender):
     """Initialize session tracer when session starts"""
@@ -232,6 +236,7 @@ def _on_session_end(sender, end_state: str, end_state_reason: Optional[str]):
 def _on_session_event_recorded(sender: Session, event: Event, flush_now=False, **kwargs):
     """Handle completion of event recording for telemetry"""
     logger.debug(f"Finished recording event: {event}")
+    # breakpoint()
 
     # Create spans from definitions
     span_definitions = EventToSpanEncoder.encode(event)
