@@ -229,7 +229,7 @@ def on_session_end(sender, end_state: str, end_state_reason: Optional[str]):
 
 
 @event_recorded.connect
-def process_events(sender: Session, event: Event, flush_now=False, **kwargs):
+def on_session_recorded(sender: Session, event: Event, flush_now=False, **kwargs):
     """Handle completion of event recording for telemetry"""
     logger.debug(f"Finished recording event: {event}")
 
