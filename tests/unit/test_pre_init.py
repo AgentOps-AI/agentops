@@ -17,7 +17,7 @@ class BasicAgent:
 
 
 class TestPreInit:
-    def setup_method(self,base_url):
+    def setup_method(self, base_url):
         self.url = base_url
         self.api_key = "11111111-1111-4111-8111-111111111111"
 

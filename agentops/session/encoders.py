@@ -103,7 +103,7 @@ class EventToSpanEncoder:
             "event_type": event_type,
             "event.id": str(event.id),
             "event.start_time": event.init_timestamp,  # Use event's timestamps
-            "event.end_time": event.end_timestamp,     # Use event's timestamps
+            "event.end_time": event.end_timestamp,  # Use event's timestamps
             SpanAttributes.CODE_NAMESPACE: event.__class__.__name__,
             "action_type": event_type,
         }
@@ -199,7 +199,9 @@ class EventToSpanEncoder:
                 if (key.startswith("event.") and key != "event.type") or key == "code.namespace":
                     continue
                 # Skip session.* attributes if this isn't a session event
-                if key.startswith("session.") and not any(x in span.attributes for x in ["session.start", "session.end"]):
+                if key.startswith("session.") and not any(
+                    x in span.attributes for x in ["session.start", "session.end"]
+                ):
                     continue
                 # Skip event.data since we already processed it
                 if key == "event.data":
@@ -224,13 +226,15 @@ class EventToSpanEncoder:
 
         # Add required metadata with proper timestamp format
         if span.attributes:
-            event_data.update({
-                "id": span.attributes.get("event.id", str(uuid4())),
-                # Use span start/end time as fallback
-                "init_timestamp": str(span.attributes.get("event.start_time", span.start_time)),
-                "end_timestamp": str(span.attributes.get("event.end_time", span.end_time)),
-                "event_type": span.attributes.get("event.type", span.attributes.get("event_type", "unknown")),
-            })
+            event_data.update(
+                {
+                    "id": span.attributes.get("event.id", str(uuid4())),
+                    # Use span start/end time as fallback
+                    "init_timestamp": str(span.attributes.get("event.start_time", span.start_time)),
+                    "end_timestamp": str(span.attributes.get("event.end_time", span.end_time)),
+                    "event_type": span.attributes.get("event.type", span.attributes.get("event_type", "unknown")),
+                }
+            )
 
         logger.debug(f"Decoded event data: {event_data}")
         return event_data

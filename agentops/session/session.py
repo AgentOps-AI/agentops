@@ -536,4 +536,4 @@ class Session:
         tag_str = f", tags={self.tags}" if self.tags else ""
         end_state_str = f", end_state={self.end_state}" if self.end_timestamp else ""
 
-        return f"Session(id={self.session_id}, status={status}" f"{tag_str}{end_state_str})"
+        return f"Session(id={self.session_id}, status={status}{tag_str}{end_state_str})"

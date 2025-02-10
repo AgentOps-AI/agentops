@@ -76,15 +76,15 @@ import blinker
 
 # Session lifecycle signals
 session_initializing = blinker.signal("session_initializing")  # Before __init__ setup
-session_initialized = blinker.signal("session_initialized")    # After __init__ setup
-session_starting = blinker.signal("session_starting")         # Before API call to start session
-session_started = blinker.signal("session_started")           # After successful API start
-session_updated = blinker.signal("session_updated")           # When session state is updated
-session_ending = blinker.signal("session_ending")            # Before ending session
-session_ended = blinker.signal("session_ended")              # After session is ended
+session_initialized = blinker.signal("session_initialized")  # After __init__ setup
+session_starting = blinker.signal("session_starting")  # Before API call to start session
+session_started = blinker.signal("session_started")  # After successful API start
+session_updated = blinker.signal("session_updated")  # When session state is updated
+session_ending = blinker.signal("session_ending")  # Before ending session
+session_ended = blinker.signal("session_ended")  # After session is ended
 
 # Event lifecycle signals
-event_recording = blinker.signal("event_recording")      # Start of telemetry process
-event_recorded = blinker.signal("event_recorded")        # End of telemetry process
-event_completing = blinker.signal("event_completing")    # Start of event execution
-event_completed = blinker.signal("event_completed")      # End of event execution
+event_recording = blinker.signal("event_recording")  # Start of telemetry process
+event_recorded = blinker.signal("event_recorded")  # End of telemetry process
+event_completing = blinker.signal("event_completing")  # Start of event execution
+event_completed = blinker.signal("event_completed")  # End of event execution
