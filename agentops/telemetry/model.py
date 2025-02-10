@@ -20,9 +20,10 @@ class InstrumentedBase:
     - timing-related properties and methods
     """
 
-    init_timestamp: Optional[str] = field(default=None)  # Allow setting in __init__
-    end_timestamp: Optional[str] = field(default=None)  # Allow setting in __init__
+    # Move fields with defaults to the end
     _span: Optional[Span] = field(default=None, init=False)
+    init_timestamp: Optional[str] = field(default=None, init=False)
+    end_timestamp: Optional[str] = field(default=None, init=False)
 
     def __post_init__(self):
         """Create span and set timestamps if provided"""
