@@ -251,31 +251,28 @@ def on_session_end(sender, end_state: str, end_state_reason: Optional[str]):
 
 @event_recorded.connect
 def on_event_record(sender, event: Event, flush_now: bool = False):
-    """Create span for recorded event"""
+    """Create span for recorded event and handle timing"""
     logger.debug(f"Event recorded: {event}")
 
-    # If sender is None, try to get default session
-    if sender is None:
-        from agentops.session.registry import get_default_session
-
-        sender = get_default_session()
-        if sender is None:
-            raise ValueError("No active session found")
-
-    # Use encoder to create span definitions
-    span_definitions = EventToSpanEncoder.encode(event)
+    # Set initial timestamp if not already set
+    if not event.init_timestamp:
+        event.init_timestamp = get_ISO_time()
 
     # Create spans from definitions
-    for span_def in span_definitions:
-        # Ensure event type is set in attributes
-        if "event_type" not in span_def.attributes and hasattr(event, "event_type"):
-            span_def.attributes["event_type"] = event.event_type
+    span_definitions = EventToSpanEncoder.encode(event)
 
+    # Create the span with context manager to properly handle timing
+    for span_def in span_definitions:
         with sender._tracer.tracer.start_as_current_span(
             name=span_def.name,
             kind=span_def.kind,
             attributes=span_def.attributes,
         ) as span:
+            # The span's end time will be set when the context manager exits
+            
+            # Set event end timestamp when span ends
+            event.end_timestamp = get_ISO_time()
+            
             # Update event counts if applicable
             event_type = span_def.attributes.get("event_type")
             if event_type in sender.event_counts:

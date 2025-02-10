@@ -100,12 +100,12 @@ class EventToSpanEncoder:
 
         # Build attributes dict, filtering out None values
         attributes = {
-            "event_type": event_type,  # This will never be None
+            "event_type": event_type,
             "event.id": str(event.id),
-            "event.start_time": event.init_timestamp,
-            "event.end_timestamp": event.end_timestamp or "",
+            "event.start_time": event.init_timestamp,  # Use event's timestamps
+            "event.end_time": event.end_timestamp,     # Use event's timestamps
             SpanAttributes.CODE_NAMESPACE: event.__class__.__name__,
-            "action_type": event_type,  # Keep them in sync
+            "action_type": event_type,
         }
 
         # Only add non-None optional values
@@ -185,7 +185,7 @@ class EventToSpanEncoder:
         event_data = {}
 
         # Parse event.data if present
-        if "event.data" in span.attributes:
+        if span.attributes and "event.data" in span.attributes:
             try:
                 data = json.loads(span.attributes["event.data"])
                 event_data.update(data)
@@ -193,38 +193,44 @@ class EventToSpanEncoder:
                 logger.warning("Failed to parse event.data JSON")
 
         # Copy attributes, properly filtering and transforming
-        for key, value in span.attributes.items():
-            # Skip internal attributes except event.type which we need
-            if (key.startswith("event.") and key != "event.type") or key == "code.namespace":
-                continue
-            # Skip session.* attributes if this isn't a session event
-            if key.startswith("session.") and not any(x in span.attributes for x in ["session.start", "session.end"]):
-                continue
-            # Skip event.data since we already processed it
-            if key == "event.data":
-                continue
-            # Add the value if it's not None
-            if value is not None:
-                # Parse JSON strings back into dicts/values for params and returns
-                if key in ["params", "returns"] and isinstance(value, str):
-                    try:
-                        event_data[key] = json.loads(value)
-                    except json.JSONDecodeError:
+        if span.attributes:
+            for key, value in span.attributes.items():
+                # Skip internal attributes except event.type which we need
+                if (key.startswith("event.") and key != "event.type") or key == "code.namespace":
+                    continue
+                # Skip session.* attributes if this isn't a session event
+                if key.startswith("session.") and not any(x in span.attributes for x in ["session.start", "session.end"]):
+                    continue
+                # Skip event.data since we already processed it
+                if key == "event.data":
+                    continue
+                # Add the value if it's not None
+                if value is not None:
+                    # Parse JSON strings back into dicts/values for params and returns
+                    if key in ["params", "returns", "session.tags"] and isinstance(value, str):
+                        try:
+                            event_data[key] = json.loads(value)
+                        except json.JSONDecodeError:
+                            # If it's session.tags and a string, convert to list
+                            if key == "session.tags":
+                                event_data[key] = [value]
+                            else:
+                                event_data[key] = value
+                    # Handle event.type specially
+                    elif key == "event.type":
+                        event_data["event_type"] = value
+                    else:
                         event_data[key] = value
-                # Handle event.type specially
-                elif key == "event.type":
-                    event_data["event_type"] = value
-                else:
-                    event_data[key] = value
 
         # Add required metadata with proper timestamp format
-        event_data.update({
-            "id": span.attributes.get("event.id", str(uuid4())),
-            "init_timestamp": str(span.attributes.get("event.start_time", "")),
-            "end_timestamp": str(span.attributes.get("event.end_time", "")),
-            # Add event_type if not already present
-            "event_type": span.attributes.get("event.type", span.attributes.get("event_type", "unknown")),
-        })
+        if span.attributes:
+            event_data.update({
+                "id": span.attributes.get("event.id", str(uuid4())),
+                # Use span start/end time as fallback
+                "init_timestamp": str(span.attributes.get("event.start_time", span.start_time)),
+                "end_timestamp": str(span.attributes.get("event.end_time", span.end_time)),
+                "event_type": span.attributes.get("event.type", span.attributes.get("event_type", "unknown")),
+            })
 
         logger.debug(f"Decoded event data: {event_data}")
         return event_data
