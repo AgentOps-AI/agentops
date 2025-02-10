@@ -6,7 +6,7 @@ from blinker import Signal
 from agentops.config import Configuration
 from agentops.event import Event
 from agentops.session import Session
-from agentops.session.events import (
+from agentops.session.signals import (
     event_recorded,
     session_ended,
     session_ending,

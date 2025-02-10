@@ -14,7 +14,7 @@ from typing import Any, Dict, List, Optional, Sequence, Union
 from uuid import UUID, uuid4
 
 from agentops.log_config import logger
-from agentops.session.events import (  # Import signals needed at runtime
+from agentops.session.signals import (  # Import signals needed at runtime
     event_completed,
     event_recorded,
     event_recording,

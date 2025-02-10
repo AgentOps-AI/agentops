@@ -4,7 +4,7 @@ import logging
 from typing import TYPE_CHECKING, List, Optional, Union
 from uuid import UUID
 
-from .events import session_ended, session_initialized, session_started
+from .signals import session_ended, session_initialized, session_started
 
 if TYPE_CHECKING:
     from .session import Session

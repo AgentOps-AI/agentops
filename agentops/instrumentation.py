@@ -20,7 +20,7 @@ from agentops.helpers import get_ISO_time, safe_serialize
 from agentops.http_client import HttpClient
 from agentops.log_config import logger
 from agentops.session.encoders import EventToSpanEncoder
-from agentops.session.events import event_recorded, session_ended, session_started, session_updated
+from agentops.session.signals import event_recorded, session_ended, session_started, session_updated
 from agentops.session.exporters import EventExporter, SessionLogExporter
 
 if TYPE_CHECKING:
