@@ -301,10 +301,7 @@ class Session:
                     )
                     logger.info(colored(f"\x1b[34mSession Replay: {self.session_url}\x1b[0m", "blue"))
 
-                    token_cost = self.token_cost
-                    # Signal session has ended after cleanup
-                    session_ended.send(self, end_state=end_state, end_state_reason=end_state_reason)
-                    return token_cost
+                    return self.token_cost
 
             except Exception as e:
                 logger.exception(f"Error during session end: {e}")
@@ -399,7 +396,7 @@ class Session:
                     api_key=self.config.api_key,  # Add API key here
                 )
             except ApiServerException as e:
-                return logger.error(f"Could not update session - {e}")
+                logger.error(f"Could not update session - {e}")
 
     def create_agent(self, name, agent_id):
         """Create a new agent in the session"""
@@ -422,7 +419,8 @@ class Session:
                 api_key=self.config.api_key,
             )
         except ApiServerException as e:
-            return logger.error(f"Could not create agent - {e}")
+            logger.error(f"Could not create agent - {e}")
+            return
 
         return agent_id
 
