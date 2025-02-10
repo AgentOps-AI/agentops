@@ -200,7 +200,10 @@ def on_event_recording(sender, event: Event):
 @event_recorded.connect
 def on_event_recorded(sender, event: Event):
     """Handle completion of event recording"""
-    assert not event.end_timestamp, "Programming error: attempted ending an Event with valued 'end_timestamp'"
+    if not event.end_timestamp:
+        breakpoint()
+    # TODO: Determine when we should raise an error here
+    # assert not event.end_timestamp, "Programming error: attempted ending an Event with valued 'end_timestamp'"
     event.end_timestamp = get_ISO_time()
     logger.debug(f"Finished recording event: {event}")
 

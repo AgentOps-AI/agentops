@@ -251,7 +251,7 @@ class EventToSpanEncoder:
                     # Use span start/end time as fallback
                     "init_timestamp": str(span.attributes.get("event.start_time", span.start_time)),
                     "end_timestamp": str(span.attributes.get("event.end_time", span.end_time)),
-                    "event_type": span.attributes.get("event.type", span.attributes.get("event_type", "unknown")),
+                    "event_type": span.attributes.get("event.type", span.attributes.get("event_type")),
                 }
             )
 
