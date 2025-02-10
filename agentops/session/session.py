@@ -38,6 +38,7 @@ from agentops.session.signals import (
     session_starting,
     session_updated,
 )
+from agentops.telemetry import InstrumentedBase
 
 from .exporters import EventExporter, SessionLogExporter
 
@@ -88,7 +89,7 @@ def on_session_ended(sender, end_state, end_state_reason, **kwargs):
 
 
 @dataclass
-class Session:
+class Session(InstrumentedBase):
     """Data container for session state with minimal public API"""
 
     session_id: UUID
@@ -98,15 +99,12 @@ class Session:
     token_cost: Decimal = field(default_factory=lambda: Decimal(0))
     end_state: str = field(default_factory=lambda: EndState.INDETERMINATE.value)
     end_state_reason: Optional[str] = None
-    end_timestamp: Optional[str] = None
     jwt: Optional[str] = None
     video: Optional[str] = None
     event_counts: Dict[str, int] = field(
         default_factory=lambda: {"llms": 0, "tools": 0, "actions": 0, "errors": 0, "apis": 0}
     )
-    init_timestamp: str = field(default_factory=get_ISO_time)
     is_running: bool = field(default=False)
-    _has_started: bool = field(default=False, init=False)  # New private field to track if session was ever started
 
     def __post_init__(self):
         """Initialize session components after dataclass initialization"""
@@ -129,12 +127,7 @@ class Session:
 
     def _set_running(self, value: bool) -> None:
         """Helper method to safely set is_running state"""
-        if value and self._has_started:
-            raise AssertionError("Session can only be started once")
-
         self.is_running = value
-        if value:
-            self._has_started = True
 
     def _cleanup(self):
         """Clean up session resources"""

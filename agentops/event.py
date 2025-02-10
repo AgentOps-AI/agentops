@@ -17,6 +17,7 @@ from blinker import Signal
 from ordered_set import OrderedSet
 
 from agentops.log_config import logger
+from agentops.telemetry import InstrumentedBase
 
 from .helpers import check_call_stack_for_agent_id, get_ISO_time
 
@@ -25,6 +26,8 @@ from .helpers import check_call_stack_for_agent_id, get_ISO_time
 
 
 if TYPE_CHECKING:
+    from opentelemetry.trace import Span
+
     from agentops.session.session import Session
 
 
@@ -37,15 +40,25 @@ class EventType(Enum):
 
 
 @dataclass
-class Event:
+class EventBase(InstrumentedBase):
+    """Base class for Event that defines core fields"""
+
+    event_type: Union[EventType, str]
+    params: Optional[dict] = None
+    returns: Optional[Union[str, List[str]]] = None
+    agent_id: Optional[UUID] = field(default_factory=check_call_stack_for_agent_id)
+    id: UUID = field(default_factory=uuid4)
+    session_id: Optional[UUID] = None
+
+
+@dataclass
+class Event(EventBase):
     """
     Abstract base class for events that will be recorded. Should not be instantiated directly.
 
     event_type(str): The type of event. Defined in events.EventType. Some values are 'llm', 'action', 'api', 'tool', 'error'.
     params(dict, optional): The parameters of the function containing the triggered event, e.g. {'x': 1} in example below
     returns(str, optional): The return value of the function containing the triggered event, e.g. 2 in example below
-    init_timestamp(str): A timestamp indicating when the event began. Defaults to the time when this Event was instantiated.
-    end_timestamp(str): A timestamp indicating when the event ended. Defaults to the time when this Event was instantiated.
     agent_id(UUID, optional): The unique identifier of the agent that triggered the event.
     id(UUID): A unique identifier for the event. Defaults to a new UUID.
     session_id(UUID, optional): The unique identifier of the session that the event belongs to.
@@ -60,22 +73,11 @@ class Event:
     }
     """
 
-    event_type: Union[EventType, str]  # Allow both EventType enum and string
-    params: Optional[dict] = None
-    returns: Optional[Union[str, List[str]]] = None
-    init_timestamp: str = field(default_factory=get_ISO_time)
-    end_timestamp: Optional[str] = None
-    agent_id: Optional[UUID] = field(default_factory=check_call_stack_for_agent_id)
-    id: UUID = field(default_factory=uuid4)
-    session_id: Optional[UUID] = None
-
     def __post_init__(self):
-        # Convert string event_type to enum value if possible
         if isinstance(self.event_type, str):
             try:
                 self.event_type = EventType(self.event_type)
             except ValueError:
-                # If not a standard event type, keep as string
                 pass
 
     @property
@@ -227,7 +229,7 @@ def register_handlers():
     """Register event.py signal handlers"""
     # First unregister to ensure clean state
     unregister_handlers()
-    
+
     event_recording.connect(_on_event_recording)
     event_recorded.connect(_on_event_recorded)
     event_completed.connect(_on_event_completed)
