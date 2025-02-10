@@ -102,8 +102,8 @@ class EventToSpanEncoder:
         attributes = {
             "event_type": event_type,
             "event.id": str(event.id),
-            "event.start_time": event.init_timestamp,  # Use event's timestamps
-            "event.end_time": event.end_timestamp,  # Use event's timestamps
+            "event.start_time": event.init_timestamp,
+            "event.end_time": event.end_timestamp,
             SpanAttributes.CODE_NAMESPACE: event.__class__.__name__,
             "action_type": event_type,
         }
@@ -114,7 +114,8 @@ class EventToSpanEncoder:
         if event.returns is not None:
             attributes["returns"] = event.returns
         if event.logs is not None:
-            attributes["logs"] = event.logs
+            # Ensure lists are JSON encoded
+            attributes["logs"] = json.dumps(event.logs) if isinstance(event.logs, (list, dict)) else event.logs
 
         logger.debug(f"Span attributes: {attributes}")
 

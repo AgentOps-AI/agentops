@@ -86,3 +86,77 @@ class TestEventToSpanEncoder:
         span_defs = EventToSpanEncoder.encode(UnknownEvent(event_type="unknown"))
         assert len(span_defs) == 1
         assert span_defs[0].name == "event"
+
+    def test_generic_event_with_nested_data(self):
+        """Test encoding/decoding of events with nested data structures"""
+        nested_params = {
+            "config": {"model": "gpt-4", "temperature": 0.7, "settings": {"max_tokens": 100}},
+            "metadata": ["tag1", "tag2"],
+            "flags": {"debug": True},
+        }
+
+        class ComplexEvent(Event):
+            pass
+
+        event = ComplexEvent(
+            event_type="complex", 
+            params=nested_params, 
+            returns=["success"]  # Changed to match expected type
+        )
+
+        span_defs = EventToSpanEncoder.encode(event)
+        assert len(span_defs) == 1
+        span = span_defs[0]
+
+        # Verify nested structures are properly JSON encoded
+        assert json.loads(span.attributes["params"]) == nested_params
+        assert json.loads(span.attributes["returns"]) == ["success"]
+
+    def test_null_and_empty_values(self, mock_action_event):
+        """Test handling of null and empty values in event attributes"""
+        event = mock_action_event
+        event.params = None
+        event.returns = ""
+        event.logs = []
+
+        span_defs = EventToSpanEncoder.encode(event)
+        assert len(span_defs) == 1
+        span = span_defs[0]
+
+        # Verify null/empty values are handled correctly
+        assert "params" not in span.attributes  # None values should be excluded
+        assert span.attributes["returns"] == ""
+        assert span.attributes["logs"] == "[]"  # Empty list should be JSON encoded
+
+    def test_special_characters_in_attributes(self):
+        """Test handling of special characters in event attributes"""
+        special_params = {
+            "unicode": "Hello 世界",
+            "special_chars": "!@#$%^&*()",
+            "newlines": "line1\nline2\r\nline3",
+            "quotes": "\"quoted text\" and 'single quotes'",
+        }
+
+        event = Event(event_type="special", params=special_params)
+
+        span_defs = EventToSpanEncoder.encode(event)
+        decoded_params = json.loads(span_defs[0].attributes["params"])
+
+        # Verify special characters are preserved
+        assert decoded_params == special_params
+
+    def test_large_data_preservation(self):
+        """Test preservation of large data structures"""
+        large_list = [{"item": i, "data": "x" * 100} for i in range(100)]
+        large_event = Event(
+            event_type="large_data", 
+            params={"large_list": large_list}, 
+            returns=["100 items processed"]  # Changed to match expected type
+        )
+
+        span_defs = EventToSpanEncoder.encode(large_event)
+        decoded_params = json.loads(span_defs[0].attributes["params"])
+
+        # Verify large data structures are preserved
+        assert decoded_params["large_list"] == large_list
+        assert json.loads(span_defs[0].attributes["returns"]) == ["100 items processed"]
