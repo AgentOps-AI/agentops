@@ -28,6 +28,7 @@ from agentops.http_client import HttpClient, Response
 from agentops.instrumentation import cleanup_session_telemetry, setup_session_telemetry
 from agentops.log_config import logger
 from agentops.session.signals import (
+    event_recorded,
     event_recording,
     session_ended,
     session_ending,
@@ -209,9 +210,16 @@ class Session:
         if not self.is_running:
             return
 
+        # Set session ID on event - it shouldn't already be set; this Event should still be
+        assert not event.session_id, "ProgrammingError: Event already has a session_id"
+        event.session_id = self.session_id
+
         try:
             # Signal event recording is starting
             event_recording.send(self, event=event)
+
+            # Signal event has been recorded - this triggers span creation
+            event_recorded.send(self, event=event, flush_now=flush_now)
 
         except Exception as e:
             logger.error(f"Error recording event: {e}")

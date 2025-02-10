@@ -20,12 +20,13 @@ from agentops.helpers import get_ISO_time, safe_serialize
 from agentops.http_client import HttpClient
 from agentops.log_config import logger
 from agentops.session.encoders import EventToSpanEncoder
-from agentops.session.signals import event_recorded, session_ended, session_started, session_updated
 from agentops.session.exporters import EventExporter, SessionLogExporter
+from agentops.session.signals import event_recorded, session_ended, session_started, session_updated
 
 if TYPE_CHECKING:
     from agentops.client import Client
     from agentops.event import ErrorEvent, Event, EventType
+    from agentops.session.session import Session
 
 """
 This module handles OpenTelemetry instrumentation setup for AgentOps sessions.
@@ -250,26 +251,20 @@ def on_session_end(sender, end_state: str, end_state_reason: Optional[str]):
 
 
 @event_recorded.connect
-def on_event_record(sender, event: Event, flush_now: bool = False):
-    """Create span for recorded event and handle timing"""
-    logger.debug(f"Event recorded: {event}")
-
-    # Set initial timestamp if not already set
-    if not event.init_timestamp:
-        event.init_timestamp = get_ISO_time()
+def process_events(sender: Session, event: Event, flush_now=False, **kwargs):
+    """Handle completion of event recording for telemetry"""
+    logger.debug(f"Finished recording event: {event}")
 
     # Create spans from definitions
     span_definitions = EventToSpanEncoder.encode(event)
 
-    # Create the span with context manager to properly handle timing
+    # Create spans
     for span_def in span_definitions:
         with sender._tracer.tracer.start_as_current_span(
             name=span_def.name,
             kind=span_def.kind,
             attributes=span_def.attributes,
         ) as span:
-            # The span's end time will be set when the context manager exits
-
             # Set event end timestamp when span ends
             event.end_timestamp = get_ISO_time()
 

@@ -72,7 +72,9 @@ class TestRecordAction:
             return x + y + z
 
         # Act
+        breakpoint()
         add_three(1, 2)
+        breakpoint()
         add_three(1, 2, 4)
 
         time.sleep(1.5)

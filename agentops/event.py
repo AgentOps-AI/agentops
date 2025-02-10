@@ -10,12 +10,15 @@ from __future__ import annotations
 import traceback
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Any, Dict, List, Optional, Sequence, Union
+from typing import TYPE_CHECKING, Any, Dict, List, Optional, Sequence, Union
 from uuid import UUID, uuid4
 
 from agentops.log_config import logger
 
 from .helpers import check_call_stack_for_agent_id, get_ISO_time
+
+if TYPE_CHECKING:
+    from agentops.session.session import Session
 
 
 class EventType(Enum):
@@ -190,7 +193,7 @@ from agentops.session.signals import (  # Import signals needed at runtime
 
 # Event timing handlers
 @event_recording.connect
-def on_event_recording(sender, event: Event):
+def on_event_recording(sender: Session, event: Event, **kwargs):
     """Handle start of event recording"""
     if not event.init_timestamp:
         event.init_timestamp = get_ISO_time()
@@ -198,7 +201,7 @@ def on_event_recording(sender, event: Event):
 
 
 @event_recorded.connect
-def on_event_recorded(sender, event: Event):
+def on_event_recorded(sender: Session, event: Event, **kwargs):
     """Handle completion of event recording"""
     if not event.end_timestamp:
         breakpoint()
@@ -209,7 +212,7 @@ def on_event_recorded(sender, event: Event):
 
 
 @event_completed.connect
-def on_event_completed(sender, event: Event):
+def on_event_completed(sender: Session, event: Event):
     """Handle event completion"""
     if not event.end_timestamp:
         event.end_timestamp = get_ISO_time()
