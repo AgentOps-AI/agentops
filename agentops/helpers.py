@@ -1,26 +1,142 @@
-import inspect
+"""Helper functions and classes for AgentOps."""
+
+import os
 import json
+import uuid
+import logging
 from datetime import datetime, timezone
 from functools import wraps
 from importlib.metadata import PackageNotFoundError, version
 from pprint import pformat
-from typing import Any, Optional, Union
+from typing import Any, Optional, Union, Dict, List
 from uuid import UUID
 from .descriptor import agentops_property
 
 import requests
 
-from .log_config import logger
+from .config import Configuration
+
+logger = logging.getLogger(__name__)
 
 
-def get_ISO_time():
-    """
-    Get the current UTC time in ISO 8601 format with milliseconds precision in UTC timezone.
-
-    Returns:
-        str: The current UTC time as a string in ISO 8601 format.
-    """
+def get_ISO_time() -> str:
+    """Get current time in ISO format with timezone."""
     return datetime.now(timezone.utc).isoformat()
+
+
+def generate_uuid() -> str:
+    """Generate a UUID string."""
+    return str(uuid.uuid4())
+
+
+def get_env_var(key: str, default: Any = None) -> Any:
+    """Get environment variable value.
+    
+    Args:
+        key: Environment variable key.
+        default: Default value if not found.
+        
+    Returns:
+        Environment variable value or default.
+    """
+    return os.environ.get(key, default)
+
+
+def make_api_request(
+    method: str,
+    endpoint: str,
+    data: Optional[Dict[str, Any]] = None,
+    headers: Optional[Dict[str, str]] = None,
+    config: Optional[Configuration] = None,
+) -> requests.Response:
+    """Make an API request to the AgentOps backend.
+    
+    Args:
+        method: HTTP method.
+        endpoint: API endpoint.
+        data: Request data.
+        headers: Request headers.
+        config: Configuration object.
+        
+    Returns:
+        API response.
+    """
+    if config is None:
+        config = Configuration()
+        
+    url = f"{config.api_url}{endpoint}"
+    headers = headers or {}
+    headers.update({
+        "Content-Type": "application/json",
+        "Authorization": f"Bearer {config.api_key}",
+    })
+    
+    try:
+        response = requests.request(
+            method=method,
+            url=url,
+            json=data,
+            headers=headers,
+            timeout=config.request_timeout,
+        )
+        response.raise_for_status()
+        return response
+    except requests.exceptions.RequestException as e:
+        logger.error(f"API request failed: {e}")
+        raise
+
+
+def clean_dict(d: Dict[str, Any]) -> Dict[str, Any]:
+    """Clean dictionary by removing None values and converting objects to strings.
+    
+    Args:
+        d: Dictionary to clean.
+        
+    Returns:
+        Cleaned dictionary.
+    """
+    return {
+        k: str(v) if not isinstance(v, (str, int, float, bool, list, dict)) else v
+        for k, v in d.items()
+        if v is not None
+    }
+
+
+def validate_tags(tags: List[str]) -> None:
+    """Validate tags format.
+    
+    Args:
+        tags: List of tags to validate.
+        
+    Raises:
+        ValueError: If tags are invalid.
+    """
+    if not isinstance(tags, list):
+        raise ValueError("Tags must be a list")
+        
+    if not all(isinstance(tag, str) for tag in tags):
+        raise ValueError("All tags must be strings")
+        
+    if not all(tag.strip() for tag in tags):
+        raise ValueError("Tags cannot be empty strings")
+
+
+def validate_metadata(metadata: Dict[str, Any]) -> None:
+    """Validate metadata format.
+    
+    Args:
+        metadata: Metadata dictionary to validate.
+        
+    Raises:
+        ValueError: If metadata is invalid.
+    """
+    if not isinstance(metadata, dict):
+        raise ValueError("Metadata must be a dictionary")
+        
+    try:
+        json.dumps(metadata)
+    except (TypeError, ValueError):
+        raise ValueError("Metadata must be JSON serializable")
 
 
 def is_jsonable(x):

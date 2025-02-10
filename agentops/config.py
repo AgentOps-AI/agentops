@@ -16,6 +16,10 @@ class Configuration:
         self.auto_start_session: bool = True
         self.skip_auto_end_session: bool = False
         self.env_data_opt_out: bool = False
+        
+        # Telemetry settings
+        self.enable_telemetry: bool = True
+        self.otlp_endpoint: str = "http://localhost:4318/v1/traces"
 
     def configure(
         self,
@@ -30,6 +34,8 @@ class Configuration:
         auto_start_session: Optional[bool] = None,
         skip_auto_end_session: Optional[bool] = None,
         env_data_opt_out: Optional[bool] = None,
+        enable_telemetry: Optional[bool] = None,
+        otlp_endpoint: Optional[str] = None,
     ):
         if api_key is not None:
             try:
@@ -72,3 +78,9 @@ class Configuration:
 
         if env_data_opt_out is not None:
             self.env_data_opt_out = env_data_opt_out
+            
+        if enable_telemetry is not None:
+            self.enable_telemetry = enable_telemetry
+            
+        if otlp_endpoint is not None:
+            self.otlp_endpoint = otlp_endpoint

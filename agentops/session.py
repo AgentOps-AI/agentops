@@ -18,11 +18,13 @@ from opentelemetry.sdk.trace.export import BatchSpanProcessor, ConsoleSpanExport
 from termcolor import colored
 
 from .config import Configuration
-from .event import ErrorEvent, Event
+from .event import ErrorEvent, Event, LLMEvent
 from .exceptions import ApiServerException
 from .helpers import filter_unjsonable, get_ISO_time, safe_serialize
 from .http_client import HttpClient, Response
 from .log_config import logger
+from .telemetry import TelemetryManager
+from opentelemetry.trace import SpanKind, Status, StatusCode
 
 """
 OTEL Guidelines:
@@ -216,54 +218,57 @@ class Session:
         tags: Optional[List[str]] = None,
         host_env: Optional[dict] = None,
     ):
-        self.end_timestamp = None
-        self.end_state: Optional[str] = "Indeterminate"
+        self.end_timestamp: Optional[str] = None
+        self.end_state: str = "Indeterminate"
         self.session_id = session_id
-        self.init_timestamp = get_ISO_time()
+        self.init_timestamp: str = get_ISO_time()
         self.tags: List[str] = tags or []
         self.video: Optional[str] = None
         self.end_state_reason: Optional[str] = None
         self.host_env = host_env
         self.config = config
-        self.jwt = None
+        self.jwt: Optional[str] = None
         self._lock = threading.Lock()
         self._end_session_lock = threading.Lock()
         self.token_cost: Decimal = Decimal(0)
         self._session_url: str = ""
-        self.event_counts = {
+        self.event_counts: Dict[str, int] = {
             "llms": 0,
             "tools": 0,
             "actions": 0,
             "errors": 0,
             "apis": 0,
         }
-        # self.session_url: Optional[str] = None
-
+        self.is_running: bool = False
+        self.telemetry: Optional[TelemetryManager] = None
+        self._session_span: Optional[trace.Span] = None
+        self._session_context: Optional[Context] = None
+        self._agent_contexts: Dict[UUID, Context] = {}
+        
         # Start session first to get JWT
         self.is_running = self._start_session()
         if not self.is_running:
             return
 
-        # Initialize OTEL components with a more controlled processor
-        self._tracer_provider = TracerProvider()
-        self._otel_tracer = self._tracer_provider.get_tracer(
-            f"agentops.session.{str(session_id)}",
+        # Initialize telemetry
+        self.telemetry = TelemetryManager(
+            service_name="agentops",
+            otlp_endpoint=config.otlp_endpoint,
+            enabled=config.enable_telemetry,
         )
-        self._otel_exporter = SessionExporter(session=self)
-
-        # Use smaller batch size and shorter delay to reduce buffering
-        self._span_processor = BatchSpanProcessor(
-            self._otel_exporter,
-            max_queue_size=self.config.max_queue_size,
-            schedule_delay_millis=self.config.max_wait_time,
-            max_export_batch_size=min(
-                max(self.config.max_queue_size // 20, 1),
-                min(self.config.max_queue_size, 32),
-            ),
-            export_timeout_millis=20000,
+        
+        # Create and store session root span
+        self._session_span = self.telemetry.create_session_span(
+            str(session_id),
+            attributes={
+                "session.tags": ",".join(self.tags) if self.tags else "",
+                "session.init_timestamp": self.init_timestamp,
+            }
         )
-
-        self._tracer_provider.add_span_processor(self._span_processor)
+        self._session_context = trace.set_span_in_context(self._session_span)
+        
+        # Store agent contexts
+        self._agent_contexts = {}
 
     def set_video(self, video: str) -> None:
         """
@@ -297,6 +302,7 @@ class Session:
         end_state_reason: Optional[str] = None,
         video: Optional[str] = None,
     ) -> Union[Decimal, None]:
+        """End the session and clean up resources."""
         with self._end_session_lock:
             if not self.is_running:
                 return None
@@ -306,37 +312,35 @@ class Session:
                 return None
 
             try:
-                # Force flush any pending spans before ending session
-                if hasattr(self, "_span_processor"):
-                    self._span_processor.force_flush(timeout_millis=5000)
-
-                # 1. Set shutdown flag on exporter first
-                if hasattr(self, "_otel_exporter"):
-                    self._otel_exporter.shutdown()
-
-                # 2. Set session end state
+                # Set session end state
                 self.end_timestamp = get_ISO_time()
                 self.end_state = end_state
                 self.end_state_reason = end_state_reason
-                if video is not None:
+                if video:
                     self.video = video
 
-                # 3. Mark session as not running before cleanup
+                # End session span if it exists
+                if hasattr(self, '_session_span'):
+                    self._session_span.set_attribute("session.end_state", end_state)
+                    if end_state_reason:
+                        self._session_span.set_attribute("session.end_state_reason", end_state_reason)
+                    self._session_span.end(end_time=int(datetime.now(timezone.utc).timestamp() * 1e9))
+
+                # End all agent spans
+                for agent_id, context in self._agent_contexts.items():
+                    if context:
+                        span = trace.get_current_span(context)
+                        if span:
+                            span.end(end_time=int(datetime.now(timezone.utc).timestamp() * 1e9))
+
+                # Update session in backend
+                self._update_session()
+
+                # Clean up telemetry
+                self.telemetry = None
                 self.is_running = False
 
-                # 4. Clean up OTEL components
-                if hasattr(self, "_span_processor"):
-                    try:
-                        # Force flush any pending spans
-                        self._span_processor.force_flush(timeout_millis=5000)
-                        # Shutdown the processor
-                        self._span_processor.shutdown()
-                    except Exception as e:
-                        logger.warning(f"Error during span processor cleanup: {e}")
-                    finally:
-                        del self._span_processor
-
-                # 5. Final session update
+                # Get final analytics
                 if not (analytics_stats := self.get_analytics()):
                     return None
 
@@ -351,10 +355,18 @@ class Session:
                 )
                 logger.info(analytics)
 
+                return self.token_cost
+
             except Exception as e:
                 logger.exception(f"Error during session end: {e}")
+                if hasattr(self, '_session_span'):
+                    self._session_span.set_status(Status(StatusCode.ERROR))
+                    self._session_span.record_exception(e)
+                raise
             finally:
-                active_sessions.remove(self)  # First thing, get rid of the session
+                # Clean up session from active sessions
+                if self in active_sessions:
+                    active_sessions.remove(self)
 
                 logger.info(
                     colored(
@@ -362,7 +374,6 @@ class Session:
                         "blue",
                     )
                 )
-            return self.token_cost
 
     def add_tags(self, tags: List[str]) -> None:
         """
@@ -415,56 +426,63 @@ class Session:
         if not hasattr(event, "end_timestamp") or event.end_timestamp is None:
             event.end_timestamp = get_ISO_time()
 
-        # Create session context
-        token = set_value("session.id", str(self.session_id))
+        # Get or create agent context
+        agent_context = None
+        if event.agent_id:
+            if event.agent_id not in self._agent_contexts:
+                # Create new agent span
+                agent_span = self.telemetry.create_agent_span(
+                    str(event.agent_id),
+                    session_context=self._session_context,
+                    attributes={
+                        "session.id": str(self.session_id),
+                        "agent.init_timestamp": get_ISO_time(),
+                    }
+                )
+                self._agent_contexts[event.agent_id] = trace.set_span_in_context(agent_span)
+            agent_context = self._agent_contexts[event.agent_id]
+
+        # Create event attributes
+        event_attributes = {
+            "event.id": str(event.id),
+            "event.type": event.event_type,
+            "event.timestamp": event.init_timestamp,
+            "event.end_timestamp": event.end_timestamp,
+            "session.id": str(self.session_id),
+            "session.tags": ",".join(self.tags) if self.tags else "",
+        }
+
+        # Add event-specific attributes
+        event_data = dict(filter_unjsonable(event.__dict__))
+        event_attributes["event.data"] = json.dumps(event_data)
+
+        # Create event span
+        event_span = self.telemetry.create_event_span(
+            event_type=event.event_type,
+            event_id=str(event.id),
+            agent_context=agent_context,
+            attributes=event_attributes,
+            kind=SpanKind.CLIENT if isinstance(event, LLMEvent) else SpanKind.INTERNAL
+        )
 
         try:
-            token = attach(token)
+            # Update event counts
+            if event.event_type in self.event_counts:
+                self.event_counts[event.event_type] += 1
 
-            # Create a copy of event data to modify
-            event_data = dict(filter_unjsonable(event.__dict__))
-
-            # Add required fields based on event type
+            # Handle errors
             if isinstance(event, ErrorEvent):
-                event_data["error_type"] = getattr(event, "error_type", event.event_type)
-            elif event.event_type == "actions":
-                # Ensure action events have action_type
-                if "action_type" not in event_data:
-                    event_data["action_type"] = event_data.get("name", "unknown_action")
-                if "name" not in event_data:
-                    event_data["name"] = event_data.get("action_type", "unknown_action")
-            elif event.event_type == "tools":
-                # Ensure tool events have name
-                if "name" not in event_data:
-                    event_data["name"] = event_data.get("tool_name", "unknown_tool")
-                if "tool_name" not in event_data:
-                    event_data["tool_name"] = event_data.get("name", "unknown_tool")
+                event_span.set_status(Status(StatusCode.ERROR))
+                if hasattr(event, "trigger_event") and event.trigger_event:
+                    event_span.set_attribute("trigger_event.id", str(event.trigger_event.id))
+                    event_span.set_attribute("trigger_event.type", str(event.trigger_event.event_type))
 
-            with self._otel_tracer.start_as_current_span(
-                name=event.event_type,
-                attributes={
-                    "event.id": str(event.id),
-                    "event.type": event.event_type,
-                    "event.timestamp": event.init_timestamp or get_ISO_time(),
-                    "event.end_timestamp": event.end_timestamp or get_ISO_time(),
-                    "session.id": str(self.session_id),
-                    "session.tags": ",".join(self.tags) if self.tags else "",
-                    "event.data": json.dumps(event_data),
-                },
-            ) as span:
-                if event.event_type in self.event_counts:
-                    self.event_counts[event.event_type] += 1
-
-                if isinstance(event, ErrorEvent):
-                    span.set_attribute("error", True)
-                    if hasattr(event, "trigger_event") and event.trigger_event:
-                        span.set_attribute("trigger_event.id", str(event.trigger_event.id))
-                        span.set_attribute("trigger_event.type", event.trigger_event.event_type)
-
-                if flush_now and hasattr(self, "_span_processor"):
-                    self._span_processor.force_flush()
+        except Exception as e:
+            event_span.set_status(Status(StatusCode.ERROR))
+            event_span.record_exception(e)
+            raise
         finally:
-            detach(token)
+            event_span.end()
 
     def _send_event(self, event):
         """Direct event sending for testing"""
