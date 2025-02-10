@@ -191,28 +191,6 @@ class SessionTracer:
                 logger.warning(f"Error during exporter cleanup: {e}")
 
 
-def _normalize_action_event(event_data: dict) -> None:
-    """Normalize action event fields"""
-    if "action_type" not in event_data and "name" in event_data:
-        event_data["action_type"] = event_data["name"]
-    elif "name" not in event_data and "action_type" in event_data:
-        event_data["name"] = event_data["action_type"]
-    else:
-        event_data.setdefault("action_type", "unknown_action")
-        event_data.setdefault("name", "unknown_action")
-
-
-def _normalize_tool_event(event_data: dict) -> None:
-    """Normalize tool event fields"""
-    if "name" not in event_data and "tool_name" in event_data:
-        event_data["name"] = event_data["tool_name"]
-    elif "tool_name" not in event_data and "name" in event_data:
-        event_data["tool_name"] = event_data["name"]
-    else:
-        event_data.setdefault("name", "unknown_tool")
-        event_data.setdefault("tool_name", "unknown_tool")
-
-
 @session_started.connect
 def on_session_start(sender):
     """Initialize session tracer when session starts"""
