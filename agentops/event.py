@@ -13,9 +13,16 @@ from enum import Enum
 from typing import TYPE_CHECKING, Any, Dict, List, Optional, Sequence, Union
 from uuid import UUID, uuid4
 
+from blinker import Signal
+from ordered_set import OrderedSet
+
 from agentops.log_config import logger
 
 from .helpers import check_call_stack_for_agent_id, get_ISO_time
+
+# Configure Signal to use OrderedSet for ordered handler execution
+Signal.set_class = OrderedSet
+
 
 if TYPE_CHECKING:
     from agentops.session.session import Session
