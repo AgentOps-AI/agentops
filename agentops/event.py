@@ -14,38 +14,8 @@ from typing import Any, Dict, List, Optional, Sequence, Union
 from uuid import UUID, uuid4
 
 from agentops.log_config import logger
-from agentops.session.signals import (  # Import signals needed at runtime
-    event_completed,
-    event_recorded,
-    event_recording,
-)
 
 from .helpers import check_call_stack_for_agent_id, get_ISO_time
-
-
-# Event timing handlers
-@event_recording.connect
-def on_event_recording(sender, event: Event):
-    """Handle start of event recording"""
-    if not event.init_timestamp:
-        event.init_timestamp = get_ISO_time()
-    logger.debug(f"Starting to record event: {event}")
-
-
-@event_recorded.connect
-def on_event_recorded(sender, event: Event):
-    """Handle completion of event recording"""
-    assert not event.end_timestamp, "Programming error: attempted ending an Event with valued 'end_timestamp'"
-    event.end_timestamp = get_ISO_time()
-    logger.debug(f"Finished recording event: {event}")
-
-
-@event_completed.connect
-def on_event_completed(sender, event: Event):
-    """Handle event completion"""
-    if not event.end_timestamp:
-        event.end_timestamp = get_ISO_time()
-    logger.debug(f"Event completed: {event}")
 
 
 class EventType(Enum):
@@ -209,3 +179,35 @@ class ErrorEvent(Event):
     def timestamp(self) -> str:
         """Maintain backward compatibility with old code expecting timestamp"""
         return self.init_timestamp
+
+
+from agentops.session.signals import (  # Import signals needed at runtime
+    event_completed,
+    event_recorded,
+    event_recording,
+)
+
+
+# Event timing handlers
+@event_recording.connect
+def on_event_recording(sender, event: Event):
+    """Handle start of event recording"""
+    if not event.init_timestamp:
+        event.init_timestamp = get_ISO_time()
+    logger.debug(f"Starting to record event: {event}")
+
+
+@event_recorded.connect
+def on_event_recorded(sender, event: Event):
+    """Handle completion of event recording"""
+    assert not event.end_timestamp, "Programming error: attempted ending an Event with valued 'end_timestamp'"
+    event.end_timestamp = get_ISO_time()
+    logger.debug(f"Finished recording event: {event}")
+
+
+@event_completed.connect
+def on_event_completed(sender, event: Event):
+    """Handle event completion"""
+    if not event.end_timestamp:
+        event.end_timestamp = get_ISO_time()
+    logger.debug(f"Event completed: {event}")

@@ -10,8 +10,6 @@ from enum import Enum
 from typing import Any, Dict, List, Optional, Union
 from uuid import UUID, uuid4
 
-from blinker import Signal
-
 # from opentelemetry import trace
 # from opentelemetry.context import attach, detach, set_value
 # from opentelemetry.sdk._logs import LoggerProvider, LoggingHandler, LogRecord
@@ -20,7 +18,6 @@ from blinker import Signal
 # from opentelemetry.sdk.resources import SERVICE_NAME, Resource
 # from opentelemetry.sdk.trace import ReadableSpan, TracerProvider
 # from opentelemetry.sdk.trace.export import BatchSpanProcessor, ConsoleSpanExporter, SpanExporter, SpanExportResult
-from opentelemetry.trace import Tracer
 from termcolor import colored
 
 from agentops.config import TESTING, Configuration
@@ -31,9 +28,6 @@ from agentops.http_client import HttpClient, Response
 from agentops.instrumentation import cleanup_session_telemetry, setup_session_telemetry
 from agentops.log_config import logger
 from agentops.session.signals import (
-    event_completed,
-    event_completing,
-    event_recorded,
     event_recording,
     session_ended,
     session_ending,
@@ -43,7 +37,6 @@ from agentops.session.signals import (
     session_starting,
     session_updated,
 )
-from agentops.session.registry import add_session, remove_session
 
 from .exporters import EventExporter, SessionLogExporter
 
