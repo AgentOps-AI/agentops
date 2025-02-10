@@ -24,7 +24,7 @@ from opentelemetry.trace import Tracer
 from termcolor import colored
 
 from agentops.config import TESTING, Configuration
-from agentops.event import ErrorEvent, Event
+from agentops.event import Event
 from agentops.exceptions import ApiServerException
 from agentops.helpers import filter_unjsonable, get_ISO_time, safe_serialize
 from agentops.http_client import HttpClient, Response

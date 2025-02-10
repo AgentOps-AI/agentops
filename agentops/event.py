@@ -14,7 +14,11 @@ from typing import Any, Dict, List, Optional, Sequence, Union
 from uuid import UUID, uuid4
 
 from agentops.log_config import logger
-from agentops.session.events import event_recorded, session_ended, session_started, session_updated
+from agentops.session.events import (  # Import signals needed at runtime
+    event_completed,
+    event_recorded,
+    event_recording,
+)
 
 from .helpers import check_call_stack_for_agent_id, get_ISO_time
 

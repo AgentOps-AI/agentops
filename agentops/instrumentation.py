@@ -16,7 +16,6 @@ from opentelemetry.sdk.trace.sampling import ParentBased, Sampler, TraceIdRatioB
 from termcolor import colored
 
 from agentops.config import Configuration
-from agentops.event import ErrorEvent, Event, EventType
 from agentops.helpers import get_ISO_time, safe_serialize
 from agentops.http_client import HttpClient
 from agentops.log_config import logger
@@ -26,6 +25,7 @@ from agentops.session.exporters import EventExporter, SessionLogExporter
 
 if TYPE_CHECKING:
     from agentops.client import Client
+    from agentops.event import ErrorEvent, Event, EventType
 
 """
 This module handles OpenTelemetry instrumentation setup for AgentOps sessions.
