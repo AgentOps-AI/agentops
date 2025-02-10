@@ -21,7 +21,7 @@ from agentops.log_config import logger
 from .helpers import check_call_stack_for_agent_id, get_ISO_time
 
 # Configure Signal to use OrderedSet for ordered handler execution
-Signal.set_class = OrderedSet
+# Signal.set_class = OrderedSet  # This causes a type error
 
 
 if TYPE_CHECKING:
@@ -199,16 +199,14 @@ from agentops.session.signals import (  # Import signals needed at runtime
 
 
 # Event timing handlers
-@event_recording.connect
-def on_event_recording(sender: Session, event: Event, **kwargs):
+def _on_event_recording(sender: Session, event: Event, **kwargs):
     """Handle start of event recording"""
     if not event.init_timestamp:
         event.init_timestamp = get_ISO_time()
     logger.debug(f"Starting to record event: {event}")
 
 
-@event_recorded.connect
-def on_event_recorded(sender: Session, event: Event, **kwargs):
+def _on_event_recorded(sender: Session, event: Event, **kwargs):
     """Handle completion of event recording"""
     if not event.end_timestamp:
         breakpoint()
@@ -218,9 +216,29 @@ def on_event_recorded(sender: Session, event: Event, **kwargs):
     logger.debug(f"Finished recording event: {event}")
 
 
-@event_completed.connect
-def on_event_completed(sender: Session, event: Event):
+def _on_event_completed(sender: Session, event: Event):
     """Handle event completion"""
     if not event.end_timestamp:
         event.end_timestamp = get_ISO_time()
     logger.debug(f"Event completed: {event}")
+
+
+def register_handlers():
+    """Register event.py signal handlers"""
+    # First unregister to ensure clean state
+    unregister_handlers()
+    
+    event_recording.connect(_on_event_recording)
+    event_recorded.connect(_on_event_recorded)
+    event_completed.connect(_on_event_completed)
+
+
+def unregister_handlers():
+    """Unregister event.py signal handlers"""
+    event_recording.disconnect(_on_event_recording)
+    event_recorded.disconnect(_on_event_recorded)
+    event_completed.disconnect(_on_event_completed)
+
+
+# Register handlers when module is imported
+register_handlers()

@@ -98,6 +98,11 @@ def setup_session_telemetry(session_id: UUID, log_exporter) -> tuple[LoggingHand
     # Register handler with session
     set_session_handler(session_id, log_handler)
 
+    # Register signal handlers
+    session_started.connect(_on_session_start)
+    session_ended.connect(_on_session_end)
+    event_recorded.connect(_on_session_event_recorded)
+
     return log_handler, log_processor
 
 
@@ -109,13 +114,11 @@ def cleanup_session_telemetry(log_handler: LoggingHandler, log_processor: BatchL
     2. Closing the handler to free resources
     3. Flushing any pending logs in the processor
     4. Shutting down the processor
+    5. Disconnecting signal handlers
 
     Args:
         log_handler: The session's LoggingHandler to be removed and closed
         log_processor: The session's BatchLogRecordProcessor to be flushed and shutdown
-
-    Used by:
-        Session.end_session() to clean up logging components when the session ends
     """
     from agentops.log_config import logger
 
@@ -191,8 +194,7 @@ class SessionTracer:
                 logger.warning(f"Error during exporter cleanup: {e}")
 
 
-@session_started.connect
-def on_session_start(sender):
+def _on_session_start(sender):
     """Initialize session tracer when session starts"""
     # Initialize tracer when session starts - this is the proper time
     tracer = SessionTracer(sender.session_id, sender.config)
@@ -210,8 +212,7 @@ def on_session_start(sender):
         span.set_attribute("session.start", True)
 
 
-@session_ended.connect
-def on_session_end(sender, end_state: str, end_state_reason: Optional[str]):
+def _on_session_end(sender, end_state: str, end_state_reason: Optional[str]):
     """Clean up tracer when session ends"""
     # By this point tracer should exist since session was started
     with sender._tracer.tracer.start_as_current_span(
@@ -228,8 +229,7 @@ def on_session_end(sender, end_state: str, end_state_reason: Optional[str]):
     sender._tracer.cleanup()
 
 
-@event_recorded.connect
-def on_session_recorded(sender: Session, event: Event, flush_now=False, **kwargs):
+def _on_session_event_recorded(sender: Session, event: Event, flush_now=False, **kwargs):
     """Handle completion of event recording for telemetry"""
     logger.debug(f"Finished recording event: {event}")
 
@@ -254,3 +254,24 @@ def on_session_recorded(sender: Session, event: Event, flush_now=False, **kwargs
     # Handle manual flush if requested
     if flush_now:
         sender._tracer.span_processor.force_flush()
+
+
+def register_handlers():
+    """Register signal handlers"""
+    # Disconnect signal handlers to ensure clean state
+    unregister_handlers()
+    import agentops.event  # Ensure event.py handlers are registered before instrumentation.py handlers
+
+    session_started.connect(_on_session_start)
+    session_ended.connect(_on_session_end)
+    event_recorded.connect(_on_session_event_recorded)
+
+
+def unregister_handlers():
+    """Unregister signal handlers"""
+    session_started.disconnect(_on_session_start)
+    session_ended.disconnect(_on_session_end)
+    event_recorded.disconnect(_on_session_event_recorded)
+
+
+register_handlers()
