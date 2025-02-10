@@ -312,29 +312,6 @@ class Session:
             finally:
                 session_ended.send(self, end_state=end_state, end_state_reason=end_state_reason)
 
-    def _send_event(self, event):
-        """Direct event sending for testing"""
-        try:
-            payload = {
-                "events": [
-                    {
-                        "id": str(event.id),
-                        "event_type": event.event_type,
-                        "init_timestamp": event.init_timestamp,
-                        "end_timestamp": event.end_timestamp,
-                        "data": filter_unjsonable(asdict(event)),
-                    }
-                ]
-            }
-
-            HttpClient.post(
-                f"{self.config.endpoint}/v2/create_events",
-                json.dumps(payload).encode("utf-8"),
-                jwt=self.jwt,
-            )
-        except Exception as e:
-            logger.error(f"Failed to send event: {e}")
-
     def _reauthorize_jwt(self) -> Union[str, None]:
         with self._lock:
             payload = {"session_id": self.session_id}
