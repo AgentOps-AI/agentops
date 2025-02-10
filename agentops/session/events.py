@@ -41,37 +41,35 @@ session_ended:
 
 Event Lifecycle:
 ---------------
-event_creating:
-    Emitted by: Event constructors
-    Handled by: None (Available for timing hooks)
-
-event_created:
-    Emitted by: Event constructors after initialization
-    Handled by: None (Available for timing hooks)
-
 event_recording:
-    Emitted by: Session.record() before processing
-    Handled by: None (Available for timing hooks)
+    Emitted by: Session.record() before instrumentation
+    Handled by: on_event_recording() - Sets initial timestamp
+    Purpose: Marks start of telemetry/instrumentation process
 
 event_recorded:
-    Emitted by: Session.record()
-    Handled by: on_event_record() in instrumentation.py - Creates spans and handles timing
+    Emitted by: Session.record() after instrumentation
+    Handled by: on_event_recorded() - Creates spans and handles timing
+    Purpose: Marks completion of telemetry/instrumentation process
 
 event_completing:
-    Emitted by: Event handlers before completion
-    Handled by: None (Available for timing hooks)
+    Emitted by: Event handlers before execution
+    Handled by: on_event_completing() - Logs event about to execute
+    Purpose: Marks start of actual event execution (e.g. LLM call, tool use)
 
 event_completed:
-    Emitted by: Event handlers after completion
-    Handled by: None (Available for timing hooks)
+    Emitted by: Event handlers after execution
+    Handled by: on_event_completed() - Sets completion timestamp
+    Purpose: Marks successful completion of event execution
+
+Example Flow:
+------------
+1. event_recording  - "Starting to record this LLM call"
+2. event_recorded   - "Created spans and instrumentation for LLM call"
+3. event_completing - "About to execute LLM call"
+4. event_completed  - "LLM call finished executing"
 
 Note: The following signals are reserved for future use but not currently implemented:
 - session_starting
-- event_creating
-- event_created  
-- event_recording
-- event_completing
-- event_completed
 """
 
 import blinker
@@ -85,10 +83,8 @@ session_updated = blinker.signal("session_updated")           # When session sta
 session_ending = blinker.signal("session_ending")            # Before ending session
 session_ended = blinker.signal("session_ended")              # After session is ended
 
-# Event signals
-event_creating = blinker.signal("event_creating")      # Before event is created
-event_created = blinker.signal("event_created")        # After event is created
-event_recording = blinker.signal("event_recording")    # Before event is recorded
-event_recorded = blinker.signal("event_recorded")      # After event is recorded
-event_completing = blinker.signal("event_completing")  # Before event completes
-event_completed = blinker.signal("event_completed")    # After event completes
+# Event lifecycle signals
+event_recording = blinker.signal("event_recording")      # Start of telemetry process
+event_recorded = blinker.signal("event_recorded")        # End of telemetry process
+event_completing = blinker.signal("event_completing")    # Start of event execution
+event_completed = blinker.signal("event_completed")      # End of event execution

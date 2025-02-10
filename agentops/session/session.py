@@ -31,7 +31,10 @@ from agentops.http_client import HttpClient, Response
 from agentops.instrumentation import cleanup_session_telemetry, setup_session_telemetry
 from agentops.log_config import logger
 from agentops.session.events import (
+    event_completed,
+    event_completing,
     event_recorded,
+    event_recording,
     session_ended,
     session_ending,
     session_initialized,
@@ -39,7 +42,6 @@ from agentops.session.events import (
     session_started,
     session_starting,
     session_updated,
-    event_recording,
 )
 from agentops.session.registry import add_session, remove_session
 
@@ -209,16 +211,19 @@ class Session:
             logger.error(f"Failed to setup logging: {e}")
             return False
 
-    def record(self, event: Union[Event, ErrorEvent], flush_now=False) -> None:
+    def record(self, event: Event, flush_now=False) -> None:
         """Record an event in this trace"""
         if not self.is_running:
             return
 
-        # Signal event recording is starting
-        event_recording.send(self, event=event)
+        try:
+            # Signal event recording is starting
+            event_recording.send(self, event=event)
 
-        # Emit event signal - OTEL instrumentation will catch this and create spans
-        event_recorded.send(self, event=event, flush_now=flush_now)
+        except Exception as e:
+            logger.error(f"Error recording event: {e}")
+            if TESTING:
+                raise e
 
     def add_tags(self, tags: List[str]) -> None:
         """

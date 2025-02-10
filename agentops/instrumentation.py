@@ -157,7 +157,7 @@ class SessionTracer:
 
         # Set up exporter
         self.exporter = EventExporter(session=get_session_by_id(session_id))
-        
+
         processor_cls = self.exporter_cls()
         if processor_cls == SimpleSpanProcessor:
             self.span_processor = processor_cls(self.exporter)
@@ -269,10 +269,10 @@ def on_event_record(sender, event: Event, flush_now: bool = False):
             attributes=span_def.attributes,
         ) as span:
             # The span's end time will be set when the context manager exits
-            
+
             # Set event end timestamp when span ends
             event.end_timestamp = get_ISO_time()
-            
+
             # Update event counts if applicable
             event_type = span_def.attributes.get("event_type")
             if event_type in sender.event_counts:
