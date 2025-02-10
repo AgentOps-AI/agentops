@@ -171,7 +171,7 @@ class ErrorEvent(Event):
             self.details = self.details or str(self.exception)
             self.exception = None  # removes exception from serialization
 
-        # Ensure end timestamp is set
+        # Ensure end_timestamp is set for the sake of consistency
         if not self.end_timestamp:
             self.end_timestamp = get_ISO_time()
 

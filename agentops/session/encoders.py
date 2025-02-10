@@ -192,7 +192,25 @@ class EventToSpanEncoder:
             except json.JSONDecodeError:
                 logger.warning("Failed to parse event.data JSON")
 
-        # Copy attributes, properly filtering and transforming
+        """
+        Copy attributes, properly filtering and transforming. 
+
+        Examples of span.attributes:
+        1) {
+            "event.data": "...",
+            "event.type": "...",
+            "code.namespace": "...",
+            "session.tags": "...",
+        }
+        
+        2) {
+            'session.id': '258d9df3-979c-4daf-a370-555f229af831',
+            'session.init_timestamp': '2025-02-10T16:27:18.044987+00:00',
+            'session.start': True,
+            'session.tags': ''
+        }
+
+        """
         if span.attributes:
             for key, value in span.attributes.items():
                 # Skip internal attributes except event.type which we need
