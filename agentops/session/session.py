@@ -39,6 +39,7 @@ from agentops.session.events import (
     session_started,
     session_starting,
     session_updated,
+    event_recording,
 )
 from agentops.session.registry import add_session, remove_session
 
@@ -213,6 +214,9 @@ class Session:
         if not self.is_running:
             return
 
+        # Signal event recording is starting
+        event_recording.send(self, event=event)
+
         # Emit event signal - OTEL instrumentation will catch this and create spans
         event_recorded.send(self, event=event, flush_now=flush_now)
 
@@ -293,6 +297,7 @@ class Session:
 
                     token_cost = self.token_cost
                     # Signal session has ended after cleanup
+                    session_ended.send(self, end_state=end_state, end_state_reason=end_state_reason)
                     return token_cost
 
             except Exception as e:
@@ -349,6 +354,9 @@ class Session:
         This method should only be responsible to send signals (`session_starting` and `session_started`)
         """
         with self._lock:
+            # Signal session is starting
+            session_starting.send(self)
+
             payload = {"session": asdict(self)}
             logger.debug(f"Prepared session payload: {payload}")
 
