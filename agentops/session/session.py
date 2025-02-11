@@ -11,12 +11,9 @@ from typing import Any, Dict, List, Optional, Union
 from uuid import UUID, uuid4
 
 from opentelemetry import trace
-from opentelemetry.context import attach, detach, set_value
-from opentelemetry.sdk._logs import LoggerProvider, LoggingHandler
-from opentelemetry.sdk._logs.export import BatchLogRecordProcessor
-from opentelemetry.sdk.resources import SERVICE_NAME, Resource
-from opentelemetry.sdk.trace import TracerProvider
-from opentelemetry.sdk.trace.export import BatchSpanProcessor, SpanExporter
+
+# from opentelemetry.context import attach, detach, set_value
+# from opentelemetry.sdk._logs import LoggerProvider, LoggingHandler
 from termcolor import colored
 
 from agentops.config import TESTING, Configuration
@@ -29,17 +26,12 @@ from agentops.session.signals import (
     event_recorded,
     event_recording,
     session_ended,
-    session_ending,
     session_initialized,
     session_initializing,
-    session_started,
     session_starting,
     session_updated,
 )
 from agentops.telemetry import InstrumentedBase
-from agentops.telemetry.instrumentation import cleanup_session_telemetry, setup_session_telemetry
-
-from .exporters import EventExporter, SessionLogExporter
 
 
 class EndState(Enum):
@@ -57,34 +49,6 @@ class EndState(Enum):
     SUCCESS = "Success"
     FAIL = "Fail"
     INDETERMINATE = "Indeterminate"  # Default
-
-
-# Session state management via signals
-@session_initializing.connect
-def on_session_initializing(sender, session_id, **kwargs):
-    """Handle session initialization"""
-    sender._set_running(False)  # Ensure we start in a known state
-
-
-@session_ending.connect
-def on_session_ending(sender, end_state, end_state_reason, **kwargs):
-    """Handle session ending"""
-    # Always set end_timestamp when session is ending
-    sender.end_timestamp = sender.end_timestamp or get_ISO_time()
-    sender.end_state = end_state
-    sender.end_state_reason = end_state_reason
-
-
-@session_started.connect
-def on_session_started(sender, **kwargs):
-    """Handle session started"""
-    sender._set_running(True)
-
-
-@session_ended.connect
-def on_session_ended(sender, end_state, end_state_reason, **kwargs):
-    """Handle session ended"""
-    sender._set_running(False)
 
 
 @dataclass
@@ -113,10 +77,6 @@ class Session(InstrumentedBase):
         # Then initialize session-specific components
         self._lock = threading.Lock()
         self._end_session_lock = threading.Lock()
-        self._log_handler = None
-        self._log_processor = None
-        self._log_exporter = None
-        self._tracer = None
 
         # Initialize session
         try:
@@ -130,17 +90,9 @@ class Session(InstrumentedBase):
             # Signal session is initialized
             session_initialized.send(self, session_id=self.session_id)
 
-    def _set_running(self, value: bool) -> None:
-        """Helper method to safely set is_running state"""
-        self.is_running = value
-
     def _cleanup(self):
         """Clean up session resources"""
-        if self._log_handler and self._log_processor:
-            cleanup_session_telemetry(self._log_handler, self._log_processor)
-        self._log_handler = None
-        self._log_processor = None
-        self._log_exporter = None
+        pass
 
     def _initialize(self) -> bool:
         """Initialize session components"""
@@ -183,14 +135,13 @@ class Session(InstrumentedBase):
                     api_key=self.config.api_key,
                     parent_key=self.config.parent_key,
                 )
+                assert res.code == 200, f"Failed to start session - {res.status}: {res.body}"
+
             except ApiServerException as e:
                 logger.error(f"Could not start session - {e}")
                 return False
-            logger.debug(f"Received response: {res.body}")
-
-            if res.code != 200:
-                logger.debug(f"Received non-200 status code: {res.code}")
-                return False
+            else:  # If no exception is raised
+                self.is_running = True
 
             jwt = res.body.get("jwt", None)
             self.jwt = jwt
@@ -199,7 +150,7 @@ class Session(InstrumentedBase):
                 return False
             logger.debug("Successfully received and set JWT")
 
-            session_started.send(self)  # Sets is_running=True
+            self.is_running = True
 
             logger.info(
                 colored(
@@ -211,16 +162,16 @@ class Session(InstrumentedBase):
             logger.debug("Session started successfully")
             return True
 
-    def _setup_logging(self) -> bool:
-        """Set up logging for the session"""
-        try:
-            self._log_exporter = SessionLogExporter(session=self)
-            self._log_handler, self._log_processor = setup_session_telemetry(self.session_id, self._log_exporter)
-            logger.addHandler(self._log_handler)
-            return True
-        except Exception as e:
-            logger.error(f"Failed to setup logging: {e}")
-            return False
+    # def _setup_logging(self) -> bool:
+    #     """Set up logging for the session"""
+    #     try:
+    #         self._log_exporter = SessionLogExporter(session=self)
+    #         self._log_handler, self._log_processor = setup_session_telemetry(self.session_id, self._log_exporter)
+    #         logger.addHandler(self._log_handler)
+    #         return True
+    #     except Exception as e:
+    #         logger.error(f"Failed to setup logging: {e}")
+    #         return False
 
     def record(self, event: Event, flush_now=False) -> None:
         """Record an event in this trace"""
@@ -302,9 +253,6 @@ class Session(InstrumentedBase):
                 return None
 
             try:
-                # Signal session is ending - this will set is_running=False
-                session_ending.send(self, end_state=end_state, end_state_reason=end_state_reason)
-
                 if video is not None:
                     self.video = video
 
