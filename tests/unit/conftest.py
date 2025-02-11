@@ -11,7 +11,6 @@ from pytest import Config, Session
 
 import agentops
 from agentops.event import ActionEvent, ErrorEvent, LLMEvent, ToolEvent
-from agentops.telemetry.instrumentation import SessionTracer
 from agentops.singleton import clear_singletons
 from tests.fixtures.event import llm_event_spy
 
@@ -156,5 +155,5 @@ def mock_error_event():
 def sync_tracer(mocker):
     """Fixture to make SessionTracer use SimpleSpanProcessor for synchronous export during tests"""
 
-    mocker.patch("agentops.instrumentation.SessionTracer.exporter_cls", return_value=SimpleSpanProcessor)
+    mocker.patch("agentops.telemetry.instrumentation.get_processor_cls", return_value=SimpleSpanProcessor)
     yield
