@@ -17,31 +17,19 @@ from tests.integration.conftest import agentops_session
 # pytestmark = pytest.mark.usefixtures("sync_tracer")
 
 
-@pytest.fixture(autouse=True)
-def setup_test_tracer(agentops_session):
-    """Set up test tracer for each test"""
-    # Set up tracer
-    tracer = setup_session_tracer(agentops_session.session_id)
-
-    yield tracer
-
-    # Clean up after test
-    cleanup_session_tracer(agentops_session.session_id)
-
-
 def test_session_event_span_hierarchy(agentops_session):
     """Test that Event spans are children of their Session span"""
     # Create a session with proper UUID
-    assert agentops_session.span is not None, "Session span should be created in __post_init__"
+    assert getattr(agentops_session, "span", None) is not None, "Session span should be created in __post_init__"
     session_span_id = agentops_session.span.get_span_context().span_id
 
     # Record an event - should create child span
     event = ActionEvent(event_type=EventType.ACTION)
     agentops_session.record(event)
-    assert event.span is not None, "Event span should be created during session.record()"
+    assert getattr(event, "span", None) is not None, "Event span should be created during session.record()"
 
     # Get parent span ID from context
-    context = event.span.get_span_context()
+    context = getattr(event, "span", None).get_span_context()
     assert (
         context.trace_id == agentops_session.span.get_span_context().trace_id
     ), "Event should be in same trace as Session"
