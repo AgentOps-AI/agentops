@@ -14,6 +14,18 @@ from agentops.session.session import EndState, Session
 pytestmark = pytest.mark.usefixtures("sync_tracer")
 
 
+@pytest.fixture(autouse=True)
+def setup_tracer():
+    """Set up global tracer provider for tests"""
+    provider = TracerProvider()
+    processor = SimpleSpanProcessor(ConsoleSpanExporter())
+    provider.add_span_processor(processor)
+    trace.set_tracer_provider(provider)
+    yield
+    # Clean up after test
+    provider.shutdown()
+
+
 def test_session_event_span_hierarchy():
     """Test that Event spans are children of their Session span"""
     # Create a session with proper UUID
@@ -41,11 +53,7 @@ def test_session_event_span_hierarchy():
 def test_instrumented_base_creates_span():
     """Test that any InstrumentedBase object gets a span on creation"""
     # Configure a real tracer provider for this test
-    provider = TracerProvider()
-    processor = SimpleSpanProcessor(ConsoleSpanExporter())
-    provider.add_span_processor(processor)
-    trace.set_tracer_provider(provider)
-    
+
     # Test with both Session and Event
     session = Session(session_id=uuid4(), config=Configuration())
     assert session.span is not None, "Session should have a span"
@@ -56,12 +64,9 @@ def test_instrumented_base_creates_span():
     # Verify spans have proper context
     session_context = session.span.get_span_context()
     event_context = event.span.get_span_context()
-    
+
     assert session_context.is_valid, "Session span context should be valid"
     assert event_context.is_valid, "Event span context should be valid"
-    
-    # Clean up
-    trace.set_tracer_provider(None)
 
 
 def test_event_span_survives_recording():

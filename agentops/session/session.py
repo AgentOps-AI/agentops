@@ -211,11 +211,13 @@ class Session(InstrumentedBase):
         event.session_id = self.session_id
 
         try:
-            # Signal event recording is starting
-            event_recording.send(self, event=event)
+            # Make sure we're using the session's span context when recording the event
+            with trace.use_span(self.span, end_on_exit=False):
+                # Signal event recording is starting
+                event_recording.send(self, event=event)
 
-            # Signal event has been recorded - this triggers span creation
-            event_recorded.send(self, event=event, flush_now=flush_now)
+                # Signal event has been recorded - this triggers span creation
+                event_recorded.send(self, event=event, flush_now=flush_now)
 
         except Exception as e:
             logger.error(f"Error recording event: {e}")

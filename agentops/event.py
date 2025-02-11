@@ -246,4 +246,4 @@ def unregister_handlers():
 
 
 # Register handlers when module is imported
-register_handlers()
+# register_handlers()
