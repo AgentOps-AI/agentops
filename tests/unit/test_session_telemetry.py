@@ -10,37 +10,41 @@ from opentelemetry.sdk.trace.export import ConsoleSpanExporter, SimpleSpanProces
 from agentops.config import Configuration
 from agentops.event import ActionEvent, EventType
 from agentops.session.session import EndState, Session
+from agentops.telemetry.instrumentation import cleanup_session_tracer, setup_session_tracer
+from tests.integration.conftest import agentops_session
 
-pytestmark = pytest.mark.usefixtures("sync_tracer")
+# Remove the sync_tracer fixture since we're using the new procedural approach
+# pytestmark = pytest.mark.usefixtures("sync_tracer")
 
 
 @pytest.fixture(autouse=True)
-def setup_tracer():
-    """Set up global tracer provider for tests"""
-    provider = TracerProvider()
-    processor = SimpleSpanProcessor(ConsoleSpanExporter())
-    provider.add_span_processor(processor)
-    trace.set_tracer_provider(provider)
-    yield
+def setup_test_tracer(agentops_session):
+    """Set up test tracer for each test"""
+    # Set up tracer
+    tracer = setup_session_tracer(agentops_session.session_id)
+
+    yield tracer
+
     # Clean up after test
-    provider.shutdown()
+    cleanup_session_tracer(agentops_session.session_id)
 
 
-def test_session_event_span_hierarchy():
+def test_session_event_span_hierarchy(agentops_session):
     """Test that Event spans are children of their Session span"""
     # Create a session with proper UUID
-    session = Session(session_id=uuid4(), config=Configuration())
-    assert session.span is not None, "Session span should be created in __post_init__"
-    session_span_id = session.span.get_span_context().span_id
+    assert agentops_session.span is not None, "Session span should be created in __post_init__"
+    session_span_id = agentops_session.span.get_span_context().span_id
 
     # Record an event - should create child span
     event = ActionEvent(event_type=EventType.ACTION)
-    session.record(event)
+    agentops_session.record(event)
     assert event.span is not None, "Event span should be created during session.record()"
 
     # Get parent span ID from context
     context = event.span.get_span_context()
-    assert context.trace_id == session.span.get_span_context().trace_id, "Event should be in same trace as Session"
+    assert (
+        context.trace_id == agentops_session.span.get_span_context().trace_id
+    ), "Event should be in same trace as Session"
 
     # Print debug info - removing the parent access that was causing issues
     print(f"Session span ID: {session_span_id}")
@@ -50,19 +54,16 @@ def test_session_event_span_hierarchy():
     assert session_span_id != context.span_id, "Event should have different span ID from session"
 
 
-def test_instrumented_base_creates_span():
+def test_instrumented_base_creates_span(agentops_session):
     """Test that any InstrumentedBase object gets a span on creation"""
-    # Configure a real tracer provider for this test
-
     # Test with both Session and Event
-    session = Session(session_id=uuid4(), config=Configuration())
-    assert session.span is not None, "Session should have a span"
+    assert agentops_session.span is not None, "Session should have a span"
 
     event = ActionEvent(event_type=EventType.ACTION)
     assert event.span is not None, "Event should have a span"
 
     # Verify spans have proper context
-    session_context = session.span.get_span_context()
+    session_context = agentops_session.span.get_span_context()
     event_context = event.span.get_span_context()
 
     assert session_context.is_valid, "Session span context should be valid"
@@ -71,7 +72,6 @@ def test_instrumented_base_creates_span():
 
 def test_event_span_survives_recording():
     """Test that event's span remains after being recorded"""
-    session = Session(session_id=uuid4(), config=Configuration())
     event = ActionEvent(event_type=EventType.ACTION)
 
     # Verify span exists before recording
@@ -79,7 +79,7 @@ def test_event_span_survives_recording():
     before_span_id = event.span.get_span_context().span_id
 
     # Record event
-    session.record(event)
+    agentops_session.record(event)
 
     # Verify span still exists and is the same
     assert event.span is not None, "Event should still have span after recording"

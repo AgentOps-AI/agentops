@@ -8,6 +8,9 @@ import pytest
 import requests_mock
 from opentelemetry.sdk.trace.export import SimpleSpanProcessor
 from pytest import Config, Session
+from opentelemetry import trace
+from opentelemetry.sdk.trace import TracerProvider
+from opentelemetry.sdk.trace.export import ConsoleSpanExporter
 
 import agentops
 from agentops.event import ActionEvent, ErrorEvent, LLMEvent, ToolEvent
