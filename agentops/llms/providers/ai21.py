@@ -149,7 +149,6 @@ class AI21Provider(BaseProvider):
                     llm_event.completion_tokens = getattr(response.usage, "completion_tokens", None)
                     llm_event.end_timestamp = get_ISO_time()
                     self._safe_record(session, llm_event)
-                from ai21.models.responses.completion_response import CompletionsResponse
 
                 if isinstance(response, CompletionsResponse):
                     llm_event.returns = response
@@ -162,7 +161,6 @@ class AI21Provider(BaseProvider):
                     llm_event.completion_tokens = getattr(response.usage, "completion_tokens", None)
                     llm_event.end_timestamp = get_ISO_time()
                     self._safe_record(session, llm_event)
-                from ai21.models.responses.conversational_rag_response import ConversationalRagResponse
 
                 if isinstance(response, ConversationalRagResponse):
                     action_event.returns = response
@@ -171,7 +169,6 @@ class AI21Provider(BaseProvider):
                     action_event.logs = [{"logs": response.model_dump()}]
                     action_event.end_timestamp = get_ISO_time()
                     self._safe_record(session, action_event)
-                from ai21.models.responses.file_response import FileResponse
 
                 if isinstance(response, FileResponse):
                     action_event.returns = response
