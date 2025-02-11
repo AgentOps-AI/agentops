@@ -20,20 +20,21 @@ class InstrumentedBase:
     - timing-related properties and methods
     """
 
-    # Private fields with proper typing and metadata
-    _init_timestamp: Optional[str] = field(
+    # Make these public fields that will be included in asdict()
+    init_timestamp: Optional[str] = field(
         default=None,
         init=False,
     )
-    _end_timestamp: Optional[str] = field(
+    end_timestamp: Optional[str] = field(
         default=None,
         init=False,
     )
 
+    # Private implementation details - won't be included in asdict()
     _span: Span = field(
         default=None,
         init=False,
-        repr=False,  # Don't include in repr since it's internal state
+        repr=False,
     )
 
     def __post_init__(self):
@@ -41,18 +42,18 @@ class InstrumentedBase:
 
     def _create_span(self) -> None:
         """Create a new span with current timestamps"""
-        # End existing span if any
         if self._span is not None:
             self._end_span()
 
-        # Create new span
         tracer = trace.get_tracer(self.__class__.__name__)
-        self._span = tracer.start_span(
-            self.__class__.__name__,
+        span_kwargs = dict(
+            name=self.__class__.__name__,
             kind=SpanKind.INTERNAL,
-            start_time=iso_to_unix_nano(self._init_timestamp or get_ISO_time()),
+            start_time=iso_to_unix_nano(self.init_timestamp or get_ISO_time()),
             attributes={"class": self.__class__.__name__},
         )
+        logger.debug("Starting span with kwargs: %s", span_kwargs)
+        self._span = tracer.start_span(**span_kwargs)
 
     def _end_span(self, end_time: Optional[int] = None) -> None:
         """End the current span if it exists"""
@@ -62,30 +63,6 @@ class InstrumentedBase:
             self._span = None
 
     @property
-    def init_timestamp(self) -> Optional[str]:
-        """Get the initialization timestamp"""
-        return self._init_timestamp
-
-    @init_timestamp.setter
-    def init_timestamp(self, value: Optional[str]):
-        """Set the initialization timestamp and recreate span if needed"""
-        self._init_timestamp = value
-        if value:
-            self._create_span()
-
-    @property
-    def end_timestamp(self) -> Optional[str]:
-        """Get the end timestamp"""
-        return self._end_timestamp
-
-    @end_timestamp.setter
-    def end_timestamp(self, value: Optional[str]):
-        """Set the end timestamp and end span if needed"""
-        self._end_timestamp = value
-        if value:
-            self._end_span(end_time=iso_to_unix_nano(value))
-
-    @property
     def span(self) -> Optional[Span]:
         """Get the associated span. Read-only as spans are managed internally."""
         return self._span
@@ -93,9 +70,9 @@ class InstrumentedBase:
     @property
     def is_ended(self) -> bool:
         """Check if the instrumented object has ended"""
-        return self._end_timestamp is not None
+        return self.end_timestamp is not None
 
     def end(self):
         """End the instrumented object and its span"""
-        if not self._end_timestamp:
+        if not self.end_timestamp:
             self.end_timestamp = get_ISO_time()
