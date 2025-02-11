@@ -49,7 +49,7 @@ class Client(metaclass=MetaClient):
 
         # Register handlers in correct order
         from agentops.event import register_handlers as register_event_handlers
-        from agentops.instrumentation import register_handlers as register_instrumentation_handlers
+        from agentops.telemetry.instrumentation import register_handlers as register_instrumentation_handlers
         
         register_event_handlers()  # Register event.py handlers first
         register_instrumentation_handlers()  # Register instrumentation.py handlers second

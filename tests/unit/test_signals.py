@@ -2,7 +2,7 @@ def test_event_handlers_registration_order():
     """Test that event.py handlers are registered before instrumentation.py handlers"""
 
     import agentops.event as lib_event
-    import agentops.instrumentation as lib_instrumentation
+    import agentops.telemetry.instrumentation as lib_instrumentation
     import agentops.session.signals as signals
 
     # Get the receiver list from the signal and dereference the weakrefs

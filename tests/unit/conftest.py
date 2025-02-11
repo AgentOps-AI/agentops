@@ -11,7 +11,7 @@ from pytest import Config, Session
 
 import agentops
 from agentops.event import ActionEvent, ErrorEvent, LLMEvent, ToolEvent
-from agentops.instrumentation import SessionTracer
+from agentops.telemetry.instrumentation import SessionTracer
 from agentops.singleton import clear_singletons
 from tests.fixtures.event import llm_event_spy
 

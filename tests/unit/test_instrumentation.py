@@ -6,7 +6,7 @@ import pytest
 from opentelemetry.sdk._logs import LoggerProvider, LoggingHandler
 from opentelemetry.sdk._logs.export import BatchLogRecordProcessor
 
-from agentops.instrumentation import setup_session_telemetry, cleanup_session_telemetry
+from agentops.telemetry.instrumentation import setup_session_telemetry, cleanup_session_telemetry
 from agentops.log_config import logger
 from agentops.session import SessionLogExporter
 from agentops.log_capture import LogCapture

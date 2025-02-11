@@ -25,7 +25,7 @@ from agentops.event import Event
 from agentops.exceptions import ApiServerException
 from agentops.helpers import filter_unjsonable, get_ISO_time, safe_serialize
 from agentops.http_client import HttpClient, Response
-from agentops.instrumentation import cleanup_session_telemetry, setup_session_telemetry
+from agentops.telemetry.instrumentation import cleanup_session_telemetry, setup_session_telemetry
 from agentops.log_config import logger
 from agentops.session.signals import (
     event_recorded,

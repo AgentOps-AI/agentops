@@ -9,7 +9,7 @@ from opentelemetry.sdk._logs import LoggerProvider, LoggingHandler
 from opentelemetry.sdk._logs.export import BatchLogRecordProcessor, ConsoleLogExporter
 from opentelemetry.sdk.resources import Resource
 
-from agentops.instrumentation import get_session_handler, set_session_handler
+from agentops.telemetry.instrumentation import get_session_handler, set_session_handler
 
 if TYPE_CHECKING:
     from agentops.session import Session
