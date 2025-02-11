@@ -3,8 +3,8 @@
 from dataclasses import dataclass, field
 from typing import Optional
 
-from opentelemetry import trace
-from opentelemetry.trace import Span
+from opentelemetry import context, trace
+from opentelemetry.trace import Span, SpanKind
 
 from agentops.helpers import get_ISO_time, iso_to_unix_nano
 from agentops.log_config import logger
@@ -27,11 +27,19 @@ class InstrumentedBase:
 
     def __post_init__(self):
         """Create span and set timestamps if provided"""
-        tracer = trace.get_tracer(__name__)
-        span = tracer.start_as_current_span(  # Use start_as_current_span to let OTEL set the current span context
-            self.__class__.__name__, start_time=iso_to_unix_nano(self.init_timestamp or get_ISO_time())
+        tracer = trace.get_tracer(self.__class__.__name__)
+
+        # Get current context
+        ctx = context.get_current()
+
+        # Create span with current context
+        self._span = tracer.start_span(
+            self.__class__.__name__,
+            context=ctx,
+            kind=SpanKind.INTERNAL,
+            start_time=iso_to_unix_nano(self.init_timestamp or get_ISO_time()),
+            attributes={"class": self.__class__.__name__},
         )
-        self._span = span
 
     @property
     def span(self) -> Optional[Span]:

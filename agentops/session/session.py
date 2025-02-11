@@ -108,6 +108,10 @@ class Session(InstrumentedBase):
 
     def __post_init__(self):
         """Initialize session components after dataclass initialization"""
+        # First create the session span
+        super().__post_init__()
+        
+        # Then initialize session-specific components
         self._lock = threading.Lock()
         self._end_session_lock = threading.Lock()
         self._log_handler = None

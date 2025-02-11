@@ -74,6 +74,9 @@ class Event(EventBase):
     """
 
     def __post_init__(self):
+        # Call parent's post_init to create span
+        super().__post_init__()
+        # Then do Event-specific initialization
         if isinstance(self.event_type, str):
             try:
                 self.event_type = EventType(self.event_type)
