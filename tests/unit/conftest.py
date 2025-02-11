@@ -156,5 +156,5 @@ def mock_error_event():
 def sync_tracer(mocker):
     """Fixture to make SessionTracer use SimpleSpanProcessor for synchronous export during tests"""
 
-    with mocker.patch("agentops.instrumentation.SessionTracer.exporter_cls", return_value=SimpleSpanProcessor):
-        yield
+    mocker.patch("agentops.instrumentation.SessionTracer.exporter_cls", return_value=SimpleSpanProcessor)
+    yield
