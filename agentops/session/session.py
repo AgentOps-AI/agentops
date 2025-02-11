@@ -10,14 +10,13 @@ from enum import Enum
 from typing import Any, Dict, List, Optional, Union
 from uuid import UUID, uuid4
 
-# from opentelemetry import trace
-# from opentelemetry.context import attach, detach, set_value
-# from opentelemetry.sdk._logs import LoggerProvider, LoggingHandler, LogRecord
-# from opentelemetry.sdk._logs._internal import LogData
-# from opentelemetry.sdk._logs.export import BatchLogRecordProcessor, LogExporter, LogExportResult
-# from opentelemetry.sdk.resources import SERVICE_NAME, Resource
-# from opentelemetry.sdk.trace import ReadableSpan, TracerProvider
-# from opentelemetry.sdk.trace.export import BatchSpanProcessor, ConsoleSpanExporter, SpanExporter, SpanExportResult
+from opentelemetry import trace
+from opentelemetry.context import attach, detach, set_value
+from opentelemetry.sdk._logs import LoggerProvider, LoggingHandler
+from opentelemetry.sdk._logs.export import BatchLogRecordProcessor
+from opentelemetry.sdk.resources import SERVICE_NAME, Resource
+from opentelemetry.sdk.trace import TracerProvider
+from opentelemetry.sdk.trace.export import BatchSpanProcessor, SpanExporter
 from termcolor import colored
 
 from agentops.config import TESTING, Configuration
@@ -25,7 +24,6 @@ from agentops.event import Event
 from agentops.exceptions import ApiServerException
 from agentops.helpers import filter_unjsonable, get_ISO_time, safe_serialize
 from agentops.http_client import HttpClient, Response
-from agentops.telemetry.instrumentation import cleanup_session_telemetry, setup_session_telemetry
 from agentops.log_config import logger
 from agentops.session.signals import (
     event_recorded,
@@ -39,6 +37,7 @@ from agentops.session.signals import (
     session_updated,
 )
 from agentops.telemetry import InstrumentedBase
+from agentops.telemetry.instrumentation import cleanup_session_telemetry, setup_session_telemetry
 
 from .exporters import EventExporter, SessionLogExporter
 
@@ -123,10 +122,13 @@ class Session(InstrumentedBase):
         try:
             session_initializing.send(self, session_id=self.session_id)
             if not self._initialize():
-                self.end(EndState.FAIL.value, "Failed to initialize session")
+                raise RuntimeError("Session._initialize() did not succeed", self)
         except Exception as e:
             logger.error(f"Failed to initialize session: {e}")
             self.end(EndState.FAIL.value, f"Exception during initialization: {str(e)}")
+        else:
+            # Signal session is initialized
+            session_initialized.send(self, session_id=self.session_id)
 
     def _set_running(self, value: bool) -> None:
         """Helper method to safely set is_running state"""
@@ -143,21 +145,13 @@ class Session(InstrumentedBase):
     def _initialize(self) -> bool:
         """Initialize session components"""
         try:
-            # Get JWT from API
-            if not self._get_jwt():
+            # Start the session which will get JWT and initialize everything
+            if not self._start_session():
                 return False
-
-            # Initialize logging
-            # if not self._setup_logging():
-            #     return False
-
-            # Signal session is initialized
-            session_initialized.send(self, session_id=self.session_id)
 
             logger.info(colored(f"\x1b[34mSession Replay: {self.session_url}\x1b[0m", "blue"))
 
-            # Start the session after initialization
-            return self._start_session()
+            return True
 
         except Exception as e:
             if TESTING:
@@ -165,30 +159,57 @@ class Session(InstrumentedBase):
             logger.error(f"Failed to initialize session: {e}")
             return False
 
-    def _get_jwt(self) -> bool:
-        """Get JWT from API server"""
-        payload = {"session": asdict(self)}
-        try:
-            res = HttpClient.post(
-                f"{self.config.endpoint}/v2/create_session",
-                safe_serialize(payload).encode("utf-8"),
-                api_key=self.config.api_key,
-                parent_key=self.config.parent_key,
-            )
-            if not res:
-                logger.error("Failed to get response from API server")
+    def _start_session(self) -> bool:
+        """
+        Manually starts the session
+        This method should only be responsible to send signals (`session_starting` and `session_started`)
+        and initialize the JWT.
+        """
+        with self._lock:
+            # Signal session is starting
+            session_starting.send(self)
+
+            self.init_timestamp = get_ISO_time()
+
+            payload = {"session": asdict(self)}
+            logger.debug(f"Prepared session payload: {payload}")
+
+            try:
+                serialized_payload = json.dumps(filter_unjsonable(payload)).encode("utf-8")
+                logger.debug("Sending create session request with payload: %s", serialized_payload)
+                res = HttpClient.post(
+                    f"{self.config.endpoint}/v2/create_session",
+                    serialized_payload,
+                    api_key=self.config.api_key,
+                    parent_key=self.config.parent_key,
+                )
+            except ApiServerException as e:
+                logger.error(f"Could not start session - {e}")
+                return False
+            logger.debug(f"Received response: {res.body}")
+
+            if res.code != 200:
+                logger.debug(f"Received non-200 status code: {res.code}")
                 return False
 
-            if not (jwt := res.body.get("jwt")):
-                logger.error("No JWT in API response")
-                return False
-
+            jwt = res.body.get("jwt", None)
             self.jwt = jwt
-            return True
+            if jwt is None:
+                logger.debug("No JWT received in response")
+                return False
+            logger.debug("Successfully received and set JWT")
 
-        except Exception as e:
-            logger.error(f"Failed to get JWT: {e}")
-            return False
+            session_started.send(self)  # Sets is_running=True
+
+            logger.info(
+                colored(
+                    f"\x1b[34mSession Replay: {self.session_url}\x1b[0m",
+                    "blue",
+                )
+            )
+
+            logger.debug("Session started successfully")
+            return True
 
     def _setup_logging(self) -> bool:
         """Set up logging for the session"""
@@ -212,6 +233,10 @@ class Session(InstrumentedBase):
 
         try:
             # Make sure we're using the session's span context when recording the event
+            if not self.span:
+                logger.error("No span available for recording event")
+                return
+
             with trace.use_span(self.span, end_on_exit=False):
                 # Signal event recording is starting
                 event_recording.send(self, event=event)
@@ -325,55 +350,6 @@ class Session(InstrumentedBase):
             except Exception as e:
                 logger.error(f"Failed to reauthorize JWT: {e}")
                 return None
-
-    def _start_session(self) -> bool:
-        """
-        Manually starts the session
-        This method should only be responsible to send signals (`session_starting` and `session_started`)
-        """
-        with self._lock:
-            # Signal session is starting
-            session_starting.send(self)
-
-            payload = {"session": asdict(self)}
-            logger.debug(f"Prepared session payload: {payload}")
-
-            try:
-                serialized_payload = json.dumps(filter_unjsonable(payload)).encode("utf-8")
-                logger.debug("Sending create session request with payload: %s", serialized_payload)
-                res = HttpClient.post(
-                    f"{self.config.endpoint}/v2/create_session",
-                    serialized_payload,
-                    api_key=self.config.api_key,
-                    parent_key=self.config.parent_key,
-                )
-            except ApiServerException as e:
-                logger.error(f"Could not start session - {e}")
-                return False
-            logger.debug(f"Received response: {res.body}")
-
-            if res.code != 200:
-                logger.debug(f"Received non-200 status code: {res.code}")
-                return False
-
-            jwt = res.body.get("jwt", None)
-            self.jwt = jwt
-            if jwt is None:
-                logger.debug("No JWT received in response")
-                return False
-            logger.debug("Successfully received and set JWT")
-
-            session_started.send(self)  # Sets is_running=True
-
-            logger.info(
-                colored(
-                    f"\x1b[34mSession Replay: {self.session_url}\x1b[0m",
-                    "blue",
-                )
-            )
-
-            logger.debug("Session started successfully")
-            return True
 
     def _update_session(self) -> None:
         """Update session state on the server"""

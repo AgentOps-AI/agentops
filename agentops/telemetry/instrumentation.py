@@ -153,7 +153,7 @@ def _setup_span_processor(session_id: UUID, config: Configuration) -> SpanProces
     )
 
 
-def setup_session_tracer(session_id: UUID, config: Configuration) -> trace.Tracer:
+def setup_session_tracer(session_id: UUID, config: Optional[Configuration] = None) -> trace.Tracer:
     """Set up OpenTelemetry tracing components for a session.
     
     This function orchestrates the creation of all session-specific telemetry components:
@@ -170,6 +170,9 @@ def setup_session_tracer(session_id: UUID, config: Configuration) -> trace.Trace
     Returns:
         Tracer: Session-specific tracer for creating spans
     """
+    if config is None:
+        config = Configuration()
+
     # Set up provider and tracer
     provider, tracer = _setup_trace_provider(session_id, config)
     

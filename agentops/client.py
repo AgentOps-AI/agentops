@@ -47,13 +47,6 @@ class Client(metaclass=MetaClient):
             env_data_opt_out=os.environ.get("AGENTOPS_ENV_DATA_OPT_OUT", "False").lower() == "true",
         )
 
-        # Register handlers in correct order
-        from agentops.event import register_handlers as register_event_handlers
-        from agentops.telemetry.instrumentation import register_handlers as register_instrumentation_handlers
-        
-        register_event_handlers()  # Register event.py handlers first
-        register_instrumentation_handlers()  # Register instrumentation.py handlers second
-
     def configure(
         self,
         api_key: Optional[str] = None,
