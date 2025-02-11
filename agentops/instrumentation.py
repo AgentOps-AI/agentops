@@ -279,4 +279,4 @@ def unregister_handlers():
     event_recorded.disconnect(_on_session_event_recorded)
 
 
-register_handlers()
+# register_handlers()

@@ -110,7 +110,7 @@ class Session(InstrumentedBase):
         """Initialize session components after dataclass initialization"""
         # First create the session span
         super().__post_init__()
-        
+
         # Then initialize session-specific components
         self._lock = threading.Lock()
         self._end_session_lock = threading.Lock()
@@ -122,8 +122,7 @@ class Session(InstrumentedBase):
         # Initialize session
         try:
             session_initializing.send(self, session_id=self.session_id)
-            success = self._initialize()
-            if not success:
+            if not self._initialize():
                 self.end(EndState.FAIL.value, "Failed to initialize session")
         except Exception as e:
             logger.error(f"Failed to initialize session: {e}")
