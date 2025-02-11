@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import logging
 import sys
-from typing import TYPE_CHECKING, Dict, List, Optional, Union, Tuple
+from typing import TYPE_CHECKING, Dict, List, Optional, Type, Union, Tuple
 from uuid import UUID, uuid4
 
 from opentelemetry import trace
@@ -114,6 +114,17 @@ def _setup_trace_provider(session_id: UUID, config: Configuration) -> Tuple[Trac
     return provider, tracer
 
 
+def get_processor_cls() -> Type[SpanProcessor]:
+    """Get the appropriate SpanProcessor class based on environment.
+    
+    Returns SimpleSpanProcessor for tests, BatchSpanProcessor otherwise.
+    
+    Returns:
+        Type[SpanProcessor]: The SpanProcessor class to use
+    """
+    return SimpleSpanProcessor if TESTING else BatchSpanProcessor
+
+
 def _setup_span_processor(session_id: UUID, config: Configuration) -> SpanProcessor:
     """Set up span processor for a session.
     
@@ -135,8 +146,8 @@ def _setup_span_processor(session_id: UUID, config: Configuration) -> SpanProces
     # Set up exporter
     exporter = EventExporter(session=get_session_by_id(session_id))
     
-    # Determine processor class - for tests we use SimpleSpanProcessor
-    processor_cls = SimpleSpanProcessor if TESTING else BatchSpanProcessor
+    # Get appropriate processor class
+    processor_cls = get_processor_cls()
     
     if processor_cls == SimpleSpanProcessor:
         return processor_cls(exporter)
