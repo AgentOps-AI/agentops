@@ -2,19 +2,20 @@ import contextlib
 import re
 import uuid
 from collections import defaultdict
-from typing import Dict, Iterator, List
+from typing import Dict, Generator, Iterator, List
 
 import pytest
 import requests_mock
-from opentelemetry.sdk.trace.export import SimpleSpanProcessor
-from pytest import Config, Session
 from opentelemetry import trace
 from opentelemetry.sdk.trace import TracerProvider
-from opentelemetry.sdk.trace.export import ConsoleSpanExporter
+from opentelemetry.sdk.trace.export import ConsoleSpanExporter, SimpleSpanProcessor
+from pytest import Config, Session
 
 import agentops
+from agentops.config import Configuration
 from agentops.event import ActionEvent, ErrorEvent, LLMEvent, ToolEvent
 from agentops.singleton import clear_singletons
+from agentops.telemetry.instrumentation import cleanup_session_tracer, setup_session_tracer
 from tests.fixtures.event import llm_event_spy
 
 
@@ -154,9 +155,30 @@ def mock_error_event():
     return ErrorEvent(trigger_event=trigger, exception=error, error_type="ValueError", details="Detailed error info")
 
 
-@pytest.fixture(autouse=True)
-def sync_tracer(mocker):
-    """Fixture to make SessionTracer use SimpleSpanProcessor for synchronous export during tests"""
+# @pytest.fixture(autouse=True)
+# def sync_tracer(mocker):
+#     """Fixture to make SessionTracer use SimpleSpanProcessor for synchronous export during tests"""
+#
+#     mocker.patch("agentops.telemetry.instrumentation.get_processor_cls", return_value=SimpleSpanProcessor)
+#     yield
 
-    mocker.patch("agentops.telemetry.instrumentation.get_processor_cls", return_value=SimpleSpanProcessor)
+
+@pytest.fixture(autouse=True)
+def test_tracer():
+    """Fixture that provides a basic tracer for testing.
+
+    This sets up minimal tracing infrastructure needed for testing InstrumentedBase
+    without requiring the full session infrastructure.
+    """
+    # Create and configure provider
+    provider = TracerProvider()
+    processor = SimpleSpanProcessor(ConsoleSpanExporter())
+    provider.add_span_processor(processor)
+
+    # Set as global tracer provider
+    trace.set_tracer_provider(provider)
+
     yield
+
+    # Clean up
+    provider.shutdown()

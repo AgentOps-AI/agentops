@@ -1,8 +1,21 @@
 import pytest
+from opentelemetry import trace
+from opentelemetry.sdk.trace import TracerProvider
+from opentelemetry.sdk.trace.export import SimpleSpanProcessor, ConsoleSpanExporter
 from opentelemetry.trace import Span
 
 from agentops.helpers import get_ISO_time
 from agentops.telemetry.model import InstrumentedBase
+
+# @pytest.fixture(autouse=True)
+# def setup_tracer():
+#     """Set up a tracer provider for tests"""
+#     provider = TracerProvider()
+#     processor = SimpleSpanProcessor(ConsoleSpanExporter())
+#     provider.add_span_processor(processor)
+#     trace.set_tracer_provider(provider)
+#     yield
+#     provider.shutdown()
 
 
 def test_init_creates_span():
