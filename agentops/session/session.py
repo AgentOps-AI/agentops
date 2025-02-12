@@ -471,4 +471,5 @@ class Session(InstrumentedBase):
             super()._create_span()
 
     def force_flush(self):
-        self.flush()
+        return
+        # self.flush()

@@ -90,4 +90,10 @@ class InstrumentedBase:
         This is useful in testing scenarios or when you need to ensure all
         telemetry data has been exported before proceeding.
         """
-        trace.get_tracer_provider().force_flush()
+        return
+        # provider = trace.get_tracer_provider()
+        # for processor in provider._span_processors:
+        #     try:
+        #         processor.force_flush()
+        #     except Exception as e:
+        #         logger.warning(f"Error during tracer flush: {e}")
