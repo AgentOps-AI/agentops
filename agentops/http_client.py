@@ -163,7 +163,6 @@ class HttpClient:
             else:
                 raise ApiServerException(f"API server: {result.body}")
         if result.code == 500:
-            breakpoint()
             raise ApiServerException("API server: - internal server error")
 
         return result
