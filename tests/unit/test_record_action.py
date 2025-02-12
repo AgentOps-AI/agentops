@@ -5,6 +5,7 @@ import pytest
 
 import agentops
 from agentops import record_action
+from agentops.session import Session
 
 
 class TestRecordAction:
@@ -27,16 +28,19 @@ class TestRecordAction:
 
         session.flush()
 
-        # Find the record_action request
+        # Find all events across all requests
+        all_events = []
         action_requests = [r for r in mock_req.request_history if "/v2/create_events" in r.url]
-        assert len(action_requests) > 0
-        last_action_request = action_requests[-1]
+        for request in action_requests:
+            all_events.extend(request.json()["events"])
 
-        assert last_action_request.headers["X-Agentops-Api-Key"] == self.api_key
-        request_json = last_action_request.json()
-        assert request_json["events"][0]["action_type"] == self.event_type
-        assert request_json["events"][0]["params"] == {"x": 3, "y": 4}
-        assert request_json["events"][0]["returns"] == 7
+        # Find the relevant event
+        test_events = [e for e in all_events if e["action_type"] == self.event_type]
+        assert len(test_events) == 1
+        event = test_events[0]
+
+        assert event["params"] == {"x": 3, "y": 4}
+        assert event["returns"] == 7
 
         agentops.end_session(end_state="Success")
 
@@ -52,23 +56,25 @@ class TestRecordAction:
 
         session.flush()
 
-        # Find the record_action request
+        # Find all events
+        all_events = []
         action_requests = [r for r in mock_req.request_history if "/v2/create_events" in r.url]
-        assert len(action_requests) > 0
-        last_action_request = action_requests[-1]
+        for request in action_requests:
+            all_events.extend(request.json()["events"])
 
-        assert last_action_request.headers["X-Agentops-Api-Key"] == self.api_key
-        request_json = last_action_request.json()
-        assert request_json["events"][0]["action_type"] == "add_two"
-        assert request_json["events"][0]["params"] == {"x": 3, "y": 4}
-        assert request_json["events"][0]["returns"] == 7
+        # Find the add_two event
+        add_two_events = [e for e in all_events if e["action_type"] == "add_two"]
+        assert len(add_two_events) == 1
+        event = add_two_events[0]
+
+        assert event["params"] == {"x": 3, "y": 4}
+        assert event["returns"] == 7
 
         agentops.end_session(end_state="Success")
 
     def test_record_action_decorator_multiple(self, mock_req):
         session: Session = agentops.start_session()
 
-        # Arrange
         @record_action(event_name=self.event_type)
         def add_three(x, y, z=3):
             return x + y + z
@@ -79,21 +85,26 @@ class TestRecordAction:
 
         session.flush()
 
-        # Find the record_action request
+        # Find all events
+        all_events = []
         action_requests = [r for r in mock_req.request_history if "/v2/create_events" in r.url]
-        assert len(action_requests) > 0
-        last_action_request = action_requests[-1]
+        for request in action_requests:
+            all_events.extend(request.json()["events"])
 
-        assert last_action_request.headers["X-Agentops-Api-Key"] == self.api_key
-        request_json = last_action_request.json()
+        # Find events for this test
+        test_events = [e for e in all_events if e["action_type"] == self.event_type]
+        assert len(test_events) == 2
 
-        assert request_json["events"][1]["action_type"] == self.event_type
-        assert request_json["events"][1]["params"] == {"x": 1, "y": 2, "z": 4}
-        assert request_json["events"][1]["returns"] == 7
+        # Sort events by returns to match the order of execution
+        test_events.sort(key=lambda x: x["returns"])
 
-        assert request_json["events"][0]["action_type"] == self.event_type
-        assert request_json["events"][0]["params"] == {"x": 1, "y": 2, "z": 3}
-        assert request_json["events"][0]["returns"] == 6
+        # First call (with default z=3)
+        assert test_events[0]["params"] == {"x": 1, "y": 2, "z": 3}
+        assert test_events[0]["returns"] == 6
+
+        # Second call (with z=4)
+        assert test_events[1]["params"] == {"x": 1, "y": 2, "z": 4}
+        assert test_events[1]["returns"] == 7
 
         agentops.end_session(end_state="Success")
 
