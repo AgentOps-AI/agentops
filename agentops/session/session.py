@@ -433,7 +433,6 @@ class Session(InstrumentedBase):
         Deprecated: Use end() instead.
         Kept for backward compatibility.
         """
-        breakpoint()
         return self.end(*args, **kwargs)
 
     def __repr__(self) -> str:
