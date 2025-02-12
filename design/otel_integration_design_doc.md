@@ -234,6 +234,44 @@ class Session:
    - Develop and integrate a custom PostgreSQL exporter.
    - Validate the hierarchy: agents as parent spans and events as their child spans.
    - Test context propagation across threads and async flows.
+   - **Custom PostgreSQL Exporter Detailed Design:**
+     - **Independence:**  
+       The exporter will strictly implement the OpenTelemetry `SpanExporter` interface, operating solely on span data. This allows it to remain decoupled from AgentOps business logic and focus only on converting spans to the required PostgreSQL format.
+     
+     - **Schema Design:**  
+       Design a PostgreSQL table with columns to capture all required span data:
+         - `trace_id`: Uses the session ID from AgentOps as the trace identifier.
+         - `span_id`: Unique identifier for the span.
+         - `parent_span_id`: To represent the hierarchy (e.g., linking agent spans to their event spans).
+         - `operation_name`: The name of the span, indicating the activity or event.
+         - `start_time` and `end_time`: Timestamps in nanoseconds since epoch.
+         - `attributes`: A JSONB field to capture additional metadata and custom attributes.
+         - `status`: The status of the span (e.g., OK, error).
+       Additionally, create indexes on key columns (e.g., `trace_id`, `span_id`, `start_time`) to optimize query performance for analytical tools like Jaiqu.
+     
+     - **Batch Processing and Asynchronous Inserts:**  
+       Utilize batching to accumulate spans before performing database inserts. This mechanism should:
+         - Minimize the number of round trips to PostgreSQL.
+         - Support asynchronous, non-blocking operations so that slow database inserts do not impact overall performance.
+         - Include configurable parameters (e.g., batch size, insert intervals) controlled via environment variables.
+         - Implement retry logic to handle transient errors and minimize data loss.
+     
+     - **Error Handling:**  
+       Implement robust error logging and handling:
+         - Log detailed error messages including span identifiers to aid in troubleshooting.
+         - Use a retry/backoff mechanism for failed batches.
+         - Consider buffering failed batches temporarily, ensuring that temporary issues do not result in permanent data loss.
+     
+     - **Dual Export Coordination:**  
+       Since spans are exported simultaneously to both Jaeger and PostgreSQL, ensure:
+         - The exporter does not modify the span objects, allowing independent handling by both processors.
+         - Resource management (CPU, network I/O, database connections) is configured so that simultaneous exports do not interfere with each other.
+     
+     - **Configuration Management:**  
+       Use environment variables or configuration files to manage:
+         - PostgreSQL connection settings (host, port, username, password, database, table name).
+         - Operational parameters such as batch size, timeouts, and maximum retry attempts.
+   
    - **Expected timeline:** 1-2 weeks.
 
 3. **Phase 3: Production Readiness**
