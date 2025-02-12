@@ -4,6 +4,7 @@ import logging
 import sys
 from typing import TYPE_CHECKING, Dict, List, Optional, Tuple, Type, Union
 from uuid import UUID, uuid4
+import json
 
 from opentelemetry import trace
 from opentelemetry.context import attach, detach, set_value
@@ -325,31 +326,26 @@ def _on_session_end(sender, end_state: str, end_state_reason: Optional[str]):
 
 def _on_session_event_recorded(sender: Session, event: Event, flush_now=False, **kwargs):
     """Handle completion of event recording for telemetry"""
-    logger.debug(f"Finished recording event: {event}")
-
     if not sender._tracer:
-        logger.error("No tracer found during event recording")
         return
 
-    # Create spans from definitions
-    span_definitions = EventToSpanEncoder.encode(event)
+    # Create spans within the session's trace context
+    with trace.use_span(sender.span):
+        span_definitions = EventToSpanEncoder.encode(event)
+        
+        for span_def in span_definitions:
+            with sender._tracer.start_as_current_span(
+                name=span_def.name,
+                kind=span_def.kind,
+                attributes=span_def.attributes,
+            ) as span:
+                event.end_timestamp = get_ISO_time()
+                
+                # Update event counts
+                event_type = span_def.attributes.get("event_type")
+                if event_type in sender.event_counts:
+                    sender.event_counts[event_type] += 1
 
-    # Create spans
-    for span_def in span_definitions:
-        with sender._tracer.start_as_current_span(
-            name=span_def.name,
-            kind=span_def.kind,
-            attributes=span_def.attributes,
-        ) as span:
-            # Set event end timestamp when span ends
-            event.end_timestamp = get_ISO_time()
-
-            # Update event counts if applicable
-            event_type = span_def.attributes.get("event_type")
-            if event_type in sender.event_counts:
-                sender.event_counts[event_type] += 1
-
-    # Handle manual flush if requested
     if flush_now:
         flush_session_telemetry(sender.session_id)
 
