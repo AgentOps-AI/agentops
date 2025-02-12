@@ -182,8 +182,7 @@ class Session(InstrumentedBase):
 
     def record(self, event: Event, flush_now=False) -> None:
         """Record an event in this trace"""
-        if not self.is_running:
-            return
+        assert self.is_running, "Session is not running"
 
         # Set session ID on event - it shouldn't already be set; this Event should still be
         assert not event.session_id, "ProgrammingError: Event already has a session_id"
