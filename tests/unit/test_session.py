@@ -152,21 +152,30 @@ class TestSingleSessions:
         agentops.start_session()
         agentops.add_tags("wrong-type-tags")
 
-        request_json = mock_req.last_request.json()
+        # Find create_session request
+        create_session_requests = [r for r in mock_req.request_history if "/v2/create_session" in r.url]
+        assert len(create_session_requests) > 0
+        request_json = create_session_requests[-1].json()
         assert request_json["session"]["tags"] == ["wrong-type-tags"]
 
     def test_session_add_tags_with_string(self, mock_req):
         session = agentops.start_session()
         session.add_tags("wrong-type-tags")
 
-        request_json = mock_req.last_request.json()
+        # Find create_session request
+        create_session_requests = [r for r in mock_req.request_history if "/v2/create_session" in r.url]
+        assert len(create_session_requests) > 0
+        request_json = create_session_requests[-1].json()
         assert request_json["session"]["tags"] == ["wrong-type-tags"]
 
     def test_set_tags_with_string(self, mock_req):
         agentops.start_session()
         agentops.set_tags("wrong-type-tags")
 
-        request_json = mock_req.last_request.json()
+        # Find create_session request
+        create_session_requests = [r for r in mock_req.request_history if "/v2/create_session" in r.url]
+        assert len(create_session_requests) > 0
+        request_json = create_session_requests[-1].json()
         assert request_json["session"]["tags"] == ["wrong-type-tags"]
 
     def test_session_set_tags_with_string(self, mock_req):
@@ -175,14 +184,20 @@ class TestSingleSessions:
 
         session.set_tags("wrong-type-tags")
 
-        request_json = mock_req.last_request.json()
+        # Find create_session request
+        create_session_requests = [r for r in mock_req.request_history if "/v2/create_session" in r.url]
+        assert len(create_session_requests) > 0
+        request_json = create_session_requests[-1].json()
         assert request_json["session"]["tags"] == ["wrong-type-tags"]
 
     def test_set_tags_before_session(self, mock_req):
         agentops.configure(default_tags=["pre-session-tag"])
         agentops.start_session()
 
-        request_json = mock_req.last_request.json()
+        # Find create_session request
+        create_session_requests = [r for r in mock_req.request_history if "/v2/create_session" in r.url]
+        assert len(create_session_requests) > 0
+        request_json = create_session_requests[-1].json()
         assert request_json["session"]["tags"] == ["pre-session-tag"]
 
     def test_safe_get_session_no_session(self, mock_req):
