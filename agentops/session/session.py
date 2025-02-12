@@ -30,6 +30,7 @@ from agentops.session.signals import (
     session_initializing,
     session_starting,
     session_updated,
+    session_started,
 )
 from agentops.telemetry import InstrumentedBase
 
@@ -159,6 +160,9 @@ class Session(InstrumentedBase):
                 )
             )
 
+            # Add session_started signal after successful initialization
+            session_started.send(self)
+
             logger.debug("Session started successfully")
             return True
 
@@ -245,6 +249,7 @@ class Session(InstrumentedBase):
         video: Optional[str] = None,
     ) -> Union[Decimal, None]:
         with self._end_session_lock:
+            # Add check to prevent multiple ends
             if not self.is_running:
                 return None
 
@@ -258,6 +263,9 @@ class Session(InstrumentedBase):
 
                 # Clean up trace components
                 self._cleanup()
+
+                # Set is_running to False before sending end signal
+                self.is_running = False
 
                 # Log final analytics
                 if analytics_stats := self.get_analytics():
@@ -276,8 +284,8 @@ class Session(InstrumentedBase):
 
             except Exception as e:
                 logger.exception(f"Error during session end: {e}")
-                # Ensure session_ended is still sent even if there's an error
             finally:
+                # Send end signal only once
                 session_ended.send(self, end_state=end_state, end_state_reason=end_state_reason)
 
     def _reauthorize_jwt(self) -> Union[str, None]:
