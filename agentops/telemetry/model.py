@@ -13,7 +13,15 @@ from agentops.log_config import logger
 
 @dataclass(kw_only=True)
 class InstrumentedBase:
-    """Base class for objects that have timing and OpenTelemetry instrumentation.
+    """
+    All instrumented models should inherit from this clsss (Session, Event, etc)
+
+
+    The purpose of this class is to manage instrumentation for a model,
+    including the creation of a span and its lifecycle
+
+
+    Base class for objects that have timing and OpenTelemetry instrumentation.
 
     Provides consistent handling of:
     - init_timestamp and end_timestamp fields

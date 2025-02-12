@@ -16,7 +16,6 @@ import agentops
 from agentops.config import Configuration
 from agentops.event import ActionEvent, ErrorEvent, LLMEvent, ToolEvent
 from agentops.singleton import clear_singletons
-from agentops.telemetry.instrumentation import cleanup_session_tracer, setup_session_tracer
 from tests.fixtures.event import llm_event_spy
 
 
