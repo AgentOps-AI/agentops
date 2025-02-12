@@ -28,6 +28,9 @@ def iso_to_unix_nano(iso_time: str) -> int:
     dt = datetime.fromisoformat(iso_time)
     return int(dt.timestamp() * 1_000_000_000)
 
+def from_unix_nano_to_iso(unix_nano: int) -> str:
+    return datetime.fromtimestamp(unix_nano / 1_000_000_000, timezone.utc).isoformat()
+
 
 def is_jsonable(x):
     try:
