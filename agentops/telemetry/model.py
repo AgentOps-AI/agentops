@@ -7,7 +7,7 @@ from typing import Optional
 from opentelemetry import trace
 from opentelemetry.trace import Span, SpanKind
 
-from agentops.helpers import get_ISO_time, iso_to_unix_nano
+from agentops.helpers import from_unix_nano_to_iso, get_ISO_time, iso_to_unix_nano
 from agentops.log_config import logger
 
 
@@ -49,14 +49,25 @@ class InstrumentedBase:
     @property
     def init_timestamp(self) -> Optional[str]:
         """Get the timestamp when the object was initialized"""
-        return self._span.start_time if self._span else None
+        return from_unix_nano_to_iso(self._span.start_time) if self._span else None
 
     @init_timestamp.setter
-    def init_timestamp(self, value: Optional[str]) -> None:
+    def init_timestamp(self, value: str | None | int) -> None:
         # Forwards setting to the span
         if self._span:
             assert not self._span.is_recording(), "Can't set init_timestamp after span has been started"
-            self._span.start_time = iso_to_unix_nano(value)
+            if value is None:
+                return
+            # Convert ISO string to unix nano if needed
+            if isinstance(value, str):
+                unix_nano = iso_to_unix_nano(value)
+            # Value is already unix nano
+            elif isinstance(value, int):
+                unix_nano = value
+            else:
+                raise ValueError(f"init_timestamp must be str or int, got {type(value)}")
+
+            self._span.start_time = unix_nano
 
     def _create_span(self, *args, **kwargs) -> None:
         """Create a new span with current timestamps"""
