@@ -1,3 +1,4 @@
+import asyncio
 import contextlib
 import time
 from datetime import datetime
@@ -102,12 +103,12 @@ class TestRecordTool:
 
         @record_tool(self.tool_name)
         async def async_add(x, y):
-            time.sleep(0.1)
+            await asyncio.sleep(0.1)
             return x + y
 
         # Act
         result = await async_add(3, 4)
-        time.sleep(0.1)
+        await asyncio.sleep(0.1)
 
         # Assert
         assert result == 7
@@ -189,9 +190,9 @@ class TestRecordTool:
 
         # Act
         await async_add(1, 2, session=session_1)
-        time.sleep(0.1)
+        await asyncio.sleep(0.1)
         await async_add(1, 2, session=session_2)
-        time.sleep(0.1)
+        await asyncio.sleep(0.1)
 
         # Find tool requests
         tool_requests = [r for r in mock_req.request_history if "/v2/create_events" in r.url]
