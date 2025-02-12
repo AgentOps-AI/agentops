@@ -7,7 +7,7 @@ from dataclasses import asdict, dataclass, field
 from datetime import datetime
 from decimal import ROUND_HALF_UP, Decimal
 from enum import Enum
-from typing import Any, Dict, List, Optional, Union
+from typing import TYPE_CHECKING, Any, Dict, List, Optional, Union
 from uuid import UUID, uuid4
 
 from opentelemetry import trace
@@ -17,7 +17,6 @@ from opentelemetry import trace
 from termcolor import colored
 
 from agentops.config import TESTING, Configuration
-from agentops.event import Event
 from agentops.exceptions import ApiServerException
 from agentops.helpers import filter_unjsonable, get_ISO_time, safe_serialize
 from agentops.http_client import HttpClient, Response
@@ -34,6 +33,9 @@ from agentops.session.signals import (
     session_updated,
 )
 from agentops.telemetry import InstrumentedBase
+
+if TYPE_CHECKING:
+    from agentops.event import Event
 
 
 class EndState(Enum):

@@ -1,6 +1,7 @@
 """Base class for instrumented objects that have timing and spans."""
 
-from dataclasses import dataclass, field
+import inspect
+from dataclasses import MISSING, dataclass, field
 from typing import Optional
 
 from opentelemetry import trace
@@ -10,7 +11,7 @@ from agentops.helpers import get_ISO_time, iso_to_unix_nano
 from agentops.log_config import logger
 
 
-@dataclass
+@dataclass(kw_only=True)
 class InstrumentedBase:
     """Base class for objects that have timing and OpenTelemetry instrumentation.
 
@@ -20,20 +21,9 @@ class InstrumentedBase:
     - timing-related properties and methods
     """
 
-    # Move these to the end of the parameter list using default_factory
-    init_timestamp: Optional[str] = field(
-        default=None,
-        init=True,
-        compare=False,
-        kw_only=True,  # This makes it a keyword-only argument
-    )
-    end_timestamp: Optional[str] = field(
-        default=None,
-        init=True,
-        compare=False,
-        kw_only=True,  # This makes it a keyword-only argument
-    )
-
+    # These will be keyword-only parameters
+    init_timestamp: Optional[str] = None
+    end_timestamp: Optional[str] = None
     # Private implementation details
     _span: Span = field(
         default=None,
@@ -47,6 +37,17 @@ class InstrumentedBase:
         if self.init_timestamp is None:
             self.init_timestamp = get_ISO_time()
         self._create_span()
+
+    @property
+    def init_timestamp(self) -> Optional[str]:
+        """Get the timestamp when the object was initialized"""
+        return self._span.start_time
+
+    @init_timestamp.setter
+    def init_timestamp(self, value: Optional[str]) -> None:
+        # Forwards setting to the span
+        assert not self._span.is_recording(), "Can't set init_timestamp after span has been started"
+        self._span.start_time = iso_to_unix_nano(value)
 
     def _create_span(self) -> None:
         """Create a new span with current timestamps"""
@@ -85,6 +86,10 @@ class InstrumentedBase:
         if not self.end_timestamp:
             self.end_timestamp = get_ISO_time()
 
+    def trace_id(self) -> str:
+        # Syntactic sugar for session_id.
+        return getattr(self, "session_id")
+
     def flush(self) -> None:
         """Force flush any pending spans in the OpenTelemetry trace exporter.
 
@@ -96,3 +101,11 @@ class InstrumentedBase:
 
         if session_id := getattr(self, "session_id", None):
             flush_session_telemetry(session_id)
+
+
+if __name__ == "__main__":
+    # Test initialization
+    InstrumentedBase(
+        init_timestamp="2021-01-01T00:00:00Z",
+        end_timestamp="2021-01-01T00:00:01Z",
+    )
