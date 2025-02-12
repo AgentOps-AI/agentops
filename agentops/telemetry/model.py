@@ -103,7 +103,7 @@ class InstrumentedBase:
     def end(self):
         """End the instrumented object and its span"""
         assert not self.end_timestamp, "Can't end() when end_timestamp already set"
-        self.end_timestamp = get_ISO_time()  # Setter will trigger span ending
+        self._end_span()
 
     def trace_id(self) -> str:
         # Syntactic sugar for session_id.
