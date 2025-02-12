@@ -39,22 +39,11 @@ class EventType(Enum):
     ERROR = "errors"
 
 
-@dataclass
-class EventBase(InstrumentedBase):
-    """Base class for Event that defines core fields"""
-
-    event_type: Union[EventType, str]
-    params: Optional[dict] = None
-    returns: Optional[Union[str, List[str]]] = None
-    agent_id: Optional[UUID] = field(default_factory=check_call_stack_for_agent_id)
-    id: UUID = field(default_factory=uuid4)
-    session_id: Optional[UUID] = None
 
 
 @dataclass
-class Event(EventBase):
-    """
-    Abstract base class for events that will be recorded. Should not be instantiated directly.
+class Event(InstrumentedBase):
+    """Base class for Event that defines core fields
 
     event_type(str): The type of event. Defined in events.EventType. Some values are 'llm', 'action', 'api', 'tool', 'error'.
     params(dict, optional): The parameters of the function containing the triggered event, e.g. {'x': 1} in example below
@@ -72,6 +61,13 @@ class Event(EventBase):
         return x+1
     }
     """
+
+    event_type: Union[EventType, str]
+    params: Optional[dict] = None
+    returns: Optional[Union[str, List[str]]] = None
+    agent_id: Optional[UUID] = field(default_factory=check_call_stack_for_agent_id)
+    id: UUID = field(default_factory=uuid4)
+    session_id: Optional[UUID] = None
 
     def __post_init__(self):
         # Call parent's post_init to create span
