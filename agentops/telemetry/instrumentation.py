@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import logging
 import sys
-from typing import TYPE_CHECKING, Dict, List, Optional, Type, Union, Tuple
+from typing import TYPE_CHECKING, Dict, List, Optional, Tuple, Type, Union
 from uuid import UUID, uuid4
 
 from opentelemetry import trace
@@ -91,24 +91,21 @@ def set_session_handler(session_id: UUID, handler: Optional[LoggingHandler]) -> 
 
 def _setup_trace_provider(session_id: UUID, config: Configuration) -> Tuple[TracerProvider, trace.Tracer]:
     """Set up trace provider for a session.
-    
+
     Creates a session-specific TracerProvider and Tracer to maintain isolation between
     concurrent sessions. This ensures that telemetry data from different sessions
     doesn't get mixed up and can be properly attributed and managed independently.
-    
+
     Args:
         session_id: UUID identifier for the session
         config: Configuration instance with telemetry settings
-        
+
     Returns:
         Tuple containing:
         - TracerProvider: Session-specific provider instance with proper resource attribution
         - Tracer: Session-specific tracer for creating spans in this session's context
     """
-    resource = Resource.create({
-        SERVICE_NAME: f"agentops.session.{str(session_id)}", 
-        "session.id": str(session_id)
-    })
+    resource = Resource.create({SERVICE_NAME: f"agentops.session.{str(session_id)}", "session.id": str(session_id)})
     provider = TracerProvider(resource=resource)
     tracer = provider.get_tracer(f"agentops.session.{str(session_id)}")
     return provider, tracer
@@ -116,42 +113,42 @@ def _setup_trace_provider(session_id: UUID, config: Configuration) -> Tuple[Trac
 
 def get_processor_cls() -> Type[SpanProcessor]:
     """Get the appropriate SpanProcessor class based on environment.
-    
+
     Returns SimpleSpanProcessor for tests, BatchSpanProcessor otherwise.
-    
+
     Returns:
         Type[SpanProcessor]: The SpanProcessor class to use
     """
-    return SimpleSpanProcessor if TESTING else BatchSpanProcessor
+    return BatchSpanProcessor
 
 
 def _setup_span_processor(session_id: UUID, config: Configuration) -> SpanProcessor:
     """Set up span processor for a session.
-    
+
     Creates a session-specific SpanProcessor that handles the export pipeline for
     this session's telemetry data. This allows for:
     - Independent export configurations per session
     - Isolated error handling (issues in one session don't affect others)
     - Clean shutdown when the session ends
-    
+
     Args:
         session_id: UUID identifier for the session
         config: Configuration instance with telemetry settings
-        
+
     Returns:
         SpanProcessor: Session-specific processor instance
     """
     from agentops.session.registry import get_session_by_id
-    
+
     # Set up exporter
     exporter = EventExporter(session=get_session_by_id(session_id))
-    
+
     # Get appropriate processor class
     processor_cls = get_processor_cls()
-    
+
     if processor_cls == SimpleSpanProcessor:
         return processor_cls(exporter)
-    
+
     # For BatchSpanProcessor, we need to configure the batch settings
     return BatchSpanProcessor(
         exporter,
@@ -166,18 +163,18 @@ def _setup_span_processor(session_id: UUID, config: Configuration) -> SpanProces
 
 def setup_session_tracer(session_id: UUID, config: Optional[Configuration] = None) -> trace.Tracer:
     """Set up OpenTelemetry tracing components for a session.
-    
+
     This function orchestrates the creation of all session-specific telemetry components:
     - TracerProvider: For session-specific resource attribution
     - Tracer: For creating spans within the session's context
     - SpanProcessor: For independent export pipeline configuration
-    
+
     The components are stored in _session_tracers for lifecycle management.
-    
+
     Args:
         session_id: UUID identifier for the session
         config: Configuration instance with telemetry settings
-        
+
     Returns:
         Tracer: Session-specific tracer for creating spans
     """
@@ -186,27 +183,27 @@ def setup_session_tracer(session_id: UUID, config: Optional[Configuration] = Non
 
     # Set up provider and tracer
     provider, tracer = _setup_trace_provider(session_id, config)
-    
+
     # Set up processor
     processor = _setup_span_processor(session_id, config)
     provider.add_span_processor(processor)
-    
+
     # Store components for cleanup
     _session_tracers[session_id] = (provider, tracer, processor)
-    
+
     return tracer
 
 
 def cleanup_session_tracer(session_id: UUID) -> None:
     """Clean up tracing components for a session.
-    
+
     Handles the graceful shutdown of a session's telemetry components:
     - Flushes any pending telemetry data
     - Shuts down the span processor
     - Shuts down the tracer provider
-    
+
     This ensures clean session termination without affecting other active sessions.
-    
+
     Args:
         session_id: UUID identifier for the session
     """
@@ -354,10 +351,7 @@ def _on_session_event_recorded(sender: Session, event: Event, flush_now=False, *
 
     # Handle manual flush if requested
     if flush_now:
-        components = _session_tracers.get(sender.session_id)
-        if components:
-            _, _, processor = components
-            processor.force_flush()
+        flush_session_telemetry(sender.session_id)
 
 
 def register_handlers():
@@ -378,13 +372,31 @@ def unregister_handlers():
     event_recorded.disconnect(_on_session_event_recorded)
 
 
+def flush_session_telemetry(session_id: UUID) -> bool:
+    """Force flush any pending telemetry data for a session.
+
+    Args:
+        session_id: The UUID of the session to flush
+
+    Returns:
+        bool: True if flush was successful, False if components not found
+    """
+    components = _session_tracers.get(session_id)
+    if not components:
+        return False
+
+    _, _, processor = components
+    processor.force_flush()
+    return True
+
+
 register_handlers()
 
 # class SessionSpanProcessor(BatchSpanProcessor):
 #     def on_start(self, span, parent_context):
 #         if span.attributes.get("class") == "Session":
 #             super().on_start(span, parent_context)
-            
+
 #     def on_end(self, span):
 #         if span.attributes.get("class") == "Session":
 #             super().on_end(span)
@@ -393,7 +405,7 @@ register_handlers()
 #     def on_start(self, span, parent_context):
 #         if span.attributes.get("class") in ["ActionEvent", "LLMEvent", "ToolEvent", "ErrorEvent"]:
 #             super().on_start(span, parent_context)
-            
+
 #     def on_end(self, span):
 #         if span.attributes.get("class") in ["ActionEvent", "LLMEvent", "ToolEvent", "ErrorEvent"]:
 #             super().on_end(span)

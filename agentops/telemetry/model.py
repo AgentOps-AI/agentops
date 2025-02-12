@@ -19,18 +19,19 @@ class InstrumentedBase:
     - span association and lifecycle
     - timing-related properties and methods
     """
+
     # Move these to the end of the parameter list using default_factory
     init_timestamp: Optional[str] = field(
         default=None,
         init=True,
         compare=False,
-        kw_only=True  # This makes it a keyword-only argument
+        kw_only=True,  # This makes it a keyword-only argument
     )
     end_timestamp: Optional[str] = field(
         default=None,
         init=True,
         compare=False,
-        kw_only=True  # This makes it a keyword-only argument
+        kw_only=True,  # This makes it a keyword-only argument
     )
 
     # Private implementation details
@@ -86,14 +87,12 @@ class InstrumentedBase:
 
     def flush(self) -> None:
         """Force flush any pending spans in the OpenTelemetry trace exporter.
-        
+
         This is useful in testing scenarios or when you need to ensure all
         telemetry data has been exported before proceeding.
         """
-        return
-        # provider = trace.get_tracer_provider()
-        # for processor in provider._span_processors:
-        #     try:
-        #         processor.force_flush()
-        #     except Exception as e:
-        #         logger.warning(f"Error during tracer flush: {e}")
+
+        from agentops.telemetry.instrumentation import flush_session_telemetry
+
+        if session_id := getattr(self, "session_id", None):
+            flush_session_telemetry(session_id)

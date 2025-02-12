@@ -7,6 +7,7 @@ import requests_mock
 
 import agentops
 from agentops import record_tool
+from agentops.session.session import Session
 
 jwts = ["some_jwt", "some_jwt2", "some_jwt3"]
 
@@ -20,7 +21,7 @@ class TestRecordTool:
         agentops.init(self.api_key, max_wait_time=5, auto_start_session=False)
 
     def test_record_tool_decorator(self, mock_req):
-        agentops.start_session()
+        session: Session = agentops.start_session()
 
         @record_tool(tool_name=self.tool_name)
         def add_two(x, y):
@@ -28,7 +29,7 @@ class TestRecordTool:
 
         # Act
         add_two(3, 4)
-        time.sleep(0.1)
+        session.flush()
 
         # Find the record_tool request
         tool_requests = [r for r in mock_req.request_history if "/v2/create_events" in r.url]
@@ -44,7 +45,7 @@ class TestRecordTool:
         agentops.end_session(end_state="Success")
 
     def test_record_tool_default_name(self, mock_req):
-        agentops.start_session()
+        session: Session = agentops.start_session()
 
         @record_tool()
         def add_two(x, y):
@@ -52,7 +53,8 @@ class TestRecordTool:
 
         # Act
         add_two(3, 4)
-        time.sleep(0.1)
+
+        session.flush()
 
         # Find the record_tool request
         tool_requests = [r for r in mock_req.request_history if "/v2/create_events" in r.url]
@@ -68,7 +70,7 @@ class TestRecordTool:
         agentops.end_session(end_state="Success")
 
     def test_record_tool_decorator_multiple(self, mock_req):
-        agentops.start_session()
+        session: Session = agentops.start_session()
 
         # Arrange
         @record_tool(tool_name=self.tool_name)
@@ -77,9 +79,9 @@ class TestRecordTool:
 
         # Act
         add_three(1, 2)
-        time.sleep(0.1)
         add_three(1, 2)
-        time.sleep(0.1)
+
+        session.flush()
 
         # Find all tool requests
         tool_requests = [r for r in mock_req.request_history if "/v2/create_events" in r.url]

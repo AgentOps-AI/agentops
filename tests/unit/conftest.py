@@ -155,8 +155,8 @@ def mock_error_event():
     return ErrorEvent(trigger_event=trigger, exception=error, error_type="ValueError", details="Detailed error info")
 
 
-@pytest.fixture(autouse=True)
-def sync_tracer(mocker):
+@pytest.fixture
+def simple_span_processor(mocker):
     """Fixture to make SessionTracer use SimpleSpanProcessor for synchronous export during tests"""
 
     mocker.patch("agentops.telemetry.instrumentation.get_processor_cls", return_value=SimpleSpanProcessor)
