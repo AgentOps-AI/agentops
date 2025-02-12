@@ -19,16 +19,18 @@ class InstrumentedBase:
     - span association and lifecycle
     - timing-related properties and methods
     """
-    # Make these fields init=False so they don't interfere with subclass constructors
+    # Move these to the end of the parameter list using default_factory
     init_timestamp: Optional[str] = field(
         default=None,
-        init=False,
+        init=True,
         compare=False,
+        kw_only=True  # This makes it a keyword-only argument
     )
     end_timestamp: Optional[str] = field(
         default=None,
-        init=False,
+        init=True,
         compare=False,
+        kw_only=True  # This makes it a keyword-only argument
     )
 
     # Private implementation details

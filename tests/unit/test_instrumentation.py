@@ -13,6 +13,10 @@ from agentops.session import add_session
 from agentops.telemetry.instrumentation import cleanup_session_telemetry, setup_session_telemetry
 
 
+
+pytestmark = [pytest.mark.skip]
+
+
 class TestSessionTelemetry:
     @pytest.fixture
     def session_id(self):

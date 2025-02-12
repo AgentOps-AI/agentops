@@ -63,10 +63,12 @@ def get_default_session() -> Optional["Session"]:
     return None
 
 
-@session_initialized.connect
-def on_session_initialized(sender, **kwargs):
-    """Add session to registry when initialized"""
-    logger.debug(f"Session initialized signal received for {sender.session_id}")
+
+@session_started.connect
+def on_session_started(sender, **kwargs):
+    """Ensure session is in registry when started"""
+    logger.debug(f"Session started signal received for {sender.session_id}")
+    # Add session if not already added during initialization
     add_session(sender)
 
 
