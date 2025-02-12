@@ -26,12 +26,12 @@ from agentops.session.signals import (
     event_recorded,
     event_recording,
     session_ended,
+    session_ending,
     session_initialized,
     session_initializing,
     session_started,
     session_starting,
     session_updated,
-    session_ending,
 )
 from agentops.telemetry import InstrumentedBase
 
@@ -272,6 +272,7 @@ class Session(InstrumentedBase):
                 self.is_running = False
 
                 # Log final analytics
+                # FIXME: Hilarious, but self.get_analytics() is actually what notifies session updates hence ending the session
                 if analytics_stats := self.get_analytics():
                     logger.info(
                         f"Session Stats - "
@@ -318,7 +319,6 @@ class Session(InstrumentedBase):
 
         with self._lock:
             # Emit session updated signal
-            session_updated.send(self, session_id=self.session_id)
 
             payload = {"session": asdict(self)}
 
@@ -331,6 +331,8 @@ class Session(InstrumentedBase):
                 )
             except ApiServerException as e:
                 logger.error(f"Could not update session - {e}")
+            else:
+                session_updated.send(self, session_id=self.session_id)
 
     def create_agent(self, name, agent_id):
         """Create a new agent in the session"""
