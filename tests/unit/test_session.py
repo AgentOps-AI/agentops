@@ -20,10 +20,11 @@ import agentops
 from agentops import ActionEvent, Client
 from agentops.helpers import get_ISO_time
 from agentops.http_client import HttpClient
-from agentops.telemetry.instrumentation import cleanup_session_telemetry, setup_session_telemetry
-from agentops.session import SessionLogExporter
+
+# from agentops.telemetry.exporters import SessionLogExporter
 from agentops.session.session import Session
 from agentops.singleton import clear_singletons
+from agentops.telemetry.instrumentation import cleanup_session_telemetry, setup_session_telemetry
 
 
 class TestNonInitializedSessions:

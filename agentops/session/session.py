@@ -28,9 +28,9 @@ from agentops.session.signals import (
     session_ended,
     session_initialized,
     session_initializing,
+    session_started,
     session_starting,
     session_updated,
-    session_started,
 )
 from agentops.telemetry import InstrumentedBase
 
@@ -443,3 +443,22 @@ class Session(InstrumentedBase):
         end_state_str = f", end_state={self.end_state}" if self.end_timestamp else ""
 
         return f"Session(id={self.session_id}, status={status}{tag_str}{end_state_str})"
+
+    def _create_span(self) -> None:
+        """Create session span using session_id as trace_id"""
+        # Convert session_id UUID to trace_id int
+        trace_id = int(str(self.session_id).replace("-", ""), 16)
+
+        # Create context with our trace ID
+        context = trace.SpanContext(
+            trace_id=trace_id,
+            span_id=0,
+            is_remote=False,
+            # Don't sample the Session span itself, but allow Events to inherit the trace_id
+            trace_flags=trace.TraceFlags.DEFAULT,
+        )
+
+        # Set the context before calling super()
+        token = trace.set_span_in_context(context)
+        with trace.use_span(token):
+            super()._create_span()

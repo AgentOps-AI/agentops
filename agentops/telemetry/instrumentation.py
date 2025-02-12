@@ -379,3 +379,26 @@ def unregister_handlers():
 
 
 # register_handlers()
+
+# class SessionSpanProcessor(BatchSpanProcessor):
+#     def on_start(self, span, parent_context):
+#         if span.attributes.get("class") == "Session":
+#             super().on_start(span, parent_context)
+            
+#     def on_end(self, span):
+#         if span.attributes.get("class") == "Session":
+#             super().on_end(span)
+
+# class EventSpanProcessor(BatchSpanProcessor):
+#     def on_start(self, span, parent_context):
+#         if span.attributes.get("class") in ["ActionEvent", "LLMEvent", "ToolEvent", "ErrorEvent"]:
+#             super().on_start(span, parent_context)
+            
+#     def on_end(self, span):
+#         if span.attributes.get("class") in ["ActionEvent", "LLMEvent", "ToolEvent", "ErrorEvent"]:
+#             super().on_end(span)
+
+# # Setup providers with different processors
+# provider = TracerProvider()
+# provider.add_span_processor(SessionSpanProcessor(session_exporter))
+# provider.add_span_processor(EventSpanProcessor(event_exporter))

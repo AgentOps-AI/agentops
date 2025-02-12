@@ -1,16 +1,16 @@
 import logging
-from uuid import uuid4
 from unittest.mock import Mock
+from uuid import uuid4
 
 import pytest
 from opentelemetry.sdk._logs import LoggerProvider, LoggingHandler
 from opentelemetry.sdk._logs.export import BatchLogRecordProcessor
 
-from agentops.telemetry.instrumentation import setup_session_telemetry, cleanup_session_telemetry
-from agentops.log_config import logger
-from agentops.session import SessionLogExporter
+# from agentops.session import SessionLogExporter
 from agentops.log_capture import LogCapture
+from agentops.log_config import logger
 from agentops.session import add_session
+from agentops.telemetry.instrumentation import cleanup_session_telemetry, setup_session_telemetry
 
 
 class TestSessionTelemetry:
