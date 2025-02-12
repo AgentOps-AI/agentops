@@ -251,8 +251,7 @@ class Session(InstrumentedBase):
     ) -> Union[Decimal, None]:
         with self._end_session_lock:
             # Add check to prevent multiple ends
-            if not self.is_running:
-                return None
+            assert self.is_running, "Session is not running"
 
             if not any(end_state == state.value for state in EndState):
                 logger.warning("Invalid end_state. Please use one of the EndState")
@@ -270,6 +269,14 @@ class Session(InstrumentedBase):
 
                 # Set is_running to False after sending ending signal
                 self.is_running = False
+
+                try:
+                    self._update_session()
+                except:
+                    # We're setting back is_running to True to allow retrying
+                    # !! Though this is not the best practice
+                    self.is_running = True
+                    raise
 
                 # Log final analytics
                 # FIXME: Hilarious, but self.get_analytics() is actually what notifies session updates hence ending the session
@@ -314,8 +321,6 @@ class Session(InstrumentedBase):
 
     def _update_session(self) -> None:
         """Update session state on the server"""
-        if not self.is_running:
-            return
 
         with self._lock:
             # Emit session updated signal
@@ -323,7 +328,7 @@ class Session(InstrumentedBase):
             payload = {"session": asdict(self)}
 
             try:
-                HttpClient.post(
+                self.__update_session_response = HttpClient.post(
                     f"{self.config.endpoint}/v2/update_session",
                     json.dumps(filter_unjsonable(payload)).encode("utf-8"),
                     jwt=self.jwt,
@@ -405,15 +410,9 @@ class Session(InstrumentedBase):
 
     def get_analytics(self) -> Optional[Dict[str, Any]]:
         """Get session analytics"""
-        if not self.end_timestamp:
-            self.end_timestamp = get_ISO_time()
-
         formatted_duration = self._format_duration(self.init_timestamp, self.end_timestamp)
 
-        if (response := self._update_session()) is None:
-            return None
-
-        self.token_cost = self._get_token_cost(response)
+        self.token_cost = self._get_token_cost(self.__update_session_response)
 
         return {
             "LLM calls": self.event_counts["llms"],
@@ -434,6 +433,7 @@ class Session(InstrumentedBase):
         Deprecated: Use end() instead.
         Kept for backward compatibility.
         """
+        breakpoint()
         return self.end(*args, **kwargs)
 
     def __repr__(self) -> str:
