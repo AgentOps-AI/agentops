@@ -1,6 +1,19 @@
-version: '3.7'
-
 services:
+  postgres:
+    image: postgres:15
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=agentops_test
+    ports:
+      - "5432:5432"
+    networks:
+      - jaeger-net
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
   jaeger:
     image: jaegertracing/all-in-one:latest
     ports:
