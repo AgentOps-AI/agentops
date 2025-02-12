@@ -23,7 +23,7 @@ class LogCapture:
     If no telemetry manager is available, creates a standalone logging setup.
 
     Attributes:
-        session_id
+        session: The session object
         stdout_line_count: Number of lines written to stdout
         stderr_line_count: Number of lines written to stderr
         log_level_counts: Count of log messages by level
@@ -32,7 +32,7 @@ class LogCapture:
         is_capturing: Whether capture is currently active
     """
 
-    session_id: UUID
+    session: "Session"
     stdout_line_count: int = field(default=0)
     stderr_line_count: int = field(default=0)
     log_level_counts: Dict[str, int] = field(
@@ -50,7 +50,6 @@ class LogCapture:
     _handler: Optional[LoggingHandler] = field(default=None, init=False, repr=False)
     _logger_provider: Optional[LoggerProvider] = field(default=None, init=False, repr=False)
     _owns_handler: bool = field(default=False, init=False, repr=False)
-    _session: Optional["Session"] = field(default=None, init=False, repr=False)
 
     def __post_init__(self):
         """Initialize loggers after dataclass initialization"""
@@ -65,16 +64,9 @@ class LogCapture:
             logger.handlers.clear()
 
     @property
-    def session(self) -> Optional["Session"]:
-        """Get the associated session instance"""
-        if self._session is None:
-            from agentops.session import get_active_sessions
-
-            for session in get_active_sessions():
-                if session.session_id == self.session_id:
-                    self._session = session
-                    break
-        return self._session
+    def session_id(self) -> UUID:
+        """Get the session ID from the session object"""
+        return self.session.session_id
 
     def start(self):
         """Start capturing output using OTEL logging handler"""
@@ -82,7 +74,7 @@ class LogCapture:
             return
 
         if not self.session:
-            raise ValueError(f"No active session found with ID {self.session_id}")
+            raise ValueError("No session provided")
 
         from agentops.helpers import get_ISO_time
 
@@ -99,13 +91,10 @@ class LogCapture:
             # Use session's resource attributes if available
             resource_attrs = {"service.name": "agentops", "session.id": str(self.session_id)}
 
-            # resource_attrs.update(config.resource_attributes)
-
             # Setup logger provider with console exporter
             resource = Resource.create(resource_attrs)
             self._logger_provider = LoggerProvider(resource=resource)
-            exporter = ConsoleLogExporter()
-            self._logger_provider.add_log_record_processor(BatchLogRecordProcessor(exporter))
+            self._logger_provider.add_log_record_processor(BatchLogRecordProcessor(self.session._log_exporter))
 
             self._handler = LoggingHandler(
                 level=logging.INFO,
@@ -344,7 +333,7 @@ if __name__ == "__main__":
     add_session(session)  # Add session to registry so it can be found
 
     # Create and start capture
-    capture = LogCapture(session_id=session.session_id)
+    capture = LogCapture(session=session)
     capture.start()
     try:
         # Test Rich formatting

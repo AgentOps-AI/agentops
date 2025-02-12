@@ -337,8 +337,8 @@ class Session:
 
         # Initialize logging components
         self._log_exporter = SessionLogExporter(session=self)
-        self._log_handler, self._log_processor = setup_session_telemetry(str(session_id), self._log_exporter)
-        logger.addHandler(self._log_handler)
+        self._log_processor = setup_session_telemetry(self, self._log_exporter)
+        # logger.addHandler(self._log_handler)
 
     def set_video(self, video: str) -> None:
         """
@@ -433,7 +433,7 @@ class Session:
             except Exception as e:
                 logger.exception(f"Error during session end: {e}")
             finally:
-                active_sessions.remove(self)  # First thing, get rid of the session
+                remove_session(self)
 
                 logger.info(
                     colored(
@@ -631,6 +631,7 @@ class Session:
                     )
                 )
 
+                add_session(self)
                 return True
             except ApiServerException as e:
                 return logger.error(f"Could not start session - {e}")

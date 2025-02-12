@@ -8,7 +8,7 @@ from uuid import UUID
 from opentelemetry import trace
 from opentelemetry.sdk._logs import LoggerProvider, LoggingHandler
 from opentelemetry.sdk._logs.export import BatchLogRecordProcessor
-from opentelemetry.sdk.resources import Resource, SERVICE_NAME
+from opentelemetry.sdk.resources import SERVICE_NAME, Resource
 from opentelemetry.sdk.trace import SpanProcessor, TracerProvider
 from opentelemetry.sdk.trace.export import BatchSpanProcessor, SpanExporter
 from opentelemetry.sdk.trace.sampling import ParentBased, Sampler, TraceIdRatioBased
@@ -58,7 +58,7 @@ def set_session_handler(session_id: UUID, handler: Optional[LoggingHandler]) -> 
         _session_handlers[session_id] = handler
 
 
-def setup_session_telemetry(session_id: str, log_exporter) -> tuple[LoggingHandler, BatchLogRecordProcessor]:
+def setup_session_telemetry(session, log_exporter) -> tuple[LoggingHandler, BatchLogRecordProcessor]:
     """Set up OpenTelemetry logging components for a new session.
 
     This function creates the necessary components to capture and export logs for a specific session:
@@ -76,22 +76,30 @@ def setup_session_telemetry(session_id: str, log_exporter) -> tuple[LoggingHandl
         - BatchLogRecordProcessor: Processor that batches and exports logs
     """
     # Create logging components
-    resource = Resource.create({SERVICE_NAME: f"agentops.session.{session_id}"})
+    resource = Resource.create({SERVICE_NAME: f"agentops.session.{session.session_id}"})
     logger_provider = LoggerProvider(resource=resource)
 
     # Create processor and handler
     log_processor = BatchLogRecordProcessor(log_exporter)
     logger_provider.add_log_record_processor(log_processor)  # Add processor to provider
 
-    log_handler = LoggingHandler(
-        level=logging.INFO,
-        logger_provider=logger_provider,
+    from agentops.log_capture import LogCapture
+
+    logcap = LogCapture(
+        session,
     )
 
-    # Register handler with session
-    set_session_handler(session_id, log_handler)
+    logcap.start()
 
-    return log_handler, log_processor
+    # log_handler = LoggingHandler(
+    #     level=logging.INFO,
+    #     logger_provider=logger_provider,
+    # )
+    #
+    # # Register handler with session
+    # set_session_handler(session_id, log_handler)
+    #
+    # return log_handler, log_processor
 
 
 def cleanup_session_telemetry(log_handler: LoggingHandler, log_processor: BatchLogRecordProcessor) -> None:

@@ -1,8 +1,8 @@
 import contextlib
+import re
 import uuid
 from collections import defaultdict
 from typing import Dict, Iterator, List
-import re
 
 import pytest
 import requests_mock
@@ -89,8 +89,8 @@ def mock_req(base_url, jwt):
 
 
 @pytest.fixture
-def agentops_init():
-    agentops.init()
+def agentops_init(api_key, base_url):
+    agentops.init(api_key=api_key, endpoint=base_url, auto_start_session=False)
 
 
 @pytest.fixture
