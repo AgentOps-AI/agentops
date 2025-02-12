@@ -247,7 +247,7 @@ class EventToSpanEncoder:
         if span.attributes:
             event_data.update(
                 {
-                    "id": span.attributes.get("event.id", str(uuid4())),
+                    "id": span.attributes.get("event.id"),
                     # Use span start/end time as fallback
                     "init_timestamp": from_unix_nano_to_iso(span.start_time),
                     "end_timestamp": from_unix_nano_to_iso(span.end_time) if span.end_time else None,
