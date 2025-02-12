@@ -1,4 +1,4 @@
-"""Telemetry module for OpenTelemetry integration."""
+"""Telemetry manager for OpenTelemetry integration."""
 
 from typing import Dict, Any, Optional
 from datetime import datetime, timezone
@@ -30,6 +30,7 @@ class TelemetryManager:
             service_name: Name of the service for telemetry.
             otlp_endpoint: Endpoint for the OTLP exporter.
             enabled: Whether telemetry is enabled.
+            postgres_config: Optional configuration for PostgreSQL exporter.
         """
         self.service_name = service_name
         self.otlp_endpoint = otlp_endpoint
@@ -52,7 +53,7 @@ class TelemetryManager:
         
         # Set up PostgreSQL exporter if configured
         if postgres_config:
-            from .telemetry.postgres_exporter import PostgresSpanExporter
+            from .postgres_exporter import PostgresSpanExporter
             postgres_exporter = PostgresSpanExporter(**postgres_config)
             postgres_processor = BatchSpanProcessor(postgres_exporter)
             tracer_provider.add_span_processor(postgres_processor)
@@ -118,7 +119,7 @@ class TelemetryManager:
             base_attributes.update(attributes)
             
         return self.tracer.start_span(
-            name=f"agent.{agent_id}",
+            name="agent",
             context=session_context,
             kind=SpanKind.INTERNAL,
             attributes=base_attributes
@@ -160,4 +161,4 @@ class TelemetryManager:
             context=agent_context,
             kind=kind,
             attributes=base_attributes
-        ) 
+        )
