@@ -41,6 +41,8 @@ class InstrumentedBase:
         """Initialize timestamps and create span"""
         # Create span using eventually precached timestamps
         # TODO: What happens when just constructing an event without record()??
+        # TODO: What kind of span should we create when the Event model is initialized, or even the Session?
+        # ... Are they differents kinds of spans?
         self._create_span(
             init_timestamp=getattr(self, "__init_timestamp", None), end_timestamp=getattr(self, "__end_timestamp", None)
         )
@@ -107,7 +109,7 @@ class InstrumentedBase:
 
     def trace_id(self) -> str:
         # Syntactic sugar for session_id.
-        return getattr(self, "session_id")
+        return getattr(self, "session_id")  # TODO: This can raise, we should use TraceContext or something
 
     def flush(self) -> None:
         """Force flush any pending spans in the OpenTelemetry trace exporter.
