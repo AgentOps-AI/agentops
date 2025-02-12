@@ -1,4 +1,5 @@
 import contextlib
+from enum import auto
 import re
 import uuid
 from collections import defaultdict
@@ -155,7 +156,7 @@ def mock_error_event():
     return ErrorEvent(trigger_event=trigger, exception=error, error_type="ValueError", details="Detailed error info")
 
 
-@pytest.fixture
+@pytest.fixture(auto_use=True)
 def simple_span_processor(mocker):
     """Fixture to make SessionTracer use SimpleSpanProcessor for synchronous export during tests"""
 

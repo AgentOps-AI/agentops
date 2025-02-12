@@ -98,7 +98,7 @@ class TestRecordTool:
 
     @pytest.mark.asyncio
     async def test_async_tool_call(self, mock_req):
-        agentops.start_session()
+        session: Session = agentops.start_session()
 
         @record_tool(self.tool_name)
         async def async_add(x, y):
