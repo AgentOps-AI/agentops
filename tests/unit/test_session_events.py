@@ -76,13 +76,9 @@ def test_session_lifecycle_signals(mock_req):
     def on_session_ended(sender, end_state, end_state_reason, **kwargs):
         received_signals.append(("ended", end_state, end_state_reason))
 
-    # Create and run through session lifecycle
-    session_id = uuid4()
-    config = Configuration()
-    config.api_key = "test-key"
+    agentops_session: Session = agentops.start_session()
 
-    # Creation triggers full initialization sequence
-    session = Session(session_id=session_id, config=config)
+    session_id = agentops_session.session_id
 
     # Verify initialization signals
     assert ("initializing", session_id) in received_signals
@@ -91,7 +87,7 @@ def test_session_lifecycle_signals(mock_req):
     assert ("started", session_id) in received_signals
 
     # Ending triggers ending/ended
-    session.end(end_state="Success", end_state_reason="Test completed")
+    agentops_session.end(end_state="Success", end_state_reason="Test completed")
     assert ("ending", "Success", "Test completed") in received_signals
     assert ("ended", "Success", "Test completed") in received_signals
 
