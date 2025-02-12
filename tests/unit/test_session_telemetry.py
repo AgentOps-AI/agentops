@@ -10,11 +10,6 @@ from opentelemetry.sdk.trace.export import ConsoleSpanExporter, SimpleSpanProces
 from agentops.config import Configuration
 from agentops.event import ActionEvent, EventType
 from agentops.session.session import EndState, Session
-from agentops.telemetry.instrumentation import cleanup_session_tracer, setup_session_tracer
-from tests.integration.conftest import agentops_session
-
-# Remove the sync_tracer fixture since we're using the new procedural approach
-# pytestmark = pytest.mark.usefixtures("sync_tracer")
 
 
 def test_session_event_span_hierarchy(agentops_session):
