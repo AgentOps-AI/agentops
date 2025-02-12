@@ -20,7 +20,7 @@ session_starting:
 
 session_started:
     Emitted by: Session._start_session() after successful API call
-    Handled by: 
+    Handled by:
         - on_session_started() in session.py - Sets running state to True
         - on_session_start() in instrumentation.py - Initializes tracer
 
@@ -34,7 +34,7 @@ session_ending:
 
 session_ended:
     Emitted by: Session.end() after cleanup
-    Handled by: 
+    Handled by:
         - on_session_ended() in session.py - Sets running state to False
         - on_session_end() in instrumentation.py - Records final span and cleans up
         - on_session_ended() in registry.py - Removes session from registry

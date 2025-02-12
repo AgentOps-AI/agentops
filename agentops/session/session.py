@@ -81,13 +81,13 @@ class Session(InstrumentedBase):
 
         # Initialize session
         try:
-            session_initializing.send(self, session_id=self.session_id)
+            session_initializing.send(self)
             if not self._initialize():
                 raise RuntimeError("Session._initialize() did not succeed", self)
         except Exception as e:
             logger.error(f"Failed to initialize session: {e}")
             self.end(EndState.FAIL.value, f"Exception during initialization: {str(e)}")
-        else:
+        finally:
             # Signal session is initialized
             session_initialized.send(self, session_id=self.session_id)
 
@@ -120,7 +120,7 @@ class Session(InstrumentedBase):
         """
         with self._lock:
             # Signal session is starting
-            session_starting.send(self)
+            session_starting.send(self, session_id=self.session_id)
 
             self.init_timestamp = get_ISO_time()
 
@@ -144,6 +144,9 @@ class Session(InstrumentedBase):
             else:  # If no exception is raised
                 self.is_running = True
 
+                # Signal session started after successful initialization
+                session_started.send(self)
+
             jwt = res.body.get("jwt", None)
             self.jwt = jwt
             if jwt is None:
@@ -159,9 +162,6 @@ class Session(InstrumentedBase):
                     "blue",
                 )
             )
-
-            # Add session_started signal after successful initialization
-            session_started.send(self)
 
             logger.debug("Session started successfully")
             return True

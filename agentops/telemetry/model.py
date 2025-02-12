@@ -19,25 +19,30 @@ class InstrumentedBase:
     - span association and lifecycle
     - timing-related properties and methods
     """
-
-    # Make these public fields that will be included in asdict()
+    # Make these fields init=False so they don't interfere with subclass constructors
     init_timestamp: Optional[str] = field(
         default=None,
         init=False,
+        compare=False,
     )
     end_timestamp: Optional[str] = field(
         default=None,
         init=False,
+        compare=False,
     )
 
-    # Private implementation details - won't be included in asdict()
+    # Private implementation details
     _span: Span = field(
         default=None,
         init=False,
         repr=False,
+        compare=False,
     )
 
     def __post_init__(self):
+        """Initialize timestamps and create span"""
+        if self.init_timestamp is None:
+            self.init_timestamp = get_ISO_time()
         self._create_span()
 
     def _create_span(self) -> None:

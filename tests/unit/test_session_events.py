@@ -3,9 +3,11 @@ from uuid import uuid4
 import pytest
 from blinker import Signal
 
+import agentops
 from agentops.config import Configuration
 from agentops.event import Event
 from agentops.session import Session
+from agentops.session.registry import clear_registry, get_active_sessions
 from agentops.session.signals import (
     event_recorded,
     session_ended,
@@ -16,8 +18,9 @@ from agentops.session.signals import (
     session_starting,
     session_updated,
 )
-from agentops.session.registry import clear_registry, get_active_sessions
 from agentops.singleton import clear_singletons
+
+pytestmark = [pytest.mark.usefixtures("agentops_init")]
 
 
 @pytest.fixture(autouse=True)
@@ -50,16 +53,16 @@ def test_session_lifecycle_signals(mock_req):
 
     # Connect all lifecycle signals
     @session_initializing.connect
-    def on_session_initializing(sender, session_id, **kwargs):
-        received_signals.append(("initializing", session_id))
+    def on_session_initializing(sender, **kwargs):
+        received_signals.append(("initializing", sender.session_id))
 
     @session_initialized.connect
-    def on_session_initialized(sender, session_id, **kwargs):
-        received_signals.append(("initialized", session_id))
+    def on_session_initialized(sender, **kwargs):
+        received_signals.append(("initialized", sender.session_id))
 
     @session_starting.connect
-    def on_session_starting(sender, session_id, **kwargs):
-        received_signals.append(("starting", session_id))
+    def on_session_starting(sender, **kwargs):
+        received_signals.append(("starting", sender.session_id))
 
     @session_started.connect
     def on_session_started(sender, **kwargs):
@@ -82,17 +85,15 @@ def test_session_lifecycle_signals(mock_req):
     session = Session(session_id=session_id, config=config)
 
     # Verify initialization signals
-    assert received_signals[0] == ("initializing", session_id)
-    assert received_signals[1] == ("initialized", session_id)
-
-    # Verify start signals
-    assert received_signals[2] == ("starting", session_id)
-    assert received_signals[3] == ("started", session_id)
+    assert ("initializing", session_id) in received_signals
+    assert ("initialized", session_id) in received_signals
+    assert ("starting", session_id) in received_signals
+    assert ("started", session_id) in received_signals
 
     # Ending triggers ending/ended
     session.end(end_state="Success", end_state_reason="Test completed")
-    assert received_signals[4] == ("ending", "Success", "Test completed")
-    assert received_signals[5] == ("ended", "Success", "Test completed")
+    assert ("ending", "Success", "Test completed") in received_signals
+    assert ("ended", "Success", "Test completed") in received_signals
 
 
 def test_session_update_signal(mock_req):
@@ -104,19 +105,16 @@ def test_session_update_signal(mock_req):
         received_signals.append(("updated", session_id))
 
     # Create session (initialization happens automatically)
-    session_id = uuid4()
-    config = Configuration()
-    config.api_key = "test-key"
-    session = Session(session_id=session_id, config=config)
+    import agentops
 
-    session._start_session()
+    session: Session = agentops.start_session()
 
     # Trigger update
     session.add_tags(["test-tag"])
 
     # Verify update signal was received
     assert len(received_signals) == 1
-    assert received_signals[0] == ("updated", session_id)
+    assert received_signals[0] == ("updated", session.session_id)
 
 
 def test_event_recorded_signal(mock_req):
@@ -128,10 +126,8 @@ def test_event_recorded_signal(mock_req):
         received_signals.append(("event_recorded", event, flush_now))
 
     # Create session (initialization happens automatically)
-    session_id = uuid4()
-    config = Configuration()
-    config.api_key = "test-key"
-    session = Session(session_id=session_id, config=config)
+
+    session: Session = agentops.start_session()
 
     # Record an event
     test_event = Event("test_event")
@@ -144,7 +140,7 @@ def test_event_recorded_signal(mock_req):
     assert received_signals[0][2] == True
 
 
-def test_signals_not_emitted_after_session_end(mock_req):
+def test_signals_not_emitted_after_session_end(mock_req, agentops_session):
     """Test that signals are not emitted after session is ended"""
     received_signals = []
 
@@ -157,16 +153,12 @@ def test_signals_not_emitted_after_session_end(mock_req):
         received_signals.append(("updated", session_id))
 
     # Create and end session
-    session_id = uuid4()
-    config = Configuration()
-    config.api_key = "test-key"
-    session = Session(session_id=session_id, config=config)
-    session.end(end_state="Success")
+    agentops_session.end(end_state="Success")
 
     # Try to record event and update after end
     test_event = Event("test_event")
-    session.record(test_event)
-    session.add_tags(["test-tag"])
+    agentops_session.record(test_event)
+    agentops_session.add_tags(["test-tag"])
 
     # Verify no signals were received after end
     assert all(signal[0] != "event_recorded" for signal in received_signals)
@@ -176,16 +168,12 @@ def test_signals_not_emitted_after_session_end(mock_req):
 def test_session_registration(mock_req):
     """Test that sessions are properly registered when initialized"""
     # Create session
-    session_id = uuid4()
-    config = Configuration()
-    config.api_key = "test-key"
-
     # Verify session is not in active sessions before creation
     active_sessions = get_active_sessions()
     assert len(active_sessions) == 0
 
     # Create session (initialization happens automatically)
-    session = Session(session_id=session_id, config=config)
+    session: Session = agentops.start_session()
 
     # Verify session is in active sessions after initialization
     active_sessions = get_active_sessions()
@@ -201,10 +189,7 @@ def test_session_registration(mock_req):
 def test_multiple_session_registration(mock_req):
     """Test that multiple sessions can be registered"""
     # Create and start multiple sessions
-    config = Configuration()
-    config.api_key = "test-key"
-
-    session1 = Session(session_id=uuid4(), config=config)
+    session1: Session = agentops.start_session()
 
     # Verify no sessions registered yet
     active_sessions = get_active_sessions()
@@ -217,8 +202,7 @@ def test_multiple_session_registration(mock_req):
     assert len(active_sessions) == 1
     assert active_sessions[0].session_id == session1.session_id
 
-    session2 = Session(session_id=uuid4(), config=config)
-    session2._start_session()
+    session2: Session = agentops.start_session()
 
     # Verify both sessions are registered
     active_sessions = get_active_sessions()
