@@ -156,7 +156,7 @@ def mock_error_event():
     return ErrorEvent(trigger_event=trigger, exception=error, error_type="ValueError", details="Detailed error info")
 
 
-@pytest.fixture(auto_use=True)
+@pytest.fixture(autouse=True)
 def simple_span_processor(mocker):
     """Fixture to make SessionTracer use SimpleSpanProcessor for synchronous export during tests"""
 
