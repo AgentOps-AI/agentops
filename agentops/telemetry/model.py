@@ -32,24 +32,33 @@ class InstrumentedBase:
         compare=False,
     )
 
+    def __init__(self, *args, **kwargs):
+        self.__init_timestamp = kwargs.pop("init_timestamp", None)
+        self.__end_timestamp = kwargs.pop("end_timestamp", None)
+        breakpoint()
+        super().__init__(**kwargs)
+
     def __post_init__(self):
         """Initialize timestamps and create span"""
-        if self.init_timestamp is None:
-            self.init_timestamp = get_ISO_time()
-        self._create_span()
+        # Create span using eventually precached timestamps
+        # TODO: What happens when just constructing an event without record()??
+        self._create_span(
+            init_timestamp=getattr(self, "__init_timestamp", None), end_timestamp=getattr(self, "__end_timestamp", None)
+        )
 
     @property
     def init_timestamp(self) -> Optional[str]:
         """Get the timestamp when the object was initialized"""
-        return self._span.start_time
+        return self._span.start_time if self._span else None
 
     @init_timestamp.setter
     def init_timestamp(self, value: Optional[str]) -> None:
         # Forwards setting to the span
-        assert not self._span.is_recording(), "Can't set init_timestamp after span has been started"
-        self._span.start_time = iso_to_unix_nano(value)
+        if self._span:
+            assert not self._span.is_recording(), "Can't set init_timestamp after span has been started"
+            self._span.start_time = iso_to_unix_nano(value)
 
-    def _create_span(self) -> None:
+    def _create_span(self, *args, **kwargs) -> None:
         """Create a new span with current timestamps"""
         if self._span is not None:
             self._end_span()

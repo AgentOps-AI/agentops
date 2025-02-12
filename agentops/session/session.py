@@ -453,7 +453,7 @@ class Session(InstrumentedBase):
 
         return f"Session(id={self.session_id}, status={status}{tag_str}{end_state_str})"
 
-    def _create_span(self) -> None:
+    def _create_span(self, **kwargs) -> None:
         """Create session span using session_id as trace_id"""
         # Convert session_id UUID to trace_id int
         trace_id = int(str(self.session_id).replace("-", ""), 16)
@@ -470,7 +470,7 @@ class Session(InstrumentedBase):
         # Set the context before calling super()
         token = trace.set_span_in_context(context)
         with trace.use_span(token):
-            super()._create_span()
+            super()._create_span(**kwargs)
 
     def force_flush(self):
         self.flush()
