@@ -254,8 +254,10 @@ class Session(InstrumentedBase):
             assert self.is_running, "Session is not running"
 
             if not any(end_state == state.value for state in EndState):
-                logger.warning("Invalid end_state. Please use one of the EndState")
-                return None
+                raise ValueError("Invalid end_state. Please use one of the EndState")
+
+            self.end_state = end_state
+            self.end_state_reason = end_state_reason
 
             try:
                 if video is not None:
@@ -467,3 +469,6 @@ class Session(InstrumentedBase):
         token = trace.set_span_in_context(context)
         with trace.use_span(token):
             super()._create_span()
+
+    def force_flush(self):
+        self.flush()

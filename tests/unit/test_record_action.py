@@ -45,7 +45,7 @@ class TestRecordAction:
         # Act
         add_two(3, 4)
 
-        agentops_session._tracer.force_flush()
+        agentops_session.force_flush()
 
         # Find the record_action request
         action_requests = [r for r in mock_req.request_history if "/v2/create_events" in r.url]
@@ -70,7 +70,7 @@ class TestRecordAction:
         add_three(1, 2)
         add_three(1, 2, 4)
 
-        agentops_session._tracer.force_flush()
+        agentops_session.force_flush()
 
         # time.sleep(1.5)
 
@@ -102,7 +102,7 @@ class TestRecordAction:
         # Act
         result = await async_add(3, 4)
 
-        agentops_session._tracer.force_flush()
+        agentops_session.flush()
         # Assert
         assert result == 7
 
@@ -139,8 +139,8 @@ class TestRecordAction:
         add_three(1, 2, session=session_1)
         add_three(1, 2, 3, session=session_2)
 
-        session_1._tracer.force_flush()
-        session_2._tracer.force_flush()
+        session_1.force_flush()
+        session_2.force_flush()
 
         # Find action requests
         action_requests = [r for r in mock_req.request_history if "/v2/create_events" in r.url]

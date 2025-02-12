@@ -83,3 +83,11 @@ class InstrumentedBase:
         """End the instrumented object and its span"""
         if not self.end_timestamp:
             self.end_timestamp = get_ISO_time()
+
+    def flush(self) -> None:
+        """Force flush any pending spans in the OpenTelemetry trace exporter.
+        
+        This is useful in testing scenarios or when you need to ensure all
+        telemetry data has been exported before proceeding.
+        """
+        trace.get_tracer_provider().force_flush()
