@@ -1,9 +1,10 @@
+import json
 from enum import Enum
-from typing import Optional, Dict, Any
+from sys import exc_info
+from typing import Any, Dict, Optional
 
 import requests
 from requests.adapters import HTTPAdapter, Retry
-import json
 
 from .exceptions import ApiServerException
 
@@ -162,6 +163,7 @@ class HttpClient:
             else:
                 raise ApiServerException(f"API server: {result.body}")
         if result.code == 500:
+            breakpoint()
             raise ApiServerException("API server: - internal server error")
 
         return result
