@@ -53,7 +53,7 @@ def test_instrumented_base_creates_span(agentops_session):
     assert event_context.is_valid, "Event span context should be valid"
 
 
-def test_event_span_survives_recording():
+def test_event_span_survives_recording(agentops_session):
     """Test that event's span remains after being recorded"""
     event = ActionEvent(event_type=EventType.ACTION)
 
