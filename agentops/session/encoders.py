@@ -16,7 +16,7 @@ from opentelemetry.trace import SpanKind
 from agentops.log_config import logger
 
 from ..event import ActionEvent, ErrorEvent, Event, EventType, LLMEvent, ToolEvent
-from ..helpers import get_ISO_time
+from ..helpers import from_unix_nano_to_iso, get_ISO_time
 
 
 @dataclass
@@ -249,8 +249,8 @@ class EventToSpanEncoder:
                 {
                     "id": span.attributes.get("event.id", str(uuid4())),
                     # Use span start/end time as fallback
-                    "init_timestamp": str(span.attributes.get("event.start_time", span.start_time)),
-                    "end_timestamp": str(span.attributes.get("event.end_time", span.end_time)),
+                    "init_timestamp": from_unix_nano_to_iso(span.start_time),
+                    "end_timestamp": from_unix_nano_to_iso(span.end_time) if span.end_time else None,
                     "event_type": span.attributes.get("event.type", span.attributes.get("event_type")),
                 }
             )
