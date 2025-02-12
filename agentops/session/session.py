@@ -31,6 +31,7 @@ from agentops.session.signals import (
     session_started,
     session_starting,
     session_updated,
+    session_ending,
 )
 from agentops.telemetry import InstrumentedBase
 
@@ -264,7 +265,10 @@ class Session(InstrumentedBase):
                 # Clean up trace components
                 self._cleanup()
 
-                # Set is_running to False before sending end signal
+                # Send ending signal before setting is_running to False
+                session_ending.send(self, end_state=end_state, end_state_reason=end_state_reason)
+
+                # Set is_running to False after sending ending signal
                 self.is_running = False
 
                 # Log final analytics
@@ -285,7 +289,7 @@ class Session(InstrumentedBase):
             except Exception as e:
                 logger.exception(f"Error during session end: {e}")
             finally:
-                # Send end signal only once
+                # Send ended signal only once
                 session_ended.send(self, end_state=end_state, end_state_reason=end_state_reason)
 
     def _reauthorize_jwt(self) -> Union[str, None]:
