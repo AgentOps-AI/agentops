@@ -35,7 +35,6 @@ class InstrumentedBase:
     def __init__(self, *args, **kwargs):
         self.__init_timestamp = kwargs.pop("init_timestamp", None)
         self.__end_timestamp = kwargs.pop("end_timestamp", None)
-        breakpoint()
         super().__init__(**kwargs)
 
     def __post_init__(self):
@@ -103,8 +102,8 @@ class InstrumentedBase:
 
     def end(self):
         """End the instrumented object and its span"""
-        if not self.end_timestamp:
-            self.end_timestamp = get_ISO_time()
+        assert not self.end_timestamp, "Can't end() when end_timestamp already set"
+        self.end_timestamp = get_ISO_time()  # Setter will trigger span ending
 
     def trace_id(self) -> str:
         # Syntactic sugar for session_id.
