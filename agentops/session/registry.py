@@ -4,13 +4,13 @@ import logging
 from typing import TYPE_CHECKING, List, Optional, Union
 from uuid import UUID
 
-from agentops.session import session_started
+from agentops.logging import logger
+from agentops.session.session import session_ended, session_started
 
 if TYPE_CHECKING:
     from .session import Session
 
 _active_sessions = []  # type: List["Session"]
-logger = logging.getLogger(__name__)
 
 
 def add_session(session: "Session") -> None:
