@@ -3,8 +3,10 @@ from uuid import UUID
 
 import requests
 
-from ..exceptions import ApiServerException
-from ..helpers import safe_serialize
+from agentops.exceptions import ApiServerException
+from agentops.helpers import safe_serialize
+from agentops.logging import logger
+
 from .base import ApiClient
 
 
