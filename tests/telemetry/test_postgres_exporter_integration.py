@@ -1,11 +1,23 @@
-"""Integration tests for the PostgreSQL span exporter."""
+"""Integration tests for the PostgreSQL span exporter.
+
+Tests the OpenTelemetry PostgreSQL exporter implementation, including:
+- Basic span export functionality
+- Parent-child relationship validation
+- Error handling and retries
+- Service name consistency
+- Connection management
+- Invalid span handling
+"""
 
 import time
+import logging
+from unittest.mock import patch, MagicMock
+
 import pytest
 import psycopg2
 from opentelemetry import trace
-from opentelemetry.sdk.trace import TracerProvider
-from opentelemetry.sdk.trace.export import BatchSpanProcessor
+from opentelemetry.sdk.trace import TracerProvider, ReadableSpan
+from opentelemetry.sdk.trace.export import BatchSpanProcessor, SpanExportResult
 from opentelemetry.sdk.resources import Resource, SERVICE_NAME
 from opentelemetry.trace import SpanKind, Status, StatusCode
 
@@ -157,6 +169,89 @@ def test_span_export(postgres_connection, tracer_provider, cleanup_spans):
         trace_info = cur.fetchone()
         assert trace_info and trace_info[1] > 1, "Expected multiple spans in trace"
         assert trace_info[2] > 0, "Expected parent-child relationships in spans"
+
+@pytest.mark.timeout(30)
+def test_retry_on_connection_error(tracer_provider, cleanup_spans):
+    """Test that the exporter retries on connection errors."""
+    # Create a test span
+    tracer = trace.get_tracer(__name__)
+    with tracer.start_as_current_span("test-retry") as span:
+        span.set_attribute("test.retry", "true")
+    
+    # Mock the connection to fail twice then succeed
+    original_connect = psycopg2.connect
+    connect_attempts = 0
+    
+    def mock_connect(*args, **kwargs):
+        nonlocal connect_attempts
+        connect_attempts += 1
+        if connect_attempts <= 2:  # Fail first two attempts
+            raise psycopg2.OperationalError("Test connection error")
+        return original_connect(*args, **kwargs)
+    
+    # Patch psycopg2.connect and attempt export
+    with patch('psycopg2.connect', side_effect=mock_connect):
+        tracer_provider.force_flush()
+        time.sleep(1)  # Wait for retry attempts
+    
+    assert connect_attempts == 3, "Expected 3 connection attempts"
+
+@pytest.mark.timeout(30)
+def test_invalid_span_handling(postgres_connection, tracer_provider, cleanup_spans):
+    """Test that invalid spans are properly handled and logged."""
+    # Create an exporter with a mock logger
+    exporter = PostgresSpanExporter(**POSTGRES_EXPORTER_CONFIG)
+    mock_logger = MagicMock()
+    exporter.logger = mock_logger
+    
+    # Create an invalid span (missing context)
+    invalid_span = MagicMock(spec=ReadableSpan)
+    invalid_span.name = "invalid-span"
+    invalid_span.context = None
+    
+    # Export the invalid span
+    result = exporter.export([invalid_span])
+    
+    # Verify the export was successful (skipped invalid span)
+    assert result == SpanExportResult.SUCCESS
+    
+    # Verify error was logged
+    mock_logger.error.assert_called_with(
+        "Span invalid-span has no context"
+    )
+
+@pytest.mark.timeout(30)
+def test_service_name_consistency(postgres_connection, tracer_provider, cleanup_spans):
+    """Test that service name is consistently set at both resource and span levels."""
+    tracer = trace.get_tracer(__name__)
+    
+    # Create a span with service name in resource
+    with tracer.start_as_current_span(
+        name="test-service-name",
+        kind=SpanKind.SERVER,
+        attributes={"custom.attr": "test"}
+    ) as span:
+        pass
+    
+    # Force flush and verify in database
+    tracer_provider.force_flush()
+    time.sleep(1)
+    
+    with postgres_connection.cursor() as cur:
+        cur.execute("""
+            SELECT attributes->>'service.name' as span_service_name,
+                   service_name as resource_service_name
+            FROM otel_spans
+            WHERE name = 'test-service-name'
+        """)
+        result = cur.fetchone()
+        
+        assert result, "Span not found in database"
+        span_service_name, resource_service_name = result
+        
+        # Verify service name is set at both levels
+        assert span_service_name == "test-service"
+        assert resource_service_name == "test-service"
 
 @pytest.mark.timeout(30)
 def test_span_attributes_completeness(postgres_connection, tracer_provider, cleanup_spans):
