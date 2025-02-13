@@ -1,6 +1,9 @@
-import requests
 from importlib.metadata import PackageNotFoundError, version
-from ..log_config import logger
+
+import requests
+
+from agentops.logging import logger
+
 
 def get_agentops_version():
     try:
@@ -9,6 +12,7 @@ def get_agentops_version():
     except Exception as e:
         logger.warning("Error reading package version: %s", e)
         return None
+
 
 def check_agentops_update():
     try:
@@ -29,4 +33,4 @@ def check_agentops_update():
                 )
     except Exception as e:
         logger.debug(f"Failed to check for updates: {e}")
-        return None 
+        return None

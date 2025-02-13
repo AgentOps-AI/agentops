@@ -1,6 +1,8 @@
 from functools import wraps
 from pprint import pformat
-from ..log_config import logger
+
+from agentops.logging import logger
+
 
 def debug_print_function_params(func):
     @wraps(func)
@@ -15,4 +17,4 @@ def debug_print_function_params(func):
 
         return func(self, *args, **kwargs)
 
-    return wrapper 
+    return wrapper
