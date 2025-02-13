@@ -1,8 +1,8 @@
 import contextlib
-from enum import auto
 import re
 import uuid
 from collections import defaultdict
+from enum import auto
 from typing import Dict, Generator, Iterator, List
 
 import pytest
@@ -10,12 +10,10 @@ import requests_mock
 from opentelemetry import trace
 from opentelemetry.sdk.trace import TracerProvider
 from opentelemetry.sdk.trace.export import ConsoleSpanExporter, SimpleSpanProcessor
-from pytest import Config, Session
+from pytest import Session
 
 import agentops
-from agentops.config import Configuration
-from agentops.event import ActionEvent, ErrorEvent, LLMEvent, ToolEvent
-from agentops.singleton import clear_singletons
+from agentops.config import Config
 from tests.fixtures.event import llm_event_spy
 
 
@@ -39,7 +37,6 @@ def setup_teardown():
     """
     Ensures that all agentops sessions are closed and singletons are cleared in-between tests
     """
-    clear_singletons()
     yield
     agentops.end_all_sessions()  # teardown part
 
@@ -53,7 +50,8 @@ def api_key() -> str:
 @pytest.fixture(scope="session")
 def base_url() -> str:
     """Base API URL"""
-    return agentops.Client()._config.endpoint
+    return Config().endpoint
+    # return agentops.Client()._config.endpoint
 
 
 @pytest.fixture(autouse=True)
@@ -126,28 +124,6 @@ def mock_llm_event():
 
 
 @pytest.fixture
-def mock_action_event():
-    """Creates an ActionEvent for testing"""
-    return ActionEvent(
-        action_type="process_data",
-        params={"input_file": "data.csv"},
-        returns="100 rows processed",
-        logs="Successfully processed all rows",
-    )
-
-
-@pytest.fixture
-def mock_tool_event():
-    """Creates a ToolEvent for testing"""
-    return ToolEvent(
-        name="searchWeb",
-        params={"query": "python testing"},
-        returns=["result1", "result2"],
-        logs={"status": "success"},
-    )
-
-
-@pytest.fixture
 def mock_error_event():
     """Creates an ErrorEvent for testing"""
     trigger = ActionEvent(action_type="risky_action")
@@ -159,5 +135,5 @@ def mock_error_event():
 def simple_span_processor(mocker):
     """Fixture to make SessionTracer use SimpleSpanProcessor for synchronous export during tests"""
 
-    mocker.patch("agentops.telemetry.instrumentation.get_processor_cls", return_value=SimpleSpanProcessor)
+    # mocker.patch("agentops.telemetry.instrumentation.get_processor_cls", return_value=SimpleSpanProcessor)
     yield
