@@ -1,4 +1,4 @@
-from .log_config import logger
+from agentops.logging import logger
 
 
 class MultiSessionException(Exception):
