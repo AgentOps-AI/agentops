@@ -14,7 +14,7 @@ authors = [
   { name="Pratyush Shukla", email="ps4534@nyu.edu" }
 ]
 description = "Observability and DevTool Platform for AI Agents"
-readme = "README.md"
+# readme = "README.md"
 requires-python = ">=3.9,<3.14"
 classifiers = [
     "Programming Language :: Python :: 3",
