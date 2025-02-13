@@ -231,48 +231,58 @@ class Session:
      - ✓ Verification of context propagation
 
 2. **Phase 2: Enhancement Phase**
-   - Develop and integrate a custom PostgreSQL exporter.
-   - Validate the hierarchy: agents as parent spans and events as their child spans.
-   - Test context propagation across threads and async flows.
-   - **Custom PostgreSQL Exporter Detailed Design:**
-     - **Independence:**  
-       The exporter will strictly implement the OpenTelemetry `SpanExporter` interface, operating solely on span data. This allows it to remain decoupled from AgentOps business logic and focus only on converting spans to the required PostgreSQL format.
-     
-     - **Schema Design:**  
-       Design a PostgreSQL table with columns to capture all required span data:
-         - `trace_id`: Uses the session ID from AgentOps as the trace identifier.
-         - `span_id`: Unique identifier for the span.
-         - `parent_span_id`: To represent the hierarchy (e.g., linking agent spans to their event spans).
-         - `operation_name`: The name of the span, indicating the activity or event.
-         - `start_time` and `end_time`: Timestamps in nanoseconds since epoch.
-         - `attributes`: A JSONB field to capture additional metadata and custom attributes.
-         - `status`: The status of the span (e.g., OK, error).
-       Additionally, create indexes on key columns (e.g., `trace_id`, `span_id`, `start_time`) to optimize query performance for analytical tools like Jaiqu.
-     
-     - **Batch Processing and Asynchronous Inserts:**  
-       Utilize batching to accumulate spans before performing database inserts. This mechanism should:
-         - Minimize the number of round trips to PostgreSQL.
-         - Support asynchronous, non-blocking operations so that slow database inserts do not impact overall performance.
-         - Include configurable parameters (e.g., batch size, insert intervals) controlled via environment variables.
-         - Implement retry logic to handle transient errors and minimize data loss.
-     
-     - **Error Handling:**  
-       Implement robust error logging and handling:
-         - Log detailed error messages including span identifiers to aid in troubleshooting.
-         - Use a retry/backoff mechanism for failed batches.
-         - Consider buffering failed batches temporarily, ensuring that temporary issues do not result in permanent data loss.
-     
-     - **Dual Export Coordination:**  
-       Since spans are exported simultaneously to both Jaeger and PostgreSQL, ensure:
-         - The exporter does not modify the span objects, allowing independent handling by both processors.
-         - Resource management (CPU, network I/O, database connections) is configured so that simultaneous exports do not interfere with each other.
-     
-     - **Configuration Management:**  
-       Use environment variables or configuration files to manage:
-         - PostgreSQL connection settings (host, port, username, password, database, table name).
-         - Operational parameters such as batch size, timeouts, and maximum retry attempts.
+   - Develop and integrate a custom PostgreSQL exporter that strictly implements the OpenTelemetry SpanExporter interface. This exporter focuses solely on converting OpenTelemetry spans into the required PostgreSQL format without coupling to AgentOps business logic.
+   - Validate the hierarchy by ensuring:
+     - Agents are represented as parent spans.
+     - Events are recorded as child spans.
+     - Context propagation is robust across threads and asynchronous flows.
    
-   - **Expected timeline:** 1-2 weeks.
+   - **Custom PostgreSQL Exporter Detailed Design:**
+     - **Independence:**
+       The exporter operates only on standardized span data, remaining decoupled from AgentOps' internal session/event representation.
+     
+     - **Schema Design:**
+       The PostgreSQL table is designed with columns to capture all necessary span data:
+         - `trace_id`: Uses the session ID as the trace identifier.
+         - `span_id`: Unique span identifier.
+         - `parent_span_id`: Establishes parent-child relationships.
+         - `name`: Represents the operation name.
+         - `start_time` and `end_time`: Stored as BIGINT (nanoseconds since epoch).
+         - `attributes`: A JSONB field for custom metadata.
+         - `status_code` and `status_message`: To capture span result.
+         - `service_name` and `resource_attributes`: To enforce consistent service identification.
+       Indexes are created on key columns such as `trace_id`, `service_name`, and `start_time` to optimize analytical queries (e.g., via Jaiqu).
+
+     - **Batch Processing and Asynchronous Inserts:**
+       - The exporter accumulates spans in batches to minimize round trips to the database.
+       - It supports non-blocking and asynchronous insertion, ensuring that slower PostgreSQL operations do not delay the real-time Jaeger exporter.
+       - Configurable parameters (batch size, insert intervals, timeouts) are provided via environment variables.
+       - Retry logic with a backoff mechanism is implemented to handle transient errors and prevent data loss.
+       - **Flush and Shutdown:**  
+         To ensure that all spans are persisted, especially during testing or a graceful shutdown, explicit flush/shutdown operations (e.g., using the tracer provider's force_flush() method) are employed. This guarantees that any pending batches are committed to PostgreSQL.
+
+     - **Error Handling and Logging:**
+       - Robust error logging is integrated to capture any failures during table creation and batch insert operations.
+       - The `_ensure_table_exists()` method is enhanced to use `CREATE TABLE IF NOT EXISTS` semantics, thereby automatically recreating the table if it is missing (for instance, after a Docker container restart).
+       - Detailed log messages include span identifiers and error details, helping with troubleshooting and ensuring transparency in the export process.
+
+     - **Dual Export Coordination:**
+       - Since spans are exported simultaneously to both the Jaeger and PostgreSQL systems, the exporter makes no modifications to the span objects to ensure both exporters receive the same data.
+       - Resource management (CPU, network I/O, connection pooling) is tuned so that operations for both exporters do not compete adversely.
+     
+     - **Configuration Management:**
+       - PostgreSQL connection details (host, port, database, user, password, table name) are obtained from environment variables or configuration files.
+       - Operational parameters, such as batch processing intervals and maximum retry counts, are similarly configurable.
+
+   - **Testing Strategy for Phase 2 Enhancements:**
+     - Integration tests (e.g., those in tests/telemetry/test_postgres_exporter_integration.py) are updated to include a forced flush (or shutdown) of the BatchSpanProcessor using the tracer provider's force_flush() method to confirm that pending spans are indeed exported.
+     - The tests validate that:
+         - The spans are correctly written to the PostgreSQL database.
+         - The schema (including indexes) is correctly initialized.
+         - The trace hierarchy, identifiable by the proper parent-child relationships and the corresponding attributes, is maintained.
+     - Logging is reviewed to catch any potential silent errors during export.
+
+   - **Expected Timeline:** 1-2 weeks of development, including the refined error handling, table creation improvements, and integration with persistent Docker volumes for PostgreSQL.
 
 3. **Phase 3: Production Readiness**
    - Implement robust error handling, asynchronous processing, and performance optimizations.
