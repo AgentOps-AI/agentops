@@ -19,13 +19,12 @@ from termcolor import colored
 from agentops.api.session import SessionApiClient
 from agentops.config import TESTING, Config
 from agentops.exceptions import ApiServerException
-from agentops.helpers import filter_unjsonable, get_ISO_time, safe_serialize
-from agentops.http_client import HttpClient, Response
+from agentops.helpers import filter_unjsonable, get_ISO_time
 
 
-class EndState(Enum):
+class SessionState(Enum):
     """
-    Enum representing the possible end states of a session.
+    Enum representing the possible states of a session.
 
     Attributes:
         SUCCESS: Indicates the session ended successfully.
@@ -49,7 +48,7 @@ class Session:
     tags: List[str] = field(default_factory=list)
     host_env: Optional[dict] = None
     token_cost: Decimal = field(default_factory=lambda: Decimal(0))
-    end_state: str = field(default_factory=lambda: EndState.INDETERMINATE.value)
+    end_state: str = field(default_factory=lambda: SessionState.INDETERMINATE.value)
     end_state_reason: Optional[str] = None
     jwt: Optional[str] = None
     video: Optional[str] = None
@@ -74,7 +73,7 @@ class Session:
                 raise RuntimeError("Session._initialize() did not succeed", self)
         except Exception as e:
             logger.error(f"Failed to initialize session: {e}")
-            self.end(EndState.FAIL.value, f"Exception during initialization: {str(e)}")
+            self.end(SessionState.FAIL.value, f"Exception during initialization: {str(e)}")
         finally:
             # Signal session is initialized
             session_initialized.send(self, session_id=self.session_id)
