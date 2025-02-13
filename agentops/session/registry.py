@@ -4,7 +4,7 @@ import logging
 from typing import TYPE_CHECKING, List, Optional, Union
 from uuid import UUID
 
-from .signals import session_ended, session_initialized, session_started
+from agentops.session import session_started
 
 if TYPE_CHECKING:
     from .session import Session
@@ -61,7 +61,6 @@ def get_default_session() -> Optional["Session"]:
     if len(_active_sessions) == 1:
         return _active_sessions[0]
     return None
-
 
 
 @session_started.connect

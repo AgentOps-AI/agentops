@@ -12,6 +12,7 @@ from uuid import UUID, uuid4
 
 from blinker import Signal
 from opentelemetry import trace
+from requests import Response
 
 # from opentelemetry.context import attach, detach, set_value
 # from opentelemetry.sdk._logs import LoggerProvider, LoggingHandler
@@ -27,6 +28,8 @@ from agentops.logging import logger
 session_starting = Signal()
 session_started = Signal()
 session_initialized = Signal()
+session_ending = Signal()
+session_ended = Signal()
 
 
 class SessionState(Enum):
@@ -149,10 +152,13 @@ class Session:
 
     def _get_token_cost(self, response: Response) -> Decimal:
         """Get token cost from response"""
-        token_cost = response.body.get("token_cost", "unknown")
-        if token_cost == "unknown" or token_cost is None:
+        try:
+            token_cost = response.json().get("token_cost", "unknown")
+            if token_cost == "unknown" or token_cost is None:
+                return Decimal(0)
+            return Decimal(token_cost)
+        except (ValueError, AttributeError):
             return Decimal(0)
-        return Decimal(token_cost)
 
     def _format_token_cost(self, token_cost: Decimal) -> str:
         """Format token cost for display"""
@@ -192,12 +198,44 @@ class Session:
         """URL to view this trace in the dashboard"""
         return f"{self.config.endpoint}/drilldown?session_id={self.session_id}"
 
-    def end(self, *args, **kwargs):
+    def end(self, end_state: Optional[str] = None, end_state_reason: Optional[str] = None, video: Optional[str] = None) -> None:
         """
-        Deprecated: Use end() instead.
-        Kept for backward compatibility.
+        End the session and send final state to the API.
+
+        Args:
+            end_state (str, optional): The final state of the session. Options: Success, Fail, or Indeterminate.
+            end_state_reason (str, optional): The reason for ending the session.
+            video (str, optional): URL to a video recording of the session
         """
-        raise NotImplementedError
+        with self._end_session_lock:
+            if not self.is_running:
+                logger.debug(f"Session {self.session_id} already ended or not started")
+                return
+
+            # Signal session is ending
+            session_ending.send(self, session_id=self.session_id)
+
+            # Update session state
+            if end_state:
+                self.end_state = end_state
+            if end_state_reason:
+                self.end_state_reason = end_state_reason
+            if video:
+                self.video = video
+
+            self.end_timestamp = get_ISO_time()
+            self.is_running = False
+
+            # Get analytics before ending
+            analytics = self._get_analytics()
+            if analytics:
+                logger.info("\nSession Analytics:")
+                for key, value in analytics.items():
+                    logger.info(f"{key}: {value}")
+
+            # Signal session has ended
+            session_ended.send(self, session_id=self.session_id)
+            logger.debug(f"Session {self.session_id} ended with state {self.end_state}")
 
     def __repr__(self) -> str:
         """Return a string representation of the Session."""
