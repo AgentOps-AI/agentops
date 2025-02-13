@@ -1,7 +1,15 @@
 """Session management module"""
 
 from .registry import add_session, get_active_sessions, remove_session
-from .session import Session, SessionState, session_initialized, session_started, session_starting
+from .session import (
+    Session,
+    SessionState,
+    session_ended,
+    session_ending,
+    session_initialized,
+    session_started,
+    session_starting,
+)
 
 __all__ = [
     "Session",
@@ -12,4 +20,6 @@ __all__ = [
     "session_initialized",
     "session_started",
     "session_starting",
+    "session_ending",
+    "session_ended",
 ]
