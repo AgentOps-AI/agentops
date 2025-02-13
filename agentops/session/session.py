@@ -17,7 +17,7 @@ from opentelemetry import trace
 from termcolor import colored
 
 from agentops.api.session import SessionApiClient
-from agentops.config import TESTING, Configuration
+from agentops.config import TESTING, Config
 from agentops.exceptions import ApiServerException
 from agentops.helpers import filter_unjsonable, get_ISO_time, safe_serialize
 from agentops.http_client import HttpClient, Response
@@ -45,7 +45,7 @@ class Session:
     """Data container for session state with minimal public API"""
 
     session_id: UUID
-    config: Configuration
+    config: Config
     tags: List[str] = field(default_factory=list)
     host_env: Optional[dict] = None
     token_cost: Decimal = field(default_factory=lambda: Decimal(0))

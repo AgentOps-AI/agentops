@@ -1,14 +1,28 @@
+import logging
 import os
 import sys
-import logging
-from typing import List, Optional, Set
-from uuid import UUID
 from dataclasses import dataclass, field
+from typing import List, Optional, Set, TypedDict
+from uuid import UUID
 
-logger = logging.getLogger(__name__)
+from .logging import logger
+
+
+class ConfigDict(TypedDict):
+    api_key: Optional[str]
+    parent_key: Optional[str]
+    endpoint: Optional[str]
+    max_wait_time: Optional[int]
+    max_queue_size: Optional[int]
+    default_tags: Optional[List[str]]
+    instrument_llm_calls: Optional[bool]
+    auto_start_session: Optional[bool]
+    skip_auto_end_session: Optional[bool]
+    env_data_opt_out: Optional[bool]
+
 
 @dataclass
-class Configuration:
+class Config:
     api_key: Optional[str] = None
     parent_key: Optional[str] = None
     endpoint: str = "https://api.agentops.ai"
