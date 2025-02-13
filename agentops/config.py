@@ -1,23 +1,24 @@
 import os
 import sys
-from typing import List, Optional
+import logging
+from typing import List, Optional, Set
 from uuid import UUID
+from dataclasses import dataclass, field
 
-from .log_config import logger
+logger = logging.getLogger(__name__)
 
-
+@dataclass
 class Configuration:
-    def __init__(self):
-        self.api_key: Optional[str] = None
-        self.parent_key: Optional[str] = None
-        self.endpoint: str = "https://api.agentops.ai"
-        self.max_wait_time: int = 5000
-        self.max_queue_size: int = 512
-        self.default_tags: set[str] = set()
-        self.instrument_llm_calls: bool = True
-        self.auto_start_session: bool = True
-        self.skip_auto_end_session: bool = False
-        self.env_data_opt_out: bool = False
+    api_key: Optional[str] = None
+    parent_key: Optional[str] = None
+    endpoint: str = "https://api.agentops.ai"
+    max_wait_time: int = 5000
+    max_queue_size: int = 512
+    default_tags: Set[str] = field(default_factory=set)
+    instrument_llm_calls: bool = True
+    auto_start_session: bool = True
+    skip_auto_end_session: bool = False
+    env_data_opt_out: bool = False
 
     def configure(
         self,
