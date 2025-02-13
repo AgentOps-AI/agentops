@@ -35,11 +35,11 @@ def init(**kwargs: Unpack[ConfigDict]) -> Union[Session, None]:
             (i.e. Crew determining when tasks are complete and ending the session)
     Attributes:
     """
-    raise NotImplementedError
+    pass
 
 
 def configure(**kwargs: Unpack[ConfigDict]):
-    raise NotImplementedError
+    pass
 
 
 def start_session(
@@ -54,7 +54,7 @@ def start_session(
             e.g. ["test_run"].
         inherited_session_id: (str, optional): Set the session ID to inherit from another client
     """
-    raise NotImplementedError
+    pass
 
 
 def end_session(
@@ -109,4 +109,4 @@ def set_tags(tags: List[str]):
 # Mostly used for unit testing -
 # prevents unexpected sessions on new tests
 def end_all_sessions() -> None:
-    raise NotImplementedError
+    pass
