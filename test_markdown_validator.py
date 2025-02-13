@@ -1,19 +1,61 @@
 import sys
 from crewai import Agent, Task
-from langchain_groq import ChatGroq
 from langchain.tools import tool
 from langchain_openai import ChatOpenAI
-import agentops
 import os
 from dotenv import load_dotenv
 from pymarkdown.api import PyMarkdownApi, PyMarkdownApiException
 from io import StringIO
+import agentops
+from agentops.telemetry import TelemetryManager
 
 # Load environment variables
 load_dotenv()
 
-# Initialize AgentOps
-agentops.init(os.getenv("AGENTOPS_DEV_API_KEY"), default_tags=["crewai", "markdown_validator", "otel-test"])
+# Configure OpenTelemetry exporters first
+from opentelemetry import trace
+from opentelemetry.sdk.trace import TracerProvider
+from opentelemetry.sdk.trace.export import BatchSpanProcessor
+from opentelemetry.exporter.otlp.proto.http.trace_exporter import OTLPSpanExporter
+from opentelemetry.sdk.resources import Resource, SERVICE_NAME
+from agentops.telemetry.postgres_exporter import PostgresSpanExporter
+
+# Create and configure the tracer provider
+resource = Resource.create({
+    SERVICE_NAME: os.getenv("OTEL_SERVICE_NAME", "agentops"),
+    "environment": "test"
+})
+
+provider = TracerProvider(resource=resource)
+
+# Set up PostgreSQL exporter
+postgres_exporter = PostgresSpanExporter(
+    host=os.getenv("POSTGRES_HOST", "localhost"),
+    port=int(os.getenv("POSTGRES_PORT", "5432")),
+    database=os.getenv("POSTGRES_DB", "agentops_test"),
+    user=os.getenv("POSTGRES_USER", "postgres"),
+    password=os.getenv("POSTGRES_PASSWORD", "postgres"),
+    table_name="otel_spans"
+)
+postgres_processor = BatchSpanProcessor(postgres_exporter)
+provider.add_span_processor(postgres_processor)
+
+# Set up OTLP exporter for Jaeger
+otlp_exporter = OTLPSpanExporter(
+    endpoint=os.getenv("OTEL_EXPORTER_OTLP_ENDPOINT", "http://localhost:4318/v1/traces")
+)
+otlp_processor = BatchSpanProcessor(otlp_exporter)
+provider.add_span_processor(otlp_processor)
+
+# Set as global provider
+trace.set_tracer_provider(provider)
+
+# Initialize AgentOps with telemetry disabled since we're using our own provider
+agentops.init(
+    api_key=os.getenv("AGENTOPS_DEV_API_KEY"),
+    default_tags=["crewai", "markdown_validator", "otel-test"],
+    endpoint=os.getenv("AGENTOPS_API_ENDPOINT")
+)
 
 @tool("markdown_validation_tool")
 def markdown_validation_tool(file_path: str) -> str:
@@ -37,12 +79,6 @@ def markdown_validation_tool(file_path: str) -> str:
     except PyMarkdownApiException as this_exception:
         print(f"API Exception: {this_exception}", file=sys.stderr)
         return f"API Exception: {str(this_exception)}"
-
-groq_llm = ChatGroq(
-    temperature=0,
-    groq_api_key=os.getenv("GROQ_API_KEY"),
-    model_name="llama3-70b-8192",
-)
 
 default_llm = ChatOpenAI(
     openai_api_base=os.environ.get("OPENAI_API_BASE_URL", "https://api.openai.com/v1"),
