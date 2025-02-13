@@ -10,6 +10,7 @@ from enum import Enum
 from typing import TYPE_CHECKING, Any, Dict, List, Optional, Union
 from uuid import UUID, uuid4
 
+from blinker import Signal
 from opentelemetry import trace
 
 # from opentelemetry.context import attach, detach, set_value
@@ -20,6 +21,12 @@ from agentops.api.session import SessionApiClient
 from agentops.config import TESTING, Config
 from agentops.exceptions import ApiServerException
 from agentops.helpers import filter_unjsonable, get_ISO_time
+from agentops.logging import logger
+
+# Define signals for session events
+session_starting = Signal()
+session_started = Signal()
+session_initialized = Signal()
 
 
 class SessionState(Enum):
@@ -59,12 +66,12 @@ class Session:
 
     def __post_init__(self):
         """Initialize session components after dataclass initialization"""
-        # First create the session span
-        super().__post_init__()
-
-        # Then initialize session-specific components
+        # Initialize session-specific components
         self._lock = threading.Lock()
         self._end_session_lock = threading.Lock()
+
+        if self.config.api_key is None:
+            raise ValueError("API key is required")
 
         self.api = SessionApiClient(self.config.endpoint, self.session_id, self.config.api_key)
         # Initialize session
@@ -90,47 +97,37 @@ class Session:
 
             self.init_timestamp = get_ISO_time()
 
-            payload = {"session": asdict(self)}
-            logger.debug(f"Prepared session payload: {payload}")
-
             try:
-                serialized_payload = json.dumps(filter_unjsonable(payload)).encode("utf-8")
-                logger.debug("Sending create session request with payload: %s", serialized_payload)
-                res = HttpClient.post(
-                    f"{self.config.endpoint}/v2/create_session",
-                    serialized_payload,
-                    api_key=self.config.api_key,
-                    parent_key=self.config.parent_key,
-                )
-                assert res.code == 200, f"Failed to start session - {res.status}: {res.body}"
+                session_data = asdict(self)
+                success, jwt = self.api.create_session(session_data, parent_key=self.config.parent_key)
+                if not success:
+                    logger.error("Failed to create session")
+                    return False
 
-            except ApiServerException as e:
-                logger.error(f"Could not start session - {e}")
-                return False
-            else:  # If no exception is raised
+                self.jwt = jwt
+                if jwt is None:
+                    logger.debug("No JWT received in response")
+                    return False
+                logger.debug("Successfully received and set JWT")
+
                 self.is_running = True
+
+                logger.info(
+                    colored(
+                        f"\x1b[34mSession Replay: {self.session_url}\x1b[0m",
+                        "blue",
+                    )
+                )
 
                 # Signal session started after successful initialization
                 session_started.send(self)
 
-            jwt = res.body.get("jwt", None)
-            self.jwt = jwt
-            if jwt is None:
-                logger.debug("No JWT received in response")
+                logger.debug("Session started successfully")
+                return True
+
+            except ApiServerException as e:
+                logger.error(f"Could not start session - {e}")
                 return False
-            logger.debug("Successfully received and set JWT")
-
-            self.is_running = True
-
-            logger.info(
-                colored(
-                    f"\x1b[34mSession Replay: {self.session_url}\x1b[0m",
-                    "blue",
-                )
-            )
-
-            logger.debug("Session started successfully")
-            return True
 
     def _format_duration(self, start_time, end_time) -> str:
         """Format duration between two timestamps"""
@@ -172,13 +169,14 @@ class Session:
 
         formatted_duration = self._format_duration(self.init_timestamp, self.end_timestamp)
 
-        response = self.api.update_session(self._serialize_session())
+        response = self.api.update_session(asdict(self))
         if not response:
             return None
 
         # Update token cost from API response
-        if "token_cost" in response:
-            self.token_cost = Decimal(str(response["token_cost"]))
+        token_cost = response.get("token_cost")
+        if token_cost is not None:
+            self.token_cost = Decimal(str(token_cost))
 
         return {
             "LLM calls": self.event_counts["llms"],
