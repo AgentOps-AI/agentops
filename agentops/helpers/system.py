@@ -1,11 +1,14 @@
-import platform
-import psutil
-import socket
-from .helpers import get_agentops_version
-from .log_config import logger
 import importlib.metadata
 import os
+import platform
+import socket
 import sys
+
+import psutil
+
+from agentops.logging import logger
+
+from .version import get_agentops_version
 
 
 def get_sdk_details():
