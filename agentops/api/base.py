@@ -10,6 +10,7 @@ class ApiClient:
     """Base class for API communication with connection pooling"""
 
     _session: Optional[requests.Session] = None
+    last_response: Optional[requests.Response] = None  # Added to store last response
 
     @classmethod
     def get_session(cls) -> requests.Session:
@@ -74,4 +75,5 @@ class ApiClient:
         """Make POST request"""
         url = f"{self.endpoint}{path}"
         session = self.get_session()
-        return session.post(url, json=data, headers=headers)
+        self.last_response = session.post(url, json=data, headers=headers)
+        return self.last_response
