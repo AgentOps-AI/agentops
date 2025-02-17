@@ -6,7 +6,7 @@ import threading
 from dataclasses import asdict, dataclass, field
 from datetime import datetime
 from decimal import ROUND_HALF_UP, Decimal
-from enum import Enum, auto
+from enum import Enum, auto, StrEnum
 from typing import TYPE_CHECKING, Any, Dict, List, Optional, Union
 from uuid import UUID, uuid4
 
@@ -34,16 +34,13 @@ session_ended = Signal()
 session_updated = Signal()
 
 
-class SessionState(Enum):
+class SessionState(StrEnum):
     """Session state enumeration"""
-    INITIALIZING = "Initializing"
-    RUNNING = "Running"
-    FAILED = "Failed"
-    SUCCEEDED = "Succeeded"
-    INDETERMINATE = "Indeterminate"
-
-    def __str__(self) -> str:
-        return self.value
+    INITIALIZING = auto()
+    RUNNING = auto()
+    SUCCEEDED = auto()
+    FAILED = auto()
+    INDETERMINATE = auto()
 
     @property
     def is_terminal(self) -> bool:
@@ -54,6 +51,19 @@ class SessionState(Enum):
     def is_alive(self) -> bool:
         """Whether the session is still active"""
         return self in (self.INITIALIZING, self.RUNNING)
+
+    @classmethod
+    def from_string(cls, state: str) -> "SessionState":
+        """Convert string to SessionState, with simple aliases"""
+        state = state.upper()
+        if state in ("SUCCESS", "SUCCEEDED"):
+            return cls.SUCCEEDED
+        if state in ("FAIL", "FAILED"):
+            return cls.FAILED
+        try:
+            return cls[state]  # Use direct lookup since it's a StrEnum
+        except KeyError:
+            return cls.INDETERMINATE
 
 
 @dataclass
@@ -86,7 +96,7 @@ class Session:
         """
         if isinstance(value, str):
             try:
-                value = SessionState(value)
+                value = SessionState.from_string(value)
             except ValueError:
                 logger.warning(f"Invalid session state: {value}")
                 value = SessionState.INDETERMINATE
@@ -200,6 +210,25 @@ class Session:
         """URL to view this trace in the dashboard"""
         return f"{self.config.endpoint}/drilldown?session_id={self.session_id}"
 
+    def _map_end_state(self, state: str) -> SessionState:
+        """Map common end state strings to SessionState enum values"""
+        state_map = {
+            "Success": SessionState.SUCCEEDED,
+            "SUCCEEDED": SessionState.SUCCEEDED,
+            "Succeeded": SessionState.SUCCEEDED,
+            "Fail": SessionState.FAILED,
+            "FAILED": SessionState.FAILED,
+            "Failed": SessionState.FAILED,
+            "Indeterminate": SessionState.INDETERMINATE,
+            "INDETERMINATE": SessionState.INDETERMINATE
+        }
+        try:
+            # First try to map the string directly
+            return state_map.get(state, SessionState(state))
+        except ValueError:
+            logger.warning(f"Invalid end state: {state}, using INDETERMINATE")
+            return SessionState.INDETERMINATE
+
     def end(
         self, 
         end_state: Optional[str] = None,
@@ -212,14 +241,20 @@ class Session:
                 logger.debug(f"Session {self.session_id} already ended")
                 return
 
-            session_ending.send(self, session_id=self.session_id)
-
+            # Update state before sending signal
             if end_state is not None:
-                self.state = end_state
+                self.state = SessionState.from_string(end_state)
             if end_state_reason is not None:
                 self.end_state_reason = end_state_reason
             if video is not None:
                 self.video = video
+
+            # Send signal with current state
+            session_ending.send(self, 
+                session_id=self.session_id,
+                end_state=str(self.state),
+                end_state_reason=self.end_state_reason
+            )
 
             self.end_timestamp = get_ISO_time()
 
@@ -229,7 +264,11 @@ class Session:
             self.api.update_session(session_data)
 
             session_updated.send(self, session_id=self.session_id)
-            session_ended.send(self, session_id=self.session_id)
+            session_ended.send(self, 
+                session_id=self.session_id,
+                end_state=str(self.state),
+                end_state_reason=self.end_state_reason
+            )
             logger.debug(f"Session {self.session_id} ended with state {self.state}")
 
     def start(self):
@@ -254,9 +293,12 @@ class Session:
                     )
                 )
 
-                session_started.send(self)
-                logger.debug("Session started successfully")
+                # Set state before sending signal so registry sees correct state
                 self.state = SessionState.RUNNING
+                
+                # Send session_started signal with self as sender
+                session_started.send(self, session_id=self.session_id)
+                logger.debug("Session started successfully")
                 return True
 
             except ApiServerException as e:
@@ -305,7 +347,12 @@ class Session:
         Args:
             tags: List of tags to add
         """
+        if self.state.is_terminal:
+            logger.warning("Cannot add tags to ended session")
+            return
+        
         self.tags.extend(tags)
+        session_updated.send(self, session_id=self.session_id)
 
     def set_tags(self, tags: List[str]) -> None:
         """Set session tags, replacing existing ones
@@ -313,4 +360,9 @@ class Session:
         Args:
             tags: List of tags to set
         """
+        if self.state.is_terminal:
+            logger.warning("Cannot set tags on ended session")
+            return
+        
         self.tags = tags
+        session_updated.send(self, session_id=self.session_id)
