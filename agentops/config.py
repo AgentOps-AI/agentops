@@ -2,10 +2,11 @@ import logging
 import os
 import sys
 from dataclasses import dataclass, field
-from typing import List, Optional, Set, TypedDict
+from typing import List, Optional, Set, TypedDict, Any
 from uuid import UUID
 
 from .logging import logger
+from .helpers import get_env_bool, get_env_int, get_env_list
 
 
 class ConfigDict(TypedDict):
@@ -23,20 +24,36 @@ class ConfigDict(TypedDict):
 
 @dataclass
 class Config:
-    api_key: Optional[str] = None
-    parent_key: Optional[str] = None
-    endpoint: str = "https://api.agentops.ai"
-    max_wait_time: int = 5000
-    max_queue_size: int = 512
-    default_tags: Set[str] = field(default_factory=set)
-    instrument_llm_calls: bool = True
-    auto_start_session: bool = True
-    skip_auto_end_session: bool = False
-    env_data_opt_out: bool = False
+    api_key: Optional[str] = field(default_factory=lambda: os.getenv('AGENTOPS_API_KEY'))
+    parent_key: Optional[str] = field(default_factory=lambda: os.getenv('AGENTOPS_PARENT_KEY'))
+    endpoint: str = field(
+        default_factory=lambda: os.getenv('AGENTOPS_API_ENDPOINT', 'https://api.agentops.ai')
+    )
+    max_wait_time: int = field(
+        default_factory=lambda: get_env_int('AGENTOPS_MAX_WAIT_TIME', 5000)
+    )
+    max_queue_size: int = field(
+        default_factory=lambda: get_env_int('AGENTOPS_MAX_QUEUE_SIZE', 512)
+    )
+    default_tags: Set[str] = field(
+        default_factory=lambda: get_env_list('AGENTOPS_DEFAULT_TAGS')
+    )
+    instrument_llm_calls: bool = field(
+        default_factory=lambda: get_env_bool('AGENTOPS_INSTRUMENT_LLM_CALLS', True)
+    )
+    auto_start_session: bool = field(
+        default_factory=lambda: get_env_bool('AGENTOPS_AUTO_START_SESSION', True)
+    )
+    skip_auto_end_session: bool = field(
+        default_factory=lambda: get_env_bool('AGENTOPS_SKIP_AUTO_END_SESSION', False)
+    )
+    env_data_opt_out: bool = field(
+        default_factory=lambda: get_env_bool('AGENTOPS_ENV_DATA_OPT_OUT', False)
+    )
 
     def configure(
         self,
-        client,
+        client: Any,
         api_key: Optional[str] = None,
         parent_key: Optional[str] = None,
         endpoint: Optional[str] = None,
@@ -48,12 +65,13 @@ class Config:
         skip_auto_end_session: Optional[bool] = None,
         env_data_opt_out: Optional[bool] = None,
     ):
+        """Configure settings from kwargs, validating where necessary"""
         if api_key is not None:
             try:
                 UUID(api_key)
                 self.api_key = api_key
             except ValueError:
-                message = f"API Key is invalid: {{{api_key}}}.\n\t    Find your API key at https://app.agentops.ai/settings/projects"
+                message = f"API Key is invalid: {{{api_key}}}.\n\t    Find your API key at {self.endpoint}/settings/projects"
                 client.add_pre_init_warning(message)
                 logger.error(message)
 
@@ -76,7 +94,7 @@ class Config:
             self.max_queue_size = max_queue_size
 
         if default_tags is not None:
-            self.default_tags.update(default_tags)
+            self.default_tags = set(default_tags)
 
         if instrument_llm_calls is not None:
             self.instrument_llm_calls = instrument_llm_calls
@@ -95,25 +113,16 @@ TESTING = "pytest" in sys.modules
 
 
 if TESTING:
-
     def hook_pdb():
         import sys
-
         def info(type, value, tb):
             if hasattr(sys, "ps1") or not sys.stderr.isatty():
-                # we are in interactive mode or we don't have a tty-like
-                # device, so we call the default hook
                 sys.__excepthook__(type, value, tb)
             else:
                 import pdb
                 import traceback
-
-                # we are NOT in interactive mode, print the exception...
                 traceback.print_exception(type, value, tb)
-                # ...then start the debugger in post-mortem mode.
-                # pdb.pm() # deprecated
-                pdb.post_mortem(tb)  # more "modern"
-
+                pdb.post_mortem(tb)
         sys.excepthook = info
 
     hook_pdb()
