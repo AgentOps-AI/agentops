@@ -13,24 +13,36 @@ from agentops.session.session import Session, SessionState
 pytestmark = [pytest.mark.usefixtures("agentops_init")]
 
 
-@pytest.fixture(autouse=True)
-def setup_teardown():
-    """Setup and teardown for each test"""
-    clear_registry()  # Clear registry before each test
+@pytest.fixture(autouse=True, scope='function')
+def registry_setup():
+    """Setup and teardown registry for each test"""
+    # Clear any existing sessions
     yield
-    clear_registry()  # Clear registry after each test
+    clear_registry()
 
 
-@pytest.fixture(autouse=True)
-def cleanup_signals():
-    """Cleanup all signal receivers after each test"""
+@pytest.fixture(autouse=True, scope='function')
+def signal_setup():
+    """Setup and teardown signal handlers for each test"""
+    # Store original receivers
+    original_receivers = {
+        'initialized': session_initialized.receivers.copy(),
+        'starting': session_starting.receivers.copy(),
+        'started': session_started.receivers.copy(),
+        'updated': session_updated.receivers.copy(),
+        'ending': session_ending.receivers.copy(),
+        'ended': session_ended.receivers.copy()
+    }
+
     yield
-    session_initialized.receivers.clear()
-    session_starting.receivers.clear()
-    session_started.receivers.clear()
-    session_updated.receivers.clear()
-    session_ending.receivers.clear()
-    session_ended.receivers.clear()
+
+    # Restore original receivers after test
+    session_initialized.receivers = original_receivers['initialized']
+    session_starting.receivers = original_receivers['starting']
+    session_started.receivers = original_receivers['started']
+    session_updated.receivers = original_receivers['updated']
+    session_ending.receivers = original_receivers['ending']
+    session_ended.receivers = original_receivers['ended']
 
 
 def test_session_lifecycle_signals(mock_req):
@@ -126,7 +138,7 @@ def test_session_registration(mock_req):
     active_sessions = get_active_sessions()
     assert len(active_sessions) == 0
 
-    # Create session (initialization happens automatically)
+    # Create and start session
     session = agentops.start_session()
     assert session is not None, "Failed to start session"
 
@@ -147,13 +159,7 @@ def test_multiple_session_registration(mock_req):
     session1 = agentops.start_session()
     assert session1 is not None, "Failed to start first session"
 
-    # Verify no sessions registered yet
-    active_sessions = get_active_sessions()
-    assert len(active_sessions) == 0
-
-    session1.start()
-
-    # Verify first session registered
+    # Verify first session is already registered (start_session automatically starts it)
     active_sessions = get_active_sessions()
     assert len(active_sessions) == 1
     assert active_sessions[0].session_id == session1.session_id
