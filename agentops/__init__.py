@@ -15,6 +15,7 @@ from agentops.session.session import SessionState
 from .client import Client
 from .helpers import check_agentops_update
 from .session import Session
+from .config import Config
 
 # Client global instance; one per process runtime
 _client = Client()
