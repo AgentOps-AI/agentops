@@ -52,10 +52,21 @@ See also:
     - Registry functions for managing multiple sessions
 """
 
-from .registry import add_session, get_active_sessions, remove_session
+from typing import Optional
+from .registry import add_session, get_active_sessions, remove_session, get_default_session
 from .session import (Session, SessionState, session_ended, session_ending,
                       session_initialized, session_started, session_starting,
                       session_updated)
+
+# Add current property to get default session
+@property
+def current() -> Optional[Session]:
+    """Get the current active session.
+    
+    Returns:
+        The current active session if exactly one session exists, otherwise None.
+    """
+    return get_default_session()
 
 __all__ = [
     "Session",
@@ -68,5 +79,6 @@ __all__ = [
     "session_starting",
     "session_ending",
     "session_ended",
-    "session_updated"
+    "session_updated",
+    "current"
 ]
