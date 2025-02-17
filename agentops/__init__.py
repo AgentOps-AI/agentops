@@ -1,12 +1,16 @@
 # agentops/__init__.py
+import functools
 import sys
 import threading
 from importlib.metadata import version as get_version
-from typing import List, Optional, Union, Unpack
+from typing import Any, Callable, List, Optional, Union, Unpack
 
+import wrapt
 from packaging import version
 
+from agentops.api.session import SessionApiClient
 from agentops.config import ConfigDict
+from agentops.session.session import SessionState
 
 from .client import Client
 from .helpers import check_agentops_update
@@ -14,6 +18,7 @@ from .session import Session
 
 # Client global instance; one per process runtime
 _client = Client()
+
 
 def init(**kwargs: Unpack[ConfigDict]) -> Union[Session, None]:
     """
@@ -40,23 +45,59 @@ def init(**kwargs: Unpack[ConfigDict]) -> Union[Session, None]:
     """
     return _client.init(**kwargs)
 
+
 def configure(**kwargs: Unpack[ConfigDict]):
     """Update client configuration"""
     _client.configure(**kwargs)
 
+
 def start_session(
-    tags: Optional[List[str]] = None,
-    inherited_session_id: Optional[str] = None,
-) -> Union[Session, None]:
-    """
-    Start a new session for recording events.
+    wrapped=None, *, tags: Optional[List[str]] = None, inherited_session_id: Optional[str] = None
+) -> Union[Session, Callable, None]:
+    """Start a new session for recording events. Can be used as a decorator or function.
+
+    When used as a function:
+        session = start_session(tags=["test_run"])
+
+    When used as a decorator:
+        @start_session
+        def my_function():
+            pass
+
+        @start_session(tags=["test_run"])
+        def my_function():
+            pass
 
     Args:
+        wrapped (Callable, optional): The function being wrapped when used as a decorator
         tags (List[str], optional): Tags that can be used for grouping or sorting later.
-            e.g. ["test_run"].
-        inherited_session_id: (str, optional): Set the session ID to inherit from another client
+            e.g. ["test_run"]
+        inherited_session_id (str, optional): Set the session ID to inherit from another client
+
+    Returns:
+        Union[Session, Callable, None]: Returns Session when used as a function,
+        or a wrapped function when used as a decorator.
     """
-    return _client.start_session(tags, inherited_session_id)
+    # If called directly as a function
+    if wrapped is None:
+        # Return a partial function when used as @start_session(tags=[...])
+        if tags is not None or inherited_session_id is not None:
+            return functools.partial(start_session, tags=tags, inherited_session_id=inherited_session_id)
+        return _client.start_session(tags, inherited_session_id)
+
+    # Define the decorator function
+    @wrapt.decorator
+    def wrapper(wrapped, instance, args, kwargs):
+        session = _client.start_session(tags, inherited_session_id)
+        try:
+            return wrapped(*args, **kwargs)
+        finally:
+            if session:
+                _client.end_session(end_state=SessionState.SUCCEEDED, is_auto_end=True)
+
+    # If used as @start_session without parameters or with @start_session(tags=[...])
+    return wrapper(wrapped)
+
 
 def end_session(
     end_state: str,
@@ -74,6 +115,7 @@ def end_session(
     """
     _client.end_session(end_state, end_state_reason, video, is_auto_end)
 
+
 def record():
     """
     Record an event with the AgentOps service.
@@ -82,6 +124,7 @@ def record():
         event (Event): The event to record.
     """
     raise NotImplementedError
+
 
 def add_tags(tags: List[str]):
     """
@@ -94,6 +137,7 @@ def add_tags(tags: List[str]):
     """
     _client.add_tags(tags)
 
+
 def set_tags(tags: List[str]):
     """
     Replace session tags at runtime.
@@ -103,11 +147,13 @@ def set_tags(tags: List[str]):
     """
     _client.set_tags(tags)
 
+
 # Mostly used for unit testing -
 # prevents unexpected sessions on new tests
 def end_all_sessions() -> None:
     """End all active sessions"""
     _client.end_all_sessions()
+
 
 # For backwards compatibility and testing
 def get_client() -> Client:
