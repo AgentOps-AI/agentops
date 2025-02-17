@@ -5,20 +5,20 @@ from opentelemetry.trace import get_tracer
 from opentelemetry.metrics import get_meter
 from wrapt import wrap_function_wrapper
 
-from opentelemetry.instrumentation.openai.shared.chat_wrappers import (
+from agentops.instrumentation.openai.shared.chat_wrappers import (
     chat_wrapper,
     achat_wrapper,
 )
-from opentelemetry.instrumentation.openai.shared.completion_wrappers import (
+from agentops.instrumentation.openai.shared.completion_wrappers import (
     completion_wrapper,
     acompletion_wrapper,
 )
-from opentelemetry.instrumentation.openai.shared.embeddings_wrappers import (
+from agentops.instrumentation.openai.shared.embeddings_wrappers import (
     embeddings_wrapper,
     aembeddings_wrapper,
 )
-from opentelemetry.instrumentation.openai.utils import is_metrics_enabled
-from opentelemetry.instrumentation.openai.version import __version__
+from agentops.instrumentation.openai.utils import is_metrics_enabled
+from agentops.instrumentation.openai.version import __version__
 from opentelemetry.semconv_ai import Meters
 
 _instruments = ("openai >= 0.27.0", "openai < 1.0.0")
