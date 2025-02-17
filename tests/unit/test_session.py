@@ -8,7 +8,7 @@ from uuid import UUID
 import pytest
 
 import agentops
-from agentops.session.session import Session
+from agentops.session.session import Session, SessionState
 
 # class TestNonInitializedSessions:
 #     def setup_method(self):
@@ -20,8 +20,38 @@ from agentops.session.session import Session
 #         assert session is None
 
 
-class TestSingleSessions:
-    def setup_method(self):
-        self.api_key = "11111111-1111-4111-8111-111111111111"
-        self.event_type = "test_event_type"
-        agentops.init(api_key=self.api_key, max_wait_time=50, auto_start_session=False)
+class TestSessionStart:
+    def test_session_start(self):
+        session = agentops.start_session()
+        assert session is not None
+
+
+class TestSessionDecorators:
+    def test_session_decorator_auto_end(self):
+        """Test that session decorator automatically ends session by default"""
+
+        @agentops.start_session
+        def sample_function():
+            return "test complete"
+
+        with patch.object(agentops._client, "end_session") as mock_end_session:
+            result = sample_function()
+
+            assert result == "test complete"
+            mock_end_session.assert_called_once_with(end_state=SessionState.SUCCEEDED, is_auto_end=True)
+
+    def test_session_decorator_with_tags(self):
+        """Test that session decorator accepts tags parameter"""
+        test_tags = ["test1", "test2"]
+
+        @agentops.start_session(tags=test_tags)
+        def sample_function():
+            return "test complete"
+
+        with patch.object(agentops._client, "start_session") as mock_start_session, \
+             patch.object(agentops._client, "end_session") as mock_end_session:
+            result = sample_function()
+
+            assert result == "test complete"
+            mock_start_session.assert_called_once_with(test_tags, None)
+            mock_end_session.assert_called_once_with(end_state=SessionState.SUCCEEDED, is_auto_end=True)
