@@ -1,11 +1,13 @@
-from typing import List, Optional, Union, Dict, Any
-from uuid import UUID
 import threading
-from .session import Session
+import uuid
+from typing import Any, Dict, List, Optional, Union
+from uuid import UUID
+
 from .config import Config, ConfigDict
 from .exceptions import NoSessionException
-from .session.registry import get_default_session, get_active_sessions
 from .logging import logger
+from .session import Session
+from .session.registry import get_active_sessions, get_default_session
 
 
 class Client:
@@ -59,18 +61,30 @@ class Client:
         tags: Optional[List[str]] = None,
         inherited_session_id: Optional[str] = None,
     ) -> Union[Session, None]:
-        """Start a new session for recording events"""
+        """Start a new session for recording events
+        
+        Args:
+            tags: Optional list of tags for the session
+            inherited_session_id: Optional ID to inherit from another session
+            
+        Returns:
+            Session or None: New session if successful, None if no API key configured
+        """
         if not self._config.api_key:
             logger.warning("No API key configured - cannot start session")
             return None
 
-        session_id = UUID(inherited_session_id) if inherited_session_id else None
-        session = Session(
-            session_id=session_id or UUID.uuid4(),
-            config=self._config,
-            tags=tags or []
-        )
-        return session
+        try:
+            session_id = UUID(inherited_session_id) if inherited_session_id else uuid.uuid4()
+            session = Session(
+                session_id=session_id,
+                config=self._config,
+                tags=tags or []
+            )
+            return session
+        except Exception as e:
+            logger.error(f"Failed to create session: {e}")
+            return None
 
     def end_session(
         self,

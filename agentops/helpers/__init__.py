@@ -1,5 +1,11 @@
 from .time import get_ISO_time, iso_to_unix_nano, from_unix_nano_to_iso
-from .serialization import is_jsonable, filter_unjsonable, safe_serialize
+from .serialization import (
+    AgentOpsJSONEncoder,
+    serialize_uuid,
+    safe_serialize,
+    is_jsonable,
+    filter_unjsonable,
+)
 from .system import (
     get_host_env,
     get_sdk_details,
@@ -19,9 +25,11 @@ __all__ = [
     'get_ISO_time',
     'iso_to_unix_nano',
     'from_unix_nano_to_iso',
+    'AgentOpsJSONEncoder',
+    'serialize_uuid',
+    'safe_serialize',
     'is_jsonable',
     'filter_unjsonable',
-    'safe_serialize',
     'get_host_env',
     'get_sdk_details',
     'get_os_details',

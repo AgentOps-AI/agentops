@@ -8,9 +8,9 @@ from packaging import version
 
 from agentops.config import ConfigDict
 
+from .client import Client
 from .helpers import check_agentops_update
 from .session import Session
-from .client import Client
 
 # Client global instance; one per process runtime
 _client = Client()
