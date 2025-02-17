@@ -6,7 +6,7 @@ import threading
 from dataclasses import asdict, dataclass, field
 from datetime import datetime
 from decimal import ROUND_HALF_UP, Decimal
-from enum import Enum, auto, StrEnum
+from enum import Enum, StrEnum, auto
 from typing import TYPE_CHECKING, Any, Dict, List, Optional, Union
 from uuid import UUID, uuid4
 
@@ -17,13 +17,17 @@ from requests import Response
 # from opentelemetry.sdk._logs import LoggerProvider, LoggingHandler
 from termcolor import colored
 
+import agentops
 from agentops import session
 from agentops.api.session import SessionApiClient
 from agentops.config import TESTING, Config
 from agentops.exceptions import ApiServerException
 from agentops.helpers import filter_unjsonable, get_ISO_time
-from agentops.logging import logger
 from agentops.helpers.serialization import AgentOpsJSONEncoder
+from agentops.logging import logger
+
+if TYPE_CHECKING:
+    from agentops.config import Config
 
 # Define signals for session events
 session_starting = Signal()
@@ -66,12 +70,16 @@ class SessionState(StrEnum):
             return cls.INDETERMINATE
 
 
+def default_config():
+    from agentops import Config as _Config
+    return _Config()
+
 @dataclass
 class Session:
     """Data container for session state with minimal public API"""
 
     session_id: UUID
-    config: Config
+    config: Config = field(default_factory=default_config)
     tags: List[str] = field(default_factory=list)
     host_env: Optional[dict] = None
     _state: SessionState = field(default=SessionState.INITIALIZING)
