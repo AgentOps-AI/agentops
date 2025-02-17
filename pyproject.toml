@@ -87,6 +87,7 @@ dev = [
     # Agent integration testing
     "pytest-sugar>=1.0.0",
     "pdbpp>=0.10.3",
+    "ipython>=8.18.1",
 ]
 
 [project.urls]
