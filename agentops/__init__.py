@@ -10,7 +10,10 @@ from agentops.config import ConfigDict
 
 from .helpers import check_agentops_update
 from .session import Session
+from .client import Client
 
+# Client global instance; one per process runtime
+_client = Client()
 
 def init(**kwargs: Unpack[ConfigDict]) -> Union[Session, None]:
     """
@@ -35,12 +38,11 @@ def init(**kwargs: Unpack[ConfigDict]) -> Union[Session, None]:
             (i.e. Crew determining when tasks are complete and ending the session)
     Attributes:
     """
-    pass
-
+    return _client.init(**kwargs)
 
 def configure(**kwargs: Unpack[ConfigDict]):
-    pass
-
+    """Update client configuration"""
+    _client.configure(**kwargs)
 
 def start_session(
     tags: Optional[List[str]] = None,
@@ -54,8 +56,7 @@ def start_session(
             e.g. ["test_run"].
         inherited_session_id: (str, optional): Set the session ID to inherit from another client
     """
-    pass
-
+    return _client.start_session(tags, inherited_session_id)
 
 def end_session(
     end_state: str,
@@ -71,8 +72,7 @@ def end_session(
         end_state_reason (str, optional): The reason for ending the session.
         video (str, optional): URL to a video recording of the session
     """
-    raise NotImplementedError
-
+    _client.end_session(end_state, end_state_reason, video, is_auto_end)
 
 def record():
     """
@@ -83,7 +83,6 @@ def record():
     """
     raise NotImplementedError
 
-
 def add_tags(tags: List[str]):
     """
     Append to session tags at runtime.
@@ -93,8 +92,7 @@ def add_tags(tags: List[str]):
     Args:
         tags (List[str]): The list of tags to append.
     """
-    raise NotImplementedError
-
+    _client.add_tags(tags)
 
 def set_tags(tags: List[str]):
     """
@@ -103,10 +101,15 @@ def set_tags(tags: List[str]):
     Args:
         tags (List[str]): The list of tags to set.
     """
-    raise NotImplementedError
-
+    _client.set_tags(tags)
 
 # Mostly used for unit testing -
 # prevents unexpected sessions on new tests
 def end_all_sessions() -> None:
-    pass
+    """End all active sessions"""
+    _client.end_all_sessions()
+
+# For backwards compatibility and testing
+def get_client() -> Client:
+    """Get the singleton client instance"""
+    return _client
