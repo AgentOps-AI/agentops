@@ -21,62 +21,70 @@ class SessionApiClient(ApiClient):
 
     def create_session(
         self, session_data: Dict[str, Any], parent_key: Optional[str] = None
-    ) -> Tuple[bool, Optional[str]]:
-        """Create a new session"""
-        try:
-            headers = self._prepare_headers(
-                api_key=self.api_key, parent_key=parent_key, custom_headers={"X-Session-ID": str(self.session_id)}
-            )
+    ) -> Optional[str]:
+        """Create a new session
+        
+        Returns:
+            str: JWT token for the created session
+            
+        Raises:
+            ApiServerException: If session creation fails
+        """
+        headers = self._prepare_headers(
+            api_key=self.api_key, parent_key=parent_key, custom_headers={"X-Session-ID": str(self.session_id)}
+        )
 
-            res = self.post("/v2/create_session", {"session": session_data}, headers)
-            jwt = res.json().get("jwt")
-            return bool(jwt), jwt
+        res = self.post("/v2/create_session", {"session": session_data}, headers)
+        jwt = res.json().get("jwt")
+        if not jwt:
+            raise ApiServerException("Failed to create session - no JWT returned")
+        return jwt
 
-        except ApiServerException as e:
-            logger.error(f"Could not create session - {e}")
-            return False, None
+    def update_session(self, session_data: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+        """Update an existing session
+        
+        Returns:
+            Dict[str, Any]: Updated session data
+            
+        Raises:
+            ApiServerException: If session update fails
+        """
+        headers = self._prepare_headers(
+            api_key=self.api_key, jwt=self.jwt, custom_headers={"X-Session-ID": str(self.session_id)}
+        )
 
-    def update_session(self, session_data: Optional[Dict[str, Any]] = None) -> Optional[Dict[str, Any]]:
-        """Update session state"""
-        try:
-            headers = self._prepare_headers(
-                api_key=self.api_key, jwt=self.jwt, custom_headers={"X-Session-ID": str(self.session_id)}
-            )
+        res = self.post("/v2/update_session", {"session": session_data or {}}, headers)
+        if res.status_code != 200:
+            raise ApiServerException(f"Failed to update session - status code {res.status_code}")
+        return res.json()
 
-            res = self.post("/v2/update_session", {"session": session_data or {}}, headers)
-            return res.json()
+    def create_agent(self, name: str, agent_id: str) -> None:
+        """Create a new agent
+        
+        Raises:
+            ApiServerException: If agent creation fails
+        """
+        headers = self._prepare_headers(
+            api_key=self.api_key, jwt=self.jwt, custom_headers={"X-Session-ID": str(self.session_id)}
+        )
 
-        except ApiServerException as e:
-            logger.error(f"Could not update session - {e}")
-            return None
+        res = self.post("/v2/create_agent", {"id": agent_id, "name": name}, headers)
+        if res.status_code != 200:
+            raise ApiServerException(f"Failed to create agent - status code {res.status_code}")
 
-    def create_agent(self, name: str, agent_id: str) -> bool:
-        """Create a new agent"""
-        try:
-            headers = self._prepare_headers(
-                api_key=self.api_key, jwt=self.jwt, custom_headers={"X-Session-ID": str(self.session_id)}
-            )
+    def create_events(self, events: List[Dict[str, Any]]) -> None:
+        """Send events to API
+        
+        Raises:
+            ApiServerException: If event creation fails
+        """
+        headers = self._prepare_headers(
+            api_key=self.api_key, jwt=self.jwt, custom_headers={"X-Session-ID": str(self.session_id)}
+        )
 
-            res = self.post("/v2/create_agent", {"id": agent_id, "name": name}, headers)
-            return res.status_code == 200
-
-        except ApiServerException as e:
-            logger.error(f"Could not create agent - {e}")
-            return False
-
-    def create_events(self, events: List[Dict[str, Any]]) -> bool:
-        """Send events to API"""
-        try:
-            headers = self._prepare_headers(
-                api_key=self.api_key, jwt=self.jwt, custom_headers={"X-Session-ID": str(self.session_id)}
-            )
-
-            res = self.post("/v2/create_events", {"events": events}, headers)
-            return res.status_code == 200
-
-        except ApiServerException as e:
-            logger.error(f"Could not create events - {e}")
-            return False
+        res = self.post("/v2/create_events", {"events": events}, headers)
+        if res.status_code != 200:
+            raise ApiServerException(f"Failed to create events - status code {res.status_code}")
 
     def _post(self, path: str, data: Dict[str, Any], headers: Dict[str, str]) -> requests.Response:
         """Make POST request"""
