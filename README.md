@@ -435,7 +435,7 @@ await main()
 
 ### Mistral 〽️
 
-Track agents built with the Anthropic Python SDK (>=0.32.0).
+Track agents built with the Mistral Python SDK (>=0.32.0).
 
 - [AgentOps integration example](./examples/mistral//mistral_example.ipynb)
 - [Official Mistral documentation](https://docs.mistral.ai)
