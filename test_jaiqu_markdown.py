@@ -61,10 +61,26 @@ try:
     
     # Print a sample of original and transformed spans
     if markdown_spans and transformed_spans:
-        print("\nSample Original Span:")
-        print(json.dumps(markdown_spans[0], indent=2))
-        print("\nSample Transformed Span:")
-        print(json.dumps(transformed_spans[0], indent=2))
+        # Find a span with event.data
+        event_span = next(
+            (span for span in markdown_spans if span.get('attributes', {}).get('event.data')),
+            markdown_spans[0]
+        )
+        event_index = markdown_spans.index(event_span)
+        
+        print("\nOriginal Span with event.data:")
+        print(json.dumps(event_span, indent=2))
+        print("\nEvent Data (parsed):")
+        event_data = event_span.get('attributes', {}).get('event.data', '{}')
+        try:
+            parsed_event_data = json.loads(event_data)
+            print(json.dumps(parsed_event_data, indent=2))
+        except json.JSONDecodeError:
+            print("Could not parse event.data as JSON")
+            print(event_data)
+        
+        print("\nTransformed Span:")
+        print(json.dumps(transformed_spans[event_index], indent=2))
 
 except Exception as e:
     logger.error(f"Error: {str(e)}")

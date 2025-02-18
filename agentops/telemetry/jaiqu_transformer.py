@@ -152,6 +152,23 @@ class JaiquTransformer:
             except (TypeError, ValueError) as e:
                 raise ValueError(f"Invalid timestamp format: {e}")
             
+            # Process attributes
+            attributes = span_data.get("attributes", {})
+            processed_attributes = {}
+            
+            # Process special fields
+            for key, value in attributes.items():
+                if key == "event.data" and isinstance(value, str):
+                    try:
+                        processed_attributes["event_data"] = json.loads(value)
+                    except json.JSONDecodeError:
+                        logger.warning(f"Could not parse event.data as JSON: {value}")
+                        processed_attributes["event_data"] = value
+                else:
+                    # Convert dot notation to underscore
+                    processed_key = key.replace(".", "_")
+                    processed_attributes[processed_key] = value
+            
             # Create transformed data structure
             transformed_data = {
                 "id": span_data["span_id"],
@@ -165,7 +182,7 @@ class JaiquTransformer:
                     "code": span_data.get("status_code", 0),
                     "message": span_data.get("status_message", "")
                 },
-                "attributes": span_data.get("attributes", {}),
+                "attributes": processed_attributes,
                 "resource_attributes": span_data.get("resource_attributes", {})
             }
             
