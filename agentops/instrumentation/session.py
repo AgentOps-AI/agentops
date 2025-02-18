@@ -28,9 +28,9 @@ if TYPE_CHECKING:
     from agentops.session.session import Session
 
 # Use WeakValueDictionary to allow tracer garbage collection
-_session_tracers: WeakValueDictionary[str, 'SessionTracer'] = WeakValueDictionary()
+_session_tracers: WeakValueDictionary[str, 'SessionInstrumentor'] = WeakValueDictionary()
 
-class SessionTracer:
+class SessionInstrumentor:
     """Tracer for AgentOps session operations.
     
     This class is used internally by Session to provide automatic tracing.
@@ -42,7 +42,7 @@ class SessionTracer:
     """
 
     def __init__(self, session_id: str, endpoint: Optional[str] = None):
-        logger.debug(f"Initializing SessionTracer for session {session_id}")
+        logger.debug(f"Initializing {self.__class__.__name__} for session {session_id}")
         # Create resource with session ID
         self.resource = Resource(attributes={
             "service.name": "agentops",
@@ -98,7 +98,7 @@ def setup_session_tracer(sender: Session, **kwargs):
     session_id = str(sender.session_id)
     try:
         endpoint = getattr(sender.config, 'telemetry_endpoint', None)
-        tracer = SessionTracer(session_id, endpoint)
+        tracer = SessionInstrumentor(session_id, endpoint)
         _session_tracers[session_id] = tracer
         setattr(sender, 'tracer', tracer)
         logger.debug(f"Tracer set up for session {session_id}")
@@ -116,7 +116,7 @@ def cleanup_session_tracer(sender: Session, **kwargs):
         logger.debug(f"Cleaned up tracer for session {session_id}")
 
 
-def get_session_tracer(session_id: str) -> Optional[SessionTracer]:
+def get_session_tracer(session_id: str) -> Optional[SessionInstrumentor]:
     """Get the tracer for a specific session."""
     tracer = _session_tracers.get(str(session_id))
     if tracer is None:
