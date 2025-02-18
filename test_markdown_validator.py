@@ -135,5 +135,83 @@ syntax_review_task = Task(
 
 syntax_review_task.execute_sync()
 
-# End AgentOps session
-agentops.end_session("Success") 
+# End AgentOps session and analyze spans
+agentops.end_session("Success")
+
+# Define target schema for span transformation
+target_schema = {
+    "type": "object",
+    "properties": {
+        "id": {"type": "string"},
+        "trace_id": {"type": "string"},
+        "parent_id": {"type": "string"},
+        "operation": {"type": "string"},
+        "service": {"type": "string"},
+        "start": {"type": "string", "format": "date-time"},
+        "end": {"type": "string", "format": "date-time"},
+        "status": {
+            "type": "object",
+            "properties": {
+                "code": {"type": "integer"},
+                "message": {"type": "string"}
+            }
+        },
+        "attributes": {"type": "object"},
+        "events": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "name": {"type": "string"},
+                    "timestamp": {"type": "string", "format": "date-time"},
+                    "attributes": {"type": "object"}
+                }
+            }
+        }
+    },
+    "required": ["id", "trace_id", "operation", "service", "start", "end"]
+}
+
+# Initialize JaiquTransformer
+from agentops.telemetry.jaiqu_transformer import JaiquTransformer
+
+transformer = JaiquTransformer(
+    host=os.getenv("POSTGRES_HOST", "localhost"),
+    port=int(os.getenv("POSTGRES_PORT", "5432")),
+    database=os.getenv("POSTGRES_DB", "agentops_test"),
+    user=os.getenv("POSTGRES_USER", "postgres"),
+    password=os.getenv("POSTGRES_PASSWORD", "postgres"),
+    table_name="otel_spans"
+)
+
+# Wait for spans to be exported
+import time
+time.sleep(2)
+
+# Fetch and transform spans
+spans = transformer.fetch_spans()
+print(f"\nFetched {len(spans)} spans from PostgreSQL")
+
+transformed_spans = transformer.transform_spans(spans, target_schema)
+print(f"Transformed {len(transformed_spans)} spans to target schema")
+
+# Validate transformed spans
+valid_spans = 0
+for span in transformed_spans:
+    if transformer.validate_schema(span, target_schema):
+        valid_spans += 1
+
+print(f"Validated {valid_spans} spans against target schema\n")
+
+# Optional: Print some span details for verification
+if transformed_spans:
+    print("Sample transformed span:")
+    sample_span = transformed_spans[0]
+    print(f"Operation: {sample_span['operation']}")
+    print(f"Service: {sample_span['service']}")
+    print(f"Start Time: {sample_span['start']}")
+    print(f"End Time: {sample_span['end']}")
+    if 'attributes' in sample_span:
+        print("Attributes:")
+        for key, value in sample_span['attributes'].items():
+            print(f"  {key}: {value}")
