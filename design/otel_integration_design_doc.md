@@ -286,6 +286,95 @@ class Session:
    - Enhance logging and add comprehensive monitoring and tests.
    - **Expected timeline:** 1-2 weeks.
 
+4. **Phase 4: Jaiqu Integration Demo POC**
+
+### Objective
+Demonstrate a Proof-of-Concept (POC) for integrating span data with Jaiqu used as a library. In this phase, we will:
+- Extract span data from our PostgreSQL-based exporter.
+- Transform the current span JSON representation into a target format.
+- Leverage the Jaiqu Python library (by directly importing its functions) to:
+  - Validate the transformed JSON data against the desired target schema.
+  - Generate repeatable jq queries for data extraction from the transformed JSON data.
+
+This POC aims to validate the end-to-end flow—from span generation and export, through data transformation, to schema translation and query generation using Jaiqu's internal mechanisms.
+
+### Implementation Details for the Jaiqu Integration Demo POC
+
+1. **Environment Setup and Data Validation**
+   - **Database Readiness:**  
+     Ensure that the PostgreSQL instance (with the `otel_spans` table) is operational and contains the telemetry span data from the AgentOps system.
+   - **Data Verification:**  
+     Confirm that each span record contains the necessary fields (e.g., `trace_id`, `span_id`, `parent_span_id`, `name`, `start_time`, `end_time`, `attributes`, etc.) that can be mapped to the target JSON format.
+   - **Representative Dataset:**  
+     Choose sessions that include a mix of root, agent, and event spans to thoroughly test hierarchical reconstruction and data completeness.
+
+2. **Querying Span Data**
+   - **Scope of Extraction:**  
+     Define SQL queries to extract span records for a specific session or trace.
+   - **Output Format:**  
+     The queries should return span records as JSON objects matching the schema produced by our PostgreSQL exporter.
+   - **Batching/Pagination:**  
+     Implement batching or pagination mechanisms if the dataset is large.
+
+3. **Transformation Layer Design**
+   - **Mapping Schema:**  
+     Outline a clear mapping between the exported span JSON schema and the target JSON schema. This includes:
+     - Renaming fields (e.g., ensuring that the service and resource fields align with the desired target properties).
+     - Converting data types (for instance, converting nanosecond timestamps into ISO 8601 formatted strings if required).
+     - Reconstructing the hierarchical relationships among spans using the `parent_span_id` field.
+   - **Transformation Process:**  
+     Develop a Python transformation layer that:
+     - Iterates through the extracted span data.
+     - Applies the mapping and type conversion rules.
+     - Assembles a final JSON payload that is compatible with Jaiqu's schema processing.
+
+4. **Integration with Jaiqu as a Library**
+   - **Library Usage:**  
+     Instead of interacting via an external API endpoint, we will integrate by directly importing and using the Jaiqu library. Key functions and modules include:
+     - `validate_schema`: To validate that the transformed JSON data meets the requirements of the target schema.
+     - `translate_schema`: To generate a jq query that maps the transformed JSON into the desired output format.
+     - Additionally, helper functions like `repair_query` will be available for error handling and retries.
+   - **Workflow:**  
+     The integration component will perform the following:
+     - Load the transformed span data.
+     - Invoke `validate_schema(transformed_json, target_schema, key_hints, openai_api_key)` from Jaiqu to ensure the data satisfies the required schema.
+     - If validation is successful, call `translate_schema(transformed_json, target_schema, key_hints, max_retries, openai_api_key)` to generate a jq query.
+     - Apply the generated jq query against the transformed JSON to verify that it extracts the expected data.
+   - **Error Handling:**  
+     Utilize Jaiqu's inbuilt helper functions to log errors and implement retries:
+     - Log any issues occurring during schema validation or translation.
+     - If errors arise, leverage `repair_query` to attempt corrections using the provided schema and error details.
+
+5. **Testing and Validation**
+   - **Unit Testing:**  
+     Develop tests for the transformation layer to ensure individual spans are correctly mapped to the target format.
+   - **Integration Testing:**  
+     Build an end-to-end test pipeline that:
+       - Queries span data from PostgreSQL.
+       - Applies the transformation layer.
+       - Invokes Jaiqu's library functions to validate and translate the schema.
+       - Verifies that the final jq query, when applied to the transformed data, produces the expected output.
+   - **Performance Testing:**  
+     Evaluate the performance of both the transformation and schema translation steps to ensure the process scales appropriately with increased span volume.
+
+6. **Documentation and Demo Review**
+   - **Implementation Guide:**  
+     Document the detailed transformation mapping, integration steps using Jaiqu as a library, and any assumptions regarding data formats.
+   - **Stakeholder Demonstration:**  
+     Organize a demo session to showcase the full process—from span extraction and transformation through to invoking Jaiqu's `translate_schema` function.
+   - **Feedback Collection:**  
+     Gather stakeholder feedback to refine integration processes, improve performance, and address any data compatibility issues.
+   - **Future Enhancements:**  
+     Identify areas for potential improvements such as asynchronous processing, enhanced error handling, and real-time monitoring as the integration transitions towards production readiness.
+
+### Summary
+This Phase 4 POC will:
+- Extract span data from PostgreSQL.
+- Transform the exported JSON data to a target schema.
+- Directly use the Jaiqu library for schema validation and jq query translation.
+- Validate the complete end-to-end flow through thorough unit and integration tests.
+- Provide comprehensive documentation and a live demonstration using Jaiqu as a library.
+
 ## Testing Strategy
 
 ### Unit Tests
