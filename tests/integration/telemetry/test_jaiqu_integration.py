@@ -114,12 +114,18 @@ def test_end_to_end_transformation(setup_telemetry, jaiqu_transformer, target_sc
     # Fetch spans from PostgreSQL
     spans = jaiqu_transformer.fetch_spans()
     assert len(spans) > 0
-    logging.info(f"Original spans: {json.dumps(spans, indent=2)}")
     
-    # Transform spans
+    # Transform a single span to see schema comparison
+    first_span = spans[0]
+    logging.info("Single Span Transformation:")
+    logging.info(f"Original Span: {json.dumps(first_span, indent=2)}")
+    transformed_span = jaiqu_transformer.transform_span(first_span, target_schema)
+    assert transformed_span is not None
+    logging.info(f"Transformed Span: {json.dumps(transformed_span, indent=2)}")
+    
+    # Transform all spans
     transformed_spans = jaiqu_transformer.transform_spans(spans, target_schema)
     assert len(transformed_spans) > 0
-    logging.info(f"Transformed spans: {json.dumps(transformed_spans, indent=2)}")
     
     # Validate first transformed span
     first_span = transformed_spans[0]
@@ -158,13 +164,21 @@ def test_span_attribute_preservation(setup_telemetry, jaiqu_transformer, target_
     
     # Fetch and transform spans
     spans = jaiqu_transformer.fetch_spans()
+    logging.info(f"Found {len(spans)} spans")
+    logging.info("Original spans:")
+    logging.info(json.dumps(spans, indent=2))
+    
     transformed_spans = jaiqu_transformer.transform_spans(spans, target_schema)
+    logging.info(f"Transformed {len(transformed_spans)} spans")
+    logging.info("Transformed spans:")
+    logging.info(json.dumps(transformed_spans, indent=2))
     
     # Find our test span
     test_span = next(
         (s for s in transformed_spans if s["operation"] == "attribute_test"),
         None
     )
+    logging.info(f"Found test span: {test_span}")
     assert test_span is not None
     
     # Verify attributes are preserved
