@@ -10,8 +10,10 @@ The tracers capture:
     - Error states and reasons
 """
 
+from __future__ import annotations
+
 import atexit
-from typing import Any, Dict, Optional
+from typing import TYPE_CHECKING, Any, Dict, Optional
 from weakref import WeakValueDictionary
 
 from opentelemetry import trace
@@ -21,6 +23,9 @@ from opentelemetry.sdk.trace.export import BatchSpanProcessor
 
 from agentops.logging import logger
 from agentops.session import session_ended, session_initialized
+
+if TYPE_CHECKING:
+    from agentops.session.session import Session
 
 # Use WeakValueDictionary to allow tracer garbage collection
 _session_tracers: WeakValueDictionary[str, 'SessionTracer'] = WeakValueDictionary()
@@ -37,6 +42,7 @@ class SessionTracer:
     """
 
     def __init__(self, session_id: str, endpoint: Optional[str] = None):
+        logger.debug(f"Initializing SessionTracer for session {session_id}")
         # Create resource with session ID
         self.resource = Resource(attributes={
             "service.name": "agentops",
@@ -45,36 +51,30 @@ class SessionTracer:
         
         # Initialize tracer
         self.trace_provider = TracerProvider(resource=self.resource)
+        logger.debug("TracerProvider initialized")
         
         # Store processor reference for cleanup
         self.span_processor = None
         
         # Add exporter if endpoint provided
         if endpoint:
+            logger.debug(f"Configuring OTLP exporter with endpoint: {endpoint}")
             from opentelemetry.exporter.otlp.proto.http.trace_exporter import \
                 OTLPSpanExporter
             trace_exporter = OTLPSpanExporter(endpoint=endpoint)
             self.span_processor = BatchSpanProcessor(trace_exporter)
             self.trace_provider.add_span_processor(self.span_processor)
+            logger.debug("Span processor and exporter configured")
 
         self.tracer = self.trace_provider.get_tracer("agentops.session")
+        logger.debug("Session tracer ready")
         
         # Register cleanup on process exit
         atexit.register(self.shutdown)
+        logger.debug("Cleanup handler registered")
 
     def start_operation_span(self, operation_name: str, attributes: Optional[Dict[str, Any]] = None):
-        """Start a new span for a session operation.
-        
-        Used internally by Session to track operations. The Session class automatically
-        creates spans for key operations like initialization, state changes, and API calls.
-        
-        Args:
-            operation_name: Name of the operation (e.g., "session.start", "session.end")
-            attributes: Optional attributes like state changes or error details
-        
-        Returns:
-            A context manager that will automatically close the span
-        """
+        logger.debug(f"Starting operation span: {operation_name} with attributes: {attributes}")
         return self.tracer.start_as_current_span(
             operation_name,
             attributes=attributes or {}
@@ -82,16 +82,18 @@ class SessionTracer:
 
     def shutdown(self):
         """Shutdown the tracer provider and clean up resources."""
+        logger.debug("Shutting down tracer")
         if self.span_processor:
             self.span_processor.shutdown()
             self.trace_provider.shutdown()
+            logger.debug("Tracer shutdown complete")
 
     def __del__(self):
         self.shutdown()
 
 
 @session_initialized.connect
-def setup_session_tracer(sender, **kwargs):
+def setup_session_tracer(sender: Session, **kwargs):
     """Set up tracer when a session is initialized."""
     session_id = str(sender.session_id)
     try:
@@ -105,7 +107,7 @@ def setup_session_tracer(sender, **kwargs):
 
 
 @session_ended.connect 
-def cleanup_session_tracer(sender, **kwargs):
+def cleanup_session_tracer(sender: Session, **kwargs):
     """Clean up tracer when a session ends."""
     session_id = str(sender.session_id)
     if session_id in _session_tracers:
