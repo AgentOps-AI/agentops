@@ -104,6 +104,7 @@ class LlmTracker:
         """
         Overrides key methods of the specified API to record events.
         """
+        litellm_initialized = False
 
         for api in self.SUPPORTED_APIS:
             if api in sys.modules:
@@ -116,11 +117,11 @@ class LlmTracker:
                     if Version(module_version) >= parse("1.3.1"):
                         provider = LiteLLMProvider(self.client)
                         provider.override()
+                        litellm_initialized = True
                     else:
                         logger.warning(f"Only LiteLLM>=1.3.1 supported. v{module_version} found.")
-                    return  # If using an abstraction like litellm, do not patch the underlying LLM APIs
 
-                if api == "openai":
+                if api == "openai" and not litellm_initialized:
                     # Patch openai v1.0.0+ methods
                     if hasattr(module, "__version__"):
                         module_version = parse(module.__version__)
