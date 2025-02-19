@@ -1,3 +1,4 @@
+import inspect
 import sys
 from importlib import import_module
 from importlib.metadata import version
@@ -99,21 +100,53 @@ class LlmTracker:
 
     def __init__(self, client):
         self.client = client
+        self.litellm_initialized = False
+
+    def _is_litellm_call(self):
+        """
+        Detects if the API call originated from LiteLLM.
+        Returns True if LiteLLM appears in the call stack **before** OpenAI.
+        """
+        stack = inspect.stack()
+
+        litellm_seen = False  # Track if LiteLLM was encountered
+        openai_seen = False  # Track if OpenAI was encountered
+
+        for frame in stack:
+            module = inspect.getmodule(frame.frame)
+            
+            module_name = module.__name__ if module else None
+            
+            filename = frame.filename.lower()
+            
+            if module_name and "litellm" in module_name or "litellm" in filename:
+                print("LiteLLM detected.")
+                litellm_seen = True
+
+            if module_name and "openai" in module_name or "openai" in filename:
+                print("OpenAI detected.")
+                openai_seen = True
+
+                if not litellm_seen:
+                    return False
+
+        return litellm_seen
 
     def override_api(self):
         """
         Overrides key methods of the specified API to record events.
         """
         litellm_initialized = False
-
+        
         for api in self.SUPPORTED_APIS:
             if api in sys.modules:
                 module = import_module(api)
+                
                 if api == "litellm":
                     module_version = version(api)
                     if module_version is None:
                         logger.warning("Cannot determine LiteLLM version. Only LiteLLM>=1.3.1 supported.")
-
+                        
                     if Version(module_version) >= parse("1.3.1"):
                         provider = LiteLLMProvider(self.client)
                         provider.override()
@@ -121,9 +154,10 @@ class LlmTracker:
                     else:
                         logger.warning(f"Only LiteLLM>=1.3.1 supported. v{module_version} found.")
 
-                if api == "openai" and not litellm_initialized:
+                if api == "openai":
                     # Patch openai v1.0.0+ methods
-                    if hasattr(module, "__version__"):
+                    # Ensure OpenAI is only initialized if it was NOT called inside LiteLLM
+                    if not self._is_litellm_call():
                         module_version = parse(module.__version__)
                         if module_version >= parse("1.0.0"):
                             provider = OpenAiProvider(self.client)
