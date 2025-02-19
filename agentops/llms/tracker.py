@@ -154,15 +154,16 @@ class LlmTracker:
                     # Patch openai v1.0.0+ methods
                     # Ensure OpenAI is only initialized if it was NOT called inside LiteLLM
                     if not self._is_litellm_call():
-                        module_version = parse(module.__version__)
-                        if module_version >= parse("1.0.0"):
-                            provider = OpenAiProvider(self.client)
-                            provider.override()
-                        else:
-                            raise DeprecationWarning(
-                                "OpenAI versions < 0.1 are no longer supported by AgentOps. Please upgrade OpenAI or "
-                                "downgrade AgentOps to <=0.3.8."
-                            )
+                        if hasattr(module, "__version__"):
+                            module_version = parse(module.__version__)
+                            if module_version >= parse("1.0.0"):
+                                provider = OpenAiProvider(self.client)
+                                provider.override()
+                            else:
+                                raise DeprecationWarning(
+                                    "OpenAI versions < 0.1 are no longer supported by AgentOps. Please upgrade OpenAI or "
+                                    "downgrade AgentOps to <=0.3.8."
+                                )
 
                 if api == "cohere":
                     # Patch cohere v5.4.0+ methods
