@@ -120,11 +120,9 @@ class LlmTracker:
             filename = frame.filename.lower()
             
             if module_name and "litellm" in module_name or "litellm" in filename:
-                print("LiteLLM detected.")
                 litellm_seen = True
 
             if module_name and "openai" in module_name or "openai" in filename:
-                print("OpenAI detected.")
                 openai_seen = True
 
                 if not litellm_seen:
@@ -136,8 +134,6 @@ class LlmTracker:
         """
         Overrides key methods of the specified API to record events.
         """
-        litellm_initialized = False
-        
         for api in self.SUPPORTED_APIS:
             if api in sys.modules:
                 module = import_module(api)
@@ -150,7 +146,7 @@ class LlmTracker:
                     if Version(module_version) >= parse("1.3.1"):
                         provider = LiteLLMProvider(self.client)
                         provider.override()
-                        litellm_initialized = True
+                        self.litellm_initialized = True
                     else:
                         logger.warning(f"Only LiteLLM>=1.3.1 supported. v{module_version} found.")
 
