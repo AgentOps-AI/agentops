@@ -25,33 +25,9 @@ class TestSessionStart:
         session = agentops.start_session()
         assert session is not None
 
-
-class TestSessionDecorators:
-    def test_session_decorator_auto_end(self):
-        """Test that session decorator automatically ends session by default"""
-
-        @agentops.start_session
-        def sample_function():
-            return "test complete"
-
-        with patch.object(agentops._client, "end_session") as mock_end_session:
-            result = sample_function()
-
-            assert result == "test complete"
-            mock_end_session.assert_called_once_with(end_state=SessionState.SUCCEEDED, is_auto_end=True)
-
-    def test_session_decorator_with_tags(self):
-        """Test that session decorator accepts tags parameter"""
+    def test_session_start_with_tags(self):
+        """Test that start_session with tags returns a session directly, not a partial"""
         test_tags = ["test1", "test2"]
-
-        @agentops.start_session(tags=test_tags)
-        def sample_function():
-            return "test complete"
-
-        with patch.object(agentops._client, "start_session") as mock_start_session, \
-             patch.object(agentops._client, "end_session") as mock_end_session:
-            result = sample_function()
-
-            assert result == "test complete"
-            mock_start_session.assert_called_once_with(test_tags, None)
-            mock_end_session.assert_called_once_with(end_state=SessionState.SUCCEEDED, is_auto_end=True)
+        session = agentops.start_session(tags=test_tags)
+        assert isinstance(session, Session), "start_session with tags should return a Session instance"
+        assert session.tags == test_tags

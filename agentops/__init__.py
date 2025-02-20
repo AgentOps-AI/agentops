@@ -53,49 +53,18 @@ def configure(**kwargs: Unpack[ConfigDict]):
 
 
 def start_session(
-    wrapped=None, *, tags: Optional[List[str]] = None
-) -> Union[Session, Callable, None]:
-    """Start a new session for recording events. Can be used as a decorator or function.
-
-    When used as a function:
-        session = start_session(tags=["test_run"])
-
-    When used as a decorator:
-        @start_session
-        def my_function():
-            pass
-
-        @start_session(tags=["test_run"])
-        def my_function():
-            pass
+    tags: Optional[List[str]] = None
+) -> Optional[Session]:
+    """Start a new session for recording events.
 
     Args:
-        wrapped (Callable, optional): The function being wrapped when used as a decorator
         tags (List[str], optional): Tags that can be used for grouping or sorting later.
             e.g. ["test_run"]
 
     Returns:
-        Union[Session, Callable, None]: Returns Session when used as a function,
-        or a wrapped function when used as a decorator.
+        Optional[Session]: Returns Session if successful, None otherwise.
     """
-    # Define the decorator function that will be used in both cases
-    def create_wrapper(func):
-        @wrapt.decorator
-        def wrapper(wrapped, instance, args, kwargs):
-            session = _client.start_session(tags)
-            try:
-                return wrapped(*args, **kwargs)
-            finally:
-                if session:
-                    _client.end_session(end_state=SessionState.SUCCEEDED, is_auto_end=True)
-        return wrapper(func)
-
-    # Case 1: Called as a regular function - start_session() or start_session(tags=[...])
-    if wrapped is None:
-        return _client.start_session(tags)
-        
-    # Case 2: Used as a decorator - @start_session or @start_session(tags=[...])
-    return create_wrapper(wrapped)
+    return _client.start_session(tags)
 
 
 def end_session(
