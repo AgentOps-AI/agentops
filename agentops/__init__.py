@@ -53,7 +53,7 @@ def configure(**kwargs: Unpack[ConfigDict]):
 
 
 def start_session(
-    wrapped=None, *, tags: Optional[List[str]] = None, inherited_session_id: Optional[str] = None
+    wrapped=None, *, tags: Optional[List[str]] = None
 ) -> Union[Session, Callable, None]:
     """Start a new session for recording events. Can be used as a decorator or function.
 
@@ -73,32 +73,29 @@ def start_session(
         wrapped (Callable, optional): The function being wrapped when used as a decorator
         tags (List[str], optional): Tags that can be used for grouping or sorting later.
             e.g. ["test_run"]
-        inherited_session_id (str, optional): Set the session ID to inherit from another client
 
     Returns:
         Union[Session, Callable, None]: Returns Session when used as a function,
         or a wrapped function when used as a decorator.
     """
     # Define the decorator function that will be used in both cases
-    @wrapt.decorator
-    def wrapper(wrapped, instance, args, kwargs):
-        session = _client.start_session(tags, inherited_session_id)
-        try:
-            return wrapped(*args, **kwargs)
-        finally:
-            if session:
-                _client.end_session(end_state=SessionState.SUCCEEDED, is_auto_end=True)
+    def create_wrapper(func):
+        @wrapt.decorator
+        def wrapper(wrapped, instance, args, kwargs):
+            session = _client.start_session(tags)
+            try:
+                return wrapped(*args, **kwargs)
+            finally:
+                if session:
+                    _client.end_session(end_state=SessionState.SUCCEEDED, is_auto_end=True)
+        return wrapper(func)
 
     # Case 1: Called as a regular function - start_session() or start_session(tags=[...])
     if wrapped is None:
-        return _client.start_session(tags, inherited_session_id)
+        return _client.start_session(tags)
         
-    # Case 2: Used as a plain decorator - @start_session
-    if callable(wrapped):
-        return wrapper(wrapped)
-        
-    # This case should never happen as we've handled both function call and decorator cases
-    raise ValueError("Invalid use of start_session")
+    # Case 2: Used as a decorator - @start_session or @start_session(tags=[...])
+    return create_wrapper(wrapped)
 
 
 def end_session(
