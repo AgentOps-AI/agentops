@@ -20,17 +20,13 @@ from weakref import WeakValueDictionary
 from opentelemetry import context, trace
 from opentelemetry.instrumentation.instrumentor import BaseInstrumentor
 from opentelemetry.sdk.resources import Resource
-from opentelemetry.sdk.trace import (ReadableSpan, Span, SpanProcessor, Tracer,
-                                     TracerProvider)
-from opentelemetry.sdk.trace.export import (BatchSpanProcessor,
-                                            SimpleSpanProcessor)
+from opentelemetry.sdk.trace import ReadableSpan, Span, SpanProcessor, Tracer, TracerProvider
+from opentelemetry.sdk.trace.export import BatchSpanProcessor, SimpleSpanProcessor
 from opentelemetry.trace import NonRecordingSpan, SpanContext
-from opentelemetry.trace.propagation.tracecontext import \
-    TraceContextTextMapPropagator
+from opentelemetry.trace.propagation.tracecontext import TraceContextTextMapPropagator
 from opentelemetry.sdk.trace import TracerProvider as SDKTracerProvider  # The SDK implementation
 
-from agentops.instrumentation.session.exporters import (
-    RegularEventExporter, SessionLifecycleExporter)
+from agentops.instrumentation.session.exporters import RegularEventExporter, SessionLifecycleExporter
 from agentops.logging import logger
 from agentops.session import session_ended, session_started
 
@@ -49,43 +45,25 @@ class SessionTracer:
     Handles the session-level tracing context and span management.
     """
 
-    session: Session
-    tracer: trace.Tracer
-
     def __init__(self, session_id: str, tracer: trace.Tracer):
         self.session_id = session_id
         self.tracer = tracer
-        self._root_span: Span | None = None  # Use union type syntax
-        self._context: context.Context | None = None
-
-    @contextlib.contextmanager
-    def start_root_span(self):
-        """Start and manage the root session span."""
-        if self._root_span is not None:
-            raise RuntimeError("Root span already exists")
-
-        root_span = self.tracer.start_span(
+        self._root_span = self.tracer.start_span(
             "session.lifecycle", attributes={"session.id": self.session_id, "session.type": "root"}
         )
-        self._root_span = root_span  # type: ignore
-        self._context = trace.set_span_in_context(root_span)
-
-        try:
-            yield root_span
-        finally:
-            root_span.end()
-            self._root_span = None
-            self._context = None
+        # Set the context with the root span
+        self._context = trace.set_span_in_context(self._root_span)
 
     @contextlib.contextmanager
     def start_operation(self, name: str, attributes: Optional[Dict[str, Any]] = None):
         """Start an operation span as child of root span."""
-        if self._context is None:
+        if self._context is None or self._root_span is None:
             raise RuntimeError("No active session context")
 
         attributes = attributes or {}
         attributes["session.id"] = self.session_id
 
+        # Attach the session context while we create the new span
         token = context.attach(self._context)
         try:
             with self.tracer.start_as_current_span(name, attributes=attributes) as span:
@@ -101,6 +79,11 @@ class SessionTracer:
     def extract_context(self, carrier: Dict[str, str]) -> Optional[context.Context]:
         """Extract context from carrier."""
         return TraceContextTextMapPropagator().extract(carrier)
+
+    def __del__(self):
+        """Cleanup when the tracer is destroyed."""
+        if self._root_span is not None:
+            self._root_span.end()
 
 
 class SessionInstrumentor:
@@ -149,7 +132,7 @@ class SessionInstrumentor:
         # Create session tracer
         otel_tracer = self.otel_provider.get_tracer("agentops.session")
         self.session_tracer = SessionTracer(str(self.session.session_id), otel_tracer)
-        
+
         SessionInstrumentor._is_instrumented = True
         logger.debug("Session tracer ready")
         self.session._tracer = self.session_tracer
