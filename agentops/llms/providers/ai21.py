@@ -166,10 +166,7 @@ class AI21Provider(BaseProvider):
         AsyncChatCompletions.create = patched_function
 
     def undo_override(self):
-        if (
-            self.original_create is not None
-            and self.original_create_async is not None
-        ):
+        if self.original_create is not None and self.original_create_async is not None:
             from ai21.clients.studio.resources.chat import (
                 ChatCompletions,
                 AsyncChatCompletions,
