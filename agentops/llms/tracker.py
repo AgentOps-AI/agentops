@@ -1,3 +1,4 @@
+import inspect
 import sys
 from importlib import import_module
 from importlib.metadata import version
@@ -99,15 +100,60 @@ class LlmTracker:
 
     def __init__(self, client):
         self.client = client
+        self.litellm_initialized = False
+
+    def _is_litellm_call(self):
+        """
+        Detects if the API call originated from LiteLLM.
+
+        **Issue We Are Addressing:**
+        - When using LiteLLM, it internally calls OpenAI methods, which results in OpenAI being initialized by default.
+        - This creates an issue where OpenAI is tracked as the primary provider, even when the request was routed via LiteLLM.
+        - We need to ensure that OpenAI is only tracked if it was explicitly used and **not** invoked indirectly through LiteLLM.
+
+        **How This Works:**
+        - The function checks the call stack (execution history) to determine the order in which modules were called.
+        - If LiteLLM appears in the call stack **before** OpenAI, then OpenAI was invoked via LiteLLM, meaning we should ignore OpenAI.
+        - If OpenAI appears first without LiteLLM, then OpenAI was used directly, and we should track it as expected.
+
+        **Return Value:**
+        - Returns `True` if the API call originated from LiteLLM.
+        - Returns `False` if OpenAI was directly called without going through LiteLLM.
+        """
+
+        stack = inspect.stack()
+
+        litellm_seen = False  # Track if LiteLLM was encountered in the stack
+        openai_seen = False  # Track if OpenAI was encountered in the stack
+
+        for frame in stack:
+            module = inspect.getmodule(frame.frame)
+
+            module_name = module.__name__ if module else None
+
+            filename = frame.filename.lower()
+
+            if module_name and "litellm" in module_name or "litellm" in filename:
+                litellm_seen = True
+
+            if module_name and "openai" in module_name or "openai" in filename:
+                openai_seen = True
+
+                # If OpenAI is seen **before** LiteLLM, it means OpenAI was used directly, so return False
+                if not litellm_seen:
+                    return False
+
+        # If LiteLLM was seen at any point before OpenAI, return True (indicating an indirect OpenAI call via LiteLLM)
+        return litellm_seen
 
     def override_api(self):
         """
         Overrides key methods of the specified API to record events.
         """
-
         for api in self.SUPPORTED_APIS:
             if api in sys.modules:
                 module = import_module(api)
+
                 if api == "litellm":
                     module_version = version(api)
                     if module_version is None:
@@ -116,22 +162,24 @@ class LlmTracker:
                     if Version(module_version) >= parse("1.3.1"):
                         provider = LiteLLMProvider(self.client)
                         provider.override()
+                        self.litellm_initialized = True
                     else:
                         logger.warning(f"Only LiteLLM>=1.3.1 supported. v{module_version} found.")
-                    return  # If using an abstraction like litellm, do not patch the underlying LLM APIs
 
                 if api == "openai":
                     # Patch openai v1.0.0+ methods
-                    if hasattr(module, "__version__"):
-                        module_version = parse(module.__version__)
-                        if module_version >= parse("1.0.0"):
-                            provider = OpenAiProvider(self.client)
-                            provider.override()
-                        else:
-                            raise DeprecationWarning(
-                                "OpenAI versions < 0.1 are no longer supported by AgentOps. Please upgrade OpenAI or "
-                                "downgrade AgentOps to <=0.3.8."
-                            )
+                    # Ensure OpenAI is only initialized if it was NOT called inside LiteLLM
+                    if not self._is_litellm_call():
+                        if hasattr(module, "__version__"):
+                            module_version = parse(module.__version__)
+                            if module_version >= parse("1.0.0"):
+                                provider = OpenAiProvider(self.client)
+                                provider.override()
+                            else:
+                                raise DeprecationWarning(
+                                    "OpenAI versions < 0.1 are no longer supported by AgentOps. Please upgrade OpenAI or "
+                                    "downgrade AgentOps to <=0.3.8."
+                                )
 
                 if api == "cohere":
                     # Patch cohere v5.4.0+ methods
