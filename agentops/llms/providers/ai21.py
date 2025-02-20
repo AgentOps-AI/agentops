@@ -16,8 +16,6 @@ from agentops.singleton import singleton
 class AI21Provider(BaseProvider):
     original_create = None
     original_create_async = None
-    original_answer = None
-    original_answer_async = None
 
     def __init__(self, client):
         super().__init__(client)
@@ -171,8 +169,6 @@ class AI21Provider(BaseProvider):
         if (
             self.original_create is not None
             and self.original_create_async is not None
-            and self.original_answer is not None
-            and self.original_answer_async is not None
         ):
             from ai21.clients.studio.resources.chat import (
                 ChatCompletions,
