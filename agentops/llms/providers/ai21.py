@@ -28,10 +28,8 @@ class AI21Provider(BaseProvider):
         from ai21.stream.stream import Stream
         from ai21.stream.async_stream import AsyncStream
         from ai21.models.chat.chat_completion_chunk import ChatCompletionChunk
-        from ai21.models.chat.chat_completion_response import ChatCompletionResponse
 
         llm_event = LLMEvent(init_timestamp=init_timestamp, params=kwargs)
-        action_event = ActionEvent(init_timestamp=init_timestamp, params=kwargs)
 
         if session is not None:
             llm_event.session_id = session.session_id
