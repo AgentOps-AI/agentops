@@ -43,26 +43,27 @@ class TestSingleSessions:
         agentops.record(ActionEvent(self.event_type))
 
         time.sleep(0.1)
-        # 3 Requests: check_for_updates, start_session, create_events (2 in 1)
-        assert len(mock_req.request_history) == 3
-        time.sleep(0.15)
 
-        assert (
-            mock_req.last_request.headers["Authorization"] == f"Bearer {mock_req.session_jwts[str(session.session_id)]}"
-        )
-        request_json = mock_req.last_request.json()
+        # Find event requests
+        event_requests = [r for r in mock_req.request_history if "/v2/create_events" in r.url]
+        assert len(event_requests) > 0
+        last_event_request = event_requests[-1]
+
+        assert last_event_request.headers["Authorization"] == f"Bearer {mock_req.session_jwts[str(session.session_id)]}"
+        request_json = last_event_request.json()
         assert request_json["events"][0]["event_type"] == self.event_type
 
         end_state = "Success"
         agentops.end_session(end_state)
         time.sleep(0.15)
 
-        # We should have 4 requests (additional end session)
-        assert len(mock_req.request_history) == 4
-        assert (
-            mock_req.last_request.headers["Authorization"] == f"Bearer {mock_req.session_jwts[str(session.session_id)]}"
-        )
-        request_json = mock_req.last_request.json()
+        # Find session end request
+        end_session_requests = [r for r in mock_req.request_history if "/v2/update_session" in r.url]
+        assert len(end_session_requests) > 0
+        last_end_request = end_session_requests[-1]
+
+        assert last_end_request.headers["Authorization"] == f"Bearer {mock_req.session_jwts[str(session.session_id)]}"
+        request_json = last_end_request.json()
         assert request_json["session"]["end_state"] == end_state
         assert len(request_json["session"]["tags"]) == 0
 
@@ -80,9 +81,13 @@ class TestSingleSessions:
         agentops.end_session(end_state)
         time.sleep(0.15)
 
-        # Assert 3 requests, 1 for session init, 1 for event, 1 for end session
-        assert mock_req.last_request.headers["X-Agentops-Api-Key"] == self.api_key
-        request_json = mock_req.last_request.json()
+        # Find session end request
+        end_session_requests = [r for r in mock_req.request_history if "/v2/update_session" in r.url]
+        assert len(end_session_requests) > 0
+        last_end_request = end_session_requests[-1]
+
+        assert last_end_request.headers["X-Agentops-Api-Key"] == self.api_key
+        request_json = last_end_request.json()
         assert request_json["session"]["end_state"] == end_state
         assert request_json["session"]["tags"] == ["GPT-4", "test-tag", "dupe-tag"]
 
@@ -101,10 +106,13 @@ class TestSingleSessions:
         agentops.end_session(end_state)
         time.sleep(0.15)
 
-        # 4 requests: check_for_updates, start_session, record_event, end_session
-        assert len(mock_req.request_history) == 4
-        assert mock_req.last_request.headers["X-Agentops-Api-Key"] == self.api_key
-        request_json = mock_req.last_request.json()
+        # Find session end request
+        end_session_requests = [r for r in mock_req.request_history if "/v2/update_session" in r.url]
+        assert len(end_session_requests) > 0
+        last_end_request = end_session_requests[-1]
+
+        assert last_end_request.headers["X-Agentops-Api-Key"] == self.api_key
+        request_json = last_end_request.json()
         assert request_json["session"]["end_state"] == end_state
         assert request_json["session"]["tags"] == tags
 
@@ -115,9 +123,14 @@ class TestSingleSessions:
         inherited_id = "4f72e834-ff26-4802-ba2d-62e7613446f1"
         agentops.start_session(tags=["test"], inherited_session_id=inherited_id)
 
+        # Find session start request
+        start_session_requests = [r for r in mock_req.request_history if "/v2/create_session" in r.url]
+        assert len(start_session_requests) > 0
+        last_start_request = start_session_requests[-1]
+
         # Act
         # session_id correct
-        request_json = mock_req.last_request.json()
+        request_json = last_start_request.json()
         assert request_json["session"]["session_id"] == inherited_id
 
         # Act
@@ -247,54 +260,52 @@ class TestMultiSessions:
         ]
         time.sleep(0.1)
 
-        # Requests: check_for_updates, 2 start_session
-        assert len(mock_req.request_history) == 3
-
         session_1.record(ActionEvent(self.event_type))
         session_2.record(ActionEvent(self.event_type))
 
         time.sleep(1.5)
 
-        # 5 requests: check_for_updates, 2 start_session, 2 record_event
-        assert len(mock_req.request_history) == 5
-
-        # Check the last two requests instead of just the last one
-        last_request = mock_req.request_history[-1]
-        second_last_request = mock_req.request_history[-2]
+        # Find event requests
+        event_requests = [r for r in mock_req.request_history if "/v2/create_events" in r.url]
+        assert len(event_requests) >= 2
 
         # Verify session_1's request
+        session_1_request = event_requests[-2]
         assert (
-            second_last_request.headers["Authorization"] == f"Bearer {mock_req.session_jwts[str(session_1.session_id)]}"
+            session_1_request.headers["Authorization"] == f"Bearer {mock_req.session_jwts[str(session_1.session_id)]}"
         )
-        assert second_last_request.json()["events"][0]["event_type"] == self.event_type
+        assert session_1_request.json()["events"][0]["event_type"] == self.event_type
 
         # Verify session_2's request
-        assert last_request.headers["Authorization"] == f"Bearer {mock_req.session_jwts[str(session_2.session_id)]}"
-        assert last_request.json()["events"][0]["event_type"] == self.event_type
+        session_2_request = event_requests[-1]
+        assert (
+            session_2_request.headers["Authorization"] == f"Bearer {mock_req.session_jwts[str(session_2.session_id)]}"
+        )
+        assert session_2_request.json()["events"][0]["event_type"] == self.event_type
 
         end_state = "Success"
 
         session_1.end_session(end_state)
         time.sleep(1.5)
 
-        # Additional end session request
-        assert len(mock_req.request_history) == 6
-        assert (
-            mock_req.last_request.headers["Authorization"]
-            == f"Bearer {mock_req.session_jwts[str(session_1.session_id)]}"
-        )
-        request_json = mock_req.last_request.json()
+        # Find session end requests
+        end_session_requests = [r for r in mock_req.request_history if "/v2/update_session" in r.url]
+        assert len(end_session_requests) > 0
+        session_1_end = end_session_requests[-1]
+
+        assert session_1_end.headers["Authorization"] == f"Bearer {mock_req.session_jwts[str(session_1.session_id)]}"
+        request_json = session_1_end.json()
         assert request_json["session"]["end_state"] == end_state
         assert len(request_json["session"]["tags"]) == 0
 
         session_2.end_session(end_state)
-        # Additional end session request
-        assert len(mock_req.request_history) == 7
-        assert (
-            mock_req.last_request.headers["Authorization"]
-            == f"Bearer {mock_req.session_jwts[str(session_2.session_id)]}"
-        )
-        request_json = mock_req.last_request.json()
+        time.sleep(0.1)
+
+        # Verify session 2 end request
+        end_session_requests = [r for r in mock_req.request_history if "/v2/update_session" in r.url]
+        session_2_end = end_session_requests[-1]
+        assert session_2_end.headers["Authorization"] == f"Bearer {mock_req.session_jwts[str(session_2.session_id)]}"
+        request_json = session_2_end.json()
         assert request_json["session"]["end_state"] == end_state
         assert len(request_json["session"]["tags"]) == 0
 

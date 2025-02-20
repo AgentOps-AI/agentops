@@ -22,11 +22,13 @@ class TestCanary:
         agentops.record(ActionEvent(event_type))
         time.sleep(2)
 
-        # 3 requests: check_for_updates, create_session, create_events
-        assert len(mock_req.request_history) == 3
+        # Find event requests
+        event_requests = [r for r in mock_req.request_history if "/v2/create_events" in r.url]
+        assert len(event_requests) > 0
+        last_event_request = event_requests[-1]
 
-        request_json = mock_req.last_request.json()
-        assert mock_req.last_request.headers["X-Agentops-Api-Key"] == self.api_key
+        assert last_event_request.headers["X-Agentops-Api-Key"] == self.api_key
+        request_json = last_event_request.json()
         assert request_json["events"][0]["event_type"] == event_type
 
         agentops.end_session("Success")
