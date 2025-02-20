@@ -105,12 +105,26 @@ class LlmTracker:
     def _is_litellm_call(self):
         """
         Detects if the API call originated from LiteLLM.
-        Returns True if LiteLLM appears in the call stack **before** OpenAI.
+
+        **Issue We Are Addressing:**
+        - When using LiteLLM, it internally calls OpenAI methods, which results in OpenAI being initialized by default.
+        - This creates an issue where OpenAI is tracked as the primary provider, even when the request was routed via LiteLLM.
+        - We need to ensure that OpenAI is only tracked if it was explicitly used and **not** invoked indirectly through LiteLLM.
+
+        **How This Works:**
+        - The function checks the call stack (execution history) to determine the order in which modules were called.
+        - If LiteLLM appears in the call stack **before** OpenAI, then OpenAI was invoked via LiteLLM, meaning we should ignore OpenAI.
+        - If OpenAI appears first without LiteLLM, then OpenAI was used directly, and we should track it as expected.
+
+        **Return Value:**
+        - Returns `True` if the API call originated from LiteLLM.
+        - Returns `False` if OpenAI was directly called without going through LiteLLM.
         """
+
         stack = inspect.stack()
 
-        litellm_seen = False  # Track if LiteLLM was encountered
-        openai_seen = False  # Track if OpenAI was encountered
+        litellm_seen = False  # Track if LiteLLM was encountered in the stack
+        openai_seen = False  # Track if OpenAI was encountered in the stack
 
         for frame in stack:
             module = inspect.getmodule(frame.frame)
@@ -125,9 +139,11 @@ class LlmTracker:
             if module_name and "openai" in module_name or "openai" in filename:
                 openai_seen = True
 
+                # If OpenAI is seen **before** LiteLLM, it means OpenAI was used directly, so return False
                 if not litellm_seen:
                     return False
 
+        # If LiteLLM was seen at any point before OpenAI, return True (indicating an indirect OpenAI call via LiteLLM)
         return litellm_seen
 
     def override_api(self):
