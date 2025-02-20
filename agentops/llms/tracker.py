@@ -114,11 +114,11 @@ class LlmTracker:
 
         for frame in stack:
             module = inspect.getmodule(frame.frame)
-            
+
             module_name = module.__name__ if module else None
-            
+
             filename = frame.filename.lower()
-            
+
             if module_name and "litellm" in module_name or "litellm" in filename:
                 litellm_seen = True
 
@@ -137,12 +137,12 @@ class LlmTracker:
         for api in self.SUPPORTED_APIS:
             if api in sys.modules:
                 module = import_module(api)
-                
+
                 if api == "litellm":
                     module_version = version(api)
                     if module_version is None:
                         logger.warning("Cannot determine LiteLLM version. Only LiteLLM>=1.3.1 supported.")
-                        
+
                     if Version(module_version) >= parse("1.3.1"):
                         provider = LiteLLMProvider(self.client)
                         provider.override()
