@@ -1,6 +1,8 @@
 from opentelemetry import trace
+
 import agentops
 from agentops.session import Session
+
 
 def main():
     session = Session(tags=["demo", "basic-tracing"])
@@ -16,7 +18,6 @@ def main():
         
         with session.tracer.start_operation("sub_task") as sub_span:
             sub_span.set_attribute("sub_task.name", "validation")
-            # More work...
 
 def process_data():
     # Simulated work

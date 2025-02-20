@@ -1,6 +1,5 @@
 """Tests for session tracing functionality."""
 
-from unittest.mock import Mock, patch
 from uuid import uuid4
 
 import pytest
@@ -68,31 +67,30 @@ def test_session_tracer_cleanup(agentops_session):
 
 def test_multiple_session_tracers():
     """Test that multiple sessions can have independent tracers"""
-    with patch("agentops.api.session.SessionApiClient"):
-        session1 = Session(session_id=uuid4(), config=Config(api_key="test-key"))
-        session2 = Session(session_id=uuid4(), config=Config(api_key="test-key"))
+    session1 = Session(session_id=uuid4(), config=Config(api_key="test-key"))
+    session2 = Session(session_id=uuid4(), config=Config(api_key="test-key"))
 
-        setup_session_tracer(session1)
-        setup_session_tracer(session2)
+    setup_session_tracer(session1)
+    setup_session_tracer(session2)
 
-        # Verify both sessions have tracers
-        assert hasattr(session1, "_tracer")
-        assert hasattr(session2, "_tracer")
+    # Verify both sessions have tracers
+    assert hasattr(session1, "_tracer")
+    assert hasattr(session2, "_tracer")
 
-        # Verify tracers are different
-        assert session1.tracer != session2.tracer
+    # Verify tracers are different
+    assert session1.tracer != session2.tracer
 
-        # Test operations don't interfere
-        with session1.tracer.start_root_span() as root1:
-            with session2.tracer.start_root_span() as root2:
-                with session1.tracer.start_operation("op1") as span1:
-                    with session2.tracer.start_operation("op2") as span2:
-                        span1.set_attribute("session", "1")
-                        span2.set_attribute("session", "2")
+    # Test operations don't interfere
+    with session1.tracer.start_root_span() as root1:
+        with session2.tracer.start_root_span() as root2:
+            with session1.tracer.start_operation("op1") as span1:
+                with session2.tracer.start_operation("op2") as span2:
+                    span1.set_attribute("session", "1")
+                    span2.set_attribute("session", "2")
 
-        # Clean up
-        cleanup_session_tracer(session1)
-        cleanup_session_tracer(session2)
+    # Clean up
+    cleanup_session_tracer(session1)
+    cleanup_session_tracer(session2)
 
 
 @pytest.mark.asyncio
