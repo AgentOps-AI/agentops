@@ -64,15 +64,15 @@ def test_session_lifecycle_signals(mock_req):
         received_signals.append(("started", sender.session_id))
 
     @session_ending.connect
-    def on_session_ending(sender, session_id, end_state, end_state_reason, **kwargs):
+    def on_session_ending(sender, end_state, end_state_reason, **kwargs):
         received_signals.append(("ending", end_state, end_state_reason))
 
     @session_ended.connect
-    def on_session_ended(sender, session_id, end_state, end_state_reason, **kwargs):
+    def on_session_ended(sender, end_state, end_state_reason, **kwargs):
         received_signals.append(("ended", end_state, end_state_reason))
 
     @session_updated.connect
-    def on_session_updated(sender, session_id, **kwargs):
+    def on_session_updated(sender, **kwargs):
         received_signals.append(("updated", session_id))
 
     agentops_session = agentops.start_session()
@@ -96,8 +96,8 @@ def test_session_update_signal(mock_req):
     received_signals = []
 
     @session_updated.connect
-    def on_session_updated(sender, session_id, **kwargs):
-        received_signals.append(("updated", session_id))
+    def on_session_updated(sender, **kwargs):
+        received_signals.append(("updated", sender.session_id))
 
     # Create session (initialization happens automatically)
     session = agentops.start_session()
@@ -116,8 +116,8 @@ def test_signals_not_emitted_after_session_end(mock_req, agentops_session):
     received_signals = []
 
     @session_updated.connect
-    def on_session_updated(sender, session_id, **kwargs):
-        received_signals.append(("updated", session_id))
+    def on_session_updated(sender, **kwargs):
+        received_signals.append(("updated", sender.session_id))
 
     # End session
     agentops_session.end(end_state=SessionState.SUCCEEDED)

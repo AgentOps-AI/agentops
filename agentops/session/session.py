@@ -272,7 +272,7 @@ class Session:
             )
             self.api.update_session(session_data)
 
-            session_updated.send(self, session_id=self.session_id)
+            session_updated.send(self)
             session_ended.send(self, 
                 session_id=self.session_id,
                 end_state=str(self.state),
@@ -283,7 +283,7 @@ class Session:
     def start(self):
         """Start the session"""
         with self._lock:
-            session_starting.send(self, session_id=self.session_id)
+            session_starting.send(self)
             self.init_timestamp = get_ISO_time()
 
             try:
@@ -306,7 +306,7 @@ class Session:
                 self.state = SessionState.RUNNING
                 
                 # Send session_started signal with self as sender
-                session_started.send(self, session_id=self.session_id)
+                session_started.send(self)
                 logger.debug("Session started successfully")
                 return True
 
@@ -361,7 +361,7 @@ class Session:
             return
         
         self.tags.extend(tags)
-        session_updated.send(self, session_id=self.session_id)
+        session_updated.send(self)
 
     def set_tags(self, tags: List[str]) -> None:
         """Set session tags, replacing existing ones
@@ -374,7 +374,7 @@ class Session:
             return
         
         self.tags = tags
-        session_updated.send(self, session_id=self.session_id)
+        session_updated.send(self)
 
     @property
     def tracer(self) -> "SessionTracer":
