@@ -79,14 +79,7 @@ def start_session(
         Union[Session, Callable, None]: Returns Session when used as a function,
         or a wrapped function when used as a decorator.
     """
-    # If called directly as a function
-    if wrapped is None:
-        # Return a partial function when used as @start_session(tags=[...])
-        if tags is not None or inherited_session_id is not None:
-            return functools.partial(start_session, tags=tags, inherited_session_id=inherited_session_id)
-        return _client.start_session(tags, inherited_session_id)
-
-    # Define the decorator function
+    # Define the decorator function that will be used in both cases
     @wrapt.decorator
     def wrapper(wrapped, instance, args, kwargs):
         session = _client.start_session(tags, inherited_session_id)
@@ -96,8 +89,16 @@ def start_session(
             if session:
                 _client.end_session(end_state=SessionState.SUCCEEDED, is_auto_end=True)
 
-    # If used as @start_session without parameters or with @start_session(tags=[...])
-    return wrapper(wrapped)
+    # Case 1: Called as a regular function - start_session() or start_session(tags=[...])
+    if wrapped is None:
+        return _client.start_session(tags, inherited_session_id)
+        
+    # Case 2: Used as a plain decorator - @start_session
+    if callable(wrapped):
+        return wrapper(wrapped)
+        
+    # This case should never happen as we've handled both function call and decorator cases
+    raise ValueError("Invalid use of start_session")
 
 
 def end_session(
