@@ -28,6 +28,7 @@ from agentops.logging import logger
 
 if TYPE_CHECKING:
     from agentops.config import Config
+    from agentops.instrumentation.session.tracer import SessionTracer
 
 # Define signals for session events
 session_starting = Signal()
@@ -78,7 +79,7 @@ def default_config():
 class Session:
     """Data container for session state with minimal public API"""
 
-    session_id: UUID
+    session_id: UUID = field(default_factory=uuid4)
     config: Config = field(default_factory=default_config)
     tags: List[str] = field(default_factory=list)
     host_env: Optional[dict] = None
@@ -374,3 +375,16 @@ class Session:
         
         self.tags = tags
         session_updated.send(self, session_id=self.session_id)
+
+    @property
+    def tracer(self) -> "SessionTracer":
+        """Get the session tracer instance."""
+        tracer = getattr(self, "_tracer", None)
+        if tracer is None:
+            raise RuntimeError("Session tracer not initialized")
+        return tracer
+
+    @tracer.setter
+    def tracer(self, value: "SessionTracer") -> None:
+        """Set the session tracer instance."""
+        self._tracer = value

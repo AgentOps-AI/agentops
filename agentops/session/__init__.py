@@ -58,6 +58,9 @@ from .session import (Session, SessionState, session_ended, session_ending,
                       session_initialized, session_started, session_starting,
                       session_updated)
 
+# Import instrumentation to ensure signal handlers are registered
+from agentops.instrumentation.session import SessionInstrumentor
+
 # Add current property to get default session
 @property
 def current() -> Optional[Session]:

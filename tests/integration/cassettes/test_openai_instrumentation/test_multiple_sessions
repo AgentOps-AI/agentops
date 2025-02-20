@@ -1,0 +1,446 @@
+interactions:
+- request:
+    body: '{"session": {"session_id": "7ff10cec-4676-41fe-afd2-8acca727d61e", "config":
+      {"api_key": "6accd669-a251-4d45-883e-b88181d6ebf0", "parent_key": null, "endpoint":
+      "http://localhost:8000", "max_wait_time": 5000, "max_queue_size": 512, "default_tags":
+      [], "instrument_llm_calls": true, "auto_start_session": true, "skip_auto_end_session":
+      false, "env_data_opt_out": false}, "tags": [], "host_env": null, "_state": "initializing",
+      "end_state_reason": null, "jwt": null, "video": null, "event_counts": {"llms":
+      0, "tools": 0, "actions": 0, "errors": 0, "apis": 0}}}'
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '559'
+      Content-Type:
+      - application/json; charset=UTF-8
+      Keep-Alive:
+      - timeout=10, max=1000
+      User-Agent:
+      - python-requests/2.32.3
+      X-Agentops-Api-Key:
+      - 6accd669-a251-4d45-883e-b88181d6ebf0
+      X-Session-ID:
+      - 7ff10cec-4676-41fe-afd2-8acca727d61e
+    method: POST
+    uri: http://localhost:8000/v2/create_session
+  response:
+    body:
+      string: '{"message":"Internal Server Error"}'
+    headers:
+      content-length:
+      - '35'
+      content-type:
+      - application/json
+      date:
+      - Mon, 17 Feb 2025 20:29:27 GMT
+      server:
+      - hypercorn-h11
+    status:
+      code: 500
+      message: ''
+- request:
+    body: '{"session": {"session_id": "ac9fcc29-26c8-4876-b653-f693eab21552", "config":
+      {"api_key": "6accd669-a251-4d45-883e-b88181d6ebf0", "parent_key": null, "endpoint":
+      "http://localhost:8000", "max_wait_time": 5000, "max_queue_size": 512, "default_tags":
+      [], "instrument_llm_calls": true, "auto_start_session": true, "skip_auto_end_session":
+      false, "env_data_opt_out": false}, "tags": [], "host_env": null, "_state": "initializing",
+      "end_state_reason": null, "jwt": null, "video": null, "event_counts": {"llms":
+      0, "tools": 0, "actions": 0, "errors": 0, "apis": 0}}}'
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '559'
+      Content-Type:
+      - application/json; charset=UTF-8
+      Keep-Alive:
+      - timeout=10, max=1000
+      User-Agent:
+      - python-requests/2.32.3
+      X-Agentops-Api-Key:
+      - 6accd669-a251-4d45-883e-b88181d6ebf0
+      X-Session-ID:
+      - ac9fcc29-26c8-4876-b653-f693eab21552
+    method: POST
+    uri: http://localhost:8000/v2/create_session
+  response:
+    body:
+      string: '{"message":"Internal Server Error"}'
+    headers:
+      content-length:
+      - '35'
+      content-type:
+      - application/json
+      date:
+      - Mon, 17 Feb 2025 20:29:28 GMT
+      server:
+      - hypercorn-h11
+    status:
+      code: 500
+      message: ''
+- request:
+    body: '{"session": {"session_id": "af465dc2-4a0a-4e72-ac57-e662e3c1e163", "config":
+      {"api_key": "6accd669-a251-4d45-883e-b88181d6ebf0", "parent_key": null, "endpoint":
+      "http://localhost:8000", "max_wait_time": 5000, "max_queue_size": 512, "default_tags":
+      [], "instrument_llm_calls": true, "auto_start_session": true, "skip_auto_end_session":
+      false, "env_data_opt_out": false}, "tags": [], "host_env": null, "_state": "initializing",
+      "end_state_reason": null, "jwt": null, "video": null, "event_counts": {"llms":
+      0, "tools": 0, "actions": 0, "errors": 0, "apis": 0}}}'
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '559'
+      Content-Type:
+      - application/json; charset=UTF-8
+      Keep-Alive:
+      - timeout=10, max=1000
+      User-Agent:
+      - python-requests/2.32.3
+      X-Agentops-Api-Key:
+      - 6accd669-a251-4d45-883e-b88181d6ebf0
+      X-Session-ID:
+      - af465dc2-4a0a-4e72-ac57-e662e3c1e163
+    method: POST
+    uri: http://localhost:8000/v2/create_session
+  response:
+    body:
+      string: '{"message":"Internal Server Error"}'
+    headers:
+      content-length:
+      - '35'
+      content-type:
+      - application/json
+      date:
+      - Mon, 17 Feb 2025 20:29:28 GMT
+      server:
+      - hypercorn-h11
+    status:
+      code: 500
+      message: ''
+- request:
+    body: '{"messages": [{"role": "user", "content": "Tell a joke"}], "model": "gpt-3.5-turbo"}'
+    headers:
+      accept:
+      - application/json
+      accept-encoding:
+      - gzip, deflate
+      connection:
+      - keep-alive
+      content-length:
+      - '84'
+      content-type:
+      - application/json
+      host:
+      - api.openai.com
+      traceparent:
+      - 00-82d0ce434407bfe359582b9d6c28de73-d8de12c9eec5afb5-01
+      user-agent:
+      - AsyncOpenAI/Python 1.59.7
+      x-stainless-arch:
+      - arm64
+      x-stainless-async:
+      - async:asyncio
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - MacOS
+      x-stainless-package-version:
+      - 1.59.7
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.12.2
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    body:
+      string: !!binary |
+        H4sIAAAAAAAAAwAAAP//jFK7btwwEOz1FRs2ae4MS7bPvmsMuHNcpkgRBwJFrqS1KZIgl3HOxv17
+        QN1DOiQB0rCY2RnM7PKjABCkxQaE6iWrwZvlQ1VV10/V+3r99BpQrZSlr49leqeXVfgiFlnhmhdU
+        fFRdKDd4g0zO7mkVUDJm1/L2an1XXZeru5EYnEaTZZ3n5dXFzZJTaNzysqxuDsrekcIoNvC9AAD4
+        GN+c0Wr8JTZwuTgiA8YoOxSb0xCACM5kRMgYKbK0LBYTqZxltGPsb/0WlEtG288M3CM0pLbKIGSR
+        huSh2QJxRNPeP9tn+4BKpohADG8yAr85YAqoP839A7YpytzPJmMO+O4U2LjOB9fEA3/CW7IU+zqg
+        jM7mcJGdFyO7KwB+jItJZ12FD27wXLN7RZsNy8NexHSKGXl7INmxNBNeHfEzt1ojSzJxtlihpOpR
+        T8rpCjJpcjOimHX+M8zfvPe9yXb/Yz8RSqFn1LUPqEmdF57GAuaP+q+x047HwCJi+EkKayYM+Q4a
+        W5nM/guJuI2MQ92S7TD4QOM/Gu+8K34DAAD//wMAsFEeW0YDAAA=
+    headers:
+      CF-RAY:
+      - 9138879d2d4e053b-OTP
+      Connection:
+      - keep-alive
+      Content-Encoding:
+      - gzip
+      Content-Type:
+      - application/json
+      Date:
+      - Mon, 17 Feb 2025 20:29:29 GMT
+      Server:
+      - cloudflare
+      Set-Cookie:
+      - __cf_bm=uTry6I0t6AH2IOe8UJVjLE3OFIJqfm4Sa3Y.waXSYbU-1739824169-1.0.1.1-Y6QuJOFqC0KwlpdTVT1JDykx5iJkv2jkvqw86m8eDPXLjFOjmqJ9M19xXxiCbx7tZtocS7j3kqOZ5zHHzLJH2Q;
+        path=/; expires=Mon, 17-Feb-25 20:59:29 GMT; domain=.api.openai.com; HttpOnly;
+        Secure; SameSite=None
+      - _cfuvid=x.SE_iDogPSfDUxgSDnu1veirDe6bYIGz5nyDB9D_iM-1739824169022-0.0.1.1-604800000;
+        path=/; domain=.api.openai.com; HttpOnly; Secure; SameSite=None
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - nosniff
+      access-control-expose-headers:
+      - X-Request-ID
+      alt-svc:
+      - h3=":443"; ma=86400
+      cf-cache-status:
+      - DYNAMIC
+      openai-organization:
+      - user-hksbbkenojmearmlvkukyuhp
+      openai-processing-ms:
+      - '370'
+      openai-version:
+      - '2020-10-01'
+      strict-transport-security:
+      - max-age=31536000; includeSubDomains; preload
+      x-ratelimit-limit-requests:
+      - '10000'
+      x-ratelimit-limit-tokens:
+      - '200000'
+      x-ratelimit-remaining-requests:
+      - '9997'
+      x-ratelimit-remaining-tokens:
+      - '199980'
+      x-ratelimit-reset-requests:
+      - 24.168s
+      x-ratelimit-reset-tokens:
+      - 6ms
+      x-request-id:
+      - req_a322c986a626261fd63b12a33ed30f63
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"messages": [{"role": "user", "content": "Write a haiku"}], "model": "gpt-3.5-turbo"}'
+    headers:
+      accept:
+      - application/json
+      accept-encoding:
+      - gzip, deflate
+      connection:
+      - keep-alive
+      content-length:
+      - '86'
+      content-type:
+      - application/json
+      host:
+      - api.openai.com
+      traceparent:
+      - 00-a56bc890489c435f1e3b06904ac772d4-eddf82da6a6e7e6b-01
+      user-agent:
+      - AsyncOpenAI/Python 1.59.7
+      x-stainless-arch:
+      - arm64
+      x-stainless-async:
+      - async:asyncio
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - MacOS
+      x-stainless-package-version:
+      - 1.59.7
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.12.2
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    body:
+      string: !!binary |
+        H4sIAAAAAAAAAwAAAP//jFLBbtQwEL3nK0a+cNmtNmkL2z1WCCSQAIlegKLIa08St47HeCZAqfbf
+        K2e3m1QUiYsP8+Y9vzcz9wWAclZtQJlOi+mjX15WVXX2Orzv/ny6Kn98Ib366j/Gq9ubd+XbN2qR
+        GbS9QSOPrBNDffQojsIeNgm1YFYtX51erKuz8uV6BHqy6DOtjbI8PTlfypC2tFyV1fmB2ZEzyGoD
+        3woAgPvxzR6Dxd9qA6vFY6VHZt2i2hybAFQinytKMzsWHUQtJtBQEAyj7UtPzNQzuADN4D1sPVF/
+        HT5TIxBRtGewOhgX2tzyywV7HT5oGRK+YNiiHuQOuHMBef5DwmZgnROGwftDfXe07KmNibZ8wI/1
+        xgXHXZ1QM4Vsj4WiGtFdAfB9HM3wJK2KifootdAthixYlns5NS1jBq4PoJBoP9Wri8UzarVF0c7z
+        bLTKaNOhnZjTHvRgHc2AYpb5bzPPae9zu9D+j/wEGINR0NYxoXXmaeCpLWE+1X+1HWc8GlaM6acz
+        WIvDlPdgsdGD3x+R4jsW7OvGhRZTTG68pHHPu+IBAAD//wMA3NWJ2kgDAAA=
+    headers:
+      CF-RAY:
+      - 9138879d1c29e445-OTP
+      Connection:
+      - keep-alive
+      Content-Encoding:
+      - gzip
+      Content-Type:
+      - application/json
+      Date:
+      - Mon, 17 Feb 2025 20:29:29 GMT
+      Server:
+      - cloudflare
+      Set-Cookie:
+      - __cf_bm=gvSQFXIJBkx3D8u220kROsJXpRf6Ga99dfTCejed6HY-1739824169-1.0.1.1-0T.u0xoi.ph8F4HsPpF591g6tU_LikwtWTwO0yy58Fvu.2Lr9M._5MvKl2G9CVnQg59f6QgNDvDs5dEoVICX5w;
+        path=/; expires=Mon, 17-Feb-25 20:59:29 GMT; domain=.api.openai.com; HttpOnly;
+        Secure; SameSite=None
+      - _cfuvid=KVm0l_3YwkyVzek6I5K6w4x5k.Ramo6nzqNl4xRxOWM-1739824169048-0.0.1.1-604800000;
+        path=/; domain=.api.openai.com; HttpOnly; Secure; SameSite=None
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - nosniff
+      access-control-expose-headers:
+      - X-Request-ID
+      alt-svc:
+      - h3=":443"; ma=86400
+      cf-cache-status:
+      - DYNAMIC
+      openai-organization:
+      - user-hksbbkenojmearmlvkukyuhp
+      openai-processing-ms:
+      - '376'
+      openai-version:
+      - '2020-10-01'
+      strict-transport-security:
+      - max-age=31536000; includeSubDomains; preload
+      x-ratelimit-limit-requests:
+      - '10000'
+      x-ratelimit-limit-tokens:
+      - '200000'
+      x-ratelimit-remaining-requests:
+      - '9996'
+      x-ratelimit-remaining-tokens:
+      - '199961'
+      x-ratelimit-reset-requests:
+      - 32.807s
+      x-ratelimit-reset-tokens:
+      - 11ms
+      x-request-id:
+      - req_9990b8339ef69b9deb45a6126c65f78c
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"messages": [{"role": "user", "content": "Define OpenTelemetry"}], "model":
+      "gpt-3.5-turbo"}'
+    headers:
+      accept:
+      - application/json
+      accept-encoding:
+      - gzip, deflate
+      connection:
+      - keep-alive
+      content-length:
+      - '93'
+      content-type:
+      - application/json
+      host:
+      - api.openai.com
+      traceparent:
+      - 00-1e076d422830615351faa1e39a633bc0-485c1e806eaeb254-01
+      user-agent:
+      - AsyncOpenAI/Python 1.59.7
+      x-stainless-arch:
+      - arm64
+      x-stainless-async:
+      - async:asyncio
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - MacOS
+      x-stainless-package-version:
+      - 1.59.7
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.12.2
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    body:
+      string: !!binary |
+        H4sIAAAAAAAAAwAAAP//jFRNj9RIDL33r7ByYqV0a7phgJnbbq9AcAC0AgmEVq1KlZPUUCmXbKd7
+        Zkfz31FV+muWOXCJVH728/NX7mcAlXfVNVS2N2qHFOZ/rVarFzdfPtFyR8u/33+8uv36jT+/f5v+
+        6S7fVnWOoOYGrR6iFpaGFFA9xQm2jEYxsy5fPb96vXqxfPm6AAM5DDmsSzp/vric68gNzS+Wq8t9
+        ZE/eolTX8H0GAHBfvlljdHhbXcNFfbAMKGI6rK6PTgAVU8iWyoh4URO1qk+gpagYi+yPCeNnDDig
+        8h14AROBGkHemsYHr3fQshlwR/wDWmKwgUY3j0b9FkGo1Z1hBO2NggmBdgIOtxgoIQsogaUQ0GoN
+        icmiSA0mOsDbRKygx8TOqAEZbQ9GIJu8lRoCdfsAZWNRoGUawKQUvDW5y1LArDY3awHvNOfZeocC
+        BgQVqIU/P73LXL5hwx4zYYdRwUdRHgeMWqimPKQ9MihRKOpz55xh5/9D6Gn3f8FeDvWhO8iMMngt
+        b8skAs63LXJOqGj7SIE6j5PuFIy2xIPUgNE0wccOGlRFhq0Xv+9/9hyjQy5isg+14Lwo+2bMieRO
+        FAdZwK+zhAG5Q84RuiPAWy9aGB5NODHlLZZ6YmBjs0/Om99rjDLux+AFIu3AQMfGjXm1D8ElRY+w
+        zvsBH6b9WNOQxpLwDY3RlT7Ds/WH9Zs/Fuf7yNiOYvI9xDGEvf3huOCBusTUyB4/2lsfvfQbRiMU
+        8zKLUqoK+jAD+Lcc0vjoNqrENCTdKP3AmAmXy4muOp3uOXi5R5XUhDNg9bJ+gm/jUI0PcnaKlTW2
+        R3cKPd2tGZ2nM2B2VvWvcp7inir3sfsd+hNgLSZFt0mMztvHJZ/cGG/KYj/tduxyEVztT3CjHjlP
+        wmFrxjD9dKppQTetjx1yYl/+PGXSD7OfAAAA//8DAL6zRoR4BQAA
+    headers:
+      CF-RAY:
+      - 9138879d1c2be445-OTP
+      Connection:
+      - keep-alive
+      Content-Encoding:
+      - gzip
+      Content-Type:
+      - application/json
+      Date:
+      - Mon, 17 Feb 2025 20:29:29 GMT
+      Server:
+      - cloudflare
+      Set-Cookie:
+      - __cf_bm=iAMNpqUj6FC7T8ICk9ZfgM0.mtTXccqL3CXtseVfB68-1739824169-1.0.1.1-aBQqyKFyeRgVcesKkL462o9F4.aoz0jblhIg7OZAnlYO..D5X3uZiv4aesBguH1zm.7lAiVVHYswvsCsnxDPig;
+        path=/; expires=Mon, 17-Feb-25 20:59:29 GMT; domain=.api.openai.com; HttpOnly;
+        Secure; SameSite=None
+      - _cfuvid=sNrfIcUA3PCxD1Sipn6gD0E59DVjP6m8qCZNMNMpQv0-1739824169878-0.0.1.1-604800000;
+        path=/; domain=.api.openai.com; HttpOnly; Secure; SameSite=None
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - nosniff
+      access-control-expose-headers:
+      - X-Request-ID
+      alt-svc:
+      - h3=":443"; ma=86400
+      cf-cache-status:
+      - DYNAMIC
+      openai-organization:
+      - user-hksbbkenojmearmlvkukyuhp
+      openai-processing-ms:
+      - '1222'
+      openai-version:
+      - '2020-10-01'
+      strict-transport-security:
+      - max-age=31536000; includeSubDomains; preload
+      x-ratelimit-limit-requests:
+      - '10000'
+      x-ratelimit-limit-tokens:
+      - '200000'
+      x-ratelimit-remaining-requests:
+      - '9998'
+      x-ratelimit-remaining-tokens:
+      - '199977'
+      x-ratelimit-reset-requests:
+      - 15.535s
+      x-ratelimit-reset-tokens:
+      - 6ms
+      x-request-id:
+      - req_a8c800dd7ccda832a7a988ff862b16eb
+    status:
+      code: 200
+      message: OK
+version: 1

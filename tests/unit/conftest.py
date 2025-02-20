@@ -133,7 +133,7 @@ def mock_error_event():
 
 @pytest.fixture(autouse=True)
 def simple_span_processor(mocker):
-    """Fixture to make SessionTracer use SimpleSpanProcessor for synchronous export during tests"""
+    """Fixture to make SessionInstrumentor use SimpleSpanProcessor for synchronous export during tests"""
 
     # mocker.patch("agentops.telemetry.instrumentation.get_processor_cls", return_value=SimpleSpanProcessor)
     yield

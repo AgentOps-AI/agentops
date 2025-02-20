@@ -1,0 +1,125 @@
+interactions:
+- request:
+    body: '{"session": {"session_id": "1031dd41-596c-4247-98c2-4ac88b0b4e3d", "config":
+      {"api_key": "6accd669-a251-4d45-883e-b88181d6ebf0", "parent_key": null, "endpoint":
+      "http://localhost:8000", "max_wait_time": 5000, "max_queue_size": 512, "default_tags":
+      [], "instrument_llm_calls": true, "auto_start_session": true, "skip_auto_end_session":
+      false, "env_data_opt_out": false}, "tags": [], "host_env": null, "_state": "initializing",
+      "end_state_reason": null, "jwt": null, "video": null, "event_counts": {"llms":
+      0, "tools": 0, "actions": 0, "errors": 0, "apis": 0}}}'
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '559'
+      Content-Type:
+      - application/json; charset=UTF-8
+      Keep-Alive:
+      - timeout=10, max=1000
+      User-Agent:
+      - python-requests/2.32.3
+      X-Agentops-Api-Key:
+      - 6accd669-a251-4d45-883e-b88181d6ebf0
+      X-Session-ID:
+      - 1031dd41-596c-4247-98c2-4ac88b0b4e3d
+    method: POST
+    uri: http://localhost:8000/v2/create_session
+  response:
+    body:
+      string: '{"message":"Internal Server Error"}'
+    headers:
+      content-length:
+      - '35'
+      content-type:
+      - application/json
+      date:
+      - Mon, 17 Feb 2025 20:29:30 GMT
+      server:
+      - hypercorn-h11
+    status:
+      code: 500
+      message: ''
+- request:
+    body: '{"messages": [{"role": "user", "content": "test"}], "model": "invalid-model"}'
+    headers:
+      accept:
+      - application/json
+      accept-encoding:
+      - gzip, deflate
+      connection:
+      - keep-alive
+      content-length:
+      - '77'
+      content-type:
+      - application/json
+      host:
+      - api.openai.com
+      traceparent:
+      - 00-8ba77112a2f33c67e54091f50942c963-2b0c35211b9c1efc-01
+      user-agent:
+      - AsyncOpenAI/Python 1.59.7
+      x-stainless-arch:
+      - arm64
+      x-stainless-async:
+      - async:asyncio
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - MacOS
+      x-stainless-package-version:
+      - 1.59.7
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.12.2
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    body:
+      string: !!binary |
+        H4sIAAAAAAAAA0yOwQqDMBBE737FsOe2H+B39B6D2dZAzNpkIxXx3wvbQj3OY+YxewcAxKVIoR67
+        RUMz1+qfTD3oPjFmCZwwxLz6FMPV4oAgXJFFwe9YFVKwSUMQY5NfGX4cuVaoIOqNLn+/bovJf0ZX
+        +NW4qvteORUXX/xMPXJL6YRHCba3Jy6Luoe0HMgaR3d0HwAAAP//AwAPlIOa2wAAAA==
+    headers:
+      CF-RAY:
+      - 913887aa0e66053b-OTP
+      Connection:
+      - keep-alive
+      Content-Encoding:
+      - gzip
+      Content-Type:
+      - application/json; charset=utf-8
+      Date:
+      - Mon, 17 Feb 2025 20:29:30 GMT
+      Server:
+      - cloudflare
+      Set-Cookie:
+      - __cf_bm=A7imAL1XWlPrhFctik6xHLngq7R3FTEAkv1MBnAQwXM-1739824170-1.0.1.1-AMHIgbOkj0GUI64zyMRt.rmBipm2SiiGbj32lnLnz2kcCB5nR.ELBwK_DPQiCALHnK9KKspvjEwmweWq4RZAyg;
+        path=/; expires=Mon, 17-Feb-25 20:59:30 GMT; domain=.api.openai.com; HttpOnly;
+        Secure; SameSite=None
+      - _cfuvid=.cA3axVpf2kE7zAl1zbGL7b2FDcQ72CxiFhUzRerpmw-1739824170802-0.0.1.1-604800000;
+        path=/; domain=.api.openai.com; HttpOnly; Secure; SameSite=None
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - nosniff
+      alt-svc:
+      - h3=":443"; ma=86400
+      cf-cache-status:
+      - DYNAMIC
+      strict-transport-security:
+      - max-age=31536000; includeSubDomains; preload
+      vary:
+      - Origin
+      x-request-id:
+      - req_0616d6d20f079d0487312ad3659f759c
+    status:
+      code: 404
+      message: Not Found
+version: 1
