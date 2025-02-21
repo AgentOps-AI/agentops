@@ -56,6 +56,7 @@ class SessionTracer:
     def __init__(self, session_id: str, tracer: trace.Tracer):
         self.session_id = session_id
         self.tracer = tracer
+        self._is_ended = False
         # Automatically start the session root span
         self._root_span = self.tracer.start_span(
             "session.lifecycle", 
@@ -64,7 +65,6 @@ class SessionTracer:
                 "session.type": "root"
             }
         )
-        # Set the context with the root span
         self._context = trace.set_span_in_context(self._root_span)
 
     def _start_span(self, name: str, attributes: Optional[Dict[str, Any]] = None):
@@ -90,10 +90,15 @@ class SessionTracer:
         """Extract context from carrier."""
         return TraceContextTextMapPropagator().extract(carrier)
 
+    def end(self):
+        """End the session root span if not already ended."""
+        if not self._is_ended and self._root_span is not None:
+            self._root_span.end()
+            self._is_ended = True
+
     def __del__(self):
         """Cleanup when the tracer is destroyed."""
-        if self._root_span is not None:
-            self._root_span.end()
+        self.end()
 
 
 class SessionInstrumentor:
@@ -175,8 +180,8 @@ class SessionInstrumentor:
                     logger.debug(f"Error during processor flush: {e}")
             
             # End the root span if it exists
-            if self.session_tracer and self.session_tracer._root_span:
-                self.session_tracer._root_span.end()
+            if self.session_tracer:
+                self.session_tracer.end()
             
             # Now shutdown processors
             for processor in self.processors:
