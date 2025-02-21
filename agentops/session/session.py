@@ -139,7 +139,7 @@ class Session:
             self.state = SessionState.FAILED
             raise ValueError("API key is required")
 
-        self.api = SessionApiClient(self.config.endpoint, self.session_id, self.config.api_key)
+        self.api = SessionApiClient(self)
         
         # Initialize session
         try:
