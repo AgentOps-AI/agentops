@@ -1,6 +1,6 @@
-from .config import configure_logging
+from .config import logger, configure_logging
 
 # Create and configure the logger
 logger = configure_logging()
 
-__all__ = ['logger'] 
+__all__ = ['logger', 'configure_logging'] 

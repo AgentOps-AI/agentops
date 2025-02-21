@@ -2,11 +2,11 @@ import logging
 import os
 import sys
 from dataclasses import dataclass, field
-from typing import List, Optional, Set, TypedDict, Any
+from typing import List, Optional, Set, TypedDict, Any, Union
 from uuid import UUID
 
-from .logging import logger
 from .helpers import get_env_bool, get_env_int, get_env_list
+from .logging.config import logger
 
 
 class ConfigDict(TypedDict):
@@ -20,6 +20,7 @@ class ConfigDict(TypedDict):
     auto_start_session: Optional[bool]
     skip_auto_end_session: Optional[bool]
     env_data_opt_out: Optional[bool]
+    log_level: Optional[Union[str, int]]
 
 
 @dataclass
@@ -50,6 +51,9 @@ class Config:
     env_data_opt_out: bool = field(
         default_factory=lambda: get_env_bool('AGENTOPS_ENV_DATA_OPT_OUT', False)
     )
+    log_level: Union[str, int] = field(
+        default_factory=lambda: os.getenv('AGENTOPS_LOG_LEVEL', 'CRITICAL')
+    )
 
     def configure(
         self,
@@ -64,6 +68,7 @@ class Config:
         auto_start_session: Optional[bool] = None,
         skip_auto_end_session: Optional[bool] = None,
         env_data_opt_out: Optional[bool] = None,
+        log_level: Optional[Union[str, int]] = None,
     ):
         """Configure settings from kwargs, validating where necessary"""
         if api_key is not None:
@@ -107,6 +112,22 @@ class Config:
 
         if env_data_opt_out is not None:
             self.env_data_opt_out = env_data_opt_out
+
+        if log_level is not None:
+            if isinstance(log_level, str):
+                level = log_level.upper()
+                if hasattr(logging, level):
+                    self.log_level = getattr(logging, level)
+                else:
+                    message = f"Invalid log level: {log_level}"
+                    client.add_pre_init_warning(message)
+                    logger.warning(message)
+            elif isinstance(log_level, int):
+                self.log_level = log_level
+            else:
+                message = f"Log level must be string or int, got {type(log_level)}"
+                client.add_pre_init_warning(message)
+                logger.warning(message)
 
 
 TESTING = "pytest" in sys.modules

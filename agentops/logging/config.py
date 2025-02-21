@@ -1,12 +1,36 @@
 import logging
 import os
+from typing import Optional
 from .formatters import AgentOpsLogFormatter, AgentOpsLogFileFormatter
 
-def configure_logging():
-    """Configure the AgentOps logger with console and optional file handlers."""
-    logger = logging.getLogger("agentops")
-    logger.propagate = False
-    logger.setLevel(logging.CRITICAL)
+# Create the logger at module level
+logger = logging.getLogger("agentops")
+logger.propagate = False
+logger.setLevel(logging.CRITICAL)
+
+def configure_logging(config=None):  # Remove type hint temporarily to avoid circular import
+    """Configure the AgentOps logger with console and optional file handlers.
+    
+    Args:
+        config: Optional Config instance. If not provided, a new Config instance will be created.
+    """
+    # Defer the Config import to avoid circular dependency
+    if config is None:
+        from ..config import Config
+        config = Config()
+
+    # Use env var as override if present, otherwise use config
+    log_level_env = os.environ.get("AGENTOPS_LOG_LEVEL", "").upper()
+    if log_level_env and hasattr(logging, log_level_env):
+        log_level = getattr(logging, log_level_env)
+    else:
+        log_level = config.log_level if isinstance(config.log_level, int) else logging.CRITICAL
+    
+    logger.setLevel(log_level)
+
+    # Remove existing handlers
+    for handler in logger.handlers[:]:
+        logger.removeHandler(handler)
 
     # Configure console logging
     stream_handler = logging.StreamHandler()
