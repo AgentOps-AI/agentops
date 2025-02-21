@@ -14,23 +14,27 @@ from __future__ import annotations
 
 import atexit
 import contextlib
+import threading
 from typing import TYPE_CHECKING, Any, Collection, Dict, Optional, Sequence
 from weakref import WeakValueDictionary
-import threading
 
 from opentelemetry import context, trace
 from opentelemetry.instrumentation.instrumentor import BaseInstrumentor
 from opentelemetry.sdk.resources import Resource
-from opentelemetry.sdk.trace import ReadableSpan, Span, SpanProcessor, Tracer, TracerProvider
-from opentelemetry.sdk.trace.export import BatchSpanProcessor, SimpleSpanProcessor
+from opentelemetry.sdk.trace import ReadableSpan, Span, SpanProcessor, Tracer
+from opentelemetry.sdk.trace import TracerProvider  # The SDK implementation
+from opentelemetry.sdk.trace import TracerProvider as SDKTracerProvider
+from opentelemetry.sdk.trace.export import (BatchSpanProcessor,
+                                            SimpleSpanProcessor)
 from opentelemetry.trace import NonRecordingSpan, SpanContext
-from opentelemetry.trace.propagation.tracecontext import TraceContextTextMapPropagator
-from opentelemetry.sdk.trace import TracerProvider as SDKTracerProvider  # The SDK implementation
+from opentelemetry.trace.propagation.tracecontext import \
+    TraceContextTextMapPropagator
 
-from agentops.instrumentation.session.exporters import RegularEventExporter, SessionLifecycleExporter
+from agentops.instrumentation.session.exporters import (
+    RegularEventExporter, SessionLifecycleExporter)
+from agentops.instrumentation.session.processors import LiveSpanProcessor
 from agentops.logging import logger
 from agentops.session import session_ended, session_started
-from agentops.instrumentation.session.processors import InFlightSpanProcessor
 
 if TYPE_CHECKING:
     from agentops.session.session import Session
@@ -127,10 +131,10 @@ class SessionInstrumentor:
                 trace.set_tracer_provider(self.otel_provider)
 
         # Configure processors with in-flight span handling
-        lifecycle_processor = InFlightSpanProcessor(
+        lifecycle_processor = LiveSpanProcessor(
             SessionLifecycleExporter(self.session)
         )
-        regular_processor = InFlightSpanProcessor(
+        regular_processor = LiveSpanProcessor(
             RegularEventExporter(self.session)
         )
 
