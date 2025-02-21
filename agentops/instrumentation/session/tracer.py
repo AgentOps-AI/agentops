@@ -16,6 +16,7 @@ import atexit
 import contextlib
 from typing import TYPE_CHECKING, Any, Collection, Dict, Optional, Sequence
 from weakref import WeakValueDictionary
+import threading
 
 from opentelemetry import context, trace
 from opentelemetry.instrumentation.instrumentor import BaseInstrumentor
@@ -29,6 +30,7 @@ from opentelemetry.sdk.trace import TracerProvider as SDKTracerProvider  # The S
 from agentops.instrumentation.session.exporters import RegularEventExporter, SessionLifecycleExporter
 from agentops.logging import logger
 from agentops.session import session_ended, session_started
+from agentops.instrumentation.session.processors import InFlightSpanProcessor
 
 if TYPE_CHECKING:
     from agentops.session.session import Session
@@ -93,9 +95,11 @@ class SessionInstrumentor:
 
     def __init__(self, session: "Session"):
         self.session = session
-        self.otel_provider: SDKTracerProvider | None = None  # Change to SDK type since we need SDK features
+        self.otel_provider: SDKTracerProvider | None = None
         self.session_tracer: SessionTracer | None = None
         self.processors: list[SpanProcessor] = []
+        self._shutdown_lock = threading.Lock()
+        self._is_shutdown = False
 
         self.instrument()
         if self.session_tracer is None:
@@ -113,17 +117,22 @@ class SessionInstrumentor:
         if isinstance(provider, SDKTracerProvider):
             self.otel_provider = provider
         else:
-            # Only create new provider if we don't have a valid SDK provider
             self.otel_provider = SDKTracerProvider(
-                resource=Resource({"service.name": "agentops", "session.id": str(self.session.session_id)})
+                resource=Resource({
+                    "service.name": "agentops",
+                    "session.id": str(self.session.session_id)
+                })
             )
-            # Don't override if we already have an SDK provider
             if not isinstance(trace.get_tracer_provider(), SDKTracerProvider):
                 trace.set_tracer_provider(self.otel_provider)
 
-        # Configure processors
-        lifecycle_processor = BatchSpanProcessor(SessionLifecycleExporter(self.session))
-        regular_processor = BatchSpanProcessor(RegularEventExporter(self.session))
+        # Configure processors with in-flight span handling
+        lifecycle_processor = InFlightSpanProcessor(
+            SessionLifecycleExporter(self.session)
+        )
+        regular_processor = InFlightSpanProcessor(
+            RegularEventExporter(self.session)
+        )
 
         self.processors.extend([lifecycle_processor, regular_processor])
         self.otel_provider.add_span_processor(lifecycle_processor)
@@ -132,10 +141,10 @@ class SessionInstrumentor:
         # Create session tracer
         otel_tracer = self.otel_provider.get_tracer("agentops.session")
         self.session_tracer = SessionTracer(str(self.session.session_id), otel_tracer)
+        self.session._tracer = self.session_tracer
 
         SessionInstrumentor._is_instrumented = True
         logger.debug("Session tracer ready")
-        self.session._tracer = self.session_tracer
 
     def uninstrument(self, **kwargs):
         """Clean up instrumentation."""
@@ -144,12 +153,40 @@ class SessionInstrumentor:
 
     def shutdown(self):
         """Shutdown and cleanup resources."""
-        logger.debug("Shutting down session tracer")
-        for processor in self.processors:
-            processor.shutdown()
-        if isinstance(self.otel_provider, SDKTracerProvider):  # Type check before SDK operations
-            self.otel_provider.shutdown()
-        logger.debug("Session tracer shutdown complete")
+        with self._shutdown_lock:
+            if self._is_shutdown:
+                return
+            
+            logger.debug("Shutting down session tracer")
+            
+            # Force flush before marking as shutdown
+            for processor in self.processors:
+                try:
+                    processor.force_flush()
+                except Exception as e:
+                    logger.debug(f"Error during processor flush: {e}")
+            
+            # End the root span if it exists
+            if self.session_tracer and self.session_tracer._root_span:
+                self.session_tracer._root_span.end()
+            
+            # Now shutdown processors
+            for processor in self.processors:
+                try:
+                    processor.shutdown()
+                except Exception as e:
+                    logger.debug(f"Error during processor shutdown: {e}")
+            
+            # Finally shutdown provider
+            if isinstance(self.otel_provider, SDKTracerProvider):
+                try:
+                    self.otel_provider.force_flush()
+                    self.otel_provider.shutdown()
+                except Exception as e:
+                    logger.debug(f"Error during provider shutdown: {e}")
+            
+            self._is_shutdown = True
+            logger.debug("Session tracer shutdown complete")
 
     def instrumentation_dependencies(self) -> Collection[str]:
         """Return packages required for instrumentation."""

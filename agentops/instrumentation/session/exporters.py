@@ -20,25 +20,22 @@ class BaseExporter(ABC):
 
     def __init__(self, session: Session):
         self.session = session
-        self._shutdown = threading.Event()
-        self._export_lock = threading.Lock()
+        self._is_shutdown = False
 
     def export(self, data: Sequence[Any]) -> SpanExportResult:
         """Template method for export implementation"""
-        if self._shutdown.is_set():
+        if self._is_shutdown:
             return SpanExportResult.SUCCESS
 
-        with self._export_lock:
-            try:
-                if not data:
-                    return SpanExportResult.SUCCESS
-
-                return self._export(data)
-            except Exception as e:
-                logger.error(f"Export failed: {e}")
-                if TESTING:
-                    raise e
-                return SpanExportResult.FAILURE
+        try:
+            if not data:
+                return SpanExportResult.SUCCESS
+            return self._export(data)
+        except Exception as e:
+            logger.error(f"Export failed: {e}")
+            if TESTING:
+                raise e
+            return SpanExportResult.FAILURE
 
     @abstractmethod
     def _export(self, data: Sequence[Any]) -> SpanExportResult:
@@ -46,12 +43,12 @@ class BaseExporter(ABC):
         raise NotImplementedError
 
     def shutdown(self):
-        """Mark the exporter as shutdown"""
-        self._shutdown.set()
+        """Shutdown the exporter"""
+        self._is_shutdown = True
 
     def force_flush(self, timeout_millis: Optional[int] = None) -> bool:
+        """Force flush any spans"""
         return True
-
 
 
 class SessionLifecycleExporter(BaseExporter, SpanExporter):
@@ -60,11 +57,12 @@ class SessionLifecycleExporter(BaseExporter, SpanExporter):
         session_events = []
         for span in spans:
             if span.name in ["session.start", "session.end"]:
-                session_events.append(span.to_json()) # TODO: Add session_id ?
+                event_data = dict(span.to_json())  # Convert to dict to avoid type error
+                event_data["session_id"] = self.session.session_id
+                session_events.append(event_data)
         
         if session_events:
             try:
-                # Send events to your backend/storage
                 self.session.api.create_events(session_events)
                 return SpanExportResult.SUCCESS
             except Exception as e:
@@ -72,17 +70,19 @@ class SessionLifecycleExporter(BaseExporter, SpanExporter):
                 return SpanExportResult.FAILURE
         return SpanExportResult.SUCCESS
 
+
 class RegularEventExporter(BaseExporter, SpanExporter):
     """Handles regular events (not session lifecycle)"""
     def _export(self, spans: Sequence[ReadableSpan]) -> SpanExportResult:
         events = []
         for span in spans:
             if span.name not in ["session.start", "session.end"]:
-                events.append(span.to_json()) # TODO: Add session_id ?
+                event_data = dict(span.to_json())  # Convert to dict to avoid type error
+                event_data["session_id"] = self.session.session_id
+                events.append(event_data)
         
         if events:
             try:
-                # Send events to your backend/storage
                 self.session.api.create_events(events)
                 return SpanExportResult.SUCCESS
             except Exception as e:
