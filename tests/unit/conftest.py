@@ -110,27 +110,6 @@ def agentops_session(agentops_init):
     agentops.end_all_sessions()
 
 
-@pytest.fixture
-def mock_llm_event():
-    """Creates an LLMEvent for testing"""
-    return LLMEvent(
-        prompt="What is the meaning of life?",
-        completion="42",
-        model="gpt-4",
-        prompt_tokens=10,
-        completion_tokens=1,
-        cost=0.01,
-    )
-
-
-@pytest.fixture
-def mock_error_event():
-    """Creates an ErrorEvent for testing"""
-    trigger = ActionEvent(action_type="risky_action")
-    error = ValueError("Something went wrong")
-    return ErrorEvent(trigger_event=trigger, exception=error, error_type="ValueError", details="Detailed error info")
-
-
 @pytest.fixture(autouse=True)
 def simple_span_processor(mocker):
     """Fixture to make SessionInstrumentor use SimpleSpanProcessor for synchronous export during tests"""
