@@ -47,35 +47,39 @@ _instruments = ("agentops >= 0.1.0",)
 
 class SessionTracer:
     """Core session tracing functionality.
-
+    
     Handles the session-level tracing context and span management.
+    A session IS a root span - all operations within the session are automatically
+    tracked as child spans. Users should never need to manually start spans.
     """
 
     def __init__(self, session_id: str, tracer: trace.Tracer):
         self.session_id = session_id
         self.tracer = tracer
+        # Automatically start the session root span
         self._root_span = self.tracer.start_span(
-            "session.lifecycle", attributes={"session.id": self.session_id, "session.type": "root"}
+            "session.lifecycle", 
+            attributes={
+                "session.id": self.session_id,
+                "session.type": "root"
+            }
         )
         # Set the context with the root span
         self._context = trace.set_span_in_context(self._root_span)
 
-    @contextlib.contextmanager
-    def start_operation(self, name: str, attributes: Optional[Dict[str, Any]] = None):
-        """Start an operation span as child of root span."""
+    def _start_span(self, name: str, attributes: Optional[Dict[str, Any]] = None):
+        """Internal method to start child spans. Not for public use."""
         if self._context is None or self._root_span is None:
             raise RuntimeError("No active session context")
 
         attributes = attributes or {}
         attributes["session.id"] = self.session_id
 
-        # Attach the session context while we create the new span
-        token = context.attach(self._context)
-        try:
-            with self.tracer.start_as_current_span(name, attributes=attributes) as span:
-                yield span
-        finally:
-            context.detach(token)
+        return self.tracer.start_span(
+            name,
+            context=self._context,
+            attributes=attributes
+        )
 
     def inject_context(self, carrier: Dict[str, str]):
         """Inject current context into carrier for propagation."""

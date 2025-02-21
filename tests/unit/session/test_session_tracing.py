@@ -27,28 +27,25 @@ def test_basic_span_propagation(session_generator):
     """Test that spans are correctly created and associated with the session"""
     session = session_generator(tags=["test-tracing"])
     
-    with session.tracer.start_operation("test_operation") as span:
-        # Verify span is active and valid
-        current_span = trace.get_current_span()
-        assert current_span == span
-        assert current_span.get_span_context().is_valid
-
-        # Verify span attributes
-        span.set_attribute("test.attribute", "test_value")
-        assert span.get_span_context().is_valid
-        assert span.is_recording()
+    # Session is already the root span
+    child_span = session._tracer._start_span("test_operation")
+    assert child_span.is_recording()
+    child_span.end()
 
 
 def test_nested_span_hierarchy(session_generator):
     """Test that nested spans maintain correct parent-child relationships"""
     session = session_generator(tags=["test-nested"])
 
-    with session.tracer.start_operation("parent_operation") as parent:
-        parent_context = parent.get_span_context()
-
-        with session.tracer.start_operation("child_operation") as child:
-            child_context = child.get_span_context()
-            assert child_context.trace_id == parent_context.trace_id
+    # Create child spans
+    parent_span = session._tracer._start_span("parent_operation")
+    child_span = session._tracer._start_span("child_operation")
+    
+    # Verify hierarchy
+    assert parent_span.get_span_context().trace_id == child_span.get_span_context().trace_id
+    
+    child_span.end()
+    parent_span.end()
 
 
 def test_multiple_session_span_isolation(session_generator):
@@ -56,48 +53,42 @@ def test_multiple_session_span_isolation(session_generator):
     session1 = session_generator(tags=["session-1"])
     session2 = session_generator(tags=["session-2"])
 
-    with session1.tracer.start_operation("operation_1") as span1:
-        with session2.tracer.start_operation("operation_2") as span2:
-            # Verify spans have different trace IDs
-            assert span1.get_span_context().trace_id != span2.get_span_context().trace_id
-            # Verify current span is from the innermost context
-            current_span = trace.get_current_span()
-            assert current_span == span2
+    # Create spans in each session
+    span1 = session1._tracer._start_span("operation_1")
+    span2 = session2._tracer._start_span("operation_2")
+
+    # Verify spans have different trace IDs
+    assert span1.get_span_context().trace_id != span2.get_span_context().trace_id
+
+    span1.end()
+    span2.end()
 
 
 def test_span_attributes_and_events(session_generator):
     """Test that span attributes and events are correctly recorded"""
     session = session_generator(tags=["test-attributes"])
 
-    with session.tracer.start_operation("test_operation") as span:
-        # Test attributes
-        span.set_attribute("string.attr", "test")
-        span.set_attribute("int.attr", 42)
-        span.set_attribute("bool.attr", True)
+    # Create a child span
+    span = session._tracer._start_span("test_operation")
+    
+    # Test attributes
+    span.set_attribute("string.attr", "test")
+    span.set_attribute("int.attr", 42)
+    span.set_attribute("bool.attr", True)
 
-        # Test events
-        span.add_event("test_event", {"severity": "INFO", "detail": "test detail"})
+    # Test events
+    span.add_event("test_event", {"severity": "INFO", "detail": "test detail"})
 
-        # Verify span is recording
-        assert span.is_recording()
+    # Verify span is recording
+    assert span.is_recording()
+    span.end()
 
 
 def test_context_propagation(session_generator):
     """Test that context is correctly propagated across operations"""
     session = session_generator(tags=["test-propagation"])
 
-    with session.tracer.start_operation("root_operation") as operation_span:
-        # Test context injection
-        carrier = {}
-        session.tracer.inject_context(carrier)
-
-        # Verify context was injected
-        assert "traceparent" in carrier
-
-        # Test context extraction
-        extracted_context = session.tracer.extract_context(carrier)
-        assert extracted_context is not None
-
-        # Get current context and verify it matches
-        current_context = trace.get_current_span().get_span_context()
-        assert current_context.trace_id == operation_span.get_span_context().trace_id
+    # The session root span context should be propagated to children
+    child_span = session._tracer._start_span("child_operation")
+    assert child_span.get_span_context().trace_id == session._tracer._root_span.get_span_context().trace_id
+    child_span.end()

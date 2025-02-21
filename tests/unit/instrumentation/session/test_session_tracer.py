@@ -3,10 +3,12 @@
 from uuid import uuid4
 
 import pytest
+from opentelemetry import trace
 from opentelemetry.sdk.trace import ReadableSpan
 from opentelemetry.sdk.trace.export import SpanExporter
 from opentelemetry.trace import SpanKind
 
+import agentops
 from agentops import Config, Session
 from agentops.instrumentation.session.tracer import (SessionInstrumentor,
                                                      SessionTracer,
@@ -28,25 +30,24 @@ def reset_instrumentation():
 
 def test_session_tracer_initialization(agentops_session):
     """Test that session tracer is properly initialized"""
-    # Initialize tracer
     setup_session_tracer(agentops_session)
 
-    # Verify tracer was initialized
-    assert hasattr(agentops_session, "_tracer"), "Session tracer not initialized"
-    assert isinstance(agentops_session._tracer, SessionTracer), "Wrong tracer type"
+    # Verify tracer was initialized with root span
+    assert hasattr(agentops_session, "_tracer")
+    assert isinstance(agentops_session._tracer, SessionTracer)
+    assert agentops_session._tracer._root_span is not None
+    assert agentops_session._tracer._root_span.is_recording()
 
-    # Test basic tracing operations
-    with agentops_session._tracer.start_root_span() as root_span:
-        # Now we can start operations
-        with agentops_session._tracer.start_operation("test_operation") as span:
-            span.set_attribute("test.attribute", "test_value")
+    # Verify root span has correct attributes
+    root_span = agentops_session._tracer._root_span
+    assert root_span.attributes["session.id"] == str(agentops_session.session_id)
+    assert root_span.attributes["session.type"] == "root"
 
-            # Nested operation
-            with agentops_session._tracer.start_operation("nested_operation") as nested_span:
-                nested_span.set_attribute("nested.attribute", "nested_value")
-
-    # Verify tracer was registered
-    assert str(agentops_session.session_id) in _session_tracers, "Tracer not registered"
+    # Test internal span creation
+    child_span = agentops_session._tracer._start_span("test_operation")
+    assert child_span.is_recording()
+    child_span.set_attribute("test.attribute", "test_value")
+    child_span.end()
 
 
 def test_session_tracer_cleanup(agentops_session):
@@ -73,20 +74,15 @@ def test_multiple_session_tracers():
     setup_session_tracer(session1)
     setup_session_tracer(session2)
 
-    # Verify both sessions have tracers
+    # Verify both sessions have tracers and root spans
     assert hasattr(session1, "_tracer")
     assert hasattr(session2, "_tracer")
+    assert session1._tracer._root_span is not None
+    assert session2._tracer._root_span is not None
 
     # Verify tracers are different
     assert session1.tracer != session2.tracer
-
-    # Test operations don't interfere
-    with session1.tracer.start_root_span() as root1:
-        with session2.tracer.start_root_span() as root2:
-            with session1.tracer.start_operation("op1") as span1:
-                with session2.tracer.start_operation("op2") as span2:
-                    span1.set_attribute("session", "1")
-                    span2.set_attribute("session", "2")
+    assert session1._tracer._root_span != session2._tracer._root_span
 
     # Clean up
     cleanup_session_tracer(session1)
@@ -99,10 +95,11 @@ async def test_async_session_tracing(agentops_session):
     setup_session_tracer(agentops_session)
 
     async def traced_operation():
-        with agentops_session.tracer.start_root_span() as root:
-            with agentops_session.tracer.start_operation("async_op") as span:
-                span.set_attribute("async", True)
-                return "success"
+        # The session is already the root span
+        child_span = agentops_session._tracer._start_span("async_op")
+        child_span.set_attribute("async", True)
+        child_span.end()
+        return "success"
 
     result = await traced_operation()
     assert result == "success"
