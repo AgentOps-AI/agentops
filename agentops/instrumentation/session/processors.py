@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import time
 from threading import Event, Lock, Thread
 from typing import Dict, Optional, Sequence
@@ -18,7 +20,7 @@ class InFlightSpanProcessor(SpanProcessor):
         self._lock = Lock()
         self._shutdown = Event()
         self._export_interval = export_interval_secs
-        self._last_export_time = 0.0  # Track last export time
+        self._last_export_time = time.monotonic()  # Use monotonic time
         
         # Start background export thread
         self._export_thread = Thread(target=self._export_in_flight_spans, daemon=True)
@@ -30,18 +32,19 @@ class InFlightSpanProcessor(SpanProcessor):
             time.sleep(self._export_interval)
             
             # Skip if no spans or if last export was too recent
-            current_time = time.time()
+            current_time = time.monotonic()
             if current_time - self._last_export_time < self._export_interval:
                 continue
                 
             with self._lock:
                 if not self._in_flight:
                     continue
-                
+                    
                 # Create readable snapshots of in-flight spans
                 spans_to_export = [
                     self._create_span_snapshot(span)
                     for span in self._in_flight.values()
+                    if span and span.context and span.context.is_valid  # Guard against None
                 ]
                 if spans_to_export:
                     try:
@@ -53,7 +56,7 @@ class InFlightSpanProcessor(SpanProcessor):
     def _create_span_snapshot(self, span: Span) -> ReadableSpan:
         """Create a snapshot of an in-flight span"""
         readable = span._readable_span()  # Get the ReadableSpan version
-        readable._end_time = time.time_ns()  # Set current time as end time
+        readable._end_time = time.time_ns()  # Still use time_ns() for span timestamps
         readable._attributes = {
             **(readable._attributes or {}),
             "in_flight": True,
@@ -62,7 +65,7 @@ class InFlightSpanProcessor(SpanProcessor):
 
     def on_start(self, span: Span, parent_context: Optional[Context] = None) -> None:
         """Track span when it starts"""
-        if not span.context.is_valid:
+        if not span or not span.context or not span.context.is_valid:
             return
             
         with self._lock:
@@ -70,7 +73,7 @@ class InFlightSpanProcessor(SpanProcessor):
 
     def on_end(self, span: ReadableSpan) -> None:
         """Handle span when it ends"""
-        if not span.context.is_valid:
+        if not span or not span.context or not span.context.is_valid:
             return
             
         with self._lock:
@@ -85,8 +88,7 @@ class InFlightSpanProcessor(SpanProcessor):
     def shutdown(self) -> None:
         """Gracefully shutdown the processor"""
         self._shutdown.set()
-        # Reduced timeout for tests
-        self._export_thread.join(timeout=1.0)  # Reduced from 5.0
+        self._export_thread.join(timeout=1.0)
         
         # Final export of any remaining spans
         with self._lock:
@@ -94,6 +96,7 @@ class InFlightSpanProcessor(SpanProcessor):
                 final_spans = [
                     self._create_span_snapshot(span)
                     for span in self._in_flight.values()
+                    if span and span.context and span.context.is_valid  # Guard against None
                 ]
                 try:
                     self.span_exporter.export(final_spans)
@@ -110,6 +113,7 @@ class InFlightSpanProcessor(SpanProcessor):
                 spans_to_flush = [
                     self._create_span_snapshot(span)
                     for span in self._in_flight.values()
+                    if span and span.context and span.context.is_valid  # Guard against None
                 ]
                 try:
                     self.span_exporter.export(spans_to_flush)
