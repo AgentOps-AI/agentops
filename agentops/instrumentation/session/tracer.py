@@ -123,7 +123,7 @@ class SessionInstrumentor:
 
     def instrument(self, **kwargs):
         """Initialize OTEL instrumentation."""
-        logger.debug(f"Initializing tracer for session {self.session.session_id}")
+        logger.debug(f"[{self.session.session_id}] Initializing tracer for session {self.session.session_id}")
 
         # Get or create provider
         provider = trace.get_tracer_provider()
@@ -157,7 +157,7 @@ class SessionInstrumentor:
         self.session._tracer = self.session_tracer
 
         SessionInstrumentor._is_instrumented = True
-        logger.debug("Session tracer ready")
+        logger.debug(f"[{self.session.session_id}] Session tracer ready")
 
     def uninstrument(self, **kwargs):
         """Clean up instrumentation."""
@@ -170,14 +170,14 @@ class SessionInstrumentor:
             if self._is_shutdown:
                 return
             
-            logger.debug("Shutting down session tracer")
+            logger.debug(f"[{self.session.session_id}] Shutting down session tracer")
             
             # Force flush before marking as shutdown
             for processor in self.processors:
                 try:
                     processor.force_flush()
                 except Exception as e:
-                    logger.debug(f"Error during processor flush: {e}")
+                    logger.debug(f"[{self.session.session_id}] Error during processor flush: {e}")
             
             # End the root span if it exists
             if self.session_tracer:
@@ -188,7 +188,7 @@ class SessionInstrumentor:
                 try:
                     processor.shutdown()
                 except Exception as e:
-                    logger.debug(f"Error during processor shutdown: {e}")
+                    logger.debug(f"[{self.session.session_id}] Error during processor shutdown: {e}")
             
             # Finally shutdown provider
             if isinstance(self.otel_provider, SDKTracerProvider):
@@ -196,10 +196,10 @@ class SessionInstrumentor:
                     self.otel_provider.force_flush()
                     self.otel_provider.shutdown()
                 except Exception as e:
-                    logger.debug(f"Error during provider shutdown: {e}")
+                    logger.debug(f"[{self.session.session_id}] Error during provider shutdown: {e}")
             
             self._is_shutdown = True
-            logger.debug("Session tracer shutdown complete")
+            logger.debug(f"[{self.session.session_id}] Session tracer shutdown complete")
 
     def instrumentation_dependencies(self) -> Collection[str]:
         """Return packages required for instrumentation."""
@@ -212,9 +212,9 @@ def setup_session_tracer(sender: Session, **kwargs):
     try:
         instrumentor = SessionInstrumentor(sender)
         instrumentor.instrument()
-        logger.debug(f"Session tracing started for {sender.session_id}")
+        logger.debug(f"[{sender.session_id}] Session tracing started for {sender.session_id}")
     except Exception as e:
-        logger.error(f"Failed to initialize session tracer: {e}")
+        logger.error(f"[{sender.session_id}] Failed to initialize session tracer: {e}")
         raise
 
 
@@ -225,7 +225,7 @@ def cleanup_session_tracer(sender: Session, **kwargs):
     if session_id in _session_tracers:
         tracer = _session_tracers.pop(session_id)
         tracer.uninstrument()
-        logger.debug(f"Session tracing cleaned up for {session_id}")
+        logger.debug(f"[{session_id}] Session tracing cleaned up for {session_id}")
 
 
 def get_session_tracer(session_id: str) -> Optional[SessionTracer]:
