@@ -141,6 +141,9 @@ class Session:
 
         self.api = SessionApiClient(self)
         
+        # Signal session is initialized
+        session_initialized.send(self)
+        
         # Initialize session
         try:
             if not self.start():
@@ -150,10 +153,6 @@ class Session:
             self.state = SessionState.FAILED
             logger.error(f"Failed to initialize session: {e}")
             self.end(str(SessionState.FAILED), f"Exception during initialization: {str(e)}")
-        finally:
-            # Signal session is initialized
-            session_initialized.send(self, session_id=self.session_id)
-            
 
     @property
     def init_timestamp(self) -> str | None:
@@ -283,6 +282,10 @@ class Session:
     def start(self):
         """Start the session"""
         with self._lock:
+            if self.state != SessionState.INITIALIZING:
+                logger.warning("Session already started")
+                return False
+
             session_starting.send(self)
             self.init_timestamp = get_ISO_time()
 
@@ -290,10 +293,7 @@ class Session:
                 session_data = json.loads(
                     json.dumps(asdict(self), cls=AgentOpsJSONEncoder)
                 )
-                self.jwt = self.api.create_session(
-                    session_data, 
-                    parent_key=self.config.parent_key
-                )
+                self.jwt = self.api.create_session(session_data)
 
                 logger.info(
                     colored(
