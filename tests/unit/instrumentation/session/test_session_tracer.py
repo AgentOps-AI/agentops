@@ -10,22 +10,14 @@ from opentelemetry.trace import SpanKind
 
 import agentops
 from agentops import Config, Session
-from agentops.instrumentation.session.tracer import (SessionInstrumentor,
-                                                     SessionTracer,
-                                                     _session_tracers,
-                                                     cleanup_session_tracer,
-                                                     get_session_tracer,
-                                                     setup_session_tracer)
+from agentops.telemetry.tracer import SessionTracer, _session_tracers, setup_session_tracer, cleanup_session_tracer, get_session_tracer
 
 
 @pytest.fixture(autouse=True)
 def reset_instrumentation():
     """Reset instrumentation state between tests"""
     _session_tracers.clear()
-    SessionInstrumentor._is_instrumented = False
     yield
-
-
 
 
 def test_session_tracer_initialization(agentops_session):
@@ -124,21 +116,22 @@ def test_weak_reference_cleanup(agentops_session):
     """Test that tracers are properly garbage collected."""
     setup_session_tracer(agentops_session)
     session_id = str(agentops_session.session_id)
-    
+
     # Get the instrumentor
     instrumentor = _session_tracers[session_id]
-    
+
     # Store weak reference count
     initial_count = len(_session_tracers)
-    
+
     # Clean up the session properly
     cleanup_session_tracer(agentops_session)
     del agentops_session
-    
+
     # Force garbage collection
     import gc
+
     gc.collect()
-    
+
     # Check that tracer was removed
     assert len(_session_tracers) == 0, "Tracer not properly cleaned up"
 

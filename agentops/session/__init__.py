@@ -54,21 +54,17 @@ See also:
 
 from typing import Optional
 
-# Import signals first since they have no dependencies
-from .signals import (
-    session_started, session_ended, session_ending,
-    session_initialized, session_starting, session_updated
-)
+# Import instrumentation to ensure signal handlers are registered
+import agentops.telemetry
 
+from .registry import (add_session, get_active_sessions, get_default_session,
+                       remove_session)
 # Then import core components
 from .session import Session, SessionState
-from .registry import (
-    add_session, get_active_sessions, 
-    remove_session, get_default_session
-)
+# Import signals first since they have no dependencies
+from .signals import (session_ended, session_ending, session_initialized,
+                      session_started, session_starting, session_updated)
 
-# Import instrumentation to ensure signal handlers are registered
-from agentops.instrumentation.session import SessionInstrumentor
 
 # Add current property to get default session
 @property

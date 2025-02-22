@@ -104,7 +104,7 @@ class Session(SessionTracerAdapter):
                 value = SessionState.INDETERMINATE
         self._state = value
         # Update span status when state changes
-        self.update_span_status(value, self.end_state_reason)
+        self.set_status(value, self.end_state_reason)
 
     @property
     def end_state(self) -> str:

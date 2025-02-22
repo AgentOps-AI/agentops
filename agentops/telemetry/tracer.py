@@ -20,7 +20,7 @@ from opentelemetry.trace.propagation.tracecontext import \
     TraceContextTextMapPropagator
 
 from agentops.logging import logger
-from agentops.session import session_ended, session_started
+from agentops.session.signals import session_ended, session_started
 
 from .exporters import RegularEventExporter
 from .processors import LiveSpanProcessor
