@@ -21,6 +21,7 @@ class ConfigDict(TypedDict):
     skip_auto_end_session: Optional[bool]
     env_data_opt_out: Optional[bool]
     log_level: Optional[Union[str, int]]
+    fail_safe: Optional[bool]
 
 
 @dataclass
@@ -54,6 +55,9 @@ class Config:
     log_level: Union[str, int] = field(
         default_factory=lambda: os.getenv('AGENTOPS_LOG_LEVEL', 'CRITICAL')
     )
+    fail_safe: bool = field(
+        default_factory=lambda: get_env_bool('AGENTOPS_FAIL_SAFE', False)
+    )
 
     def configure(
         self,
@@ -69,6 +73,7 @@ class Config:
         skip_auto_end_session: Optional[bool] = None,
         env_data_opt_out: Optional[bool] = None,
         log_level: Optional[Union[str, int]] = None,
+        fail_safe: Optional[bool] = None,
     ):
         """Configure settings from kwargs, validating where necessary"""
         if api_key is not None:
@@ -128,6 +133,9 @@ class Config:
                 message = f"Log level must be string or int, got {type(log_level)}"
                 client.add_pre_init_warning(message)
                 logger.warning(message)
+
+        if fail_safe is not None:
+            self.fail_safe = fail_safe
 
 
 TESTING = "pytest" in sys.modules

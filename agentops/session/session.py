@@ -132,7 +132,10 @@ class Session:
 
         if self.config.api_key is None:
             self.state = SessionState.FAILED
-            raise ValueError("API key is required")
+            if not self.config.fail_safe:
+                raise ValueError("API key is required")
+            logger.error("API key is required")
+            return
 
         self.api = SessionApiClient(self)
         
@@ -143,11 +146,16 @@ class Session:
         try:
             if not self.start():
                 self.state = SessionState.FAILED
-                raise RuntimeError("Session._initialize() did not succeed", self)
+                if not self.config.fail_safe:
+                    raise RuntimeError("Session.start() did not succeed", self)
+                logger.error("Session initialization failed")
+                return
         except Exception as e:
             self.state = SessionState.FAILED
             logger.error(f"Failed to initialize session: {e}")
             self.end(str(SessionState.FAILED), f"Exception during initialization: {str(e)}")
+            if not self.config.fail_safe:
+                raise
 
     @property
     def init_timestamp(self) -> str | None:
@@ -308,6 +316,8 @@ class Session:
             except ApiServerException as e:
                 logger.error(f"Could not start session - {e}")
                 self.state = SessionState.FAILED
+                if not self.config.fail_safe:
+                    raise
                 return False
 
     def flush(self):
