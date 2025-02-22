@@ -13,9 +13,12 @@ from typing import TYPE_CHECKING, Any, Dict, Optional
 from weakref import WeakValueDictionary
 
 from opentelemetry import context, trace
+from opentelemetry.exporter.otlp.proto.http.trace_exporter import \
+    OTLPSpanExporter
 from opentelemetry.sdk.resources import SERVICE_NAME, Resource
 from opentelemetry.sdk.trace import TracerProvider
-from opentelemetry.sdk.trace.export import BatchSpanProcessor
+from opentelemetry.sdk.trace.export import (BatchSpanProcessor,
+                                            SimpleSpanProcessor)
 from opentelemetry.trace.propagation.tracecontext import \
     TraceContextTextMapPropagator
 
@@ -92,7 +95,7 @@ class SessionTelemetry:
         provider = get_tracer_provider()
 
         # Set up processor and exporter
-        processor = BatchSpanProcessor(RegularEventExporter(session))
+        processor = SimpleSpanProcessor(OTLPSpanExporter(endpoint="http://localhost:4318/v1/traces"))
         provider.add_span_processor(processor)
 
         # Initialize tracer and root span

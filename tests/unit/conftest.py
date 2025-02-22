@@ -60,7 +60,7 @@ def mock_req(base_url, jwt):
     """
     Mocks AgentOps backend API requests.
     """
-    with requests_mock.Mocker() as m:
+    with requests_mock.Mocker(real_http=True) as m:
         # Map session IDs to their JWTs
         m.session_jwts = {}
 

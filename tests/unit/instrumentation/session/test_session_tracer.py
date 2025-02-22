@@ -10,10 +10,10 @@ from opentelemetry.trace import SpanKind
 
 import agentops
 from agentops import Config, Session
-from agentops.telemetry.tracer import (SessionTelemetry, _session_tracers,
-                                       cleanup_session_tracer,
-                                       get_session_tracer,
-                                       setup_session_tracer)
+from agentops.telemetry.session import (SessionTelemetry, _session_tracers,
+                                        cleanup_session_tracer,
+                                        get_session_tracer,
+                                        setup_session_tracer)
 
 
 @pytest.fixture(autouse=True)

@@ -29,7 +29,7 @@ from agentops.session.tracer_adapter import SessionTelemetryAdapter
 
 if TYPE_CHECKING:
     from agentops.config import Config
-    from agentops.telemetry.tracer import SessionTelemetry
+    from agentops.telemetry.session import SessionTelemetry
 
 from .signals import *
 

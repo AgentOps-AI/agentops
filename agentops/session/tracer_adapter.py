@@ -9,14 +9,14 @@ from typing import TYPE_CHECKING, Optional
 from opentelemetry import trace
 from opentelemetry.trace import Status, StatusCode
 
-from agentops.telemetry.tracer import SessionTelemetry
-
 if TYPE_CHECKING:
     from agentops.session.session import SessionState
 
 
 # Import instrumentation to ensure signal handlers are registered
-from agentops.telemetry.tracer import SessionTelemetry, cleanup_session_tracer, setup_session_tracer
+from agentops.telemetry.session import (SessionTelemetry,
+                                        cleanup_session_tracer,
+                                        setup_session_tracer)
 
 
 @dataclass
