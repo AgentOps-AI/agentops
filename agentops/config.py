@@ -2,7 +2,7 @@ import logging
 import os
 import sys
 from dataclasses import dataclass, field
-from typing import List, Optional, Set, TypedDict, Any, Union
+from typing import Any, List, Optional, Set, TypedDict, Union
 from uuid import UUID
 
 from .helpers import get_env_bool, get_env_int, get_env_list
@@ -26,35 +26,58 @@ class ConfigDict(TypedDict):
 
 @dataclass
 class Config:
+    # API key for authentication with AgentOps services
     api_key: Optional[str] = field(default_factory=lambda: os.getenv('AGENTOPS_API_KEY'))
+    
+    # Parent API key for hierarchical organization of sessions
     parent_key: Optional[str] = field(default_factory=lambda: os.getenv('AGENTOPS_PARENT_KEY'))
+    
+    # Base URL for the AgentOps API
     endpoint: str = field(
         default_factory=lambda: os.getenv('AGENTOPS_API_ENDPOINT', 'https://api.agentops.ai')
     )
+    
+    # Maximum time in milliseconds to wait for API responses
     max_wait_time: int = field(
         default_factory=lambda: get_env_int('AGENTOPS_MAX_WAIT_TIME', 5000)
     )
+    
+    # Maximum number of events to queue before forcing a flush
     max_queue_size: int = field(
         default_factory=lambda: get_env_int('AGENTOPS_MAX_QUEUE_SIZE', 512)
     )
+    
+    # Default tags to apply to all sessions
     default_tags: Set[str] = field(
         default_factory=lambda: get_env_list('AGENTOPS_DEFAULT_TAGS')
     )
+    
+    # Whether to automatically instrument and track LLM API calls
     instrument_llm_calls: bool = field(
         default_factory=lambda: get_env_bool('AGENTOPS_INSTRUMENT_LLM_CALLS', True)
     )
+    
+    # Whether to automatically start a session when initializing
     auto_start_session: bool = field(
         default_factory=lambda: get_env_bool('AGENTOPS_AUTO_START_SESSION', True)
     )
+    
+    # Whether to skip automatically ending sessions on program exit
     skip_auto_end_session: bool = field(
         default_factory=lambda: get_env_bool('AGENTOPS_SKIP_AUTO_END_SESSION', False)
     )
+    
+    # Whether to opt out of collecting environment data
     env_data_opt_out: bool = field(
         default_factory=lambda: get_env_bool('AGENTOPS_ENV_DATA_OPT_OUT', False)
     )
+    
+    # Logging level for AgentOps logs
     log_level: Union[str, int] = field(
         default_factory=lambda: os.getenv('AGENTOPS_LOG_LEVEL', 'CRITICAL')
     )
+    
+    # Whether to suppress errors and continue execution when possible
     fail_safe: bool = field(
         default_factory=lambda: get_env_bool('AGENTOPS_FAIL_SAFE', False)
     )
