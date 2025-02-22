@@ -53,10 +53,19 @@ See also:
 """
 
 from typing import Optional
-from .registry import add_session, get_active_sessions, remove_session, get_default_session
-from .session import (Session, SessionState, session_ended, session_ending,
-                      session_initialized, session_started, session_starting,
-                      session_updated)
+
+# Import signals first since they have no dependencies
+from .signals import (
+    session_started, session_ended, session_ending,
+    session_initialized, session_starting, session_updated
+)
+
+# Then import core components
+from .session import Session, SessionState
+from .registry import (
+    add_session, get_active_sessions, 
+    remove_session, get_default_session
+)
 
 # Import instrumentation to ensure signal handlers are registered
 from agentops.instrumentation.session import SessionInstrumentor

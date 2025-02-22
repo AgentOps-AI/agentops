@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING, List, Optional, Union
 from uuid import UUID
 
 from agentops.logging import logger
-from agentops.session.session import session_ended, session_started
+from agentops.session.signals import session_ended, session_started
 
 if TYPE_CHECKING:
     from .session import Session

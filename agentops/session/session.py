@@ -30,17 +30,12 @@ if TYPE_CHECKING:
     from agentops.config import Config
     from agentops.instrumentation.session.tracer import SessionTracer
 
-# Define signals for session events
-session_starting = Signal()
-session_started = Signal()
-session_initialized = Signal()
-session_ending = Signal()
-session_ended = Signal()
-session_updated = Signal()
+from .signals import *
 
 
 class SessionState(StrEnum):
     """Session state enumeration"""
+
     INITIALIZING = auto()
     RUNNING = auto()
     SUCCEEDED = auto()
