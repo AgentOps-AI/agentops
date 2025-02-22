@@ -23,7 +23,7 @@ class LiveSpanProcessor(SpanProcessor):
        - Ensures spans are exported even if session ends unexpectedly
 
     2. Operation Context:
-       - Tracks spans created by SessionTracer.start_operation()
+       - Tracks spans created by SessionTelemetry.start_operation()
        - Handles nested operation spans within a session
        - Maintains parent-child relationships between spans
 

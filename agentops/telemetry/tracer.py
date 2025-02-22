@@ -15,6 +15,7 @@ from weakref import WeakValueDictionary
 from opentelemetry import context, trace
 from opentelemetry.sdk.resources import SERVICE_NAME, Resource
 from opentelemetry.sdk.trace import TracerProvider
+from opentelemetry.sdk.trace.export import BatchSpanProcessor
 from opentelemetry.trace.propagation.tracecontext import \
     TraceContextTextMapPropagator
 
@@ -28,14 +29,26 @@ if TYPE_CHECKING:
     from agentops.session.session import Session
 
 # Use WeakValueDictionary to allow tracer garbage collection
-_session_tracers: WeakValueDictionary[str, "SessionTracer"] = WeakValueDictionary()
+_session_tracers: WeakValueDictionary[str, "SessionTelemetry"] = WeakValueDictionary()
+
+# Global TracerProvider instance
+_tracer_provider: Optional[TracerProvider] = None
+
+
+def get_tracer_provider() -> TracerProvider:
+    """Get or create the global TracerProvider."""
+    global _tracer_provider
+    if _tracer_provider is None:
+        _tracer_provider = TracerProvider(resource=Resource({SERVICE_NAME: "agentops"}))
+        trace.set_tracer_provider(_tracer_provider)
+    return _tracer_provider
 
 
 @session_started.connect
 def setup_session_tracer(sender: Session, **kwargs):
     """Set up and start session tracing."""
     try:
-        tracer = SessionTracer(sender)
+        tracer = SessionTelemetry(sender)
         sender._tracer = tracer
         logger.debug(f"[{sender.session_id}] Session tracing started")
     except Exception as e:
@@ -53,12 +66,12 @@ def cleanup_session_tracer(sender: Session, **kwargs):
         logger.debug(f"[{session_id}] Session tracing cleaned up")
 
 
-def get_session_tracer(session_id: str) -> Optional[SessionTracer]:
+def get_session_tracer(session_id: str) -> Optional[SessionTelemetry]:
     """Get tracer for a session."""
     return _session_tracers.get(str(session_id))
 
 
-class SessionTracer:
+class SessionTelemetry:
     """Core session tracing functionality.
 
     Handles the session-level tracing context and span management.
@@ -66,35 +79,34 @@ class SessionTracer:
     tracked as child spans.
     """
 
-
     @property
     def session_id(self) -> str:
         return str(self.session.session_id)
 
     def __init__(self, session: Session):
-        """Initialize session tracer with provider and processors."""
         self.session = session
         self._is_ended = False
         self._shutdown_lock = threading.Lock()
 
-        # Initialize provider if needed
-        provider = trace.get_tracer_provider()
-        if not isinstance(provider, TracerProvider):
-            provider = TracerProvider(resource=Resource({SERVICE_NAME: "agentops", "session.id": self.session_id}))
-            trace.set_tracer_provider(provider)
+        # Use global provider
+        provider = get_tracer_provider()
 
         # Set up processor and exporter
-        processor = LiveSpanProcessor(RegularEventExporter(session))
+        processor = BatchSpanProcessor(RegularEventExporter(session))
         provider.add_span_processor(processor)
 
         # Initialize tracer and root span
         self.tracer = provider.get_tracer("agentops.session")
         session.span = self.tracer.start_span(
-            "session.lifecycle", attributes={"session.id": self.session_id, "session.type": "root"}
+            "session.lifecycle", 
+            attributes={
+                "session.id": self.session_id, 
+                "session.type": "root"
+            }
         )
-        self._context = trace.set_span_in_context(session.span)
         
-        # Attach the context and store the token
+        # Create and activate the session context immediately
+        self._context = trace.set_span_in_context(session.span)
         self._token = context.attach(self._context)
 
         # Store for cleanup
@@ -102,28 +114,6 @@ class SessionTracer:
         atexit.register(self.shutdown)
 
         logger.debug(f"[{self.session_id}] Session tracer initialized")
-
-    def start_span(self, name: str, attributes: Optional[Dict[str, Any]] = None) -> trace.Span:
-        """Start a new child span in the session context."""
-        if self._is_ended:
-            raise RuntimeError("Cannot start span on ended session")
-
-        if self._context is None:
-            raise RuntimeError("No active session context")
-
-        attributes = attributes or {}
-        attributes["session.id"] = self.session_id
-
-        return self.tracer.start_span(name, context=self._context, attributes=attributes)
-
-    def inject_context(self, carrier: Dict[str, str]) -> None:
-        """Inject current context into carrier for propagation."""
-        if self._context:
-            TraceContextTextMapPropagator().inject(carrier, self._context)
-
-    def extract_context(self, carrier: Dict[str, str]) -> Optional[context.Context]:
-        """Extract context from carrier."""
-        return TraceContextTextMapPropagator().extract(carrier)
 
     def shutdown(self) -> None:
         """Shutdown and cleanup resources."""
@@ -133,9 +123,10 @@ class SessionTracer:
 
             logger.debug(f"[{self.session_id}] Shutting down session tracer")
 
-            # Detach the context
-            if hasattr(self, '_token'):
+            # Detach our context if it's still active
+            if self._token is not None:
                 context.detach(self._token)
+                self._token = None
 
             if self.session.span:
                 self.session.span.end()
@@ -144,9 +135,8 @@ class SessionTracer:
             if isinstance(provider, TracerProvider):
                 try:
                     provider.force_flush()
-                    provider.shutdown()
                 except Exception as e:
-                    logger.debug(f"[{self.session_id}] Error during shutdown: {e}")
+                    logger.debug(f"[{self.session_id}] Error during flush: {e}")
 
             self._is_ended = True
             logger.debug(f"[{self.session_id}] Session tracer shutdown complete")

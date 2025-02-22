@@ -9,18 +9,18 @@ from typing import TYPE_CHECKING, Optional
 from opentelemetry import trace
 from opentelemetry.trace import Status, StatusCode
 
-from agentops.telemetry.tracer import SessionTracer
+from agentops.telemetry.tracer import SessionTelemetry
 
 if TYPE_CHECKING:
     from agentops.session.session import SessionState
 
 
 # Import instrumentation to ensure signal handlers are registered
-from agentops.telemetry.tracer import SessionTracer, cleanup_session_tracer, setup_session_tracer
+from agentops.telemetry.tracer import SessionTelemetry, cleanup_session_tracer, setup_session_tracer
 
 
 @dataclass
-class SessionTracerAdapter:
+class SessionTelemetryAdapter:
     """Base class for objects with tracked start and end timestamps.
 
     This class provides the foundation for tracking the lifecycle of an object
@@ -73,7 +73,7 @@ class SessionTracerAdapter:
     # ------------------------------------------------------------
 
     @property
-    def tracer(self) -> SessionTracer:
+    def tracer(self) -> SessionTelemetry:
         return self._tracer
 
     def set_status(self, state: SessionState, reason: Optional[str] = None) -> None:

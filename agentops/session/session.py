@@ -25,11 +25,11 @@ from agentops.exceptions import ApiServerException
 from agentops.helpers import filter_unjsonable, get_ISO_time
 from agentops.helpers.serialization import AgentOpsJSONEncoder
 from agentops.logging import logger
-from agentops.session.tracer_adapter import SessionTracerAdapter
+from agentops.session.tracer_adapter import SessionTelemetryAdapter
 
 if TYPE_CHECKING:
     from agentops.config import Config
-    from agentops.telemetry.tracer import SessionTracer
+    from agentops.telemetry.tracer import SessionTelemetry
 
 from .signals import *
 
@@ -72,7 +72,7 @@ def default_config():
     return _Config()
 
 @dataclass
-class Session(SessionTracerAdapter):
+class Session(SessionTelemetryAdapter):
     """Data container for session state with minimal public API"""
 
     session_id: UUID = field(default_factory=uuid4)
