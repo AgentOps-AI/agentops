@@ -230,34 +230,3 @@ def get_session_tracer(session_id: str) -> Optional[SessionTracer]:
     """Get tracer for a session."""
     instrumentor = _session_tracers.get(str(session_id))
     return instrumentor.session_tracer if instrumentor else None
-
-
-# Add a custom filtering processor
-class FilteringSpanProcessor(SpanProcessor):
-    """Processor that filters spans based on their names"""
-
-    def __init__(
-        self,
-        wrapped_processor: SpanProcessor,
-        span_names: Optional[Sequence[str]] = None,
-        exclude_span_names: Optional[Sequence[str]] = None,
-    ):
-        self.processor = wrapped_processor
-        self.span_names = set(span_names or [])
-        self.exclude_span_names = set(exclude_span_names or [])
-
-    def on_start(self, span: Span, parent_context=None) -> None:
-        self.processor.on_start(span, parent_context)
-
-    def on_end(self, span: Span) -> None:
-        if span.name in self.exclude_span_names:
-            return
-        if not self.span_names or span.name in self.span_names:
-            self.processor.on_end(span)
-
-    def shutdown(self) -> None:
-        self.processor.shutdown()
-
-    def force_flush(self, timeout_millis: int = 30000) -> bool:
-        """Force flush with default timeout."""
-        return self.processor.force_flush(timeout_millis)
