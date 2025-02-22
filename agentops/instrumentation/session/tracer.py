@@ -21,17 +21,15 @@ from weakref import WeakValueDictionary
 from opentelemetry import context, trace
 from opentelemetry.instrumentation.instrumentor import BaseInstrumentor
 from opentelemetry.sdk.resources import Resource
-from opentelemetry.sdk.trace import ReadableSpan, Span, SpanProcessor, Tracer
 from opentelemetry.sdk.trace import TracerProvider  # The SDK implementation
-from opentelemetry.sdk.trace import TracerProvider as SDKTracerProvider
+from opentelemetry.sdk.trace import ReadableSpan, Span, SpanProcessor, Tracer
 from opentelemetry.sdk.trace.export import (BatchSpanProcessor,
                                             SimpleSpanProcessor)
 from opentelemetry.trace import NonRecordingSpan, SpanContext
 from opentelemetry.trace.propagation.tracecontext import \
     TraceContextTextMapPropagator
 
-from agentops.instrumentation.session.exporters import (
-    RegularEventExporter, SessionLifecycleExporter)
+from agentops.instrumentation.session.exporters import RegularEventExporter
 from agentops.instrumentation.session.processors import LiveSpanProcessor
 from agentops.logging import logger
 from agentops.session import session_ended, session_started
@@ -108,7 +106,7 @@ class SessionInstrumentor:
 
     def __init__(self, session: "Session"):
         self.session = session
-        self.otel_provider: SDKTracerProvider | None = None
+        self.otel_provider: TracerProvider | None = None
         self.session_tracer: SessionTracer | None = None
         self.processors: list[SpanProcessor] = []
         self._shutdown_lock = threading.Lock()
@@ -127,28 +125,28 @@ class SessionInstrumentor:
 
         # Get or create provider
         provider = trace.get_tracer_provider()
-        if isinstance(provider, SDKTracerProvider):
+        if isinstance(provider, TracerProvider):
             self.otel_provider = provider
         else:
-            self.otel_provider = SDKTracerProvider(
+            self.otel_provider = TracerProvider(
                 resource=Resource({
                     "service.name": "agentops",
                     "session.id": str(self.session.session_id)
                 })
             )
-            if not isinstance(trace.get_tracer_provider(), SDKTracerProvider):
+            if not isinstance(trace.get_tracer_provider(), TracerProvider):
                 trace.set_tracer_provider(self.otel_provider)
 
         # Configure processors with in-flight span handling
-        lifecycle_processor = LiveSpanProcessor(
-            SessionLifecycleExporter(self.session)
-        )
+        # lifecycle_processor = LiveSpanProcessor(
+        #     SessionLifecycleExporter(self.session)
+        # )
         regular_processor = LiveSpanProcessor(
             RegularEventExporter(self.session)
         )
 
-        self.processors.extend([lifecycle_processor, regular_processor])
-        self.otel_provider.add_span_processor(lifecycle_processor)
+        self.processors.extend([regular_processor])
+        # self.otel_provider.add_span_processor(lifecycle_processor)
         self.otel_provider.add_span_processor(regular_processor)
 
         # Create session tracer
@@ -191,7 +189,7 @@ class SessionInstrumentor:
                     logger.debug(f"[{self.session.session_id}] Error during processor shutdown: {e}")
             
             # Finally shutdown provider
-            if isinstance(self.otel_provider, SDKTracerProvider):
+            if isinstance(self.otel_provider, TracerProvider):
                 try:
                     self.otel_provider.force_flush()
                     self.otel_provider.shutdown()

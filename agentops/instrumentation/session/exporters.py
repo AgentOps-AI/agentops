@@ -51,38 +51,38 @@ class BaseExporter(ABC):
         return True
 
 
-class SessionLifecycleExporter(BaseExporter, SpanExporter):
-    """Handles only session start/end events"""
-    def _export(self, spans: Sequence[ReadableSpan]) -> SpanExportResult:
-        session_events = []
-        for span in spans:
-            if span.name in ["session.start", "session.end"]:
-                # Convert span data to dict properly
-                span_data = {}
-                if hasattr(span, "to_json"):
-                    # Handle custom to_json implementations
-                    json_data = span.to_json()
-                    if isinstance(json_data, dict):
-                        span_data.update(json_data)
-                    else:
-                        # Fall back to attributes if to_json doesn't return dict
-                        span_data.update(span.attributes or {})
-                else:
-                    # Use span attributes directly
-                    span_data.update(span.attributes or {})
-                
-                span_data["session_id"] = str(self.session.session_id)
-                session_events.append(span_data)
-        
-        if session_events:
-            try:
-                self.session.api.create_events(session_events)
-                return SpanExportResult.SUCCESS
-            except Exception as e:
-                logger.error(f"Failed to export session events: {e}")
-                return SpanExportResult.FAILURE
-        return SpanExportResult.SUCCESS
-
+# class SessionLifecycleExporter(BaseExporter, SpanExporter):
+#     """Handles only session start/end events"""
+#     def _export(self, spans: Sequence[ReadableSpan]) -> SpanExportResult:
+#         session_events = []
+#         for span in spans:
+#             if span.name in ["session.start", "session.end"]:
+#                 # Convert span data to dict properly
+#                 span_data = {}
+#                 if hasattr(span, "to_json"):
+#                     # Handle custom to_json implementations
+#                     json_data = span.to_json()
+#                     if isinstance(json_data, dict):
+#                         span_data.update(json_data)
+#                     else:
+#                         # Fall back to attributes if to_json doesn't return dict
+#                         span_data.update(span.attributes or {})
+#                 else:
+#                     # Use span attributes directly
+#                     span_data.update(span.attributes or {})
+#                 
+#                 span_data["session_id"] = str(self.session.session_id)
+#                 session_events.append(span_data)
+#         
+#         if session_events:
+#             try:
+#                 self.session.api.create_events(session_events)
+#                 return SpanExportResult.SUCCESS
+#             except Exception as e:
+#                 logger.error(f"Failed to export session events: {e}")
+#                 return SpanExportResult.FAILURE
+#         return SpanExportResult.SUCCESS
+#
 
 class RegularEventExporter(BaseExporter, SpanExporter):
     """Handles regular events (not session lifecycle)"""
