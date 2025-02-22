@@ -2,9 +2,9 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Optional
-from datetime import datetime, timezone
 from dataclasses import dataclass, field
+from datetime import datetime, timezone
+from typing import TYPE_CHECKING, Optional
 
 from opentelemetry import trace
 from opentelemetry.trace import Status, StatusCode
@@ -13,6 +13,10 @@ from agentops.telemetry.tracer import SessionTracer
 
 if TYPE_CHECKING:
     from agentops.session.session import SessionState
+
+
+# Import instrumentation to ensure signal handlers are registered
+from agentops.telemetry.tracer import SessionTracer, cleanup_session_tracer, setup_session_tracer
 
 
 @dataclass
@@ -24,7 +28,7 @@ class SessionTracerAdapter:
     span integration.
     """
 
-    span: trace.Span = field(init=False, repr=False)  # The root span for the session
+    span: trace.Span | None = field(default=None, init=False, repr=False)  # The root span for the session
 
     @staticmethod
     def _ns_to_iso(ns_time: Optional[int]) -> Optional[str]:
@@ -74,9 +78,6 @@ class SessionTracerAdapter:
 
     def set_status(self, state: SessionState, reason: Optional[str] = None) -> None:
         """Update root span status based on session state."""
-        if not self.span:
-            return
-
         if state.is_terminal:
             if state.name == "SUCCEEDED":
                 self.span.set_status(Status(StatusCode.OK))
@@ -87,3 +88,11 @@ class SessionTracerAdapter:
 
             if reason:
                 self.span.set_attribute("session.end_reason", reason)
+
+    @property
+    def spans(self):
+        """Generator that yields all spans in the trace."""
+        if self.span:
+            yield self.span
+            for child in getattr(self.span, "children", []):
+                yield child

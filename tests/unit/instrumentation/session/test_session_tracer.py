@@ -10,7 +10,13 @@ from opentelemetry.trace import SpanKind
 
 import agentops
 from agentops import Config, Session
-from agentops.telemetry.tracer import SessionTracer, _session_tracers, setup_session_tracer, cleanup_session_tracer, get_session_tracer
+from agentops.telemetry.tracer import (
+    SessionTracer,
+    _session_tracers,
+    cleanup_session_tracer,
+    get_session_tracer,
+    setup_session_tracer,
+)
 
 
 @pytest.fixture(autouse=True)
@@ -27,19 +33,25 @@ def test_session_tracer_initialization(agentops_session):
     # Verify tracer was initialized with root span
     assert hasattr(agentops_session, "_tracer")
     assert isinstance(agentops_session._tracer, SessionTracer)
-    assert agentops_session._tracer._root_span is not None
-    assert agentops_session._tracer._root_span.is_recording()
+    assert agentops_session.session.span is not None
+    assert agentops_session.session.span.is_recording()
 
     # Verify root span has correct attributes
-    root_span = agentops_session._tracer._root_span
+    root_span = agentops_session.session.span
     assert root_span.attributes["session.id"] == str(agentops_session.session_id)
     assert root_span.attributes["session.type"] == "root"
 
-    # Test internal span creation
-    child_span = agentops_session._tracer._start_span("test_operation")
+    # Test new span creation with the active session span
+    # Use the actual OpenTelemtry to create a new span
+    tracer = trace.get_tracer(__name__)
+    child_span = tracer.start_span("test_operation")
     assert child_span.is_recording()
     child_span.set_attribute("test.attribute", "test_value")
     child_span.end()
+
+    # TODO:Verify the span was added to the session
+    assert len(agentops_session.spans) == 2
+    assert agentops_session.spans[-1] == child_span
 
 
 def test_session_tracer_cleanup(agentops_session):

@@ -31,8 +31,7 @@ if TYPE_CHECKING:
     from agentops.config import Config
     from agentops.telemetry.tracer import SessionTracer
 
-from .signals import (session_ended, session_ending, session_initialized,
-                      session_started, session_updated)
+from .signals import *
 
 
 class SessionState(StrEnum):
@@ -104,7 +103,8 @@ class Session(SessionTracerAdapter):
                 value = SessionState.INDETERMINATE
         self._state = value
         # Update span status when state changes
-        self.set_status(value, self.end_state_reason)
+        if hasattr(self,'span'):
+            self.set_status(value, self.end_state_reason)
 
     @property
     def end_state(self) -> str:

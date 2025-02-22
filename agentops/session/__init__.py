@@ -54,9 +54,6 @@ See also:
 
 from typing import Optional
 
-# Import instrumentation to ensure signal handlers are registered
-import agentops.telemetry
-
 from .registry import (add_session, get_active_sessions, get_default_session,
                        remove_session)
 # Then import core components
