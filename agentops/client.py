@@ -84,6 +84,8 @@ class Client:
             return session
         except Exception as e:
             logger.error(f"Failed to create session: {e}")
+            if not self._config.fail_safe:
+                raise
             return None
 
     def end_session(
