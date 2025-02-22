@@ -9,7 +9,8 @@ import pytest
 import requests_mock
 from opentelemetry import trace
 from opentelemetry.sdk.trace import TracerProvider
-from opentelemetry.sdk.trace.export import ConsoleSpanExporter, SimpleSpanProcessor
+from opentelemetry.sdk.trace.export import (ConsoleSpanExporter,
+                                            SimpleSpanProcessor)
 from pytest import Session
 
 import agentops
@@ -59,7 +60,7 @@ def mock_req(base_url, jwt):
     """
     Mocks AgentOps backend API requests.
     """
-    with requests_mock.Mocker() as m:
+    with requests_mock.Mocker(real_http=True) as m:
         # Map session IDs to their JWTs
         m.session_jwts = {}
 
@@ -109,10 +110,3 @@ def agentops_session(agentops_init):
 
     agentops.end_all_sessions()
 
-
-@pytest.fixture(autouse=True)
-def simple_span_processor(mocker):
-    """Fixture to make SessionInstrumentor use SimpleSpanProcessor for synchronous export during tests"""
-
-    # mocker.patch("agentops.telemetry.instrumentation.get_processor_cls", return_value=SimpleSpanProcessor)
-    yield

@@ -5,6 +5,8 @@ from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING, Any, Dict, Optional, Sequence
 from uuid import uuid4
 
+from opentelemetry.exporter.otlp.proto.http.trace_exporter import \
+    OTLPSpanExporter
 from opentelemetry.sdk.trace import ReadableSpan
 from opentelemetry.sdk.trace.export import SpanExporter, SpanExportResult
 
@@ -84,6 +86,13 @@ class BaseExporter(ABC):
 #         return SpanExportResult.SUCCESS
 #
 
+
+
+class AllSpanExporter(OTLPSpanExporter):
+    def export(self, spans) -> SpanExportResult:
+        breakpoint()
+        return super().export(spans)
+#
 class RegularEventExporter(BaseExporter, SpanExporter):
     """Handles regular events (not session lifecycle)"""
     def _export(self, spans: Sequence[ReadableSpan]) -> SpanExportResult:

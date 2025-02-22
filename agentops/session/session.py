@@ -25,10 +25,11 @@ from agentops.exceptions import ApiServerException
 from agentops.helpers import filter_unjsonable, get_ISO_time
 from agentops.helpers.serialization import AgentOpsJSONEncoder
 from agentops.logging import logger
+from agentops.session.tracer_adapter import SessionTelemetryAdapter
 
 if TYPE_CHECKING:
     from agentops.config import Config
-    from agentops.instrumentation.session.tracer import SessionTracer
+    from agentops.telemetry.session import SessionTelemetry
 
 from .signals import *
 
@@ -71,7 +72,7 @@ def default_config():
     return _Config()
 
 @dataclass
-class Session:
+class Session(SessionTelemetryAdapter):
     """Data container for session state with minimal public API"""
 
     session_id: UUID = field(default_factory=uuid4)
@@ -93,11 +94,7 @@ class Session:
 
     @state.setter
     def state(self, value: Union[SessionState, str]) -> None:
-        """Set session state
-        
-        Args:
-            value: New state (SessionState enum or string)
-        """
+        """Set session state"""
         if isinstance(value, str):
             try:
                 value = SessionState.from_string(value)
@@ -105,6 +102,9 @@ class Session:
                 logger.warning(f"Invalid session state: {value}")
                 value = SessionState.INDETERMINATE
         self._state = value
+        # Update span status when state changes
+        if hasattr(self,'span'):
+            self.set_status(value, self.end_state_reason)
 
     @property
     def end_state(self) -> str:
@@ -126,9 +126,6 @@ class Session:
         # Initialize session-specific components
         self._lock = threading.Lock()
         self._end_session_lock = threading.Lock()
-        
-        self._init_timestamp = None
-        self._end_timestamp = None
 
         if self.config.api_key is None:
             self.state = SessionState.FAILED
@@ -156,28 +153,6 @@ class Session:
             self.end(str(SessionState.FAILED), f"Exception during initialization: {str(e)}")
             if not self.config.fail_safe:
                 raise
-
-    @property
-    def init_timestamp(self) -> str | None:
-        """Get the initialization timestamp"""
-        return self._init_timestamp
-    
-
-    @init_timestamp.setter
-    def init_timestamp(self, value: str):
-        """Set the initialization timestamp"""
-        self._init_timestamp = value
-        
-
-    @property   
-    def end_timestamp(self) -> str | None:
-        """Get the end timestamp"""
-        return self._end_timestamp
-    
-    @end_timestamp.setter
-    def end_timestamp(self, value: str):
-        """Set the end timestamp"""
-        self._end_timestamp = value
 
     @property
     def token_cost(self) -> str:
@@ -380,16 +355,3 @@ class Session:
         
         self.tags = tags
         session_updated.send(self)
-
-    @property
-    def tracer(self) -> "SessionTracer":
-        """Get the session tracer instance."""
-        tracer = getattr(self, "_tracer", None)
-        if tracer is None:
-            raise RuntimeError("Session tracer not initialized")
-        return tracer
-
-    @tracer.setter
-    def tracer(self, value: "SessionTracer") -> None:
-        """Set the session tracer instance."""
-        self._tracer = value
