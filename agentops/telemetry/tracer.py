@@ -93,6 +93,9 @@ class SessionTracer:
             "session.lifecycle", attributes={"session.id": self.session_id, "session.type": "root"}
         )
         self._context = trace.set_span_in_context(session.span)
+        
+        # Attach the context and store the token
+        self._token = context.attach(self._context)
 
         # Store for cleanup
         _session_tracers[self.session_id] = self
@@ -129,6 +132,10 @@ class SessionTracer:
                 return
 
             logger.debug(f"[{self.session_id}] Shutting down session tracer")
+
+            # Detach the context
+            if hasattr(self, '_token'):
+                context.detach(self._token)
 
             if self.session.span:
                 self.session.span.end()
