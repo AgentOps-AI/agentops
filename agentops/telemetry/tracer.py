@@ -24,6 +24,7 @@ from agentops.session import session_ended, session_started
 
 from .exporters import RegularEventExporter
 from .processors import LiveSpanProcessor
+from .span_bridge import SessionSpanBridge
 
 if TYPE_CHECKING:
     from agentops.session.session import Session
@@ -70,6 +71,9 @@ class SessionTracer:
             }
         )
         self._context = trace.set_span_in_context(self._root_span)
+        
+        # Initialize bridge after root span creation
+        self.bridge = SessionSpanBridge(session, self._root_span)
         
         # Store for cleanup
         _session_tracers[self.session_id] = self

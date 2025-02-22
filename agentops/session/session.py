@@ -25,12 +25,13 @@ from agentops.exceptions import ApiServerException
 from agentops.helpers import filter_unjsonable, get_ISO_time
 from agentops.helpers.serialization import AgentOpsJSONEncoder
 from agentops.logging import logger
+from agentops.session.tracer_adapter import SessionTracerAdapter
 
 if TYPE_CHECKING:
     from agentops.config import Config
-    from agentops.instrumentation.session.tracer import SessionTracer
+    from agentops.telemetry.tracer import SessionTracer
 
-from .signals import *
+from .signals import session_ending, session_initialized, session_started, session_updated, session_ended
 
 
 class SessionState(StrEnum):
@@ -71,7 +72,7 @@ def default_config():
     return _Config()
 
 @dataclass
-class Session:
+class Session(SessionTracerAdapter):
     """Data container for session state with minimal public API"""
 
     session_id: UUID = field(default_factory=uuid4)
@@ -126,9 +127,6 @@ class Session:
         # Initialize session-specific components
         self._lock = threading.Lock()
         self._end_session_lock = threading.Lock()
-        
-        self._init_timestamp = None
-        self._end_timestamp = None
 
         if self.config.api_key is None:
             self.state = SessionState.FAILED
@@ -156,28 +154,6 @@ class Session:
             self.end(str(SessionState.FAILED), f"Exception during initialization: {str(e)}")
             if not self.config.fail_safe:
                 raise
-
-    @property
-    def init_timestamp(self) -> str | None:
-        """Get the initialization timestamp"""
-        return self._init_timestamp
-    
-
-    @init_timestamp.setter
-    def init_timestamp(self, value: str):
-        """Set the initialization timestamp"""
-        self._init_timestamp = value
-        
-
-    @property   
-    def end_timestamp(self) -> str | None:
-        """Get the end timestamp"""
-        return self._end_timestamp
-    
-    @end_timestamp.setter
-    def end_timestamp(self, value: str):
-        """Set the end timestamp"""
-        self._end_timestamp = value
 
     @property
     def token_cost(self) -> str:
@@ -393,3 +369,12 @@ class Session:
     def tracer(self, value: "SessionTracer") -> None:
         """Set the session tracer instance."""
         self._tracer = value
+        # Update timestamps from span if available
+        if hasattr(value, "bridge"):
+            span = value.bridge.root_span
+            init_ts = self._ns_to_iso(getattr(span, "start_time", None))
+            end_ts = self._ns_to_iso(getattr(span, "end_time", None))
+            if init_ts:
+                self._init_timestamp = init_ts
+            if end_ts:
+                self._end_timestamp = end_ts
