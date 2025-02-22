@@ -9,6 +9,8 @@ from dataclasses import dataclass, field
 from opentelemetry import trace
 from opentelemetry.trace import Status, StatusCode
 
+from agentops.telemetry.tracer import SessionTracer
+
 if TYPE_CHECKING:
     from agentops.session.session import SessionState
 
@@ -22,7 +24,7 @@ class SessionTracerAdapter:
     span integration.
     """
 
-    span: Optional[trace.Span] = field(default=None, init=False, repr=False)  # The root span for the session
+    span: trace.Span = field(init=False, repr=False)  # The root span for the session
 
     @staticmethod
     def _ns_to_iso(ns_time: Optional[int]) -> Optional[str]:
@@ -32,6 +34,8 @@ class SessionTracerAdapter:
         seconds = ns_time / 1e9
         dt = datetime.fromtimestamp(seconds, tz=timezone.utc)
         return dt.isoformat().replace("+00:00", "Z")
+
+    # ------------------------------------------------------------
 
     @property
     def init_timestamp(self) -> Optional[str]:
@@ -61,6 +65,12 @@ class SessionTracerAdapter:
         self._end_timestamp = value
         if self.span:
             self.span.set_attribute("session.end_timestamp", value)
+
+    # ------------------------------------------------------------
+
+    @property
+    def tracer(self) -> SessionTracer:
+        return self._tracer
 
     def set_status(self, state: SessionState, reason: Optional[str] = None) -> None:
         """Update root span status based on session state."""

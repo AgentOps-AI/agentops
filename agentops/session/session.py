@@ -31,7 +31,8 @@ if TYPE_CHECKING:
     from agentops.config import Config
     from agentops.telemetry.tracer import SessionTracer
 
-from .signals import session_ending, session_initialized, session_started, session_updated, session_ended
+from .signals import (session_ended, session_ending, session_initialized,
+                      session_started, session_updated)
 
 
 class SessionState(StrEnum):
@@ -94,11 +95,7 @@ class Session(SessionTracerAdapter):
 
     @state.setter
     def state(self, value: Union[SessionState, str]) -> None:
-        """Set session state
-        
-        Args:
-            value: New state (SessionState enum or string)
-        """
+        """Set session state"""
         if isinstance(value, str):
             try:
                 value = SessionState.from_string(value)
@@ -106,6 +103,8 @@ class Session(SessionTracerAdapter):
                 logger.warning(f"Invalid session state: {value}")
                 value = SessionState.INDETERMINATE
         self._state = value
+        # Update span status when state changes
+        self.update_span_status(value, self.end_state_reason)
 
     @property
     def end_state(self) -> str:
@@ -356,25 +355,3 @@ class Session(SessionTracerAdapter):
         
         self.tags = tags
         session_updated.send(self)
-
-    @property
-    def tracer(self) -> "SessionTracer":
-        """Get the session tracer instance."""
-        tracer = getattr(self, "_tracer", None)
-        if tracer is None:
-            raise RuntimeError("Session tracer not initialized")
-        return tracer
-
-    @tracer.setter
-    def tracer(self, value: "SessionTracer") -> None:
-        """Set the session tracer instance."""
-        self._tracer = value
-        # Update timestamps from span if available
-        if hasattr(value, "bridge"):
-            span = value.bridge.root_span
-            init_ts = self._ns_to_iso(getattr(span, "start_time", None))
-            end_ts = self._ns_to_iso(getattr(span, "end_time", None))
-            if init_ts:
-                self._init_timestamp = init_ts
-            if end_ts:
-                self._end_timestamp = end_ts
