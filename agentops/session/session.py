@@ -285,11 +285,11 @@ class Session(SessionTelemetryAdapter):
                 
                 # Send session_started signal with self as sender
                 session_started.send(self)
-                logger.debug("Session started successfully")
+                logger.debug(f"{self.session_id} Sessionstarted successfully")
                 return True
 
             except ApiServerException as e:
-                logger.error(f"Could not start session - {e}")
+                logger.error(f"{self.session_id} Could not start session - {e}")
                 self.state = SessionState.FAILED
                 if not self.config.fail_safe:
                     raise
@@ -337,7 +337,7 @@ class Session(SessionTelemetryAdapter):
             tags: List of tags to add
         """
         if self.state.is_terminal:
-            logger.warning("Cannot add tags to ended session")
+            logger.warning(f"{self.session_id} Cannot add tags to ended session")
             return
         
         self.tags.extend(tags)
