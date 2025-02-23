@@ -58,8 +58,8 @@ class Client:
 
     def start_session(
         self,
-        tags: Optional[List[str]] = None,
         inherited_session_id: Optional[str] = None,
+        **kwargs
     ) -> Union[Session, None]:
         """Start a new session for recording events
         
@@ -79,7 +79,7 @@ class Client:
             session = Session(
                 session_id=session_id,
                 config=self._config,
-                tags=tags or []
+                **kwargs
             )
             return session
         except Exception as e:

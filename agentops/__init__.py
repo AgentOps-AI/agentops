@@ -53,7 +53,7 @@ def configure(**kwargs: Unpack[ConfigDict]):
 
 
 def start_session(
-    tags: Optional[List[str]] = None
+    **kwargs
 ) -> Optional[Session]:
     """Start a new session for recording events.
 
@@ -64,7 +64,7 @@ def start_session(
     Returns:
         Optional[Session]: Returns Session if successful, None otherwise.
     """
-    return _client.start_session(tags)
+    return _client.start_session(**kwargs)
 
 
 def end_session(
