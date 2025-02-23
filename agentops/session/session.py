@@ -286,6 +286,18 @@ class Session(SessionTelemetryAdapter):
         
         self.tags.extend(tags)
         session_updated.send(self)
+    def dict(self) -> dict:
+        """Convert session to dictionary, excluding private and non-serializable fields"""
+        return {
+            "session_id": self.session_id,
+            "config": asdict(self.config),  # Serialize config separately
+            "tags": self.tags,
+            "host_env": self.host_env,
+            "state": str(self.state),
+            "jwt": self.jwt,
+            "video": self.video,
+            "event_counts": self.event_counts,
+        }
 
     def set_tags(self, tags: List[str]) -> None:
         """Set session tags, replacing existing ones
@@ -299,3 +311,5 @@ class Session(SessionTelemetryAdapter):
         
         self.tags = tags
         session_updated.send(self)
+    def json(self):
+        return json.dumps(self.dict(), cls=AgentOpsJSONEncoder)
