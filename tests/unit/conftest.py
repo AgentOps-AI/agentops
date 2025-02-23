@@ -16,6 +16,7 @@ from pytest import Session
 import agentops
 from agentops.config import Config
 from tests.fixtures.event import llm_event_spy
+from tests.fixtures.session import *
 
 
 @pytest.fixture
@@ -98,15 +99,3 @@ def mock_req(base_url, jwt):
 @pytest.fixture
 def agentops_init(api_key, base_url):
     agentops.init(api_key=api_key, endpoint=base_url, auto_start_session=False)
-
-
-@pytest.fixture
-def agentops_session(agentops_init):
-    session = agentops.start_session()
-
-    assert session, "Failed agentops.start_session() returned None."
-
-    yield session
-
-    agentops.end_all_sessions()
-
