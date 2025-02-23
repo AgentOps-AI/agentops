@@ -49,9 +49,8 @@ def get_tracer_provider() -> TracerProvider:
 def setup_session_tracer(sender: Session, **kwargs):
     """Set up and start session tracing."""
     try:
-        tracer = SessionTelemetry(sender)
-        sender._tracer = tracer
-        logger.debug(f"[{sender.session_id}] Session tracing started")
+        setattr(sender,'telemetry',SessionTelemetry(sender))
+        logger.debug(f"[{sender.session_id}] Session telemetry started")
     except Exception as e:
         logger.error(f"[{sender.session_id}] Failed to initialize session tracer: {e}")
         raise

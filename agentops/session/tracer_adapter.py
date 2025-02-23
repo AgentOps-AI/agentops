@@ -30,6 +30,8 @@ class SessionTelemetryAdapter:
 
     span: trace.Span | None = field(default=None, init=False, repr=False)  # The root span for the session
 
+    telemetry: SessionTelemetry = field(default=None,repr=False,init=False)
+
     @staticmethod
     def _ns_to_iso(ns_time: Optional[int]) -> Optional[str]:
         """Convert nanosecond timestamp to ISO format."""
@@ -71,10 +73,6 @@ class SessionTelemetryAdapter:
             self.span.set_attribute("session.end_timestamp", value)
 
     # ------------------------------------------------------------
-
-    @property
-    def tracer(self) -> SessionTelemetry:
-        return self._tracer
 
     def set_status(self, state: SessionState, reason: Optional[str] = None) -> None:
         """Update root span status based on session state."""
