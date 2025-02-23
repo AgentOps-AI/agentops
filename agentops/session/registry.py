@@ -17,9 +17,9 @@ def add_session(session: "Session") -> None:
     """Add session to active sessions list"""
     if session not in _active_sessions:
         _active_sessions.append(session)
-        logger.debug(f"Added session {session.session_id} to registry. Active sessions: {len(_active_sessions)}")
+        logger.debug(f"[{session.session_id}] Added to registry. Active sessions: {len(_active_sessions)}")
     else:
-        logger.debug(f"Session {session.session_id} already in registry")
+        logger.warning(f"[{session.session_id}] Already in registry. This might imply a programming error. Please report this.")
 
 
 def remove_session(session: "Session") -> None:
