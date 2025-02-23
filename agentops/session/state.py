@@ -1,8 +1,11 @@
 from dataclasses import field
 from enum import StrEnum, auto
-from typing import Optional, Union
+from typing import TYPE_CHECKING, Optional, Union
 
 from agentops.logging import logger
+
+if TYPE_CHECKING:
+    from .session import Session
 
 
 class SessionState(StrEnum):
@@ -60,7 +63,7 @@ class SessionStateDescriptor:
             return f"{state}({reason})"
         return state
         
-    def __set__(self, obj, value: Union[SessionState, str]) -> None:
+    def __set__(self, obj: 'Session', value: Union[SessionState, str]) -> None:
         """Set the state and optionally update reason"""
         if isinstance(value, str):
             try:

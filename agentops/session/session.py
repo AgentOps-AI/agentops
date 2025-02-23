@@ -277,6 +277,8 @@ class Session(SessionTelemetryAdapter):
             "jwt": self.jwt,
             "video": self.video,
             "event_counts": self.event_counts,
+            "init_timestamp": self.init_timestamp,
+            "end_timestamp": self.end_timestamp
         }
 
     def set_tags(self, tags: List[str]) -> None:

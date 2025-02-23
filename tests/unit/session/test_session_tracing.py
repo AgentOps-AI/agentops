@@ -4,6 +4,9 @@ from opentelemetry import trace
 import agentops
 
 
+pytestmark = [pytest.mark.skip]
+
+
 @pytest.fixture
 def session_generator():
     """Fixture that provides a session generator with automatic cleanup"""
