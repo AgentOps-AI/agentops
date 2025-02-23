@@ -87,6 +87,9 @@ class Session(SessionTelemetryAdapter):
         default_factory=lambda: {"llms": 0, "tools": 0, "actions": 0, "errors": 0, "apis": 0}
     )
 
+    ############################################################################################
+    # kw-only fields below (controls)
+    auto_start: bool = field(default=True, kw_only=True, repr=False, compare=False)
     @property
     def state(self) -> SessionState:
         """Get current session state"""
@@ -135,24 +138,25 @@ class Session(SessionTelemetryAdapter):
             return
 
         self.api = SessionApiClient(self)
-        
+
         # Signal session is initialized
         session_initialized.send(self)
-        
-        # Initialize session
-        try:
-            if not self.start():
-                self.state = SessionState.FAILED
+
+        # Initialize session only if auto_start is True
+        if self.auto_start:
+            try:
+                if not self.start():
+                    self.state = SessionState.FAILED
+                    if not self.config.fail_safe:
+                        raise RuntimeError("Session.start() did not succeed", self)
+                    logger.error("Session initialization failed")
+                    return
+            except Exception as e:
                 if not self.config.fail_safe:
-                    raise RuntimeError("Session.start() did not succeed", self)
-                logger.error("Session initialization failed")
-                return
-        except Exception as e:
-            self.state = SessionState.FAILED
-            logger.error(f"Failed to initialize session: {e}")
-            self.end(str(SessionState.FAILED), f"Exception during initialization: {str(e)}")
-            if not self.config.fail_safe:
-                raise
+                    raise
+                self.state = SessionState.FAILED
+                logger.error(f"Failed to initialize session: {e}")
+                self.end(str(SessionState.FAILED), f"Exception during initialization: {str(e)}")
 
     @property
     def token_cost(self) -> str:
