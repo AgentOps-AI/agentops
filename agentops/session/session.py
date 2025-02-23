@@ -37,7 +37,7 @@ from .signals import *
 
 
 
-@dataclass
+@dataclass(slots=True)
 class Session(SessionTelemetryAdapter):
     """Data container for session state with minimal public API"""
 
