@@ -26,60 +26,64 @@ class ConfigDict(TypedDict):
 
 @dataclass
 class Config:
-    # API key for authentication with AgentOps services
-    api_key: Optional[str] = field(default_factory=lambda: os.getenv('AGENTOPS_API_KEY'))
+    api_key: Optional[str] = field(
+        default_factory=lambda: os.getenv('AGENTOPS_API_KEY'),
+        metadata={"description": "API key for authentication with AgentOps services"}
+    )
     
-    # Parent API key for hierarchical organization of sessions
-    parent_key: Optional[str] = field(default_factory=lambda: os.getenv('AGENTOPS_PARENT_KEY'))
+    parent_key: Optional[str] = field(
+        default_factory=lambda: os.getenv('AGENTOPS_PARENT_KEY'),
+        metadata={"description": "Parent API key for hierarchical organization of sessions"}
+    )
     
-    # Base URL for the AgentOps API
     endpoint: str = field(
-        default_factory=lambda: os.getenv('AGENTOPS_API_ENDPOINT', 'https://api.agentops.ai')
+        default_factory=lambda: os.getenv('AGENTOPS_API_ENDPOINT', 'https://api.agentops.ai'),
+        metadata={"description": "Base URL for the AgentOps API"}
     )
     
-    # Maximum time in milliseconds to wait for API responses
     max_wait_time: int = field(
-        default_factory=lambda: get_env_int('AGENTOPS_MAX_WAIT_TIME', 5000)
+        default_factory=lambda: get_env_int('AGENTOPS_MAX_WAIT_TIME', 5000),
+        metadata={"description": "Maximum time in milliseconds to wait for API responses"}
     )
     
-    # Maximum number of events to queue before forcing a flush
     max_queue_size: int = field(
-        default_factory=lambda: get_env_int('AGENTOPS_MAX_QUEUE_SIZE', 512)
+        default_factory=lambda: get_env_int('AGENTOPS_MAX_QUEUE_SIZE', 512),
+        metadata={"description": "Maximum number of events to queue before forcing a flush"}
     )
     
-    # Default tags to apply to all sessions
     default_tags: Set[str] = field(
-        default_factory=lambda: get_env_list('AGENTOPS_DEFAULT_TAGS')
+        default_factory=lambda: get_env_list('AGENTOPS_DEFAULT_TAGS'),
+        metadata={"description": "Default tags to apply to all sessions"}
     )
     
-    # Whether to automatically instrument and track LLM API calls
     instrument_llm_calls: bool = field(
-        default_factory=lambda: get_env_bool('AGENTOPS_INSTRUMENT_LLM_CALLS', True)
+        default_factory=lambda: get_env_bool('AGENTOPS_INSTRUMENT_LLM_CALLS', True),
+        metadata={"description": "Whether to automatically instrument and track LLM API calls"}
     )
     
-    # Whether to automatically start a session when initializing
     auto_start_session: bool = field(
-        default_factory=lambda: get_env_bool('AGENTOPS_AUTO_START_SESSION', True)
+        default_factory=lambda: get_env_bool('AGENTOPS_AUTO_START_SESSION', True),
+        metadata={"description": "Whether to automatically start a session when initializing"}
     )
     
-    # Whether to skip automatically ending sessions on program exit
     skip_auto_end_session: bool = field(
-        default_factory=lambda: get_env_bool('AGENTOPS_SKIP_AUTO_END_SESSION', False)
+        default_factory=lambda: get_env_bool('AGENTOPS_SKIP_AUTO_END_SESSION', False),
+        metadata={"description": "Whether to skip automatically ending sessions on program exit"}
     )
     
-    # Whether to opt out of collecting environment data
     env_data_opt_out: bool = field(
-        default_factory=lambda: get_env_bool('AGENTOPS_ENV_DATA_OPT_OUT', False)
+        default_factory=lambda: get_env_bool('AGENTOPS_ENV_DATA_OPT_OUT', False),
+        metadata={"description": "Whether to opt out of collecting environment data"}
     )
     
-    # Logging level for AgentOps logs
     log_level: Union[str, int] = field(
-        default_factory=lambda: os.getenv('AGENTOPS_LOG_LEVEL', 'CRITICAL')
+        default_factory=lambda: os.getenv('AGENTOPS_LOG_LEVEL', 'CRITICAL'),
+        metadata={"description": "Logging level for AgentOps logs"}
     )
     
-    # Whether to suppress errors and continue execution when possible
     fail_safe: bool = field(
-        default_factory=lambda: get_env_bool('AGENTOPS_FAIL_SAFE', False)
+        default_factory=lambda: get_env_bool('AGENTOPS_FAIL_SAFE', False),
+        metadata={"description": "Whether to suppress errors and continue execution when possible"}
     )
 
     def configure(
