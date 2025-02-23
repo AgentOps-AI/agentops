@@ -1,28 +1,20 @@
 from __future__ import annotations
 
-import functools
 import json
 import threading
 from dataclasses import asdict, dataclass, field
 from datetime import datetime
 from decimal import ROUND_HALF_UP, Decimal
-from enum import Enum, StrEnum, auto
-from typing import TYPE_CHECKING, Any, Dict, List, Optional, Union
+from enum import StrEnum, auto
+from typing import TYPE_CHECKING, Dict, List, Optional, Union
 from uuid import UUID, uuid4
 
-from blinker import Signal
-from opentelemetry import trace
-from requests import Response
-# from opentelemetry.context import attach, detach, set_value
-# from opentelemetry.sdk._logs import LoggerProvider, LoggingHandler
 from termcolor import colored
 
-import agentops
-from agentops import session
 from agentops.api.session import SessionApiClient
 from agentops.config import Config, default_config
 from agentops.exceptions import ApiServerException
-from agentops.helpers import filter_unjsonable, get_ISO_time
+from agentops.helpers import get_ISO_time
 from agentops.helpers.serialization import AgentOpsJSONEncoder
 from agentops.logging import logger
 from agentops.session.tracer_adapter import SessionTelemetryAdapter
@@ -34,7 +26,6 @@ if TYPE_CHECKING:
     from agentops.config import Config
 
 from .signals import *
-
 
 
 @dataclass(slots=True)
@@ -121,7 +112,6 @@ class Session(SessionTelemetryAdapter):
         except (ValueError, AttributeError):
             return "0.00"
 
-
     @property
     def analytics(self) -> Optional[Dict[str, Union[int, str]]]:
         """Get session analytics"""
@@ -151,7 +141,7 @@ class Session(SessionTelemetryAdapter):
             "FAILED": SessionState.FAILED,
             "Failed": SessionState.FAILED,
             "Indeterminate": SessionState.INDETERMINATE,
-            "INDETERMINATE": SessionState.INDETERMINATE
+            "INDETERMINATE": SessionState.INDETERMINATE,
         }
         try:
             # First try to map the string directly
@@ -161,10 +151,7 @@ class Session(SessionTelemetryAdapter):
             return SessionState.INDETERMINATE
 
     def end(
-        self, 
-        end_state: Optional[str] = None,
-        end_state_reason: Optional[str] = None,
-        video: Optional[str] = None
+        self, end_state: Optional[str] = None, end_state_reason: Optional[str] = None, video: Optional[str] = None
     ) -> None:
         """End the session"""
         with self._lock:
@@ -181,24 +168,18 @@ class Session(SessionTelemetryAdapter):
                 self.video = video
 
             # Send signal with current state
-            session_ending.send(self, 
-                session_id=self.session_id,
-                end_state=str(self.state),
-                end_state_reason=self.end_state_reason
+            session_ending.send(
+                self, session_id=self.session_id, end_state=str(self.state), end_state_reason=self.end_state_reason
             )
 
             self.end_timestamp = get_ISO_time()
 
-            session_data = json.loads(
-                json.dumps(asdict(self), cls=AgentOpsJSONEncoder)
-            )
+            session_data = json.loads(self.json())
             self.api.update_session(session_data)
 
             session_updated.send(self)
-            session_ended.send(self, 
-                session_id=self.session_id,
-                end_state=str(self.state),
-                end_state_reason=self.end_state_reason
+            session_ended.send(
+                self, session_id=self.session_id, end_state=str(self.state), end_state_reason=self.end_state_reason
             )
             logger.debug(f"Session {self.session_id} ended with state {self.state}")
 
@@ -210,12 +191,10 @@ class Session(SessionTelemetryAdapter):
                 return False
 
             session_starting.send(self)
-            self.init_timestamp = get_ISO_time()
+            # self.init_timestamp = get_ISO_time() # The SPAN will retrieve this
 
             try:
-                session_data = json.loads(
-                    json.dumps(asdict(self), cls=AgentOpsJSONEncoder)
-                )
+                session_data = json.loads(self.json())
                 self.jwt = self.api.create_session(session_data)
 
                 logger.info(
@@ -227,10 +206,10 @@ class Session(SessionTelemetryAdapter):
 
                 # Set state before sending signal so registry sees correct state
                 self.state = SessionState.RUNNING
-                
+
                 # Send session_started signal with self as sender
                 session_started.send(self)
-                logger.debug(f"{self.session_id} Sessionstarted successfully")
+                logger.debug(f"[{self.session_id}] Session started successfully")
                 return True
 
             except ApiServerException as e:
@@ -266,13 +245,13 @@ class Session(SessionTelemetryAdapter):
     def __repr__(self) -> str:
         """String representation"""
         parts = [f"Session(id={self.session_id}, status={self.state}"]
-        
+
         if self.tags:
             parts.append(f"tags={self.tags}")
-            
+
         if self.state.is_terminal and self.end_state_reason:
             parts.append(f"reason='{self.end_state_reason}'")
-            
+
         return ", ".join(parts) + ")"
 
     def add_tags(self, tags: List[str]) -> None:
