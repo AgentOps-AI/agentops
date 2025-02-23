@@ -20,7 +20,7 @@ from termcolor import colored
 import agentops
 from agentops import session
 from agentops.api.session import SessionApiClient
-from agentops.config import TESTING, Config
+from agentops.config import Config, default_config
 from agentops.exceptions import ApiServerException
 from agentops.helpers import filter_unjsonable, get_ISO_time
 from agentops.helpers.serialization import AgentOpsJSONEncoder
@@ -67,9 +67,6 @@ class SessionState(StrEnum):
             return cls.INDETERMINATE
 
 
-def default_config():
-    from agentops import Config as _Config
-    return _Config()
 
 @dataclass
 class Session(SessionTelemetryAdapter):

@@ -164,6 +164,10 @@ class Config:
         if fail_safe is not None:
             self.fail_safe = fail_safe
 
+def default_config():
+    from agentops import Config as _Config
+
+    return _Config()
 
 # Detect if we're running under pytest
 TESTING = "pytest" in sys.modules
@@ -190,6 +194,7 @@ if TESTING:
             else:
                 import pdb
                 import traceback
+
                 # Print the traceback and start the debugger
                 traceback.print_exception(type, value, tb)
                 pdb.post_mortem(tb)
