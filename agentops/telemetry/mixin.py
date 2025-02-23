@@ -1,4 +1,4 @@
-from typing import TYPE_CHECKING, Protocol, Optional, Dict, Any
+from typing import TYPE_CHECKING, Any, Dict, Optional, Protocol
 
 from opentelemetry import context, trace
 from opentelemetry.trace import SpanContext, TraceFlags
@@ -6,44 +6,15 @@ from opentelemetry.trace import SpanContext, TraceFlags
 from agentops.instrumentation.session.tracer import SessionInstrumentor
 
 if TYPE_CHECKING:
-    from agentops.session import Session, SessionState
     from opentelemetry.trace import Span
+
+from agentops.session.state import SessionState
 
 
 class SessionProtocol(Protocol):  # Forward attributes for Session class
     session_id: str
     tracer: SessionInstrumentor
     state: SessionState
-
-
-class SpanOperationMixin(SessionProtocol):
-    """Base mixin for span operations.
-    
-    Provides core functionality for creating and managing spans.
-    """
-    
-    def start_span(self, name: str, attributes: Optional[Dict[str, Any]] = None) -> "Span":
-        """Start a new span with the given name and attributes.
-        
-        Args:
-            name: Name of the span
-            attributes: Optional attributes to add to the span
-            
-        Returns:
-            The created span
-        """
-        base_attributes = {
-            "session.id": str(self.session_id),
-            "session.state": str(self.state)
-        }
-        if attributes:
-            base_attributes.update(attributes)
-            
-        return self.tracer.tracer.start_as_current_span(
-            name,
-            attributes=base_attributes
-        )
-
 
 
 class SessionContextMixin(SessionProtocol):
