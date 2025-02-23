@@ -27,44 +27,13 @@ from agentops.helpers.serialization import AgentOpsJSONEncoder
 from agentops.logging import logger
 from agentops.session.tracer_adapter import SessionTelemetryAdapter
 
+from .state import SessionState
+from .state import SessionStateDescriptor as session_state_field
+
 if TYPE_CHECKING:
     from agentops.config import Config
-    from agentops.telemetry.session import SessionTelemetry
 
 from .signals import *
-
-
-class SessionState(StrEnum):
-    """Session state enumeration"""
-
-    INITIALIZING = auto()
-    RUNNING = auto()
-    SUCCEEDED = auto()
-    FAILED = auto()
-    INDETERMINATE = auto()
-
-    @property
-    def is_terminal(self) -> bool:
-        """Whether this is a terminal state"""
-        return self in (self.FAILED, self.SUCCEEDED, self.INDETERMINATE)
-
-    @property
-    def is_alive(self) -> bool:
-        """Whether the session is still active"""
-        return self in (self.INITIALIZING, self.RUNNING)
-
-    @classmethod
-    def from_string(cls, state: str) -> "SessionState":
-        """Convert string to SessionState, with simple aliases"""
-        state = state.upper()
-        if state in ("SUCCESS", "SUCCEEDED"):
-            return cls.SUCCEEDED
-        if state in ("FAIL", "FAILED"):
-            return cls.FAILED
-        try:
-            return cls[state]  # Use direct lookup since it's a StrEnum
-        except KeyError:
-            return cls.INDETERMINATE
 
 
 
@@ -76,7 +45,6 @@ class Session(SessionTelemetryAdapter):
     config: Config = field(default_factory=default_config)
     tags: List[str] = field(default_factory=list)
     host_env: Optional[dict] = None
-    _state: SessionState = field(default=SessionState.INITIALIZING)
     end_state_reason: Optional[str] = None
     jwt: Optional[str] = None
     video: Optional[str] = None
@@ -84,37 +52,12 @@ class Session(SessionTelemetryAdapter):
         default_factory=lambda: {"llms": 0, "tools": 0, "actions": 0, "errors": 0, "apis": 0}
     )
 
+    # Define the state descriptor at class level
+    state = session_state_field()
+
     ############################################################################################
     # kw-only fields below (controls)
     auto_start: bool = field(default=True, kw_only=True, repr=False, compare=False)
-    @property
-    def state(self) -> SessionState:
-        """Get current session state"""
-        return self._state
-
-    @state.setter
-    def state(self, value: Union[SessionState, str]) -> None:
-        """Set session state"""
-        if isinstance(value, str):
-            try:
-                value = SessionState.from_string(value)
-            except ValueError:
-                logger.warning(f"Invalid session state: {value}")
-                value = SessionState.INDETERMINATE
-        self._state = value
-        # Update span status when state changes
-        if hasattr(self,'span'):
-            self.set_status(value, self.end_state_reason)
-
-    @property
-    def end_state(self) -> str:
-        """Legacy property for backwards compatibility"""
-        return str(self.state)
-
-    @end_state.setter 
-    def end_state(self, value: str) -> None:
-        """Legacy setter for backwards compatibility"""
-        self.state = value
 
     @property
     def is_running(self) -> bool:
