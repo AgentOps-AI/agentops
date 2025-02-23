@@ -44,7 +44,7 @@ class Session(SessionTelemetryAdapter):
     session_id: UUID = field(default_factory=uuid4)
     config: Config = field(default_factory=default_config)
     tags: List[str] = field(default_factory=list)
-    host_env: Optional[dict] = None
+    host_env: Optional[dict] = field(default_factory=lambda:{}, repr=False)
     end_state_reason: Optional[str] = None
     jwt: Optional[str] = None
     video: Optional[str] = None
@@ -58,6 +58,9 @@ class Session(SessionTelemetryAdapter):
     ############################################################################################
     # kw-only fields below (controls)
     auto_start: bool = field(default=True, kw_only=True, repr=False, compare=False)
+    ############################################################################################
+    # Private fields only below
+    _lock: threading.Lock = field(default_factory=threading.Lock, repr=False, init=False, compare=False)
 
     @property
     def is_running(self) -> bool:
@@ -67,8 +70,6 @@ class Session(SessionTelemetryAdapter):
     def __post_init__(self):
         """Initialize session components after dataclass initialization"""
         # Initialize session-specific components
-        self._lock = threading.Lock()
-        self._end_session_lock = threading.Lock()
 
         if self.config.api_key is None:
             self.state = SessionState.FAILED
@@ -166,7 +167,7 @@ class Session(SessionTelemetryAdapter):
         video: Optional[str] = None
     ) -> None:
         """End the session"""
-        with self._end_session_lock:
+        with self._lock:
             if self.state.is_terminal:
                 logger.debug(f"Session {self.session_id} already ended")
                 return
