@@ -5,8 +5,7 @@ from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING, Any, Dict, Optional, Sequence
 from uuid import uuid4
 
-from opentelemetry.exporter.otlp.proto.http.trace_exporter import \
-    OTLPSpanExporter
+from opentelemetry.exporter.otlp.proto.http.trace_exporter import OTLPSpanExporter
 from opentelemetry.sdk.trace import ReadableSpan
 from opentelemetry.sdk.trace.export import SpanExporter, SpanExportResult
 
@@ -34,7 +33,7 @@ class BaseExporter(ABC):
                 return SpanExportResult.SUCCESS
             return self._export(data)
         except Exception as e:
-            logger.error(f"Export failed: {e}")
+            logger.error(f"[{self.session.session_id}] Export failed: {e}")
             if TESTING:
                 raise e
             return SpanExportResult.FAILURE
@@ -53,74 +52,37 @@ class BaseExporter(ABC):
         return True
 
 
-# class SessionLifecycleExporter(BaseExporter, SpanExporter):
-#     """Handles only session start/end events"""
-#     def _export(self, spans: Sequence[ReadableSpan]) -> SpanExportResult:
-#         session_events = []
-#         for span in spans:
-#             if span.name in ["session.start", "session.end"]:
-#                 # Convert span data to dict properly
-#                 span_data = {}
-#                 if hasattr(span, "to_json"):
-#                     # Handle custom to_json implementations
-#                     json_data = span.to_json()
-#                     if isinstance(json_data, dict):
-#                         span_data.update(json_data)
-#                     else:
-#                         # Fall back to attributes if to_json doesn't return dict
-#                         span_data.update(span.attributes or {})
-#                 else:
-#                     # Use span attributes directly
-#                     span_data.update(span.attributes or {})
-#                 
-#                 span_data["session_id"] = str(self.session.session_id)
-#                 session_events.append(span_data)
-#         
-#         if session_events:
-#             try:
-#                 self.session.api.create_events(session_events)
-#                 return SpanExportResult.SUCCESS
-#             except Exception as e:
-#                 logger.error(f"Failed to export session events: {e}")
-#                 return SpanExportResult.FAILURE
-#         return SpanExportResult.SUCCESS
-#
-
-
-
-class AllSpanExporter(OTLPSpanExporter):
-    def export(self, spans) -> SpanExportResult:
-        breakpoint()
-        return super().export(spans)
-#
 class RegularEventExporter(BaseExporter, SpanExporter):
-    """Handles regular events (not session lifecycle)"""
+    """
+    Handles all spans that are not session lifecycle
+    """
+
     def _export(self, spans: Sequence[ReadableSpan]) -> SpanExportResult:
         events = []
         for span in spans:
-            if span.name not in ["session.start", "session.end"]:
-                # Convert span data to dict properly
-                span_data = {}
-                if hasattr(span, "to_json"):
-                    # Handle custom to_json implementations
-                    json_data = span.to_json()
-                    if isinstance(json_data, dict):
-                        span_data.update(json_data)
-                    else:
-                        # Fall back to attributes if to_json doesn't return dict
-                        span_data.update(span.attributes or {})
+            # Convert span data to dict properly
+            span_data = {}
+            if hasattr(span, "to_json"):
+                # Handle custom to_json implementations
+                json_data = span.to_json()
+                if isinstance(json_data, dict):
+                    span_data.update(json_data)
                 else:
-                    # Use span attributes directly
+                    # Fall back to attributes if to_json doesn't return dict
                     span_data.update(span.attributes or {})
-                
-                span_data["session_id"] = str(self.session.session_id)
-                events.append(span_data)
-        
+            else:
+                # Use span attributes directly
+                span_data.update(span.attributes or {})
+
+            span_data["session_id"] = str(self.session.session_id)
+
+            events.append(span_data)
+
         if events:
             try:
                 self.session.api.create_events(events)
                 return SpanExportResult.SUCCESS
             except Exception as e:
-                logger.error(f"Failed to export regular events: {e}")
+                logger.error(f"[{self.session.session_id}] Failed to export events: {e}")
                 return SpanExportResult.FAILURE
         return SpanExportResult.SUCCESS
