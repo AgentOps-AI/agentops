@@ -6,8 +6,10 @@ from unittest.mock import MagicMock, Mock, patch
 from uuid import UUID
 
 import pytest
+from opentelemetry.trace import Status, StatusCode
 
 import agentops
+from agentops.config import Config
 from agentops.session.session import Session, SessionState
 
 # class TestNonInitializedSessions:
@@ -31,3 +33,56 @@ class TestSessionStart:
         session = agentops.start_session(tags=test_tags)
         assert isinstance(session, Session), "start_session with tags should return a Session instance"
         assert session.tags == test_tags
+
+class TestSessionToSpanSerialization:
+    def test_session_to_span_serialization(self, agentops_session):
+        """Test that Session attributes are properly serialized into span attributes"""
+        # Create a session with known attributes
+        tags = ["test", "demo"]
+        
+        session = Session(
+            session_id=session_id,
+            config=config,
+            tags=tags,
+            host_env={"os": "linux"},
+        )
+        
+        # Get the span attributes
+        span_attributes = session._get_span_attributes()
+        
+        # Verify span attributes match session attributes
+        assert span_attributes["session.id"] == str(session_id)
+        assert span_attributes["session.tags"] == tags
+        assert span_attributes["session.state"] == "INITIALIZING"
+        assert span_attributes["session.host_env.os"] == "linux"
+        
+        # Test state transitions affect span status
+        session.state = SessionState.RUNNING
+        assert session.span.status.status_code == StatusCode.UNSET
+        
+        session.state = SessionState.SUCCEEDED
+        assert session.span.status.status_code == StatusCode.OK
+        
+        session.state = SessionState.FAILED
+        session.end_state_reason = "Test failure"
+        assert session.span.status.status_code == StatusCode.ERROR
+        assert session.span.status.description == "Test failure"
+
+    def test_session_event_counts_in_span():
+        """Test that session event counts are properly tracked in span attributes"""
+        session = Session(config=Config(api_key="test-key"))
+        
+        # Update event counts
+        session.event_counts["llms"] = 2
+        session.event_counts["tools"] = 3
+        session.event_counts["actions"] = 1
+        session.event_counts["errors"] = 1
+        
+        # Get updated span attributes
+        span_attributes = session._get_span_attributes()
+        
+        # Verify counts in span attributes
+        assert span_attributes["session.events.llms"] == 2
+        assert span_attributes["session.events.tools"] == 3
+        assert span_attributes["session.events.actions"] == 1
+        assert span_attributes["session.events.errors"] == 1
