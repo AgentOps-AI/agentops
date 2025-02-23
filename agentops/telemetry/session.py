@@ -24,9 +24,7 @@ from opentelemetry.trace.propagation.tracecontext import \
 
 from agentops.logging import logger
 from agentops.session.signals import session_ended, session_started
-
-from .exporters import RegularEventExporter
-from .processors import LiveSpanProcessor
+from agentops.telemetry.helpers import dict_to_span_attributes
 
 if TYPE_CHECKING:
     from agentops.session.session import Session
@@ -96,16 +94,14 @@ class SessionTelemetry:
 
         # Set up processor and exporter
         processor = SimpleSpanProcessor(OTLPSpanExporter(endpoint="http://localhost:4318/v1/traces"))
+
         provider.add_span_processor(processor)
 
         # Initialize tracer and root span
         self.tracer = provider.get_tracer("agentops.session")
         session.span = self.tracer.start_span(
-            "session.lifecycle", 
-            attributes={
-                "session.id": self.session_id, 
-                "session.type": "root"
-            }
+            "session", 
+            attributes=dict_to_span_attributes(self.session.dict())
         )
         
         # Create and activate the session context immediately
