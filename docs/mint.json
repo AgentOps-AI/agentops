@@ -106,7 +106,8 @@
         "v1/integrations/smolagents",
         "v1/integrations/swarmzero",
         "v1/integrations/taskweaver",
-        "v1/integrations/xai"
+        "v1/integrations/xai",
+        "v1/integrations/haystack"
       ]
     },
     {
