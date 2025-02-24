@@ -6,18 +6,18 @@ function initEntelligence() {
     chatScript.type = "module";
     chatScript.id = "entelligence-chat";
     chatScript.src =
-      "https://dujj2xy9pc7vi.cloudfront.net/vanilla/entelligence-chat.umd.js";    
+      "https://dujj2xy9pc7vi.cloudfront.net/vanilla/entelligence-chat.umd.js";
     chatScript.defer = true; // Add defer to load after HTML parsing
 
     // Create initialization script
     const initScript = document.createElement("script");
-    initScript.type = "module"; 
+    initScript.type = "module";
     initScript.textContent = `
     window.EntelligenceChat.init({
       analyticsData: {
         repoName: "agentops",
         organization: "AgentOps-AI",
-        apiKey: "1234567890",
+        apiKey: "YrodtbYbdqWNKOraqTFuVWPQ5k6yqWHTevojAI_w0Zg",
         theme: 'dark',
         companyName: "AgentOps"
       }
