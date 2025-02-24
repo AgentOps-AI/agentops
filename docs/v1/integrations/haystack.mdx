@@ -1,5 +1,5 @@
 ---
-title: Haystack Integration
+title: Haystack
 description: "Monitor your Haystack agents with AgentOps"
 ---
 
@@ -22,6 +22,9 @@ AgentOps makes monitoring your Haystack agents seamless. Haystack, much like Aut
     </CodeGroup>
   </Step>
   <Step title="Install Haystack">
+    <Warning>
+      We currently only support Haystack 2.x.
+    </Warning>
     <CodeGroup>
       ```bash pip
       pip install haystack-ai
@@ -47,7 +50,7 @@ AgentOps makes monitoring your Haystack agents seamless. Haystack, much like Aut
       import agentops
       agentops.init(<INSERT YOUR API KEY HERE>)
       ...
-      # MUST END SESSION at end of program (e.g. main.py)
+      # End of program (e.g. main.py)
       agentops.end_session("Success") # Success|Fail|Indeterminate
       ```
     </CodeGroup>
@@ -63,6 +66,10 @@ AgentOps makes monitoring your Haystack agents seamless. Haystack, much like Aut
     </Frame>
   </Step>
 </Steps>
+
+## Full Examples
+
+
 
 <script type="module" src="/scripts/github_stars.js"></script>
 <script type="module" src="/scripts/scroll-img-fadein-animation.js"></script>

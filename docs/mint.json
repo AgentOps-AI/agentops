@@ -95,6 +95,7 @@
         "v1/integrations/crewai",
         "v1/integrations/gemini",
         "v1/integrations/groq",
+        "v1/integrations/haystack",
         "v1/integrations/langchain",
         "v1/integrations/llama_stack",
         "v1/integrations/litellm",
@@ -106,8 +107,7 @@
         "v1/integrations/smolagents",
         "v1/integrations/swarmzero",
         "v1/integrations/taskweaver",
-        "v1/integrations/xai",
-        "v1/integrations/haystack"
+        "v1/integrations/xai"
       ]
     },
     {
