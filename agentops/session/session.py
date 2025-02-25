@@ -41,7 +41,7 @@ class Session(SessionTelemetryAdapter):
     video: Optional[str] = None
     event_counts: Dict[str, int] = field(
         default_factory=lambda: {"llms": 0, "tools": 0, "actions": 0, "errors": 0, "apis": 0}
-    )
+    ) # this going to be replaced with a meter / counter (see otel)
 
     # Define the state descriptor at class level
     state = session_state_field()
@@ -213,10 +213,10 @@ class Session(SessionTelemetryAdapter):
                 return True
 
             except ApiServerException as e:
-                logger.error(f"{self.session_id} Could not start session - {e}")
-                self.state = SessionState.FAILED
                 if not self.config.fail_safe:
                     raise
+                logger.error(f"[{self.session_id}] Could not start session - {e}")
+                self.state = SessionState.FAILED
                 return False
 
     def flush(self):
