@@ -8,6 +8,7 @@ from .exceptions import NoSessionException
 from .logging import logger
 from .session import Session
 from .session.registry import get_active_sessions, get_default_session
+from .instrumentation import instrument_all, uninstrument_all
 
 
 class Client:
@@ -47,6 +48,10 @@ class Client:
             skip_auto_end_session (bool): Don't auto-end session based on framework.
         """
         self._config.configure(self, **kwargs)
+        
+        # Instrument LLM calls if enabled
+        if self._config.instrument_llm_calls:
+            instrument_all()
         
         if self._config.auto_start_session:
             return self.start_session()
