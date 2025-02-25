@@ -1,4 +1,6 @@
-from .openai import OpenAIInstrumentor
+from opentelemetry.instrumentation.openai import OpenAIInstrumentor
+
+from agentops.logging import logger
 
 # Export all insturmentors (see opentelemetry.instrumentation.instrumentor.BaseInstrumentor)
 # Can iteratively call .instrument() on each entry
@@ -20,6 +22,7 @@ def instrument_all():
     for instrumentor_class in instrumentors:
         instrumentor = instrumentor_class()
         instrumentor.instrument()
+        logger.info(f"Instrumented {instrumentor_class.__name__}")
         _active_instrumentors.append(instrumentor)
 
 
@@ -31,4 +34,5 @@ def uninstrument_all():
     global _active_instrumentors
     for instrumentor in _active_instrumentors:
         instrumentor.uninstrument()
+        logger.info(f"Uninstrumented {instrumentor.__class__.__name__}")
     _active_instrumentors = []
