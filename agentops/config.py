@@ -18,6 +18,7 @@ class ConfigDict(TypedDict):
     default_tags: Optional[List[str]]
     instrument_llm_calls: Optional[bool]
     auto_start_session: Optional[bool]
+    auto_init: Optional[bool]
     skip_auto_end_session: Optional[bool]
     env_data_opt_out: Optional[bool]
     log_level: Optional[Union[str, int]]
@@ -66,6 +67,11 @@ class Config:
         metadata={"description": "Whether to automatically start a session when initializing"}
     )
     
+    auto_init: bool = field(
+        default_factory=lambda: get_env_bool('AGENTOPS_AUTO_INIT', True),
+        metadata={"description": "Whether to automatically initialize the client on import"}
+    )
+    
     skip_auto_end_session: bool = field(
         default_factory=lambda: get_env_bool('AGENTOPS_SKIP_AUTO_END_SESSION', False),
         metadata={"description": "Whether to skip automatically ending sessions on program exit"}
@@ -97,6 +103,7 @@ class Config:
         default_tags: Optional[List[str]] = None,
         instrument_llm_calls: Optional[bool] = None,
         auto_start_session: Optional[bool] = None,
+        auto_init: Optional[bool] = None,
         skip_auto_end_session: Optional[bool] = None,
         env_data_opt_out: Optional[bool] = None,
         log_level: Optional[Union[str, int]] = None,
@@ -139,6 +146,9 @@ class Config:
         if auto_start_session is not None:
             self.auto_start_session = auto_start_session
 
+        if auto_init is not None:
+            self.auto_init = auto_init
+
         if skip_auto_end_session is not None:
             self.skip_auto_end_session = skip_auto_end_session
 
@@ -165,9 +175,8 @@ class Config:
             self.fail_safe = fail_safe
 
 def default_config():
-    from agentops import Config as _Config
-
-    return _Config()
+    """Return a default configuration instance"""
+    return Config()
 
 # Detect if we're running under pytest
 TESTING = "pytest" in sys.modules

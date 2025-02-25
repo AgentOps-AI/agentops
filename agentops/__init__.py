@@ -40,6 +40,7 @@ def init(**kwargs: Unpack[ConfigDict]) -> Union[Session, None]:
         instrument_llm_calls (bool): Whether to instrument LLM calls and emit LLMEvents.
         auto_start_session (bool): Whether to start a session automatically when the client is created.
         inherited_session_id (optional, str): Init Agentops with an existing Session
+        auto_init (bool): Whether to automatically initialize the client on import. Defaults to True.
         skip_auto_end_session (optional, bool): Don't automatically end session based on your framework's decision-making
             (i.e. Crew determining when tasks are complete and ending the session)
     Attributes:
