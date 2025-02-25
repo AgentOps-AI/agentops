@@ -1,20 +1,10 @@
 # agentops/__init__.py
-import functools
-import sys
-import threading
-from importlib.metadata import version as get_version
-from typing import Any, Callable, List, Optional, Union, Unpack
+from typing import List, Optional, Union, Unpack
 
-import wrapt
-from packaging import version
-
-from agentops.api.session import SessionApiClient
 from agentops.config import ConfigDict
-from agentops.session.session import SessionState
 
 from .client import Client
 from .config import Config
-from .helpers import check_agentops_update
 from .session import Session
 
 # Client global instance; one per process runtime
@@ -39,7 +29,6 @@ def init(**kwargs: Unpack[ConfigDict]) -> Union[Session, None]:
         default_tags (List[str], optional): Default tags for the sessions that can be used for grouping or sorting later (e.g. ["GPT-4"]).
         instrument_llm_calls (bool): Whether to instrument LLM calls and emit LLMEvents.
         auto_start_session (bool): Whether to start a session automatically when the client is created.
-        inherited_session_id (optional, str): Init Agentops with an existing Session
         auto_init (bool): Whether to automatically initialize the client on import. Defaults to True.
         skip_auto_end_session (optional, bool): Don't automatically end session based on your framework's decision-making
             (i.e. Crew determining when tasks are complete and ending the session)
