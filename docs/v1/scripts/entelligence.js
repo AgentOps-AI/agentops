@@ -6,7 +6,8 @@ function initEntelligence() {
     chatScript.type = "module";
     chatScript.id = "entelligence-chat";
     chatScript.src =
-      "https://d345f39z3arwqc.cloudfront.net/entelligence-chat.js";
+      "https://dujj2xy9pc7vi.cloudfront.net/vanilla/entelligence-chat.umd.js";
+    chatScript.defer = true; // Add defer to load after HTML parsing
 
     // Create initialization script
     const initScript = document.createElement("script");
@@ -15,23 +16,28 @@ function initEntelligence() {
     window.EntelligenceChat.init({
       analyticsData: {
         repoName: "agentops",
-        organization: "AgentOps-AI", 
-        apiKey: "1234567890",
-        theme: 'dark'
+        organization: "AgentOps-AI",
+        apiKey: "YrodtbYbdqWNKOraqTFuVWPQ5k6yqWHTevojAI_w0Zg",
+        theme: 'dark',
+        companyName: "AgentOps"
       }
     });
   `;
 
-    // Append initialization script after chat script loads
-    chatScript.onload = () => {
-      document.body.appendChild(initScript);
-    };
+    // Add to head instead of body for better performance
+    const head = document.getElementsByTagName("head")[0];
+    head.appendChild(chatScript);
 
-    // Append chat script to the body
-    document.body.appendChild(chatScript);
+    // Initialize after script loads
+    chatScript.onload = () => {
+      document.head.appendChild(initScript);
+    };
   }
 }
 
-window.addEventListener("load", function () {
+// Run when DOM is ready
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', initEntelligence);
+} else {
   initEntelligence();
-});
+}
