@@ -10,17 +10,16 @@ from opentelemetry import context as context_api
 from opentelemetry.trace.propagation import set_span_in_context
 from opentelemetry.trace.propagation.tracecontext import TraceContextTextMapPropagator
 
-from agentops.instrumentation.openai.shared.config import Config
+from opentelemetry.instrumentation.openai.shared.config import Config
 from opentelemetry.semconv._incubating.attributes.gen_ai_attributes import (
     GEN_AI_RESPONSE_ID,
 )
 from opentelemetry.semconv_ai import SpanAttributes
-from agentops.instrumentation.openai.utils import (
+from opentelemetry.instrumentation.openai.utils import (
     dont_throw,
     is_openai_v1,
     should_record_stream_token_usage,
 )
-from agentops.instrumentation.context import get_current_session
 
 OPENAI_LLM_USAGE_TOKEN_TYPES = ["prompt_tokens", "completion_tokens"]
 PROMPT_FILTER_KEY = "prompt_filter_results"
@@ -114,18 +113,9 @@ def set_tools_attributes(span, tools):
         )
 
 
-def _set_request_attributes(span, kwargs, instance):
+def _set_request_attributes(span, kwargs):
     if not span.is_recording():
         return
-
-    # Add session context to span
-    session = get_current_session()
-    if session:
-        _set_span_attribute(span, "session.id", str(session.session_id))
-        _set_span_attribute(span, "session.state", str(session.state))
-        
-        # Increment LLM call count for session
-        session.event_counts["llms"] += 1
 
     _set_api_attributes(span)
     _set_span_attribute(span, SpanAttributes.LLM_SYSTEM, "OpenAI")

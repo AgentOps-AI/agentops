@@ -7,7 +7,7 @@ import threading
 import traceback
 
 import openai
-from agentops.instrumentation.openai.shared.config import Config
+from opentelemetry.instrumentation.openai.shared.config import Config
 
 _OPENAI_VERSION = version("openai")
 
