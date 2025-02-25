@@ -27,21 +27,6 @@ class Client:
 
 
     def init(self, **kwargs) -> Union[Session, None]:
-        """
-        Initialize the AgentOps client configuration.
-
-        Args:
-            api_key (str, optional): API Key for AgentOps services.
-            parent_key (str, optional): Organization key for visibility of all user sessions.
-            endpoint (str, optional): The endpoint for the AgentOps service.
-            max_wait_time (int, optional): Maximum time to wait before flushing queue.
-            max_queue_size (int, optional): Maximum size of the event queue.
-            default_tags (List[str], optional): Default tags for sessions.
-            instrument_llm_calls (bool): Whether to instrument LLM calls.
-            auto_start_session (bool): Whether to start a session automatically.
-            auto_init (bool): Whether to initialize the client automatically on import.
-            skip_auto_end_session (bool): Don't auto-end session based on framework.
-        """
         self.configure(**kwargs)
 
         # Instrument LLM calls if enabled
