@@ -1,12 +1,15 @@
+import json
 import logging
 import os
 import sys
-from dataclasses import dataclass, field
+from dataclasses import asdict, dataclass, field
 from typing import Any, List, Optional, Set, TypedDict, Union
 from uuid import UUID
 
 from opentelemetry.sdk.trace import SpanProcessor
 from opentelemetry.sdk.trace.export import SpanExporter
+
+from agentops.helpers.serialization import AgentOpsJSONEncoder
 
 from .helpers import get_env_bool, get_env_int, get_env_list
 from .logging.config import logger
@@ -194,6 +197,17 @@ class Config:
 
         if processor is not None:
             self.processor = processor
+
+    def dict(self):
+        """Return a dictionary representation of the config"""
+        __dict = asdict(self)
+        del __dict["exporter"]
+        del __dict["processor"]
+        return __dict
+
+    def json(self):
+        """Return a JSON representation of the config"""
+        return json.dumps(self.dict(), cls=AgentOpsJSONEncoder)
 
 
 def default_config():
