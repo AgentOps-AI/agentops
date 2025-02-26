@@ -39,10 +39,6 @@ class Session(SessionTelemetryAdapter):
     end_state_reason: Optional[str] = None
     jwt: Optional[str] = None
     video: Optional[str] = None
-    event_counts: Dict[str, int] = field(
-        default_factory=lambda: {"llms": 0, "tools": 0, "actions": 0, "errors": 0, "apis": 0}
-    ) # this going to be replaced with a meter / counter (see otel)
-
     # Define the state descriptor at class level
     state = session_state_field()
 
