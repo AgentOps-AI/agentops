@@ -55,7 +55,7 @@ test = [
     "ai21>=3.0.0",
     "groq",
     "ollama",
-    "mistralai",
+    "mistralai<1.0.0",
     "google-generativeai>=0.1.0",
     # ;;
     # The below is a really hard dependency, that can be installed only between python >=3.10,<3.13.
