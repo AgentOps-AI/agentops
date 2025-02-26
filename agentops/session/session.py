@@ -270,7 +270,7 @@ class Session(SessionTelemetryAdapter):
         """Convert session to dictionary, excluding private and non-serializable fields"""
         return {
             "session_id": self.session_id,
-            "config": asdict(self.config),  # Serialize config separately
+            "config": self.config.dict(),
             "tags": self.tags,
             "host_env": self.host_env,
             "state": str(self.state),
