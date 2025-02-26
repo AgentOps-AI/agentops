@@ -30,7 +30,7 @@ class ConfigDict(TypedDict):
     fail_safe: Optional[bool]
 
 
-@dataclass
+@dataclass(slots=True)
 class Config:
     api_key: Optional[str] = field(
         default_factory=lambda: os.getenv("AGENTOPS_API_KEY"),
@@ -184,10 +184,20 @@ class Config:
 
     def dict(self):
         """Return a dictionary representation of the config"""
-        __dict = asdict(self)
-        del __dict["exporter"]
-        del __dict["processor"]
-        return __dict
+        return {
+            "api_key": self.api_key,
+            "endpoint": self.endpoint,
+            "max_wait_time": self.max_wait_time,
+            "max_queue_size": self.max_queue_size,
+            "default_tags": self.default_tags,
+            "instrument_llm_calls": self.instrument_llm_calls,
+            "auto_start_session": self.auto_start_session,
+            "auto_init": self.auto_init,
+            "skip_auto_end_session": self.skip_auto_end_session,
+            "env_data_opt_out": self.env_data_opt_out,
+            "log_level": self.log_level,
+            "fail_safe": self.fail_safe,
+        }
 
     def json(self):
         """Return a JSON representation of the config"""
