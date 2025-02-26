@@ -19,13 +19,13 @@ from typing import Dict
 # Client global instance; one per process runtime
 _client = Client()
 
-
 def init(
     api_key: Optional[str] = None,
     parent_key: Optional[str] = None,
     endpoint: Optional[str] = None,
     max_wait_time: Optional[int] = None,
     max_queue_size: Optional[int] = None,
+    tags: Optional[List[str]] = None,
     default_tags: Optional[List[str]] = None,
     instrument_llm_calls: Optional[bool] = None,
     auto_start_session: Optional[bool] = None,
@@ -65,13 +65,22 @@ def init(
         processor (SpanProcessor): Custom span processor for OpenTelemetry trace data. If provided,
             takes precedence over exporter. Used for complete control over span processing.
     """
+    # Merge tags and default_tags if both are provided
+    merged_tags = None
+    if tags and default_tags:
+        merged_tags = list(set(tags + default_tags))
+    elif tags:
+        merged_tags = tags
+    elif default_tags:
+        merged_tags = default_tags
+    
     return _client.init(
         api_key=api_key,
         parent_key=parent_key,
         endpoint=endpoint,
         max_wait_time=max_wait_time,
         max_queue_size=max_queue_size,
-        default_tags=default_tags,
+        default_tags=merged_tags,
         instrument_llm_calls=instrument_llm_calls,
         auto_start_session=auto_start_session,
         auto_init=auto_init,
