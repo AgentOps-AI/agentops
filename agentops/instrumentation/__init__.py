@@ -1,4 +1,11 @@
-from opentelemetry.instrumentation.openai import OpenAIInstrumentor
+from third_party.opentelemetry.instrumentation.openai import OpenAIInstrumentor
+from third_party.opentelemetry.instrumentation.anthropic import AnthropicInstrumentor
+from third_party.opentelemetry.instrumentation.cohere import CohereInstrumentor
+from third_party.opentelemetry.instrumentation.crewai import CrewAIInstrumentor
+from third_party.opentelemetry.instrumentation.groq import GroqInstrumentor
+from third_party.opentelemetry.instrumentation.haystack import HaystackInstrumentor
+from third_party.opentelemetry.instrumentation.mistralai import MistralAiInstrumentor
+from third_party.opentelemetry.instrumentation.ollama import OllamaInstrumentor
 
 from agentops.logging import logger
 
@@ -6,7 +13,7 @@ from agentops.logging import logger
 # Can iteratively call .instrument() on each entry
 
 
-instrumentors = [OpenAIInstrumentor]
+instrumentors = [OpenAIInstrumentor, AnthropicInstrumentor, CohereInstrumentor, CrewAIInstrumentor, GroqInstrumentor, HaystackInstrumentor, MistralAiInstrumentor, OllamaInstrumentor]
 # Keep live references to instrumentor instances
 _active_instrumentors = []
 
