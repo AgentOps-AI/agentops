@@ -12,9 +12,9 @@ This package provides OpenTelemetry instrumentation for various LLM providers an
 ### OpenAI Instrumentation
 
 ```python
-from agentops.instrumentation.openai import OpenAIInstrumentor
+from opentelemetry.instrumentation.openai import OpenAIInstrumentor
 
-from agentops.telemetry.session import get_tracer_provider()
+from agentops.telemetry import get_tracer_provider()
 
 # Initialize and instrument
 instrumentor = OpenAIInstrumentor(
@@ -22,5 +22,11 @@ instrumentor = OpenAIInstrumentor(
     enrich_token_usage=True,  # Include token usage in spans
     enable_trace_context_propagation=True,  # Enable trace context propagation
 )
-instrumentor.instrument(tracer_provider=tracer_provider) # <-- Uses the global AgentOps TracerProvider 
+instrumentor.instrument(tracer_provider=tracer_provider) # <-- Uses the global AgentOps TracerProvider
 ```
+
+
+> To add custom instrumentation, please do so in the `third_party/opentelemetry` directory.
+
+
+
