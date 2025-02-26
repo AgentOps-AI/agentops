@@ -1,4 +1,12 @@
-from typing import List, Optional, Union, Unpack
+from typing import Dict, List, Optional, Union, Unpack
+
+from opentelemetry.propagators.textmap import TextMapPropagator
+from opentelemetry.sdk._logs.export import LogExporter
+from opentelemetry.sdk.metrics.export import MetricExporter
+from opentelemetry.sdk.resources import SERVICE_NAME
+from opentelemetry.sdk.trace import SpanProcessor
+from opentelemetry.sdk.trace.export import SpanExporter
+from opentelemetry.util.re import parse_env_headers
 
 from agentops.config import ConfigDict
 
@@ -6,22 +14,11 @@ from .client import Client
 from .config import Config
 from .session import Session
 
-from opentelemetry.sdk.trace import SpanProcessor
-from opentelemetry.sdk.trace.export import SpanExporter
-from opentelemetry.sdk.metrics.export import MetricExporter
-from opentelemetry.sdk._logs.export import LogExporter
-from opentelemetry.sdk.resources import SERVICE_NAME
-from opentelemetry.propagators.textmap import TextMapPropagator
-from opentelemetry.util.re import parse_env_headers
-
-from typing import Dict
-
 # Client global instance; one per process runtime
 _client = Client()
 
 def init(
     api_key: Optional[str] = None,
-    parent_key: Optional[str] = None,
     endpoint: Optional[str] = None,
     max_wait_time: Optional[int] = None,
     max_queue_size: Optional[int] = None,
@@ -43,8 +40,6 @@ def init(
     Args:
         api_key (str, optional): API Key for AgentOps services. If none is provided, key will
             be read from the AGENTOPS_API_KEY environment variable.
-        parent_key (str, optional): Organization key to give visibility of all user sessions the user's organization. If none is provided, key will
-            be read from the AGENTOPS_PARENT_KEY environment variable.
         endpoint (str, optional): The endpoint for the AgentOps service. If none is provided, key will
             be read from the AGENTOPS_API_ENDPOINT environment variable. Defaults to 'https://api.agentops.ai'.
         max_wait_time (int, optional): The maximum time to wait in milliseconds before flushing the queue.
@@ -76,7 +71,6 @@ def init(
     
     return _client.init(
         api_key=api_key,
-        parent_key=parent_key,
         endpoint=endpoint,
         max_wait_time=max_wait_time,
         max_queue_size=max_queue_size,

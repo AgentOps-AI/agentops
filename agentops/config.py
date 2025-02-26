@@ -17,7 +17,6 @@ from .logging.config import logger
 
 class ConfigDict(TypedDict):
     api_key: Optional[str]
-    parent_key: Optional[str]
     endpoint: Optional[str]
     max_wait_time: Optional[int]
     max_queue_size: Optional[int]
@@ -36,11 +35,6 @@ class Config:
     api_key: Optional[str] = field(
         default_factory=lambda: os.getenv("AGENTOPS_API_KEY"),
         metadata={"description": "API key for authentication with AgentOps services"},
-    )
-
-    parent_key: Optional[str] = field(
-        default_factory=lambda: os.getenv("AGENTOPS_PARENT_KEY"),
-        metadata={"description": "Parent API key for hierarchical organization of sessions"},
     )
 
     endpoint: str = field(
@@ -110,7 +104,6 @@ class Config:
         self,
         client: Any,
         api_key: Optional[str] = None,
-        parent_key: Optional[str] = None,
         endpoint: Optional[str] = None,
         max_wait_time: Optional[int] = None,
         max_queue_size: Optional[int] = None,
@@ -136,15 +129,6 @@ class Config:
                 )
                 client.add_pre_init_warning(message)
                 logger.error(message)
-
-        if parent_key is not None:
-            try:
-                UUID(parent_key)
-                self.parent_key = parent_key
-            except ValueError:
-                message = f"Parent Key is invalid: {parent_key}"
-                client.add_pre_init_warning(message)
-                logger.warning(message)
 
         if endpoint is not None:
             self.endpoint = endpoint

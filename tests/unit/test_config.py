@@ -23,7 +23,6 @@ def mock_env():
         # Set up test environment variables
         env_vars = {
             "AGENTOPS_API_KEY": "test-api-key",
-            "AGENTOPS_PARENT_KEY": "test-parent-key",
             "AGENTOPS_API_ENDPOINT": "https://test.agentops.ai",
             "AGENTOPS_MAX_WAIT_TIME": "1000",
             "AGENTOPS_MAX_QUEUE_SIZE": "256",
@@ -49,7 +48,6 @@ def test_config_from_env(mock_env):
     config = Config()
     
     assert config.api_key == "test-api-key"
-    assert config.parent_key == "test-parent-key"
     assert config.endpoint == "https://test.agentops.ai"
     assert config.max_wait_time == 1000
     assert config.max_queue_size == 256
@@ -80,7 +78,6 @@ def test_config_override_env(mock_env, valid_uuid):
     assert config.default_tags == {"new-tag"}
     assert config.instrument_llm_calls is True
     # Other values should remain from env
-    assert config.parent_key == "test-parent-key"
     assert config.max_queue_size == 256
 
 
@@ -90,7 +87,6 @@ def test_config_defaults():
         config = Config()
         
         assert config.api_key is None
-        assert config.parent_key is None
         assert config.endpoint == "https://api.agentops.ai"
         assert config.max_wait_time == 5000
         assert config.max_queue_size == 512

@@ -34,7 +34,6 @@ class SessionApiClient(ApiClient):
         """
         headers = self._prepare_headers(
             api_key=self.session.config.api_key,
-            parent_key=self.session.config.parent_key,
             custom_headers={"X-Session-ID": str(self.session.session_id)},
         )
 

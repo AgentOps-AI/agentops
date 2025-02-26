@@ -46,7 +46,6 @@ class ApiClient:
     def _prepare_headers(
         self,
         api_key: Optional[str] = None,
-        parent_key: Optional[str] = None,
         jwt: Optional[str] = None,
         custom_headers: Optional[Dict[str, str]] = None,
     ) -> Dict[str, str]:
@@ -56,16 +55,13 @@ class ApiClient:
         if api_key:
             headers["X-Agentops-Api-Key"] = api_key
 
-        if parent_key:
-            headers["X-Agentops-Parent-Key"] = parent_key
-
         if jwt:
             headers["Authorization"] = f"Bearer {jwt}"
 
         if custom_headers:
             # Don't let custom headers override critical headers
             safe_headers = custom_headers.copy()
-            for protected in ["Authorization", "X-Agentops-Api-Key", "X-Agentops-Parent-Key"]:
+            for protected in ["Authorization", "X-Agentops-Api-Key"]:
                 safe_headers.pop(protected, None)
             headers.update(safe_headers)
 
