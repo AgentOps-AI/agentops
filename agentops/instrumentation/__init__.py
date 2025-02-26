@@ -1,11 +1,11 @@
-from third_party.opentelemetry.instrumentation.openai import OpenAIInstrumentor
-from third_party.opentelemetry.instrumentation.anthropic import AnthropicInstrumentor
-from third_party.opentelemetry.instrumentation.cohere import CohereInstrumentor
-from third_party.opentelemetry.instrumentation.crewai import CrewAIInstrumentor
-from third_party.opentelemetry.instrumentation.groq import GroqInstrumentor
-from third_party.opentelemetry.instrumentation.haystack import HaystackInstrumentor
-from third_party.opentelemetry.instrumentation.mistralai import MistralAiInstrumentor
-from third_party.opentelemetry.instrumentation.ollama import OllamaInstrumentor
+from opentelemetry.instrumentation.openai import OpenAIInstrumentor
+from opentelemetry.instrumentation.anthropic import AnthropicInstrumentor
+from opentelemetry.instrumentation.cohere import CohereInstrumentor
+from opentelemetry.instrumentation.crewai import CrewAIInstrumentor
+from opentelemetry.instrumentation.groq import GroqInstrumentor
+from opentelemetry.instrumentation.haystack import HaystackInstrumentor
+from opentelemetry.instrumentation.mistralai import MistralAiInstrumentor
+from opentelemetry.instrumentation.ollama import OllamaInstrumentor
 
 from agentops.logging import logger
 
