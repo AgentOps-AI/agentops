@@ -1,4 +1,3 @@
-# agentops/__init__.py
 from typing import List, Optional, Union, Unpack
 
 from agentops.config import ConfigDict
@@ -7,11 +6,37 @@ from .client import Client
 from .config import Config
 from .session import Session
 
+from opentelemetry.sdk.trace import SpanProcessor
+from opentelemetry.sdk.trace.export import SpanExporter
+from opentelemetry.sdk.metrics.export import MetricExporter
+from opentelemetry.sdk._logs.export import LogExporter
+from opentelemetry.sdk.resources import SERVICE_NAME
+from opentelemetry.propagators.textmap import TextMapPropagator
+from opentelemetry.util.re import parse_env_headers
+
+from typing import Dict
+
 # Client global instance; one per process runtime
 _client = Client()
 
 
-def init(**kwargs: Unpack[ConfigDict]) -> Union[Session, None]:
+def init(
+    api_key: Optional[str] = None,
+    parent_key: Optional[str] = None,
+    endpoint: Optional[str] = None,
+    max_wait_time: Optional[int] = None,
+    max_queue_size: Optional[int] = None,
+    default_tags: Optional[List[str]] = None,
+    instrument_llm_calls: Optional[bool] = None,
+    auto_start_session: Optional[bool] = None,
+    auto_init: Optional[bool] = None,
+    skip_auto_end_session: Optional[bool] = None,
+    env_data_opt_out: Optional[bool] = None,
+    log_level: Optional[Union[str, int]] = None,
+    fail_safe: Optional[bool] = None,
+    exporter: Optional[SpanExporter] = None,
+    processor: Optional[SpanProcessor] = None,
+) -> Union[Session, None]:
     """
     Initializes the AgentOps singleton pattern.
 
@@ -32,9 +57,31 @@ def init(**kwargs: Unpack[ConfigDict]) -> Union[Session, None]:
         auto_init (bool): Whether to automatically initialize the client on import. Defaults to True.
         skip_auto_end_session (optional, bool): Don't automatically end session based on your framework's decision-making
             (i.e. Crew determining when tasks are complete and ending the session)
-    Attributes:
+        env_data_opt_out (bool): Whether to opt out of collecting environment data.
+        log_level (str, int): The log level to use for the client. Defaults to 'CRITICAL'.
+        fail_safe (bool): Whether to suppress errors and continue execution when possible.
+        exporter (SpanExporter): Custom span exporter for OpenTelemetry trace data. If provided,
+            will be used instead of the default OTLPSpanExporter. Not needed if processor is specified.
+        processor (SpanProcessor): Custom span processor for OpenTelemetry trace data. If provided,
+            takes precedence over exporter. Used for complete control over span processing.
     """
-    return _client.init(**kwargs)
+    return _client.init(
+        api_key=api_key,
+        parent_key=parent_key,
+        endpoint=endpoint,
+        max_wait_time=max_wait_time,
+        max_queue_size=max_queue_size,
+        default_tags=default_tags,
+        instrument_llm_calls=instrument_llm_calls,
+        auto_start_session=auto_start_session,
+        auto_init=auto_init,
+        skip_auto_end_session=skip_auto_end_session,
+        env_data_opt_out=env_data_opt_out,
+        log_level=log_level,
+        fail_safe=fail_safe,
+        exporter=exporter,
+        processor=processor,
+    )
 
 
 def configure(**kwargs: Unpack[ConfigDict]):
@@ -42,9 +89,7 @@ def configure(**kwargs: Unpack[ConfigDict]):
     _client.configure(**kwargs)
 
 
-def start_session(
-    **kwargs
-) -> Optional[Session]:
+def start_session(**kwargs) -> Optional[Session]:
     """Start a new session for recording events.
 
     Args:

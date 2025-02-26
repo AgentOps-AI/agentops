@@ -1,9 +1,15 @@
+import json
 import logging
 import os
 import sys
-from dataclasses import dataclass, field
+from dataclasses import asdict, dataclass, field
 from typing import Any, List, Optional, Set, TypedDict, Union
 from uuid import UUID
+
+from opentelemetry.sdk.trace import SpanProcessor
+from opentelemetry.sdk.trace.export import SpanExporter
+
+from agentops.helpers.serialization import AgentOpsJSONEncoder
 
 from .helpers import get_env_bool, get_env_int, get_env_list
 from .logging.config import logger
@@ -28,68 +34,76 @@ class ConfigDict(TypedDict):
 @dataclass
 class Config:
     api_key: Optional[str] = field(
-        default_factory=lambda: os.getenv('AGENTOPS_API_KEY'),
-        metadata={"description": "API key for authentication with AgentOps services"}
+        default_factory=lambda: os.getenv("AGENTOPS_API_KEY"),
+        metadata={"description": "API key for authentication with AgentOps services"},
     )
-    
+
     parent_key: Optional[str] = field(
-        default_factory=lambda: os.getenv('AGENTOPS_PARENT_KEY'),
-        metadata={"description": "Parent API key for hierarchical organization of sessions"}
+        default_factory=lambda: os.getenv("AGENTOPS_PARENT_KEY"),
+        metadata={"description": "Parent API key for hierarchical organization of sessions"},
     )
-    
+
     endpoint: str = field(
-        default_factory=lambda: os.getenv('AGENTOPS_API_ENDPOINT', 'https://api.agentops.ai'),
-        metadata={"description": "Base URL for the AgentOps API"}
+        default_factory=lambda: os.getenv("AGENTOPS_API_ENDPOINT", "https://api.agentops.ai"),
+        metadata={"description": "Base URL for the AgentOps API"},
     )
-    
+
     max_wait_time: int = field(
-        default_factory=lambda: get_env_int('AGENTOPS_MAX_WAIT_TIME', 5000),
-        metadata={"description": "Maximum time in milliseconds to wait for API responses"}
+        default_factory=lambda: get_env_int("AGENTOPS_MAX_WAIT_TIME", 5000),
+        metadata={"description": "Maximum time in milliseconds to wait for API responses"},
     )
-    
+
     max_queue_size: int = field(
-        default_factory=lambda: get_env_int('AGENTOPS_MAX_QUEUE_SIZE', 512),
-        metadata={"description": "Maximum number of events to queue before forcing a flush"}
+        default_factory=lambda: get_env_int("AGENTOPS_MAX_QUEUE_SIZE", 512),
+        metadata={"description": "Maximum number of events to queue before forcing a flush"},
     )
-    
+
     default_tags: Set[str] = field(
-        default_factory=lambda: get_env_list('AGENTOPS_DEFAULT_TAGS'),
-        metadata={"description": "Default tags to apply to all sessions"}
+        default_factory=lambda: get_env_list("AGENTOPS_DEFAULT_TAGS"),
+        metadata={"description": "Default tags to apply to all sessions"},
     )
-    
+
     instrument_llm_calls: bool = field(
-        default_factory=lambda: get_env_bool('AGENTOPS_INSTRUMENT_LLM_CALLS', True),
-        metadata={"description": "Whether to automatically instrument and track LLM API calls"}
+        default_factory=lambda: get_env_bool("AGENTOPS_INSTRUMENT_LLM_CALLS", True),
+        metadata={"description": "Whether to automatically instrument and track LLM API calls"},
     )
-    
+
     auto_start_session: bool = field(
-        default_factory=lambda: get_env_bool('AGENTOPS_AUTO_START_SESSION', True),
-        metadata={"description": "Whether to automatically start a session when initializing"}
+        default_factory=lambda: get_env_bool("AGENTOPS_AUTO_START_SESSION", True),
+        metadata={"description": "Whether to automatically start a session when initializing"},
     )
-    
+
     auto_init: bool = field(
-        default_factory=lambda: get_env_bool('AGENTOPS_AUTO_INIT', True),
-        metadata={"description": "Whether to automatically initialize the client on import"}
+        default_factory=lambda: get_env_bool("AGENTOPS_AUTO_INIT", True),
+        metadata={"description": "Whether to automatically initialize the client on import"},
     )
-    
+
     skip_auto_end_session: bool = field(
-        default_factory=lambda: get_env_bool('AGENTOPS_SKIP_AUTO_END_SESSION', False),
-        metadata={"description": "Whether to skip automatically ending sessions on program exit"}
+        default_factory=lambda: get_env_bool("AGENTOPS_SKIP_AUTO_END_SESSION", False),
+        metadata={"description": "Whether to skip automatically ending sessions on program exit"},
     )
-    
+
     env_data_opt_out: bool = field(
-        default_factory=lambda: get_env_bool('AGENTOPS_ENV_DATA_OPT_OUT', False),
-        metadata={"description": "Whether to opt out of collecting environment data"}
+        default_factory=lambda: get_env_bool("AGENTOPS_ENV_DATA_OPT_OUT", False),
+        metadata={"description": "Whether to opt out of collecting environment data"},
     )
-    
+
     log_level: Union[str, int] = field(
-        default_factory=lambda: os.getenv('AGENTOPS_LOG_LEVEL', 'CRITICAL'),
-        metadata={"description": "Logging level for AgentOps logs"}
+        default_factory=lambda: os.getenv("AGENTOPS_LOG_LEVEL", "CRITICAL"),
+        metadata={"description": "Logging level for AgentOps logs"},
     )
-    
+
     fail_safe: bool = field(
-        default_factory=lambda: get_env_bool('AGENTOPS_FAIL_SAFE', False),
-        metadata={"description": "Whether to suppress errors and continue execution when possible"}
+        default_factory=lambda: get_env_bool("AGENTOPS_FAIL_SAFE", False),
+        metadata={"description": "Whether to suppress errors and continue execution when possible"},
+    )
+
+    exporter: Optional[SpanExporter] = field(
+        default_factory=lambda: None, metadata={"description": "Custom span exporter for OpenTelemetry trace data"}
+    )
+
+    processor: Optional[SpanProcessor] = field(
+        default_factory=lambda: None, metadata={"description": "Custom span processor for OpenTelemetry trace data"}
     )
 
     def configure(
@@ -108,6 +122,8 @@ class Config:
         env_data_opt_out: Optional[bool] = None,
         log_level: Optional[Union[str, int]] = None,
         fail_safe: Optional[bool] = None,
+        exporter: Optional[SpanExporter] = None,
+        processor: Optional[SpanProcessor] = None,
     ):
         """Configure settings from kwargs, validating where necessary"""
         if api_key is not None:
@@ -115,7 +131,9 @@ class Config:
                 UUID(api_key)
                 self.api_key = api_key
             except ValueError:
-                message = f"API Key is invalid: {{{api_key}}}.\n\t    Find your API key at {self.endpoint}/settings/projects"
+                message = (
+                    f"API Key is invalid: {{{api_key}}}.\n\t    Find your API key at {self.endpoint}/settings/projects"
+                )
                 client.add_pre_init_warning(message)
                 logger.error(message)
 
@@ -174,28 +192,49 @@ class Config:
         if fail_safe is not None:
             self.fail_safe = fail_safe
 
+        if exporter is not None:
+            self.exporter = exporter
+
+        if processor is not None:
+            self.processor = processor
+
+    def dict(self):
+        """Return a dictionary representation of the config"""
+        __dict = asdict(self)
+        del __dict["exporter"]
+        del __dict["processor"]
+        return __dict
+
+    def json(self):
+        """Return a JSON representation of the config"""
+        return json.dumps(self.dict(), cls=AgentOpsJSONEncoder)
+
+
 def default_config():
     """Return a default configuration instance"""
     return Config()
+
 
 # Detect if we're running under pytest
 TESTING = "pytest" in sys.modules
 
 
 if TESTING:
+
     def hook_pdb():
         """Set up automatic pdb debugging during test runs.
-        
+
         This hooks into Python's exception handling system to automatically start pdb
         when an uncaught exception occurs during tests. This makes it easier to debug
         test failures by dropping into the debugger at the point of failure.
-        
+
         The hook is only installed when running under pytest. It will:
         - Print the full traceback
         - Start pdb post-mortem debugging
         - Skip this behavior if running non-interactively
         """
         import sys
+
         def info(type, value, tb):
             # Skip if we're in interactive mode or stdout isn't a terminal
             if hasattr(sys, "ps1") or not sys.stderr.isatty():
@@ -207,6 +246,7 @@ if TESTING:
                 # Print the traceback and start the debugger
                 traceback.print_exception(type, value, tb)
                 pdb.post_mortem(tb)
+
         sys.excepthook = info
 
     hook_pdb()
