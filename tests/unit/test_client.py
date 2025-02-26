@@ -1,15 +1,11 @@
-import uuid
 import pytest
 from unittest import mock
-import json
 
 import agentops
 from agentops.client import Client
-from agentops._singleton import ao_instances, clear_singletons
+from agentops._singleton import clear_singletons
 from agentops.exceptions import AgentOpsClientNotInitializedException, NoApiKeyException, NoSessionException
-from agentops.instrumentation import instrument_all, uninstrument_all
 from agentops.session import Session
-from agentops.session.state import SessionState
 from opentelemetry.sdk.trace import SpanProcessor
 from opentelemetry.sdk.trace.export import SpanExporter
 

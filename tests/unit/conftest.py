@@ -1,19 +1,15 @@
-import contextlib
 import re
 import uuid
 from collections import defaultdict
-from enum import auto
-from typing import Dict, Generator, Iterator, List
 
 import pytest
 import requests_mock
-from pytest import Session
 
 import agentops
 from agentops.config import Config
-from tests.fixtures.config import *
-from tests.fixtures.session import *
-from tests.fixtures.instrumentation import *
+from tests.fixtures.config import *  # noqa
+from tests.fixtures.instrumentation import *  # noqa
+from tests.fixtures.session import *  # noqa
 
 
 @pytest.fixture
