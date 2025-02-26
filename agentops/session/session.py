@@ -35,19 +35,51 @@ class Session(SessionTelemetryAdapter):
     session_id: UUID = field(default_factory=uuid4)
     config: Config = field(default_factory=default_config)
     tags: List[str] = field(default_factory=list)
-    host_env: Optional[dict] = field(default_factory=lambda:{}, repr=False)
+    host_env: Optional[dict] = field(default_factory=lambda: {}, repr=False)
     end_state_reason: Optional[str] = None
     jwt: Optional[str] = None
     video: Optional[str] = None
-    event_counts: Dict[str, int] = field(
-        default_factory=lambda: {"llms": 0, "tools": 0, "actions": 0, "errors": 0, "apis": 0}
-    ) # this going to be replaced with a meter / counter (see otel)
+    # event_counts field removed and replaced with a property below
 
     # Define the state descriptor at class level
     state = session_state_field()
 
     ############################################################################################
     # kw-only fields below (controls)
+
+    @property
+    def event_counts(self):
+        """Get cached event counts from the telemetry processor."""
+        if hasattr(self, "telemetry") and hasattr(self.telemetry, "metrics_processor"):
+            return self.telemetry.metrics_processor.event_counts
+        # Fallback for backward compatibility
+        return {"llms": 0, "tools": 0, "actions": 0, "errors": 0, "apis": 0}
+
+    def count_llm(self):
+        """Count an LLM call."""
+        if hasattr(self, "telemetry") and hasattr(self.telemetry, "metrics_processor"):
+            self.telemetry.metrics_processor._count_llm()
+
+    def count_tool(self):
+        """Count a tool call."""
+        if hasattr(self, "telemetry") and hasattr(self.telemetry, "metrics_processor"):
+            self.telemetry.metrics_processor._count_tool()
+
+    def count_action(self):
+        """Count an action."""
+        if hasattr(self, "telemetry") and hasattr(self.telemetry, "metrics_processor"):
+            self.telemetry.metrics_processor._count_action()
+
+    def count_error(self):
+        """Count an error."""
+        if hasattr(self, "telemetry") and hasattr(self.telemetry, "metrics_processor"):
+            self.telemetry.metrics_processor._count_error()
+
+    def count_api(self):
+        """Count an API call."""
+        if hasattr(self, "telemetry") and hasattr(self.telemetry, "metrics_processor"):
+            self.telemetry.metrics_processor._count_api()
+
     auto_start: bool = field(default=True, kw_only=True, repr=False, compare=False)
     ############################################################################################
     # Private fields only below
@@ -256,16 +288,17 @@ class Session(SessionTelemetryAdapter):
 
     def add_tags(self, tags: List[str]) -> None:
         """Add tags to the session
-        
+
         Args:
             tags: List of tags to add
         """
         if self.state.is_terminal:
             logger.warning(f"{self.session_id} Cannot add tags to ended session")
             return
-        
+
         self.tags.extend(tags)
         session_updated.send(self)
+
     def dict(self) -> dict:
         """Convert session to dictionary, excluding private and non-serializable fields"""
         return {
@@ -278,20 +311,21 @@ class Session(SessionTelemetryAdapter):
             "video": self.video,
             "event_counts": self.event_counts,
             "init_timestamp": self.init_timestamp,
-            "end_timestamp": self.end_timestamp
+            "end_timestamp": self.end_timestamp,
         }
 
     def set_tags(self, tags: List[str]) -> None:
         """Set session tags, replacing existing ones
-        
+
         Args:
             tags: List of tags to set
         """
         if self.state.is_terminal:
             logger.warning("Cannot set tags on ended session")
             return
-        
+
         self.tags = tags
         session_updated.send(self)
+
     def json(self):
         return json.dumps(self.dict(), cls=AgentOpsJSONEncoder)
