@@ -16,13 +16,6 @@ from agentops.telemetry.session import (SessionTelemetry, _session_tracers,
                                         setup_session_tracer)
 
 
-@pytest.fixture(autouse=True)
-def reset_instrumentation():
-    """Reset instrumentation state between tests"""
-    _session_tracers.clear()
-    yield
-
-
 def test_session_tracer_initialization(agentops_session):
     """Test that session tracer is properly initialized"""
     setup_session_tracer(agentops_session)

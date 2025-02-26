@@ -13,6 +13,7 @@ import agentops
 from agentops.config import Config
 from tests.fixtures.config import *
 from tests.fixtures.session import *
+from tests.fixtures.instrumentation import *
 
 
 @pytest.fixture
