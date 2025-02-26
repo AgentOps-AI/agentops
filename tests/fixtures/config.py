@@ -30,25 +30,20 @@ def agentops_config(request):
 
     # Create a fresh config instance
     config = default_config()
-    
+
     # Get custom kwargs from marker if present, otherwise use empty dict
     marker = request.node.get_closest_marker("config_kwargs")
     kwargs = marker.kwargs if marker else {}
-    
+
     # Mock client for configuration (since we need to pass a client to configure)
-    class MockClient:
-        def __init__(self):
-            self.warnings = []
-            
-        def add_pre_init_warning(self, message):
-            self.warnings.append(message)
-    
-    mock_client = MockClient()
-    
+    from unittest.mock import MagicMock
+
+    from agentops.client import Client
+
+    mock_client = MagicMock(spec=Client)
+    mock_client.warnings = []
+
     # Apply configuration from marker kwargs
     config.configure(client=mock_client, **kwargs)
-    
-    # Store warnings on the config object for test inspection if needed
-    config._test_warnings = mock_client.warnings
-    
+
     return config
