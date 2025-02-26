@@ -1,7 +1,8 @@
 import logging
 import os
 from typing import Optional
-from .formatters import AgentOpsLogFormatter, AgentOpsLogFileFormatter
+
+from .formatters import AgentOpsLogFileFormatter, AgentOpsLogFormatter
 
 # Create the logger at module level
 logger = logging.getLogger("agentops")
@@ -16,7 +17,7 @@ def configure_logging(config=None):  # Remove type hint temporarily to avoid cir
     """
     # Defer the Config import to avoid circular dependency
     if config is None:
-        from ..config import Config
+        from agentops.config import Config
         config = Config()
 
     # Use env var as override if present, otherwise use config

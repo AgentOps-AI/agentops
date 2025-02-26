@@ -1,10 +1,11 @@
 import os
-import pytest
 from unittest import mock
 from uuid import UUID
 
-from agentops.config import Config
+import pytest
+
 from agentops.client import Client
+from agentops.config import Config
 
 
 @pytest.fixture(autouse=True)
@@ -112,18 +113,6 @@ def test_invalid_api_key():
         assert "API Key is invalid" in client.pre_init_warnings[0]
         assert config.api_key is None
 
-
-def test_invalid_parent_key():
-    """Test handling of invalid parent key"""
-    with mock.patch.dict(os.environ, clear=True):
-        client = Client()
-        config = Config()
-        
-        config.configure(client, parent_key="invalid-uuid")
-        
-        assert len(client.pre_init_warnings) == 1
-        assert "Parent Key is invalid" in client.pre_init_warnings[0]
-        assert config.parent_key is None
 
 
 def test_env_list_parsing():

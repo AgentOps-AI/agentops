@@ -7,22 +7,22 @@ from opentelemetry.metrics import get_meter
 
 from wrapt import wrap_function_wrapper
 
-from agentops.instrumentation.openai.shared.chat_wrappers import (
+from opentelemetry.instrumentation.openai.shared.chat_wrappers import (
     chat_wrapper,
     achat_wrapper,
 )
-from agentops.instrumentation.openai.shared.completion_wrappers import (
+from opentelemetry.instrumentation.openai.shared.completion_wrappers import (
     completion_wrapper,
     acompletion_wrapper,
 )
-from agentops.instrumentation.openai.shared.embeddings_wrappers import (
+from opentelemetry.instrumentation.openai.shared.embeddings_wrappers import (
     embeddings_wrapper,
     aembeddings_wrapper,
 )
-from agentops.instrumentation.openai.shared.image_gen_wrappers import (
+from opentelemetry.instrumentation.openai.shared.image_gen_wrappers import (
     image_gen_metrics_wrapper,
 )
-from agentops.instrumentation.openai.v1.assistant_wrappers import (
+from opentelemetry.instrumentation.openai.v1.assistant_wrappers import (
     assistants_create_wrapper,
     runs_create_wrapper,
     runs_retrieve_wrapper,
@@ -30,8 +30,8 @@ from agentops.instrumentation.openai.v1.assistant_wrappers import (
     messages_list_wrapper,
 )
 
-from agentops.instrumentation.openai.utils import is_metrics_enabled
-from agentops.instrumentation.openai.version import __version__
+from opentelemetry.instrumentation.openai.utils import is_metrics_enabled
+from opentelemetry.instrumentation.openai.version import __version__
 
 from opentelemetry.semconv_ai import Meters
 

@@ -7,15 +7,11 @@ from typing import Dict, Generator, Iterator, List
 
 import pytest
 import requests_mock
-from opentelemetry import trace
-from opentelemetry.sdk.trace import TracerProvider
-from opentelemetry.sdk.trace.export import (ConsoleSpanExporter,
-                                            SimpleSpanProcessor)
 from pytest import Session
 
 import agentops
 from agentops.config import Config
-from tests.fixtures.event import llm_event_spy
+from tests.fixtures.config import *
 from tests.fixtures.session import *
 
 
@@ -53,7 +49,6 @@ def api_key() -> str:
 def base_url() -> str:
     """Base API URL"""
     return Config().endpoint
-    # return agentops.Client()._config.endpoint
 
 
 @pytest.fixture(autouse=True)

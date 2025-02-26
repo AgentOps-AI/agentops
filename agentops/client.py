@@ -1,95 +1,73 @@
-import threading
 import uuid
 from typing import Any, Dict, List, Optional, Union
 from uuid import UUID
 
+from agentops._singleton import conditional_singleton
+
 from .config import Config, ConfigDict
-from .exceptions import NoSessionException
+from .exceptions import (AgentOpsClientNotInitializedException,
+                         NoApiKeyException, NoSessionException)
+from .instrumentation import instrument_all, uninstrument_all
 from .logging import logger
 from .session import Session
 from .session.registry import get_active_sessions, get_default_session
-from .instrumentation import instrument_all, uninstrument_all
 
 
+@conditional_singleton
 class Client:
     """Singleton client for AgentOps service"""
-    _instance = None
-    _lock = threading.Lock()
+
+    config: Config
     _initialized = False
 
-    def __new__(cls):
-        if cls._instance is None:
-            with cls._lock:
-                if cls._instance is None:
-                    cls._instance = super().__new__(cls)
-        return cls._instance
-
     def __init__(self):
-        # Only initialize once
-        if not self._initialized:
-            self._config = Config()
-            self._pre_init_warnings: List[str] = []
-            self._initialized = True
+        self._initialized = False
+        self.config = Config()
+        self._pre_init_warnings: List[str] = []
 
-    def init(self, **kwargs: ConfigDict) -> Union[Session, None]:
-        """
-        Initialize the AgentOps client configuration.
 
-        Args:
-            api_key (str, optional): API Key for AgentOps services.
-            parent_key (str, optional): Organization key for visibility of all user sessions.
-            endpoint (str, optional): The endpoint for the AgentOps service.
-            max_wait_time (int, optional): Maximum time to wait before flushing queue.
-            max_queue_size (int, optional): Maximum size of the event queue.
-            default_tags (List[str], optional): Default tags for sessions.
-            instrument_llm_calls (bool): Whether to instrument LLM calls.
-            auto_start_session (bool): Whether to start a session automatically.
-            inherited_session_id (str, optional): Init with existing Session
-            skip_auto_end_session (bool): Don't auto-end session based on framework.
-        """
-        self._config.configure(self, **kwargs)
-        
+    def init(self, **kwargs) -> Union[Session, None]:
+        self.configure(**kwargs)
+
         # Instrument LLM calls if enabled
-        if self._config.instrument_llm_calls:
+        if self.config.instrument_llm_calls:
             instrument_all()
-        
-        if self._config.auto_start_session:
+
+        self.initialized = True
+
+        if self.config.auto_start_session:
             return self.start_session()
-        return None
 
-    def configure(self, **kwargs: ConfigDict):
+    def configure(self, **kwargs):
         """Update client configuration"""
-        self._config.configure(self, **kwargs)
+        self.config.configure(self, **kwargs)
 
-    def start_session(
-        self,
-        inherited_session_id: Optional[str] = None,
-        **kwargs
-    ) -> Union[Session, None]:
+    def start_session(self, **kwargs) -> Union[Session, None]:
         """Start a new session for recording events
-        
+
         Args:
             tags: Optional list of tags for the session
             inherited_session_id: Optional ID to inherit from another session
-            
+
         Returns:
             Session or None: New session if successful, None if no API key configured
         """
-        if not self._config.api_key:
-            logger.warning("No API key configured - cannot start session")
-            return None
+
+        if not self.initialized:
+            # Attempt to initialize the client if not already initialized
+            if self.config.auto_init:
+                self.init()
+            else:
+                raise AgentOpsClientNotInitializedException
+
+        if not self.config.api_key:
+            raise NoApiKeyException
 
         try:
-            session_id = UUID(inherited_session_id) if inherited_session_id else uuid.uuid4()
-            session = Session(
-                session_id=session_id,
-                config=self._config,
-                **kwargs
-            )
-            return session
+            return Session(config=self.config, **kwargs)
         except Exception as e:
             logger.error(f"Failed to create session: {e}")
-            if not self._config.fail_safe:
+            if not self.config.fail_safe:
                 raise
             return None
 
@@ -135,4 +113,14 @@ class Client:
     @property
     def pre_init_warnings(self) -> List[str]:
         """Get warnings that occurred before initialization"""
-        return self._pre_init_warnings 
+        return self._pre_init_warnings
+
+    @property
+    def initialized(self) -> bool:
+        return self._initialized
+
+    @initialized.setter
+    def initialized(self, value: bool):
+        if self._initialized and self._initialized != value:
+            raise ValueError("Client already initialized")
+        self._initialized = value
