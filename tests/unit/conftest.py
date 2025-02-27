@@ -7,6 +7,7 @@ import requests_mock
 
 import agentops
 from agentops.config import Config
+from tests.fixtures.client import *  # noqa
 from tests.fixtures.config import *  # noqa
 from tests.fixtures.instrumentation import *  # noqa
 from tests.fixtures.session import *  # noqa
@@ -36,20 +37,20 @@ def setup_teardown():
     agentops.end_all_sessions()  # teardown part
 
 
-@pytest.fixture(scope="session")
-def api_key() -> str:
+@pytest.fixture
+def api_key(agentops_config) -> str:
     """Standard API key for testing"""
-    return "11111111-1111-4111-8111-111111111111"
+    return agentops_config.api_key
 
 
-@pytest.fixture(scope="session")
-def base_url() -> str:
+@pytest.fixture
+def base_url(agentops_config) -> str:
     """Base API URL"""
-    return Config().endpoint
+    return agentops_config.endpoint
 
 
 @pytest.fixture(autouse=True)
-def mock_req(base_url, jwt):
+def mock_req(agentops_config, jwt):
     """
     Mocks AgentOps backend API requests.
     """
@@ -57,7 +58,7 @@ def mock_req(base_url, jwt):
         # Map session IDs to their JWTs
         m.session_jwts = {}
 
-        m.post(base_url + "/v2/create_events", json={"status": "ok"})
+        m.post(agentops_config.endpoint + "/v2/create_events", json={"status": "ok"})
 
         def create_session_response(request, context):
             context.status_code = 200
@@ -74,12 +75,12 @@ def mock_req(base_url, jwt):
             # Return the same JWT for this session
             return {"status": "success", "jwt": m.session_jwts[session_id]}
 
-        m.post(base_url + "/v2/create_session", json=create_session_response)
-        m.post(base_url + "/v2/update_session", json={"status": "success", "token_cost": 5})
-        m.post(base_url + "/v2/developer_errors", json={"status": "ok"})
-        m.post(base_url + "/v2/reauthorize_jwt", json=reauthorize_jwt_response)
-        m.post(base_url + "/v2/create_agent", json={"status": "success"})
-        m.post(base_url + "/v2/create_events", json={"status": "success"})
+        m.post(agentops_config.endpoint + "/v2/create_session", json=create_session_response)
+        m.post(agentops_config.endpoint + "/v2/update_session", json={"status": "success", "token_cost": 5})
+        m.post(agentops_config.endpoint + "/v2/developer_errors", json={"status": "ok"})
+        m.post(agentops_config.endpoint + "/v2/reauthorize_jwt", json=reauthorize_jwt_response)
+        m.post(agentops_config.endpoint + "/v2/create_agent", json={"status": "success"})
+        m.post(agentops_config.endpoint + "/v2/create_events", json={"status": "success"})
         # Use explicit regex pattern for logs endpoint to match any URL and session ID
         logs_pattern = re.compile(r".*/v3/logs/[0-9a-f-]{8}-[0-9a-f-]{4}-[0-9a-f-]{4}-[0-9a-f-]{4}-[0-9a-f-]{12}")
         m.put(logs_pattern, json={"status": "success"})
@@ -89,5 +90,16 @@ def mock_req(base_url, jwt):
 
 
 @pytest.fixture
-def agentops_init(api_key, base_url):
-    agentops.init(api_key=api_key, endpoint=base_url, auto_start_session=False)
+def agentops_init(api_key, agentops_config):
+    agentops.init(api_key=api_key, endpoint=agentops_config.endpoint, auto_start_session=False)
+
+
+@pytest.fixture(autouse=True)
+def noinstrument(agentops_config):
+    agentops_config.instrument_llm_calls = False
+    yield
+
+@pytest.fixture
+def instrument(agentops_config, noinstrument):
+    agentops_config.instrument_llm_calls = True
+    yield

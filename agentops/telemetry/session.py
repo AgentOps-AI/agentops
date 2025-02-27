@@ -84,6 +84,10 @@ def start_recording_session_span(sender: Session, **kwargs):
         logger.error(traceback.format_exc())
 
 
+def default_processor_cls():
+    return SimpleSpanProcessor
+
+
 def get_session_tracer(session_id: str) -> Optional[SessionTelemetry]:
     """Get tracer for a session."""
     return _session_tracers.get(str(session_id))
@@ -112,6 +116,7 @@ class SessionTelemetry:
         # Use global provider
         provider = get_tracer_provider()
 
+        ProcessorClass = default_processor_cls()
         # Set up processor and exporter
         if session.config.processor is not None:
             # Use the custom processor if provided
@@ -119,12 +124,12 @@ class SessionTelemetry:
             logger.debug(f"[{self.session_id}] Using custom span processor")
         elif session.config.exporter is not None:
             # Use the custom exporter with a SimpleSpanProcessor if only exporter is provided
-            processor = SimpleSpanProcessor(session.config.exporter)
+            processor = ProcessorClass(session.config.exporter)
             provider.add_span_processor(processor)
             logger.debug(f"[{self.session_id}] Using custom span exporter with SimpleSpanProcessor")
         else:
             # Use default processor and exporter
-            processor = SimpleSpanProcessor(OTLPSpanExporter(endpoint="http://localhost:4318/v1/traces"))
+            processor = ProcessorClass(OTLPSpanExporter(endpoint="http://localhost:4318/v1/traces"))
             provider.add_span_processor(processor)
             logger.debug(f"[{self.session_id}] Using default span processor and exporter")
 

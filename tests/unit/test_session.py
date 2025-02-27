@@ -20,8 +20,10 @@ from agentops.session.session import Session
 #         client.init()
 #         assert isinstance(agentops.start_session(), Session)
 
+pytestmark = [pytest.mark.usefixture('noinstrument')]
+
 class TestSessionStart:
-    def test_session_start(self):
+    def test_session_start(self, agentops_config):
         session = agentops.start_session()
         assert session is not None
 

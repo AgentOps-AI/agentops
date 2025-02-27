@@ -13,14 +13,11 @@ def reset_instrumentation():
     _session_tracers.clear()
     yield
 
-@pytest.fixture(scope="session")
-def exporter():
+@pytest.fixture(autouse=True)
+def exporter(agentops_config):
     exporter = InMemorySpanExporter()
-    agentops.init(
-        tags=['testing'],
-        exporter=exporter,
-    )
-    return exporter
+    agentops_config.exporter = exporter
+    yield exporter
 
 
 @pytest.fixture(autouse=True)
