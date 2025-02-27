@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import json
 import threading
-from dataclasses import asdict, dataclass, field
 from datetime import datetime, timezone
 from decimal import ROUND_HALF_UP, Decimal
 from enum import StrEnum, auto
@@ -10,7 +9,7 @@ from typing import TYPE_CHECKING, Dict, List, Optional, Union
 from uuid import UUID, uuid4
 
 from opentelemetry import trace
-from opentelemetry.trace import Status, StatusCode
+from opentelemetry.trace import Span, Status, StatusCode
 from termcolor import colored
 
 from agentops.api.session import SessionApiClient
@@ -18,6 +17,7 @@ from agentops.config import Config, default_config
 from agentops.exceptions import ApiServerException
 from agentops.helpers import get_ISO_time
 from agentops.helpers.serialization import AgentOpsJSONEncoder
+from agentops.helpers.system import get_host_env
 from agentops.helpers.time import iso_to_unix_nano
 from agentops.logging import logger
 from agentops.session.tracer import SessionTracer
@@ -31,51 +31,57 @@ if TYPE_CHECKING:
 from .signals import *
 
 
-@dataclass(slots=True)
 class Session:
     """Data container for session state with minimal public API"""
 
-    # Use _session_id as the field name to avoid conflicts with the property
-    config: Config = field(default_factory=default_config)
-    tags: List[str] = field(default_factory=list)
-    host_env: Optional[dict] = field(default_factory=lambda: {}, repr=False)
-    end_state_reason: Optional[str] = None
-    jwt: Optional[str] = None
-    video: Optional[str] = None
-    event_counts: Dict[str, int] = field(
-        default_factory=lambda: {"llms": 0, "tools": 0, "actions": 0, "errors": 0, "apis": 0}
-    )  # this going to be replaced with a meter / counter (see otel)
+    # __slots__ = (
+    #     'config', 'tags', 'host_env', 'end_state_reason', 'jwt', 'video', 
+    #     'event_counts', 'state', 'auto_start', '_session_id', '_lock',
+    #     'span', 'telemetry', '_init_timestamp', '_end_timestamp', 'api'
+    # )
 
-    # Define the state descriptor at class level
-    state = session_state_field()
 
-    ############################################################################################
-    # kw-only fields below (controls)
-    auto_start: bool = field(default=True, kw_only=True, repr=False, compare=False)
-    ############################################################################################
-    # Private fields only below
-    _lock: threading.Lock = field(default_factory=threading.Lock, repr=False, init=False, compare=False)
+    state = session_state_field
 
-    # These fields come from SessionTelemetryMixin
-    span: trace.Span | None = field(default=None, init=False, repr=False)  # The root span for the session
-    telemetry: Optional[SessionTracer] = field(default=None, repr=False, init=False)
-    _init_timestamp: Optional[str] = field(default=None, init=False, repr=False)
-    _end_timestamp: Optional[str] = field(default=None, init=False, repr=False)
-
-    # Add api field to slots
-    api: SessionApiClient = field(default=None, init=False, repr=False)
-
-    @property
-    def is_running(self) -> bool:
-        """Whether session is currently running"""
-        return self.state.is_alive
-
-    def __post_init__(self):
-        """Initialize session components after dataclass initialization"""
+    def __init__(
+        self,
+        config: Optional[Config] = None,
+        tags: Optional[List[str]] = [],
+        host_env: Optional[dict] = get_host_env(),
+        end_state_reason: Optional[str] = None,
+        jwt: Optional[str] = None,
+        video: Optional[str] = None,
+        event_counts: Optional[Dict[str, int]] = None,
+        *,
+        auto_start: bool = True,
+        session_id: Optional[UUID] = None,
+    ):
+        """Initialize a Session with optional session_id."""
+        # Initialize all properties
+        self.config = config or default_config()
+        self.tags = tags or []
+        self.host_env = host_env or {}
+        self.end_state_reason = end_state_reason
+        self.jwt = jwt
+        self.video = video
+        self.event_counts = event_counts or {"llms": 0, "tools": 0, "actions": 0, "errors": 0, "apis": 0}
+        self.auto_start = auto_start
+        self._session_id = session_id or uuid4()
+        self._lock = threading.Lock()
+        
+        # Fields from mixin
+        self.span: Optional[Span] = None
+        self.telemetry = None
+        self._init_timestamp: Optional[str] = None
+        self._end_timestamp: Optional[str] = None
+        self.api = None
+        
+        # Initialize state descriptor
+        self._state = SessionState.INITIALIZING
+        
         # Initialize session-specific components
-
         if self.config.api_key is None:
-            self.state = SessionState.FAILED
+            self._state = SessionState.FAILED
             if not self.config.fail_safe:
                 raise ValueError("API key is required")
             logger.error("API key is required")
@@ -90,7 +96,7 @@ class Session:
         if self.auto_start:
             try:
                 if not self.start():
-                    self.state = SessionState.FAILED
+                    self._state = SessionState.FAILED
                     if not self.config.fail_safe:
                         raise RuntimeError("Session.start() did not succeed", self)
                     logger.error("Session initialization failed")
@@ -98,9 +104,27 @@ class Session:
             except Exception as e:
                 if not self.config.fail_safe:
                     raise
-                self.state = SessionState.FAILED
+                self._state = SessionState.FAILED
                 logger.error(f"Failed to initialize session: {e}")
                 self.end(str(SessionState.FAILED), f"Exception during initialization: {str(e)}")
+
+    @property
+    def state(self) -> SessionState:
+        """Get the current session state."""
+        return self._state
+        
+    @state.setter
+    def state(self, value):
+        """Set the session state."""
+        if isinstance(value, SessionState):
+            self._state = value
+        else:
+            # Try to convert string to SessionState
+            try:
+                self._state = SessionState.from_string(str(value))
+            except ValueError:
+                logger.warning(f"Invalid session state: {value}")
+                self._state = SessionState.INDETERMINATE
 
     @property
     def token_cost(self) -> str:
@@ -110,7 +134,7 @@ class Session:
         try:
             # Get token cost from either response or direct value
             cost = Decimal(0)
-            if self.api.last_response is not None:
+            if self.api and self.api.last_response is not None:
                 cost_value = self.api.last_response.json().get("token_cost", "unknown")
                 if cost_value != "unknown" and cost_value is not None:
                     cost = Decimal(str(cost_value))
@@ -142,6 +166,11 @@ class Session:
     def session_url(self) -> str:
         """URL to view this trace in the dashboard"""
         return f"{self.config.endpoint}/drilldown?session_id={self.session_id}"
+    
+    @property
+    def is_running(self) -> bool:
+        """Whether session is currently running"""
+        return self._state.is_alive
 
     def _map_end_state(self, state: str) -> SessionState:
         """Map common end state strings to SessionState enum values"""
@@ -167,13 +196,13 @@ class Session:
     ) -> None:
         """End the session"""
         with self._lock:
-            if self.state.is_terminal:
+            if self._state.is_terminal:
                 logger.debug(f"Session {self.session_id} already ended")
                 return
 
             # Update state before sending signal
             if end_state is not None:
-                self.state = SessionState.from_string(end_state)
+                self._state = SessionState.from_string(end_state)
             if end_state_reason is not None:
                 self.end_state_reason = end_state_reason
             if video is not None:
@@ -181,24 +210,25 @@ class Session:
 
             # Send signal with current state
             session_ending.send(
-                self, session_id=self.session_id, end_state=str(self.state), end_state_reason=self.end_state_reason
+                self, session_id=self.session_id, end_state=str(self._state), end_state_reason=self.end_state_reason
             )
 
             self.end_timestamp = get_ISO_time()
 
             session_data = json.loads(self.json())
-            self.api.update_session(session_data)
+            if self.api:
+                self.api.update_session(session_data)
 
             session_updated.send(self)
             session_ended.send(
-                self, session_id=self.session_id, end_state=str(self.state), end_state_reason=self.end_state_reason
+                self, session_id=self.session_id, end_state=str(self._state), end_state_reason=self.end_state_reason
             )
-            logger.debug(f"Session {self.session_id} ended with state {self.state}")
+            logger.debug(f"Session {self.session_id} ended with state {self._state}")
 
     def start(self):
         """Start the session"""
         with self._lock:
-            if self.state != SessionState.INITIALIZING:
+            if self._state != SessionState.INITIALIZING:
                 logger.warning("Session already started")
                 return False
 
@@ -207,6 +237,10 @@ class Session:
 
             try:
                 session_data = json.loads(self.json())
+                if not self.api:
+                    logger.error("API client not initialized")
+                    return False
+                    
                 self.jwt = self.api.create_session(session_data)
 
                 logger.info(
@@ -217,7 +251,7 @@ class Session:
                 )
 
                 # Set state before sending signal so registry sees correct state
-                self.state = SessionState.RUNNING
+                self._state = SessionState.RUNNING
 
                 # Send session_started signal with self as sender
                 session_started.send(self)
@@ -228,18 +262,21 @@ class Session:
                 if not self.config.fail_safe:
                     raise
                 logger.error(f"[{self.session_id}] Could not start session - {e}")
-                self.state = SessionState.FAILED
+                self._state = SessionState.FAILED
                 return False
 
     def flush(self):
-        self.api.update_session()
-        session_updated.send(self)
+        if self.api:
+            self.api.update_session()
+            session_updated.send(self)
+        else:
+            logger.warning("Cannot flush: API client not initialized")
 
     def _format_duration(self, start_time, end_time) -> str:
         """Format duration between two timestamps"""
         if not start_time or not end_time:
             return "0.0s"
-
+            
         start = datetime.fromisoformat(start_time.replace("Z", "+00:00"))
         end = datetime.fromisoformat(end_time.replace("Z", "+00:00"))
         duration = end - start
@@ -259,12 +296,12 @@ class Session:
     ##########################################################################################
     def __repr__(self) -> str:
         """String representation"""
-        parts = [f"Session(id={self.session_id}, status={self.state}"]
+        parts = [f"Session(id={self.session_id}, status={self._state}"]
 
         if self.tags:
             parts.append(f"tags={self.tags}")
 
-        if self.state.is_terminal and self.end_state_reason:
+        if self._state.is_terminal and self.end_state_reason:
             parts.append(f"reason='{self.end_state_reason}'")
 
         return ", ".join(parts) + ")"
@@ -275,7 +312,7 @@ class Session:
         Args:
             tags: List of tags to add
         """
-        if self.state.is_terminal:
+        if self._state.is_terminal:
             logger.warning(f"{self.session_id} Cannot add tags to ended session")
             return
 
@@ -285,11 +322,11 @@ class Session:
     def dict(self) -> dict:
         """Convert session to dictionary, excluding private and non-serializable fields"""
         return {
-            "session_id": self.session_id,
+            "session_id": str(self.session_id),  # Explicitly convert UUID to string
             "config": self.config.dict(),
             "tags": self.tags,
             "host_env": self.host_env,
-            "state": str(self.state),
+            "state": str(self._state),
             "jwt": self.jwt,
             "video": self.video,
             "event_counts": self.event_counts,
@@ -303,7 +340,7 @@ class Session:
         Args:
             tags: List of tags to set
         """
-        if self.state.is_terminal:
+        if self._state.is_terminal:
             logger.warning("Cannot set tags on ended session")
             return
 
@@ -326,25 +363,9 @@ class Session:
 
     @property
     def session_id(self) -> UUID:
-        """Get session_id from the span if available, otherwise raise an error."""
-        # If span exists and has a span context, derive session_id from the trace_id
-        if self.span is not None:
-            span_context = self.span.get_span_context()
-            if span_context is not None:
-                # Use the trace_id from the span context to create a UUID
-                # Format the trace_id as a 32-character hex string (zero-padded if needed)
-                trace_id_hex = format(span_context.trace_id, "032x")
-
-                # Convert the hex string to a UUID
-                try:
-                    session_id = UUID(trace_id_hex)
-                    logger.debug(f"Derived session_id {session_id} from trace_id {trace_id_hex}")
-                    return session_id
-                except ValueError as e:
-                    logger.error(f"Failed to convert trace_id to UUID: {e}")
-
-        # Raise an error if no session_id is available - sessions must be 1:1 tied to spans
-        raise ValueError("No session_id available. Sessions must be 1:1 tied to spans.")
+        """Get session_id from instance variable."""
+        # Always return the stored session ID
+        return self._session_id
 
     @property
     def init_timestamp(self) -> Optional[str]:
@@ -374,14 +395,18 @@ class Session:
             raise ValueError("Timestamp must be a string in ISO format")
         self._end_timestamp = value
         if self.span and value is not None:
-            # End the span when setting end_timestamp
-            self.span.end(end_time=iso_to_unix_nano(value))
+            # Only end the span if it hasn't been ended yet
+            # Check if the span has end_time attribute and it's been set
+            has_ended = hasattr(self.span, "end_time") and self.span.end_time is not None
+            if not has_ended:
+                # End the span when setting end_timestamp
+                self.span.end(end_time=iso_to_unix_nano(value))
 
     def set_status(self, state: SessionState, reason: Optional[str] = None) -> None:
         """Update root span status based on session state."""
         if self.span is None:
             return
-
+            
         if state.is_terminal:
             if state.name == "SUCCEEDED":
                 self.span.set_status(Status(StatusCode.OK))

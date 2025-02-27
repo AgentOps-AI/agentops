@@ -1,5 +1,17 @@
+from uuid import UUID
+
 from opentelemetry.util.types import Attributes, AttributeValue
 
+
+def trace_id_to_uuid(trace_id: int) -> UUID:
+    # Convert the trace_id to a 32-character hex string
+    trace_id_hex = format(trace_id, '032x')
+    
+    # Format as UUID string (8-4-4-4-12)
+    uuid_str = f"{trace_id_hex[0:8]}-{trace_id_hex[8:12]}-{trace_id_hex[12:16]}-{trace_id_hex[16:20]}-{trace_id_hex[20:32]}"
+    
+    # Create UUID object
+    return UUID(uuid_str)
 
 def dict_to_span_attributes(data: dict, prefix: str = "") -> Attributes:
     """Convert a dictionary to OpenTelemetry span attributes.

@@ -10,19 +10,16 @@ from opentelemetry.trace import SpanKind
 
 import agentops
 from agentops import Config, Session
-from agentops.session.tracer import (SessionTelemetry, _session_tracers,
-                                        cleanup_session_tracer,
-                                        get_session_tracer,
-                                        setup_session_tracer)
+from agentops.session.tracer import (SessionTracer, _session_tracers,
+                                     cleanup_session_tracer,
+                                     get_session_tracer, setup_session_tracer)
 
 
 def test_session_tracer_initialization(agentops_session):
     """Test that session tracer is properly initialized"""
-    setup_session_tracer(agentops_session)
-
     # Verify tracer was initialized with root span
     assert hasattr(agentops_session, "telemetry")
-    assert isinstance(agentops_session.telemetry, SessionTelemetry)
+    assert isinstance(agentops_session.telemetry, SessionTracer)
     assert agentops_session.span is not None
     assert agentops_session.span.is_recording()
 
@@ -57,4 +54,3 @@ def test_session_tracer_cleanup(agentops_session):
 
     # Verify tracer was cleaned up
     assert session_id not in _session_tracers, "Tracer not cleaned up"
-

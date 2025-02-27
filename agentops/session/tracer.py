@@ -10,19 +10,21 @@ from __future__ import annotations
 import atexit
 import threading
 from typing import TYPE_CHECKING, Optional
-from weakref import WeakValueDictionary
 from uuid import uuid4
+from weakref import WeakValueDictionary
 
 from opentelemetry import context, trace
-from opentelemetry.exporter.otlp.proto.http.trace_exporter import OTLPSpanExporter
+from opentelemetry.exporter.otlp.proto.http.trace_exporter import \
+    OTLPSpanExporter
 from opentelemetry.sdk.resources import SERVICE_NAME, Resource
 from opentelemetry.sdk.trace import TracerProvider
 from opentelemetry.sdk.trace.export import SimpleSpanProcessor
 from opentelemetry.trace import NonRecordingSpan, SpanContext, TraceFlags
 
 from agentops.logging import logger
-from agentops.session.signals import session_ended, session_initialized, session_started
 from agentops.session.helpers import dict_to_span_attributes
+from agentops.session.signals import (session_ended, session_initialized,
+                                      session_started)
 
 if TYPE_CHECKING:
     from agentops.session.session import Session
@@ -115,15 +117,41 @@ class SessionTracer:
 
         # Initialize tracer
         self.tracer = provider.get_tracer("agentops.session")
-
+        
         # Create attributes from session data
         attributes = dict_to_span_attributes(self.session.dict())
 
-        # Create the recording span
-        self.session.span = self.tracer.start_span("session", attributes=attributes)
-
-        # Create and activate the session context
-        self._context = trace.set_span_in_context(self.session.span)
+        # We need to get a proper context for the tracer to use
+        current_context = context.get_current()
+        
+        # Create a new recording span directly 
+        span = self.tracer.start_span("session", attributes=attributes)
+        
+        # Manually override the trace_id and span_id inside the span to match our session_id
+        # Convert UUID to int by removing hyphens and converting hex to int
+        session_uuid_hex = str(self.session.session_id).replace('-', '')
+        trace_id = int(session_uuid_hex, 16)
+        span_id = trace_id & 0xFFFFFFFFFFFFFFFF  # Use lower 64 bits for span ID
+        
+        # Set the span's context to use our trace ID
+        # This is a bit of a hack, but it ensures the trace ID matches our session ID
+        span_context = span.get_span_context()
+        new_context = SpanContext(
+            trace_id=trace_id,
+            span_id=span_id, 
+            is_remote=False,
+            trace_flags=TraceFlags(TraceFlags.SAMPLED),
+            trace_state=span_context.trace_state if hasattr(span_context, 'trace_state') else None
+        )
+        
+        # Replace the span's context with our custom context
+        span._context = new_context  # type: ignore
+        
+        # Store the span in the session
+        self.session.span = span
+        
+        # Activate the context
+        self._context = trace.set_span_in_context(span)
         self._token = context.attach(self._context)
 
         # Store for cleanup
@@ -147,9 +175,12 @@ class SessionTracer:
                 context.detach(self._token)
                 self._token = None
 
-            # End the span if it exists
+            # End the span if it exists and hasn't been ended yet
             if self.session.span is not None:
-                self.session.span.end()
+                # Check if the span has already been ended
+                has_ended = hasattr(self.session.span, "end_time") and self.session.span.end_time is not None
+                if not has_ended:
+                    self.session.span.end()
 
             provider = trace.get_tracer_provider()
             if isinstance(provider, TracerProvider):

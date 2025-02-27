@@ -1,4 +1,3 @@
-
 import pytest
 
 import agentops
@@ -20,7 +19,8 @@ from agentops.session.session import Session
 #         client.init()
 #         assert isinstance(agentops.start_session(), Session)
 
-pytestmark = [pytest.mark.usefixture('noinstrument')]
+pytestmark = [pytest.mark.usefixture("noinstrument")]
+
 
 class TestSessionStart:
     def test_session_start(self, agentops_config):
@@ -34,6 +34,8 @@ class TestSessionStart:
         assert isinstance(session, Session), "start_session with tags should return a Session instance"
         assert session.tags == test_tags
 
+    def test_init_timestamp(self, agentops_session):
+        assert agentops_session.init_timestamp is not None, "Session.init_timestamp should be set"
 
 
 class TestSessionEncoding:
