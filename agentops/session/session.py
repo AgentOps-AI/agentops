@@ -17,7 +17,7 @@ from agentops.exceptions import ApiServerException
 from agentops.helpers import get_ISO_time
 from agentops.helpers.serialization import AgentOpsJSONEncoder
 from agentops.logging import logger
-from agentops.session.telemetry import SessionTelemetryMixin
+from agentops.session.mixin import SessionTelemetryMixin
 
 from .state import SessionState
 from .state import SessionStateDescriptor as session_state_field
@@ -32,16 +32,16 @@ from .signals import *
 class Session(SessionTelemetryMixin):
     """Data container for session state with minimal public API"""
 
-    session_id: UUID = field(default_factory=uuid4)
+    # Use _session_id as the field name to avoid conflicts with the property
     config: Config = field(default_factory=default_config)
     tags: List[str] = field(default_factory=list)
-    host_env: Optional[dict] = field(default_factory=lambda:{}, repr=False)
+    host_env: Optional[dict] = field(default_factory=lambda: {}, repr=False)
     end_state_reason: Optional[str] = None
     jwt: Optional[str] = None
     video: Optional[str] = None
     event_counts: Dict[str, int] = field(
         default_factory=lambda: {"llms": 0, "tools": 0, "actions": 0, "errors": 0, "apis": 0}
-    ) # this going to be replaced with a meter / counter (see otel)
+    )  # this going to be replaced with a meter / counter (see otel)
 
     # Define the state descriptor at class level
     state = session_state_field()
@@ -52,6 +52,7 @@ class Session(SessionTelemetryMixin):
     ############################################################################################
     # Private fields only below
     _lock: threading.Lock = field(default_factory=threading.Lock, repr=False, init=False, compare=False)
+
 
     @property
     def is_running(self) -> bool:
@@ -256,16 +257,17 @@ class Session(SessionTelemetryMixin):
 
     def add_tags(self, tags: List[str]) -> None:
         """Add tags to the session
-        
+
         Args:
             tags: List of tags to add
         """
         if self.state.is_terminal:
             logger.warning(f"{self.session_id} Cannot add tags to ended session")
             return
-        
+
         self.tags.extend(tags)
         session_updated.send(self)
+
     def dict(self) -> dict:
         """Convert session to dictionary, excluding private and non-serializable fields"""
         return {
@@ -278,20 +280,21 @@ class Session(SessionTelemetryMixin):
             "video": self.video,
             "event_counts": self.event_counts,
             "init_timestamp": self.init_timestamp,
-            "end_timestamp": self.end_timestamp
+            "end_timestamp": self.end_timestamp,
         }
 
     def set_tags(self, tags: List[str]) -> None:
         """Set session tags, replacing existing ones
-        
+
         Args:
             tags: List of tags to set
         """
         if self.state.is_terminal:
             logger.warning("Cannot set tags on ended session")
             return
-        
+
         self.tags = tags
         session_updated.send(self)
+
     def json(self):
         return json.dumps(self.dict(), cls=AgentOpsJSONEncoder)

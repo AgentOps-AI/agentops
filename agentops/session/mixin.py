@@ -66,10 +66,9 @@ class SessionTelemetryMixin:
                 except ValueError as e:
                     logger.error(f"Failed to convert trace_id to UUID: {e}")
 
-        # If we don't have a span yet or couldn't convert, generate a temporary UUID and store it
+        # Raise an error if no session_id is available - sessions must be 1:1 tied to spans
         if self._session_id is None:
-            self._session_id = uuid4()
-            logger.debug(f"Generated new session_id {self._session_id} as fallback")
+            raise ValueError("No session_id available. Sessions must be 1:1 tied to spans.")
 
         return self._session_id
 
