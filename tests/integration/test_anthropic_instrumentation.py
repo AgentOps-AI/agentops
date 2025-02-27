@@ -1,18 +1,20 @@
 import pytest
-import openai
+import anthropic
 import agentops
 from tests.fixtures.instrumentation import exporter
 
 @pytest.mark.asyncio
-def test_openai_instrumentation(exporter):
-    """Test that OpenAI API calls are tracked in spans"""
+def test_anthropic_instrumentation(exporter):
+    """Test that Anthropic API calls are tracked in spans"""
     
     # Create a session for tracking
     session = agentops.start_session()
     
     try:
-        response = openai.chat.completions.create(
-            model="gpt-3.5-turbo",
+        client = anthropic.Anthropic()
+        response = client.messages.create(
+            model="claude-3-5-sonnet-20240620",
+            max_tokens=100,
             messages=[{"role": "user", "content": "Write a one-line joke"}]
         )
         
@@ -23,11 +25,11 @@ def test_openai_instrumentation(exporter):
         
         # Optionally, you can check for specific attributes in the spans
         for span in finished_spans:
-            assert "openai" in span.name, "Expected span name not found"
+            assert "anthropic" in span.name, "Expected span name not found"
             assert span.status.is_ok, "Span status should be OK"
         
-        # Verify the response from OpenAI
-        assert response.choices[0].message.content is not None
+        # Verify the response from Anthropic
+        assert response.content[0].text is not None
         
     finally:
         session.end("SUCCEEDED")
