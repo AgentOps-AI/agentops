@@ -1,3 +1,4 @@
+from enum import Enum
 import inspect
 import json
 from datetime import datetime, timezone
@@ -67,6 +68,10 @@ def safe_serialize(obj):
         try:
             if isinstance(o, UUID):
                 return str(o)
+            # Handle Enum types
+            elif isinstance(o, Enum):
+                return o.value
+            # Handle objects with attributes property that's dict-like
             elif hasattr(o, "model_dump_json"):
                 return str(o.model_dump_json())
             elif hasattr(o, "to_json"):

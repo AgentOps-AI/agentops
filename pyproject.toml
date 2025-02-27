@@ -118,6 +118,8 @@ pythonpath = ["."]
 faulthandler_timeout = 30  # Reduced from 60
 timeout = 60  # Reduced from 300
 disable_socket = true  # Add this to prevent hanging on socket cleanup
+log_cli = true  # Enable logging to console
+log_cli_level = "INFO"  # Set log level to INFO
 
 [tool.ruff]
 line-length = 120

@@ -17,9 +17,17 @@ from tests.fixtures.vcr import vcr_config
 
 
 @pytest.fixture
-def agentops_session():
-    agentops.start_session()
-
+def agentops_init():
+    agentops.init(auto_start_session=False)
     yield
+
+
+@pytest.fixture
+def agentops_session(agentops_init):
+    session = agentops.start_session()
+
+    assert session, "Failed agentops.start_session() returned None."
+
+    yield session
 
     agentops.end_all_sessions()

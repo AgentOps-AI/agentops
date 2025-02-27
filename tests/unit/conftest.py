@@ -1,4 +1,5 @@
 import contextlib
+import re
 import uuid
 from collections import defaultdict
 from typing import Dict, Iterator, List
@@ -80,5 +81,24 @@ def mock_req(base_url, jwt):
         m.post(base_url + "/v2/developer_errors", json={"status": "ok"})
         m.post(base_url + "/v2/reauthorize_jwt", json=reauthorize_jwt_response)
         m.post(base_url + "/v2/create_agent", json={"status": "success"})
+        # Use explicit regex pattern for logs endpoint to match any URL and session ID
+        logs_pattern = re.compile(r".*/v3/logs/[0-9a-f-]{8}-[0-9a-f-]{4}-[0-9a-f-]{4}-[0-9a-f-]{4}-[0-9a-f-]{12}")
+        m.put(logs_pattern, json={"status": "success"})
 
         yield m
+
+
+@pytest.fixture
+def agentops_init(api_key, base_url):
+    agentops.init(api_key=api_key, endpoint=base_url, auto_start_session=False)
+
+
+@pytest.fixture
+def agentops_session(agentops_init):
+    session = agentops.start_session()
+
+    assert session, "Failed agentops.start_session() returned None."
+
+    yield session
+
+    agentops.end_all_sessions()

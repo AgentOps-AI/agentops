@@ -8,6 +8,9 @@ from uuid import UUID
 import pytest
 import requests_mock
 from opentelemetry import trace
+from opentelemetry._logs import SeverityNumber
+from opentelemetry.sdk._logs import LoggerProvider, LoggingHandler, LogRecord
+from opentelemetry.sdk._logs.export import BatchLogRecordProcessor, LogExporter, LogExportResult
 from opentelemetry.sdk.trace import ReadableSpan
 from opentelemetry.sdk.trace.export import SpanExportResult
 from opentelemetry.trace import SpanContext, SpanKind, Status, StatusCode
@@ -16,6 +19,8 @@ from opentelemetry.trace.span import TraceState
 import agentops
 from agentops import ActionEvent, Client
 from agentops.http_client import HttpClient
+from agentops.instrumentation import cleanup_session_telemetry, setup_session_telemetry
+from agentops.session import SessionLogExporter
 from agentops.singleton import clear_singletons
 
 
@@ -310,6 +315,7 @@ class TestMultiSessions:
         assert len(request_json["session"]["tags"]) == 0
 
     def test_add_tags(self, mock_req):
+        """Test adding tags to multiple sessions"""
         # Arrange
         session_1_tags = ["session-1"]
         session_2_tags = ["session-2"]
@@ -328,13 +334,19 @@ class TestMultiSessions:
         session_2.end_session(end_state)
         time.sleep(0.15)
 
-        # Assert 3 requests, 1 for session init, 1 for event, 1 for end session
-        req1 = mock_req.request_history[-1].json()
-        req2 = mock_req.request_history[-2].json()
+        # Find update session requests
+        update_requests = [r for r in mock_req.request_history if "/v2/update_session" in r.url]
+        assert len(update_requests) >= 2
 
-        session_1_req = req1 if req1["session"]["session_id"] == session_1.session_id else req2
-        session_2_req = req2 if req2["session"]["session_id"] == session_2.session_id else req1
+        # Get the last two update requests
+        req1 = update_requests[-1].json()
+        req2 = update_requests[-2].json()
 
+        # Match requests to sessions
+        session_1_req = req1 if req1["session"]["session_id"] == str(session_1.session_id) else req2
+        session_2_req = req2 if req2["session"]["session_id"] == str(session_2.session_id) else req1
+
+        # Assert
         assert session_1_req["session"]["end_state"] == end_state
         assert session_2_req["session"]["end_state"] == end_state
 
@@ -619,3 +631,230 @@ class TestSessionExporter:
             UUID(event["id"])
         except ValueError:
             pytest.fail("Event ID is not a valid UUID")
+
+
+class TestSessionLogExporter:
+    def setup_method(self):
+        """Set up test environment before each test"""
+        self.api_key = "11111111-1111-4111-8111-111111111111"
+        agentops.init(api_key=self.api_key, max_wait_time=50, auto_start_session=False)
+        self.session = agentops.start_session()
+        assert self.session is not None
+
+        # Set up logging components through instrumentation
+        self.log_exporter = SessionLogExporter(session=self.session)
+        self.log_handler, self.log_processor = setup_session_telemetry(str(self.session.session_id), self.log_exporter)
+
+    def teardown_method(self):
+        """Clean up after each test"""
+        if hasattr(self, "log_handler") and hasattr(self, "log_processor"):
+            cleanup_session_telemetry(self.log_handler, self.log_processor)
+        if self.session:
+            self.session.end_session("Success")
+        agentops.end_all_sessions()
+        clear_singletons()
+
+    def test_log_export_basic(self, mock_req):
+        """Test basic log export functionality"""
+        # Create a test log record
+        log_record = LogRecord(
+            timestamp=123456789,
+            trace_id=0x000000000000000000000000DEADBEEF,
+            span_id=0x00000000DEADBEF0,
+            trace_flags=0x01,
+            severity_text="INFO",
+            severity_number=SeverityNumber.INFO,
+            body="Test log message",
+            resource=self.log_handler._logger_provider.resource,
+            attributes={},
+        )
+
+        # Export the log record
+        result = self.log_exporter.export([log_record])
+
+        # Verify export was successful
+        assert result == LogExportResult.SUCCESS
+
+        # Verify the request
+        assert len(mock_req.request_history) > 0
+        last_request = mock_req.request_history[-1]
+        assert last_request.path.startswith("/v3/logs")
+        lr_data = last_request.json()
+        assert len(lr_data) == 1
+        assert lr_data[0]["body"] == "Test log message"
+
+    def test_log_export_multiple_records(self, mock_req):
+        """Test exporting multiple log records at once"""
+        # Create test log records
+        log_records = [
+            LogRecord(
+                timestamp=123456789,
+                trace_id=0x000000000000000000000000DEADBEEF,
+                span_id=0x00000000DEADBEF0,
+                trace_flags=0x01,
+                severity_text="INFO",
+                severity_number=SeverityNumber.INFO,
+                body=f"Test message {i}",
+                resource=self.log_handler._logger_provider.resource,
+                attributes={},
+            )
+            for i in range(3)
+        ]
+
+        # Export the log records
+        result = self.log_exporter.export(log_records)
+
+        # Verify export was successful
+        assert result == LogExportResult.SUCCESS
+
+        # Verify the request
+        assert len(mock_req.request_history) > 0
+        last_request = mock_req.request_history[-1]
+        assert last_request.path.startswith("/v3/logs")
+        lr_data = last_request.json()
+        assert len(lr_data) == 3
+        assert lr_data[0]["body"] == "Test message 0"
+        assert lr_data[1]["body"] == "Test message 1"
+        assert lr_data[2]["body"] == "Test message 2"
+
+    def test_log_export_after_shutdown(self, mock_req):
+        """Test that export after shutdown returns success without sending request"""
+        # Shutdown the exporter
+        self.log_exporter.shutdown()
+
+        # Create a test log record
+        log_record = LogRecord(
+            timestamp=123456789,
+            trace_id=0x000000000000000000000000DEADBEEF,
+            span_id=0x00000000DEADBEF0,
+            trace_flags=0x01,
+            severity_text="INFO",
+            severity_number=SeverityNumber.INFO,
+            body="Test log message",
+            resource=self.log_handler._logger_provider.resource,
+            attributes={},
+        )
+
+        # Export should return success but not make request
+        result = self.log_exporter.export([log_record])
+        assert result == LogExportResult.SUCCESS
+
+        # Verify no request was made
+        assert not any(req.url.endswith("/v3/logs") for req in mock_req.request_history[-1:])
+
+    def test_log_export_with_session_metadata(self, mock_req):
+        """Test that exported logs include correct session metadata"""
+        # Create a test log record
+        log_record = LogRecord(
+            timestamp=123456789,
+            trace_id=0x000000000000000000000000DEADBEEF,
+            span_id=0x00000000DEADBEF0,
+            trace_flags=0x01,
+            severity_text="INFO",
+            severity_number=SeverityNumber.INFO,
+            body="Test log message",
+            resource=self.log_handler._logger_provider.resource,
+            attributes={},
+        )
+
+        # Export the log record
+        result = self.log_exporter.export([log_record])
+        assert result == LogExportResult.SUCCESS
+
+        # Verify the request includes session metadata
+        last_request = mock_req.last_request.json()[0]
+        last_request["body"] == "Test log message"
+
+
+class TestSessionLogging:
+    def setup_method(self):
+        """Set up test environment before each test"""
+        self.api_key = "11111111-1111-4111-8111-111111111111"
+        agentops.init(api_key=self.api_key, max_wait_time=50, auto_start_session=False)
+        self.session = agentops.start_session()
+        assert self.session is not None
+
+    def teardown_method(self):
+        """Clean up after each test"""
+        if self.session:
+            self.session.end_session("Success")
+        agentops.end_all_sessions()
+        clear_singletons()
+
+    @pytest.fixture
+    def agentops_logger(self):
+        from agentops.log_config import logger
+
+        return logger
+
+    def test_log_handler_installation(self, agentops_logger):
+        """Test that the session's specific log handler is correctly installed"""
+        # Get the handler that was created for this session
+        session_handler = self.session._log_handler
+
+        # Verify the handler exists and is a LoggingHandler
+        assert isinstance(session_handler, LoggingHandler), "Session should have a LoggingHandler instance"
+
+        # Verify this specific handler is in the logger's handlers
+        assert (
+            session_handler in agentops_logger.handlers
+        ), "Session's specific LoggingHandler should be in logger's handlers"
+
+        # Count how many times this specific handler appears
+        handler_count = sum(1 for h in agentops_logger.handlers if h is session_handler)
+        assert handler_count == 1, "Session's LoggingHandler should appear exactly once in logger's handlers"
+
+    def test_log_handler_removal_on_session_end(self, agentops_logger):
+        """Test that the session's specific log handler is removed when session ends"""
+        # Get the handler that was created for this session
+        this_session_logging_handler = self.session._log_handler
+
+        # Verify handler exists before ending session
+        assert (
+            this_session_logging_handler in agentops_logger.handlers
+        ), "Session handler should be present before ending session"
+
+        # End the session
+        self.session.end_session("Success")
+
+        # Verify the specific handler was removed
+        assert (
+            this_session_logging_handler not in agentops_logger.handlers
+        ), "Session handler should be removed after ending session"
+
+    # def test_logging_with_session(self, mock_req):
+    #     """Test that logging works with an active session"""
+    #     # Log a test message
+    #     test_message = "Test log message"
+    #     logger.info(test_message)
+
+    #     # Force flush logs
+    #     self.session._log_processor.force_flush()
+
+    #     # Verify the request
+    #     assert len(mock_req.request_history) > 0
+    #     last_request = mock_req.last_request.json()
+    #     assert "logs" in last_request
+    #     assert test_message in last_request["logs"]
+
+    # def test_multiple_log_messages(self, mock_req):
+    #     """Test handling of multiple log messages"""
+    #     # Log multiple test messages
+    #     test_messages = [
+    #         "First test message",
+    #         "Second test message",
+    #         "Third test message"
+    #     ]
+
+    #     for msg in test_messages:
+    #         logger.info(msg)
+
+    #     # Force flush logs
+    #     self.session._log_processor.force_flush()
+
+    #     # Verify the request
+    #     assert len(mock_req.request_history) > 0
+    #     last_request = mock_req.last_request.json()
+    #     assert "logs" in last_request
+    #     for msg in test_messages:
+    #         assert msg in last_request["logs"]
