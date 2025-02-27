@@ -4,7 +4,7 @@ from opentelemetry.sdk.trace.export.in_memory_span_exporter import \
     InMemorySpanExporter
 
 import agentops
-from agentops.telemetry.session import _session_tracers
+from agentops.session.tracer import _session_tracers
 
 
 @pytest.fixture(autouse=True)

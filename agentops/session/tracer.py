@@ -23,7 +23,7 @@ from opentelemetry.trace import NonRecordingSpan, SpanContext, TraceFlags
 from agentops.logging import logger
 from agentops.session.signals import (session_ended, session_initialized,
                                       session_started)
-from agentops.telemetry.helpers import dict_to_span_attributes
+from agentops.session.helpers import dict_to_span_attributes
 
 if TYPE_CHECKING:
     from agentops.session.session import Session

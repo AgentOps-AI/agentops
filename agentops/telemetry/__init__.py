@@ -1,4 +1,4 @@
-from .session import (_session_tracers, cleanup_session_tracer,
+from ..session.tracer import (_session_tracers, cleanup_session_tracer,
                       get_session_tracer, get_tracer_provider,
                       setup_session_tracer)
 

@@ -27,7 +27,7 @@ def instrument_all():
     _active_instrumentors = []
 
 
-    from agentops.telemetry.session import get_tracer_provider
+    from agentops.session.tracer import get_tracer_provider
     tracer_provider = get_tracer_provider()
 
     for instrumentor_class in instrumentors:

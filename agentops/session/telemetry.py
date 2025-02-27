@@ -16,13 +16,13 @@ if TYPE_CHECKING:
 # Import instrumentation to ensure signal handlers are registered
 from agentops.helpers.time import iso_to_unix_nano
 from agentops.sdk.types import ISOTimeStamp
-from agentops.telemetry.session import (SessionTelemetry,
+from agentops.session.tracer import (SessionTelemetry,
                                         cleanup_session_tracer,
                                         setup_session_tracer)
 
 
 @dataclass
-class SessionTelemetryAdapter:
+class SessionTelemetryMixin:
     """Base class for objects with tracked start and end timestamps.
 
     This class provides the foundation for tracking the lifecycle of an object
