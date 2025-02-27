@@ -14,6 +14,8 @@ if TYPE_CHECKING:
 
 
 # Import instrumentation to ensure signal handlers are registered
+from agentops.helpers.time import iso_to_unix_nano
+from agentops.sdk.types import ISOTimeStamp
 from agentops.telemetry.session import (SessionTelemetry,
                                         cleanup_session_tracer,
                                         setup_session_tracer)
@@ -30,7 +32,7 @@ class SessionTelemetryAdapter:
 
     span: trace.Span | None = field(default=None, init=False, repr=False)  # The root span for the session
 
-    telemetry: SessionTelemetry = field(default=None,repr=False,init=False)
+    telemetry: SessionTelemetry = field(default=None, repr=False, init=False)
 
     @staticmethod
     def _ns_to_iso(ns_time: Optional[int]) -> Optional[str]:
@@ -51,7 +53,7 @@ class SessionTelemetryAdapter:
             return self._ns_to_iso(self.span.init_time)  # type: ignore
 
     @init_timestamp.setter
-    def init_timestamp(self, value: Optional[str]) -> None:
+    def init_timestamp(self, value: Optional[ISOTimeStamp]) -> None:
         """Set the initialization timestamp."""
         if value is not None and not isinstance(value, str):
             raise ValueError("Timestamp must be a string in ISO format")
@@ -64,13 +66,15 @@ class SessionTelemetryAdapter:
             return self._ns_to_iso(self.span.end_time)  # type: ignore
 
     @end_timestamp.setter
-    def end_timestamp(self, value: Optional[str]) -> None:
+    def end_timestamp(self, value: ISOTimeStamp) -> None:
         """Set the end timestamp."""
         if value is not None and not isinstance(value, str):
             raise ValueError("Timestamp must be a string in ISO format")
         self._end_timestamp = value
         if self.span:
-            self.span.set_attribute("session.end_timestamp", value)
+            if value is not None:
+                # End the span when setting end_timestamp
+                self.span.end(end_time=iso_to_unix_nano(value))
 
     # ------------------------------------------------------------
 
