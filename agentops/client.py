@@ -2,8 +2,6 @@ import uuid
 from typing import Any, Dict, List, Optional, Union
 from uuid import UUID
 
-from agentops._singleton import conditional_singleton
-
 from .config import Config, ConfigDict
 from .exceptions import (AgentOpsClientNotInitializedException,
                          NoApiKeyException, NoSessionException)
@@ -13,18 +11,25 @@ from .session import Session
 from .session.registry import get_active_sessions, get_default_session
 
 
-@conditional_singleton
 class Client:
     """Singleton client for AgentOps service"""
 
+    _instance = None
     config: Config
     _initialized = False
 
-    def __init__(self):
-        self._initialized = False
-        self.config = Config()
-        self._pre_init_warnings: List[str] = []
+    def __new__(cls, *args, **kwargs):
+        if cls._instance is None:
+            cls._instance = super(Client, cls).__new__(cls)
+        return cls._instance
 
+    def __init__(self):
+        # Only initialize once
+        if not hasattr(self, "_init_done"):
+            self._initialized = False
+            self.config = Config()
+            self._pre_init_warnings: List[str] = []
+            self._init_done = True
 
     def init(self, **kwargs) -> Union[Session, None]:
         self.configure(**kwargs)
