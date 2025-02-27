@@ -233,7 +233,7 @@ class Session:
                 return False
 
             session_starting.send(self)
-            # self.init_timestamp = get_ISO_time() # The SPAN will retrieve this
+            self.init_timestamp = get_ISO_time() # The SPAN will retrieve this
 
             try:
                 session_data = json.loads(self.json())
