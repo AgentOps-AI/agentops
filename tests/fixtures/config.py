@@ -1,7 +1,7 @@
 import pytest
 
 
-@pytest.fixture
+@pytest.fixture(scope="session")
 def agentops_config(request):
     """Fixture that creates and manages an AgentOps configuration for testing.
 
