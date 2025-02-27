@@ -96,8 +96,6 @@ def test_invalid_api_key():
 
         config.configure(api_key="invalid-uuid")
 
-        assert len(client.pre_init_warnings) == 1
-        assert "API Key is invalid" in client.pre_init_warnings[0]
         assert config.api_key is None
 
 

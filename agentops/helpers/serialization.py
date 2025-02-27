@@ -1,11 +1,11 @@
 """Serialization helpers for AgentOps"""
 
 import json
-from enum import Enum
-from uuid import UUID
 from datetime import datetime
 from decimal import Decimal
+from enum import Enum
 from typing import Any
+from uuid import UUID
 
 from agentops.logging import logger
 
@@ -64,7 +64,7 @@ class AgentOpsJSONEncoder(json.JSONEncoder):
             return obj.to_json()
         if isinstance(obj, Enum):
             return obj.value
-        return super().default(obj)
+        return str(obj)
 
 
 def serialize_uuid(obj: UUID) -> str:

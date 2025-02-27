@@ -37,13 +37,13 @@ def setup_teardown():
     agentops.end_all_sessions()  # teardown part
 
 
-@pytest.fixture(scope="session")
+@pytest.fixture
 def api_key(agentops_config) -> str:
     """Standard API key for testing"""
-    return "11111111-1111-4111-8111-111111111111"
+    return agentops_config.api_key
 
 
-@pytest.fixture(scope="session")
+@pytest.fixture
 def base_url(agentops_config) -> str:
     """Base API URL"""
     return agentops_config.endpoint
@@ -92,3 +92,14 @@ def mock_req(agentops_config, jwt):
 @pytest.fixture
 def agentops_init(api_key, agentops_config):
     agentops.init(api_key=api_key, endpoint=agentops_config.endpoint, auto_start_session=False)
+
+
+@pytest.fixture(autouse=True)
+def noinstrument(agentops_config):
+    agentops_config.instrument_llm_calls = False
+    yield
+
+@pytest.fixture
+def instrument(agentops_config, noinstrument):
+    agentops_config.instrument_llm_calls = True
+    yield

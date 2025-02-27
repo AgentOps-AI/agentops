@@ -179,6 +179,8 @@ class Config:
             "env_data_opt_out": self.env_data_opt_out,
             "log_level": self.log_level,
             "fail_safe": self.fail_safe,
+            "exporter": self.exporter,
+            "processor": self.processor,
         }
 
     def json(self):

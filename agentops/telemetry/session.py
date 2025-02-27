@@ -13,14 +13,16 @@ from typing import TYPE_CHECKING, Optional
 from weakref import WeakValueDictionary
 
 from opentelemetry import context, trace
-from opentelemetry.exporter.otlp.proto.http.trace_exporter import OTLPSpanExporter
+from opentelemetry.exporter.otlp.proto.http.trace_exporter import \
+    OTLPSpanExporter
 from opentelemetry.sdk.resources import SERVICE_NAME, Resource
 from opentelemetry.sdk.trace import TracerProvider
 from opentelemetry.sdk.trace.export import SimpleSpanProcessor
 from opentelemetry.trace import NonRecordingSpan, SpanContext, TraceFlags
 
 from agentops.logging import logger
-from agentops.session.signals import session_ended, session_initialized, session_started
+from agentops.session.signals import (session_ended, session_initialized,
+                                      session_started)
 from agentops.telemetry.helpers import dict_to_span_attributes
 
 if TYPE_CHECKING:
