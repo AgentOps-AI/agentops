@@ -3,12 +3,14 @@ from __future__ import annotations
 import json
 import threading
 from dataclasses import asdict, dataclass, field
-from datetime import datetime
+from datetime import datetime, timezone
 from decimal import ROUND_HALF_UP, Decimal
 from enum import StrEnum, auto
 from typing import TYPE_CHECKING, Dict, List, Optional, Union
 from uuid import UUID, uuid4
 
+from opentelemetry import trace
+from opentelemetry.trace import Status, StatusCode
 from termcolor import colored
 
 from agentops.api.session import SessionApiClient
@@ -16,8 +18,9 @@ from agentops.config import Config, default_config
 from agentops.exceptions import ApiServerException
 from agentops.helpers import get_ISO_time
 from agentops.helpers.serialization import AgentOpsJSONEncoder
+from agentops.helpers.time import iso_to_unix_nano
 from agentops.logging import logger
-from agentops.session.mixin import SessionTelemetryMixin
+from agentops.session.tracer import SessionTracer
 
 from .state import SessionState
 from .state import SessionStateDescriptor as session_state_field
@@ -29,7 +32,7 @@ from .signals import *
 
 
 @dataclass(slots=True)
-class Session(SessionTelemetryMixin):
+class Session:
     """Data container for session state with minimal public API"""
 
     # Use _session_id as the field name to avoid conflicts with the property
@@ -53,6 +56,14 @@ class Session(SessionTelemetryMixin):
     # Private fields only below
     _lock: threading.Lock = field(default_factory=threading.Lock, repr=False, init=False, compare=False)
 
+    # These fields come from SessionTelemetryMixin
+    span: trace.Span | None = field(default=None, init=False, repr=False)  # The root span for the session
+    telemetry: Optional[SessionTracer] = field(default=None, repr=False, init=False)
+    _init_timestamp: Optional[str] = field(default=None, init=False, repr=False)
+    _end_timestamp: Optional[str] = field(default=None, init=False, repr=False)
+
+    # Add api field to slots
+    api: SessionApiClient = field(default=None, init=False, repr=False)
 
     @property
     def is_running(self) -> bool:
@@ -226,6 +237,9 @@ class Session(SessionTelemetryMixin):
 
     def _format_duration(self, start_time, end_time) -> str:
         """Format duration between two timestamps"""
+        if not start_time or not end_time:
+            return "0.0s"
+
         start = datetime.fromisoformat(start_time.replace("Z", "+00:00"))
         end = datetime.fromisoformat(end_time.replace("Z", "+00:00"))
         duration = end - start
@@ -298,3 +312,91 @@ class Session(SessionTelemetryMixin):
 
     def json(self):
         return json.dumps(self.dict(), cls=AgentOpsJSONEncoder)
+
+    # Methods from SessionTelemetryMixin below:
+
+    @staticmethod
+    def _ns_to_iso(ns_time: Optional[int]) -> Optional[str]:
+        """Convert nanosecond timestamp to ISO format."""
+        if ns_time is None:
+            return None
+        seconds = ns_time / 1e9
+        dt = datetime.fromtimestamp(seconds, tz=timezone.utc)
+        return dt.isoformat().replace("+00:00", "Z")
+
+    @property
+    def session_id(self) -> UUID:
+        """Get session_id from the span if available, otherwise raise an error."""
+        # If span exists and has a span context, derive session_id from the trace_id
+        if self.span is not None:
+            span_context = self.span.get_span_context()
+            if span_context is not None:
+                # Use the trace_id from the span context to create a UUID
+                # Format the trace_id as a 32-character hex string (zero-padded if needed)
+                trace_id_hex = format(span_context.trace_id, "032x")
+
+                # Convert the hex string to a UUID
+                try:
+                    session_id = UUID(trace_id_hex)
+                    logger.debug(f"Derived session_id {session_id} from trace_id {trace_id_hex}")
+                    return session_id
+                except ValueError as e:
+                    logger.error(f"Failed to convert trace_id to UUID: {e}")
+
+        # Raise an error if no session_id is available - sessions must be 1:1 tied to spans
+        raise ValueError("No session_id available. Sessions must be 1:1 tied to spans.")
+
+    @property
+    def init_timestamp(self) -> Optional[str]:
+        """Get the initialization timestamp from the span if available."""
+        if self.span and hasattr(self.span, "init_time"):
+            return self._ns_to_iso(self.span.init_time)  # type: ignore
+        return self._init_timestamp
+
+    @init_timestamp.setter
+    def init_timestamp(self, value: Optional[str]) -> None:
+        """Set the initialization timestamp."""
+        if value is not None and not isinstance(value, str):
+            raise ValueError("Timestamp must be a string in ISO format")
+        self._init_timestamp = value
+
+    @property
+    def end_timestamp(self) -> Optional[str]:
+        """Get the end timestamp from the span if available, otherwise return stored value."""
+        if self.span and hasattr(self.span, "end_time"):
+            return self._ns_to_iso(self.span.end_time)  # type: ignore
+        return self._end_timestamp
+
+    @end_timestamp.setter
+    def end_timestamp(self, value: Optional[str]) -> None:
+        """Set the end timestamp."""
+        if value is not None and not isinstance(value, str):
+            raise ValueError("Timestamp must be a string in ISO format")
+        self._end_timestamp = value
+        if self.span and value is not None:
+            # End the span when setting end_timestamp
+            self.span.end(end_time=iso_to_unix_nano(value))
+
+    def set_status(self, state: SessionState, reason: Optional[str] = None) -> None:
+        """Update root span status based on session state."""
+        if self.span is None:
+            return
+
+        if state.is_terminal:
+            if state.name == "SUCCEEDED":
+                self.span.set_status(Status(StatusCode.OK))
+            elif state.name == "FAILED":
+                self.span.set_status(Status(StatusCode.ERROR))
+            else:
+                self.span.set_status(Status(StatusCode.UNSET))
+
+            if reason:
+                self.span.set_attribute("session.end_reason", reason)
+
+    @property
+    def spans(self):
+        """Generator that yields all spans in the trace."""
+        if self.span:
+            yield self.span
+            for child in getattr(self.span, "children", []):
+                yield child
