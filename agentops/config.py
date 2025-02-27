@@ -102,7 +102,6 @@ class Config:
 
     def configure(
         self,
-        client: Any,
         api_key: Optional[str] = None,
         endpoint: Optional[str] = None,
         max_wait_time: Optional[int] = None,
@@ -124,11 +123,7 @@ class Config:
                 UUID(api_key)
                 self.api_key = api_key
             except ValueError:
-                message = (
-                    f"API Key is invalid: {{{api_key}}}.\n\t    Find your API key at {self.endpoint}/settings/projects"
-                )
-                client.add_pre_init_warning(message)
-                logger.error(message)
+                logger.error(f"API Key is invalid: {{{api_key}}}.\n\t    Find your API key at {self.endpoint}/settings/projects")
 
         if endpoint is not None:
             self.endpoint = endpoint
@@ -158,20 +153,7 @@ class Config:
             self.env_data_opt_out = env_data_opt_out
 
         if log_level is not None:
-            if isinstance(log_level, str):
-                level = log_level.upper()
-                if hasattr(logging, level):
-                    self.log_level = getattr(logging, level)
-                else:
-                    message = f"Invalid log level: {log_level}"
-                    client.add_pre_init_warning(message)
-                    logger.warning(message)
-            elif isinstance(log_level, int):
-                self.log_level = log_level
-            else:
-                message = f"Log level must be string or int, got {type(log_level)}"
-                client.add_pre_init_warning(message)
-                logger.warning(message)
+            self.log_level = log_level
 
         if fail_safe is not None:
             self.fail_safe = fail_safe

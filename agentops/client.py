@@ -45,7 +45,7 @@ class Client:
 
     def configure(self, **kwargs):
         """Update client configuration"""
-        self.config.configure(self, **kwargs)
+        self.config.configure(**kwargs)
 
     def start_session(self, **kwargs) -> Union[Session, None]:
         """Start a new session for recording events

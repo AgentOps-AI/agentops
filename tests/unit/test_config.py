@@ -8,14 +8,6 @@ from agentops.client import Client
 from agentops.config import Config
 
 
-@pytest.fixture(autouse=True)
-def reset_client():
-    """Reset the Client singleton between tests"""
-    Client._instance = None
-    Client._initialized = False
-    yield
-
-
 @pytest.fixture
 def mock_env():
     """Fixture to mock environment variables"""
@@ -30,7 +22,7 @@ def mock_env():
             "AGENTOPS_INSTRUMENT_LLM_CALLS": "false",
             "AGENTOPS_AUTO_START_SESSION": "false",
             "AGENTOPS_SKIP_AUTO_END_SESSION": "true",
-            "AGENTOPS_ENV_DATA_OPT_OUT": "true"
+            "AGENTOPS_ENV_DATA_OPT_OUT": "true",
         }
         for key, value in env_vars.items():
             os.environ[key] = value
@@ -40,13 +32,13 @@ def mock_env():
 @pytest.fixture
 def valid_uuid():
     """Return a valid UUID string for testing"""
-    return str(UUID('12345678-1234-5678-1234-567812345678'))
+    return str(UUID("12345678-1234-5678-1234-567812345678"))
 
 
 def test_config_from_env(mock_env):
     """Test configuration initialization from environment variables"""
     config = Config()
-    
+
     assert config.api_key == "test-api-key"
     assert config.endpoint == "https://test.agentops.ai"
     assert config.max_wait_time == 1000
@@ -62,16 +54,15 @@ def test_config_override_env(mock_env, valid_uuid):
     """Test that kwargs override environment variables"""
     config = Config()
     client = Client()
-    
+
     config.configure(
-        client,
         api_key=valid_uuid,
         endpoint="https://override.agentops.ai",
         max_wait_time=2000,
         default_tags=["new-tag"],
-        instrument_llm_calls=True
+        instrument_llm_calls=True,
     )
-    
+
     assert config.api_key == valid_uuid
     assert config.endpoint == "https://override.agentops.ai"
     assert config.max_wait_time == 2000
@@ -85,7 +76,7 @@ def test_config_defaults():
     """Test default values when no env vars or kwargs provided"""
     with mock.patch.dict(os.environ, clear=True):
         config = Config()
-        
+
         assert config.api_key is None
         assert config.endpoint == "https://api.agentops.ai"
         assert config.max_wait_time == 5000
@@ -102,13 +93,12 @@ def test_invalid_api_key():
     with mock.patch.dict(os.environ, clear=True):
         client = Client()
         config = Config()
-        
-        config.configure(client, api_key="invalid-uuid")
-        
+
+        config.configure(api_key="invalid-uuid")
+
         assert len(client.pre_init_warnings) == 1
         assert "API Key is invalid" in client.pre_init_warnings[0]
         assert config.api_key is None
-
 
 
 def test_env_list_parsing():
@@ -125,4 +115,4 @@ def test_env_list_parsing():
     # Test single value
     with mock.patch.dict(os.environ, {"AGENTOPS_DEFAULT_TAGS": "single"}):
         config = Config()
-        assert config.default_tags == {"single"} 
+        assert config.default_tags == {"single"}

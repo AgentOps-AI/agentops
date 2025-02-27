@@ -35,15 +35,7 @@ def agentops_config(request):
     marker = request.node.get_closest_marker("config_kwargs")
     kwargs = marker.kwargs if marker else {}
 
-    # Mock client for configuration (since we need to pass a client to configure)
-    from unittest.mock import MagicMock
-
-    from agentops.client import Client
-
-    mock_client = MagicMock(spec=Client)
-    mock_client.warnings = []
-
     # Apply configuration from marker kwargs
-    config.configure(client=mock_client, **kwargs)
+    config.configure(**kwargs)
 
     return config
