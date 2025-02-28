@@ -2,7 +2,6 @@ import threading
 import time
 from typing import Any, Callable, Dict, Optional, Union
 
-import jwt
 import requests
 from requests.adapters import HTTPAdapter
 from urllib3.util import Retry
@@ -57,10 +56,20 @@ class AuthenticatedAdapter(HTTPAdapter):
         # Make the initial request
         response = super().send(request, **kwargs)
         
-        # If we get a 401/403, the token might be expired
+        # If we get a 401/403, check if it's due to token expiration
         if response.status_code in (401, 403):
             # Check if the response indicates a token expiration
-            if response.text and "expired" in response.text.lower():
+            is_token_expired = False
+            try:
+                # Try to parse the response as JSON
+                response_data = response.json()
+                error_msg = response_data.get("error", "").lower()
+                is_token_expired = "expired" in error_msg or "token" in error_msg
+            except Exception:
+                # If we can't parse JSON, check the raw text
+                is_token_expired = response.text and "expired" in response.text.lower()
+                
+            if is_token_expired:
                 try:
                     # Force token refresh
                     self.api_client.get_auth_token(self.api_key)
@@ -223,25 +232,18 @@ class ApiClient:
                 raise ApiServerException(f"Failed to process authentication response: {str(e)}")
 
     def is_token_valid(self) -> bool:
-        """Check if the current JWT token exists and is not expired"""
-        if not self.jwt_token:
-            return False
-            
-        try:
-            # Simple approach: decode token without verification to check expiration
-            # This is more efficient than the previous implementation
-            decoded = jwt.decode(self.jwt_token, options={"verify_signature": False})
-            exp_time = decoded.get("exp")
-            
-            # Compare expiration time with current time
-            return exp_time is not None and exp_time > time.time()
-        except Exception:
-            # Any decoding error means the token is invalid
-            return False
+        """
+        Check if the current JWT token exists.
+        
+        Note: We don't try to decode the token to check expiration.
+        Instead, we rely on HTTP 401/403 responses to indicate when
+        a token needs to be refreshed.
+        """
+        return self.jwt_token is not None
 
     def get_valid_token(self, api_key: str) -> str:
         """
-        Get a JWT token, only getting a new one if we don't have one or if it's expired.
+        Get a JWT token, only getting a new one if we don't have one.
 
         Args:
             api_key: The API key to authenticate with if refresh is needed
@@ -252,8 +254,7 @@ class ApiClient:
         with ApiClient.__token_lock:
             if not self.is_token_valid():
                 return self.get_auth_token(api_key)
-            if self.jwt_token is None:
-                return self.get_auth_token(api_key)
+            assert self.jwt_token is not None  # For type checking
             return self.jwt_token
 
     def get_auth_headers(self, api_key: str, custom_headers: Optional[Dict[str, str]] = None) -> Dict[str, str]:
@@ -323,30 +324,36 @@ class ApiClient:
         # If we get a 401/403, the token might be expired
         # Try to refresh and retry
         if response.status_code in (401, 403):
+            # Check if the response indicates a token expiration
+            is_token_expired = False
             try:
-                # Check if the response indicates a token expiration
-                if response.text and "expired" in response.text.lower():
-                    raise AgentOpsApiJwtExpiredException("JWT token has expired")
+                # Try to parse the response as JSON
+                response_data = response.json()
+                error_msg = response_data.get("error", "").lower()
+                is_token_expired = "expired" in error_msg or "token" in error_msg
+            except Exception:
+                # If we can't parse JSON, check the raw text
+                is_token_expired = response.text and "expired" in response.text.lower()
+                
+            if is_token_expired:
+                try:
+                    # Force a token refresh
+                    token = self.get_auth_token(api_key)
+                    self.jwt_token = token
+                    headers = self._prepare_headers(api_key=api_key, custom_headers=custom_headers)
 
-                # Force a token refresh
-                token = self.get_auth_token(api_key)
-                self.jwt_token = token
-                headers = self._prepare_headers(api_key=api_key, custom_headers=custom_headers)
+                    if method.lower() == "post":
+                        response = session.post(url, json=data or {}, headers=headers)
+                    elif method.lower() == "get":
+                        response = session.get(url, headers=headers)
+                    elif method.lower() == "put":
+                        response = session.put(url, json=data or {}, headers=headers)
+                    elif method.lower() == "delete":
+                        response = session.delete(url, headers=headers)
 
-                if method.lower() == "post":
-                    response = session.post(url, json=data or {}, headers=headers)
-                elif method.lower() == "get":
-                    response = session.get(url, headers=headers)
-                elif method.lower() == "put":
-                    response = session.put(url, json=data or {}, headers=headers)
-                elif method.lower() == "delete":
-                    response = session.delete(url, headers=headers)
-
-                self.last_response = response
-            except AgentOpsApiJwtExpiredException:
-                # Token expired, we've already refreshed it and retried
-                # If we still got an error, propagate it
-                if response.status_code in (401, 403):
-                    raise ApiServerException(f"Authentication failed after token refresh: {response.status_code}")
+                    self.last_response = response
+                except Exception:
+                    # If refresh fails, just return the original response
+                    pass
 
         return response

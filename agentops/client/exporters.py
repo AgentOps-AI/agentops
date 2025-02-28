@@ -68,3 +68,12 @@ class AuthenticatedOTLPExporter(OTLPSpanExporter):
             # For network or serialization errors, return failure
             # Authentication errors should be handled by the session adapter
             return SpanExportResult.FAILURE
+
+    def clear(self):
+        """
+        Clear any stored spans.
+        
+        This method is added for compatibility with test fixtures.
+        The OTLP exporter doesn't store spans, so this is a no-op.
+        """
+        pass
