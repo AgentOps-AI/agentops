@@ -1,79 +1,58 @@
-import asyncio
-from uuid import uuid4
-
-import openai
 import pytest
-from opentelemetry import trace
+import vcr
+import json
+import openai
+from inline_snapshot import snapshot
 
-from agentops import Config, Session
-
-pytestmark = [pytest.mark.vcr]
-
-
-@pytest.mark.asyncio
-async def test_session_llm_tracking(agentops_session):
-    """Test that LLM calls are tracked in session context"""
+@vcr.use_cassette('tests/integration/cassettes/test_openai_instrumentation.yaml')
+def test_openai_instrumentation(exporter, mock_env_keys, agentops_session):
+    """Test that OpenAI API calls are tracked in spans"""
     
-    try:
-        client = openai.AsyncOpenAI()
-        response = await client.chat.completions.create(
-            model="gpt-3.5-turbo",
-            messages=[{"role": "user", "content": "Write a one-line joke"}]
-        )
-        
-        # Verify session tracking
-        assert session.event_counts["llms"] == 1
-        assert session.event_counts["errors"] == 0
-        assert response.choices[0].message.content is not None
-        
-    finally:
-        session.end("SUCCEEDED")
-
-# @pytest.mark.asyncio
-# async def test_multiple_sessions():
-#     """Test concurrent sessions track LLM calls independently"""
-#     async def run_session(prompt: str):
-#         session = Session(session_id=uuid4())
-#         
-#         client = openai.AsyncOpenAI()
-#         await client.chat.completions.create(
-#             model="gpt-3.5-turbo",
-#             messages=[{"role": "user", "content": prompt}]
-#         )
-#         
-#         return session
-#
-#     # Run multiple sessions concurrently
-#     sessions = await asyncio.gather(
-#         run_session("Tell a joke"),
-#         run_session("Write a haiku"),
-#         run_session("Define OpenTelemetry")
-#     )
-#
-#     # Verify each session tracked its calls independently
-#     for session in sessions:
-#         assert session.event_counts["llms"] == 1
-#         assert session.event_counts["errors"] == 0
-#         session.end("SUCCEEDED")
-#
-# @pytest.mark.asyncio
-# async def test_error_handling():
-#     """Test that errors are tracked in session context"""
-#     session = Session(session_id=uuid4())
-#     
-#     try:
-#         client = openai.AsyncOpenAI()
-#         with pytest.raises(openai.BadRequestError):
-#             # Use an invalid model to guarantee an error
-#             await client.chat.completions.create(
-#                 model="invalid-model",
-#                 messages=[{"role": "user", "content": "test"}]
-#             )
-#         
-#         # Verify error tracking
-#         assert session.event_counts["errors"] == 1
-#         assert session.state == "FAILED"
-#         
-#     finally:
-#         if session.is_running:
-#             session.end("FAILED") 
+    response = openai.chat.completions.create(
+        model="gpt-3.5-turbo",
+        messages=[{"role": "user", "content": "Write a one-line joke"}]
+    )
+    
+    finished_spans = exporter.get_finished_spans()
+    
+    # Assert that spans were created
+    assert len(finished_spans) > 0, "No spans were recorded"
+    
+    spans_data = [
+        {
+            "name": span.name,
+            "attributes": dict(span.attributes),
+            "status": span.status.is_ok
+        }
+        for span in finished_spans
+    ]
+    
+    spans_json = json.dumps(spans_data, indent=2)
+    
+    # Verify the spans using snapshot
+    assert spans_json == snapshot("""\
+[
+  {
+    "name": "openai.chat",
+    "attributes": {
+      "llm.request.type": "chat",
+      "gen_ai.system": "OpenAI",
+      "gen_ai.request.model": "gpt-3.5-turbo",
+      "llm.headers": "None",
+      "llm.is_streaming": false,
+      "gen_ai.openai.api_base": "https://api.openai.com/v1/",
+      "gen_ai.prompt.0.role": "user",
+      "gen_ai.prompt.0.content": "Write a one-line joke",
+      "gen_ai.response.model": "gpt-3.5-turbo-0125",
+      "gen_ai.response.id": "chatcmpl-B64DtRzWaXFqy9a01Nsf5LaCbk7rh",
+      "llm.usage.total_tokens": 29,
+      "gen_ai.usage.completion_tokens": 17,
+      "gen_ai.usage.prompt_tokens": 12,
+      "gen_ai.completion.0.finish_reason": "stop",
+      "gen_ai.completion.0.role": "assistant",
+      "gen_ai.completion.0.content": "I told my wife she should embrace her mistakes - she gave me a hug."
+    },
+    "status": true
+  }
+]\
+""")
