@@ -1,9 +1,7 @@
 import pytest
 import anthropic
 import agentops
-from tests.fixtures.instrumentation import exporter
 
-@pytest.mark.asyncio
 def test_anthropic_instrumentation(exporter):
     """Test that Anthropic API calls are tracked in spans"""
     

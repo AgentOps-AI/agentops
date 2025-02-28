@@ -1,9 +1,7 @@
 import pytest
 import openai
 import agentops
-from tests.fixtures.instrumentation import exporter
 
-@pytest.mark.asyncio
 def test_openai_instrumentation(exporter):
     """Test that OpenAI API calls are tracked in spans"""
     
