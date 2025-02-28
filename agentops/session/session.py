@@ -52,14 +52,12 @@ class Session:
         event_counts: Optional[Dict[str, int]] = None,
         host_env: Optional[dict] = get_host_env(),
         config: Optional[Config] = None,
-        end_state_reason: Optional[str] = None,
     ):
         """Initialize a Session with optional session_id."""
         # Initialize all properties
         self.config = config or default_config()
         self.tags = tags or []
         self.host_env = host_env or {}
-        self.end_state_reason = end_state_reason
         self.jwt = jwt
         self.event_counts = event_counts or {"llms": 0, "tools": 0, "actions": 0, "errors": 0, "apis": 0}
         self.auto_start = auto_start
@@ -103,8 +101,9 @@ class Session:
                     raise
                 self._state = SessionState.FAILED
                 logger.error(f"Failed to initialize session: {e}")
-                self.end(str(SessionState.FAILED), f"Exception during initialization: {str(e)}")
+                self.end(str(SessionState.FAILED))
 
+    # ------------------------------------------------------------------------------------------
     @property
     def state(self) -> SessionState:
         """Get the current session state."""
@@ -123,6 +122,7 @@ class Session:
                 logger.warning(f"Invalid session state: {value}")
                 self._state = SessionState.INDETERMINATE
 
+    # ------------------------------------------------------------------------------------------
     @property
     def token_cost(self) -> str:
         """
@@ -188,7 +188,7 @@ class Session:
             logger.warning(f"Invalid end state: {state}, using INDETERMINATE")
             return SessionState.INDETERMINATE
 
-    def end(self, end_state: Optional[str] = None, end_state_reason: Optional[str] = None) -> None:
+    def end(self, end_state: Optional[str] = None) -> None:
         """End the session"""
         with self._lock:
             if self._state.is_terminal:
@@ -198,24 +198,24 @@ class Session:
             # Update state before sending signal
             if end_state is not None:
                 self._state = SessionState.from_string(end_state)
-            if end_state_reason is not None:
-                self.end_state_reason = end_state_reason
 
             # Send signal with current state
-            session_ending.send(
-                self, session_id=self.session_id, end_state=str(self._state), end_state_reason=self.end_state_reason
-            )
+            session_ending.send(self, session_id=self.session_id, end_state=str(self._state))
 
-            self.end_timestamp = get_ISO_time()
+            self._end_timestamp = get_ISO_time()
+            if self.span and self._end_timestamp is not None:
+                # Only end the span if it hasn't been ended yet
+                has_ended = hasattr(self.span, "end_time") and self.span.end_time is not None
+                if not has_ended:
+                    # End the span when setting end_timestamp
+                    self.span.end(end_time=iso_to_unix_nano(self._end_timestamp))
 
             session_data = json.loads(self.json())
             if self.api:
                 self.api.update_session(session_data)
 
             session_updated.send(self)
-            session_ended.send(
-                self, session_id=self.session_id, end_state=str(self._state), end_state_reason=self.end_state_reason
-            )
+            session_ended.send(self, session_id=self.session_id, end_state=str(self._state))
             logger.debug(f"Session {self.session_id} ended with state {self._state}")
 
     def start(self):
@@ -258,13 +258,6 @@ class Session:
                 self._state = SessionState.FAILED
                 return False
 
-    def flush(self):
-        if self.api:
-            self.api.update_session()
-            session_updated.send(self)
-        else:
-            logger.warning("Cannot flush: API client not initialized")
-
     def _format_duration(self, start_time, end_time) -> str:
         """Format duration between two timestamps"""
         if not start_time or not end_time:
@@ -286,7 +279,6 @@ class Session:
 
         return " ".join(parts)
 
-    ##########################################################################################
     def __repr__(self) -> str:
         """String representation"""
         parts = [f"Session(id={self.session_id}, status={self._state}"]
@@ -294,53 +286,25 @@ class Session:
         if self.tags:
             parts.append(f"tags={self.tags}")
 
-        if self._state.is_terminal and self.end_state_reason:
-            parts.append(f"reason='{self.end_state_reason}'")
-
         return ", ".join(parts) + ")"
 
-    def add_tags(self, tags: List[str]) -> None:
-        """Add tags to the session
+    # ------------------------------------------------------------------------------------------
 
-        Args:
-            tags: List of tags to add
-        """
-        if self._state.is_terminal:
-            logger.warning(f"{self.session_id} Cannot add tags to ended session")
+    def set_status(self, state: SessionState, reason: Optional[str] = None) -> None:
+        """Update root span status based on session state."""
+        if self.span is None:
             return
 
-        self.tags.extend(tags)
-        session_updated.send(self)
+        if state.is_terminal:
+            if state.name == "SUCCEEDED":
+                self.span.set_status(Status(StatusCode.OK))
+            elif state.name == "FAILED":
+                self.span.set_status(Status(StatusCode.ERROR))
+            else:
+                self.span.set_status(Status(StatusCode.UNSET))
 
-    def dict(self) -> dict:
-        """Convert session to dictionary, excluding private and non-serializable fields"""
-        return {
-            "session_id": str(self.session_id),  # Explicitly convert UUID to string
-            "config": self.config.dict(),
-            "tags": self.tags,
-            "host_env": self.host_env,
-            "state": str(self._state),
-            "jwt": self.jwt,
-            "event_counts": self.event_counts,
-            "init_timestamp": self.init_timestamp,
-            "end_timestamp": self.end_timestamp,
-        }
-
-    def set_tags(self, tags: List[str]) -> None:
-        """Set session tags, replacing existing ones
-
-        Args:
-            tags: List of tags to set
-        """
-        if self._state.is_terminal:
-            logger.warning("Cannot set tags on ended session")
-            return
-
-        self.tags = tags
-        session_updated.send(self)
-
-    def json(self):
-        return json.dumps(self.dict(), cls=AgentOpsJSONEncoder)
+            if reason:
+                self.span.set_attribute("session.end_reason", reason)
 
     # Methods from SessionTelemetryMixin below:
 
@@ -364,52 +328,14 @@ class Session:
         """Get the initialization timestamp from the span if available."""
         if self.span and hasattr(self.span, "init_time"):
             return self._ns_to_iso(self.span.init_time)  # type: ignore
-        return self._init_timestamp
-
-    @init_timestamp.setter
-    def init_timestamp(self, value: Optional[str]) -> None:
-        """Set the initialization timestamp."""
-        if value is not None and not isinstance(value, str):
-            raise ValueError("Timestamp must be a string in ISO format")
-        self._init_timestamp = value
 
     @property
     def end_timestamp(self) -> Optional[str]:
         """Get the end timestamp from the span if available, otherwise return stored value."""
         if self.span and hasattr(self.span, "end_time"):
             return self._ns_to_iso(self.span.end_time)  # type: ignore
-        return self._end_timestamp
 
-    @end_timestamp.setter
-    def end_timestamp(self, value: Optional[str]) -> None:
-        """Set the end timestamp."""
-        if value is not None and not isinstance(value, str):
-            raise ValueError("Timestamp must be a string in ISO format")
-        self._end_timestamp = value
-        if self.span and value is not None:
-            # Only end the span if it hasn't been ended yet
-            # Check if the span has end_time attribute and it's been set
-            has_ended = hasattr(self.span, "end_time") and self.span.end_time is not None
-            if not has_ended:
-                # End the span when setting end_timestamp
-                self.span.end(end_time=iso_to_unix_nano(value))
-
-    def set_status(self, state: SessionState, reason: Optional[str] = None) -> None:
-        """Update root span status based on session state."""
-        if self.span is None:
-            return
-
-        if state.is_terminal:
-            if state.name == "SUCCEEDED":
-                self.span.set_status(Status(StatusCode.OK))
-            elif state.name == "FAILED":
-                self.span.set_status(Status(StatusCode.ERROR))
-            else:
-                self.span.set_status(Status(StatusCode.UNSET))
-
-            if reason:
-                self.span.set_attribute("session.end_reason", reason)
-
+    # ------------------------------------------------------------------------------------------
     @property
     def spans(self):
         """Generator that yields all spans in the trace."""
@@ -417,3 +343,21 @@ class Session:
             yield self.span
             for child in getattr(self.span, "children", []):
                 yield child
+
+    # ------------------------------------------------------------------------------------------
+
+    def dict(self) -> dict:
+        """Convert session to dictionary, excluding private and non-serializable fields"""
+        return {
+            "session_id": str(self.session_id),  # Explicitly convert UUID to string
+            "config": self.config.dict(),
+            "tags": self.tags,
+            "host_env": self.host_env,
+            "state": str(self._state),
+            "jwt": self.jwt,
+            "init_timestamp": self.init_timestamp,
+            "end_timestamp": self.end_timestamp,
+        }
+
+    def json(self):
+        return json.dumps(self.dict(), cls=AgentOpsJSONEncoder)
