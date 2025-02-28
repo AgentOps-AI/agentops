@@ -1,11 +1,13 @@
 import pytest
-from haystack.components.generators import OpenAIGenerator
 import agentops
+import json
+import vcr
+from haystack.components.generators import OpenAIGenerator
 
-def test_haystack_instrumentation(exporter):
+@vcr.use_cassette('tests/integration/cassettes/test_haystack_instrumentation.yaml')
+def test_haystack_instrumentation(exporter, snapshot):
     """Test that haystack is instrumented"""
     
-    # Create a session for tracking
     session = agentops.start_session()
     
     try:
@@ -21,12 +23,19 @@ def test_haystack_instrumentation(exporter):
         haystack_spans = [span for span in finished_spans if "haystack" in span.name]
         assert len(haystack_spans) > 0, "No haystack spans were found"
         
-        # Verify the response from OpenAI
-        assert response is not None
-        assert isinstance(response, dict)
-        assert "replies" in response
-        assert len(response["replies"]) > 0
-        assert response["replies"][0] is not None
+        spans_data = [
+            {
+                "name": span.name,
+                "attributes": dict(span.attributes),
+                "status": span.status.is_ok
+            }
+            for span in finished_spans
+        ]
+        
+        spans_json = json.dumps(spans_data, indent=2)
+        
+        # Verify the spans using snapshot
+        snapshot.assert_match(spans_json, 'haystack_spans.json')
         
     finally:
         session.end("SUCCEEDED")

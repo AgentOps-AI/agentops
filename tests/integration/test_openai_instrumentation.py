@@ -1,11 +1,13 @@
 import pytest
-import openai
 import agentops
+import vcr
+import json
+import openai
 
-def test_openai_instrumentation(exporter):
+@vcr.use_cassette('tests/integration/cassettes/test_openai_instrumentation.yaml')
+def test_openai_instrumentation(snapshot, exporter):
     """Test that OpenAI API calls are tracked in spans"""
     
-    # Create a session for tracking
     session = agentops.start_session()
     
     try:
@@ -19,13 +21,19 @@ def test_openai_instrumentation(exporter):
         # Assert that spans were created
         assert len(finished_spans) > 0, "No spans were recorded"
         
-        # Optionally, you can check for specific attributes in the spans
-        for span in finished_spans:
-            assert "openai" in span.name, "Expected span name not found"
-            assert span.status.is_ok, "Span status should be OK"
+        spans_data = [
+            {
+                "name": span.name,
+                "attributes": dict(span.attributes),
+                "status": span.status.is_ok
+            }
+            for span in finished_spans
+        ]
         
-        # Verify the response from OpenAI
-        assert response.choices[0].message.content is not None
+        spans_json = json.dumps(spans_data, indent=2)
+        
+        # Verify the spans using snapshot
+        snapshot.assert_match(spans_json, 'openai_spans.json')
         
     finally:
         session.end("SUCCEEDED")

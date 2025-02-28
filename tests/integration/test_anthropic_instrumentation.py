@@ -1,11 +1,13 @@
 import pytest
-import anthropic
 import agentops
+import vcr
+import json
+import anthropic
 
-def test_anthropic_instrumentation(exporter):
+@vcr.use_cassette('tests/integration/cassettes/test_anthropic_instrumentation.yaml')
+def test_anthropic_instrumentation(snapshot, exporter):
     """Test that Anthropic API calls are tracked in spans"""
     
-    # Create a session for tracking
     session = agentops.start_session()
     
     try:
@@ -21,13 +23,19 @@ def test_anthropic_instrumentation(exporter):
         # Assert that spans were created
         assert len(finished_spans) > 0, "No spans were recorded"
         
-        # Optionally, you can check for specific attributes in the spans
-        for span in finished_spans:
-            assert "anthropic" in span.name, "Expected span name not found"
-            assert span.status.is_ok, "Span status should be OK"
+        spans_data = [
+            {
+                "name": span.name,
+                "attributes": dict(span.attributes),
+                "status": span.status.is_ok
+            }
+            for span in finished_spans
+        ]
         
-        # Verify the response from Anthropic
-        assert response.content[0].text is not None
+        spans_json = json.dumps(spans_data, indent=2)
+        
+        # Verify the spans using snapshot
+        snapshot.assert_match(spans_json, 'anthropic_spans.json')
         
     finally:
         session.end("SUCCEEDED")
