@@ -2,7 +2,6 @@ from abc import ABC, abstractmethod
 from typing import List
 from uuid import UUID
 
-from agentops.api.session import SessionApiClient
 from agentops.config import Config, default_config
 from agentops.helpers import get_host_env
 

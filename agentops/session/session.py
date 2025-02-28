@@ -7,7 +7,6 @@ from uuid import UUID
 
 from termcolor import colored
 
-from agentops.api.session import SessionApiClient
 from agentops.exceptions import ApiServerException
 from agentops.helpers import get_ISO_time
 from agentops.helpers.serialization import AgentOpsJSONEncoder
@@ -54,8 +53,6 @@ class Session(*_SessionMixins):
                 raise ValueError("API key is required")
             logger.error("API key is required")
             return
-
-        self.api = SessionApiClient(self)
 
         # Signal session is initialized
         session_initialized.send(self)

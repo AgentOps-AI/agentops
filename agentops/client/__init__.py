@@ -2,13 +2,13 @@ import uuid
 from typing import Any, Dict, List, Optional, Union
 from uuid import UUID
 
-from .config import Config, ConfigDict
-from .exceptions import (AgentOpsClientNotInitializedException,
-                         NoApiKeyException, NoSessionException)
-from .instrumentation import instrument_all, uninstrument_all
-from .logging import logger
-from .session import Session
-from .session.registry import get_active_sessions, get_default_session
+from agentops.config import Config, ConfigDict
+from agentops.exceptions import (AgentOpsClientNotInitializedException,
+                                 NoApiKeyException, NoSessionException)
+from agentops.instrumentation import instrument_all, uninstrument_all
+from agentops.logging import logger
+from agentops.session import Session
+from agentops.session.registry import get_active_sessions, get_default_session
 
 
 class Client:
