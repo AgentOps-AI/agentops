@@ -33,7 +33,7 @@ Example usage:
     # Session automatically tracks events
     
     # End the session with a state
-    session.end("SUCCEEDED", "Task completed successfully")
+    session.end(SessionState.SUCCEEDED)
     ```
 
 Working with multiple sessions:

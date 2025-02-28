@@ -91,7 +91,7 @@ class Session(*_SessionMixins):
                     raise
                 self._state = SessionState.FAILED
                 logger.error(f"Failed to initialize session: {e}")
-                self.end(str(SessionState.FAILED))
+                self.end(SessionState.FAILED)
 
     # ------------------------------------------------------------------------------------------
     @property
@@ -100,17 +100,13 @@ class Session(*_SessionMixins):
         return self._state
 
     @state.setter
-    def state(self, value):
+    def state(self, value: SessionState):
         """Set the session state."""
         if isinstance(value, SessionState):
             self._state = value
         else:
-            # Try to convert string to SessionState
-            try:
-                self._state = SessionState.from_string(str(value))
-            except ValueError:
-                logger.warning(f"Invalid session state: {value}")
-                self._state = SessionState.INDETERMINATE
+            logger.warning(f"Invalid session state: {value}, must be a SessionState enum")
+            self._state = SessionState.INDETERMINATE
 
     @property
     def session_url(self) -> str:
@@ -122,26 +118,7 @@ class Session(*_SessionMixins):
         """Whether session is currently running"""
         return self._state.is_alive
 
-    def _map_end_state(self, state: str) -> SessionState:
-        """Map common end state strings to SessionState enum values"""
-        state_map = {
-            "Success": SessionState.SUCCEEDED,
-            "SUCCEEDED": SessionState.SUCCEEDED,
-            "Succeeded": SessionState.SUCCEEDED,
-            "Fail": SessionState.FAILED,
-            "FAILED": SessionState.FAILED,
-            "Failed": SessionState.FAILED,
-            "Indeterminate": SessionState.INDETERMINATE,
-            "INDETERMINATE": SessionState.INDETERMINATE,
-        }
-        try:
-            # First try to map the string directly
-            return state_map.get(state, SessionState(state))
-        except ValueError:
-            logger.warning(f"Invalid end state: {state}, using INDETERMINATE")
-            return SessionState.INDETERMINATE
-
-    def end(self, end_state: Optional[str] = None) -> None:
+    def end(self, end_state: Optional[SessionState] = None) -> None:
         """End the session"""
         with self._lock:
             if self._state.is_terminal:
@@ -150,7 +127,7 @@ class Session(*_SessionMixins):
 
             # Update state before sending signal
             if end_state is not None:
-                self._state = SessionState.from_string(end_state)
+                self._state = end_state
 
             # Send signal with current state
             session_ending.send(self, session_id=self.session_id, end_state=str(self._state))
