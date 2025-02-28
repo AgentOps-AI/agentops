@@ -19,6 +19,7 @@ from agentops.helpers.time import iso_to_unix_nano
 from agentops.logging import logger
 
 from .mixin.analytics import AnalyticsSessionMixin
+from .mixin.telemetry import TelemetrySessionMixin
 from .signals import *
 from .state import SessionState
 from .state import SessionStateDescriptor as session_state_field
@@ -27,19 +28,14 @@ if TYPE_CHECKING:
     from agentops.config import Config
 
 
-_SessionMixins = (AnalyticsSessionMixin,)
+_SessionMixins = (AnalyticsSessionMixin, TelemetrySessionMixin)
 
 
 class Session(*_SessionMixins):
     """Data container for session state with minimal public API"""
 
-    # __slots__ = (
-    #     'config', 'tags', 'host_env', 'end_state_reason', 'jwt',
-    #     'event_counts', 'state', 'auto_start', '_session_id', '_lock',
-    #     'span', 'telemetry', '_init_timestamp', '_end_timestamp', 'api'
-    # )
-
-    state = session_state_field
+    # Use the session state descriptor
+    _state_descriptor = session_state_field()
 
     def __init__(
         self,
@@ -60,13 +56,10 @@ class Session(*_SessionMixins):
         self.auto_start = auto_start
         self._session_id = session_id or uuid4()
         self._lock = threading.Lock()
-
-        # Fields from mixin
-        self.span: Optional[Span] = None
-        self.telemetry = None
-        self._init_timestamp: Optional[str] = None
-        self._end_timestamp: Optional[str] = None
         self.api = None
+
+        # Initialize mixins
+        super().__init__()
 
         # Initialize state descriptor
         self._state = SessionState.INITIALIZING
@@ -218,7 +211,6 @@ class Session(*_SessionMixins):
                 self._state = SessionState.FAILED
                 return False
 
-
     def __repr__(self) -> str:
         """String representation"""
         parts = [f"Session(id={self.session_id}, status={self._state}"]
@@ -230,59 +222,11 @@ class Session(*_SessionMixins):
 
     # ------------------------------------------------------------------------------------------
 
-    def set_status(self, state: SessionState, reason: Optional[str] = None) -> None:
-        """Update root span status based on session state."""
-        if self.span is None:
-            return
-
-        if state.is_terminal:
-            if state.name == "SUCCEEDED":
-                self.span.set_status(Status(StatusCode.OK))
-            elif state.name == "FAILED":
-                self.span.set_status(Status(StatusCode.ERROR))
-            else:
-                self.span.set_status(Status(StatusCode.UNSET))
-
-            if reason:
-                self.span.set_attribute("session.end_reason", reason)
-
-    # Methods from SessionTelemetryMixin below:
-
-    @staticmethod
-    def _ns_to_iso(ns_time: Optional[int]) -> Optional[str]:
-        """Convert nanosecond timestamp to ISO format."""
-        if ns_time is None:
-            return None
-        seconds = ns_time / 1e9
-        dt = datetime.fromtimestamp(seconds, tz=timezone.utc)
-        return dt.isoformat().replace("+00:00", "Z")
-
     @property
     def session_id(self) -> UUID:
         """Get session_id from instance variable."""
         # Always return the stored session ID
         return self._session_id
-
-    @property
-    def init_timestamp(self) -> Optional[str]:
-        """Get the initialization timestamp from the span if available."""
-        if self.span and hasattr(self.span, "init_time"):
-            return self._ns_to_iso(self.span.init_time)  # type: ignore
-
-    @property
-    def end_timestamp(self) -> Optional[str]:
-        """Get the end timestamp from the span if available, otherwise return stored value."""
-        if self.span and hasattr(self.span, "end_time"):
-            return self._ns_to_iso(self.span.end_time)  # type: ignore
-
-    # ------------------------------------------------------------------------------------------
-    @property
-    def spans(self):
-        """Generator that yields all spans in the trace."""
-        if self.span:
-            yield self.span
-            for child in getattr(self.span, "children", []):
-                yield child
 
     # ------------------------------------------------------------------------------------------
 
