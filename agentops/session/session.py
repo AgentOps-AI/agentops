@@ -22,16 +22,19 @@ from agentops.helpers.time import iso_to_unix_nano
 from agentops.logging import logger
 from agentops.session.tracer import SessionTracer
 
+from .mixin.analytics import AnalyticsSessionMixin
+from .signals import *
 from .state import SessionState
 from .state import SessionStateDescriptor as session_state_field
 
 if TYPE_CHECKING:
     from agentops.config import Config
 
-from .signals import *
+
+_SessionMixins = (AnalyticsSessionMixin,)
 
 
-class Session:
+class Session(*_SessionMixins):
     """Data container for session state with minimal public API"""
 
     # __slots__ = (
@@ -49,7 +52,6 @@ class Session:
         jwt: Optional[str] = None,
         auto_start: bool = True,
         session_id: Optional[UUID] = None,  # TODO: Define use cases for initializing session with a specific ID
-        event_counts: Optional[Dict[str, int]] = None,
         host_env: Optional[dict] = get_host_env(),
         config: Optional[Config] = None,
     ):
@@ -59,7 +61,6 @@ class Session:
         self.tags = tags or []
         self.host_env = host_env or {}
         self.jwt = jwt
-        self.event_counts = event_counts or {"llms": 0, "tools": 0, "actions": 0, "errors": 0, "apis": 0}
         self.auto_start = auto_start
         self._session_id = session_id or uuid4()
         self._lock = threading.Lock()
@@ -121,43 +122,6 @@ class Session:
             except ValueError:
                 logger.warning(f"Invalid session state: {value}")
                 self._state = SessionState.INDETERMINATE
-
-    # ------------------------------------------------------------------------------------------
-    @property
-    def token_cost(self) -> str:
-        """
-        Processes token cost based on the last response from the API.
-        """
-        try:
-            # Get token cost from either response or direct value
-            cost = Decimal(0)
-            if self.api and self.api.last_response is not None:
-                cost_value = self.api.last_response.json().get("token_cost", "unknown")
-                if cost_value != "unknown" and cost_value is not None:
-                    cost = Decimal(str(cost_value))
-
-            # Format the cost
-            return (
-                "{:.2f}".format(cost)
-                if cost == 0
-                else "{:.6f}".format(cost.quantize(Decimal("0.000001"), rounding=ROUND_HALF_UP))
-            )
-        except (ValueError, AttributeError):
-            return "0.00"
-
-    @property
-    def analytics(self) -> Optional[Dict[str, Union[int, str]]]:
-        """Get session analytics"""
-        formatted_duration = self._format_duration(self.init_timestamp, self.end_timestamp)
-
-        return {
-            "LLM calls": self.event_counts["llms"],
-            "Tool calls": self.event_counts["tools"],
-            "Actions": self.event_counts["actions"],
-            "Errors": self.event_counts["errors"],
-            "Duration": formatted_duration,
-            "Cost": self.token_cost,
-        }
 
     @property
     def session_url(self) -> str:
@@ -258,26 +222,6 @@ class Session:
                 self._state = SessionState.FAILED
                 return False
 
-    def _format_duration(self, start_time, end_time) -> str:
-        """Format duration between two timestamps"""
-        if not start_time or not end_time:
-            return "0.0s"
-
-        start = datetime.fromisoformat(start_time.replace("Z", "+00:00"))
-        end = datetime.fromisoformat(end_time.replace("Z", "+00:00"))
-        duration = end - start
-
-        hours, remainder = divmod(duration.total_seconds(), 3600)
-        minutes, seconds = divmod(remainder, 60)
-
-        parts = []
-        if hours > 0:
-            parts.append(f"{int(hours)}h")
-        if minutes > 0:
-            parts.append(f"{int(minutes)}m")
-        parts.append(f"{seconds:.1f}s")
-
-        return " ".join(parts)
 
     def __repr__(self) -> str:
         """String representation"""
