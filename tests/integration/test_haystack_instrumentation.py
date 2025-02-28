@@ -1,11 +1,16 @@
 import pytest
+import os
+os.environ["OPENAI_API_KEY"] = "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
+os.environ["ANTHROPIC_API_KEY"] = "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
+os.environ["AGENTOPS_API_KEY"] = "00000000-0000-0000-0000-000000000000"
 import agentops
 import json
 import vcr
 from haystack.components.generators import OpenAIGenerator
+from inline_snapshot import snapshot
 
 @vcr.use_cassette('tests/integration/cassettes/test_haystack_instrumentation.yaml')
-def test_haystack_instrumentation(exporter, snapshot):
+def test_haystack_instrumentation(exporter):
     """Test that haystack is instrumented"""
     
     session = agentops.start_session()
@@ -19,10 +24,6 @@ def test_haystack_instrumentation(exporter, snapshot):
         # Assert that spans were created
         assert len(finished_spans) > 0, "No spans were recorded"
         
-        # Check that at least one span has "haystack" in its name
-        haystack_spans = [span for span in finished_spans if "haystack" in span.name]
-        assert len(haystack_spans) > 0, "No haystack spans were found"
-        
         spans_data = [
             {
                 "name": span.name,
@@ -35,7 +36,76 @@ def test_haystack_instrumentation(exporter, snapshot):
         spans_json = json.dumps(spans_data, indent=2)
         
         # Verify the spans using snapshot
-        snapshot.assert_match(spans_json, 'haystack_spans.json')
+        assert spans_json == snapshot("""\
+[
+  {
+    "name": "openai.chat",
+    "attributes": {
+      "llm.request.type": "chat",
+      "gen_ai.system": "OpenAI",
+      "gen_ai.request.model": "o3-mini",
+      "llm.headers": "None",
+      "llm.is_streaming": false,
+      "gen_ai.openai.api_base": "https://api.openai.com/v1/",
+      "gen_ai.prompt.0.role": "user",
+      "gen_ai.prompt.0.content": "What's Natural Language Processing? Be brief.",
+      "gen_ai.response.model": "o3-mini-2025-01-31",
+      "gen_ai.response.id": "chatcmpl-B62syNLryB1UHbhgTXw6BxWKC5sl5",
+      "gen_ai.openai.system_fingerprint": "fp_42bfad963b",
+      "llm.usage.total_tokens": 117,
+      "gen_ai.usage.completion_tokens": 103,
+      "gen_ai.usage.prompt_tokens": 14,
+      "gen_ai.completion.0.finish_reason": "stop",
+      "gen_ai.completion.0.role": "assistant",
+      "gen_ai.completion.0.content": "Natural Language Processing (NLP) is a field of artificial intelligence that focuses on enabling computers to understand, interpret, and generate human language."
+    },
+    "status": true
+  },
+  {
+    "name": "openai.chat",
+    "attributes": {
+      "llm.request.type": "chat",
+      "gen_ai.system": "OpenAI",
+      "gen_ai.request.model": "o3-mini",
+      "llm.headers": "None",
+      "llm.is_streaming": false,
+      "gen_ai.openai.api_base": "https://api.openai.com/v1/",
+      "gen_ai.prompt.0.role": "user",
+      "gen_ai.prompt.0.content": "What's Natural Language Processing? Be brief.",
+      "gen_ai.response.model": "o3-mini-2025-01-31",
+      "gen_ai.response.id": "chatcmpl-B62syNLryB1UHbhgTXw6BxWKC5sl5",
+      "gen_ai.openai.system_fingerprint": "fp_42bfad963b",
+      "llm.usage.total_tokens": 117,
+      "gen_ai.usage.completion_tokens": 103,
+      "gen_ai.usage.prompt_tokens": 14,
+      "gen_ai.completion.0.finish_reason": "stop",
+      "gen_ai.completion.0.role": "assistant",
+      "gen_ai.completion.0.content": "Natural Language Processing (NLP) is a field of artificial intelligence that focuses on enabling computers to understand, interpret, and generate human language."
+    },
+    "status": true
+  },
+  {
+    "name": "haystack.openai.completion",
+    "attributes": {
+      "gen_ai.system": "OpenAI",
+      "llm.request.type": "completion",
+      "gen_ai.completion.0.content": "replies",
+      "gen_ai.completion.1.content": "meta"
+    },
+    "status": true
+  },
+  {
+    "name": "haystack.openai.completion",
+    "attributes": {
+      "gen_ai.system": "OpenAI",
+      "llm.request.type": "completion",
+      "gen_ai.completion.0.content": "replies",
+      "gen_ai.completion.1.content": "meta"
+    },
+    "status": true
+  }
+]\
+""")
         
     finally:
         session.end("SUCCEEDED")
