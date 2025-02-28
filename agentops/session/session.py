@@ -3,12 +3,9 @@ from __future__ import annotations
 import json
 import threading
 from datetime import datetime, timezone
-from decimal import ROUND_HALF_UP, Decimal
-from enum import StrEnum, auto
-from typing import TYPE_CHECKING, Dict, List, Optional, Union
+from typing import TYPE_CHECKING, List, Optional
 from uuid import UUID, uuid4
 
-from opentelemetry import trace
 from opentelemetry.trace import Span, Status, StatusCode
 from termcolor import colored
 
@@ -20,7 +17,6 @@ from agentops.helpers.serialization import AgentOpsJSONEncoder
 from agentops.helpers.system import get_host_env
 from agentops.helpers.time import iso_to_unix_nano
 from agentops.logging import logger
-from agentops.session.tracer import SessionTracer
 
 from .mixin.analytics import AnalyticsSessionMixin
 from .signals import *
