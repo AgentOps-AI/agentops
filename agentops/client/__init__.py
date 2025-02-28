@@ -10,18 +10,21 @@ from agentops.logging import logger
 from agentops.session import Session
 from agentops.session.registry import get_active_sessions, get_default_session
 
+from .api import ApiClient
+
 
 class Client:
     """Singleton client for AgentOps service"""
 
-    _instance = None
     config: Config
     _initialized = False
 
+    api_client: ApiClient
+
     def __new__(cls, *args, **kwargs):
-        if cls._instance is None:
-            cls._instance = super(Client, cls).__new__(cls)
-        return cls._instance
+        if cls.__instance is None:
+            cls.__instance = super(Client, cls).__new__(cls)
+        return cls.__instance
 
     def __init__(self):
         # Only initialize once
@@ -33,6 +36,13 @@ class Client:
 
     def init(self, **kwargs) -> Union[Session, None]:
         self.configure(**kwargs)
+
+        if not self.config.api_key:
+            raise NoApiKeyException
+
+        self.api_client = ApiClient(self.config.endpoint)
+
+        self.api_client.get_auth_token(self.config.api_key)
 
         # Instrument LLM calls if enabled
         if self.config.instrument_llm_calls:
@@ -64,9 +74,6 @@ class Client:
                 self.init()
             else:
                 raise AgentOpsClientNotInitializedException
-
-        if not self.config.api_key:
-            raise NoApiKeyException
 
         try:
             return Session(config=self.config, **kwargs)
@@ -111,15 +118,6 @@ class Client:
         for session in get_active_sessions():
             session.end("Indeterminate", "Forced end via end_all_sessions()")
 
-    def add_pre_init_warning(self, warning: str):
-        """Add a warning that occurred before initialization"""
-        self._pre_init_warnings.append(warning)
-
-    @property
-    def pre_init_warnings(self) -> List[str]:
-        """Get warnings that occurred before initialization"""
-        return self._pre_init_warnings
-
     @property
     def initialized(self) -> bool:
         return self._initialized
@@ -129,3 +127,6 @@ class Client:
         if self._initialized and self._initialized != value:
             raise ValueError("Client already initialized")
         self._initialized = value
+
+    # ------------------------------------------------------------
+    __instance = None
