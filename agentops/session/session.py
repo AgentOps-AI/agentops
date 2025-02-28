@@ -35,26 +35,24 @@ class Session:
     """Data container for session state with minimal public API"""
 
     # __slots__ = (
-    #     'config', 'tags', 'host_env', 'end_state_reason', 'jwt', 'video', 
+    #     'config', 'tags', 'host_env', 'end_state_reason', 'jwt',
     #     'event_counts', 'state', 'auto_start', '_session_id', '_lock',
     #     'span', 'telemetry', '_init_timestamp', '_end_timestamp', 'api'
     # )
-
 
     state = session_state_field
 
     def __init__(
         self,
-        config: Optional[Config] = None,
         tags: Optional[List[str]] = [],
-        host_env: Optional[dict] = get_host_env(),
-        end_state_reason: Optional[str] = None,
-        jwt: Optional[str] = None,
-        video: Optional[str] = None,
-        event_counts: Optional[Dict[str, int]] = None,
         *,
+        jwt: Optional[str] = None,
         auto_start: bool = True,
-        session_id: Optional[UUID] = None,
+        session_id: Optional[UUID] = None,  # TODO: Define use cases for initializing session with a specific ID
+        event_counts: Optional[Dict[str, int]] = None,
+        host_env: Optional[dict] = get_host_env(),
+        config: Optional[Config] = None,
+        end_state_reason: Optional[str] = None,
     ):
         """Initialize a Session with optional session_id."""
         # Initialize all properties
@@ -63,22 +61,21 @@ class Session:
         self.host_env = host_env or {}
         self.end_state_reason = end_state_reason
         self.jwt = jwt
-        self.video = video
         self.event_counts = event_counts or {"llms": 0, "tools": 0, "actions": 0, "errors": 0, "apis": 0}
         self.auto_start = auto_start
         self._session_id = session_id or uuid4()
         self._lock = threading.Lock()
-        
+
         # Fields from mixin
         self.span: Optional[Span] = None
         self.telemetry = None
         self._init_timestamp: Optional[str] = None
         self._end_timestamp: Optional[str] = None
         self.api = None
-        
+
         # Initialize state descriptor
         self._state = SessionState.INITIALIZING
-        
+
         # Initialize session-specific components
         if self.config.api_key is None:
             self._state = SessionState.FAILED
@@ -112,7 +109,7 @@ class Session:
     def state(self) -> SessionState:
         """Get the current session state."""
         return self._state
-        
+
     @state.setter
     def state(self, value):
         """Set the session state."""
@@ -166,7 +163,7 @@ class Session:
     def session_url(self) -> str:
         """URL to view this trace in the dashboard"""
         return f"{self.config.endpoint}/drilldown?session_id={self.session_id}"
-    
+
     @property
     def is_running(self) -> bool:
         """Whether session is currently running"""
@@ -191,9 +188,7 @@ class Session:
             logger.warning(f"Invalid end state: {state}, using INDETERMINATE")
             return SessionState.INDETERMINATE
 
-    def end(
-        self, end_state: Optional[str] = None, end_state_reason: Optional[str] = None, video: Optional[str] = None
-    ) -> None:
+    def end(self, end_state: Optional[str] = None, end_state_reason: Optional[str] = None) -> None:
         """End the session"""
         with self._lock:
             if self._state.is_terminal:
@@ -205,8 +200,6 @@ class Session:
                 self._state = SessionState.from_string(end_state)
             if end_state_reason is not None:
                 self.end_state_reason = end_state_reason
-            if video is not None:
-                self.video = video
 
             # Send signal with current state
             session_ending.send(
@@ -240,7 +233,7 @@ class Session:
                 if not self.api:
                     logger.error("API client not initialized")
                     return False
-                    
+
                 self.jwt = self.api.create_session(session_data)
 
                 logger.info(
@@ -276,7 +269,7 @@ class Session:
         """Format duration between two timestamps"""
         if not start_time or not end_time:
             return "0.0s"
-            
+
         start = datetime.fromisoformat(start_time.replace("Z", "+00:00"))
         end = datetime.fromisoformat(end_time.replace("Z", "+00:00"))
         duration = end - start
@@ -328,7 +321,6 @@ class Session:
             "host_env": self.host_env,
             "state": str(self._state),
             "jwt": self.jwt,
-            "video": self.video,
             "event_counts": self.event_counts,
             "init_timestamp": self.init_timestamp,
             "end_timestamp": self.end_timestamp,
@@ -406,7 +398,7 @@ class Session:
         """Update root span status based on session state."""
         if self.span is None:
             return
-            
+
         if state.is_terminal:
             if state.name == "SUCCEEDED":
                 self.span.set_status(Status(StatusCode.OK))
