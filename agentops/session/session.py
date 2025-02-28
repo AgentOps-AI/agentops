@@ -2,19 +2,15 @@ from __future__ import annotations
 
 import json
 import threading
-from datetime import datetime, timezone
-from typing import TYPE_CHECKING, List, Optional
-from uuid import UUID, uuid4
+from typing import TYPE_CHECKING, Optional
+from uuid import UUID
 
-from opentelemetry.trace import Span, Status, StatusCode
 from termcolor import colored
 
 from agentops.api.session import SessionApiClient
-from agentops.config import Config, default_config
 from agentops.exceptions import ApiServerException
 from agentops.helpers import get_ISO_time
 from agentops.helpers.serialization import AgentOpsJSONEncoder
-from agentops.helpers.system import get_host_env
 from agentops.helpers.time import iso_to_unix_nano
 from agentops.logging import logger
 
@@ -39,27 +35,14 @@ class Session(*_SessionMixins):
 
     def __init__(
         self,
-        tags: Optional[List[str]] = [],
-        *,
-        jwt: Optional[str] = None,
-        auto_start: bool = True,
-        session_id: Optional[UUID] = None,  # TODO: Define use cases for initializing session with a specific ID
-        host_env: Optional[dict] = get_host_env(),
-        config: Optional[Config] = None,
+        **kwargs,
     ):
         """Initialize a Session with optional session_id."""
         # Initialize all properties
-        self.config = config or default_config()
-        self.tags = tags or []
-        self.host_env = host_env or {}
-        self.jwt = jwt
-        self.auto_start = auto_start
-        self._session_id = session_id or uuid4()
         self._lock = threading.Lock()
-        self.api = None
 
         # Initialize mixins
-        super().__init__()
+        super().__init__(**kwargs)
 
         # Initialize state descriptor
         self._state = SessionState.INITIALIZING
@@ -108,10 +91,6 @@ class Session(*_SessionMixins):
             logger.warning(f"Invalid session state: {value}, must be a SessionState enum")
             self._state = SessionState.INDETERMINATE
 
-    @property
-    def session_url(self) -> str:
-        """URL to view this trace in the dashboard"""
-        return f"{self.config.endpoint}/drilldown?session_id={self.session_id}"
 
     @property
     def is_running(self) -> bool:
@@ -188,6 +167,7 @@ class Session(*_SessionMixins):
                 self._state = SessionState.FAILED
                 return False
 
+    # ------------------------------------------------------------------------------------------
     def __repr__(self) -> str:
         """String representation"""
         parts = [f"Session(id={self.session_id}, status={self._state}"]
@@ -198,15 +178,6 @@ class Session(*_SessionMixins):
         return ", ".join(parts) + ")"
 
     # ------------------------------------------------------------------------------------------
-
-    @property
-    def session_id(self) -> UUID:
-        """Get session_id from instance variable."""
-        # Always return the stored session ID
-        return self._session_id
-
-    # ------------------------------------------------------------------------------------------
-
     def dict(self) -> dict:
         """Convert session to dictionary, excluding private and non-serializable fields"""
         return {
