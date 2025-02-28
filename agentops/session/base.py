@@ -10,7 +10,6 @@ class SessionBase(ABC):
     """Base class for Session"""
 
     auto_start: bool
-    session_id: UUID
     host_env: dict
     config: Config
     tags: List[str]
