@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from datetime import datetime, timezone
-from typing import Optional, Generator, Any
+from typing import Any, Generator, Optional
 
 from opentelemetry.trace import Span, Status, StatusCode
 
@@ -17,9 +17,9 @@ class TelemetrySessionMixin:
     def __init__(self, *args, **kwargs):
         # Initialize span-related fields
         self.span = None  # Will be a Span object when set
-        self.telemetry = None
         # Call super().__init__ if it exists
         super().__init__(*args, **kwargs) if hasattr(super(), '__init__') else None
+        self.tracer
 
     def set_status(self, state: SessionState, reason: Optional[str] = None) -> None:
         """Update root span status based on session state."""

@@ -50,13 +50,7 @@ class Session(*_SessionMixins, SessionBase):
         # Initialize state descriptor
         self._state = SessionState.INITIALIZING
 
-        # Initialize session-specific components
-        if self.config.api_key is None:
-            self._state = SessionState.FAILED
-            if not self.config.fail_safe:
-                raise ValueError("API key is required")
-            logger.error("API key is required")
-            return
+        # TODO: Validate JWT here?
 
         # Signal session is initialized
         session_initialized.send(self)
@@ -91,7 +85,6 @@ class Session(*_SessionMixins, SessionBase):
         else:
             logger.warning(f"Invalid session state: {value}, must be a SessionState enum")
             self._state = SessionState.INDETERMINATE
-
 
     @property
     def is_running(self) -> bool:
@@ -136,7 +129,6 @@ class Session(*_SessionMixins, SessionBase):
                 return False
 
             session_starting.send(self)
-            # self.init_timestamp = get_ISO_time() # The SPAN will retrieve this
 
             try:
                 session_data = json.loads(self.json())
@@ -187,7 +179,6 @@ class Session(*_SessionMixins, SessionBase):
             "tags": self.tags,
             "host_env": self.host_env,
             "state": str(self._state),
-            "jwt": self.jwt,
             "init_timestamp": self.init_timestamp,
             "end_timestamp": self.end_timestamp,
         }
