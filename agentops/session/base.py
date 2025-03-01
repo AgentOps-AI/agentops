@@ -19,7 +19,6 @@ class SessionBase(ABC):
         kwargs.setdefault("config", default_config())
         kwargs.setdefault("auto_start", True)
         kwargs.setdefault("tags", [])
-        super().__init__(*args, **kwargs)
 
     @property
     def session_url(self) -> str:
