@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import atexit
 import threading
-from typing import TYPE_CHECKING, Dict, Optional
+from typing import TYPE_CHECKING, Dict, Optional, Protocol
 from uuid import uuid4
 from weakref import WeakValueDictionary
 
@@ -19,13 +19,14 @@ from opentelemetry.exporter.otlp.proto.http.trace_exporter import \
 from opentelemetry.sdk.resources import SERVICE_NAME, Resource
 from opentelemetry.sdk.trace import TracerProvider
 from opentelemetry.sdk.trace.export import SimpleSpanProcessor
-from opentelemetry.trace import NonRecordingSpan, SpanContext, TraceFlags
+from opentelemetry.trace import NonRecordingSpan, Span, SpanContext, TraceFlags
 
 from agentops.logging import logger
 from agentops.session.base import SessionBase
 from agentops.session.helpers import dict_to_span_attributes
 
 if TYPE_CHECKING:
+    from agentops.session.mixin.telemetry import TracedSession
     from agentops.session.session import Session
 
 # Dictionary to store active session tracers
@@ -61,13 +62,13 @@ class SessionTracer:
     tracked as child spans.
     """
 
-    session: SessionBase
+    session: TracedSession
 
     @property
     def session_id(self) -> str:
         return str(self.session.session_id)
 
-    def __init__(self, session: SessionBase):
+    def __init__(self, session: TracedSession):
         self.session = session
         self._is_ended = False
         self._shutdown_lock = threading.Lock()
@@ -82,17 +83,14 @@ class SessionTracer:
         if session.config.processor is not None:
             # Use the custom processor if provided
             provider.add_span_processor(session.config.processor)
-            logger.debug(f"[{self.session_id}] Using custom span processor")
         elif session.config.exporter is not None:
             # Use the custom exporter with a SimpleSpanProcessor if only exporter is provided
             processor = ProcessorClass(session.config.exporter)
             provider.add_span_processor(processor)
-            logger.debug(f"[{self.session_id}] Using custom span exporter with SimpleSpanProcessor")
         else:
             # Use default processor and exporter
             processor = ProcessorClass(OTLPSpanExporter(endpoint=f"{session.config.endpoint}/v1/traces"))
             provider.add_span_processor(processor)
-            logger.debug(f"[{self.session_id}] Using default span processor and exporter")
 
         # Initialize tracer
         self.tracer = provider.get_tracer("agentops.session")

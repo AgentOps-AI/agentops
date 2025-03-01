@@ -2,23 +2,45 @@ from __future__ import annotations
 
 from datetime import datetime, timezone
 from typing import Any, Generator, Optional
+from uuid import UUID
 
-from opentelemetry.trace import Status, StatusCode
+from opentelemetry.trace import Span, Status, StatusCode
 
 from agentops.session.base import SessionBase
 from agentops.session.state import SessionState
 from agentops.session.tracer import SessionTracer
 
 
-class TelemetrySessionMixin(SessionBase):
+def trace_id_to_uuid(trace_id: int) -> UUID:
+    # Convert the trace_id to a 32-character hex string
+    trace_id_hex = format(trace_id, "032x")
+
+    # Format as UUID string (8-4-4-4-12)
+    uuid_str = (
+        f"{trace_id_hex[0:8]}-{trace_id_hex[8:12]}-{trace_id_hex[12:16]}-{trace_id_hex[16:20]}-{trace_id_hex[20:32]}"
+    )
+
+    # Create UUID object
+    return UUID(uuid_str)
+
+
+class TracedSession(SessionBase):
+    span: Optional[Span]
+
+    @property
+    def session_id(self):
+        """Returns the Trace ID as a UUID"""
+        if not (span := getattr(self, "span", None)):
+            return None
+        return trace_id_to_uuid(span.get_span_context().trace_id)
+
+
+class TelemetrySessionMixin(TracedSession):
     """
     Mixin that adds telemetry and span-related functionality to a session
     """
 
     def __init__(self, *args, **kwargs):
-        # Initialize span-related fields
-        self.span = None  # Will be a Span object when set
-        # Call super().__init__ if it exists
         super().__init__(*args, **kwargs) if hasattr(super(), "__init__") else None
         self.telemetry = SessionTracer(self)
 

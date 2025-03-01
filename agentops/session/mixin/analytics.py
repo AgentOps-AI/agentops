@@ -31,8 +31,8 @@ class AnalyticsSessionMixin:
     """
 
     def __init__(self, *args, **kwargs):
-        self.event_counts = {"llms": 0, "tools": 0, "actions": 0, "errors": 0, "apis": 0}
         super().__init__(*args, **kwargs) if hasattr(super(), '__init__') else None
+        self.event_counts = {"llms": 0, "tools": 0, "actions": 0, "errors": 0, "apis": 0}
 
     # ------------------------------------------------------------------------------------------
     @property

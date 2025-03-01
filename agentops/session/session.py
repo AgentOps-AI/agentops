@@ -147,15 +147,15 @@ class Session(*_SessionMixins, SessionBase):
                 return False
 
     # ------------------------------------------------------------------------------------------
-    def __repr__(self) -> str:
-        """String representation"""
-        parts = [f"Session(id={self.session_id}, status={self._state}"]
-
-        if self.tags:
-            parts.append(f"tags={self.tags}")
-
-        return ", ".join(parts) + ")"
-
+    # def __repr__(self) -> str:
+    #     """String representation"""
+    #     parts = [f"Session(id={self.session_id}, status={self._state}"]
+    #
+    #     if self.tags:
+    #         parts.append(f"tags={self.tags}")
+    #
+    #     return ", ".join(parts) + ")"
+    #
     # ------------------------------------------------------------------------------------------
     def dict(self) -> dict:
         """Convert session to dictionary, excluding private and non-serializable fields"""

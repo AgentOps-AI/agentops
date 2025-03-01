@@ -38,3 +38,9 @@ class SessionBase(ABC):
     @property
     def session_id(self) -> UUID:
         raise NotImplementedError
+
+    def dict(self) -> dict:
+        raise NotImplementedError
+
+    def json(self) -> str:
+        raise NotImplementedError
