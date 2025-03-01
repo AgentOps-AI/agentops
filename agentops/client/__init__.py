@@ -2,37 +2,46 @@ import uuid
 from typing import Any, Dict, List, Optional, Union
 from uuid import UUID
 
-from .config import Config, ConfigDict
-from .exceptions import (AgentOpsClientNotInitializedException,
-                         NoApiKeyException, NoSessionException)
-from .instrumentation import instrument_all, uninstrument_all
-from .logging import logger
-from .session import Session
-from .session.registry import get_active_sessions, get_default_session
+from agentops.config import Config, ConfigDict
+from agentops.exceptions import (AgentOpsClientNotInitializedException,
+                                 NoApiKeyException, NoSessionException)
+from agentops.instrumentation import instrument_all, uninstrument_all
+from agentops.logging import logger
+from agentops.session import Session, SessionState
+from agentops.session.registry import get_active_sessions, get_default_session
+
+from .api import ApiClient
 
 
 class Client:
     """Singleton client for AgentOps service"""
 
-    _instance = None
     config: Config
-    _initialized = False
+    _initialized: bool
+
+    api_client: ApiClient
 
     def __new__(cls, *args, **kwargs):
-        if cls._instance is None:
-            cls._instance = super(Client, cls).__new__(cls)
-        return cls._instance
+        if cls.__instance is None:
+            cls.__instance = super(Client, cls).__new__(cls)
+        return cls.__instance
 
     def __init__(self):
         # Only initialize once
-        if not hasattr(self, "_init_done"):
-            self._initialized = False
-            self.config = Config()
-            self._pre_init_warnings: List[str] = []
-            self._init_done = True
+        self._initialized = False
+        self.config = Config()
 
     def init(self, **kwargs) -> Union[Session, None]:
         self.configure(**kwargs)
+
+        if not self.config.api_key:
+            raise NoApiKeyException
+
+        self.api_client = ApiClient(self.config.endpoint)
+
+        # Prefetch JWT token if enabled
+        if self.config.prefetch_jwt_token:
+            self.api_client.get_auth_token(self.config.api_key)
 
         # Instrument LLM calls if enabled
         if self.config.instrument_llm_calls:
@@ -65,9 +74,6 @@ class Client:
             else:
                 raise AgentOpsClientNotInitializedException
 
-        if not self.config.api_key:
-            raise NoApiKeyException
-
         try:
             return Session(config=self.config, **kwargs)
         except Exception as e:
@@ -86,7 +92,7 @@ class Client:
         """End the current session"""
         session = get_default_session()
         if session:
-            session.end(end_state, end_state_reason, video)
+            session.end(SessionState(end_state))
         else:
             logger.warning("No active session to end")
 
@@ -109,16 +115,7 @@ class Client:
     def end_all_sessions(self):
         """End all active sessions"""
         for session in get_active_sessions():
-            session.end("Indeterminate", "Forced end via end_all_sessions()")
-
-    def add_pre_init_warning(self, warning: str):
-        """Add a warning that occurred before initialization"""
-        self._pre_init_warnings.append(warning)
-
-    @property
-    def pre_init_warnings(self) -> List[str]:
-        """Get warnings that occurred before initialization"""
-        return self._pre_init_warnings
+            session.end(SessionState.INDETERMINATE)
 
     @property
     def initialized(self) -> bool:
@@ -129,3 +126,6 @@ class Client:
         if self._initialized and self._initialized != value:
             raise ValueError("Client already initialized")
         self._initialized = value
+
+    # ------------------------------------------------------------
+    __instance = None

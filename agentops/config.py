@@ -28,6 +28,7 @@ class ConfigDict(TypedDict):
     env_data_opt_out: Optional[bool]
     log_level: Optional[Union[str, int]]
     fail_safe: Optional[bool]
+    prefetch_jwt_token: Optional[bool]
 
 
 @dataclass(slots=True)
@@ -92,6 +93,11 @@ class Config:
         metadata={"description": "Whether to suppress errors and continue execution when possible"},
     )
 
+    prefetch_jwt_token: bool = field(
+        default_factory=lambda: get_env_bool("AGENTOPS_PREFETCH_JWT_TOKEN", True),
+        metadata={"description": "Whether to prefetch JWT token during initialization"},
+    )
+
     exporter: Optional[SpanExporter] = field(
         default_factory=lambda: None, metadata={"description": "Custom span exporter for OpenTelemetry trace data"}
     )
@@ -114,6 +120,7 @@ class Config:
         env_data_opt_out: Optional[bool] = None,
         log_level: Optional[Union[str, int]] = None,
         fail_safe: Optional[bool] = None,
+        prefetch_jwt_token: Optional[bool] = None,
         exporter: Optional[SpanExporter] = None,
         processor: Optional[SpanProcessor] = None,
     ):
@@ -158,6 +165,9 @@ class Config:
         if fail_safe is not None:
             self.fail_safe = fail_safe
 
+        if prefetch_jwt_token is not None:
+            self.prefetch_jwt_token = prefetch_jwt_token
+
         if exporter is not None:
             self.exporter = exporter
 
@@ -179,6 +189,7 @@ class Config:
             "env_data_opt_out": self.env_data_opt_out,
             "log_level": self.log_level,
             "fail_safe": self.fail_safe,
+            "prefetch_jwt_token": self.prefetch_jwt_token,
             "exporter": self.exporter,
             "processor": self.processor,
         }
