@@ -73,7 +73,6 @@ class TestClient:
         client = Client()
 
         # Start a session
-        breakpoint()
         client.start_session()
 
         # Verify init was called
