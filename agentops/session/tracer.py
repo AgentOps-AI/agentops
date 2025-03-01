@@ -21,6 +21,7 @@ from opentelemetry.sdk.trace.export import SimpleSpanProcessor
 from opentelemetry.trace import NonRecordingSpan, SpanContext, TraceFlags
 
 from agentops.logging import logger
+from agentops.session.base import SessionBase
 from agentops.session.helpers import dict_to_span_attributes
 from agentops.session.signals import session_ended, session_initialized, session_started
 
@@ -60,11 +61,13 @@ class SessionTracer:
     tracked as child spans.
     """
 
+    session: SessionBase
+
     @property
     def session_id(self) -> str:
         return str(self.session.session_id)
 
-    def __init__(self, session: Session):
+    def __init__(self, session: SessionBase):
         self.session = session
         self._is_ended = False
         self._shutdown_lock = threading.Lock()

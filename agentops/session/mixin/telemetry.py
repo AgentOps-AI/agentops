@@ -3,13 +3,14 @@ from __future__ import annotations
 from datetime import datetime, timezone
 from typing import Any, Generator, Optional
 
-from opentelemetry.trace import Span, Status, StatusCode
+from opentelemetry.trace import Status, StatusCode
 
-from agentops.helpers.time import iso_to_unix_nano
+from agentops.session.base import SessionBase
 from agentops.session.state import SessionState
+from agentops.session.tracer import SessionTracer
 
 
-class TelemetrySessionMixin:
+class TelemetrySessionMixin(SessionBase):
     """
     Mixin that adds telemetry and span-related functionality to a session
     """
@@ -18,8 +19,8 @@ class TelemetrySessionMixin:
         # Initialize span-related fields
         self.span = None  # Will be a Span object when set
         # Call super().__init__ if it exists
-        super().__init__(*args, **kwargs) if hasattr(super(), '__init__') else None
-        self.tracer
+        super().__init__(*args, **kwargs) if hasattr(super(), "__init__") else None
+        self.telemetry = SessionTracer(self)
 
     def set_status(self, state: SessionState, reason: Optional[str] = None) -> None:
         """Update root span status based on session state."""
