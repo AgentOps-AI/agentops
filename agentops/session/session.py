@@ -13,6 +13,7 @@ from agentops.helpers.serialization import AgentOpsJSONEncoder
 from agentops.helpers.time import iso_to_unix_nano
 from agentops.logging import logger
 
+from .base import SessionBase
 from .mixin.analytics import AnalyticsSessionMixin
 from .mixin.telemetry import TelemetrySessionMixin
 from .signals import *
@@ -26,7 +27,7 @@ if TYPE_CHECKING:
 _SessionMixins = (AnalyticsSessionMixin, TelemetrySessionMixin)
 
 
-class Session(*_SessionMixins):
+class Session(*_SessionMixins, SessionBase):
     """Data container for session state with minimal public API"""
 
     # Use the session state descriptor
@@ -34,10 +35,13 @@ class Session(*_SessionMixins):
 
     def __init__(
         self,
+        *,
+        config: Config,
         **kwargs,
     ):
         """Initialize a Session with optional session_id."""
         # Initialize all properties
+        self.config = config
         self._lock = threading.Lock()
 
         # Initialize mixins

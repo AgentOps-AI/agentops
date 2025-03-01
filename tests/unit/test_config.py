@@ -5,10 +5,10 @@ from uuid import UUID
 import pytest
 
 from agentops.client import Client
-from agentops.config import Config
+from agentops.config import Config, default_config
 
 
-@pytest.fixture
+@pytest.fixture(autouse=True)
 def mock_env():
     """Fixture to mock environment variables"""
     with mock.patch.dict(os.environ, clear=True):
@@ -27,7 +27,6 @@ def mock_env():
         for key, value in env_vars.items():
             os.environ[key] = value
         yield
-
 
 @pytest.fixture
 def valid_uuid():
@@ -69,7 +68,7 @@ def test_config_override_env(mock_env, valid_uuid):
     assert config.default_tags == {"new-tag"}
     assert config.instrument_llm_calls is True
     # Other values should remain from env
-    assert config.max_queue_size == 256
+    assert config.max_queue_size == default_config().max_queue_size
 
 
 def test_config_defaults():

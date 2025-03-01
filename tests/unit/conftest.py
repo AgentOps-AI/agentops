@@ -1,6 +1,8 @@
+import os
 import re
 import uuid
 from collections import defaultdict
+from unittest import mock
 
 import pytest
 import requests_mock
