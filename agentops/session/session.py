@@ -16,7 +16,6 @@ from agentops.logging import logger
 from .base import SessionBase
 from .mixin.analytics import AnalyticsSessionMixin
 from .mixin.telemetry import TelemetrySessionMixin
-from .signals import *
 from .state import SessionState
 from .state import SessionStateDescriptor as session_state_field
 
@@ -50,10 +49,6 @@ class Session(*_SessionMixins, SessionBase):
         # Initialize state descriptor
         self._state = SessionState.INITIALIZING
 
-        # TODO: Validate JWT here?
-
-        # Signal session is initialized
-        session_initialized.send(self)
 
         # Initialize session only if auto_start is True
         if self.auto_start:
@@ -98,12 +93,9 @@ class Session(*_SessionMixins, SessionBase):
                 logger.debug(f"Session {self.session_id} already ended")
                 return
 
-            # Update state before sending signal
             if end_state is not None:
                 self._state = end_state
 
-            # Send signal with current state
-            session_ending.send(self, session_id=self.session_id, end_state=str(self._state))
 
             self._end_timestamp = get_ISO_time()
             if self.span and self._end_timestamp is not None:
@@ -117,8 +109,6 @@ class Session(*_SessionMixins, SessionBase):
             if self.api:
                 self.api.update_session(session_data)
 
-            session_updated.send(self)
-            session_ended.send(self, session_id=self.session_id, end_state=str(self._state))
             logger.debug(f"Session {self.session_id} ended with state {self._state}")
 
     def start(self):
@@ -128,7 +118,6 @@ class Session(*_SessionMixins, SessionBase):
                 logger.warning("Session already started")
                 return False
 
-            session_starting.send(self)
 
             try:
                 session_data = json.loads(self.json())
@@ -145,11 +134,8 @@ class Session(*_SessionMixins, SessionBase):
                     )
                 )
 
-                # Set state before sending signal so registry sees correct state
                 self._state = SessionState.RUNNING
 
-                # Send session_started signal with self as sender
-                session_started.send(self)
                 logger.debug(f"[{self.session_id}] Session started successfully")
                 return True
 
