@@ -115,7 +115,7 @@ class Client:
     def end_all_sessions(self):
         """End all active sessions"""
         for session in get_active_sessions():
-            session.end(SessionState("Indeterminate"))
+            session.end(SessionState.INDETERMINATE)
 
     @property
     def initialized(self) -> bool:
