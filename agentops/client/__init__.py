@@ -7,7 +7,7 @@ from agentops.exceptions import (AgentOpsClientNotInitializedException,
                                  NoApiKeyException, NoSessionException)
 from agentops.instrumentation import instrument_all, uninstrument_all
 from agentops.logging import logger
-from agentops.session import Session
+from agentops.session import Session, SessionState
 from agentops.session.registry import get_active_sessions, get_default_session
 
 from .api import ApiClient
@@ -17,7 +17,7 @@ class Client:
     """Singleton client for AgentOps service"""
 
     config: Config
-    _initialized = False
+    _initialized: bool
 
     api_client: ApiClient
 
@@ -28,11 +28,8 @@ class Client:
 
     def __init__(self):
         # Only initialize once
-        if not hasattr(self, "_init_done"):
-            self._initialized = False
-            self.config = Config()
-            self._pre_init_warnings: List[str] = []
-            self._init_done = True
+        self._initialized = False
+        self.config = Config()
 
     def init(self, **kwargs) -> Union[Session, None]:
         self.configure(**kwargs)
@@ -42,7 +39,9 @@ class Client:
 
         self.api_client = ApiClient(self.config.endpoint)
 
-        self.api_client.get_auth_token(self.config.api_key)
+        # Prefetch JWT token if enabled
+        if self.config.prefetch_jwt_token:
+            self.api_client.get_auth_token(self.config.api_key)
 
         # Instrument LLM calls if enabled
         if self.config.instrument_llm_calls:
@@ -93,7 +92,7 @@ class Client:
         """End the current session"""
         session = get_default_session()
         if session:
-            session.end(end_state, end_state_reason, video)
+            session.end(SessionState(end_state))
         else:
             logger.warning("No active session to end")
 
@@ -116,7 +115,7 @@ class Client:
     def end_all_sessions(self):
         """End all active sessions"""
         for session in get_active_sessions():
-            session.end("Indeterminate", "Forced end via end_all_sessions()")
+            session.end(SessionState("Indeterminate"))
 
     @property
     def initialized(self) -> bool:

@@ -16,7 +16,3 @@ def reset_client():
     Client.__instance = None
     if hasattr(Client, "_init_done"):
         delattr(Client, "_init_done")
-
-
-
-

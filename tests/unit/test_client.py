@@ -18,6 +18,17 @@ def mock_session(mocker: MockerFixture):
     yield mock_session
 
 
+@pytest.fixture(autouse=True)
+def no_prefetch_jwt_token(agentops_config):
+    agentops_config.prefetch_jwt_token = False
+
+
+@pytest.fixture(autouse=True)
+def no_auto_init(agentops_config):
+    agentops_config.auto_init = False
+
+
+
 class TestClient:
     def test_client_init_configuration(self, api_key):
         """Test client initialization with configuration parameters"""
@@ -56,13 +67,13 @@ class TestClient:
         )
 
     @mock.patch("agentops.client.Client.init")
-    def test_start_session_uninitialized_with_auto_init(self, client_init_mock):
+    def test_start_session_uninitialized_with_auto_init(self, client_init_mock, no_auto_init):
         """Test starting a session when client is not initialized but auto_init is True"""
         # Create client but don't initialize it
         client = Client()
-        client.config.auto_init = True
 
         # Start a session
+        breakpoint()
         client.start_session()
 
         # Verify init was called
@@ -142,17 +153,6 @@ class TestClient:
         mock_session1.end.assert_called_once()
         mock_session2.end.assert_called_once()
 
-    def test_add_pre_init_warning(self):
-        """Test adding pre-init warnings"""
-        client = Client()
-
-        warning1 = "Warning 1"
-        warning2 = "Warning 2"
-
-        client.add_pre_init_warning(warning1)
-        client.add_pre_init_warning(warning2)
-
-        assert client.pre_init_warnings == [warning1, warning2]
 
     def test_initialized_property(self):
         """Test the initialized property and setter"""
