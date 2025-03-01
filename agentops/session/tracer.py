@@ -9,12 +9,13 @@ from __future__ import annotations
 
 import atexit
 import threading
-from typing import TYPE_CHECKING, Optional
+from typing import TYPE_CHECKING, Dict, Optional
 from uuid import uuid4
 from weakref import WeakValueDictionary
 
 from opentelemetry import context, trace
-from opentelemetry.exporter.otlp.proto.http.trace_exporter import OTLPSpanExporter
+from opentelemetry.exporter.otlp.proto.http.trace_exporter import \
+    OTLPSpanExporter
 from opentelemetry.sdk.resources import SERVICE_NAME, Resource
 from opentelemetry.sdk.trace import TracerProvider
 from opentelemetry.sdk.trace.export import SimpleSpanProcessor
@@ -23,13 +24,12 @@ from opentelemetry.trace import NonRecordingSpan, SpanContext, TraceFlags
 from agentops.logging import logger
 from agentops.session.base import SessionBase
 from agentops.session.helpers import dict_to_span_attributes
-from agentops.session.signals import session_ended, session_initialized, session_started
 
 if TYPE_CHECKING:
     from agentops.session.session import Session
 
-# Use WeakValueDictionary to allow tracer garbage collection
-_session_tracers: WeakValueDictionary[str, "SessionTracer"] = WeakValueDictionary()
+# Dictionary to store active session tracers
+_session_tracers = WeakValueDictionary()
 
 # Global TracerProvider instance
 _tracer_provider: Optional[TracerProvider] = None
@@ -135,7 +135,6 @@ class SessionTracer:
 
         # Store for cleanup
         _session_tracers[self.session_id] = self
-        atexit.register(self.shutdown)
 
         logger.debug(
             f"[{self.session_id}] Session tracer initialized with recording span: {type(self.session.span).__name__}"
@@ -174,3 +173,4 @@ class SessionTracer:
     def __del__(self):
         """Ensure cleanup on garbage collection."""
         self.shutdown()
+        # No need to manually remove from _session_tracers as WeakValueDictionary handles this automatically
