@@ -106,23 +106,23 @@ class SessionTracer:
 
         # Manually override the trace_id and span_id inside the span to match our session_id
         # Convert UUID to int by removing hyphens and converting hex to int
-        session_uuid_hex = str(self.session.session_id).replace("-", "")
-        trace_id = int(session_uuid_hex, 16)
-        span_id = trace_id & 0xFFFFFFFFFFFFFFFF  # Use lower 64 bits for span ID
-
-        # Set the span's context to use our trace ID
-        # This is a bit of a hack, but it ensures the trace ID matches our session ID
-        span_context = span.get_span_context()
-        new_context = SpanContext(
-            trace_id=trace_id,
-            span_id=span_id,
-            is_remote=False,
-            trace_flags=TraceFlags(TraceFlags.SAMPLED),
-            trace_state=span_context.trace_state if hasattr(span_context, "trace_state") else None,
-        )
+        # session_uuid_hex = str(self.session.session_id).replace("-", "")
+        # trace_id = int(session_uuid_hex, 16)
+        # span_id = trace_id & 0xFFFFFFFFFFFFFFFF  # Use lower 64 bits for span ID
+        #
+        # # Set the span's context to use our trace ID
+        # # This is a bit of a hack, but it ensures the trace ID matches our session ID
+        # span_context = span.get_span_context()
+        # new_context = SpanContext(
+        #     trace_id=trace_id,
+        #     span_id=span_id,
+        #     is_remote=False,
+        #     trace_flags=TraceFlags(TraceFlags.SAMPLED),
+        #     trace_state=span_context.trace_state if hasattr(span_context, "trace_state") else None,
+        # )
 
         # Replace the span's context with our custom context
-        span._context = new_context  # type: ignore
+        # span._context = new_context  # type: ignore
 
         # Store the span in the session
         self.session.span = span

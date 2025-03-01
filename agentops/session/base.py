@@ -15,10 +15,17 @@ class SessionBase(ABC):
     tags: List[str]
 
     def __init__(self, *args, **kwargs):
+        # Set default values in kwargs
         kwargs.setdefault("host_env", get_host_env())
         kwargs.setdefault("config", default_config())
         kwargs.setdefault("auto_start", True)
         kwargs.setdefault("tags", [])
+        
+        # Assign instance attributes from kwargs
+        self.host_env = kwargs["host_env"]
+        self.config = kwargs["config"]
+        self.auto_start = kwargs["auto_start"]
+        self.tags = kwargs["tags"]
 
     @property
     def session_url(self) -> str:

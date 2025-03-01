@@ -30,7 +30,7 @@ class Session(*_SessionMixins, SessionBase):
     """Data container for session state with minimal public API"""
 
     # Use the session state descriptor
-    _state_descriptor = session_state_field()
+    _state = session_state_field()
 
     def __init__(
         self,
@@ -42,13 +42,20 @@ class Session(*_SessionMixins, SessionBase):
         # Initialize all properties
         self.config = config
         self._lock = threading.Lock()
+        
+        # Initialize state descriptor
+        self._state = SessionState.INITIALIZING
+        
+        # Initialize span attribute
+        self.span = None
+        
+        # Initialize api attribute
+        self.api = getattr(config, "api", None)
+        self.jwt = None
+        self._end_timestamp = None
 
         # Initialize mixins
         super().__init__(**kwargs)
-
-        # Initialize state descriptor
-        self._state = SessionState.INITIALIZING
-
 
         # Initialize session only if auto_start is True
         if self.auto_start:
@@ -96,7 +103,6 @@ class Session(*_SessionMixins, SessionBase):
             if end_state is not None:
                 self._state = end_state
 
-
             self._end_timestamp = get_ISO_time()
             if self.span and self._end_timestamp is not None:
                 # Only end the span if it hasn't been ended yet
@@ -117,7 +123,6 @@ class Session(*_SessionMixins, SessionBase):
             if self._state != SessionState.INITIALIZING:
                 logger.warning("Session already started")
                 return False
-
 
             try:
                 session_data = json.loads(self.json())
