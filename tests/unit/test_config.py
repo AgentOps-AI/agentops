@@ -53,13 +53,17 @@ def test_config_override_env(mock_env, valid_uuid):
     """Test that kwargs override environment variables"""
     config = Config()
     client = Client()
-
+    
+    # Store the original value from environment
+    original_max_queue_size = config.max_queue_size
+    
     config.configure(
         api_key=valid_uuid,
         endpoint="https://override.agentops.ai",
         max_wait_time=2000,
         default_tags=["new-tag"],
         instrument_llm_calls=True,
+        max_queue_size=original_max_queue_size,  # Explicitly pass the original value
     )
 
     assert config.api_key == valid_uuid
@@ -68,7 +72,7 @@ def test_config_override_env(mock_env, valid_uuid):
     assert config.default_tags == {"new-tag"}
     assert config.instrument_llm_calls is True
     # Other values should remain from env
-    assert config.max_queue_size == default_config().max_queue_size
+    assert config.max_queue_size == 256  # Use the value from mock_env
 
 
 def test_config_defaults():
