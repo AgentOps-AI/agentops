@@ -15,7 +15,7 @@ class SessionState(StrEnum):
     RUNNING = auto()
     SUCCEEDED = auto()
     FAILED = auto()
-    INDETERMINATE = auto()
+    INDETERMINATE = 'INITIALIZING' # FIXME: Remove Backward compat. redundancy
 
     @property
     def is_terminal(self) -> bool:
