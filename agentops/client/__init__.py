@@ -10,7 +10,7 @@ from agentops.logging import logger
 from agentops.session import Session, SessionState
 from agentops.session.registry import get_active_sessions, get_default_session
 
-from .api import ApiClient
+from .api import ApiClient, V3Client
 
 
 class Client:
@@ -20,6 +20,7 @@ class Client:
     _initialized: bool
 
     api_client: ApiClient
+    v3_client: Optional[V3Client] = None
 
     def __new__(cls, *args, **kwargs):
         if cls.__instance is None:
@@ -38,6 +39,7 @@ class Client:
             raise NoApiKeyException
 
         self.api_client = ApiClient(self.config.endpoint)
+        self.v3_client = V3Client(self.config.endpoint)
 
         # Prefetch JWT token if enabled
         if self.config.prefetch_jwt_token:
