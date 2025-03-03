@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import datetime
 import json
 import threading
 from typing import TYPE_CHECKING, Optional
@@ -33,13 +34,20 @@ class Session(AnalyticsSessionMixin, TelemetrySessionMixin, SessionBase):
         **kwargs,
     ):
         """Initialize a Session with optional session_id."""
-        # Initialize all properties
-        self.config = config
-        self._lock = threading.Lock()
-
+        # Pass the config to the base class initialization
+        # This ensures the config is properly set in kwargs before super().__init__ is called
+        kwargs["config"] = config
+        
         # Initialize state descriptor
         self._state = SessionState.INITIALIZING
-        # Initialize mixins
+        
+        # Initialize lock
+        self._lock = threading.Lock()
+        
+        # Set default init_timestamp
+        self._init_timestamp = datetime.datetime.utcnow().isoformat() + "Z"
+        
+        # Initialize mixins and base class
         super().__init__(**kwargs)
 
         # Initialize session only if auto_start is True
@@ -55,6 +63,14 @@ class Session(AnalyticsSessionMixin, TelemetrySessionMixin, SessionBase):
         """Start the session"""
         with self._lock:
             self.telemetry.start()
+            
+    @property
+    def init_timestamp(self) -> str:
+        """Get the initialization timestamp."""
+        # First try to get it from the span
+        span_timestamp = super().init_timestamp if hasattr(super(), "init_timestamp") else None
+        # If not available, use our default timestamp
+        return span_timestamp or self._init_timestamp
 
     def dict(self) -> dict:
         """Convert session to dictionary, excluding private and non-serializable fields"""
