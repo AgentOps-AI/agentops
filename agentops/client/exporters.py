@@ -12,6 +12,7 @@ from opentelemetry.sdk.trace.export import SpanExportResult
 from agentops.client.http.http_client import HttpClient
 from agentops.exceptions import (AgentOpsApiJwtExpiredException,
                                  ApiServerException)
+from agentops.logging import logger
 
 
 class AuthenticatedOTLPExporter(OTLPSpanExporter):
@@ -61,9 +62,21 @@ class AuthenticatedOTLPExporter(OTLPSpanExporter):
         """
         try:
             return super().export(spans)
+        except AgentOpsApiJwtExpiredException as e:
+            # Authentication token expired or invalid
+            logger.warning(f"Authentication error during span export: {e}")
+            return SpanExportResult.FAILURE
+        except ApiServerException as e:
+            # Server-side error
+            logger.error(f"API server error during span export: {e}")
+            return SpanExportResult.FAILURE
+        except requests.RequestException as e:
+            # Network or HTTP error
+            logger.error(f"Network error during span export: {e}")
+            return SpanExportResult.FAILURE
         except Exception as e:
-            # For network or serialization errors, return failure
-            # Authentication errors should be handled by the session adapter
+            # Any other error
+            logger.error(f"Unexpected error during span export: {e}")
             return SpanExportResult.FAILURE
 
     def clear(self):

@@ -11,6 +11,7 @@ from opentelemetry.sdk.trace.export import SpanExportResult
 
 from agentops.client.exporters import AuthenticatedOTLPExporter
 from agentops.client.http.http_client import HttpClient
+from agentops.exceptions import AgentOpsApiJwtExpiredException, ApiServerException
 
 
 class TestAuthenticatedOTLPExporter:
@@ -89,26 +90,37 @@ class TestAuthenticatedOTLPExporter:
 
     def test_export_failure(self, mocker: MockerFixture, mock_span):
         """Test that export handles failures gracefully."""
-        # Mock the parent export method to raise an exception
-        mocker.patch.object(
-            OTLPSpanExporter,
-            'export',
-            side_effect=Exception("Export failed")
-        )
-        
         # Create the exporter
         exporter = AuthenticatedOTLPExporter(
             endpoint="https://api.example.com/v3/traces",
             api_key="test-api-key"
         )
         
-        # Call export
+        # Test with a generic exception
+        mocker.patch.object(
+            OTLPSpanExporter,
+            'export',
+            side_effect=Exception("Export failed")
+        )
         result = exporter.export([mock_span])
+        assert result == SpanExportResult.FAILURE
         
-        # Verify the parent export method was called
-        OTLPSpanExporter.export.assert_called_once_with([mock_span])
+        # Test with AgentOpsApiJwtExpiredException
+        mocker.patch.object(
+            OTLPSpanExporter,
+            'export',
+            side_effect=AgentOpsApiJwtExpiredException("JWT token expired")
+        )
+        result = exporter.export([mock_span])
+        assert result == SpanExportResult.FAILURE
         
-        # Verify the result
+        # Test with ApiServerException
+        mocker.patch.object(
+            OTLPSpanExporter,
+            'export',
+            side_effect=ApiServerException("Server error")
+        )
+        result = exporter.export([mock_span])
         assert result == SpanExportResult.FAILURE
 
     def test_clear(self):

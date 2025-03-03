@@ -4,6 +4,8 @@ from requests.adapters import HTTPAdapter
 from urllib3.util import Retry
 
 from agentops.client.auth_manager import AuthManager
+from agentops.exceptions import AgentOpsApiJwtExpiredException, ApiServerException
+from agentops.logging import logger
 
 
 class BaseHTTPAdapter(HTTPAdapter):
@@ -92,6 +94,7 @@ class AuthenticatedHttpAdapter(BaseHTTPAdapter):
 
         # If we get a 401/403, check if it's due to token expiration
         if self.auth_manager.is_token_expired_response(response):
+            logger.debug("Token expired, attempting to refresh")
             try:
                 # Force token refresh
                 self.auth_manager.clear_token()
@@ -101,10 +104,17 @@ class AuthenticatedHttpAdapter(BaseHTTPAdapter):
                 request = self.add_headers(request, **kwargs)
 
                 # Retry the request
+                logger.debug("Retrying request with new token")
                 response = super().send(request, **kwargs)
-            except Exception:
-                # If refresh fails, just return the original response
-                pass
+            except AgentOpsApiJwtExpiredException as e:
+                # Authentication failed
+                logger.warning(f"Failed to refresh authentication token: {e}")
+            except ApiServerException as e:
+                # Server error during token refresh
+                logger.error(f"Server error during token refresh: {e}")
+            except Exception as e:
+                # Any other error during token refresh
+                logger.error(f"Unexpected error during token refresh: {e}")
 
         return response
 
