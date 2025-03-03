@@ -4,8 +4,8 @@ import json
 import openai
 from inline_snapshot import snapshot
 
-@vcr.use_cassette('tests/integration/cassettes/test_openai_instrumentation.yaml')
-def test_openai_instrumentation(exporter, mock_env_keys, agentops_session):
+@pytest.mark.vcr(cassette_name="test_openai_instrumentation.yaml")
+def test_openai_instrumentation(mock_env_keys, agentops_session, exporter, clear_exporter):
     """Test that OpenAI API calls are tracked in spans"""
     
     response = openai.chat.completions.create(
@@ -44,13 +44,13 @@ def test_openai_instrumentation(exporter, mock_env_keys, agentops_session):
       "gen_ai.prompt.0.role": "user",
       "gen_ai.prompt.0.content": "Write a one-line joke",
       "gen_ai.response.model": "gpt-3.5-turbo-0125",
-      "gen_ai.response.id": "chatcmpl-B64DtRzWaXFqy9a01Nsf5LaCbk7rh",
+      "gen_ai.response.id": "chatcmpl-B6lZmK9o76760aFRdvILIQlFOgAzM",
       "llm.usage.total_tokens": 29,
       "gen_ai.usage.completion_tokens": 17,
       "gen_ai.usage.prompt_tokens": 12,
       "gen_ai.completion.0.finish_reason": "stop",
       "gen_ai.completion.0.role": "assistant",
-      "gen_ai.completion.0.content": "I told my wife she should embrace her mistakes - she gave me a hug."
+      "gen_ai.completion.0.content": "I told my wife she should embrace her mistakes - she gave me a hug!"
     },
     "status": true
   }

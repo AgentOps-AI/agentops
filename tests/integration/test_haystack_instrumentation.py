@@ -5,8 +5,8 @@ import vcr
 from haystack.components.generators import OpenAIGenerator
 from inline_snapshot import snapshot
 
-@vcr.use_cassette('tests/integration/cassettes/test_haystack_instrumentation.yaml')
-def test_haystack_instrumentation(exporter, mock_env_keys, agentops_session):
+@pytest.mark.vcr(cassette_name="test_haystack_instrumentation.yaml")
+def test_haystack_instrumentation(mock_env_keys, agentops_session, exporter, clear_exporter):
     """Test that haystack is instrumented"""
     
     client = OpenAIGenerator(model="o3-mini")
@@ -43,14 +43,14 @@ def test_haystack_instrumentation(exporter, mock_env_keys, agentops_session):
       "gen_ai.prompt.0.role": "user",
       "gen_ai.prompt.0.content": "What's Natural Language Processing? Be brief.",
       "gen_ai.response.model": "o3-mini-2025-01-31",
-      "gen_ai.response.id": "chatcmpl-B64A0TEu9iZpkOIto5k96pKIVbO2z",
+      "gen_ai.response.id": "chatcmpl-B6lblB79zMADeHyPBRKEMMOmiAMfF",
       "gen_ai.openai.system_fingerprint": "fp_42bfad963b",
-      "llm.usage.total_tokens": 435,
-      "gen_ai.usage.completion_tokens": 421,
+      "llm.usage.total_tokens": 181,
+      "gen_ai.usage.completion_tokens": 167,
       "gen_ai.usage.prompt_tokens": 14,
       "gen_ai.completion.0.finish_reason": "stop",
       "gen_ai.completion.0.role": "assistant",
-      "gen_ai.completion.0.content": "Natural Language Processing (NLP) is a branch of artificial intelligence that enables computers to understand, interpret, and generate human language."
+      "gen_ai.completion.0.content": "Natural Language Processing (NLP) is a branch of artificial intelligence that focuses on enabling computers to understand, interpret, and generate human language."
     },
     "status": true
   },

@@ -4,9 +4,10 @@ import vcr
 import json
 import anthropic
 from inline_snapshot import snapshot
+from tests.fixtures.vcr import vcr_config, _filter_request, _filter_response
 
-@vcr.use_cassette('tests/integration/cassettes/test_anthropic_instrumentation.yaml')
-def test_anthropic_instrumentation(exporter, mock_env_keys, agentops_session):
+@pytest.mark.vcr(cassette_name="test_anthropic_instrumentation.yaml")
+def test_anthropic_instrumentation(mock_env_keys, agentops_session, exporter, clear_exporter):
     """Test that Anthropic API calls are tracked in spans using inline snapshots"""
 
     client = anthropic.Anthropic()
@@ -18,7 +19,6 @@ def test_anthropic_instrumentation(exporter, mock_env_keys, agentops_session):
 
     finished_spans = exporter.get_finished_spans()
 
-    # Ensure spans were recorded
     assert finished_spans, "No spans were recorded"
 
     spans_data = [
@@ -41,7 +41,7 @@ def test_anthropic_instrumentation(exporter, mock_env_keys, agentops_session):
       "gen_ai.prompt.0.content": "Write a one-line joke",
       "gen_ai.prompt.0.role": "user",
       "gen_ai.response.model": "claude-3-5-sonnet-20240620",
-      "gen_ai.response.id": "msg_018foy6BLQXBGEZgN3MRUEoA",
+      "gen_ai.response.id": "msg_019H42Yhpf2dnfj68Y1AdK1T",
       "gen_ai.completion.0.finish_reason": "end_turn",
       "gen_ai.completion.0.role": "assistant",
       "gen_ai.completion.0.content": "Why don't scientists trust atoms? Because they make up everything!",
