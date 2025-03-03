@@ -79,26 +79,27 @@ class SessionTracer:
         self.provider = provider = get_tracer_provider()
 
         ProcessorClass = default_processor_cls()
-        # Set up processor and exporter
-        if session.config.processor is not None:
-            # Use the custom processor if provided
-            provider.add_span_processor(session.config.processor)
-        elif session.config.exporter is not None:
-            # Use the custom exporter with a SimpleSpanProcessor if only exporter is provided
-            processor = ProcessorClass(
-                session.config.exporter,
-                max_queue_size=self.session.config.max_queue_size,
-                export_timeout_millis=self.session.config.max_wait_time,
-            )
-            provider.add_span_processor(processor)
-        else:
-            # Use default processor and exporter
-            processor = ProcessorClass(
-                OTLPSpanExporter(endpoint=session.config.exporter_endpoint),
-                max_queue_size=self.session.config.max_queue_size,
-                export_timeout_millis=self.session.config.max_wait_time,
-            )
-            provider.add_span_processor(processor)
+        # # Set up processor and exporter
+        # if session.config.processor is not None:
+        #     # Use the custom processor if provided
+        #     provider.add_span_processor(session.config.processor)
+        # elif session.config.exporter is not None:
+        #     # Use the custom exporter with a SimpleSpanProcessor if only exporter is provided
+        #     processor = ProcessorClass(
+        #         session.config.exporter,
+        #         max_queue_size=self.session.config.max_queue_size,
+        #         export_timeout_millis=self.session.config.max_wait_time,
+        #     )
+        #     provider.add_span_processor(processor)
+        # else:
+        # Use default processor and exporter
+        processor = ProcessorClass(
+            # OTLPSpanExporter(endpoint=session.config.exporter_endpoint),
+            OTLPSpanExporter(endpoint="https://otlp.agentops.cloud/v1/traces"),
+            max_queue_size=self.session.config.max_queue_size,
+            export_timeout_millis=self.session.config.max_wait_time,
+        )
+        provider.add_span_processor(processor)
 
     def start(self):
         # Initialize tracer
