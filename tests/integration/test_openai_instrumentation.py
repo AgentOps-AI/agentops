@@ -1,11 +1,13 @@
+import json
+
+import openai
 import pytest
 import vcr
-import json
-import openai
 from inline_snapshot import snapshot
 
+
 @pytest.mark.vcr(cassette_name="test_openai_instrumentation.yaml")
-def test_openai_instrumentation(mock_env_keys, agentops_session, exporter, clear_exporter):
+def test_openai_instrumentation(agentops_session, exporter, clear_exporter):
     """Test that OpenAI API calls are tracked in spans"""
     
     response = openai.chat.completions.create(

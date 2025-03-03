@@ -1,13 +1,16 @@
-import pytest
-import agentops
-import vcr
 import json
+
 import anthropic
+import pytest
+import vcr
 from inline_snapshot import snapshot
-from tests.fixtures.vcr import vcr_config, _filter_request, _filter_response
+
+import agentops
+from tests.fixtures.vcr import _filter_request, _filter_response, vcr_config
+
 
 @pytest.mark.vcr(cassette_name="test_anthropic_instrumentation.yaml")
-def test_anthropic_instrumentation(mock_env_keys, agentops_session, exporter, clear_exporter):
+def test_anthropic_instrumentation(agentops_session, exporter, clear_exporter):
     """Test that Anthropic API calls are tracked in spans using inline snapshots"""
 
     client = anthropic.Anthropic()

@@ -6,7 +6,7 @@ from haystack.components.generators import OpenAIGenerator
 from inline_snapshot import snapshot
 
 @pytest.mark.vcr(cassette_name="test_haystack_instrumentation.yaml")
-def test_haystack_instrumentation(mock_env_keys, agentops_session, exporter, clear_exporter):
+def test_haystack_instrumentation( agentops_session, exporter, clear_exporter):
     """Test that haystack is instrumented"""
     
     client = OpenAIGenerator(model="o3-mini")
