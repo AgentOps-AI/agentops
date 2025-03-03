@@ -9,7 +9,7 @@ from opentelemetry.exporter.otlp.proto.http.trace_exporter import \
 from opentelemetry.sdk.trace import ReadableSpan
 from opentelemetry.sdk.trace.export import SpanExportResult
 
-from agentops.client.api import ApiClient
+from agentops.client.http.http_client import HttpClient
 from agentops.exceptions import (AgentOpsApiJwtExpiredException,
                                  ApiServerException)
 
@@ -31,15 +31,11 @@ class AuthenticatedOTLPExporter(OTLPSpanExporter):
         timeout: Optional[int] = None,
         compression: Optional[Compression] = None,
     ):
-        self.api_client = api_client
         self.api_key = api_key
         self._auth_headers = headers or {}
 
         # Create a dedicated session with authentication handling
-        self._session = api_client.create_authenticated_session(api_key)
-
-        # Make sure our custom session is used for all requests
-        self._session_factory = lambda: self._session
+        self._session = HttpClient.get_authenticated_session(endpoint, api_key)
 
         # Initialize the parent class
         super().__init__(
@@ -73,7 +69,7 @@ class AuthenticatedOTLPExporter(OTLPSpanExporter):
     def clear(self):
         """
         Clear any stored spans.
-        
+
         This method is added for compatibility with test fixtures.
         The OTLP exporter doesn't store spans, so this is a no-op.
         """

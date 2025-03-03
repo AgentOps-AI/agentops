@@ -3,14 +3,15 @@ from unittest import mock
 
 import pytest
 import requests
-from requests.adapters import HTTPAdapter
 from opentelemetry.sdk.trace import ReadableSpan
 from opentelemetry.sdk.trace.export import SpanExportResult
 from pytest_mock import MockerFixture
+from requests.adapters import HTTPAdapter
 
-from agentops.client.api import ApiClient, AuthenticatedAdapter
+from agentops.client.api import ApiClient
 from agentops.client.exporters import AuthenticatedOTLPExporter
-from agentops.exceptions import AgentOpsApiJwtExpiredException, ApiServerException
+from agentops.exceptions import (AgentOpsApiJwtExpiredException,
+                                 ApiServerException)
 
 
 @pytest.fixture
@@ -37,7 +38,6 @@ def exporter(api_client):
     """Create an authenticated OTLP exporter for testing"""
     return AuthenticatedOTLPExporter(
         endpoint="https://test-api.agentops.ai/v3/traces",
-        api_client=api_client,
         api_key="test-api-key",
     )
 
@@ -189,4 +189,3 @@ class TestAuthenticatedOTLPExporter:
             
             # Verify
             assert result == SpanExportResult.FAILURE
-

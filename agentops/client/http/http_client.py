@@ -1,8 +1,11 @@
-from typing import Dict, Optional
+from typing import Callable, Dict, Optional
 
 import requests
 
-from agentops.client.http.http_adapter import BaseHTTPAdapter
+from agentops.client.auth_manager import AuthManager
+from agentops.client.http.http_adapter import (AuthenticatedHttpAdapter,
+                                               BaseHTTPAdapter)
+from agentops.exceptions import AgentOpsApiJwtExpiredException
 
 
 class HttpClient:
@@ -33,6 +36,65 @@ class HttpClient:
             )
 
         return cls._session
+
+    @classmethod
+    def get_authenticated_session(
+        cls,
+        endpoint: str,
+        api_key: str,
+        token_fetcher: Optional[Callable[[str], str]] = None,
+    ) -> requests.Session:
+        """
+        Create a new session with authentication handling.
+        
+        Args:
+            endpoint: Base API endpoint (used to derive auth endpoint if needed)
+            api_key: The API key to use for authentication
+            token_fetcher: Optional custom token fetcher function
+            
+        Returns:
+            A requests.Session with authentication handling
+        """
+        # Create auth manager with default token endpoint
+        auth_endpoint = f"{endpoint}/auth/token"
+        auth_manager = AuthManager(auth_endpoint)
+        
+        # Use provided token fetcher or create a default one
+        if token_fetcher is None:
+            def default_token_fetcher(key: str) -> str:
+                # Simple token fetching implementation
+                response = requests.post(
+                    auth_manager.token_endpoint,
+                    json={"api_key": key},
+                    headers={"Content-Type": "application/json"}
+                )
+                if response.status_code != 200:
+                    raise AgentOpsApiJwtExpiredException("Failed to fetch token")
+                return response.json().get("token")
+            token_fetcher = default_token_fetcher
+        
+        # Create a new session
+        session = requests.Session()
+        
+        # Create an authenticated adapter
+        adapter = AuthenticatedHttpAdapter(
+            auth_manager=auth_manager,
+            api_key=api_key,
+            token_fetcher=token_fetcher
+        )
+        
+        # Mount the adapter for both HTTP and HTTPS
+        session.mount("http://", adapter)
+        session.mount("https://", adapter)
+        
+        # Set default headers
+        session.headers.update({
+            "Connection": "keep-alive",
+            "Keep-Alive": "timeout=10, max=1000",
+            "Content-Type": "application/json",
+        })
+        
+        return session
 
     @classmethod
     def request(
