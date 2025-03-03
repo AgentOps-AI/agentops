@@ -26,6 +26,7 @@ def trace_id_to_uuid(trace_id: int) -> UUID:
 
 class TracedSession(SessionBase):
     span: Optional[Span]
+    telemetry: SessionTracer
 
     @property
     def session_id(self):

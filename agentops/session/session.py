@@ -42,15 +42,6 @@ class Session(*_SessionMixins, SessionBase):
 
         # Initialize state descriptor
         self._state = SessionState.INITIALIZING
-
-        # Initialize span attribute
-        self.span = None
-
-        # Initialize api attribute
-        self.api = getattr(config, "api", None)
-        self.jwt = None
-        self._end_timestamp = None
-
         # Initialize mixins
         super().__init__(**kwargs)
 
@@ -61,12 +52,12 @@ class Session(*_SessionMixins, SessionBase):
     def end(self):
         """End the session"""
         with self._lock:
-            raise NotImplementedError
+            self.telemetry.shutdown()
 
     def start(self):
         """Start the session"""
         with self._lock:
-            raise NotImplementedError("Session.start() is not implemented")
+            self.telemetry.start()
 
     def dict(self) -> dict:
         """Convert session to dictionary, excluding private and non-serializable fields"""
