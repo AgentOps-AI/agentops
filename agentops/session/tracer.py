@@ -14,6 +14,8 @@ from uuid import uuid4
 from weakref import WeakValueDictionary
 
 from opentelemetry import context, trace
+from opentelemetry.exporter.otlp.proto.grpc.trace_exporter import \
+    OTLPSpanExporter as gOTLPSpanExporter
 from opentelemetry.exporter.otlp.proto.http.trace_exporter import \
     OTLPSpanExporter
 from opentelemetry.sdk.resources import SERVICE_NAME, Resource
@@ -89,7 +91,7 @@ class SessionTracer:
             provider.add_span_processor(processor)
         else:
             # Use default processor and exporter
-            processor = ProcessorClass(OTLPSpanExporter(endpoint=f"{session.config.endpoint}/v1/traces"))
+            processor = ProcessorClass(OTLPSpanExporter(endpoint=session.config.exporter_endpoint))
             provider.add_span_processor(processor)
 
     def start(self):
