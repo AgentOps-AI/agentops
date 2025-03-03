@@ -9,7 +9,7 @@ from pytest_mock import MockerFixture
 from requests.adapters import HTTPAdapter
 
 from agentops.client.api import ApiClient
-from agentops.client.exporters import AuthenticatedOTLPExporter
+from agentops.session.exporters import AuthenticatedOTLPExporter
 from agentops.client.http.http_client import HttpClient
 from agentops.client.http.http_adapter import AuthenticatedHttpAdapter
 from agentops.client.auth_manager import AuthManager

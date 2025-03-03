@@ -9,7 +9,7 @@ from opentelemetry.exporter.otlp.proto.http.trace_exporter import OTLPSpanExport
 from opentelemetry.sdk.trace import ReadableSpan
 from opentelemetry.sdk.trace.export import SpanExportResult
 
-from agentops.client.exporters import AuthenticatedOTLPExporter
+from agentops.session.exporters import AuthenticatedOTLPExporter
 from agentops.client.http.http_client import HttpClient
 from agentops.exceptions import AgentOpsApiJwtExpiredException, ApiServerException
 
