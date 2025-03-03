@@ -23,10 +23,7 @@ if TYPE_CHECKING:
     from agentops.config import Config
 
 
-_SessionMixins = (AnalyticsSessionMixin, TelemetrySessionMixin)
-
-
-class Session(*_SessionMixins, SessionBase):
+class Session(AnalyticsSessionMixin, TelemetrySessionMixin, SessionBase):
     """Data container for session state with minimal public API"""
 
     def __init__(

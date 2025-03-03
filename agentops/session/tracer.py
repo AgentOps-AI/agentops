@@ -14,7 +14,8 @@ from uuid import uuid4
 from weakref import WeakValueDictionary
 
 from opentelemetry import context, trace
-from opentelemetry.exporter.otlp.proto.http.trace_exporter import OTLPSpanExporter
+from opentelemetry.exporter.otlp.proto.http.trace_exporter import \
+    OTLPSpanExporter
 from opentelemetry.sdk.resources import SERVICE_NAME, Resource
 from opentelemetry.sdk.trace import TracerProvider
 from opentelemetry.sdk.trace.export import SimpleSpanProcessor
@@ -125,7 +126,7 @@ class SessionTracer:
         # span._context = new_context  # type: ignore
 
         # Store the span in the session
-        self.session.span = span
+        self.session._span = span
 
         # Activate the context
         self._context = trace.set_span_in_context(span)

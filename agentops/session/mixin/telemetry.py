@@ -41,9 +41,12 @@ class TelemetrySessionMixin(TracedSession):
     Mixin that adds telemetry and span-related functionality to a session
     """
 
+    _span: Optional[Span]
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs) if hasattr(super(), "__init__") else None
         self.telemetry = SessionTracer(self)
+        self._span = None
 
     def set_status(self, state: SessionState, reason: Optional[str] = None) -> None:
         """Update root span status based on session state."""
@@ -83,6 +86,13 @@ class TelemetrySessionMixin(TracedSession):
         if self.span and hasattr(self.span, "end_time"):
             return self._ns_to_iso(self.span.end_time)  # type: ignore
         return None
+
+    @property
+    def span(self) -> Optional[Span]:
+        """Get the span from the session."""
+        if not (span := getattr(self, "_span", None)):
+            return None
+        return span
 
     @property
     def spans(self) -> Generator[Any, None, None]:
