@@ -86,6 +86,9 @@ class AuthenticatedHttpAdapter(BaseHTTPAdapter):
 
     def send(self, request, **kwargs):
         """Send the request with authentication retry logic"""
+        # Ensure allow_redirects is set to False
+        kwargs["allow_redirects"] = False
+        
         # Add auth headers to initial request
         request = self.add_headers(request, **kwargs)
 
@@ -113,7 +116,7 @@ class AuthenticatedHttpAdapter(BaseHTTPAdapter):
                 # Server error during token refresh
                 logger.error(f"Server error during token refresh: {e}")
             except Exception as e:
-                # Any other error during token refresh
+                # Unexpected error during token refresh
                 logger.error(f"Unexpected error during token refresh: {e}")
 
         return response

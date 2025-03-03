@@ -136,6 +136,7 @@ class HttpClient:
         data: Optional[Dict] = None,
         headers: Optional[Dict] = None,
         timeout: int = 30,
+        max_redirects: int = 5,
     ) -> requests.Response:
         """
         Make a generic HTTP request
@@ -146,23 +147,59 @@ class HttpClient:
             data: Request payload (for POST, PUT methods)
             headers: Request headers
             timeout: Request timeout in seconds
+            max_redirects: Maximum number of redirects to follow (default: 5)
 
         Returns:
             Response from the API
 
         Raises:
             requests.RequestException: If the request fails
+            ValueError: If the redirect limit is exceeded or an unsupported HTTP method is used
         """
         session = cls.get_session()
         method = method.lower()
+        redirect_count = 0
 
-        if method == "get":
-            return session.get(url, headers=headers, timeout=timeout)
-        elif method == "post":
-            return session.post(url, json=data, headers=headers, timeout=timeout)
-        elif method == "put":
-            return session.put(url, json=data, headers=headers, timeout=timeout)
-        elif method == "delete":
-            return session.delete(url, headers=headers, timeout=timeout)
-        else:
-            raise ValueError(f"Unsupported HTTP method: {method}")
+        while redirect_count <= max_redirects:
+            # Make the request with allow_redirects=False
+            if method == "get":
+                response = session.get(url, headers=headers, timeout=timeout, allow_redirects=False)
+            elif method == "post":
+                response = session.post(url, json=data, headers=headers, timeout=timeout, allow_redirects=False)
+            elif method == "put":
+                response = session.put(url, json=data, headers=headers, timeout=timeout, allow_redirects=False)
+            elif method == "delete":
+                response = session.delete(url, headers=headers, timeout=timeout, allow_redirects=False)
+            else:
+                raise ValueError(f"Unsupported HTTP method: {method}")
+
+            # Check if we got a redirect response
+            if response.status_code in (301, 302, 303, 307, 308):
+                redirect_count += 1
+                
+                if redirect_count > max_redirects:
+                    raise ValueError(f"Exceeded maximum number of redirects ({max_redirects})")
+                
+                # Get the new location
+                if "location" not in response.headers:
+                    # No location header, can't redirect
+                    return response
+                
+                # Update URL to the redirect location
+                url = response.headers["location"]
+                
+                # For 303 redirects, always use GET for the next request
+                if response.status_code == 303:
+                    method = "get"
+                    data = None
+                
+                logger.debug(f"Following redirect ({redirect_count}/{max_redirects}) to: {url}")
+                
+                # Continue the loop to make the next request
+                continue
+            
+            # Not a redirect, return the response
+            return response
+            
+        # This should never be reached due to the max_redirects check above
+        return response
