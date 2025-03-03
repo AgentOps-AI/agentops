@@ -62,12 +62,13 @@ test = [
     # CI will fail because all tests will automatically pull this dependency group;
     # we need a separate group specifically for integration tests which will run on pinned 3.1x
     # ------------------------------------------------------------------------------------------------------------------------------------
-    # "crewai-tools @ git+https://github.com/crewAIInc/crewAI-tools.git@a14091abb24527c97ccfcc8539d529c8b4559a0f; python_version>='3.10'", 
+    # "crewai-tools @ git+https://github.com/crewAIInc/crewAI-tools.git@a14091abb24527c97ccfcc8539d529c8b4559a0f; python_version>='3.10'",
     # ------------------------------------------------------------------------------------------------------------------------------------
     # ;;
     "autogen<0.4.0",
     "pytest-cov",
     "fastapi[standard]",
+    "inline-snapshot>=0.20.3",
 ]
 
 dev = [

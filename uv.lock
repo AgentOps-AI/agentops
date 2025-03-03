@@ -77,6 +77,7 @@ test = [
     { name = "fastapi", extra = ["standard"] },
     { name = "google-generativeai" },
     { name = "groq" },
+    { name = "inline-snapshot" },
     { name = "litellm" },
     { name = "mistralai" },
     { name = "ollama" },
@@ -131,6 +132,7 @@ test = [
     { name = "fastapi", extras = ["standard"] },
     { name = "google-generativeai", specifier = ">=0.1.0" },
     { name = "groq" },
+    { name = "inline-snapshot", specifier = ">=0.20.3" },
     { name = "litellm" },
     { name = "mistralai", specifier = ">=0.2.0,<1.0.0" },
     { name = "ollama" },
@@ -1307,6 +1309,21 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/d7/4b/cbd8e699e64a6f16ca3a8220661b5f83792b3017d0f79807cb8708d33913/iniconfig-2.0.0.tar.gz", hash = "sha256:2d91e135bf72d31a410b17c16da610a82cb55f6b0477d1a902134b24a455b8b3", size = 4646 }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/ef/a6/62565a6e1cf69e10f5727360368e451d4b7f58beeac6173dc9db836a5b46/iniconfig-2.0.0-py3-none-any.whl", hash = "sha256:b6a85871a79d2e3b22d2d1b94ac2824226a63c6b741c88f7ae975f18b6778374", size = 5892 },
+]
+
+[[package]]
+name = "inline-snapshot"
+version = "0.20.3"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "asttokens" },
+    { name = "executing" },
+    { name = "rich" },
+    { name = "tomli", marker = "python_full_version < '3.11'" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/d7/86/1c060700f596b516bdc6df742f74c3febc708ef1f0e99b81b65efde12c36/inline_snapshot-0.20.3.tar.gz", hash = "sha256:7a353170b7e42aa89086c7ba790a973c9645523acf985532648dabd7ee2d71f2", size = 92067 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/5e/31/9198a02632764ecdfc332d3d53ad5d5b3b06fb2cd60bee63bb1b6ed7ff29/inline_snapshot-0.20.3-py3-none-any.whl", hash = "sha256:1ea999fbf38dd11cc72d0e1a0b9303c63d496b77bdc406a394fe2424ae842f70", size = 48068 },
 ]
 
 [[package]]
