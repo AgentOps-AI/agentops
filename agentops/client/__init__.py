@@ -2,15 +2,14 @@ import uuid
 from typing import Any, Dict, List, Optional, Union
 from uuid import UUID
 
+from agentops.client.api import ApiClient
+from agentops.client.api.versions.v3 import V3Client
 from agentops.config import Config, ConfigDict
-from agentops.exceptions import (AgentOpsClientNotInitializedException,
-                                 NoApiKeyException, NoSessionException)
+from agentops.exceptions import AgentOpsClientNotInitializedException, NoApiKeyException, NoSessionException
 from agentops.instrumentation import instrument_all, uninstrument_all
 from agentops.logging import logger
 from agentops.session import Session, SessionState
 from agentops.session.registry import get_active_sessions, get_default_session
-
-from .api import ApiClient
 
 
 class Client:
@@ -19,7 +18,7 @@ class Client:
     config: Config
     _initialized: bool
 
-    api_client: ApiClient
+    api: ApiClient
 
     def __new__(cls, *args, **kwargs):
         if cls.__instance is None:
@@ -37,11 +36,11 @@ class Client:
         if not self.config.api_key:
             raise NoApiKeyException
 
-        self.api_client = ApiClient(self.config.endpoint)
+        self.api = ApiClient(self.config.endpoint)
 
         # Prefetch JWT token if enabled
         if self.config.prefetch_jwt_token:
-            self.api_client.get_auth_token(self.config.api_key)
+            self.api.v3.fetch_auth_token(self.config.api_key)
 
         # Instrument LLM calls if enabled
         if self.config.instrument_llm_calls:

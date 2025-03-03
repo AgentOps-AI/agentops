@@ -2,14 +2,17 @@
 # This is imported conditionally to avoid dependency issues
 from typing import Dict, Optional, Sequence
 
-from opentelemetry.exporter.otlp.proto.http.trace_exporter import OTLPSpanExporter
+import requests
 from opentelemetry.exporter.otlp.proto.http import Compression
+from opentelemetry.exporter.otlp.proto.http.trace_exporter import \
+    OTLPSpanExporter
 from opentelemetry.sdk.trace import ReadableSpan
 from opentelemetry.sdk.trace.export import SpanExportResult
-import requests
 
-from agentops.client.api import ApiClient
-from agentops.exceptions import AgentOpsApiJwtExpiredException, ApiServerException
+from agentops.client.http.http_client import HttpClient
+from agentops.exceptions import (AgentOpsApiJwtExpiredException,
+                                 ApiServerException)
+from agentops.logging import logger
 
 
 class AuthenticatedOTLPExporter(OTLPSpanExporter):
@@ -24,21 +27,16 @@ class AuthenticatedOTLPExporter(OTLPSpanExporter):
     def __init__(
         self,
         endpoint: str,
-        api_client: ApiClient,
         api_key: str,
         headers: Optional[Dict[str, str]] = None,
         timeout: Optional[int] = None,
         compression: Optional[Compression] = None,
     ):
-        self.api_client = api_client
         self.api_key = api_key
         self._auth_headers = headers or {}
 
         # Create a dedicated session with authentication handling
-        self._session = api_client.create_authenticated_session(api_key)
-
-        # Make sure our custom session is used for all requests
-        self._session_factory = lambda: self._session
+        self._session = HttpClient.get_authenticated_session(endpoint, api_key)
 
         # Initialize the parent class
         super().__init__(
@@ -64,15 +62,27 @@ class AuthenticatedOTLPExporter(OTLPSpanExporter):
         """
         try:
             return super().export(spans)
+        except AgentOpsApiJwtExpiredException as e:
+            # Authentication token expired or invalid
+            logger.warning(f"Authentication error during span export: {e}")
+            return SpanExportResult.FAILURE
+        except ApiServerException as e:
+            # Server-side error
+            logger.error(f"API server error during span export: {e}")
+            return SpanExportResult.FAILURE
+        except requests.RequestException as e:
+            # Network or HTTP error
+            logger.error(f"Network error during span export: {e}")
+            return SpanExportResult.FAILURE
         except Exception as e:
-            # For network or serialization errors, return failure
-            # Authentication errors should be handled by the session adapter
+            # Any other error
+            logger.error(f"Unexpected error during span export: {e}")
             return SpanExportResult.FAILURE
 
     def clear(self):
         """
         Clear any stored spans.
-        
+
         This method is added for compatibility with test fixtures.
         The OTLP exporter doesn't store spans, so this is a no-op.
         """
