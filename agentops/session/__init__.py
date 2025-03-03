@@ -58,9 +58,6 @@ from .registry import (add_session, get_active_sessions, get_default_session,
                        remove_session)
 # Then import core components
 from .session import Session, SessionState
-# Import signals first since they have no dependencies
-from .signals import (session_ended, session_ending, session_initialized,
-                      session_started, session_starting, session_updated)
 
 
 # Add current property to get default session
@@ -79,11 +76,5 @@ __all__ = [
     "get_active_sessions",
     "add_session",
     "remove_session",
-    "session_initialized",
-    "session_started",
-    "session_starting",
-    "session_ending",
-    "session_ended",
-    "session_updated",
     "current"
 ]
