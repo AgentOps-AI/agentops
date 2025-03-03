@@ -2,14 +2,16 @@
 # This is imported conditionally to avoid dependency issues
 from typing import Dict, Optional, Sequence
 
-from opentelemetry.exporter.otlp.proto.http.trace_exporter import OTLPSpanExporter
+import requests
 from opentelemetry.exporter.otlp.proto.http import Compression
+from opentelemetry.exporter.otlp.proto.http.trace_exporter import \
+    OTLPSpanExporter
 from opentelemetry.sdk.trace import ReadableSpan
 from opentelemetry.sdk.trace.export import SpanExportResult
-import requests
 
 from agentops.client.api import ApiClient
-from agentops.exceptions import AgentOpsApiJwtExpiredException, ApiServerException
+from agentops.exceptions import (AgentOpsApiJwtExpiredException,
+                                 ApiServerException)
 
 
 class AuthenticatedOTLPExporter(OTLPSpanExporter):
@@ -24,7 +26,6 @@ class AuthenticatedOTLPExporter(OTLPSpanExporter):
     def __init__(
         self,
         endpoint: str,
-        api_client: ApiClient,
         api_key: str,
         headers: Optional[Dict[str, str]] = None,
         timeout: Optional[int] = None,

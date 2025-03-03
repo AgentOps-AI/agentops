@@ -1,10 +1,11 @@
 import threading
 import time
-from typing import Dict, Optional, Callable
+from typing import Callable, Dict, Optional
 
 import requests
 
-from agentops.exceptions import AgentOpsApiJwtExpiredException, ApiServerException
+from agentops.exceptions import (AgentOpsApiJwtExpiredException,
+                                 ApiServerException)
 
 
 class AuthManager:

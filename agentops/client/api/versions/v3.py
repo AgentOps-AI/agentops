@@ -1,12 +1,18 @@
+"""
+V3 API client for the AgentOps API.
+
+This module provides the client for the V3 version of the AgentOps API.
+"""
+
 from typing import Any, Dict, List, Optional
 
 import requests
 
-from agentops.client.api_client import ApiClient
+from agentops.client.api.base import AuthenticatedApiClient
 from agentops.exceptions import ApiServerException
 
 
-class V3Client(ApiClient):
+class V3Client(AuthenticatedApiClient):
     """Client for the AgentOps V3 API"""
 
     def __init__(self, endpoint: str):
@@ -16,7 +22,8 @@ class V3Client(ApiClient):
         Args:
             endpoint: The base URL for the API
         """
-        super().__init__(endpoint)
+        # Set up with V3-specific auth endpoint
+        super().__init__(endpoint, auth_endpoint=f"{endpoint}/v3/auth/token")
 
     def fetch_auth_token(self, api_key: str) -> str:
         """
@@ -56,3 +63,5 @@ class V3Client(ApiClient):
             return token
         except Exception as e:
             raise ApiServerException(f"Failed to process authentication response: {str(e)}")
+            
+    # Add V3-specific API methods here 

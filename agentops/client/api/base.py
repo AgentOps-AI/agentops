@@ -1,11 +1,19 @@
+"""
+Base API client classes for making HTTP requests.
+
+This module provides the foundation for all API clients in the AgentOps SDK.
+"""
+
 import threading
-from typing import Any, Dict, Optional, Union, Protocol, Callable
+from typing import Any, Callable, Dict, Optional, Protocol, Type, Union
 
 import requests
 
-from agentops.client.http.http_adapter import HttpClient
-from agentops.client.http.auth_manager import AuthManager
-from agentops.exceptions import AgentOpsApiJwtExpiredException, ApiServerException
+from agentops.client.auth_manager import AuthManager
+from agentops.client.http.http_adapter import (AuthenticatedHttpAdapter,
+                                               BaseHTTPAdapter, HttpClient)
+from agentops.exceptions import (AgentOpsApiJwtExpiredException,
+                                 ApiServerException)
 
 
 class TokenFetcher(Protocol):
@@ -13,19 +21,23 @@ class TokenFetcher(Protocol):
     def __call__(self, api_key: str) -> str: ...
 
 
-class ApiClient:
-    """Base class for API communication with connection pooling"""
+class BaseApiClient:
+    """
+    Base class for API communication with connection pooling.
+    
+    This class provides the core HTTP functionality without authentication.
+    It should be used for APIs that don't require authentication.
+    """
 
     def __init__(self, endpoint: str):
         """
-        Initialize the API client.
+        Initialize the base API client.
         
         Args:
             endpoint: The base URL for the API
         """
         self.endpoint = endpoint
         self.http_client = HttpClient()
-        self.auth_manager = AuthManager(f"{endpoint}/v3/auth/token")
         self.last_response: Optional[requests.Response] = None
     
     def _get_full_url(self, path: str) -> str:
@@ -134,6 +146,66 @@ class ApiClient:
             Response from the API
         """
         return self.request("delete", path, headers=headers)
+
+
+class AuthenticatedApiClient(BaseApiClient):
+    """
+    API client with authentication support.
+    
+    This class extends BaseApiClient with authentication functionality.
+    It should be used as a base class for version-specific API clients
+    that require authentication.
+    """
+    
+    def __init__(self, endpoint: str, auth_endpoint: Optional[str] = None):
+        """
+        Initialize the authenticated API client.
+        
+        Args:
+            endpoint: The base URL for the API
+            auth_endpoint: The endpoint for authentication (defaults to {endpoint}/auth/token)
+        """
+        super().__init__(endpoint)
+        
+        # Set up authentication manager
+        if auth_endpoint is None:
+            auth_endpoint = f"{endpoint}/auth/token"
+        self.auth_manager = AuthManager(auth_endpoint)
+    
+    def create_authenticated_session(self, api_key: str) -> requests.Session:
+        """
+        Create a new session with authentication handling.
+        
+        This method is designed to be used by other components like the OTLPSpanExporter
+        that need to include authentication in their requests.
+        
+        Args:
+            api_key: The API key to use for authentication
+            
+        Returns:
+            A requests.Session with authentication handling
+        """
+        session = requests.Session()
+        
+        # Create an authenticated adapter
+        adapter = AuthenticatedHttpAdapter(
+            auth_manager=self.auth_manager,
+            api_key=api_key,
+            token_fetcher=self.fetch_auth_token
+        )
+        
+        # Mount the adapter for both HTTP and HTTPS
+        session.mount("http://", adapter)
+        session.mount("https://", adapter)
+        
+        # Set default headers
+        session.headers.update({
+            "Connection": "keep-alive",
+            "Keep-Alive": "timeout=10, max=1000",
+            "Content-Type": "application/json",
+        })
+        
+        return session
     
     def get_auth_headers(self, api_key: str, custom_headers: Optional[Dict[str, str]] = None) -> Dict[str, str]:
         """
@@ -208,4 +280,4 @@ class ApiClient:
             # Retry the request
             response = self.request(method, path, data, headers)
         
-        return response
+        return response 

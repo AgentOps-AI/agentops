@@ -1,11 +1,14 @@
+from typing import Callable, Dict, Optional
+
 import requests
 from requests.adapters import HTTPAdapter
 from urllib3.util import Retry
-from typing import Dict, Optional
+
+from agentops.client.auth_manager import AuthManager
 
 
-class EnhancedHTTPAdapter(HTTPAdapter):
-    """HTTP adapter with enhanced connection pooling and retry logic"""
+class BaseHTTPAdapter(HTTPAdapter):
+    """Base HTTP adapter with enhanced connection pooling and retry logic"""
 
     def __init__(
         self,
@@ -14,7 +17,7 @@ class EnhancedHTTPAdapter(HTTPAdapter):
         max_retries: Optional[Retry] = None,
     ):
         """
-        Initialize the enhanced HTTP adapter.
+        Initialize the base HTTP adapter.
 
         Args:
             pool_connections: Number of connection pools to cache
@@ -35,68 +38,76 @@ class EnhancedHTTPAdapter(HTTPAdapter):
         )
 
 
-class HttpClient:
-    """Base HTTP client with connection pooling and session management"""
-    
-    _session: Optional[requests.Session] = None
-    
-    @classmethod
-    def get_session(cls) -> requests.Session:
-        """Get or create the global session with optimized connection pooling"""
-        if cls._session is None:
-            cls._session = requests.Session()
+class AuthenticatedHttpAdapter(BaseHTTPAdapter):
+    """HTTP adapter with automatic JWT authentication and refresh"""
 
-            # Configure connection pooling
-            adapter = EnhancedHTTPAdapter()
-
-            # Mount adapter for both HTTP and HTTPS
-            cls._session.mount("http://", adapter)
-            cls._session.mount("https://", adapter)
-
-            # Set default headers
-            cls._session.headers.update({
-                "Connection": "keep-alive",
-                "Keep-Alive": "timeout=10, max=1000",
-                "Content-Type": "application/json",
-            })
-
-        return cls._session
-    
-    @classmethod
-    def request(
-        cls,
-        method: str,
-        url: str,
-        data: Optional[Dict] = None,
-        headers: Optional[Dict] = None,
-        timeout: int = 30,
-    ) -> requests.Response:
+    def __init__(
+        self,
+        auth_manager: AuthManager,
+        api_key: str,
+        token_fetcher: Callable[[str], str],
+        pool_connections: int = 15,
+        pool_maxsize: int = 256,
+        max_retries: Optional[Retry] = None,
+    ):
         """
-        Make a generic HTTP request
+        Initialize the authenticated HTTP adapter.
 
         Args:
-            method: HTTP method (e.g., 'get', 'post', 'put', 'delete')
-            url: Full URL for the request
-            data: Request payload (for POST, PUT methods)
-            headers: Request headers
-            timeout: Request timeout in seconds
-
-        Returns:
-            Response from the API
-
-        Raises:
-            requests.RequestException: If the request fails
+            auth_manager: The authentication manager to use
+            api_key: The API key to authenticate with
+            token_fetcher: Function to fetch a new token if needed
+            pool_connections: Number of connection pools to cache
+            pool_maxsize: Maximum number of connections to save in the pool
+            max_retries: Retry configuration for failed requests
         """
-        session = cls.get_session()
-        method = method.lower()
+        self.auth_manager = auth_manager
+        self.api_key = api_key
+        self.token_fetcher = token_fetcher
 
-        if method == "get":
-            return session.get(url, headers=headers, timeout=timeout)
-        elif method == "post":
-            return session.post(url, json=data, headers=headers, timeout=timeout)
-        elif method == "put":
-            return session.put(url, json=data, headers=headers, timeout=timeout)
-        elif method == "delete":
-            return session.delete(url, headers=headers, timeout=timeout)
-        else:
-            raise ValueError(f"Unsupported HTTP method: {method}") 
+        super().__init__(
+            pool_connections=pool_connections,
+            pool_maxsize=pool_maxsize,
+            max_retries=max_retries
+        )
+
+    def add_headers(self, request, **kwargs):
+        """Add authentication headers to the request"""
+        # Get fresh auth headers from the auth manager
+        self.auth_manager.get_valid_token(self.api_key, self.token_fetcher)
+        auth_headers = self.auth_manager.prepare_auth_headers(self.api_key)
+
+        # Update request headers
+        for key, value in auth_headers.items():
+            request.headers[key] = value
+
+        return request
+
+    def send(self, request, **kwargs):
+        """Send the request with authentication retry logic"""
+        # Add auth headers to initial request
+        request = self.add_headers(request, **kwargs)
+
+        # Make the initial request
+        response = super().send(request, **kwargs)
+
+        # If we get a 401/403, check if it's due to token expiration
+        if self.auth_manager.is_token_expired_response(response):
+            try:
+                # Force token refresh
+                self.auth_manager.clear_token()
+                self.auth_manager.get_valid_token(self.api_key, self.token_fetcher)
+
+                # Update request with new token
+                request = self.add_headers(request, **kwargs)
+
+                # Retry the request
+                response = super().send(request, **kwargs)
+            except Exception:
+                # If refresh fails, just return the original response
+                pass
+
+        return response
+
+
+ 
