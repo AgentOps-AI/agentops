@@ -30,6 +30,8 @@ source = { editable = "." }
 dependencies = [
     { name = "opentelemetry-api", version = "1.22.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.10'" },
     { name = "opentelemetry-api", version = "1.29.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.10'" },
+    { name = "opentelemetry-exporter-otlp-proto-grpc", version = "1.22.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.10'" },
+    { name = "opentelemetry-exporter-otlp-proto-grpc", version = "1.29.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.10'" },
     { name = "opentelemetry-exporter-otlp-proto-http", version = "1.22.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.10'" },
     { name = "opentelemetry-exporter-otlp-proto-http", version = "1.29.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.10'" },
     { name = "opentelemetry-instrumentation", version = "0.48b0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.10'" },
@@ -87,6 +89,8 @@ test = [
 requires-dist = [
     { name = "opentelemetry-api", marker = "python_full_version < '3.10'", specifier = "==1.22.0" },
     { name = "opentelemetry-api", marker = "python_full_version >= '3.10'", specifier = ">=1.27.0" },
+    { name = "opentelemetry-exporter-otlp-proto-grpc", marker = "python_full_version < '3.10'", specifier = "==1.22.0" },
+    { name = "opentelemetry-exporter-otlp-proto-grpc", marker = "python_full_version >= '3.10'", specifier = ">=1.27.0" },
     { name = "opentelemetry-exporter-otlp-proto-http", marker = "python_full_version < '3.10'", specifier = "==1.22.0" },
     { name = "opentelemetry-exporter-otlp-proto-http", marker = "python_full_version >= '3.10'", specifier = ">=1.27.0" },
     { name = "opentelemetry-instrumentation", specifier = ">=0.48b0" },
@@ -1932,6 +1936,55 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/b1/58/f7fd7eaf592b2521999a4271ab3ce1c82fe37fe9b0dc25c348398d95d66a/opentelemetry_exporter_otlp_proto_common-1.29.0.tar.gz", hash = "sha256:e7c39b5dbd1b78fe199e40ddfe477e6983cb61aa74ba836df09c3869a3e3e163", size = 19133 }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/9e/75/7609bda3d72bf307839570b226180513e854c01443ebe265ed732a4980fc/opentelemetry_exporter_otlp_proto_common-1.29.0-py3-none-any.whl", hash = "sha256:a9d7376c06b4da9cf350677bcddb9618ed4b8255c3f6476975f5e38274ecd3aa", size = 18459 },
+]
+
+[[package]]
+name = "opentelemetry-exporter-otlp-proto-grpc"
+version = "1.22.0"
+source = { registry = "https://pypi.org/simple" }
+resolution-markers = [
+    "python_full_version < '3.10' and platform_python_implementation == 'PyPy'",
+    "python_full_version < '3.10' and platform_python_implementation != 'PyPy'",
+]
+dependencies = [
+    { name = "backoff", marker = "python_full_version < '3.10'" },
+    { name = "deprecated", marker = "python_full_version < '3.10'" },
+    { name = "googleapis-common-protos", marker = "python_full_version < '3.10'" },
+    { name = "grpcio", marker = "python_full_version < '3.10'" },
+    { name = "opentelemetry-api", version = "1.22.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.10'" },
+    { name = "opentelemetry-exporter-otlp-proto-common", version = "1.22.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.10'" },
+    { name = "opentelemetry-proto", version = "1.22.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.10'" },
+    { name = "opentelemetry-sdk", version = "1.22.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.10'" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/8f/ba/701ecae5572ed827d3a114fc231c10ff9e3a7c8a5cdf62bdc735919666dd/opentelemetry_exporter_otlp_proto_grpc-1.22.0.tar.gz", hash = "sha256:1e0e5aa4bbabc74942f06f268deffd94851d12a8dc30b02527472ef1729fe5b1", size = 25310 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/88/76/9057dce1afb24204cbe7f1c04629980f7b0f9aa5f5114c39d2e25f24209a/opentelemetry_exporter_otlp_proto_grpc-1.22.0-py3-none-any.whl", hash = "sha256:b5bcadc129272004316a455e9081216d3380c1fc2231a928ea6a70aa90e173fb", size = 18281 },
+]
+
+[[package]]
+name = "opentelemetry-exporter-otlp-proto-grpc"
+version = "1.29.0"
+source = { registry = "https://pypi.org/simple" }
+resolution-markers = [
+    "python_full_version >= '3.13' and platform_python_implementation == 'PyPy'",
+    "python_full_version >= '3.13' and platform_python_implementation != 'PyPy'",
+    "python_full_version >= '3.11' and python_full_version < '3.13' and platform_python_implementation == 'PyPy'",
+    "python_full_version == '3.10.*' and platform_python_implementation == 'PyPy'",
+    "python_full_version >= '3.11' and python_full_version < '3.13' and platform_python_implementation != 'PyPy'",
+    "python_full_version == '3.10.*' and platform_python_implementation != 'PyPy'",
+]
+dependencies = [
+    { name = "deprecated", marker = "python_full_version >= '3.10'" },
+    { name = "googleapis-common-protos", marker = "python_full_version >= '3.10'" },
+    { name = "grpcio", marker = "python_full_version >= '3.10'" },
+    { name = "opentelemetry-api", version = "1.29.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.10'" },
+    { name = "opentelemetry-exporter-otlp-proto-common", version = "1.29.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.10'" },
+    { name = "opentelemetry-proto", version = "1.29.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.10'" },
+    { name = "opentelemetry-sdk", version = "1.29.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.10'" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/41/aa/b3f2190613141f35fe15145bf438334fdd1eac8aeeee4f7ecbc887999443/opentelemetry_exporter_otlp_proto_grpc-1.29.0.tar.gz", hash = "sha256:3d324d07d64574d72ed178698de3d717f62a059a93b6b7685ee3e303384e73ea", size = 26224 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/f2/de/4b4127a25d1594851d99032f3a9acb09cb512d11edec713410fb906607f4/opentelemetry_exporter_otlp_proto_grpc-1.29.0-py3-none-any.whl", hash = "sha256:5a2a3a741a2543ed162676cf3eefc2b4150e6f4f0a193187afb0d0e65039c69c", size = 18520 },
 ]
 
 [[package]]
