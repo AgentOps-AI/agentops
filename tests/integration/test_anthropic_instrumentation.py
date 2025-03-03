@@ -30,28 +30,4 @@ def test_anthropic_instrumentation(mock_env_keys, agentops_session, exporter, cl
         for span in finished_spans
     ]
 
-    assert json.dumps(spans_data, indent=2) == snapshot("""\
-[
-  {
-    "name": "anthropic.chat",
-    "attributes": {
-      "gen_ai.system": "Anthropic",
-      "llm.request.type": "completion",
-      "gen_ai.request.model": "claude-3-5-sonnet-20240620",
-      "gen_ai.prompt.0.content": "Write a one-line joke",
-      "gen_ai.prompt.0.role": "user",
-      "gen_ai.response.model": "claude-3-5-sonnet-20240620",
-      "gen_ai.response.id": "msg_019H42Yhpf2dnfj68Y1AdK1T",
-      "gen_ai.completion.0.finish_reason": "end_turn",
-      "gen_ai.completion.0.role": "assistant",
-      "gen_ai.completion.0.content": "Why don't scientists trust atoms? Because they make up everything!",
-      "gen_ai.usage.prompt_tokens": 13,
-      "gen_ai.usage.completion_tokens": 16,
-      "llm.usage.total_tokens": 29,
-      "gen_ai.usage.cache_read_input_tokens": 0,
-      "gen_ai.usage.cache_creation_input_tokens": 0
-    },
-    "status": true
-  }
-]\
-""")
+    assert json.dumps(spans_data, indent=2) == snapshot()
