@@ -98,6 +98,13 @@ class Config:
         metadata={"description": "Whether to prefetch JWT token during initialization"},
     )
 
+    exporter_endpoint: Optional[str] = field(
+        default_factory=lambda: os.getenv("AGENTOPS_EXPORTER_ENDPOINT"),
+        metadata={
+            "description": "Endpoint for the span exporter. When not provided, the default AgentOps endpoint will be used."
+        },
+    )
+
     exporter: Optional[SpanExporter] = field(
         default_factory=lambda: None, metadata={"description": "Custom span exporter for OpenTelemetry trace data"}
     )
@@ -123,6 +130,7 @@ class Config:
         prefetch_jwt_token: Optional[bool] = None,
         exporter: Optional[SpanExporter] = None,
         processor: Optional[SpanProcessor] = None,
+        exporter_endpoint: Optional[str] = None,
     ):
         """Configure settings from kwargs, validating where necessary"""
         if api_key is not None:
@@ -130,7 +138,9 @@ class Config:
                 UUID(api_key)
                 self.api_key = api_key
             except ValueError:
-                logger.error(f"API Key is invalid: {{{api_key}}}.\n\t    Find your API key at {self.endpoint}/settings/projects")
+                logger.error(
+                    f"API Key is invalid: {{{api_key}}}.\n\t    Find your API key at {self.endpoint}/settings/projects"
+                )
 
         if endpoint is not None:
             self.endpoint = endpoint
@@ -174,6 +184,11 @@ class Config:
         if processor is not None:
             self.processor = processor
 
+        if exporter_endpoint is not None:
+            self.exporter_endpoint = exporter_endpoint
+        else:
+            self.exporter_endpoint = self.endpoint
+
     def dict(self):
         """Return a dictionary representation of the config"""
         return {
@@ -192,6 +207,7 @@ class Config:
             "prefetch_jwt_token": self.prefetch_jwt_token,
             "exporter": self.exporter,
             "processor": self.processor,
+            "exporter_endpoint": self.exporter_endpoint,
         }
 
     def json(self):
