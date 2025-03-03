@@ -14,13 +14,11 @@ from uuid import uuid4
 from weakref import WeakValueDictionary
 
 from opentelemetry import context, trace
-from opentelemetry.exporter.otlp.proto.grpc.trace_exporter import \
-    OTLPSpanExporter as gOTLPSpanExporter
-from opentelemetry.exporter.otlp.proto.http.trace_exporter import \
-    OTLPSpanExporter
+from opentelemetry.exporter.otlp.proto.grpc.trace_exporter import OTLPSpanExporter as gOTLPSpanExporter
+from opentelemetry.exporter.otlp.proto.http.trace_exporter import OTLPSpanExporter
 from opentelemetry.sdk.resources import SERVICE_NAME, Resource
 from opentelemetry.sdk.trace import TracerProvider
-from opentelemetry.sdk.trace.export import SimpleSpanProcessor
+from opentelemetry.sdk.trace.export import BatchSpanProcessor, SimpleSpanProcessor
 from opentelemetry.trace import NonRecordingSpan, Span, SpanContext, TraceFlags
 
 from agentops.logging import logger
@@ -48,7 +46,7 @@ def get_tracer_provider() -> TracerProvider:
 
 
 def default_processor_cls():
-    return SimpleSpanProcessor
+    return BatchSpanProcessor
 
 
 def get_session_tracer(session_id: str) -> Optional[SessionTracer]:
@@ -87,11 +85,19 @@ class SessionTracer:
             provider.add_span_processor(session.config.processor)
         elif session.config.exporter is not None:
             # Use the custom exporter with a SimpleSpanProcessor if only exporter is provided
-            processor = ProcessorClass(session.config.exporter)
+            processor = ProcessorClass(
+                session.config.exporter,
+                max_queue_size=self.session.config.max_queue_size,
+                export_timeout_millis=self.session.config.max_wait_time,
+            )
             provider.add_span_processor(processor)
         else:
             # Use default processor and exporter
-            processor = ProcessorClass(OTLPSpanExporter(endpoint=session.config.exporter_endpoint))
+            processor = ProcessorClass(
+                OTLPSpanExporter(endpoint=session.config.exporter_endpoint),
+                max_queue_size=self.session.config.max_queue_size,
+                export_timeout_millis=self.session.config.max_wait_time,
+            )
             provider.add_span_processor(processor)
 
     def start(self):
