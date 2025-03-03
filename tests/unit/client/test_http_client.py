@@ -110,7 +110,8 @@ class TestHttpClient:
         mock_get.assert_called_once_with(
             "https://api.example.com/test",
             headers={"X-Test": "test"},
-            timeout=10
+            timeout=10,
+            allow_redirects=False
         )
 
     def test_request_post(self, mocker: MockerFixture):
@@ -137,7 +138,8 @@ class TestHttpClient:
             "https://api.example.com/test",
             json={"test": "data"},
             headers={"X-Test": "test"},
-            timeout=10
+            timeout=10,
+            allow_redirects=False
         )
 
     def test_request_put(self, mocker: MockerFixture):
@@ -164,7 +166,8 @@ class TestHttpClient:
             "https://api.example.com/test",
             json={"test": "data"},
             headers={"X-Test": "test"},
-            timeout=10
+            timeout=10,
+            allow_redirects=False
         )
 
     def test_request_delete(self, mocker: MockerFixture):
@@ -189,7 +192,8 @@ class TestHttpClient:
         mock_delete.assert_called_once_with(
             "https://api.example.com/test",
             headers={"X-Test": "test"},
-            timeout=10
+            timeout=10,
+            allow_redirects=False
         )
 
     def test_request_unsupported_method(self):
