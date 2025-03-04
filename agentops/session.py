@@ -88,6 +88,9 @@ class SessionExporter(SpanExporter):
 
     @property
     def endpoint(self):
+        # Use exporter_endpoint if provided, otherwise use default endpoint
+        if self.session.config.exporter_endpoint is not None:
+            return f"{self.session.config.exporter_endpoint}/v2/create_events"
         return f"{self.session.config.endpoint}/v2/create_events"
 
     def export(self, spans: Sequence[ReadableSpan]) -> SpanExportResult:
@@ -249,7 +252,12 @@ class Session:
         self._otel_tracer = self._tracer_provider.get_tracer(
             f"agentops.session.{str(session_id)}",
         )
-        self._otel_exporter = SessionExporter(session=self)
+
+        # Use custom exporter if provided, otherwise use default SessionExporter
+        if self.config.exporter is not None:
+            self._otel_exporter = self.config.exporter
+        else:
+            self._otel_exporter = SessionExporter(session=self)
 
         # Use smaller batch size and shorter delay to reduce buffering
         self._span_processor = BatchSpanProcessor(

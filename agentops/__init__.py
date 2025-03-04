@@ -1,6 +1,6 @@
 # agentops/__init__.py
 import sys
-from typing import Optional, List, Union
+from typing import Any, Optional, List, Union
 
 from .client import Client
 from .event import Event, ActionEvent, LLMEvent, ToolEvent, ErrorEvent
@@ -48,6 +48,9 @@ def init(
     auto_start_session: Optional[bool] = None,
     inherited_session_id: Optional[str] = None,
     skip_auto_end_session: Optional[bool] = None,
+    exporter: Optional[Any] = None,
+    exporter_endpoint: Optional[str] = None,
+    **kwargs,
 ) -> Union[Session, None]:
     """
     Initializes the AgentOps singleton pattern.
@@ -69,6 +72,10 @@ def init(
         inherited_session_id (optional, str): Init Agentops with an existing Session
         skip_auto_end_session (optional, bool): Don't automatically end session based on your framework's decision-making
             (i.e. Crew determining when tasks are complete and ending the session)
+        exporter (Any, optional): Custom OpenTelemetry exporter to use instead of the default SessionExporter.
+        exporter_endpoint (str, optional): Endpoint for the exporter. If none is provided, key will
+            be read from the AGENTOPS_EXPORTER_ENDPOINT environment variable.
+        **kwargs: Additional configuration parameters to be passed to the client.
     Attributes:
     """
     Client().unsuppress_logs()
@@ -94,6 +101,9 @@ def init(
         instrument_llm_calls=instrument_llm_calls,
         auto_start_session=auto_start_session,
         skip_auto_end_session=skip_auto_end_session,
+        exporter=exporter,
+        exporter_endpoint=exporter_endpoint,
+        **kwargs,
     )
 
     if inherited_session_id is not None:
@@ -119,6 +129,9 @@ def configure(
     instrument_llm_calls: Optional[bool] = None,
     auto_start_session: Optional[bool] = None,
     skip_auto_end_session: Optional[bool] = None,
+    exporter: Optional[Any] = None,
+    exporter_endpoint: Optional[str] = None,
+    **kwargs,
 ):
     """
     Configure the AgentOps Client
@@ -134,6 +147,10 @@ def configure(
         auto_start_session (bool, optional): Whether to start a session automatically when the client is created.
         skip_auto_end_session (bool, optional): Don't automatically end session based on your framework's decision-making
             (i.e. Crew determining when tasks are complete and ending the session)
+        exporter (Any, optional): Custom OpenTelemetry exporter to use instead of the default SessionExporter.
+        exporter_endpoint (str, optional): Endpoint for the exporter. If none is provided, key will
+            be read from the AGENTOPS_EXPORTER_ENDPOINT environment variable.
+        **kwargs: Additional configuration parameters to be passed to the client.
     """
     Client().configure(
         api_key=api_key,
@@ -145,6 +162,9 @@ def configure(
         instrument_llm_calls=instrument_llm_calls,
         auto_start_session=auto_start_session,
         skip_auto_end_session=skip_auto_end_session,
+        exporter=exporter,
+        exporter_endpoint=exporter_endpoint,
+        **kwargs,
     )
 
 

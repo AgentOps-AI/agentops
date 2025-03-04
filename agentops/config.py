@@ -1,4 +1,5 @@
-from typing import List, Optional
+import os
+from typing import Any, List, Optional
 from uuid import UUID
 
 from .log_config import logger
@@ -16,6 +17,8 @@ class Configuration:
         self.auto_start_session: bool = True
         self.skip_auto_end_session: bool = False
         self.env_data_opt_out: bool = False
+        self.exporter: Optional[Any] = None
+        self.exporter_endpoint: Optional[str] = None
 
     def configure(
         self,
@@ -30,6 +33,9 @@ class Configuration:
         auto_start_session: Optional[bool] = None,
         skip_auto_end_session: Optional[bool] = None,
         env_data_opt_out: Optional[bool] = None,
+        exporter: Optional[Any] = None,
+        exporter_endpoint: Optional[str] = None,
+        **kwargs,
     ):
         if api_key is not None:
             try:
@@ -72,3 +78,11 @@ class Configuration:
 
         if env_data_opt_out is not None:
             self.env_data_opt_out = env_data_opt_out
+
+        if exporter is not None:
+            self.exporter = exporter
+
+        if exporter_endpoint is not None:
+            self.exporter_endpoint = exporter_endpoint
+        elif os.environ.get("AGENTOPS_EXPORTER_ENDPOINT") is not None:
+            self.exporter_endpoint = os.environ.get("AGENTOPS_EXPORTER_ENDPOINT")

@@ -15,7 +15,7 @@ import threading
 import traceback
 from decimal import Decimal
 from functools import cached_property
-from typing import List, Optional, Tuple, Union
+from typing import Any, List, Optional, Tuple, Union
 from uuid import UUID, uuid4
 
 from termcolor import colored
@@ -60,6 +60,9 @@ class Client(metaclass=MetaClient):
         auto_start_session: Optional[bool] = None,
         skip_auto_end_session: Optional[bool] = None,
         env_data_opt_out: Optional[bool] = None,
+        exporter: Optional[Any] = None,
+        exporter_endpoint: Optional[str] = None,
+        **kwargs,
     ):
         if self.has_sessions:
             return logger.warning(
@@ -78,6 +81,9 @@ class Client(metaclass=MetaClient):
             auto_start_session=auto_start_session,
             skip_auto_end_session=skip_auto_end_session,
             env_data_opt_out=env_data_opt_out,
+            exporter=exporter,
+            exporter_endpoint=exporter_endpoint,
+            **kwargs,
         )
 
     def initialize(self) -> Union[Session, None]:
