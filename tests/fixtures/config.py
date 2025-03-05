@@ -43,18 +43,31 @@ def agentops_config():
 
 
 @pytest.fixture(autouse=True)
-def config_mock(agentops_config, mocker: MockerFixture, exporter):
+def config_mock(request, mocker: MockerFixture, runtime):
+    """
+    Mock the Config.configure method to use values from agentops_config fixture.
+    This fixture only applies when the agentops_config fixture is explicitly used in a test.
+    """
+    # Check if agentops_config is in the fixture names for this test
+    runtime.config_mock_applied = False
+    if 'agentops_config' not in request.fixturenames:
+        # If agentops_config is not used, just yield None without applying the mock
+        yield None
+        return
+    
+    
+    # Get the agentops_config fixture
+    agentops_config = request.getfixturevalue('agentops_config')
+    
     # Store the original method
     original_configure = agentops_config.__class__.configure
 
     # Now patch the init method
     mock_configure = mocker.patch("agentops.config.Config.configure", autospec=True)
 
-
     # Add side effect to merge kwargs with agentops_config.dict()
     def side_effect(self, **kwargs):
         # Only update with config values for keys NOT already in kwargs
-
         config_dict = agentops_config.dict()
         for key, value in config_dict.items():
             if key not in kwargs:
@@ -64,5 +77,8 @@ def config_mock(agentops_config, mocker: MockerFixture, exporter):
         return original_configure(self, **kwargs)
 
     mock_configure.side_effect = side_effect
+
+    # Set a custom field on request to mark that the config_mock fixture has been applied
+    runtime.config_mock_applied = True
 
     yield mock_configure
