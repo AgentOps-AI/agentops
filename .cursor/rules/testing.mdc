@@ -1,0 +1,9 @@
+---
+description: Testing guidelines
+globs: tests/*
+alwaysApply: false
+---
+- You've got configured session fixtures in [conftest.py](mdc:tests/unit/conftest.py)
+- You've also got mock_req to mock Session's API Client from [session.py](mdc:agentops/api/session.py)
+- Mind the [config.py](mdc:tests/fixtures/config.py) fixture which mocks the Client init throughout testing
+- Mind [instrumentation.py](mdc:tests/fixtures/instrumentation.py) fixture which mocks the exporter used throughout testing via agentops_config fixture in [config.py](mdc:tests/fixtures/config.py)
