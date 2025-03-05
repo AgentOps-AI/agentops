@@ -8,7 +8,8 @@ from agentops.config import Config, ConfigDict
 from agentops.exceptions import AgentOpsClientNotInitializedException, NoApiKeyException, NoSessionException
 from agentops.instrumentation import instrument_all, uninstrument_all
 from agentops.logging import logger
-from agentops.session import Session, SessionState
+from agentops.session import Session
+from agentops.session.state import SessionState
 from agentops.session.registry import get_active_sessions, get_default_session
 
 
