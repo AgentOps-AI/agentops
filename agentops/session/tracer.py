@@ -173,6 +173,7 @@ class SessionTracer:
                     logger.debug(f"[{self.session_id}] Detached context token")
                 except Exception as e:
                     logger.warning(f"[{self.session_id}] Error detaching context token: {e}")
+                logger.debug(f"[{self.session_id}] Detached context token")
 
             # End the span if it exists and hasn't been ended yet
             if hasattr(self.session, "_span") and self.session._span is not None:
