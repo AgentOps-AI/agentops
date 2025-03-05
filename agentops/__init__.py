@@ -9,6 +9,7 @@ from opentelemetry.sdk.trace.export import SpanExporter
 from opentelemetry.util.re import parse_env_headers
 
 from agentops.config import ConfigDict
+from agentops.exceptions import NoApiKeyException
 
 from .client import Client
 from .config import Config
@@ -98,6 +99,9 @@ def init(
     # Start a session if auto_start_session is enabled
     if auto_start_session:
         return _client.start_session()
+
+    if not _client.config.api_key:
+        raise NoApiKeyException
     return None
 
 
