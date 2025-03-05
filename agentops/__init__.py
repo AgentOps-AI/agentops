@@ -102,7 +102,39 @@ def init(
 
 
 def configure(**kwargs):
-    """Update client configuration"""
+    """Update client configuration
+    
+    Args:
+        **kwargs: Configuration parameters. Supported parameters include:
+            - api_key: API Key for AgentOps services
+            - endpoint: The endpoint for the AgentOps service
+            - max_wait_time: Maximum time to wait in milliseconds before flushing the queue
+            - max_queue_size: Maximum size of the event queue
+            - default_tags: Default tags for the sessions
+            - instrument_llm_calls: Whether to instrument LLM calls
+            - auto_start_session: Whether to start a session automatically
+            - skip_auto_end_session: Don't automatically end session
+            - env_data_opt_out: Whether to opt out of collecting environment data
+            - log_level: The log level to use for the client
+            - fail_safe: Whether to suppress errors and continue execution
+            - exporter: Custom span exporter for OpenTelemetry trace data
+            - processor: Custom span processor for OpenTelemetry trace data
+            - exporter_endpoint: Endpoint for the exporter
+    """
+    # List of valid parameters that can be passed to configure
+    valid_params = {
+        'api_key', 'endpoint', 'max_wait_time', 'max_queue_size', 
+        'default_tags', 'instrument_llm_calls', 'auto_start_session', 
+        'skip_auto_end_session', 'env_data_opt_out', 'log_level', 
+        'fail_safe', 'exporter', 'processor', 'exporter_endpoint'
+    }
+    
+    # Check for invalid parameters
+    invalid_params = set(kwargs.keys()) - valid_params
+    if invalid_params:
+        from .logging.config import logger
+        logger.warning(f"Invalid configuration parameters: {invalid_params}")
+    
     _client.configure(**kwargs)
 
 
