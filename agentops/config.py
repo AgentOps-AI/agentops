@@ -10,8 +10,7 @@ from opentelemetry.sdk.trace import SpanProcessor
 from opentelemetry.sdk.trace.export import SpanExporter
 
 from agentops.helpers.serialization import AgentOpsJSONEncoder
-
-from .helpers import get_env_bool, get_env_int, get_env_list
+from agentops.helpers.env import get_env_bool, get_env_int, get_env_list
 from .logging.config import logger
 
 
