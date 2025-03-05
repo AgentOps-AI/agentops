@@ -1,8 +1,0 @@
----
-description: Testing guidelines
-globs: tests/*
----
-
-- Avoid using mocks in tests
-- You've got configured session fixtures in [conftest.py](mdc:tests/unit/conftest.py)
-- You've also got mock_req to mock Session's API Client from [session.py](mdc:agentops/api/session.py)
