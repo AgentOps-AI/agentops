@@ -7,7 +7,6 @@ tracked as child spans.
 
 from __future__ import annotations
 
-import atexit
 import threading
 from typing import TYPE_CHECKING, Dict, Optional, Protocol
 from uuid import uuid4
@@ -30,7 +29,7 @@ if TYPE_CHECKING:
     from agentops.session.session import Session
 
 # Dictionary to store active session tracers
-_session_tracers = WeakValueDictionary()
+_session_tracers: WeakValueDictionary = WeakValueDictionary()
 
 # Global TracerProvider instance
 _tracer_provider: Optional[TracerProvider] = None
@@ -152,6 +151,7 @@ class SessionTracer:
         """Shutdown and cleanup resources."""
         with self._shutdown_lock:
             if self._is_ended:
+                logger.debug(f"[{self.session_id}] Session tracer already shut down, skipping")
                 return
 
             logger.debug(f"[{self.session_id}] Shutting down session tracer")
@@ -160,25 +160,44 @@ class SessionTracer:
             if self._token is not None:
                 context.detach(self._token)
                 self._token = None
+                logger.debug(f"[{self.session_id}] Detached context token")
 
             # End the span if it exists and hasn't been ended yet
-            if self.session.span is not None:
+            if hasattr(self.session, "_span") and self.session._span is not None:
                 # Check if the span has already been ended
-                has_ended = hasattr(self.session.span, "end_time") and self.session.span.end_time is not None
+                has_ended = hasattr(self.session._span, "end_time") and self.session._span.end_time is not None
                 if not has_ended:
-                    self.session.span.end()
+                    logger.debug(f"[{self.session_id}] Ending session span")
+                    self.session._span.end()
+                    logger.debug(f"[{self.session_id}] Session span ended")
 
+            # Force flush the span processor to ensure all spans are processed
             provider = trace.get_tracer_provider()
             if isinstance(provider, TracerProvider):
                 try:
-                    provider.force_flush()
+                    logger.debug(f"[{self.session_id}] Flushing span processor")
+                    # Use a timeout to prevent hanging during garbage collection
+                    provider.force_flush(timeout_millis=5000)  # 5 second timeout
+                    logger.debug(f"[{self.session_id}] Span processor flushed successfully")
                 except Exception as e:
-                    logger.debug(f"[{self.session_id}] Error during flush: {e}")
+                    logger.warning(f"[{self.session_id}] Error during span processor flush: {e}")
+
+            # Clear references to prevent circular references
+            self.tracer = None
+            self._context = None
+
+            # Remove from session tracers dictionary
+            if self.session_id in _session_tracers:
+                del _session_tracers[self.session_id]
 
             self._is_ended = True
             logger.debug(f"[{self.session_id}] Session tracer shutdown complete")
 
     def __del__(self):
         """Ensure cleanup on garbage collection."""
-        self.shutdown()
-        # No need to manually remove from _session_tracers as WeakValueDictionary handles this automatically
+        try:
+            logger.debug(f"[{getattr(self, 'session_id', 'unknown')}] SessionTracer.__del__ called")
+            self.shutdown()
+            # No need to manually remove from _session_tracers as WeakValueDictionary handles this automatically
+        except Exception as e:
+            logger.warning(f"Error during SessionTracer.__del__: {e}")

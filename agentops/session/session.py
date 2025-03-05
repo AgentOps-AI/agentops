@@ -37,16 +37,16 @@ class Session(AnalyticsSessionMixin, TelemetrySessionMixin, SessionBase):
         # Pass the config to the base class initialization
         # This ensures the config is properly set in kwargs before super().__init__ is called
         kwargs["config"] = config
-        
+
         # Initialize state descriptor
         self._state = SessionState.INITIALIZING
-        
+
         # Initialize lock
         self._lock = threading.Lock()
-        
+
         # Set default init_timestamp
         self._init_timestamp = datetime.datetime.utcnow().isoformat() + "Z"
-        
+
         # Initialize mixins and base class
         super().__init__(**kwargs)
 
@@ -54,16 +54,40 @@ class Session(AnalyticsSessionMixin, TelemetrySessionMixin, SessionBase):
         if self.auto_start:
             self.start()
 
-    def end(self):
+    def __del__(self) -> None:
+        """
+        Cleanup method called during garbage collection.
+
+        Ensures the session is properly ended and spans are exported
+        when the session object goes out of scope without an explicit
+        end() call.
+        """
+        try:
+            # Check if session is still running
+            if hasattr(self, "_state") and self._state != SessionState.SUCCEEDED and self._state != SessionState.FAILED:
+                # Log that we're ending the session during garbage collection
+                logger.info(f"Session {getattr(self, 'session_id', 'unknown')} being ended during garbage collection")
+
+                # End the session if it's still running
+                self.end()
+        except Exception as e:
+            # Log the exception but don't raise it (exceptions in __del__ are ignored)
+            logger.warning(f"Error during Session.__del__ for session {getattr(self, 'session_id', 'unknown')}: {e}")
+
+    def end(self, state=None):
         """End the session"""
         with self._lock:
             self.telemetry.shutdown()
+            if state is not None:
+                self._state = state
+            else:
+                self._state = SessionState.SUCCEEDED
 
     def start(self):
         """Start the session"""
         with self._lock:
             self.telemetry.start()
-            
+
     @property
     def init_timestamp(self) -> str:
         """Get the initialization timestamp."""
