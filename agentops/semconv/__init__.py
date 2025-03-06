@@ -1,5 +1,4 @@
 from enum import Enum
-print("I AM AT --------------------> agentops/semconv/__init__.py")
 SUPPRESS_LANGUAGE_MODEL_INSTRUMENTATION_KEY = "suppress_language_model_instrumentation"
 class Meters:
     # Define your custom meters here
