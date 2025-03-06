@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import atexit
 import threading
-from typing import TYPE_CHECKING, Dict, Optional, Protocol
+from typing import TYPE_CHECKING, Dict, Optional, Protocol, Union
 from uuid import uuid4
 from weakref import WeakValueDictionary
 
@@ -18,19 +18,20 @@ from opentelemetry.exporter.otlp.proto.grpc.trace_exporter import OTLPSpanExport
 from opentelemetry.exporter.otlp.proto.http.trace_exporter import OTLPSpanExporter
 from opentelemetry.sdk.resources import SERVICE_NAME, Resource
 from opentelemetry.sdk.trace import TracerProvider
-from opentelemetry.sdk.trace.export import BatchSpanProcessor, SimpleSpanProcessor
+from opentelemetry.sdk.trace.export import BatchSpanProcessor, SimpleSpanProcessor, SpanProcessor
 from opentelemetry.trace import NonRecordingSpan, Span, SpanContext, TraceFlags
 
 from agentops.logging import logger
 from agentops.session.base import SessionBase
 from agentops.session.helpers import dict_to_span_attributes
+from agentops.session.processors import InFlightSpanProcessor
 
 if TYPE_CHECKING:
     from agentops.session.mixin.telemetry import TracedSession
     from agentops.session.session import Session
 
 # Dictionary to store active session tracers
-_session_tracers = WeakValueDictionary()
+_session_tracers: WeakValueDictionary[str, SessionTracer] = WeakValueDictionary()
 
 # Global TracerProvider instance
 _tracer_provider: Optional[TracerProvider] = None
@@ -43,10 +44,6 @@ def get_tracer_provider() -> TracerProvider:
         _tracer_provider = TracerProvider(resource=Resource({SERVICE_NAME: "agentops"}))
         trace.set_tracer_provider(_tracer_provider)
     return _tracer_provider
-
-
-def default_processor_cls():
-    return BatchSpanProcessor
 
 
 def get_session_tracer(session_id: str) -> Optional[SessionTracer]:
@@ -74,23 +71,24 @@ class SessionTracer:
         self._shutdown_lock = threading.Lock()
         self._token = None
         self._context = None
+        self._span_processor = None
 
         # Use global provider
         self.provider = provider = get_tracer_provider()
 
-        ProcessorClass = default_processor_cls()
         # Set up processor and exporter
         if session.config.processor is not None:
             # Use the custom processor if provided
-            provider.add_span_processor(session.config.processor)
+            self._span_processor = session.config.processor
+            provider.add_span_processor(self._span_processor)
         elif session.config.exporter is not None:
-            # Use the custom exporter with the default processor class
-            processor = ProcessorClass(
+            # Use the custom exporter with InFlightSpanProcessor
+            self._span_processor = InFlightSpanProcessor(
                 session.config.exporter,
-                max_queue_size=self.session.config.max_queue_size,
-                export_timeout_millis=self.session.config.max_wait_time,
+                max_export_batch_size=self.session.config.max_queue_size,
+                schedule_delay_millis=self.session.config.max_wait_time,
             )
-            provider.add_span_processor(processor)
+            provider.add_span_processor(self._span_processor)
         else:
             # Use default processor and exporter
             endpoint = (
@@ -98,12 +96,12 @@ class SessionTracer:
                 if session.config.exporter_endpoint
                 else "https://otlp.agentops.cloud/v1/traces"
             )
-            processor = ProcessorClass(
+            self._span_processor = InFlightSpanProcessor(
                 OTLPSpanExporter(endpoint=endpoint),
-                max_queue_size=self.session.config.max_queue_size,
-                export_timeout_millis=self.session.config.max_wait_time,
+                max_export_batch_size=self.session.config.max_queue_size,
+                schedule_delay_millis=self.session.config.max_wait_time,
             )
-            provider.add_span_processor(processor)
+            provider.add_span_processor(self._span_processor)
 
     def start(self):
         # Initialize tracer
@@ -152,37 +150,73 @@ class SessionTracer:
             f"[{self.session_id}] Session tracer initialized with recording span: {type(self.session.span).__name__}"
         )
 
+    def _end_session_span(self) -> None:
+        """End the session span if it exists and hasn't been ended yet."""
+        # Use a more direct approach with proper error handling
+        try:
+            span = self.session.span
+            if span is None:
+                return
+
+            # Try to end the span
+            span.end()
+            logger.debug(f"[{self.session_id}] Ended session span")
+        except AttributeError:
+            # Session might not have a span attribute
+            pass
+        except Exception as e:
+            # Log any other errors but don't raise them
+            logger.debug(f"[{self.session_id}] Note: {e}")
+
     def shutdown(self) -> None:
         """Shutdown and cleanup resources."""
+        # Use a direct approach with the lock
         with self._shutdown_lock:
+            # Early return if already ended
             if self._is_ended:
                 return
 
             logger.debug(f"[{self.session_id}] Shutting down session tracer")
 
-            # Detach our context if it's still active
+            # Clean up the context if it's active
             if self._token is not None:
-                context.detach(self._token)
-                self._token = None
+                try:
+                    context.detach(self._token)
+                    self._token = None
+                except Exception as e:
+                    logger.debug(f"[{self.session_id}] Error detaching context: {e}")
 
-            # End the span if it exists and hasn't been ended yet
-            if self.session.span is not None:
-                # Check if the span has already been ended
-                has_ended = hasattr(self.session.span, "end_time") and self.session.span.end_time is not None
-                if not has_ended:
-                    self.session.span.end()
+            # End the session span if it exists
+            try:
+                span = self.session.span
+                if span is not None:
+                    span.end()
+                    logger.debug(f"[{self.session_id}] Ended session span")
+            except AttributeError:
+                # Session might not have a span attribute
+                pass
+            except Exception as e:
+                # Log any other errors but don't raise them
+                logger.debug(f"[{self.session_id}] Note when ending span: {e}")
 
+            # Flush the tracer provider
             provider = trace.get_tracer_provider()
             if isinstance(provider, TracerProvider):
                 try:
                     provider.force_flush()
+                    logger.debug(f"[{self.session_id}] Flushed tracer provider")
                 except Exception as e:
                     logger.debug(f"[{self.session_id}] Error during flush: {e}")
 
+            # Mark as ended
             self._is_ended = True
             logger.debug(f"[{self.session_id}] Session tracer shutdown complete")
 
     def __del__(self):
         """Ensure cleanup on garbage collection."""
-        self.shutdown()
-        # No need to manually remove from _session_tracers as WeakValueDictionary handles this automatically
+        try:
+            self.shutdown()
+        except Exception as e:
+            # During garbage collection, some resources might already be gone
+            # Just log and continue
+            logger.debug(f"Error during cleanup in __del__: {e}")
