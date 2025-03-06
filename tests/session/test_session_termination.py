@@ -354,6 +354,7 @@ class TestSessionTermination(unittest.TestCase):
         # Create a mock tracer with the necessary attributes
         tracer = MagicMock()
         tracer.session_id = "test-session-id"
+        tracer._is_ended = False
 
         # Call the __del__ method directly
         SessionTracer.__del__(tracer)
