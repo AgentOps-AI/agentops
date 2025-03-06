@@ -24,7 +24,7 @@ from opentelemetry.metrics import Counter, Histogram, Meter, get_meter
 from opentelemetry.semconv._incubating.attributes.gen_ai_attributes import (
     GEN_AI_RESPONSE_ID,
 )
-from opentelemetry.semconv_ai import (
+from agentops.semconv import (
     SUPPRESS_LANGUAGE_MODEL_INSTRUMENTATION_KEY,
     LLMRequestTypeValues,
     SpanAttributes,
@@ -536,7 +536,7 @@ async def _awrap(
 
 
 def is_metrics_enabled() -> bool:
-    return (os.getenv("TRACELOOP_METRICS_ENABLED") or "true").lower() == "true"
+    return (os.getenv("AGENTOPS_METRICS_ENABLED") or "true").lower() == "true"
 
 
 class GroqInstrumentor(BaseInstrumentor):
