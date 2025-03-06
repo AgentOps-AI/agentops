@@ -1,19 +1,10 @@
-from typing import Dict, List, Optional, Union
-
-from opentelemetry.propagators.textmap import TextMapPropagator
-from opentelemetry.sdk._logs.export import LogExporter
-from opentelemetry.sdk.metrics.export import MetricExporter
-from opentelemetry.sdk.resources import SERVICE_NAME
-from opentelemetry.sdk.trace import SpanProcessor
-from opentelemetry.sdk.trace.export import SpanExporter
-from opentelemetry.util.re import parse_env_headers
-
-from agentops.config import ConfigDict
-from agentops.exceptions import NoApiKeyException
+from typing import TYPE_CHECKING, List, Optional, Union
 
 from .client import Client
-from .config import Config
 from .session import Session
+
+from opentelemetry.sdk.trace import SpanProcessor
+from opentelemetry.sdk.trace.export import SpanExporter
 
 # Client global instance; one per process runtime
 _client = Client()
@@ -76,8 +67,7 @@ def init(
     elif default_tags:
         merged_tags = default_tags
 
-    # Configure the client with the provided parameters
-    _client.configure(
+    return _client.init(
         api_key=api_key,
         endpoint=endpoint,
         max_wait_time=max_wait_time,
@@ -96,18 +86,10 @@ def init(
         **kwargs,
     )
 
-    # Start a session if auto_start_session is enabled
-    if auto_start_session:
-        return _client.start_session()
-
-    if not _client.config.api_key:
-        raise NoApiKeyException
-    return None
-
 
 def configure(**kwargs):
     """Update client configuration
-    
+
     Args:
         **kwargs: Configuration parameters. Supported parameters include:
             - api_key: API Key for AgentOps services
@@ -127,18 +109,29 @@ def configure(**kwargs):
     """
     # List of valid parameters that can be passed to configure
     valid_params = {
-        'api_key', 'endpoint', 'max_wait_time', 'max_queue_size', 
-        'default_tags', 'instrument_llm_calls', 'auto_start_session', 
-        'skip_auto_end_session', 'env_data_opt_out', 'log_level', 
-        'fail_safe', 'exporter', 'processor', 'exporter_endpoint'
+        "api_key",
+        "endpoint",
+        "max_wait_time",
+        "max_queue_size",
+        "default_tags",
+        "instrument_llm_calls",
+        "auto_start_session",
+        "skip_auto_end_session",
+        "env_data_opt_out",
+        "log_level",
+        "fail_safe",
+        "exporter",
+        "processor",
+        "exporter_endpoint",
     }
-    
+
     # Check for invalid parameters
     invalid_params = set(kwargs.keys()) - valid_params
     if invalid_params:
         from .logging.config import logger
+
         logger.warning(f"Invalid configuration parameters: {invalid_params}")
-    
+
     _client.configure(**kwargs)
 
 
