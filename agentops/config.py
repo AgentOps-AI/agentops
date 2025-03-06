@@ -9,9 +9,10 @@ from uuid import UUID
 from opentelemetry.sdk.trace import SpanProcessor
 from opentelemetry.sdk.trace.export import SpanExporter
 
+from agentops.exceptions import InvalidApiKeyException
+from agentops.helpers.env import get_env_bool, get_env_int, get_env_list
 from agentops.helpers.serialization import AgentOpsJSONEncoder
 
-from .helpers import get_env_bool, get_env_int, get_env_list
 from .logging.config import logger
 
 
@@ -134,13 +135,12 @@ class Config:
     ):
         """Configure settings from kwargs, validating where necessary"""
         if api_key is not None:
-            try:
-                UUID(api_key)
-                self.api_key = api_key
-            except ValueError:
-                logger.error(
-                    f"API Key is invalid: {{{api_key}}}.\n\t    Find your API key at {self.endpoint}/settings/projects"
-                )
+            self.api_key = api_key
+            if not TESTING:  # Allow setting dummy keys in tests
+                try:
+                    UUID(api_key)
+                except ValueError:
+                    raise InvalidApiKeyException(api_key, self.endpoint)
 
         if endpoint is not None:
             self.endpoint = endpoint

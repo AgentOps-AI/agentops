@@ -27,11 +27,12 @@ class TestSessionStart:
         session = agentops.start_session()
         assert session is not None
 
-    def test_session_start_with_tags(self):
+    def test_session_start_with_tags(self, agentops_config):
         """Test that start_session with tags returns a session directly, not a partial"""
         test_tags = ["test1", "test2"]
         session = agentops.start_session(tags=test_tags)
         assert isinstance(session, Session), "start_session with tags should return a Session instance"
+        assert session is not None, "Session should not be None"
         assert session.tags == test_tags
 
     def test_init_timestamp(self, agentops_session):
