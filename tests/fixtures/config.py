@@ -1,9 +1,19 @@
+import os
+from unittest import mock
+
 import pytest
 from pytest_mock import MockerFixture
 
 
+@pytest.fixture(autouse=True)
+def mock_env():
+    with mock.patch.dict(os.environ,clear=True) as mock_env:
+        yield mock_env
+
+
+
 @pytest.fixture
-def agentops_config():
+def agentops_config(mock_env):
     """Fixture that creates and manages an AgentOps configuration for testing.
 
     This fixture will create a new configuration with parameters that can be
@@ -27,10 +37,10 @@ def agentops_config():
         agentops.config.Config: Configuration object with test-specific settings
     """
     import agentops
-    from agentops.config import default_config
+    from agentops.config import Config
 
     # Create a fresh config instance
-    config = default_config()
+    config = Config()
 
     # # Get custom kwargs from marker if present, otherwise use empty dict
     # marker = request.node.get_closest_marker("config_kwargs")
@@ -38,27 +48,26 @@ def agentops_config():
 
     # # Apply configuration from marker kwargs
     # config.configure(**kwargs)
-
     yield config
 
 
+
 @pytest.fixture(autouse=True)
-def config_mock(request, mocker: MockerFixture, runtime):
+def mock_config(request, mocker: MockerFixture, runtime, mock_env):
     """
     Mock the Config.configure method to use values from agentops_config fixture.
     This fixture only applies when the agentops_config fixture is explicitly used in a test.
     """
     # Check if agentops_config is in the fixture names for this test
     runtime.config_mock_applied = False
-    if 'agentops_config' not in request.fixturenames:
+    if "agentops_config" not in request.fixturenames:
         # If agentops_config is not used, just yield None without applying the mock
         yield None
         return
-    
-    
+
     # Get the agentops_config fixture
-    agentops_config = request.getfixturevalue('agentops_config')
-    
+    agentops_config = request.getfixturevalue("agentops_config")
+
     # Store the original method
     original_configure = agentops_config.__class__.configure
 
@@ -72,7 +81,6 @@ def config_mock(request, mocker: MockerFixture, runtime):
         for key, value in config_dict.items():
             if key not in kwargs:
                 kwargs[key] = value
-
         # Call original init and return its result
         return original_configure(self, **kwargs)
 
