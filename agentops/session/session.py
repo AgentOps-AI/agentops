@@ -25,7 +25,17 @@ if TYPE_CHECKING:
 
 
 class Session(AnalyticsSessionMixin, TelemetrySessionMixin, SessionBase):
-    """Data container for session state with minimal public API"""
+    """Data container for session state with minimal public API
+
+    The Session class manages the lifecycle of a session, including span creation,
+    telemetry data collection, and cleanup. Sessions should ideally be explicitly
+    ended using the end() method, but will be automatically cleaned up when they
+    go out of scope via the __del__ method.
+
+    Note: While automatic cleanup via __del__ is provided as a safety mechanism,
+    it's still recommended to explicitly call end() when done with a session to
+    ensure timely cleanup and proper state recording.
+    """
 
     def __init__(
         self,
@@ -68,14 +78,21 @@ class Session(AnalyticsSessionMixin, TelemetrySessionMixin, SessionBase):
                 # Log that we're ending the session during garbage collection
                 logger.info(f"Session {getattr(self, 'session_id', 'unknown')} being ended during garbage collection")
 
-                # End the session if it's still running
-                self.end()
+                # End the session with appropriate state
+                self.end(state=SessionState.INDETERMINATE)
         except Exception as e:
             # Log the exception but don't raise it (exceptions in __del__ are ignored)
             logger.warning(f"Error during Session.__del__ for session {getattr(self, 'session_id', 'unknown')}: {e}")
 
     def end(self, state=None):
-        """End the session"""
+        """End the session
+
+        This method ends the session, shutting down the telemetry tracer and
+        setting the final state of the session.
+
+        Args:
+            state: Optional final state for the session. If not provided, defaults to SUCCEEDED.
+        """
         with self._lock:
             self.telemetry.shutdown()
             if state is not None:
