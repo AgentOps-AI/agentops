@@ -13,6 +13,7 @@ from agentops.helpers import get_ISO_time
 from agentops.helpers.serialization import AgentOpsJSONEncoder
 from agentops.helpers.time import iso_to_unix_nano
 from agentops.logging import logger
+from agentops.sdk.descriptors.classproperty import classproperty
 
 from .base import SessionBase
 from .mixin.analytics import AnalyticsSessionMixin
@@ -105,6 +106,18 @@ class Session(AnalyticsSessionMixin, TelemetrySessionMixin, SessionBase):
         with self._lock:
             self.telemetry.start()
 
+    # Add current function to get default session
+    @classproperty
+    def current(cls) -> Optional[Session]:
+        """Get the current active session.
+
+        Returns:
+            The current active session if exactly one session exists, otherwise None.
+        """
+        from .registry import get_current_session
+        return get_current_session()
+
+            # 
     @property
     def init_timestamp(self) -> str:
         """Get the initialization timestamp."""

@@ -1,18 +1,22 @@
 import pytest
-from pytest_mock import MockerFixture
 
 from agentops import Client
+
 
 
 @pytest.fixture(autouse=True)
 def reset_client():
     """Reset the client singleton before and after each test"""
     # Reset the Client singleton by resetting its class attributes
-    Client.__instance = None
-    if hasattr(Client, "_init_done"):
-        delattr(Client, "_init_done")
+    if getattr(Client, "__instance", None):
+        del Client.__instance
     yield
     # Reset again after the test
     Client.__instance = None
-    if hasattr(Client, "_init_done"):
-        delattr(Client, "_init_done")
+
+
+@pytest.fixture(autouse=True)
+def mock_client(mock_env, reset_client):
+    # Resets the client with a clear env
+    Client()
+    yield
