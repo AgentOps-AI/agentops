@@ -43,8 +43,6 @@ def agentops_config(mock_env):
     config = Config()
 
     # # Get custom kwargs from marker if present, otherwise use empty dict
-    # marker = request.node.get_closest_marker("config_kwargs")
-    # kwargs = marker.kwargs if marker else {}
 
     # # Apply configuration from marker kwargs
     # config.configure(**kwargs)
@@ -77,6 +75,12 @@ def mock_config(request, mocker: MockerFixture, runtime, mock_env):
     # Add side effect to merge kwargs with agentops_config.dict()
     def side_effect(self, **kwargs):
         # Only update with config values for keys NOT already in kwargs
+        marker = request.node.get_closest_marker("config_kwargs")
+        # kwargs = marker.kwargs if marker else {}
+        # Update kwargs with marker kwargs
+        if marker:
+            kwargs.update(marker.kwargs or {})
+
         config_dict = agentops_config.dict()
         for key, value in config_dict.items():
             if key not in kwargs:
