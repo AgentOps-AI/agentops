@@ -5,7 +5,7 @@ from opentelemetry.instrumentation.utils import (
     _SUPPRESS_INSTRUMENTATION_KEY,
 )
 from opentelemetry.instrumentation.haystack.utils import with_tracer_wrapper
-from opentelemetry.semconv_ai import SpanAttributes, TraceloopSpanKindValues
+from agentops.semconv import SpanAttributes, WorkflowSpanKindValues
 
 logger = logging.getLogger(__name__)
 
@@ -18,10 +18,10 @@ def wrap(tracer, to_wrap, wrapped, instance, args, kwargs):
     attach(set_value("workflow_name", name))
     with tracer.start_as_current_span(f"{name}.task") as span:
         span.set_attribute(
-            SpanAttributes.TRACELOOP_SPAN_KIND,
-            TraceloopSpanKindValues.TASK.value,
+            SpanAttributes.WORKFLOW_SPAN_KIND,
+            WorkflowSpanKindValues.TASK.value,
         )
-        span.set_attribute(SpanAttributes.TRACELOOP_ENTITY_NAME, name)
+        span.set_attribute(SpanAttributes.ENTITY_NAME, name)
 
         response = wrapped(*args, **kwargs)
 
