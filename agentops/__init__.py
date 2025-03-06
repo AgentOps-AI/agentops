@@ -1,21 +1,14 @@
-from typing import Dict, List, Optional, Union, Unpack
-
-from opentelemetry.propagators.textmap import TextMapPropagator
-from opentelemetry.sdk._logs.export import LogExporter
-from opentelemetry.sdk.metrics.export import MetricExporter
-from opentelemetry.sdk.resources import SERVICE_NAME
-from opentelemetry.sdk.trace import SpanProcessor
-from opentelemetry.sdk.trace.export import SpanExporter
-from opentelemetry.util.re import parse_env_headers
-
-from agentops.config import ConfigDict
+from typing import TYPE_CHECKING, List, Optional, Union
 
 from .client import Client
-from .config import Config
 from .session import Session
+
+from opentelemetry.sdk.trace import SpanProcessor
+from opentelemetry.sdk.trace.export import SpanExporter
 
 # Client global instance; one per process runtime
 _client = Client()
+
 
 def init(
     api_key: Optional[str] = None,
@@ -33,6 +26,8 @@ def init(
     fail_safe: Optional[bool] = None,
     exporter: Optional[SpanExporter] = None,
     processor: Optional[SpanProcessor] = None,
+    exporter_endpoint: Optional[str] = None,
+    **kwargs,
 ) -> Union[Session, None]:
     """
     Initializes the AgentOps singleton pattern.
@@ -59,6 +54,9 @@ def init(
             will be used instead of the default OTLPSpanExporter. Not needed if processor is specified.
         processor (SpanProcessor): Custom span processor for OpenTelemetry trace data. If provided,
             takes precedence over exporter. Used for complete control over span processing.
+        exporter_endpoint (str, optional): Endpoint for the exporter. If none is provided, key will
+            be read from the AGENTOPS_EXPORTER_ENDPOINT environment variable.
+        **kwargs: Additional configuration parameters to be passed to the client.
     """
     # Merge tags and default_tags if both are provided
     merged_tags = None
@@ -68,7 +66,7 @@ def init(
         merged_tags = tags
     elif default_tags:
         merged_tags = default_tags
-    
+
     return _client.init(
         api_key=api_key,
         endpoint=endpoint,
@@ -84,11 +82,56 @@ def init(
         fail_safe=fail_safe,
         exporter=exporter,
         processor=processor,
+        exporter_endpoint=exporter_endpoint,
+        **kwargs,
     )
 
 
-def configure(**kwargs: Unpack[ConfigDict]):
-    """Update client configuration"""
+def configure(**kwargs):
+    """Update client configuration
+
+    Args:
+        **kwargs: Configuration parameters. Supported parameters include:
+            - api_key: API Key for AgentOps services
+            - endpoint: The endpoint for the AgentOps service
+            - max_wait_time: Maximum time to wait in milliseconds before flushing the queue
+            - max_queue_size: Maximum size of the event queue
+            - default_tags: Default tags for the sessions
+            - instrument_llm_calls: Whether to instrument LLM calls
+            - auto_start_session: Whether to start a session automatically
+            - skip_auto_end_session: Don't automatically end session
+            - env_data_opt_out: Whether to opt out of collecting environment data
+            - log_level: The log level to use for the client
+            - fail_safe: Whether to suppress errors and continue execution
+            - exporter: Custom span exporter for OpenTelemetry trace data
+            - processor: Custom span processor for OpenTelemetry trace data
+            - exporter_endpoint: Endpoint for the exporter
+    """
+    # List of valid parameters that can be passed to configure
+    valid_params = {
+        "api_key",
+        "endpoint",
+        "max_wait_time",
+        "max_queue_size",
+        "default_tags",
+        "instrument_llm_calls",
+        "auto_start_session",
+        "skip_auto_end_session",
+        "env_data_opt_out",
+        "log_level",
+        "fail_safe",
+        "exporter",
+        "processor",
+        "exporter_endpoint",
+    }
+
+    # Check for invalid parameters
+    invalid_params = set(kwargs.keys()) - valid_params
+    if invalid_params:
+        from .logging.config import logger
+
+        logger.warning(f"Invalid configuration parameters: {invalid_params}")
+
     _client.configure(**kwargs)
 
 
