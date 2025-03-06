@@ -59,22 +59,4 @@ from .registry import (add_session, get_active_sessions, get_default_session,
 # Then import core components
 from .session import Session, SessionState
 
-
-# Add current property to get default session
-@property
-def current() -> Optional[Session]:
-    """Get the current active session.
-    
-    Returns:
-        The current active session if exactly one session exists, otherwise None.
-    """
-    return get_default_session()
-
-__all__ = [
-    "Session",
-    "SessionState",
-    "get_active_sessions",
-    "add_session",
-    "remove_session",
-    "current"
-]
+__all__ = ["Session", "SessionState", "get_active_sessions", "add_session", "remove_session", "current"]
