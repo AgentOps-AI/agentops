@@ -39,7 +39,7 @@ class Config:
     )
 
     endpoint: str = field(
-        default_factory=lambda: os.getenv("AGENTOPS_API_ENDPOINT", "https://api.agentops.ai"),
+        default_factory=lambda: os.getenv("AGENTOPS_API_ENDPOINT", "https://api.agentops.cloud"),
         metadata={"description": "Base URL for the AgentOps API"},
     )
 

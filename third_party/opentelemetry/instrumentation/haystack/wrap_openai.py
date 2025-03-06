@@ -5,7 +5,7 @@ from opentelemetry.trace import SpanKind
 from opentelemetry.trace.status import Status, StatusCode
 
 from opentelemetry.instrumentation.utils import _SUPPRESS_INSTRUMENTATION_KEY
-from opentelemetry.semconv_ai import SpanAttributes, LLMRequestTypeValues
+from agentops.semconv import SpanAttributes, LLMRequestTypeValues
 from opentelemetry.instrumentation.haystack.utils import (
     dont_throw,
     with_tracer_wrapper,

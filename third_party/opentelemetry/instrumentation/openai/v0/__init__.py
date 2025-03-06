@@ -19,7 +19,7 @@ from opentelemetry.instrumentation.openai.shared.embeddings_wrappers import (
 )
 from opentelemetry.instrumentation.openai.utils import is_metrics_enabled
 from opentelemetry.instrumentation.openai.version import __version__
-from opentelemetry.semconv_ai import Meters
+from agentops.semconv import Meters
 
 _instruments = ("openai >= 0.27.0", "openai < 1.0.0")
 
@@ -29,6 +29,7 @@ class OpenAIV0Instrumentor(BaseInstrumentor):
         return _instruments
 
     def _instrument(self, **kwargs):
+        print("OpenAIV0Instrumentor _instrument")
         tracer_provider = kwargs.get("tracer_provider")
         tracer = get_tracer(__name__, __version__, tracer_provider)
 

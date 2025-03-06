@@ -22,8 +22,11 @@ def is_azure_openai(instance):
     )
 
 
-def is_metrics_enabled() -> bool:
-    return (os.getenv("TRACELOOP_METRICS_ENABLED") or "true").lower() == "true"
+def is_metrics_enabled():
+    """
+    Check if metrics are enabled.
+    """
+    return (os.getenv("AGENTOPS_METRICS_ENABLED") or "true").lower() == "true"
 
 
 def should_record_stream_token_usage():

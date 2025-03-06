@@ -14,7 +14,7 @@ from opentelemetry.instrumentation.openai.shared.config import Config
 from opentelemetry.semconv._incubating.attributes.gen_ai_attributes import (
     GEN_AI_RESPONSE_ID,
 )
-from opentelemetry.semconv_ai import SpanAttributes
+from agentops.semconv import SpanAttributes
 from opentelemetry.instrumentation.openai.utils import (
     dont_throw,
     is_openai_v1,
@@ -33,10 +33,20 @@ tiktoken_encodings = {}
 logger = logging.getLogger(__name__)
 
 
-def should_send_prompts():
+def should_trace_content():
+    """
+    Check if content should be traced.
+    """
     return (
-        os.getenv("TRACELOOP_TRACE_CONTENT") or "true"
-    ).lower() == "true" or context_api.get_value("override_enable_content_tracing")
+        os.getenv("AGENTOPS_TRACE_CONTENT") or "true"
+    ).lower() == "true"
+
+
+def should_send_prompts():
+    """
+    Check if prompts should be sent.
+    """
+    return should_trace_content()
 
 
 def _set_span_attribute(span, name, value):

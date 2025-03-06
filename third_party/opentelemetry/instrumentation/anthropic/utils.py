@@ -5,7 +5,7 @@ import threading
 import traceback
 from opentelemetry import context as context_api
 from opentelemetry.instrumentation.anthropic.config import Config
-from opentelemetry.semconv_ai import SpanAttributes
+from agentops.semconv import SpanAttributes
 
 GEN_AI_SYSTEM = "gen_ai.system"
 GEN_AI_SYSTEM_ANTHROPIC = "anthropic"
@@ -20,7 +20,7 @@ def set_span_attribute(span, name, value):
 
 def should_send_prompts():
     return (
-        os.getenv("TRACELOOP_TRACE_CONTENT") or "true"
+        os.getenv("AGENTOPS_TRACE_CONTENT") or "true"
     ).lower() == "true" or context_api.get_value("override_enable_content_tracing")
 
 

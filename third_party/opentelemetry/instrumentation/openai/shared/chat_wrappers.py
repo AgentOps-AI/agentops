@@ -8,10 +8,10 @@ from wrapt import ObjectProxy
 
 from opentelemetry import context as context_api
 from opentelemetry.metrics import Counter, Histogram
-from opentelemetry.semconv_ai import (
-    SUPPRESS_LANGUAGE_MODEL_INSTRUMENTATION_KEY,
+from agentops.semconv import (
     SpanAttributes,
     LLMRequestTypeValues,
+    SUPPRESS_LANGUAGE_MODEL_INSTRUMENTATION_KEY,
 )
 
 from opentelemetry.instrumentation.utils import _SUPPRESS_INSTRUMENTATION_KEY

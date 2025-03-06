@@ -21,7 +21,7 @@ class ApiClient:
     It lazily initializes version-specific clients when they are first accessed.
     """
 
-    def __init__(self, endpoint: str = "https://api.agentops.ai"):
+    def __init__(self, endpoint: str = "https://api.agentops.cloud"):
         """
         Initialize the master API client.
 

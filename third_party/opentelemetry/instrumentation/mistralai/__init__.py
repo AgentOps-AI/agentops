@@ -19,7 +19,7 @@ from opentelemetry.instrumentation.utils import (
 )
 
 from opentelemetry.semconv._incubating.attributes.gen_ai_attributes import GEN_AI_RESPONSE_ID
-from opentelemetry.semconv_ai import (
+from agentops.semconv import (
     SUPPRESS_LANGUAGE_MODEL_INSTRUMENTATION_KEY,
     SpanAttributes,
     LLMRequestTypeValues,
@@ -58,7 +58,7 @@ WRAPPED_METHODS = [
 
 def should_send_prompts():
     return (
-        os.getenv("TRACELOOP_TRACE_CONTENT") or "true"
+        os.getenv("AGENTOPS_TRACE_CONTENT") or "true"
     ).lower() == "true" or context_api.get_value("override_enable_content_tracing")
 
 
