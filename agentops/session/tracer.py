@@ -59,6 +59,11 @@ class SessionTracer:
     Handles the session-level tracing context and span management.
     A session IS a root span - all operations within the session are automatically
     tracked as child spans.
+
+    The SessionTracer includes automatic cleanup via __del__ to ensure resources
+    are properly released when the tracer is garbage collected. However, it's
+    still recommended to explicitly call shutdown() when done with a tracer to
+    ensure timely cleanup and proper data export.
     """
 
     session: TracedSession
@@ -157,10 +162,13 @@ class SessionTracer:
             logger.debug(f"[{self.session_id}] Shutting down session tracer")
 
             # Detach our context if it's still active
-            if self._token is not None:
-                context.detach(self._token)
-                self._token = None
-                logger.debug(f"[{self.session_id}] Detached context token")
+            if hasattr(self, "_token") and self._token is not None:
+                try:
+                    context.detach(self._token)
+                    self._token = None
+                    logger.debug(f"[{self.session_id}] Detached context token")
+                except Exception as e:
+                    logger.warning(f"[{self.session_id}] Error detaching context token: {e}")
 
             # End the span if it exists and hasn't been ended yet
             if hasattr(self.session, "_span") and self.session._span is not None:
@@ -173,7 +181,7 @@ class SessionTracer:
 
             # Force flush the span processor to ensure all spans are processed
             provider = trace.get_tracer_provider()
-            if isinstance(provider, TracerProvider):
+            if provider is not None and isinstance(provider, TracerProvider):
                 try:
                     logger.debug(f"[{self.session_id}] Flushing span processor")
                     # Use a timeout to prevent hanging during garbage collection
@@ -193,11 +201,22 @@ class SessionTracer:
             self._is_ended = True
             logger.debug(f"[{self.session_id}] Session tracer shutdown complete")
 
-    def __del__(self):
-        """Ensure cleanup on garbage collection."""
+    def __del__(self) -> None:
+        """
+        Cleanup method called during garbage collection.
+
+        Ensures the tracer is properly shutdown when the object goes out of scope
+        without an explicit shutdown() call.
+        """
         try:
-            logger.debug(f"[{getattr(self, 'session_id', 'unknown')}] SessionTracer.__del__ called")
-            self.shutdown()
-            # No need to manually remove from _session_tracers as WeakValueDictionary handles this automatically
+            # Check if the tracer is already ended
+            if hasattr(self, "_is_ended") and not self._is_ended:
+                logger.info(
+                    f"SessionTracer for session {getattr(self, 'session_id', 'unknown')} being shutdown during garbage collection"
+                )
+                self.shutdown()
         except Exception as e:
-            logger.warning(f"Error during SessionTracer.__del__: {e}")
+            # Log the exception but don't raise it (exceptions in __del__ are ignored)
+            logger.warning(
+                f"Error during SessionTracer.__del__ for session {getattr(self, 'session_id', 'unknown')}: {e}"
+            )
