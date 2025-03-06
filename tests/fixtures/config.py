@@ -74,19 +74,29 @@ def mock_config(request, mocker: MockerFixture, runtime, mock_env):
 
     # Add side effect to merge kwargs with agentops_config.dict()
     def side_effect(self, **kwargs):
-        # Only update with config values for keys NOT already in kwargs
-        marker = request.node.get_closest_marker("config_kwargs")
-        # kwargs = marker.kwargs if marker else {}
-        # Update kwargs with marker kwargs
-        if marker:
-            kwargs.update(marker.kwargs or {})
-
+        # Create a merged kwargs dictionary
+        merged_kwargs = {}
+        
+        # Start with config_dict values (lowest priority)
         config_dict = agentops_config.dict()
         for key, value in config_dict.items():
-            if key not in kwargs:
-                kwargs[key] = value
-        # Call original init and return its result
-        return original_configure(self, **kwargs)
+            if value is not None:
+                merged_kwargs[key] = value
+        
+        # Add marker values (medium priority)
+        marker = request.node.get_closest_marker("config_kwargs")
+        if marker and marker.kwargs:
+            for key, value in marker.kwargs.items():
+                if value is not None:
+                    merged_kwargs[key] = value
+        
+        # Add explicit kwargs (highest priority)
+        for key, value in kwargs.items():
+            if value is not None:
+                merged_kwargs[key] = value
+        
+        # Call original configure with the merged kwargs
+        return original_configure(self, **merged_kwargs)
 
     mock_configure.side_effect = side_effect
 
