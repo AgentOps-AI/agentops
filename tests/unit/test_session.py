@@ -3,6 +3,7 @@ import json
 import threading
 import time
 import uuid
+import weakref
 from unittest.mock import MagicMock, patch, ANY, call
 
 import pytest
@@ -210,6 +211,25 @@ class TestSessionLifecycle:
             # Note: We can't directly verify that end was called because the session object
             # no longer exists. This test mainly ensures that __del__ doesn't raise exceptions.
 
+    def test_session_del_basic(self, mock_config):
+        """Basic test for Session.__del__ method.
+
+        This test simply verifies that the __del__ method doesn't raise exceptions.
+        """
+        # Create a session
+        session = Session(config=mock_config)
+
+        # Delete the session reference
+        del session
+
+        # Force garbage collection
+        gc.collect()
+
+        # Wait a bit for GC to complete
+        time.sleep(0.1)
+
+        # If we got here without exceptions, the test passes
+
     def test_session_end_idempotent(self, mock_config):
         """Test that calling end() multiple times is idempotent."""
         with patch("agentops.session.session.remove_session"), patch("agentops.session.session.add_session"), patch(
@@ -352,30 +372,25 @@ class TestSessionSpanStatus:
             mock_span.end.assert_called_once()
 
     def test_session_already_ended_no_status_update(self, mock_config, mock_span):
-        """Test that ending an already ended session doesn't update the span status again."""
+        """Test that ending an already ended session doesn't update the status."""
         with patch("agentops.session.session.remove_session"), patch("agentops.session.session.add_session"), patch(
             "agentops.session.session.set_current_session"
         ):
-            # Create a session
+            # Create a session with a mock span
             session = Session(config=mock_config)
-
-            # Replace the span with our mock
             session._span = mock_span
 
-            # End the session with SUCCEEDED state
+            # End the session
             session.end(SessionState.SUCCEEDED)
 
-            # Reset the mocks to clear the call history
+            # Reset the mock to clear the call history
             mock_span.set_status.reset_mock()
             mock_span.end.reset_mock()
 
-            # Simulate that the span has been ended
-            mock_span.end_time = 123456789  # Non-None value
-
-            # Try to end the session again with a different state
+            # End the session again
             session.end(SessionState.FAILED)
 
-            # Verify that the span status was not set again
+            # Verify that the span status was not updated
             mock_span.set_status.assert_not_called()
 
             # Verify that the span was not ended again
