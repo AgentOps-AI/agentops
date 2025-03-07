@@ -5,7 +5,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 from opentelemetry.sdk.trace import TracerProvider
 
-from agentops.session.processors import InFlightSpanProcessor
+from agentops.session.processors import LiveSpanProcessor
 from agentops.session.tracer import SessionTracer, _session_tracers
 
 
@@ -76,7 +76,7 @@ class TestSessionTracer:
             mock_provider = MagicMock(spec=TracerProvider)
             mock_get_provider.return_value = mock_provider
 
-            with patch("agentops.session.tracer.InFlightSpanProcessor") as mock_processor_cls:
+            with patch("agentops.session.tracer.LiveSpanProcessor") as mock_processor_cls:
                 mock_processor = MagicMock()
                 mock_processor_cls.return_value = mock_processor
 
@@ -101,7 +101,7 @@ class TestSessionTracer:
                 mock_exporter = MagicMock()
                 mock_exporter_cls.return_value = mock_exporter
 
-                with patch("agentops.session.tracer.InFlightSpanProcessor") as mock_processor_cls:
+                with patch("agentops.session.tracer.LiveSpanProcessor") as mock_processor_cls:
                     mock_processor = MagicMock()
                     mock_processor_cls.return_value = mock_processor
 

@@ -25,7 +25,7 @@ from opentelemetry.trace import NonRecordingSpan, Span, SpanContext, TraceFlags,
 from agentops.logging import logger
 from agentops.session.base import SessionBase
 from agentops.session.helpers import dict_to_span_attributes
-from agentops.session.processors import InFlightSpanProcessor
+from agentops.session.processors import LiveSpanProcessor
 
 if TYPE_CHECKING:
     from agentops.session.mixin.telemetry import TracedSession
@@ -95,8 +95,8 @@ class SessionTracer:
             self._span_processor = session.config.processor
             provider.add_span_processor(self._span_processor)
         elif session.config.exporter is not None:
-            # Use the custom exporter with InFlightSpanProcessor
-            self._span_processor = InFlightSpanProcessor(
+            # Use the custom exporter with LiveSpanProcessor
+            self._span_processor = LiveSpanProcessor(
                 session.config.exporter,
                 max_export_batch_size=session.config.max_queue_size,
                 schedule_delay_millis=session.config.max_wait_time,
@@ -109,7 +109,7 @@ class SessionTracer:
                 if session.config.exporter_endpoint
                 else "https://otlp.agentops.cloud/v1/traces"
             )
-            self._span_processor = InFlightSpanProcessor(
+            self._span_processor = LiveSpanProcessor(
                 OTLPSpanExporter(endpoint=endpoint),
                 max_export_batch_size=session.config.max_queue_size,
                 schedule_delay_millis=session.config.max_wait_time,
