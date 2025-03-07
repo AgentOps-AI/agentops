@@ -112,20 +112,21 @@ class Session(AnalyticsSessionMixin, TelemetrySessionMixin, SessionBase):
             self._state = state
 
             # Update span status directly based on state
-            if self.span:
+            if self._span:
                 if state == SessionState.SUCCEEDED:
-                    self.span.set_status(Status(StatusCode.OK))
+                    self._span.set_status(Status(StatusCode.OK))
                 elif state == SessionState.FAILED:
-                    self.span.set_status(Status(StatusCode.ERROR))
+                    self._span.set_status(Status(StatusCode.ERROR))
                 else:
-                    self.span.set_status(Status(StatusCode.UNSET))
+                    self._span.set_status(Status(StatusCode.UNSET))
 
-                # End the span
-                self.span.end()
-                logger.debug(f"[{self.session_id}] Ended span")
+                # End the span directly if it hasn't been ended yet and telemetry is not available
+                if self._span.end_time is None and self.telemetry is None:
+                    self._span.end()
+                    logger.debug(f"[{self.session_id}] Ended span directly")
 
             # Shutdown telemetry
-            if hasattr(self, "telemetry") and self.telemetry:
+            if self.telemetry:
                 self.telemetry.shutdown()
 
             # Unregister from cleanup
