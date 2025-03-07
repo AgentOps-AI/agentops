@@ -14,7 +14,7 @@ from opentelemetry.sdk.trace.export import SpanExporter, SpanExportResult, SpanP
 from agentops.logging import logger
 
 
-class InFlightSpanProcessor(SpanProcessor):
+class LiveProcessor(SpanProcessor):
     """
     Adapted from Prefect's implementation.
     (https://github.com/PrefectHQ/prefect/blob/main/src/prefect/telemetry/processors.py)
@@ -24,7 +24,7 @@ class InFlightSpanProcessor(SpanProcessor):
     """
 
     def __init__(self, exporter: SpanExporter, max_export_batch_size: int = 512, schedule_delay_millis: int = 5000):
-        """Initialize the InFlightSpanProcessor.
+        """Initialize the LiveProcessor.
 
         Args:
             exporter: The exporter to use for exporting spans
