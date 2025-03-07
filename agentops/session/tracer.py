@@ -9,7 +9,8 @@ from __future__ import annotations
 
 import atexit
 import threading
-from typing import TYPE_CHECKING, Dict, Optional, Protocol, Union
+import logging
+from typing import TYPE_CHECKING, Dict, Optional, Protocol, Union, Any, Set
 from uuid import uuid4
 from weakref import WeakValueDictionary
 
@@ -19,7 +20,7 @@ from opentelemetry.exporter.otlp.proto.http.trace_exporter import OTLPSpanExport
 from opentelemetry.sdk.resources import SERVICE_NAME, Resource
 from opentelemetry.sdk.trace import TracerProvider
 from opentelemetry.sdk.trace.export import BatchSpanProcessor, SimpleSpanProcessor, SpanProcessor
-from opentelemetry.trace import NonRecordingSpan, Span, SpanContext, TraceFlags
+from opentelemetry.trace import NonRecordingSpan, Span, SpanContext, TraceFlags, Status, StatusCode
 
 from agentops.logging import logger
 from agentops.session.base import SessionBase
@@ -31,10 +32,13 @@ if TYPE_CHECKING:
     from agentops.session.session import Session
 
 # Dictionary to store active session tracers
-_session_tracers: WeakValueDictionary[str, SessionTracer] = WeakValueDictionary()
+_session_tracers: WeakValueDictionary[str, "SessionTracer"] = WeakValueDictionary()
 
 # Global TracerProvider instance
 _tracer_provider: Optional[TracerProvider] = None
+
+# Thread-local storage for tokens
+_thread_local = threading.local()
 
 
 def get_tracer_provider() -> TracerProvider:
@@ -46,7 +50,7 @@ def get_tracer_provider() -> TracerProvider:
     return _tracer_provider
 
 
-def get_session_tracer(session_id: str) -> Optional[SessionTracer]:
+def get_session_tracer(session_id: str) -> Optional["SessionTracer"]:
     """Get tracer for a session."""
     return _session_tracers.get(str(session_id))
 
@@ -59,19 +63,28 @@ class SessionTracer:
     tracked as child spans.
     """
 
-    session: TracedSession
+    session: "TracedSession"
 
     @property
     def session_id(self) -> str:
+        """Get the session ID."""
         return str(self.session.session_id)
 
-    def __init__(self, session: TracedSession):
+    def __init__(self, session: "TracedSession"):
+        """Initialize the session tracer.
+
+        Args:
+            session: The session to trace.
+        """
         self.session = session
         self._is_ended = False
         self._shutdown_lock = threading.Lock()
-        self._token = None
         self._context = None
         self._span_processor = None
+
+        # Initialize thread-local storage for this tracer
+        if not hasattr(_thread_local, "tokens"):
+            _thread_local.tokens = {}
 
         # Use global provider
         self.provider = provider = get_tracer_provider()
@@ -85,8 +98,8 @@ class SessionTracer:
             # Use the custom exporter with InFlightSpanProcessor
             self._span_processor = InFlightSpanProcessor(
                 session.config.exporter,
-                max_export_batch_size=self.session.config.max_queue_size,
-                schedule_delay_millis=self.session.config.max_wait_time,
+                max_export_batch_size=session.config.max_queue_size,
+                schedule_delay_millis=session.config.max_wait_time,
             )
             provider.add_span_processor(self._span_processor)
         else:
@@ -98,8 +111,8 @@ class SessionTracer:
             )
             self._span_processor = InFlightSpanProcessor(
                 OTLPSpanExporter(endpoint=endpoint),
-                max_export_batch_size=self.session.config.max_queue_size,
-                schedule_delay_millis=self.session.config.max_wait_time,
+                max_export_batch_size=session.config.max_queue_size,
+                schedule_delay_millis=session.config.max_wait_time,
             )
             provider.add_span_processor(self._span_processor)
 
@@ -141,7 +154,11 @@ class SessionTracer:
 
         # Activate the context
         self._context = trace.set_span_in_context(span)
-        self._token = context.attach(self._context)
+
+        # Store the token in thread-local storage
+        thread_id = threading.get_ident()
+        token = context.attach(self._context)
+        _thread_local.tokens[f"{self.session_id}_{thread_id}"] = token
 
         # Store for cleanup
         _session_tracers[self.session_id] = self
@@ -179,12 +196,25 @@ class SessionTracer:
             logger.debug(f"[{self.session_id}] Shutting down session tracer")
 
             # Clean up the context if it's active
-            if self._token is not None:
+            thread_id = threading.get_ident()
+            token_key = f"{self.session_id}_{thread_id}"
+
+            if hasattr(_thread_local, "tokens") and token_key in _thread_local.tokens:
                 try:
-                    context.detach(self._token)
-                    self._token = None
+                    context.detach(_thread_local.tokens[token_key])
+                    del _thread_local.tokens[token_key]
+                except ValueError as e:
+                    # This can happen if we're in a different thread than the one that created the token
+                    # It's safe to ignore this error as the context will be cleaned up when the thread exits
+                    logger.debug(f"[{self.session_id}] Context token was created in a different thread: {e}")
+                    if token_key in _thread_local.tokens:
+                        del _thread_local.tokens[token_key]
                 except Exception as e:
                     logger.debug(f"[{self.session_id}] Error detaching context: {e}")
+            else:
+                # This is a different thread than the one that created the token
+                # We can't detach the token, but we can log a debug message
+                logger.debug(f"[{self.session_id}] No context token found for thread {thread_id}")
 
             # End the session span if it exists and hasn't been ended yet
             try:
