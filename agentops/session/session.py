@@ -53,12 +53,6 @@ class Session(AnalyticsSessionMixin, TelemetrySessionMixin, SessionBase):
         # Initialize mixins and base class
         super().__init__(**kwargs)
 
-        # Register this session for cleanup
-        add_session(self)
-
-        # Set as current session
-        set_current_session(self)
-
         # Initialize session only if auto_start is True
         if self.auto_start:
             self.start()
@@ -129,9 +123,8 @@ class Session(AnalyticsSessionMixin, TelemetrySessionMixin, SessionBase):
                     self._span.end()
                     logger.debug(f"[{self.session_id}] Ended span directly")
 
-            # Shutdown telemetry
-            if self.telemetry:
-                self.telemetry.shutdown()
+            # Shutdown telemetry using the mixin method
+            self.shutdown_telemetry()
 
             # Unregister from cleanup
             remove_session(self)
@@ -141,11 +134,17 @@ class Session(AnalyticsSessionMixin, TelemetrySessionMixin, SessionBase):
     def start(self):
         """Start the session"""
         with self._lock:
+            # Register this session for cleanup
+            add_session(self)
+
+            # Set as current session
+            set_current_session(self)
+
             # Update state
             self._state = SessionState.RUNNING
 
-            # Start telemetry
-            self.telemetry.start()
+            # Start telemetry using the mixin method
+            self.start_telemetry()
 
             logger.debug(f"[{self.session_id}] Session started")
 
