@@ -164,7 +164,7 @@ class Session(AnalyticsSessionMixin, TelemetrySessionMixin, SessionBase):
     def init_timestamp(self) -> str:
         """Get the initialization timestamp."""
         # First try to get it from the span
-        span_timestamp = super().init_timestamp if hasattr(super(), "init_timestamp") else None
+        span_timestamp = super().init_timestamp
         # If not available, use our default timestamp
         return span_timestamp or self._init_timestamp
 
