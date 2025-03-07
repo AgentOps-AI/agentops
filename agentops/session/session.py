@@ -120,9 +120,9 @@ class Session(AnalyticsSessionMixin, TelemetrySessionMixin, SessionBase):
                 else:
                     self.span.set_status(Status(StatusCode.UNSET))
 
-            # Ensure the span is ended
-            if self.span and not hasattr(self.span, "end_time"):
+                # End the span
                 self.span.end()
+                logger.debug(f"[{self.session_id}] Ended span")
 
             # Shutdown telemetry
             if hasattr(self, "telemetry") and self.telemetry:
