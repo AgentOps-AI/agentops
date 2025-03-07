@@ -87,14 +87,18 @@ class Session(AnalyticsSessionMixin, TelemetrySessionMixin, SessionBase):
             self.end(SessionState.SUCCEEDED)
 
     def __del__(self) -> None:
-        """Ensure cleanup on garbage collection."""
+        """Ensure cleanup on garbage collection.
+
+        This method is called by the garbage collector when the object is about to be destroyed.
+        It ensures that all resources are properly cleaned up if the session hasn't been ended.
+        """
         try:
+            # Only perform cleanup if not in a terminal state
             if self._state != SessionState.SUCCEEDED and self._state != SessionState.FAILED:
                 logger.debug(f"[{self.session_id}] Session garbage collected before being ended")
                 self.end(SessionState.INDETERMINATE)
         except Exception as e:
-            # Can't use logger here as it might be None during shutdown
-            print(f"Error during Session.__del__: {e}")
+            logger.warning(f"Error during Session.__del__: {e}")
 
     def end(self, state=SessionState.SUCCEEDED):
         """End the session with the given state.
