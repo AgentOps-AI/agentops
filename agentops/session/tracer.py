@@ -199,6 +199,14 @@ class SessionTracer:
                 # Log any other errors but don't raise them
                 logger.debug(f"[{self.session_id}] Note when ending span: {e}")
 
+            # Flush the span processor if available
+            if self._span_processor:
+                try:
+                    self._span_processor.force_flush()
+                    logger.debug(f"[{self.session_id}] Flushed span processor")
+                except Exception as e:
+                    logger.warning(f"[{self.session_id}] Error flushing span processor: {e}")
+
             # Flush the tracer provider
             provider = trace.get_tracer_provider()
             if isinstance(provider, TracerProvider):
