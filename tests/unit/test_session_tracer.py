@@ -9,6 +9,47 @@ from agentops.session.processors import LiveSpanProcessor
 from agentops.session.tracer import SessionTracer, _session_tracers
 
 
+# Define the fixture at module level
+@pytest.fixture
+def mock_get_tracer_provider():
+    """
+    Mock the get_tracer_provider function to return a mock TracerProvider.
+    """
+    mock_provider = MagicMock(spec=TracerProvider)
+
+    # Create a patcher for the get_tracer_provider function
+    patcher = patch("agentops.session.tracer.get_tracer_provider", return_value=mock_provider)
+
+    # Start the patcher and yield the mock provider
+    mock_get_provider = patcher.start()
+    mock_get_provider.return_value = mock_provider
+
+    yield mock_provider
+
+    # Stop the patcher after the test is done
+    patcher.stop()
+
+
+@pytest.fixture
+def mock_trace_get_tracer_provider():
+    """
+    Mock the trace.get_tracer_provider function to return a mock TracerProvider.
+    """
+    mock_provider = MagicMock(spec=TracerProvider)
+
+    # Create a patcher for the trace.get_tracer_provider function
+    patcher = patch("agentops.session.tracer.trace.get_tracer_provider", return_value=mock_provider)
+
+    # Start the patcher and yield the mock provider
+    mock_get_provider = patcher.start()
+    mock_get_provider.return_value = mock_provider
+
+    yield mock_provider
+
+    # Stop the patcher after the test is done
+    patcher.stop()
+
+
 def test_session_tracer_global_lifecycle():
     """Test the global lifecycle of SessionTracer."""
     # Create a mock session
@@ -52,7 +93,7 @@ class TestSessionTracer:
         self.mock_session.config.max_queue_size = 100
         self.mock_session.config.max_wait_time = 1000
 
-    def test_init_with_custom_processor(self):
+    def test_init_with_custom_processor(self, mock_get_tracer_provider):
         """Test initialization with a custom processor."""
         mock_processor = MagicMock()
         self.mock_session.config.processor = mock_processor
@@ -67,7 +108,7 @@ class TestSessionTracer:
             mock_provider.add_span_processor.assert_called_once_with(mock_processor)
             assert tracer._span_processor == mock_processor
 
-    def test_init_with_custom_exporter(self):
+    def test_init_with_custom_exporter(self, mock_get_tracer_provider):
         """Test initialization with a custom exporter."""
         mock_exporter = MagicMock()
         self.mock_session.config.exporter = mock_exporter
@@ -91,7 +132,7 @@ class TestSessionTracer:
                 mock_provider.add_span_processor.assert_called_once_with(mock_processor)
                 assert tracer._span_processor == mock_processor
 
-    def test_init_with_default_exporter(self):
+    def test_init_with_default_exporter(self, mock_get_tracer_provider):
         """Test initialization with the default exporter."""
         with patch("agentops.session.tracer.get_tracer_provider") as mock_get_provider:
             mock_provider = MagicMock(spec=TracerProvider)
@@ -119,7 +160,7 @@ class TestSessionTracer:
                     mock_provider.add_span_processor.assert_called_once_with(mock_processor)
                     assert tracer._span_processor == mock_processor
 
-    def test_shutdown_flushes_provider(self):
+    def test_shutdown_flushes_provider(self, mock_trace_get_tracer_provider):
         """Test that shutdown flushes the tracer provider."""
         with patch("agentops.session.tracer.get_tracer_provider") as mock_get_provider:
             mock_provider = MagicMock(spec=TracerProvider)
@@ -148,7 +189,7 @@ class TestSessionTracer:
             # This should not raise an exception
             tracer.shutdown()
 
-    def test_shutdown_ends_session_span(self):
+    def test_shutdown_ends_session_span(self, mock_trace_get_tracer_provider):
         """Test that shutdown ends the session span."""
         with patch("agentops.session.tracer.get_tracer_provider"):
             tracer = SessionTracer(self.mock_session)

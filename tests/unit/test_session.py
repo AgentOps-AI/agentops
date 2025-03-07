@@ -7,28 +7,56 @@ import weakref
 from unittest.mock import MagicMock, patch, ANY, call
 
 import pytest
+from opentelemetry.sdk.trace import TracerProvider
+from opentelemetry.trace import Status, StatusCode
 
 import agentops
 from agentops.client import Client
 from agentops.config import Config
 from agentops.session import Session, SessionState
 from agentops.session.registry import _active_sessions, get_active_sessions, clear_registry
-from opentelemetry.trace import Status, StatusCode
 
-#
-#
-# class TestSessionRequiresInitialization:
-#
-#
-#     # @pytest.mark.config_kwargs(auto_init=False)
-#     def test_session_requires_initialization(self):
-#         # require client .init() to be called before session.start()
-#         client = Client()
-#         assert not client.initialized, "CLIENT IS NOT SUPPOSED TO BE INITIALIZED"
-#         with pytest.raises(Exception):
-#             agentops.start_session()
-#         client.init()
-#         assert isinstance(agentops.start_session(), Session)
+
+# Define the fixture at module level
+@pytest.fixture
+def mock_get_tracer_provider():
+    """
+    Mock the get_tracer_provider function to return a mock TracerProvider.
+    """
+    mock_provider = MagicMock(spec=TracerProvider)
+
+    # Create a patcher for the get_tracer_provider function
+    patcher = patch("agentops.session.tracer.get_tracer_provider", return_value=mock_provider)
+
+    # Start the patcher and yield the mock provider
+    mock_get_provider = patcher.start()
+    mock_get_provider.return_value = mock_provider
+
+    yield mock_provider
+
+    # Stop the patcher after the test is done
+    patcher.stop()
+
+
+@pytest.fixture
+def mock_trace_get_tracer_provider():
+    """
+    Mock the trace.get_tracer_provider function to return a mock TracerProvider.
+    """
+    mock_provider = MagicMock(spec=TracerProvider)
+
+    # Create a patcher for the trace.get_tracer_provider function
+    patcher = patch("opentelemetry.trace.get_tracer_provider", return_value=mock_provider)
+
+    # Start the patcher and yield the mock provider
+    mock_get_provider = patcher.start()
+    mock_get_provider.return_value = mock_provider
+
+    yield mock_provider
+
+    # Stop the patcher after the test is done
+    patcher.stop()
+
 
 pytestmark = [pytest.mark.usefixture("noinstrument")]
 
@@ -414,7 +442,7 @@ class TestSessionSpanStatus:
             # Verify that the session state was updated
             assert session._state == SessionState.SUCCEEDED
 
-    def test_session_telemetry_shutdown(self, mock_config):
+    def test_session_telemetry_shutdown(self, mock_config, mock_trace_get_tracer_provider):
         """Test that the telemetry.shutdown method is called during session end."""
         with patch("agentops.session.session.remove_session"), patch("agentops.session.session.add_session"), patch(
             "agentops.session.session.set_current_session"
@@ -422,11 +450,14 @@ class TestSessionSpanStatus:
             # Create a session
             session = Session(config=mock_config)
 
-            # Mock the telemetry.shutdown method
-            session.telemetry.shutdown = MagicMock()
+            # Create a spy on the telemetry.shutdown method instead of replacing it
+            shutdown_spy = patch.object(session.telemetry, "shutdown", wraps=session.telemetry.shutdown)
+            with shutdown_spy as mock_shutdown:
+                # End the session
+                session.end()
 
-            # End the session
-            session.end()
+                # Verify that telemetry.shutdown was called
+                mock_shutdown.assert_called_once()
 
-            # Verify that telemetry.shutdown was called
-            session.telemetry.shutdown.assert_called_once()
+            # Verify force_flush was called on the provider
+            mock_trace_get_tracer_provider.force_flush.assert_called_once()
