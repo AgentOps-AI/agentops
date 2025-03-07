@@ -31,9 +31,9 @@ class TracedSession(SessionBase):
     @property
     def session_id(self):
         """Returns the Trace ID as a UUID"""
-        if not (span := getattr(self, "_span", None)):
-            return None
-        return trace_id_to_uuid(span.get_span_context().trace_id)
+        if self.span:
+            return trace_id_to_uuid(self.span.get_span_context().trace_id)
+        return None
 
 
 class TelemetrySessionMixin(TracedSession):
@@ -76,23 +76,21 @@ class TelemetrySessionMixin(TracedSession):
     @property
     def init_timestamp(self) -> Optional[str]:
         """Get the initialization timestamp from the span if available."""
-        if self._span and hasattr(self._span, "init_time"):
+        if self._span and self._span.init_time:
             return self._ns_to_iso(self._span.init_time)  # type: ignore
         return None
 
     @property
     def end_timestamp(self) -> Optional[str]:
         """Get the end timestamp from the span if available."""
-        if self._span and hasattr(self._span, "end_time"):
+        if self._span and self._span.end_time:
             return self._ns_to_iso(self._span.end_time)  # type: ignore
         return None
 
     @property
     def span(self) -> Optional[Span]:
         """Get the span from the session."""
-        if not (span := getattr(self, "_span", None)):
-            return None
-        return span
+        return self._span
 
     @property
     def spans(self) -> Generator[Any, None, None]:
