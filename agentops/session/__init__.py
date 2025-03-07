@@ -69,7 +69,7 @@ See also:
 
 from typing import Optional
 
-from .registry import add_session, get_active_sessions, get_default_session, remove_session
+from .registry import get_active_sessions, get_default_session, add_session, remove_session
 
 # Then import core components
 from .session import Session, SessionState
