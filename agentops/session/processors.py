@@ -69,10 +69,6 @@ class InFlightSpanProcessor(SpanProcessor):
             # Use span_id as the key for the in-flight spans dictionary
             self._in_flight_spans[span.context.span_id] = span
 
-    def force_export(self) -> None:
-        """Force export all in-flight spans."""
-        self._process_spans(export_only=True)
-
     def force_flush(self, timeout_millis: int = 30000) -> bool:
         """Force flush all spans to be exported.
 
