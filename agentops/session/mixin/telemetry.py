@@ -44,7 +44,7 @@ class TelemetrySessionMixin(TracedSession):
     _span: Optional[Span]
 
     def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs) if hasattr(super(), "__init__") else None
+        super().__init__(*args, **kwargs)
         self.telemetry = SessionTracer(self)
         self._span = None
 
@@ -86,16 +86,20 @@ class TelemetrySessionMixin(TracedSession):
     @property
     def init_timestamp(self) -> Optional[str]:
         """Get the initialization timestamp from the span if available."""
-        if self._span and self._span.init_time:
-            return self._ns_to_iso(self._span.init_time)  # type: ignore
-        return None
+        try:
+            if self._span and self._span.init_time:
+                return self._ns_to_iso(self._span.init_time)  # type: ignore
+        except AttributeError:
+            return None
 
     @property
     def end_timestamp(self) -> Optional[str]:
         """Get the end timestamp from the span if available."""
-        if self._span and self._span.end_time:
-            return self._ns_to_iso(self._span.end_time)  # type: ignore
-        return None
+        try:
+            if self._span and self._span.end_time:
+                return self._ns_to_iso(self._span.end_time)  # type: ignore
+        except AttributeError:
+            return None
 
     @property
     def span(self) -> Optional[Span]:
