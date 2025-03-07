@@ -14,14 +14,6 @@ from opentelemetry.sdk.trace.export import SpanExporter, SpanExportResult, SpanP
 from agentops.logging import logger
 
 
-class FlushableExporter(Protocol):
-    """Protocol for exporters that support flushing."""
-
-    def force_flush(self, timeout_millis: int = 30000) -> bool:
-        """Force flush all spans to be exported."""
-        ...
-
-
 class InFlightSpanProcessor(SpanProcessor):
     """
     Adapted from Prefect's implementation.
