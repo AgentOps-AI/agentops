@@ -53,6 +53,8 @@ def mock_span():
     span = MagicMock()
     span.set_status = MagicMock()
     span.end = MagicMock()
+    # Set end_time to None to simulate a span that hasn't been ended
+    span.end_time = None
     # Mock the span context and trace_id
     context = MagicMock()
     context.trace_id = 123456789  # Use a simple integer instead of a complex object
@@ -182,7 +184,7 @@ class TestSessionLifecycle:
         """Test that Session.__del__ method ends the session properly."""
         with patch("agentops.session.session.remove_session"), patch("agentops.session.session.add_session"), patch(
             "agentops.session.session.set_current_session"
-        ), patch("agentops.session.session.hasattr", return_value=False):  # Mock hasattr to always return False
+        ):
             # Create a session
             session = Session(config=mock_config)
 
@@ -212,7 +214,7 @@ class TestSessionLifecycle:
         """Test that calling end() multiple times is idempotent."""
         with patch("agentops.session.session.remove_session"), patch("agentops.session.session.add_session"), patch(
             "agentops.session.session.set_current_session"
-        ), patch("agentops.session.session.hasattr", return_value=False):  # Mock hasattr to always return False
+        ):
             # Create a session
             session = Session(config=mock_config)
 
@@ -232,7 +234,7 @@ class TestSessionLifecycle:
         """Test that concurrent session operations are thread-safe."""
         with patch("agentops.session.session.remove_session"), patch("agentops.session.session.add_session"), patch(
             "agentops.session.session.set_current_session"
-        ), patch("agentops.session.session.hasattr", return_value=False):  # Mock hasattr to always return False
+        ):
             # Create a session
             session = Session(config=mock_config)
 
@@ -259,7 +261,7 @@ class TestSessionSpanStatus:
         """Test that ending a session updates the span status correctly."""
         with patch("agentops.session.session.remove_session"), patch("agentops.session.session.add_session"), patch(
             "agentops.session.session.set_current_session"
-        ), patch("agentops.session.session.hasattr", return_value=False):  # Mock hasattr to always return False
+        ):
             # Create a session
             session = Session(config=mock_config)
 
@@ -282,7 +284,7 @@ class TestSessionSpanStatus:
         """Test that ending a session with FAILED status sets the correct span status."""
         with patch("agentops.session.session.remove_session"), patch("agentops.session.session.add_session"), patch(
             "agentops.session.session.set_current_session"
-        ), patch("agentops.session.session.hasattr", return_value=False):  # Mock hasattr to always return False
+        ):
             # Create a session
             session = Session(config=mock_config)
 
@@ -305,7 +307,7 @@ class TestSessionSpanStatus:
         """Test that ending a session with INDETERMINATE status sets the correct span status."""
         with patch("agentops.session.session.remove_session"), patch("agentops.session.session.add_session"), patch(
             "agentops.session.session.set_current_session"
-        ), patch("agentops.session.session.hasattr", return_value=False):  # Mock hasattr to always return False
+        ):
             # Create a session
             session = Session(config=mock_config)
 
@@ -328,7 +330,7 @@ class TestSessionSpanStatus:
         """Test that the context manager sets the correct span status when an exception occurs."""
         with patch("agentops.session.session.remove_session"), patch("agentops.session.session.add_session"), patch(
             "agentops.session.session.set_current_session"
-        ), patch("agentops.session.session.hasattr", return_value=False):  # Mock hasattr to always return False
+        ):
             try:
                 # Use the session as a context manager
                 with Session(config=mock_config) as session:
@@ -353,7 +355,7 @@ class TestSessionSpanStatus:
         """Test that ending an already ended session doesn't update the span status again."""
         with patch("agentops.session.session.remove_session"), patch("agentops.session.session.add_session"), patch(
             "agentops.session.session.set_current_session"
-        ), patch("agentops.session.session.hasattr", return_value=False):  # Mock hasattr to always return False
+        ):
             # Create a session
             session = Session(config=mock_config)
 
@@ -366,6 +368,9 @@ class TestSessionSpanStatus:
             # Reset the mocks to clear the call history
             mock_span.set_status.reset_mock()
             mock_span.end.reset_mock()
+
+            # Simulate that the span has been ended
+            mock_span.end_time = 123456789  # Non-None value
 
             # Try to end the session again with a different state
             session.end(SessionState.FAILED)

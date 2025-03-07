@@ -153,7 +153,11 @@ class TestSessionTracer:
         with patch("agentops.session.tracer.get_tracer_provider"):
             tracer = SessionTracer(self.mock_session)
             mock_span = MagicMock()
-            tracer.session.span = mock_span
+
+            # Set end_time to None to simulate a span that hasn't been ended
+            mock_span.end_time = None
+
+            tracer.session._span = mock_span
             tracer._token = None  # Avoid context detachment
 
             # Mock the tracer provider to avoid actual flushing
