@@ -87,12 +87,17 @@ class TelemetrySessionMixin(TracedSession):
             return self._ns_to_iso(self._span.end_time)  # type: ignore
         return None
 
-    def get_spans(self) -> List[Span]:
-        """Get all spans in the trace."""
-        result = []
-        if self._span:
-            result.append(self._span)
-            # Add any child spans if available
-            if hasattr(self._span, "children"):
-                result.extend(getattr(self._span, "children", []))
-        return result
+    @property
+    def span(self) -> Optional[Span]:
+        """Get the span from the session."""
+        if not (span := getattr(self, "_span", None)):
+            return None
+        return span
+
+    @property
+    def spans(self) -> Generator[Any, None, None]:
+        """Generator that yields all spans in the trace."""
+        if self.span:
+            yield self.span
+            for child in getattr(self.span, "children", []):
+                yield child
