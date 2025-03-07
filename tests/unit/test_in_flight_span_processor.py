@@ -1,4 +1,4 @@
-"""Tests for the LiveProcessor class."""
+"""Tests for the InFlightSpanProcessor class."""
 
 import threading
 from unittest.mock import MagicMock, patch
@@ -7,20 +7,20 @@ import pytest
 from opentelemetry.sdk.trace import ReadableSpan
 from opentelemetry.sdk.trace.export import SpanExporter, SpanExportResult
 
-from agentops.session.processors import LiveProcessor
+from agentops.session.processors import InFlightSpanProcessor
 
 
-class TestLiveProcessor:
-    """Tests for the LiveProcessor class."""
+class TestInFlightSpanProcessor:
+    """Tests for the InFlightSpanProcessor class."""
 
     def setUp(self):
         self.exporter = MagicMock(spec=SpanExporter)
-        self.processor = LiveProcessor(self.exporter)
+        self.processor = InFlightSpanProcessor(self.exporter)
 
     def test_init(self):
         """Test initialization of the processor."""
         exporter = MagicMock(spec=SpanExporter)
-        processor = LiveProcessor(exporter)
+        processor = InFlightSpanProcessor(exporter)
 
         assert processor._exporter == exporter
         assert processor._max_export_batch_size == 512
@@ -32,7 +32,7 @@ class TestLiveProcessor:
     def test_on_start(self):
         """Test on_start method (should do nothing)."""
         exporter = MagicMock(spec=SpanExporter)
-        processor = LiveProcessor(exporter)
+        processor = InFlightSpanProcessor(exporter)
         span = MagicMock(spec=ReadableSpan)
 
         # This should not raise any exceptions
@@ -41,7 +41,7 @@ class TestLiveProcessor:
     def test_on_end(self):
         """Test on_end method adds span to in-flight spans."""
         exporter = MagicMock(spec=SpanExporter)
-        processor = LiveProcessor(exporter)
+        processor = InFlightSpanProcessor(exporter)
         span = MagicMock(spec=ReadableSpan)
         span.context.span_id = 12345
 
@@ -52,7 +52,7 @@ class TestLiveProcessor:
     def test_on_end_after_shutdown(self):
         """Test on_end method doesn't add span after shutdown."""
         exporter = MagicMock(spec=SpanExporter)
-        processor = LiveProcessor(exporter)
+        processor = InFlightSpanProcessor(exporter)
         span = MagicMock(spec=ReadableSpan)
         span.context.span_id = 12345
 
@@ -66,7 +66,7 @@ class TestLiveProcessor:
     def test_force_export_empty(self):
         """Test force_export with no spans."""
         exporter = MagicMock(spec=SpanExporter)
-        processor = LiveProcessor(exporter)
+        processor = InFlightSpanProcessor(exporter)
 
         processor.force_export()
 
@@ -75,7 +75,7 @@ class TestLiveProcessor:
     def test_force_export(self):
         """Test force_export with spans."""
         exporter = MagicMock(spec=SpanExporter)
-        processor = LiveProcessor(exporter)
+        processor = InFlightSpanProcessor(exporter)
 
         # Add spans to in-flight spans
         span1 = MagicMock(spec=ReadableSpan)
@@ -100,7 +100,7 @@ class TestLiveProcessor:
     def test_process_spans_empty(self):
         """Test _process_spans with no spans."""
         exporter = MagicMock(spec=SpanExporter)
-        processor = LiveProcessor(exporter)
+        processor = InFlightSpanProcessor(exporter)
 
         processor._process_spans(export_only=True)
 
@@ -110,7 +110,7 @@ class TestLiveProcessor:
         """Test _process_spans with successful export."""
         exporter = MagicMock(spec=SpanExporter)
         exporter.export.return_value = SpanExportResult.SUCCESS
-        processor = LiveProcessor(exporter)
+        processor = InFlightSpanProcessor(exporter)
 
         span = MagicMock(spec=ReadableSpan)
         span.context.span_id = 12345
@@ -124,7 +124,7 @@ class TestLiveProcessor:
         """Test _process_spans with failed export."""
         exporter = MagicMock(spec=SpanExporter)
         exporter.export.return_value = SpanExportResult.FAILURE
-        processor = LiveProcessor(exporter)
+        processor = InFlightSpanProcessor(exporter)
 
         span = MagicMock(spec=ReadableSpan)
         span.context.span_id = 12345
@@ -139,7 +139,7 @@ class TestLiveProcessor:
         """Test _process_spans with exception."""
         exporter = MagicMock(spec=SpanExporter)
         exporter.export.side_effect = Exception("Test exception")
-        processor = LiveProcessor(exporter)
+        processor = InFlightSpanProcessor(exporter)
 
         span = MagicMock(spec=ReadableSpan)
         span.context.span_id = 12345
@@ -153,7 +153,7 @@ class TestLiveProcessor:
     def test_shutdown(self):
         """Test shutdown method."""
         exporter = MagicMock(spec=SpanExporter)
-        processor = LiveProcessor(exporter)
+        processor = InFlightSpanProcessor(exporter)
 
         span = MagicMock(spec=ReadableSpan)
         span.context.span_id = 12345
@@ -177,7 +177,7 @@ class TestLiveProcessor:
         """Test force_flush method."""
         exporter = MagicMock(spec=SpanExporter)
         exporter.force_flush = MagicMock(return_value=True)
-        processor = LiveProcessor(exporter)
+        processor = InFlightSpanProcessor(exporter)
 
         # Add a span to in-flight spans
         span = MagicMock(spec=ReadableSpan)
@@ -202,7 +202,7 @@ class TestLiveProcessor:
         if hasattr(exporter, "force_flush"):
             delattr(exporter, "force_flush")
 
-        processor = LiveProcessor(exporter)
+        processor = InFlightSpanProcessor(exporter)
 
         # Add a span to in-flight spans
         span = MagicMock(spec=ReadableSpan)
@@ -221,7 +221,7 @@ class TestLiveProcessor:
         """Test force_flush when exporter's force_flush raises an exception."""
         exporter = MagicMock(spec=SpanExporter)
         exporter.force_flush = MagicMock(side_effect=Exception("Test exception"))
-        processor = LiveProcessor(exporter)
+        processor = InFlightSpanProcessor(exporter)
 
         # Add a span to in-flight spans
         span = MagicMock(spec=ReadableSpan)
