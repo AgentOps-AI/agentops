@@ -8,7 +8,7 @@ import wrapt
 from contextlib import contextmanager
 from typing import Any, Callable, Dict, List, Optional, TypeVar, Union, cast, ContextManager
 
-from opentelemetry import trace
+from opentelemetry import trace, context
 from opentelemetry.trace import Span, SpanKind as OTelSpanKind
 
 import agentops
@@ -20,7 +20,7 @@ from agentops.semconv import (
     CoreAttributes, 
     Status, 
     AgentStatus, 
-    ToolStatus
+    ToolStatus,
 )
 
 # Type variable for functions
@@ -78,6 +78,7 @@ def agent(
     Decorator for agent classes.
     
     Creates a span of kind AGENT for the lifetime of the agent instance.
+    The span will be a child of the current session span.
     
     Args:
         name: Name of the agent
@@ -139,23 +140,28 @@ def agent(
             agent_id = str(uuid.uuid4())
             span_attributes[AgentAttributes.AGENT_ID] = agent_id
             
-            # Create and start the span
-            self._agentops_span = _tracer.start_span(
+            # Add span kind directly to attributes
+            span_attributes["span.kind"] = SpanKind.AGENT
+            
+            # Create and start the span as a child of the current span (session)
+            # Store the context manager and use it to access the span
+            self._agentops_span_ctx = _tracer.start_as_current_span(
                 name=span_attributes.get(AgentAttributes.AGENT_NAME, cls.__name__),
                 kind=OTelSpanKind.INTERNAL,
                 attributes=span_attributes
             )
+            self._agentops_span_ctx.__enter__()  # Enter the context
+            self._agentops_span = trace.get_current_span()  # Get the actual span
             
-            # Set span kind
-            self._agentops_span.set_attribute("span.kind", SpanKind.AGENT)
-            
-            # Store the span in the instance
+            # Store the span and context token in the instance
             self._agentops_agent_id = agent_id
+            # Store the context for later use by methods
+            self._agentops_context = trace.set_span_in_context(self._agentops_span)
             
         def del_wrapper(self):
             # End the span if it exists
-            if hasattr(self, "_agentops_span"):
-                self._agentops_span.end()
+            if hasattr(self, "_agentops_span_ctx"):
+                self._agentops_span_ctx.__exit__(None, None, None)  # Exit the context
                 
             # Call original __del__ if it exists
             if original_del:
@@ -181,6 +187,7 @@ def tool(
     Decorator for tool functions.
     
     Creates a span of kind TOOL for each invocation of the function.
+    The span will be a child of the current span (typically a method span).
     
     Args:
         name: Name of the tool
@@ -231,7 +238,8 @@ def tool(
                         # Fall back to the parameter name if conversion fails
                         params[param_name] = f"<{type(param_value).__name__}>"
                 
-                span_attributes[ToolAttributes.TOOL_PARAMETERS] = params
+                # Convert params dictionary to a string representation
+                span_attributes[ToolAttributes.TOOL_PARAMETERS] = str(params)
                 
             # Add custom attributes
             if attributes:
@@ -240,19 +248,19 @@ def tool(
             # Add kwargs as attributes
             span_attributes.update(kwargs)
             
-            # Create and start the span
+            # Add span kind directly to attributes
+            span_attributes["span.kind"] = SpanKind.TOOL
+            
+            # Create and start the span as a child of the current span
             with _tracer.start_as_current_span(
                 name=tool_name,
                 kind=OTelSpanKind.INTERNAL,
                 attributes=span_attributes
             ) as span:
-                # Set span kind
-                span.set_attribute("span.kind", SpanKind.TOOL)
-                
-                # Set initial status
-                span.set_attribute(ToolAttributes.TOOL_STATUS, ToolStatus.EXECUTING)
-                
                 try:
+                    # Set initial status
+                    span.set_attribute(ToolAttributes.TOOL_STATUS, ToolStatus.EXECUTING)
+                    
                     # Call the original function
                     result = func(*args, **kwargs)
                     
@@ -294,6 +302,7 @@ def span(
     General-purpose span decorator for functions and methods.
     
     Creates a span for each invocation of the function.
+    For methods of an agent class, the span will be a child of the agent span.
     
     Args:
         name: Name of the span (defaults to function name)
@@ -315,7 +324,15 @@ def span(
         
         if is_coroutine:
             @functools.wraps(func)
-            async def async_wrapper(*args, **kwargs):
+            async def async_wrapper(self_or_arg, *args, **kwargs):
+                # Determine if this is a method call (has self)
+                is_method = not inspect.isfunction(self_or_arg) and not inspect.ismethod(self_or_arg)
+                self = self_or_arg if is_method else None
+                
+                # Adjust args if this is not a method call
+                if not is_method:
+                    args = (self_or_arg,) + args
+                
                 # Create span attributes
                 span_attributes = {}
                 
@@ -324,22 +341,33 @@ def span(
                 
                 # Capture arguments if enabled
                 if capture_args:
-                    # Bind arguments to parameter names
-                    bound_args = sig.bind(*args, **kwargs)
-                    bound_args.apply_defaults()
-                    
-                    # Convert arguments to a serializable format
-                    for param_name, param_value in bound_args.arguments.items():
-                        # Skip 'self' parameter
-                        if param_name == 'self':
-                            continue
-                            
-                        try:
-                            # Try to convert to a simple type
-                            span_attributes[f"arg.{param_name}"] = str(param_value)
-                        except:
-                            # Fall back to the parameter name if conversion fails
-                            span_attributes[f"arg.{param_name}"] = f"<{type(param_value).__name__}>"
+                    try:
+                        # Bind arguments to parameter names
+                        if is_method:
+                            # For methods, include self in the binding
+                            method_args = (self,) + args
+                            bound_args = sig.bind(self, *args, **kwargs)
+                        else:
+                            # For regular functions
+                            bound_args = sig.bind(*args, **kwargs)
+                        
+                        bound_args.apply_defaults()
+                        
+                        # Convert arguments to a serializable format
+                        for param_name, param_value in bound_args.arguments.items():
+                            # Skip 'self' parameter
+                            if param_name == 'self':
+                                continue
+                                
+                            try:
+                                # Try to convert to a simple type
+                                span_attributes[f"arg.{param_name}"] = str(param_value)
+                            except:
+                                # Fall back to the parameter name if conversion fails
+                                span_attributes[f"arg.{param_name}"] = f"<{type(param_value).__name__}>"
+                    except Exception as e:
+                        # If binding fails, log it as an attribute but continue
+                        span_attributes["error.binding_args"] = str(e)
                 
                 # Add custom attributes
                 if attributes:
@@ -348,42 +376,90 @@ def span(
                 # Add kwargs as attributes
                 span_attributes.update(kwargs)
                 
-                # Create and start the span
-                with _tracer.start_as_current_span(
-                    name=span_name,
-                    kind=OTelSpanKind.INTERNAL,
-                    attributes=span_attributes
-                ) as span:
-                    # Set span kind if provided
-                    if kind:
-                        span.set_attribute("span.kind", kind)
-                    
+                # Add span kind directly to attributes if provided
+                if kind:
+                    span_attributes["span.kind"] = kind
+                
+                # Check if this is a method of an agent class
+                parent_context = None
+                if is_method and hasattr(self, "_agentops_context"):
+                    # Use the agent's context as parent
+                    parent_context = self._agentops_context
+                
+                # Create and start the span with the appropriate parent context
+                if parent_context:
+                    # Use the agent's context
+                    token = context.attach(parent_context)
                     try:
-                        # Call the original function
-                        result = await func(*args, **kwargs)
-                        
-                        # Capture result if enabled
-                        if capture_result:
+                        with _tracer.start_as_current_span(
+                            name=span_name,
+                            kind=OTelSpanKind.INTERNAL,
+                            attributes=span_attributes
+                        ) as span:
                             try:
-                                # Try to convert to a simple type
-                                span.set_attribute("result", str(result))
-                            except:
-                                # Fall back to the type name if conversion fails
-                                span.set_attribute("result", f"<{type(result).__name__}>")
-                        
-                        return result
-                    except Exception as e:
-                        # Set error attributes
-                        span.set_attribute(CoreAttributes.ERROR_TYPE, type(e).__name__)
-                        span.set_attribute(CoreAttributes.ERROR_MESSAGE, str(e))
-                        
-                        # Re-raise the exception
-                        raise
+                                # Call the original function
+                                result = await func(self, *args, **kwargs) if is_method else await func(*args, **kwargs)
+                                
+                                # Capture result if enabled
+                                if capture_result:
+                                    try:
+                                        # Try to convert to a simple type
+                                        span.set_attribute("result", str(result))
+                                    except:
+                                        # Fall back to the type name if conversion fails
+                                        span.set_attribute("result", f"<{type(result).__name__}>")
+                                
+                                return result
+                            except Exception as e:
+                                # Set error attributes
+                                span.set_attribute(CoreAttributes.ERROR_TYPE, type(e).__name__)
+                                span.set_attribute(CoreAttributes.ERROR_MESSAGE, str(e))
+                                
+                                # Re-raise the exception
+                                raise
+                    finally:
+                        context.detach(token)
+                else:
+                    # No agent context, use current context
+                    with _tracer.start_as_current_span(
+                        name=span_name,
+                        kind=OTelSpanKind.INTERNAL,
+                        attributes=span_attributes
+                    ) as span:
+                        try:
+                            # Call the original function
+                            result = await func(self, *args, **kwargs) if is_method else await func(*args, **kwargs)
+                            
+                            # Capture result if enabled
+                            if capture_result:
+                                try:
+                                    # Try to convert to a simple type
+                                    span.set_attribute("result", str(result))
+                                except:
+                                    # Fall back to the type name if conversion fails
+                                    span.set_attribute("result", f"<{type(result).__name__}>")
+                            
+                            return result
+                        except Exception as e:
+                            # Set error attributes
+                            span.set_attribute(CoreAttributes.ERROR_TYPE, type(e).__name__)
+                            span.set_attribute(CoreAttributes.ERROR_MESSAGE, str(e))
+                            
+                            # Re-raise the exception
+                            raise
             
             return async_wrapper
         else:
             @functools.wraps(func)
-            def wrapper(*args, **kwargs):
+            def wrapper(self_or_arg, *args, **kwargs):
+                # Determine if this is a method call (has self)
+                is_method = not inspect.isfunction(self_or_arg) and not inspect.ismethod(self_or_arg)
+                self = self_or_arg if is_method else None
+                
+                # Adjust args if this is not a method call
+                if not is_method:
+                    args = (self_or_arg,) + args
+                
                 # Create span attributes
                 span_attributes = {}
                 
@@ -392,22 +468,33 @@ def span(
                 
                 # Capture arguments if enabled
                 if capture_args:
-                    # Bind arguments to parameter names
-                    bound_args = sig.bind(*args, **kwargs)
-                    bound_args.apply_defaults()
-                    
-                    # Convert arguments to a serializable format
-                    for param_name, param_value in bound_args.arguments.items():
-                        # Skip 'self' parameter
-                        if param_name == 'self':
-                            continue
-                            
-                        try:
-                            # Try to convert to a simple type
-                            span_attributes[f"arg.{param_name}"] = str(param_value)
-                        except:
-                            # Fall back to the parameter name if conversion fails
-                            span_attributes[f"arg.{param_name}"] = f"<{type(param_value).__name__}>"
+                    try:
+                        # Bind arguments to parameter names
+                        if is_method:
+                            # For methods, include self in the binding
+                            method_args = (self,) + args
+                            bound_args = sig.bind(self, *args, **kwargs)
+                        else:
+                            # For regular functions
+                            bound_args = sig.bind(*args, **kwargs)
+                        
+                        bound_args.apply_defaults()
+                        
+                        # Convert arguments to a serializable format
+                        for param_name, param_value in bound_args.arguments.items():
+                            # Skip 'self' parameter
+                            if param_name == 'self':
+                                continue
+                                
+                            try:
+                                # Try to convert to a simple type
+                                span_attributes[f"arg.{param_name}"] = str(param_value)
+                            except:
+                                # Fall back to the parameter name if conversion fails
+                                span_attributes[f"arg.{param_name}"] = f"<{type(param_value).__name__}>"
+                    except Exception as e:
+                        # If binding fails, log it as an attribute but continue
+                        span_attributes["error.binding_args"] = str(e)
                 
                 # Add custom attributes
                 if attributes:
@@ -416,37 +503,77 @@ def span(
                 # Add kwargs as attributes
                 span_attributes.update(kwargs)
                 
-                # Create and start the span
-                with _tracer.start_as_current_span(
-                    name=span_name,
-                    kind=OTelSpanKind.INTERNAL,
-                    attributes=span_attributes
-                ) as span:
-                    # Set span kind if provided
-                    if kind:
-                        span.set_attribute("span.kind", kind)
-                    
+                # Add span kind directly to attributes if provided
+                if kind:
+                    span_attributes["span.kind"] = kind
+                
+                # Check if this is a method of an agent class
+                parent_context = None
+                if is_method and hasattr(self, "_agentops_context"):
+                    # Use the agent's context as parent
+                    parent_context = self._agentops_context
+                
+                # Create and start the span with the appropriate parent context
+                if parent_context:
+                    # Use the agent's context
+                    token = context.attach(parent_context)
                     try:
-                        # Call the original function
-                        result = func(*args, **kwargs)
-                        
-                        # Capture result if enabled
-                        if capture_result:
+                        with _tracer.start_as_current_span(
+                            name=span_name,
+                            kind=OTelSpanKind.INTERNAL,
+                            attributes=span_attributes
+                        ) as span:
                             try:
-                                # Try to convert to a simple type
-                                span.set_attribute("result", str(result))
-                            except:
-                                # Fall back to the type name if conversion fails
-                                span.set_attribute("result", f"<{type(result).__name__}>")
-                        
-                        return result
-                    except Exception as e:
-                        # Set error attributes
-                        span.set_attribute(CoreAttributes.ERROR_TYPE, type(e).__name__)
-                        span.set_attribute(CoreAttributes.ERROR_MESSAGE, str(e))
-                        
-                        # Re-raise the exception
-                        raise
+                                # Call the original function
+                                result = func(self, *args, **kwargs) if is_method else func(*args, **kwargs)
+                                
+                                # Capture result if enabled
+                                if capture_result:
+                                    try:
+                                        # Try to convert to a simple type
+                                        span.set_attribute("result", str(result))
+                                    except:
+                                        # Fall back to the type name if conversion fails
+                                        span.set_attribute("result", f"<{type(result).__name__}>")
+                                
+                                return result
+                            except Exception as e:
+                                # Set error attributes
+                                span.set_attribute(CoreAttributes.ERROR_TYPE, type(e).__name__)
+                                span.set_attribute(CoreAttributes.ERROR_MESSAGE, str(e))
+                                
+                                # Re-raise the exception
+                                raise
+                    finally:
+                        context.detach(token)
+                else:
+                    # No agent context, use current context
+                    with _tracer.start_as_current_span(
+                        name=span_name,
+                        kind=OTelSpanKind.INTERNAL,
+                        attributes=span_attributes
+                    ) as span:
+                        try:
+                            # Call the original function
+                            result = func(self, *args, **kwargs) if is_method else func(*args, **kwargs)
+                            
+                            # Capture result if enabled
+                            if capture_result:
+                                try:
+                                    # Try to convert to a simple type
+                                    span.set_attribute("result", str(result))
+                                except:
+                                    # Fall back to the type name if conversion fails
+                                    span.set_attribute("result", f"<{type(result).__name__}>")
+                            
+                            return result
+                        except Exception as e:
+                            # Set error attributes
+                            span.set_attribute(CoreAttributes.ERROR_TYPE, type(e).__name__)
+                            span.set_attribute(CoreAttributes.ERROR_MESSAGE, str(e))
+                            
+                            # Re-raise the exception
+                            raise
             
             return wrapper
     
@@ -462,14 +589,7 @@ def create_span(
     """
     Context manager for creating spans manually.
     
-    Args:
-        name: Name of the span
-        kind: Kind of span (from SpanKind)
-        attributes: Attributes to add to the span
-        **kwargs: Additional keyword arguments to add as attributes
-        
-    Returns:
-        Context manager that creates and manages a span
+    Creates a span that's a child of the current span.
     """
     # Create span attributes
     span_attributes = {}
@@ -481,17 +601,25 @@ def create_span(
     # Add kwargs as attributes
     span_attributes.update(kwargs)
     
-    # Create and start the span
+    # Add span kind directly to attributes if provided
+    if kind:
+        span_attributes["span.kind"] = kind
+    
+    # Create and start the span as a child of the current span
     with _tracer.start_as_current_span(
         name=name,
         kind=OTelSpanKind.INTERNAL,
         attributes=span_attributes
     ) as span:
-        # Set span kind if provided
-        if kind:
-            span.set_attribute("span.kind", kind)
-        
-        yield span
+        try:
+            yield span
+        except Exception as e:
+            # Set error attributes
+            span.set_attribute(CoreAttributes.ERROR_TYPE, type(e).__name__)
+            span.set_attribute(CoreAttributes.ERROR_MESSAGE, str(e))
+            
+            # Re-raise the exception
+            raise
 
 def current_span() -> Optional[Span]:
     """Get the current active span."""
