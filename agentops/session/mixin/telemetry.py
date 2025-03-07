@@ -83,7 +83,7 @@ class TelemetrySessionMixin(TracedSession):
     @property
     def end_timestamp(self) -> Optional[str]:
         """Get the end timestamp from the span if available."""
-        if self._span and self._span.end_time is not None:  # type: ignore
+        if self._span and hasattr(self._span, "end_time"):
             return self._ns_to_iso(self._span.end_time)  # type: ignore
         return None
 
