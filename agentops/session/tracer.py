@@ -255,6 +255,4 @@ class SessionTracer:
         try:
             self.shutdown()
         except Exception as e:
-            # During garbage collection, some resources might already be gone
-            # Just log and continue
             logger.debug(f"Error during cleanup in __del__: {e}")
