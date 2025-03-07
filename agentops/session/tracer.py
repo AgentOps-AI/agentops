@@ -178,9 +178,6 @@ class SessionTracer:
             # Try to end the span
             span.end()
             logger.debug(f"[{self.session_id}] Ended session span")
-        except AttributeError:
-            # Session might not have a span attribute
-            pass
         except Exception as e:
             # Log any other errors but don't raise them
             logger.debug(f"[{self.session_id}] Note: {e}")
