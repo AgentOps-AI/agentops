@@ -147,14 +147,14 @@ class SessionTracer:
         _session_tracers[self.session_id] = self
 
         logger.debug(
-            f"[{self.session_id}] Session tracer initialized with recording span: {type(self.session.span).__name__}"
+            f"[{self.session_id}] Session tracer initialized with recording span: {type(self.session._span).__name__}"
         )
 
     def _end_session_span(self) -> None:
         """End the session span if it exists and hasn't been ended yet."""
         # Use a more direct approach with proper error handling
         try:
-            span = self.session.span
+            span = self.session._span
             if span is None:
                 return
 
@@ -186,12 +186,15 @@ class SessionTracer:
                 except Exception as e:
                     logger.debug(f"[{self.session_id}] Error detaching context: {e}")
 
-            # End the session span if it exists
+            # End the session span if it exists and hasn't been ended yet
             try:
-                span = self.session.span
-                if span is not None:
-                    span.end()
-                    logger.debug(f"[{self.session_id}] Ended session span")
+                if self.session._span is not None:
+                    # Check if the span has already been ended
+                    if self.session._span.end_time is None:  # type: ignore
+                        self.session._span.end()
+                        logger.debug(f"[{self.session_id}] Ended session span")
+                    else:
+                        logger.debug(f"[{self.session_id}] Session span already ended")
             except AttributeError:
                 # Session might not have a span attribute
                 pass
