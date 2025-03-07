@@ -100,7 +100,9 @@ class TelemetrySessionMixin(TracedSession):
     @property
     def span(self) -> Optional[Span]:
         """Get the span from the session."""
-        return self._span
+        if self._span:
+            return self._span
+        return None
 
     @property
     def spans(self) -> Generator[Any, None, None]:
