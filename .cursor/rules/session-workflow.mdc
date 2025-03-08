@@ -1,0 +1,16 @@
+---
+description: Explains how the codebase work in relation to Session
+globs: 
+---
+
+# What is a Session?
+
+
+A Session, as defined in [session.py](mdc:agentops/session/session.py) represents a root span (also known as a trace) in AgentOps. You can create multiple traces and all subsequent spans generated within the context of that session will be automatically linked to that parent Session. This allows for logical grouping and hierarchical tracking of related operations.
+
+
+
+# What other spans are there?
+
+
+In modules like [__init__.py](mdc:agentops/instrumentation/openai/__init__.py) we instrument OpenAI. All traces generated within that instrumented module should fall under an active Session
