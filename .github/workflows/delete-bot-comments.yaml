@@ -1,0 +1,28 @@
+name: Delete Bot Comments
+
+on:
+  issue_comment:
+    types: [created]
+
+jobs:
+  delete-bot-comment:
+    runs-on: ubuntu-latest
+    if: ${{ github.event.comment.user.login == 'entelligence-ai-pr-reviews' }}
+    
+    steps:
+      - name: Delete bot comment
+        uses: actions/github-script@v6
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const commentId = context.payload.comment.id;
+            
+            console.log(`Deleting comment ID: ${commentId} from bot: entelligence-ai-pr-reviews`);
+            
+            await github.rest.issues.deleteComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              comment_id: commentId
+            });
+            
+            console.log('Comment deleted successfully'); 
