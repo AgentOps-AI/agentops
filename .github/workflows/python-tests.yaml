@@ -1,0 +1,109 @@
+# :: Use nektos/act to run this locally
+# :: Example: 
+# :: `act push -j unit-tests --matrix python-version:3.10 --container-architecture linux/amd64`
+#
+# This workflow runs two separate test suites:
+# 1. Unit Tests (python-tests job):
+#    - Runs across Python 3.9 to 3.13
+#    - Located in tests/unit directory
+#    - Coverage report uploaded to Codecov for Python 3.11 only
+#
+# 2. Integration Tests (integration-tests job):
+#    - Runs only on Python 3.13
+#    - Located in tests/integration directory
+#    - Longer timeout (15 min vs 10 min for unit tests)
+#    - Separate cache for dependencies
+
+name: Python Tests
+on:
+  workflow_dispatch: {}
+  push:
+    branches:
+      - main
+    paths:
+      - 'agentops/**/*.py'
+      - 'agentops/**/*.ipynb'
+      - 'tests/**/*.py'
+      - 'tests/**/*.ipynb'
+  pull_request:
+    branches:
+      - main
+    paths:
+      - 'pyproject.toml'
+      - 'agentops/**/*.py'
+      - 'agentops/**/*.ipynb'
+      - 'tests/**/*.py'
+      - 'tests/**/*.ipynb'
+
+jobs:
+  unit-tests:
+    runs-on: ubuntu-latest
+    env:
+      OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+      AGENTOPS_API_KEY: ${{ secrets.AGENTOPS_API_KEY }}
+      PYTHONUNBUFFERED: "1"
+
+    strategy:
+      matrix:
+        python-version: ["3.9", "3.10", "3.11", "3.12", "3.13"]
+      fail-fast: false
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup UV
+        uses: astral-sh/setup-uv@v5
+        continue-on-error: true
+        with:
+          python-version: ${{ matrix.python-version }}
+          enable-cache: true
+          cache-suffix: uv-${{ matrix.python-version }}
+          cache-dependency-glob: "**/pyproject.toml"
+
+      - name: Install dependencies
+        run: |
+          uv sync --group test --group dev
+
+      - name: Run unit tests with coverage
+        timeout-minutes: 5
+        run: |
+          uv run -m pytest tests/unit -v --cov=agentops --cov-report=xml
+
+      # Only upload coverage report for python3.11
+      - name: Upload coverage to Codecov
+        if: ${{matrix.python-version == '3.11'}}
+        uses: codecov/codecov-action@v5
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          files: ./coverage.xml
+          flags: unittests
+          name: codecov-umbrella
+          fail_ci_if_error: true # Should we?
+
+  integration-tests:
+    runs-on: ubuntu-latest
+    env:
+      OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+      AGENTOPS_API_KEY: ${{ secrets.AGENTOPS_API_KEY }}
+      PYTHONUNBUFFERED: "1"
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup UV
+        uses: astral-sh/setup-uv@v5
+        continue-on-error: true
+        with:
+          python-version: "3.12"
+          enable-cache: true
+          cache-suffix: uv-3.12-integration
+          cache-dependency-glob: "**/pyproject.toml"
+
+      - name: Install dependencies
+        run: |
+          uv sync --group test --group dev
+
+      - name: Run integration tests
+        timeout-minutes: 5
+        run: |
+          uv run pytest tests/integration
