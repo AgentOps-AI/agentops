@@ -174,7 +174,7 @@ def test_kwargs_override_env_vars(agentops_config, mock_config):
 def test_no_api_key_raises_exception():
     """Test that an exception is raised when no API key is provided"""
     with pytest.raises(NoApiKeyException):
-        agentops.init()
+        agentops.init(api_key=False)  # have to use `False` because `None` gets filtered
 
 
 def test_instrument_llm_calls_flag():
