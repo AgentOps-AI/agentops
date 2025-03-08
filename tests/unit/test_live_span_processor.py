@@ -27,7 +27,7 @@ class TestLiveSpanProcessor:
         assert processor._schedule_delay_millis == 5000
         assert processor._in_flight_spans == {}
         assert processor._shutdown is False
-        assert isinstance(processor._lock, threading.Lock)
+        assert isinstance(processor._lock, type(threading.Lock()))
 
     def test_on_start(self):
         """Test on_start method (should do nothing)."""
