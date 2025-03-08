@@ -69,6 +69,7 @@ test = [
     "autogen<0.4.0",
     "pytest-cov",
     "fastapi[standard]",
+    "tox>=4.24.2",
 ]
 
 dev = [
