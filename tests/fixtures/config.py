@@ -1,4 +1,5 @@
 import os
+import uuid
 from unittest import mock
 
 import pytest
@@ -8,9 +9,8 @@ from pytest_mock import MockerFixture
 @pytest.fixture(autouse=True)
 def mock_env():
     """Clear environment but preserve AGENTOPS_API_KEY if it exists."""
-    api_key = os.environ.get("AGENTOPS_API_KEY")
     with mock.patch.dict(os.environ, clear=True) as mock_env:
-        os.environ["AGENTOPS_API_KEY"] = api_key
+        mock_env["AGENTOPS_API_KEY"] = uuid.uuid4().hex
         yield mock_env
 
 
