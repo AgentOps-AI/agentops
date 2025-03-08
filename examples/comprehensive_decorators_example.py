@@ -19,7 +19,7 @@ from opentelemetry.sdk.trace.export import ConsoleSpanExporter, BatchSpanProcess
 # Initialize AgentOps
 processor = BatchSpanProcessor(ConsoleSpanExporter())
 agentops.init(
-    api_key="c674dcc9-2084-4bf5-bdd5-dc3ddf421a42",  # Replace with your actual API key
+    api_key="your_api_key",  # Replace with your actual API key
     processor=processor,
     instrument_llm_calls=True  # Enable LLM instrumentation if you're using OpenAI, etc.
 )
