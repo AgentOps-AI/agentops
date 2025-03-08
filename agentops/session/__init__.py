@@ -46,6 +46,21 @@ Integration with Instrumentation:
     - Sessions can be configured to instrument LLM calls and other events
     - Integration with OpenTelemetry for enhanced tracing and observability
 
+Context Management:
+    - Sessions can be used as context managers with the 'with' statement
+    - This ensures proper cleanup even if exceptions occur
+    - Example:
+        ```python
+        with Session(config=config) as session:
+            # Your code here
+            # Session will be automatically ended when the block exits
+        ```
+
+Garbage Collection:
+    - Sessions implement __del__ to ensure proper cleanup during garbage collection
+    - This prevents data loss when a session is no longer referenced
+    - The session will be automatically ended with INDETERMINATE state
+
 See also:
     - Session class for detailed session management
     - SessionState enum for possible session states
@@ -54,9 +69,19 @@ See also:
 
 from typing import Optional
 
-from .registry import (add_session, get_active_sessions, get_default_session,
-                       remove_session)
+from .registry import get_active_sessions, get_default_session, add_session, remove_session
+
 # Then import core components
 from .session import Session, SessionState
 
-__all__ = ["Session", "SessionState", "get_active_sessions", "add_session", "remove_session", "current"]
+__all__ = [
+    "Session",
+    "SessionState",
+    "get_active_sessions",
+    "add_session",
+    "remove_session",
+    "current",
+]
+
+# Alias for backward compatibility
+current = Session.current

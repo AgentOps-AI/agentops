@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from datetime import datetime, timezone
-from typing import Any, Generator, Optional
+from typing import Any, Generator, Optional, List
 from uuid import UUID
 
 from opentelemetry.trace import Span, Status, StatusCode
@@ -25,15 +25,15 @@ def trace_id_to_uuid(trace_id: int) -> UUID:
 
 
 class TracedSession(SessionBase):
-    span: Optional[Span]
+    _span: Optional[Span]
     telemetry: SessionTracer
 
     @property
     def session_id(self):
         """Returns the Trace ID as a UUID"""
-        if not (span := getattr(self, "span", None)):
-            return None
-        return trace_id_to_uuid(span.get_span_context().trace_id)
+        if self.span:
+            return trace_id_to_uuid(self.span.get_span_context().trace_id)
+        return None
 
 
 class TelemetrySessionMixin(TracedSession):
@@ -44,25 +44,35 @@ class TelemetrySessionMixin(TracedSession):
     _span: Optional[Span]
 
     def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs) if hasattr(super(), "__init__") else None
+        super().__init__(*args, **kwargs)
         self.telemetry = SessionTracer(self)
         self._span = None
 
+    def start_telemetry(self) -> None:
+        """Start telemetry for the session."""
+        if self.telemetry:
+            self.telemetry.start()
+
+    def shutdown_telemetry(self) -> None:
+        """Shutdown telemetry for the session."""
+        if self.telemetry:
+            self.telemetry.shutdown()
+
     def set_status(self, state: SessionState, reason: Optional[str] = None) -> None:
         """Update root span status based on session state."""
-        if self.span is None:
+        if self._span is None:
             return
 
         if state.is_terminal:
             if state.name == "SUCCEEDED":
-                self.span.set_status(Status(StatusCode.OK))
+                self._span.set_status(Status(StatusCode.OK))
             elif state.name == "FAILED":
-                self.span.set_status(Status(StatusCode.ERROR))
+                self._span.set_status(Status(StatusCode.ERROR))
             else:
-                self.span.set_status(Status(StatusCode.UNSET))
+                self._span.set_status(Status(StatusCode.UNSET))
 
             if reason:
-                self.span.set_attribute("session.end_reason", reason)
+                self._span.set_attribute("session.end_reason", reason)
 
     @staticmethod
     def _ns_to_iso(ns_time: Optional[int]) -> Optional[str]:
@@ -76,23 +86,27 @@ class TelemetrySessionMixin(TracedSession):
     @property
     def init_timestamp(self) -> Optional[str]:
         """Get the initialization timestamp from the span if available."""
-        if self.span and hasattr(self.span, "init_time"):
-            return self._ns_to_iso(self.span.init_time)  # type: ignore
-        return None
+        try:
+            if self._span and self._span.init_time:
+                return self._ns_to_iso(self._span.init_time)  # type: ignore
+        except AttributeError:
+            return None
 
     @property
     def end_timestamp(self) -> Optional[str]:
         """Get the end timestamp from the span if available."""
-        if self.span and hasattr(self.span, "end_time"):
-            return self._ns_to_iso(self.span.end_time)  # type: ignore
-        return None
+        try:
+            if self._span and self._span.end_time:
+                return self._ns_to_iso(self._span.end_time)  # type: ignore
+        except AttributeError:
+            return None
 
     @property
     def span(self) -> Optional[Span]:
         """Get the span from the session."""
-        if not (span := getattr(self, "_span", None)):
-            return None
-        return span
+        if self._span:
+            return self._span
+        return None
 
     @property
     def spans(self) -> Generator[Any, None, None]:
