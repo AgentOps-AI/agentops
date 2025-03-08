@@ -17,9 +17,7 @@ from agentops.semconv import (
     SpanKind, 
     AgentAttributes, 
     ToolAttributes, 
-    CoreAttributes, 
-    Status, 
-    AgentStatus, 
+    CoreAttributes,
     ToolStatus,
 )
 

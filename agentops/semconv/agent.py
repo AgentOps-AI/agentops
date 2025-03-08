@@ -11,9 +11,3 @@ class AgentAttributes:
     # Capabilities
     AGENT_TOOLS = "agent.tools"            # Tools available to the agent
     AGENT_MODELS = "agent.models"          # Models available to the agent
-    
-    # State
-    AGENT_STATUS = "agent.status"          # Current status of the agent
-    
-    # Reasoning
-    AGENT_REASONING = "agent.reasoning"    # Agent's reasoning process

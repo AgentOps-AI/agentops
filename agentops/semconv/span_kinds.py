@@ -4,7 +4,6 @@ class SpanKind:
     """Defines the kinds of spans in AgentOps."""
     
     # Core span kinds
-    SESSION = "session"                # Root span for a session
     AGENT = "agent"                    # Agent instance
     TOOL = "tool"                      # Tool execution
     
