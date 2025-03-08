@@ -3,6 +3,12 @@ from typing import TYPE_CHECKING, List, Optional, Union
 from .client import Client
 from .session import Session
 
+# Import semantic conventions
+from .semconv import SpanKind, CoreAttributes, AgentAttributes, ToolAttributes, ToolStatus
+
+# Import decorators
+from .decorators import session, agent, tool, span, create_span, current_span, add_span_attribute, add_span_event
+
 from opentelemetry.sdk.trace import SpanProcessor
 from opentelemetry.sdk.trace.export import SpanExporter
 
