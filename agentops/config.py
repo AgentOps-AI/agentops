@@ -186,8 +186,8 @@ class Config:
 
         if exporter_endpoint is not None:
             self.exporter_endpoint = exporter_endpoint
-        else:
-            self.exporter_endpoint = self.endpoint
+        # else:
+        #     self.exporter_endpoint = self.endpoint
 
     def dict(self):
         """Return a dictionary representation of the config"""
