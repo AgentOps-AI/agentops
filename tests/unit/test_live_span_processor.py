@@ -63,17 +63,17 @@ class TestLiveSpanProcessor:
 
         assert 12345 not in processor._in_flight_spans
 
-    def test_force_export_empty(self):
-        """Test force_export with no spans."""
+    def test_force_flush_empty(self):
+        """Test force_flush with no spans."""
         exporter = MagicMock(spec=SpanExporter)
         processor = LiveSpanProcessor(exporter)
 
-        processor.force_export()
+        processor.force_flush()
 
         exporter.export.assert_not_called()
 
-    def test_force_export(self):
-        """Test force_export with spans."""
+    def test_force_flush(self):
+        """Test force_flush with spans."""
         exporter = MagicMock(spec=SpanExporter)
         processor = LiveSpanProcessor(exporter)
 
@@ -85,7 +85,7 @@ class TestLiveSpanProcessor:
 
         processor._in_flight_spans = {12345: span1, 67890: span2}
 
-        processor.force_export()
+        processor.force_flush()
 
         # Verify spans were exported
         exporter.export.assert_called_once()
