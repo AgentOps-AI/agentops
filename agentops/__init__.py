@@ -3,6 +3,9 @@ from typing import TYPE_CHECKING, List, Optional, Union
 from .client import Client
 from .session import Session
 
+# Import semantic conventions
+from .semconv import SpanKind, CoreAttributes, AgentAttributes, ToolAttributes, ToolStatus
+
 from opentelemetry.sdk.trace import SpanProcessor
 from opentelemetry.sdk.trace.export import SpanExporter
 

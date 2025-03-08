@@ -12,7 +12,3 @@ class ToolAttributes:
     TOOL_PARAMETERS = "tool.parameters"    # Parameters passed to the tool
     TOOL_RESULT = "tool.result"            # Result returned by the tool
     TOOL_STATUS = "tool.status"            # Status of tool execution
-    
-    # Performance
-    TOOL_LATENCY = "tool.latency"          # Latency of tool execution
-    TOOL_COST = "tool.cost"                # Cost of tool execution
