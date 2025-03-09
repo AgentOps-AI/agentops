@@ -9,7 +9,7 @@ from opentelemetry.metrics import Histogram, Meter, get_meter
 from opentelemetry.instrumentation.utils import unwrap
 from opentelemetry.instrumentation.instrumentor import BaseInstrumentor
 from opentelemetry.instrumentation.crewai.version import __version__
-from opentelemetry.semconv_ai import SpanAttributes, TraceloopSpanKindValues, Meters
+from agentops.semconv import SpanAttributes, AgentOpsSpanKindValues, Meters
 from .crewai_span_attributes import CrewAISpanAttributes, set_span_attribute
 
 _instruments = ("crewai >= 0.70.0",)
@@ -98,7 +98,7 @@ def wrap_agent_execute_task(tracer, duration_histogram, token_histogram, wrapped
         f"{agent_name}.agent",
         kind=SpanKind.CLIENT,
         attributes={
-            SpanAttributes.TRACELOOP_SPAN_KIND: TraceloopSpanKindValues.AGENT.value,
+            SpanAttributes.AGENTOPS_SPAN_KIND: AgentOpsSpanKindValues.AGENT.value,
         }
     ) as span:
         try:
@@ -139,13 +139,13 @@ def wrap_task_execute(tracer, duration_histogram, token_histogram, wrapped, inst
         f"{task_name}.task",
         kind=SpanKind.CLIENT,
         attributes={
-            SpanAttributes.TRACELOOP_SPAN_KIND: TraceloopSpanKindValues.TASK.value,
+            SpanAttributes.AGENTOPS_SPAN_KIND: AgentOpsSpanKindValues.TASK.value,
         }
     ) as span:
         try:
             CrewAISpanAttributes(span=span, instance=instance)
             result = wrapped(*args, **kwargs)
-            set_span_attribute(span, SpanAttributes.TRACELOOP_ENTITY_OUTPUT, str(result))
+            set_span_attribute(span, SpanAttributes.AGENTOPS_ENTITY_OUTPUT, str(result))
             span.set_status(Status(StatusCode.OK))
             return result
         except Exception as ex:
@@ -185,7 +185,7 @@ def wrap_llm_call(tracer, duration_histogram, token_histogram, wrapped, instance
 
 
 def is_metrics_enabled() -> bool:
-    return (os.getenv("TRACELOOP_METRICS_ENABLED") or "true").lower() == "true"
+    return (os.getenv("AGENTOPS_METRICS_ENABLED") or "true").lower() == "true"
 
 
 def _create_metrics(meter: Meter):
