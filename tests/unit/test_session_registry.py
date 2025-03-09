@@ -223,14 +223,14 @@ def test_session_registry_mixin_integration():
     
     # Test session registration
     session = TestSession()
-    session.start()
+    session._start_session_registry()
     
     # Verify it was added to registry
     assert session in get_active_sessions()
     assert get_current_session() == session
     
     # Test session unregistration
-    session.end(state=SessionState.SUCCEEDED)
+    session._end_session_registry()
     assert session not in get_active_sessions()
 
 

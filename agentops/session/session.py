@@ -79,11 +79,11 @@ class Session(SessionRegistryMixin, SessionReportingMixin, SessionStateMixin, Se
     def start(self):
         """Start the session"""
         with self._lock:
-            # explicitly call super() methods for clear execution order
+            # explicitly call mixin methods for clear execution order
             # Running state is set by the `SessionStateMixin`
-            super(SessionRegistryMixin, self).start()
-            super(SessionStateMixin, self).start()
-            super(SessionReportingMixin, self).start()
+            self._start_session_registry()
+            self._start_session_state()
+            self._start_session_telemetry()
             
             logger.debug(f"[{self.session_id}] Session started")
 
@@ -94,10 +94,10 @@ class Session(SessionRegistryMixin, SessionReportingMixin, SessionStateMixin, Se
             state: The final state of the session. Defaults to SUCCEEDED.
         """
         with self._lock:
-            # explicitly call super() methods for clear execution order
-            super(SessionStateMixin, self).end(state)
-            super(SessionReportingMixin, self).end(state)
-            super(SessionRegistryMixin, self).end(state)
+            # explicitly call mixin methods for clear execution order
+            self._end_session_registry()
+            self._end_session_state(state)
+            self._end_session_telemetry()
             
             logger.debug(f"[{self.session_id}] Session ended with state: {state}")
 

@@ -17,7 +17,7 @@ class SessionStateMixin(TelemetrySessionMixin, SessionBase):
     # Use the new property descriptor that acts as a mediator
     state = SessionStateProperty(SessionState.INITIALIZING)
 
-    def start(self) -> None:
+    def _start_session_state(self) -> None:
         """
         Start method that updates state to RUNNING.
 
@@ -26,7 +26,7 @@ class SessionStateMixin(TelemetrySessionMixin, SessionBase):
         # Call parent start method to maintain the chain
         self.state = SessionState.RUNNING
 
-    def end(self, state: SessionState) -> None:
+    def _end_session_state(self, state: SessionState) -> None:
         """
         End method that updates state to a terminal state.
 

@@ -23,7 +23,7 @@ class SessionRegistryMixin(SessionBase):
         # Call parent init
         super().__init__(*args, **kwargs)
 
-    def start(self) -> None:
+    def _start_session_registry(self) -> None:
         """Register this session in the global registry and set as current."""
         # Register this session for cleanup
         add_session(self)
@@ -33,7 +33,7 @@ class SessionRegistryMixin(SessionBase):
 
         logger.debug(f"[{self.session_id}] Session registered in registry")
 
-    def end(self, state: SessionState) -> None:
+    def _end_session_registry(self) -> None:
         """Unregister this session from the global registry."""
         # Unregister from cleanup
         remove_session(self)

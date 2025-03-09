@@ -7,7 +7,6 @@ from uuid import UUID
 from opentelemetry.trace import Span, Status, StatusCode
 
 from agentops.session.base import SessionBase
-from agentops.session.state import SessionState
 from agentops.session.tracer import SessionTracer
 
 
@@ -48,11 +47,11 @@ class TelemetrySessionMixin(TracedSession):
         self.telemetry = SessionTracer(self)
         self._span = None
 
-    def start(self) -> None:
+    def _start_session_telemetry(self) -> None:
         """Start telemetry for the session."""
         self.telemetry.start()
 
-    def end(self, state: SessionState) -> None:
+    def _end_session_telemetry(self) -> None:
         """Shutdown telemetry for the session."""
         self.telemetry.shutdown()
 
