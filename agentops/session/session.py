@@ -123,9 +123,6 @@ class Session(SessionRegistryMixin, AnalyticsSessionMixin, TelemetrySessionMixin
                     self._span.end()
                     logger.debug(f"[{self.session_id}] Ended span directly")
 
-            # Shutdown telemetry using the mixin method
-            self.shutdown_telemetry() # TODO: This should be called from the mixin
-
             # Unregister from cleanup
             super().end()
 
@@ -138,9 +135,6 @@ class Session(SessionRegistryMixin, AnalyticsSessionMixin, TelemetrySessionMixin
 
             # Update state
             self._state = SessionState.RUNNING
-
-            # Start telemetry using the mixin method
-            self.start_telemetry()
 
             logger.debug(f"[{self.session_id}] Session started")
 

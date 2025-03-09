@@ -48,15 +48,13 @@ class TelemetrySessionMixin(TracedSession):
         self.telemetry = SessionTracer(self)
         self._span = None
 
-    def start_telemetry(self) -> None:
+    def start(self) -> None:
         """Start telemetry for the session."""
-        if self.telemetry:
-            self.telemetry.start()
+        self.telemetry.start()
 
-    def shutdown_telemetry(self) -> None:
+    def stop(self) -> None:
         """Shutdown telemetry for the session."""
-        if self.telemetry:
-            self.telemetry.shutdown()
+        self.telemetry.shutdown()
 
     def set_status(self, state: SessionState, reason: Optional[str] = None) -> None:
         """Update root span status based on session state."""
