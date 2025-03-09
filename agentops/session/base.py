@@ -35,18 +35,23 @@ class SessionBase(ABC):
 
     # --------------------------------------------------------------------------
 
+    @abstractmethod
     def start(self):
         raise NotImplementedError
 
+    @abstractmethod
     def end(self, state: SessionState):
         raise NotImplementedError
 
     @property
+    @abstractmethod
     def session_id(self) -> UUID:
         raise NotImplementedError
 
+    @abstractmethod
     def dict(self) -> dict:
         raise NotImplementedError
 
+    @abstractmethod
     def json(self) -> str:
         raise NotImplementedError
