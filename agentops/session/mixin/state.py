@@ -26,7 +26,7 @@ class SessionStateMixin(TelemetrySessionMixin, SessionBase):
         # Call parent start method to maintain the chain
         self.state = SessionState.RUNNING
 
-    def _end_session_state(self, state: SessionState) -> None:
+    def _end_session_state(self, state: Union[SessionState, str]) -> None:
         """
         End method that updates state to a terminal state.
 

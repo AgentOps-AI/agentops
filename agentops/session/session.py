@@ -3,7 +3,7 @@ from __future__ import annotations
 import datetime
 import json
 import threading
-from typing import TYPE_CHECKING, Optional
+from typing import TYPE_CHECKING, Optional, Union
 from uuid import UUID
 
 from termcolor import colored
@@ -87,7 +87,7 @@ class Session(SessionRegistryMixin, SessionReportingMixin, SessionStateMixin, Se
             
             logger.debug(f"[{self.session_id}] Session started")
 
-    def end(self, state=SessionState.SUCCEEDED):
+    def end(self, state: Union[SessionState, str] = SessionState.SUCCEEDED):
         """End the session with the given state.
 
         Args:

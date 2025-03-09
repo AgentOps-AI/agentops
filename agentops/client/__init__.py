@@ -93,7 +93,8 @@ class Client:
         """End the current session"""
         session = get_default_session()
         if session:
-            session.end(SessionState(end_state))
+            # TODO `end_state_reason` and `video` get orphaned here. 
+            session.end(end_state)
         else:
             logger.warning("No active session to end")
 
