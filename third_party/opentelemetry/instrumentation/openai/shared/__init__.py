@@ -14,7 +14,7 @@ from opentelemetry.instrumentation.openai.shared.config import Config
 from opentelemetry.semconv._incubating.attributes.gen_ai_attributes import (
     GEN_AI_RESPONSE_ID,
 )
-from opentelemetry.semconv_ai import SpanAttributes
+from agentops.semconv import SpanAttributes
 from opentelemetry.instrumentation.openai.utils import (
     dont_throw,
     is_openai_v1,

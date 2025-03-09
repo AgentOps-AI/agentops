@@ -9,7 +9,7 @@ from opentelemetry.trace import Span, NonRecordingSpan, SpanContext
 
 import agentops
 from agentops.decorators import agent, tool, span, create_span, current_span, add_span_attribute
-from agentops.semconv import SpanKind, AgentAttributes, ToolAttributes, CoreAttributes, ToolStatus
+from agentops.semconv import SpanKind, AgentAttributes, ToolAttributes, CoreAttributes, ToolStatus, AgentOpsSpanKindValues
 
 from agentops.decorators import session
 from agentops.session.session import SessionState
@@ -139,7 +139,7 @@ def test_agent_decorator_basic():
         assert call_args["name"] == "test_agent"
         assert "attributes" in call_args
         attributes = call_args["attributes"]
-        assert attributes.get("span.kind") == SpanKind.AGENT
+        assert attributes.get("span.kind") == AgentOpsSpanKindValues.AGENT.value
         assert attributes.get(AgentAttributes.AGENT_ROLE) == "test_role"
         
         # Check that the original functionality works
@@ -391,7 +391,7 @@ async def test_span_decorator_async():
         mock_start_span.return_value.__enter__.return_value = mock_span
         mock_tracer.start_as_current_span = mock_start_span
 
-        @span(name="async_span", kind=SpanKind.AGENT_ACTION)
+        @span(name="async_span", kind=AgentOpsSpanKindValues.AGENT.value)
         async def async_function(a, b):
             await asyncio.sleep(0.01)  # Small delay
             return a + b
@@ -408,7 +408,7 @@ async def test_span_decorator_async():
         assert call_args["name"] == "async_span"
         assert "attributes" in call_args
         attributes = call_args["attributes"]
-        assert attributes.get("span.kind") == SpanKind.AGENT_ACTION
+        assert attributes.get("span.kind") == AgentOpsSpanKindValues.AGENT.value
 
 
 def test_span_decorator_method():

@@ -14,7 +14,7 @@ from opentelemetry.trace import Span, SpanKind as OTelSpanKind
 import agentops
 from agentops.session.state import SessionState
 from agentops.semconv import (
-    SpanKind, 
+    AgentOpsSpanKindValues, 
     AgentAttributes, 
     ToolAttributes, 
     CoreAttributes,
@@ -139,7 +139,7 @@ def agent(
             span_attributes[AgentAttributes.AGENT_ID] = agent_id
             
             # Add span kind directly to attributes
-            span_attributes["span.kind"] = SpanKind.AGENT
+            span_attributes["span.kind"] = AgentOpsSpanKindValues.AGENT.value
             
             # Create and start the span as a child of the current span (session)
             # Store the context manager and use it to access the span
@@ -247,7 +247,7 @@ def tool(
             span_attributes.update(kwargs)
             
             # Add span kind directly to attributes
-            span_attributes["span.kind"] = SpanKind.TOOL
+            span_attributes["span.kind"] = AgentOpsSpanKindValues.TOOL.value
             
             # Create and start the span as a child of the current span
             with _tracer.start_as_current_span(
@@ -257,7 +257,7 @@ def tool(
             ) as span:
                 try:
                     # Set initial status
-                    span.set_attribute(ToolAttributes.TOOL_STATUS, ToolStatus.EXECUTING)
+                    span.set_attribute(ToolAttributes.TOOL_STATUS, ToolStatus.EXECUTING.value)
                     
                     # Call the original function
                     result = func(*args, **kwargs)
@@ -272,12 +272,12 @@ def tool(
                             span.set_attribute(ToolAttributes.TOOL_RESULT, f"<{type(result).__name__}>")
                     
                     # Set success status
-                    span.set_attribute(ToolAttributes.TOOL_STATUS, ToolStatus.SUCCEEDED)
+                    span.set_attribute(ToolAttributes.TOOL_STATUS, ToolStatus.SUCCEEDED.value)
                     
                     return result
                 except Exception as e:
                     # Set error status and attributes
-                    span.set_attribute(ToolAttributes.TOOL_STATUS, ToolStatus.FAILED)
+                    span.set_attribute(ToolAttributes.TOOL_STATUS, ToolStatus.FAILED.value)
                     span.set_attribute(CoreAttributes.ERROR_TYPE, type(e).__name__)
                     span.set_attribute(CoreAttributes.ERROR_MESSAGE, str(e))
                     

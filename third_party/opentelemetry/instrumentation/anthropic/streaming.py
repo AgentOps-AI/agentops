@@ -12,7 +12,7 @@ from opentelemetry.instrumentation.anthropic.utils import (
 )
 from opentelemetry.metrics import Counter, Histogram
 from opentelemetry.semconv._incubating.attributes.gen_ai_attributes import GEN_AI_RESPONSE_ID
-from opentelemetry.semconv_ai import SpanAttributes
+from agentops.semconv import SpanAttributes
 from opentelemetry.trace.status import Status, StatusCode
 
 logger = logging.getLogger(__name__)

@@ -5,7 +5,7 @@ import threading
 import traceback
 from opentelemetry import context as context_api
 from opentelemetry.instrumentation.anthropic.config import Config
-from opentelemetry.semconv_ai import SpanAttributes
+from agentops.semconv import SpanAttributes
 
 GEN_AI_SYSTEM = "gen_ai.system"
 GEN_AI_SYSTEM_ANTHROPIC = "anthropic"
