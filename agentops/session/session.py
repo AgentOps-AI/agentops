@@ -6,6 +6,7 @@ import threading
 from typing import TYPE_CHECKING, Optional
 from uuid import UUID
 
+from opentelemetry.trace import Status, StatusCode
 from termcolor import colored
 
 from agentops.exceptions import ApiServerException
@@ -17,17 +18,16 @@ from agentops.sdk.descriptors.classproperty import classproperty
 
 from .base import SessionBase
 from .mixin.analytics import AnalyticsSessionMixin
+from .mixin.registry import SessionRegistryMixin
 from .mixin.telemetry import TelemetrySessionMixin
 from .state import SessionState
 from .state import SessionStateDescriptor as session_state_field
-from .registry import add_session, remove_session, set_current_session
-from opentelemetry.trace import Status, StatusCode
 
 if TYPE_CHECKING:
     from agentops.config import Config
 
 
-class Session(AnalyticsSessionMixin, TelemetrySessionMixin, SessionBase):
+class Session(SessionRegistryMixin, AnalyticsSessionMixin, TelemetrySessionMixin, SessionBase):
     """Data container for session state with minimal public API"""
 
     def __init__(
@@ -124,21 +124,17 @@ class Session(AnalyticsSessionMixin, TelemetrySessionMixin, SessionBase):
                     logger.debug(f"[{self.session_id}] Ended span directly")
 
             # Shutdown telemetry using the mixin method
-            self.shutdown_telemetry()
+            self.shutdown_telemetry() # TODO: This should be called from the mixin
 
             # Unregister from cleanup
-            remove_session(self)
+            super().end()
 
             logger.debug(f"[{self.session_id}] Session ended with state: {state}")
 
     def start(self):
         """Start the session"""
         with self._lock:
-            # Register this session for cleanup
-            add_session(self)
-
-            # Set as current session
-            set_current_session(self)
+            super().start()
 
             # Update state
             self._state = SessionState.RUNNING
