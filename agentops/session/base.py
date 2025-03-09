@@ -34,11 +34,9 @@ class SessionBase(ABC):
 
     # --------------------------------------------------------------------------
 
-    @abstractmethod
     def start(self):
         raise NotImplementedError
 
-    @abstractmethod
     def end(self):
         raise NotImplementedError
 
