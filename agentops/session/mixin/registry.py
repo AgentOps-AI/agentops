@@ -4,13 +4,12 @@ from typing import TYPE_CHECKING, Any, Optional
 
 from agentops.logging import logger
 from agentops.session.registry import add_session, remove_session, set_current_session, get_current_session
-from agentops.session.base import SessionBase
 
 if TYPE_CHECKING:
     from agentops.session.session import Session
 
 
-class SessionRegistryMixin(SessionBase):
+class SessionRegistryMixin:
     """
     Mixin that adds registry management functionality to a session.
 

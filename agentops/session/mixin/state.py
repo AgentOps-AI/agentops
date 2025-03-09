@@ -1,12 +1,11 @@
 from typing import Optional, Union
 
-from agentops.session.base import SessionBase
 from agentops.session.state import SessionState, SessionStateProperty
 
 from .telemetry import TelemetrySessionMixin
 
 
-class SessionStateMixin(TelemetrySessionMixin, SessionBase):
+class SessionStateMixin(TelemetrySessionMixin):
     """
     Mixin for handling session state management and transitions.
 

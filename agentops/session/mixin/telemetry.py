@@ -6,7 +6,6 @@ from uuid import UUID
 
 from opentelemetry.trace import Span, Status, StatusCode
 
-from agentops.session.base import SessionBase
 from agentops.session.tracer import SessionTracer
 
 
@@ -23,7 +22,7 @@ def trace_id_to_uuid(trace_id: int) -> UUID:
     return UUID(uuid_str)
 
 
-class TracedSession(SessionBase):
+class TracedSession:
     _span: Optional[Span]
     telemetry: SessionTracer
 
