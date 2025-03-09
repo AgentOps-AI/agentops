@@ -173,7 +173,7 @@ class TestLiveSpanProcessor:
         # Verify exporter was shut down
         exporter.shutdown.assert_called_once()
 
-    def test_force_flush(self):
+    def test_force_flush_with_timeout(self):
         """Test force_flush method."""
         exporter = MagicMock(spec=SpanExporter)
         exporter.force_flush = MagicMock(return_value=True)
@@ -231,8 +231,10 @@ class TestLiveSpanProcessor:
         with patch("agentops.session.processors.logger") as mock_logger:
             result = processor.force_flush()
 
-            # Verify warning was logged
-            mock_logger.warning.assert_called_once()
+            # Verify both warnings were logged
+            assert mock_logger.warning.call_count == 2
+            mock_logger.warning.assert_any_call(f"Failed to export 1 spans: {exporter.export()}")
+            mock_logger.warning.assert_any_call("Error flushing exporter: Test exception")
 
             # Verify result is False due to exception
             assert result is False
