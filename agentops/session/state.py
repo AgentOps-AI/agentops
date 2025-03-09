@@ -1,6 +1,6 @@
 from dataclasses import field
 from enum import Enum, auto
-from typing import TYPE_CHECKING, Optional, Union
+from typing import TYPE_CHECKING, Optional, Union, Any
 
 from agentops.logging import logger
 
@@ -15,6 +15,7 @@ class StrEnum(str, Enum):
 
 if TYPE_CHECKING:
     from .session import Session
+    from opentelemetry.trace import Span, Status, StatusCode
 
 
 class SessionState(StrEnum):
@@ -50,8 +51,17 @@ class SessionState(StrEnum):
             return cls.INDETERMINATE
 
 
-class SessionStateDescriptor:
-    """Descriptor for managing session state with description"""
+class SessionStateProperty:
+    """
+    Property descriptor for session state that acts as a mediator between
+    state management and telemetry functionality.
+    
+    This descriptor handles:
+    1. Setting and getting the session state
+    2. Parsing state strings with optional reasons
+    3. Updating span status based on state
+    4. Recording state as span attribute
+    """
 
     def __init__(self, default_state: SessionState = SessionState.INITIALIZING):
         self._default = default_state
@@ -61,7 +71,7 @@ class SessionStateDescriptor:
         self._reason_name = f"_{name}_reason"
 
     def __get__(self, obj, objtype=None):
-        """Get the current state"""
+        """Get the current state with optional reason"""
         if obj is None:
             return self._default
 
@@ -72,21 +82,83 @@ class SessionStateDescriptor:
             return f"{state}({reason})"
         return state
 
-    def __set__(self, obj: "Session", value: Union[SessionState, str]) -> None:
-        """Set the state and optionally update reason"""
+    def __set__(self, obj, value: Union[SessionState, str]) -> None:
+        """
+        Set the state and handle telemetry updates.
+        
+        This method:
+        1. Parses the state and reason from the value
+        2. Sets the internal state and reason
+        3. Updates the span status based on state
+        4. Records the state as a span attribute
+        """
+        state = None
+        reason = None
+
+        # Parse the state and reason from the value
         if isinstance(value, str):
-            try:
-                state = SessionState.from_string(value)
-            except ValueError:
-                logger.warning(f"Invalid session state: {value}")
-                state = SessionState.INDETERMINATE
-                setattr(obj, self._reason_name, f"Invalid state: {value}")
+            # Check if there's a reason in parentheses
+            if "(" in value and value.endswith(")"):
+                state_str, reason_part = value.split("(", 1)
+                reason = reason_part.rstrip(")")
+                try:
+                    state = SessionState.from_string(state_str)
+                except ValueError:
+                    logger.warning(f"Invalid session state: {state_str}")
+                    state = SessionState.INDETERMINATE
+                    reason = f"Invalid state: {state_str}"
+            else:
+                try:
+                    state = SessionState.from_string(value)
+                except ValueError:
+                    logger.warning(f"Invalid session state: {value}")
+                    state = SessionState.INDETERMINATE
+                    reason = f"Invalid state: {value}"
         else:
             state = value
 
+        # Set the internal state and reason
         setattr(obj, self._state_name, state)
+        if reason:
+            setattr(obj, self._reason_name, reason)
+        else:
+            # Clear any existing reason if not provided
+            if hasattr(obj, self._reason_name):
+                setattr(obj, self._reason_name, None)
 
-        # Update span status if available
-        if hasattr(obj, "span"):
-            reason = getattr(obj, self._reason_name, None)
-            obj.set_status(state, reason)
+        # Update span status and record state attribute
+        self._update_span(obj, state, reason)
+
+    def _update_span(self, obj: Any, state: SessionState, reason: Optional[str] = None) -> None:
+        """
+        Update span status and attributes based on state.
+        
+        This method:
+        1. Gets the span from the object if available
+        2. Updates the span status based on state
+        3. Records the state as a span attribute
+        4. Records the reason as a span attribute if provided
+        """
+        # Get the span from the object if available
+        span = getattr(obj, "_span", None)
+        if span is None:
+            return
+
+        # Import here to avoid circular imports
+        from opentelemetry.trace import Status, StatusCode
+            
+        # Update span status based on state
+        if state.is_terminal:
+            if state == SessionState.SUCCEEDED:
+                span.set_status(Status(StatusCode.OK))
+            elif state == SessionState.FAILED:
+                span.set_status(Status(StatusCode.ERROR))
+            else:
+                span.set_status(Status(StatusCode.UNSET))
+                
+        # Record state as span attribute
+        span.set_attribute("session.state", str(self.__get__(obj)))
+        
+        # Add reason as attribute if present
+        if reason:
+            span.set_attribute("session.end_reason", reason)
