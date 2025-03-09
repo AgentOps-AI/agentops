@@ -137,8 +137,8 @@ class TestSessionStart:
 
     def test_session_start_initializes_state(self, mock_config):
         """Test that starting a session initializes the state correctly."""
-        with patch("agentops.session.session.remove_session"), patch("agentops.session.session.add_session"), patch(
-            "agentops.session.session.set_current_session"
+        with patch("agentops.session.registry.remove_session"), patch("agentops.session.registry.add_session"), patch(
+            "agentops.session.registry.set_current_session"
         ):
             # Create a session with auto_start=False
             session = Session(config=mock_config, auto_start=False)
@@ -180,8 +180,8 @@ class TestSessionEncoding:
 class TestSessionLifecycle:
     def test_session_context_manager(self, mock_config):
         """Test that Session works as a context manager."""
-        with patch("agentops.session.session.remove_session"), patch("agentops.session.session.add_session"), patch(
-            "agentops.session.session.set_current_session"
+        with patch("agentops.session.registry.remove_session"), patch("agentops.session.registry.add_session"), patch(
+            "agentops.session.registry.set_current_session"
         ):
             # Use the session as a context manager
             with Session(config=mock_config) as session:
@@ -193,8 +193,8 @@ class TestSessionLifecycle:
 
     def test_session_context_manager_with_exception(self, mock_config):
         """Test that Session context manager handles exceptions properly."""
-        with patch("agentops.session.session.remove_session"), patch("agentops.session.session.add_session"), patch(
-            "agentops.session.session.set_current_session"
+        with patch("agentops.session.registry.remove_session"), patch("agentops.session.registry.add_session"), patch(
+            "agentops.session.registry.set_current_session"
         ):
             try:
                 with Session(config=mock_config) as session:
@@ -211,8 +211,8 @@ class TestSessionLifecycle:
 
     def test_session_del_method(self, mock_config):
         """Test that Session.__del__ method ends the session properly."""
-        with patch("agentops.session.session.remove_session"), patch("agentops.session.session.add_session"), patch(
-            "agentops.session.session.set_current_session"
+        with patch("agentops.session.registry.remove_session"), patch("agentops.session.registry.add_session"), patch(
+            "agentops.session.registry.set_current_session"
         ):
             # Create a session
             session = Session(config=mock_config)
@@ -260,8 +260,8 @@ class TestSessionLifecycle:
 
     def test_session_end_idempotent(self, mock_config):
         """Test that calling end() multiple times is idempotent."""
-        with patch("agentops.session.session.remove_session"), patch("agentops.session.session.add_session"), patch(
-            "agentops.session.session.set_current_session"
+        with patch("agentops.session.registry.remove_session"), patch("agentops.session.registry.add_session"), patch(
+            "agentops.session.registry.set_current_session"
         ):
             # Create a session
             session = Session(config=mock_config)
@@ -280,8 +280,8 @@ class TestSessionLifecycle:
 
     def test_concurrent_session_operations(self, mock_config):
         """Test that concurrent session operations are thread-safe."""
-        with patch("agentops.session.session.remove_session"), patch("agentops.session.session.add_session"), patch(
-            "agentops.session.session.set_current_session"
+        with patch("agentops.session.registry.remove_session"), patch("agentops.session.registry.add_session"), patch(
+            "agentops.session.registry.set_current_session"
         ):
             # Create a session
             session = Session(config=mock_config)
@@ -307,8 +307,8 @@ class TestSessionLifecycle:
 class TestSessionSpanStatus:
     def test_session_end_updates_status(self, mock_config, mock_span):
         """Test that ending a session updates the span status correctly."""
-        with patch("agentops.session.session.remove_session"), patch("agentops.session.session.add_session"), patch(
-            "agentops.session.session.set_current_session"
+        with patch("agentops.session.registry.remove_session"), patch("agentops.session.registry.add_session"), patch(
+            "agentops.session.registry.set_current_session"
         ):
             # Create a session
             session = Session(config=mock_config)
@@ -330,8 +330,8 @@ class TestSessionSpanStatus:
 
     def test_session_end_failed_updates_status(self, mock_config, mock_span):
         """Test that ending a session with FAILED status sets the correct span status."""
-        with patch("agentops.session.session.remove_session"), patch("agentops.session.session.add_session"), patch(
-            "agentops.session.session.set_current_session"
+        with patch("agentops.session.registry.remove_session"), patch("agentops.session.registry.add_session"), patch(
+            "agentops.session.registry.set_current_session"
         ):
             # Create a session
             session = Session(config=mock_config)
@@ -353,8 +353,8 @@ class TestSessionSpanStatus:
 
     def test_session_end_indeterminate_updates_status(self, mock_config, mock_span):
         """Test that ending a session with INDETERMINATE status sets the correct span status."""
-        with patch("agentops.session.session.remove_session"), patch("agentops.session.session.add_session"), patch(
-            "agentops.session.session.set_current_session"
+        with patch("agentops.session.registry.remove_session"), patch("agentops.session.registry.add_session"), patch(
+            "agentops.session.registry.set_current_session"
         ):
             # Create a session
             session = Session(config=mock_config)
@@ -376,8 +376,8 @@ class TestSessionSpanStatus:
 
     def test_session_context_manager_exception_status(self, mock_config, mock_span):
         """Test that the context manager sets the correct span status when an exception occurs."""
-        with patch("agentops.session.session.remove_session"), patch("agentops.session.session.add_session"), patch(
-            "agentops.session.session.set_current_session"
+        with patch("agentops.session.registry.remove_session"), patch("agentops.session.registry.add_session"), patch(
+            "agentops.session.registry.set_current_session"
         ):
             try:
                 # Use the session as a context manager
@@ -401,8 +401,8 @@ class TestSessionSpanStatus:
 
     def test_session_already_ended_no_status_update(self, mock_config, mock_span):
         """Test that ending an already ended session doesn't update the status."""
-        with patch("agentops.session.session.remove_session"), patch("agentops.session.session.add_session"), patch(
-            "agentops.session.session.set_current_session"
+        with patch("agentops.session.registry.remove_session"), patch("agentops.session.registry.add_session"), patch(
+            "agentops.session.registry.set_current_session"
         ):
             # Create a session with a mock span
             session = Session(config=mock_config)
@@ -426,8 +426,8 @@ class TestSessionSpanStatus:
 
     def test_session_no_span_no_error(self, mock_config):
         """Test that ending a session without a span doesn't cause an error."""
-        with patch("agentops.session.session.remove_session"), patch("agentops.session.session.add_session"), patch(
-            "agentops.session.session.set_current_session"
+        with patch("agentops.session.registry.remove_session"), patch("agentops.session.registry.add_session"), patch(
+            "agentops.session.registry.set_current_session"
         ):
             # Create a session
             session = Session(config=mock_config)
@@ -444,8 +444,8 @@ class TestSessionSpanStatus:
 
     def test_session_telemetry_shutdown(self, mock_config, mock_trace_get_tracer_provider):
         """Test that the telemetry.shutdown method is called during session end."""
-        with patch("agentops.session.session.remove_session"), patch("agentops.session.session.add_session"), patch(
-            "agentops.session.session.set_current_session"
+        with patch("agentops.session.registry.remove_session"), patch("agentops.session.registry.add_session"), patch(
+            "agentops.session.registry.set_current_session"
         ):
             # Create a session
             session = Session(config=mock_config)
