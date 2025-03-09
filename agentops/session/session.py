@@ -18,7 +18,7 @@ from agentops.sdk.descriptors.classproperty import classproperty
 from .base import SessionBase
 from .mixin.analytics import AnalyticsSessionMixin
 from .mixin.registry import SessionRegistryMixin
-from .mixin.state import StateSessionMixin
+from .mixin.state import SessionStateMixin
 from .mixin.telemetry import TelemetrySessionMixin
 from .state import SessionState
 
@@ -26,7 +26,10 @@ if TYPE_CHECKING:
     from agentops.config import Config
 
 
-class Session(SessionRegistryMixin, AnalyticsSessionMixin, TelemetrySessionMixin, StateSessionMixin, SessionBase):
+class SessionReportingMixin(AnalyticsSessionMixin, TelemetrySessionMixin):
+    pass
+
+class Session(SessionRegistryMixin, SessionReportingMixin, SessionStateMixin, SessionBase):
     """Data container for session state with minimal public API"""
 
     def __init__(
@@ -73,6 +76,17 @@ class Session(SessionRegistryMixin, AnalyticsSessionMixin, TelemetrySessionMixin
         except Exception as e:
             logger.warning(f"Error during Session.__del__: {e}")
 
+    def start(self):
+        """Start the session"""
+        with self._lock:
+            # explicitly call super() methods for clear execution order
+            # Running state is set by the `SessionStateMixin`
+            super(SessionRegistryMixin, self).start()
+            super(SessionStateMixin, self).start()
+            super(SessionReportingMixin, self).start()
+            
+            logger.debug(f"[{self.session_id}] Session started")
+
     def end(self, state=SessionState.SUCCEEDED):
         """End the session with the given state.
 
@@ -80,19 +94,12 @@ class Session(SessionRegistryMixin, AnalyticsSessionMixin, TelemetrySessionMixin
             state: The final state of the session. Defaults to SUCCEEDED.
         """
         with self._lock:
-            # Use the StateSessionMixin's end method which handles state transitions
-            # Pass the state parameter to the parent end method
-            super().end()
+            # explicitly call super() methods for clear execution order
+            super(SessionStateMixin, self).end(state)
+            super(SessionReportingMixin, self).end(state)
+            super(SessionRegistryMixin, self).end(state)
+            
             logger.debug(f"[{self.session_id}] Session ended with state: {state}")
-
-    def start(self):
-        """Start the session"""
-        with self._lock:
-            # Call parent start method which will call all mixin start methods
-            super().start()
-            # Set the state to RUNNING
-            # self.set_state(SessionState.RUNNING)  # TODO: Do we still need this here?
-            logger.debug(f"[{self.session_id}] Session started")
 
     # Add current function to get default session
     @classproperty

@@ -4,6 +4,7 @@ from uuid import UUID
 
 from agentops.config import Config, default_config
 from agentops.helpers import get_host_env
+from agentops.session.state import SessionState
 
 
 class SessionBase(ABC):
@@ -37,7 +38,7 @@ class SessionBase(ABC):
     def start(self):
         raise NotImplementedError
 
-    def end(self):
+    def end(self, state: SessionState):
         raise NotImplementedError
 
     @property

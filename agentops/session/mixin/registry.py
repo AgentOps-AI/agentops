@@ -33,7 +33,7 @@ class SessionRegistryMixin(SessionBase):
 
         logger.debug(f"[{self.session_id}] Session registered in registry")
 
-    def end(self) -> None:
+    def end(self, state: SessionState) -> None:
         """Unregister this session from the global registry."""
         # Unregister from cleanup
         remove_session(self)

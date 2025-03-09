@@ -144,7 +144,7 @@ class TestSessionStart:
             session = Session(config=mock_config, auto_start=False)
 
             # Verify that the initial state is INITIALIZING
-            assert session._state == SessionState.INITIALIZING
+            assert session.state == SessionState.INITIALIZING
 
             # Mock the telemetry.start method
             session.telemetry.start = MagicMock()
@@ -153,7 +153,7 @@ class TestSessionStart:
             session.start()
 
             # Verify that the state was updated to RUNNING
-            assert session._state == SessionState.RUNNING
+            assert session.state == SessionState.RUNNING
 
             # Verify that telemetry.start was called
             session.telemetry.start.assert_called_once()

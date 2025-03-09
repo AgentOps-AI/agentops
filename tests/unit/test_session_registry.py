@@ -16,6 +16,7 @@ from agentops.session.registry import (
     use_session,
     end_session_scope,
 )
+from agentops.session.state import SessionState
 
 pytestmark = [pytest.mark.usefixtures("agentops_init")]
 
@@ -229,7 +230,7 @@ def test_session_registry_mixin_integration():
     assert get_current_session() == session
     
     # Test session unregistration
-    session.end()
+    session.end(state=SessionState.SUCCEEDED)
     assert session not in get_active_sessions()
 
 

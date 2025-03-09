@@ -52,25 +52,26 @@ class TelemetrySessionMixin(TracedSession):
         """Start telemetry for the session."""
         self.telemetry.start()
 
-    def stop(self) -> None:
+    def end(self, state: SessionState) -> None:
         """Shutdown telemetry for the session."""
         self.telemetry.shutdown()
 
-    def set_status(self, state: SessionState, reason: Optional[str] = None) -> None:
-        """Update root span status based on session state."""
-        if self._span is None:
-            return
+    # TODO I can't find any references that actually call this. 
+    # def set_status(self, state: SessionState, reason: Optional[str] = None) -> None:
+    #     """Update root span status based on session state."""
+    #     if self._span is None:
+    #         return
 
-        if state.is_terminal:
-            if state.name == "SUCCEEDED":
-                self._span.set_status(Status(StatusCode.OK))
-            elif state.name == "FAILED":
-                self._span.set_status(Status(StatusCode.ERROR))
-            else:
-                self._span.set_status(Status(StatusCode.UNSET))
+    #     if state.is_terminal:
+    #         if state.name == "SUCCEEDED":
+    #             self._span.set_status(Status(StatusCode.OK))
+    #         elif state.name == "FAILED":
+    #             self._span.set_status(Status(StatusCode.ERROR))
+    #         else:
+    #             self._span.set_status(Status(StatusCode.UNSET))
 
-            if reason:
-                self._span.set_attribute("session.end_reason", reason)
+    #         if reason:
+    #             self._span.set_attribute("session.end_reason", reason)
 
     @staticmethod
     def _ns_to_iso(ns_time: Optional[int]) -> Optional[str]:

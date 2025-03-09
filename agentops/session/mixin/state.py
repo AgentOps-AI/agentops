@@ -6,7 +6,7 @@ from agentops.session.state import SessionState, SessionStateProperty
 from .telemetry import TelemetrySessionMixin
 
 
-class StateSessionMixin(TelemetrySessionMixin, SessionBase):
+class SessionStateMixin(TelemetrySessionMixin, SessionBase):
     """
     Mixin for handling session state management and transitions.
 
@@ -24,11 +24,9 @@ class StateSessionMixin(TelemetrySessionMixin, SessionBase):
         This is legacy behavior maintained for backwards compatibility.
         """
         # Call parent start method to maintain the chain
-        super().start()
-
         self.state = SessionState.RUNNING
 
-    def end(self, state=SessionState.SUCCEEDED) -> None:
+    def end(self, state: SessionState) -> None:
         """
         End method that updates state to a terminal state.
 
@@ -37,9 +35,6 @@ class StateSessionMixin(TelemetrySessionMixin, SessionBase):
         # Set the state if not already in a terminal state
         if not self.is_terminal():
             self.set_state(state)
-
-        # Call parent end method to maintain the chain
-        super().end()
 
     def set_state(self, state: Union[SessionState, str], reason: Optional[str] = None) -> None:
         """
