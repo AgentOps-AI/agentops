@@ -13,7 +13,8 @@ from agentops.logging import logger
 # Can iteratively call .instrument() on each entry
 
 
-instrumentors = [OpenAIInstrumentor, AnthropicInstrumentor, CohereInstrumentor, CrewAIInstrumentor, GroqInstrumentor, HaystackInstrumentor, MistralAiInstrumentor, OllamaInstrumentor]
+instrumentors = [OpenAIInstrumentor, AnthropicInstrumentor, CohereInstrumentor, CrewAIInstrumentor,
+                 GroqInstrumentor, HaystackInstrumentor, MistralAiInstrumentor, OllamaInstrumentor]
 # Keep live references to instrumentor instances
 _active_instrumentors = []
 
@@ -26,9 +27,8 @@ def instrument_all():
     global _active_instrumentors
     _active_instrumentors = []
 
-
-    from agentops.session.tracer import get_tracer_provider
-    tracer_provider = get_tracer_provider()
+    from agentops.sdk.core import TracingCore
+    tracer_provider = TracingCore.get_instance()._provider
 
     for instrumentor_class in instrumentors:
         instrumentor = instrumentor_class()

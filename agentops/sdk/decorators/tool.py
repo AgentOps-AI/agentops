@@ -2,10 +2,10 @@ import functools
 import inspect
 from typing import Any, Callable, Dict, Optional, Type, TypeVar, Union, cast
 
+from agentops.logging import logger
+from agentops.sdk.context import get_current_session
 from agentops.sdk.core import TracingCore
 from agentops.sdk.spans.tool import ToolSpan
-from agentops.logging import logger
-from agentops.session.registry import get_current_session
 
 F = TypeVar('F', bound=Callable[..., Any])
 

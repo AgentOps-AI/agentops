@@ -1,17 +1,20 @@
 """Tests for the client exporters."""
 
+from unittest import mock
+
 import pytest
 import requests
-from unittest import mock
-from pytest_mock import MockerFixture
 from opentelemetry.exporter.otlp.proto.http import Compression
-from opentelemetry.exporter.otlp.proto.http.trace_exporter import OTLPSpanExporter
+from opentelemetry.exporter.otlp.proto.http.trace_exporter import \
+    OTLPSpanExporter
 from opentelemetry.sdk.trace import ReadableSpan
 from opentelemetry.sdk.trace.export import SpanExportResult
+from pytest_mock import MockerFixture
 
-from agentops.session.exporters import AuthenticatedOTLPExporter
 from agentops.client.http.http_client import HttpClient
-from agentops.exceptions import AgentOpsApiJwtExpiredException, ApiServerException
+from agentops.exceptions import (AgentOpsApiJwtExpiredException,
+                                 ApiServerException)
+from agentops.sdk.exporters import AuthenticatedOTLPExporter
 
 
 class TestAuthenticatedOTLPExporter:

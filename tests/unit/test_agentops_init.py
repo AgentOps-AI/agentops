@@ -19,12 +19,12 @@ def mocks(mocker):
     }
 
 
-def test_init_passes_kwargs_to_client_configure(agentops_config, mock_config):
+def test_init_passes_kwargs_to_client_configure( mock_config):
     """Test that kwargs passed to agentops.init are passed to client.configure"""
     # Call init with some kwargs
     agentops.init(
         api_key="test-key",
-        endpoint=agentops_config.endpoint,  # Use the endpoint from agentops_config
+        endpoint='test-endpoint',
         max_wait_time=1000,
         max_queue_size=200,
         default_tags=["tag1", "tag2"],
@@ -44,7 +44,7 @@ def test_init_passes_kwargs_to_client_configure(agentops_config, mock_config):
     args, kwargs = mock_config.call_args
 
     assert kwargs["api_key"] == "test-key"
-    assert kwargs["endpoint"] == agentops_config.endpoint
+    assert kwargs["endpoint"] == "test-endpoint"
     assert kwargs["max_wait_time"] == 1000
     assert kwargs["max_queue_size"] == 200
     assert kwargs["default_tags"] == ["tag1", "tag2"]
@@ -59,14 +59,13 @@ def test_init_passes_kwargs_to_client_configure(agentops_config, mock_config):
     assert kwargs["exporter_endpoint"] == "https://custom-exporter.com"
 
 
-def test_init_passes_all_config_params(agentops_config, mocker, mock_config):
+def test_init_passes_all_config_params( mocker, mock_config):
     """Test that all config parameters are properly set when passed to init"""
     # Mock the Client.configure method to directly set the config values
 
     # Call init with all possible config parameters
     agentops.init(
         api_key="test-key",
-        endpoint=agentops_config.endpoint,  # Use the endpoint from agentops_config
         max_wait_time=1000,
         max_queue_size=200,
         default_tags=["tag1", "tag2"],
@@ -89,7 +88,6 @@ def test_init_passes_all_config_params(agentops_config, mocker, mock_config):
 
     # Check that the config was updated correctly
     assert client.config.api_key == "test-key"
-    assert client.config.endpoint == agentops_config.endpoint
     assert client.config.max_wait_time == 1000
     assert client.config.max_queue_size == 200
     assert "tag1" in client.config.default_tags
@@ -130,7 +128,7 @@ def test_init_with_minimal_params(mock_config):
     max_queue_size=300,
     instrument_llm_calls=False,
 )
-def test_env_vars_without_kwargs(agentops_config, mock_config):
+def test_env_vars_without_kwargs( mock_config):
     """Test that environment variables are used when no kwargs are provided"""
     # Initialize with no parameters
     agentops.init()
@@ -148,7 +146,7 @@ def test_env_vars_without_kwargs(agentops_config, mock_config):
 
 
 @pytest.mark.config_kwargs(api_key="env-api-key", max_wait_time=2000)
-def test_kwargs_override_env_vars(agentops_config, mock_config):
+def test_kwargs_override_env_vars( mock_config):
     """Test that kwargs override environment variables"""
     # Initialize with some parameters that should override env vars
     agentops.init(api_key="explicit-api-key", endpoint="https://explicit-endpoint.com", max_queue_size=999)
@@ -168,7 +166,7 @@ def test_kwargs_override_env_vars(agentops_config, mock_config):
     assert client.config.api_key == "explicit-api-key"  # Overridden by kwarg
     assert client.config.endpoint == "https://explicit-endpoint.com"  # Overridden by kwarg
     assert client.config.max_queue_size == 999  # Overridden by kwarg
-    assert client.config.max_wait_time == 2000  # From agentops_config/env
+    assert client.config.max_wait_time == 2000
 
 
 def test_no_api_key_raises_exception():

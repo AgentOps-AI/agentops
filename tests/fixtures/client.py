@@ -3,7 +3,6 @@ import pytest
 from agentops import Client
 
 
-
 @pytest.fixture(autouse=True)
 def reset_client():
     """Reset the client singleton before and after each test"""
@@ -16,7 +15,7 @@ def reset_client():
 
 
 @pytest.fixture(autouse=True)
-def mock_client(mock_env, reset_client):
+def mock_client(reset_client):
     # Resets the client with a clear env
     Client()
     yield

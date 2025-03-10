@@ -215,43 +215,5 @@ class Config:
         return json.dumps(self.dict(), cls=AgentOpsJSONEncoder)
 
 
-def default_config():
-    """Return a default configuration instance"""
-    return Config()
-
-
-# Detect if we're running under pytest
-TESTING = "pytest" in sys.modules
-
-
-if TESTING:
-
-    def hook_pdb():
-        """Set up automatic pdb debugging during test runs.
-
-        This hooks into Python's exception handling system to automatically start pdb
-        when an uncaught exception occurs during tests. This makes it easier to debug
-        test failures by dropping into the debugger at the point of failure.
-
-        The hook is only installed when running under pytest. It will:
-        - Print the full traceback
-        - Start pdb post-mortem debugging
-        - Skip this behavior if running non-interactively
-        """
-        import sys
-
-        def info(type, value, tb):
-            # Skip if we're in interactive mode or stdout isn't a terminal
-            if hasattr(sys, "ps1") or not sys.stderr.isatty():
-                sys.__excepthook__(type, value, tb)
-            else:
-                import pdb
-                import traceback
-
-                # Print the traceback and start the debugger
-                traceback.print_exception(type, value, tb)
-                pdb.post_mortem(tb)
-
-        sys.excepthook = info
-
-    hook_pdb()
+# checks if pytest is imported
+TESTING = 'pytest' in sys.modules
