@@ -1,39 +1,131 @@
-from opentelemetry.instrumentation.openai import OpenAIInstrumentor
-from opentelemetry.instrumentation.anthropic import AnthropicInstrumentor
-from opentelemetry.instrumentation.cohere import CohereInstrumentor
-from opentelemetry.instrumentation.crewai import CrewAIInstrumentor
-from opentelemetry.instrumentation.groq import GroqInstrumentor
-from opentelemetry.instrumentation.haystack import HaystackInstrumentor
-from opentelemetry.instrumentation.mistralai import MistralAiInstrumentor
-from opentelemetry.instrumentation.ollama import OllamaInstrumentor
+from typing import Any
+from types import ModuleType
+from dataclasses import dataclass
+import importlib
+
+from opentelemetry.instrumentation.instrumentor import BaseInstrumentor
 
 from agentops.logging import logger
-
-# Export all insturmentors (see opentelemetry.instrumentation.instrumentor.BaseInstrumentor)
-# Can iteratively call .instrument() on each entry
+from agentops.session.tracer import get_tracer_provider
 
 
-instrumentors = [OpenAIInstrumentor, AnthropicInstrumentor, CohereInstrumentor, CrewAIInstrumentor, GroqInstrumentor, HaystackInstrumentor, MistralAiInstrumentor, OllamaInstrumentor]
-# Keep live references to instrumentor instances
-_active_instrumentors = []
+# references to all active instrumentors
+_active_instrumentors: list[BaseInstrumentor] = []
+
+
+@dataclass
+class InstrumentorLoader:
+    """
+    Represents a dynamically-loadable instrumentor.
+    
+    This class is used to load and activate instrumentors based on their module and class names.
+    We use the `provider_import_name` to determine if the library is installed in the environment.
+    
+    `modue_name` is the name of the module to import from.
+    `class_name` is the name of the class to instantiate from the module.
+    `provider_import_name` is the name of the package to check for availability.
+    """
+    module_name: str
+    class_name: str
+    provider_import_name: str
+    
+    @property
+    def module(self) -> ModuleType:
+        """Reference to the instrumentor module."""
+        return importlib.import_module(self.module_name)
+
+    @property
+    def should_activate(self) -> bool:
+        """Is the provider import available in the environment?"""
+        try:
+            importlib.import_module(self.provider_import_name)
+            return True
+        except ImportError:
+            return False
+
+    def get_instance(self) -> BaseInstrumentor:
+        """Return a new instance of the instrumentor."""
+        tracer_provider = get_tracer_provider()
+        return getattr(self.module, self.class_name)()
+
+
+available_instrumentors: list[InstrumentorLoader] = [
+    InstrumentorLoader(
+        module_name='opentelemetry.instrumentation.openai', 
+        class_name='OpenAIInstrumentor', 
+        provider_import_name='openai', 
+    ), 
+    InstrumentorLoader(
+        module_name='opentelemetry.instrumentation.anthropic', 
+        class_name='AnthropicInstrumentor', 
+        provider_import_name='anthropic', 
+    ),
+    InstrumentorLoader(
+        module_name='opentelemetry.instrumentation.cohere', 
+        class_name='CohereInstrumentor', 
+        provider_import_name='cohere', 
+    ),
+    InstrumentorLoader(
+        module_name='opentelemetry.instrumentation.crewai', 
+        class_name='CrewAIInstrumentor', 
+        provider_import_name='crewai', 
+    ),
+    InstrumentorLoader(
+        module_name='opentelemetry.instrumentation.groq', 
+        class_name='GroqInstrumentor', 
+        provider_import_name='groq', 
+    ),
+    InstrumentorLoader(
+        module_name='opentelemetry.instrumentation.haystack', 
+        class_name='HaystackInstrumentor', 
+        provider_import_name='haystack', 
+    ),
+    InstrumentorLoader(
+        module_name='opentelemetry.instrumentation.mistralai', 
+        class_name='MistralAiInstrumentor', 
+        provider_import_name='mistralai', 
+    ),
+    InstrumentorLoader(
+        module_name='opentelemetry.instrumentation.ollama', 
+        class_name='OllamaInstrumentor', 
+        provider_import_name='ollama', 
+    ),
+]
+
+
+def instrument_one(loader: InstrumentorLoader) -> BaseInstrumentor:
+    """Instrument a single instrumentor."""
+    if not loader.should_activate:
+        # this package is not in the environment; skip
+        logger.debug(f"Package {loader.provider_import_name} not found; skipping instrumentation of {loader.class_name}")
+        return None
+    
+    instrumentor = loader.get_instance()
+    instrumentor.instrument(tracer_provider=get_tracer_provider())
+    logger.info(f"Instrumented {loader.class_name}")
+    _active_instrumentors.append(instrumentor)
+    
+    return instrumentor
 
 
 def instrument_all():
     """
     Instrument all available instrumentors.
-    This function is called when instrument_llm_calls is enabled.
+    This function is called when `instrument_llm_calls` is enabled.
     """
     global _active_instrumentors
-    _active_instrumentors = []
-
-
-    from agentops.session.tracer import get_tracer_provider
-    tracer_provider = get_tracer_provider()
-
-    for instrumentor_class in instrumentors:
-        instrumentor = instrumentor_class()
-        instrumentor.instrument(tracer_provider=tracer_provider)
-        logger.info(f"Instrumented {instrumentor_class.__name__}")
+    
+    if len(_active_instrumentors):
+        logger.warning("Instrumentors have already been populated.")
+        return
+    
+    for loader in available_instrumentors:
+        if loader.class_name in _active_instrumentors:
+            # already instrumented
+            logger.warning(f"Instrumentor {loader.class_name} has already been instrumented.")
+            return None
+        
+        instrumentor = instrument_one(loader)
         _active_instrumentors.append(instrumentor)
 
 
