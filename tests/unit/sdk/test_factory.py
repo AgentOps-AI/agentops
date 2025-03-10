@@ -159,6 +159,7 @@ class TestSpanFactory(unittest.TestCase):
         """Test that the SpanFactory can auto-register span types."""
         # Clear existing registrations
         SpanFactory._span_types = {}
+        SpanFactory._initialized = False
         
         # Call auto-register method
         SpanFactory.auto_register_span_types()
