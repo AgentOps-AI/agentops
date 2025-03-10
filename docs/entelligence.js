@@ -14,7 +14,7 @@ function injectShadowStyles(interval) {
     let css = ''
 
     // Load and inject CSS
-   fetch("https://plank-entelligence.s3.us-east-1.amazonaws.com/entelligence-chat.css")
+   fetch("https://dujj2xy9pc7vi.cloudfront.net/entelligence-chat.css")
       .then(r => r.text())
       .then(styles => {
         const style = document.createElement("style");        
