@@ -61,6 +61,21 @@ class SessionStateProperty:
     2. Parsing state strings with optional reasons
     3. Updating span status based on state
     4. Recording state as span attribute
+    
+    Examples:
+        # Define a state property in a class
+        class Session:
+            state = SessionStateProperty()
+            
+        # Get the current state
+        session = Session()
+        current_state = session.state  # Returns SessionState.INITIALIZING
+        
+        # Set a new state
+        session.state = SessionState.RUNNING
+        
+        # Set state with reason
+        session.state = "FAILED(Out of memory)"
     """
 
     def __init__(self, default_state: SessionState = SessionState.INITIALIZING):
