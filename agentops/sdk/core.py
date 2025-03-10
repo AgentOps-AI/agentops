@@ -107,6 +107,10 @@ class TracingCore:
 
         # Register shutdown handler
         atexit.register(self.shutdown)
+        
+        # Auto-register span types right when TracingCore is instantiated
+        from agentops.sdk.factory import SpanFactory
+        SpanFactory.auto_register_span_types()
 
     def initialize(self, **kwargs) -> None:
         """
@@ -144,9 +148,8 @@ class TracingCore:
             
             self._config = config
             
-            # Auto-register span types
-            from agentops.sdk.factory import SpanFactory
-            SpanFactory.auto_register_span_types()
+            # Span types are registered in the constructor
+            # No need to register them here anymore
             
             # Create provider with safe access to service_name
             service_name = config.get('service_name') or 'agentops'
@@ -302,16 +305,10 @@ class TracingCore:
         """
         Initialize the tracing core from a configuration object.
         
-        This method extracts the relevant tracing configuration from a configuration object
-        and initializes the tracing core with it.
-        
         Args:
-            config: A configuration object containing tracing configuration
+            config: Configuration object (dict or object with dict method)
         """
         instance = cls.get_instance()
-        
-        # Auto-register span types
-        SpanFactory.auto_register_span_types()
         
         # Extract tracing-specific configuration
         # For TracingConfig, we can directly pass it to initialize
@@ -332,3 +329,6 @@ class TracingCore:
         
         # Initialize with the extracted configuration
         instance.initialize(**tracing_kwargs)
+        
+        # Span types are registered in the constructor
+        # No need to register them here anymore
