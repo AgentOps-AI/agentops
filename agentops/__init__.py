@@ -9,6 +9,14 @@ from .semconv import SpanKind, CoreAttributes, AgentAttributes, ToolAttributes, 
 # Import decorators
 from .decorators import session, agent, tool, span, create_span, current_span, add_span_attribute, add_span_event
 
+# events for backwards compatibility
+from .events import (
+    ActionEvent,
+    LLMEvent,
+    ToolEvent,
+    ErrorEvent,
+)
+
 from opentelemetry.sdk.trace import SpanProcessor
 from opentelemetry.sdk.trace.export import SpanExporter
 
