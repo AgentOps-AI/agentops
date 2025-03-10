@@ -5,6 +5,8 @@ from typing import Any, Dict, Optional, Union
 from opentelemetry.trace import Span, StatusCode
 
 from agentops.sdk.spanned import SpannedBase
+from agentops.semconv.agent import AgentAttributes
+from agentops.semconv.span_kinds import SpanKind
 
 
 class AgentSpan(SpannedBase):
@@ -32,7 +34,7 @@ class AgentSpan(SpannedBase):
             **kwargs: Additional keyword arguments
         """
         # Set default values
-        kwargs.setdefault("kind", "agent")
+        kwargs.setdefault("kind", SpanKind.AGENT)
         kwargs.setdefault("immediate_export", True)  # Agents are typically exported immediately
         
         # Initialize base class
@@ -43,8 +45,8 @@ class AgentSpan(SpannedBase):
         
         # Set attributes
         self._attributes.update({
-            "agent.name": name,
-            "agent.type": agent_type,
+            AgentAttributes.AGENT_NAME: name,
+            AgentAttributes.AGENT_ROLE: agent_type,
         })
     
     def record_action(self, action: str, details: Optional[Dict[str, Any]] = None) -> None:

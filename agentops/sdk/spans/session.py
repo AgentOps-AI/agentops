@@ -14,6 +14,7 @@ from agentops.sdk.core import TracingCore
 from agentops.logging import logger
 from agentops.sdk.spanned import SpannedBase
 from agentops.helpers.serialization import AgentOpsJSONEncoder
+from agentops.semconv.core import CoreAttributes
 
 
 class SessionSpan(SpannedBase):
@@ -155,6 +156,8 @@ class SessionSpan(SpannedBase):
         # Set status if appropriate
         if normalized_state == "FAILED":
             self.set_status(StatusCode.ERROR, reason)
+            if reason:
+                self.set_attribute(CoreAttributes.ERROR_MESSAGE, reason)
         elif normalized_state == "SUCCEEDED":
             self.set_status(StatusCode.OK)
     

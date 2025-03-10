@@ -5,6 +5,7 @@ from typing import Any, Dict, Optional, Union
 from opentelemetry.trace import Span, StatusCode
 
 from agentops.sdk.spanned import SpannedBase
+from agentops.semconv.span_kinds import SpanKind
 
 
 class CustomSpan(SpannedBase):

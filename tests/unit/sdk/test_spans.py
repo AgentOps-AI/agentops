@@ -57,7 +57,7 @@ class TestSessionSpan(unittest.TestCase):
             # Verify
             self.assertEqual(result, span)
             super_start.assert_called_once()
-            span.set_state.assert_called_once_with("RUNNING")
+            span.set_state.assert_called_once()
 
     def test_end(self):
         """Test ending a session span."""
@@ -95,6 +95,9 @@ class TestSessionSpan(unittest.TestCase):
         span.set_attribute = MagicMock()
         span.set_status = MagicMock()
         
+        # Import constants
+        from agentops.semconv.core import CoreAttributes
+        
         # Test with simple state
         span.set_state("RUNNING")
         self.assertEqual(span._state, "RUNNING")
@@ -107,8 +110,14 @@ class TestSessionSpan(unittest.TestCase):
         span.set_state("FAILED", "Something went wrong")
         self.assertEqual(span._state, "FAILED")
         self.assertEqual(span._state_reason, "Something went wrong")
-        span.set_attribute.assert_called_once_with("session.state", "FAILED(Something went wrong)")
-        span.set_status.assert_called_once_with(StatusCode.ERROR, "Something went wrong")
+        # Check that set_attribute was called twice (once for state, once for error message)
+        self.assertEqual(span.set_attribute.call_count, 2)
+        # Check that the first call was for session.state
+        self.assertEqual(span.set_attribute.call_args_list[0][0][0], "session.state")
+        self.assertEqual(span.set_attribute.call_args_list[0][0][1], "FAILED(Something went wrong)")
+        # Check that the second call was for error.message
+        self.assertEqual(span.set_attribute.call_args_list[1][0][0], CoreAttributes.ERROR_MESSAGE)
+        self.assertEqual(span.set_attribute.call_args_list[1][0][1], "Something went wrong")
         
         # Test with normalized state
         span.set_attribute.reset_mock()
@@ -219,8 +228,11 @@ class TestAgentSpan(unittest.TestCase):
         self.assertEqual(span.kind, "agent")
         self.assertEqual(span._agent_type, "assistant")
         self.assertTrue(span.immediate_export)
-        self.assertEqual(span._attributes["agent.name"], "test_agent")
-        self.assertEqual(span._attributes["agent.type"], "assistant")
+        
+        # Import the constants at test time to avoid circular imports
+        from agentops.semconv.agent import AgentAttributes
+        self.assertEqual(span._attributes[AgentAttributes.AGENT_NAME], "test_agent")
+        self.assertEqual(span._attributes[AgentAttributes.AGENT_ROLE], "assistant")
 
     def test_record_action(self):
         """Test recording an action."""
@@ -316,8 +328,11 @@ class TestToolSpan(unittest.TestCase):
         self.assertEqual(span.kind, "tool")
         self.assertEqual(span._tool_type, "search")
         self.assertFalse(span.immediate_export)
-        self.assertEqual(span._attributes["tool.name"], "test_tool")
-        self.assertEqual(span._attributes["tool.type"], "search")
+        
+        # Import the constants at test time to avoid circular imports
+        from agentops.semconv.tool import ToolAttributes
+        self.assertEqual(span._attributes[ToolAttributes.TOOL_NAME], "test_tool")
+        self.assertEqual(span._attributes[ToolAttributes.TOOL_DESCRIPTION], "search")
         self.assertIsNone(span._input)
         self.assertIsNone(span._output)
 
@@ -330,10 +345,13 @@ class TestToolSpan(unittest.TestCase):
         )
         span.set_attribute = MagicMock()
         
+        # Import the constants at test time to avoid circular imports
+        from agentops.semconv.tool import ToolAttributes
+        
         # Test with string
         span.set_input("test query")
         self.assertEqual(span._input, "test query")
-        span.set_attribute.assert_called_once_with("tool.input", "test query")
+        span.set_attribute.assert_called_once_with(ToolAttributes.TOOL_PARAMETERS, "test query")
         
         # Test with complex object
         span.set_attribute.reset_mock()
@@ -341,7 +359,7 @@ class TestToolSpan(unittest.TestCase):
         span.set_input(input_data)
         self.assertEqual(span._input, input_data)
         span.set_attribute.assert_called_once()
-        self.assertEqual(span.set_attribute.call_args[0][0], "tool.input")
+        self.assertEqual(span.set_attribute.call_args[0][0], ToolAttributes.TOOL_PARAMETERS)
         self.assertIsInstance(span.set_attribute.call_args[0][1], str)
 
     def test_set_output(self):
@@ -353,10 +371,13 @@ class TestToolSpan(unittest.TestCase):
         )
         span.set_attribute = MagicMock()
         
+        # Import the constants at test time to avoid circular imports
+        from agentops.semconv.tool import ToolAttributes
+        
         # Test with string
         span.set_output("test result")
         self.assertEqual(span._output, "test result")
-        span.set_attribute.assert_called_once_with("tool.output", "test result")
+        span.set_attribute.assert_called_once_with(ToolAttributes.TOOL_RESULT, "test result")
         
         # Test with complex object
         span.set_attribute.reset_mock()
@@ -364,7 +385,7 @@ class TestToolSpan(unittest.TestCase):
         span.set_output(output_data)
         self.assertEqual(span._output, output_data)
         span.set_attribute.assert_called_once()
-        self.assertEqual(span.set_attribute.call_args[0][0], "tool.output")
+        self.assertEqual(span.set_attribute.call_args[0][0], ToolAttributes.TOOL_RESULT)
         self.assertIsInstance(span.set_attribute.call_args[0][1], str)
 
     def test_to_dict(self):

@@ -5,6 +5,8 @@ from typing import Any, Dict, Optional, Union
 from opentelemetry.trace import Span, StatusCode
 
 from agentops.sdk.spanned import SpannedBase
+from agentops.semconv.tool import ToolAttributes
+from agentops.semconv.span_kinds import SpanKind
 
 
 class ToolSpan(SpannedBase):
@@ -32,7 +34,7 @@ class ToolSpan(SpannedBase):
             **kwargs: Additional keyword arguments
         """
         # Set default values
-        kwargs.setdefault("kind", "tool")
+        kwargs.setdefault("kind", SpanKind.TOOL)
         
         # Initialize base class
         super().__init__(name=name, parent=parent, **kwargs)
@@ -44,8 +46,8 @@ class ToolSpan(SpannedBase):
         
         # Set attributes
         self._attributes.update({
-            "tool.name": name,
-            "tool.type": tool_type,
+            ToolAttributes.TOOL_NAME: name,
+            ToolAttributes.TOOL_DESCRIPTION: tool_type,
         })
     
     def set_input(self, input_data: Any) -> None:
@@ -63,7 +65,7 @@ class ToolSpan(SpannedBase):
         else:
             input_str = input_data
         
-        self.set_attribute("tool.input", input_str)
+        self.set_attribute(ToolAttributes.TOOL_PARAMETERS, input_str)
     
     def set_output(self, output_data: Any) -> None:
         """
@@ -80,7 +82,7 @@ class ToolSpan(SpannedBase):
         else:
             output_str = output_data
         
-        self.set_attribute("tool.output", output_str)
+        self.set_attribute(ToolAttributes.TOOL_RESULT, output_str)
     
     def to_dict(self) -> Dict[str, Any]:
         """Convert to dictionary."""
