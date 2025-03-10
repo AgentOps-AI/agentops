@@ -1,4 +1,4 @@
- #!/usr/bin/env python
+#!/usr/bin/env python
 """
 Example of integrating the AgentOps SDK with an existing LLM application.
 
@@ -12,7 +12,7 @@ import time
 import random
 from typing import List, Dict, Any, Optional
 
-from agentops.config import Config
+from agentops.sdk.types import TracingConfig
 from agentops.sdk.core import TracingCore
 from agentops.sdk.decorators.session import session
 from agentops.sdk.decorators.agent import agent
@@ -231,14 +231,17 @@ class ChatbotAgent:
 
 def initialize_tracing():
     """Initialize the tracing core."""
-    config = Config(
-        api_key="test_key",  # Replace with your API key
-        host="https://api.agentops.ai",  # Replace with your host
-        project_id="example-project",  # Replace with your project ID
-    )
+    # Initialize the tracing core with the config
     core = TracingCore.get_instance()
-    core.initialize(config)
-    return core
+    # Initialize the core with the config
+    core.initialize(
+        exporter_endpoint="https://otlp-jaeger.agentops.cloud/v1/traces",  # Optional: Replace with your exporter endpoint
+        max_queue_size=512,
+        max_wait_time=5000
+    )
+    
+    # No need to manually register span types anymore, it's done automatically
+    # during TracingCore initialization
 
 
 def demonstrate_original_chatbot():

@@ -12,7 +12,7 @@ import sys
 import time
 from typing import Any, Dict, List
 
-from agentops.config import Config
+from agentops.sdk.types import TracingConfig
 from agentops.sdk.core import TracingCore
 from agentops.sdk.decorators.agent import agent
 from agentops.sdk.decorators.session import session
@@ -27,6 +27,8 @@ def initialize_tracing():
     core.initialize(
         exporter_endpoint="https://otlp-jaeger.agentops.cloud/v1/traces",  # Optional: Replace with your exporter endpoint
         # exporter_endpoint="https://otlp.agentops.cloud/v1/traces",  # Optional: Replace with your exporter endpoint
+        max_queue_size=512,
+        max_wait_time=5000
     )
     
     # No need to manually register span types anymore, it's done automatically

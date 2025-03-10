@@ -4,7 +4,7 @@ from uuid import UUID
 
 from opentelemetry.trace import StatusCode
 
-from agentops.config import Config
+from agentops.sdk.types import TracingConfig
 from agentops.sdk.spans.session import SessionSpan
 from agentops.sdk.spans.agent import AgentSpan
 from agentops.sdk.spans.tool import ToolSpan
@@ -20,7 +20,7 @@ class TestSessionSpan(unittest.TestCase):
         # Set up
         mock_core = MagicMock()
         mock_tracing_core.get_instance.return_value = mock_core
-        config = Config(api_key="test_key")
+        config = {"service_name": "test_service", "max_queue_size": 512, "max_wait_time": 5000}
         
         # Test
         span = SessionSpan(
@@ -38,14 +38,14 @@ class TestSessionSpan(unittest.TestCase):
         self.assertEqual(span._host_env, {"os": "linux"})
         self.assertEqual(span._state, "INITIALIZING")
         self.assertIsNone(span._state_reason)
-        mock_core.initialize.assert_called_once_with(config)
+        mock_core.initialize_from_config.assert_called_once_with(config)
 
     def test_start(self):
         """Test starting a session span."""
         # Set up
         span = SessionSpan(
             name="test_session",
-            config=Config(api_key="test_key")
+            config={"service_name": "test_service", "max_queue_size": 512, "max_wait_time": 5000}
         )
         span.set_state = MagicMock()
         super_start = MagicMock()
@@ -63,7 +63,7 @@ class TestSessionSpan(unittest.TestCase):
         # Set up
         span = SessionSpan(
             name="test_session",
-            config=Config(api_key="test_key")
+            config={"service_name": "test_service", "max_queue_size": 512, "max_wait_time": 5000}
         )
         span.set_state = MagicMock()
         super_end = MagicMock()
@@ -89,7 +89,7 @@ class TestSessionSpan(unittest.TestCase):
         # Set up
         span = SessionSpan(
             name="test_session",
-            config=Config(api_key="test_key")
+            config={"service_name": "test_service", "max_queue_size": 512, "max_wait_time": 5000}
         )
         span.set_attribute = MagicMock()
         span.set_status = MagicMock()
@@ -123,7 +123,7 @@ class TestSessionSpan(unittest.TestCase):
         # Set up
         span = SessionSpan(
             name="test_session",
-            config=Config(api_key="test_key")
+            config={"service_name": "test_service", "max_queue_size": 512, "max_wait_time": 5000}
         )
         
         # Test without reason
@@ -141,7 +141,7 @@ class TestSessionSpan(unittest.TestCase):
         # Set up
         span = SessionSpan(
             name="test_session",
-            config=Config(api_key="test_key"),
+            config={"service_name": "test_service", "max_queue_size": 512, "max_wait_time": 5000},
             tags=["tag1"]
         )
         span.set_attribute = MagicMock()
@@ -162,7 +162,7 @@ class TestSessionSpan(unittest.TestCase):
         # Set up
         span = SessionSpan(
             name="test_session",
-            config=Config(api_key="test_key"),
+            config={"service_name": "test_service", "max_queue_size": 512, "max_wait_time": 5000},
             tags=["tag1"]
         )
         span.add_tag = MagicMock()
@@ -176,7 +176,7 @@ class TestSessionSpan(unittest.TestCase):
     def test_to_dict(self):
         """Test converting to dictionary."""
         # Set up
-        config = Config(api_key="test_key")
+        config = {"service_name": "test_service", "max_queue_size": 512, "max_wait_time": 5000}
         span = SessionSpan(
             name="test_session",
             config=config,
@@ -198,7 +198,7 @@ class TestSessionSpan(unittest.TestCase):
         self.assertEqual(result["state"], "RUNNING")
         # Only check config if it's in the result
         if "config" in result:
-            self.assertEqual(result["config"], config.dict())
+            self.assertEqual(result["config"], config)
 
 
 class TestAgentSpan(unittest.TestCase):

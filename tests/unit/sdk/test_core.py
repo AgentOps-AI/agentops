@@ -5,7 +5,7 @@ from uuid import UUID
 from opentelemetry.sdk.trace import TracerProvider
 from opentelemetry.trace import StatusCode
 
-from agentops.config import Config
+from agentops.sdk.types import TracingConfig
 from agentops.sdk.core import TracingCore, ImmediateExportProcessor
 from agentops.sdk.spanned import SpannedBase
 
@@ -107,26 +107,28 @@ class TestTracingCore(unittest.TestCase):
     @patch("agentops.sdk.core.TracerProvider")
     @patch("agentops.sdk.core.trace")
     def test_initialize(self, mock_trace, mock_tracer_provider):
-        """Test initialize method."""
+        """Test initialization."""
         # Set up
         core = TracingCore()
-        config = Config(api_key="test_key")
+        config = {"service_name": "test_service", "max_queue_size": 512, "max_wait_time": 5000}
         mock_provider = MagicMock()
         mock_tracer_provider.return_value = mock_provider
+        mock_trace.get_tracer_provider.return_value = mock_provider
         
-        # Test initialization
-        core.initialize(config)
-        self.assertTrue(core._initialized)
-        self.assertEqual(core._config, config)
+        # Test
+        core.initialize(**config)
+        
+        # Verify
         mock_tracer_provider.assert_called_once()
-        mock_trace.set_tracer_provider.assert_called_once_with(mock_provider)
+        mock_provider.add_span_processor.assert_called()
         
-        # Test initializing an already initialized core
+        # Test with existing provider
         mock_tracer_provider.reset_mock()
-        mock_trace.reset_mock()
-        core.initialize(config)
+        mock_provider.reset_mock()
+        mock_trace.get_tracer_provider.return_value = mock_provider
+        
+        core.initialize(**config)
         mock_tracer_provider.assert_not_called()
-        mock_trace.set_tracer_provider.assert_not_called()
 
     def test_shutdown(self):
         """Test shutdown method."""
