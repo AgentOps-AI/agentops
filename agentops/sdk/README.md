@@ -9,6 +9,7 @@ In AgentOps v0.4, we've transitioned from the "Event" concept to using "Spans" f
 1. **Session**: The master trace that serves as the root for all spans. No spans can exist without a session at the top.
 2. **Spans**: Represent different types of operations (Agent, Tool, etc.) and are organized hierarchically.
 3. **Decorators**: Allow users to easily mark their custom components with AgentOps-specific span types.
+4. **TracingConfig**: A dedicated configuration structure for the tracing core, separate from the main application configuration.
 
 ## Architecture Diagram
 
@@ -17,10 +18,12 @@ flowchart TD
     %% Core Tracing Components
     subgraph "Core Tracing Infrastructure"
         TracingCore[Tracing Core]
+        TracingConfig[Tracing Config]
         SpanFactory[Span Factory]
         SpanProcessor[Span Processor]
         SpanExporter[Span Exporter]
         
+        TracingConfig --> TracingCore
         TracingCore --> SpanFactory
         TracingCore --> SpanProcessor
         SpanProcessor --> SpanExporter
@@ -101,6 +104,7 @@ flowchart TD
 ### Core Tracing Infrastructure
 
 - **Tracing Core**: Central component that manages the creation, processing, and export of spans.
+- **Tracing Config**: Configuration specific to the tracing infrastructure, separate from the main application configuration.
 - **Span Factory**: Creates spans of different types based on context and decorator information.
 - **Span Processor**: Processes spans (adds attributes, manages context, etc.) before they are exported.
 - **Span Exporter**: Exports spans to the configured destination (e.g., AgentOps backend).
@@ -177,6 +181,15 @@ flowchart TD
 
 ```python
 from agentops import Session, agent, tool
+from agentops.sdk import TracingCore, TracingConfig
+
+# Initialize the tracing core with a dedicated configuration
+TracingCore.get_instance().initialize(
+    service_name="my-service",
+    exporter_endpoint="https://my-exporter-endpoint.com",
+    max_queue_size=1000,
+    max_wait_time=10000
+)
 
 # Create a session (master trace)
 with Session() as session:
@@ -207,4 +220,5 @@ with Session() as session:
 2. **Hierarchical Tracing**: All operations are organized hierarchically with the session as the root.
 3. **Automatic Context Propagation**: Context is propagated automatically through the call stack.
 4. **Extensibility**: Custom span types can be added easily.
+5. **Separation of Concerns**: Tracing configuration is separate from the main application configuration.
 
