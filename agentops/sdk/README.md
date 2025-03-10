@@ -1,4 +1,4 @@
-# AgentOps v0.4 Architecture Proposal
+# AgentOps v0.4 Architecture
 
 ## Transition from Events to Spans
 
@@ -208,10 +208,3 @@ with Session() as session:
 3. **Automatic Context Propagation**: Context is propagated automatically through the call stack.
 4. **Extensibility**: Custom span types can be added easily.
 
-## Next Steps
-
-1. Implement the core tracing infrastructure.
-2. Implement the span base classes.
-3. Implement the decorators.
-4. Update the existing session implementation to use the new architecture.
-5. Add examples and documentation. 
