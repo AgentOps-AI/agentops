@@ -62,7 +62,7 @@ class SessionSpan(SpannedBase):
         # Set attributes on span when started
         self._attributes.update({
             "session.name": name,
-            "session.tags": self._tags,
+            "session.tags": json.dumps(self._tags),
             "session.state": self._state,
         })
         
@@ -174,7 +174,7 @@ class SessionSpan(SpannedBase):
         """
         if tag not in self._tags:
             self._tags.append(tag)
-        self.set_attribute("session.tags", self._tags)
+        self.set_attribute("session.tags", json.dumps(self._tags))
     
     def add_tags(self, tags: List[str]) -> None:
         """
