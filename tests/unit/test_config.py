@@ -6,7 +6,7 @@ import pytest
 
 import agentops.config
 from agentops.client import Client
-from agentops.config import Config, default_config
+from agentops.config import Config
 from agentops.exceptions import InvalidApiKeyException
 
 
