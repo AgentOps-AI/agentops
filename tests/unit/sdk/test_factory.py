@@ -19,10 +19,6 @@ class TestToolSpan(SpannedBase):
     """Test tool span class."""
     pass
 
-class TestLLMSpan(SpannedBase):
-    """Test LLM span class."""
-    pass
-
 
 class TestSpanFactory(unittest.TestCase):
     """Test the SpanFactory class."""
@@ -34,7 +30,6 @@ class TestSpanFactory(unittest.TestCase):
         SpanFactory.register_span_type("session", TestSessionSpan)
         SpanFactory.register_span_type("agent", TestAgentSpan)
         SpanFactory.register_span_type("tool", TestToolSpan)
-        SpanFactory.register_span_type("llm", TestLLMSpan)
 
     def test_register_span_type(self):
         """Test registering a span type."""
@@ -137,26 +132,6 @@ class TestSpanFactory(unittest.TestCase):
                 attributes={"key": "value"},
                 auto_start=True,
                 immediate_export=False
-            )
-
-    def test_create_llm_span(self):
-        """Test creating an LLM span."""
-        with patch.object(SpanFactory, "create_span") as mock_create_span:
-            parent = MagicMock()
-            SpanFactory.create_llm_span(
-                name="test_llm",
-                parent=parent,
-                attributes={"key": "value"},
-                auto_start=True,
-                immediate_export=True
-            )
-            mock_create_span.assert_called_once_with(
-                kind="llm",
-                name="test_llm",
-                parent=parent,
-                attributes={"key": "value"},
-                auto_start=True,
-                immediate_export=True
             )
 
     def test_create_custom_span(self):

@@ -15,7 +15,6 @@ from agentops.sdk.spans import (
     SessionSpan,
     AgentSpan,
     ToolSpan,
-    LLMSpan,
     CustomSpan,
 )
 
@@ -24,7 +23,6 @@ from agentops.sdk.decorators import (
     session,
     agent,
     tool,
-    llm,
 )
 
 __all__ = [
@@ -37,12 +35,10 @@ __all__ = [
     "SessionSpan",
     "AgentSpan",
     "ToolSpan",
-    "LLMSpan",
     "CustomSpan",
     
     # Decorators
     "session",
     "agent",
     "tool",
-    "llm",
 ] 

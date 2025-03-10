@@ -98,7 +98,16 @@ class SessionSpan(SpannedBase):
             return self
         
         # Set final state
-        self.set_state(state)
+        if isinstance(state, str):
+            self.set_state(state)
+        else:
+            # If it's a StatusCode, map it to a state string
+            if state == StatusCode.ERROR:
+                self.set_state("FAILED")
+            elif state == StatusCode.OK:
+                self.set_state("SUCCEEDED")
+            else:
+                self.set_state("UNKNOWN")
         
         # Map state to status code
         status_code = StatusCode.OK
@@ -109,8 +118,99 @@ class SessionSpan(SpannedBase):
                 status_code = StatusCode.OK
             else:
                 status_code = StatusCode.UNSET
+        else:
+            # If it's already a StatusCode, use it directly
+            status_code = state
         
         # End the span
         super().end(status_code)
         
-        return 
+        return self
+    
+    def set_state(self, state: str, reason: Optional[str] = None) -> None:
+        """
+        Set the state of the session.
+        
+        Args:
+            state: State of the session (e.g., "RUNNING", "FAILED", "SUCCEEDED")
+            reason: Optional reason for the state
+        """
+        # Normalize state
+        normalized_state = state.upper()
+        if normalized_state in ("SUCCESS", "OK"):
+            normalized_state = "SUCCEEDED"
+        elif normalized_state in ("FAIL", "ERROR"):
+            normalized_state = "FAILED"
+        
+        # Store state
+        self._state = normalized_state
+        self._state_reason = reason
+        
+        # Set attribute
+        state_value = normalized_state
+        if reason:
+            state_value = f"{normalized_state}({reason})"
+        self.set_attribute("session.state", state_value)
+        
+        # Set status if appropriate
+        if normalized_state == "FAILED":
+            self.set_status(StatusCode.ERROR, reason)
+        elif normalized_state == "SUCCEEDED":
+            self.set_status(StatusCode.OK)
+    
+    @property
+    def state(self) -> str:
+        """Get the state of the session."""
+        if self._state_reason:
+            return f"{self._state}({self._state_reason})"
+        return self._state
+    
+    def add_tag(self, tag: str) -> None:
+        """
+        Add a tag to the session.
+        
+        Args:
+            tag: Tag to add
+        """
+        if tag not in self._tags:
+            self._tags.append(tag)
+        self.set_attribute("session.tags", self._tags)
+    
+    def add_tags(self, tags: List[str]) -> None:
+        """
+        Add multiple tags to the session.
+        
+        Args:
+            tags: Tags to add
+        """
+        for tag in tags:
+            self.add_tag(tag)
+    
+    def to_dict(self) -> Dict[str, Any]:
+        """
+        Convert the session span to a dictionary.
+        
+        Returns:
+            Dictionary representation of the session span
+        """
+        result = {
+            "name": self.name,
+            "kind": self.kind,
+            "trace_id": str(self.trace_id),
+            "span_id": self.span_id,
+            "state": self._state,
+            "tags": self._tags,
+        }
+        
+        if self._state_reason:
+            result["state_reason"] = self._state_reason
+        
+        if self._start_time and isinstance(self._start_time, datetime.datetime):
+            result["start_time"] = self._start_time.isoformat()
+        
+        if self._end_time and isinstance(self._end_time, datetime.datetime):
+            result["end_time"] = self._end_time.isoformat()
+            if isinstance(self._start_time, datetime.datetime):
+                result["duration_ms"] = (self._end_time - self._start_time).total_seconds() * 1000
+        
+        return result 

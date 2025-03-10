@@ -14,7 +14,7 @@ def tool(
     *,
     name: Optional[str] = None,
     tool_type: str = "generic",
-    immediate_export: bool = False,
+    immediate_export: bool = True,
     **kwargs
 ) -> Union[F, Callable[[F], F]]:
     """
@@ -54,27 +54,43 @@ def tool(
             
             # Create the tool span
             core = TracingCore.get_instance()
-            with core.create_span(
+            tool_span = core.create_span(
                 kind="tool",
                 name=span_name,
                 parent=parent_span,
                 attributes=kwargs.get("attributes", {}),
                 immediate_export=immediate_export,
                 tool_type=tool_type,
-            ) as tool_span:
+            )
+            
+            try:
+                # Start the span
+                tool_span.start()
+                
                 # Record the input
                 if func_kwargs:
                     tool_span.set_input(func_kwargs)
                 elif len(args) > 1:  # Skip self if it's a method
                     tool_span.set_input(args[1:] if hasattr(args[0], '__class__') else args)
                 
-                # Call the function
-                result = func(*args, **func_kwargs)
+                # Call the function with the tool span as an argument
+                result = func(*args, tool_span=tool_span, **func_kwargs)
                 
                 # Record the output
                 tool_span.set_output(result)
                 
+                # End the span
+                tool_span.end()
+                
                 return result
+            except Exception as e:
+                # Record the error
+                if hasattr(tool_span, 'set_error'):
+                    tool_span.set_error(e)
+                
+                # End the span with error status
+                tool_span.end(status="ERROR", description=str(e))
+                raise
         
         return cast(F, wrapper)
     

@@ -6,7 +6,6 @@ from agentops.config import Config
 from agentops.sdk.decorators.session import session
 from agentops.sdk.decorators.agent import agent
 from agentops.sdk.decorators.tool import tool
-from agentops.sdk.decorators.llm import llm
 
 
 class TestSessionDecorator(unittest.TestCase):
@@ -216,93 +215,6 @@ class TestToolDecorator(unittest.TestCase):
         self.assertEqual(mock_core.create_span.call_args[1]["name"], "test_tool")
         self.assertEqual(mock_core.create_span.call_args[1]["tool_type"], "search")
         self.assertTrue(mock_core.create_span.call_args[1]["immediate_export"])
-
-
-class TestLLMDecorator(unittest.TestCase):
-    """Test the LLM decorator."""
-
-    @patch("agentops.sdk.decorators.llm.get_current_session")
-    @patch("agentops.sdk.decorators.llm.TracingCore")
-    def test_function_decoration(self, mock_tracing_core, mock_get_current_session):
-        """Test decorating a function."""
-        # Set up
-        mock_core = MagicMock()
-        mock_tracing_core.get_instance.return_value = mock_core
-        mock_llm_span = MagicMock()
-        mock_core.create_span.return_value = mock_llm_span
-        mock_session = MagicMock()
-        mock_session.span = MagicMock()
-        mock_get_current_session.return_value = mock_session
-        
-        # Define a function to decorate
-        @llm(name="test_llm", model="gpt-4")
-        def test_function(prompt=None, messages=None):
-            if prompt:
-                return {
-                    "choices": [{"text": f"Response to: {prompt}"}],
-                    "usage": {"prompt_tokens": 10, "completion_tokens": 20}
-                }
-            elif messages:
-                return {
-                    "choices": [{"message": {"content": f"Response to: {messages[-1]['content']}"}}],
-                    "usage": {"prompt_tokens": 15, "completion_tokens": 25}
-                }
-            return None
-        
-        # Test with prompt
-        result = test_function(prompt="What is the capital of France?")
-        
-        # Verify
-        self.assertEqual(result["choices"][0]["text"], "Response to: What is the capital of France?")
-        mock_tracing_core.get_instance.assert_called_once()
-        mock_core.create_span.assert_called_once()
-        self.assertEqual(mock_core.create_span.call_args[1]["kind"], "llm")
-        self.assertEqual(mock_core.create_span.call_args[1]["name"], "test_llm")
-        self.assertEqual(mock_core.create_span.call_args[1]["parent"], mock_session.span)
-        self.assertEqual(mock_core.create_span.call_args[1]["model"], "gpt-4")
-        self.assertTrue(mock_core.create_span.call_args[1]["immediate_export"])
-        
-        # Verify prompt, response, and tokens were recorded
-        mock_llm_span.set_prompt.assert_called_once_with("What is the capital of France?")
-        mock_llm_span.set_response.assert_called_once_with("Response to: What is the capital of France?")
-        mock_llm_span.set_tokens.assert_called_once_with(10, 20)
-        
-        # Test with messages
-        mock_tracing_core.reset_mock()
-        mock_core.reset_mock()
-        mock_llm_span.reset_mock()
-        
-        messages = [
-            {"role": "system", "content": "You are a helpful assistant."},
-            {"role": "user", "content": "What is the capital of France?"}
-        ]
-        result = test_function(messages=messages)
-        
-        # Verify
-        self.assertEqual(result["choices"][0]["message"]["content"], "Response to: What is the capital of France?")
-        mock_tracing_core.get_instance.assert_called_once()
-        mock_core.create_span.assert_called_once()
-        
-        # Verify messages, response, and tokens were recorded
-        mock_llm_span.set_prompt.assert_called_once_with(messages)
-        mock_llm_span.set_response.assert_called_once_with("Response to: What is the capital of France?")
-        mock_llm_span.set_tokens.assert_called_once_with(15, 25)
-        
-        # Test with no active session
-        mock_get_current_session.return_value = None
-        mock_tracing_core.reset_mock()
-        mock_core.reset_mock()
-        mock_llm_span.reset_mock()
-        
-        result = test_function(prompt="What is the capital of France?")
-        
-        # Verify no span was created
-        self.assertEqual(result["choices"][0]["text"], "Response to: What is the capital of France?")
-        mock_tracing_core.get_instance.assert_not_called()
-        mock_core.create_span.assert_not_called()
-        mock_llm_span.set_prompt.assert_not_called()
-        mock_llm_span.set_response.assert_not_called()
-        mock_llm_span.set_tokens.assert_not_called()
 
 
 if __name__ == "__main__":

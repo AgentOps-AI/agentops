@@ -88,16 +88,27 @@ def agent(
                 
                 # Create the agent span
                 core = TracingCore.get_instance()
-                with core.create_span(
+                agent_span = core.create_span(
                     kind="agent",
                     name=span_name,
                     parent=session.span,
                     attributes=kwargs.get("attributes", {}),
                     immediate_export=immediate_export,
                     agent_type=agent_type,
-                ) as agent_span:
+                )
+                
+                try:
+                    # Start the span
+                    agent_span.start()
                     # Call the function with the agent span as an argument
-                    return cls_or_func(*args, agent_span=agent_span, **func_kwargs)
+                    result = cls_or_func(*args, agent_span=agent_span, **func_kwargs)
+                    # End the span
+                    agent_span.end()
+                    return result
+                except Exception as e:
+                    # End the span with error status
+                    agent_span.end(status="ERROR", description=str(e))
+                    raise
             
             return wrapper
     

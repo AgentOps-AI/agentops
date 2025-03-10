@@ -78,16 +78,28 @@ def session(
             def wrapper(*args, **func_kwargs):
                 # Create the session span
                 core = TracingCore.get_instance()
-                with core.create_span(
+                # Create the span but don't use context manager
+                session_span = core.create_span(
                     kind="session",
                     name=span_name,
                     attributes=kwargs.get("attributes", {}),
                     immediate_export=immediate_export,
                     config=span_config,
                     tags=tags,
-                ) as session_span:
+                )
+                
+                try:
+                    # Start the span
+                    session_span.start()
                     # Call the function with the session span as an argument
-                    return cls_or_func(*args, session_span=session_span, **func_kwargs)
+                    result = cls_or_func(*args, session_span=session_span, **func_kwargs)
+                    # End the span
+                    session_span.end()
+                    return result
+                except Exception as e:
+                    # End the span with error status
+                    session_span.end(status="ERROR", description=str(e))
+                    raise
             
             return wrapper
     
