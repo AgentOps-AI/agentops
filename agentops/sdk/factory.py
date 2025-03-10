@@ -31,6 +31,23 @@ class SpanFactory:
         cls._span_types[kind] = span_class
     
     @classmethod
+    def auto_register_span_types(cls) -> None:
+        """
+        Automatically register all standard span types.
+        
+        This method should be called once during initialization to ensure
+        that all standard span types are registered with the factory.
+        """
+        # Import here to avoid circular imports
+        from agentops.sdk.spans import SessionSpan, AgentSpan, ToolSpan, CustomSpan
+        
+        # Register standard span types
+        cls.register_span_type("session", SessionSpan)
+        cls.register_span_type("agent", AgentSpan)
+        cls.register_span_type("tool", ToolSpan)
+        cls.register_span_type("custom", CustomSpan)
+    
+    @classmethod
     def create_span(
         cls,
         kind: str,

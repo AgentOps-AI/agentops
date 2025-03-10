@@ -144,6 +144,10 @@ class TracingCore:
             
             self._config = config
             
+            # Auto-register span types
+            from agentops.sdk.factory import SpanFactory
+            SpanFactory.auto_register_span_types()
+            
             # Create provider with safe access to service_name
             service_name = config.get('service_name') or 'agentops'
             self._provider = TracerProvider(
@@ -305,6 +309,9 @@ class TracingCore:
             config: A Config object containing tracing configuration
         """
         instance = cls.get_instance()
+        
+        # Auto-register span types
+        SpanFactory.auto_register_span_types()
         
         # Extract tracing-specific configuration from the Config object
         # Use getattr with default values to ensure we don't pass None for required fields

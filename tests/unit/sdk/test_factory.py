@@ -155,6 +155,29 @@ class TestSpanFactory(unittest.TestCase):
                 immediate_export=False
             )
 
+    def test_auto_register_span_types(self):
+        """Test that the SpanFactory can auto-register span types."""
+        # Clear existing registrations
+        SpanFactory._span_types = {}
+        
+        # Call auto-register method
+        SpanFactory.auto_register_span_types()
+        
+        # Verify that standard span types are registered
+        from agentops.sdk.spans import SessionSpan, AgentSpan, ToolSpan, CustomSpan
+        
+        self.assertIn("session", SpanFactory._span_types)
+        self.assertEqual(SpanFactory._span_types["session"], SessionSpan)
+        
+        self.assertIn("agent", SpanFactory._span_types)
+        self.assertEqual(SpanFactory._span_types["agent"], AgentSpan)
+        
+        self.assertIn("tool", SpanFactory._span_types)
+        self.assertEqual(SpanFactory._span_types["tool"], ToolSpan)
+        
+        self.assertIn("custom", SpanFactory._span_types)
+        self.assertEqual(SpanFactory._span_types["custom"], CustomSpan)
+
 
 if __name__ == "__main__":
     unittest.main() 
