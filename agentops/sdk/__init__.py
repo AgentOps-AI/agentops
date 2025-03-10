@@ -32,15 +32,15 @@ __all__ = [
     "TracedObject",
     "SpannedBase",
     "TracingConfig",
-    
+
     # Span types
     "SessionSpan",
     "AgentSpan",
     "ToolSpan",
     "CustomSpan",
-    
+
     # Decorators
     "session",
     "agent",
     "tool",
-] 
+]
