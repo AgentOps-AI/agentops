@@ -29,28 +29,6 @@ def trace_id_to_uuid(trace_id: int) -> UUID:
     return UUID(uuid_str)
 
 
-def format_duration(start_time, end_time) -> str:
-    """Format duration between two timestamps"""
-    if not start_time or not end_time:
-        return "0.0s"
-
-    start = datetime.fromisoformat(start_time.replace("Z", "+00:00"))
-    end = datetime.fromisoformat(end_time.replace("Z", "+00:00"))
-    duration = end - start
-
-    hours, remainder = divmod(duration.total_seconds(), 3600)
-    minutes, seconds = divmod(remainder, 60)
-
-    parts = []
-    if hours > 0:
-        parts.append(f"{int(hours)}h")
-    if minutes > 0:
-        parts.append(f"{int(minutes)}m")
-    parts.append(f"{seconds:.1f}s")
-
-    return " ".join(parts)
-
-
 def dict_to_span_attributes(data: dict, prefix: str = "") -> Attributes:
     """Convert a dictionary to OpenTelemetry span attributes.
 
