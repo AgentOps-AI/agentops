@@ -20,78 +20,29 @@ The tests in `tests/telemetry/test_processors.py` confirm this behavior, particu
 
 The UI components in `ui/src/components/FlowRunGraphs.vue` and `ui-v2/src/components/ui/chart.tsx` show how these spans are visualized in the UI, although the specific flamegraph implementation details aren't fully visible in the provided snippets.
 
-This approach allows for real-time visibility of spans in progress, which is essential for monitoring and debugging active processes in a flamegraph visualization.</think>Based on the codebase search results, I can explain how Cursor achieves immediate span export for flamegraph visualization without waiting for spans to end.
+This approach allows for real-time visibility of spans in progress, which is essential for monitoring and debugging active processes in a flamegraph visualization.
 
-The key mechanism is implemented in the `LiveSpanProcessor` class in `src/prefect/telemetry/processors.py`. Here's how it works:
+## How Tests Handle Span Snapshots
 
-### 1. Tracking Active Spans
+Tests for the `LiveSpanProcessor` are implemented in `tests/telemetry/test_processors.py` and demonstrate how span snapshots are handled:
 
-```python
-class LiveSpanProcessor(SpanProcessor):
-    def __init__(self, span_exporter: SpanExporter):
-        self.span_exporter = span_exporter
-        self._in_flight: Dict[int, Span] = {}  # Dictionary of active spans
-        self._lock = Lock()
-        self._stop_event = Event()
-        self._export_thread = Thread(target=self._export_periodically, daemon=True)
-        self._export_thread.start()
-        
-    def on_start(self, span: Span, parent_context: Optional[Context] = None) -> None:
-        if not span.context or not span.context.trace_flags.sampled:
-            return
-        with self._lock:
-            self._in_flight[span.context.span_id] = span
-```
+1. **Separate Export Events for the Same Logical Span**:
+   - Spans and their snapshots are treated as separate export events, but they represent the same logical span
+   - The exporter receives multiple span objects for different states of the same span (identified by the same span ID)
 
-When a span starts, it's added to an `_in_flight` dictionary that tracks all currently active spans.
+2. **What Tests Expect**:
+   - For a span that starts and ends, tests expect:
+     - At least one in-flight span export (snapshot) with the `prefect.in-flight: True` attribute
+     - One final span export when the span completes (without the in-flight attribute)
 
-### 2. Periodic Export of Active Spans
+3. **Verification Approach**:
+   - The `test_periodic_export` test confirms that active spans are exported with the "prefect.in-flight" attribute before completion
+   - The `test_span_processing_lifecycle` test verifies that when spans complete, they're exported again (without the in-flight attribute)
+   - Tests verify both types of exports separately, focusing on the correct behavior of each export operation
 
-```python
-def _export_periodically(self) -> None:
-    while not self._stop_event.is_set():
-        time.sleep(1)
-        with self._lock:
-            to_export = [
-                self._readable_span(span) for span in self._in_flight.values()
-            ]
-            if to_export:
-                self.span_exporter.export(to_export)
-```
+4. **Distinguishing Snapshots from Completed Spans**:
+   - The key distinction is that snapshots are marked with `prefect.in-flight: True`
+   - Completed spans don't have this attribute
+   - This allows visualization systems to differentiate between snapshots and completed spans, updating the display accordingly
 
-A background thread runs periodically (every 1 second) to export snapshots of all active spans. This is the critical part - it doesn't wait for spans to complete before exporting them.
-
-### 3. Creating "In-Flight" Snapshots
-
-```python
-def _readable_span(self, span: Span) -> ReadableSpan:
-    readable = span._readable_span()
-    readable._end_time = time.time_ns()  # Temporarily set end time to now
-    readable._attributes = {
-        **(readable._attributes or {}),
-        "prefect.in-flight": True,  # Mark as in-flight
-    }
-    return readable
-```
-
-For each active span, it:
-1. Creates a readable snapshot
-2. Sets a temporary end time to the current time
-3. Adds a special attribute `"prefect.in-flight": True` to indicate it's still running
-
-### 4. Normal Export When Spans End
-
-```python
-def on_end(self, span: ReadableSpan) -> None:
-    if not span.context or not span.context.trace_flags.sampled:
-        return
-    with self._lock:
-        del self._in_flight[span.context.span_id]
-        self.span_exporter.export((span,))
-```
-
-When spans actually complete, they're removed from the in-flight dictionary and exported normally.
-
-This approach allows the flamegraph to show real-time information about spans that are still in progress, with each span snapshot having a temporary end time set to the current moment. The UI can then use these snapshots to render the flamegraph with both completed and in-progress spans, providing immediate visibility without waiting for spans to finish.
-
-This pattern is particularly useful for long-running spans or deep execution stacks, as it provides continuous visibility into what's happening without delay.
+This testing approach ensures both the real-time visibility feature works correctly (through snapshots) while also maintaining the complete and accurate final representation of spans after they've completed.
