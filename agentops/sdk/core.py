@@ -300,28 +300,35 @@ class TracingCore:
     @classmethod
     def initialize_from_config(cls, config):
         """
-        Initialize the tracing core from a Config object (compatibility method).
+        Initialize the tracing core from a configuration object.
         
-        This method extracts the relevant tracing configuration from a Config object
+        This method extracts the relevant tracing configuration from a configuration object
         and initializes the tracing core with it.
         
         Args:
-            config: A Config object containing tracing configuration
+            config: A configuration object containing tracing configuration
         """
         instance = cls.get_instance()
         
         # Auto-register span types
         SpanFactory.auto_register_span_types()
         
-        # Extract tracing-specific configuration from the Config object
-        # Use getattr with default values to ensure we don't pass None for required fields
-        tracing_kwargs = {
-            'exporter': getattr(config, 'exporter', None),
-            'processor': getattr(config, 'processor', None),
-            'exporter_endpoint': getattr(config, 'exporter_endpoint', None),
-            'max_queue_size': getattr(config, 'max_queue_size', 512),
-            'max_wait_time': getattr(config, 'max_wait_time', 5000),
-        }
+        # Extract tracing-specific configuration
+        # For TracingConfig, we can directly pass it to initialize
+        if isinstance(config, dict):
+            # If it's already a dict (TracingConfig), use it directly
+            tracing_kwargs = config
+        else:
+            # For backward compatibility with old Config object
+            # Extract tracing-specific configuration from the Config object
+            # Use getattr with default values to ensure we don't pass None for required fields
+            tracing_kwargs = {
+                'exporter': getattr(config, 'exporter', None),
+                'processor': getattr(config, 'processor', None),
+                'exporter_endpoint': getattr(config, 'exporter_endpoint', None),
+                'max_queue_size': getattr(config, 'max_queue_size', 512),
+                'max_wait_time': getattr(config, 'max_wait_time', 5000),
+            }
         
         # Initialize with the extracted configuration
         instance.initialize(**tracing_kwargs)
