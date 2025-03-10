@@ -101,10 +101,15 @@ class Session(SessionRegistryMixin, SessionReportingMixin, SessionStateMixin, Se
             
             logger.debug(f"[{self.session_id}] Session ended with state: {state}")
 
-    def end_session(self, *args, **kwargs) -> Union[Decimal, None]:
+    def end_session(
+        self,
+        end_state: str = "Indeterminate",
+        end_state_reason: Optional[str] = None,
+        video: Optional[str] = None,
+    ) -> Union[Decimal, None]:
         """Deprecated method to end the session."""
         # this method is called explicitly by CrewAI and should fail silently
-        return self.end(*args, **kwargs)
+        return self.end(state=end_state)
 
     def create_agent(self, name, agent_id):
         """Deprecated method to manually create an agent in older versions of the SDK."""
