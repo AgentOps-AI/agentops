@@ -19,7 +19,7 @@ from opentelemetry.instrumentation.utils import (
 )
 
 from opentelemetry.semconv._incubating.attributes.gen_ai_attributes import GEN_AI_RESPONSE_ID
-from opentelemetry.semconv_ai import (
+from agentops.semconv import (
     SUPPRESS_LANGUAGE_MODEL_INSTRUMENTATION_KEY,
     SpanAttributes,
     LLMRequestTypeValues,

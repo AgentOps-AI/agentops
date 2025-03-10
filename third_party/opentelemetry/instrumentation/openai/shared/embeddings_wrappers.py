@@ -3,7 +3,7 @@ import time
 
 from opentelemetry import context as context_api
 from opentelemetry.metrics import Counter, Histogram
-from opentelemetry.semconv_ai import (
+from agentops.semconv import (
     SUPPRESS_LANGUAGE_MODEL_INSTRUMENTATION_KEY,
     SpanAttributes,
     LLMRequestTypeValues,
