@@ -50,7 +50,7 @@ class SessionSpan(SpannedBase):
         kwargs.setdefault("kind", "session")
         
         # Initialize base class
-        super().__init__(name=name, kind="session", parent=None, **kwargs)
+        super().__init__(name=name, parent=None, **kwargs)
         
         # Store session-specific attributes
         self._config = config

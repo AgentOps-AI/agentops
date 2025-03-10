@@ -35,7 +35,7 @@ class ToolSpan(SpannedBase):
         kwargs.setdefault("kind", "tool")
         
         # Initialize base class
-        super().__init__(name=name, kind="tool", parent=parent, **kwargs)
+        super().__init__(name=name, parent=parent, **kwargs)
         
         # Store tool-specific attributes
         self._tool_type = tool_type

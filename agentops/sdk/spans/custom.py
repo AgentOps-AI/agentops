@@ -32,7 +32,7 @@ class CustomSpan(SpannedBase):
             **kwargs: Additional keyword arguments
         """
         # Initialize base class
-        super().__init__(name=name, kind=kind, parent=parent, **kwargs)
+        super().__init__(name=name, parent=parent, kind=kind, **kwargs)
         
         # Set attributes
         self._attributes.update({

@@ -36,7 +36,7 @@ class AgentSpan(SpannedBase):
         kwargs.setdefault("immediate_export", True)  # Agents are typically exported immediately
         
         # Initialize base class
-        super().__init__(name=name, kind="agent", parent=parent, **kwargs)
+        super().__init__(name=name, parent=parent, **kwargs)
         
         # Store agent-specific attributes
         self._agent_type = agent_type

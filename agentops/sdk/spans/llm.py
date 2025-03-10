@@ -36,7 +36,7 @@ class LLMSpan(SpannedBase):
         kwargs.setdefault("immediate_export", True)  # LLM calls are typically exported immediately
         
         # Initialize base class
-        super().__init__(name=name, kind="llm", parent=parent, **kwargs)
+        super().__init__(name=name, parent=parent, **kwargs)
         
         # Store LLM-specific attributes
         self._model = model
