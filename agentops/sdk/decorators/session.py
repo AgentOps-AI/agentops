@@ -2,6 +2,9 @@ import functools
 import inspect
 from typing import Any, Callable, Dict, Optional, Type, TypeVar, Union, cast
 
+from opentelemetry import trace
+from opentelemetry.trace import Span
+
 from agentops.sdk.types import TracingConfig
 from agentops.sdk.core import TracingCore
 from agentops.sdk.spans.session import SessionSpan
@@ -47,8 +50,7 @@ def session(
             # Decorate a class
             original_init = cls_or_func.__init__
             
-            @functools.wraps(original_init)
-            def init_wrapper(self: Any, *args: Any, **init_kwargs: Any) -> None:
+            def init_wrapper(self, *args, **init_kwargs):
                 # Create the session span
                 core = TracingCore.get_instance()
                 session_span = core.create_span(
@@ -63,23 +65,26 @@ def session(
                 # Store the session span on the instance
                 self._session_span = session_span
                 
-                # Call the original __init__
-                original_init(self, *args, **init_kwargs)
+                # Start the span
+                session_span.start()
+                
+                # Call the original __init__ inside the span's context
+                with trace.use_span(session_span.span, end_on_exit=False):
+                    original_init(self, *args, **init_kwargs)
             
             # Replace the __init__ method
             cls_or_func.__init__ = init_wrapper
             
-            # Add methods to access the session span
-            setattr(cls_or_func, 'get_session_span', lambda self: self._session_span)
+            # Add method to access the session span
+            cls_or_func.get_session_span = lambda self: self._session_span
             
             return cls_or_func
         else:
             # Decorate a function
             @functools.wraps(cls_or_func)
-            def wrapper(*args: Any, **func_kwargs: Any) -> Any:
+            def wrapper(*args, **func_kwargs):
                 # Create the session span
                 core = TracingCore.get_instance()
-                # Create the span but don't use context manager
                 session_span = core.create_span(
                     kind="session",
                     name=span_name,
@@ -92,14 +97,17 @@ def session(
                 try:
                     # Start the span
                     session_span.start()
-                    # Call the function with the session span as an argument
-                    result = cls_or_func(*args, session_span=session_span, **func_kwargs)
+                    
+                    # Call the function inside the span's context
+                    with trace.use_span(session_span.span, end_on_exit=False):
+                        result = cls_or_func(*args, session_span=session_span, **func_kwargs)
+                    
                     # End the span
-                    session_span.end()
+                    session_span.end("SUCCEEDED")
                     return result
                 except Exception as e:
                     # End the span with error status
-                    session_span.end(status="ERROR", description=str(e))
+                    session_span.end("ERROR")
                     raise
             
             return wrapper
