@@ -1,6 +1,7 @@
 import unittest
 from unittest.mock import MagicMock, patch
 from uuid import UUID
+import json
 
 from opentelemetry.trace import StatusCode
 
@@ -149,13 +150,13 @@ class TestSessionSpan(unittest.TestCase):
         # Test adding a new tag
         span.add_tag("tag2")
         self.assertEqual(span._tags, ["tag1", "tag2"])
-        span.set_attribute.assert_called_once_with("session.tags", ["tag1", "tag2"])
+        span.set_attribute.assert_called_once_with("session.tags", json.dumps(["tag1", "tag2"]))
         
         # Test adding an existing tag
         span.set_attribute.reset_mock()
         span.add_tag("tag1")
         self.assertEqual(span._tags, ["tag1", "tag2"])
-        span.set_attribute.assert_called_once_with("session.tags", ["tag1", "tag2"])
+        span.set_attribute.assert_called_once_with("session.tags", json.dumps(["tag1", "tag2"]))
 
     def test_add_tags(self):
         """Test adding multiple tags."""
@@ -167,11 +168,11 @@ class TestSessionSpan(unittest.TestCase):
         )
         span.add_tag = MagicMock()
         
-        # Test
+        # Test adding multiple tags
         span.add_tags(["tag2", "tag3"])
+        self.assertEqual(span.add_tag.call_count, 2)
         span.add_tag.assert_any_call("tag2")
         span.add_tag.assert_any_call("tag3")
-        self.assertEqual(span.add_tag.call_count, 2)
 
     def test_to_dict(self):
         """Test converting to dictionary."""
