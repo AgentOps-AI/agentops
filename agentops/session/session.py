@@ -3,7 +3,8 @@ from __future__ import annotations
 import datetime
 import json
 import threading
-from typing import TYPE_CHECKING, Optional, Union
+from decimal import Decimal
+from typing import TYPE_CHECKING, Optional, Union, Any
 from uuid import UUID
 
 from termcolor import colored
@@ -14,6 +15,7 @@ from agentops.helpers.serialization import AgentOpsJSONEncoder
 from agentops.helpers.time import iso_to_unix_nano
 from agentops.logging import logger
 from agentops.sdk.descriptors.classproperty import classproperty
+from agentops.event import EventBase
 
 from .base import SessionBase
 from .mixin.analytics import AnalyticsSessionMixin
@@ -108,13 +110,47 @@ class Session(SessionRegistryMixin, SessionReportingMixin, SessionStateMixin, Se
         video: Optional[str] = None,
     ) -> Union[Decimal, None]:
         """Deprecated method to end the session."""
-        # this method is called explicitly by CrewAI and should fail silently
+        # this method is called explicitly by CrewAI and should continue silently instead
+        # of raising a warning or deprecation error. 
         return self.end(state=end_state)
 
     def create_agent(self, name, agent_id):
-        """Deprecated method to manually create an agent in older versions of the SDK."""
-        # this method is called explicitly by CrewAI and should fail silently
+        """
+        Deprecated method to manually create an agent in older versions of the SDK.
+        
+        Instrumentation should handle recognizing Agents automatically.
+        """
+        # this method is called explicitly by CrewAI and should fail silently instead
+        # of raising a warning or deprecation error. 
         pass
+
+    def record(self, event: Any, **kwargs):
+        """Record an event.
+        
+        This method is maintained for backwards compatibility with code like CrewAI
+        that directly calls this method. It ensures that any event recorded this way
+        is linked to the current session and properly captured in OpenTelemetry.
+        
+        Args:
+            event: The event to record (ActionEvent, LLMEvent, ToolEvent, ErrorEvent)
+            **kwargs: Additional parameters to pass to the event
+        """
+        # Set the session_id on the event if it's an EventBase instance
+        if isinstance(event, EventBase) and not event.session_id:
+            event.session_id = self.session_id
+            
+            # If the event has a span, set the session_id as an attribute
+            if hasattr(event, 'span') and event.span:
+                event.span.set_attribute("session.id", str(self.session_id))
+                
+                # Add any tags from the session as span attributes
+                if self.tags:
+                    for tag_key, tag_value in self.tags.items():
+                        event.span.set_attribute(f"session.tag.{tag_key}", str(tag_value))
+        
+        # No need to do anything else since the Event functions already create spans
+        # that are properly linked to the current trace context
+        return event
 
     # Add current function to get default session
     @classproperty
