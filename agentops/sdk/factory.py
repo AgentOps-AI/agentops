@@ -18,6 +18,7 @@ class SpanFactory:
     """
     
     _span_types: Dict[str, Type[SpannedBase]] = {}
+    _initialized = False
     
     @classmethod
     def register_span_type(cls, kind: str, span_class: Type[SpannedBase]) -> None:
@@ -29,6 +30,28 @@ class SpanFactory:
             span_class: Class to use for creating spans of this kind
         """
         cls._span_types[kind] = span_class
+    
+    @classmethod
+    def auto_register_span_types(cls) -> None:
+        """
+        Automatically register all standard span types.
+        
+        This method should be called once during initialization to ensure
+        that all standard span types are registered with the factory.
+        """
+        # Import here to avoid circular imports
+        from agentops.sdk.spans import SessionSpan, AgentSpan, ToolSpan, CustomSpan
+        
+        # Reset span types if needed for testing
+        if not cls._span_types:
+            # Register standard span types
+            cls.register_span_type("session", SessionSpan)
+            cls.register_span_type("agent", AgentSpan)
+            cls.register_span_type("tool", ToolSpan)
+            cls.register_span_type("custom", CustomSpan)
+        
+        # Mark as initialized
+        cls._initialized = True
     
     @classmethod
     def create_span(

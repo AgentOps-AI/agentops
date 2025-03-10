@@ -2,18 +2,19 @@ import functools
 import inspect
 from typing import Any, Callable, Dict, Optional, Type, TypeVar, Union, cast
 
-from agentops.config import Config, default_config
+from agentops.sdk.types import TracingConfig
 from agentops.sdk.core import TracingCore
 from agentops.sdk.spans.session import SessionSpan
 from agentops.logging import logger
 
 T = TypeVar('T')
+F = TypeVar('F', bound=Callable[..., Any])
 
 def session(
     cls_or_func: Optional[Union[Type[T], Callable[..., Any]]] = None,
     *,
     name: Optional[str] = None,
-    config: Optional[Config] = None,
+    config: Optional[TracingConfig] = None,
     tags: Optional[list[str]] = None,
     immediate_export: bool = True,
     **kwargs
@@ -40,14 +41,14 @@ def session(
         span_name = name or cls_or_func.__name__
         
         # Get the configuration
-        span_config = config or default_config()
+        span_config = config or {"max_queue_size": 512, "max_wait_time": 5000}
         
         if inspect.isclass(cls_or_func):
             # Decorate a class
             original_init = cls_or_func.__init__
             
             @functools.wraps(original_init)
-            def init_wrapper(self, *args, **init_kwargs):
+            def init_wrapper(self: Any, *args: Any, **init_kwargs: Any) -> None:
                 # Create the session span
                 core = TracingCore.get_instance()
                 session_span = core.create_span(
@@ -69,13 +70,13 @@ def session(
             cls_or_func.__init__ = init_wrapper
             
             # Add methods to access the session span
-            cls_or_func.get_session_span = lambda self: self._session_span
+            setattr(cls_or_func, 'get_session_span', lambda self: self._session_span)
             
             return cls_or_func
         else:
             # Decorate a function
             @functools.wraps(cls_or_func)
-            def wrapper(*args, **func_kwargs):
+            def wrapper(*args: Any, **func_kwargs: Any) -> Any:
                 # Create the session span
                 core = TracingCore.get_instance()
                 # Create the span but don't use context manager

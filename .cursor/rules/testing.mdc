@@ -1,6 +1,6 @@
 ---
 description: Testing guidelines
-globs: tests/*
+globs: tests/unit/*
 alwaysApply: false
 ---
 - You've got configured session fixtures in [conftest.py](mdc:tests/unit/conftest.py)

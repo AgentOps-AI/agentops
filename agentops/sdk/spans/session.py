@@ -9,7 +9,7 @@ from uuid import UUID
 from opentelemetry import context, trace
 from opentelemetry.trace import Span, Status, StatusCode
 
-from agentops.config import Config
+from agentops.sdk.types import TracingConfig
 from agentops.sdk.core import TracingCore
 from agentops.logging import logger
 from agentops.sdk.spanned import SpannedBase
@@ -27,7 +27,7 @@ class SessionSpan(SpannedBase):
     def __init__(
         self,
         name: str,
-        config: Config,
+        config: TracingConfig,
         tags: Optional[List[str]] = None,
         host_env: Optional[Dict[str, Any]] = None,
         **kwargs
@@ -44,13 +44,13 @@ class SessionSpan(SpannedBase):
         """
         # Initialize tracing core with config
         core = TracingCore.get_instance()
-        core.initialize(config)
+        core.initialize_from_config(config)
         
         # Set default values
         kwargs.setdefault("kind", "session")
         
         # Initialize base class
-        super().__init__(name=name, parent=None, **kwargs)
+        super().__init__(name=name, **kwargs)
         
         # Store session-specific attributes
         self._config = config
@@ -62,7 +62,7 @@ class SessionSpan(SpannedBase):
         # Set attributes on span when started
         self._attributes.update({
             "session.name": name,
-            "session.tags": self._tags,
+            "session.tags": json.dumps(self._tags),
             "session.state": self._state,
         })
         
@@ -174,7 +174,7 @@ class SessionSpan(SpannedBase):
         """
         if tag not in self._tags:
             self._tags.append(tag)
-        self.set_attribute("session.tags", self._tags)
+        self.set_attribute("session.tags", json.dumps(self._tags))
     
     def add_tags(self, tags: List[str]) -> None:
         """
@@ -211,6 +211,11 @@ class SessionSpan(SpannedBase):
         if self._end_time and isinstance(self._end_time, datetime.datetime):
             result["end_time"] = self._end_time.isoformat()
             if isinstance(self._start_time, datetime.datetime):
-                result["duration_ms"] = (self._end_time - self._start_time).total_seconds() * 1000
+                # Calculate duration in milliseconds
+                # Convert to timestamps to avoid type issues
+                end_timestamp = self._end_time.timestamp()
+                start_timestamp = self._start_time.timestamp()
+                duration_seconds = end_timestamp - start_timestamp
+                result["duration_ms"] = duration_seconds * 1000
         
         return result 

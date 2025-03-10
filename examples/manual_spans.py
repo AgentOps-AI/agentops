@@ -1,9 +1,9 @@
- #!/usr/bin/env python
+#!/usr/bin/env python
 """
-Example of manually creating and using spans with the AgentOps SDK.
+Example of manually creating spans with the AgentOps SDK.
 
-This example demonstrates how to create and use spans directly without using decorators.
-This approach gives you more control over the span lifecycle and is useful for more complex scenarios.
+This example demonstrates how to manually create and manage spans
+without using the decorators.
 """
 
 import os
@@ -12,19 +12,25 @@ import sys
 import time
 from typing import Any, Dict, List
 
-from agentops.config import Config
+from agentops.sdk.types import TracingConfig
 from agentops.sdk.core import TracingCore
+from agentops.sdk.spans.session import SessionSpan
+from agentops.sdk.spans.agent import AgentSpan
+from agentops.sdk.spans.tool import ToolSpan
 
 
 def initialize_tracing():
     """Initialize the tracing core."""
-    config = Config(
-        api_key="test_key",  # Replace with your API key
-        host="https://api.agentops.ai",  # Replace with your host
-        project_id="example-project",  # Replace with your project ID
-    )
+    # Create a tracing core instance
     core = TracingCore.get_instance()
-    core.initialize(config)
+    
+    # Initialize the core with configuration
+    core.initialize(
+        exporter_endpoint="https://otlp-jaeger.agentops.cloud/v1/traces",  # Optional: Replace with your exporter endpoint
+        max_queue_size=512,
+        max_wait_time=5000
+    )
+    
     return core
 
 

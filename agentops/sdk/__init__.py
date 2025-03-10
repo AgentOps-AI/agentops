@@ -9,6 +9,7 @@ for different types of operations in AI agent workflows.
 from agentops.sdk.core import TracingCore
 from agentops.sdk.traced import TracedObject
 from agentops.sdk.spanned import SpannedBase
+from agentops.sdk.types import TracingConfig
 
 # Import span types
 from agentops.sdk.spans import (
@@ -30,15 +31,16 @@ __all__ = [
     "TracingCore",
     "TracedObject",
     "SpannedBase",
-    
+    "TracingConfig",
+
     # Span types
     "SessionSpan",
     "AgentSpan",
     "ToolSpan",
     "CustomSpan",
-    
+
     # Decorators
     "session",
     "agent",
     "tool",
-] 
+]

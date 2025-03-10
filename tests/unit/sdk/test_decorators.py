@@ -2,7 +2,7 @@ import unittest
 from unittest.mock import MagicMock, patch
 from uuid import UUID
 
-from agentops.config import Config
+from agentops.sdk.types import TracingConfig
 from agentops.sdk.decorators.session import session
 from agentops.sdk.decorators.agent import agent
 from agentops.sdk.decorators.tool import tool
