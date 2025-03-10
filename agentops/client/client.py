@@ -1,17 +1,21 @@
-import uuid
-from typing import Any, Dict, List, Optional, Union
-from uuid import UUID
+from typing import List, Optional, Union
 
 from agentops.client.api import ApiClient
-from agentops.client.api.versions.v3 import V3Client
-from agentops.config import Config, ConfigDict
+from agentops.config import Config
 from agentops.exceptions import (AgentOpsClientNotInitializedException,
                                  NoApiKeyException, NoSessionException)
-from agentops.instrumentation import instrument_all, uninstrument_all
+from agentops.instrumentation import instrument_all
 from agentops.logging import logger
-from agentops.session import Session
-from agentops.session.registry import get_active_sessions, get_default_session
-from agentops.session.state import SessionState
+
+
+def get_default_session():
+    """Get the default session"""
+    raise NotImplementedError
+
+
+def get_active_sessions():
+    """Get all active sessions"""
+    raise NotImplementedError
 
 
 class Client:
@@ -32,7 +36,7 @@ class Client:
         self._initialized = False
         self.config = Config()
 
-    def init(self, **kwargs) -> Union[Session, None]:
+    def init(self, **kwargs):
         self.configure(**kwargs)
 
         if not self.config.api_key:
@@ -57,7 +61,7 @@ class Client:
         """Update client configuration"""
         self.config.configure(**kwargs)
 
-    def start_session(self, **kwargs) -> Union[Session, None]:
+    def start_session(self, **kwargs):
         """Start a new session for recording events
 
         Args:
@@ -75,49 +79,7 @@ class Client:
             else:
                 raise AgentOpsClientNotInitializedException
 
-        try:
-            return Session(config=self.config, **kwargs)
-        except Exception as e:
-            logger.error(f"Failed to create session: {e}")
-            if not self.config.fail_safe:
-                raise
-            return None
-
-    def end_session(
-        self,
-        end_state: str,
-        end_state_reason: Optional[str] = None,
-        video: Optional[str] = None,
-        is_auto_end: Optional[bool] = False,
-    ):
-        """End the current session"""
-        session = get_default_session()
-        if session:
-            # TODO `end_state_reason` and `video` get orphaned here. 
-            session.end(end_state)
-        else:
-            logger.warning("No active session to end")
-
-    def add_tags(self, tags: List[str]):
-        """Add tags to current session"""
-        session = get_default_session()
-        if session:
-            session.add_tags(tags)
-        else:
-            raise NoSessionException("No active session to add tags to")
-
-    def set_tags(self, tags: List[str]):
-        """Set tags for current session"""
-        session = get_default_session()
-        if session:
-            session.set_tags(tags)
-        else:
-            raise NoSessionException("No active session to set tags for")
-
-    def end_all_sessions(self):
-        """End all active sessions"""
-        for session in get_active_sessions():
-            session.end(SessionState.INDETERMINATE)
+        raise NotImplementedError('Session start is not yet implemented')
 
     @property
     def initialized(self) -> bool:
