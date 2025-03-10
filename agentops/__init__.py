@@ -1,16 +1,6 @@
-from typing import TYPE_CHECKING, List, Optional, Union
+from typing import List, Optional, Union
 
 from .client import Client
-from .session import Session
-
-# Import semantic conventions
-from .semconv import SpanKind, CoreAttributes, AgentAttributes, ToolAttributes, ToolStatus
-
-# Import decorators
-from .decorators import session, agent, tool, span, create_span, current_span, add_span_attribute, add_span_event
-
-from opentelemetry.sdk.trace import SpanProcessor
-from opentelemetry.sdk.trace.export import SpanExporter
 
 # Client global instance; one per process runtime
 _client = Client()
@@ -30,13 +20,11 @@ def init(
     env_data_opt_out: Optional[bool] = None,
     log_level: Optional[Union[str, int]] = None,
     fail_safe: Optional[bool] = None,
-    exporter: Optional[SpanExporter] = None,
-    processor: Optional[SpanProcessor] = None,
     exporter_endpoint: Optional[str] = None,
     **kwargs,
-) -> Union[Session, None]:
+):
     """
-    Initializes the AgentOps singleton pattern.
+    Initializes the AgentOps SDK.
 
     Args:
         api_key (str, optional): API Key for AgentOps services. If none is provided, key will
@@ -56,10 +44,6 @@ def init(
         env_data_opt_out (bool): Whether to opt out of collecting environment data.
         log_level (str, int): The log level to use for the client. Defaults to 'CRITICAL'.
         fail_safe (bool): Whether to suppress errors and continue execution when possible.
-        exporter (SpanExporter): Custom span exporter for OpenTelemetry trace data. If provided,
-            will be used instead of the default OTLPSpanExporter. Not needed if processor is specified.
-        processor (SpanProcessor): Custom span processor for OpenTelemetry trace data. If provided,
-            takes precedence over exporter. Used for complete control over span processing.
         exporter_endpoint (str, optional): Endpoint for the exporter. If none is provided, key will
             be read from the AGENTOPS_EXPORTER_ENDPOINT environment variable.
         **kwargs: Additional configuration parameters to be passed to the client.
@@ -86,8 +70,6 @@ def init(
         env_data_opt_out=env_data_opt_out,
         log_level=log_level,
         fail_safe=fail_safe,
-        exporter=exporter,
-        processor=processor,
         exporter_endpoint=exporter_endpoint,
         **kwargs,
     )
@@ -141,7 +123,7 @@ def configure(**kwargs):
     _client.configure(**kwargs)
 
 
-def start_session(**kwargs) -> Optional[Session]:
+def start_session(**kwargs):
     """Start a new session for recording events.
 
     Args:
@@ -168,7 +150,7 @@ def end_session(
         end_state_reason (str, optional): The reason for ending the session.
         video (str, optional): URL to a video recording of the session
     """
-    _client.end_session(end_state, end_state_reason, video, is_auto_end)
+    raise NotImplementedError
 
 
 def record():
@@ -190,7 +172,7 @@ def add_tags(tags: List[str]):
     Args:
         tags (List[str]): The list of tags to append.
     """
-    _client.add_tags(tags)
+    raise NotImplementedError
 
 
 def set_tags(tags: List[str]):
@@ -200,14 +182,14 @@ def set_tags(tags: List[str]):
     Args:
         tags (List[str]): The list of tags to set.
     """
-    _client.set_tags(tags)
+    raise NotImplementedError
 
 
 # Mostly used for unit testing -
 # prevents unexpected sessions on new tests
 def end_all_sessions() -> None:
     """End all active sessions"""
-    _client.end_all_sessions()
+    raise NotImplementedError
 
 
 # For backwards compatibility and testing
