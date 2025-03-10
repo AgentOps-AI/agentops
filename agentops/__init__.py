@@ -10,7 +10,7 @@ from .semconv import SpanKind, CoreAttributes, AgentAttributes, ToolAttributes, 
 from .decorators import session, agent, tool, span, create_span, current_span, add_span_attribute, add_span_event
 
 # events for backwards compatibility
-from .events import (
+from .event import (
     ActionEvent,
     LLMEvent,
     ToolEvent,
