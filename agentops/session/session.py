@@ -101,6 +101,11 @@ class Session(SessionRegistryMixin, SessionReportingMixin, SessionStateMixin, Se
             
             logger.debug(f"[{self.session_id}] Session ended with state: {state}")
 
+    def create_agent(self, name, agent_id):
+        """Deprecated method to manually create an agent in older versions of the SDK."""
+        # this method is called explicitly by CrewAI and should fail silently
+        pass
+
     # Add current function to get default session
     @classproperty
     def current(cls) -> Optional[Session]:
