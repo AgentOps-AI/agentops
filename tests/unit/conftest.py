@@ -11,8 +11,6 @@ import agentops
 from agentops.config import Config
 from tests.fixtures.client import *  # noqa
 from tests.fixtures.config import *  # noqa
-from tests.fixtures.instrumentation import *  # noqa
-from tests.fixtures.session import *  # noqa
 
 
 @pytest.fixture(autouse=True)
