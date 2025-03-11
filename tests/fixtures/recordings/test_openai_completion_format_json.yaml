@@ -1,0 +1,107 @@
+interactions:
+- request:
+    body: '{"messages": [{"role": "system", "content": "You are a helpful assistant
+      that responds only in JSON format."}, {"role": "user", "content": "Generate
+      a list of 3 book recommendations with title, author and year"}], "model": "gpt-3.5-turbo",
+      "response_format": {"type": "json_object"}}'
+    headers:
+      accept:
+      - application/json
+      accept-encoding:
+      - gzip, deflate
+      authorization:
+      - REDACTED
+      connection:
+      - keep-alive
+      content-length:
+      - '283'
+      content-type:
+      - application/json
+      host:
+      - api.openai.com
+      user-agent:
+      - AsyncOpenAI/Python 1.65.5
+      x-stainless-arch:
+      - REDACTED
+      x-stainless-async:
+      - REDACTED
+      x-stainless-lang:
+      - REDACTED
+      x-stainless-os:
+      - REDACTED
+      x-stainless-package-version:
+      - 1.65.5
+      x-stainless-read-timeout:
+      - '600'
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - REDACTED
+      x-stainless-runtime-version:
+      - REDACTED
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    body:
+      string: "{\n  \"id\": \"chatcmpl-B9gveKQjqAOYIUudxtuPgBsCyILNV\",\n  \"object\":
+        \"chat.completion\",\n  \"created\": 1741649670,\n  \"model\": \"gpt-3.5-turbo-0125\",\n
+        \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
+        \"assistant\",\n        \"content\": \"{\\n  \\\"recommendations\\\": [\\n
+        \   {\\n      \\\"title\\\": \\\"Educated\\\",\\n      \\\"author\\\": \\\"Tara
+        Westover\\\",\\n      \\\"year\\\": 2018\\n    },\\n    {\\n      \\\"title\\\":
+        \\\"The Alchemist\\\",\\n      \\\"author\\\": \\\"Paulo Coelho\\\",\\n      \\\"year\\\":
+        1988\\n    },\\n    {\\n      \\\"title\\\": \\\"Sapiens: A Brief History
+        of Humankind\\\",\\n      \\\"author\\\": \\\"Yuval Noah Harari\\\",\\n      \\\"year\\\":
+        2014\\n    }\\n  ]\\n}\",\n        \"refusal\": null\n      },\n      \"logprobs\":
+        null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
+        37,\n    \"completion_tokens\": 111,\n    \"total_tokens\": 148,\n    \"prompt_tokens_details\":
+        {\n      \"cached_tokens\": 0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\":
+        {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\":
+        0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\":
+        \"default\",\n  \"system_fingerprint\": null\n}\n"
+    headers:
+      CF-Cache-Status:
+      - DYNAMIC
+      CF-RAY: REDACTED
+      Connection:
+      - keep-alive
+      Content-Type:
+      - application/json
+      Date:
+      - Mon, 10 Mar 2025 23:34:31 GMT
+      Server:
+      - cloudflare
+      Set-Cookie:
+      - __cf_bm=pvlP0JLe7TOPta.RzwZE5OO1oq0GAMV.ysgiugScQ3k-1741649671-1.0.1.1-bQ58aPS08EfyVi36ZnyE48nojWmS0LzToKTGBHpIy1YMZf01rs1kSObw2E04zr94ozCHiINGENAH1oX2RfdTZop7k8dnfs8BfrqNzLt9jCg;
+        path=/; expires=Tue, 11-Mar-25 00:04:31 GMT; domain=.api.openai.com; HttpOnly;
+        Secure; SameSite=None
+      - _cfuvid=xHdbSgCpcOPOp5_gOm_V8la__hwydZbHAuQ51686DEY-1741649671825-0.0.1.1-604800000;
+        path=/; domain=.api.openai.com; HttpOnly; Secure; SameSite=None
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - nosniff
+      access-control-expose-headers:
+      - X-Request-ID
+      alt-svc:
+      - h3=":443"; ma=86400
+      content-length:
+      - '1159'
+      openai-organization: REDACTED
+      openai-processing-ms:
+      - '1374'
+      openai-version:
+      - '2020-10-01'
+      strict-transport-security:
+      - max-age=31536000; includeSubDomains; preload
+      x-ratelimit-limit-requests: REDACTED
+      x-ratelimit-limit-tokens: REDACTED
+      x-ratelimit-remaining-requests: REDACTED
+      x-ratelimit-remaining-tokens: REDACTED
+      x-ratelimit-reset-requests: REDACTED
+      x-ratelimit-reset-tokens: REDACTED
+      x-request-id: REDACTED
+    status:
+      code: 200
+      message: OK
+version: 1

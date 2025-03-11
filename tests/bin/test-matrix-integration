@@ -1,0 +1,303 @@
+#!/usr/bin/env python3
+"""
+test-matrix-integration
+
+A command line utility to run a matrix of integration tests across multiple Python versions.
+This script automatically handles dependency installation and test execution with the
+appropriate environment settings for each test configuration.
+
+Usage:
+  test-matrix-integration [options] [test_names...]
+
+Arguments:
+  test_names         One or more test configurations to run (openai, anthropic etc.)
+                     If none specified, all tests will be run
+
+Options:
+  --quick            Run only on a single Python version with the primary package version
+  --no-cache         Disable loading VCR recordings (used to generate more live data)
+  --file             Specify a test file to run. Can be used multiple times.
+                     Can also include pytest function names to run specific tests.
+                     ie. --file tests/integration/test_session.py::test_session
+  --verbose          Show detailed output from each test run (including errors)
+
+Examples:
+  # Run all tests on all Python versions
+  test-matrix-integration
+  
+  # Run only OpenAI tests on Python 3.12
+  test-matrix-integration openai --quick
+  
+  # Run only specific test files with OpenAI configuration
+  test-matrix-integration openai --file tests/integration/test_session.py
+  
+  # Run multiple specific test files with OpenAI configuration
+  test-matrix-integration openai --file tests/integration/test_session.py --file tests/integration/test_openai_completion.py
+  
+  # Run specific test function
+  test-matrix-integration openai --file tests/integration/test_session.py::test_session_current
+  
+  # Show detailed test output
+  test-matrix-integration openai --verbose
+"""
+from typing import Optional
+import argparse
+import os
+import subprocess
+import sys
+import tempfile
+
+# Global configuration
+RUN_QUICK: bool = False  # Run only on a single Python version without primary_package iteration
+ACTIVE_PYTHON_VERSIONS: list[str] = ['3.9', '3.10', '3.11', '3.12', '3.13']
+QUICK_PYTHON_VERSION: str = '3.12'
+FILES_OVERRIDE: list[str] = []  # Can be set to run specific files under a test group
+USE_VCR_CACHE: bool = True  # Default to using existing VCR recordings
+VERBOSE: bool = False  # Show detailed output from test runs
+TEST_RESULTS: dict = {}  # Store test results in a structured format
+
+ENV = {
+    'AGENTOPS_TEST_MATRIX': '1',
+}
+
+MATRIX = {
+    'openai': {
+        'python_versions': ['3.10', '3.11', '3.12', '3.13'], 
+        'dependency_groups': ["test", "test-openai", ], 
+        'primary_package': {
+            'name': "openai", 
+            'versions': ['1.50', '1.57', '1.60', '1.65'], 
+        },
+        'test_files': [
+            "tests/integration/test_openai_completion.py",
+        ]
+    },
+    'anthropic': {
+        'python_versions': ['3.10', '3.11', '3.12', '3.13'],
+        'dependency_groups': ["test", "test-anthropic", ], 
+        'primary_package': {
+            'name': "anthropic", 
+            'versions': ['0.32', '0.38', '0.40', '0.49'], 
+        }, 
+        'test_files': [
+            "tests/integration/test_anthropic.py",
+        ],
+    },
+    'autogen': {
+        'python_versions': ['3.10', '3.11', '3.12'],
+        'dependency_groups': ["test", "test-autogen", ], 
+        'test_files': [
+            "tests/integration/test_autogen.py",
+        ]
+    },
+    'crewai': {
+        'python_versions': ['3.10', '3.11', '3.12'],
+        'dependency_groups': ["test", "test-crewai", ], 
+        'primary_package': {
+            'name': "crewai", 
+            'versions': ['0.86.0', '0.98.0', '0.101.0', '0.105.0'], 
+        },
+        'test_files': [
+            "tests/integration/test_crewai.py",
+        ]
+    },
+}
+
+
+def run_cmd(cmd: list[str], env_vars: dict = None) -> tuple[int, str]:
+    """Run a command with custom environment variables and return exit code and output."""
+    env = os.environ.copy()
+    if env_vars:
+        env.update(env_vars)
+    
+    try:
+        result = subprocess.run(
+            cmd, 
+            check=False,  # Don't raise exception on non-zero exit
+            env=env,
+            capture_output=(not VERBOSE),
+            text=True
+        )
+        output = result.stdout + result.stderr
+        return result.returncode, output
+    except Exception as e:
+        error_msg = f"Error running command: {e}"
+        return 1, error_msg  # Return error code 1 and error message
+
+
+def run_test(name: str):
+    conf = MATRIX[name]
+    python_versions = [v for v in conf['python_versions'] if v in ACTIVE_PYTHON_VERSIONS]
+    print(f"Running tests for `{name}` on Python versions: {', '.join(python_versions)}")
+    
+    # Initialize test results for this configuration
+    if name not in TEST_RESULTS:
+        TEST_RESULTS[name] = {}
+
+    # Determine package versions to test
+    if (package := conf.get('primary_package')) and not RUN_QUICK:
+        package_name = package['name']
+        package_versions = package['versions']
+        with_packages = [f"{package_name}=={ver}" for ver in package_versions]
+        print(f"Using package versions: {', '.join(with_packages)}")
+    else:
+        package_name = None
+        package_versions = ["default"]
+        with_packages = [None, ]  # single iteration if no primary package specified.
+    
+    for python_ver in python_versions:
+        if python_ver not in TEST_RESULTS[name]:
+            TEST_RESULTS[name][python_ver] = {}
+            
+        for i, with_package in enumerate(with_packages):
+            # Get display version for the results matrix
+            version_display = package_versions[i] if with_package else "default"
+            
+            groups = [("--group", dep) for dep in conf['dependency_groups']]
+            groups = [item for sublist in groups for item in sublist]
+            files = FILES_OVERRIDE if FILES_OVERRIDE else conf['test_files']
+            with_ = ["--with", with_package] if with_package else []
+            
+            cmd = [
+                "uv", "run", "--isolated",
+                *groups, 
+                "--python", python_ver,
+                *with_, 
+                "pytest", 
+                *files, 
+            ]
+
+            env_vars = ENV.copy()
+            if not USE_VCR_CACHE:
+                env_vars['VCR_RECORD_MODE'] = "all"
+                print("VCR record mode: ALL")
+            
+            exit_code, output = run_cmd(cmd, env_vars)
+            TEST_RESULTS[name][python_ver][version_display] = {
+                "exit_code": exit_code,
+                "output": output,
+            }
+
+
+def run_all_tests():
+    for name in MATRIX.keys():
+        run_test(name)
+
+
+def print_results_matrix():
+    GREEN = "\033[92m"
+    RED = "\033[91m"
+    RESET = "\033[0m"
+    
+    for test_name, results in TEST_RESULTS.items():
+        python_versions = sorted(results.keys())
+        
+        all_package_versions = set()
+        for py_ver in python_versions:
+            all_package_versions.update(results[py_ver].keys())
+        package_versions = sorted(list(all_package_versions))
+        
+        col_width = 10
+        header = " ".ljust(col_width) + " | "
+        for py_ver in python_versions:
+            header += f"{py_ver}".ljust(col_width) + " | "
+        
+        print("")
+        print(f" {test_name} ".center(len(header), "="))
+        print(header)
+        print("-" * len(header))
+        
+        for pkg_ver in package_versions:
+            row = f"{pkg_ver}".ljust(col_width) + " | "
+            for py_ver in python_versions:
+                if pkg_ver in results[py_ver]:
+                    exit_code = results[py_ver][pkg_ver]["exit_code"]
+                    status = "PASS" if exit_code == 0 else "FAIL"
+                    if status == "PASS":
+                        display = f"{GREEN}PASS{RESET}"
+                        padding = " " * (col_width - 4)  # 4 is len("PASS")
+                    else:
+                        display = f"{RED}FAIL{RESET}"
+                        padding = " " * (col_width - 4)  # 4 is len("FAIL")
+                else:
+                    display = "N/A"
+                    padding = " " * (py_col_width - 3)  # 3 is len("N/A")
+                
+                row += display + padding + " | "
+            print(row)
+
+
+def parse_args():
+    """Parse command line arguments."""
+    parser = argparse.ArgumentParser(
+        description="Utility to run a matrix of integration tests"
+    )
+    parser.add_argument(
+        "--no-cache",
+        action="store_true",
+        help="Disable loading VCR recordings (used to generate more live data)"
+    )
+    parser.add_argument(
+        "--quick",
+        action="store_true",
+        help="Run only on Python version 3.12"
+    )
+    parser.add_argument(
+        "--file",
+        action="append",
+        dest="files",
+        help="Test file to run. Can be specified multiple times. "
+             "Can also have the pytest function name to run specific tests."
+    )
+    parser.add_argument(
+        "--verbose",
+        action="store_true",
+        help="Show detailed output from each test run (including errors)"
+    )
+    # tests is not a required argument, so it can be empty
+    parser.add_argument(
+        "tests",
+        nargs="*",
+        choices=list(MATRIX.keys()) + [[]],
+        help="One or more test configurations to run",
+    )
+    
+    return parser.parse_args()
+
+
+def main():
+    """Main entry point."""
+    global RUN_QUICK
+    global ACTIVE_PYTHON_VERSIONS
+    global USE_VCR_CACHE
+    global FILES_OVERRIDE
+    global VERBOSE
+    
+    args = parse_args()
+    
+    if args.quick:
+        RUN_QUICK = True
+        ACTIVE_PYTHON_VERSIONS = [QUICK_PYTHON_VERSION, ]
+        print(f"Running quick tests on Python {QUICK_PYTHON_VERSION}.")
+    
+    if args.no_cache:
+        USE_VCR_CACHE = False
+        print("VCR cache disabled - will record new cassettes.")
+    
+    if args.verbose:
+        VERBOSE = True
+    
+    if args.files:
+        FILES_OVERRIDE = args.files
+        print(f"Using overridden files: {', '.join(FILES_OVERRIDE)}")
+
+    if args.tests:
+        for test in args.tests:
+            run_test(test)
+    else:
+        run_all_tests()
+    
+    print_results_matrix()
+
+if __name__ == "__main__":
+    sys.exit(main())

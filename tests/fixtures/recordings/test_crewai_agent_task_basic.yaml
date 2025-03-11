@@ -1,0 +1,173 @@
+interactions:
+- request:
+    body: '{"session": {"end_timestamp": null, "end_state": "Indeterminate", "session_id":
+      "d1617e50-82fd-4405-a207-cef2037d79ab", "init_timestamp": "2025-03-10T23:38:01.367496+00:00",
+      "tags": [], "video": null, "end_state_reason": null, "host_env": {"SDK": {"AgentOps
+      SDK Version": "0.3.26", "Python Version": "3.12.7", "System Packages": {"future_fstrings":
+      "1.2.0", "pluggy": "1.5.0", "importlib.resources": "6.5.2", "importlib.metadata":
+      "8.5.0", "iniconfig": "2.0.0", "pytest": "8.3.4", "pytest_recording": "0.13.2",
+      "pytest_cov": "6.0.0", "coverage": "7.6.10", "pyfakefs": "5.7.4", "fancycompleter":
+      "0.9.1", "pytest_asyncio": "0.25.2", "termcolor": "2.4.0", "pytest_sugar": "1.0.0",
+      "sniffio": "1.3.1", "typing_extensions": "4.12.2", "anyio": "4.8.0", "pytest_dotenv":
+      "0.5.2", "pytest_mock": "3.14.0", "colorama": "0.4.6", "networkx": "3.4.2",
+      "pytest_depends": "1.0.1", "urllib3": "2.3.0", "charset_normalizer": "3.4.1",
+      "idna": "3.10", "certifi": "2024.12.14", "requests": "2.32.3", "requests_mock":
+      "1.12.1", "psutil": "6.0.0", "packaging": "24.2", "wrapt": "1.17.2", "deprecated":
+      "1.2.15", "importlib_metadata": "8.5.0", "zipp": "3.21.0", "opentelemetry.sdk":
+      "1.29.0", "tenacity": "8.5.0", "langchain_core": "0.3.43", "pydantic": "2.10.6",
+      "pydantic_core": "2.27.2", "annotated_types": "0.7.0", "langsmith": "0.1.147",
+      "requests_toolbelt": "1.0.0", "h11": "0.14.0", "h2": "4.2.0", "hpack": "4.1.0",
+      "hyperframe": "6.1.0", "httpcore": "1.0.7", "click": "8.1.8", "pygments": "2.19.1",
+      "rich": "13.9.4", "httpx": "0.27.2", "orjson": "3.10.15", "jsonpointer": "3.0.0",
+      "jsonpatch": "1.33", "agentops": "0.3.26", "json_repair": "0.39.1", "overrides":
+      "7.7.0", "numpy": "1.26.4", "onnxruntime": "1.21.0", "tokenizers": "0.20.3",
+      "tqdm": "4.67.1", "opentelemetry.exporter.otlp.proto.grpc": "1.29.0", "opentelemetry.exporter.otlp.proto.common":
+      "1.29.0", "opentelemetry.proto": "1.29.0", "chromadb": "0.5.23", "crewai.tools":
+      "0.37.0", "appdirs": "1.4.4", "blinker": "1.9.0", "opentelemetry.exporter.otlp.proto.http":
+      "1.29.0", "multidict": "6.1.0", "propcache": "0.2.1", "yarl": "1.18.3", "aiohappyeyeballs":
+      "2.4.4", "frozenlist": "1.5.0", "aiosignal": "1.3.2", "aiohttp": "3.11.11",
+      "distro": "1.9.0", "jiter": "0.5.0", "openai": "1.65.5", "regex": "2024.11.6",
+      "tiktoken": "0.7.0", "markupsafe": "3.0.2", "jinja2": "3.1.5", "litellm": "1.60.2",
+      "json5": "0.10.0", "jsonpickle": "4.0.2", "traitlets": "5.14.3", "executing":
+      "2.2.0", "asttokens": "3.0.0", "pure_eval": "0.2.3", "stack_data": "0.6.3",
+      "decorator": "5.2.1", "wcwidth": "0.2.13", "prompt_toolkit": "3.0.50", "parso":
+      "0.8.4", "jedi": "0.19.2", "IPython": "9.0.2", "pyvis": "0.3.2", "crewai": "0.105.0"}},
+      "OS": {"Hostname": "SLOMP-3.local", "OS": "Darwin", "OS Version": "Darwin Kernel
+      Version 23.2.0: Wed Nov 15 21:59:33 PST 2023; root:xnu-10002.61.3~2/RELEASE_ARM64_T8112",
+      "OS Release": "23.2.0"}, "CPU": {"Physical cores": 8, "Total cores": 8, "CPU
+      Usage": "50.0%"}, "RAM": {"Total": "24.00 GB", "Available": "4.39 GB", "Used":
+      "7.23 GB", "Percentage": "81.7%"}, "Disk": {"/dev/disk3s1s1": {"Mountpoint":
+      "/", "Total": "1858.19 GB", "Used": "13.42 GB", "Free": "320.87 GB", "Percentage":
+      "4.0%"}, "/dev/disk3s6": {"Mountpoint": "/System/Volumes/VM", "Total": "1858.19
+      GB", "Used": "16.00 GB", "Free": "320.87 GB", "Percentage": "4.7%"}, "/dev/disk3s2":
+      {"Mountpoint": "/System/Volumes/Preboot", "Total": "1858.19 GB", "Used": "11.28
+      GB", "Free": "320.87 GB", "Percentage": "3.4%"}, "/dev/disk3s4": {"Mountpoint":
+      "/System/Volumes/Update", "Total": "1858.19 GB", "Used": "0.62 GB", "Free":
+      "320.87 GB", "Percentage": "0.2%"}, "/dev/disk1s2": {"Mountpoint": "/System/Volumes/xarts",
+      "Total": "0.49 GB", "Used": "0.01 GB", "Free": "0.47 GB", "Percentage": "1.2%"},
+      "/dev/disk1s1": {"Mountpoint": "/System/Volumes/iSCPreboot", "Total": "0.49
+      GB", "Used": "0.01 GB", "Free": "0.47 GB", "Percentage": "1.3%"}, "/dev/disk1s3":
+      {"Mountpoint": "/System/Volumes/Hardware", "Total": "0.49 GB", "Used": "0.00
+      GB", "Free": "0.47 GB", "Percentage": "0.2%"}, "/dev/disk3s5": {"Mountpoint":
+      "/System/Volumes/Data", "Total": "1858.19 GB", "Used": "1493.98 GB", "Free":
+      "320.87 GB", "Percentage": "82.3%"}, "/dev/disk2s1": {"Mountpoint": "/System/Volumes/Update/SFR/mnt1",
+      "Total": "5.00 GB", "Used": "1.63 GB", "Free": "3.35 GB", "Percentage": "32.7%"},
+      "/dev/disk7s1": {"Mountpoint": "/private/var/folders/jm/0mh2bt2s1fbbmjr4vwpt7qj80000gn/T/EhyzAt",
+      "Total": "0.08 GB", "Used": "0.07 GB", "Free": "0.01 GB", "Percentage": "83.5%"},
+      "/dev/disk3s1": {"Mountpoint": "/System/Volumes/Update/mnt1", "Total": "1858.19
+      GB", "Used": "13.42 GB", "Free": "320.87 GB", "Percentage": "4.0%"}}, "Installed
+      Packages": {"Installed Packages": {"pytest-recording": "0.13.2", "shellingham":
+      "1.5.4", "qdrant-client": "1.13.3", "shapely": "2.0.7", "opentelemetry-instrumentation":
+      "0.50b0", "opentelemetry-api": "1.29.0", "coloredlogs": "15.0.1", "humanfriendly":
+      "10.0", "pexpect": "4.9.0", "Pygments": "2.19.1", "pandas": "2.2.3", "coverage":
+      "7.6.10", "tomli": "2.2.1", "opentelemetry-proto": "1.29.0", "importlib_metadata":
+      "8.5.0", "mmh3": "5.1.0", "filelock": "3.16.1", "idna": "3.10", "traitlets":
+      "5.14.3", "pytest-cov": "6.0.0", "pyasn1_modules": "0.4.1", "kubernetes": "32.0.1",
+      "pyvis": "0.3.2", "termcolor": "2.4.0", "multidict": "6.1.0", "ptyprocess":
+      "0.7.0", "flatbuffers": "25.2.10", "fastapi": "0.115.6", "pillow": "11.1.0",
+      "uv": "0.6.5", "huggingface-hub": "0.27.1", "litellm": "1.60.2", "Mako": "1.3.9",
+      "overrides": "7.7.0", "psycopg2-binary": "2.9.10", "parso": "0.8.4", "colorama":
+      "0.4.6", "uvicorn": "0.34.0", "opentelemetry-util-http": "0.50b0", "grpcio":
+      "1.71.0", "zipp": "3.21.0", "pyfakefs": "5.7.4", "typer": "0.15.1", "langchain-openai":
+      "0.2.14", "fancycompleter": "0.9.1", "langchain-core": "0.3.43", "rich-toolkit":
+      "0.13.2", "schema": "0.7.7", "opentelemetry-exporter-otlp-proto-grpc": "1.29.0",
+      "ipython": "9.0.2", "bcrypt": "4.3.0", "pytest-asyncio": "0.25.2", "google-cloud-core":
+      "2.4.3", "onnxruntime": "1.21.0", "referencing": "0.35.1", "posthog": "3.19.1",
+      "googleapis-common-protos": "1.66.0", "pypdfium2": "4.30.1", "requests": "2.32.3",
+      "frozenlist": "1.5.0", "openpyxl": "3.1.5", "dnspython": "2.7.0", "httpx-sse":
+      "0.4.0", "alembic": "1.15.1", "pydantic": "2.10.6", "opentelemetry-instrumentation-fastapi":
+      "0.50b0", "chromadb": "0.5.23", "langchain": "0.3.20", "blinker": "1.9.0", "cryptography":
+      "44.0.2", "soupsieve": "2.6", "markdown-it-py": "3.0.0", "pytest": "8.3.4",
+      "httpx": "0.27.2", "sympy": "1.13.3", "setuptools": "76.0.0", "mypy-extensions":
+      "1.0.0", "h11": "0.14.0", "lancedb": "0.20.0", "networkx": "3.4.2", "opentelemetry-sdk":
+      "1.29.0", "pytest-sugar": "1.0.0", "jedi": "0.19.2", "et_xmlfile": "2.0.0",
+      "typing-inspect": "0.9.0", "embedchain": "0.1.127", "pyrepl": "0.9.0", "google-cloud-aiplatform":
+      "1.83.0", "grpc-google-iam-v1": "0.14.1", "iniconfig": "2.0.0", "beautifulsoup4":
+      "4.13.3", "rich": "13.9.4", "tokenizers": "0.20.3", "jsonpickle": "4.0.2", "SQLAlchemy":
+      "2.0.38", "asttokens": "3.0.0", "opentelemetry-instrumentation-asgi": "0.50b0",
+      "google-resumable-media": "2.7.2", "tqdm": "4.67.1", "urllib3": "2.3.0", "protobuf":
+      "5.29.3", "chroma-hnswlib": "0.7.6", "jsonpatch": "1.33", "click": "8.1.8",
+      "jsonpointer": "3.0.0", "ipython_pygments_lexers": "1.1.1", "numpy": "1.26.4",
+      "docstring_parser": "0.16", "tomli_w": "1.2.0", "decorator": "5.2.1", "appdirs":
+      "1.4.4", "h2": "4.2.0", "cffi": "1.17.1", "aiohttp": "3.11.11", "jsonschema":
+      "4.23.0", "google-crc32c": "1.6.0", "pdfminer.six": "20231228", "opentelemetry-semantic-conventions":
+      "0.50b0", "ruff": "0.9.1", "google-cloud-resource-manager": "1.14.1", "executing":
+      "2.2.0", "propcache": "0.2.1", "pyasn1": "0.6.1", "stack-data": "0.6.3", "Jinja2":
+      "3.1.5", "portalocker": "2.10.1", "PyJWT": "2.10.1", "asgiref": "3.8.1", "dataclasses-json":
+      "0.6.7", "oauthlib": "3.2.2", "psutil": "6.0.0", "openai": "1.65.5", "vcrpy":
+      "7.0.0", "pdfplumber": "0.11.5", "python-dotenv": "1.0.1", "regex": "2024.11.6",
+      "fsspec": "2024.12.0", "langchain-text-splitters": "0.3.6", "anyio": "4.8.0",
+      "sniffio": "1.3.1", "nodeenv": "1.9.1", "pydantic-settings": "2.8.1", "google-cloud-storage":
+      "2.19.0", "jsonschema-specifications": "2024.10.1", "cohere": "5.13.8", "fastapi-cli":
+      "0.0.7", "mdurl": "0.1.2", "fastavro": "1.10.0", "python-dateutil": "2.9.0.post0",
+      "mpmath": "1.3.0", "opentelemetry-exporter-otlp-proto-common": "1.29.0", "build":
+      "1.2.2.post1", "types-requests": "2.32.0.20241016", "pytz": "2024.2", "crewai":
+      "0.105.0", "yarl": "1.18.3", "charset-normalizer": "3.4.1", "jsonref": "1.1.0",
+      "rsa": "4.9", "Deprecated": "1.2.15", "wcwidth": "0.2.13", "packaging": "24.2",
+      "langchain-cohere": "0.3.5", "langchain-experimental": "0.3.4", "json5": "0.10.0",
+      "tenacity": "8.5.0", "tzdata": "2025.1", "pytest-dotenv": "0.5.2", "pydantic_core":
+      "2.27.2", "parameterized": "0.9.0", "pylance": "0.23.2", "httpcore": "1.0.7",
+      "pycparser": "2.22", "websockets": "14.1", "pluggy": "1.5.0", "pyarrow": "19.0.1",
+      "future-fstrings": "1.2.0", "python-multipart": "0.0.20", "tiktoken": "0.7.0",
+      "agentops": "0.3.26", "google-auth": "2.38.0", "starlette": "0.41.3", "pure_eval":
+      "0.2.3", "mypy": "1.14.1", "json_repair": "0.39.1", "deprecation": "2.1.0",
+      "distro": "1.9.0", "auth0-python": "4.8.1", "mem0ai": "0.1.67", "requests-toolbelt":
+      "1.0.0", "google-api-core": "2.24.2", "wrapt": "1.17.2", "orjson": "3.10.15",
+      "docker": "7.1.0", "httptools": "0.6.4", "crewai-tools": "0.37.0", "aiosignal":
+      "1.3.2", "typing_extensions": "4.12.2", "jiter": "0.5.0", "wmctrl": "0.5", "PyYAML":
+      "6.0.2", "rpds-py": "0.22.3", "attrs": "24.3.0", "matplotlib-inline": "0.1.7",
+      "watchfiles": "1.0.4", "email_validator": "2.2.0", "monotonic": "1.6", "backoff":
+      "2.2.1", "google-cloud-bigquery": "3.30.0", "pdbpp": "0.10.3", "pytube": "15.0.0",
+      "hpack": "4.1.0", "pytest-mock": "3.14.0", "pyproject_hooks": "1.2.0", "prompt_toolkit":
+      "3.0.50", "pyright": "1.1.396", "grpcio-tools": "1.71.0", "instructor": "1.5.2",
+      "uvloop": "0.21.0", "aiohappyeyeballs": "2.4.4", "marshmallow": "3.26.1", "annotated-types":
+      "0.7.0", "certifi": "2024.12.14", "grpcio-status": "1.71.0", "PyPika": "0.48.9",
+      "gptcache": "0.1.44", "pysbd": "0.3.4", "cachetools": "5.5.2", "six": "1.17.0",
+      "pytest-depends": "1.0.1", "opentelemetry-exporter-otlp-proto-http": "1.29.0",
+      "hyperframe": "6.1.0", "langsmith": "0.1.147", "requests-oauthlib": "2.0.0",
+      "proto-plus": "1.26.1", "importlib_resources": "6.5.2", "langchain-community":
+      "0.3.19", "durationpy": "0.9", "requests-mock": "1.12.1", "tabulate": "0.9.0",
+      "pypdf": "5.3.1", "websocket-client": "1.8.0", "MarkupSafe": "3.0.2"}}, "Project
+      Working Directory": {"Project Working Directory": "/Users/tcdent/Work/agentops-dev"},
+      "Virtual Environment": {"Virtual Environment": "/Users/tcdent/.cache/uv/builds-v0/.tmpu73HQN"}},
+      "config": "", "jwt": null, "_lock": "", "_end_session_lock": "", "token_cost":
+      "", "_session_url": "", "event_counts": {"llms": 0, "tools": 0, "actions": 0,
+      "errors": 0, "apis": 0}}}'
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '10953'
+      Content-Type:
+      - application/json; charset=UTF-8
+      Keep-Alive:
+      - timeout=10, max=1000
+      User-Agent:
+      - python-requests/2.32.3
+      x-agentops-api-key:
+      - REDACTED
+    method: POST
+    uri: https://api.agentops.ai/v2/create_session
+  response:
+    body:
+      string: '{"jwt":"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzZXNzaW9uX2lkIjoiZDE2MTdlNTAtODJmZC00NDA1LWEyMDctY2VmMjAzN2Q3OWFiIiwiZXhwIjoxNzQxNzM2MjgxLjc0Nzg1NH0.xAR_08TKfB1HMV4HTn6Dg7rLB8uRo-ArbbNb004JBT0","session_url":"https://app.agentops.ai/drilldown?session_id=d1617e50-82fd-4405-a207-cef2037d79ab","status":"Success"}'
+    headers:
+      Content-Length:
+      - '311'
+      Content-Type:
+      - application/json
+      Date:
+      - Mon, 10 Mar 2025 23:38:01 GMT
+      Server:
+      - railway-edge
+      X-Railway-Edge:
+      - railway/us-west1
+      X-Railway-Request-Id: REDACTED
+    status:
+      code: 200
+      message: OK
+version: 1

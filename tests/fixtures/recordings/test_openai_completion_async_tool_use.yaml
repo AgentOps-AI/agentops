@@ -1,0 +1,108 @@
+interactions:
+- request:
+    body: '{"messages": [{"role": "user", "content": "How''s the weather in San Francisco?"}],
+      "model": "gpt-3.5-turbo", "parallel_tool_calls": true, "tool_choice": "required",
+      "tools": [{"type": "function", "function": {"name": "get_current_weather", "description":
+      "Get the current weather in a given location", "parameters": {"type": "object",
+      "properties": {"location": {"type": "string", "description": "The city and state,
+      e.g. San Francisco, CA"}}, "required": ["location"]}}}]}'
+    headers:
+      accept:
+      - application/json
+      accept-encoding:
+      - gzip, deflate
+      authorization:
+      - REDACTED
+      connection:
+      - keep-alive
+      content-length:
+      - '473'
+      content-type:
+      - application/json
+      host:
+      - api.openai.com
+      user-agent:
+      - AsyncOpenAI/Python 1.65.5
+      x-stainless-arch:
+      - REDACTED
+      x-stainless-async:
+      - REDACTED
+      x-stainless-lang:
+      - REDACTED
+      x-stainless-os:
+      - REDACTED
+      x-stainless-package-version:
+      - 1.65.5
+      x-stainless-read-timeout:
+      - '600'
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - REDACTED
+      x-stainless-runtime-version:
+      - REDACTED
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    body:
+      string: "{\n  \"id\": \"chatcmpl-B9gvdLsXUNUclxcNQEYmjC9o7dmNp\",\n  \"object\":
+        \"chat.completion\",\n  \"created\": 1741649669,\n  \"model\": \"gpt-3.5-turbo-0125\",\n
+        \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
+        \"assistant\",\n        \"content\": null,\n        \"tool_calls\": [\n          {\n
+        \           \"id\": \"call_uKAGZQXpxXOt1lluy8DXnLXH\",\n            \"type\":
+        \"function\",\n            \"function\": {\n              \"name\": \"get_current_weather\",\n
+        \             \"arguments\": \"{\\\"location\\\":\\\"San Francisco\\\"}\"\n
+        \           }\n          }\n        ],\n        \"refusal\": null\n      },\n
+        \     \"logprobs\": null,\n      \"finish_reason\": \"tool_calls\"\n    }\n
+        \ ],\n  \"usage\": {\n    \"prompt_tokens\": 71,\n    \"completion_tokens\":
+        17,\n    \"total_tokens\": 88,\n    \"prompt_tokens_details\": {\n      \"cached_tokens\":
+        0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\":
+        {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\":
+        0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\":
+        \"default\",\n  \"system_fingerprint\": null\n}\n"
+    headers:
+      CF-RAY: REDACTED
+      Connection:
+      - keep-alive
+      Content-Type:
+      - application/json
+      Date:
+      - Mon, 10 Mar 2025 23:34:30 GMT
+      Server:
+      - cloudflare
+      Set-Cookie:
+      - __cf_bm=jC4UZAGtFyvcNmDxBf9NFGjyA8volvOliXRt1EQpbRs-1741649670-1.0.1.1-NZ0CztdA95X3w2IKfBYVIJfr3kITPeVyHfPUrXgTYQTs1sW4mMftsWB1sFvOOh3rUfrJTJTLf.wMmGiQ_PPdp4vhjQvGQVan4gqn5wYI23I;
+        path=/; expires=Tue, 11-Mar-25 00:04:30 GMT; domain=.api.openai.com; HttpOnly;
+        Secure; SameSite=None
+      - _cfuvid=mGcPHwg18_xyND.G6pUIr2KiuycBiIB1m2f1Qcun8Es-1741649670255-0.0.1.1-604800000;
+        path=/; domain=.api.openai.com; HttpOnly; Secure; SameSite=None
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - nosniff
+      access-control-expose-headers:
+      - X-Request-ID
+      alt-svc:
+      - h3=":443"; ma=86400
+      cf-cache-status:
+      - DYNAMIC
+      content-length:
+      - '1062'
+      openai-organization: REDACTED
+      openai-processing-ms:
+      - '298'
+      openai-version:
+      - '2020-10-01'
+      strict-transport-security:
+      - max-age=31536000; includeSubDomains; preload
+      x-ratelimit-limit-requests: REDACTED
+      x-ratelimit-limit-tokens: REDACTED
+      x-ratelimit-remaining-requests: REDACTED
+      x-ratelimit-remaining-tokens: REDACTED
+      x-ratelimit-reset-requests: REDACTED
+      x-ratelimit-reset-tokens: REDACTED
+      x-request-id: REDACTED
+    status:
+      code: 200
+      message: OK
+version: 1

@@ -1,0 +1,76 @@
+interactions:
+- request:
+    body: !!binary |
+      CskTCiQKIgoMc2VydmljZS5uYW1lEhIKEGNyZXdBSS10ZWxlbWV0cnkSoBMKEgoQY3Jld2FpLnRl
+      bGVtZXRyeRKeBwoQcApzq2e460XeauXbbnSrCBII8yJVphMl3TkqDENyZXcgQ3JlYXRlZDABORCD
+      qP1WlSsYQci3tv1WlSsYShsKDmNyZXdhaV92ZXJzaW9uEgkKBzAuMTA1LjBKGgoOcHl0aG9uX3Zl
+      cnNpb24SCAoGMy4xMi43Si4KCGNyZXdfa2V5EiIKIDhmYmJmNTRkYjY5NzJlZmZhYjJmZjEwZTEw
+      MDE0YTQwSjEKB2NyZXdfaWQSJgokNWYxNjYyYmMtNjZmNC00M2E0LTg2ZGEtNjkyYmIyNjMzNTI4
+      ShwKDGNyZXdfcHJvY2VzcxIMCgpzZXF1ZW50aWFsShEKC2NyZXdfbWVtb3J5EgIQAEoaChRjcmV3
+      X251bWJlcl9vZl90YXNrcxICGAFKGwoVY3Jld19udW1iZXJfb2ZfYWdlbnRzEgIYAUrOAgoLY3Jl
+      d19hZ2VudHMSvgIKuwJbeyJrZXkiOiAiZTk1Zjc5NDRiMDk0NGZiMmEwMTgxOTExNzU0Njc0ZjUi
+      LCAiaWQiOiAiODc4ODQ5ZGEtZjJmOC00NmU2LWFiZjItMzY4NjlhMzhlNDIyIiwgInJvbGUiOiAi
+      R3JlZXRlciIsICJ2ZXJib3NlPyI6IGZhbHNlLCAibWF4X2l0ZXIiOiAyNSwgIm1heF9ycG0iOiBu
+      dWxsLCAiZnVuY3Rpb25fY2FsbGluZ19sbG0iOiAiIiwgImxsbSI6ICJncHQtNG8tbWluaSIsICJk
+      ZWxlZ2F0aW9uX2VuYWJsZWQ/IjogZmFsc2UsICJhbGxvd19jb2RlX2V4ZWN1dGlvbj8iOiBmYWxz
+      ZSwgIm1heF9yZXRyeV9saW1pdCI6IDIsICJ0b29sc19uYW1lcyI6IFtdfV1K/AEKCmNyZXdfdGFz
+      a3MS7QEK6gFbeyJrZXkiOiAiNmI5YTkzYTZhMjI1OGZjNTY5ZjQwODA3YmIzZDEwMjkiLCAiaWQi
+      OiAiYjQyNTZmY2MtNTI4NC00ZjEzLWEwZjYtMDdkMTBjODBlZWNkIiwgImFzeW5jX2V4ZWN1dGlv
+      bj8iOiBmYWxzZSwgImh1bWFuX2lucHV0PyI6IGZhbHNlLCAiYWdlbnRfcm9sZSI6ICJHcmVldGVy
+      IiwgImFnZW50X2tleSI6ICJlOTVmNzk0NGIwOTQ0ZmIyYTAxODE5MTE3NTQ2NzRmNSIsICJ0b29s
+      c19uYW1lcyI6IFtdfV16AhgBhQEAAQAAEo4CChAkvh2DqrD8WnbG9DQSE2FSEggxc3oziuXMTioM
+      VGFzayBDcmVhdGVkMAE5CM/h/VaVKxhBWJLi/VaVKxhKLgoIY3Jld19rZXkSIgogOGZiYmY1NGRi
+      Njk3MmVmZmFiMmZmMTBlMTAwMTRhNDBKMQoHY3Jld19pZBImCiQ1ZjE2NjJiYy02NmY0LTQzYTQt
+      ODZkYS02OTJiYjI2MzM1MjhKLgoIdGFza19rZXkSIgogNmI5YTkzYTZhMjI1OGZjNTY5ZjQwODA3
+      YmIzZDEwMjlKMQoHdGFza19pZBImCiRiNDI1NmZjYy01Mjg0LTRmMTMtYTBmNi0wN2QxMGM4MGVl
+      Y2R6AhgBhQEAAQAAEsYHChAsCkZtix49gFHXaAkDk2y3EgiW2dExSo45ASoMQ3JldyBDcmVhdGVk
+      MAE56HQhR1eVKxhBkHwwR1eVKxhKGwoOY3Jld2FpX3ZlcnNpb24SCQoHMC4xMDUuMEoaCg5weXRo
+      b25fdmVyc2lvbhIICgYzLjEyLjdKLgoIY3Jld19rZXkSIgogOTM2YzA5NDcxMzYyOGU3OTUyZTA3
+      MGMwYWNjY2NiNjFKMQoHY3Jld19pZBImCiRlODVkMDkzNC1kN2I5LTQwZmQtOWQ2ZC00NTBmODI1
+      MWVhNTFKHAoMY3Jld19wcm9jZXNzEgwKCnNlcXVlbnRpYWxKEQoLY3Jld19tZW1vcnkSAhAAShoK
+      FGNyZXdfbnVtYmVyX29mX3Rhc2tzEgIYAUobChVjcmV3X251bWJlcl9vZl9hZ2VudHMSAhgBSuIC
+      CgtjcmV3X2FnZW50cxLSAgrPAlt7ImtleSI6ICIwMTZkZDlmMWJkODgzNWUwMGRiZTIyYjJlOWY2
+      NzYzZCIsICJpZCI6ICJiMjgzMWVkNi1mNjBlLTQ4NDgtOGJlZC1kODA5MTE3NTdkODMiLCAicm9s
+      ZSI6ICJUcmF2ZWwgQWR2aXNvciIsICJ2ZXJib3NlPyI6IGZhbHNlLCAibWF4X2l0ZXIiOiAyNSwg
+      Im1heF9ycG0iOiBudWxsLCAiZnVuY3Rpb25fY2FsbGluZ19sbG0iOiAiIiwgImxsbSI6ICJncHQt
+      NG8tbWluaSIsICJkZWxlZ2F0aW9uX2VuYWJsZWQ/IjogZmFsc2UsICJhbGxvd19jb2RlX2V4ZWN1
+      dGlvbj8iOiBmYWxzZSwgIm1heF9yZXRyeV9saW1pdCI6IDIsICJ0b29sc19uYW1lcyI6IFsiZ2V0
+      IHdlYXRoZXIiXX1dSpACCgpjcmV3X3Rhc2tzEoECCv4BW3sia2V5IjogIjQyZDYzNzg0ZDQwMGQ3
+      ZDJjYjFkYmQ0YWM2OGI1ZTQxIiwgImlkIjogImNhMGFhOWUwLWQyN2MtNDY3OS04YWM0LTZiNjRj
+      MWVhNzAyMyIsICJhc3luY19leGVjdXRpb24/IjogZmFsc2UsICJodW1hbl9pbnB1dD8iOiBmYWxz
+      ZSwgImFnZW50X3JvbGUiOiAiVHJhdmVsIEFkdmlzb3IiLCAiYWdlbnRfa2V5IjogIjAxNmRkOWYx
+      YmQ4ODM1ZTAwZGJlMjJiMmU5ZjY3NjNkIiwgInRvb2xzX25hbWVzIjogWyJnZXQgd2VhdGhlciJd
+      fV16AhgBhQEAAQAAEo4CChDxOYmh+FKU3gaOdkc4ly+qEgj7RmI6TOF/NSoMVGFzayBDcmVhdGVk
+      MAE5kNpKR1eVKxhB6HJLR1eVKxhKLgoIY3Jld19rZXkSIgogOTM2YzA5NDcxMzYyOGU3OTUyZTA3
+      MGMwYWNjY2NiNjFKMQoHY3Jld19pZBImCiRlODVkMDkzNC1kN2I5LTQwZmQtOWQ2ZC00NTBmODI1
+      MWVhNTFKLgoIdGFza19rZXkSIgogNDJkNjM3ODRkNDAwZDdkMmNiMWRiZDRhYzY4YjVlNDFKMQoH
+      dGFza19pZBImCiRjYTBhYTllMC1kMjdjLTQ2NzktOGFjNC02YjY0YzFlYTcwMjN6AhgBhQEAAQAA
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '2508'
+      Content-Type:
+      - application/x-protobuf
+      User-Agent:
+      - OTel-OTLP-Exporter-Python/1.29.0
+    method: POST
+    uri: https://telemetry.crewai.com:4319/v1/traces
+  response:
+    body:
+      string: "\n\0"
+    headers:
+      Content-Length:
+      - '2'
+      Content-Type:
+      - application/x-protobuf
+      Date:
+      - Mon, 10 Mar 2025 23:38:03 GMT
+    status:
+      code: 200
+      message: OK
+version: 1

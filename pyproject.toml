@@ -41,9 +41,57 @@ dependencies = [
 ]
 
 [dependency-groups]
+dev = [
+    "pyfakefs", # File system testing
+    "pytest-recording", # Alternative to pytest-vcr with better Python 3.x support
+    # Code quality and type checking
+    "ruff", # Fast Python linter for maintaining code quality
+    "mypy", # Static type checking for better reliability
+    "types-requests", # Type stubs for requests library
+    # HTTP mocking and environment
+    "requests_mock>=1.11.0", # Mock HTTP requests for testing agent external communications
+    "python-dotenv", # Environment management for secure testing
+    # Agent integration testing
+    "pytest-sugar>=1.0.0",
+    "pdbpp>=0.10.3",
+    "ipython>=8.18.1",
+]
+
 test = [
-    "openai>=1.0.0",
-    "anthropic",
+    # Testing essentials
+    "pytest>=8.0.0", # Testing framework with good async support
+    "pytest-depends", # For testing complex agent workflows
+    "pytest-asyncio", # Async test support for testing concurrent agent operations
+    "pytest-mock", # Mocking capabilities for isolating agent components
+    "pyfakefs", # File system testing
+    "pytest-recording", # Alternative to pytest-vcr with better Python 3.x support
+    # TODO: Use release version after vcrpy is released with this fix.
+    #"vcrpy @ git+https://github.com/kevin1024/vcrpy.git@5f1b20c4ca4a18c1fc8cfe049d7df12ca0659c9b",
+    # tcdent branch removes urlib3 version constraints for crewai compat.
+    "vcrpy @ git+https://github.com/tcdent/vcrpy.git@eb1d82b62e8a849365376b0c9ddb0ed9f07047a8",
+    "pytest-cov",
+    "fastapi[standard]",
+    "pytest-dotenv>=0.5.2",
+    "requests_mock>=1.11.0", # Mock HTTP requests for testing agent external communications
+    "pydantic>=2.10.6",
+]
+test-openai = [
+    "openai>=1.65.4",
+]
+test-anthropic = [
+    "anthropic"
+]
+test-autogen = [
+    "autogen; python_version>='3.10' and python_version<'3.13'",
+    "regex",
+]
+test-crewai = [
+    "setuptools",
+    "crewai>=0.100.0; python_version>='3.10' and python_version<'3.13'",
+    "crewai-tools; python_version>='3.10' and python_version<'3.13'",
+]
+# TODO break the rest of these out into specific test groups
+test-other = [
     "cohere",
     "litellm",
     "ai21>=3.0.0",
@@ -60,30 +108,6 @@ test = [
     # ------------------------------------------------------------------------------------------------------------------------------------
     # ;;
     "autogen<0.4.0",
-    "pytest-cov",
-    "fastapi[standard]",
-]
-
-dev = [
-    # Testing essentials
-    "pytest>=8.0.0", # Testing framework with good async support
-    "pytest-depends", # For testing complex agent workflows
-    "pytest-asyncio", # Async test support for testing concurrent agent operations
-    "pytest-mock", # Mocking capabilities for isolating agent components
-    "pyfakefs", # File system testing
-    "pytest-recording", # Alternative to pytest-vcr with better Python 3.x support
-    # TODO: Use release version after vcrpy is released with this fix.
-    "vcrpy @ git+https://github.com/kevin1024/vcrpy.git@5f1b20c4ca4a18c1fc8cfe049d7df12ca0659c9b",
-    # Code quality and type checking
-    "ruff", # Fast Python linter for maintaining code quality
-    "mypy", # Static type checking for better reliability
-    "types-requests", # Type stubs for requests library
-    # HTTP mocking and environment
-    "requests_mock>=1.11.0", # Mock HTTP requests for testing agent external communications
-    "python-dotenv", # Environment management for secure testing
-    # Agent integration testing
-    "pytest-sugar>=1.0.0",
-    "pdbpp>=0.10.3",
 ]
 
 [project.urls]
@@ -104,6 +128,16 @@ constraint-dependencies = [
     "opentelemetry-api>=1.27.0; python_version>='3.10'",
     "opentelemetry-sdk>=1.27.0; python_version>='3.10'",
     "opentelemetry-exporter-otlp-proto-http>=1.27.0; python_version>='3.10'",
+]
+conflicts = [
+    [
+      # in order to have dependency-groups with packages containing the same name, 
+      # we need to explicitly state that we expect conflicts. 
+      { group = "test-openai" },
+      { group = "test-anthropic" },
+      { group = "test-autogen" },
+      { group = "test-crewai" },
+    ],
 ]
 
 [tool.autopep8]
