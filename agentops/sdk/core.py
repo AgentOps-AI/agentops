@@ -6,7 +6,6 @@ from typing import Any, Dict, List, Optional, Set, Type, Union, cast
 
 from opentelemetry import context, trace
 from opentelemetry.exporter.otlp.proto.http.trace_exporter import OTLPSpanExporter
-from opentelemetry.exporter.otlp.proto.grpc.trace_exporter import OTLPSpanExporter
 from opentelemetry.sdk.resources import Resource
 from opentelemetry.sdk.trace import TracerProvider, ReadableSpan
 from opentelemetry.sdk.trace import SpanProcessor
