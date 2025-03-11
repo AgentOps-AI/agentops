@@ -7,6 +7,7 @@ from opentelemetry.trace import Span, StatusCode
 from agentops.sdk.spanned import SpannedBase
 from agentops.semconv.agent import AgentAttributes
 from agentops.semconv.span_kinds import SpanKind
+from agentops.semconv.core import CoreAttributes
 
 
 class AgentSpan(SpannedBase):
@@ -57,10 +58,10 @@ class AgentSpan(SpannedBase):
             action: Name of the action
             details: Optional details about the action
         """
-        self.set_attribute("agent.action", action)
+        self.set_attribute(SpanKind.AGENT_ACTION, action)
         if details:
             for key, value in details.items():
-                self.set_attribute(f"agent.action.{key}", value)
+                self.set_attribute(f"{SpanKind.AGENT_ACTION}.{key}", value)
         
         # Update the span to trigger immediate export if configured
         self.update()
@@ -72,7 +73,7 @@ class AgentSpan(SpannedBase):
         Args:
             thought: The thought to record
         """
-        self.set_attribute("agent.thought", thought)
+        self.set_attribute(SpanKind.AGENT_THINKING, thought)
         
         # Update the span to trigger immediate export if configured
         self.update()
@@ -85,7 +86,7 @@ class AgentSpan(SpannedBase):
             error: The error to record
         """
         error_str = str(error)
-        self.set_attribute("agent.error", error_str)
+        self.set_attribute(CoreAttributes.ERROR_MESSAGE, error_str)
         
         # Update the span to trigger immediate export if configured
         self.update()
