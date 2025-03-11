@@ -7,20 +7,13 @@ for different types of operations in AI agent workflows.
 
 # Import core components
 from agentops.sdk.core import TracingCore
-from agentops.sdk.traced import TracedObject
 # from agentops.sdk.traced import TracedObject  # Merged into TracedObject
 from agentops.sdk.types import TracingConfig
 
 # Import span types
-from agentops.sdk.spans import (
-    SessionSpan,
-    AgentSpan,
-    ToolSpan,
-    CustomSpan,
-)
 
 # Import decorators
-from agentops.sdk.decorators import (
+from agentops.sdk.decorators.agentops import (
     session,
     agent,
     tool,
@@ -29,17 +22,7 @@ from agentops.sdk.decorators import (
 __all__ = [
     # Core components
     "TracingCore",
-    "TracedObject",
-    # "TracedObject",  # Merged into TracedObject
     "TracingConfig",
-
-    # Span types
-    "SessionSpan",
-    "AgentSpan",
-    "ToolSpan",
-    "CustomSpan",
-
-    # Decorators
     "session",
     "agent",
     "tool",
