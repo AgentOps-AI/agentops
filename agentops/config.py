@@ -100,7 +100,7 @@ class Config:
     )
 
     exporter_endpoint: Optional[str] = field(
-        default_factory=lambda: os.getenv("AGENTOPS_EXPORTER_ENDPOINT", "https://otlp.agentops.cloud/v1/traces"),
+        default_factory=lambda: os.getenv("AGENTOPS_EXPORTER_ENDPOINT", "https://otlp.agentops.ai/v1/traces"),
         metadata={
             "description": "Endpoint for the span exporter. When not provided, the default AgentOps endpoint will be used."
         },
