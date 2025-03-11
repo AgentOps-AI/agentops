@@ -7,34 +7,34 @@ from typing import Any, Dict, List, Optional, Set, Type, Union, cast
 from opentelemetry import context, trace
 from opentelemetry.exporter.otlp.proto.http.trace_exporter import OTLPSpanExporter
 from opentelemetry.exporter.otlp.proto.grpc.trace_exporter import OTLPSpanExporter
-from opentelemetry.sdk.resources import SERVICE_NAME, Resource
+from opentelemetry.sdk.resources import Resource
 from opentelemetry.sdk.trace import TracerProvider, ReadableSpan
 from opentelemetry.sdk.trace import SpanProcessor
 from opentelemetry.sdk.trace.export import BatchSpanProcessor, SimpleSpanProcessor, SpanExporter
 from opentelemetry.trace import Span
-from opentelemetry.semconv.resource import ResourceAttributes
 
 from agentops.logging import logger
 from agentops.sdk.processors import LiveSpanProcessor
 from agentops.sdk.spanned import SpannedBase
 from agentops.sdk.factory import SpanFactory
 from agentops.sdk.types import TracingConfig
+from agentops.sdk.exporters import AuthenticatedOTLPExporter
+from agentops.semconv import ResourceAttributes
 
-# Shortcuts for common constants
-SERVICE_NAME = ResourceAttributes.SERVICE_NAME
+# No need to create shortcuts since we're using our own ResourceAttributes class now
 
 
 class ImmediateExportProcessor(SpanProcessor):
     """
     A span processor that exports spans immediately when they are ended.
-    
+
     This processor is useful for spans that need to be exported as soon as they
     are complete, without waiting for a batch export.
-    
+
     Note: This processor is being deprecated in favor of LiveSpanProcessor,
     which provides both immediate export and in-flight span export.
     """
-    
+
     def __init__(self, exporter):
         self._exporter = exporter
         self._lock = threading.Lock()
@@ -73,10 +73,10 @@ class ImmediateExportProcessor(SpanProcessor):
     def force_flush(self, timeout_millis: int = 30000) -> bool:
         """
         Force flush all spans to be exported.
-        
+
         Args:
             timeout_millis: Timeout in milliseconds
-            
+
         Returns:
             True if the flush succeeded, False otherwise
         """
@@ -122,7 +122,7 @@ class TracingCore:
 
         # Register shutdown handler
         atexit.register(self.shutdown)
-        
+
         # Auto-register span types right when TracingCore is instantiated
         from agentops.sdk.factory import SpanFactory
         SpanFactory.auto_register_span_types()
@@ -130,7 +130,7 @@ class TracingCore:
     def initialize(self, **kwargs) -> None:
         """
         Initialize the tracing core with the given configuration.
-        
+
         Args:
             **kwargs: Configuration parameters for tracing
                 service_name: Name of the service
@@ -139,18 +139,20 @@ class TracingCore:
                 exporter_endpoint: Endpoint for the span exporter
                 max_queue_size: Maximum number of spans to queue before forcing a flush
                 max_wait_time: Maximum time in milliseconds to wait before flushing
+                api_key: API key for authentication (required for authenticated exporter)
+                project_id: Project ID to include in resource attributes
         """
         if self._initialized:
             return
-        
+
         with self._lock:
             if self._initialized:
                 return
-            
+
             # Set default values for required fields
             max_queue_size = kwargs.get('max_queue_size', 512)
             max_wait_time = kwargs.get('max_wait_time', 5000)
-            
+
             # Create a TracingConfig from kwargs with proper defaults
             config: TracingConfig = {
                 'service_name': kwargs.get('service_name', 'agentops'),
@@ -159,22 +161,35 @@ class TracingCore:
                 'exporter_endpoint': kwargs.get('exporter_endpoint', 'https://otlp.agentops.cloud/v1/traces'),
                 'max_queue_size': max_queue_size,
                 'max_wait_time': max_wait_time,
+                'api_key': kwargs.get('api_key'),
+                'project_id': kwargs.get('project_id')
             }
-            
+
             self._config = config
-            
+
             # Span types are registered in the constructor
             # No need to register them here anymore
-            
+
             # Create provider with safe access to service_name
             service_name = config.get('service_name') or 'agentops'
-            self._provider = TracerProvider(
-                resource=Resource({SERVICE_NAME: service_name})
-            )
             
+            # Create resource attributes dictionary
+            resource_attrs = {ResourceAttributes.SERVICE_NAME: service_name}
+            
+            # Add project_id to resource attributes if available
+            project_id = config.get('project_id')
+            if project_id:
+                # Add project_id as a custom resource attribute
+                resource_attrs[ResourceAttributes.PROJECT_ID] = project_id
+                logger.debug(f"Including project_id in resource attributes: {project_id}")
+            
+            self._provider = TracerProvider(
+                resource=Resource(resource_attrs)
+            )
+
             # Set as global provider
             trace.set_tracer_provider(self._provider)
-            
+
             # Add processors - safely access optional fields
             processor = config.get('processor')
             if processor:
@@ -186,38 +201,46 @@ class TracingCore:
                 exporter = config.get('exporter')
                 # Type assertion to satisfy the linter
                 assert exporter is not None  # We already checked it's not None above
-                
+
                 processor = LiveSpanProcessor(
                     exporter,
-                    max_export_batch_size=config['max_queue_size'],
-                    schedule_delay_millis=config['max_wait_time'],
+                    max_export_batch_size=config.get('max_queue_size', max_queue_size),
+                    schedule_delay_millis=config.get('max_wait_time', max_wait_time),
                 )
                 self._provider.add_span_processor(processor)
                 self._processors.append(processor)
-                
+
                 # Add immediate export processor using the same exporter
                 self._immediate_processor = ImmediateExportProcessor(exporter)
                 self._provider.add_span_processor(self._immediate_processor)
                 self._processors.append(self._immediate_processor)
             else:
-                # Use default processor and exporter
+                # Use default authenticated processor and exporter if api_key is available
                 endpoint = config.get('exporter_endpoint') or 'https://otlp.agentops.cloud/v1/traces'
-                exporter = OTLPSpanExporter(endpoint=endpoint)
-                
+                api_key = config.get('api_key')
+
+                if api_key:
+                    # Use the authenticated exporter if an API key is provided
+                    exporter = AuthenticatedOTLPExporter(endpoint=endpoint, api_key=api_key)
+                else:
+                    # Fall back to standard exporter if no API key
+                    exporter = OTLPSpanExporter(endpoint=endpoint)
+                    logger.warning("No API key provided, using standard non-authenticated exporter")
+
                 # Regular processor for normal spans
                 processor = LiveSpanProcessor(
                     exporter,
-                    max_export_batch_size=config['max_queue_size'],
-                    schedule_delay_millis=config['max_wait_time'],
+                    max_export_batch_size=config.get('max_queue_size', max_queue_size),
+                    schedule_delay_millis=config.get('max_wait_time', max_wait_time),
                 )
                 self._provider.add_span_processor(processor)
                 self._processors.append(processor)
-                
+
                 # Immediate processor for spans that need immediate export
                 self._immediate_processor = ImmediateExportProcessor(exporter)
                 self._provider.add_span_processor(self._immediate_processor)
                 self._processors.append(self._immediate_processor)
-            
+
             self._initialized = True
             logger.debug("Tracing core initialized")
 
@@ -319,12 +342,12 @@ class TracingCore:
     def initialize_from_config(cls, config):
         """
         Initialize the tracing core from a configuration object.
-        
+
         Args:
             config: Configuration object (dict or object with dict method)
         """
         instance = cls.get_instance()
-        
+
         # Extract tracing-specific configuration
         # For TracingConfig, we can directly pass it to initialize
         if isinstance(config, dict):
@@ -340,10 +363,12 @@ class TracingCore:
                 'exporter_endpoint': getattr(config, 'exporter_endpoint', None),
                 'max_queue_size': getattr(config, 'max_queue_size', 512),
                 'max_wait_time': getattr(config, 'max_wait_time', 5000),
+                'api_key': getattr(config, 'api_key', None),
+                'project_id': getattr(config, 'project_id', None),
             }
-        
+
         # Initialize with the extracted configuration
         instance.initialize(**tracing_kwargs)
-        
+
         # Span types are registered in the constructor
         # No need to register them here anymore

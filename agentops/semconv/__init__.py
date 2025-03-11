@@ -5,6 +5,7 @@ from .core import CoreAttributes
 from .agent import AgentAttributes
 from .tool import ToolAttributes
 from .status import ToolStatus
+from .resource import ResourceAttributes
 
 __all__ = [
     "SpanKind",
@@ -12,4 +13,5 @@ __all__ = [
     "AgentAttributes",
     "ToolAttributes",
     "ToolStatus",
+    "ResourceAttributes",
 ]
