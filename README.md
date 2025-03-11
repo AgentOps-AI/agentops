@@ -76,7 +76,7 @@ AgentOps helps developers build, evaluate, and monitor AI agents. From prototype
 | 💸 **LLM Cost Management**            | Track spend with LLM foundation model providers               |
 | 🧪 **Agent Benchmarking**             | Test your agents against 1,000+ evals                         |
 | 🔐 **Compliance and Security**        | Detect common prompt injection and data exfiltration exploits |
-| 🤝 **Framework Integrations**         | Native Integrations with CrewAI, AG2(AutoGen), Camel AI, & LangChain         |
+| 🤝 **Framework Integrations**         | Native Integrations with CrewAI, AG2 (AutoGen), Camel AI, & LangChain         |
 
 ## Quick Start ⌨️
 
@@ -180,7 +180,7 @@ record(ActionEvent("received_user_input"))
 
 ### OpenAI Agents SDK 🖇️
 
-Built multi-agent systems with tools, handoffs, and guardails. AgentOps is a first-class integration with OpenAI Agents
+Build multi-agent systems with tools, handoffs, and guardrails. AgentOps provides first-class integration with OpenAI Agents.
 
 ```bash
 pip install agents-sdk
@@ -191,7 +191,7 @@ pip install agents-sdk
 
 ### CrewAI 🛶
 
-Build Crew agents with observability with only 2 lines of code. Simply set an `AGENTOPS_API_KEY` in your environment, and your crews will get automatic monitoring on the AgentOps dashboard.
+Build Crew agents with observability in just 2 lines of code. Simply set an `AGENTOPS_API_KEY` in your environment, and your crews will get automatic monitoring on the AgentOps dashboard.
 
 ```bash
 pip install 'crewai[agentops]'
