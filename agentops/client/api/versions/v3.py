@@ -7,6 +7,7 @@ This module provides the client for the V3 version of the AgentOps API.
 from typing import Any, Dict, List, Optional
 
 import requests
+import urllib.parse
 
 from agentops.client.api.base import AuthenticatedApiClient
 from agentops.client.api.types import AuthTokenResponse
@@ -23,8 +24,12 @@ class V3Client(AuthenticatedApiClient):
         Args:
             endpoint: The base URL for the API
         """
+        # Extract the base URL without path components to avoid path duplication
+        parsed_url = urllib.parse.urlparse(endpoint)
+        base_url = f"{parsed_url.scheme}://{parsed_url.netloc}"
+        
         # Set up with V3-specific auth endpoint
-        super().__init__(endpoint, auth_endpoint=f"{endpoint}/v3/auth/token")
+        super().__init__(endpoint, auth_endpoint=f"{base_url}/v3/auth/token")
 
     def fetch_auth_token(self, api_key: str) -> AuthTokenResponse:
         path = "/v3/auth/token"
