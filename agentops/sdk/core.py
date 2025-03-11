@@ -13,7 +13,7 @@ from opentelemetry.sdk.trace.export import BatchSpanProcessor, SimpleSpanProcess
 from opentelemetry.trace import Span
 
 from agentops.logging import logger
-from agentops.sdk.processors import LiveSpanProcessor
+from agentops.sdk.processors import LiveSpanProcessor, SafeBatchSpanProcessor
 from agentops.sdk.spanned import SpannedBase
 from agentops.sdk.factory import SpanFactory
 from agentops.sdk.types import TracingConfig
@@ -132,7 +132,7 @@ class TracingCore:
                 # Type assertion to satisfy the linter
                 assert exporter is not None  # We already checked it's not None above
 
-                processor = BatchSpanProcessor(
+                processor = SafeBatchSpanProcessor(
                     exporter,
                     max_export_batch_size=config.get('max_queue_size', max_queue_size),
                     schedule_delay_millis=config.get('max_wait_time', max_wait_time),
@@ -153,7 +153,7 @@ class TracingCore:
                     logger.warning("No API key provided, using standard non-authenticated exporter")
 
                 # Regular processor for normal spans and immediate export
-                processor = BatchSpanProcessor(
+                processor = SafeBatchSpanProcessor(
                     exporter,
                     max_export_batch_size=config.get('max_queue_size', max_queue_size),
                     schedule_delay_millis=config.get('max_wait_time', max_wait_time),
