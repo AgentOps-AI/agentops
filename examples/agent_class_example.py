@@ -2,7 +2,7 @@ import agentops
 from agentops.sdk.decorators import session, agent
 
 # Initialize AgentOps
-agentops.init(api_key="your_api_key_here")
+agentops.init()
 
 # Create a session class
 @session(name="AgentWorkflow")
