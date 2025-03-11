@@ -170,7 +170,12 @@ class TracedObject(abc.ABC):
         return self
     
     @property
-    def trace_id(self) -> UUID:
+    def trace_id(self) -> int:
+        """Get the trace ID."""
+        return self._span.get_span_context().trace_id # type: ignore
+
+    @property
+    def trace_uuid(self) -> UUID:
         """Get the trace ID."""
         if self._span:
             # Convert the trace ID from the span to a UUID
