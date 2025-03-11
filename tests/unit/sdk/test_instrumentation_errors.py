@@ -15,13 +15,6 @@ from agentops.semconv.core import CoreAttributes
 from tests.unit.sdk.instrumentation_tester import InstrumentationTester
 
 
-@pytest.fixture
-def instrumentation():
-    """Fixture for the instrumentation tester."""
-    tester = InstrumentationTester()
-    yield tester
-    tester.reset()
-
 
 class TestErrorInstrumentation:
     """Test error handling in instrumentation."""

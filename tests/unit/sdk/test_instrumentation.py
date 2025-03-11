@@ -1,28 +1,18 @@
-import pytest
-from typing import Dict, Any, List
 import time
+from typing import Any, Dict, List
+
+import pytest
+from opentelemetry import context, trace
+from opentelemetry.trace import StatusCode
 
 import agentops
-from tests.unit.sdk.instrumentation_tester import InstrumentationTester
 from agentops.sdk.decorators.agent import agent
 from agentops.sdk.decorators.session import session
 from agentops.sdk.decorators.tool import tool
-from opentelemetry.trace import StatusCode
-from opentelemetry import trace, context
-from agentops.semconv.span_kinds import SpanKind
 from agentops.semconv.agent import AgentAttributes
+from agentops.semconv.span_kinds import SpanKind
 from agentops.semconv.tool import ToolAttributes
-
-
-@pytest.fixture
-def instrumentation():
-    """Fixture for the instrumentation tester."""
-    # Create a fresh tester for each test
-    tester = InstrumentationTester()
-    # Yield the tester for test use
-    yield tester
-    # Clean up after the test
-    tester.reset()
+from tests.unit.sdk.instrumentation_tester import InstrumentationTester
 
 
 class TestBasicInstrumentation:
@@ -397,8 +387,8 @@ class TestBasicInstrumentation:
         print("\n=== Testing context propagation ===")
         
         # First test direct context setting and getting to verify OTel is working
-        from opentelemetry import trace, context
-        
+        from opentelemetry import context, trace
+
         # Create a direct test of context propagation
         print("\n--- Direct Context Test ---")
         

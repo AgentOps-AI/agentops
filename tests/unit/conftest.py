@@ -6,6 +6,7 @@ from unittest import mock
 
 import pytest
 import requests_mock
+from tests.unit.sdk.instrumentation_tester import InstrumentationTester
 
 import agentops
 from agentops.config import Config
@@ -44,3 +45,12 @@ def noinstrument():
 def mock_config(mocker):
     """Mock the Client.configure method"""
     return mocker.patch("agentops.client.Client.configure")
+
+
+@pytest.fixture
+def instrumentation():
+    """Fixture for the instrumentation tester."""
+    tester = InstrumentationTester()
+    yield tester
+    tester.reset()
+
