@@ -3,11 +3,11 @@ from opentelemetry.trace import Span
 from typing import Optional, Dict, Any, Tuple, TypeVar, Type
 
 from agentops.sdk.spans.session import SessionSpan
-from agentops.sdk.spanned import SpannedBase
+from agentops.sdk.traced import TracedObject
 from agentops.logging import logger
 
 # Type variable for span types
-T = TypeVar('T', bound=SpannedBase)
+T = TypeVar('T', bound=TracedObject)
 
 
 def get_root_span(span: Optional[Span] = None) -> Optional[SessionSpan]:
@@ -35,8 +35,8 @@ def get_root_span(span: Optional[Span] = None) -> Optional[SessionSpan]:
     if isinstance(span, SessionSpan):
         return span
 
-    # If we have a SpannedBase object, we can try to access its parent
-    # This requires knowledge of the internal structure of SpannedBase
+    # If we have a TracedObject object, we can try to access its parent
+    # This requires knowledge of the internal structure of TracedObject
     try:
         # Try to get the parent span
         parent = getattr(span, "_parent", None)

@@ -4,13 +4,13 @@ from uuid import UUID
 
 from opentelemetry.trace import StatusCode
 
-from agentops.sdk.spanned import SpannedBase
+from agentops.sdk.traced import TracedObject
 from agentops.semconv.core import CoreAttributes
 
 
-# Create a concrete implementation of SpannedBase for testing
-class TestSpan(SpannedBase):
-    """Concrete implementation of SpannedBase for testing."""
+# Create a concrete implementation of TracedObject for testing
+class TestSpan(TracedObject):
+    """Concrete implementation of TracedObject for testing."""
     pass
 
 

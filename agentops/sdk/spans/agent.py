@@ -4,13 +4,13 @@ from typing import Any, Dict, Optional, Union
 
 from opentelemetry.trace import Span, StatusCode
 
-from agentops.sdk.spanned import SpannedBase
+from agentops.sdk.traced import TracedObject
 from agentops.semconv.agent import AgentAttributes
 from agentops.semconv.span_kinds import SpanKind
 from agentops.semconv.core import CoreAttributes
 
 
-class AgentSpan(SpannedBase):
+class AgentSpan(TracedObject):
     """
     Represents an agent span, which tracks agent operations.
     
@@ -22,7 +22,7 @@ class AgentSpan(SpannedBase):
         self,
         name: str,
         agent_type: str,
-        parent: Optional[Union[SpannedBase, Span]] = None,
+        parent: Optional[Union[TracedObject, Span]] = None,
         **kwargs
     ):
         """

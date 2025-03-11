@@ -4,11 +4,11 @@ from typing import Any, Dict, Optional, Union
 
 from opentelemetry.trace import Span, StatusCode
 
-from agentops.sdk.spanned import SpannedBase
+from agentops.sdk.traced import TracedObject
 from agentops.semconv.span_kinds import SpanKind
 
 
-class CustomSpan(SpannedBase):
+class CustomSpan(TracedObject):
     """
     Represents a custom span, which can be used for any user-defined operation.
     
@@ -20,7 +20,7 @@ class CustomSpan(SpannedBase):
         self,
         name: str,
         kind: str,
-        parent: Optional[Union[SpannedBase, Span]] = None,
+        parent: Optional[Union[TracedObject, Span]] = None,
         **kwargs
     ):
         """
