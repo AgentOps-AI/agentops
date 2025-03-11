@@ -6,6 +6,7 @@ from agentops.exceptions import (AgentOpsClientNotInitializedException,
                                  NoApiKeyException, NoSessionException)
 from agentops.instrumentation import instrument_all
 from agentops.logging import logger
+from agentops.sdk.core import TracingCore
 
 
 def get_default_session():
@@ -47,6 +48,9 @@ class Client:
         # Prefetch JWT token if enabled
         if self.config.prefetch_jwt_token:
             self.api.v3.fetch_auth_token(self.config.api_key)
+
+        # Initialize TracingCore with the current configuration
+        TracingCore.initialize_from_config(self.config)
 
         # Instrument LLM calls if enabled
         if self.config.instrument_llm_calls:
