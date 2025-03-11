@@ -57,7 +57,10 @@ class TracingCore:
         from agentops.sdk.factory import SpanFactory
         SpanFactory.auto_register_span_types()
 
-    def initialize(self, **kwargs) -> None:
+    def initialize(
+        self,
+        **kwargs
+    ) -> None:
         """
         Initialize the tracing core with the given configuration.
 
@@ -88,7 +91,7 @@ class TracingCore:
                 'service_name': kwargs.get('service_name', 'agentops'),
                 'exporter': kwargs.get('exporter'),
                 'processor': kwargs.get('processor'),
-                'exporter_endpoint': kwargs.get('exporter_endpoint', 'https://otlp.agentops.cloud/v1/traces'),
+                'exporter_endpoint': kwargs.get('exporter_endpoint', 'https://otlp.agentops.api/v1/traces'),
                 'max_queue_size': max_queue_size,
                 'max_wait_time': max_wait_time,
                 'api_key': kwargs.get('api_key'),
@@ -141,7 +144,7 @@ class TracingCore:
                 self._processors.append(processor)
             else:
                 # Use default authenticated processor and exporter if api_key is available
-                endpoint = config.get('exporter_endpoint') or 'https://otlp.agentops.cloud/v1/traces'
+                endpoint = config.get('exporter_endpoint') or 'https://otlp.agentops.api/v1/traces'
                 api_key = config.get('api_key')
 
                 if api_key:
@@ -278,7 +281,7 @@ class TracingCore:
             # For backward compatibility with old Config object
             # Extract tracing-specific configuration from the Config object
             # Use getattr with default values to ensure we don't pass None for required fields
-            tracing_kwargs = {
+            tracing_kwargs = {k: v for k, v in {
                 'exporter': getattr(config, 'exporter', None),
                 'processor': getattr(config, 'processor', None),
                 'exporter_endpoint': getattr(config, 'exporter_endpoint', None),
@@ -286,8 +289,8 @@ class TracingCore:
                 'max_wait_time': getattr(config, 'max_wait_time', 5000),
                 'api_key': getattr(config, 'api_key', None),
                 'project_id': getattr(config, 'project_id', None),
-            }
-
+                'endpoint': getattr(config, 'endpoint', None),
+            }.items() if v is not None}
         # Update with any additional kwargs
         tracing_kwargs.update(kwargs)
 

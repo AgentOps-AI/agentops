@@ -8,12 +8,12 @@ from typing import Any, Dict, List, Optional
 
 import requests
 
-from agentops.client.api.base import AuthenticatedApiClient
+from agentops.client.api.base import AuthenticatedApiClient, BaseApiClient
 from agentops.client.api.types import AuthTokenResponse
 from agentops.exceptions import ApiServerException
 
 
-class V3Client(AuthenticatedApiClient):
+class V3Client(BaseApiClient):
     """Client for the AgentOps V3 API"""
 
     def __init__(self, endpoint: str):
@@ -24,12 +24,12 @@ class V3Client(AuthenticatedApiClient):
             endpoint: The base URL for the API
         """
         # Set up with V3-specific auth endpoint
-        super().__init__(endpoint, auth_endpoint=f"{endpoint}/v3/auth/token")
+        super().__init__(endpoint)
 
     def fetch_auth_token(self, api_key: str) -> AuthTokenResponse:
         path = "/v3/auth/token"
         data = {"api_key": api_key}
-        headers = self.auth_manager.prepare_auth_headers(api_key)
+        headers = self.prepare_headers({"X-API-Key": api_key})
 
         r = self.post(path, data, headers)
 

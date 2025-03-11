@@ -39,6 +39,27 @@ class BaseApiClient:
         self.http_client = HttpClient()
         self.last_response: Optional[requests.Response] = None
 
+    def prepare_headers(self, custom_headers: Optional[Dict[str, str]] = None) -> Dict[str, str]:
+        """
+        Prepare headers for API requests.
+
+        Args:
+            custom_headers: Additional headers to include
+
+        Returns:
+            Headers dictionary with standard headers and any custom headers
+        """
+        headers = {
+            "Content-Type": "application/json",
+            "Connection": "keep-alive",
+            "Keep-Alive": "timeout=10, max=1000",
+        }
+        
+        if custom_headers:
+            headers.update(custom_headers)
+            
+        return headers
+
     def _get_full_url(self, path: str) -> str:
         """
         Get the full URL for a path.
