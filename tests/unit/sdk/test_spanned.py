@@ -31,7 +31,7 @@ def test_init():
     assert span._attributes[CoreAttributes.EXPORT_IMMEDIATELY] == True
 
 
-@patch("agentops.sdk.spanned.trace")
+@patch("agentops.sdk.traced.trace")
 def test_start(mock_trace):
     """Test starting a span."""
     # Set up mocks

@@ -32,9 +32,6 @@ flowchart TD
     %% Span Base Classes
     subgraph "Span Base Classes"
         TracedObject[TracedObject]
-        SpannedBase[SpannedBase]
-        
-        TracedObject --> SpannedBase
     end
     
     %% Span Types
@@ -45,11 +42,11 @@ flowchart TD
         LLMSpan[LLMSpan]
         CustomSpan[CustomSpan]
         
-        SpannedBase --> SessionSpan
-        SpannedBase --> AgentSpan
-        SpannedBase --> ToolSpan
-        SpannedBase --> LLMSpan
-        SpannedBase --> CustomSpan
+        TracedObject --> SessionSpan
+        TracedObject --> AgentSpan
+        TracedObject --> ToolSpan
+        TracedObject --> LLMSpan
+        TracedObject --> CustomSpan
     end
     
     %% Decorators
@@ -92,7 +89,7 @@ flowchart TD
     TracingCore <--> SpanContext
     
     class TracingCore,SpanFactory,SpanProcessor,SpanExporter core
-    class TracedObject,SpannedBase base
+    class TracedObject base
     class SessionSpan,AgentSpan,ToolSpan,LLMSpan,CustomSpan span
     class SessionDecorator,AgentDecorator,ToolDecorator,LLMDecorator decorator
     class Session,Agent,Tool user
@@ -111,8 +108,7 @@ flowchart TD
 
 ### Span Base Classes
 
-- **TracedObject**: Base class that provides core tracing functionality (trace ID, span ID, etc.).
-- **SpannedBase**: Abstract base class that extends TracedObject with common span operations (start, end, attributes).
+- **TracedObject**: Base class that provides core tracing functionality (trace ID, span ID, etc.) and common span operations (start, end, attributes).
 
 ### Span Types
 

@@ -3,7 +3,7 @@ from __future__ import annotations
 import abc
 import threading
 from datetime import datetime, timezone
-from typing import Any, Dict, Optional, Union, TypeVar
+from typing import Any, Dict, Optional, Union, TypeVar, cast
 from uuid import UUID, uuid4
 
 from opentelemetry import context, trace
@@ -11,6 +11,7 @@ from opentelemetry.trace import Span, SpanContext, Status, StatusCode
 
 from agentops.semconv import CoreAttributes
 
+# Define TypeVar with bound to TracedObject
 T = TypeVar('T', bound='TracedObject')
 
 class TracedObject(abc.ABC):
@@ -52,8 +53,8 @@ class TracedObject(abc.ABC):
         self._kind = kind
         self._parent = parent
         self._immediate_export = immediate_export
-        self._start_time = None
-        self._end_time = None
+        self._start_time: Optional[str] = None
+        self._end_time: Optional[str] = None
         self._is_started = False
         self._is_ended = False
         
@@ -61,14 +62,14 @@ class TracedObject(abc.ABC):
         if immediate_export:
             self._attributes[CoreAttributes.EXPORT_IMMEDIATELY] = True
     
-    def start(self) -> T:
+    def start(self: T) -> T:
         """Start the span."""
         if self._is_started:
-            return self  # type: ignore
+            return self
         
         with self._lock:
             if self._is_started:
-                return self  # type: ignore
+                return self
             
             # Get the tracer
             tracer = trace.get_tracer("agentops")
@@ -106,16 +107,16 @@ class TracedObject(abc.ABC):
             if self._immediate_export:
                 self._span.set_attribute(CoreAttributes.EXPORT_IMMEDIATELY, True)
             
-            return self  # type: ignore
+            return self
     
-    def end(self, status: Union[StatusCode, str] = StatusCode.OK, description: Optional[str] = None) -> T:
+    def end(self: T, status: Union[StatusCode, str] = StatusCode.OK, description: Optional[str] = None) -> T:
         """End the span."""
         if self._is_ended:
-            return self  # type: ignore
+            return self
         
         with self._lock:
             if self._is_ended:
-                return self  # type: ignore
+                return self
             
             # Set status
             self.set_status(status, description)
@@ -128,9 +129,9 @@ class TracedObject(abc.ABC):
             self._end_time = datetime.now(timezone.utc).isoformat()
             self._is_ended = True
             
-            return self  # type: ignore
+            return self
     
-    def update(self) -> T:
+    def update(self: T) -> T:
         """
         Update the span without ending it.
         
@@ -141,7 +142,7 @@ class TracedObject(abc.ABC):
             Self for chaining
         """
         if not self._is_started or self._is_ended:
-            return self  # type: ignore
+            return self
         
         # If this span needs immediate export, we need to trigger a re-export
         # We do this by temporarily setting a special attribute that the
@@ -150,9 +151,9 @@ class TracedObject(abc.ABC):
             # Set a timestamp to ensure the processor sees this as a change
             self._span.set_attribute('export.update', datetime.now(timezone.utc).isoformat())
         
-        return self  # type: ignore
+        return self
     
-    def set_error(self, error: Exception) -> T:
+    def set_error(self: T, error: Exception) -> T:
         """
         Set error information on the span.
         
@@ -166,7 +167,7 @@ class TracedObject(abc.ABC):
             self._span.set_attribute(CoreAttributes.ERROR_TYPE, error.__class__.__name__)
             self._span.set_attribute(CoreAttributes.ERROR_MESSAGE, str(error))
             self.set_status(StatusCode.ERROR, str(error))
-        return self  # type: ignore
+        return self
     
     @property
     def trace_id(self) -> UUID:
@@ -261,9 +262,9 @@ class TracedObject(abc.ABC):
             
             self._span.set_status(Status(status_code, description))
     
-    def __enter__(self) -> T:
+    def __enter__(self: T) -> T:
         """Enter context manager."""
-        return self.start()  # type: ignore
+        return self.start()
     
     def __exit__(self, exc_type, exc_val, exc_tb) -> None:
         """Exit context manager."""
