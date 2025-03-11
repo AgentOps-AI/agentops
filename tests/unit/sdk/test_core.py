@@ -6,84 +6,8 @@ from opentelemetry.sdk.trace import TracerProvider
 from opentelemetry.trace import StatusCode
 
 from agentops.sdk.types import TracingConfig
-from agentops.sdk.core import TracingCore, ImmediateExportProcessor
+from agentops.sdk.core import TracingCore
 from agentops.sdk.spanned import SpannedBase
-
-
-class TestImmediateExportProcessor(unittest.TestCase):
-    """Test the ImmediateExportProcessor class."""
-
-    def test_init(self):
-        """Test initialization."""
-        exporter = MagicMock()
-        processor = ImmediateExportProcessor(exporter)
-        self.assertEqual(processor._exporter, exporter)
-
-    def test_on_start(self):
-        """Test on_start method."""
-        # Set up
-        exporter = MagicMock()
-        processor = ImmediateExportProcessor(exporter)
-        span = MagicMock()
-        
-        # Test with export.immediate=False
-        span.attributes = {}
-        processor.on_start(span)
-        exporter.export.assert_not_called()
-        
-        # Test with export.immediate=True
-        span.attributes = {"export.immediate": True}
-        processor.on_start(span)
-        exporter.export.assert_called_once_with([span])
-        
-        # Test with exception
-        exporter.reset_mock()
-        exporter.export.side_effect = Exception("Test error")
-        processor.on_start(span)  # Should not raise
-
-    def test_on_end(self):
-        """Test on_end method."""
-        # Set up
-        exporter = MagicMock()
-        processor = ImmediateExportProcessor(exporter)
-        span = MagicMock()
-        
-        # Test normal case
-        processor.on_end(span)
-        exporter.export.assert_called_once_with([span])
-        
-        # Test with exception
-        exporter.reset_mock()
-        exporter.export.side_effect = Exception("Test error")
-        processor.on_end(span)  # Should not raise
-
-    def test_force_flush(self):
-        """Test force_flush method."""
-        # Set up
-        exporter = MagicMock()
-        exporter.force_flush.return_value = True
-        processor = ImmediateExportProcessor(exporter)
-        
-        # Test normal case
-        result = processor.force_flush()
-        self.assertTrue(result)
-        exporter.force_flush.assert_called_once()
-        
-        # Test with exception
-        exporter.reset_mock()
-        exporter.force_flush.side_effect = Exception("Test error")
-        result = processor.force_flush()
-        self.assertFalse(result)
-
-    def test_shutdown(self):
-        """Test shutdown method."""
-        # Set up
-        exporter = MagicMock()
-        processor = ImmediateExportProcessor(exporter)
-        
-        # Test
-        processor.shutdown()
-        exporter.shutdown.assert_called_once()
 
 
 class TestTracingCore(unittest.TestCase):

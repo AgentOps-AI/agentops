@@ -24,74 +24,6 @@ from agentops.semconv import ResourceAttributes
 # No need to create shortcuts since we're using our own ResourceAttributes class now
 
 
-class ImmediateExportProcessor(SpanProcessor):
-    """
-    A span processor that exports spans immediately when they are ended.
-
-    This processor is useful for spans that need to be exported as soon as they
-    are complete, without waiting for a batch export.
-
-    Note: This processor is being deprecated in favor of LiveSpanProcessor,
-    which provides both immediate export and in-flight span export.
-    """
-
-    def __init__(self, exporter):
-        self._exporter = exporter
-        self._lock = threading.Lock()
-
-    def on_start(self, span: ReadableSpan, parent_context=None) -> None:
-        """
-        Called when a span starts. Exports the span immediately if it has the
-        'export.immediate' attribute set to True.
-
-        Args:
-            span: The span that is starting
-            parent_context: Optional parent context
-        """
-        # Check if the span should be exported immediately
-        if hasattr(span, "attributes") and span.attributes and span.attributes.get("export.immediate"):
-            try:
-                with self._lock:
-                    self._exporter.export([span])
-            except Exception as e:
-                logger.warning(f"Error exporting span on start: {e}")
-
-    def on_end(self, span: ReadableSpan) -> None:
-        """
-        Called when a span ends. Exports the span immediately.
-
-        Args:
-            span: The span that is ending
-        """
-        # Export the span immediately
-        try:
-            with self._lock:
-                self._exporter.export([span])
-        except Exception as e:
-            logger.warning(f"Error exporting span: {e}")
-
-    def force_flush(self, timeout_millis: int = 30000) -> bool:
-        """
-        Force flush all spans to be exported.
-
-        Args:
-            timeout_millis: Timeout in milliseconds
-
-        Returns:
-            True if the flush succeeded, False otherwise
-        """
-        try:
-            result = self._exporter.force_flush(timeout_millis)
-            return result
-        except Exception as e:
-            logger.warning(f"Error flushing spans: {e}")
-            return False
-
-    def shutdown(self) -> None:
-        """Shut down the processor."""
-        self._exporter.shutdown()
-
-
 class TracingCore:
     """
     Central component for tracing in AgentOps.
@@ -116,7 +48,6 @@ class TracingCore:
         """Initialize the tracing core."""
         self._provider = None
         self._processors: List[SpanProcessor] = []
-        self._immediate_processor = None
         self._initialized = False
         self._config = None
 
@@ -209,11 +140,6 @@ class TracingCore:
                 )
                 self._provider.add_span_processor(processor)
                 self._processors.append(processor)
-
-                # Add immediate export processor using the same exporter
-                self._immediate_processor = ImmediateExportProcessor(exporter)
-                self._provider.add_span_processor(self._immediate_processor)
-                self._processors.append(self._immediate_processor)
             else:
                 # Use default authenticated processor and exporter if api_key is available
                 endpoint = config.get('exporter_endpoint') or 'https://otlp.agentops.cloud/v1/traces'
@@ -227,7 +153,7 @@ class TracingCore:
                     exporter = OTLPSpanExporter(endpoint=endpoint)
                     logger.warning("No API key provided, using standard non-authenticated exporter")
 
-                # Regular processor for normal spans
+                # Regular processor for normal spans and immediate export
                 processor = LiveSpanProcessor(
                     exporter,
                     max_export_batch_size=config.get('max_queue_size', max_queue_size),
@@ -235,11 +161,6 @@ class TracingCore:
                 )
                 self._provider.add_span_processor(processor)
                 self._processors.append(processor)
-
-                # Immediate processor for spans that need immediate export
-                self._immediate_processor = ImmediateExportProcessor(exporter)
-                self._provider.add_span_processor(self._immediate_processor)
-                self._processors.append(self._immediate_processor)
 
             self._initialized = True
             logger.debug("Tracing core initialized")
