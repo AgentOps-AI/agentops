@@ -19,7 +19,7 @@ from agentops.semconv.core import CoreAttributes
 
 
 class LiveSpanProcessor(SpanProcessor):
-    def __init__(self, span_exporter: SpanExporter):
+    def __init__(self, span_exporter: SpanExporter, **kwargs):
         self.span_exporter = span_exporter
         self._in_flight: Dict[int, Span] = {}
         self._lock = Lock()
