@@ -5,6 +5,7 @@ from opentelemetry.util.types import Attributes, AttributeValue
 from datetime import datetime, timezone
 from typing import Optional
 from uuid import UUID
+import uuid
 
 
 def ns_to_iso(ns_time: Optional[int]) -> Optional[str]:
@@ -27,6 +28,10 @@ def trace_id_to_uuid(trace_id: int) -> UUID:
 
     # Create UUID object
     return UUID(uuid_str)
+
+
+def uuid_to_hex_int(uuid: UUID) -> int:
+    return int(uuid.hex, 16)
 
 
 def dict_to_span_attributes(data: dict, prefix: str = "") -> Attributes:
@@ -81,3 +86,31 @@ def dict_to_span_attributes(data: dict, prefix: str = "") -> Attributes:
 
     _flatten(data)
     return attributes
+
+
+def uuid_to_int(uuid_str):
+    """Convert a UUID string to a decimal integer."""
+    # If input is a UUID object, convert to string
+    if isinstance(uuid_str, uuid.UUID):
+        uuid_str = str(uuid_str)
+    
+    # Remove hyphens if they exist
+    uuid_str = uuid_str.replace('-', '')
+    
+    # Convert the hex string to an integer
+    return int(uuid_str, 16)
+
+
+def int_to_uuid(integer):
+    """Convert a decimal integer back to a UUID object."""
+    # Convert the integer to hex and remove '0x' prefix
+    hex_str = hex(integer)[2:]
+    
+    # Pad with zeros to ensure it's 32 characters long (128 bits)
+    hex_str = hex_str.zfill(32)
+    
+    # Insert hyphens in the correct positions
+    uuid_str = f"{hex_str[:8]}-{hex_str[8:12]}-{hex_str[12:16]}-{hex_str[16:20]}-{hex_str[20:]}"
+    
+    # Return as UUID object
+    return uuid.UUID(uuid_str)
