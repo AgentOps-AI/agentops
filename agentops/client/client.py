@@ -49,17 +49,16 @@ class Client:
         self.api = ApiClient(self.config.endpoint)
 
         # Prefetch JWT token if enabled
-        if self.config.prefetch_jwt_token:
-            self.api.v3.fetch_auth_token(self.config.api_key)
+        # TODO: Move this validation somewhere else (and integrate with self.config.prefetch_jwt_token once we have a solution to that)
+        response = self.api.v3.fetch_auth_token(self.config.api_key)
             
-        # Get the project_id from HttpClient after token fetch
-        from agentops.client.http.http_client import HttpClient
-        project_id = HttpClient.get_project_id()
+        assert 'project_id' in response is not None, "Authentication failed: could not fetch `project_id`"
+
+        project_id = response['project_id']
         
         # Initialize TracingCore with the current configuration and project_id
         tracing_config = self.config.dict()
-        if project_id:
-            tracing_config['project_id'] = project_id
+        tracing_config['project_id'] = project_id
         
         TracingCore.initialize_from_config(tracing_config)
 
