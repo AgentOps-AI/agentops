@@ -2,7 +2,7 @@ import functools
 import inspect
 from typing import Any, Callable, Dict, Optional, Type, TypeVar, Union, cast
 
-from opentelemetry import trace
+from opentelemetry import trace, context
 from opentelemetry.trace import StatusCode, Span
 
 from agentops.logging import logger
@@ -47,8 +47,24 @@ def tool(
                 # Call the original function without creating a span
                 return func(*args, **func_kwargs)
 
-            # Get the parent span
-            parent_span = current_span
+            # Get the parent span (either from the current context or from class if available)
+            parent_span = None
+            parent_context = None
+
+            # Check if this is a method in a class with an agent context
+            if args and hasattr(args[0], '_agent_context'):
+                # If the first argument is an instance with an agent context, use that
+                instance = args[0]
+                parent_context = instance._agent_context
+                token = context.attach(parent_context)
+                try:
+                    # Inside the agent context, get the current span
+                    parent_span = trace.get_current_span()
+                finally:
+                    context.detach(token)
+            else:
+                # Otherwise use the current span from context
+                parent_span = current_span
 
             # Create the tool span
             core = TracingCore.get_instance()
@@ -65,30 +81,37 @@ def tool(
                 # Start the tool span
                 tool_span.start()
 
-                # Record the input if possible
-                if isinstance(tool_span, ToolSpan):
-                    try:
+                # Record the input if tool_span is a ToolSpan instance
+                try:
+                    if isinstance(tool_span, ToolSpan):
                         if func_kwargs:
                             tool_span.set_input(func_kwargs)
                         elif len(args) > 1:  # Skip self if it's a method
                             tool_span.set_input(args[1:] if hasattr(args[0], '__class__') else args)
-                    except AttributeError:
-                        logger.debug(f"Tool {span_name} doesn't support set_input")
+                except AttributeError:
+                    # If set_input doesn't exist, just log it
+                    logger.debug(f"Tool {span_name} doesn't support set_input")
 
-                # Call the function inside the tool span's context
+                # Capture the tool context for potential nested tool calls
+                tool_context = None
+
+                # Call the function with the tool span as current in this context
                 result = None
                 if tool_span.span:
                     with trace.use_span(tool_span.span, end_on_exit=False):
+                        # Get the context with the tool span
+                        tool_context = context.get_current()
                         result = func(*args, tool_span=tool_span, **func_kwargs)
                 else:
                     result = func(*args, tool_span=tool_span, **func_kwargs)
 
-                # Record the output if possible
-                if isinstance(tool_span, ToolSpan):
-                    try:
+                # Record the output if tool_span is a ToolSpan instance
+                try:
+                    if isinstance(tool_span, ToolSpan):
                         tool_span.set_output(result)
-                    except AttributeError:
-                        logger.debug(f"Tool {span_name} doesn't support set_output")
+                except AttributeError:
+                    # If set_output doesn't exist, just log it
+                    logger.debug(f"Tool {span_name} doesn't support set_output")
 
                 return result
             except Exception as e:
@@ -96,8 +119,11 @@ def tool(
                 logger.error(f"Error in tool {span_name}: {str(e)}")
 
                 # Set error status in the span context if possible
-                if tool_span.span:
-                    tool_span.span.set_status(StatusCode.ERROR, str(e))
+                try:
+                    if tool_span.span:
+                        tool_span.span.set_status(StatusCode.ERROR, str(e))
+                except Exception:
+                    pass
 
                 raise
 
