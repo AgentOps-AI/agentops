@@ -3,12 +3,13 @@ from __future__ import annotations
 import abc
 import threading
 from datetime import datetime, timezone
-from typing import Any, Dict, Optional, Union, TypeVar, cast
+from typing import Any, Dict, Optional, TypeVar, Union, cast
 from uuid import UUID, uuid4
 
 from opentelemetry import context, trace
 from opentelemetry.trace import Span, SpanContext, Status, StatusCode
 
+from agentops.logging import logger
 from agentops.semconv import CoreAttributes
 
 # Define TypeVar with bound to TracedObject
@@ -61,6 +62,14 @@ class TracedObject(abc.ABC):
         # Add immediate export flag to attributes if needed
         if immediate_export:
             self._attributes[CoreAttributes.EXPORT_IMMEDIATELY] = True
+            
+        # Debug log the initialization
+        logger.debug(f"Initialized {self.__class__.__name__}: name={name}, kind={kind}, trace_id={self._trace_id}")
+        if self._parent:
+            parent_id = getattr(self._parent, 'trace_id', 'unknown')
+            logger.debug(f"Parent span: {parent_id}")
+        if self._attributes:
+            logger.debug(f"Initial attributes: {self._attributes}")
     
     def start(self: T) -> T:
         """Start the span."""
@@ -107,6 +116,10 @@ class TracedObject(abc.ABC):
             if self._immediate_export:
                 self._span.set_attribute(CoreAttributes.EXPORT_IMMEDIATELY, True)
             
+            # Debug log the start
+            logger.debug(f"Started span: {self.__class__.__name__}({self._name}), trace_id={self.trace_id}, span_id={self.span_id}")
+            logger.debug(f"Span attributes: {attributes}")
+            
             return self
     
     def end(self: T, status: Union[StatusCode, str] = StatusCode.OK, description: Optional[str] = None) -> T:
@@ -129,6 +142,18 @@ class TracedObject(abc.ABC):
             self._end_time = datetime.now(timezone.utc).isoformat()
             self._is_ended = True
             
+            # Debug log the end
+            status_str = status.name if isinstance(status, StatusCode) else status
+            logger.debug(f"Ended span: {self.__class__.__name__}({self._name}), trace_id={self.trace_id}, span_id={self.span_id}")
+            logger.debug(f"Status: {status_str}")
+            if description:
+                logger.debug(f"Description: {description}")
+            if self._start_time and self._end_time:
+                start_dt = datetime.fromisoformat(self._start_time.replace('Z', '+00:00'))
+                end_dt = datetime.fromisoformat(self._end_time.replace('Z', '+00:00'))
+                duration_ms = (end_dt - start_dt).total_seconds() * 1000
+                logger.debug(f"Duration: {duration_ms:.2f}ms")
+            
             return self
     
     def update(self: T) -> T:
@@ -148,8 +173,9 @@ class TracedObject(abc.ABC):
         # We do this by temporarily setting a special attribute that the
         # ImmediateExportProcessor will look for
         if self._immediate_export and self._span:
-            # Set a timestamp to ensure the processor sees this as a change
-            self._span.set_attribute('export.update', datetime.now(timezone.utc).isoformat())
+            update_time = datetime.now(timezone.utc).isoformat()
+            self._span.set_attribute('export.update', update_time)
+            logger.debug(f"Updated span for immediate export: {self.__class__.__name__}({self._name}), trace_id={self.trace_id}, span_id={self.span_id}, time={update_time}")
         
         return self
     
@@ -164,9 +190,15 @@ class TracedObject(abc.ABC):
             Self for chaining
         """
         if self._span and error:
-            self._span.set_attribute(CoreAttributes.ERROR_TYPE, error.__class__.__name__)
-            self._span.set_attribute(CoreAttributes.ERROR_MESSAGE, str(error))
-            self.set_status(StatusCode.ERROR, str(error))
+            error_type = error.__class__.__name__
+            error_message = str(error)
+            
+            self._span.set_attribute(CoreAttributes.ERROR_TYPE, error_type)
+            self._span.set_attribute(CoreAttributes.ERROR_MESSAGE, error_message)
+            self.set_status(StatusCode.ERROR, error_message)
+            
+            logger.debug(f"Error recorded on span {self.__class__.__name__}({self._name}), trace_id={self.trace_id}: {error_type} - {error_message}")
+        
         return self
     
     @property
@@ -241,6 +273,7 @@ class TracedObject(abc.ABC):
         self._immediate_export = value
         if self._span:
             self._span.set_attribute(CoreAttributes.EXPORT_IMMEDIATELY, value)
+            logger.debug(f"Changed immediate_export for {self.__class__.__name__}({self._name}) to {value}")
     
     def set_attribute(self, key: str, value: Any) -> None:
         """Set a span attribute."""
@@ -248,6 +281,7 @@ class TracedObject(abc.ABC):
             self._attributes[key] = value
             if self._span:
                 self._span.set_attribute(key, value)
+                logger.debug(f"Set attribute on {self.__class__.__name__}({self._name}): {key}={repr(value)[:100]}")
     
     def set_attributes(self, attributes: Dict[str, Any]) -> None:
         """Set multiple span attributes."""
@@ -256,6 +290,7 @@ class TracedObject(abc.ABC):
             if self._span:
                 for key, value in attributes.items():
                     self._span.set_attribute(key, value)
+                logger.debug(f"Set multiple attributes on {self.__class__.__name__}({self._name}): {list(attributes.keys())}")
     
     def set_status(self, status: Union[StatusCode, str], description: Optional[str] = None) -> None:
         """Set the span status."""
@@ -265,7 +300,13 @@ class TracedObject(abc.ABC):
             else:
                 status_code = status
             
+            status_str = status_code.name if isinstance(status_code, StatusCode) else status_code
             self._span.set_status(Status(status_code, description))
+            
+            log_msg = f"Set status on {self.__class__.__name__}({self._name}): {status_str}"
+            if description:
+                log_msg += f" - {description}"
+            logger.debug(log_msg)
     
     def __enter__(self: T) -> T:
         """Start the span and set it as the current context."""
@@ -275,6 +316,7 @@ class TracedObject(abc.ABC):
         # Store the context manager so we can exit it later
         self._context_manager = use_span_context(self._span)
         self._context_manager.__enter__()
+        logger.debug(f"Entered context for {self.__class__.__name__}({self._name})")
         return self
     
     def __exit__(self, exc_type, exc_val, exc_tb) -> None:
@@ -282,15 +324,17 @@ class TracedObject(abc.ABC):
         try:
             if exc_val:
                 self.set_error(exc_val)
+                logger.debug(f"Exception in context for {self.__class__.__name__}({self._name}): {exc_type.__name__} - {exc_val}")
             self.end()
         finally:
             # Exit the context manager to restore the previous context
             if hasattr(self, '_context_manager'):
                 self._context_manager.__exit__(exc_type, exc_val, exc_tb)
+                logger.debug(f"Exited context for {self.__class__.__name__}({self._name})")
     
     def to_dict(self) -> Dict[str, Any]:
         """Convert to dictionary."""
-        return {
+        result = {
             "trace_id": str(self.trace_id),
             "span_id": self.span_id,
             "name": self.name,
@@ -302,6 +346,8 @@ class TracedObject(abc.ABC):
             "is_ended": self.is_ended,
             "immediate_export": self.immediate_export,
         }
+        logger.debug(f"Converting {self.__class__.__name__}({self._name}) to dict: {list(result.keys())}")
+        return result
     
     def __str__(self) -> str:
         """String representation of the traced object."""
@@ -326,4 +372,5 @@ class TracedObject(abc.ABC):
             Context manager that sets this span as the current context
         """
         from agentops.sdk.decorators.context_utils import use_span_context
+        logger.debug(f"Created context manager for {self.__class__.__name__}({self._name})")
         return use_span_context(self._span) 

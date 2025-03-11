@@ -71,6 +71,10 @@ class SessionSpan(TracedObject):
         if self._host_env:
             for key, value in self._host_env.items():
                 self._attributes[f"host.{key}"] = value
+                
+        logger.debug(f"SessionSpan initialized: name={name}, tags={self._tags}, state={self._state}")
+        if self._host_env:
+            logger.debug(f"SessionSpan host environment: {list(self._host_env.keys())}")
     
     def start(self) -> SessionSpan:
         """Start the session span."""
@@ -83,6 +87,7 @@ class SessionSpan(TracedObject):
         # Update state
         self.set_state("RUNNING")
         
+        logger.debug(f"SessionSpan started: {self.name}, trace_id={self.trace_id}")
         return self
     
     def end(self, state: Union[str, StatusCode] = "SUCCEEDED") -> SessionSpan:
@@ -123,6 +128,8 @@ class SessionSpan(TracedObject):
             # If it's already a StatusCode, use it directly
             status_code = state
         
+        logger.debug(f"SessionSpan ending: {self.name}, state={self._state}, status_code={status_code}")
+        
         # End the span
         super().end(status_code)
         
@@ -144,6 +151,7 @@ class SessionSpan(TracedObject):
             normalized_state = "FAILED"
         
         # Store state
+        old_state = self._state
         self._state = normalized_state
         self._state_reason = reason
         
@@ -158,8 +166,8 @@ class SessionSpan(TracedObject):
             self.set_status(StatusCode.ERROR, reason)
             if reason:
                 self.set_attribute(CoreAttributes.ERROR_MESSAGE, reason)
-        elif normalized_state == "SUCCEEDED":
-            self.set_status(StatusCode.OK)
+                
+        logger.debug(f"SessionSpan state changed: {self.name}, {old_state} -> {normalized_state}{' ('+reason+')' if reason else ''}")
     
     @property
     def state(self) -> str:
@@ -177,6 +185,7 @@ class SessionSpan(TracedObject):
         """
         if tag not in self._tags:
             self._tags.append(tag)
+            logger.debug(f"SessionSpan tag added: {self.name}, tag={tag}")
         self.set_attribute("session.tags", json.dumps(self._tags))
     
     def add_tags(self, tags: List[str]) -> None:
@@ -186,6 +195,9 @@ class SessionSpan(TracedObject):
         Args:
             tags: Tags to add
         """
+        new_tags = [tag for tag in tags if tag not in self._tags]
+        if new_tags:
+            logger.debug(f"SessionSpan tags added: {self.name}, tags={new_tags}")
         for tag in tags:
             self.add_tag(tag)
     
@@ -221,4 +233,5 @@ class SessionSpan(TracedObject):
                 duration_seconds = end_timestamp - start_timestamp
                 result["duration_ms"] = duration_seconds * 1000
         
+        logger.debug(f"SessionSpan converted to dict: {self.name}, keys={list(result.keys())}")
         return result 

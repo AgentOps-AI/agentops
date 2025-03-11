@@ -5,6 +5,7 @@ from typing import Any, Dict, Optional, Union
 from opentelemetry.trace import Span, StatusCode
 
 from agentops.sdk.traced import TracedObject
+from agentops.logging import logger
 from agentops.semconv.span_kinds import SpanKind
 
 
@@ -40,6 +41,8 @@ class CustomSpan(TracedObject):
             "custom.name": name,
             "custom.kind": kind,
         })
+        
+        logger.debug(f"CustomSpan initialized: name={name}, kind={kind}")
     
     def add_event(self, name: str, attributes: Optional[Dict[str, Any]] = None) -> None:
         """
@@ -51,10 +54,15 @@ class CustomSpan(TracedObject):
         """
         if self._span:
             self._span.add_event(name, attributes)
+            
+            attrs_str = f", attributes={list(attributes.keys()) if attributes else 'None'}"
+            logger.debug(f"CustomSpan event added: {self.name}, event={name}{attrs_str}")
         
         # Update the span to trigger immediate export if configured
         self.update()
     
     def to_dict(self) -> Dict[str, Any]:
         """Convert to dictionary."""
-        return super().to_dict() 
+        result = super().to_dict()
+        logger.debug(f"CustomSpan converted to dict: {self.name}, kind={self.kind}")
+        return result 

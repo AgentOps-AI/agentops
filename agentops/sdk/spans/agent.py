@@ -5,6 +5,7 @@ from typing import Any, Dict, Optional, Union
 from opentelemetry.trace import Span, StatusCode
 
 from agentops.sdk.traced import TracedObject
+from agentops.logging import logger
 from agentops.semconv.agent import AgentAttributes
 from agentops.semconv.span_kinds import SpanKind
 from agentops.semconv.core import CoreAttributes
@@ -49,6 +50,8 @@ class AgentSpan(TracedObject):
             AgentAttributes.AGENT_NAME: name,
             AgentAttributes.AGENT_ROLE: agent_type,
         })
+        
+        logger.debug(f"AgentSpan initialized: name={name}, agent_type={agent_type}")
     
     def record_action(self, action: str, details: Optional[Dict[str, Any]] = None) -> None:
         """
@@ -63,6 +66,9 @@ class AgentSpan(TracedObject):
             for key, value in details.items():
                 self.set_attribute(f"{SpanKind.AGENT_ACTION}.{key}", value)
         
+        detail_str = f", details={list(details.keys()) if details else 'None'}"
+        logger.debug(f"AgentSpan action recorded: {self.name}, action={action}{detail_str}")
+        
         # Update the span to trigger immediate export if configured
         self.update()
     
@@ -74,6 +80,10 @@ class AgentSpan(TracedObject):
             thought: The thought to record
         """
         self.set_attribute(SpanKind.AGENT_THINKING, thought)
+        
+        # Log a truncated version of the thought to avoid huge log lines
+        log_thought = thought[:100] + "..." if len(thought) > 100 else thought
+        logger.debug(f"AgentSpan thought recorded: {self.name}, thought={log_thought}")
         
         # Update the span to trigger immediate export if configured
         self.update()
@@ -88,6 +98,10 @@ class AgentSpan(TracedObject):
         error_str = str(error)
         self.set_attribute(CoreAttributes.ERROR_MESSAGE, error_str)
         
+        # Log a truncated version of the error to avoid huge log lines
+        log_error = error_str[:100] + "..." if len(error_str) > 100 else error_str
+        logger.debug(f"AgentSpan error recorded: {self.name}, error={log_error}")
+        
         # Update the span to trigger immediate export if configured
         self.update()
     
@@ -97,4 +111,5 @@ class AgentSpan(TracedObject):
         result.update({
             "agent_type": self._agent_type,
         })
+        logger.debug(f"AgentSpan converted to dict: {self.name}, agent_type={self._agent_type}")
         return result 

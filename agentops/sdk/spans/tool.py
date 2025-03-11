@@ -5,6 +5,7 @@ from typing import Any, Dict, Optional, Union
 from opentelemetry.trace import Span, StatusCode
 
 from agentops.sdk.traced import TracedObject
+from agentops.logging import logger
 from agentops.semconv.tool import ToolAttributes
 from agentops.semconv.span_kinds import SpanKind
 
@@ -49,6 +50,8 @@ class ToolSpan(TracedObject):
             ToolAttributes.TOOL_NAME: name,
             ToolAttributes.TOOL_DESCRIPTION: tool_type,
         })
+        
+        logger.debug(f"ToolSpan initialized: name={name}, tool_type={tool_type}")
     
     def set_input(self, input_data: Any) -> None:
         """
@@ -66,6 +69,13 @@ class ToolSpan(TracedObject):
             input_str = input_data
         
         self.set_attribute(ToolAttributes.TOOL_PARAMETERS, input_str)
+        
+        # Log a truncated version of the input to avoid huge log lines
+        if isinstance(input_str, str):
+            log_input = input_str[:100] + "..." if len(input_str) > 100 else input_str
+        else:
+            log_input = str(input_str)
+        logger.debug(f"ToolSpan input set: {self.name}, input={log_input}")
     
     def set_output(self, output_data: Any) -> None:
         """
@@ -83,6 +93,13 @@ class ToolSpan(TracedObject):
             output_str = output_data
         
         self.set_attribute(ToolAttributes.TOOL_RESULT, output_str)
+        
+        # Log a truncated version of the output to avoid huge log lines
+        if isinstance(output_str, str):
+            log_output = output_str[:100] + "..." if len(output_str) > 100 else output_str
+        else:
+            log_output = str(output_str)
+        logger.debug(f"ToolSpan output set: {self.name}, output={log_output}")
     
     def to_dict(self) -> Dict[str, Any]:
         """Convert to dictionary."""
@@ -92,4 +109,5 @@ class ToolSpan(TracedObject):
             "input": self._input,
             "output": self._output,
         })
+        logger.debug(f"ToolSpan converted to dict: {self.name}, tool_type={self._tool_type}")
         return result 
