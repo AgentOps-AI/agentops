@@ -36,7 +36,11 @@ class AuthenticatedOTLPExporter(OTLPSpanExporter):
         self._auth_headers = headers or {}
 
         # Create a dedicated session with authentication handling
-        self._session = HttpClient.get_authenticated_session(endpoint, api_key)
+        # Use the correct authentication API endpoint with explicit v3 path
+        auth_endpoint = "https://api.agentops.cloud"
+        
+        # Create a session that will use the v3 authentication endpoint
+        self._session = HttpClient.get_authenticated_session(auth_endpoint, api_key)
 
         # Initialize the parent class
         super().__init__(

@@ -60,7 +60,13 @@ class HttpClient:
             A requests.Session with authentication handling
         """
         # Create auth manager with default token endpoint
-        auth_endpoint = f"{endpoint}/auth/token"
+        # Extract the base URL without path components to avoid path duplication
+        import urllib.parse
+        parsed_url = urllib.parse.urlparse(endpoint)
+        base_url = f"{parsed_url.scheme}://{parsed_url.netloc}"
+        
+        # Create a proper auth endpoint using the base URL and v3 path
+        auth_endpoint = f"{base_url}/v3/auth/token"
         auth_manager = AuthManager(auth_endpoint)
         
         # Use provided token fetcher or create a default one
