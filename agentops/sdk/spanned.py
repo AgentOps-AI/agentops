@@ -2,12 +2,13 @@ from __future__ import annotations
 
 import abc
 from datetime import datetime, timezone
-from typing import Any, Dict, Optional, Union, TypeVar, Generic
+from typing import Any, Dict, Optional, Union, TypeVar
 
-from opentelemetry import context, trace
-from opentelemetry.trace import Span, Status, StatusCode
+from opentelemetry import trace
+from opentelemetry.trace import Span, StatusCode
 
 from agentops.sdk.traced import TracedObject
+from agentops.semconv import CoreAttributes
 
 T = TypeVar('T', bound='SpannedBase')
 
@@ -48,7 +49,7 @@ class SpannedBase(TracedObject, abc.ABC):
         
         # Add immediate export flag to attributes if needed
         if immediate_export:
-            self._attributes['export.immediate'] = True
+            self._attributes[CoreAttributes.EXPORT_IMMEDIATELY] = True
     
     def start(self) -> T:
         """Start the span."""
@@ -140,6 +141,22 @@ class SpannedBase(TracedObject, abc.ABC):
             self._span.set_attribute('export.update', datetime.now(timezone.utc).isoformat())
         
         return self
+    
+    def set_error(self, error: Exception) -> T:
+        """
+        Set error information on the span.
+        
+        Args:
+            error: The exception that occurred
+            
+        Returns:
+            Self for chaining
+        """
+        if self._span and error:
+            self._span.set_attribute(CoreAttributes.ERROR_TYPE, error.__class__.__name__)
+            self._span.set_attribute(CoreAttributes.ERROR_MESSAGE, str(error))
+            self.set_status(StatusCode.ERROR, str(error))
+        return self  # type: ignore # This is the same pattern used in other methods
     
     @property
     def name(self) -> str:
