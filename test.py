@@ -5,7 +5,9 @@ import openai
 
 import agentops
 
-s = agentops.start_session()
+
+agentops.init()
+
 
 response = openai.chat.completions.create(
     model="gpt-3.5-turbo",
@@ -13,4 +15,3 @@ response = openai.chat.completions.create(
 )
 
 
-breakpoint()
