@@ -87,9 +87,6 @@ class AuthenticatedHttpAdapter(BaseHTTPAdapter):
 
     def send(self, request, **kwargs):
         """Send the request with authentication retry logic"""
-        # Ensure allow_redirects is set to False
-        kwargs["allow_redirects"] = False
-        
         # Add auth headers to initial request
         request = self.add_headers(request, **kwargs)
 
@@ -108,7 +105,6 @@ class AuthenticatedHttpAdapter(BaseHTTPAdapter):
                 request = self.add_headers(request, **kwargs)
 
                 # Retry the request
-                logger.debug("Retrying request with new token")
                 response = super().send(request, **kwargs)
             except AgentOpsApiJwtExpiredException as e:
                 # Authentication failed

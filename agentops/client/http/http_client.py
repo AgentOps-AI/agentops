@@ -65,8 +65,8 @@ class HttpClient:
         parsed_url = urllib.parse.urlparse(endpoint)
         base_url = f"{parsed_url.scheme}://{parsed_url.netloc}"
         
-        # Create a proper auth endpoint using the base URL
-        auth_endpoint = f"{base_url}/auth/token"
+        # Create a proper auth endpoint using the base URL and v3 path
+        auth_endpoint = f"{base_url}/v3/auth/token"
         auth_manager = AuthManager(auth_endpoint)
         
         # Use provided token fetcher or create a default one

@@ -157,7 +157,7 @@ class AuthenticatedApiClient(BaseApiClient):
 
         Args:
             endpoint: The base URL for the API
-            auth_endpoint: The endpoint for authentication (defaults to {endpoint}/auth/token)
+            auth_endpoint: The endpoint for authentication (defaults to {endpoint}/v3/auth/token)
         """
         super().__init__(endpoint)
 
@@ -166,7 +166,7 @@ class AuthenticatedApiClient(BaseApiClient):
             # Extract the base URL without path components to avoid path duplication
             parsed_url = urllib.parse.urlparse(endpoint)
             base_url = f"{parsed_url.scheme}://{parsed_url.netloc}"
-            auth_endpoint = f"{base_url}/auth/token"
+            auth_endpoint = f"{base_url}/v3/auth/token"
         self.auth_manager = AuthManager(auth_endpoint)
 
     def create_authenticated_session(self, api_key: str) -> requests.Session:
