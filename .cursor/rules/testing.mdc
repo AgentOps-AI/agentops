@@ -4,4 +4,4 @@ globs: tests/*
 alwaysApply: false
 ---
 - Use `pytest` tests, not unit tests
-- You've also got mock_req to mock Session's API Client from [session.py](mdc:agentops/api/session.py)
+- Use the [instrumentation_tester.py](mdc:tests/unit/sdk/instrumentation_tester.py)
