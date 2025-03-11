@@ -8,6 +8,7 @@ from opentelemetry.trace import StatusCode
 from agentops.sdk.types import TracingConfig
 from agentops.sdk.core import TracingCore
 from agentops.sdk.spanned import SpannedBase
+from agentops.semconv.core import CoreAttributes
 
 
 @pytest.fixture
@@ -126,7 +127,7 @@ def test_create_span(mock_factory, reset_tracing_core):
         kind="test",
         name="test_span",
         parent=None,
-        attributes={"key": "value", "export.immediate": True},
+        attributes={"key": "value", CoreAttributes.EXPORT_IMMEDIATELY: True},
         auto_start=True,
         immediate_export=True
     )

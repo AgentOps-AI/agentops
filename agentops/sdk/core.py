@@ -19,6 +19,7 @@ from agentops.sdk.factory import SpanFactory
 from agentops.sdk.types import TracingConfig
 from agentops.sdk.exporters import AuthenticatedOTLPExporter
 from agentops.semconv import ResourceAttributes
+from agentops.semconv.core import CoreAttributes
 
 # No need to create shortcuts since we're using our own ResourceAttributes class now
 
@@ -239,7 +240,7 @@ class TracingCore:
         # Add immediate export flag to attributes if needed
         if immediate_export:
             attributes = attributes or {}
-            attributes['export.immediate'] = True
+            attributes[CoreAttributes.EXPORT_IMMEDIATELY] = True
 
         return SpanFactory.create_span(
             kind=kind,

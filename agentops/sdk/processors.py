@@ -66,3 +66,16 @@ class LiveSpanProcessor(SpanProcessor):
 
     def force_flush(self, timeout_millis: int = 30000) -> bool:
         return True
+
+    def export_in_flight_spans(self) -> None:
+        """Export all in-flight spans without ending them.
+        
+        This method is primarily used for testing to ensure all spans
+        are exported before assertions are made.
+        """
+        with self._lock:
+            to_export = [
+                self._readable_span(span) for span in self._in_flight.values()
+            ]
+            if to_export:
+                self.span_exporter.export(to_export)

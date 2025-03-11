@@ -94,7 +94,7 @@ class SpannedBase(TracedObject, abc.ABC):
             # If this span needs immediate export, add a special attribute
             # The ImmediateExportProcessor will look for this attribute
             if self._immediate_export:
-                self._span.set_attribute('export.immediate', True)
+                self._span.set_attribute(CoreAttributes.EXPORT_IMMEDIATELY, True)
             
             return self
     
@@ -202,7 +202,7 @@ class SpannedBase(TracedObject, abc.ABC):
         """
         self._immediate_export = value
         if self._span:
-            self._span.set_attribute('export.immediate', value)
+            self._span.set_attribute(CoreAttributes.EXPORT_IMMEDIATELY, value)
     
     def __enter__(self) -> T:
         """Enter context manager."""

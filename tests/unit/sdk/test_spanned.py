@@ -5,6 +5,7 @@ from uuid import UUID
 from opentelemetry.trace import StatusCode
 
 from agentops.sdk.spanned import SpannedBase
+from agentops.semconv.core import CoreAttributes
 
 
 # Create a concrete implementation of SpannedBase for testing
@@ -27,7 +28,7 @@ def test_init():
     # Test with immediate_export
     span = TestSpan(name="test", kind="test", immediate_export=True)
     assert span.immediate_export
-    assert span._attributes["export.immediate"] == True
+    assert span._attributes[CoreAttributes.EXPORT_IMMEDIATELY] == True
 
 
 @patch("agentops.sdk.spanned.trace")
