@@ -7,12 +7,11 @@ from typing import Any, Dict, List, Optional, Set, Type, Union, cast
 from opentelemetry import context, trace
 from opentelemetry.exporter.otlp.proto.http.trace_exporter import OTLPSpanExporter
 from opentelemetry.exporter.otlp.proto.grpc.trace_exporter import OTLPSpanExporter
-from opentelemetry.sdk.resources import SERVICE_NAME, Resource
+from opentelemetry.sdk.resources import Resource
 from opentelemetry.sdk.trace import TracerProvider, ReadableSpan
 from opentelemetry.sdk.trace import SpanProcessor
 from opentelemetry.sdk.trace.export import BatchSpanProcessor, SimpleSpanProcessor, SpanExporter
 from opentelemetry.trace import Span
-from opentelemetry.semconv.resource import ResourceAttributes
 
 from agentops.logging import logger
 from agentops.sdk.processors import LiveSpanProcessor
@@ -20,9 +19,9 @@ from agentops.sdk.spanned import SpannedBase
 from agentops.sdk.factory import SpanFactory
 from agentops.sdk.types import TracingConfig
 from agentops.sdk.exporters import AuthenticatedOTLPExporter
+from agentops.semconv import ResourceAttributes
 
-# Shortcuts for common constants
-SERVICE_NAME = ResourceAttributes.SERVICE_NAME
+# No need to create shortcuts since we're using our own ResourceAttributes class now
 
 
 class ImmediateExportProcessor(SpanProcessor):
@@ -141,6 +140,7 @@ class TracingCore:
                 max_queue_size: Maximum number of spans to queue before forcing a flush
                 max_wait_time: Maximum time in milliseconds to wait before flushing
                 api_key: API key for authentication (required for authenticated exporter)
+                project_id: Project ID to include in resource attributes
         """
         if self._initialized:
             return
@@ -161,7 +161,8 @@ class TracingCore:
                 'exporter_endpoint': kwargs.get('exporter_endpoint', 'https://otlp.agentops.cloud/v1/traces'),
                 'max_queue_size': max_queue_size,
                 'max_wait_time': max_wait_time,
-                'api_key': kwargs.get('api_key')
+                'api_key': kwargs.get('api_key'),
+                'project_id': kwargs.get('project_id')
             }
 
             self._config = config
@@ -171,8 +172,19 @@ class TracingCore:
 
             # Create provider with safe access to service_name
             service_name = config.get('service_name') or 'agentops'
+            
+            # Create resource attributes dictionary
+            resource_attrs = {ResourceAttributes.SERVICE_NAME: service_name}
+            
+            # Add project_id to resource attributes if available
+            project_id = config.get('project_id')
+            if project_id:
+                # Add project_id as a custom resource attribute
+                resource_attrs[ResourceAttributes.PROJECT_ID] = project_id
+                logger.debug(f"Including project_id in resource attributes: {project_id}")
+            
             self._provider = TracerProvider(
-                resource=Resource({SERVICE_NAME: service_name})
+                resource=Resource(resource_attrs)
             )
 
             # Set as global provider
@@ -352,6 +364,7 @@ class TracingCore:
                 'max_queue_size': getattr(config, 'max_queue_size', 512),
                 'max_wait_time': getattr(config, 'max_wait_time', 5000),
                 'api_key': getattr(config, 'api_key', None),
+                'project_id': getattr(config, 'project_id', None),
             }
 
         # Initialize with the extracted configuration
