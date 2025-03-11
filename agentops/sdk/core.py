@@ -60,6 +60,7 @@ class TracingCore:
 
     def initialize(
         self,
+        jwt: Optional[str] = None,
         **kwargs
     ) -> None:
         """
@@ -146,16 +147,7 @@ class TracingCore:
             else:
                 # Use default authenticated processor and exporter if api_key is available
                 endpoint = config.get('exporter_endpoint') or 'https://otlp.agentops.api/v1/traces'
-                api_key = config.get('api_key')
-
-                if api_key:
-                    # Use the authenticated exporter if an API key is provided
-                    exporter = AuthenticatedOTLPExporter(endpoint=endpoint, api_key=api_key)
-                else:
-                    # Fall back to standard exporter if no API key
-                    exporter = OTLPSpanExporter(endpoint=endpoint)
-                    logger.warning("No API key provided, using standard non-authenticated exporter")
-
+                exporter = AuthenticatedOTLPExporter(endpoint=endpoint, jwt=kwargs.get('jwt'))
                 # Regular processor for normal spans and immediate export
                 processor = BatchSpanProcessor(
                     exporter,

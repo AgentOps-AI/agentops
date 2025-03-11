@@ -6,14 +6,14 @@ This module provides the client for the AgentOps API.
 
 from typing import Dict, Optional, Type, TypeVar, cast
 
+from agentops.client.api.base import  BaseApiClient
 from agentops.client.api.types import AuthTokenResponse
-from agentops.client.api.base import AuthenticatedApiClient, BaseApiClient
 from agentops.client.api.versions.v3 import V3Client
 
 # Define a type variable for client classes
-T = TypeVar("T", bound=AuthenticatedApiClient)
+T = TypeVar("T", bound=BaseApiClient)
 
-__all__ = ["ApiClient", "AuthenticatedApiClient", "BaseApiClient", "AuthTokenResponse"]
+__all__ = ["ApiClient", "BaseApiClient", "AuthTokenResponse"]
 
 class ApiClient:
     """
@@ -31,7 +31,7 @@ class ApiClient:
             endpoint: The base URL for the API
         """
         self.endpoint = endpoint
-        self._clients: Dict[str, AuthenticatedApiClient] = {}
+        self._clients: Dict[str, BaseApiClient] = {}
 
     @property
     def v3(self) -> V3Client:

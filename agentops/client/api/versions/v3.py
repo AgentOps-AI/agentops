@@ -8,7 +8,7 @@ from typing import Any, Dict, List, Optional
 
 import requests
 
-from agentops.client.api.base import AuthenticatedApiClient, BaseApiClient
+from agentops.client.api.base import BaseApiClient
 from agentops.client.api.types import AuthTokenResponse
 from agentops.exceptions import ApiServerException
 

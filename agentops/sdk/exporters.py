@@ -9,7 +9,6 @@ from opentelemetry.exporter.otlp.proto.http.trace_exporter import \
 from opentelemetry.sdk.trace import ReadableSpan
 from opentelemetry.sdk.trace.export import SpanExportResult
 
-from agentops.client.http.http_client import HttpClient
 from agentops.exceptions import (AgentOpsApiJwtExpiredException,
                                  ApiServerException)
 from agentops.logging import logger
@@ -27,28 +26,26 @@ class AuthenticatedOTLPExporter(OTLPSpanExporter):
     def __init__(
         self,
         endpoint: str,
-        api_key: str,
+        jwt: str,
         headers: Optional[Dict[str, str]] = None,
         timeout: Optional[int] = None,
         compression: Optional[Compression] = None,
+        **kwargs,
     ):
-        self.api_key = api_key
-        self._auth_headers = headers or {}
 
-        # Create a dedicated session with authentication handling
-        # Use the correct authentication API endpoint with explicit v3 path
-        
-        # Create a session that will use the v3 authentication endpoint
+        # TODO: Implement re-authentication
         # FIXME: endpoint here is not "endpoint" from config
-        self._session = HttpClient.get_authenticated_session(endpoint, api_key)
+        # self._session = HttpClient.get_authenticated_session(endpoint, api_key)
 
         # Initialize the parent class
         super().__init__(
             endpoint=endpoint,
-            headers=self._auth_headers,  # Base headers
+            headers={
+                'Authorization': f'Bearer {jwt}',
+            },  # Base headers
             timeout=timeout,
             compression=compression,
-            session=self._session,  # Use our authenticated session
+            # session=self._session,  # Use our authenticated session
         )
 
     def export(self, spans: Sequence[ReadableSpan]) -> SpanExportResult:

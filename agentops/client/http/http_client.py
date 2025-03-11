@@ -2,10 +2,10 @@ from typing import Callable, Dict, Optional
 
 import requests
 
-from agentops.exceptions import AgentOpsApiJwtExpiredException, ApiServerException
+from agentops.client.http.http_adapter import BaseHTTPAdapter
+from agentops.exceptions import (AgentOpsApiJwtExpiredException,
+                                 ApiServerException)
 from agentops.logging import logger
-from agentops.client.auth_manager import AuthManager
-from agentops.client.http.http_adapter import BaseHTTPAdapter, AuthenticatedHttpAdapter
 from agentops.semconv import ResourceAttributes
 
 
@@ -44,100 +44,100 @@ class HttpClient:
 
         return cls._session
 
-    @classmethod
-    def get_authenticated_session(
-        cls,
-        endpoint: str,
-        api_key: str,
-        token_fetcher: Optional[Callable[[str], str]] = None,
-    ) -> requests.Session:
-        """
-        Create a new session with authentication handling.
-        
-        Args:
-            endpoint: Base API endpoint (used to derive auth endpoint if needed)
-            api_key: The API key to use for authentication
-            token_fetcher: Optional custom token fetcher function
-            
-        Returns:
-            A requests.Session with authentication handling
-        """
-        # Create auth manager with default token endpoint
-        auth_endpoint = f"{endpoint}/auth/token"
-        auth_manager = AuthManager(auth_endpoint)
-        
-        # Use provided token fetcher or create a default one
-        if token_fetcher is None:
-            def default_token_fetcher(key: str) -> str:
-                # Simple token fetching implementation
-                try:
-                    response = requests.post(
-                        auth_manager.token_endpoint,
-                        json={"api_key": key},
-                        headers={"Content-Type": "application/json"},
-                        timeout=30
-                    )
-                    
-                    if response.status_code == 401 or response.status_code == 403:
-                        error_msg = "Invalid API key or unauthorized access"
-                        try:
-                            error_data = response.json()
-                            if "error" in error_data:
-                                error_msg = error_data["error"]
-                        except Exception:
-                            if response.text:
-                                error_msg = response.text
-                        
-                        logger.error(f"Authentication failed: {error_msg}")
-                        raise AgentOpsApiJwtExpiredException(f"Authentication failed: {error_msg}")
-                    
-                    if response.status_code >= 500:
-                        logger.error(f"Server error during authentication: {response.status_code}")
-                        raise ApiServerException(f"Server error during authentication: {response.status_code}")
-                    
-                    if response.status_code != 200:
-                        logger.error(f"Unexpected status code during authentication: {response.status_code}")
-                        raise AgentOpsApiJwtExpiredException(f"Failed to fetch token: {response.status_code}")
-                    
-                    token_data = response.json()
-                    if "token" not in token_data:
-                        logger.error("Token not found in response")
-                        raise AgentOpsApiJwtExpiredException("Token not found in response")
-                    
-                    # Store project_id if present in the response
-                    if "project_id" in token_data:
-                        HttpClient._project_id = token_data["project_id"]
-                        logger.debug(f"Project ID stored: {HttpClient._project_id} (will be set as {ResourceAttributes.PROJECT_ID})")
-                    
-                    return token_data["token"]
-                except requests.RequestException as e:
-                    logger.error(f"Network error during authentication: {e}")
-                    raise AgentOpsApiJwtExpiredException(f"Network error during authentication: {e}")
-                
-            token_fetcher = default_token_fetcher
-        
-        # Create a new session
-        session = requests.Session()
-        
-        # Create an authenticated adapter
-        adapter = AuthenticatedHttpAdapter(
-            auth_manager=auth_manager,
-            api_key=api_key,
-            token_fetcher=token_fetcher
-        )
-        
-        # Mount the adapter for both HTTP and HTTPS
-        session.mount("http://", adapter)
-        session.mount("https://", adapter)
-        
-        # Set default headers
-        session.headers.update({
-            "Connection": "keep-alive",
-            "Keep-Alive": "timeout=10, max=1000",
-            "Content-Type": "application/json",
-        })
-        
-        return session
+    # @classmethod
+    # def get_authenticated_session(
+    #     cls,
+    #     endpoint: str,
+    #     api_key: str,
+    #     token_fetcher: Optional[Callable[[str], str]] = None,
+    # ) -> requests.Session:
+    #     """
+    #     Create a new session with authentication handling.
+    #     
+    #     Args:
+    #         endpoint: Base API endpoint (used to derive auth endpoint if needed)
+    #         api_key: The API key to use for authentication
+    #         token_fetcher: Optional custom token fetcher function
+    #         
+    #     Returns:
+    #         A requests.Session with authentication handling
+    #     """
+    #     # Create auth manager with default token endpoint
+    #     auth_endpoint = f"{endpoint}/auth/token"
+    #     auth_manager = AuthManager(auth_endpoint)
+    #     
+    #     # Use provided token fetcher or create a default one
+    #     if token_fetcher is None:
+    #         def default_token_fetcher(key: str) -> str:
+    #             # Simple token fetching implementation
+    #             try:
+    #                 response = requests.post(
+    #                     auth_manager.token_endpoint,
+    #                     json={"api_key": key},
+    #                     headers={"Content-Type": "application/json"},
+    #                     timeout=30
+    #                 )
+    #                 
+    #                 if response.status_code == 401 or response.status_code == 403:
+    #                     error_msg = "Invalid API key or unauthorized access"
+    #                     try:
+    #                         error_data = response.json()
+    #                         if "error" in error_data:
+    #                             error_msg = error_data["error"]
+    #                     except Exception:
+    #                         if response.text:
+    #                             error_msg = response.text
+    #                     
+    #                     logger.error(f"Authentication failed: {error_msg}")
+    #                     raise AgentOpsApiJwtExpiredException(f"Authentication failed: {error_msg}")
+    #                 
+    #                 if response.status_code >= 500:
+    #                     logger.error(f"Server error during authentication: {response.status_code}")
+    #                     raise ApiServerException(f"Server error during authentication: {response.status_code}")
+    #                 
+    #                 if response.status_code != 200:
+    #                     logger.error(f"Unexpected status code during authentication: {response.status_code}")
+    #                     raise AgentOpsApiJwtExpiredException(f"Failed to fetch token: {response.status_code}")
+    #                 
+    #                 token_data = response.json()
+    #                 if "token" not in token_data:
+    #                     logger.error("Token not found in response")
+    #                     raise AgentOpsApiJwtExpiredException("Token not found in response")
+    #                 
+    #                 # Store project_id if present in the response
+    #                 if "project_id" in token_data:
+    #                     HttpClient._project_id = token_data["project_id"]
+    #                     logger.debug(f"Project ID stored: {HttpClient._project_id} (will be set as {ResourceAttributes.PROJECT_ID})")
+    #                 
+    #                 return token_data["token"]
+    #             except requests.RequestException as e:
+    #                 logger.error(f"Network error during authentication: {e}")
+    #                 raise AgentOpsApiJwtExpiredException(f"Network error during authentication: {e}")
+    #             
+    #         token_fetcher = default_token_fetcher
+    #     
+    #     # Create a new session
+    #     session = requests.Session()
+    #     
+    #     # Create an authenticated adapter
+    #     adapter = AuthenticatedHttpAdapter(
+    #         auth_manager=auth_manager,
+    #         api_key=api_key,
+    #         token_fetcher=token_fetcher
+    #     )
+    #     
+    #     # Mount the adapter for both HTTP and HTTPS
+    #     session.mount("http://", adapter)
+    #     session.mount("https://", adapter)
+    #     
+    #     # Set default headers
+    #     session.headers.update({
+    #         "Connection": "keep-alive",
+    #         "Keep-Alive": "timeout=10, max=1000",
+    #         "Content-Type": "application/json",
+    #     })
+    #     
+    #     return session
 
     @classmethod
     def request(

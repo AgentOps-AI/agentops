@@ -51,16 +51,12 @@ class Client:
         # Prefetch JWT token if enabled
         # TODO: Move this validation somewhere else (and integrate with self.config.prefetch_jwt_token once we have a solution to that)
         response = self.api.v3.fetch_auth_token(self.config.api_key)
-            
-        assert 'project_id' in response is not None, "Authentication failed: could not fetch `project_id`"
 
-        project_id = response['project_id']
-        
         # Initialize TracingCore with the current configuration and project_id
         tracing_config = self.config.dict()
-        tracing_config['project_id'] = project_id
-        
-        TracingCore.initialize_from_config(tracing_config)
+        tracing_config['project_id'] = response['project_id']
+
+        TracingCore.initialize_from_config(tracing_config, jwt=response['token'])
 
         # Instrument LLM calls if enabled
         if self.config.instrument_llm_calls:
