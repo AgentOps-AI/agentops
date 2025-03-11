@@ -13,7 +13,6 @@ from opentelemetry.sdk.trace.export import BatchSpanProcessor, SimpleSpanProcess
 from opentelemetry.trace import Span
 
 from agentops.logging import logger
-from agentops.sdk.processors import LiveSpanProcessor
 from agentops.sdk.traced import TracedObject
 from agentops.sdk.factory import SpanFactory
 from agentops.sdk.types import TracingConfig
@@ -132,7 +131,6 @@ class TracingCore:
                 self._provider.add_span_processor(processor)
                 self._processors.append(processor)
             elif config.get('exporter') is not None:
-                # Use custom exporter with LiveSpanProcessor
                 exporter = config.get('exporter')
                 # Type assertion to satisfy the linter
                 assert exporter is not None  # We already checked it's not None above
