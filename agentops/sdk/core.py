@@ -103,17 +103,17 @@ class TracingCore:
 
             # Create provider with safe access to service_name
             service_name = config.get('service_name') or 'agentops'
-            
+
             # Create resource attributes dictionary
             resource_attrs = {ResourceAttributes.SERVICE_NAME: service_name}
-            
+
             # Add project_id to resource attributes if available
             project_id = config.get('project_id')
             if project_id:
                 # Add project_id as a custom resource attribute
                 resource_attrs[ResourceAttributes.PROJECT_ID] = project_id
                 logger.debug(f"Including project_id in resource attributes: {project_id}")
-            
+
             self._provider = TracerProvider(
                 resource=Resource(resource_attrs)
             )
@@ -260,12 +260,13 @@ class TracingCore:
         SpanFactory.register_span_type(kind, span_class)
 
     @classmethod
-    def initialize_from_config(cls, config):
+    def initialize_from_config(cls, config, **kwargs):
         """
         Initialize the tracing core from a configuration object.
 
         Args:
             config: Configuration object (dict or object with dict method)
+            **kwargs: Additional keyword arguments to pass to initialize
         """
         instance = cls.get_instance()
 
@@ -273,7 +274,7 @@ class TracingCore:
         # For TracingConfig, we can directly pass it to initialize
         if isinstance(config, dict):
             # If it's already a dict (TracingConfig), use it directly
-            tracing_kwargs = config
+            tracing_kwargs = config.copy()
         else:
             # For backward compatibility with old Config object
             # Extract tracing-specific configuration from the Config object
@@ -287,6 +288,9 @@ class TracingCore:
                 'api_key': getattr(config, 'api_key', None),
                 'project_id': getattr(config, 'project_id', None),
             }
+
+        # Update with any additional kwargs
+        tracing_kwargs.update(kwargs)
 
         # Initialize with the extracted configuration
         instance.initialize(**tracing_kwargs)
