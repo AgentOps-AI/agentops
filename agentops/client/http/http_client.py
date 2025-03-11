@@ -75,8 +75,6 @@ class HttpClient:
                         timeout=30
                     )
 
-                    breakpoint()
-                    
                     if response.status_code == 401 or response.status_code == 403:
                         error_msg = "Invalid API key or unauthorized access"
                         try:

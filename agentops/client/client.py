@@ -47,16 +47,14 @@ class Client:
         self.api = ApiClient(self.config.endpoint)
 
         # Prefetch JWT token if enabled
-        if self.config.prefetch_jwt_token:
-            token_data: AuthTokenResponse = self.api.v3.fetch_auth_token(self.config.api_key)
+        token_data: AuthTokenResponse = self.api.v3.fetch_auth_token(self.config.api_key)
+
+        assert token_data.get(
+            'project_id') is not None, f"Could not retrieve project_id from self.api.v3.fetch_auth_token - invalid response {token_data}"
 
         # Initialize TracingCore with the current configuration and project_id
         tracing_config = self.config.dict()
-        assert tracing_config.get(
-            'project_id') is not None, f"Could not retrieve project_id from self.api.v3.fetch_auth_token - invalid response {token_data}"
-
         tracing_config['project_id'] = token_data['project_id']
-        breakpoint()
         TracingCore.initialize_from_config(tracing_config)
 
         # Instrument LLM calls if enabled
