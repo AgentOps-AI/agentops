@@ -1,6 +1,10 @@
 from opentelemetry import trace
-from agentops.sdk.decorators import session, agent, tool
+
+import agentops
+from agentops.sdk.decorators import agent, session, tool
 from agentops.sdk.spans.utils import get_root_span
+
+agentops.init()
 
 # Define a utility function to get the root span (to be implemented in your SDK)
 def get_session_info():
