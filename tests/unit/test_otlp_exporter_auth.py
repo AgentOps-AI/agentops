@@ -115,9 +115,6 @@ class TestAuthenticatedOTLPExporter:
 
         # Verify
         assert result == SpanExportResult.SUCCESS
-        # We can't check requests_mock.call_count because we've mocked the parent export method
-        # assert requests_mock.call_count == 1
-        # assert "Authorization" in requests_mock.last_request.headers
 
     def test_export_with_expired_token(self, requests_mock, mocker):
         """Test that the adapter handles token expiration and reauthenticates"""
@@ -228,3 +225,195 @@ class TestAuthenticatedOTLPExporter:
             
             # Verify
             assert result == SpanExportResult.FAILURE
+
+    def test_export_with_intermittent_network_issues(self, mocker):
+        """Test that export handles intermittent network issues"""
+        # Setup - create an exporter
+        exporter = AuthenticatedOTLPExporter(
+            endpoint="https://test-api.agentops.ai/v3/traces",
+            api_key="test-api-key",
+        )
+        
+        # Create a mock span
+        mock_span = mock.MagicMock(spec=ReadableSpan)
+        
+        # Mock the parent export method to simulate intermittent failures
+        export_mock = mocker.patch(
+            'opentelemetry.exporter.otlp.proto.http.trace_exporter.OTLPSpanExporter.export'
+        )
+        
+        # First call: connection error
+        export_mock.side_effect = requests.exceptions.ConnectionError("Connection failed")
+        result1 = exporter.export([mock_span])
+        assert result1 == SpanExportResult.FAILURE
+        
+        # Second call: timeout
+        export_mock.side_effect = requests.exceptions.Timeout("Request timed out")
+        result2 = exporter.export([mock_span])
+        assert result2 == SpanExportResult.FAILURE
+        
+        # Third call: success
+        export_mock.side_effect = None
+        export_mock.return_value = SpanExportResult.SUCCESS
+        result3 = exporter.export([mock_span])
+        assert result3 == SpanExportResult.SUCCESS
+
+    def test_export_with_large_payload(self, mocker):
+        """Test that export handles large payloads correctly"""
+        # Setup
+        exporter = AuthenticatedOTLPExporter(
+            endpoint="https://test-api.agentops.ai/v3/traces",
+            api_key="test-api-key",
+        )
+        
+        mock_spans = [mock.MagicMock(spec=ReadableSpan) for _ in range(100)]
+        
+        export_mock = mocker.patch(
+            'opentelemetry.exporter.otlp.proto.http.trace_exporter.OTLPSpanExporter.export',
+            return_value=SpanExportResult.SUCCESS
+        )
+        
+        result = exporter.export(mock_spans)
+        
+        # Verify
+        assert result == SpanExportResult.SUCCESS
+        export_mock.assert_called_once_with(mock_spans)
+
+    def test_realistic_span_data(self, mocker):
+        """Test with realistic span data that mimics production scenarios"""
+        from opentelemetry import trace
+        from opentelemetry.sdk.trace import TracerProvider
+        from opentelemetry.sdk.trace.export import BatchSpanProcessor
+        from opentelemetry.sdk.resources import Resource
+        
+        resource = Resource({
+            "service.name": "payment-service",
+            "service.version": "1.2.3",
+            "service.instance.id": "instance-12345",
+            "deployment.environment": "production",
+            "host.name": "payment-pod-abc123",
+            "cloud.provider": "aws",
+            "cloud.region": "us-west-2",
+            "container.id": "container-789xyz"
+        })
+        
+        provider = TracerProvider(resource=resource)
+        
+        mock_session = mock.MagicMock(spec=requests.Session)
+        mock_session.headers = {}
+        
+        mocker.patch.object(
+            HttpClient,
+            'get_authenticated_session',
+            return_value=mock_session
+        )
+        
+        exporter = AuthenticatedOTLPExporter(
+            endpoint="https://test-api.agentops.ai/v3/traces",
+            api_key="test-api-key",
+        )
+        
+        export_mock = mocker.patch(
+            'opentelemetry.exporter.otlp.proto.http.trace_exporter.OTLPSpanExporter.export',
+            return_value=SpanExportResult.SUCCESS
+        )
+        
+        processor = BatchSpanProcessor(exporter)
+        provider.add_span_processor(processor)
+        
+        trace.set_tracer_provider(provider)
+        
+        tracer = trace.get_tracer("payment-processor", "1.2.3")
+        
+        with tracer.start_as_current_span("process_payment", kind=trace.SpanKind.SERVER) as payment_span:
+            payment_span.set_attribute("http.method", "POST")
+            payment_span.set_attribute("http.url", "https://api.example.com/v1/payments")
+            payment_span.set_attribute("http.status_code", 200)
+            payment_span.set_attribute("payment.id", "pmt_123456789")
+            payment_span.set_attribute("payment.amount", 99.99)
+            payment_span.set_attribute("payment.currency", "USD")
+            payment_span.set_attribute("customer.id", "cust_987654321")
+            
+            with tracer.start_as_current_span("validate_payment") as validate_span:
+                validate_span.set_attribute("validation.method", "full")
+                validate_span.add_event("validation.start", {"timestamp": "2023-03-15T14:30:00Z"})
+                validate_span.add_event("validation.complete", {"timestamp": "2023-03-15T14:30:01Z", "result": "passed"})
+            
+            with tracer.start_as_current_span("payment_gateway_request", kind=trace.SpanKind.CLIENT) as gateway_span:
+                gateway_span.set_attribute("http.method", "POST")
+                gateway_span.set_attribute("http.url", "https://gateway.example.com/v2/charge")
+                gateway_span.set_attribute("http.status_code", 200)
+                gateway_span.set_attribute("gateway.transaction_id", "tx_abcdef123456")
+                
+                gateway_span.add_event("gateway.request_sent", {"timestamp": "2023-03-15T14:30:02Z"})
+                gateway_span.add_event("gateway.response_received", {"timestamp": "2023-03-15T14:30:03Z"})
+            
+            with tracer.start_as_current_span("update_database") as db_span:
+                db_span.set_attribute("db.system", "postgresql")
+                db_span.set_attribute("db.name", "payments")
+                db_span.set_attribute("db.statement", "UPDATE payments SET status = 'completed' WHERE id = ?")
+                db_span.set_attribute("db.operation", "UPDATE")
+                
+                db_span.add_event("db.query.start", {"timestamp": "2023-03-15T14:30:04Z"})
+                db_span.add_event("db.query.complete", {"timestamp": "2023-03-15T14:30:04Z", "rows_affected": 1})
+            
+            with tracer.start_as_current_span("send_notification", kind=trace.SpanKind.PRODUCER) as notification_span:
+                notification_span.set_attribute("messaging.system", "kafka")
+                notification_span.set_attribute("messaging.destination", "payment-notifications")
+                notification_span.set_attribute("messaging.message_id", "msg_123456")
+                
+                notification_span.add_event("notification.queued", {"timestamp": "2023-03-15T14:30:05Z"})
+        
+        processor.force_flush()
+        
+        mock_span = mock.MagicMock(spec=ReadableSpan)
+        exporter.export([mock_span])
+        
+        assert export_mock.call_count >= 1
+        
+        processor.shutdown()
+
+    def test_export_during_server_maintenance(self, mocker, requests_mock):
+        """Test export behavior during server maintenance (503 with Retry-After)"""
+        # Setup
+        endpoint = "https://test-api.agentops.ai/v3/traces"
+        api_key = "test-api-key"
+        
+        # Create the exporter
+        exporter = AuthenticatedOTLPExporter(
+            endpoint=endpoint,
+            api_key=api_key
+        )
+        
+        # Create a mock span
+        mock_span = mock.MagicMock(spec=ReadableSpan)
+        
+        # Mock the parent export method to simulate server maintenance
+        export_mock = mocker.patch(
+            'opentelemetry.exporter.otlp.proto.http.trace_exporter.OTLPSpanExporter.export'
+        )
+        
+        # First attempt: server in maintenance mode
+        maintenance_response = requests.Response()
+        maintenance_response.status_code = 503
+        maintenance_response.headers = {"Retry-After": "60"}
+        maintenance_response._content = b'{"error": "Server maintenance in progress"}'
+        
+        export_mock.side_effect = requests.exceptions.HTTPError(
+            "503 Server Error: Service Unavailable",
+            response=maintenance_response
+        )
+        
+        # Execute
+        result = exporter.export([mock_span])
+        
+        # Verify
+        assert result == SpanExportResult.FAILURE
+        
+        # Simulate maintenance completed
+        export_mock.side_effect = None
+        export_mock.return_value = SpanExportResult.SUCCESS
+        
+        # Try again after maintenance
+        result = exporter.export([mock_span])
+        assert result == SpanExportResult.SUCCESS
