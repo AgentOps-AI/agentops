@@ -36,7 +36,12 @@ class AuthenticatedOTLPExporter(OTLPSpanExporter):
         self._auth_headers = headers or {}
 
         # Create a dedicated session with authentication handling
-        self._session = HttpClient.get_authenticated_session(endpoint, api_key)
+        # Extract the base URL to ensure consistent handling for auth endpoints
+        import urllib.parse
+        parsed_url = urllib.parse.urlparse(endpoint)
+        base_url = f"{parsed_url.scheme}://{parsed_url.netloc}"
+        
+        self._session = HttpClient.get_authenticated_session(base_url, api_key)
 
         # Initialize the parent class
         super().__init__(

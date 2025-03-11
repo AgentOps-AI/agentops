@@ -7,6 +7,7 @@ This module provides the foundation for all API clients in the AgentOps SDK.
 from typing import Any, Dict, Optional, Protocol
 
 import requests
+import urllib.parse
 
 from agentops.client.api.types import AuthTokenResponse
 from agentops.client.auth_manager import AuthManager
@@ -162,7 +163,10 @@ class AuthenticatedApiClient(BaseApiClient):
 
         # Set up authentication manager
         if auth_endpoint is None:
-            auth_endpoint = f"{endpoint}/auth/token"
+            # Extract the base URL without path components to avoid path duplication
+            parsed_url = urllib.parse.urlparse(endpoint)
+            base_url = f"{parsed_url.scheme}://{parsed_url.netloc}"
+            auth_endpoint = f"{base_url}/auth/token"
         self.auth_manager = AuthManager(auth_endpoint)
 
     def create_authenticated_session(self, api_key: str) -> requests.Session:
