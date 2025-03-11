@@ -12,7 +12,7 @@ from opentelemetry.sdk.trace import SpanProcessor
 from opentelemetry.sdk.trace.export import BatchSpanProcessor, SimpleSpanProcessor, SpanExporter
 from opentelemetry.trace import Span
 
-from agentops.logging import logger
+from agentops.logging import logger, debug, info, warning, error, log_method_call, log_function_call
 from agentops.sdk.processors import LiveSpanProcessor, SafeBatchSpanProcessor
 from agentops.sdk.spanned import SpannedBase
 from agentops.sdk.factory import SpanFactory
@@ -57,6 +57,7 @@ class TracingCore:
         from agentops.sdk.factory import SpanFactory
         SpanFactory.auto_register_span_types()
 
+    @log_method_call(level='info')
     def initialize(self, **kwargs) -> None:
         """
         Initialize the tracing core with the given configuration.
@@ -111,7 +112,7 @@ class TracingCore:
             if project_id:
                 # Add project_id as a custom resource attribute
                 resource_attrs[ResourceAttributes.PROJECT_ID] = project_id
-                logger.debug(f"Including project_id in resource attributes: {project_id}")
+                debug(f"Including project_id in resource attributes: {project_id}")
 
             self._provider = TracerProvider(
                 resource=Resource(resource_attrs)
@@ -150,7 +151,7 @@ class TracingCore:
                 else:
                     # Fall back to standard exporter if no API key
                     exporter = OTLPSpanExporter(endpoint=endpoint)
-                    logger.warning("No API key provided, using standard non-authenticated exporter")
+                    warning("No API key provided, using standard non-authenticated exporter")
 
                 # Regular processor for normal spans and immediate export
                 processor = SafeBatchSpanProcessor(
@@ -162,8 +163,9 @@ class TracingCore:
                 self._processors.append(processor)
 
             self._initialized = True
-            logger.debug("Tracing core initialized")
+            debug("Tracing core initialized")
 
+    @log_method_call(level='info')
     def shutdown(self) -> None:
         """Shutdown the tracing core."""
         if not self._initialized:
@@ -178,17 +180,17 @@ class TracingCore:
                 try:
                     processor.force_flush()
                 except Exception as e:
-                    logger.warning(f"Error flushing processor: {e}")
+                    warning(f"Error flushing processor: {e}")
 
             # Shutdown provider
             if self._provider:
                 try:
                     self._provider.shutdown()
                 except Exception as e:
-                    logger.warning(f"Error shutting down provider: {e}")
+                    warning(f"Error shutting down provider: {e}")
 
             self._initialized = False
-            logger.debug("Tracing core shutdown")
+            debug("Tracing core shutdown")
 
     def get_tracer(self, name: str = "agentops") -> trace.Tracer:
         """
@@ -205,6 +207,7 @@ class TracingCore:
 
         return trace.get_tracer(name)
 
+    @log_method_call(level='debug')
     def create_span(
         self,
         kind: str,
@@ -259,6 +262,7 @@ class TracingCore:
         SpanFactory.register_span_type(kind, span_class)
 
     @classmethod
+    @log_function_call(level='info')
     def initialize_from_config(cls, config, **kwargs):
         """
         Initialize the tracing core from a configuration object.

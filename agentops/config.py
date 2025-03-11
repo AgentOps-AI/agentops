@@ -13,7 +13,7 @@ from agentops.exceptions import InvalidApiKeyException
 from agentops.helpers.env import get_env_bool, get_env_int, get_env_list
 from agentops.helpers.serialization import AgentOpsJSONEncoder
 
-from .logging.config import logger
+from .logging import logger, debug, info, warning, error, log_method_call
 
 
 class ConfigDict(TypedDict):
@@ -114,6 +114,7 @@ class Config:
         default_factory=lambda: None, metadata={"description": "Custom span processor for OpenTelemetry trace data"}
     )
 
+    @log_method_call(level='debug')
     def configure(
         self,
         api_key: Optional[str] = None,

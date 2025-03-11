@@ -5,7 +5,7 @@ import importlib
 
 from opentelemetry.instrumentation.instrumentor import BaseInstrumentor
 
-from agentops.logging import logger
+from agentops.logging import logger, debug, info, warning, error, log_function_call
 from agentops.sdk.core import TracingCore
 
 
@@ -95,21 +95,23 @@ available_instrumentors: list[InstrumentorLoader] = [
 ]
 
 
+@log_function_call(level='debug')
 def instrument_one(loader: InstrumentorLoader) -> Optional[BaseInstrumentor]:
     """Instrument a single instrumentor."""
     if not loader.should_activate:
         # this package is not in the environment; skip
-        logger.debug(f"Package {loader.provider_import_name} not found; skipping instrumentation of {loader.class_name}")
+        debug(f"Package {loader.provider_import_name} not found; skipping instrumentation of {loader.class_name}")
         return None
     
     instrumentor = loader.get_instance()
     instrumentor.instrument(tracer_provider=TracingCore.get_instance()._provider)
-    logger.info(f"Instrumented {loader.class_name}")
+    info(f"Instrumented {loader.class_name}")
     _active_instrumentors.append(instrumentor)
     
     return instrumentor
 
 
+@log_function_call(level='info')
 def instrument_all():
     """
     Instrument all available instrumentors.
@@ -118,13 +120,14 @@ def instrument_all():
     global _active_instrumentors
     
     if len(_active_instrumentors):
-        logger.warning("Instrumentors have already been populated.")
+        warning("Instrumentors have already been populated.")
         return
     
+    info(f"Instrumenting all available instrumentors ({len(available_instrumentors)} found)")
     for loader in available_instrumentors:
         if loader.class_name in _active_instrumentors:
             # already instrumented
-            logger.warning(f"Instrumentor {loader.class_name} has already been instrumented.")
+            warning(f"Instrumentor {loader.class_name} has already been instrumented.")
             return None
         
         instrumentor = instrument_one(loader)
@@ -132,13 +135,15 @@ def instrument_all():
             _active_instrumentors.append(instrumentor)
 
 
+@log_function_call(level='info')
 def uninstrument_all():
     """
     Uninstrument all available instrumentors.
     This can be called to disable instrumentation.
     """
     global _active_instrumentors
+    info(f"Uninstrumenting all active instrumentors ({len(_active_instrumentors)} found)")
     for instrumentor in _active_instrumentors:
         instrumentor.uninstrument()
-        logger.info(f"Uninstrumented {instrumentor.__class__.__name__}")
+        info(f"Uninstrumented {instrumentor.__class__.__name__}")
     _active_instrumentors = []
