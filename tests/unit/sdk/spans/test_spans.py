@@ -3,13 +3,17 @@ from unittest.mock import MagicMock, patch
 from uuid import UUID
 import json
 
-from opentelemetry.trace import StatusCode
+from opentelemetry.trace import StatusCode, SpanKind as OTelSpanKind
 
 from agentops.sdk.types import TracingConfig
 from agentops.sdk.spans.session import SessionSpan
 from agentops.sdk.spans.agent import AgentSpan
 from agentops.sdk.spans.tool import ToolSpan
 from agentops.sdk.spans.custom import CustomSpan
+from agentops.semconv.agent import AgentAttributes
+from agentops.semconv.span_kinds import SpanKind
+from agentops.semconv.tool import ToolAttributes
+from agentops.semconv.core import CoreAttributes
 
 
 class TestSessionSpan(unittest.TestCase):
@@ -94,9 +98,6 @@ class TestSessionSpan(unittest.TestCase):
         )
         span.set_attribute = MagicMock()
         span.set_status = MagicMock()
-        
-        # Import constants
-        from agentops.semconv.core import CoreAttributes
         
         # Test with simple state
         span.set_state("RUNNING")
@@ -230,7 +231,6 @@ class TestAgentSpan(unittest.TestCase):
         self.assertTrue(span.immediate_export)
         
         # Import the constants at test time to avoid circular imports
-        from agentops.semconv.agent import AgentAttributes
         self.assertEqual(span._attributes[AgentAttributes.AGENT_NAME], "test_agent")
         self.assertEqual(span._attributes[AgentAttributes.AGENT_ROLE], "assistant")
 
@@ -246,15 +246,15 @@ class TestAgentSpan(unittest.TestCase):
         
         # Test without details
         span.record_action("search")
-        span.set_attribute.assert_called_once_with("agent.action", "search")
+        span.set_attribute.assert_called_once_with(SpanKind.AGENT_ACTION, "search")
         span.update.assert_called_once()
         
         # Test with details
         span.set_attribute.reset_mock()
         span.update.reset_mock()
         span.record_action("search", {"query": "test query"})
-        span.set_attribute.assert_any_call("agent.action", "search")
-        span.set_attribute.assert_any_call("agent.action.query", "test query")
+        span.set_attribute.assert_any_call(SpanKind.AGENT_ACTION, "search")
+        span.set_attribute.assert_any_call(f"{SpanKind.AGENT_ACTION}.query", "test query")
         span.update.assert_called_once()
 
     def test_record_thought(self):
@@ -269,7 +269,7 @@ class TestAgentSpan(unittest.TestCase):
         
         # Test
         span.record_thought("I should search for information")
-        span.set_attribute.assert_called_once_with("agent.thought", "I should search for information")
+        span.set_attribute.assert_called_once_with(SpanKind.AGENT_THINKING, "I should search for information")
         span.update.assert_called_once()
 
     def test_record_error(self):
@@ -284,14 +284,14 @@ class TestAgentSpan(unittest.TestCase):
         
         # Test with string
         span.record_error("Something went wrong")
-        span.set_attribute.assert_called_once_with("agent.error", "Something went wrong")
+        span.set_attribute.assert_called_once_with(CoreAttributes.ERROR_MESSAGE, "Something went wrong")
         span.update.assert_called_once()
         
         # Test with exception
         span.set_attribute.reset_mock()
         span.update.reset_mock()
         span.record_error(ValueError("Invalid value"))
-        span.set_attribute.assert_called_once_with("agent.error", "Invalid value")
+        span.set_attribute.assert_called_once_with(CoreAttributes.ERROR_MESSAGE, "Invalid value")
         span.update.assert_called_once()
 
     def test_to_dict(self):
@@ -330,7 +330,6 @@ class TestToolSpan(unittest.TestCase):
         self.assertFalse(span.immediate_export)
         
         # Import the constants at test time to avoid circular imports
-        from agentops.semconv.tool import ToolAttributes
         self.assertEqual(span._attributes[ToolAttributes.TOOL_NAME], "test_tool")
         self.assertEqual(span._attributes[ToolAttributes.TOOL_DESCRIPTION], "search")
         self.assertIsNone(span._input)
