@@ -263,15 +263,25 @@ class TracedObject(abc.ABC):
             self._span.set_status(Status(status_code, description))
     
     def __enter__(self: T) -> T:
-        """Enter context manager."""
-        return self.start()
+        """Start the span and set it as the current context."""
+        from agentops.sdk.decorators.context_utils import use_span_context
+        
+        self.start()
+        # Store the context manager so we can exit it later
+        self._context_manager = use_span_context(self._span)
+        self._context_manager.__enter__()
+        return self
     
     def __exit__(self, exc_type, exc_val, exc_tb) -> None:
-        """Exit context manager."""
-        if exc_type is not None:
-            self.end(StatusCode.ERROR, str(exc_val))
-        else:
-            self.end(StatusCode.OK)
+        """End the span and restore the previous context."""
+        try:
+            if exc_val:
+                self.set_error(exc_val)
+            self.end()
+        finally:
+            # Exit the context manager to restore the previous context
+            if hasattr(self, '_context_manager'):
+                self._context_manager.__exit__(exc_type, exc_val, exc_tb)
     
     def to_dict(self) -> Dict[str, Any]:
         """Convert to dictionary."""
@@ -294,4 +304,21 @@ class TracedObject(abc.ABC):
     
     def __repr__(self) -> str:
         """Detailed representation of the traced object."""
-        return f"{self.__class__.__name__}(trace_id={self.trace_id}, span_id={self.span_id})" 
+        return f"{self.__class__.__name__}(trace_id={self.trace_id}, span_id={self.span_id})"
+    
+    def with_context(self):
+        """
+        Context manager to use this span's context temporarily.
+        
+        Example:
+            ```python
+            with span.with_context():
+                # Code here will run with the span as the current context
+                pass
+            ```
+        
+        Returns:
+            Context manager that sets this span as the current context
+        """
+        from agentops.sdk.decorators.context_utils import use_span_context
+        return use_span_context(self._span) 

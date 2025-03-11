@@ -3,11 +3,12 @@ import inspect
 from typing import Any, Callable, Dict, Optional, Type, TypeVar, Union, cast
 
 from opentelemetry import trace
-from opentelemetry.trace import StatusCode, Span
+from opentelemetry.trace import StatusCode
 
 from agentops.logging import logger
 from agentops.sdk.core import TracingCore
 from agentops.sdk.spans.tool import ToolSpan
+from agentops.sdk.decorators.context_utils import use_span_context
 
 F = TypeVar('F', bound=Callable[..., Any])
 
@@ -58,45 +59,42 @@ def tool(
                 tool_type=tool_type,
             )
 
-            try:
-                # Start the tool span
-                tool_span.start()
+            # Start the tool span
+            tool_span.start()
 
-                # Record the input if possible
-                if isinstance(tool_span, ToolSpan):
-                    try:
-                        if func_kwargs:
-                            tool_span.set_input(func_kwargs)
-                        elif len(args) > 1:  # Skip self if it's a method
-                            tool_span.set_input(args[1:] if hasattr(args[0], '__class__') else args)
-                    except AttributeError:
-                        logger.debug(f"Tool {span_name} doesn't support set_input")
+            # Use the context manager for span context
+            with use_span_context(tool_span.span):
+                try:
+                    # Record the input if possible
+                    if isinstance(tool_span, ToolSpan):
+                        try:
+                            if func_kwargs:
+                                tool_span.set_input(func_kwargs)
+                            elif len(args) > 1:  # Skip self if it's a method
+                                tool_span.set_input(args[1:] if hasattr(args[0], '__class__') else args)
+                        except AttributeError:
+                            logger.debug(f"Tool {span_name} doesn't support set_input")
 
-                # Call the function inside the tool span's context
-                result = None
-                if tool_span.span:
-                    with trace.use_span(tool_span.span, end_on_exit=False):
-                        result = func(*args, **func_kwargs)
-                else:
+                    # Call the function inside the tool span's context
                     result = func(*args, **func_kwargs)
 
-                # Record the output if possible
-                if isinstance(tool_span, ToolSpan):
-                    try:
-                        tool_span.set_output(result)
-                    except AttributeError:
-                        logger.debug(f"Tool {span_name} doesn't support set_output")
+                    # Record the output if possible
+                    if isinstance(tool_span, ToolSpan):
+                        try:
+                            tool_span.set_output(result)
+                        except AttributeError:
+                            logger.debug(f"Tool {span_name} doesn't support set_output")
 
-                return result
-            except Exception as e:
-                # Record the error
-                logger.error(f"Error in tool {span_name}: {str(e)}")
+                    return result
+                except Exception as e:
+                    # Record the error
+                    logger.error(f"Error in tool {span_name}: {str(e)}")
 
-                # Set error status in the span context if possible
-                if tool_span.span:
-                    tool_span.span.set_status(StatusCode.ERROR, str(e))
+                    # Set error status in the span context if possible
+                    if tool_span.span:
+                        tool_span.span.set_status(StatusCode.ERROR, str(e))
 
-                raise
+                    raise
 
         return cast(F, wrapper)
 

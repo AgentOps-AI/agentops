@@ -3,11 +3,12 @@ import inspect
 from typing import Any, Callable, Dict, Optional, Type, TypeVar, Union, cast
 
 from opentelemetry import trace
-from opentelemetry.trace import StatusCode, Span
+from opentelemetry.trace import StatusCode
 
 from agentops.sdk.core import TracingCore
 from agentops.sdk.spans.agent import AgentSpan
 from agentops.logging import logger
+from agentops.sdk.decorators.context_utils import use_span_context
 
 T = TypeVar('T')
 
@@ -71,11 +72,9 @@ def agent(
                 # Start the agent span
                 agent_span.start()
 
-                # Call the original __init__ inside the agent span's context
-                if agent_span.span:
-                    with trace.use_span(agent_span.span, end_on_exit=False):
-                        original_init(self, *args, **init_kwargs)
-                else:
+                # Use the context manager for span context
+                with use_span_context(agent_span.span):
+                    # Call the original __init__ inside the agent span's context
                     original_init(self, *args, **init_kwargs)
 
             # Replace the __init__ method
@@ -108,28 +107,24 @@ def agent(
                     agent_type=agent_type,
                 )
 
-                try:
-                    # Start the agent span
-                    agent_span.start()
+                # Start the agent span
+                agent_span.start()
 
-                    # Call the function inside the agent span's context
-                    result = None
-                    if agent_span.span:
-                        with trace.use_span(agent_span.span, end_on_exit=False):
-                            result = cls_or_func(*args, **func_kwargs)
-                    else:
+                # Use the context manager for span context
+                with use_span_context(agent_span.span):
+                    try:
+                        # Call the function inside the agent span's context
                         result = cls_or_func(*args, **func_kwargs)
-
-                    return result
-                except Exception as e:
-                    # Record the error on the agent span if possible
-                    logger.error(f"Error in agent {span_name}: {str(e)}")
-                    if isinstance(agent_span, AgentSpan):
-                        try:
-                            agent_span.record_error(e)
-                        except AttributeError:
-                            pass
-                    raise
+                        return result
+                    except Exception as e:
+                        # Record the error on the agent span if possible
+                        logger.error(f"Error in agent {span_name}: {str(e)}")
+                        if isinstance(agent_span, AgentSpan):
+                            try:
+                                agent_span.record_error(e)
+                            except AttributeError:
+                                pass
+                        raise
 
             return wrapper
 

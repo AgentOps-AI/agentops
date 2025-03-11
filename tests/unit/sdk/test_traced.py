@@ -225,25 +225,35 @@ def test_context_manager():
     # Set up
     span = ConcreteTracedObject(name="test", kind="test")
     span.start = MagicMock(return_value=span)
-    span.end = MagicMock(return_value=span)
+    
+    # We need to preserve the original end method behavior
+    original_end = span.end
+    span.end = MagicMock(side_effect=lambda *args, **kwargs: original_end(*args, **kwargs))
+    span.set_status = MagicMock()
     
     # Test normal execution
     with span as s:
         assert s == span
     span.start.assert_called_once()
-    span.end.assert_called_once_with(StatusCode.OK)
+    span.set_status.assert_called_once_with(StatusCode.OK, None)
+    span.end.assert_called_once()
     
     # Test with exception
     span.start.reset_mock()
     span.end.reset_mock()
+    span.set_status.reset_mock()
+    
+    # Mock set_error to test exception handling
+    span.set_error = MagicMock(return_value=span)
+    
     try:
         with span as s:
             raise ValueError("Test error")
     except ValueError:
         pass
     span.start.assert_called_once()
+    span.set_error.assert_called_once()
     span.end.assert_called_once()
-    assert span.end.call_args[0][0] == StatusCode.ERROR
 
 
 def test_to_dict():

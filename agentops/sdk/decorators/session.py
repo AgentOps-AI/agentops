@@ -2,14 +2,14 @@ import functools
 import inspect
 from typing import Any, Callable, Dict, List, Optional, Type, TypeVar, Union, cast
 
-from opentelemetry import trace, context
-from opentelemetry.trace import StatusCode, Span
-from opentelemetry.context import Context
+from opentelemetry import trace
+from opentelemetry.trace import StatusCode
 
 from agentops.sdk.types import TracingConfig
 from agentops.sdk.core import TracingCore
 from agentops.sdk.spans.session import SessionSpan
 from agentops.logging import logger
+from agentops.sdk.decorators.context_utils import use_span_context
 
 T = TypeVar('T')
 F = TypeVar('F', bound=Callable[..., Any])
@@ -69,11 +69,9 @@ def session(
                 # Start the span
                 session_span.start()
                 
-                # Call the original __init__ inside the session span's context
-                if session_span.span:
-                    with trace.use_span(session_span.span, end_on_exit=False):
-                        original_init(self, *args, **init_kwargs)
-                else:
+                # Use the context manager for span context
+                with use_span_context(session_span.span):
+                    # Call the original __init__ inside the session span's context
                     original_init(self, *args, **init_kwargs)
             
             # Replace the __init__ method
@@ -98,25 +96,22 @@ def session(
                     tags=tags,
                 )
                 
-                try:
-                    # Start the span
-                    session_span.start()
-                    
-                    # Call the function inside the session span's context
-                    result = None
-                    if session_span.span:
-                        with trace.use_span(session_span.span, end_on_exit=False):
-                            result = cls_or_func(*args, **func_kwargs)
-                    else:
+                # Start the span
+                session_span.start()
+                
+                # Use the context manager for span context
+                with use_span_context(session_span.span):
+                    try:
+                        # Call the function inside the session span's context
                         result = cls_or_func(*args, **func_kwargs)
-                    
-                    # End the span
-                    session_span.end("SUCCEEDED")
-                    return result
-                except Exception as e:
-                    # End the span with error status
-                    session_span.end("ERROR")
-                    raise
+                        
+                        # End the span
+                        session_span.end("SUCCEEDED")
+                        return result
+                    except Exception as e:
+                        # End the span with error status
+                        session_span.end("ERROR")
+                        raise
             
             return wrapper
     
