@@ -16,36 +16,10 @@ from agentops.sdk.core import TracingCore
 from agentops.sdk.types import TracingConfig
 
 
-@pytest.fixture(scope="module")
-def setup_tracing():
-    """Set up tracing for tests."""
-    # Create a tracer provider
-    provider = TracerProvider()
-    
-    # Add a simple processor that prints to the console
-    processor = SimpleSpanProcessor(ConsoleSpanExporter())
-    provider.add_span_processor(processor)
-    
-    # Set the provider as the global provider
-    trace.set_tracer_provider(provider)
-    
-    # Get a tracer
-    tracer = trace.get_tracer("test_tracer")
-    
-    # Initialize the tracing core
-    config = TracingConfig(
-        exporter=ConsoleSpanExporter(),
-        processor=processor,
-        service_name="test_service"
-    )
-    TracingCore.initialize_from_config(config)
-    
-    return tracer
-
-
-def test_get_current_trace_context(setup_tracing):
+def test_get_current_trace_context(instrumentation):
     """Test get_current_trace_context with a real span."""
-    tracer = setup_tracing
+    # Get a tracer from the instrumentation tester's provider
+    tracer = trace.get_tracer("test_tracer")
     
     # Create a span
     with tracer.start_as_current_span("test_span") as span:
@@ -62,9 +36,13 @@ def test_get_current_trace_context(setup_tracing):
         assert span_id == actual_span_id
 
 
-def test_is_same_trace(setup_tracing):
+def test_is_same_trace(instrumentation):
     """Test is_same_trace with real spans."""
-    tracer = setup_tracing
+    # Get a tracer from the instrumentation tester's provider
+    tracer = trace.get_tracer("test_tracer")
+    
+    # Clear any existing spans before starting the test
+    instrumentation.clear_spans()
     
     # Create two spans in the same trace
     with tracer.start_as_current_span("parent_span") as parent_span:
@@ -73,20 +51,29 @@ def test_is_same_trace(setup_tracing):
             result = is_same_trace(parent_span, child_span)
             assert result is True
     
-    # Create two spans in different traces
+    # Force flush any pending spans
+    instrumentation.span_processor.force_flush()
+    
+    # Create a span
     with tracer.start_as_current_span("span1") as span1:
         # End the first span to ensure we get a new trace
         pass
     
-    with tracer.start_as_current_span("span2") as span2:
+    # Force flush any pending spans and clear the current context
+    instrumentation.span_processor.force_flush()
+    trace.get_current_span().end()  # End any current span
+    
+    # Create another span in a different trace
+    with tracer.start_as_current_span("span2", context=None) as span2:
         # Test is_same_trace with spans in different traces
         result = is_same_trace(span1, span2)
         assert result is False
 
 
-def test_set_span_attributes(setup_tracing):
+def test_set_span_attributes(instrumentation):
     """Test set_span_attributes with a real span."""
-    tracer = setup_tracing
+    # Get a tracer from the instrumentation tester's provider
+    tracer = trace.get_tracer("test_tracer")
     
     # Create a span
     with tracer.start_as_current_span("test_span") as span:
@@ -99,8 +86,8 @@ def test_set_span_attributes(setup_tracing):
             list_attr=["a", "b", "c"]
         )
         
-        # Get the attributes
-        attributes = span.attributes
+        # Get the attributes using get_span_attributes
+        attributes = get_span_attributes(span)
         
         # Verify
         assert attributes["string_attr"] == "string_value"
@@ -113,9 +100,10 @@ def test_set_span_attributes(setup_tracing):
         assert "none_attr" not in attributes
 
 
-def test_get_span_attributes(setup_tracing):
+def test_get_span_attributes(instrumentation):
     """Test get_span_attributes with a real span."""
-    tracer = setup_tracing
+    # Get a tracer from the instrumentation tester's provider
+    tracer = trace.get_tracer("test_tracer")
     
     # Create a span with attributes
     with tracer.start_as_current_span("test_span") as span:
@@ -136,9 +124,10 @@ def test_get_span_attributes(setup_tracing):
         assert current_attributes["key2"] == 123
 
 
-def test_get_root_span(setup_tracing):
+def test_get_root_span(instrumentation):
     """Test get_root_span with nested spans."""
-    tracer = setup_tracing
+    # Get a tracer from the instrumentation tester's provider
+    tracer = trace.get_tracer("test_tracer")
     
     # Create a parent span
     with tracer.start_as_current_span("root_span") as root_span:
