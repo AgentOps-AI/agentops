@@ -28,7 +28,7 @@ class TestAuthManager:
         auth_manager = AuthManager(token_endpoint="https://api.example.com/auth/token")
         
         # Verify is_token_valid returns False
-        assert not auth_manager.is_token_valid()
+        assert not auth_manager.has_token()
 
     def test_is_token_valid_with_token(self):
         """Test that is_token_valid returns True when a token is set."""
@@ -38,43 +38,45 @@ class TestAuthManager:
         auth_manager.jwt_token = "test-token"
         
         # Verify is_token_valid returns True
-        assert auth_manager.is_token_valid()
+        assert auth_manager.has_token()
 
     def test_get_valid_token_with_no_token(self):
         """Test that get_valid_token fetches a new token when none exists."""
         auth_manager = AuthManager(token_endpoint="https://api.example.com/auth/token")
         
         # Create a mock token fetcher
-        token_fetcher = mock.Mock(return_value="new-token")
+        token_fetcher = mock.Mock(return_value={"token": "new-token", "project_id": "test-project"})
         
         # Call get_valid_token
-        token = auth_manager.get_valid_token("test-api-key", token_fetcher)
+        token_response = auth_manager.maybe_fetch("test-api-key", token_fetcher)
         
         # Verify the token fetcher was called
         token_fetcher.assert_called_once_with("test-api-key")
         
-        # Verify the token was set and returned
+        # Verify the token was stored and returned
         assert auth_manager.jwt_token == "new-token"
-        assert token == "new-token"
+        assert auth_manager.project_id == "test-project"
+        assert token_response == {"token": "new-token", "project_id": "test-project"}
 
     def test_get_valid_token_with_existing_token(self):
         """Test that get_valid_token returns the existing token when one exists."""
         auth_manager = AuthManager(token_endpoint="https://api.example.com/auth/token")
         
-        # Set a token
+        # Set a token and project_id
         auth_manager.jwt_token = "existing-token"
+        auth_manager.project_id = "existing-project"
         
         # Create a mock token fetcher
-        token_fetcher = mock.Mock(return_value="new-token")
+        token_fetcher = mock.Mock(return_value={"token": "new-token", "project_id": "new-project"})
         
         # Call get_valid_token
-        token = auth_manager.get_valid_token("test-api-key", token_fetcher)
+        token_response = auth_manager.maybe_fetch("test-api-key", token_fetcher)
         
         # Verify the token fetcher was not called
         token_fetcher.assert_not_called()
         
         # Verify the existing token was returned
-        assert token == "existing-token"
+        assert token_response == {"token": "existing-token", "project_id": "existing-project"}
 
     def test_prepare_auth_headers_with_no_token(self):
         """Test that prepare_auth_headers works with no token."""

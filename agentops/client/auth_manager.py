@@ -1,28 +1,27 @@
 import threading
-import time
-from typing import Callable, Dict, Optional
+from typing import Callable, Dict, Optional, Union
 
 import requests
 
-from agentops.exceptions import (AgentOpsApiJwtExpiredException,
-                                 ApiServerException)
+from agentops.client.api.types import AuthTokenResponse
 
 
 class AuthManager:
     """Manages authentication tokens and related operations"""
-    
+
     def __init__(self, token_endpoint: str):
         """
         Initialize the authentication manager.
-        
+
         Args:
             token_endpoint: The full URL for token acquisition
         """
         self.token_endpoint = token_endpoint
         self.jwt_token: Optional[str] = None
+        self.project_id: Optional[str] = None
         self._token_lock = threading.Lock()
-        
-    def is_token_valid(self) -> bool:
+
+    def has_token(self) -> bool:
         """
         Check if the current JWT token exists.
 
@@ -31,8 +30,8 @@ class AuthManager:
         a token needs to be refreshed.
         """
         return self.jwt_token is not None
-    
-    def get_valid_token(self, api_key: str, token_fetcher: Callable[[str], str]) -> str:
+
+    def maybe_fetch(self, api_key: str, token_fetcher: Callable[[str], Union[str, AuthTokenResponse]]) -> AuthTokenResponse:
         """
         Get a JWT token, only getting a new one if we don't have one.
 
@@ -41,14 +40,25 @@ class AuthManager:
             token_fetcher: Function to fetch a new token if needed
 
         Returns:
-            A JWT token
+            An AuthTokenResponse object containing the token and project_id
         """
         with self._token_lock:
-            if not self.is_token_valid():
-                self.jwt_token = token_fetcher(api_key)
+            if not self.has_token():
+                result = token_fetcher(api_key)
+                if isinstance(result, str):
+                    self.jwt_token = result
+                    # Create a compatible AuthTokenResponse
+                    return {"token": result, "project_id": self.project_id or ""}
+                else:
+                    # It's an AuthTokenResponse
+                    self.jwt_token = result["token"]
+                    self.project_id = result["project_id"]
+                    return result
+            
+            # We have a token, return it in AuthTokenResponse format
             assert self.jwt_token is not None  # For type checking
-            return self.jwt_token
-    
+            return {"token": self.jwt_token, "project_id": self.project_id or ""}
+
     def prepare_auth_headers(
         self,
         api_key: str,
@@ -56,11 +66,11 @@ class AuthManager:
     ) -> Dict[str, str]:
         """
         Prepare headers with authentication information.
-        
+
         Args:
             api_key: The API key to include in headers
             custom_headers: Additional headers to include
-            
+
         Returns:
             Headers dictionary with authentication information
         """
@@ -80,20 +90,20 @@ class AuthManager:
             headers.update(safe_headers)
 
         return headers
-    
+
     def is_token_expired_response(self, response: requests.Response) -> bool:
         """
         Check if a response indicates an expired token.
-        
+
         Args:
             response: The HTTP response to check
-            
+
         Returns:
             True if the response indicates an expired token, False otherwise
         """
         if response.status_code not in (401, 403):
             return False
-            
+
         # Check if the response indicates a token expiration
         try:
             # Try to parse the response as JSON
@@ -103,8 +113,8 @@ class AuthManager:
         except Exception:
             # If we can't parse JSON, check the raw text
             return bool(response.text and "expired" in response.text.lower())
-    
+
     def clear_token(self):
         """Clear the stored token, forcing a refresh on next use"""
         with self._token_lock:
-            self.jwt_token = None 
+            self.jwt_token = None

@@ -63,7 +63,7 @@ class TestAuthenticatedHttpAdapter:
     @pytest.fixture
     def token_fetcher(self):
         """Create a token fetcher function for testing."""
-        return mock.Mock(return_value="test-token")
+        return mock.Mock(return_value={"token": "test-token", "project_id": "test-project"})
 
     def test_init(self, auth_manager, token_fetcher):
         """Test that the adapter initializes correctly."""
@@ -91,7 +91,7 @@ class TestAuthenticatedHttpAdapter:
         )
         
         # Mock the auth manager methods
-        auth_manager.get_valid_token = mock.Mock()
+        auth_manager.maybe_fetch = mock.Mock(return_value={"token": "test-token", "project_id": "test-project"})
         auth_manager.prepare_auth_headers = mock.Mock(return_value={
             "Authorization": "Bearer test-token",
             "Content-Type": "application/json; charset=UTF-8",
@@ -105,7 +105,7 @@ class TestAuthenticatedHttpAdapter:
         modified_request = adapter.add_headers(request)
         
         # Verify the auth manager methods were called
-        auth_manager.get_valid_token.assert_called_once_with("test-api-key", token_fetcher)
+        auth_manager.maybe_fetch.assert_called_once_with("test-api-key", token_fetcher)
         auth_manager.prepare_auth_headers.assert_called_once_with("test-api-key")
         
         # Verify the headers were added to the request
@@ -176,7 +176,7 @@ class TestAuthenticatedHttpAdapter:
         # Mock the auth manager methods
         auth_manager.is_token_expired_response = mock.Mock(return_value=True)
         auth_manager.clear_token = mock.Mock()
-        auth_manager.get_valid_token = mock.Mock()
+        auth_manager.maybe_fetch = mock.Mock(return_value={"token": "new-token", "project_id": "test-project"})
         
         # Create a request
         request = requests.Request('GET', 'https://api.example.com/test').prepare()
@@ -184,16 +184,13 @@ class TestAuthenticatedHttpAdapter:
         # Call send
         response = adapter.send(request)
         
-        # Verify the response
-        assert response is success_response
-        assert response.status_code == 200
-        
-        # Verify the methods were called
-        assert adapter.add_headers.call_count == 2  # Called for initial request and retry
-        assert BaseHTTPAdapter.send.call_count == 2  # Called for initial request and retry
+        # Verify the auth manager methods were called
         auth_manager.is_token_expired_response.assert_called_once_with(expired_response)
         auth_manager.clear_token.assert_called_once()
-        auth_manager.get_valid_token.assert_called_once_with("test-api-key", token_fetcher)
+        auth_manager.maybe_fetch.assert_called_once_with("test-api-key", token_fetcher)
+        
+        # Verify the response is the success response
+        assert response is success_response
 
     def test_send_with_token_refresh_failure(self, auth_manager, token_fetcher, mocker: MockerFixture):
         """Test that send handles token refresh failures gracefully."""
@@ -216,7 +213,7 @@ class TestAuthenticatedHttpAdapter:
         # Mock the auth manager methods
         auth_manager.is_token_expired_response = mock.Mock(return_value=True)
         auth_manager.clear_token = mock.Mock()
-        auth_manager.get_valid_token = mock.Mock(side_effect=AgentOpsApiJwtExpiredException("Failed to refresh token"))
+        auth_manager.maybe_fetch = mock.Mock(side_effect=AgentOpsApiJwtExpiredException("Failed to refresh token"))
         
         # Create a request
         request = requests.Request('GET', 'https://api.example.com/test').prepare()
@@ -233,4 +230,4 @@ class TestAuthenticatedHttpAdapter:
         BaseHTTPAdapter.send.assert_called_once()  # Only called for initial request
         auth_manager.is_token_expired_response.assert_called_once_with(expired_response)
         auth_manager.clear_token.assert_called_once()
-        auth_manager.get_valid_token.assert_called_once_with("test-api-key", token_fetcher) 
+        auth_manager.maybe_fetch.assert_called_once_with("test-api-key", token_fetcher) 

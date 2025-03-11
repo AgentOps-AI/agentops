@@ -214,34 +214,3 @@ class HttpClient:
             
         # This should never be reached due to the max_redirects check above
         return response
-
-    @classmethod
-    def initialize_tracing_with_project_id(cls, tracing_config: Optional[Dict] = None) -> None:
-        """
-        Initialize tracing with the stored project_id.
-        
-        This method should be called after obtaining a JWT token that provides the project_id.
-        It configures the TracingCore instance with the project_id obtained during authentication.
-        The project_id will be set as the resource attribute defined by ResourceAttributes.PROJECT_ID.
-        
-        Args:
-            tracing_config: Optional configuration dictionary to pass to TracingCore.initialize.
-                            Any existing values will be preserved, and project_id will be added.
-        """
-        from agentops.sdk.core import TracingCore
-        
-        # Get a reference to the tracing core
-        core = TracingCore.get_instance()
-        
-        # Create a new config dictionary to avoid modifying the passed one
-        config = dict(tracing_config or {})
-        
-        # Add the project_id from HttpClient to the config if available
-        if cls._project_id:
-            config['project_id'] = cls._project_id
-            logger.debug(f"Initializing tracing with {ResourceAttributes.PROJECT_ID}: {cls._project_id}")
-        else:
-            logger.warning(f"No project_id available when initializing tracing. {ResourceAttributes.PROJECT_ID} will not be set.")
-        
-        # Initialize the tracing core with the configuration
-        core.initialize(**config)

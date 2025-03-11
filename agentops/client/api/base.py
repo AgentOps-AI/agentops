@@ -8,6 +8,7 @@ from typing import Any, Dict, Optional, Protocol
 
 import requests
 
+from agentops.client.api.types import AuthTokenResponse
 from agentops.client.auth_manager import AuthManager
 from agentops.client.http.http_adapter import AuthenticatedHttpAdapter
 from agentops.client.http.http_client import HttpClient
@@ -181,7 +182,8 @@ class AuthenticatedApiClient(BaseApiClient):
 
         # Create an authenticated adapter
         adapter = AuthenticatedHttpAdapter(
-            auth_manager=self.auth_manager, api_key=api_key, token_fetcher=self.fetch_auth_token
+            auth_manager=self.auth_manager, api_key=api_key, token_fetcher=lambda key: self.fetch_auth_token(key)[
+                "token"]
         )
 
         # Mount the adapter for both HTTP and HTTPS
@@ -211,12 +213,12 @@ class AuthenticatedApiClient(BaseApiClient):
             Headers dictionary with valid authentication
         """
         # Ensure we have a valid token
-        self.auth_manager.get_valid_token(api_key, self.fetch_auth_token)
+        self.auth_manager.maybe_fetch(api_key, self.fetch_auth_token)
 
         # Prepare headers with the token
         return self.auth_manager.prepare_auth_headers(api_key, custom_headers)
 
-    def fetch_auth_token(self, api_key: str) -> str:
+    def fetch_auth_token(self, api_key: str) -> AuthTokenResponse:
         """
         Fetch a new authentication token.
 

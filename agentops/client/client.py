@@ -48,9 +48,17 @@ class Client:
         # Prefetch JWT token if enabled
         if self.config.prefetch_jwt_token:
             self.api.v3.fetch_auth_token(self.config.api_key)
-
-        # Initialize TracingCore with the current configuration
-        TracingCore.initialize_from_config(self.config)
+            
+        # Get the project_id from HttpClient after token fetch
+        from agentops.client.http.http_client import HttpClient
+        project_id = HttpClient.get_project_id()
+        
+        # Initialize TracingCore with the current configuration and project_id
+        tracing_config = self.config.dict()
+        if project_id:
+            tracing_config['project_id'] = project_id
+        
+        TracingCore.initialize_from_config(tracing_config)
 
         # Instrument LLM calls if enabled
         if self.config.instrument_llm_calls:

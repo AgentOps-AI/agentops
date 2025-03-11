@@ -1,4 +1,4 @@
-from typing import Callable, Optional
+from typing import Callable, Dict, Optional, Union
 
 from requests.adapters import HTTPAdapter
 from urllib3.util import Retry
@@ -6,6 +6,7 @@ from urllib3.util import Retry
 from agentops.client.auth_manager import AuthManager
 from agentops.exceptions import AgentOpsApiJwtExpiredException, ApiServerException
 from agentops.logging import logger
+from agentops.client.api.types import AuthTokenResponse
 
 
 class BaseHTTPAdapter(HTTPAdapter):
@@ -46,7 +47,7 @@ class AuthenticatedHttpAdapter(BaseHTTPAdapter):
         self,
         auth_manager: AuthManager,
         api_key: str,
-        token_fetcher: Callable[[str], str],
+        token_fetcher: Callable[[str], Union[str, AuthTokenResponse]],
         pool_connections: int = 15,
         pool_maxsize: int = 256,
         max_retries: Optional[Retry] = None,
@@ -75,7 +76,7 @@ class AuthenticatedHttpAdapter(BaseHTTPAdapter):
     def add_headers(self, request, **kwargs):
         """Add authentication headers to the request"""
         # Get fresh auth headers from the auth manager
-        self.auth_manager.get_valid_token(self.api_key, self.token_fetcher)
+        self.auth_manager.maybe_fetch(self.api_key, self.token_fetcher)
         auth_headers = self.auth_manager.prepare_auth_headers(self.api_key)
 
         # Update request headers
@@ -101,7 +102,7 @@ class AuthenticatedHttpAdapter(BaseHTTPAdapter):
             try:
                 # Force token refresh
                 self.auth_manager.clear_token()
-                self.auth_manager.get_valid_token(self.api_key, self.token_fetcher)
+                self.auth_manager.maybe_fetch(self.api_key, self.token_fetcher)
 
                 # Update request with new token
                 request = self.add_headers(request, **kwargs)

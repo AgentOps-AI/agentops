@@ -1,17 +1,19 @@
 """
-AgentOps API client package.
+API client for the AgentOps API.
 
-This package provides clients for interacting with the AgentOps API.
+This module provides the client for the AgentOps API.
 """
 
 from typing import Dict, Optional, Type, TypeVar, cast
 
+from agentops.client.api.types import AuthTokenResponse
 from agentops.client.api.base import AuthenticatedApiClient, BaseApiClient
 from agentops.client.api.versions.v3 import V3Client
 
 # Define a type variable for client classes
 T = TypeVar("T", bound=AuthenticatedApiClient)
 
+__all__ = ["ApiClient", "AuthenticatedApiClient", "BaseApiClient", "AuthTokenResponse"]
 
 class ApiClient:
     """
