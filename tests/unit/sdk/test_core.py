@@ -7,7 +7,7 @@ from opentelemetry.trace import StatusCode
 
 from agentops.sdk.types import TracingConfig
 from agentops.sdk.core import TracingCore
-from agentops.sdk.spanned import SpannedBase
+from agentops.sdk.traced import TracedObject
 from agentops.semconv.core import CoreAttributes
 
 
@@ -139,8 +139,8 @@ def test_register_span_type(mock_factory, reset_tracing_core):
     # Set up
     core = TracingCore()
     
-    # Create a proper subclass of SpannedBase for the test
-    class TestSpanClass(SpannedBase):
+    # Create a proper subclass of TracedObject for the test
+    class TestSpanClass(TracedObject):
         pass
     
     # Test

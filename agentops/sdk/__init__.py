@@ -8,7 +8,7 @@ for different types of operations in AI agent workflows.
 # Import core components
 from agentops.sdk.core import TracingCore
 from agentops.sdk.traced import TracedObject
-from agentops.sdk.spanned import SpannedBase
+# from agentops.sdk.traced import TracedObject  # Merged into TracedObject
 from agentops.sdk.types import TracingConfig
 
 # Import span types
@@ -30,7 +30,7 @@ __all__ = [
     # Core components
     "TracingCore",
     "TracedObject",
-    "SpannedBase",
+    # "TracedObject",  # Merged into TracedObject
     "TracingConfig",
 
     # Span types

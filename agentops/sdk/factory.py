@@ -5,10 +5,10 @@ from typing import Any, Dict, Optional, Type, Union, TypeVar
 from opentelemetry import trace
 from opentelemetry.trace import Span
 
-from agentops.sdk.spanned import SpannedBase
+from agentops.sdk.traced import TracedObject
 
 # Type variable for span types
-T = TypeVar('T', bound=SpannedBase)
+T = TypeVar('T', bound=TracedObject)
 
 class SpanFactory:
     """
@@ -17,11 +17,11 @@ class SpanFactory:
     This class handles the creation of spans with the appropriate context and attributes.
     """
     
-    _span_types: Dict[str, Type[SpannedBase]] = {}
+    _span_types: Dict[str, Type[TracedObject]] = {}
     _initialized = False
     
     @classmethod
-    def register_span_type(cls, kind: str, span_class: Type[SpannedBase]) -> None:
+    def register_span_type(cls, kind: str, span_class: Type[TracedObject]) -> None:
         """
         Register a span type with the factory.
         
@@ -58,12 +58,12 @@ class SpanFactory:
         cls,
         kind: str,
         name: str,
-        parent: Optional[Union[SpannedBase, Span]] = None,
+        parent: Optional[Union[TracedObject, Span]] = None,
         attributes: Optional[Dict[str, Any]] = None,
         auto_start: bool = True,
         immediate_export: bool = False,
         **kwargs
-    ) -> SpannedBase:
+    ) -> TracedObject:
         """
         Create a span of the specified kind.
         
@@ -111,7 +111,7 @@ class SpanFactory:
         auto_start: bool = True,
         immediate_export: bool = True,  # Sessions are typically exported immediately
         **kwargs
-    ) -> SpannedBase:
+    ) -> TracedObject:
         """
         Create a session span.
         
@@ -139,12 +139,12 @@ class SpanFactory:
     def create_agent_span(
         cls,
         name: str,
-        parent: Optional[Union[SpannedBase, Span]] = None,
+        parent: Optional[Union[TracedObject, Span]] = None,
         attributes: Optional[Dict[str, Any]] = None,
         auto_start: bool = True,
         immediate_export: bool = True,  # Agents are typically exported immediately
         **kwargs
-    ) -> SpannedBase:
+    ) -> TracedObject:
         """
         Create an agent span.
         
@@ -173,12 +173,12 @@ class SpanFactory:
     def create_tool_span(
         cls,
         name: str,
-        parent: Optional[Union[SpannedBase, Span]] = None,
+        parent: Optional[Union[TracedObject, Span]] = None,
         attributes: Optional[Dict[str, Any]] = None,
         auto_start: bool = True,
         immediate_export: bool = False,  # Tools are typically short-lived
         **kwargs
-    ) -> SpannedBase:
+    ) -> TracedObject:
         """
         Create a tool span.
         
@@ -207,12 +207,12 @@ class SpanFactory:
     def create_llm_span(
         cls,
         name: str,
-        parent: Optional[Union[SpannedBase, Span]] = None,
+        parent: Optional[Union[TracedObject, Span]] = None,
         attributes: Optional[Dict[str, Any]] = None,
         auto_start: bool = True,
         immediate_export: bool = True,  # LLM calls are typically long-running
         **kwargs
-    ) -> SpannedBase:
+    ) -> TracedObject:
         """
         Create an LLM span.
         
@@ -242,12 +242,12 @@ class SpanFactory:
         cls,
         kind: str,
         name: str,
-        parent: Optional[Union[SpannedBase, Span]] = None,
+        parent: Optional[Union[TracedObject, Span]] = None,
         attributes: Optional[Dict[str, Any]] = None,
         auto_start: bool = True,
         immediate_export: bool = False,
         **kwargs
-    ) -> SpannedBase:
+    ) -> TracedObject:
         """
         Create a custom span.
         

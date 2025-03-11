@@ -54,7 +54,7 @@ def test_session_span_start():
     )
     span.set_state = MagicMock()
     super_start = MagicMock()
-    with patch("agentops.sdk.spans.session.SpannedBase.start", super_start):
+    with patch("agentops.sdk.spans.session.TracedObject.start", super_start):
         # Test
         result = span.start()
         
@@ -74,7 +74,7 @@ def test_session_span_end():
     )
     span.set_state = MagicMock()
     super_end = MagicMock()
-    with patch("agentops.sdk.spans.session.SpannedBase.end", super_end):
+    with patch("agentops.sdk.spans.session.TracedObject.end", super_end):
         # Test with default state
         result = span.end()
         

@@ -3,19 +3,19 @@ from unittest.mock import MagicMock, patch
 from uuid import UUID
 
 from agentops.sdk.factory import SpanFactory
-from agentops.sdk.spanned import SpannedBase
+from agentops.sdk.traced import TracedObject
 
 
 # Create concrete span classes for testing
-class TestSessionSpan(SpannedBase):
+class TestSessionSpan(TracedObject):
     """Test session span class."""
     pass
 
-class TestAgentSpan(SpannedBase):
+class TestAgentSpan(TracedObject):
     """Test agent span class."""
     pass
 
-class TestToolSpan(SpannedBase):
+class TestToolSpan(TracedObject):
     """Test tool span class."""
     pass
 
@@ -36,14 +36,14 @@ def setup_span_factory():
 def test_register_span_type(setup_span_factory):
     """Test registering a span type."""
     # Test registering a new span type
-    class CustomSpan(SpannedBase):
+    class CustomSpan(TracedObject):
         pass
     
     SpanFactory.register_span_type("custom", CustomSpan)
     assert SpanFactory._span_types["custom"] == CustomSpan
     
     # Test overriding an existing span type
-    class NewSessionSpan(SpannedBase):
+    class NewSessionSpan(TracedObject):
         pass
     
     SpanFactory.register_span_type("session", NewSessionSpan)

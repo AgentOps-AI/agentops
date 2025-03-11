@@ -12,12 +12,12 @@ from opentelemetry.trace import Span, Status, StatusCode
 from agentops.sdk.types import TracingConfig
 from agentops.sdk.core import TracingCore
 from agentops.logging import logger
-from agentops.sdk.spanned import SpannedBase
+from agentops.sdk.traced import TracedObject
 from agentops.helpers.serialization import AgentOpsJSONEncoder
 from agentops.semconv.core import CoreAttributes
 
 
-class SessionSpan(SpannedBase):
+class SessionSpan(TracedObject):
     """
     Represents a session span, which is the root span for all operations in a session.
     

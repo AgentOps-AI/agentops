@@ -14,7 +14,7 @@ from opentelemetry.trace import Span
 
 from agentops.logging import logger
 from agentops.sdk.processors import LiveSpanProcessor
-from agentops.sdk.spanned import SpannedBase
+from agentops.sdk.traced import TracedObject
 from agentops.sdk.factory import SpanFactory
 from agentops.sdk.types import TracingConfig
 from agentops.sdk.exporters import AuthenticatedOTLPExporter
@@ -213,12 +213,12 @@ class TracingCore:
         self,
         kind: str,
         name: str,
-        parent: Optional[Union[SpannedBase, Span]] = None,
+        parent: Optional[Union[TracedObject, Span]] = None,
         attributes: Optional[Dict[str, Any]] = None,
         auto_start: bool = True,
         immediate_export: bool = False,
         **kwargs
-    ) -> SpannedBase:
+    ) -> TracedObject:
         """
         Create a span of the specified kind.
 
@@ -252,7 +252,7 @@ class TracingCore:
             **kwargs
         )
 
-    def register_span_type(self, kind: str, span_class: Type[SpannedBase]) -> None:
+    def register_span_type(self, kind: str, span_class: Type[TracedObject]) -> None:
         """
         Register a span type with the factory.
 
