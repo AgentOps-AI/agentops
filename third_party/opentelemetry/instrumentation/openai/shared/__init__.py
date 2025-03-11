@@ -14,7 +14,7 @@ from opentelemetry.instrumentation.openai.shared.config import Config
 from opentelemetry.semconv._incubating.attributes.gen_ai_attributes import (
     GEN_AI_RESPONSE_ID,
 )
-from opentelemetry.semconv_ai import SpanAttributes
+from agentops.semconv import SpanAttributes
 from opentelemetry.instrumentation.openai.utils import (
     dont_throw,
     is_openai_v1,
@@ -128,20 +128,20 @@ def _set_request_attributes(span, kwargs):
     )
     _set_span_attribute(span, SpanAttributes.LLM_REQUEST_TOP_P, kwargs.get("top_p"))
     _set_span_attribute(
-        span, SpanAttributes.LLM_FREQUENCY_PENALTY, kwargs.get("frequency_penalty")
+        span, SpanAttributes.LLM_REQUEST_FREQUENCY_PENALTY, kwargs.get("frequency_penalty")
     )
     _set_span_attribute(
-        span, SpanAttributes.LLM_PRESENCE_PENALTY, kwargs.get("presence_penalty")
+        span, SpanAttributes.LLM_REQUEST_PRESENCE_PENALTY, kwargs.get("presence_penalty")
     )
     _set_span_attribute(span, SpanAttributes.LLM_USER, kwargs.get("user"))
-    _set_span_attribute(span, SpanAttributes.LLM_HEADERS, str(kwargs.get("headers")))
+    _set_span_attribute(span, SpanAttributes.LLM_REQUEST_HEADERS, str(kwargs.get("headers")))
     # The new OpenAI SDK removed the `headers` and create new field called `extra_headers`
     if kwargs.get("extra_headers") is not None:
         _set_span_attribute(
-            span, SpanAttributes.LLM_HEADERS, str(kwargs.get("extra_headers"))
+            span, SpanAttributes.LLM_REQUEST_HEADERS, str(kwargs.get("extra_headers"))
         )
     _set_span_attribute(
-        span, SpanAttributes.LLM_IS_STREAMING, kwargs.get("stream") or False
+        span, SpanAttributes.LLM_REQUEST_STREAMING, kwargs.get("stream") or False
     )
 
 
