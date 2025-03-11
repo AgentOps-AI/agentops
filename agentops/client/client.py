@@ -6,6 +6,7 @@ from agentops.exceptions import (AgentOpsClientNotInitializedException,
                                  NoApiKeyException, NoSessionException)
 from agentops.instrumentation import instrument_all
 from agentops.logging import logger
+from agentops.logging.config import configure_logging
 from agentops.sdk.core import TracingCore
 
 
@@ -42,6 +43,8 @@ class Client:
 
         if not self.config.api_key:
             raise NoApiKeyException
+
+        configure_logging(self.config)
 
         self.api = ApiClient(self.config.endpoint)
 
