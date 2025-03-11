@@ -132,7 +132,7 @@ class TracingCore:
                 # Type assertion to satisfy the linter
                 assert exporter is not None  # We already checked it's not None above
 
-                processor = LiveSpanProcessor(
+                processor = BatchSpanProcessor(
                     exporter,
                     max_export_batch_size=config.get('max_queue_size', max_queue_size),
                     schedule_delay_millis=config.get('max_wait_time', max_wait_time),
@@ -153,7 +153,7 @@ class TracingCore:
                     logger.warning("No API key provided, using standard non-authenticated exporter")
 
                 # Regular processor for normal spans and immediate export
-                processor = LiveSpanProcessor(
+                processor = BatchSpanProcessor(
                     exporter,
                     max_export_batch_size=config.get('max_queue_size', max_queue_size),
                     schedule_delay_millis=config.get('max_wait_time', max_wait_time),
