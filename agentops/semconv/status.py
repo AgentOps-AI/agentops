@@ -1,6 +1,6 @@
 """Status enumerations for spans."""
-
-class ToolStatus:
+from enum import Enum
+class ToolStatus(Enum):
     """Tool status values."""
     
     EXECUTING = "executing"
