@@ -1,6 +1,7 @@
 from typing import List, Optional, Union
 
 from agentops.client.api import ApiClient
+from agentops.client.api.types import AuthTokenResponse
 from agentops.config import Config
 from agentops.exceptions import (AgentOpsClientNotInitializedException,
                                  NoApiKeyException, NoSessionException)
@@ -47,17 +48,15 @@ class Client:
 
         # Prefetch JWT token if enabled
         if self.config.prefetch_jwt_token:
-            self.api.v3.fetch_auth_token(self.config.api_key)
-            
-        # Get the project_id from HttpClient after token fetch
-        from agentops.client.http.http_client import HttpClient
-        project_id = HttpClient.get_project_id()
-        
+            token_data: AuthTokenResponse = self.api.v3.fetch_auth_token(self.config.api_key)
+
         # Initialize TracingCore with the current configuration and project_id
         tracing_config = self.config.dict()
-        if project_id:
-            tracing_config['project_id'] = project_id
-        
+        assert tracing_config.get(
+            'project_id') is not None, f"Could not retrieve project_id from self.api.v3.fetch_auth_token - invalid response {token_data}"
+
+        tracing_config['project_id'] = token_data['project_id']
+        breakpoint()
         TracingCore.initialize_from_config(tracing_config)
 
         # Instrument LLM calls if enabled

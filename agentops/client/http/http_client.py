@@ -2,10 +2,12 @@ from typing import Callable, Dict, Optional
 
 import requests
 
-from agentops.exceptions import AgentOpsApiJwtExpiredException, ApiServerException
-from agentops.logging import logger
 from agentops.client.auth_manager import AuthManager
-from agentops.client.http.http_adapter import BaseHTTPAdapter, AuthenticatedHttpAdapter
+from agentops.client.http.http_adapter import (AuthenticatedHttpAdapter,
+                                               BaseHTTPAdapter)
+from agentops.exceptions import (AgentOpsApiJwtExpiredException,
+                                 ApiServerException)
+from agentops.logging import logger
 from agentops.semconv import ResourceAttributes
 
 
@@ -13,12 +15,7 @@ class HttpClient:
     """Base HTTP client with connection pooling and session management"""
 
     _session: Optional[requests.Session] = None
-    _project_id: Optional[str] = None
-
-    @classmethod
-    def get_project_id(cls) -> Optional[str]:
-        """Get the stored project ID"""
-        return cls._project_id
+    
 
     @classmethod
     def get_session(cls) -> requests.Session:
@@ -77,6 +74,8 @@ class HttpClient:
                         headers={"Content-Type": "application/json"},
                         timeout=30
                     )
+
+                    breakpoint()
                     
                     if response.status_code == 401 or response.status_code == 403:
                         error_msg = "Invalid API key or unauthorized access"
@@ -104,10 +103,6 @@ class HttpClient:
                         logger.error("Token not found in response")
                         raise AgentOpsApiJwtExpiredException("Token not found in response")
                     
-                    # Store project_id if present in the response
-                    if "project_id" in token_data:
-                        HttpClient._project_id = token_data["project_id"]
-                        logger.debug(f"Project ID stored: {HttpClient._project_id} (will be set as {ResourceAttributes.PROJECT_ID})")
                     
                     return token_data["token"]
                 except requests.RequestException as e:
