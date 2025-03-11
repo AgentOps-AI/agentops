@@ -11,5 +11,6 @@ class TracingConfig(TypedDict, total=False):
     exporter: Optional[SpanExporter]
     processor: Optional[SpanProcessor]
     exporter_endpoint: Optional[str]
+    api_key: Optional[str]  # API key for authentication with AgentOps services
     max_queue_size: int  # Required with a default value
     max_wait_time: int   # Required with a default value
