@@ -1,6 +1,7 @@
 import logging
 import os
-from typing import Optional
+import sys
+from typing import Dict, Optional, Union
 
 from .formatters import AgentOpsLogFileFormatter, AgentOpsLogFormatter
 
@@ -8,6 +9,13 @@ from .formatters import AgentOpsLogFileFormatter, AgentOpsLogFormatter
 logger = logging.getLogger("agentops")
 logger.propagate = False
 logger.setLevel(logging.CRITICAL)
+
+class IgnoreTracerProviderFilter(logging.Filter):
+    def filter(self, record):
+        return record.getMessage() != 'Overriding of current TracerProvider is not allowed'
+
+# Apply filter to suppress specific OpenTelemetry log messages
+logging.getLogger('opentelemetry.trace').addFilter(IgnoreTracerProviderFilter())
 
 def configure_logging(config=None):  # Remove type hint temporarily to avoid circular import
     """Configure the AgentOps logger with console and optional file handlers.
