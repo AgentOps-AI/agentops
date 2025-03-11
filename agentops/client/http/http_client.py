@@ -13,6 +13,12 @@ class HttpClient:
     """Base HTTP client with connection pooling and session management"""
 
     _session: Optional[requests.Session] = None
+    _project_id: Optional[str] = None
+
+    @classmethod
+    def get_project_id(cls) -> Optional[str]:
+        """Get the stored project ID"""
+        return cls._project_id
 
     @classmethod
     def get_session(cls) -> requests.Session:
@@ -97,6 +103,11 @@ class HttpClient:
                     if "token" not in token_data:
                         logger.error("Token not found in response")
                         raise AgentOpsApiJwtExpiredException("Token not found in response")
+                    
+                    # Store project_id if present in the response
+                    if "project_id" in token_data:
+                        HttpClient._project_id = token_data["project_id"]
+                        logger.debug(f"Project ID stored: {HttpClient._project_id}")
                     
                     return token_data["token"]
                 except requests.RequestException as e:
