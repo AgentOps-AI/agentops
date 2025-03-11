@@ -43,9 +43,9 @@
 
 
 
-<div style="justify-content: center">
-  <img src="docs/images/external/app_screenshots/dashboard-banner.png" alt="Dashboard Banner">
-</div>
+https://github.com/user-attachments/assets/dfb4fa8d-d8c4-4965-9ff6-5b8514c1c22f
+
+
 
 <br/>
 
@@ -177,6 +177,17 @@ record(ActionEvent("received_user_input"))
 ```
 
 ## Integrations 🦾
+
+### OpenAI Agents SDK 🖇️
+
+Built multi-agent systems with tools, handoffs, and guardails. AgentOps is a first-class integration with OpenAI Agents
+
+```bash
+pip install agents-sdk
+```
+
+- [AgentOps integration example](https://docs.agentops.ai/v1/integrations/agentssdk)
+- [Official CrewAI documentation](https://docs.crewai.com/how-to/AgentOps-Observability)
 
 ### CrewAI 🛶
 
