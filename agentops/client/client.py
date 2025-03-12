@@ -7,18 +7,8 @@ from agentops.exceptions import (AgentOpsClientNotInitializedException,
                                  NoApiKeyException, NoSessionException)
 from agentops.instrumentation import instrument_all
 from agentops.logging import logger
-from agentops.logging.config import configure_logging
+from agentops.logging.config import configure_logging, intercept_opentelemetry_logging
 from agentops.sdk.core import TracingCore
-
-
-def get_default_session():
-    """Get the default session"""
-    raise NotImplementedError
-
-
-def get_active_sessions():
-    """Get all active sessions"""
-    raise NotImplementedError
 
 
 class Client:
@@ -46,7 +36,9 @@ class Client:
         if not self.config.api_key:
             raise NoApiKeyException
 
+        # TODO we may need to initialize logging before importing OTEL to capture all
         configure_logging(self.config)
+        intercept_opentelemetry_logging()
 
         self.api = ApiClient(self.config.endpoint)
 
