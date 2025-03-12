@@ -331,8 +331,6 @@ class AgentsInstrumentor(BaseInstrumentor):
             tracer_provider,
         )
         
-        print(" I AM HERE agentops_agents_instrumentor.py")
-        # Initialize metrics
         global _agent_run_counter, _agent_turn_counter, _agent_execution_time_histogram, _agent_token_usage_histogram
         meter_provider = kwargs.get("meter_provider")
         if meter_provider:
