@@ -14,6 +14,7 @@ from agentops.semconv.core import CoreAttributes
 from agentops.logging import logger
 from agentops.sdk.core import TracingCore
 from agentops.sdk.converters import dict_to_span_attributes
+from agentops.helpers.serialization import AgentOpsJSONEncoder, safe_serialize
 
 
 # Helper functions for content management
@@ -150,13 +151,13 @@ def _record_operation_input(span: trace.Span, args: tuple, kwargs: Dict[str, Any
     try:
         if _should_trace_content():
             input_data = {"args": args, "kwargs": kwargs}
-            json_data = json.dumps(input_data)
+            json_data = safe_serialize(input_data)
 
             if _check_content_size(json_data):
                 span.set_attribute("agentops.operation.input", json_data)
             else:
                 logger.debug("Operation input exceeds size limit, not recording")
-    except (TypeError, ValueError) as err:
+    except Exception as err:
         logger.warning(f"Failed to serialize operation input: {err}")
 
 
@@ -164,13 +165,13 @@ def _record_operation_output(span: trace.Span, result: Any) -> None:
     """Record operation output value to span if content tracing is enabled"""
     try:
         if _should_trace_content():
-            json_data = json.dumps(result)
+            json_data = safe_serialize(result)
 
             if _check_content_size(json_data):
                 span.set_attribute("agentops.operation.output", json_data)
             else:
                 logger.debug("Operation output exceeds size limit, not recording")
-    except (TypeError, ValueError) as err:
+    except Exception as err:
         logger.warning(f"Failed to serialize operation output: {err}")
 
 
