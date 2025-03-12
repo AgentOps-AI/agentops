@@ -1,5 +1,7 @@
 """Span kinds for AgentOps."""
 from enum import Enum
+
+
 class SpanKind:
     """Defines the kinds of spans in AgentOps."""
     # Agent action kinds
@@ -13,6 +15,10 @@ class SpanKind:
     
     # Workflow kinds
     WORKFLOW_STEP = "workflow.step"    # Step in a workflow
+    SESSION = "session"
+    TASK = "task"
+    OPERATION = "operation"
+    AGENT = 'agent'
     
 
 class AgentOpsSpanKindValues(Enum):

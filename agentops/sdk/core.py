@@ -4,7 +4,7 @@ import atexit
 import threading
 from typing import Any, Dict, List, Optional, Set, Type, Union, cast
 
-from opentelemetry import context, metrics, trace, metrics
+from opentelemetry import context, metrics, trace
 from opentelemetry.exporter.otlp.proto.http.metric_exporter import \
     OTLPMetricExporter
 from opentelemetry.exporter.otlp.proto.http.trace_exporter import \
@@ -21,8 +21,6 @@ from opentelemetry.trace import Span
 
 from agentops.logging import logger
 from agentops.sdk.exporters import AuthenticatedOTLPExporter
-from agentops.sdk.factory import SpanFactory
-from agentops.sdk.traced import TracedObject
 from agentops.sdk.types import TracingConfig
 from agentops.semconv import ResourceAttributes
 from agentops.semconv.core import CoreAttributes
@@ -59,10 +57,6 @@ class TracingCore:
 
         # Register shutdown handler
         atexit.register(self.shutdown)
-
-        # Auto-register span types right when TracingCore is instantiated
-        from agentops.sdk.factory import SpanFactory
-        SpanFactory.auto_register_span_types()
 
     def initialize(
         self,
@@ -200,58 +194,48 @@ class TracingCore:
 
         return trace.get_tracer(name)
 
-    def create_span(
-        self,
-        kind: str,
-        name: str,
-        parent: Optional[Union[TracedObject, Span]] = None,
-        attributes: Optional[Dict[str, Any]] = None,
-        auto_start: bool = True,
-        immediate_export: bool = False,
-        **kwargs
-    ) -> TracedObject:
-        """
-        Create a span of the specified kind.
-
-        Args:
-            kind: Kind of span (e.g., "session", "agent", "tool")
-            name: Name of the span
-            parent: Optional parent span or spanned object
-            attributes: Optional attributes to set on the span
-            auto_start: Whether to automatically start the span
-            immediate_export: Whether to export the span immediately when started
-            **kwargs: Additional keyword arguments to pass to the span constructor
-
-        Returns:
-            A new span of the specified kind
-        """
-        if not self._initialized:
-            raise RuntimeError("Tracing core not initialized")
-
-        # Add immediate export flag to attributes if needed
-        if immediate_export:
-            attributes = attributes or {}
-            attributes[CoreAttributes.EXPORT_IMMEDIATELY] = True
-
-        return SpanFactory.create_span(
-            kind=kind,
-            name=name,
-            parent=parent,
-            attributes=attributes,
-            auto_start=auto_start,
-            immediate_export=immediate_export,
-            **kwargs
-        )
-
-    def register_span_type(self, kind: str, span_class: Type[TracedObject]) -> None:
-        """
-        Register a span type with the factory.
-
-        Args:
-            kind: Kind of span (e.g., "session", "agent", "tool")
-            span_class: Class to use for creating spans of this kind
-        """
-        SpanFactory.register_span_type(kind, span_class)
+    # def create_span(
+    #     self,
+    #     kind: str,
+    #     name: str,
+    #     parent: Optional[Union[TracedObject, Span]] = None,
+    #     attributes: Optional[Dict[str, Any]] = None,
+    #     auto_start: bool = True,
+    #     immediate_export: bool = False,
+    #     **kwargs
+    # ) -> TracedObject:
+    #     """
+    #     Create a span of the specified kind.
+    #
+    #     Args:
+    #         kind: Kind of span (e.g., "session", "agent", "tool")
+    #         name: Name of the span
+    #         parent: Optional parent span or spanned object
+    #         attributes: Optional attributes to set on the span
+    #         auto_start: Whether to automatically start the span
+    #         immediate_export: Whether to export the span immediately when started
+    #         **kwargs: Additional keyword arguments to pass to the span constructor
+    #
+    #     Returns:
+    #         A new span of the specified kind
+    #     """
+    #     if not self._initialized:
+    #         raise RuntimeError("Tracing core not initialized")
+    #
+    #     # Add immediate export flag to attributes if needed
+    #     if immediate_export:
+    #         attributes = attributes or {}
+    #         attributes[CoreAttributes.EXPORT_IMMEDIATELY] = True
+    #
+    #     return SpanFactory.create_span(
+    #         kind=kind,
+    #         name=name,
+    #         parent=parent,
+    #         attributes=attributes,
+    #         auto_start=auto_start,
+    #         immediate_export=immediate_export,
+    #         **kwargs
+    #     )
 
     @classmethod
     def initialize_from_config(cls, config, **kwargs):
