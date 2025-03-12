@@ -4,7 +4,7 @@ import atexit
 import threading
 from typing import Any, Dict, List, Optional, Set, Type, Union, cast
 
-from opentelemetry import context, metrics, trace, metrics
+from opentelemetry import context, metrics, trace
 from opentelemetry.exporter.otlp.proto.http.metric_exporter import \
     OTLPMetricExporter
 from opentelemetry.exporter.otlp.proto.http.trace_exporter import \
@@ -20,12 +20,7 @@ from opentelemetry.sdk.trace.export import (BatchSpanProcessor,
 from opentelemetry.trace import Span
 
 from agentops.logging import logger
-from agentops.sdk.traced import TracedObject
-from agentops.sdk.factory import SpanFactory
-from agentops.sdk.types import TracingConfig
 from agentops.sdk.exporters import AuthenticatedOTLPExporter
-from agentops.sdk.factory import SpanFactory
-from agentops.sdk.traced import TracedObject
 from agentops.sdk.types import TracingConfig
 from agentops.semconv import ResourceAttributes
 from agentops.semconv.core import CoreAttributes
