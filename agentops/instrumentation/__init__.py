@@ -91,7 +91,11 @@ available_instrumentors: list[InstrumentorLoader] = [
         class_name='OllamaInstrumentor', 
         provider_import_name='ollama', 
     ),
-    # TODO instrumentation for Agents SDK
+    InstrumentorLoader(
+        module_name='opentelemetry.instrumentation.agents', 
+        class_name='AgentsInstrumentor', 
+        provider_import_name='agents', 
+    ),
 ]
 
 

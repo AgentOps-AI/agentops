@@ -18,4 +18,5 @@ class WorkflowAttributes:
     WORKFLOW_STEP_OUTPUT = "workflow.step.output" # Output from the workflow step
     WORKFLOW_STEP_STATUS = "workflow.step.status" # Status of the workflow step
     WORKFLOW_STEP_ERROR = "workflow.step.error" # Error from the workflow step
+    WORKFLOW_STEP = "workflow.step"
 
