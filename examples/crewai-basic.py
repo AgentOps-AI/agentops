@@ -1,6 +1,3 @@
-# CrewAI example with full AgentOps integration
-# 
-# Run this example with: `uv run examples/crewai-basic.py`
 import agentops
 from crewai import Agent, Crew, Task
 from crewai.tools import tool
