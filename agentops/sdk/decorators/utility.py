@@ -33,7 +33,7 @@ def _should_trace_content() -> bool:
 # Legacy async decorators - Marked for deprecation
 
 def aentity_method(
-    span_kind: Optional[str] = SpanKind.WORKFLOW_TASK,
+    span_kind: Optional[str] = SpanKind.OPERATION,
     name: Optional[str] = None,
     version: Optional[int] = None,
 ):
@@ -55,7 +55,7 @@ def aentity_class(
     method_name: str,
     name: Optional[str] = None,
     version: Optional[int] = None,
-    span_kind: Optional[str] = SpanKind.WORKFLOW_TASK,
+    span_kind: Optional[str] = SpanKind.OPERATION,
 ):
     warnings.warn(
         "DeprecationWarning: The @aentity_class decorator is deprecated. "
@@ -187,7 +187,7 @@ def _finalize_span(span: trace.Span, token: Any) -> None:
 
 
 def instrument_operation(
-    span_kind: Optional[str] = SpanKind.WORKFLOW_TASK,
+    span_kind: Optional[str] = SpanKind.OPERATION,
     name: Optional[str] = None,
     version: Optional[int] = None,
 ):
@@ -204,7 +204,7 @@ def instrument_operation(
         is_async = _is_coroutine_or_generator(fn)
         operation_name = name or fn.__name__
         # Use default span_kind if None is provided
-        operation_type = span_kind or SpanKind.WORKFLOW_TASK
+        operation_type = span_kind or SpanKind.OPERATION
 
         if is_async:
             @wraps(fn)
@@ -275,7 +275,7 @@ def instrument_class(
     method_name: str,
     name: Optional[str] = None,
     version: Optional[int] = None,
-    span_kind: Optional[str] = SpanKind.WORKFLOW_TASK,
+    span_kind: Optional[str] = SpanKind.OPERATION,
 ):
     """
     Decorator to instrument a specific method on a class.

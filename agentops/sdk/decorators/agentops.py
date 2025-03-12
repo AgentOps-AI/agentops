@@ -168,7 +168,7 @@ agent.__doc__ = """
         Decorated function or class
 """
 
-operation = _create_decorator(SpanKind.WORKFLOW_TASK)
+operation = _create_decorator(SpanKind.OPERATION)
 operation.__doc__ = """
     Universal decorator for instrumenting functions or class methods as an operation.
     
@@ -191,7 +191,7 @@ operation.__doc__ = """
         @operation("method_name", name="custom_name")
         class MyClass: ...
     
-    By default, this uses the WORKFLOW_TASK span kind.
+    By default, this uses the OPERATION span kind.
     
     Args:
         method_name: When decorating a class, the name of the method to instrument
