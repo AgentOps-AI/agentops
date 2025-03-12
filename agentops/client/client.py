@@ -2,6 +2,7 @@ from typing import List, Optional, Union
 
 from agentops.client.api import ApiClient
 from agentops.config import Config
+from agentops.sdk import compat
 from agentops.exceptions import (AgentOpsClientNotInitializedException,
                                  NoApiKeyException, NoSessionException)
 from agentops.instrumentation import instrument_all
@@ -38,7 +39,7 @@ class Client:
         self._initialized = False
         self.config = Config()
 
-    def init(self, **kwargs):
+    def init(self, **kwargs) -> Optional[compat.session]:
         self.configure(**kwargs)
 
         if not self.config.api_key:
@@ -71,7 +72,7 @@ class Client:
         """Update client configuration"""
         self.config.configure(**kwargs)
 
-    def start_session(self, **kwargs):
+    def start_session(self, **kwargs) -> compat.session:
         """Start a new session for recording events
 
         Args:
@@ -89,7 +90,7 @@ class Client:
             else:
                 raise AgentOpsClientNotInitializedException
 
-        raise NotImplementedError('Session start is not yet implemented')
+        return compat.session
 
     @property
     def initialized(self) -> bool:

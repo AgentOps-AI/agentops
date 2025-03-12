@@ -2,6 +2,7 @@ from typing import List, Optional, Union
 
 from dotenv import load_dotenv
 
+from .sdk.compat import *
 from .client import Client
 
 load_dotenv()
@@ -138,23 +139,6 @@ def start_session(**kwargs):
         Optional[Session]: Returns Session if successful, None otherwise.
     """
     return _client.start_session(**kwargs)
-
-
-def end_session(
-    end_state: str,
-    end_state_reason: Optional[str] = None,
-    video: Optional[str] = None,
-    is_auto_end: Optional[bool] = False,
-):
-    """
-    End the current session with the AgentOps service.
-
-    Args:
-        end_state (str): The final state of the session. Options: Success, Fail, or Indeterminate.
-        end_state_reason (str, optional): The reason for ending the session.
-        video (str, optional): URL to a video recording of the session
-    """
-    raise NotImplementedError
 
 
 def record():
