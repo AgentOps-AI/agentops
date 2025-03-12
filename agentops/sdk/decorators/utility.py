@@ -131,7 +131,12 @@ def _make_span(
 
     # Get tracer and create span
     tracer = TracingCore.get_instance().get_tracer()
-    span = tracer.start_span(span_name)
+    
+    # Get current context to establish parent-child relationship
+    current_context = context_api.get_current()
+    
+    # Create span with current context to maintain parent-child relationship
+    span = tracer.start_span(span_name, context=current_context)
 
     # Set up context
     context = trace.set_span_in_context(span)
