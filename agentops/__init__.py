@@ -173,13 +173,6 @@ def set_tags(tags: List[str]):
     raise NotImplementedError
 
 
-# Mostly used for unit testing -
-# prevents unexpected sessions on new tests
-def end_all_sessions() -> None:
-    """End all active sessions"""
-    raise NotImplementedError
-
-
 # For backwards compatibility and testing
 def get_client() -> Client:
     """Get the singleton client instance"""
