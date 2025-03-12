@@ -11,7 +11,6 @@ class SpanKind:
     
     # LLM interaction kinds
     LLM_CALL = "llm.call"              # LLM API call
-    LLM_STREAM = "llm.stream"          # Streaming LLM response
     
     # Workflow kinds
     WORKFLOW_STEP = "workflow.step"    # Step in a workflow
@@ -19,6 +18,10 @@ class SpanKind:
     TASK = "task"
     OPERATION = "operation"
     AGENT = 'agent'
+    TOOL = 'tool'
+    LLM = 'llm'
+    TEAM = 'team'
+    UNKNOWN = 'unknown'
     
 
 class AgentOpsSpanKindValues(Enum):
