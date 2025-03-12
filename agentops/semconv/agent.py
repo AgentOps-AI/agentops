@@ -11,3 +11,11 @@ class AgentAttributes:
     # Capabilities
     AGENT_TOOLS = "agent.tools"            # Tools available to the agent
     AGENT_MODELS = "agent.models"          # Models available to the agent
+
+    TOOLS = "tools"
+    HANDOFFS = "handoffs"
+    FROM_AGENT = "from_agent"
+    TO_AGENT = "to_agent"
+    
+    AGENT_REASONING = "agent.reasoning"
+

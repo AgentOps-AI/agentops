@@ -1,0 +1,865 @@
+"""
+AgentOps Instrumentor for OpenAI Agents SDK
+
+This module provides automatic instrumentation for the OpenAI Agents SDK when AgentOps is imported.
+It combines a custom processor approach with monkey patching to capture all relevant spans and metrics.
+"""
+
+import asyncio
+import functools
+import inspect
+import logging
+import time
+import json
+from typing import Any, Collection, Dict, List, Optional, Union
+
+# OpenTelemetry imports
+from opentelemetry.instrumentation.instrumentor import BaseInstrumentor
+from opentelemetry.trace import get_tracer, SpanKind, Status, StatusCode
+from opentelemetry.metrics import get_meter
+
+# AgentOps imports
+from agentops.semconv import (
+    SpanKind,
+    CoreAttributes,
+    WorkflowAttributes,
+    InstrumentationAttributes,
+    AgentAttributes,
+    SpanAttributes,
+    Meters,
+)
+from agentops.session.tracer import get_tracer_provider
+
+# Agents SDK imports
+from agents.tracing.processor_interface import TracingProcessor as AgentsTracingProcessor
+from agents.tracing.spans import Span as AgentsSpan
+from agents.tracing.traces import Trace as AgentsTrace
+from agents import add_trace_processor
+from agents.run import RunConfig
+from agents.lifecycle import RunHooks
+
+# Version
+__version__ = "0.1.0"
+
+logger = logging.getLogger(__name__)
+
+# Global metrics objects
+_agent_run_counter = None
+_agent_turn_counter = None
+_agent_execution_time_histogram = None
+_agent_token_usage_histogram = None
+
+
+def safe_execute(func):
+    """Decorator to safely execute a function and log any exceptions."""
+    @functools.wraps(func)
+    def wrapper(*args, **kwargs):
+        try:
+            return func(*args, **kwargs)
+        except Exception as e:
+            logger.exception(f"Error in {func.__name__}: {e}")
+            return None
+    return wrapper
+
+
+@safe_execute
+def get_model_info(agent: Any, run_config: Any = None) -> Dict[str, Any]:
+    """Extract model information from agent and run_config."""
+    logger.info(f"[DEBUG] get_model_info called with agent: {agent}, run_config: {run_config}")
+    
+    result = {"model_name": "unknown"}
+    
+    # First check run_config.model (highest priority)
+    if run_config and hasattr(run_config, "model") and run_config.model:
+        if isinstance(run_config.model, str):
+            result["model_name"] = run_config.model
+            logger.info(f"[DEBUG] Found model name from run_config.model (string): {result['model_name']}")
+        elif hasattr(run_config.model, "model") and run_config.model.model:
+            # For Model objects that have a model attribute
+            result["model_name"] = run_config.model.model
+            logger.info(f"[DEBUG] Found model name from run_config.model.model: {result['model_name']}")
+    
+    # Then check agent.model if we still have unknown
+    if result["model_name"] == "unknown" and hasattr(agent, "model") and agent.model:
+        if isinstance(agent.model, str):
+            result["model_name"] = agent.model
+            logger.info(f"[DEBUG] Found model name from agent.model (string): {result['model_name']}")
+        elif hasattr(agent.model, "model") and agent.model.model:
+            # For Model objects that have a model attribute
+            result["model_name"] = agent.model.model
+            logger.info(f"[DEBUG] Found model name from agent.model.model: {result['model_name']}")
+    
+    # Check for default model from OpenAI provider
+    if result["model_name"] == "unknown":
+        # Try to import the default model from the SDK
+        try:
+            from agents.models.openai_provider import DEFAULT_MODEL
+            result["model_name"] = DEFAULT_MODEL
+            logger.info(f"[DEBUG] Using default model from OpenAI provider: {result['model_name']}")
+        except ImportError:
+            logger.info("[DEBUG] Could not import DEFAULT_MODEL from agents.models.openai_provider")
+    
+    # Extract model settings from agent
+    if hasattr(agent, "model_settings") and agent.model_settings:
+        model_settings = agent.model_settings
+        logger.info(f"[DEBUG] Found agent.model_settings: {model_settings}")
+        
+        # Extract model parameters
+        for param in ["temperature", "top_p", "frequency_penalty", "presence_penalty"]:
+            if hasattr(model_settings, param) and getattr(model_settings, param) is not None:
+                result[param] = getattr(model_settings, param)
+                logger.info(f"[DEBUG] Found model parameter {param}: {result[param]}")
+    
+    # Override with run_config.model_settings if available
+    if run_config and hasattr(run_config, "model_settings") and run_config.model_settings:
+        model_settings = run_config.model_settings
+        logger.info(f"[DEBUG] Found run_config.model_settings: {model_settings}")
+        
+        # Extract model parameters
+        for param in ["temperature", "top_p", "frequency_penalty", "presence_penalty"]:
+            if hasattr(model_settings, param) and getattr(model_settings, param) is not None:
+                result[param] = getattr(model_settings, param)
+                logger.info(f"[DEBUG] Found model parameter {param} in run_config: {result[param]}")
+    
+    logger.info(f"[DEBUG] Final model info: {result}")
+    return result
+
+
+class AgentsDetailedExporter:
+    """
+    A detailed exporter for Agents SDK traces and spans that forwards them to AgentOps.
+    """
+    
+    def export(self, items: list[Union[AgentsTrace, AgentsSpan[Any]]]) -> None:
+        """Export Agents SDK traces and spans to AgentOps."""
+        for item in items:
+            if isinstance(item, AgentsTrace):
+                self._export_trace(item)
+            else:
+                self._export_span(item)
+    
+    def _export_trace(self, trace: AgentsTrace) -> None:
+        """Export an Agents SDK trace to AgentOps."""
+        # Get the current tracer
+        tracer = get_tracer("agents-sdk", __version__, get_tracer_provider())
+        
+        # Create a new span for the trace
+        with tracer.start_as_current_span(
+            name=f"agents.trace.{trace.name}",
+            kind=SpanKind.INTERNAL,
+            attributes={
+                WorkflowAttributes.WORKFLOW_NAME: trace.name,
+                CoreAttributes.TRACE_ID: trace.trace_id,
+                InstrumentationAttributes.LIBRARY_NAME: "agents-sdk",
+                InstrumentationAttributes.LIBRARY_VERSION: __version__,
+                WorkflowAttributes.WORKFLOW_STEP_TYPE: "trace",
+            }
+        ) as span:
+            # Add any additional attributes from the trace
+            if hasattr(trace, "group_id") and trace.group_id:
+                span.set_attribute(CoreAttributes.GROUP_ID, trace.group_id)
+    
+    def _export_span(self, span: AgentsSpan[Any]) -> None:
+        """Export an Agents SDK span to AgentOps."""
+        # Get the current tracer
+        tracer = get_tracer("agents-sdk", __version__, get_tracer_provider())
+        
+        # Determine span name and kind based on span data type
+        span_data = span.span_data
+        span_type = span_data.__class__.__name__.replace('SpanData', '')
+        
+        # Map span types to appropriate attributes
+        attributes = {
+            CoreAttributes.TRACE_ID: span.trace_id,
+            CoreAttributes.SPAN_ID: span.span_id,
+            InstrumentationAttributes.LIBRARY_NAME: "agents-sdk",
+            InstrumentationAttributes.LIBRARY_VERSION: __version__,
+        }
+        
+        # Add parent ID if available
+        if span.parent_id:
+            attributes[CoreAttributes.PARENT_ID] = span.parent_id
+        
+        # Add span-specific attributes
+        if hasattr(span_data, 'name'):
+            attributes[AgentAttributes.AGENT_NAME] = span_data.name
+        
+        if hasattr(span_data, 'input') and span_data.input:
+            attributes[SpanAttributes.LLM_PROMPTS] = str(span_data.input)[:1000]  # Truncate long inputs
+        
+        if hasattr(span_data, 'output') and span_data.output:
+            attributes[SpanAttributes.LLM_COMPLETIONS] = str(span_data.output)[:1000]  # Truncate long outputs
+        
+        # Extract model information - check for GenerationSpanData specifically
+        if span_type == "Generation" and hasattr(span_data, 'model') and span_data.model:
+            attributes[SpanAttributes.LLM_REQUEST_MODEL] = span_data.model
+            attributes["gen_ai.request.model"] = span_data.model  # Standard OpenTelemetry attribute
+            attributes["gen_ai.system"] = "openai"  # Standard OpenTelemetry attribute
+            logger.info(f"[DEBUG] Found model in GenerationSpanData: {span_data.model}")
+            
+            # Add model config if available
+            if hasattr(span_data, 'model_config') and span_data.model_config:
+                for key, value in span_data.model_config.items():
+                    attributes[f"agent.model.{key}"] = value
+                    logger.info(f"[DEBUG] Added model config parameter {key}: {value}")
+        
+        # Record token usage metrics if available
+        if hasattr(span_data, 'usage') and span_data.usage and isinstance(span_data.usage, dict):
+            # Record token usage metrics if available
+            if _agent_token_usage_histogram:
+                if 'prompt_tokens' in span_data.usage:
+                    _agent_token_usage_histogram.record(
+                        span_data.usage['prompt_tokens'],
+                        {
+                            "token_type": "input", 
+                            "model": attributes.get(SpanAttributes.LLM_REQUEST_MODEL, "unknown"),
+                            "gen_ai.request.model": attributes.get(SpanAttributes.LLM_REQUEST_MODEL, "unknown"),
+                            "gen_ai.system": "openai"
+                        }
+                    )
+                    attributes[SpanAttributes.LLM_USAGE_PROMPT_TOKENS] = span_data.usage['prompt_tokens']
+                
+                if 'completion_tokens' in span_data.usage:
+                    _agent_token_usage_histogram.record(
+                        span_data.usage['completion_tokens'],
+                        {
+                            "token_type": "output", 
+                            "model": attributes.get(SpanAttributes.LLM_REQUEST_MODEL, "unknown"),
+                            "gen_ai.request.model": attributes.get(SpanAttributes.LLM_REQUEST_MODEL, "unknown"),
+                            "gen_ai.system": "openai"
+                        }
+                    )
+                    attributes[SpanAttributes.LLM_USAGE_COMPLETION_TOKENS] = span_data.usage['completion_tokens']
+                
+                if 'total_tokens' in span_data.usage:
+                    attributes[SpanAttributes.LLM_USAGE_TOTAL_TOKENS] = span_data.usage['total_tokens']
+        
+        if hasattr(span_data, 'from_agent') and span_data.from_agent:
+            attributes[AgentAttributes.FROM_AGENT] = span_data.from_agent
+        
+        if hasattr(span_data, 'to_agent') and span_data.to_agent:
+            attributes[AgentAttributes.TO_AGENT] = span_data.to_agent
+        
+        if hasattr(span_data, 'tools') and span_data.tools:
+            attributes[AgentAttributes.TOOLS] = ",".join(span_data.tools)
+        
+        if hasattr(span_data, 'handoffs') and span_data.handoffs:
+            attributes[AgentAttributes.HANDOFFS] = ",".join(span_data.handoffs)
+        
+        # Create a span with the appropriate name and attributes
+        span_name = f"agents.{span_type.lower()}"
+        
+        # Determine span kind based on span type
+        span_kind = SpanKind.INTERNAL
+        if span_type == "Agent":
+            span_kind = SpanKind.CONSUMER
+        elif span_type == "Function":
+            span_kind = SpanKind.CLIENT
+        elif span_type == "Generation":
+            span_kind = SpanKind.CLIENT
+        
+        # Create the span
+        with tracer.start_as_current_span(
+            name=span_name,
+            kind=span_kind,
+            attributes=attributes
+        ) as otel_span:
+            # Add error information if available
+            if hasattr(span, 'error') and span.error:
+                otel_span.set_status(Status(StatusCode.ERROR))
+                otel_span.record_exception(
+                    exception=Exception(span.error.get('message', 'Unknown error')),
+                    attributes={"error.data": json.dumps(span.error.get('data', {}))}
+                )
+
+
+class AgentsDetailedProcessor(AgentsTracingProcessor):
+    """
+    A processor for Agents SDK traces and spans that forwards them to AgentOps.
+    """
+    
+    def __init__(self):
+        self.exporter = AgentsDetailedExporter()
+    
+    def on_trace_start(self, trace: AgentsTrace) -> None:
+        self.exporter.export([trace])
+    
+    def on_trace_end(self, trace: AgentsTrace) -> None:
+        self.exporter.export([trace])
+    
+    def on_span_start(self, span: AgentsSpan[Any]) -> None:
+        self.exporter.export([span])
+    
+    def on_span_end(self, span: AgentsSpan[Any]) -> None:
+        """Process a span when it ends."""
+        # Log the span type for debugging
+        span_type = span.span_data.__class__.__name__.replace('SpanData', '')
+        logger.info(f"[DEBUG] Processing span end: {span_type}")
+        
+        # For Generation spans, log model information
+        if span_type == "Generation":
+            if hasattr(span.span_data, 'model') and span.span_data.model:
+                logger.info(f"[DEBUG] Generation span model: {span.span_data.model}")
+            if hasattr(span.span_data, 'usage') and span.span_data.usage:
+                logger.info(f"[DEBUG] Generation span usage: {span.span_data.usage}")
+        
+        self.exporter.export([span])
+    
+    def shutdown(self) -> None:
+        pass
+    
+    def force_flush(self):
+        pass
+
+
+class AgentsInstrumentor(BaseInstrumentor):
+    """An instrumentor for OpenAI Agents SDK."""
+    
+    def instrumentation_dependencies(self) -> Collection[str]:
+        return ["openai-agents >= 0.0.1"]
+    
+    def _instrument(self, **kwargs):
+        """Instrument the Agents SDK."""
+        tracer_provider = kwargs.get("tracer_provider")
+        tracer = get_tracer(
+            __name__,
+            __version__,
+            tracer_provider,
+        )
+        
+        # Initialize metrics
+        global _agent_run_counter, _agent_turn_counter, _agent_execution_time_histogram, _agent_token_usage_histogram
+        meter_provider = kwargs.get("meter_provider")
+        if meter_provider:
+            meter = get_meter(__name__, __version__, meter_provider)
+            
+            _agent_run_counter = meter.create_counter(
+                name="agents.runs",
+                unit="run",
+                description="Counts agent runs"
+            )
+            
+            _agent_turn_counter = meter.create_counter(
+                name="agents.turns",
+                unit="turn",
+                description="Counts agent turns"
+            )
+            
+            _agent_execution_time_histogram = meter.create_histogram(
+                name=Meters.LLM_OPERATION_DURATION,
+                unit="s",
+                description="GenAI operation duration"
+            )
+            
+            _agent_token_usage_histogram = meter.create_histogram(
+                name=Meters.LLM_TOKEN_USAGE,
+                unit="token",
+                description="Measures token usage in agent runs"
+            )
+        
+        # Try to import the default model from the SDK for reference
+        try:
+            from agents.models.openai_provider import DEFAULT_MODEL
+            logger.info(f"[DEBUG] Default model from Agents SDK: {DEFAULT_MODEL}")
+        except ImportError:
+            logger.info("[DEBUG] Could not import DEFAULT_MODEL from agents.models.openai_provider")
+        
+        # Add the custom processor to the Agents SDK
+        try:
+            from agents import add_trace_processor
+            processor = AgentsDetailedProcessor()
+            add_trace_processor(processor)
+            logger.info(f"[DEBUG] Added AgentsDetailedProcessor to Agents SDK: {processor}")
+        except Exception as e:
+            logger.error(f"Failed to add AgentsDetailedProcessor: {e}")
+        
+        # Monkey patch the Runner class
+        try:
+            self._patch_runner_class()
+            logger.info("Monkey patched Runner class")
+        except Exception as e:
+            logger.error(f"Failed to monkey patch Runner class: {e}")
+    
+    def _patch_runner_class(self):
+        """Monkey patch the Runner class to capture additional information."""
+        from agents.run import Runner
+        
+        # Store original methods
+        original_methods = {
+            "run": Runner.run,
+            "run_sync": Runner.run_sync,
+            "run_streamed": Runner.run_streamed if hasattr(Runner, "run_streamed") else None
+        }
+        
+        # Filter out None values
+        original_methods = {k: v for k, v in original_methods.items() if v is not None}
+        
+        # Create instrumented versions of each method
+        for method_name, original_method in original_methods.items():
+            is_async = method_name in ["run", "run_streamed"]
+            
+            if is_async:
+                @functools.wraps(original_method)
+                async def instrumented_method(cls, starting_agent, input, context=None, max_turns=10, hooks=None, run_config=None, _method_name=method_name, _original=original_method):
+                    start_time = time.time()
+                    
+                    # Get the current tracer
+                    tracer = get_tracer(__name__, __version__, get_tracer_provider())
+                    
+                    # Extract model information from agent and run_config
+                    model_info = get_model_info(starting_agent, run_config)
+                    model_name = model_info.get("model_name", "unknown")
+                    logger.info(f"[DEBUG] Extracted model name: {model_name}")
+                    
+                    # Record agent run counter
+                    if _agent_run_counter:
+                        _agent_run_counter.add(
+                            1,
+                            {
+                                "agent_name": starting_agent.name,
+                                "method": _method_name,
+                                "stream": "true" if _method_name == "run_streamed" else "false",
+                                "model": model_name
+                            }
+                        )
+                    
+                    is_streaming = _method_name == "run_streamed"
+                    
+                    # Create span attributes
+                    attributes = {
+                        "span.kind": SpanKind.WORKFLOW_STEP,
+                        "agent.name": starting_agent.name,
+                        WorkflowAttributes.WORKFLOW_INPUT: str(input)[:1000],
+                        WorkflowAttributes.MAX_TURNS: max_turns,
+                        "service.name": "agentops.agents",
+                        WorkflowAttributes.WORKFLOW_TYPE: f"agents.{_method_name}",
+                        SpanAttributes.LLM_REQUEST_MODEL: model_name,
+                        "gen_ai.request.model": model_name,  # Standard OpenTelemetry attribute
+                        "gen_ai.system": "openai",  # Standard OpenTelemetry attribute
+                        "stream": is_streaming
+                    }
+                    
+                    # Add model parameters from model_info
+                    for param, value in model_info.items():
+                        if param != "model_name":
+                            attributes[f"agent.model.{param}"] = value
+                    
+                    # Create a default RunConfig if None is provided
+                    if run_config is None:
+                        run_config = RunConfig(workflow_name=f"Agent {starting_agent.name}")
+                    
+                    if hasattr(run_config, "workflow_name"):
+                        attributes[WorkflowAttributes.WORKFLOW_NAME] = run_config.workflow_name
+                    
+                    # Create default hooks if None is provided
+                    if hooks is None:
+                        hooks = RunHooks()
+                    
+                    # Start a span for the run
+                    with tracer.start_as_current_span(
+                        name=f"agents.{_method_name}.{starting_agent.name}",
+                        kind=SpanKind.CLIENT,
+                        attributes=attributes
+                    ) as span:
+                        # Add agent attributes
+                        if hasattr(starting_agent, "instructions"):
+                            # Determine instruction type
+                            instruction_type = "unknown"
+                            if isinstance(starting_agent.instructions, str):
+                                instruction_type = "string"
+                                span.set_attribute("agent.instructions", starting_agent.instructions[:1000])
+                            elif callable(starting_agent.instructions):
+                                instruction_type = "function"
+                                # Store the function name or representation
+                                func_name = getattr(starting_agent.instructions, "__name__", str(starting_agent.instructions))
+                                span.set_attribute("agent.instruction_function", func_name)
+                            else:
+                                span.set_attribute("agent.instructions", str(starting_agent.instructions)[:1000])
+                            
+                            span.set_attribute("agent.instruction_type", instruction_type)
+                        
+                        # Add agent tools if available
+                        if hasattr(starting_agent, "tools") and starting_agent.tools:
+                            tool_names = [tool.name for tool in starting_agent.tools if hasattr(tool, "name")]
+                            if tool_names:
+                                span.set_attribute(AgentAttributes.AGENT_TOOLS, str(tool_names))
+                        
+                        # Add agent model settings if available
+                        if hasattr(starting_agent, "model_settings") and starting_agent.model_settings:
+                            # Add model settings directly
+                            if hasattr(starting_agent.model_settings, "temperature") and starting_agent.model_settings.temperature is not None:
+                                span.set_attribute(SpanAttributes.LLM_REQUEST_TEMPERATURE, starting_agent.model_settings.temperature)
+                            
+                            if hasattr(starting_agent.model_settings, "top_p") and starting_agent.model_settings.top_p is not None:
+                                span.set_attribute(SpanAttributes.LLM_REQUEST_TOP_P, starting_agent.model_settings.top_p)
+                            
+                            if hasattr(starting_agent.model_settings, "frequency_penalty") and starting_agent.model_settings.frequency_penalty is not None:
+                                span.set_attribute(SpanAttributes.LLM_REQUEST_FREQUENCY_PENALTY, starting_agent.model_settings.frequency_penalty)
+                            
+                            if hasattr(starting_agent.model_settings, "presence_penalty") and starting_agent.model_settings.presence_penalty is not None:
+                                span.set_attribute(SpanAttributes.LLM_REQUEST_PRESENCE_PENALTY, starting_agent.model_settings.presence_penalty)
+                        
+                        try:
+                            # Execute the original method with keyword arguments
+                            result = await _original(starting_agent, input, context=context, max_turns=max_turns, hooks=hooks, run_config=run_config)
+                            
+                            # Add result attributes to the span
+                            if hasattr(result, "final_output"):
+                                span.set_attribute(WorkflowAttributes.FINAL_OUTPUT, str(result.final_output)[:1000])
+                            
+                            # Extract model and response information
+                            response_id = None
+                            
+                            # Process raw responses
+                            if hasattr(result, "raw_responses") and result.raw_responses:
+                                logger.info(f"[DEBUG] Found raw_responses: {len(result.raw_responses)}")
+                                total_input_tokens = 0
+                                total_output_tokens = 0
+                                total_tokens = 0
+                                
+                                for i, response in enumerate(result.raw_responses):
+                                    logger.info(f"[DEBUG] Processing raw_response {i}: {type(response).__name__}")
+                                    
+                                    # Try to extract model directly
+                                    if hasattr(response, "model"):
+                                        model_name = response.model
+                                        logger.info(f"[DEBUG] Found model in raw_response: {model_name}")
+                                        span.set_attribute(SpanAttributes.LLM_REQUEST_MODEL, model_name)
+                                    
+                                    # Extract response ID if available
+                                    if hasattr(response, "referenceable_id") and response.referenceable_id:
+                                        response_id = response.referenceable_id
+                                        logger.info(f"[DEBUG] Found response_id: {response_id}")
+                                        span.set_attribute(f"gen_ai.response.id.{i}", response_id)
+                                    
+                                    # Extract usage information
+                                    if hasattr(response, "usage"):
+                                        usage = response.usage
+                                        logger.info(f"[DEBUG] Found usage: {usage}")
+                                        
+                                        # Add token usage
+                                        if hasattr(usage, "prompt_tokens") or hasattr(usage, "input_tokens"):
+                                            input_tokens = getattr(usage, "prompt_tokens", getattr(usage, "input_tokens", 0))
+                                            span.set_attribute(f"{SpanAttributes.LLM_USAGE_PROMPT_TOKENS}.{i}", input_tokens)
+                                            total_input_tokens += input_tokens
+                                            
+                                            if _agent_token_usage_histogram:
+                                                _agent_token_usage_histogram.record(
+                                                    input_tokens,
+                                                    {
+                                                        "token_type": "input", 
+                                                        "model": model_name,
+                                                        "gen_ai.request.model": model_name,
+                                                        "gen_ai.system": "openai"
+                                                    }
+                                                )
+                                        
+                                        if hasattr(usage, "completion_tokens") or hasattr(usage, "output_tokens"):
+                                            output_tokens = getattr(usage, "completion_tokens", getattr(usage, "output_tokens", 0))
+                                            span.set_attribute(f"{SpanAttributes.LLM_USAGE_COMPLETION_TOKENS}.{i}", output_tokens)
+                                            total_output_tokens += output_tokens
+                                            
+                                            if _agent_token_usage_histogram:
+                                                _agent_token_usage_histogram.record(
+                                                    output_tokens,
+                                                    {
+                                                        "token_type": "output", 
+                                                        "model": model_name,
+                                                        "gen_ai.request.model": model_name,
+                                                        "gen_ai.system": "openai"
+                                                    }
+                                                )
+                                        
+                                        if hasattr(usage, "total_tokens"):
+                                            span.set_attribute(f"{SpanAttributes.LLM_USAGE_TOTAL_TOKENS}.{i}", usage.total_tokens)
+                                            total_tokens += usage.total_tokens
+                                
+                                # Set total token counts
+                                if total_input_tokens > 0:
+                                    span.set_attribute(SpanAttributes.LLM_USAGE_PROMPT_TOKENS, total_input_tokens)
+                                
+                                if total_output_tokens > 0:
+                                    span.set_attribute(SpanAttributes.LLM_USAGE_COMPLETION_TOKENS, total_output_tokens)
+                                
+                                if total_tokens > 0:
+                                    span.set_attribute(SpanAttributes.LLM_USAGE_TOTAL_TOKENS, total_tokens)
+                            
+                            # Record execution time
+                            execution_time = (time.time() - start_time)  # In seconds
+                            if _agent_execution_time_histogram:
+                                # Create shared attributes following OpenAI conventions
+                                shared_attributes = {
+                                    "gen_ai.system": "openai",
+                                    "gen_ai.response.model": model_name,
+                                    "gen_ai.request.model": model_name,  # Standard OpenTelemetry attribute
+                                    "gen_ai.operation.name": "agent_run",
+                                    "agent_name": starting_agent.name,
+                                    "stream": "true" if is_streaming else "false"
+                                }
+                                
+                                # Add response ID if available
+                                if response_id:
+                                    shared_attributes["gen_ai.response.id"] = response_id
+                                
+                                logger.info(f"[DEBUG] Final metrics attributes: {shared_attributes}")
+                                
+                                _agent_execution_time_histogram.record(
+                                    execution_time,
+                                    attributes=shared_attributes
+                                )
+                            
+                            # Add instrumentation metadata
+                            span.set_attribute(InstrumentationAttributes.NAME, "agentops.agents")
+                            span.set_attribute(InstrumentationAttributes.VERSION, __version__)
+                            
+                            return result
+                        except Exception as e:
+                            # Record the error
+                            span.set_status(Status(StatusCode.ERROR))
+                            span.record_exception(e)
+                            span.set_attribute(CoreAttributes.ERROR_TYPE, type(e).__name__)
+                            span.set_attribute(CoreAttributes.ERROR_MESSAGE, str(e))
+                            raise
+                
+                setattr(Runner, method_name, classmethod(instrumented_method))
+            else:
+                @functools.wraps(original_method)
+                def instrumented_method(cls, starting_agent, input, context=None, max_turns=10, hooks=None, run_config=None, _method_name=method_name, _original=original_method):
+                    start_time = time.time()
+                    
+                    # Get the current tracer
+                    tracer = get_tracer(__name__, __version__, get_tracer_provider())
+                    
+                    # Extract model information from agent and run_config
+                    model_info = get_model_info(starting_agent, run_config)
+                    model_name = model_info.get("model_name", "unknown")
+                    logger.info(f"[DEBUG] Extracted model name: {model_name}")
+                    
+                    # Record agent run counter
+                    if _agent_run_counter:
+                        _agent_run_counter.add(
+                            1,
+                            {
+                                "agent_name": starting_agent.name,
+                                "method": _method_name,
+                                "stream": "false",
+                                "model": model_name
+                            }
+                        )
+                    
+                    # Create span attributes
+                    attributes = {
+                        "span.kind": SpanKind.WORKFLOW_STEP,
+                        "agent.name": starting_agent.name,
+                        WorkflowAttributes.WORKFLOW_INPUT: str(input)[:1000],
+                        WorkflowAttributes.MAX_TURNS: max_turns,
+                        "service.name": "agentops.agents",
+                        WorkflowAttributes.WORKFLOW_TYPE: f"agents.{_method_name}",
+                        SpanAttributes.LLM_REQUEST_MODEL: model_name,
+                        "gen_ai.request.model": model_name,  # Standard OpenTelemetry attribute
+                        "gen_ai.system": "openai",  # Standard OpenTelemetry attribute
+                        "stream": False
+                    }
+                    
+                    # Add model parameters from model_info
+                    for param, value in model_info.items():
+                        if param != "model_name":
+                            attributes[f"agent.model.{param}"] = value
+                    
+                    # Create a default RunConfig if None is provided
+                    if run_config is None:
+                        run_config = RunConfig(workflow_name=f"Agent {starting_agent.name}")
+                    
+                    if hasattr(run_config, "workflow_name"):
+                        attributes[WorkflowAttributes.WORKFLOW_NAME] = run_config.workflow_name
+                    
+                    # Create default hooks if None is provided
+                    if hooks is None:
+                        hooks = RunHooks()
+                    
+                    # Start a span for the run
+                    with tracer.start_as_current_span(
+                        name=f"agents.{_method_name}.{starting_agent.name}",
+                        kind=SpanKind.CLIENT,
+                        attributes=attributes
+                    ) as span:
+                        # Add agent attributes
+                        if hasattr(starting_agent, "instructions"):
+                            # Determine instruction type
+                            instruction_type = "unknown"
+                            if isinstance(starting_agent.instructions, str):
+                                instruction_type = "string"
+                                span.set_attribute("agent.instructions", starting_agent.instructions[:1000])
+                            elif callable(starting_agent.instructions):
+                                instruction_type = "function"
+                                # Store the function name or representation
+                                func_name = getattr(starting_agent.instructions, "__name__", str(starting_agent.instructions))
+                                span.set_attribute("agent.instruction_function", func_name)
+                            else:
+                                span.set_attribute("agent.instructions", str(starting_agent.instructions)[:1000])
+                            
+                            span.set_attribute("agent.instruction_type", instruction_type)
+                        
+                        # Add agent tools if available
+                        if hasattr(starting_agent, "tools") and starting_agent.tools:
+                            tool_names = [tool.name for tool in starting_agent.tools if hasattr(tool, "name")]
+                            if tool_names:
+                                span.set_attribute(AgentAttributes.AGENT_TOOLS, str(tool_names))
+                        
+                        # Add agent model settings if available
+                        if hasattr(starting_agent, "model_settings") and starting_agent.model_settings:
+                            # Add model settings directly
+                            if hasattr(starting_agent.model_settings, "temperature") and starting_agent.model_settings.temperature is not None:
+                                span.set_attribute(SpanAttributes.LLM_REQUEST_TEMPERATURE, starting_agent.model_settings.temperature)
+                            
+                            if hasattr(starting_agent.model_settings, "top_p") and starting_agent.model_settings.top_p is not None:
+                                span.set_attribute(SpanAttributes.LLM_REQUEST_TOP_P, starting_agent.model_settings.top_p)
+                            
+                            if hasattr(starting_agent.model_settings, "frequency_penalty") and starting_agent.model_settings.frequency_penalty is not None:
+                                span.set_attribute(SpanAttributes.LLM_REQUEST_FREQUENCY_PENALTY, starting_agent.model_settings.frequency_penalty)
+                            
+                            if hasattr(starting_agent.model_settings, "presence_penalty") and starting_agent.model_settings.presence_penalty is not None:
+                                span.set_attribute(SpanAttributes.LLM_REQUEST_PRESENCE_PENALTY, starting_agent.model_settings.presence_penalty)
+                        
+                        try:
+                            # Execute the original method with keyword arguments
+                            result = _original(starting_agent, input, context=context, max_turns=max_turns, hooks=hooks, run_config=run_config)
+                            
+                            # Add result attributes to the span
+                            if hasattr(result, "final_output"):
+                                span.set_attribute(WorkflowAttributes.FINAL_OUTPUT, str(result.final_output)[:1000])
+                            
+                            # Extract model and response information
+                            response_id = None
+                            
+                            # Process raw responses
+                            if hasattr(result, "raw_responses") and result.raw_responses:
+                                logger.info(f"[DEBUG] Found raw_responses: {len(result.raw_responses)}")
+                                total_input_tokens = 0
+                                total_output_tokens = 0
+                                total_tokens = 0
+                                
+                                for i, response in enumerate(result.raw_responses):
+                                    logger.info(f"[DEBUG] Processing raw_response {i}: {type(response).__name__}")
+                                    
+                                    # Try to extract model directly
+                                    if hasattr(response, "model"):
+                                        model_name = response.model
+                                        logger.info(f"[DEBUG] Found model in raw_response: {model_name}")
+                                        span.set_attribute(SpanAttributes.LLM_REQUEST_MODEL, model_name)
+                                    
+                                    # Extract response ID if available
+                                    if hasattr(response, "referenceable_id") and response.referenceable_id:
+                                        response_id = response.referenceable_id
+                                        logger.info(f"[DEBUG] Found response_id: {response_id}")
+                                        span.set_attribute(f"gen_ai.response.id.{i}", response_id)
+                                    
+                                    # Extract usage information
+                                    if hasattr(response, "usage"):
+                                        usage = response.usage
+                                        logger.info(f"[DEBUG] Found usage: {usage}")
+                                        
+                                        # Add token usage
+                                        if hasattr(usage, "prompt_tokens") or hasattr(usage, "input_tokens"):
+                                            input_tokens = getattr(usage, "prompt_tokens", getattr(usage, "input_tokens", 0))
+                                            span.set_attribute(f"{SpanAttributes.LLM_USAGE_PROMPT_TOKENS}.{i}", input_tokens)
+                                            total_input_tokens += input_tokens
+                                            
+                                            if _agent_token_usage_histogram:
+                                                _agent_token_usage_histogram.record(
+                                                    input_tokens,
+                                                    {
+                                                        "token_type": "input", 
+                                                        "model": model_name,
+                                                        "gen_ai.request.model": model_name,
+                                                        "gen_ai.system": "openai"
+                                                    }
+                                                )
+                                        
+                                        if hasattr(usage, "completion_tokens") or hasattr(usage, "output_tokens"):
+                                            output_tokens = getattr(usage, "completion_tokens", getattr(usage, "output_tokens", 0))
+                                            span.set_attribute(f"{SpanAttributes.LLM_USAGE_COMPLETION_TOKENS}.{i}", output_tokens)
+                                            total_output_tokens += output_tokens
+                                            
+                                            if _agent_token_usage_histogram:
+                                                _agent_token_usage_histogram.record(
+                                                    output_tokens,
+                                                    {
+                                                        "token_type": "output", 
+                                                        "model": model_name,
+                                                        "gen_ai.request.model": model_name,
+                                                        "gen_ai.system": "openai"
+                                                    }
+                                                )
+                                        
+                                        if hasattr(usage, "total_tokens"):
+                                            span.set_attribute(f"{SpanAttributes.LLM_USAGE_TOTAL_TOKENS}.{i}", usage.total_tokens)
+                                            total_tokens += usage.total_tokens
+                                
+                                # Set total token counts
+                                if total_input_tokens > 0:
+                                    span.set_attribute(SpanAttributes.LLM_USAGE_PROMPT_TOKENS, total_input_tokens)
+                                
+                                if total_output_tokens > 0:
+                                    span.set_attribute(SpanAttributes.LLM_USAGE_COMPLETION_TOKENS, total_output_tokens)
+                                
+                                if total_tokens > 0:
+                                    span.set_attribute(SpanAttributes.LLM_USAGE_TOTAL_TOKENS, total_tokens)
+                            
+                            # Record execution time
+                            execution_time = (time.time() - start_time)  # In seconds
+                            if _agent_execution_time_histogram:
+                                # Create shared attributes following OpenAI conventions
+                                shared_attributes = {
+                                    "gen_ai.system": "openai",
+                                    "gen_ai.response.model": model_name,
+                                    "gen_ai.request.model": model_name,  # Standard OpenTelemetry attribute
+                                    "gen_ai.operation.name": "agent_run",
+                                    "agent_name": starting_agent.name,
+                                    "stream": "false"
+                                }
+                                
+                                # Add response ID if available
+                                if response_id:
+                                    shared_attributes["gen_ai.response.id"] = response_id
+                                
+                                logger.info(f"[DEBUG] Final metrics attributes: {shared_attributes}")
+                                
+                                _agent_execution_time_histogram.record(
+                                    execution_time,
+                                    attributes=shared_attributes
+                                )
+                            
+                            # Add instrumentation metadata
+                            span.set_attribute(InstrumentationAttributes.NAME, "agentops.agents")
+                            span.set_attribute(InstrumentationAttributes.VERSION, __version__)
+                            
+                            return result
+                        except Exception as e:
+                            # Record the error
+                            span.set_status(Status(StatusCode.ERROR))
+                            span.record_exception(e)
+                            span.set_attribute(CoreAttributes.ERROR_TYPE, type(e).__name__)
+                            span.set_attribute(CoreAttributes.ERROR_MESSAGE, str(e))
+                            raise
+                
+                setattr(Runner, method_name, classmethod(instrumented_method))
+    
+    def _uninstrument(self, **kwargs):
+        """Uninstrument the Agents SDK."""
+        # Restore original methods
+        try:
+            from agents.run import Runner
+            
+            # Check if we have the original methods stored
+            if hasattr(Runner, "_original_run"):
+                Runner.run = Runner._original_run
+                delattr(Runner, "_original_run")
+            
+            if hasattr(Runner, "_original_run_sync"):
+                Runner.run_sync = Runner._original_run_sync
+                delattr(Runner, "_original_run_sync")
+            
+            logger.info("Restored original Runner methods")
+        except Exception as e:
+            logger.error(f"Failed to restore original Runner methods: {e}")
