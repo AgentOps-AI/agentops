@@ -8,7 +8,7 @@ from typing import Optional, Any, Dict, Union
 
 from opentelemetry import trace
 from opentelemetry import context as context_api
-from agentops.semconv import AgentOpsSpanKind
+from agentops.semconv import SpanKind
 from agentops.semconv.core import CoreAttributes
 
 from agentops.logging import logger
@@ -33,7 +33,7 @@ def _should_trace_content() -> bool:
 # Legacy async decorators - Marked for deprecation
 
 def aentity_method(
-    span_kind: Optional[str] = AgentOpsSpanKind.WORKFLOW_TASK,
+    span_kind: Optional[str] = SpanKind.WORKFLOW_TASK,
     name: Optional[str] = None,
     version: Optional[int] = None,
 ):
@@ -55,7 +55,7 @@ def aentity_class(
     method_name: str,
     name: Optional[str] = None,
     version: Optional[int] = None,
-    span_kind: Optional[str] = AgentOpsSpanKind.WORKFLOW_TASK,
+    span_kind: Optional[str] = SpanKind.WORKFLOW_TASK,
 ):
     warnings.warn(
         "DeprecationWarning: The @aentity_class decorator is deprecated. "
@@ -122,7 +122,7 @@ def _make_span(
 ) -> tuple:
     """Create and initialize a new instrumentation span with proper context"""
     # Set session-level information for specified operation types
-    if operation_type in [AgentOpsSpanKind.SESSION, AgentOpsSpanKind.AGENT]:
+    if operation_type in [SpanKind.SESSION, SpanKind.AGENT]:
         # Session tracking logic would go here
         pass
 
@@ -187,7 +187,7 @@ def _finalize_span(span: trace.Span, token: Any) -> None:
 
 
 def instrument_operation(
-    span_kind: Optional[str] = AgentOpsSpanKind.WORKFLOW_TASK,
+    span_kind: Optional[str] = SpanKind.WORKFLOW_TASK,
     name: Optional[str] = None,
     version: Optional[int] = None,
 ):
@@ -204,7 +204,7 @@ def instrument_operation(
         is_async = _is_coroutine_or_generator(fn)
         operation_name = name or fn.__name__
         # Use default span_kind if None is provided
-        operation_type = span_kind or AgentOpsSpanKind.WORKFLOW_TASK
+        operation_type = span_kind or SpanKind.WORKFLOW_TASK
 
         if is_async:
             @wraps(fn)
@@ -275,7 +275,7 @@ def instrument_class(
     method_name: str,
     name: Optional[str] = None,
     version: Optional[int] = None,
-    span_kind: Optional[str] = AgentOpsSpanKind.WORKFLOW_TASK,
+    span_kind: Optional[str] = SpanKind.WORKFLOW_TASK,
 ):
     """
     Decorator to instrument a specific method on a class.

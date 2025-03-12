@@ -10,7 +10,7 @@ from typing import Optional, Any, Callable, TypeVar, cast, Type, Union, overload
 
 import wrapt
 from agentops.sdk.decorators.utility import instrument_operation, instrument_class
-from agentops.semconv.span_kinds import AgentOpsSpanKind
+from agentops.semconv.span_kinds import SpanKind
 
 # Type variables for better type hinting
 F = TypeVar('F', bound=Callable[..., Any])
@@ -110,7 +110,7 @@ def _create_decorator_specifiable(default_span_kind: Optional[str] = None):
 
 
 # Create the universal decorators
-session = _create_decorator(AgentOpsSpanKind.SESSION)
+session = _create_decorator(SpanKind.SESSION)
 session.__doc__ = """
     Universal decorator for instrumenting functions or class methods as a session operation.
     
@@ -139,7 +139,7 @@ session.__doc__ = """
         Decorated function or class
 """
 
-agent = _create_decorator(AgentOpsSpanKind.AGENT)
+agent = _create_decorator(SpanKind.AGENT)
 agent.__doc__ = """
     Universal decorator for instrumenting functions or class methods as an agent operation.
     
@@ -168,7 +168,7 @@ agent.__doc__ = """
         Decorated function or class
 """
 
-operation = _create_decorator(AgentOpsSpanKind.WORKFLOW_TASK)
+operation = _create_decorator(SpanKind.WORKFLOW_TASK)
 operation.__doc__ = """
     Universal decorator for instrumenting functions or class methods as an operation.
     
@@ -211,22 +211,22 @@ record.__doc__ = """
     Can be used in multiple ways:
     
     1. On a function:
-        @record(span_kind=AgentOpsSpanKind.TOOL)
+        @record(span_kind=SpanKind.TOOL)
         def function(): ...
         
-        @record(span_kind=AgentOpsSpanKind.LLM_CALL, name="custom_name")
+        @record(span_kind=SpanKind.LLM_CALL, name="custom_name")
         def function(): ...
     
     2. On a class to instrument a specific method:
-        @record("method_name", span_kind=AgentOpsSpanKind.TOOL)
+        @record("method_name", span_kind=SpanKind.TOOL)
         class MyClass: ...
         
-        @record("method_name", span_kind=AgentOpsSpanKind.LLM_CALL, name="custom_name")
+        @record("method_name", span_kind=SpanKind.LLM_CALL, name="custom_name")
         class MyClass: ...
     
     Args:
         method_name: When decorating a class, the name of the method to instrument
-        span_kind: The specific AgentOpsSpanKind to use for this operation
+        span_kind: The specific SpanKind to use for this operation
         name: Optional custom name for the operation (defaults to function name)
         version: Optional version identifier for the operation
         
