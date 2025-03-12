@@ -10,12 +10,6 @@ logger = logging.getLogger("agentops")
 logger.propagate = False
 logger.setLevel(logging.CRITICAL)
 
-class IgnoreTracerProviderFilter(logging.Filter):
-    def filter(self, record):
-        return record.getMessage() != 'Overriding of current TracerProvider is not allowed'
-
-# Apply filter to suppress specific OpenTelemetry log messages
-logging.getLogger('opentelemetry.trace').addFilter(IgnoreTracerProviderFilter())
 
 def configure_logging(config=None):  # Remove type hint temporarily to avoid circular import
     """Configure the AgentOps logger with console and optional file handlers.
@@ -57,3 +51,29 @@ def configure_logging(config=None):  # Remove type hint temporarily to avoid cir
         logger.addHandler(file_handler)
 
     return logger 
+
+
+def intercept_opentelemetry_logging():
+    """
+    Configure OpenTelemetry logging to redirect all messages to the AgentOps logger.
+    All OpenTelemetry logs will be prefixed with [opentelemetry.X] and set to DEBUG level.
+    """
+    prefix  = "opentelemetry"
+    otel_root_logger = logging.getLogger(prefix)
+    otel_root_logger.propagate = False
+    otel_root_logger.setLevel(logging.DEBUG)  # capture all
+    
+    for handler in otel_root_logger.handlers[:]:
+        otel_root_logger.removeHandler(handler)
+    
+    # Create a handler that forwards all messages to the AgentOps logger
+    class OtelLogHandler(logging.Handler):
+        def emit(self, record):
+            if record.name.startswith(f"{prefix}."):
+                module_name = record.name.replace(f"{prefix}.", "", 1)
+            else:
+                module_name = record.name
+            message = f"[{prefix}.{module_name}] {record.getMessage()}"
+            logger.debug(message)
+    
+    otel_root_logger.addHandler(OtelLogHandler())
