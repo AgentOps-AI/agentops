@@ -96,7 +96,6 @@ available_instrumentors: list[InstrumentorLoader] = [
         class_name='AgentsInstrumentor', 
         provider_import_name='agents', 
     ),
-    # TODO instrumentation for Agents SDK
 ]
 
 
