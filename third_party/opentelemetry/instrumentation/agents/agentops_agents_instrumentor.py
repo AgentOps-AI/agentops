@@ -58,7 +58,7 @@ def safe_execute(func):
         try:
             return func(*args, **kwargs)
         except Exception as e:
-            logger.exception(f"Error in {func.__name__}: {e}")
+            logger.warning(f"Error in {func.__name__}: {e}")
             return None
     return wrapper
 
@@ -66,7 +66,6 @@ def safe_execute(func):
 @safe_execute
 def get_model_info(agent: Any, run_config: Any = None) -> Dict[str, Any]:
     """Extract model information from agent and run_config."""
-    logger.info(f"[DEBUG] get_model_info called with agent: {agent}, run_config: {run_config}")
     
     result = {"model_name": "unknown"}
     
@@ -74,21 +73,17 @@ def get_model_info(agent: Any, run_config: Any = None) -> Dict[str, Any]:
     if run_config and hasattr(run_config, "model") and run_config.model:
         if isinstance(run_config.model, str):
             result["model_name"] = run_config.model
-            logger.info(f"[DEBUG] Found model name from run_config.model (string): {result['model_name']}")
         elif hasattr(run_config.model, "model") and run_config.model.model:
             # For Model objects that have a model attribute
             result["model_name"] = run_config.model.model
-            logger.info(f"[DEBUG] Found model name from run_config.model.model: {result['model_name']}")
     
     # Then check agent.model if we still have unknown
     if result["model_name"] == "unknown" and hasattr(agent, "model") and agent.model:
         if isinstance(agent.model, str):
             result["model_name"] = agent.model
-            logger.info(f"[DEBUG] Found model name from agent.model (string): {result['model_name']}")
         elif hasattr(agent.model, "model") and agent.model.model:
             # For Model objects that have a model attribute
             result["model_name"] = agent.model.model
-            logger.info(f"[DEBUG] Found model name from agent.model.model: {result['model_name']}")
     
     # Check for default model from OpenAI provider
     if result["model_name"] == "unknown":
@@ -96,33 +91,27 @@ def get_model_info(agent: Any, run_config: Any = None) -> Dict[str, Any]:
         try:
             from agents.models.openai_provider import DEFAULT_MODEL
             result["model_name"] = DEFAULT_MODEL
-            logger.info(f"[DEBUG] Using default model from OpenAI provider: {result['model_name']}")
         except ImportError:
-            logger.info("[DEBUG] Could not import DEFAULT_MODEL from agents.models.openai_provider")
+            pass
     
     # Extract model settings from agent
     if hasattr(agent, "model_settings") and agent.model_settings:
         model_settings = agent.model_settings
-        logger.info(f"[DEBUG] Found agent.model_settings: {model_settings}")
         
         # Extract model parameters
         for param in ["temperature", "top_p", "frequency_penalty", "presence_penalty"]:
             if hasattr(model_settings, param) and getattr(model_settings, param) is not None:
                 result[param] = getattr(model_settings, param)
-                logger.info(f"[DEBUG] Found model parameter {param}: {result[param]}")
     
     # Override with run_config.model_settings if available
     if run_config and hasattr(run_config, "model_settings") and run_config.model_settings:
         model_settings = run_config.model_settings
-        logger.info(f"[DEBUG] Found run_config.model_settings: {model_settings}")
         
         # Extract model parameters
         for param in ["temperature", "top_p", "frequency_penalty", "presence_penalty"]:
             if hasattr(model_settings, param) and getattr(model_settings, param) is not None:
                 result[param] = getattr(model_settings, param)
-                logger.info(f"[DEBUG] Found model parameter {param} in run_config: {result[param]}")
-    
-    logger.info(f"[DEBUG] Final model info: {result}")
+
     return result
 
 
@@ -199,13 +188,11 @@ class AgentsDetailedExporter:
             attributes[SpanAttributes.LLM_REQUEST_MODEL] = span_data.model
             attributes["gen_ai.request.model"] = span_data.model  # Standard OpenTelemetry attribute
             attributes["gen_ai.system"] = "openai"  # Standard OpenTelemetry attribute
-            logger.info(f"[DEBUG] Found model in GenerationSpanData: {span_data.model}")
             
             # Add model config if available
             if hasattr(span_data, 'model_config') and span_data.model_config:
                 for key, value in span_data.model_config.items():
                     attributes[f"agent.model.{key}"] = value
-                    logger.info(f"[DEBUG] Added model config parameter {key}: {value}")
         
         # Record token usage metrics if available
         if hasattr(span_data, 'usage') and span_data.usage and isinstance(span_data.usage, dict):
@@ -298,14 +285,6 @@ class AgentsDetailedProcessor(AgentsTracingProcessor):
         """Process a span when it ends."""
         # Log the span type for debugging
         span_type = span.span_data.__class__.__name__.replace('SpanData', '')
-        logger.info(f"[DEBUG] Processing span end: {span_type}")
-        
-        # For Generation spans, log model information
-        if span_type == "Generation":
-            if hasattr(span.span_data, 'model') and span.span_data.model:
-                logger.info(f"[DEBUG] Generation span model: {span.span_data.model}")
-            if hasattr(span.span_data, 'usage') and span.span_data.usage:
-                logger.info(f"[DEBUG] Generation span usage: {span.span_data.usage}")
         
         self.exporter.export([span])
     
@@ -363,9 +342,8 @@ class AgentsInstrumentor(BaseInstrumentor):
         # Try to import the default model from the SDK for reference
         try:
             from agents.models.openai_provider import DEFAULT_MODEL
-            logger.info(f"[DEBUG] Default model from Agents SDK: {DEFAULT_MODEL}")
         except ImportError:
-            logger.info("[DEBUG] Could not import DEFAULT_MODEL from agents.models.openai_provider")
+            pass
         
         # Add the custom processor to the Agents SDK
         try:
@@ -373,16 +351,16 @@ class AgentsInstrumentor(BaseInstrumentor):
             processor = AgentsDetailedProcessor()
             processor.exporter = AgentsDetailedExporter(tracer_provider)
             add_trace_processor(processor)
-            logger.info(f"[DEBUG] Added AgentsDetailedProcessor to Agents SDK: {processor}")
         except Exception as e:
-            logger.error(f"Failed to add AgentsDetailedProcessor: {e}")
+            logger.warning(f"Failed to add AgentsDetailedProcessor: {e}")
+            pass
         
         # Monkey patch the Runner class
         try:
             self._patch_runner_class(tracer_provider)
-            logger.info("Monkey patched Runner class")
         except Exception as e:
-            logger.error(f"Failed to monkey patch Runner class: {e}")
+            logger.warning(f"Failed to monkey patch Runner class: {e}")
+            pass
         
     def _patch_runner_class(self, tracer_provider):
         """Monkey patch the Runner class to capture additional information."""
@@ -413,7 +391,7 @@ class AgentsInstrumentor(BaseInstrumentor):
                     # Extract model information from agent and run_config
                     model_info = get_model_info(starting_agent, run_config)
                     model_name = model_info.get("model_name", "unknown")
-                    logger.info(f"[DEBUG] Extracted model name for streaming: {model_name}")
+                    logger.warning(f"[DEBUG] Extracted model name for streaming: {model_name}")
                     
                     # Record agent run counter
                     if _agent_run_counter:
@@ -512,7 +490,7 @@ class AgentsInstrumentor(BaseInstrumentor):
                             # Add this streaming operation to the active set
                             global _active_streaming_operations
                             _active_streaming_operations.add(stream_id)
-                            logger.info(f"[DEBUG] Added streaming operation {stream_id} to active set. Current active: {len(_active_streaming_operations)}")
+                            logger.warning(f"[DEBUG] Added streaming operation {stream_id} to active set. Current active: {len(_active_streaming_operations)}")
                             
                             # Create a wrapper for the stream_events method to capture metrics after streaming
                             original_stream_events = result.stream_events
@@ -532,17 +510,17 @@ class AgentsInstrumentor(BaseInstrumentor):
                                     execution_time = (time.time() - start_time)  # In seconds
                                     
                                     # Log the entire result object for debugging
-                                    logger.info(f"[DEBUG] Streaming complete, result object: {result}")
+                                    logger.warning(f"[DEBUG] Streaming complete, result object: {result}")
                                     
                                     # Log all attributes of the result object
-                                    logger.info("[DEBUG] RunResultStreaming attributes:")
+                                    logger.warning("[DEBUG] RunResultStreaming attributes:")
                                     for attr_name in dir(result):
                                         if not attr_name.startswith('_') and not callable(getattr(result, attr_name)):
-                                            logger.info(f"[DEBUG]   {attr_name}: {getattr(result, attr_name)}")
+                                            logger.warning(f"[DEBUG]   {attr_name}: {getattr(result, attr_name)}")
                                     
                                     # Create a new span specifically for token usage metrics
                                     # This ensures we have a fresh span that won't be closed prematurely
-                                    logger.info(f"[DEBUG] Creating new span for token usage metrics for streaming operation {stream_id}")
+                                    logger.warning(f"[DEBUG] Creating new span for token usage metrics for streaming operation {stream_id}")
                                     
                                     # Get the current trace context
                                     current_span = get_current_span()
@@ -554,10 +532,10 @@ class AgentsInstrumentor(BaseInstrumentor):
                                         span_context = current_span.get_span_context()
                                         if hasattr(span_context, "trace_id"):
                                             current_trace_id = span_context.trace_id
-                                            logger.info(f"[DEBUG] Current trace ID: {current_trace_id}")
+                                            logger.warning(f"[DEBUG] Current trace ID: {current_trace_id}")
                                         if hasattr(span_context, "span_id"):
                                             current_span_id = span_context.span_id
-                                            logger.info(f"[DEBUG] Current span ID: {current_span_id}")
+                                            logger.warning(f"[DEBUG] Current span ID: {current_span_id}")
                                     
                                     # Get a new tracer
                                     usage_tracer = get_tracer(__name__, __version__, _tracer_provider)
@@ -602,37 +580,37 @@ class AgentsInstrumentor(BaseInstrumentor):
                                         
                                         # Process raw responses
                                         if hasattr(result, "raw_responses") and result.raw_responses:
-                                            logger.info(f"[DEBUG] Found raw_responses in streaming result: {len(result.raw_responses)}")
+                                            logger.warning(f"[DEBUG] Found raw_responses in streaming result: {len(result.raw_responses)}")
                                             total_input_tokens = 0
                                             total_output_tokens = 0
                                             total_tokens = 0
                                             
                                             # Log detailed information about each raw response
                                             for i, response in enumerate(result.raw_responses):
-                                                logger.info(f"[DEBUG] Processing streaming raw_response {i}: {type(response).__name__}")
+                                                logger.warning(f"[DEBUG] Processing streaming raw_response {i}: {type(response).__name__}")
                                                 
                                                 # Log all attributes of the response object
-                                                logger.info(f"[DEBUG] Raw response {i} attributes:")
+                                                logger.warning(f"[DEBUG] Raw response {i} attributes:")
                                                 for attr_name in dir(response):
                                                     if not attr_name.startswith('_') and not callable(getattr(response, attr_name)):
-                                                        logger.info(f"[DEBUG]   {attr_name}: {getattr(response, attr_name)}")
+                                                        logger.warning(f"[DEBUG]   {attr_name}: {getattr(response, attr_name)}")
                                                 
                                                 # Try to extract model directly
                                                 if hasattr(response, "model"):
                                                     model_name = response.model
-                                                    logger.info(f"[DEBUG] Found model in streaming raw_response: {model_name}")
+                                                    logger.warning(f"[DEBUG] Found model in streaming raw_response: {model_name}")
                                                     usage_span.set_attribute(SpanAttributes.LLM_REQUEST_MODEL, model_name)
                                                 
                                                 # Extract response ID if available
                                                 if hasattr(response, "referenceable_id") and response.referenceable_id:
                                                     response_id = response.referenceable_id
-                                                    logger.info(f"[DEBUG] Found streaming response_id: {response_id}")
+                                                    logger.warning(f"[DEBUG] Found streaming response_id: {response_id}")
                                                     usage_span.set_attribute(f"gen_ai.response.id.{i}", response_id)
                                                 
                                                 # Extract usage information
                                                 if hasattr(response, "usage"):
                                                     usage = response.usage
-                                                    logger.info(f"[DEBUG] Found streaming usage: {usage}")
+                                                    logger.warning(f"[DEBUG] Found streaming usage: {usage}")
                                                     
                                                     # Add token usage
                                                     if hasattr(usage, "prompt_tokens") or hasattr(usage, "input_tokens"):
@@ -671,15 +649,15 @@ class AgentsInstrumentor(BaseInstrumentor):
                                                         usage_span.set_attribute(f"{SpanAttributes.LLM_USAGE_TOTAL_TOKENS}.{i}", usage.total_tokens)
                                                         total_tokens += usage.total_tokens
                                                 else:
-                                                    logger.info(f"[DEBUG] No usage attribute found in response {i}, checking for other token usage information")
+                                                    logger.warning(f"[DEBUG] No usage attribute found in response {i}, checking for other token usage information")
                                                     # Try to find token usage information in other attributes
                                                     for attr_name in dir(response):
                                                         if not attr_name.startswith('_') and not callable(getattr(response, attr_name)):
                                                             attr_value = getattr(response, attr_name)
                                                             if isinstance(attr_value, dict) and ('tokens' in str(attr_value).lower() or 'usage' in str(attr_value).lower()):
-                                                                logger.info(f"[DEBUG] Potential token usage information found in attribute {attr_name}: {attr_value}")
+                                                                logger.warning(f"[DEBUG] Potential token usage information found in attribute {attr_name}: {attr_value}")
                                                             elif hasattr(attr_value, 'usage'):
-                                                                logger.info(f"[DEBUG] Found nested usage attribute in {attr_name}: {getattr(attr_value, 'usage')}")
+                                                                logger.warning(f"[DEBUG] Found nested usage attribute in {attr_name}: {getattr(attr_value, 'usage')}")
                                                                 # Process this nested usage attribute if needed
                                             
                                             # Set total token counts
@@ -708,7 +686,7 @@ class AgentsInstrumentor(BaseInstrumentor):
                                             if response_id:
                                                 shared_attributes["gen_ai.response.id"] = response_id
                                             
-                                            logger.info(f"[DEBUG] Final streaming metrics attributes: {shared_attributes}")
+                                            logger.warning(f"[DEBUG] Final streaming metrics attributes: {shared_attributes}")
                                             
                                             _agent_execution_time_histogram.record(
                                                 execution_time,
@@ -720,23 +698,23 @@ class AgentsInstrumentor(BaseInstrumentor):
                                         usage_span.set_attribute(InstrumentationAttributes.VERSION, __version__)
                                         
                                         # Force flush the span to ensure metrics are recorded
-                                        logger.info(f"[DEBUG] Forcing flush of usage span for streaming operation {stream_id}")
+                                        logger.warning(f"[DEBUG] Forcing flush of usage span for streaming operation {stream_id}")
                                         if hasattr(tracer_provider, "force_flush"):
                                             try:
                                                 tracer_provider.force_flush()
-                                                logger.info(f"[DEBUG] Successfully flushed usage span for streaming operation {stream_id}")
+                                                logger.warning(f"[DEBUG] Successfully flushed usage span for streaming operation {stream_id}")
                                             except Exception as e:
-                                                logger.error(f"[DEBUG] Error flushing usage span for streaming operation {stream_id}: {e}")
+                                                logger.warning(f"[DEBUG] Error flushing usage span for streaming operation {stream_id}: {e}")
                                     
                                 except Exception as e:
                                     # Record the error
-                                    logger.error(f"[ERROR] Error in instrumented_stream_events: {e}")
+                                    logger.warning(f"[ERROR] Error in instrumented_stream_events: {e}")
                                     # Don't re-raise the exception to avoid breaking the streaming
                                 finally:
                                     # Remove this streaming operation from the active set
                                     if stream_id in _active_streaming_operations:
                                         _active_streaming_operations.remove(stream_id)
-                                        logger.info(f"[DEBUG] Removed streaming operation {stream_id} from active set. Remaining active: {len(_active_streaming_operations)}")
+                                        logger.warning(f"[DEBUG] Removed streaming operation {stream_id} from active set. Remaining active: {len(_active_streaming_operations)}")
                             
                             # Replace the original stream_events method with our instrumented version
                             result.stream_events = instrumented_stream_events
@@ -762,7 +740,7 @@ class AgentsInstrumentor(BaseInstrumentor):
                     # Extract model information from agent and run_config
                     model_info = get_model_info(starting_agent, run_config)
                     model_name = model_info.get("model_name", "unknown")
-                    logger.info(f"[DEBUG] Extracted model name: {model_name}")
+                    logger.warning(f"[DEBUG] Extracted model name: {model_name}")
                     
                     # Record agent run counter
                     if _agent_run_counter:
@@ -863,30 +841,30 @@ class AgentsInstrumentor(BaseInstrumentor):
                             
                             # Process raw responses
                             if hasattr(result, "raw_responses") and result.raw_responses:
-                                logger.info(f"[DEBUG] Found raw_responses: {len(result.raw_responses)}")
+                                logger.warning(f"[DEBUG] Found raw_responses: {len(result.raw_responses)}")
                                 total_input_tokens = 0
                                 total_output_tokens = 0
                                 total_tokens = 0
                                 
                                 for i, response in enumerate(result.raw_responses):
-                                    logger.info(f"[DEBUG] Processing raw_response {i}: {type(response).__name__}")
+                                    logger.warning(f"[DEBUG] Processing raw_response {i}: {type(response).__name__}")
                                     
                                     # Try to extract model directly
                                     if hasattr(response, "model"):
                                         model_name = response.model
-                                        logger.info(f"[DEBUG] Found model in raw_response: {model_name}")
+                                        logger.warning(f"[DEBUG] Found model in raw_response: {model_name}")
                                         span.set_attribute(SpanAttributes.LLM_REQUEST_MODEL, model_name)
                                     
                                     # Extract response ID if available
                                     if hasattr(response, "referenceable_id") and response.referenceable_id:
                                         response_id = response.referenceable_id
-                                        logger.info(f"[DEBUG] Found response_id: {response_id}")
+                                        logger.warning(f"[DEBUG] Found response_id: {response_id}")
                                         span.set_attribute(f"gen_ai.response.id.{i}", response_id)
                                     
                                     # Extract usage information
                                     if hasattr(response, "usage"):
                                         usage = response.usage
-                                        logger.info(f"[DEBUG] Found usage: {usage}")
+                                        logger.warning(f"[DEBUG] Found usage: {usage}")
                                         
                                         # Add token usage
                                         if hasattr(usage, "prompt_tokens") or hasattr(usage, "input_tokens"):
@@ -952,7 +930,7 @@ class AgentsInstrumentor(BaseInstrumentor):
                                 if response_id:
                                     shared_attributes["gen_ai.response.id"] = response_id
                                 
-                                logger.info(f"[DEBUG] Final metrics attributes: {shared_attributes}")
+                                logger.warning(f"[DEBUG] Final metrics attributes: {shared_attributes}")
                                 
                                 _agent_execution_time_histogram.record(
                                     execution_time,
@@ -984,7 +962,7 @@ class AgentsInstrumentor(BaseInstrumentor):
                     # Extract model information from agent and run_config
                     model_info = get_model_info(starting_agent, run_config)
                     model_name = model_info.get("model_name", "unknown")
-                    logger.info(f"[DEBUG] Extracted model name: {model_name}")
+                    logger.warning(f"[DEBUG] Extracted model name: {model_name}")
                     
                     # Record agent run counter
                     if _agent_run_counter:
@@ -1085,30 +1063,30 @@ class AgentsInstrumentor(BaseInstrumentor):
                             
                             # Process raw responses
                             if hasattr(result, "raw_responses") and result.raw_responses:
-                                logger.info(f"[DEBUG] Found raw_responses: {len(result.raw_responses)}")
+                                logger.warning(f"[DEBUG] Found raw_responses: {len(result.raw_responses)}")
                                 total_input_tokens = 0
                                 total_output_tokens = 0
                                 total_tokens = 0
                                 
                                 for i, response in enumerate(result.raw_responses):
-                                    logger.info(f"[DEBUG] Processing raw_response {i}: {type(response).__name__}")
+                                    logger.warning(f"[DEBUG] Processing raw_response {i}: {type(response).__name__}")
                                     
                                     # Try to extract model directly
                                     if hasattr(response, "model"):
                                         model_name = response.model
-                                        logger.info(f"[DEBUG] Found model in raw_response: {model_name}")
+                                        logger.warning(f"[DEBUG] Found model in raw_response: {model_name}")
                                         span.set_attribute(SpanAttributes.LLM_REQUEST_MODEL, model_name)
                                     
                                     # Extract response ID if available
                                     if hasattr(response, "referenceable_id") and response.referenceable_id:
                                         response_id = response.referenceable_id
-                                        logger.info(f"[DEBUG] Found response_id: {response_id}")
+                                        logger.warning(f"[DEBUG] Found response_id: {response_id}")
                                         span.set_attribute(f"gen_ai.response.id.{i}", response_id)
                                     
                                     # Extract usage information
                                     if hasattr(response, "usage"):
                                         usage = response.usage
-                                        logger.info(f"[DEBUG] Found usage: {usage}")
+                                        logger.warning(f"[DEBUG] Found usage: {usage}")
                                         
                                         # Add token usage
                                         if hasattr(usage, "prompt_tokens") or hasattr(usage, "input_tokens"):
@@ -1174,7 +1152,7 @@ class AgentsInstrumentor(BaseInstrumentor):
                                 if response_id:
                                     shared_attributes["gen_ai.response.id"] = response_id
                                 
-                                logger.info(f"[DEBUG] Final metrics attributes: {shared_attributes}")
+                                logger.warning(f"[DEBUG] Final metrics attributes: {shared_attributes}")
                                 
                                 _agent_execution_time_histogram.record(
                                     execution_time,
@@ -1211,24 +1189,13 @@ class AgentsInstrumentor(BaseInstrumentor):
                 Runner.run_sync = Runner._original_run_sync
                 delattr(Runner, "_original_run_sync")
             
-            logger.info("Restored original Runner methods")
         except Exception as e:
-            logger.error(f"Failed to restore original Runner methods: {e}")
-        
-        # Restore original AgentOps shutdown method
-        try:
-            import agentops
-            if hasattr(agentops, "_original_shutdown"):
-                agentops.shutdown = agentops._original_shutdown
-                delattr(agentops, "_original_shutdown")
-                logger.info("Restored original AgentOps shutdown method")
-        except Exception as e:
-            logger.error(f"Failed to restore original AgentOps shutdown method: {e}")
+            logger.warning(f"Failed to restore original Runner methods: {e}")
+            pass
         
         # Clear active streaming operations
         global _active_streaming_operations
         _active_streaming_operations.clear()
-        logger.info("Cleared active streaming operations")
 
 
 # Helper function to manually flush spans for active streaming operations
@@ -1242,10 +1209,7 @@ def flush_active_streaming_operations(tracer_provider=None):
     global _active_streaming_operations
     
     if not _active_streaming_operations:
-        logger.info("[DEBUG] No active streaming operations to flush")
         return
-    
-    logger.info(f"[DEBUG] Manually flushing spans for {len(_active_streaming_operations)} active streaming operations")
     
     # Get the current trace context
     current_span = get_current_span()
@@ -1257,10 +1221,8 @@ def flush_active_streaming_operations(tracer_provider=None):
         span_context = current_span.get_span_context()
         if hasattr(span_context, "trace_id"):
             current_trace_id = span_context.trace_id
-            logger.info(f"[DEBUG] Current trace ID for flush: {current_trace_id}")
         if hasattr(span_context, "span_id"):
             current_span_id = span_context.span_id
-            logger.info(f"[DEBUG] Current span ID for flush: {current_span_id}")
     
     # Create a new span for each active streaming operation
     if tracer_provider:
@@ -1291,7 +1253,6 @@ def flush_active_streaming_operations(tracer_provider=None):
                     kind=SpanKind.INTERNAL,
                     attributes=flush_attributes
                 ) as span:
-                    logger.info(f"[DEBUG] Created flush span for streaming operation {stream_id}")
                     
                     # Add a marker to indicate this is a flush span
                     span.set_attribute("flush_marker", "true")
@@ -1300,13 +1261,11 @@ def flush_active_streaming_operations(tracer_provider=None):
                     if hasattr(tracer_provider, "force_flush"):
                         try:
                             tracer_provider.force_flush()
-                            logger.info(f"[DEBUG] Successfully flushed span for streaming operation {stream_id}")
                         except Exception as e:
-                            logger.error(f"[DEBUG] Error flushing span for streaming operation {stream_id}: {e}")
+                            logger.warning(f"[DEBUG] Error flushing span for streaming operation {stream_id}: {e}")
             except Exception as e:
-                logger.error(f"[DEBUG] Error creating flush span for streaming operation {stream_id}: {e}")
+                logger.warning(f"[DEBUG] Error creating flush span for streaming operation {stream_id}: {e}")
     
     # Wait a short time to allow the flush to complete
     time.sleep(0.5)
     
-    logger.info(f"[DEBUG] After manual flush, {len(_active_streaming_operations)} active streaming operations remain")
