@@ -32,6 +32,7 @@ def _should_trace_content() -> bool:
 
 # Legacy async decorators - Marked for deprecation
 
+
 def aentity_method(
     span_kind: Optional[str] = SpanKind.OPERATION,
     name: Optional[str] = None,
@@ -41,7 +42,7 @@ def aentity_method(
         "DeprecationWarning: The @aentity_method decorator is deprecated. "
         "Please use @instrument_operation for both sync and async methods.",
         DeprecationWarning,
-        stacklevel=2
+        stacklevel=2,
     )
 
     return instrument_operation(
@@ -61,7 +62,7 @@ def aentity_class(
         "DeprecationWarning: The @aentity_class decorator is deprecated. "
         "Please use @instrument_class for both sync and async classes.",
         DeprecationWarning,
-        stacklevel=2
+        stacklevel=2,
     )
 
     return instrument_class(
@@ -74,6 +75,7 @@ def aentity_class(
 
 # Function analysis helpers
 
+
 def _is_coroutine_or_generator(fn: Any) -> bool:
     """Check if a function is asynchronous (coroutine or async generator)"""
     return inspect.iscoroutinefunction(fn) or inspect.isasyncgenfunction(fn)
@@ -82,11 +84,13 @@ def _is_coroutine_or_generator(fn: Any) -> bool:
 def _convert_camel_to_snake(text: str) -> str:
     """Convert CamelCase class names to snake_case format"""
     import re
-    text = re.sub('(.)([A-Z][a-z]+)', r'\1_\2', text)
-    return re.sub('([a-z0-9])([A-Z])', r'\1_\2', text).lower()
+
+    text = re.sub("(.)([A-Z][a-z]+)", r"\1_\2", text)
+    return re.sub("([a-z0-9])([A-Z])", r"\1_\2", text).lower()
 
 
 # Generator handling
+
 
 def _process_sync_generator(span: trace.Span, generator: types.GeneratorType):
     """Process a synchronous generator and manage its span lifecycle"""
@@ -115,11 +119,8 @@ async def _process_async_generator(span: trace.Span, context_token: Any, generat
 
 # Span creation and management
 
-def _make_span(
-    operation_name: str,
-    operation_type: str,
-    version: Optional[int] = None
-) -> tuple:
+
+def _make_span(operation_name: str, operation_type: str, version: Optional[int] = None) -> tuple:
     """Create and initialize a new instrumentation span with proper context"""
     # Set session-level information for specified operation types
     if operation_type in [SpanKind.SESSION, SpanKind.AGENT]:
@@ -131,10 +132,10 @@ def _make_span(
 
     # Get tracer and create span
     tracer = TracingCore.get_instance().get_tracer()
-    
+
     # Get current context to establish parent-child relationship
     current_context = context_api.get_current()
-    
+
     # Create span with current context to maintain parent-child relationship
     span = tracer.start_span(span_name, context=current_context)
 
@@ -147,6 +148,14 @@ def _make_span(
     span.set_attribute("agentops.operation.name", operation_name)
     if version is not None:
         span.set_attribute("agentops.operation.version", version)
+
+    # Log session URL for SESSION spans
+    if operation_type == SpanKind.SESSION:
+        from agentops.sdk.decorators.context_utils import get_session_url
+
+        session_url = get_session_url(span)
+        if session_url:
+            logger.info(f"\x1b[34m🖇 AgentOps: Session Replay: {session_url}\x1b[0m")
 
     return span, context, token
 
@@ -200,6 +209,7 @@ def instrument_operation(
         name: Custom name for the operation (defaults to function name)
         version: Optional version identifier for the operation
     """
+
     def decorator(fn):
         is_async = _is_coroutine_or_generator(fn)
         operation_name = name or fn.__name__
@@ -207,6 +217,7 @@ def instrument_operation(
         operation_type = span_kind or SpanKind.OPERATION
 
         if is_async:
+
             @wraps(fn)
             async def async_wrapper(*args, **kwargs):
                 # Skip instrumentation if tracer not initialized
@@ -214,8 +225,7 @@ def instrument_operation(
                     return await fn(*args, **kwargs)
 
                 # Create and configure span
-                span, ctx, token = _make_span(
-                    operation_name, operation_type, version)
+                span, ctx, token = _make_span(operation_name, operation_type, version)
 
                 # Record function inputs
                 _record_operation_input(span, args, kwargs)
@@ -233,12 +243,21 @@ def instrument_operation(
                 # Record function outputs
                 _record_operation_output(span, result)
 
+                # Log session URL for SESSION spans at the end
+                if operation_type == SpanKind.SESSION:
+                    from agentops.sdk.decorators.context_utils import get_session_url
+
+                    session_url = get_session_url(span)
+                    if session_url:
+                        logger.info(f"\x1b[34m🖇 AgentOps: Session Replay: {session_url}\x1b[0m")
+
                 # Clean up
                 _finalize_span(span, token)
                 return result
 
             return async_wrapper
         else:
+
             @wraps(fn)
             def sync_wrapper(*args, **kwargs):
                 # Skip instrumentation if tracer not initialized
@@ -246,8 +265,7 @@ def instrument_operation(
                     return fn(*args, **kwargs)
 
                 # Create and configure span
-                span, ctx, token = _make_span(
-                    operation_name, operation_type, version)
+                span, ctx, token = _make_span(operation_name, operation_type, version)
 
                 # Record function inputs
                 _record_operation_input(span, args, kwargs)
@@ -261,6 +279,14 @@ def instrument_operation(
 
                 # Record function outputs
                 _record_operation_output(span, result)
+
+                # Log session URL for SESSION spans at the end
+                if operation_type == SpanKind.SESSION:
+                    from agentops.sdk.decorators.context_utils import get_session_url
+
+                    session_url = get_session_url(span)
+                    if session_url:
+                        logger.info(f"\x1b[34m🖇 AgentOps: Session Replay: {session_url}\x1b[0m")
 
                 # Clean up
                 _finalize_span(span, token)
@@ -286,6 +312,7 @@ def instrument_class(
         version: Optional version identifier
         span_kind: The type of operation being performed
     """
+
     def decorator(cls):
         # Derive operation name from class name if not provided
         operation_name = name if name else _convert_camel_to_snake(cls.__name__)
@@ -294,11 +321,9 @@ def instrument_class(
         target_method = getattr(cls, method_name)
 
         # Create an instrumented version of the method
-        instrumented_method = instrument_operation(
-            span_kind=span_kind,
-            name=operation_name,
-            version=version
-        )(target_method)
+        instrumented_method = instrument_operation(span_kind=span_kind, name=operation_name, version=version)(
+            target_method
+        )
 
         # Replace the original method with the instrumented version
         setattr(cls, method_name, instrumented_method)
