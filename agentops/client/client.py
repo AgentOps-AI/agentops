@@ -11,16 +11,6 @@ from agentops.logging.config import configure_logging
 from agentops.sdk.core import TracingCore
 
 
-def get_default_session():
-    """Get the default session"""
-    raise NotImplementedError
-
-
-def get_active_sessions():
-    """Get all active sessions"""
-    raise NotImplementedError
-
-
 class Client:
     """Singleton client for AgentOps service"""
 
