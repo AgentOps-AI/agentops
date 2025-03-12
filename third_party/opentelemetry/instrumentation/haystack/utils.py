@@ -6,7 +6,7 @@ import traceback
 
 from opentelemetry import context as context_api
 from opentelemetry.instrumentation.haystack.config import Config
-from opentelemetry.semconv_ai import SpanAttributes
+from agentops.semconv import SpanAttributes
 
 
 class EnhancedJSONEncoder(json.JSONEncoder):
@@ -58,7 +58,7 @@ def process_request(span, args, kwargs):
         args_to_serialize = [arg for arg in args if not isinstance(arg, dict)]
         input_entity = {"args": args_to_serialize, "kwargs": kwargs_to_serialize}
         span.set_attribute(
-            SpanAttributes.TRACELOOP_ENTITY_INPUT,
+            SpanAttributes.AGENTOPS_ENTITY_INPUT,
             json.dumps(input_entity, cls=EnhancedJSONEncoder),
         )
 
@@ -67,7 +67,7 @@ def process_request(span, args, kwargs):
 def process_response(span, response):
     if should_send_prompts():
         span.set_attribute(
-            SpanAttributes.TRACELOOP_ENTITY_OUTPUT,
+            SpanAttributes.AGENTOPS_ENTITY_OUTPUT,
             json.dumps(response, cls=EnhancedJSONEncoder),
         )
 

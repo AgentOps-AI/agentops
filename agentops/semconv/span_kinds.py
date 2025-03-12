@@ -1,12 +1,7 @@
-"""Defines the kinds of spans in AgentOps."""
-
+"""Span kinds for AgentOps."""
+from enum import Enum
 class SpanKind:
     """Defines the kinds of spans in AgentOps."""
-    
-    # Core span kinds
-    AGENT = "agent"                    # Agent instance
-    TOOL = "tool"                      # Tool execution
-    
     # Agent action kinds
     AGENT_ACTION = "agent.action"      # Agent performing an action
     AGENT_THINKING = "agent.thinking"  # Agent reasoning/planning
@@ -18,4 +13,14 @@ class SpanKind:
     
     # Workflow kinds
     WORKFLOW_STEP = "workflow.step"    # Step in a workflow
-    WORKFLOW_TASK = "workflow.task"    # Task in a workflow
+    SESSION = "session"
+    
+
+class AgentOpsSpanKindValues(Enum):
+    WORKFLOW = "workflow"
+    TASK = "task"
+    AGENT = "agent"
+    TOOL = "tool"
+    LLM = "llm"
+    TEAM = "team"
+    UNKNOWN = "unknown"

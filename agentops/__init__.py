@@ -1,6 +1,10 @@
 from typing import List, Optional, Union
 
+from dotenv import load_dotenv
+
 from .client import Client
+
+load_dotenv()
 
 # Client global instance; one per process runtime
 _client = Client()

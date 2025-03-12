@@ -4,19 +4,29 @@ import atexit
 import threading
 from typing import Any, Dict, List, Optional, Set, Type, Union, cast
 
-from opentelemetry import context, trace
-from opentelemetry.exporter.otlp.proto.http.trace_exporter import OTLPSpanExporter
+from opentelemetry import context, metrics, trace, metrics
+from opentelemetry.exporter.otlp.proto.http.metric_exporter import \
+    OTLPMetricExporter
+from opentelemetry.exporter.otlp.proto.http.trace_exporter import \
+    OTLPSpanExporter
+from opentelemetry.sdk._logs import LoggerProvider, LoggingHandler
+from opentelemetry.sdk._logs.export import SimpleLogRecordProcessor
+from opentelemetry.sdk.metrics import MeterProvider
+from opentelemetry.sdk.metrics.export import PeriodicExportingMetricReader
 from opentelemetry.sdk.resources import Resource
-from opentelemetry.sdk.trace import TracerProvider, ReadableSpan
-from opentelemetry.sdk.trace import SpanProcessor
-from opentelemetry.sdk.trace.export import BatchSpanProcessor, SimpleSpanProcessor, SpanExporter
+from opentelemetry.sdk.trace import ReadableSpan, SpanProcessor, TracerProvider
+from opentelemetry.sdk.trace.export import (BatchSpanProcessor,
+                                            SimpleSpanProcessor, SpanExporter)
 from opentelemetry.trace import Span
 
 from agentops.logging import logger
-from agentops.sdk.processors import LiveSpanProcessor
-# from agentops.sdk.traced import TracedObject
-# from agentops.sdk.types import TracingConfig
+from agentops.sdk.traced import TracedObject
+from agentops.sdk.factory import SpanFactory
+from agentops.sdk.types import TracingConfig
 from agentops.sdk.exporters import AuthenticatedOTLPExporter
+from agentops.sdk.factory import SpanFactory
+from agentops.sdk.traced import TracedObject
+from agentops.sdk.types import TracingConfig
 from agentops.semconv import ResourceAttributes
 from agentops.semconv.core import CoreAttributes
 
@@ -88,7 +98,8 @@ class TracingCore:
                 'service_name': kwargs.get('service_name', 'agentops'),
                 'exporter': kwargs.get('exporter'),
                 'processor': kwargs.get('processor'),
-                'exporter_endpoint': kwargs.get('exporter_endpoint', 'https://otlp.agentops.api/v1/traces'),
+                'exporter_endpoint': kwargs.get('exporter_endpoint', 'https://otlp.agentops.ai/v1/traces'),
+                'metrics_endpoint': kwargs.get('metrics_endpoint', 'https://otlp.agentops.ai/v1/metrics'),
                 'max_queue_size': max_queue_size,
                 'max_wait_time': max_wait_time,
                 'api_key': kwargs.get('api_key'),
@@ -113,44 +124,37 @@ class TracingCore:
                 resource_attrs[ResourceAttributes.PROJECT_ID] = project_id
                 logger.debug(f"Including project_id in resource attributes: {project_id}")
 
+            resource = Resource(resource_attrs)
             self._provider = TracerProvider(
-                resource=Resource(resource_attrs)
+                resource=resource
             )
 
             # Set as global provider
             trace.set_tracer_provider(self._provider)
 
-            # Add processors - safely access optional fields
-            processor = config.get('processor')
-            if processor:
-                # Use custom processor
-                self._provider.add_span_processor(processor)
-                self._processors.append(processor)
-            elif config.get('exporter') is not None:
-                exporter = config.get('exporter')
-                # Type assertion to satisfy the linter
-                assert exporter is not None  # We already checked it's not None above
+            # Use default authenticated processor and exporter if api_key is available
+            exporter = OTLPSpanExporter(endpoint=config.get('exporter_endpoint'), headers={
+                'Authorization': f'Bearer {kwargs.get("jwt")}'
+            })
+            # Regular processor for normal spans and immediate export
+            processor = BatchSpanProcessor(
+                exporter,
+                max_export_batch_size=config.get('max_queue_size', max_queue_size),
+                schedule_delay_millis=config.get('max_wait_time', max_wait_time),
+            )
+            self._provider.add_span_processor(processor)
+            self._processors.append(processor)
 
-                processor = BatchSpanProcessor(
-                    exporter,
-                    max_export_batch_size=config.get('max_queue_size', max_queue_size),
-                    schedule_delay_millis=config.get('max_wait_time', max_wait_time),
+            metric_reader = PeriodicExportingMetricReader(
+                OTLPMetricExporter(
+                    endpoint=config.get('metrics_endpoint'),
+                    headers={
+                        'Authorization': f'Bearer {kwargs.get("jwt")}'
+                    }
                 )
-                self._provider.add_span_processor(processor)
-                self._processors.append(processor)
-            else:
-                # Use default authenticated processor and exporter if api_key is available
-                endpoint = config.get('exporter_endpoint') or 'https://otlp.agentops.api/v1/traces'
-                exporter = AuthenticatedOTLPExporter(endpoint=endpoint, jwt=kwargs.get('jwt'))
-                # Regular processor for normal spans and immediate export
-                processor = BatchSpanProcessor(
-                    exporter,
-                    max_export_batch_size=config.get('max_queue_size', max_queue_size),
-                    schedule_delay_millis=config.get('max_wait_time', max_wait_time),
-                )
-                self._provider.add_span_processor(processor)
-                self._processors.append(processor)
-
+            )
+            meter_provider = MeterProvider(resource=resource, metric_readers=[metric_reader])
+            metrics.set_meter_provider(meter_provider)
             self._initialized = True
             logger.debug("Tracing core initialized")
 

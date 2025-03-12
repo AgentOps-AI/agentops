@@ -18,7 +18,7 @@ from opentelemetry.instrumentation.utils import (
     unwrap,
 )
 
-from opentelemetry.semconv_ai import (
+from agentops.semconv import (
     SUPPRESS_LANGUAGE_MODEL_INSTRUMENTATION_KEY,
     SpanAttributes,
     LLMRequestTypeValues,
@@ -117,7 +117,7 @@ def set_tools_attributes(span, tools):
 def _set_input_attributes(span, llm_request_type, kwargs):
     _set_span_attribute(span, SpanAttributes.LLM_REQUEST_MODEL, kwargs.get("model"))
     _set_span_attribute(
-        span, SpanAttributes.LLM_IS_STREAMING, kwargs.get("stream") or False
+        span, SpanAttributes.LLM_REQUEST_STREAMING, kwargs.get("stream") or False
     )
 
     if should_send_prompts():

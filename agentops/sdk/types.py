@@ -11,6 +11,7 @@ class TracingConfig(TypedDict, total=False):
     exporter: Optional[SpanExporter]
     processor: Optional[SpanProcessor]
     exporter_endpoint: Optional[str]
+    metrics_endpoint: Optional[str]
     api_key: Optional[str]  # API key for authentication with AgentOps services
     project_id: Optional[str]  # Project ID to include in resource attributes
     max_queue_size: int  # Required with a default value

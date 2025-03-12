@@ -2,6 +2,7 @@
 
 import logging
 import os
+import time
 from typing import Collection
 from opentelemetry.instrumentation.cohere.config import Config
 from opentelemetry.instrumentation.cohere.utils import dont_throw
@@ -10,6 +11,7 @@ from wrapt import wrap_function_wrapper
 from opentelemetry import context as context_api
 from opentelemetry.trace import get_tracer, SpanKind
 from opentelemetry.trace.status import Status, StatusCode
+from opentelemetry.metrics import get_meter
 
 from opentelemetry.instrumentation.instrumentor import BaseInstrumentor
 from opentelemetry.instrumentation.utils import (
@@ -18,10 +20,11 @@ from opentelemetry.instrumentation.utils import (
 )
 
 from opentelemetry.semconv._incubating.attributes.gen_ai_attributes import GEN_AI_RESPONSE_ID
-from opentelemetry.semconv_ai import (
+from agentops.semconv import (
     SUPPRESS_LANGUAGE_MODEL_INSTRUMENTATION_KEY,
     SpanAttributes,
     LLMRequestTypeValues,
+    Meters,
 )
 from opentelemetry.instrumentation.cohere.version import __version__
 
@@ -46,6 +49,11 @@ WRAPPED_METHODS = [
         "span_name": "cohere.rerank",
     },
 ]
+
+# Global metrics objects
+_tokens_histogram = None
+_request_counter = None
+_response_time_histogram = None
 
 
 def should_send_prompts():
@@ -72,10 +80,10 @@ def _set_input_attributes(span, llm_request_type, kwargs):
     )
     _set_span_attribute(span, SpanAttributes.LLM_REQUEST_TOP_P, kwargs.get("top_p"))
     _set_span_attribute(
-        span, SpanAttributes.LLM_FREQUENCY_PENALTY, kwargs.get("frequency_penalty")
+        span, SpanAttributes.LLM_REQUEST_FREQUENCY_PENALTY, kwargs.get("frequency_penalty")
     )
     _set_span_attribute(
-        span, SpanAttributes.LLM_PRESENCE_PENALTY, kwargs.get("presence_penalty")
+        span, SpanAttributes.LLM_REQUEST_PRESENCE_PENALTY, kwargs.get("presence_penalty")
     )
 
     if should_send_prompts():
@@ -108,8 +116,6 @@ def _set_input_attributes(span, llm_request_type, kwargs):
                 f"{SpanAttributes.LLM_PROMPTS}.{len(kwargs.get('documents'))}.content",
                 kwargs.get("query"),
             )
-
-    return
 
 
 def _set_span_chat_response(span, response):
@@ -231,27 +237,90 @@ def _wrap(tracer, to_wrap, wrapped, instance, args, kwargs):
     ):
         return wrapped(*args, **kwargs)
 
-    name = to_wrap.get("span_name")
-    llm_request_type = _llm_request_type_by_method(to_wrap.get("method"))
+    method_name = to_wrap.get("method", "")
+    span_name = to_wrap.get("span_name", method_name)
+    llm_request_type = _llm_request_type_by_method(method_name)
+
+    start_time = time.time()
+    model = kwargs.get("model", "unknown")
+    
+    # Record request metric
+    if _request_counter:
+        _request_counter.add(
+            1,
+            {
+                "model": model,
+                "provider": "cohere",
+                "method": method_name
+            }
+        )
+
     with tracer.start_as_current_span(
-        name,
+        span_name,
         kind=SpanKind.CLIENT,
-        attributes={
-            SpanAttributes.LLM_SYSTEM: "Cohere",
-            SpanAttributes.LLM_REQUEST_TYPE: llm_request_type.value,
-        },
     ) as span:
-        if span.is_recording():
-            _set_input_attributes(span, llm_request_type, kwargs)
+        _set_span_attribute(span, SpanAttributes.LLM_REQUEST_TYPE, llm_request_type)
+        _set_span_attribute(span, SpanAttributes.LLM_SYSTEM, "cohere")
+        _set_input_attributes(span, llm_request_type, kwargs)
 
-        response = wrapped(*args, **kwargs)
-
-        if response:
-            if span.is_recording():
-                _set_response_attributes(span, llm_request_type, response)
-                span.set_status(Status(StatusCode.OK))
-
-        return response
+        try:
+            response = wrapped(*args, **kwargs)
+            _set_response_attributes(span, llm_request_type, response)
+            
+            # Record response time
+            if _response_time_histogram:
+                response_time = (time.time() - start_time) * 1000  # Convert to ms
+                _response_time_histogram.record(
+                    response_time,
+                    {
+                        "model": model,
+                        "provider": "cohere",
+                        "method": method_name
+                    }
+                )
+                
+            # Record token usage if available
+            if _tokens_histogram and hasattr(response, "meta") and response.meta:
+                if hasattr(response.meta, "billed_units") and response.meta.billed_units:
+                    if hasattr(response.meta.billed_units, "input_tokens"):
+                        input_tokens = response.meta.billed_units.input_tokens
+                        _tokens_histogram.record(
+                            input_tokens,
+                            {
+                                "model": model,
+                                "provider": "cohere",
+                                "token_type": "prompt"
+                            }
+                        )
+                    
+                    if hasattr(response.meta.billed_units, "output_tokens"):
+                        output_tokens = response.meta.billed_units.output_tokens
+                        _tokens_histogram.record(
+                            output_tokens,
+                            {
+                                "model": model,
+                                "provider": "cohere",
+                                "token_type": "completion"
+                            }
+                        )
+                        
+                        # Record total tokens
+                        if hasattr(response.meta.billed_units, "input_tokens"):
+                            total_tokens = response.meta.billed_units.input_tokens + output_tokens
+                            _tokens_histogram.record(
+                                total_tokens,
+                                {
+                                    "model": model,
+                                    "provider": "cohere",
+                                    "token_type": "total"
+                                }
+                            )
+            
+            return response
+        except Exception as ex:
+            span.set_status(Status(StatusCode.ERROR))
+            span.record_exception(ex)
+            raise
 
 
 class CohereInstrumentor(BaseInstrumentor):
@@ -267,19 +336,45 @@ class CohereInstrumentor(BaseInstrumentor):
     def _instrument(self, **kwargs):
         tracer_provider = kwargs.get("tracer_provider")
         tracer = get_tracer(__name__, __version__, tracer_provider)
+        
+        # Initialize metrics
+        global _tokens_histogram, _request_counter, _response_time_histogram
+        meter_provider = kwargs.get("meter_provider")
+        if meter_provider:
+            meter = get_meter(__name__, __version__, meter_provider)
+            
+            _tokens_histogram = meter.create_histogram(
+                name=Meters.LLM_TOKEN_USAGE,
+                unit="token",
+                description="Measures number of input and output tokens used in Cohere calls"
+            )
+            
+            _request_counter = meter.create_counter(
+                name="cohere.requests",
+                unit="request",
+                description="Counts Cohere API requests"
+            )
+            
+            _response_time_histogram = meter.create_histogram(
+                name="cohere.response_time",
+                unit="ms",
+                description="Measures response time for Cohere API calls"
+            )
+
+        import cohere
+
         for wrapped_method in WRAPPED_METHODS:
-            wrap_object = wrapped_method.get("object")
-            wrap_method = wrapped_method.get("method")
             wrap_function_wrapper(
-                "cohere.client",
-                f"{wrap_object}.{wrap_method}",
+                "cohere",
+                f"Client.{wrapped_method['method']}",
                 _wrap(tracer, wrapped_method),
             )
 
     def _uninstrument(self, **kwargs):
+        import cohere
+
         for wrapped_method in WRAPPED_METHODS:
-            wrap_object = wrapped_method.get("object")
             unwrap(
-                f"cohere.client.{wrap_object}",
-                wrapped_method.get("method"),
+                cohere.Client,
+                wrapped_method["method"],
             )

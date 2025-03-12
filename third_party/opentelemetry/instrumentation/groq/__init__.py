@@ -24,7 +24,7 @@ from opentelemetry.metrics import Counter, Histogram, Meter, get_meter
 from opentelemetry.semconv._incubating.attributes.gen_ai_attributes import (
     GEN_AI_RESPONSE_ID,
 )
-from opentelemetry.semconv_ai import (
+from agentops.semconv import (
     SUPPRESS_LANGUAGE_MODEL_INSTRUMENTATION_KEY,
     LLMRequestTypeValues,
     SpanAttributes,
@@ -94,13 +94,13 @@ def _set_input_attributes(span, kwargs):
     )
     set_span_attribute(span, SpanAttributes.LLM_REQUEST_TOP_P, kwargs.get("top_p"))
     set_span_attribute(
-        span, SpanAttributes.LLM_FREQUENCY_PENALTY, kwargs.get("frequency_penalty")
+        span, SpanAttributes.LLM_REQUEST_FREQUENCY_PENALTY, kwargs.get("frequency_penalty")
     )
     set_span_attribute(
-        span, SpanAttributes.LLM_PRESENCE_PENALTY, kwargs.get("presence_penalty")
+        span, SpanAttributes.LLM_REQUEST_PRESENCE_PENALTY, kwargs.get("presence_penalty")
     )
     set_span_attribute(
-        span, SpanAttributes.LLM_IS_STREAMING, kwargs.get("stream") or False
+        span, SpanAttributes.LLM_REQUEST_STREAMING, kwargs.get("stream") or False
     )
 
     if should_send_prompts():
