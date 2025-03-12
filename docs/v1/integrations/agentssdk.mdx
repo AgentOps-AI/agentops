@@ -1,0 +1,195 @@
+---
+title: 'OpenAI Agents SDK'
+description: 'AgentOps and OpenAI Agents SDK integration for powerful multi-agent workflow monitoring.'
+---
+
+import CodeTooltip from '/snippets/add-code-tooltip.mdx'
+import EnvTooltip from '/snippets/add-env-tooltip.mdx'
+
+<Check>[Give us a star](https://github.com/AgentOps-AI/agentops) to bookmark on GitHub, save for later 🖇️)</Check>
+
+[OpenAI Agents SDK](https://github.com/openai/agentsdk_prototype) is a lightweight yet powerful framework for building multi-agent workflows. The SDK provides a comprehensive set of tools for creating, managing, and monitoring agent-based applications.
+
+{/* <Frame type="glass" caption="OpenAI Agents Tracing UI">
+  <img height="400" src="/images/openai-agents-tracing-ui.png" />
+</Frame> */}
+
+## Core Concepts
+
+- **Agents**: LLMs configured with instructions, tools, guardrails, and handoffs
+- **Handoffs**: Allow agents to transfer control to other agents for specific tasks
+- **Guardrails**: Configurable safety checks for input and output validation
+- **Tracing**: Built-in tracking of agent runs, allowing you to view, debug and optimize your workflows
+
+<Steps>
+  <Step title="Install the AgentOps SDK">
+    <CodeGroup>
+      ```bash pip 
+      pip install agentops
+      ```
+      ```bash poetry
+      poetry add agentops
+      ```
+    </CodeGroup>
+  </Step>
+  <Step title="Install OpenAI Agents SDK">
+    <CodeGroup>
+      ```bash pip 
+      pip install openai-agents
+      ```
+      ```bash poetry
+      poetry add openai-agents
+      ```
+    </CodeGroup>
+    <Tip>
+      This will be updated to a PyPI link when the package is officially released.
+    </Tip>
+  </Step>
+  <Step title="Add 2 lines of code">
+    <CodeTooltip/>
+    <CodeGroup>
+      ```python python
+      import agentops
+      agentops.init(<INSERT YOUR API KEY HERE>)
+      ```
+    </CodeGroup>
+    <EnvTooltip />
+    <CodeGroup>
+      ```python .env
+      AGENTOPS_API_KEY=<YOUR API KEY>
+      OPENAI_API_KEY=<YOUR OPENAI API KEY>
+      ```
+    </CodeGroup>
+    Read more about environment variables in [Advanced Configuration](/v1/usage/advanced-configuration)
+  </Step>
+  <Step title="Run your agents">
+    Execute your program and visit [app.agentops.ai/drilldown](https://app.agentops.ai/drilldown) to observe your Agents! 🕵️
+    <Tip>
+      After your run, AgentOps prints a clickable url to console linking directly to your session in the Dashboard
+    </Tip> 
+    <div/>{/* Intentionally blank div for newline */}
+    <Frame type="glass" caption="Clickable link to session">
+      <img height="200" src="https://github.com/AgentOps-AI/agentops/blob/main/docs/images/link-to-session.gif?raw=true" />
+    </Frame>
+  </Step>
+</Steps>
+
+## Hello World Example
+
+```python
+from agents import Agent, Runner
+import agentops
+
+# Initialize AgentOps
+agentops.init()
+
+agent = Agent(name="Assistant", instructions="You are a helpful assistant")
+
+result = Runner.run_sync(agent, "Write a haiku about recursion in programming.")
+print(result.final_output)
+
+# Output:
+# Code within the code,
+# Functions calling themselves,
+# Infinite loop's dance.
+```
+
+## Handoffs Example
+
+```python
+from agents import Agent, Runner
+import asyncio
+import agentops
+
+# Initialize AgentOps
+agentops.init()
+
+spanish_agent = Agent(
+    name="Spanish agent",
+    instructions="You only speak Spanish.",
+)
+
+english_agent = Agent(
+    name="English agent",
+    instructions="You only speak English",
+)
+
+triage_agent = Agent(
+    name="Triage agent",
+    instructions="Handoff to the appropriate agent based on the language of the request.",
+    handoffs=[spanish_agent, english_agent],
+)
+
+
+async def main():
+    result = await Runner.run(triage_agent, input="Hola, ¿cómo estás?")
+    print(result.final_output)
+    # ¡Hola! Estoy bien, gracias por preguntar. ¿Y tú, cómo estás?
+
+
+if __name__ == "__main__":
+    asyncio.run(main())
+```
+
+## Functions Example
+
+```python
+import asyncio
+from agents import Agent, Runner, function_tool
+import agentops
+
+# Initialize AgentOps
+agentops.init()
+
+@function_tool
+def get_weather(city: str) -> str:
+    return f"The weather in {city} is sunny."
+
+
+agent = Agent(
+    name="Hello world",
+    instructions="You are a helpful agent.",
+    tools=[get_weather],
+)
+
+
+async def main():
+    result = await Runner.run(agent, input="What's the weather in Tokyo?")
+    print(result.final_output)
+    # The weather in Tokyo is sunny.
+
+
+if __name__ == "__main__":
+    asyncio.run(main())
+```
+
+## The Agent Loop
+
+When you call `Runner.run()`, the SDK runs a loop until it gets a final output:
+
+1. The LLM is called using the model and settings on the agent, along with the message history.
+2. The LLM returns a response, which may include tool calls.
+3. If the response has a final output, the loop ends and returns it.
+4. If the response has a handoff, the agent is set to the new agent and the loop continues from step 1.
+5. Tool calls are processed (if any) and tool response messages are appended. Then the loop continues from step 1.
+
+You can use the `max_turns` parameter to limit the number of loop executions.
+
+## Final Output
+
+Final output is the last thing the agent produces in the loop:
+
+- If you set an `output_type` on the agent, the final output is when the LLM returns something of that type using structured outputs.
+- If there's no `output_type` (i.e., plain text responses), then the first LLM response without any tool calls or handoffs is considered the final output.
+
+<CardGroup cols={3}>
+    <Card title="Basic Agent" icon="robot" href="https://github.com/openai/agentsdk_prototype/tree/main/examples/basic" />
+    <Card title="Multi-Agent" icon="users" href="https://github.com/openai/agentsdk_prototype/tree/main/examples/multi_agent" />
+    <Card title="Tool Usage" icon="toolbox" href="https://github.com/openai/agentsdk_prototype/tree/main/examples/tools" />
+</CardGroup>
+
+<script type="module" src="/scripts/github_stars.js"></script>
+<script type="module" src="/scripts/scroll-img-fadein-animation.js"></script>
+<script type="module" src="/scripts/button_heartbeat_animation.js"></script>
+<script type="css" src="/styles/styles.css"></script>
+<script type="module" src="/scripts/adjust_api_dynamically.js"></script> 

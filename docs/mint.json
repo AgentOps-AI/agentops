@@ -87,6 +87,7 @@
     {
       "group": "Integrations",
       "pages": [
+        "v1/integrations/agentssdk",
         "v1/integrations/ai21",
         "v1/integrations/anthropic",
         "v1/integrations/autogen",

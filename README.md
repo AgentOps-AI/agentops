@@ -43,14 +43,32 @@
 
 
 
-<div style="justify-content: center">
-  <img src="docs/images/external/app_screenshots/dashboard-banner.png" alt="Dashboard Banner">
-</div>
+https://github.com/user-attachments/assets/dfb4fa8d-d8c4-4965-9ff6-5b8514c1c22f
+
+
 
 <br/>
 
 
 AgentOps helps developers build, evaluate, and monitor AI agents. From prototype to production.
+
+## Key Integrations 🔌
+
+<div align="center" style="background-color: white; padding: 20px; border-radius: 10px; margin: 0 auto; max-width: 800px;">
+  <div style="display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 30px; margin-bottom: 20px;">
+    <a href="https://docs.agentops.ai/v1/integrations/openai-agents"><img src="docs/images/external/openai/agents-sdk.svg" height="45" alt="OpenAI Agents SDK"></a>
+    <a href="https://docs.agentops.ai/v1/integrations/crewai"><img src="docs/v1/img/docs-icons/crew-banner.png" height="45" alt="CrewAI"></a>
+    <a href="https://docs.ag2.ai/docs/ecosystem/agentops"><img src="docs/images/external/autogen/ag2_blue.svg" height="45" alt="AG2 (AutoGen)"></a>
+    <a href="https://docs.agentops.ai/v1/integrations/microsoft"><img src="docs/images/external/microsoft/microsoft_logo.svg" height="45" alt="Microsoft"></a>
+  </div>
+  
+  <div style="display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 30px; margin-bottom: 20px;">
+    <a href="https://docs.agentops.ai/v1/integrations/langchain"><img src="docs/images/external/langchain/langchain-logo.png" height="45" alt="LangChain"></a>
+    <a href="https://docs.agentops.ai/v1/integrations/camel"><img src="docs/images/external/camel/camel.png" height="45" alt="Camel AI"></a>
+    <a href="https://docs.llamaindex.ai/en/stable/module_guides/observability/?h=agentops#agentops"><img src="docs/images/external/ollama/ollama-icon.png" height="45" alt="LlamaIndex"></a>
+    <a href="https://docs.agentops.ai/v1/integrations/cohere"><img src="docs/images/external/cohere/cohere-logo.svg" height="45" alt="Cohere"></a>
+  </div>
+</div>
 
 |                                       |                                                               |
 | ------------------------------------- | ------------------------------------------------------------- |
@@ -58,7 +76,7 @@ AgentOps helps developers build, evaluate, and monitor AI agents. From prototype
 | 💸 **LLM Cost Management**            | Track spend with LLM foundation model providers               |
 | 🧪 **Agent Benchmarking**             | Test your agents against 1,000+ evals                         |
 | 🔐 **Compliance and Security**        | Detect common prompt injection and data exfiltration exploits |
-| 🤝 **Framework Integrations**         | Native Integrations with CrewAI, AG2(AutoGen), Camel AI, & LangChain         |
+| 🤝 **Framework Integrations**         | Native Integrations with CrewAI, AG2 (AutoGen), Camel AI, & LangChain         |
 
 ## Quick Start ⌨️
 
@@ -160,9 +178,20 @@ record(ActionEvent("received_user_input"))
 
 ## Integrations 🦾
 
+### OpenAI Agents SDK 🖇️
+
+Build multi-agent systems with tools, handoffs, and guardrails. AgentOps provides first-class integration with OpenAI Agents.
+
+```bash
+pip install agents-sdk
+```
+
+- [AgentOps integration example](https://docs.agentops.ai/v1/integrations/agentssdk)
+- [Official CrewAI documentation](https://docs.crewai.com/how-to/AgentOps-Observability)
+
 ### CrewAI 🛶
 
-Build Crew agents with observability with only 2 lines of code. Simply set an `AGENTOPS_API_KEY` in your environment, and your crews will get automatic monitoring on the AgentOps dashboard.
+Build Crew agents with observability in just 2 lines of code. Simply set an `AGENTOPS_API_KEY` in your environment, and your crews will get automatic monitoring on the AgentOps dashboard.
 
 ```bash
 pip install 'crewai[agentops]'
@@ -728,7 +757,7 @@ from swarmzero import Agent, Swarm
 | Platform                                                                     | Dashboard                                  | Evals                                  |
 | ---------------------------------------------------------------------------- | ------------------------------------------ | -------------------------------------- |
 | ✅ Python SDK                                                                | ✅ Multi-session and Cross-session metrics | ✅ Custom eval metrics                 |
-| 🚧 Evaluation builder API                                                    | ✅ Custom event tag tracking               | 🔜 Agent scorecards                    |
+| 🚧 Evaluation builder API                                                    | ✅ Custom event tag tracking              | 🔜 Agent scorecards                    |
 | ✅ [Javascript/Typescript SDK](https://github.com/AgentOps-AI/agentops-node) | ✅ Session replays                         | 🔜 Evaluation playground + leaderboard |
 
 ## Debugging Roadmap 🧭

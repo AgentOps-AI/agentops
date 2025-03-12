@@ -1,27 +1,23 @@
 ---
 title: "Introduction"
-description: "Build your next agent with evals, observability, and replays"
+description: "AgentOps is the developer favorite platform for testing, debugging, and deploying AI agents and LLM apps."
 mode: "wide"
 ---
 
-<Check>[Give us a star](https://github.com/AgentOps-AI/agentops) on GitHub if you find AgentOps helpful (you may be our <span id="stars-text">3,000th</span> 😊)</Check>
-
-# AgentOps solves what Terminal can't
+## Integrate with developer favorite agent frameworks
 
 <CardGroup cols={2}>
-	<Card title="Terminal CAN'T..." icon="trash" iconType="solid" color="#d6483e">
-		- • Track agents across executions
-		- • Parse out LLM completions from output logs
-		- • Give you insight into what your agents did
-	</Card>
-	<Card title="AgentOps does it all and more..." icon="face-smile-halo" iconType="regular" color="#2bd600">
-		- • Record LLM prompts, completions, & timestamps
-		- • Log events, calls, and any other agent activity
-		- • Link agent errors back to their causal event
-	</Card>
+  <Card title="OpenAI Agents SDK" icon={<img src="https://www.github.com/agentops-ai/agentops/blob/main/docs/images/external/openai/openai-logomark.png?raw=true" alt="OpenAI Agents SDK" />} iconType="image" href="/v1/integrations/agentssdk" />
+  <Card title="CrewAI" icon={<img src="https://www.github.com/agentops-ai/agentops/blob/main/docs/v1/img/docs-icons/crew.png?raw=true" alt="CrewAI"/>} iconType="image" href="/v1/integrations/crewai" />
+  <Card title="AG2" icon={<img src="https://www.github.com/agentops-ai/agentops/blob/main/docs/images/external/autogen/ag2_blue.svg?raw=true" alt="AG2"/>} iconType="image" href="/v1/integrations/autogen" />
+  <Card title="AutoGen" icon={<img src="https://www.github.com/agentops-ai/agentops/blob/main/docs/images/external/microsoft/microsoft_logo.svg?raw=true" alt="AutoGen" />} iconType="image" href="/v1/integrations/autogen" />
+  <Card title="Anthropic" icon={<img src="https://www.github.com/agentops-ai/agentops/blob/main/docs/images/external/anthropic/anthropic_icon_slate.png?raw=true" alt="Anthropic" />} iconType="image" href="/v1/integrations/anthropic" />
+  <Card title="Ollama" icon={<img src="https://www.github.com/agentops-ai/agentops/blob/main/docs/images/external/ollama/ollama-icon.png?raw=true" alt="Ollama" />} iconType="image" href="/v1/integrations/ollama" />
+  <Card title="Cohere" icon={<img src="https://www.github.com/agentops-ai/agentops/blob/main/docs/images/external/cohere/cohere-logo.svg?raw=true" alt="Cohere" />} iconType="image" href="/v1/integrations/cohere" />
+  <Card title="Groq" icon="bolt" href="https://docs.agentops.ai/v1/integrations/groq" />
 </CardGroup>
 
-And we do it all in just two lines of code...
+Observability and monitoring for your AI agents and LLM apps. And we do it all in just two lines of code...
 <CodeGroup>
 	```python python
 	import agentops
@@ -31,6 +27,8 @@ And we do it all in just two lines of code...
 ... that logs everything back to your AgentOps Dashboard.
 
 ## The AgentOps Dashboard
+
+<Check>[Give us a star](https://github.com/AgentOps-AI/agentops) to bookmark on GitHub, save for later 🖇️)</Check>
 
 With just two lines of code, you can free yourself from the chains of the terminal and, instead, visualize your agents' behavior
 in your AgentOps Dashboard. After setting up AgentOps, each execution of your program is recorded as a session and the above
