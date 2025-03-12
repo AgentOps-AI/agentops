@@ -9,6 +9,14 @@ agentops.init()
 def process_data(data):
     """Process some data within a session."""
     print(f"Processing data: {data}")
+    import openai
+
+    response = openai.chat.completions.create(
+        model="gpt-3.5-turbo",
+        messages=[{"role": "user", "content": "Write a one-line joke"}]
+    )
+
+
     # Simulate some processing
     result = data.upper()
     return result
