@@ -25,6 +25,7 @@ class Client:
 
     config: Config
     _initialized: bool
+    __instance = None  # Class variable for singleton pattern
 
     api: ApiClient
 
