@@ -20,7 +20,6 @@ from opentelemetry.metrics import get_meter
 
 # AgentOps imports
 from agentops.semconv import (
-    SpanKind,
     CoreAttributes,
     WorkflowAttributes,
     InstrumentationAttributes,
@@ -28,8 +27,6 @@ from agentops.semconv import (
     SpanAttributes,
     Meters,
 )
-from agentops.session.tracer import get_tracer_provider
-
 # Agents SDK imports
 from agents.tracing.processor_interface import TracingProcessor as AgentsTracingProcessor
 from agents.tracing.spans import Span as AgentsSpan
@@ -130,6 +127,9 @@ class AgentsDetailedExporter:
     A detailed exporter for Agents SDK traces and spans that forwards them to AgentOps.
     """
     
+    def __init__(self, tracer_provider=None):
+        self.tracer_provider = tracer_provider
+    
     def export(self, items: list[Union[AgentsTrace, AgentsSpan[Any]]]) -> None:
         """Export Agents SDK traces and spans to AgentOps."""
         for item in items:
@@ -141,7 +141,7 @@ class AgentsDetailedExporter:
     def _export_trace(self, trace: AgentsTrace) -> None:
         """Export an Agents SDK trace to AgentOps."""
         # Get the current tracer
-        tracer = get_tracer("agents-sdk", __version__, get_tracer_provider())
+        tracer = get_tracer("agents-sdk", __version__, self.tracer_provider)
         
         # Create a new span for the trace
         with tracer.start_as_current_span(
@@ -162,7 +162,7 @@ class AgentsDetailedExporter:
     def _export_span(self, span: AgentsSpan[Any]) -> None:
         """Export an Agents SDK span to AgentOps."""
         # Get the current tracer
-        tracer = get_tracer("agents-sdk", __version__, get_tracer_provider())
+        tracer = get_tracer("agents-sdk", __version__, self.tracer_provider)
         
         # Determine span name and kind based on span data type
         span_data = span.span_data
@@ -279,7 +279,7 @@ class AgentsDetailedProcessor(AgentsTracingProcessor):
     """
     
     def __init__(self):
-        self.exporter = AgentsDetailedExporter()
+        self.exporter = AgentsDetailedExporter(None)
     
     def on_trace_start(self, trace: AgentsTrace) -> None:
         self.exporter.export([trace])
@@ -368,6 +368,7 @@ class AgentsInstrumentor(BaseInstrumentor):
         try:
             from agents import add_trace_processor
             processor = AgentsDetailedProcessor()
+            processor.exporter = AgentsDetailedExporter(tracer_provider)
             add_trace_processor(processor)
             logger.info(f"[DEBUG] Added AgentsDetailedProcessor to Agents SDK: {processor}")
         except Exception as e:
@@ -375,12 +376,12 @@ class AgentsInstrumentor(BaseInstrumentor):
         
         # Monkey patch the Runner class
         try:
-            self._patch_runner_class()
+            self._patch_runner_class(tracer_provider)
             logger.info("Monkey patched Runner class")
         except Exception as e:
             logger.error(f"Failed to monkey patch Runner class: {e}")
     
-    def _patch_runner_class(self):
+    def _patch_runner_class(self, tracer_provider):
         """Monkey patch the Runner class to capture additional information."""
         from agents.run import Runner
         
@@ -400,11 +401,11 @@ class AgentsInstrumentor(BaseInstrumentor):
             
             if is_async:
                 @functools.wraps(original_method)
-                async def instrumented_method(cls, starting_agent, input, context=None, max_turns=10, hooks=None, run_config=None, _method_name=method_name, _original=original_method):
+                async def instrumented_method(cls, starting_agent, input, context=None, max_turns=10, hooks=None, run_config=None, _method_name=method_name, _original=original_method, _tracer_provider=tracer_provider):
                     start_time = time.time()
                     
                     # Get the current tracer
-                    tracer = get_tracer(__name__, __version__, get_tracer_provider())
+                    tracer = get_tracer(__name__, __version__, _tracer_provider)
                     
                     # Extract model information from agent and run_config
                     model_info = get_model_info(starting_agent, run_config)
@@ -427,7 +428,7 @@ class AgentsInstrumentor(BaseInstrumentor):
                     
                     # Create span attributes
                     attributes = {
-                        "span.kind": SpanKind.WORKFLOW_STEP,
+                        "span.kind": WorkflowAttributes.WORKFLOW_STEP,
                         "agent.name": starting_agent.name,
                         WorkflowAttributes.WORKFLOW_INPUT: str(input)[:1000],
                         WorkflowAttributes.MAX_TURNS: max_turns,
@@ -624,11 +625,11 @@ class AgentsInstrumentor(BaseInstrumentor):
                 setattr(Runner, method_name, classmethod(instrumented_method))
             else:
                 @functools.wraps(original_method)
-                def instrumented_method(cls, starting_agent, input, context=None, max_turns=10, hooks=None, run_config=None, _method_name=method_name, _original=original_method):
+                def instrumented_method(cls, starting_agent, input, context=None, max_turns=10, hooks=None, run_config=None, _method_name=method_name, _original=original_method, _tracer_provider=tracer_provider):
                     start_time = time.time()
                     
                     # Get the current tracer
-                    tracer = get_tracer(__name__, __version__, get_tracer_provider())
+                    tracer = get_tracer(__name__, __version__, _tracer_provider)
                     
                     # Extract model information from agent and run_config
                     model_info = get_model_info(starting_agent, run_config)
@@ -649,7 +650,7 @@ class AgentsInstrumentor(BaseInstrumentor):
                     
                     # Create span attributes
                     attributes = {
-                        "span.kind": SpanKind.WORKFLOW_STEP,
+                        "span.kind": WorkflowAttributes.WORKFLOW_STEP,
                         "agent.name": starting_agent.name,
                         WorkflowAttributes.WORKFLOW_INPUT: str(input)[:1000],
                         WorkflowAttributes.MAX_TURNS: max_turns,
