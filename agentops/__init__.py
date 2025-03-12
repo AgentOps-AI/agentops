@@ -2,7 +2,7 @@ from typing import List, Optional, Union
 
 from dotenv import load_dotenv
 
-from .sdk.compat import *
+from .sdk._compat import *
 from .client import Client
 
 load_dotenv()
@@ -170,13 +170,6 @@ def set_tags(tags: List[str]):
     Args:
         tags (List[str]): The list of tags to set.
     """
-    raise NotImplementedError
-
-
-# Mostly used for unit testing -
-# prevents unexpected sessions on new tests
-def end_all_sessions() -> None:
-    """End all active sessions"""
     raise NotImplementedError
 
 
