@@ -19,7 +19,7 @@ from opentelemetry.sdk.trace.export import (BatchSpanProcessor,
                                             SimpleSpanProcessor, SpanExporter)
 from opentelemetry.trace import Span
 
-from agentops.logging import logger
+from agentops.logging import logger, messages
 from agentops.sdk.exporters import AuthenticatedOTLPExporter
 from agentops.sdk.types import TracingConfig
 from agentops.semconv import ResourceAttributes
@@ -152,6 +152,7 @@ class TracingCore:
             metrics.set_meter_provider(meter_provider)
             self._initialized = True
             logger.debug("Tracing core initialized")
+            messages.log_startup_message()
 
     def shutdown(self) -> None:
         """Shutdown the tracing core."""
@@ -178,6 +179,7 @@ class TracingCore:
 
             self._initialized = False
             logger.debug("Tracing core shutdown")
+            messages.log_shutdown_message()
 
     def get_tracer(self, name: str = "agentops") -> trace.Tracer:
         """
