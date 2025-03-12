@@ -92,23 +92,23 @@ agent.__doc__ = """
         Decorated function
 """
 
-event = _create_decorator(AgentOpsSpanKind.WORKFLOW_TASK)
-event.__doc__ = """
-    Generic decorator for instrumenting a function or method as an event.
-    This is a general-purpose decorator for tracking events that don't fit
+operation = _create_decorator(AgentOpsSpanKind.WORKFLOW_TASK)
+operation.__doc__ = """
+    Generic decorator for instrumenting a function or method as an operation.
+    This is a general-purpose decorator for tracking operations that don't fit
     into the specific categories of session or agent.
     
     Can be used with or without parentheses:
-        @event
+        @operation
         def function(): ...
         
-        @event(name="custom_name")
+        @operation(name="custom_name")
         def function(): ...
     
     By default, this uses the WORKFLOW_TASK span kind.
     
     Args:
-        wrapped: The function to decorate (automatically provided when used as @event)
+        wrapped: The function to decorate (automatically provided when used as @operation)
         name: Optional custom name for the operation (defaults to function name)
         version: Optional version identifier for the operation
         
@@ -116,18 +116,18 @@ event.__doc__ = """
         Decorated function
 """
 
-# Special case for operation since it accepts span_kind
-def operation(wrapped=None, *, span_kind: Union[str, None] = None, name: Optional[str] = None, version: Optional[int] = None):
+# Special case for record since it accepts span_kind
+def record(wrapped=None, *, span_kind: Union[str, None] = None, name: Optional[str] = None, version: Optional[int] = None):
     """
     Flexible decorator for instrumenting a function or method with a specific span kind.
     Use this when you need control over which specific span kind to use.
     
     Can be used with or without parentheses, but typically requires parentheses to specify span_kind:
-        @operation(span_kind=AgentOpsSpanKind.TOOL)
+        @record(span_kind=AgentOpsSpanKind.TOOL)
         def function(): ...
     
     Args:
-        wrapped: The function to decorate (automatically provided when used as @operation)
+        wrapped: The function to decorate (automatically provided when used as @record)
         span_kind: The specific AgentOpsSpanKind to use for this operation
         name: Optional custom name for the operation (defaults to function name)
         version: Optional version identifier for the operation
@@ -136,7 +136,7 @@ def operation(wrapped=None, *, span_kind: Union[str, None] = None, name: Optiona
         Decorated function
     """
     if wrapped is None:
-        return functools.partial(operation, span_kind=span_kind, name=name, version=version)
+        return functools.partial(record, span_kind=span_kind, name=name, version=version)
     
     return instrument_operation(span_kind=span_kind, name=name, version=version)(wrapped)
 
