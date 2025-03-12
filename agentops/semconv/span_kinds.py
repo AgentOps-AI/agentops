@@ -13,6 +13,7 @@ class SpanKind:
     
     # Workflow kinds
     WORKFLOW_STEP = "workflow.step"    # Step in a workflow
+    SESSION = "session"
     
 
 class AgentOpsSpanKindValues(Enum):
