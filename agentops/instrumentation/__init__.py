@@ -47,7 +47,6 @@ n the environment.
 
     def get_instance(self) -> BaseInstrumentor:
         """Return a new instance of the instrumentor."""
-        tracer_provider = TracingCore.get_instance()._provider
         return getattr(self.module, self.class_name)()
 
 
@@ -92,6 +91,7 @@ available_instrumentors: list[InstrumentorLoader] = [
         class_name='OllamaInstrumentor', 
         provider_import_name='ollama', 
     ),
+    # TODO instrumentation for Agents SDK
 ]
 
 
@@ -105,7 +105,6 @@ def instrument_one(loader: InstrumentorLoader) -> Optional[BaseInstrumentor]:
     instrumentor = loader.get_instance()
     instrumentor.instrument(tracer_provider=TracingCore.get_instance()._provider)
     logger.info(f"Instrumented {loader.class_name}")
-    _active_instrumentors.append(instrumentor)
     
     return instrumentor
 
