@@ -104,7 +104,7 @@ def instrument_one(loader: InstrumentorLoader) -> Optional[BaseInstrumentor]:
     
     instrumentor = loader.get_instance()
     instrumentor.instrument(tracer_provider=TracingCore.get_instance()._provider)
-    logger.info(f"Instrumented {loader.class_name}")
+    logger.debug(f"Instrumented {loader.class_name}")
     
     return instrumentor
 
@@ -117,13 +117,13 @@ def instrument_all():
     global _active_instrumentors
     
     if len(_active_instrumentors):
-        logger.warning("Instrumentors have already been populated.")
+        logger.debug("Instrumentors have already been populated.")
         return
     
     for loader in available_instrumentors:
         if loader.class_name in _active_instrumentors:
             # already instrumented
-            logger.warning(f"Instrumentor {loader.class_name} has already been instrumented.")
+            logger.debug(f"Instrumentor {loader.class_name} has already been instrumented.")
             return None
         
         instrumentor = instrument_one(loader)
@@ -139,5 +139,5 @@ def uninstrument_all():
     global _active_instrumentors
     for instrumentor in _active_instrumentors:
         instrumentor.uninstrument()
-        logger.info(f"Uninstrumented {instrumentor.__class__.__name__}")
+        logger.debug(f"Uninstrumented {instrumentor.__class__.__name__}")
     _active_instrumentors = []

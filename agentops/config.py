@@ -85,7 +85,7 @@ class Config:
     )
 
     log_level: Union[str, int] = field(
-        default_factory=lambda: os.getenv("AGENTOPS_LOG_LEVEL", "CRITICAL"),
+        default_factory=lambda: os.getenv("AGENTOPS_LOG_LEVEL", "WARNING"),
         metadata={"description": "Logging level for AgentOps logs"},
     )
 
