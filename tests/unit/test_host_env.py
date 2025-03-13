@@ -1,9 +1,11 @@
 from unittest.mock import patch
-from agentops import host_env
+
 import psutil
 
 # noinspection PyProtectedMember
 from psutil._common import sdiskpart, sdiskusage
+
+import agentops.helpers.system as host_env
 
 
 def mock_partitions():

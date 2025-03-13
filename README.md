@@ -41,14 +41,11 @@
   </a>
 </p>
 
-
-
-https://github.com/user-attachments/assets/dfb4fa8d-d8c4-4965-9ff6-5b8514c1c22f
-
-
+<div align="center">
+  <video src="https://github.com/user-attachments/assets/dfb4fa8d-d8c4-4965-9ff6-5b8514c1c22f" width="650" autoplay loop muted></video>
+</div>
 
 <br/>
-
 
 AgentOps helps developers build, evaluate, and monitor AI agents. From prototype to production.
 

@@ -159,11 +159,24 @@ cython_debug/
 #  option (not recommended) you can uncomment the following to ignore the entire idea folder.
 .idea/
 
+# VSCode
 .vscode/
+
+# Cursor
+.cursorrules
+
+# Benchmarks
 .benchmarks/
+
+# MacOS
 .DS_Store
 
+# Database
+.db
+
+# Time travel
 agentops_time_travel.json
 .agentops_time_travel.yaml
 
+# Node
 node_modules

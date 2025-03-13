@@ -1,5 +1,7 @@
 import pytest
 from pathlib import Path
+import os
+from vcr.record_mode import RecordMode
 
 
 @pytest.fixture(scope="session")
@@ -91,26 +93,16 @@ def vcr_config():
                 headers[original_header] = replacement
         return response
 
-    return {
-        # Basic VCR configuration
-        "serializer": "yaml",
-        "cassette_library_dir": str(vcr_cassettes),
-        "match_on": ["uri", "method", "body"],
-        "record_mode": "once",
-        "ignore_localhost": True,
-        "ignore_hosts": [
-            "pypi.org",
-            # Add OTEL endpoints to ignore list
-            "localhost:4317",  # Default OTLP gRPC endpoint
-            "localhost:4318",  # Default OTLP HTTP endpoint
-            "127.0.0.1:4317",
-            "127.0.0.1:4318",
+    vcr_config = {
+        "filter_headers": [
+            "authorization",
+            "Authorization",
+            "X-OpenAI-Client-User-Agent",
         ],
-        # Header filtering for requests and responses
-        "filter_headers": sensitive_headers,
-        "before_record_response": filter_response_headers,
-        # Add these new options
-        "decode_compressed_response": True,
+        "match_on": ["method", "scheme", "host", "port", "path", "query"],
+        "record_mode": RecordMode.ONCE if os.getenv("CI") else RecordMode.NEW_EPISODES,
+        "path_transformer": lambda path: path.replace("\\", "/"),
         "record_on_exception": False,
-        "allow_playback_repeats": True,
     }
+
+    return vcr_config

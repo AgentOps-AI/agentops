@@ -1,46 +1,35 @@
-# Job Title: AI Engineer
-
-**Location:** San Francisco, CA (Hybrid Work Model)
-
-## About Us:
-At AgentOps, we are pioneers in the realm of AI agent observability and evaluation, dedicated to enhancing the reliability and effectiveness of AI applications. Our mission is to empower engineers and teams to construct reliable AI agents that deliver exceptional performance through robust observability and evaluation tools.
+# Game Design Specialist
+**Location:** Los Angeles, CA (Hybrid Work Available)
 
 ## Introduction:
-Join us at AgentOps, where innovation meets opportunity! As an AI Engineer, you'll be at the forefront of developing groundbreaking solutions that reshape how businesses implement AI technologies. Work alongside some of the brightest minds in San Francisco within a dynamic environment that thrives on creativity and initiative. If you're passionate about AI and eager to impact the future of technology, we want to hear from you!
+At Riot Games, we are driven by a single mission—to be the most player-focused gaming company in the world. Our culture thrives on innovation, empowerment, and collaboration, where every member of our team is valued and has the opportunity to influence player experiences at every turn. If you're passionate about gaming and excited to create unforgettable experiences that resonate with players, we would love to hear from you!
 
 ## Role Description:
-In this role, you will play a vital part in designing and developing sophisticated AI systems that optimize agent observability. Your responsibilities include collaborating with cross-functional teams to create tools to enhance AI performance, ensure efficiency, and maintain stringent compliance standards. Leverage your expertise to drive innovation, streamline operations, and contribute to our mission of delivering unparalleled customer success.
+We are seeking a dedicated and talented **Game Design Specialist** who is ready to contribute to our mission. As a key member of our development team, you will play an essential role in designing engaging game mechanics, fostering player engagement, and ensuring our games exceed player expectations. Your insights will be critical in shaping the future of gaming at Riot Games.
 
 ## Responsibilities:
-- Design, implement, and optimize AI solutions focused on agent observability and evaluation.
-- Collaborate with engineering teams to develop and integrate SDK tools that enhance agent performance.
-- Conduct thorough testing and evaluations of AI models, ensuring reliability and compliance with industry standards.
-- Utilize debugging techniques, including time travel methods, to troubleshoot and improve agent systems.
-- Support the development of comprehensive documentation and reporting on AI performance metrics.
-- Engage with customers to gather feedback and enhance product features, prioritizing customer success.
-- Stay abreast of current trends and advancements in AI technology, applying insights to improve our offerings.
+- Collaborate with cross-functional teams to design and implement game features and mechanics.
+- Analyze player feedback and data to continuously improve game experience and engagement.
+- Develop and maintain game design documentation and prototypes for new gameplay features.
+- Conduct playtests to gather insights and iterate on game designs.
+- Engage with the community to understand player needs and incorporate their feedback into design choices.
 
-## Required Skills and Qualifications:
-- Bachelor’s/Master's degree in Computer Science, Engineering, or related fields.
-- Proficiency in AI and machine learning algorithms, notably in natural language processing and model evaluation.
-- Strong programming skills in Python, C++, or Java with experience in AI frameworks such as TensorFlow or PyTorch.
-- Experience in developing or integrating SDKs focused on AI agents.
-- Familiarity with cloud platforms (AWS, Azure, or Google Cloud) for deploying AI applications.
-- Proven track record in evaluating AI models, including debugging and troubleshooting capabilities.
-- Excellent collaboration, communication, and problem-solving skills.
+## Requirements:
+- At least 5 years of experience in game design or a related technical field.
+- Proven expertise in game mechanics design and player engagement strategies.
+- Strong analytical skills with a knack for data analysis and user feedback interpretation.
+- Excellent teamwork and interpersonal skills, fostering a collaborative work environment.
+- A genuine passion for gaming and in-depth knowledge of current trends in the gaming industry.
 
-## Preferred Qualifications:
-- Experience working with or developing enterprise-grade applications.
-- Exposure to regulatory frameworks and compliance standards (SOC-2, HIPAA, etc.).
-- Passion for innovative thinking and a strong customer-centric approach.
+## Qualities and Characteristics:
+- Player-focused mindset ensuring that player feedback drives every design choice.
+- Creative problem solver with a history of innovative solutions to complex design challenges.
+- Ambitious and humble, eager to learn continuously and share knowledge with the team.
 
-## What We Offer:
-- An opportunity to work with the most talented developers in San Francisco.
-- A collaborative work environment that promotes innovation and high agency.
-- Flexible work arrangements with a focus on work-life balance.
-- Competitive salary and benefits package.
-- Ongoing professional development opportunities and mentorship programs.
+## Unique Benefits:
+- Join a dynamic and inclusive workplace that values diversity and creativity.
+- Opportunities for social impact through community engagement projects.
+- A modern workspace featuring themed meeting rooms and recreational areas designed for player and employee experiences alike.
+- Enjoy food and perks that reflect our dedication to our team’s comfort and engagement.
 
-## Join Us:
-If you're ready to take on the challenge of shaping the future of AI observability and evaluation, we invite you to apply for the AI Engineer position at AgentOps. Together, we can build technology that makes a difference!
-```
+Are you ready to take on the challenge and join a passionate team dedicated to enriching the world of gaming? **Apply now** and contribute to creating impactful and memorable player experiences with Riot Games!
