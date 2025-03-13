@@ -6,7 +6,8 @@ from agentops.exceptions import (AgentOpsClientNotInitializedException,
                                  NoApiKeyException, NoSessionException)
 from agentops.instrumentation import instrument_all
 from agentops.logging import logger
-from agentops.logging.config import configure_logging, intercept_opentelemetry_logging
+from agentops.logging.config import (configure_logging,
+                                     intercept_opentelemetry_logging)
 from agentops.sdk.core import TracingCore
 
 
@@ -58,31 +59,13 @@ class Client:
         self.initialized = True
 
         if self.config.auto_start_session:
-            return self.start_session()
+            from agentops.legacy import start_session
+            start_session()
+
 
     def configure(self, **kwargs):
         """Update client configuration"""
         self.config.configure(**kwargs)
-
-    def start_session(self, **kwargs) -> _compat.session:
-        """Start a new session for recording events
-
-        Args:
-            tags: Optional list of tags for the session
-            inherited_session_id: Optional ID to inherit from another session
-
-        Returns:
-            Session or None: New session if successful, None if no API key configured
-        """
-
-        if not self.initialized:
-            # Attempt to initialize the client if not already initialized
-            if self.config.auto_init:
-                self.init()
-            else:
-                raise AgentOpsClientNotInitializedException
-
-        return _compat.session
 
     @property
     def initialized(self) -> bool:
