@@ -16,13 +16,14 @@ from opentelemetry import trace
 from agentops.exceptions import AgentOpsClientNotInitializedException
 from agentops.sdk.core import TracingCore
 from agentops.sdk.decorators.utility import _finalize_span, _make_span
+from agentops.semconv.span_attributes import SpanAttributes
 from agentops.semconv.span_kinds import SpanKind
 
 
 def start_span(
     name: str = "manual_span",
     span_kind: str = SpanKind.OPERATION,
-    attributes: Optional[Dict[str, Any]] = None,
+    attributes: Dict[str, Any] = {},
     version: Optional[int] = None
 ) -> Tuple[Any, Any]:
     """
@@ -63,17 +64,15 @@ def start_span(
         else:
             raise AgentOpsClientNotInitializedException
 
+    attributes.setdefault(SpanAttributes.AGENTOPS_SPAN_KIND, span_kind)
+
     # Use the standardized _make_span function to create the span
     span, context, token = _make_span(
         operation_name=name,
-        operation_type=span_kind,
-        version=version
+        span_kind=span_kind,
+        version=version,
+        attributes=attributes
     )
-
-    # Add custom attributes if provided
-    if attributes:
-        for key, value in attributes.items():
-            span.set_attribute(key, value)
 
     return span, token
 

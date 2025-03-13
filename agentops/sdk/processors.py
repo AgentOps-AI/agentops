@@ -12,9 +12,11 @@ from typing import Any, Dict, List, Optional
 from opentelemetry.context import Context
 from opentelemetry.sdk.trace import ReadableSpan, Span, SpanProcessor
 from opentelemetry.sdk.trace.export import SpanExporter
+from termcolor import colored
 
 import agentops.semconv as semconv
 from agentops.logging import logger
+from agentops.sdk.converters import trace_id_to_uuid, uuid_to_int16
 from agentops.semconv.core import CoreAttributes
 
 
@@ -69,7 +71,7 @@ class LiveSpanProcessor(SpanProcessor):
 
     def export_in_flight_spans(self) -> None:
         """Export all in-flight spans without ending them.
-        
+
         This method is primarily used for testing to ensure all spans
         are exported before assertions are made.
         """
@@ -116,7 +118,23 @@ class InternalSpanProcessor(SpanProcessor):
                                         "unknown") if span.attributes else "unknown"
 
         # Print basic information about the span
-        logger.info(f"Started span: {span.name} (kind: {span_kind})")
+        logger.debug(f"Started span: {span.name} (kind: {span_kind})")
+
+        # Special handling for session spans
+        if span_kind == semconv.SpanKind.SESSION:
+            trace_id = span.context.trace_id
+            # Convert trace_id to hex string if it's not already
+            if isinstance(trace_id, int):
+                session_url = f"{self.app_url}/drilldown?session_id={trace_id_to_uuid(trace_id)}"
+                logger.info(
+                    colored(
+                        f"\x1b[34mSession started: {session_url}\x1b[0m",
+                        "light_green",
+                    )
+                )
+        else:
+            # Print basic information for other span kinds
+            logger.debug(f"Ended span: {span.name} (kind: {span_kind})")
 
     def on_end(self, span: ReadableSpan) -> None:
         """
@@ -138,14 +156,16 @@ class InternalSpanProcessor(SpanProcessor):
             trace_id = span.context.trace_id
             # Convert trace_id to hex string if it's not already
             if isinstance(trace_id, int):
-                trace_id = format(trace_id, '032x')
-
-            url = f"{self.app_url}/drilldown?session_id={trace_id}"
-            # logger.info(f"Session completed: {url}")
-            print(url)
+                session_url = f"{self.app_url}/drilldown?session_id={trace_id_to_uuid(trace_id)}"
+                logger.info(
+                    colored(
+                        f"\x1b[34mSession Replay: {session_url}\x1b[0m",
+                        "blue",
+                    )
+                )
         else:
             # Print basic information for other span kinds
-            logger.info(f"Ended span: {span.name} (kind: {span_kind})")
+            logger.debug(f"Ended span: {span.name} (kind: {span_kind})")
 
     def shutdown(self) -> None:
         """Shutdown the processor."""
