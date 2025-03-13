@@ -1,8 +1,8 @@
+from agentops.legacy import *  # noqa: F403
 from typing import Dict, List, Optional, Union, Any
 
 from dotenv import load_dotenv
 
-from .sdk._compat import *
 from .client import Client
 from .sdk.commands import record as sdk_record, start_span as sdk_start_span, end_span as sdk_end_span
 from .semconv.span_kinds import SpanKind

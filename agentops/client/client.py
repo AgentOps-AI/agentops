@@ -2,7 +2,6 @@ from typing import List, Optional, Union
 
 from agentops.client.api import ApiClient
 from agentops.config import Config
-from agentops.sdk import _compat
 from agentops.exceptions import (AgentOpsClientNotInitializedException,
                                  NoApiKeyException, NoSessionException)
 from agentops.instrumentation import instrument_all
@@ -30,7 +29,7 @@ class Client:
         self._initialized = False
         self.config = Config()
 
-    def init(self, **kwargs) -> Optional[_compat.session]:
+    def init(self, **kwargs):
         self.configure(**kwargs)
 
         if not self.config.api_key:
