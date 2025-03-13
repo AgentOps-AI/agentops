@@ -1,0 +1,146 @@
+---
+title: 'Multi-Agent Example'
+description: 'How to track events from multiple different agents'
+mode: "wide"
+---
+_View Notebook on <a href={'https://github.com/AgentOps-AI/agentops/blob/main/examples/multi_agent_example.ipynb'} target={'_blank'}>Github</a>_
+
+
+{/*  SOURCE_FILE: examples/multi_agent_example.ipynb  */}
+
+# Multi-Agent Support
+This is an example implementation of tracking events from two separate agents
+
+First let's install the required packages
+
+
+```python
+%pip install -U openai
+%pip install -U agentops
+%pip install -U python-dotenv
+```
+
+Then import them
+
+
+```python
+import agentops
+from agentops import track_agent
+from openai import OpenAI
+import os
+from dotenv import load_dotenv
+import logging
+from IPython.display import display, Markdown
+```
+
+Next, we'll set our API keys. There are several ways to do this, the code below is just the most foolproof way for the purposes of this notebook. It accounts for both users who use environment variables and those who just want to set the API Key here in this notebook.
+
+[Get an AgentOps API key](https://agentops.ai/settings/projects)
+
+1. Create an environment variable in a .env file or other method. By default, the AgentOps `init()` function will look for an environment variable named `AGENTOPS_API_KEY`. Or...
+
+2. Replace `<your_agentops_key>` below and pass in the optional `api_key` parameter to the AgentOps `init(api_key=...)` function. Remember not to commit your API key to a public repo!
+
+
+```python
+load_dotenv()
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY") or "<your_openai_key>"
+AGENTOPS_API_KEY = os.getenv("AGENTOPS_API_KEY") or "<your_agentops_key>"
+logging.basicConfig(
+    level=logging.DEBUG
+)  # this will let us see that calls are assigned to an agent
+```
+
+
+```python
+agentops.init(AGENTOPS_API_KEY, default_tags=["multi-agent-notebook"])
+openai_client = OpenAI(api_key=OPENAI_API_KEY)
+```
+
+Now lets create a few agents!
+
+
+```python
+@track_agent(name="qa")
+class QaAgent:
+    def completion(self, prompt: str):
+        res = openai_client.chat.completions.create(
+            model="gpt-3.5-turbo",
+            messages=[
+                {
+                    "role": "system",
+                    "content": "You are a qa engineer and only output python code, no markdown tags.",
+                },
+                {"role": "user", "content": prompt},
+            ],
+            temperature=0.5,
+        )
+        return res.choices[0].message.content
+
+
+@track_agent(name="engineer")
+class EngineerAgent:
+    def completion(self, prompt: str):
+        res = openai_client.chat.completions.create(
+            model="gpt-3.5-turbo",
+            messages=[
+                {
+                    "role": "system",
+                    "content": "You are a software engineer and only output python code, no markdown tags.",
+                },
+                {"role": "user", "content": prompt},
+            ],
+            temperature=0.5,
+        )
+        return res.choices[0].message.content
+```
+
+
+```python
+qa = QaAgent()
+engineer = EngineerAgent()
+```
+
+Now we have our agents and we tagged them with the `@track_agent` decorator. Any LLM calls that go through this class will now be tagged as agent calls in AgentOps.
+
+Let's use these agents!
+
+
+```python
+generated_func = engineer.completion("python function to test prime number")
+```
+
+
+```python
+display(Markdown("```python\n" + generated_func + "\n```"))
+```
+
+
+```python
+generated_test = qa.completion(
+    "Write a python unit test that test the following function: \n " + generated_func
+)
+```
+
+
+```python
+display(Markdown("```python\n" + generated_test + "\n```"))
+```
+
+Perfect! It generated the code as expected, and in the DEBUG logs, you can see that the calls were made by agents named "engineer" and "qa"!
+
+Let's verify one more thing! If we make an LLM call outside of the context of a tracked agent, we want to make sure it gets assigned to the Default Agent.
+
+
+```python
+res = openai_client.chat.completions.create(
+    model="gpt-3.5-turbo",
+    messages=[
+        {"role": "system", "content": "You are not a tracked agent"},
+        {"role": "user", "content": "Say hello"},
+    ],
+)
+res.choices[0].message.content
+```
+
+You'll notice that we didn't log an agent name, so the AgentOps backend will assign it to the Default Agent for the session!

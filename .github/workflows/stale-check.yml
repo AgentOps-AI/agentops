@@ -1,0 +1,44 @@
+name: 'Check for Stale PRs'
+on:
+  schedule:
+    - cron: '0 0 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  stale-check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/stale@v9
+        with:
+          # Only process pull requests (not issues)
+          days-before-stale: 14
+          days-before-close: 7
+          
+          # Only target PRs
+          days-before-issue-stale: -1
+          days-before-issue-close: -1
+          
+          # Custom messages
+          stale-pr-message: |
+            This pull request has been automatically marked as stale because it has not had any activity in the last 14 days.
+            
+            If no updates are made within 7 days, this PR will be automatically closed.
+          
+          close-pr-message: |
+            This pull request has been automatically closed because it has been stale for 7 days with no activity.
+            
+            Feel free to reopen this PR if you'd like to continue working on it.
+          
+          # Labels
+          stale-pr-label: 'stale'
+          
+          # Remove stale label on PR update
+          remove-stale-when-updated: true
+          
+          # Don't remove any existing labels
+          labels-to-remove-when-stale: ''
+          labels-to-remove-when-unstale: ''

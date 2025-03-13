@@ -1,0 +1,82 @@
+---
+title: Haystack
+description: "Monitor your Haystack agents with AgentOps"
+---
+
+import CodeTooltip from '/snippets/add-code-tooltip.mdx'
+import EnvTooltip from '/snippets/add-env-tooltip.mdx'
+
+AgentOps makes monitoring your Haystack agents seamless. Haystack, much like AutoGen, is a flexible framework that supports multiple models. For detailed installation instructions and feature overviews, refer to the [Haystack documentation](https://docs.haystack.deepset.ai/docs/installation).
+
+## Integrating AgentOps with Haystack
+
+<Steps>
+  <Step title="Install the AgentOps SDK">
+    <CodeGroup>
+      ```bash pip
+      pip install agentops
+      ```
+      ```bash poetry
+      poetry add agentops
+      ```
+    </CodeGroup>
+  </Step>
+  <Step title="Install Haystack">
+    <Warning>
+      We currently only support Haystack 2.x.
+    </Warning>
+    <CodeGroup>
+      ```bash pip
+      pip install haystack-ai
+      ```
+      ```bash poetry
+      poetry add haystack-ai
+      ```
+    </CodeGroup>
+  </Step>
+  <Step title="Configure your environment">
+    <EnvTooltip />
+    <CodeGroup>
+      ```python .env
+      AGENTOPS_API_KEY=<YOUR API KEY>
+      ```
+    </CodeGroup>
+    Read more about environment variables in [Advanced Configuration](/v1/usage/advanced-configuration)
+  </Step>
+  <Step title="Add 3 lines of code">
+    <CodeTooltip/>
+    <CodeGroup>
+      ```python python
+      import agentops
+      agentops.init(<INSERT YOUR API KEY HERE>)
+      ...
+      # End of program (e.g. main.py)
+      agentops.end_session("Success") # Success|Fail|Indeterminate
+      ```
+    </CodeGroup>
+  </Step>
+  <Step title="Run your agent">
+    Execute your script and then visit [app.agentops.ai/drilldown](https://app.agentops.ai/drilldown) to monitor your Haystack agent in action. 🕵️
+    <Tip>
+      After execution, AgentOps outputs a clickable URL in the console that links directly to your session in the Dashboard.
+    </Tip>
+    <div/>{/* Intentionally blank div for newline */}
+    <Frame type="glass" caption="Clickable link to session">
+      <img height="200" src="https://github.com/AgentOps-AI/agentops/blob/main/docs/images/link-to-session.gif?raw=true" />
+    </Frame>
+  </Step>
+</Steps>
+
+## Full Examples
+
+You can refer to the following examples -
+
+- [Philosopher Agent](https://github.com/AgentOps-AI/agentops/blob/main/examples/haystack_examples/haystack_anthropic_example.ipynb)
+- [Mathematician Agent](https://github.com/AgentOps-AI/agentops/blob/main/examples/haystack_examples/haystack_openai_example.ipynb)
+
+
+<script type="module" src="/scripts/github_stars.js"></script>
+<script type="module" src="/scripts/scroll-img-fadein-animation.js"></script>
+<script type="module" src="/scripts/button_heartbeat_animation.js"></script>
+<script type="css" src="/styles/styles.css"></script>
+<script type="module" src="/scripts/adjust_api_dynamically.js"></script>

@@ -1,0 +1,159 @@
+---
+title: "SDK Reference"
+description: "All functions and classes exposed in the top layer of the SDK"
+---
+
+These are the functions and classes available with simply `import agentops`
+
+## Functions
+
+---
+
+### `init()`
+
+The first element of AgentOps is always calling .init()
+
+**Parameters**:
+
+- `api_key` (str, optional): API Key for AgentOps services. If not provided, the key will be read from the `AGENTOPS_API_KEY` environment variable.
+- `parent_key` (str, optional): Organization key to give visibility of all user sessions within the user's organization. If not provided, the key will be read from the `AGENTOPS_PARENT_KEY` environment variable.
+- `endpoint` (str, optional): The endpoint for the AgentOps service. Defaults to 'https://api.agentops.ai'.
+- `max_wait_time` (int, optional): The maximum time to wait in milliseconds before flushing the queue. Defaults to 30,000 (30 seconds).
+- `max_queue_size` (int, optional): The maximum size of the event queue. Defaults to 100.
+- `tags` (List[str], optional): Tags for the sessions for grouping or sorting (e.g., ["GPT-4"]).
+- `override` (bool, optional): [Deprecated] Use `instrument_llm_calls` instead to decide whether to instrument LLM calls and emit LLMEvents.
+- `instrument_llm_calls` (bool): Whether to instrument LLM calls and emit LLMEvents.
+- `auto_start_session` (bool): Whether to start a session automatically when the client is created. You may wish to delay starting a session in order to do additional setup or starting a session on a child process.
+- `inherited_session_id` (str, optional): When creating the client, passing in this value will connect the client to an existing session. This is useful when having separate processes contribute to the same session.
+- `skip_auto_end_session` (bool, optional): If you are using a framework such as Crew, the framework can decide when to halt execution. Setting this parameter to true will not end your agentops session when this happens.
+
+**Returns**:
+
+- Session ID of the current or new session.
+
+---
+
+### `start_session()`
+
+Start a new [Session](/v1/concepts/sessions) for recording events.
+
+**Parameters**:
+
+- `tags` (List[str], optional): Tags for the session.
+- `config` ([Configuration](#configuration), optional): Client configuration object.
+- `inherited_session_id` (str, optional): Session ID to continue from an existing session.
+
+**Returns**:
+
+- Session ID of the started session.
+
+---
+
+### `end_session()`
+
+Ends the current session with the AgentOps service.
+
+**Parameters**:
+
+- `end_state` (str): The final state of the session. Options: Success, Fail, or Indeterminate.
+- `end_state_reason` (str, optional): The reason for ending the session.
+- `video` (str, optional): URL to a video recording of the session.
+
+---
+
+### `record()`
+
+Record an event with the AgentOps service.
+
+**Parameters**:
+
+- `event` (Union[Event, ErrorEvent]): The event to record.
+
+---
+
+### `add_tags()`
+
+Append to session tags at runtime.
+
+**Parameters**:
+
+- `tags` (List[str]): The list of tags to append.
+
+---
+
+### `set_tags()`
+
+Replace session tags at runtime.
+
+**Parameters**:
+
+- `tags` (List[str]): The list of tags to set.
+
+---
+
+### `get_api_key()`
+
+Retrieve the API key used by the client.
+
+**Returns**:
+
+- API key as a string.
+
+---
+
+### `set_parent_key()`
+
+Set the parent API key which has visibility over projects it is a parent of.
+
+**Parameters**:
+
+- `parent_key` (str): The API key of the parent organization to set.
+
+---
+
+### `stop_instrumenting()`
+
+Stops instrumenting LLM calls. This is typically used by agent frameworks (i.e., [CrewAI](/v1/integrations/crewai) and
+[AG2](/v1/integrations/autogen)) to stop using AgentOps' auto-instrumentation of LLM libraries such as OpenAI. This
+allows these frameworks to use their own instrumenting or callback handler.
+
+
+
+
+
+## Types
+---
+
+### `Configuration`
+
+Stores the configuration settings for AgentOps clients.
+
+**Parameters**:
+
+- `api_key` (str, optional): API Key for AgentOps services. If not provided, the key will be read from the `AGENTOPS_API_KEY` environment variable. If no key is found, a `ConfigurationError` is raised.
+- `parent_key` (str, optional): Organization key to give visibility of all user sessions within the user's organization. If not provided, the key will be read from the `AGENTOPS_PARENT_KEY` environment variable.
+- `endpoint` (str, optional): The endpoint for the AgentOps service. If not provided, the endpoint will be read from the `AGENTOPS_API_ENDPOINT` environment variable. Defaults to 'https://api.agentops.ai'.
+- `max_wait_time` (int, optional): The maximum time to wait in milliseconds before flushing the queue. Defaults to 30000.
+- `max_queue_size` (int, optional): The maximum size of the event queue. Defaults to 100.
+
+**Properties**
+
+- **api_key** (str): Get or set the API Key for AgentOps services.
+- **endpoint** (str): Get or set the endpoint for the AgentOps service.
+- **max_wait_time** (int): Get or set the maximum wait time in milliseconds before flushing the queue.
+- **max_queue_size** (int): Get or set the maximum size of the event queue.
+- **parent_key** (str, optional): Get or set the organization key for session visibility.
+
+---
+
+### `LangchainCallbackHandler`
+
+[Reference](/v1/usage/langchain-callback-handler)
+
+This callback handler is intended to be used as an option in place of AgentOps auto-instrumenting. This is only useful
+when using LangChain as your LLM calling library.
+
+<script type="module" src="/scripts/github_stars.js"></script>
+<script type="module" src="/scripts/scroll-img-fadein-animation.js"></script>
+<script type="module" src="/scripts/button_heartbeat_animation.js"></script>
+<script type="module" src="/scripts/adjust_api_dynamically.js"></script>

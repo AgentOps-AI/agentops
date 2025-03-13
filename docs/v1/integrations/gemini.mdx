@@ -1,0 +1,118 @@
+---
+title: Gemini
+description: "Explore Google DeepMind's Gemini with observation via AgentOps"
+---
+
+import CodeTooltip from '/snippets/add-code-tooltip.mdx'
+import EnvTooltip from '/snippets/add-env-tooltip.mdx'
+
+[Gemini (Google Generative AI)](https://ai.google.dev/gemini-api/docs/quickstart) is a leading provider of AI tools and services.
+Explore the [Gemini API](https://ai.google.dev/docs) for more information.
+
+<Note>
+  `google-generativeai>=0.1.0` is currently supported.
+</Note>
+
+<Steps>
+  <Step title="Install the AgentOps SDK">
+    <CodeGroup>
+      ```bash pip 
+      pip install agentops
+      ```
+      ```bash poetry
+      poetry add agentops
+      ```
+    </CodeGroup>
+  </Step>
+  <Step title="Install the Gemini SDK">
+    <Note>
+      `google-generativeai>=0.1.0` is required for Gemini integration.
+    </Note>
+    <CodeGroup>
+      ```bash pip
+      pip install google-generativeai
+      ```
+      ```bash poetry
+      poetry add google-generativeai
+      ```
+    </CodeGroup>
+  </Step>
+  <Step title="Add 3 lines of code">
+    <CodeTooltip/>
+    <CodeGroup>
+      ```python python
+      import google.generativeai as genai
+      import agentops
+      
+      agentops.init(<INSERT YOUR API KEY HERE>)
+      model = genai.GenerativeModel("gemini-1.5-flash")
+      ...
+      # End of program (e.g. main.py)
+      agentops.end_session("Success") # Success|Fail|Indeterminate
+      ```
+    </CodeGroup>
+    <EnvTooltip />
+      <CodeGroup>
+        ```python .env
+        AGENTOPS_API_KEY=<YOUR API KEY>
+        GEMINI_API_KEY=<YOUR GEMINI API KEY>
+        ```
+      </CodeGroup>
+      Read more about environment variables in [Advanced Configuration](/v1/usage/advanced-configuration)
+  </Step>
+  <Step title="Run your Agent">
+    Execute your program and visit [app.agentops.ai/drilldown](https://app.agentops.ai/drilldown) to observe your Agent! 🕵️
+    <Tip>
+      After your run, AgentOps prints a clickable url to console linking directly to your session in the Dashboard
+    </Tip>
+    <div/>
+    <Frame type="glass" caption="Clickable link to session">
+      <img height="200" src="https://github.com/AgentOps-AI/agentops/blob/main/docs/images/link-to-session.gif?raw=true" />
+    </Frame>
+  </Step>
+</Steps>
+
+## Full Examples
+
+<CodeGroup>
+  ```python sync
+  import google.generativeai as genai
+  import agentops
+
+  agentops.init(<INSERT YOUR API KEY HERE>)
+  model = genai.GenerativeModel("gemini-1.5-flash")
+
+  response = model.generate_content(
+      "Write a haiku about AI and humans working together"
+  )
+
+  print(response.text)
+  agentops.end_session('Success')
+  ```
+
+  ```python stream
+  import google.generativeai as genai
+  import agentops
+
+  agentops.init(<INSERT YOUR API KEY HERE>)
+  model = genai.GenerativeModel("gemini-1.5-flash")
+
+  response = model.generate_content(
+      "Write a haiku about AI and humans working together",
+      stream=True
+  )
+
+  for chunk in response:
+      print(chunk.text, end="")
+
+  agentops.end_session('Success')
+  ```
+</CodeGroup>
+
+You can find more examples in the [Gemini Examples](/v1/examples/gemini_examples) section.
+
+<script type="module" src="/scripts/github_stars.js"></script>
+<script type="module" src="/scripts/scroll-img-fadein-animation.js"></script>
+<script type="module" src="/scripts/button_heartbeat_animation.js"></script>
+<script type="css" src="/styles/styles.css"></script>
+<script type="module" src="/scripts/adjust_api_dynamically.js"></script>

@@ -1,0 +1,109 @@
+---
+title: "Quickstart"
+description: "Start using AgentOps in under 5 minutes"
+---
+
+## Analytics in under 5 minutes:
+
+4 simple steps:
+
+1. Import AgentOps
+2. Initialize AgentOps
+3. Patch APIs/Decorate functions
+4. End Session
+
+<CodeGroup>
+```python python
+import openai # Make sure openai is imported before instantiating an AgentOps client.
+import agentops
+
+# Beginning of program (i.e. main.py, **init**.py)
+
+ao_client = agentops.Client(<INSERT YOUR API KEY HERE>)
+
+...
+
+# (optional: record specific functions)
+
+@ao_client.record_action('sample function being record')
+def sample_function(...):
+...
+
+...
+
+# End of program
+
+ao_client.end_session('Success')
+
+# Woohoo You're done 🎉
+
+````
+
+</CodeGroup>
+
+AgentOps is now set and ready to use. Every OpenAI call you make will now be recorded to the dashboard. Finally, before ending your agent you will need to close your session. `end_session` can be `Success`, `Fail`, or `Indeterminate`. We suggest setting session state depending on how your agent exits or whether your agent succeeded or not.
+
+We have 2 additional mechanisms for recording data. Namely, function decorators and discrete function calls. We suggest liberal usage of the `record_action` decorator to get the most out of your sessions.
+
+### Get an API key
+
+You can retrieve an API from [your account page](https://app.agentops.ai/account).
+
+### Install the SDK
+
+<CodeGroup>
+```bash pip 
+pip install agentops
+```
+```bash poetry
+poetry add agentops
+```
+</CodeGroup>
+
+### Add the AgentOps SDK to your agent in 3 easy steps
+
+<AccordionGroup>
+
+<Accordion icon="code" title="Add AgentOps to your logger">
+  The quickest way to integrate AgentOps into your agent is to use
+  the AgentOpsLogger. You can record all of your log events
+  as events. Add these imports to your code:
+  ```python python
+  import agentops
+  ```
+  Then initialize your AgentOps client:
+  ```python python
+  ao_client = agentops.Client(<INSERT YOUR API KEY HERE>)
+  ```
+  We recommend you store your `API_Key` as an environmental variable
+  and read it with `os.getenv('AGENT_OPS_KEY')`
+</Accordion>
+<Accordion icon="stop" title="Close the Session when your agent's run ends">
+  AgentOps records your agent's runs as `Sessions`, grouping all of 
+  events of a run together. It also includes the result of the run.
+  When your agent is about to finish it's run, add this line to your code to 
+  wrap up the session:
+  ```python python
+  ao_client.end_session(end_state="Success")
+  ```
+  An `end_state` of `Success`, `Fail`, or `Indeterminate` is required.
+  Furthermore, an `end_state_reason` can be provided to add additional context (i.e. `Could not find element on page`).
+</Accordion>
+<Accordion icon="browser" title="Check out your dashboard">
+  Run your agent and then visit [`app.agentops.ai`](https://app.agentops.ai). 
+  From the "Session Drill-Down" you should be able to see all of your OpenAI calls! 
+  Note: this will only track your OpenAI calls and you must be using the `openai` package.
+  In order to tracker other events, explore our more advanced functionality.
+</Accordion>
+</AccordionGroup>
+
+That's all you need to get started! Check out the documentation below to see
+how you can record other events. AgentOps is a lot more powerful this way!
+
+## Explore our more advanced functionality!
+
+<CardGroup cols={2}>
+  <Card title="Recording Events" icon="square-code" href="/v0/recording-events">
+    Record all of your other events the way AgentOps intends.
+  </Card>
+</CardGroup>

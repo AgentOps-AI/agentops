@@ -1,0 +1,117 @@
+---
+title: 'AgentOps Logger'
+description: 'This document explains the use of the AgentOpsLogger
+ and AgentOpsHandler classes, which are used for creating loggers 
+ and handlers configured to work with the AgentOps service'
+---
+
+## AgentOps logger
+
+The AgentOps logger is quick and simple way of integrating your existing 
+agent codebase with AgentOps. It allows you to use your current logs as events 
+by extending the built-in Python logging system to emit events to AgentOps.
+
+There are main ways of using it: 
+* Initializing a new Logger with AgentOps functionality
+* Adding a log handler to your existing Logger
+
+But first, we must import AgentOps classes and initilize the AgentOps client.
+
+```python python
+from agentops import Client, AgentOpsLogger
+
+ao_client = Client(<INSERT YOUR API KEY HERE>)
+```
+
+### Initializing a new Logger
+
+If you don't already have a logger or want to simply initialize your logger
+via AgentOps, do the following: 
+
+We can initilize a new logger with the following:
+```python python
+logger = AgentOpsLogger.get_agentops_logger(ao_client, "my_logger")
+```
+Now whenever you call get a logger with the same name, any logs written to the 
+logger will be sent to AgentOps.
+
+`get_agentops_logger` also takes the optional parameter of `level` to limit
+the amount of logs that get sent to AgentOps.
+
+### Adding a log handler
+
+If you already have complex set ups for your logging and you find it more convinient, 
+you can get a log handler from Agent Ops and attach it to your existing logger
+
+Then we can initilize a new logger with the client
+```python python
+handler = AgentOpsLogger.get_agentops_handler(agentops, "my_logger")
+<YOUR LOGGER>.addHandler(handler)
+```
+
+## Details
+
+The AgentOpsLogger class is a utility class for creating loggers 
+and handlers configured to work with the AgentOps service.
+
+```python python
+@staticmethod
+def get_agentops_logger(client: Client, name: str, level=logging.DEBUG)
+```
+This static method creates and returns a logger with an AgentOpsHandler.
+
+Arguments
+
+   * client (Client): The AgentOps client to which the logs will be sent.
+   * name (str): The name for the logger and handler.
+   * level (int, optional): The minimum severity level to log. Defaults to logging.DEBUG.
+
+Returns
+* A logger (logging.Logger) configured with an AgentOpsHandler.
+
+```python python
+@staticmethod
+def get_agentops_handler(client: AgentOps, name: str)
+```
+
+This static method creates and returns an AgentOpsHandler.
+
+Arguments
+    * client (Client): The AgentOps client to which the logs will be sent.
+    * name (str): The name for the handler.
+
+Returns
+* A new AgentOpsHandler with the given client and name.
+
+The AgentOpsHandler class is a custom logging handler for sending logs 
+to the AgentOps service. This handler extends the built-in logging.Handler
+ class to send log records to AgentOps. It also removes ANSI color codes 
+ from log messages before sending them.
+
+This method initializes the handler with a specific AgentOps client and name.
+
+Arguments
+    * client (Client): The AgentOps client to which the logs will be sent.
+    * name (str): The name for this handler.
+
+```python python
+@staticmethod
+def remove_color_codes(s: str) -> str
+```
+This static method removes ANSI color codes from a string.
+
+Arguments
+    * s (str): The string from which color codes will be removed.
+
+Returns
+*The same string, but without any color codes.
+
+###emit
+
+```python python
+def emit(self, record)
+```
+This method processes a log record and sends it to the AgentOps client. It is called whenever a log record needs to be processed.
+
+Arguments
+    * record (logging.LogRecord): The log record to process.

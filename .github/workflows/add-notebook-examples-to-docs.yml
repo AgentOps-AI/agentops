@@ -1,0 +1,69 @@
+name: Add Notebook Examples to Docs
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'examples/**'
+      - 'docs/v1/examples/**'
+      - '.github/workflows/add-notebook-examples-to-docs.yml'
+
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  add-notebook-examples-to-docs:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.x'
+
+      - name: Install dependencies
+        run: |
+          pip install jupyter nbconvert
+
+      - name: Convert notebooks to markdown and add to docs
+        run: |
+          set -x  # Enable debug mode
+          for file in docs/v1/examples/*.mdx; do
+            echo "Processing file: $file"
+            source_file=$(grep -oP '(?<=\{/\*  SOURCE_FILE: ).*(?=  \*/\})' "$file" || true)
+            if [[ -z "$source_file" ]]; then
+              continue
+            fi
+            echo "Source file: $source_file"
+            if [[ -f "$source_file" ]]; then
+              echo "Converting notebook to markdown"
+              jupyter nbconvert --to markdown "$source_file" || { echo "Error: Failed to convert $source_file" >&2; continue; }
+              markdown_file="${source_file%.ipynb}.md"
+              echo "Removing existing content after {/* SOURCE_FILE: ... */}"
+              sed -i '\#{/\*  SOURCE_FILE:#,$d' "$file"
+              echo "Appending markdown to $file"
+              echo -e "{/*  SOURCE_FILE: $source_file  */}\n" >> "$file"
+              cat "$markdown_file" >> "$file" || { echo "Error: Failed to append markdown to $file" >&2; continue; }
+              rm "$markdown_file" || { echo "Error: Failed to remove $markdown_file" >&2; continue; }
+            else
+              echo "Error: Source file not found: $source_file" >&2
+            fi
+          done
+
+      - name: Create Pull Request
+        uses: peter-evans/create-pull-request@v7
+        with:
+          committer: Howard Gil <howardbgil@gmail.com>
+          commit-message: GitHub Action - Update examples in docs from notebooks
+          title: GitHub Action - Update examples in docs from notebooks
+          body: Changes detected in examples/** or docs/v1/examples/** triggered an update of the docs/v1/examples/**.mdx files to incorporate markdown from the corresponding notebook in examples/**.
+          branch: update-examples-in-docs-from-notebooks
+          delete-branch: true
+          assignees: HowieG,siyangqiu,bboynton97,areibman
+          reviewers: HowieG,siyangqiu,bboynton97,areibman

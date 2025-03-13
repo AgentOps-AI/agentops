@@ -1,0 +1,142 @@
+{
+  "$schema": "https://mintlify.com/schema.json",
+  "name": "AgentOps",
+  "logo": {
+    "dark": "/images/external/logo/banner-badge-docs-resized-white.png",
+    "light": "/images/external/logo/banner-badge-docs-resized-black.png"
+  },
+  "favicon": "/favicon.png",
+  "colors": {
+    "primary": "#a9bed4",
+    "light": "#D1E5F7",
+    "dark": "#2b3033",
+    "background": {
+      "light": "#f5faff",
+      "dark": "#18191a"
+    },
+    "anchors": {
+      "from": "#D1E5F7",
+      "to": "#a9bed4"
+
+    }
+  },
+  "topbarCtaButton": {
+    "name": "Your Dashboard",
+    "url": "https://app.agentops.ai"
+  },
+  "topAnchor": {
+    "name": "Docs",
+    "icon": "lines-leaning"
+  },
+  "anchors": [
+    {
+      "name": "Chat With Docs",
+      "icon": "user-doctor-message",
+      "url": "https://entelligence.ai/AgentOps-AI&agentops"
+    },
+    {
+      "name": "Your Dashboard",
+      "icon": "chart-tree-map",
+      "url": "https://app.agentops.ai"
+    },
+    {
+      "name": "Discord",
+      "icon": "discord",
+      "url": "https://discord.gg/UgJyyxx7uc"
+    },
+    {
+      "name": "GitHub",
+      "icon": "github",
+      "url": "https://github.com/AgentOps-AI"
+    },
+    {
+      "name": "Call my Agent (Support)",
+      "icon": "headset",
+      "url": "https://agentops.ai/contact"
+    },
+    {
+      "name": "Give Feedback",
+      "icon": "comment-smile",
+      "url": "https://agentops.ai/contact"
+    }
+  ],
+  "navigation": [
+    {
+      "group": "",
+      "pages": [
+        "v1/introduction"
+      ]
+    },
+    {
+      "group": "Getting Started",
+      "pages": [
+        "v1/quickstart",
+        "v1/examples/examples"
+      ]
+    },
+    {
+      "group": "Concepts",
+      "pages": [
+        "v1/concepts/core-concepts",
+        "v1/concepts/decorators",
+        "v1/concepts/sessions",
+        "v1/concepts/events",
+        "v1/concepts/tags"
+      ]
+    },
+    {
+      "group": "Integrations",
+      "pages": [
+        "v1/integrations/agentssdk",
+        "v1/integrations/ai21",
+        "v1/integrations/anthropic",
+        "v1/integrations/autogen",
+        "v1/integrations/camel",
+        "v1/integrations/cohere",
+        "v1/integrations/crewai",
+        "v1/integrations/gemini",
+        "v1/integrations/groq",
+        "v1/integrations/haystack",
+        "v1/integrations/langchain",
+        "v1/integrations/llama_stack",
+        "v1/integrations/litellm",
+        "v1/integrations/mistral",
+        "v1/integrations/multion",
+        "v1/integrations/ollama",
+        "v1/integrations/openai",
+        "v1/integrations/rest",
+        "v1/integrations/smolagents",
+        "v1/integrations/swarmzero",
+        "v1/integrations/taskweaver",
+        "v1/integrations/xai"
+      ]
+    },
+    {
+      "group": "Usage",
+      "pages": [
+        "v1/usage/dashboard-info",
+        "v1/usage/sdk-reference",
+        "v1/usage/advanced-configuration",
+        "v1/usage/tracking-llm-calls",
+        "v1/usage/tracking-agents",
+        "v1/usage/recording-events",
+        "v1/usage/multiple-sessions"
+      ]
+    },
+    {
+      "group": "Other Info",
+      "pages": ["v1/concepts/host-env"]
+    }
+  ],
+  "footerSocials": {
+    "twitter": "https://twitter.com/agentopsai",
+    "discord": "https://discord.gg/UgJyyxx7uc",
+    "github": "https://github.com/AgentOps-AI"
+  },
+  "analytics": {
+    "posthog": {
+      "apiKey": "phc_BrY3H11IViWSoUJ0QFfjBx7kEwIJMT0PjBEXZQmddW",
+      "apiHost": "https://us.i.posthog.com"
+    }
+  }
+}

@@ -1,0 +1,56 @@
+---
+title: "Tracking Agents"
+description: "Use the `@track_agent()` decorator to tag your agents"
+---
+
+All Events are automatically associated with the agent that originated them. Agents are given a name which is what you will see in the dashboard.
+
+<Frame type="glass" caption="This event is labeled with the name of the Agent that originated it">
+  <img height="200" src="/images/agent-name.png" />
+</Frame>
+
+The example below tags the agent MyAgent with name `SomeCustomName`.
+
+```python python
+from agentops import track_agent
+
+@track_agent(name='SomeCustomName')
+class MyAgent:
+    ...
+```
+
+Alternatively, to name an agent in runtime, the `@track_agent` decorator creates an additional keyword argument in the class constructor. Using the above example, you can create an agent with a dynamic name with:
+```python
+research_agent = MyAgent(agentops_name='ResearchAgent')
+```
+
+`trackagent.name` is optional. <br></br>
+If omitted, agent name defaults to the name of the class (e.g. MyAgent). <br></br>
+If an event does not originate from a tracked agent, agent name defaults to "Default Agent".
+
+
+
+## Assigning Agents to a Session
+If you are using multiple concurrent sessions, it's important to assign a new agent to a session.
+
+When the `@track_agent()` decorator is used on an agent class, it adds an additional keyword param `session`.
+
+```python
+@track_agent()
+class custom_agent:
+  def completion(self, ...):
+    ...
+
+session = agentops.create_session()
+agent = custom_agent(session=session)
+agent.completion(...)
+
+session.end_session()
+```
+
+In this example, we create a custom agent class. We initialize an agent object and pass in the session to ensure the agent is assigned properly.
+
+<script type="module" src="/scripts/github_stars.js"></script>
+<script type="module" src="/scripts/adjust_api_dynamically.js"></script>
+<script type="module" src="/scripts/scroll-img-fadein-animation.js"></script>
+<script type="module" src="/scripts/button_heartbeat_animation.js"></script>

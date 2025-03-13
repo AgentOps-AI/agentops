@@ -1,0 +1,138 @@
+---
+title: 'Recording Events'
+description: 'How to record events in your session'
+mode: "wide"
+---
+_View Notebook on <a href={'https://github.com/AgentOps-AI/agentops/blob/main/examples/recording-events.ipynb'} target={'_blank'}>Github</a>_
+
+
+{/*  SOURCE_FILE: examples/recording-events.ipynb  */}
+
+# Recording Events
+AgentOps has a number of different [Event Types](https://docs.agentops.ai/v1/details/events)
+
+We automatically instrument your LLM Calls from OpenAI, LiteLLM, Cohere, and more. Just make sure their SDKs are imported before initializing AgentOps like we see below
+
+First let's install the required packages
+
+
+```python
+%pip install -U openai
+%pip install -U agentops
+%pip install -U python-dotenv
+```
+
+Then import them
+
+
+```python
+from openai import OpenAI
+import agentops
+import os
+from dotenv import load_dotenv
+```
+
+Next, we'll set our API keys. There are several ways to do this, the code below is just the most foolproof way for the purposes of this notebook. It accounts for both users who use environment variables and those who just want to set the API Key here in this notebook.
+
+[Get an AgentOps API key](https://agentops.ai/settings/projects)
+
+1. Create an environment variable in a .env file or other method. By default, the AgentOps `init()` function will look for an environment variable named `AGENTOPS_API_KEY`. Or...
+
+2. Replace `<your_agentops_key>` below and pass in the optional `api_key` parameter to the AgentOps `init(api_key=...)` function. Remember not to commit your API key to a public repo!
+
+
+```python
+load_dotenv()
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY") or "<your_openai_key>"
+AGENTOPS_API_KEY = os.getenv("AGENTOPS_API_KEY") or "<your_agentops_key>"
+```
+
+
+```python
+# Initialize the client, which will automatically start a session
+agentops.init()
+
+# Optionally, we can add default tags to all sessions
+# agentops.init(default_tags=['Hello Tracker'])
+
+openai = OpenAI()
+
+messages = [{"role": "user", "content": "Hello"}]
+response = openai.chat.completions.create(
+    model="gpt-3.5-turbo", messages=messages, temperature=0.5
+)
+print(response.choices[0].message.content)
+```
+
+Click the AgentOps link above to see your session!
+
+## Action Event
+
+AgentOps allows you to record other actions. The easiest way to record actions is through the use of AgentOps' decorators
+
+
+```python
+from agentops import record_action
+
+
+@record_action("add numbers")
+def add(x, y):
+    return x + y
+
+
+add(2, 4)
+```
+
+We can also manually craft an event exactly the way we want by creating and recording an `ActionEvent`
+
+
+```python
+from agentops import ActionEvent
+
+agentops.record(
+    ActionEvent(
+        action_type="Agent says hello", params={"message": "Hi"}, returns="Hi Back!"
+    )
+)
+```
+
+## Tool Event
+Agents use tools. These tools are useful to track with information such as name, end status, runtime, etc. To record tool usage, you can create and record a `ToolEvent` similar to above.
+
+
+```python
+from agentops import ToolEvent, record
+
+
+def scrape_website(url: str):
+    tool_event = ToolEvent(
+        name="scrape_website", params={"url": url}
+    )  # the start timestamp is set when the obj is created
+    result = "scraped data"  # perform tool logic
+    tool_event.returns = result
+    record(tool_event)
+```
+
+## Error Events
+Error events can be used alone or in reference to another event. Lets add a catch block to the code above
+
+
+```python
+from agentops import ToolEvent, record, ErrorEvent
+
+
+def scrape_website(url: str):
+    tool_event = ToolEvent(
+        name="scrape_website", params={"url": url}
+    )  # the start timestamp is set when the obj is created
+
+    try:
+        1 / 0  # Ooops! Something went wrong
+    except Exception as e:
+        record(ErrorEvent(exception=e, trigger_event=tool_event))
+
+
+scrape_website("https://app.agentops.ai")
+
+agentops.end_session("Success")
+```

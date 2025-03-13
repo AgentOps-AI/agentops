@@ -11,7 +11,9 @@ authors = [
   { name="Braelyn Boynton", email="bboynton97@gmail.com" },
   { name="Howard Gil", email="howardbgil@gmail.com" },
   { name="Constantin Teodorescu", email="teocns@gmail.com" },
-  { name="Pratyush Shukla", email="ps4534@nyu.edu" }
+  { name="Pratyush Shukla", email="ps4534@nyu.edu" },
+  { name="Travis Dent", email="tcdent@gmail.com" },
+  { name="Dwij Patel", email="dwijpatel1704@gmail.com" }
 ]
 description = "Observability and DevTool Platform for AI Agents"
 # readme = "README.md"

@@ -1,0 +1,86 @@
+---
+title: LiteLLM
+description: "Call the latest models using the OpenAI format including:  
+Llama, Mistral, Claude, Gemini, Gemma, DALL-E, Whisper"
+---
+
+import EnvTooltip from '/snippets/add-env-tooltip.mdx'
+
+[LiteLLM](https://www.litellm.ai) allows tracking 100+ LLMs with AgentOps. Checkout the [providers](https://docs.litellm.ai/docs/providers) supported by LiteLLM.
+Visit the [LiteLLM docs](https://docs.litellm.ai/docs/) for more information.
+
+## Using AgentOps with LiteLLM
+
+<Steps>
+  <Step title="Install the AgentOps SDK">
+    <CodeGroup>
+      ```bash pip 
+      pip install agentops
+      ```
+      ```bash poetry
+      poetry add agentops
+      ```
+    </CodeGroup>
+  </Step>
+  <Step title="Install LiteLLM">
+    <Note>
+      AgentOps supports `litellm>=1.3.1`
+    </Note>
+    <CodeGroup>
+      ```bash pip
+      pip install litellm
+      ```
+      ```bash poetry
+      poetry add litellm
+      ```
+    </CodeGroup>
+  </Step>
+  <Step title="Initialize AgentOps and use LiteLLM in your code">
+    <Warning>
+      AgentOps requires a minor adjustment to how you call LiteLLM. This is because of other existing integrations that use the `completion` function.
+    </Warning>
+    <CodeGroup>
+      ```python python
+      import agentops
+      import litellm
+
+      agentops.init(<INSERT YOUR API KEY HERE>)
+
+      # Some code here...
+
+      response = litellm.completion(model="gpt-4o", messages=messages)
+      
+      # Some code here...
+
+      agentops.end_session('Success')
+      ```
+    </CodeGroup>
+    <EnvTooltip />
+      <CodeGroup>
+        ```python .env
+        AGENTOPS_API_KEY=<YOUR API KEY>
+        ```
+      </CodeGroup>
+      Read more about environment variables in [Advanced Configuration](/v1/usage/advanced-configuration)
+  </Step>
+  <Step title="Run your Agent">
+    Execute your program and visit [app.agentops.ai/drilldown](https://app.agentops.ai/drilldown) to observe your Agent! 🕵️
+    <Tip>
+      After your run, AgentOps prints a clickable url to console linking directly to your session in the Dashboard
+    </Tip>
+    <div/>
+    <Frame type="glass" caption="Clickable link to session">
+      <img height="200" src="https://raw.githubusercontent.com/AgentOps-AI/agentops/refs/heads/main/docs/images/external/app_screenshots/session-replay.png?raw=true" />
+    </Frame>
+  </Step>
+</Steps>
+
+## Full Examples
+
+An example notebook is available [here](https://github.com/AgentOps-AI/agentops/blob/main/examples/litellm_examples/litellm_example.ipynb).
+
+<script type="module" src="/scripts/github_stars.js"></script>
+<script type="module" src="/scripts/scroll-img-fadein-animation.js"></script>
+<script type="module" src="/scripts/button_heartbeat_animation.js"></script>
+<script type="css" src="/styles/styles.css"></script>
+<script type="module" src="/scripts/adjust_api_dynamically.js"></script>

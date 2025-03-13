@@ -1,0 +1,188 @@
+---
+title: Sessions
+description: Detailed breakdown of initializing AgentOps and managing sessions.
+---
+
+A **Session** encapsulates a singular execution instance of your workflow, bringing together all agents, LLMs, 
+actions, etc., under one umbrella. Consequently, it is imperative for each event to be associated with a session. 
+The AgentOps dashboard provides detailed insights at the session level, including costs, token counts, errors, and more.
+
+**There must be an active session in order to use AgentOps.**
+
+---
+
+## `Session`
+
+### Properties
+
+Sessions possess the following attributes:
+- **ID**: A unique identifier for the session.
+- **Project ID**: Identifies the project associated with the session, determined by the API Key used.
+- **Starting Timestamp**: Marks the beginning of the session.
+- **Ending Timestamp**: Indicates when the session concludes.
+- **End State**: Signifies the success or failure of the session.
+
+Optionally, sessions may include:
+- **End State Reason**: Explains why the session ended, whether due to an error or a user-triggered interrupt (SIGINT).
+- **Tags**: Tags allow for the categorization and later retrieval of sessions.
+- **Host Environment**: Automatically gathers basic information about the system on which the session ran.
+- **Video**: If applicable, an optional video recording of the session.
+
+### Methods
+#### `end_session`
+**Params**
+- **end_state** (str, enum): Success|Failure|Indeterminate
+- **end_state_reason** (optional, str): additional notes on end state
+
+**Returns** (str): Total cost of session in USD
+
+#### `record`
+**Params**
+- **event** ([Event](/v1/concepts/events#event-class)): The Event to record as part of the session
+
+
+#### `add_tags`
+**Params**
+- **tags** (List[str]): a list of tags to assign to append to the current tags
+
+#### `set_tags`
+**Params**
+- **tags** (List[str]): a list of tags to assign to append to set
+
+_Note: Overrides any current tags_
+
+#### `get_analytics`
+**Returns** (dict): A dictionary containing various analytics metrics for the session.
+
+
+## Starting a Session
+When you call `agentops.init()`, a session is automatically started.
+Calling `agentops.init(auto_start_session=False)` will initialize the AgentOps SDK but not start a session.
+
+To start a session later, call `agentops.start_session()` [(reference)](/v1/usage/sdk-reference/#start-session)
+
+Both `agentops.init()` and `agentops.start_session()` work as a factory pattern and return a `Session` object. The above methods can all be called on this session object.
+
+## Ending a Session
+If a process ends without any call to agentops, it will show in the dashboard as `Indeterminate`.
+To end with a state, call either `agentops.end_session(...)` [(reference)](/v1/usage/sdk-reference/#end-session) if only one session is in use. Otherwise use `session.end_session(...)`.
+
+## Inherited Sessions
+When working with multiple agents running in different processes, it's possible to initialize AgentOps or start a session
+with an existing session_id.
+
+`agentops.init(inherited_session_id=<id>)`
+`agentops.start_session(inherited_session_id=<id>)`
+
+You can retrieve the current `session_id` by assigning the returned value from `init()` or `start_session()`.
+
+<CodeGroup>
+
+```python
+import agentops
+session = agentops.init()
+# pass session.session_id to the other process
+```
+
+```python
+# -- other process --
+session_id = retrieve_session_id() # <-- your function
+agentops.init(inherited_session_id=<id>)
+```
+
+</CodeGroup>
+
+Both processes will now contribute data to the same session.
+
+## Session Data Export
+AgentOps provides REST endpoints to export your session data and statistics. These endpoints allow you to retrieve detailed information about your sessions programmatically.
+
+### Authentication
+All data export requests require a single header:
+- `X-Agentops-Api-Key`: Your AgentOps API key
+
+### Available Endpoints
+
+#### Get Session Statistics
+```http
+GET /v2/sessions/<session_id>/stats
+```
+
+Returns statistics for the specified session including:
+- Event counts
+- Duration
+- Costs
+- Token usage
+- Other session metrics
+
+#### Export Complete Session Data
+```http
+GET /v2/sessions/<session_id>/export
+```
+
+Returns comprehensive session data including:
+- Session metadata
+- Statistics
+- All recorded events:
+  - Actions
+  - LLM calls
+  - Tool usage
+  - Errors
+
+### Example Usage
+```python
+import requests
+
+# Your AgentOps API key
+api_key = "your-api-key"
+session_id = "your-session-id"
+
+headers = {
+    "X-Agentops-Api-Key": api_key
+}
+
+# Get session stats
+stats_url = f"https://api.agentops.ai/v2/sessions/{session_id}/stats"
+stats_response = requests.get(stats_url, headers=headers)
+stats = stats_response.json()
+
+# Export complete session data
+export_url = f"https://api.agentops.ai/v2/sessions/{session_id}/export"
+export_response = requests.get(export_url, headers=headers)
+session_data = export_response.json()
+```
+
+## Session Analytics
+You can retrieve the analytics for a session by calling `session.get_analytics()`.
+
+The example below shows how to record events and retrieve analytics.
+
+<CodeGroup>
+
+```python
+import agentops
+session = agentops.init()
+session.record(ActionEvent("llms"))
+session.record(ActionEvent("tools"))
+analytics = session.get_analytics()
+print(analytics)
+session.end_session("Success")
+```
+
+The output will look like this -
+
+```bash
+{'LLM calls': 0, 'Tool calls': 0, 'Actions': 0, 'Errors': 0, 'Duration': '0.9s', 'Cost': '0.00'}
+```
+
+</CodeGroup>
+
+## The AgentOps SDK Client
+_More info for the curious_
+
+Under the hood, `agentops.init()` creates a `Client` object with various configuration options. Whenever you start a new session, these configuration options will automatically
+be applied. You can also apply different configuration options when you start a new session by passing in a
+[Configuration](/v1/usage/sdk-reference/#configuration) object.
+
+<script type="module" src="/scripts/github_stars.js"></script>
+<script type="module" src="/scripts/adjust_api_dynamically.js"></script>

@@ -1,0 +1,119 @@
+---
+title: 'Multi-Session Example'
+description: 'Handling multiple sessions at the same time'
+mode: "wide"
+---
+
+_View Notebook on <a href={'https://github.com/AgentOps-AI/agentops/blob/main/examples/multi_session_llm.ipynb'} target={'_blank'}>Github</a>_
+
+# Multiple Concurrent Sessions
+This example will show you how to run multiple sessions concurrently, assigning LLM calls to a specific session.
+
+First let's install the required packages:
+
+```bash
+pip install -U openai
+pip install -U agentops
+pip install -U python-dotenv
+```
+
+Then import them:
+
+```python
+from openai import OpenAI
+import agentops
+from agentops import ActionEvent
+import os
+from dotenv import load_dotenv
+```
+
+Next, we'll set our API keys. There are several ways to do this, the code below is just the most foolproof way for the purposes of this example. It accounts for both users who use environment variables and those who just want to set the API Key here.
+
+[Get an AgentOps API key](https://agentops.ai/settings/projects)
+
+1. Create an environment variable in a .env file or other method. By default, the AgentOps `init()` function will look for an environment variable named `AGENTOPS_API_KEY`. Or...
+
+2. Replace `<your_agentops_key>` below and pass in the optional `api_key` parameter to the AgentOps `init(api_key=...)` function. Remember not to commit your API key to a public repo!
+
+```python
+load_dotenv()
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY") or "<your_openai_key>"
+AGENTOPS_API_KEY = os.getenv("AGENTOPS_API_KEY") or "<your_agentops_key>"
+```
+
+Then, of course, lets init AgentOps. We're going to bypass creating a session automatically for the sake of showing it below.
+
+```python
+agentops.init(AGENTOPS_API_KEY, auto_start_session=False)
+openai = OpenAI()
+```
+
+Now lets create two sessions, each with an identifiable tag.
+
+```python
+session_1 = agentops.start_session(tags=["multi-session-test-1"])
+session_2 = agentops.start_session(tags=["multi-session-test-2"])
+
+print("session_id_1: {}".format(session_1.session_id))
+print("session_id_2: {}".format(session_2.session_id))
+```
+
+## LLM Calls
+Now lets go ahead and make our first OpenAI LLM call. The challenge with having multiple sessions at the same time is that there is no way for AgentOps to know what LLM call is intended to pertain to what active session. This means we need to do a little extra work in one of two ways.
+
+```python
+messages = [{"role": "user", "content": "Hello"}]
+```
+
+### Patching Function
+This method involves wrapping the LLM call withing a function on session. It can look a little counter-intuitive, but it easily tells us what session the call belongs to.
+
+```python
+# option 1: use session.patch
+response = session_1.patch(openai.chat.completions.create)(
+    model="gpt-3.5-turbo",
+    messages=messages,
+    temperature=0.5,
+)
+```
+
+### Create patched function
+If you're using the create function multiple times, you can create a new function with the same method
+
+```python
+observed_create = session_1.patch(openai.chat.completions.create)
+obs_response = observed_create(
+    model="gpt-3.5-turbo",
+    messages=messages,
+    temperature=0.5,
+)
+```
+
+### Keyword Argument
+Alternatively, you can also pass the session into the LLM function call as a keyword argument. While this method works and is a bit more readable, it is not a "pythonic" pattern and can lead to linting errors in the code, as the base function is not expecting a `session` keyword.
+
+```python
+# option 2: add session as a keyword argument
+response2 = openai.chat.completions.create(
+    model="gpt-3.5-turbo", messages=messages, temperature=0.5, session=session_2
+)
+```
+
+## Recording Events
+Outside of LLM calls, there are plenty of other events that we want to track. You can learn more about these events [here](https://docs.agentops.ai/v1/concepts/events).
+
+Recording these events on a session is as simple as `session.record(...)`
+
+```python
+session_1.record(ActionEvent(action_type="test event"))
+```
+
+Now let's go ahead and end the sessions
+
+```python
+session_1.end_session(end_state="Success")
+session_2.end_session(end_state="Success")
+```
+
+If you look in the AgentOps dashboard for these sessions, you will see two unique sessions, both with one LLM Event each, one with an Action Event as well.
+

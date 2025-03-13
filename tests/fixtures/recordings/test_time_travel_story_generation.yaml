@@ -1,0 +1,383 @@
+interactions:
+- request:
+    body: '{"messages":[{"content":"Come up with a random superpower that isn''t time
+      travel. Just return the superpower in the format: ''Superpower: [superpower]''","role":"user"}],"model":"gpt-3.5-turbo-0125"}'
+    headers:
+      accept:
+      - application/json
+      accept-encoding:
+      - gzip, deflate
+      authorization:
+      - REDACTED
+      connection:
+      - keep-alive
+      content-length:
+      - '197'
+      content-type:
+      - application/json
+      host:
+      - api.openai.com
+      user-agent:
+      - OpenAI/Python 1.58.1
+      x-stainless-arch:
+      - REDACTED
+      x-stainless-async:
+      - REDACTED
+      x-stainless-lang:
+      - REDACTED
+      x-stainless-os:
+      - REDACTED
+      x-stainless-package-version:
+      - 1.58.1
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - REDACTED
+      x-stainless-runtime-version:
+      - REDACTED
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    body:
+      string: "{\n  \"id\": \"chatcmpl-AoHTPHqwbIZuJtmSp27xPV1dJgdqU\",\n  \"object\":
+        \"chat.completion\",\n  \"created\": 1736546931,\n  \"model\": \"gpt-3.5-turbo-0125\",\n
+        \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
+        \"assistant\",\n        \"content\": \"Superpower: Teleportation with a 10-second
+        cooldown.\",\n        \"refusal\": null\n      },\n      \"logprobs\": null,\n
+        \     \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
+        37,\n    \"completion_tokens\": 14,\n    \"total_tokens\": 51,\n    \"prompt_tokens_details\":
+        {\n      \"cached_tokens\": 0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\":
+        {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\":
+        0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\":
+        \"default\",\n  \"system_fingerprint\": null\n}\n"
+    headers:
+      CF-Cache-Status:
+      - DYNAMIC
+      CF-RAY: REDACTED
+      Connection:
+      - keep-alive
+      Content-Type:
+      - application/json
+      Date:
+      - Fri, 10 Jan 2025 22:08:52 GMT
+      Server:
+      - cloudflare
+      Set-Cookie:
+      - __cf_bm=gVSuKE090cwCPGC2ij1P3M6P.TjqHcUowRM__4IefBc-1736546932-1.0.1.1-syFJSN768bpGgo3L.CXQTGK6FSmpcapJM5yEkELw0Ry_ICiOhfTqnjE0iK7gdhezhqHqqjVpYhiqnnVklxcWOg;
+        path=/; expires=Fri, 10-Jan-25 22:38:52 GMT; domain=.api.openai.com; HttpOnly;
+        Secure; SameSite=None
+      - _cfuvid=H.a7r115OhkHYrVbjWLyEDbWuSeS437hGWvQsrOypsw-1736546932100-0.0.1.1-604800000;
+        path=/; domain=.api.openai.com; HttpOnly; Secure; SameSite=None
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - nosniff
+      access-control-expose-headers:
+      - X-Request-ID
+      alt-svc:
+      - h3=":443"; ma=86400
+      content-length:
+      - '817'
+      openai-organization: REDACTED
+      openai-processing-ms:
+      - '223'
+      openai-version:
+      - '2020-10-01'
+      strict-transport-security:
+      - max-age=31536000; includeSubDomains; preload
+      x-ratelimit-limit-requests: REDACTED
+      x-ratelimit-limit-tokens: REDACTED
+      x-ratelimit-remaining-requests: REDACTED
+      x-ratelimit-remaining-tokens: REDACTED
+      x-ratelimit-reset-requests: REDACTED
+      x-ratelimit-reset-tokens: REDACTED
+      x-request-id: REDACTED
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"messages":[{"content":"Come up with a superhero name given this superpower:
+      Teleportation with a 10-second cooldown.. Just return the superhero name in
+      this format: ''Superhero: [superhero name]''","role":"user"}],"model":"gpt-3.5-turbo-0125"}'
+    headers:
+      accept:
+      - application/json
+      accept-encoding:
+      - gzip, deflate
+      authorization:
+      - REDACTED
+      connection:
+      - keep-alive
+      content-length:
+      - '243'
+      content-type:
+      - application/json
+      cookie:
+      - __cf_bm=gVSuKE090cwCPGC2ij1P3M6P.TjqHcUowRM__4IefBc-1736546932-1.0.1.1-syFJSN768bpGgo3L.CXQTGK6FSmpcapJM5yEkELw0Ry_ICiOhfTqnjE0iK7gdhezhqHqqjVpYhiqnnVklxcWOg;
+        _cfuvid=H.a7r115OhkHYrVbjWLyEDbWuSeS437hGWvQsrOypsw-1736546932100-0.0.1.1-604800000
+      host:
+      - api.openai.com
+      user-agent:
+      - OpenAI/Python 1.58.1
+      x-stainless-arch:
+      - REDACTED
+      x-stainless-async:
+      - REDACTED
+      x-stainless-lang:
+      - REDACTED
+      x-stainless-os:
+      - REDACTED
+      x-stainless-package-version:
+      - 1.58.1
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - REDACTED
+      x-stainless-runtime-version:
+      - REDACTED
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    body:
+      string: "{\n  \"id\": \"chatcmpl-AoHTQOXJl7sPJkuNv3WWKCbIGmkPx\",\n  \"object\":
+        \"chat.completion\",\n  \"created\": 1736546932,\n  \"model\": \"gpt-3.5-turbo-0125\",\n
+        \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
+        \"assistant\",\n        \"content\": \"Superhero: Warp Runner\",\n        \"refusal\":
+        null\n      },\n      \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n
+        \   }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 46,\n    \"completion_tokens\":
+        6,\n    \"total_tokens\": 52,\n    \"prompt_tokens_details\": {\n      \"cached_tokens\":
+        0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\":
+        {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\":
+        0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\":
+        \"default\",\n  \"system_fingerprint\": null\n}\n"
+    headers:
+      CF-Cache-Status:
+      - DYNAMIC
+      CF-RAY: REDACTED
+      Connection:
+      - keep-alive
+      Content-Type:
+      - application/json
+      Date:
+      - Fri, 10 Jan 2025 22:08:52 GMT
+      Server:
+      - cloudflare
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - nosniff
+      access-control-expose-headers:
+      - X-Request-ID
+      alt-svc:
+      - h3=":443"; ma=86400
+      content-length:
+      - '786'
+      openai-organization: REDACTED
+      openai-processing-ms:
+      - '155'
+      openai-version:
+      - '2020-10-01'
+      strict-transport-security:
+      - max-age=31536000; includeSubDomains; preload
+      x-ratelimit-limit-requests: REDACTED
+      x-ratelimit-limit-tokens: REDACTED
+      x-ratelimit-remaining-requests: REDACTED
+      x-ratelimit-remaining-tokens: REDACTED
+      x-ratelimit-reset-requests: REDACTED
+      x-ratelimit-reset-tokens: REDACTED
+      x-request-id: REDACTED
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"messages": [{"content": "Come up with a random superpower that isn''t
+      time travel. Just return the superpower in the format: ''Superpower: [superpower]''",
+      "role": "user"}], "model": "gpt-3.5-turbo-0125"}'
+    headers:
+      accept:
+      - application/json
+      accept-encoding:
+      - gzip, deflate
+      authorization:
+      - REDACTED
+      connection:
+      - keep-alive
+      content-length:
+      - '203'
+      content-type:
+      - application/json
+      host:
+      - api.openai.com
+      user-agent:
+      - OpenAI/Python 1.59.7
+      x-stainless-arch:
+      - REDACTED
+      x-stainless-async:
+      - REDACTED
+      x-stainless-lang:
+      - REDACTED
+      x-stainless-os:
+      - REDACTED
+      x-stainless-package-version:
+      - 1.59.7
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - REDACTED
+      x-stainless-runtime-version:
+      - REDACTED
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    body:
+      string: "{\n  \"id\": \"chatcmpl-ApjGpJLZKBGzQuUCeGIOaUgpXt6i7\",\n  \"object\":
+        \"chat.completion\",\n  \"created\": 1736892111,\n  \"model\": \"gpt-3.5-turbo-0125\",\n
+        \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
+        \"assistant\",\n        \"content\": \"Superpower: Teleportation through shadows\",\n
+        \       \"refusal\": null\n      },\n      \"logprobs\": null,\n      \"finish_reason\":
+        \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 37,\n    \"completion_tokens\":
+        9,\n    \"total_tokens\": 46,\n    \"prompt_tokens_details\": {\n      \"cached_tokens\":
+        0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\":
+        {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\":
+        0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\":
+        \"default\",\n  \"system_fingerprint\": null\n}\n"
+    headers:
+      CF-Cache-Status:
+      - DYNAMIC
+      CF-RAY: REDACTED
+      Connection:
+      - keep-alive
+      Content-Type:
+      - application/json
+      Date:
+      - Tue, 14 Jan 2025 22:01:52 GMT
+      Server:
+      - cloudflare
+      Set-Cookie:
+      - __cf_bm=ZPVtn0TX1xambDiDBLMcc4GeI8m9t7gQEuS6tIDMi38-1736892112-1.0.1.1-5ig.abnmjesQIT5LM6d2kP.pXUFFpLYSFn4fHEVM01xGlRgYxSJRK98EwgFm0pho_8kla2mcW7sTPfnA3RrJYg;
+        path=/; expires=Tue, 14-Jan-25 22:31:52 GMT; domain=.api.openai.com; HttpOnly;
+        Secure; SameSite=None
+      - _cfuvid=XclfZFSELOpjFqPgDD70pD0Fsoopn6I_HlkxPw.5ST0-1736892112381-0.0.1.1-604800000;
+        path=/; domain=.api.openai.com; HttpOnly; Secure; SameSite=None
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - nosniff
+      access-control-expose-headers:
+      - X-Request-ID
+      alt-svc:
+      - h3=":443"; ma=86400
+      content-length:
+      - '805'
+      openai-organization: REDACTED
+      openai-processing-ms:
+      - '453'
+      openai-version:
+      - '2020-10-01'
+      strict-transport-security:
+      - max-age=31536000; includeSubDomains; preload
+      x-ratelimit-limit-requests: REDACTED
+      x-ratelimit-limit-tokens: REDACTED
+      x-ratelimit-remaining-requests: REDACTED
+      x-ratelimit-remaining-tokens: REDACTED
+      x-ratelimit-reset-requests: REDACTED
+      x-ratelimit-reset-tokens: REDACTED
+      x-request-id: REDACTED
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"messages": [{"content": "Come up with a superhero name given this superpower:
+      Teleportation through shadows. Just return the superhero name in this format:
+      ''Superhero: [superhero name]''", "role": "user"}], "model": "gpt-3.5-turbo-0125"}'
+    headers:
+      accept:
+      - application/json
+      accept-encoding:
+      - gzip, deflate
+      authorization:
+      - REDACTED
+      connection:
+      - keep-alive
+      content-length:
+      - '238'
+      content-type:
+      - application/json
+      cookie:
+      - __cf_bm=ZPVtn0TX1xambDiDBLMcc4GeI8m9t7gQEuS6tIDMi38-1736892112-1.0.1.1-5ig.abnmjesQIT5LM6d2kP.pXUFFpLYSFn4fHEVM01xGlRgYxSJRK98EwgFm0pho_8kla2mcW7sTPfnA3RrJYg;
+        _cfuvid=XclfZFSELOpjFqPgDD70pD0Fsoopn6I_HlkxPw.5ST0-1736892112381-0.0.1.1-604800000
+      host:
+      - api.openai.com
+      user-agent:
+      - OpenAI/Python 1.59.7
+      x-stainless-arch:
+      - REDACTED
+      x-stainless-async:
+      - REDACTED
+      x-stainless-lang:
+      - REDACTED
+      x-stainless-os:
+      - REDACTED
+      x-stainless-package-version:
+      - 1.59.7
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - REDACTED
+      x-stainless-runtime-version:
+      - REDACTED
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    body:
+      string: "{\n  \"id\": \"chatcmpl-ApjGqLWaiyYdARpbf52BP2RNnBDiu\",\n  \"object\":
+        \"chat.completion\",\n  \"created\": 1736892112,\n  \"model\": \"gpt-3.5-turbo-0125\",\n
+        \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
+        \"assistant\",\n        \"content\": \"Superhero: Shadow Dasher\",\n        \"refusal\":
+        null\n      },\n      \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n
+        \   }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 42,\n    \"completion_tokens\":
+        7,\n    \"total_tokens\": 49,\n    \"prompt_tokens_details\": {\n      \"cached_tokens\":
+        0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\":
+        {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\":
+        0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\":
+        \"default\",\n  \"system_fingerprint\": null\n}\n"
+    headers:
+      CF-Cache-Status:
+      - DYNAMIC
+      CF-RAY: REDACTED
+      Connection:
+      - keep-alive
+      Content-Type:
+      - application/json
+      Date:
+      - Tue, 14 Jan 2025 22:01:53 GMT
+      Server:
+      - cloudflare
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - nosniff
+      access-control-expose-headers:
+      - X-Request-ID
+      alt-svc:
+      - h3=":443"; ma=86400
+      content-length:
+      - '788'
+      openai-organization: REDACTED
+      openai-processing-ms:
+      - '355'
+      openai-version:
+      - '2020-10-01'
+      strict-transport-security:
+      - max-age=31536000; includeSubDomains; preload
+      x-ratelimit-limit-requests: REDACTED
+      x-ratelimit-limit-tokens: REDACTED
+      x-ratelimit-remaining-requests: REDACTED
+      x-ratelimit-remaining-tokens: REDACTED
+      x-ratelimit-reset-requests: REDACTED
+      x-ratelimit-reset-tokens: REDACTED
+      x-request-id: REDACTED
+    status:
+      code: 200
+      message: OK
+version: 1

@@ -1,0 +1,104 @@
+---
+title: TaskWeaver
+description: "First class support for Microsoft TaskWeaver"
+---
+
+import CodeTooltip from '/snippets/add-code-tooltip.mdx'
+import EnvTooltip from '/snippets/add-env-tooltip.mdx'
+
+[TaskWeaver](https://microsoft.github.io/TaskWeaver/) is a code-first agent framework for seamlessly planning and executing data analytics tasks. Explore TaskWeaver's comprehensive [documentation](https://microsoft.github.io/TaskWeaver/docs/overview) for more information.
+
+## Steps to integrate TaskWeaver with AgentOps
+
+<Steps>
+  <Step title="Install the AgentOps SDK">
+    <CodeGroup>
+      ```bash pip 
+      pip install agentops
+      ```
+      ```bash poetry
+      poetry add agentops
+      ```
+    </CodeGroup>
+  </Step>
+  <Step title="Install TaskWeaver and configure your project directory">
+    Follow the instructions on the TaskWeaver [Quick Start](https://microsoft.github.io/TaskWeaver/docs/quickstart) section in the documentation.
+  </Step>
+  <Step title="Import the TaskWeaver handler from AgentOps and initialize the AgentOps client">
+    AgentOps uses the TaskWeaver handler to handle its events. Additionally, AgentOps tracks the LLM calls made by TaskWeaver via its inbuilt module. These are used together to observe everything in the TaskWeaver session.
+    <Note>
+      TaskWeaver provides different [usage options](https://microsoft.github.io/TaskWeaver/docs/usage). By default, it's used as a CLI app via the `taskweaver` command but can also be used as a library.
+    </Note>
+    <CodeGroup>
+      ```python python
+      import agentops
+      from agentops.partners.taskweaver_event_handler import TaskWeaverEventHandler
+      from taskweaver.app.app import TaskWeaverApp
+      
+      agentops.init(<INSERT YOUR API KEY HERE>)
+
+      # Your TaskWeaver code here
+
+      agentops.end_session("Success")
+      ```
+    </CodeGroup>
+    <EnvTooltip />
+      <CodeGroup>
+        ```python .env
+        AGENTOPS_API_KEY=<YOUR API KEY>
+        ```
+      </CodeGroup>
+      Read more about environment variables in [Advanced Configuration](/v1/usage/advanced-configuration)
+  </Step>
+  <Step title="Run your Agent">
+    Execute your program and visit [app.agentops.ai/drilldown](https://app.agentops.ai/drilldown) to observe your TaskWeaver Agent! 🕵️
+    <Tip>
+      After your run, AgentOps prints a clickable url to console linking directly to your session in the Dashboard
+    </Tip>
+    <div/>
+    <Frame type="glass" caption="Clickable link to session">
+      <img height="200" src="https://github.com/AgentOps-AI/agentops/blob/main/docs/images/external/microsoft/taskweaver_session.png?raw=true" />
+    </Frame>
+  </Step>
+</Steps>
+
+## Full Examples
+
+This is a basic example of how to use TaskWeaver as a library and observe it with AgentOps.
+
+Ensure you have configured your project directory in the TaskWeaverApp by following the documentation mentioned in step 2.
+
+<Warning>
+  When registering the TaskWeaverEventHandler, you should either use the `session.event_emitter.register` method or pass the handler object to the `event_handler` parameter in the `send_message` method. If you use both, the events will be recorded twice, resulting in a "stuttering" effect in the recorded messages.
+</Warning>
+
+<CodeGroup>
+```python python
+import agentops
+
+from taskweaver.app.app import TaskWeaverApp
+from agentops.partners.taskweaver_event_handler import TaskWeaverEventHandler
+
+agentops.init(<INSERT YOUR API KEY HERE>)
+
+app_dir = "<path to your configured project directory>"
+app = TaskWeaverApp(app_dir=app_dir)
+session = app.get_session()
+handler = TaskWeaverEventHandler()
+session.event_emitter.register(handler)
+
+user_query = "Hello, what are the capabilities of TaskWeaver?"
+response_round = session.send_message(user_query)
+
+user_query = "Write me a simple calculator program in python"
+response_round = session.send_message(user_query)
+
+agentops.end_session("Success")
+```
+</CodeGroup>
+
+<script type="module" src="/scripts/github_stars.js"></script>
+<script type="module" src="/scripts/scroll-img-fadein-animation.js"></script>
+<script type="module" src="/scripts/button_heartbeat_animation.js"></script>
+<script type="css" src="/styles/styles.css"></script>
+<script type="module" src="/scripts/adjust_api_dynamically.js"></script>

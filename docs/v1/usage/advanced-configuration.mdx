@@ -1,0 +1,36 @@
+---
+title: "Advanced Configuration"
+mode: "wide"
+---
+
+In AgentOps fashion, you only need to add one line of "code" to your `.env` file 😊
+
+<CodeGroup>
+  ```python .env
+  AGENTOPS_API_KEY=<YOUR API KEY>
+  ```
+</CodeGroup>
+
+<Tip>
+Find your AgentOps API Key in your Settings > [Projects & API Keys](https://app.agentops.ai/settings/projects) page.
+</Tip>
+
+#### Optional settings:
+
+```python .env
+# Secondary API Key for simultaneously recording to a second project
+AGENTOPS_PARENT_KEY=<YOUR PARENT KEY>
+# The AgentOps API endpoint. Defaults to https://api.agentops.ai
+AGENTOPS_API_ENDPOINT=https://api.agentops.ai
+# Logging level. <DEBUG, INFO, CRITICAL>. Defaults to INFO
+AGENTOPS_LOGGING_LEVEL=INFO
+# Write logs to file <TRUE, FALSE>. Defaults to TRUE
+AGENTOPS_LOGGING_TO_FILE=TRUE
+# Whether to opt out of recording environment data. <FALSE, TRUE>. Defaults to FALSE
+AGENTOPS_ENV_DATA_OPT_OUT=FALSE
+```
+
+<script type="module" src="/scripts/github_stars.js"></script>
+<script type="module" src="/scripts/scroll-img-fadein-animation.js"></script>
+<script type="module" src="/scripts/button_heartbeat_animation.js"></script>
+<script type="module" src="/scripts/adjust_api_dynamically.js"></script>

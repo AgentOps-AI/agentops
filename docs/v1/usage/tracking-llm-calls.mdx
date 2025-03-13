@@ -1,0 +1,42 @@
+---
+title: "Tracking LLM Calls"
+description: "Tracking LLM Calls using the AgentOps SDK"
+---
+
+### How it works
+
+When the AgentOps SDK detects a supported LLM provider module installed, it will automatically
+start tracking its usage. No further work is required from you! 😊
+
+### Not working? 
+
+Try these steps:
+1. Make sure you have the latest version of the AgentOps SDK installed. We are constantly updating it to support new LLM libraries and releases.
+2. Make sure you are calling `agentops.init()` *after* importing the LLM module but *before* you are calling the LLM method.
+3. Make sure the `instrument_llm_calls` parameter of `agentops.init()` is set to `True` (default).
+4. Make sure if you have more than one concurrent session, you patch the LLM call as described [here](/v1/usage/multiple-sssions).
+
+Still not working? Please let us know! You can find us on [Discord](https://discord.gg/DR2abmETjZ),
+ [GitHub](https://github.com/AgentOps-AI/agentops), 
+ or email us at [engineering@agentops.ai](mailto:engineering@agentops.ai).
+
+To get started, just follow the quick start guide.
+
+<CardGroup cols={2}>
+  <Card title="Quick Start" icon="code" href="/v1/quickstart">
+    Get started with AgentOps in under 5 minutes
+  </Card>
+</CardGroup>
+
+### Stop Tracking LLM Calls
+
+To stop tracking LLM calls after running `agentops.init()`, you can call `agentops.stop_instrumenting()`.
+
+This function reverts the changes made to your LLM provider's module, removing AgentOps instrumentation.
+
+_Special consideration for Cohere: Calling `stop_instrumenting()` has no effect on previously instantiated Cohere clients. You must create a new Cohere client after calling this function._
+
+<script type="module" src="/scripts/github_stars.js"></script>
+<script type="module" src="/scripts/scroll-img-fadein-animation.js"></script>
+<script type="module" src="/scripts/button_heartbeat_animation.js"></script>
+<script type="module" src="/scripts/adjust_api_dynamically.js"></script>

@@ -1,0 +1,32 @@
+---
+title: "Decorators"
+description: "Seemingly magic tools that can be added to functions and classes for easier instrumenting."
+---
+
+> Decorators work by wrapping functions or classes that they are placed above. You've probably seen this before.
+> Using decorators allows us to add a lot of functionality to your code with minimal work on your part.
+> ```python python
+> @example_decorator()
+> def hello_world():
+>    ...
+> ```
+
+## `@track_agent()`
+If your implementation uses Classes to denote Agents, this decorator enables automatic agent tracking.
+
+Learn more about tracking agents [here](/v1/usage/tracking-agents).
+
+## `@record_action()`
+Sometimes, your agent system uses functions that are important to track as [`Actions`](/v1/concepts/events/#actionevent).
+
+Adding this decorator above any function will allow every instance of that function call to be tracked and displayed
+in your [Session](v1/concepts/sessions) Drill-Down on the dashboard.
+
+## `@record_tool()`
+Some functions are used as Tools. If you are not using an agent framework that records [`ToolEvents`](/v1/concepts/events/#toolevent) with AgentOps automatically, this decorator will record `ToolEvents` when the function is called.
+
+Adding this decorator above any function will allow every instance of that function call to be tracked and displayed
+in your [Session](v1/concepts/sessions) Drill-Down on the dashboard.
+
+<script type="module" src="/scripts/github_stars.js"></script>
+<script type="module" src="/scripts/adjust_api_dynamically.js"></script>

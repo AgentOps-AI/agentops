@@ -1,0 +1,71 @@
+---
+title: 'Recording Events'
+description: 'Record Events using the AgentOps SDK'
+---
+
+To get the most out of AgentOps, it is best to carefully consider what events to record - 
+not simply record whatever your agent is logging. AgentOps offers two ways to record events 
+outside of logs.
+
+
+## `record_action` Decorator
+To make AgentOps easier to integrate, we also provide a function decorator to automatically creates 
+and records an event for your function.
+
+```python python
+@ao_client.record_action('sample function being record')
+def sample_function(...):
+    ...
+```
+
+The decorator will record the function's parameters, returns, and the time duration. We suggest using this on functions that take a long time and contain nested functions. For example, if you decorate a function that makes several OpenAI calls, then each openai call will show in the replay graph as a child of the decorated function.
+
+
+record_action:
+
+Arguments
+        * event_type (str): Type of the event
+        * tags (List[str], optional): Any tags associated with the event. Defaults to None.
+
+
+## `record()` Method
+From this point, simply call the .record() method in the AgentOps client:
+
+```python python
+ao_client.record(Event("event_type1"))
+```
+
+In AgentOps, each session is associated with a number of "Events". Events have 
+must have an "event_type" which is any arbitrary string of your choice. It might be something
+like "OpenAI Call". Events can also have other information such as the parameters of the operation,
+the returned data, alongside tags, etc.
+
+
+Events:
+Represents a discrete event to be recorded.
+
+Args:
+        event_type (str): Type of the event, e.g., "API Call". Required.
+        params (Optional[Dict[str, Any]], optional): The parameters passed to the operation. Defaults to None.
+        returns (str, optional): The output of the operation. Defaults to None.
+        result (str, optional): Result of the operation, e.g., "Success", "Fail", "Indeterminate". Defaults to "Indeterminate".
+        action_type (str, optional): Type of action of the event e.g. 'action', 'llm', 'api', 'screenshot'. Defaults to 'action'.
+        model (Models, optional): The model used during the event if an LLM is used (i.e. GPT-4).
+            For models, see the types available in the Models enum. 
+            If a model is set but an action_type is not, the action_type will be coerced to 'llm'. 
+Arguments
+        * event_type (str): Type of the event, e.g., "API Call". Required.
+        * params (str, optional): The parameters passed to the operation.
+        * returns (str, optional): The output of the operation.
+        * result (EventState, optional): Result of the operation, Enum: "Success", "Fail", "Indeterminate".
+        * action_type (ActionType, optional): Type of action of the event e.g. 'action', 'llm', 'api'
+        * model (Models, optional): The model used during the event if an LLM is used (i.e. GPT-4).
+            For models, see the types available in the Models enum. 
+            If a model is set but an action_type is not, the action_type will be coerced to 'llm'. 
+            Defaults to None.
+        * prompt (str, optional): The input prompt for an LLM call when an LLM is being used.
+        * tags (List[str], optional): Tags that can be used for grouping or sorting later. e.g. ["my_tag"].
+
+
+Attributes
+        * timestamp (float): The timestamp for when the event was created, represented as seconds since the epoch.

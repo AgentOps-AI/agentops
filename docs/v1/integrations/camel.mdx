@@ -1,0 +1,122 @@
+---
+title: 'Camel AI'
+description: 'Track and analyze CAMEL agents with AgentOps'
+---
+
+import CodeTooltip from '/snippets/add-code-tooltip.mdx'
+import EnvTooltip from '/snippets/add-env-tooltip.mdx'
+
+[CAMEL-AI](https://www.camel-ai.org/) is the first large language model (LLM) multi-agent framework and an open-source community dedicated to finding the scaling law of agents. Checkout their comprehensive documentation [here](https://docs.camel-ai.org/).
+
+## Adding AgentOps to CAMEL agents
+
+<Steps>
+	<Step title="Install the AgentOps SDK">
+		<CodeGroup>
+			```bash pip
+			pip install agentops
+			```
+			```bash poetry
+			poetry add agentops
+			```
+		</CodeGroup>
+	</Step>
+	<Step title="Install CAMEL-AI with all dependencies">
+		<CodeGroup>
+			```bash pip
+			pip install "camel-ai[all]==0.2.11"
+			```
+			```bash poetry
+			poetry add "camel-ai[all]==0.2.11"
+			```
+		</CodeGroup>
+	</Step>
+	<Step title="Add AgentOps code to your code">
+		<CodeTooltip/>
+			<CodeGroup>
+				```python python
+				import agentops
+				agentops.init(<INSERT YOUR API KEY HERE>)
+
+				# your code here
+
+				agentops.end_session("Success") # Success|Fail|Indeterminate
+				```
+			</CodeGroup>
+		<EnvTooltip />
+      <CodeGroup>
+        ```python .env
+        AGENTOPS_API_KEY=<YOUR API KEY>
+        ```
+      </CodeGroup>
+      Read more about environment variables in [Advanced Configuration](/v1/usage/advanced-configuration)
+	</Step>
+	<Step title="Run your agent">
+		Execute your program and visit [app.agentops.ai/drilldown](https://app.agentops.ai/drilldown) to observe your CAMEL Agent! 🕵️
+		<Tip>
+			After your run, AgentOps prints a clickable url to console linking directly to your session in the Dashboard
+		</Tip>
+		<div/>{/* Intentionally blank div for newline */}
+		<Frame type="glass" caption="Clickable link to session">
+			<img height="200" src="https://github.com/AgentOps-AI/agentops/blob/main/docs/images/link-to-session.gif?raw=true" />
+		</Frame>
+	</Step>
+</Steps>
+
+## Full Examples
+### Single Agent Example with Tools
+
+Here's a simple example of tracking a single CAMEL agent with tools using AgentOps:
+
+```python
+import agentops
+import os
+from camel.agents import ChatAgent
+from camel.messages import BaseMessage
+from camel.models import ModelFactory
+from camel.types import ModelPlatformType, ModelType
+
+# Initialize AgentOps
+agentops.init(os.getenv("AGENTOPS_API_KEY"))
+
+# Import toolkits after AgentOps init for tracking
+from camel.toolkits import SearchToolkit
+
+# Set up the agent with search tools
+sys_msg = BaseMessage.make_assistant_message(
+    role_name='Tools calling operator',
+    content='You are a helpful assistant'
+)
+
+# Configure tools and model
+tools = [*SearchToolkit().get_tools()]
+model = ModelFactory.create(
+    model_platform=ModelPlatformType.OPENAI,
+    model_type=ModelType.GPT_4O_MINI,
+)
+
+# Create the agent
+camel_agent = ChatAgent(
+    system_message=sys_msg,
+    model=model,
+    tools=tools,
+)
+
+# Run the agent
+user_msg = 'What is CAMEL-AI.org?'
+response = camel_agent.step(user_msg)
+print(response)
+
+# End the session
+agentops.end_session("Success")
+```
+
+### Multi-Agent Example
+
+Check out the example notebook [here](https://github.com/AgentOps-AI/agentops/tree/main/examples/camel_examples/camelai-multi-agent-example.ipynb) to see how to track multi-agent setups.
+
+<script type="module" src="/scripts/github_stars.js"></script>
+<script type="module" src="/scripts/scroll-img-fadein-animation.js"></script>
+<script type="module" src="/scripts/button_heartbeat_animation.js"></script>
+<script type="css" src="/styles/styles.css"></script>
+<script type="module" src="/scripts/adjust_api_dynamically.js"></script>

@@ -1,0 +1,69 @@
+---
+title: AG2
+description: "Track your AG2 agents with AgentOps"
+---
+
+import CodeTooltip from '/snippets/add-code-tooltip.mdx'
+import EnvTooltip from '/snippets/add-env-tooltip.mdx'
+
+AgentOps and AG2 (Formerly AutoGen) teamed up to make monitoring AG2 agents dead simple. AG2 has comprehensive [documentation](https://docs.ag2.ai/docs/Home) available as well as a great [quickstart](https://docs.ag2.ai/docs/Getting-Started).
+
+## Adding AgentOps to AG2 agents
+
+<Steps>
+	<Step title="Install the AgentOps SDK">
+		<CodeGroup>
+			```bash pip
+			pip install agentops
+			```
+			```bash poetry
+			poetry add agentops
+			```
+		</CodeGroup>
+	</Step>
+	<Step title="Install AG2">
+		<CodeGroup>
+			```bash pip
+			pip install pyautogen
+			```
+			```bash poetry
+			poetry add pyautogen
+			```
+		</CodeGroup>
+	</Step>
+	<Step title="Add 3 lines of code">
+		<CodeTooltip/>
+			<CodeGroup>
+				```python python
+				import agentops
+				agentops.init(<INSERT YOUR API KEY HERE>)
+				...
+				# MUST END SESSION at end of program (e.g. main.py)
+				agentops.end_session("Success") # Success|Fail|Indeterminate
+				```
+			</CodeGroup>
+		<EnvTooltip />
+      <CodeGroup>
+        ```python .env
+        AGENTOPS_API_KEY=<YOUR API KEY>
+        ```
+      </CodeGroup>
+      Read more about environment variables in [Advanced Configuration](/v1/usage/advanced-configuration)
+	</Step>
+	<Step title="Run your agent">
+		Execute your program and visit [app.agentops.ai/drilldown](https://app.agentops.ai/drilldown) to observe your Autogen Agent! 🕵️
+		<Tip>
+			After your run, AgentOps prints a clickable url to console linking directly to your session in the Dashboard
+		</Tip>
+		<div/>{/* Intentionally blank div for newline */}
+		<Frame type="glass" caption="Clickable link to session">
+			<img height="200" src="https://github.com/AgentOps-AI/agentops/blob/main/docs/images/link-to-session.gif?raw=true" />
+		</Frame>
+	</Step>
+</Steps>
+
+<script type="module" src="/scripts/github_stars.js"></script>
+<script type="module" src="/scripts/scroll-img-fadein-animation.js"></script>
+<script type="module" src="/scripts/button_heartbeat_animation.js"></script>
+<script type="css" src="/styles/styles.css"></script>
+<script type="module" src="/scripts/adjust_api_dynamically.js"></script>

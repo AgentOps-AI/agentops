@@ -1,0 +1,133 @@
+---
+title: Anthropic
+description: "AgentOps provides first class support for Anthropic's latest models"
+---
+
+import CodeTooltip from '/snippets/add-code-tooltip.mdx'
+import EnvTooltip from '/snippets/add-env-tooltip.mdx'
+
+[Anthropic AI](https://www.anthropic.com) is a leading provider of AI tools and services, including the Claude, Haiku, and Sonnet series of models.
+Explore the [Anthropic API](https://docs.anthropic.com/en/home) for more information.
+
+<iframe
+  width="560"
+  height="315"
+  src="https://www.youtube.com/embed/Yx2Crpbms7I"
+  title="YouTube video player"
+  frameborder="0"
+  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+  allowfullscreen
+></iframe>
+
+<Steps>
+  <Step title="Install the AgentOps SDK">
+    <CodeGroup>
+      ```bash pip 
+      pip install agentops
+      ```
+      ```bash poetry
+      poetry add agentops
+      ```
+    </CodeGroup>
+  </Step>
+  <Step title="Install the Anthropic SDK">
+    <Note>
+      `anthropic>=0.32.0` is currently supported with additional support for the Computer Use tool.
+    </Note>
+    <CodeGroup>
+      ```bash pip
+      pip install anthropic
+      ```
+      ```bash poetry
+      poetry add anthropic
+      ```
+    </CodeGroup>
+  </Step>
+  <Step title="Add 3 lines of code">
+    <CodeTooltip/>
+    <CodeGroup>
+      ```python python
+      import agentops
+      from anthropic import Anthropic
+      
+      agentops.init(<INSERT YOUR API KEY HERE>)
+      client = Anthropic()
+      ...
+      # End of program (e.g. main.py)
+      agentops.end_session("Success") # Success|Fail|Indeterminate
+      ```
+    </CodeGroup>
+    <EnvTooltip />
+      <CodeGroup>
+        ```python .env
+        AGENTOPS_API_KEY=<YOUR API KEY>
+        ANTHROPIC_API_KEY=<YOUR ANTHROPIC API KEY>
+        ```
+      </CodeGroup>
+      Read more about environment variables in [Advanced Configuration](/v1/usage/advanced-configuration)
+  </Step>
+  <Step title="Run your Agent">
+    Execute your program and visit [app.agentops.ai/drilldown](https://app.agentops.ai/drilldown) to observe your Agent! 🕵️
+    <Tip>
+      After your run, AgentOps prints a clickable url to console linking directly to your session in the Dashboard
+    </Tip>
+    <div/>
+    <Frame type="glass" caption="Clickable link to session">
+      <img height="200" src="https://github.com/AgentOps-AI/agentops/blob/main/docs/images/link-to-session.gif?raw=true" />
+    </Frame>
+  </Step>
+</Steps>
+
+## Full Examples
+
+<CodeGroup>
+  ```python sync
+  from anthropic import Anthropic
+  import agentops
+
+  agentops.init(<INSERT YOUR API KEY HERE>)
+  client = Anthropic()
+
+  message = client.messages.create(
+      model="claude-3-opus-20240229",
+      max_tokens=1024,
+      messages=[{
+          "role": "user",
+          "content": "Write a haiku about AI and humans working together"
+      }]
+  )
+
+  print(message.content)
+  agentops.end_session('Success')
+  ```
+
+  ```python async
+  from anthropic import AsyncAnthropic
+  import agentops
+  import asyncio
+
+  async def main():
+      agentops.init(<INSERT YOUR API KEY HERE>)
+      client = AsyncAnthropic()
+
+      message = await client.messages.create(
+          model="claude-3-opus-20240229",
+          max_tokens=1024,
+          messages=[{
+              "role": "user",
+              "content": "Write a haiku about AI and humans working together"
+          }]
+      )
+
+      print(message.content)
+      agentops.end_session('Success')
+
+  asyncio.run(main())
+  ```
+</CodeGroup>
+
+<script type="module" src="/scripts/github_stars.js"></script>
+<script type="module" src="/scripts/scroll-img-fadein-animation.js"></script>
+<script type="module" src="/scripts/button_heartbeat_animation.js"></script>
+<script type="css" src="/styles/styles.css"></script>
+<script type="module" src="/scripts/adjust_api_dynamically.js"></script>

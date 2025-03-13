@@ -1,0 +1,35 @@
+---
+title: Host Environment Data
+description: How AgentOps collects environment data
+---
+
+## What Data is Collected?
+
+The AgentOps SDK uses `psutil` to gather certain information about the machine that it is being run on. This data
+includes information about:
+- CPU
+- Memory
+- Storage
+- Operating System
+
+## How is it used?
+
+This data is used only for determining issues with the host environment and reporting this on your dashboard.
+
+> Example: Your agent performed slower because of a reduction in available memory
+
+This data is used in accordance with our [Privacy Policy](https://app.agentops.ai/privacy-policy)
+and is never sold or shared.
+
+## Opting-Out
+
+AgentOps users can opt out of certain environment data collection by setting the following environment variable.
+
+```
+AGENTOPS_ENV_DATA_OPT_OUT=True
+```
+
+For more questions on privacy and data usage, please [send us an email](mailto:alex@agentops.ai)
+
+<script type="module" src="/scripts/github_stars.js"></script>
+<script type="module" src="/scripts/adjust_api_dynamically.js"></script>

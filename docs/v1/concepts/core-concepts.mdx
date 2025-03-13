@@ -1,0 +1,135 @@
+---
+title: Core Concepts
+description: An in-depth exploration of the foundational elements and operational dynamics of AgentOps, highlighting its architecture and constituent components.
+---
+
+## The AgentOps SDK Client
+
+### Principles
+
+The AgentOps SDK works to provide as much functionality with as little developer implementation as possible. We accomplish this with a few principles.
+- Auto-Instrumenting
+  - After calling `agentops.init()` we automatically look for installed LLM providers and auto-instrument their calls. This allows us to capture calls between your code and the provider to collect data for your dashboard.
+- Decorators
+  - With [Decorators](/v1/concepts/decorators), the SDK can add code to your existing functions and classes.
+- Process monitoring
+  - The SDK establishes a couple process monitors that allow us to understand the state and health of your agents.
+
+### Sessions
+
+A **Session** encapsulates a singular execution instance of your workflow, bringing together all agents, LLMs, actions, etc., under one umbrella. Consequently, it is imperative for each event to be associated with a session. The AgentOps dashboard provides detailed insights at the session level, including costs, token counts, errors, and more.
+
+Sessions possess the following attributes:
+- **ID**: A unique identifier for the session.
+- **Project ID**: Identifies the project associated with the session, determined by the API Key used.
+- **Starting Timestamp**: Marks the beginning of the session.
+- **Ending Timestamp**: Indicates when the session concludes.
+- **End State**: Signifies the success or failure of the session.
+
+Optionally, sessions may include:
+- **End State Reason**: Explains why the session ended, whether due to an error or a user-triggered interrupt (SIGINT).
+- **Tags**: Tags allow for the categorization and later retrieval of sessions.
+- **Host Environment**: Automatically gathers basic information about the system on which the session ran.
+- **Video**: If applicable, an optional video recording of the session.
+
+### Session Management
+AgentOps can exist in one of two states:
+<CardGroup cols={2}>
+	<Card title="Single Session" icon="hand-point-up" iconType="solid" color="#2bd600">
+		- • Only one session exists at a time. All agent usage is synchronous.
+		- • Use cases: Scripting, development, local machine use (browser extensions, web client, etc)
+	</Card>
+	<Card title="Multi-Session" icon="hand-peace" iconType="solid" color="#2bd600">
+		- • REST server
+		- • Asynchronous agents
+	</Card>
+</CardGroup>
+
+By default, AgentOps operates in single-session mode. All of the [base SDK functions](/v1/usage/sdk-reference) work as expected.
+
+<Note>Under the hood, when you only have one session at a time, AgentOps can use functions like `agentops.add_tags(...)` and know that you want to perform the function on the one and only active session.</Note>
+
+As soon as you create a second session, AgentOps enters **Multi-Session Mode**. As long as more than one session is active, the [base SDK functions](/v1/usage/sdk-reference) will no longer work.
+
+If multiple sessions exist, you are expected to call the function on the relevant session. Ex
+<CodeGroup>
+```python single session
+import agentops
+agentops.start_session()
+agentops.end_session(end_state='Success')
+```
+
+```python multi-session
+import agentops
+session_1 = agentops.start_session()
+session_2 = agentops.start_session()
+
+session_1.end_session(end_state='Success')
+session_2.end_session(end_state='Failure')
+```
+</CodeGroup>
+
+For more documentation on using multiple concurrent sessions, please see [Multiple Sessions](v1/usage/multiple-sessions) and [FastAPI Example](/v1/examples/fastapi).
+
+### LLMs, Tools, and Actions (Events)
+
+Within AgentOps, **LLMs**, **Tools**, and **Actions** are categorized as **Events**, executed by Agents. Agents primarily initiate LLM calls, potentially leading to API/Tool calls, while Actions encompass any other significant procedures, such as executing functions, taking screenshots, etc.
+
+All events share the following characteristics:
+- **ID**: A unique identifier.
+- **Session ID**: The session to which the event belongs.
+- **Agent ID**: Identifies the agent responsible for the event.
+- **Parameters**: The inputs provided to the event.
+- **Returns**: The outputs or results of the event.
+- **Starting Timestamp**: The time at which the event began.
+- **Ending Timestamp**: The time at which the event concluded.
+
+Additionally, each event type has its own specific properties:
+
+**LLMs**:
+- **Model**: The specific LLM model used.
+- **Prompt Messages**: The initial prompts sent to the model.
+- **Completion Messages**: The responses received from the model.
+- **Prompt Tokens**: The number of tokens used in the prompts.
+- **Completion Tokens**: The number of tokens in the model's responses.
+- **Cost**: The cost incurred by the event.
+- **Thread ID**: Associates the event with a specific thread for execution tracking.
+
+**Tools**:
+- **Logs**: Records of the tool's operation, including any outputs and errors.
+
+**Actions**:
+- **Action Type**: Specifies the nature of the action (e.g., function execution, screenshot).
+- **Logs**: Detailed records of the action's execution, including parameters and outcomes.
+- **Screenshot**: If applicable, an image capture of the screen at the time of the action.
+
+### Errors
+
+Errors are an inevitable aspect of operational processes. AgentOps comprehensively documents errors related to Events, providing a wealth of information for troubleshooting.
+
+- **Error Type**: The event type (LLM, Tool, or Action) the error is associated with.
+- **Error Code**: A specific code identifying the error.
+- **Details**: A detailed description of the error.
+- **Logs/Stack Trace**: Logs or stack traces capturing the error context.
+- **Timestamp**: The exact time the error occurred.
+
+### Agents
+
+An **Agent** is an autonomous entity with its own memory and capabilities. In multi-agent frameworks, agents act as team members, each with specialized skills and responsibilities, such as project management, software development, and quality assurance, coordinating and communicating to achieve collective goals.
+
+Agents are characterized by:
+- **ID**: A unique identifier for the agent.
+- **Session ID**: Links the agent to its associated session.
+- **Name**: A user-defined name for easy identification of the agent.
+
+Optionally, agents may also have:
+- **Logs**: Textual records of the tasks performed by the agent.
+
+**Note**: For events not specifically assigned to an agent, AgentOps will automatically create and assign a default agent.
+
+### Threads
+
+*Details coming soon.*
+
+<script type="module" src="/scripts/github_stars.js"></script>
+<script type="module" src="/scripts/adjust_api_dynamically.js"></script>

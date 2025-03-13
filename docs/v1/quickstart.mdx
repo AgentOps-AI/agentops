@@ -1,0 +1,139 @@
+---
+title: "Quickstart"
+description: "Start using AgentOps with just 2 lines of code"
+---
+import CodeTooltip from '/snippets/add-code-tooltip.mdx'
+import EnvTooltip from '/snippets/add-env-tooltip.mdx'
+
+<Steps>
+  <Step title="Install the AgentOps SDK">
+    <CodeGroup>
+      ```bash pip 
+      pip install agentops
+      ```
+      ```bash poetry
+      poetry add agentops
+      ```
+    </CodeGroup>
+  </Step>
+  <Step title="Add 2 lines of code">
+    <CodeTooltip />
+    Get an AgentOps API key [here](https://app.agentops.ai/settings/projects)
+      <CodeGroup>
+        ```python python
+        import agentops
+        agentops.init(<INSERT YOUR API KEY HERE>)
+        ```
+      </CodeGroup>
+    <EnvTooltip />
+  </Step>
+  <Step title="Run your agent">
+    Execute your program and visit [app.agentops.ai/drilldown](https://app.agentops.ai/drilldown) to observe your Agent! 🕵️
+
+    <Tip>After your run, AgentOps prints a clickable URL to console linking directly to your session in the Dashboard</Tip> 
+     <div/>{/* Intentionally blank div for newline */}
+
+     <Frame type="glass" caption="Clickable link to session">
+        <img height="200" src="https://github.com/AgentOps-AI/agentops/blob/main/docs/images/link-to-session.gif?raw=true" />
+    </Frame>
+  </Step>
+</Steps>
+<Check>[Give us a star](https://github.com/AgentOps-AI/agentops) if you liked AgentOps! (you may be our <span id="stars-text">3,000th</span> 😊)</Check>
+
+## More basic functionality
+
+<CardGroup cols={1}>
+
+<Card icon="code" title="Decorate Functions">
+  You can instrument other functions inside your code with the handy `@record_action`
+  decorator, which will record an `action_type`, the parameters, and the returns. You
+  will see these function calls alongside your LLM calls from instantiating the AgentOps client.
+  ```python python
+  # (record specific functions)
+  @agentops.record_action('sample function being recorded')
+  def sample_function(...):
+    ...
+```
+
+</Card>
+<Card icon="robot" title="Track Agents">
+  If you use specific named agents within your system, you can tie all downstream [Events](/v1/concepts/events) to a
+  Named Agent with the `@track_agent` decorator.
+  ```python python
+  # (track a named agent)
+  @agentops.track_agent(name='my-expert-agent')
+  class sample_agent(...):
+    ...
+```
+
+</Card>
+<Card icon="stop" title="Ending Your Session">
+  Finally, you should end your session by calling `.end_session()` indicating whether your session 
+  was successful or not `(Success|Fail)`. We suggest setting session state depending on how 
+  your agent exits or whether your agent succeeded or not. You can also specify a end state reason,
+  such as user interrupted, ran to completion, or unhandled exception.
+  ```python python
+  # End of program
+  agentops.end_session('Success')
+  ```
+</Card>
+</CardGroup>
+
+
+## Example Code
+
+Here is the complete code from the sections above
+
+```python python
+import openai
+import agentops
+
+# Beginning of program (i.e. main.py, __init__.py)
+agentops.init(<INSERT YOUR API KEY HERE>)
+
+# (record specific functions)
+@agentops.record_action('sample function being record')
+def sample_function(...):
+  ...
+
+# (track a named agent)
+@agentops.track_agent(name='my-expert-agent')
+class sample_agent(...):
+  ...
+
+# End of program
+agentops.end_session('Success')
+```
+
+<Card
+  title="Simple Code Example"
+  icon="square-code"
+  href="https://github.com/AgentOps-AI/agentops-py/blob/main/examples/openai-gpt.ipynb"
+>
+  Jupyter Notebook with sample code that you can run!
+</Card>
+
+<Check>
+  That's all you need to get started! Check out the documentation below to see how you can record other events. AgentOps is a lot more powerful this way!
+</Check>
+
+## Explore our more advanced functionality!
+
+<CardGroup cols={2}>
+  <Card
+    title="Examples and Video Guides"
+    icon="square-code"
+    href="/v1/examples"
+  >
+    Record all of your other events the way AgentOps intends.
+  </Card>
+  <Card title="Tracking Agents" icon="robot" href="/v1/usage/tracking-agents">
+    Associate Events with specific named agents.
+  </Card>
+</CardGroup>
+
+<script type="module" src="/scripts/github_stars.js"></script>
+<script type="module" src="/scripts/scroll-img-fadein-animation.js"></script>
+<script type="module" src="/scripts/button_heartbeat_animation.js"></script>
+<script type="css" src="/styles/styles.css"></script>
+<script type="module" src="/scripts/adjust_api_dynamically.js"></script>

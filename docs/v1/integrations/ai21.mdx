@@ -1,0 +1,262 @@
+---
+title: AI21
+description: "Observe AI21's latest Jamba family of models with AgentOps "
+---
+
+import CodeTooltip from '/snippets/add-code-tooltip.mdx'
+import EnvTooltip from '/snippets/add-env-tooltip.mdx'
+
+AgentOps has first party support for [AI21](https://www.ai21.com) via its Python SDK. Explore development with AI21 by visiting their [docs](https://docs.ai21.com/docs).
+
+## Steps to integrate AI21 with AgentOps
+
+<Steps>
+  <Step title="Install the AgentOps SDK">
+    <CodeGroup>
+      ```bash pip 
+      pip install agentops
+      ```
+      ```bash poetry
+      poetry add agentops
+      ```
+    </CodeGroup>
+  </Step>
+  <Step title="Install the AI21 SDK">
+    <Note>
+      We currently support v2.x.x of the AI21 SDK and plan to support v3.x.x in the future.
+    </Note>
+    <CodeGroup>
+      ```bash pip
+      pip install "ai21<3.0.0"
+      ```
+      ```bash poetry
+      poetry add "ai21<3.0.0"
+      ```
+    </CodeGroup>
+  </Step>
+  <Step title="Add AgentOps to your code">
+    <CodeTooltip/>
+      <CodeGroup>
+        ```python python
+        from ai21 import AI21Client
+        from ai21.models.chat import ChatMessage
+        import agentops
+
+        # Initialize clients
+        agentops.init(<INSERT YOUR API KEY HERE>)
+        client = AI21Client(api_key="your-api-key")
+
+        # Your AI21 code here...
+
+        agentops.end_session("Success")
+        ```
+      </CodeGroup>
+    <EnvTooltip />
+      <CodeGroup>
+        ```python .env
+        AGENTOPS_API_KEY=<YOUR API KEY>
+        ```
+      </CodeGroup>
+      Read more about environment variables in [Advanced Configuration](/v1/usage/advanced-configuration)
+  </Step>
+  <Step title="Run your Agent">
+    Execute your program and visit [app.agentops.ai/drilldown](https://app.agentops.ai/drilldown) to observe your Agent! 🕵️
+    <Tip>
+      After your run, AgentOps prints a clickable url to console linking directly to your session in the Dashboard
+    </Tip>
+    <div/>
+    <Frame type="glass" caption="Clickable link to session">
+      <img height="200" src="https://github.com/AgentOps-AI/agentops/blob/main/docs/images/external/ai21/ai21-session.png?raw=true" />
+    </Frame>
+  </Step>
+</Steps>
+
+## Full Examples
+
+<CodeGroup>
+  ```python sync
+  from ai21 import AI21Client
+  from ai21.models.chat import ChatMessage
+  import agentops
+
+  agentops.init(<INSERT YOUR API KEY HERE>)
+  client = AI21Client(api_key="your-api-key")
+
+  messages = [
+      ChatMessage(
+          content="You are a world renowned poet in the style of Edgar Allan Poe.",
+          role="system",
+      ),
+      ChatMessage(
+          content="Write me a short poem about the AI agents co-existing within the human brain.",
+          role="user",
+      ),
+  ]
+
+  response = client.chat.completions.create(
+      messages=messages,
+      model="jamba-1.5-mini",
+  )
+
+  print(response.choices[0].message.content)
+  agentops.end_session('Success')
+  ```
+
+  ```python async
+  from ai21 import AsyncAI21Client
+  import agentops
+  import asyncio
+
+  async def main():
+      agentops.init(<INSERT YOUR API KEY HERE>)
+      client = AsyncAI21Client(api_key="your-api-key")
+
+      messages = [
+          ChatMessage(
+              content="You are a world renowned poet in the style of Edgar Allan Poe.",
+              role="system",
+          ),
+          ChatMessage(
+              content="Write me a short poem about the AI agents co-existing within the human brain.",
+              role="user",
+          ),
+      ]
+
+      response = await client.chat.completions.create(
+          messages=messages,
+          model="jamba-1.5-mini",
+      )
+
+      print(response.choices[0].message.content)
+      agentops.end_session('Success')
+
+  asyncio.run(main())
+  ```
+</CodeGroup>
+
+### Streaming Examples
+
+<CodeGroup>
+  ```python sync
+  from ai21 import AI21Client
+  from ai21.models.chat import ChatMessage
+  import agentops
+
+  agentops.init(<INSERT YOUR API KEY HERE>)
+  client = AI21Client(api_key="your-api-key")
+
+  messages = [
+      ChatMessage(
+          content="You are a world renowned poet in the style of Edgar Allan Poe.",
+          role="system",
+      ),
+      ChatMessage(
+          content="Write me a short poem about the AI agents co-existing within the human brain.",
+          role="user",
+      ),
+  ]
+
+  complete_response = ""
+
+  response = client.chat.completions.create(
+      messages=messages,
+      model="jamba-1.5-mini",
+      stream=True,
+  )
+
+  for chunk in response:
+    complete_response += str(chunk.choices[0].delta.content)
+
+  print(complete_response)
+  agentops.end_session('Success')
+  ```
+
+  ```python async
+  from ai21 import AsyncAI21Client
+  import agentops
+  import asyncio
+
+  async def main():
+      agentops.init(<INSERT YOUR API KEY HERE>)
+      client = AsyncAI21Client(api_key="your-api-key")
+
+      messages = [
+          ChatMessage(
+              content="You are a world renowned poet in the style of Edgar Allan Poe.",
+              role="system",
+          ),
+          ChatMessage(
+              content="Write me a short poem about the AI agents co-existing within the human brain.",
+              role="user",
+          ),
+      ]
+
+      complete_response = ""
+
+      response = await client.chat.completions.create(
+          messages=messages,
+          model="jamba-1.5-mini",
+          stream=True,
+      )
+
+      async for chunk in response:
+        complete_response += str(chunk.choices[0].delta.content)
+
+      print(complete_response)
+      agentops.end_session('Success')
+
+  asyncio.run(main())
+  ```
+</CodeGroup>
+
+### Task-Specific Models
+
+AI21 v2.x.x provides specialized models called Task Specific Models for specific tasks.
+
+Here's an example using the contextual answers endpoint:
+
+<CodeGroup>
+  ```python
+  from ai21 import AI21Client
+  import agentops
+
+  agentops.init(<INSERT YOUR API KEY HERE>)
+  client = AI21Client(api_key="your-api-key")
+
+  CONTEXT = """
+  In 2020 and 2021, enormous QE — approximately $4.4 trillion, or 18%, of 2021 gross
+  domestic product (GDP) — and enormous fiscal stimulus (which has been and
+  always will be inflationary) — approximately $5 trillion, or 21%, of 2021 GDP
+  — stabilized markets and allowed companies to raise enormous amounts of
+  capital. In addition, this infusion of capital saved many small businesses and
+  put more than $2.5 trillion in the hands of consumers and almost $1 trillion into
+  state and local coffers. These actions led to a rapid decline in unemployment, 
+  dropping from 15% to under 4% in 20 months — the magnitude and speed of which were both
+  unprecedented. Additionally, the economy grew 7% in 2021 despite the arrival of
+  the Delta and Omicron variants and the global supply chain shortages, which were
+  largely fueled by the dramatic upswing in consumer spending and the shift in
+  that spend from services to goods.
+  """
+
+  response = client.answer.create(
+      context=CONTEXT,
+      question="Did the economy shrink after the Omicron variant arrived?",
+  )
+
+  print(response.answer)
+  agentops.end_session('Success')
+  ```
+
+</CodeGroup>
+
+<Note>
+  If you want to stream the response, you can use the stream=True flag. The streaming response is handled by the AI21 SDK.
+</Note>
+
+All of these examples can be found in  this [notebook](https://github.com/AgentOps-AI/agentops/blob/main/examples/ai21_examples/ai21_examples.ipynb).
+
+<script type="module" src="/scripts/github_stars.js"></script>
+<script type="module" src="/scripts/scroll-img-fadein-animation.js"></script>
+<script type="module" src="/scripts/button_heartbeat_animation.js"></script>
+<script type="css" src="/styles/styles.css"></script>
+<script type="module" src="/scripts/adjust_api_dynamically.js"></script> 

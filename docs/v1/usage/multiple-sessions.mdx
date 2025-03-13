@@ -1,0 +1,230 @@
+---
+title: "Multiple Sessions"
+description: "Managing multiple concurrent sessions"
+---
+
+# Single vs Multi-Session Modes
+
+In most development and scripting use cases, having only one session active at a time is sufficient. The challenge comes when productionizing agents.
+
+By default, AgentOps operates in single-session mode. All of the [base SDK functions](/v1/usage/sdk-reference) work as expected.
+
+<Note>Under the hood, when you only have one session at a time, AgentOps can use functions like `agentops.add_tags(...)` and know that you want to perform the function on the one and only active session.</Note>
+
+As soon as you create a second session, AgentOps enters **Multi-Session Mode**. As long as more than one session is active, the [base SDK functions](/v1/usage/sdk-reference) will no longer work.
+
+If multiple sessions exist, you are expected to call the function on the relevant session. Ex:
+<CodeGroup>
+```python single session
+import agentops
+agentops.start_session()
+agentops.end_session(end_state='Success')
+```
+
+```python multi-session script
+import agentops
+session_1 = agentops.start_session()
+session_2 = agentops.start_session()
+
+session_1.end_session(end_state='Success')
+session_2.end_session(end_state='Failure')
+```
+
+```python multi-session endpoint
+@app.get("/completion")
+def completion():
+
+    session = agentops.start_session()
+
+    messages = [{"role": "user", "content": "Hello"}]
+    response = session.patch(openai.chat.completions.create)(
+        model="gpt-3.5-turbo",
+        messages=messages,
+        temperature=0.5,
+    )
+
+    session.record(
+        ActionEvent(
+            action_type="Agent says hello",
+            params=messages,
+            returns=str(response.choices[0].message.content),
+        ),
+    )
+
+    session.end_session(end_state="Success")
+
+    return {"response": response}
+```
+</CodeGroup>
+
+Functions on `agentops` will no longer work in multi-session mode
+
+**When in multi-session mode:**
+<CodeGroup>
+```python works ✅
+session.end_session(...)
+session.add_tags(...)
+session.set_tags(...)
+```
+
+```python does not work ❌
+agentops.end_session(...)
+agentops.add_tags(...)
+agentops.set_tags(...)
+```
+</CodeGroup>
+
+# Entering Multi-Session Mode
+Creating more than one session puts the AgentOps Client into multi-session mode.
+
+### Single Session Examples
+All of these examples show using AgentOps in single session mode
+
+```python
+agentops.init()
+agentops.end_session(end_state="Success")
+```
+```python
+agentops.init(auto_start_session=False)
+session = agentops.start_session()
+session.end_session(end_state="Success")
+```
+
+### Multi Session Examples
+
+As soon as you create a second session, the SDK operates in multi-session mode.
+
+```python
+session_1 = agentops.init()
+session_2 = agentops.start_session()
+```
+
+```python
+agentops.init(auto_start_session=False)
+session_1 = agentops.start_session()
+session_2 = agentops.start_session()
+```
+
+# Managing Multiple Sessions
+After creating a session, be sure to have the session reference available anywhere where data related to that session is collected.
+
+The [Session](/v1/concepts/sessions) object has methods as described in the [docs page](/v1/concepts/sessions).
+
+### Start Sessions
+Start a new session with `init()` or `start_session()` depending on whether or not AgentOps has already been initialized.
+
+```python
+session_1 = agentops.init()
+session_2 = agentops.start_session()
+```
+or
+
+```python
+agentops.init(auto_start_session=False)
+session_1 = agentops.start_session()
+session_2 = agentops.start_session()
+```
+
+### Stop Sessions
+To stop a currently active session, call `end_session()` on the session object.
+
+```python
+session = agentops.start_session()
+session.end_session()
+```
+
+If you lose access to the session object before calling `end_session()`, the session will be marked as `Indeterminate`.
+
+### Functions on Sessions
+
+All methods are described in the [docs page](/v1/concepts/sessions).
+
+These methods must be called on the session object:
+
+```python
+session = agentops.start_session()
+session.record(Event(...))
+```
+
+### Examples
+<CardGroup cols={2}>
+	<Card title="Two Session Script" icon="scroll" iconType="solid" color="green" href="https://github.com/AgentOps-AI/agentops/blob/main/examples/multi_session_llm.py">
+        Create two sessions and perform functions on each
+	</Card>
+	<Card title="REST API" icon="computer" iconType="regular" color="purple" href="/v1/examples/fastapi">
+        Create a REST server with fast-api and manage sessions
+	</Card>
+</CardGroup>
+
+# Assigning LLM Calls
+When we have multiple active sessions, it's impossible for AgentOps to know which session a particular LLM call belongs to without a little help.
+
+To track an LLM call, use [`session.patch()`](/v1/concepts/sessions#patch)
+
+```python
+import agentops
+import openai
+
+session = agentops.start_session()
+messages = [{"role": "user", "content": "Hello"}]
+response = session.patch(openai.chat.completions.create)(
+    model="gpt-3.5-turbo",
+    messages=messages,
+    temperature=0.5,
+)
+```
+
+If you're using the create function multiple times, you can create a new function with the same method.
+
+```python
+observed_create = session.patch(openai.chat.completions.create)
+obs_response = observed_create(
+    model="gpt-3.5-turbo",
+    messages=messages,
+    temperature=0.5,
+)
+```
+
+[//]: # (Alternatively, you can include the session object as a keyword parameter in the completion call.)
+
+[//]: # ()
+[//]: # (```python)
+
+[//]: # (import agentops)
+
+[//]: # (import openai)
+
+[//]: # ()
+[//]: # (session = agentops.start_session&#40;&#41;)
+
+[//]: # (messages = [{"role": "user", "content": "Hello"}])
+
+[//]: # (response = openai.chat.completions.create&#40;)
+
+[//]: # (    model="gpt-3.5-turbo",)
+
+[//]: # (    messages=messages,)
+
+[//]: # (    temperature=0.5,)
+
+[//]: # (    session=session)
+
+[//]: # (&#41;)
+
+[//]: # (```)
+
+[//]: # ()
+[//]: # (<Warning>Passing `session` as a keyword parameter is functional, but will likely show an Unexpected Argument warning.</Warning>)
+
+If you make an LLM completion call without one of these methods while you currently have more than one active session, a `MultiSessionException` will be raised.
+
+
+# Exceptions
+
+### `MultiSessionException`
+_"If multiple sessions exist, you must use session.function(). Example: session.add_tags(...) instead of agentops.add_tags(...)."_
+
+Receiving this exception means that you tried to perform a function on the SDK base, but at runtime had more than one active session.
+
+### `NoSessionException`
+A [session](/v1/concepts/session) action was attempted while no session existed on the client.
