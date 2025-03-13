@@ -82,11 +82,6 @@ available_instrumentors: list[InstrumentorLoader] = [
         provider_import_name='mistralai', 
     ),
     InstrumentorLoader(
-        module_name='opentelemetry.instrumentation.ollama', 
-        class_name='OllamaInstrumentor', 
-        provider_import_name='ollama', 
-    ),
-    InstrumentorLoader(
         module_name='opentelemetry.instrumentation.agents', 
         class_name='AgentsInstrumentor', 
         provider_import_name='agents', 
