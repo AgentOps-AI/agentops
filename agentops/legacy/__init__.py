@@ -6,7 +6,13 @@ CrewAI codebase contains an AgentOps integration which is now deprecated.
 This maintains compatibility with codebases that adhere to the previous API.
 """
 
+from typing import Dict, Any, Optional, Tuple
+
+from agentops.sdk.commands import start_span, end_span
+from agentops.semconv.span_kinds import SpanKind
+
 __all__ = [
+    'start_session',
     'end_session',
     'ToolEvent',
     'ErrorEvent',
@@ -14,12 +20,50 @@ __all__ = [
 ]
 
 
-def end_session(*args, **kwargs) -> None:
+def start_session(
+    name: str = "manual_session",
+    attributes: Optional[Dict[str, Any]] = None,
+    version: Optional[int] = None
+) -> Tuple[Any, Any]:
     """
-    @deprecated
-    Sessions are ended automatically.
+    Start a new AgentOps session manually.
+
+    This function creates and starts a new session span, which can be used to group
+    related operations together. The session will remain active until end_session
+    is called with the returned span and token.
+
+    This is a legacy function that uses start_span with span_kind=SpanKind.SESSION.
+
+    Args:
+        name: Name of the session
+        attributes: Optional attributes to set on the session span
+        version: Optional version identifier for the session
+
+    Returns:
+        A tuple of (span, token) that should be passed to end_session
     """
-    return None
+    return start_span(
+        name=name,
+        span_kind=SpanKind.SESSION,
+        attributes=attributes,
+        version=version
+    )
+
+
+def end_session(span, token) -> None:
+    """
+    End a previously started AgentOps session.
+
+    This function ends the session span and detaches the context token,
+    completing the session lifecycle.
+
+    This is a legacy function that uses end_span.
+
+    Args:
+        span: The span returned by start_session
+        token: The token returned by start_session
+    """
+    end_span(span, token)
 
 
 def ToolEvent(*args, **kwargs) -> None:

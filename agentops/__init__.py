@@ -1,4 +1,3 @@
-from agentops.legacy import *  # noqa: F403
 from typing import Dict, List, Optional, Union, Any
 
 from dotenv import load_dotenv
@@ -6,6 +5,7 @@ from dotenv import load_dotenv
 from .client import Client
 from .sdk.commands import record as sdk_record, start_span as sdk_start_span, end_span as sdk_end_span
 from .semconv.span_kinds import SpanKind
+import agentops.legacy as legacy
 
 load_dotenv()
 
@@ -141,6 +141,20 @@ def start_session(**kwargs):
         Optional[Session]: Returns Session if successful, None otherwise.
     """
     return _client.start_session(**kwargs)
+
+
+def end_session(span, token):
+    """
+    End a previously started AgentOps session.
+
+    This function ends the session span and detaches the context token,
+    completing the session lifecycle.
+
+    Args:
+        span: The span returned by start_session
+        token: The token returned by start_session
+    """
+    legacy.end_session(span, token)
 
 
 def start_span(
