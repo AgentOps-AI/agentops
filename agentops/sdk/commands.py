@@ -9,16 +9,14 @@ If you are looking for the legacy start_session / end_session, look
 at the `agentops.legacy` module.
 """
 
-from typing import Dict, Any, Optional, Tuple
-import contextlib
-import warnings
+from typing import Any, Dict, Optional, Tuple
 
 from opentelemetry import trace
-from opentelemetry import context as context_api
 
+from agentops.exceptions import AgentOpsClientNotInitializedException
 from agentops.sdk.core import TracingCore
+from agentops.sdk.decorators.utility import _finalize_span, _make_span
 from agentops.semconv.span_kinds import SpanKind
-from agentops.sdk.decorators.utility import _make_span, _finalize_span
 
 
 def start_span(
@@ -31,7 +29,7 @@ def start_span(
     Start a new AgentOps span manually.
 
     This function creates and starts a new span, which can be used to track
-    operations. The span will remain active until end_span is called with 
+    operations. The span will remain active until end_span is called with
     the returned span and token.
 
     Args:
@@ -56,9 +54,14 @@ def start_span(
         ```
     """
     # Skip if tracing is not initialized
-    if not TracingCore.get_instance()._initialized:
-        # Return dummy values that can be safely passed to end_span
-        return None, None
+    from agentops.client.client import Client
+    cli = Client()
+    if not cli.initialized:
+        # Attempt to initialize the client if not already initialized
+        if cli.config.auto_init:
+            cli.init()
+        else:
+            raise AgentOpsClientNotInitializedException
 
     # Use the standardized _make_span function to create the span
     span, context, token = _make_span(
