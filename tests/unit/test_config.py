@@ -30,6 +30,7 @@ def mock_env():
             os.environ[key] = value
         yield
 
+
 @pytest.fixture
 def valid_uuid():
     """Return a valid UUID string for testing"""
@@ -55,10 +56,10 @@ def test_config_override_env(mock_env, valid_uuid):
     """Test that kwargs override environment variables"""
     config = Config()
     client = Client()
-    
+
     # Store the original value from environment
     original_max_queue_size = config.max_queue_size
-    
+
     config.configure(
         api_key=valid_uuid,
         endpoint="https://override.agentops.ai",
@@ -75,7 +76,6 @@ def test_config_override_env(mock_env, valid_uuid):
     assert config.instrument_llm_calls is True
     # Other values should remain from env
     assert config.max_queue_size == 256  # Use the value from mock_env
-
 
 
 def test_invalid_api_key():

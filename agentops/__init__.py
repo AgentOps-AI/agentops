@@ -161,13 +161,13 @@ def start_span(
     name: str = "manual_span",
     span_kind: str = SpanKind.OPERATION,
     attributes: Optional[Dict[str, Any]] = None,
-    version: Optional[int] = None
+    version: Optional[int] = None,
 ):
     """
     Start a new span manually.
 
     This function creates and starts a new span, which can be used to track
-    operations. The span will remain active until end_span is called with 
+    operations. The span will remain active until end_span is called with
     the returned span and token.
 
     Args:

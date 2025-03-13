@@ -1,7 +1,0 @@
----
-description: Testing guidelines
-globs: tests/*
-alwaysApply: false
----
-- Use `pytest` tests, not unit tests
-- Use the [instrumentation_tester.py](mdc:tests/unit/sdk/instrumentation_tester.py)

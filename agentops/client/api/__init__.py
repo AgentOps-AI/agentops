@@ -6,7 +6,7 @@ This module provides the client for the AgentOps API.
 
 from typing import Dict, Optional, Type, TypeVar, cast
 
-from agentops.client.api.base import  BaseApiClient
+from agentops.client.api.base import BaseApiClient
 from agentops.client.api.types import AuthTokenResponse
 from agentops.client.api.versions.v3 import V3Client
 
@@ -14,6 +14,7 @@ from agentops.client.api.versions.v3 import V3Client
 T = TypeVar("T", bound=BaseApiClient)
 
 __all__ = ["ApiClient", "BaseApiClient", "AuthTokenResponse"]
+
 
 class ApiClient:
     """

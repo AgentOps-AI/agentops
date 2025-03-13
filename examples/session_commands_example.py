@@ -28,7 +28,7 @@ def example_1_manual_session():
     span, token = start_span(
         name="manual_session",
         span_kind=SpanKind.SESSION,
-        attributes={"example": "manual", "method": "direct_functions"}
+        attributes={"example": "manual", "method": "direct_functions"},
     )
 
     # Simulate some work
@@ -37,8 +37,6 @@ def example_1_manual_session():
     # End the session manually
     end_span(span, token)
     print("  Manual session ended")
-
-
 
 
 if __name__ == "__main__":

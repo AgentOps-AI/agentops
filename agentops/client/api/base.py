@@ -15,7 +15,8 @@ from agentops.client.http.http_client import HttpClient
 class TokenFetcher(Protocol):
     """Protocol for token fetching functions"""
 
-    def __call__(self, api_key: str) -> str: ...
+    def __call__(self, api_key: str) -> str:
+        ...
 
 
 class BaseApiClient:
@@ -52,10 +53,10 @@ class BaseApiClient:
             "Connection": "keep-alive",
             "Keep-Alive": "timeout=10, max=1000",
         }
-        
+
         if custom_headers:
             headers.update(custom_headers)
-            
+
         return headers
 
     def _get_full_url(self, path: str) -> str:
@@ -158,4 +159,3 @@ class BaseApiClient:
             Response from the API
         """
         return self.request("delete", path, headers=headers)
-

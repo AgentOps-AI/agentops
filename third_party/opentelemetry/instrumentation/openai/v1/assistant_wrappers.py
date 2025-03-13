@@ -109,9 +109,7 @@ def messages_list_wrapper(tracer, wrapped, instance, args, kwargs):
     i = 0
     if assistants.get(run["assistant_id"]) is not None or Config.enrich_assistant:
         if Config.enrich_assistant:
-            assistant = model_as_dict(
-                instance._client.beta.assistants.retrieve(run["assistant_id"])
-            )
+            assistant = model_as_dict(instance._client.beta.assistants.retrieve(run["assistant_id"]))
             assistants[run["assistant_id"]] = assistant
         else:
             assistant = assistants[run["assistant_id"]]
@@ -139,18 +137,14 @@ def messages_list_wrapper(tracer, wrapped, instance, args, kwargs):
         )
         i += 1
     _set_span_attribute(span, f"{SpanAttributes.LLM_PROMPTS}.{i}.role", "system")
-    _set_span_attribute(
-        span, f"{SpanAttributes.LLM_PROMPTS}.{i}.content", run["instructions"]
-    )
+    _set_span_attribute(span, f"{SpanAttributes.LLM_PROMPTS}.{i}.content", run["instructions"])
 
     for i, msg in enumerate(messages):
         prefix = f"{SpanAttributes.LLM_COMPLETIONS}.{i}"
         content = msg.get("content")
 
         _set_span_attribute(span, f"{prefix}.role", msg.get("role"))
-        _set_span_attribute(
-            span, f"{prefix}.content", content[0].get("text").get("value")
-        )
+        _set_span_attribute(span, f"{prefix}.content", content[0].get("text").get("value"))
         _set_span_attribute(span, f"gen_ai.response.{i}.id", msg.get("id"))
 
     if run.get("usage"):
@@ -188,16 +182,12 @@ def runs_create_and_stream_wrapper(tracer, wrapped, instance, args, kwargs):
     i = 0
     if assistants.get(assistant_id) is not None or Config.enrich_assistant:
         if Config.enrich_assistant:
-            assistant = model_as_dict(
-                instance._client.beta.assistants.retrieve(assistant_id)
-            )
+            assistant = model_as_dict(instance._client.beta.assistants.retrieve(assistant_id))
             assistants[assistant_id] = assistant
         else:
             assistant = assistants[assistant_id]
 
-        _set_span_attribute(
-            span, SpanAttributes.LLM_REQUEST_MODEL, assistants[assistant_id]["model"]
-        )
+        _set_span_attribute(span, SpanAttributes.LLM_REQUEST_MODEL, assistants[assistant_id]["model"])
         _set_span_attribute(
             span,
             SpanAttributes.LLM_SYSTEM,
@@ -222,9 +212,7 @@ def runs_create_and_stream_wrapper(tracer, wrapped, instance, args, kwargs):
         EventHandleWrapper,
     )
 
-    kwargs["event_handler"] = EventHandleWrapper(
-        original_handler=kwargs["event_handler"], span=span
-    )
+    kwargs["event_handler"] = EventHandleWrapper(original_handler=kwargs["event_handler"], span=span)
 
     response = wrapped(*args, **kwargs)
 

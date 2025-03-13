@@ -136,9 +136,7 @@ async def _dump_content(message_index, content, span):
 
         content = [
             (
-                await _process_image_item(
-                    item, span.context.trace_id, span.context.span_id, message_index, j
-                )
+                await _process_image_item(item, span.context.trace_id, span.context.span_id, message_index, j)
                 if _is_base64_image(item)
                 else item
             )
@@ -151,26 +149,16 @@ async def _dump_content(message_index, content, span):
 @dont_throw
 async def _aset_input_attributes(span, kwargs):
     set_span_attribute(span, SpanAttributes.LLM_REQUEST_MODEL, kwargs.get("model"))
-    set_span_attribute(
-        span, SpanAttributes.LLM_REQUEST_MAX_TOKENS, kwargs.get("max_tokens_to_sample")
-    )
-    set_span_attribute(
-        span, SpanAttributes.LLM_REQUEST_TEMPERATURE, kwargs.get("temperature")
-    )
+    set_span_attribute(span, SpanAttributes.LLM_REQUEST_MAX_TOKENS, kwargs.get("max_tokens_to_sample"))
+    set_span_attribute(span, SpanAttributes.LLM_REQUEST_TEMPERATURE, kwargs.get("temperature"))
     set_span_attribute(span, SpanAttributes.LLM_REQUEST_TOP_P, kwargs.get("top_p"))
-    set_span_attribute(
-        span, SpanAttributes.LLM_REQUEST_FREQUENCY_PENALTY, kwargs.get("frequency_penalty")
-    )
-    set_span_attribute(
-        span, SpanAttributes.LLM_REQUEST_PRESENCE_PENALTY, kwargs.get("presence_penalty")
-    )
+    set_span_attribute(span, SpanAttributes.LLM_REQUEST_FREQUENCY_PENALTY, kwargs.get("frequency_penalty"))
+    set_span_attribute(span, SpanAttributes.LLM_REQUEST_PRESENCE_PENALTY, kwargs.get("presence_penalty"))
     set_span_attribute(span, SpanAttributes.LLM_REQUEST_STREAMING, kwargs.get("stream"))
 
     if should_send_prompts():
         if kwargs.get("prompt") is not None:
-            set_span_attribute(
-                span, f"{SpanAttributes.LLM_PROMPTS}.0.user", kwargs.get("prompt")
-            )
+            set_span_attribute(span, f"{SpanAttributes.LLM_PROMPTS}.0.user", kwargs.get("prompt"))
 
         elif kwargs.get("messages") is not None:
             has_system_message = False
@@ -179,9 +167,7 @@ async def _aset_input_attributes(span, kwargs):
                 set_span_attribute(
                     span,
                     f"{SpanAttributes.LLM_PROMPTS}.0.content",
-                    await _dump_content(
-                        message_index=0, span=span, content=kwargs.get("system")
-                    ),
+                    await _dump_content(message_index=0, span=span, content=kwargs.get("system")),
                 )
                 set_span_attribute(
                     span,
@@ -193,9 +179,7 @@ async def _aset_input_attributes(span, kwargs):
                 set_span_attribute(
                     span,
                     f"{SpanAttributes.LLM_PROMPTS}.{prompt_index}.content",
-                    await _dump_content(
-                        message_index=i, span=span, content=message.get("content")
-                    ),
+                    await _dump_content(message_index=i, span=span, content=message.get("content")),
                 )
                 set_span_attribute(
                     span,
@@ -284,7 +268,7 @@ async def _aset_token_usage(
 
     input_tokens = prompt_tokens + cache_read_tokens + cache_creation_tokens
 
-    if token_histogram and type(input_tokens) is int and input_tokens >= 0:
+    if token_histogram and isinstance(input_tokens, int) and input_tokens >= 0:
         token_histogram.record(
             input_tokens,
             attributes={
@@ -301,11 +285,9 @@ async def _aset_token_usage(
             if response.get("completion"):
                 completion_tokens = await anthropic.count_tokens(response.get("completion"))
             elif response.get("content"):
-                completion_tokens = await anthropic.count_tokens(
-                    response.get("content")[0].text
-                )
+                completion_tokens = await anthropic.count_tokens(response.get("content")[0].text)
 
-    if token_histogram and type(completion_tokens) is int and completion_tokens >= 0:
+    if token_histogram and isinstance(completion_tokens, int) and completion_tokens >= 0:
         token_histogram.record(
             completion_tokens,
             attributes={
@@ -317,7 +299,7 @@ async def _aset_token_usage(
     total_tokens = input_tokens + completion_tokens
 
     choices = 0
-    if type(response.get("content")) is list:
+    if isinstance(response.get("content"), list):
         choices = len(response.get("content"))
     elif response.get("completion"):
         choices = 1
@@ -332,17 +314,11 @@ async def _aset_token_usage(
         )
 
     set_span_attribute(span, SpanAttributes.LLM_USAGE_PROMPT_TOKENS, input_tokens)
-    set_span_attribute(
-        span, SpanAttributes.LLM_USAGE_COMPLETION_TOKENS, completion_tokens
-    )
+    set_span_attribute(span, SpanAttributes.LLM_USAGE_COMPLETION_TOKENS, completion_tokens)
     set_span_attribute(span, SpanAttributes.LLM_USAGE_TOTAL_TOKENS, total_tokens)
 
-    set_span_attribute(
-        span, SpanAttributes.LLM_USAGE_CACHE_READ_INPUT_TOKENS, cache_read_tokens
-    )
-    set_span_attribute(
-        span, SpanAttributes.LLM_USAGE_CACHE_CREATION_INPUT_TOKENS, cache_creation_tokens
-    )
+    set_span_attribute(span, SpanAttributes.LLM_USAGE_CACHE_READ_INPUT_TOKENS, cache_read_tokens)
+    set_span_attribute(span, SpanAttributes.LLM_USAGE_CACHE_CREATION_INPUT_TOKENS, cache_creation_tokens)
 
 
 @dont_throw
@@ -375,7 +351,7 @@ def _set_token_usage(
 
     input_tokens = prompt_tokens + cache_read_tokens + cache_creation_tokens
 
-    if token_histogram and type(input_tokens) is int and input_tokens >= 0:
+    if token_histogram and isinstance(input_tokens, int) and input_tokens >= 0:
         token_histogram.record(
             input_tokens,
             attributes={
@@ -394,7 +370,7 @@ def _set_token_usage(
             elif response.get("content"):
                 completion_tokens = anthropic.count_tokens(response.get("content")[0].text)
 
-    if token_histogram and type(completion_tokens) is int and completion_tokens >= 0:
+    if token_histogram and isinstance(completion_tokens, int) and completion_tokens >= 0:
         token_histogram.record(
             completion_tokens,
             attributes={
@@ -406,7 +382,7 @@ def _set_token_usage(
     total_tokens = input_tokens + completion_tokens
 
     choices = 0
-    if type(response.get("content")) is list:
+    if isinstance(response.get("content"), list):
         choices = len(response.get("content"))
     elif response.get("completion"):
         choices = 1
@@ -421,17 +397,11 @@ def _set_token_usage(
         )
 
     set_span_attribute(span, SpanAttributes.LLM_USAGE_PROMPT_TOKENS, input_tokens)
-    set_span_attribute(
-        span, SpanAttributes.LLM_USAGE_COMPLETION_TOKENS, completion_tokens
-    )
+    set_span_attribute(span, SpanAttributes.LLM_USAGE_COMPLETION_TOKENS, completion_tokens)
     set_span_attribute(span, SpanAttributes.LLM_USAGE_TOTAL_TOKENS, total_tokens)
 
-    set_span_attribute(
-        span, SpanAttributes.LLM_USAGE_CACHE_READ_INPUT_TOKENS, cache_read_tokens
-    )
-    set_span_attribute(
-        span, SpanAttributes.LLM_USAGE_CACHE_CREATION_INPUT_TOKENS, cache_creation_tokens
-    )
+    set_span_attribute(span, SpanAttributes.LLM_USAGE_CACHE_READ_INPUT_TOKENS, cache_read_tokens)
+    set_span_attribute(span, SpanAttributes.LLM_USAGE_CACHE_CREATION_INPUT_TOKENS, cache_creation_tokens)
 
 
 @dont_throw
@@ -445,9 +415,7 @@ def _set_response_attributes(span, response):
         prompt_tokens = response.get("usage").input_tokens
         completion_tokens = response.get("usage").output_tokens
         set_span_attribute(span, SpanAttributes.LLM_USAGE_PROMPT_TOKENS, prompt_tokens)
-        set_span_attribute(
-            span, SpanAttributes.LLM_USAGE_COMPLETION_TOKENS, completion_tokens
-        )
+        set_span_attribute(span, SpanAttributes.LLM_USAGE_COMPLETION_TOKENS, completion_tokens)
         set_span_attribute(
             span,
             SpanAttributes.LLM_USAGE_TOTAL_TOKENS,
@@ -670,9 +638,7 @@ async def _awrap(
             await _aset_input_attributes(span, kwargs)
 
     except Exception as ex:  # pylint: disable=broad-except
-        logger.warning(
-            "Failed to set input attributes for anthropic span, error: %s", str(ex)
-        )
+        logger.warning("Failed to set input attributes for anthropic span, error: %s", str(ex))
 
     start_time = time.time()
     try:
@@ -742,9 +708,7 @@ class AnthropicInstrumentor(BaseInstrumentor):
         enrich_token_usage: bool = False,
         exception_logger=None,
         get_common_metrics_attributes: Callable[[], dict] = lambda: {},
-        upload_base64_image: Optional[
-            Callable[[str, str, str, str], Coroutine[None, None, str]]
-        ] = None,
+        upload_base64_image: Optional[Callable[[str, str, str, str], Coroutine[None, None, str]]] = None,
     ):
         super().__init__()
         Config.exception_logger = exception_logger

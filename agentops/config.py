@@ -216,4 +216,4 @@ class Config:
 
 
 # checks if pytest is imported
-TESTING = 'pytest' in sys.modules
+TESTING = "pytest" in sys.modules

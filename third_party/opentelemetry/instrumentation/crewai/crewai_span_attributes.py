@@ -74,9 +74,7 @@ class CrewAISpanAttributes:
         return self._extract_attributes(self.instance)
 
     def _parse_agents(self, agents):
-        self.crew["agents"] = [
-            self._extract_agent_data(agent) for agent in agents if agent is not None
-        ]
+        self.crew["agents"] = [self._extract_agent_data(agent) for agent in agents if agent is not None]
 
     def _parse_tasks(self, tasks):
         self.crew["tasks"] = [
@@ -102,16 +100,13 @@ class CrewAISpanAttributes:
                 "n": llm.n,
                 "seed": llm.seed,
                 "base_url": llm.base_url,
-                "api_version": llm.api_version, }
+                "api_version": llm.api_version,
+            }
             for llm in llms
         ]
 
     def _extract_agent_data(self, agent):
-        model = (
-            getattr(agent.llm, "model", None)
-            or getattr(agent.llm, "model_name", None)
-            or ""
-        )
+        model = getattr(agent.llm, "model", None) or getattr(agent.llm, "model_name", None) or ""
 
         return {
             "id": str(agent.id),
@@ -124,7 +119,8 @@ class CrewAISpanAttributes:
             "allow_delegation": agent.allow_delegation,
             "tools": agent.tools,
             "max_iter": agent.max_iter,
-            "llm": str(model), }
+            "llm": str(model),
+        }
 
     def _extract_attributes(self, obj):
         attributes = {}
@@ -139,10 +135,7 @@ class CrewAISpanAttributes:
 
     def _serialize_tools(self, tools):
         return json.dumps(
-            [
-                {k: v for k, v in vars(tool).items() if v is not None and k in ["name", "description"]}
-                for tool in tools
-            ]
+            [{k: v for k, v in vars(tool).items() if v is not None and k in ["name", "description"]} for tool in tools]
         )
 
     def _set_attribute(self, key, value):

@@ -4,6 +4,7 @@ from agentops.sdk.decorators import session
 # Initialize AgentOps
 agentops.init()
 
+
 # Example 1: Using the session decorator with a function
 @session
 def process_data(data):
@@ -12,15 +13,14 @@ def process_data(data):
     import openai
 
     response = openai.chat.completions.create(
-        model="gpt-3.5-turbo",
-        messages=[{"role": "user", "content": "Write a one-line joke"}]
+        model="gpt-3.5-turbo", messages=[{"role": "user", "content": "Write a one-line joke"}]
     )
-
 
     # Simulate some processing
     result = data.upper()
     return result
 
+
 # Call the decorated function
 result = process_data("hello world")
-print(f"Result: {result}") 
+print(f"Result: {result}")
