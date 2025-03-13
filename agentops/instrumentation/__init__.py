@@ -96,6 +96,11 @@ available_instrumentors: list[InstrumentorLoader] = [
         class_name='AgentsInstrumentor', 
         provider_import_name='agents', 
     ),
+    InstrumentorLoader(
+        module_name='opentelemetry.instrumentation.autogen', 
+        class_name='AutoGenInstrumentor', 
+        provider_import_name='autogen', 
+    ),
 ]
 
 
