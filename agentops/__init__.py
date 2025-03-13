@@ -1,3 +1,4 @@
+from decimal import Decimal
 from typing import Dict, List, Optional, Union, Any
 
 from dotenv import load_dotenv
@@ -5,6 +6,7 @@ from dotenv import load_dotenv
 from .client import Client
 from .sdk.commands import record as sdk_record, start_span as sdk_start_span, end_span as sdk_end_span
 from .semconv.span_kinds import SpanKind
+from .decorators import record_action
 import agentops.legacy as legacy
 
 load_dotenv()
@@ -143,18 +145,30 @@ def start_session(**kwargs):
     return _client.start_session(**kwargs)
 
 
-def end_session(span, token):
+def end_session(
+    end_state: str,
+    end_state_reason: Optional[str] = None,
+    video: Optional[str] = None,
+    is_auto_end: Optional[bool] = None,
+) -> Optional[Decimal]:
     """
-    End a previously started AgentOps session.
-
-    This function ends the session span and detaches the context token,
-    completing the session lifecycle.
+    End the current session with the AgentOps service.
 
     Args:
-        span: The span returned by start_session
-        token: The token returned by start_session
+        end_state (str): The final state of the session. Options: Success, Fail, or Indeterminate (default).
+        end_state_reason (str, optional): The reason for ending the session.
+        video (str, optional): The video screen recording of the session
+        is_auto_end (bool, optional): is this an automatic use of end_session and should be skipped with skip_auto_end_session
+
+    Returns:
+        Decimal: The token cost of the session. Returns 0 if the cost is unknown.
     """
-    legacy.end_session(span, token)
+    return _client.end_session(
+        end_state=end_state,
+        end_state_reason=end_state_reason,
+        video=video,
+        is_auto_end=is_auto_end,
+    )
 
 
 def start_span(
