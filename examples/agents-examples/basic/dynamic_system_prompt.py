@@ -4,9 +4,15 @@ from typing import Literal
 
 from agents import Agent, RunContextWrapper, Runner
 
+from dotenv import load_dotenv
+import os
 import agentops
 
-agentops.init()
+load_dotenv()
+
+AGENTOPS_API_KEY = os.getenv("AGENTOPS_API_KEY") or "your-api-key"
+agentops.init(api_key=AGENTOPS_API_KEY)
+
 class CustomContext:
     def __init__(self, style: Literal["haiku", "pirate", "robot"]):
         self.style = style
