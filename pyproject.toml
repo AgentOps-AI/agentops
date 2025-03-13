@@ -53,13 +53,6 @@ dependencies = [
 test = [
     "openai>=1.0.0",
     "anthropic",
-    "cohere",
-    "litellm",
-    "ai21>=3.0.0",
-    "groq",
-    "ollama",
-    "mistralai>=0.2.0,<1.0.0", # Because third_party/opentelemetry/instrumentation/mistralai instruments = ("mistralai >= 0.2.0, < 1",)
-    "google-generativeai>=0.1.0",
     # ;;
     # The below is a really hard dependency, that can be installed only between python >=3.10,<3.13.
     # CI will fail because all tests will automatically pull this dependency group;
@@ -68,7 +61,6 @@ test = [
     # "crewai-tools @ git+https://github.com/crewAIInc/crewAI-tools.git@a14091abb24527c97ccfcc8539d529c8b4559a0f; python_version>='3.10'", 
     # ------------------------------------------------------------------------------------------------------------------------------------
     # ;;
-    "autogen<0.4.0",
     "pytest-cov",
     "fastapi[standard]",
 ]
@@ -81,8 +73,7 @@ dev = [
     "pytest-mock", # Mocking capabilities for isolating agent components
     "pyfakefs", # File system testing
     "pytest-recording", # Alternative to pytest-vcr with better Python 3.x support
-    # TODO: Use release version after vcrpy is released with this fix.
-    "vcrpy @ git+https://github.com/kevin1024/vcrpy.git@5f1b20c4ca4a18c1fc8cfe049d7df12ca0659c9b",
+    "vcrpy>=0.7.0",
     # Code quality and type checking
     "ruff", # Fast Python linter for maintaining code quality
     "mypy", # Static type checking for better reliability
