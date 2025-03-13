@@ -39,6 +39,7 @@ def _should_trace_content() -> bool:
 
 # Legacy async decorators - Marked for deprecation
 
+
 def aentity_method(
     span_kind: Optional[str] = SpanKind.OPERATION,
     name: Optional[str] = None,
@@ -48,7 +49,7 @@ def aentity_method(
         "DeprecationWarning: The @aentity_method decorator is deprecated. "
         "Please use @instrument_operation for both sync and async methods.",
         DeprecationWarning,
-        stacklevel=2
+        stacklevel=2,
     )
 
     return instrument_operation(
@@ -68,7 +69,7 @@ def aentity_class(
         "DeprecationWarning: The @aentity_class decorator is deprecated. "
         "Please use @instrument_class for both sync and async classes.",
         DeprecationWarning,
-        stacklevel=2
+        stacklevel=2,
     )
 
     return instrument_class(
@@ -81,6 +82,7 @@ def aentity_class(
 
 # Function analysis helpers
 
+
 def _is_coroutine_or_generator(fn: Any) -> bool:
     """Check if a function is asynchronous (coroutine or async generator)"""
     return inspect.iscoroutinefunction(fn) or inspect.isasyncgenfunction(fn)
@@ -89,11 +91,13 @@ def _is_coroutine_or_generator(fn: Any) -> bool:
 def _convert_camel_to_snake(text: str) -> str:
     """Convert CamelCase class names to snake_case format"""
     import re
-    text = re.sub('(.)([A-Z][a-z]+)', r'\1_\2', text)
-    return re.sub('([a-z0-9])([A-Z])', r'\1_\2', text).lower()
+
+    text = re.sub("(.)([A-Z][a-z]+)", r"\1_\2", text)
+    return re.sub("([a-z0-9])([A-Z])", r"\1_\2", text).lower()
 
 
 # Generator handling
+
 
 def _process_sync_generator(span: trace.Span, generator: types.GeneratorType):
     """Process a synchronous generator and manage its span lifecycle"""
@@ -122,15 +126,13 @@ async def _process_async_generator(span: trace.Span, context_token: Any, generat
 
 # Span creation and management
 
+
 def _make_span(
-    operation_name: str,
-    span_kind: str,
-    version: Optional[int] = None,
-    attributes: Dict[str, Any] = {}
+    operation_name: str, span_kind: str, version: Optional[int] = None, attributes: Dict[str, Any] = {}
 ) -> tuple:
     """
     Create and initialize a new instrumentation span with proper context.
-    
+
     This function:
     - Creates a span with proper naming convention ({operation_name}.{span_kind})
     - Gets the current context to establish parent-child relationships
@@ -138,13 +140,13 @@ def _make_span(
     - Sets up a new context with the span
     - Attaches the context
     - Adds standard attributes to the span
-    
+
     Args:
         operation_name: Name of the operation being traced
         span_kind: Type of operation (from SpanKind)
         version: Optional version identifier for the operation
         attributes: Optional dictionary of attributes to set on the span
-        
+
     Returns:
         A tuple of (span, context, token) for span management
     """
@@ -158,15 +160,16 @@ def _make_span(
 
     # Get tracer and create span
     tracer = TracingCore.get_instance().get_tracer()
-    
+
     # Get current context to establish parent-child relationship
     current_context = context_api.get_current()
 
+    attributes.update(
+        {
+            SpanAttributes.AGENTOPS_SPAN_KIND: span_kind,
+        }
+    )
 
-    attributes.update({
-        SpanAttributes.AGENTOPS_SPAN_KIND: span_kind,
-    })
-    
     # Create span with current context to maintain parent-child relationship
     span = tracer.start_span(span_name, context=current_context, attributes=attributes)
 
@@ -237,13 +240,15 @@ def instrument_operation(
         name: Custom name for the operation (defaults to function name)
         version: Optional version identifier for the operation
     """
+
     def decorator(fn):
         is_async = _is_coroutine_or_generator(fn)
         operation_name = name or fn.__name__
         # Use default span_kind if None is provided
-        span_kind = span_kind or SpanKind.OPERATION
+        span_kind = span_kind or SpanKind.OPERATION  # noqa: F823
 
         if is_async:
+
             @wraps(fn)
             async def async_wrapper(*args, **kwargs):
                 # Skip instrumentation if tracer not initialized
@@ -251,8 +256,7 @@ def instrument_operation(
                     return await fn(*args, **kwargs)
 
                 # Create and configure span
-                span, ctx, token = _make_span(
-                    operation_name, span_kind, version)
+                span, ctx, token = _make_span(operation_name, span_kind, version)
 
                 # Record function inputs
                 _record_operation_input(span, args, kwargs)
@@ -276,6 +280,7 @@ def instrument_operation(
 
             return async_wrapper
         else:
+
             @wraps(fn)
             def sync_wrapper(*args, **kwargs):
                 # Skip instrumentation if tracer not initialized
@@ -283,8 +288,7 @@ def instrument_operation(
                     return fn(*args, **kwargs)
 
                 # Create and configure span
-                span, ctx, token = _make_span(
-                    operation_name, span_kind, version)
+                span, ctx, token = _make_span(operation_name, span_kind, version)
 
                 # Record function inputs
                 _record_operation_input(span, args, kwargs)
@@ -323,6 +327,7 @@ def instrument_class(
         version: Optional version identifier
         span_kind: The type of operation being performed
     """
+
     def decorator(cls):
         # Derive operation name from class name if not provided
         operation_name = name if name else _convert_camel_to_snake(cls.__name__)
@@ -331,11 +336,9 @@ def instrument_class(
         target_method = getattr(cls, method_name)
 
         # Create an instrumented version of the method
-        instrumented_method = instrument_operation(
-            span_kind=span_kind,
-            name=operation_name,
-            version=version
-        )(target_method)
+        instrumented_method = instrument_operation(span_kind=span_kind, name=operation_name, version=version)(
+            target_method
+        )
 
         # Replace the original method with the instrumented version
         setattr(cls, method_name, instrumented_method)

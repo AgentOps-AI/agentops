@@ -43,10 +43,7 @@ class TestBasicInstrumentation:
                 # Use tools to perform the search
                 results = self.web_search(query)
                 processed = self.process_results(results)
-                return {
-                    "query": query,
-                    "results": processed
-                }
+                return {"query": query, "results": processed}
 
             @tool(name="web_search", tool_type="search", immediate_export=True)
             def web_search(self, query: str) -> List[str]:
@@ -61,7 +58,7 @@ class TestBasicInstrumentation:
         result = search_session.run()
 
         # End the session
-        if hasattr(search_session, '_session_span'):
+        if hasattr(search_session, "_session_span"):
             search_session._session_span.end()
 
         # Flush spans
@@ -150,7 +147,6 @@ class TestBasicInstrumentation:
         print("\n=== Testing context propagation ===")
 
         # First test direct context setting and getting to verify OTel is working
-        from opentelemetry import context, trace
 
         # Create a direct test of context propagation
         print("\n--- Direct Context Test ---")
@@ -184,7 +180,9 @@ class TestBasicInstrumentation:
 
             # Now current span should be None or different
             current_span_after_detach = trace.get_current_span()
-            span_id_after_detach = current_span_after_detach.get_span_context().span_id if current_span_after_detach else 0
+            span_id_after_detach = (
+                current_span_after_detach.get_span_context().span_id if current_span_after_detach else 0
+            )
             print(f"Span ID after detach: {span_id_after_detach}")
 
             # Restore the context
@@ -242,7 +240,9 @@ class TestBasicInstrumentation:
 
                     # Verify span IDs match from __init__
                     if self.agent_span_id != 0:  # Only check if we actually got a span ID
-                        assert span_id == self.agent_span_id, f"Agent span ID changed between __init__ and process! {self.agent_span_id} != {span_id}"
+                        assert (
+                            span_id == self.agent_span_id
+                        ), f"Agent span ID changed between __init__ and process! {self.agent_span_id} != {span_id}"
 
                     # Process using a tool
                     processed = self.transform_tool(data)
@@ -298,7 +298,9 @@ class TestBasicInstrumentation:
 
                     # Verify span IDs match if we got a span in __init__
                     if self.span_id != 0:
-                        assert span_id == self.span_id, f"Span ID changed between __init__ and run! {self.span_id} != {span_id}"
+                        assert (
+                            span_id == self.span_id
+                        ), f"Span ID changed between __init__ and run! {self.span_id} != {span_id}"
 
                     # Create an agent within this session context
                     agent = TestAgent(self.session_id)
