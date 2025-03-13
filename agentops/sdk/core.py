@@ -22,6 +22,7 @@ from opentelemetry.trace import Span
 from agentops.exceptions import AgentOpsClientNotInitializedException
 from agentops.logging import logger
 from agentops.sdk.exporters import AuthenticatedOTLPExporter
+from agentops.sdk.processors import InternalSpanProcessor
 from agentops.sdk.types import TracingConfig
 from agentops.semconv import ResourceAttributes
 from agentops.semconv.core import CoreAttributes
@@ -139,6 +140,7 @@ class TracingCore:
                 schedule_delay_millis=config.get('max_wait_time', max_wait_time),
             )
             self._provider.add_span_processor(processor)
+            self._provider.add_span_processor(InternalSpanProcessor())  # Catches spans for AgentOps on-terminal printing
             self._processors.append(processor)
 
             metric_reader = PeriodicExportingMetricReader(

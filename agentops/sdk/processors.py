@@ -3,7 +3,6 @@ Span processors for AgentOps SDK.
 
 This module contains processors for OpenTelemetry spans.
 """
-
 import copy
 import threading
 import time
@@ -14,6 +13,7 @@ from opentelemetry.context import Context
 from opentelemetry.sdk.trace import ReadableSpan, Span, SpanProcessor
 from opentelemetry.sdk.trace.export import SpanExporter
 
+import agentops.semconv as semconv
 from agentops.logging import logger
 from agentops.semconv.core import CoreAttributes
 
@@ -79,3 +79,78 @@ class LiveSpanProcessor(SpanProcessor):
             ]
             if to_export:
                 self.span_exporter.export(to_export)
+
+
+class InternalSpanProcessor(SpanProcessor):
+    """
+    A span processor that prints information about spans.
+
+    This processor is particularly useful for debugging and monitoring
+    as it prints information about spans as they are created and ended.
+    For session spans, it prints a URL to the AgentOps dashboard.
+    """
+
+    def __init__(self, app_url: str = "https://app.agentops.ai"):
+        """
+        Initialize the PrintSpanProcessor.
+
+        Args:
+            app_url: The base URL for the AgentOps dashboard.
+        """
+        self.app_url = app_url
+
+    def on_start(self, span: Span, parent_context: Optional[Context] = None) -> None:
+        """
+        Called when a span is started.
+
+        Args:
+            span: The span that was started.
+            parent_context: The parent context, if any.
+        """
+        # Skip if span is not sampled
+        if not span.context or not span.context.trace_flags.sampled:
+            return
+
+        # Get the span kind from attributes
+        span_kind = span.attributes.get(semconv.SpanAttributes.AGENTOPS_SPAN_KIND,
+                                        "unknown") if span.attributes else "unknown"
+
+        # Print basic information about the span
+        logger.info(f"Started span: {span.name} (kind: {span_kind})")
+
+    def on_end(self, span: ReadableSpan) -> None:
+        """
+        Called when a span is ended.
+
+        Args:
+            span: The span that was ended.
+        """
+        # Skip if span is not sampled
+        if not span.context or not span.context.trace_flags.sampled:
+            return
+
+        # Get the span kind from attributes
+        span_kind = span.attributes.get(semconv.SpanAttributes.AGENTOPS_SPAN_KIND,
+                                        "unknown") if span.attributes else "unknown"
+
+        # Special handling for session spans
+        if span_kind == semconv.SpanKind.SESSION:
+            trace_id = span.context.trace_id
+            # Convert trace_id to hex string if it's not already
+            if isinstance(trace_id, int):
+                trace_id = format(trace_id, '032x')
+
+            url = f"{self.app_url}/drilldown?session_id={trace_id}"
+            # logger.info(f"Session completed: {url}")
+            print(url)
+        else:
+            # Print basic information for other span kinds
+            logger.info(f"Ended span: {span.name} (kind: {span_kind})")
+
+    def shutdown(self) -> None:
+        """Shutdown the processor."""
+        pass
+
+    def force_flush(self, timeout_millis: int = 30000) -> bool:
+        """Force flush the processor."""
+        return True
