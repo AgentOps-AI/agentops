@@ -1,22 +1,18 @@
 import inspect
-import json
 import os
 import types
 import warnings
 from functools import wraps
-from typing import Any, Dict, Optional, Union
+from typing import Any, Dict, Optional
 
 from opentelemetry import context as context_api
 from opentelemetry import trace
 
-from agentops.helpers.serialization import AgentOpsJSONEncoder, safe_serialize
+from agentops.helpers.serialization import safe_serialize
 from agentops.logging import logger
-from agentops.sdk.converters import dict_to_span_attributes
 from agentops.sdk.core import TracingCore
-from agentops.semconv import SpanKind, span_attributes
-from agentops.semconv.core import CoreAttributes
+from agentops.semconv import SpanKind
 from agentops.semconv.span_attributes import SpanAttributes
-from agentops.semconv.span_kinds import AgentOpsSpanKindValues
 
 """
 !! NOTE !!

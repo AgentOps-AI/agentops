@@ -6,10 +6,12 @@ and methods with appropriate span kinds. Decorators can be used with or without 
 """
 
 import inspect
-from typing import Optional, Any, Callable, TypeVar, cast, Type, Union, overload
+from typing import (Any, Callable, Optional, Type, TypeVar, Union, cast,
+                    overload)
 
 import wrapt
-from agentops.sdk.decorators.utility import instrument_operation, instrument_class
+
+from agentops.sdk.tracing.utility import instrument_class, instrument_operation
 from agentops.semconv.span_kinds import SpanKind
 
 # Type variables for better type hinting
