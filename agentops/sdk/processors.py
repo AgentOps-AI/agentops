@@ -126,10 +126,12 @@ class InternalSpanProcessor(SpanProcessor):
                 session_url = f"{self.app_url}/drilldown?session_id={trace_id_to_uuid(trace_id)}"
                 # Always log session URLs regardless of log level
                 # This ensures session links are visible even with DEBUG level
-                print(colored(
-                    f"🖇 AgentOps: Session started: {session_url}",
-                    "light_green",
-                ))
+                print(
+                    colored(
+                        f"🖇 AgentOps: Session started: {session_url}",
+                        "light_green",
+                    )
+                )
         else:
             # Print basic information for other span kinds
             logger.debug(f"Ended span: {span.name} (kind: {span_kind})")
@@ -158,10 +160,12 @@ class InternalSpanProcessor(SpanProcessor):
                 session_url = f"{self.app_url}/drilldown?session_id={trace_id_to_uuid(trace_id)}"
                 # Always log session URLs regardless of log level
                 # This ensures session links are visible even with DEBUG level
-                print(colored(
-                    f"🖇 AgentOps: Session Replay: {session_url}",
-                    "blue",
-                ))
+                print(
+                    colored(
+                        f"🖇 AgentOps: Session Replay: {session_url}",
+                        "blue",
+                    )
+                )
         else:
             # Print basic information for other span kinds
             logger.debug(f"Ended span: {span.name} (kind: {span_kind})")
