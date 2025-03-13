@@ -54,7 +54,6 @@ def end_session(span, token) -> None:
 
     Args:
         span: The span returned by start_session
-        token: The token returned by start_session
     """
     end_span(span, token)
 

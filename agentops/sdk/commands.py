@@ -15,7 +15,7 @@ from opentelemetry import trace
 
 from agentops.exceptions import AgentOpsClientNotInitializedException
 from agentops.sdk.core import TracingCore
-from agentops.sdk.tracing.utility import _finalize_span, _make_span
+from agentops.sdk.decorators.utility import _finalize_span, _make_span
 from agentops.semconv.span_attributes import SpanAttributes
 from agentops.semconv.span_kinds import SpanKind
 

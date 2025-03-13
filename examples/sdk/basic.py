@@ -1,5 +1,5 @@
 import agentops
-from agentops.sdk.decorators.agentops import agent, operation, record, session
+from agentops.sdk.decorators import agent, operation, session
 
 agentops.init()
 

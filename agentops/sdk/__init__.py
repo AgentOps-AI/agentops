@@ -7,13 +7,11 @@ for different types of operations in AI agent workflows.
 
 # Import command functions
 from agentops.sdk.commands import end_span, record, start_span
-
 # Import core components
 from agentops.sdk.core import TracingCore
-
 # Import decorators
-from agentops.sdk.decorators.agentops import agent, operation, record as record_decorator, session
-
+from agentops.sdk.decorators import agent
+from agentops.sdk.decorators import task as operation
 # from agentops.sdk.traced import TracedObject  # Merged into TracedObject
 from agentops.sdk.types import TracingConfig
 
@@ -25,9 +23,7 @@ __all__ = [
     "TracingCore",
     "TracingConfig",
     # Decorators
-    "session",
     "operation",
-    "record_decorator",
     "agent",
     # Command functions
     "start_span",
