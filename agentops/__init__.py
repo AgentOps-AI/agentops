@@ -1,13 +1,9 @@
 from typing import Dict, List, Optional, Union, Any
 
-from dotenv import load_dotenv
-
 from .client import Client
 from .sdk.commands import record as sdk_record, start_span as sdk_start_span, end_span as sdk_end_span
 from .semconv.span_kinds import SpanKind
 import agentops.legacy as legacy
-
-load_dotenv()
 
 # Client global instance; one per process runtime
 _client = Client()
