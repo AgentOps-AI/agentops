@@ -13,9 +13,10 @@ from agentops.helpers.serialization import AgentOpsJSONEncoder, safe_serialize
 from agentops.logging import logger
 from agentops.sdk.converters import dict_to_span_attributes
 from agentops.sdk.core import TracingCore
-from agentops.semconv import SpanKind
+from agentops.semconv import SpanKind, span_attributes
 from agentops.semconv.core import CoreAttributes
 from agentops.semconv.span_attributes import SpanAttributes
+from agentops.semconv.span_kinds import AgentOpsSpanKindValues
 
 """
 !! NOTE !!
@@ -199,7 +200,7 @@ def _record_operation_input(span: trace.Span, args: tuple, kwargs: Dict[str, Any
             json_data = safe_serialize(input_data)
 
             if _check_content_size(json_data):
-                span.set_attribute("agentops.operation.input", json_data)
+                span.set_attribute(SpanAttributes.AGENTOPS_ENTITY_INPUT, json_data)
             else:
                 logger.debug("Operation input exceeds size limit, not recording")
     except Exception as err:
@@ -213,7 +214,7 @@ def _record_operation_output(span: trace.Span, result: Any) -> None:
             json_data = safe_serialize(result)
 
             if _check_content_size(json_data):
-                span.set_attribute("agentops.operation.output", json_data)
+                span.set_attribute(SpanAttributes.AGENTOPS_ENTITY_OUTPUT, json_data)
             else:
                 logger.debug("Operation output exceeds size limit, not recording")
     except Exception as err:
