@@ -1,5 +1,4 @@
 version = 1
-revision = 1
 requires-python = ">=3.9, <3.14"
 resolution-markers = [
     "python_full_version >= '3.13' and platform_python_implementation == 'PyPy'",
@@ -120,7 +119,7 @@ dev = [
     { name = "requests-mock", specifier = ">=1.11.0" },
     { name = "ruff" },
     { name = "types-requests" },
-    { name = "vcrpy", git = "https://github.com/kevin1024/vcrpy.git?rev=5f1b20c4ca4a18c1fc8cfe049d7df12ca0659c9b" },
+    { name = "vcrpy", git = "https://github.com/kevin1024/vcrpy.git?rev=5f1b20c4ca4a18c1fc8cfe049d7df12ca0659c9b#5f1b20c4ca4a18c1fc8cfe049d7df12ca0659c9b" },
 ]
 test = [
     { name = "ai21", specifier = ">=3.0.0" },

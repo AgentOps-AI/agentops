@@ -5,6 +5,8 @@ This module provides a high-level API for creating and managing spans
 for different types of operations in AI agent workflows.
 """
 
+# Import command functions
+from agentops.sdk.commands import end_session, start_session
 # Import core components
 from agentops.sdk.core import TracingCore
 # Import decorators
@@ -19,7 +21,12 @@ __all__ = [
     # Core components
     "TracingCore",
     "TracingConfig",
+    # Decorators
     "session",
     "operation",
     "record",
+    "agent",
+    # Command functions
+    "start_session",
+    "end_session",
 ]
