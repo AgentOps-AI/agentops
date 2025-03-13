@@ -30,7 +30,7 @@ def trace_id_to_uuid(trace_id: int) -> UUID:
     return UUID(uuid_str)
 
 
-def uuid_to_hex_int(uuid: UUID) -> int:
+def uuid_to_int16(uuid: UUID) -> int:
     return int(uuid.hex, 16)
 
 

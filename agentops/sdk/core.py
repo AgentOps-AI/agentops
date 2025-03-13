@@ -19,8 +19,10 @@ from opentelemetry.sdk.trace.export import (BatchSpanProcessor,
                                             SimpleSpanProcessor, SpanExporter)
 from opentelemetry.trace import Span
 
+from agentops.exceptions import AgentOpsClientNotInitializedException
 from agentops.logging import logger
 from agentops.sdk.exporters import AuthenticatedOTLPExporter
+from agentops.sdk.processors import InternalSpanProcessor
 from agentops.sdk.types import TracingConfig
 from agentops.semconv import ResourceAttributes
 from agentops.semconv.core import CoreAttributes
@@ -138,6 +140,7 @@ class TracingCore:
                 schedule_delay_millis=config.get('max_wait_time', max_wait_time),
             )
             self._provider.add_span_processor(processor)
+            self._provider.add_span_processor(InternalSpanProcessor())  # Catches spans for AgentOps on-terminal printing
             self._processors.append(processor)
 
             metric_reader = PeriodicExportingMetricReader(
@@ -152,6 +155,11 @@ class TracingCore:
             metrics.set_meter_provider(meter_provider)
             self._initialized = True
             logger.debug("Tracing core initialized")
+
+    @property
+    def initialized(self) -> bool:
+        """Check if the tracing core is initialized."""
+        return self._initialized
 
     def shutdown(self) -> None:
         """Shutdown the tracing core."""
@@ -190,52 +198,9 @@ class TracingCore:
             A tracer with the given name
         """
         if not self._initialized:
-            raise RuntimeError("Tracing core not initialized")
+            raise AgentOpsClientNotInitializedException
 
         return trace.get_tracer(name)
-
-    # def create_span(
-    #     self,
-    #     kind: str,
-    #     name: str,
-    #     parent: Optional[Union[TracedObject, Span]] = None,
-    #     attributes: Optional[Dict[str, Any]] = None,
-    #     auto_start: bool = True,
-    #     immediate_export: bool = False,
-    #     **kwargs
-    # ) -> TracedObject:
-    #     """
-    #     Create a span of the specified kind.
-    #
-    #     Args:
-    #         kind: Kind of span (e.g., "session", "agent", "tool")
-    #         name: Name of the span
-    #         parent: Optional parent span or spanned object
-    #         attributes: Optional attributes to set on the span
-    #         auto_start: Whether to automatically start the span
-    #         immediate_export: Whether to export the span immediately when started
-    #         **kwargs: Additional keyword arguments to pass to the span constructor
-    #
-    #     Returns:
-    #         A new span of the specified kind
-    #     """
-    #     if not self._initialized:
-    #         raise RuntimeError("Tracing core not initialized")
-    #
-    #     # Add immediate export flag to attributes if needed
-    #     if immediate_export:
-    #         attributes = attributes or {}
-    #         attributes[CoreAttributes.EXPORT_IMMEDIATELY] = True
-    #
-    #     return SpanFactory.create_span(
-    #         kind=kind,
-    #         name=name,
-    #         parent=parent,
-    #         attributes=attributes,
-    #         auto_start=auto_start,
-    #         immediate_export=immediate_export,
-    #         **kwargs
-    #     )
 
     @classmethod
     def initialize_from_config(cls, config, **kwargs):
