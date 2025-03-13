@@ -6,7 +6,7 @@ for different types of operations in AI agent workflows.
 """
 
 # Import command functions
-from agentops.sdk.commands import end_session, end_span, record, start_session, start_span
+from agentops.sdk.commands import end_span, record, start_span
 # Import core components
 from agentops.sdk.core import TracingCore
 # Import decorators
@@ -27,8 +27,6 @@ __all__ = [
     "record_decorator",
     "agent",
     # Command functions
-    "start_session",
-    "end_session",
     "start_span",
     "end_span",
     "record",

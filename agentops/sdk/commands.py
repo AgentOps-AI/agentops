@@ -2,10 +2,11 @@
 Mid-level command layer for working with AgentOps SDK
 
 This module provides functions for creating and managing spans in AgentOps.
+It focuses on generic span operations rather than specific session management.
 
 !! NOTE !!
 If you are looking for the legacy start_session / end_session, look
-at the `agentops.sdk.legacy` module.
+at the `agentops.legacy` module.
 """
 
 from typing import Dict, Any, Optional, Tuple
@@ -74,54 +75,12 @@ def start_span(
     return span, token
 
 
-def start_session(
-    name: str = "manual_session",
-    attributes: Optional[Dict[str, Any]] = None,
-    version: Optional[int] = None
-) -> Tuple[Any, Any]:
-    """
-    Start a new AgentOps session manually.
-
-    This function creates and starts a new session span, which can be used to group
-    related operations together. The session will remain active until end_session
-    is called with the returned span and token.
-
-    This is a convenience wrapper around start_span with span_kind=SpanKind.SESSION.
-
-    Args:
-        name: Name of the session
-        attributes: Optional attributes to set on the session span
-        version: Optional version identifier for the session
-
-    Returns:
-        A tuple of (span, token) that should be passed to end_session
-
-    Example:
-        ```python
-        # Start a session
-        session_span, token = agentops.start_session("my_custom_session")
-
-        # Perform operations within the session
-        # ...
-
-        # End the session
-        agentops.end_session(session_span, token)
-        ```
-    """
-    return start_span(
-        name=name,
-        span_kind=SpanKind.SESSION,
-        attributes=attributes,
-        version=version
-    )
-
-
 def record(message: str, attributes: Optional[Dict[str, Any]] = None):
     """
-    Record an event with a message within the current session.
+    Record an event with a message within the current span context.
 
     This function creates a simple operation span with the provided message
-    and attributes, which will be automatically associated with the current session.
+    and attributes, which will be automatically associated with the current span context.
 
     Args:
         message: The message to record
@@ -129,14 +88,14 @@ def record(message: str, attributes: Optional[Dict[str, Any]] = None):
 
     Example:
         ```python
-        # Start a session
-        session_span, token = agentops.start_session("my_custom_session")
+        # Start a span
+        my_span, token = agentops.start_span("my_custom_span")
 
-        # Record an event within the session
-        agentops.record("This will generate a span within the session")
+        # Record an event within the span
+        agentops.record("This will generate a span within the current context")
 
-        # End the session
-        agentops.end_session(session_span, token)
+        # End the span
+        agentops.end_span(my_span, token)
         ```
     """
     # Skip if tracing is not initialized
