@@ -120,7 +120,25 @@ def _make_span(
     operation_type: str,
     version: Optional[int] = None
 ) -> tuple:
-    """Create and initialize a new instrumentation span with proper context"""
+    """
+    Create and initialize a new instrumentation span with proper context.
+    
+    This function:
+    - Creates a span with proper naming convention ({operation_name}.{operation_type})
+    - Gets the current context to establish parent-child relationships
+    - Creates the span with the current context
+    - Sets up a new context with the span
+    - Attaches the context
+    - Adds standard attributes to the span
+    
+    Args:
+        operation_name: Name of the operation being traced
+        operation_type: Type of operation (from SpanKind)
+        version: Optional version identifier for the operation
+        
+    Returns:
+        A tuple of (span, context, token) for span management
+    """
     # Set session-level information for specified operation types
     if operation_type in [SpanKind.SESSION, SpanKind.AGENT]:
         # Session tracking logic would go here
