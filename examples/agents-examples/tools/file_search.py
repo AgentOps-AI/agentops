@@ -26,9 +26,7 @@ async def main():
     )
 
     with trace("File search example"):
-        result = await Runner.run(
-            agent, "Be concise, and tell me 1 sentence about Arrakis I might not know."
-        )
+        result = await Runner.run(agent, "Be concise, and tell me 1 sentence about Arrakis I might not know.")
         print(result.final_output)
         """
         Arrakis, the desert planet in Frank Herbert's "Dune," was inspired by the scarcity of water

@@ -9,5 +9,6 @@ from typing import TypedDict
 
 class AuthTokenResponse(TypedDict):
     """Response from the auth/token endpoint"""
+
     token: str
-    project_id: str 
+    project_id: str

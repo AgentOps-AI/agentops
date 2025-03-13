@@ -99,9 +99,7 @@ class OpenAIV0Instrumentor(BaseInstrumentor):
             ) = (None, None, None)
 
         wrap_function_wrapper("openai", "Completion.create", completion_wrapper(tracer))
-        wrap_function_wrapper(
-            "openai", "Completion.acreate", acompletion_wrapper(tracer)
-        )
+        wrap_function_wrapper("openai", "Completion.acreate", acompletion_wrapper(tracer))
         wrap_function_wrapper(
             "openai",
             "ChatCompletion.create",

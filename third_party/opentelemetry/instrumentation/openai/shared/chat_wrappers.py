@@ -291,9 +291,7 @@ def _handle_response(
     return response
 
 
-def _set_chat_metrics(
-    instance, token_counter, choice_counter, duration_histogram, response_dict, duration
-):
+def _set_chat_metrics(instance, token_counter, choice_counter, duration_histogram, response_dict, duration):
     shared_attributes = metric_shared_attributes(
         response_model=response_dict.get("model") or None,
         operation="chat",
@@ -321,9 +319,7 @@ def _set_choice_counter_metrics(choice_counter, choices, shared_attributes):
     for choice in choices:
         attributes_with_reason = {**shared_attributes}
         if choice.get("finish_reason"):
-            attributes_with_reason[SpanAttributes.LLM_RESPONSE_FINISH_REASON] = (
-                choice.get("finish_reason")
-            )
+            attributes_with_reason[SpanAttributes.LLM_RESPONSE_FINISH_REASON] = choice.get("finish_reason")
         choice_counter.add(1, attributes=attributes_with_reason)
 
 
@@ -376,9 +372,7 @@ async def _set_prompts(span, messages):
             if isinstance(content, list):
                 content = [
                     (
-                        await _process_image_item(
-                            item, span.context.trace_id, span.context.span_id, i, j
-                        )
+                        await _process_image_item(item, span.context.trace_id, span.context.span_id, i, j)
                         if _is_base64_image(item)
                         else item
                     )
@@ -420,9 +414,7 @@ def _set_completions(span, choices):
     for choice in choices:
         index = choice.get("index")
         prefix = f"{SpanAttributes.LLM_COMPLETIONS}.{index}"
-        _set_span_attribute(
-            span, f"{prefix}.finish_reason", choice.get("finish_reason")
-        )
+        _set_span_attribute(span, f"{prefix}.finish_reason", choice.get("finish_reason"))
 
         if choice.get("content_filter_results"):
             _set_span_attribute(
@@ -450,9 +442,7 @@ def _set_completions(span, choices):
 
         function_call = message.get("function_call")
         if function_call:
-            _set_span_attribute(
-                span, f"{prefix}.tool_calls.0.name", function_call.get("name")
-            )
+            _set_span_attribute(span, f"{prefix}.tool_calls.0.name", function_call.get("name"))
             _set_span_attribute(
                 span,
                 f"{prefix}.tool_calls.0.arguments",
@@ -481,9 +471,7 @@ def _set_completions(span, choices):
 
 
 @dont_throw
-def _set_streaming_token_metrics(
-    request_kwargs, complete_response, span, token_counter, shared_attributes
-):
+def _set_streaming_token_metrics(request_kwargs, complete_response, span, token_counter, shared_attributes):
     # use tiktoken calculate token usage
     if not should_record_stream_token_usage():
         return
@@ -497,9 +485,7 @@ def _set_streaming_token_metrics(
         prompt_content = ""
         # setting the default model_name as gpt-4. As this uses the embedding "cl100k_base" that
         # is used by most of the other model.
-        model_name = (
-            complete_response.get("model") or request_kwargs.get("model") or "gpt-4"
-        )
+        model_name = complete_response.get("model") or request_kwargs.get("model") or "gpt-4"
         for msg in request_kwargs.get("messages"):
             if msg.get("content"):
                 prompt_content += msg.get("content")
@@ -518,30 +504,26 @@ def _set_streaming_token_metrics(
                 completion_content += choice["message"]["content"]
 
         if model_name:
-            completion_usage = get_token_count_from_string(
-                completion_content, model_name
-            )
+            completion_usage = get_token_count_from_string(completion_content, model_name)
 
     # span record
     _set_span_stream_usage(span, prompt_usage, completion_usage)
 
     # metrics record
     if token_counter:
-        if type(prompt_usage) is int and prompt_usage >= 0:
+        if isinstance(prompt_usage, int) and prompt_usage >= 0:
             attributes_with_token_type = {
                 **shared_attributes,
                 SpanAttributes.LLM_TOKEN_TYPE: "input",
             }
             token_counter.record(prompt_usage, attributes=attributes_with_token_type)
 
-        if type(completion_usage) is int and completion_usage >= 0:
+        if isinstance(completion_usage, int) and completion_usage >= 0:
             attributes_with_token_type = {
                 **shared_attributes,
                 SpanAttributes.LLM_TOKEN_TYPE: "output",
             }
-            token_counter.record(
-                completion_usage, attributes=attributes_with_token_type
-            )
+            token_counter.record(completion_usage, attributes=attributes_with_token_type)
 
 
 class ChatStream(ObjectProxy):
@@ -640,9 +622,7 @@ class ChatStream(ObjectProxy):
 
     def _shared_attributes(self):
         return metric_shared_attributes(
-            response_model=self._complete_response.get("model")
-            or self._request_kwargs.get("model")
-            or None,
+            response_model=self._complete_response.get("model") or self._request_kwargs.get("model") or None,
             operation="chat",
             server_address=_get_openai_base_url(self._instance),
             is_streaming=True,
@@ -672,9 +652,7 @@ class ChatStream(ObjectProxy):
         else:
             duration = None
         if duration and isinstance(duration, (float, int)) and self._duration_histogram:
-            self._duration_histogram.record(
-                duration, attributes=self._shared_attributes()
-            )
+            self._duration_histogram.record(duration, attributes=self._shared_attributes())
         if self._streaming_time_to_generate and self._time_of_first_token:
             self._streaming_time_to_generate.record(
                 time.time() - self._time_of_first_token,
@@ -731,15 +709,11 @@ def _build_from_streaming_response(
         "stream": True,
     }
 
-    _set_streaming_token_metrics(
-        request_kwargs, complete_response, span, token_counter, shared_attributes
-    )
+    _set_streaming_token_metrics(request_kwargs, complete_response, span, token_counter, shared_attributes)
 
     # choice metrics
     if choice_counter and complete_response.get("choices"):
-        _set_choice_counter_metrics(
-            choice_counter, complete_response.get("choices"), shared_attributes
-        )
+        _set_choice_counter_metrics(choice_counter, complete_response.get("choices"), shared_attributes)
 
     # duration metrics
     if start_time and isinstance(start_time, (float, int)):
@@ -798,15 +772,11 @@ async def _abuild_from_streaming_response(
         "stream": True,
     }
 
-    _set_streaming_token_metrics(
-        request_kwargs, complete_response, span, token_counter, shared_attributes
-    )
+    _set_streaming_token_metrics(request_kwargs, complete_response, span, token_counter, shared_attributes)
 
     # choice metrics
     if choice_counter and complete_response.get("choices"):
-        _set_choice_counter_metrics(
-            choice_counter, complete_response.get("choices"), shared_attributes
-        )
+        _set_choice_counter_metrics(choice_counter, complete_response.get("choices"), shared_attributes)
 
     # duration metrics
     if start_time and isinstance(start_time, (float, int)):
@@ -841,16 +811,12 @@ def _accumulate_stream_items(item, complete_response):
     for choice in item.get("choices"):
         index = choice.get("index")
         if len(complete_response.get("choices")) <= index:
-            complete_response["choices"].append(
-                {"index": index, "message": {"content": "", "role": ""}}
-            )
+            complete_response["choices"].append({"index": index, "message": {"content": "", "role": ""}})
         complete_choice = complete_response.get("choices")[index]
         if choice.get("finish_reason"):
             complete_choice["finish_reason"] = choice.get("finish_reason")
         if choice.get("content_filter_results"):
-            complete_choice["content_filter_results"] = choice.get(
-                "content_filter_results"
-            )
+            complete_choice["content_filter_results"] = choice.get("content_filter_results")
 
         delta = choice.get("delta")
 

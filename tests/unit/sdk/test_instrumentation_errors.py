@@ -15,12 +15,12 @@ from agentops.semconv.core import CoreAttributes
 from tests.unit.sdk.instrumentation_tester import InstrumentationTester
 
 
-
 class TestErrorInstrumentation:
     """Test error handling in instrumentation."""
 
     def test_session_with_error(self, instrumentation: InstrumentationTester):
         """Test that sessions with errors are properly instrumented."""
+
         @session(name="error_session", immediate_export=True)
         class ErrorSession:
             def __init__(self):
@@ -28,7 +28,7 @@ class TestErrorInstrumentation:
 
             def run(self):
                 # Explicitly set the status to ERROR before raising the exception
-                if hasattr(self, '_session_span'):
+                if hasattr(self, "_session_span"):
                     self._session_span.set_status(StatusCode.ERROR, "Test error")
                 raise ValueError("Test error")
 
@@ -62,7 +62,7 @@ class TestErrorInstrumentation:
         if session_span.status.status_code == StatusCode.ERROR:
             print(f"Session span status: {session_span.status.status_code}")
             print(f"Session span description: {session_span.status.description}")
-            
+
             # Check if the error message is set using CoreAttributes
             if CoreAttributes.ERROR_MESSAGE in session_span.attributes:
                 error_message = session_span.attributes[CoreAttributes.ERROR_MESSAGE]
@@ -71,6 +71,7 @@ class TestErrorInstrumentation:
 
     def test_agent_with_error(self, instrumentation: InstrumentationTester):
         """Test that agents with errors are properly instrumented."""
+
         @session(name="test_session", immediate_export=True)
         class TestSession:
             def __init__(self):
@@ -127,7 +128,7 @@ class TestErrorInstrumentation:
         assert agent_span.status.status_code == StatusCode.ERROR
         assert agent_span.status.description is not None
         assert "Agent error" in agent_span.status.description
-        
+
         # Check if the error message is set using CoreAttributes
         if CoreAttributes.ERROR_MESSAGE in agent_span.attributes:
             error_message = agent_span.attributes[CoreAttributes.ERROR_MESSAGE]
@@ -136,6 +137,7 @@ class TestErrorInstrumentation:
 
     def test_tool_with_error(self, instrumentation: InstrumentationTester):
         """Test that tools with errors are properly instrumented."""
+
         @session(name="test_session", immediate_export=True)
         class TestSession:
             def __init__(self):
@@ -185,7 +187,7 @@ class TestErrorInstrumentation:
             return  # Skip the rest of the test
 
         tool_span = tool_spans[0]
-        
+
         # Check the tool span attributes
         instrumentation.assert_has_attributes(
             tool_span,
@@ -200,7 +202,7 @@ class TestErrorInstrumentation:
         assert tool_span.status.status_code == StatusCode.ERROR
         assert tool_span.status.description is not None
         assert "This tool always fails" in tool_span.status.description
-        
+
         # Check if the error message is set using CoreAttributes
         if CoreAttributes.ERROR_MESSAGE in tool_span.attributes:
             error_message = tool_span.attributes[CoreAttributes.ERROR_MESSAGE]
@@ -214,7 +216,7 @@ class TestErrorInstrumentation:
             return  # Skip the rest of the test
 
         agent_span = agent_spans[0]
-        
+
         # Check the agent span attributes
         instrumentation.assert_has_attributes(
             agent_span,
@@ -239,11 +241,7 @@ class TestErrorInstrumentation:
 
         # Use a custom span instead of a session span to avoid the SessionSpan.end() issue
         try:
-            with SpanFactory.create_span(
-                kind="custom",
-                name="context_manager_test",
-                immediate_export=True
-            ):
+            with SpanFactory.create_span(kind="custom", name="context_manager_test", immediate_export=True):
                 raise ValueError("Context manager error")
         except ValueError:
             # Catch the error to continue the test
@@ -265,21 +263,25 @@ class TestErrorInstrumentation:
         if len(custom_spans) == 0:
             print("WARNING: No custom spans found, but test is passing because we're running in a test suite")
             return  # Skip the rest of the test
-            
+
         custom_span = custom_spans[0]
-        
+
         # Check the span status
         print(f"Custom span status: {custom_span.status.status_code}")
         print(f"Custom span description: {custom_span.status.description}")
-        
+
         # Check if the error message is set using CoreAttributes
-        if custom_span.status.status_code == StatusCode.ERROR and CoreAttributes.ERROR_MESSAGE in custom_span.attributes:
+        if (
+            custom_span.status.status_code == StatusCode.ERROR
+            and CoreAttributes.ERROR_MESSAGE in custom_span.attributes
+        ):
             error_message = custom_span.attributes[CoreAttributes.ERROR_MESSAGE]
             print(f"Error message attribute: {error_message}")
             assert "Context manager error" in error_message
 
     def test_nested_errors(self, instrumentation: InstrumentationTester):
         """Test that nested spans handle errors properly."""
+
         @session(name="outer_session", immediate_export=True)
         class OuterSession:
             def __init__(self):
@@ -332,7 +334,7 @@ class TestErrorInstrumentation:
 
         # Check the tool span
         tool_span = tool_spans[0]
-        
+
         # Check the tool span attributes
         instrumentation.assert_has_attributes(
             tool_span,
@@ -342,12 +344,12 @@ class TestErrorInstrumentation:
                 ToolAttributes.TOOL_DESCRIPTION: "failing_test",
             },
         )
-        
+
         # Check the tool span status
         assert tool_span.status.status_code == StatusCode.ERROR
         assert tool_span.status.description is not None
         assert "Inner tool error" in tool_span.status.description
-        
+
         # Check if the error message is set using CoreAttributes
         if CoreAttributes.ERROR_MESSAGE in tool_span.attributes:
             error_message = tool_span.attributes[CoreAttributes.ERROR_MESSAGE]
@@ -356,7 +358,7 @@ class TestErrorInstrumentation:
 
         # Check the agent span
         agent_span = agent_spans[0]
-        
+
         # Check the agent span attributes
         instrumentation.assert_has_attributes(
             agent_span,
@@ -366,13 +368,13 @@ class TestErrorInstrumentation:
                 AgentAttributes.AGENT_ROLE: "inner_test",
             },
         )
-        
+
         # Check the agent span status
         assert agent_span.status.status_code == StatusCode.ERROR
         assert agent_span.status.description is not None
 
         # Check the session span
         session_span = session_spans[0]
-        
+
         # The session should be OK because it caught the error
         assert session_span.status.status_code == StatusCode.OK

@@ -34,9 +34,9 @@ logger = logging.getLogger(__name__)
 
 
 def should_send_prompts():
-    return (
-        os.getenv("TRACELOOP_TRACE_CONTENT") or "true"
-    ).lower() == "true" or context_api.get_value("override_enable_content_tracing")
+    return (os.getenv("TRACELOOP_TRACE_CONTENT") or "true").lower() == "true" or context_api.get_value(
+        "override_enable_content_tracing"
+    )
 
 
 def _set_span_attribute(span, name, value):
@@ -58,13 +58,9 @@ def _set_client_attributes(span, instance):
 
     client = instance._client  # pylint: disable=protected-access
     if isinstance(client, (openai.AsyncOpenAI, openai.OpenAI)):
-        _set_span_attribute(
-            span, SpanAttributes.LLM_OPENAI_API_BASE, str(client.base_url)
-        )
+        _set_span_attribute(span, SpanAttributes.LLM_OPENAI_API_BASE, str(client.base_url))
     if isinstance(client, (openai.AsyncAzureOpenAI, openai.AzureOpenAI)):
-        _set_span_attribute(
-            span, SpanAttributes.LLM_OPENAI_API_VERSION, client._api_version
-        )  # pylint: disable=protected-access
+        _set_span_attribute(span, SpanAttributes.LLM_OPENAI_API_VERSION, client._api_version)  # pylint: disable=protected-access
 
 
 def _set_api_attributes(span):
@@ -91,9 +87,7 @@ def _set_functions_attributes(span, functions):
         prefix = f"{SpanAttributes.LLM_REQUEST_FUNCTIONS}.{i}"
         _set_span_attribute(span, f"{prefix}.name", function.get("name"))
         _set_span_attribute(span, f"{prefix}.description", function.get("description"))
-        _set_span_attribute(
-            span, f"{prefix}.parameters", json.dumps(function.get("parameters"))
-        )
+        _set_span_attribute(span, f"{prefix}.parameters", json.dumps(function.get("parameters")))
 
 
 def set_tools_attributes(span, tools):
@@ -108,9 +102,7 @@ def set_tools_attributes(span, tools):
         prefix = f"{SpanAttributes.LLM_REQUEST_FUNCTIONS}.{i}"
         _set_span_attribute(span, f"{prefix}.name", function.get("name"))
         _set_span_attribute(span, f"{prefix}.description", function.get("description"))
-        _set_span_attribute(
-            span, f"{prefix}.parameters", json.dumps(function.get("parameters"))
-        )
+        _set_span_attribute(span, f"{prefix}.parameters", json.dumps(function.get("parameters")))
 
 
 def _set_request_attributes(span, kwargs):
@@ -120,29 +112,17 @@ def _set_request_attributes(span, kwargs):
     _set_api_attributes(span)
     _set_span_attribute(span, SpanAttributes.LLM_SYSTEM, "OpenAI")
     _set_span_attribute(span, SpanAttributes.LLM_REQUEST_MODEL, kwargs.get("model"))
-    _set_span_attribute(
-        span, SpanAttributes.LLM_REQUEST_MAX_TOKENS, kwargs.get("max_tokens")
-    )
-    _set_span_attribute(
-        span, SpanAttributes.LLM_REQUEST_TEMPERATURE, kwargs.get("temperature")
-    )
+    _set_span_attribute(span, SpanAttributes.LLM_REQUEST_MAX_TOKENS, kwargs.get("max_tokens"))
+    _set_span_attribute(span, SpanAttributes.LLM_REQUEST_TEMPERATURE, kwargs.get("temperature"))
     _set_span_attribute(span, SpanAttributes.LLM_REQUEST_TOP_P, kwargs.get("top_p"))
-    _set_span_attribute(
-        span, SpanAttributes.LLM_REQUEST_FREQUENCY_PENALTY, kwargs.get("frequency_penalty")
-    )
-    _set_span_attribute(
-        span, SpanAttributes.LLM_REQUEST_PRESENCE_PENALTY, kwargs.get("presence_penalty")
-    )
+    _set_span_attribute(span, SpanAttributes.LLM_REQUEST_FREQUENCY_PENALTY, kwargs.get("frequency_penalty"))
+    _set_span_attribute(span, SpanAttributes.LLM_REQUEST_PRESENCE_PENALTY, kwargs.get("presence_penalty"))
     _set_span_attribute(span, SpanAttributes.LLM_USER, kwargs.get("user"))
     _set_span_attribute(span, SpanAttributes.LLM_REQUEST_HEADERS, str(kwargs.get("headers")))
     # The new OpenAI SDK removed the `headers` and create new field called `extra_headers`
     if kwargs.get("extra_headers") is not None:
-        _set_span_attribute(
-            span, SpanAttributes.LLM_REQUEST_HEADERS, str(kwargs.get("extra_headers"))
-        )
-    _set_span_attribute(
-        span, SpanAttributes.LLM_REQUEST_STREAMING, kwargs.get("stream") or False
-    )
+        _set_span_attribute(span, SpanAttributes.LLM_REQUEST_HEADERS, str(kwargs.get("extra_headers")))
+    _set_span_attribute(span, SpanAttributes.LLM_REQUEST_STREAMING, kwargs.get("stream") or False)
 
 
 @dont_throw
@@ -174,17 +154,13 @@ def _set_response_attributes(span, response):
     if is_openai_v1() and not isinstance(usage, dict):
         usage = usage.__dict__
 
-    _set_span_attribute(
-        span, SpanAttributes.LLM_USAGE_TOTAL_TOKENS, usage.get("total_tokens")
-    )
+    _set_span_attribute(span, SpanAttributes.LLM_USAGE_TOTAL_TOKENS, usage.get("total_tokens"))
     _set_span_attribute(
         span,
         SpanAttributes.LLM_USAGE_COMPLETION_TOKENS,
         usage.get("completion_tokens"),
     )
-    _set_span_attribute(
-        span, SpanAttributes.LLM_USAGE_PROMPT_TOKENS, usage.get("prompt_tokens")
-    )
+    _set_span_attribute(span, SpanAttributes.LLM_USAGE_PROMPT_TOKENS, usage.get("prompt_tokens"))
     return
 
 
@@ -202,19 +178,13 @@ def _set_span_stream_usage(span, prompt_tokens, completion_tokens):
     if not span.is_recording():
         return
 
-    if type(completion_tokens) is int and completion_tokens >= 0:
-        _set_span_attribute(
-            span, SpanAttributes.LLM_USAGE_COMPLETION_TOKENS, completion_tokens
-        )
+    if isinstance(completion_tokens, int) and completion_tokens >= 0:
+        _set_span_attribute(span, SpanAttributes.LLM_USAGE_COMPLETION_TOKENS, completion_tokens)
 
-    if type(prompt_tokens) is int and prompt_tokens >= 0:
+    if isinstance(prompt_tokens, int) and prompt_tokens >= 0:
         _set_span_attribute(span, SpanAttributes.LLM_USAGE_PROMPT_TOKENS, prompt_tokens)
 
-    if (
-        type(prompt_tokens) is int
-        and type(completion_tokens) is int
-        and completion_tokens + prompt_tokens >= 0
-    ):
+    if isinstance(prompt_tokens, int) and isinstance(completion_tokens, int) and completion_tokens + prompt_tokens >= 0:
         _set_span_attribute(
             span,
             SpanAttributes.LLM_USAGE_TOTAL_TOKENS,
@@ -233,13 +203,9 @@ def _get_openai_base_url(instance):
 
 def is_streaming_response(response):
     if is_openai_v1():
-        return isinstance(response, openai.Stream) or isinstance(
-            response, openai.AsyncStream
-        )
+        return isinstance(response, openai.Stream) or isinstance(response, openai.AsyncStream)
 
-    return isinstance(response, types.GeneratorType) or isinstance(
-        response, types.AsyncGeneratorType
-    )
+    return isinstance(response, types.GeneratorType) or isinstance(response, types.AsyncGeneratorType)
 
 
 def model_as_dict(model):
@@ -266,9 +232,7 @@ def get_token_count_from_string(string: str, model_name: str):
             encoding = tiktoken.encoding_for_model(model_name)
         except KeyError as ex:
             # no such model_name in tiktoken
-            logger.warning(
-                f"Failed to get tiktoken encoding for model_name {model_name}, error: {str(ex)}"
-            )
+            logger.warning(f"Failed to get tiktoken encoding for model_name {model_name}, error: {str(ex)}")
             return None
 
         tiktoken_encodings[model_name] = encoding
@@ -288,9 +252,7 @@ def _token_type(token_type: str):
     return None
 
 
-def metric_shared_attributes(
-    response_model: str, operation: str, server_address: str, is_streaming: bool = False
-):
+def metric_shared_attributes(response_model: str, operation: str, server_address: str, is_streaming: bool = False):
     attributes = Config.get_common_metrics_attributes()
 
     return {

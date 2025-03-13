@@ -13,13 +13,14 @@ logger.setLevel(logging.CRITICAL)
 
 def configure_logging(config=None):  # Remove type hint temporarily to avoid circular import
     """Configure the AgentOps logger with console and optional file handlers.
-    
+
     Args:
         config: Optional Config instance. If not provided, a new Config instance will be created.
     """
     # Defer the Config import to avoid circular dependency
     if config is None:
         from agentops.config import Config
+
         config = Config()
 
     # Use env var as override if present, otherwise use config
@@ -28,7 +29,7 @@ def configure_logging(config=None):  # Remove type hint temporarily to avoid cir
         log_level = getattr(logging, log_level_env)
     else:
         log_level = config.log_level if isinstance(config.log_level, int) else logging.CRITICAL
-    
+
     logger.setLevel(log_level)
 
     # Remove existing handlers
@@ -50,7 +51,7 @@ def configure_logging(config=None):  # Remove type hint temporarily to avoid cir
         file_handler.setFormatter(formatter)
         logger.addHandler(file_handler)
 
-    return logger 
+    return logger
 
 
 def intercept_opentelemetry_logging():
@@ -58,14 +59,14 @@ def intercept_opentelemetry_logging():
     Configure OpenTelemetry logging to redirect all messages to the AgentOps logger.
     All OpenTelemetry logs will be prefixed with [opentelemetry.X] and set to DEBUG level.
     """
-    prefix  = "opentelemetry"
+    prefix = "opentelemetry"
     otel_root_logger = logging.getLogger(prefix)
     otel_root_logger.propagate = False
     otel_root_logger.setLevel(logging.DEBUG)  # capture all
-    
+
     for handler in otel_root_logger.handlers[:]:
         otel_root_logger.removeHandler(handler)
-    
+
     # Create a handler that forwards all messages to the AgentOps logger
     class OtelLogHandler(logging.Handler):
         def emit(self, record):
@@ -75,5 +76,5 @@ def intercept_opentelemetry_logging():
                 module_name = record.name
             message = f"[{prefix}.{module_name}] {record.getMessage()}"
             logger.debug(message)
-    
+
     otel_root_logger.addHandler(OtelLogHandler())

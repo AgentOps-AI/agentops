@@ -144,9 +144,7 @@ def _set_completions(span, choices):
     for choice in choices:
         index = choice.get("index")
         prefix = f"{SpanAttributes.LLM_COMPLETIONS}.{index}"
-        _set_span_attribute(
-            span, f"{prefix}.finish_reason", choice.get("finish_reason")
-        )
+        _set_span_attribute(span, f"{prefix}.finish_reason", choice.get("finish_reason"))
         _set_span_attribute(span, f"{prefix}.content", choice.get("text"))
 
 
@@ -211,9 +209,7 @@ def _set_token_usage(span, request_kwargs, complete_response):
                     completion_content += choice.get("text")
 
             if model_name:
-                completion_usage = get_token_count_from_string(
-                    completion_content, model_name
-                )
+                completion_usage = get_token_count_from_string(completion_content, model_name)
 
         # span record
         _set_span_stream_usage(span, prompt_usage, completion_usage)

@@ -3,6 +3,7 @@ Span processors for AgentOps SDK.
 
 This module contains processors for OpenTelemetry spans.
 """
+
 import copy
 import threading
 import time
@@ -33,9 +34,7 @@ class LiveSpanProcessor(SpanProcessor):
         while not self._stop_event.is_set():
             time.sleep(1)
             with self._lock:
-                to_export = [
-                    self._readable_span(span) for span in self._in_flight.values()
-                ]
+                to_export = [self._readable_span(span) for span in self._in_flight.values()]
                 if to_export:
                     self.span_exporter.export(to_export)
 
@@ -76,9 +75,7 @@ class LiveSpanProcessor(SpanProcessor):
         are exported before assertions are made.
         """
         with self._lock:
-            to_export = [
-                self._readable_span(span) for span in self._in_flight.values()
-            ]
+            to_export = [self._readable_span(span) for span in self._in_flight.values()]
             if to_export:
                 self.span_exporter.export(to_export)
 
@@ -114,8 +111,9 @@ class InternalSpanProcessor(SpanProcessor):
             return
 
         # Get the span kind from attributes
-        span_kind = span.attributes.get(semconv.SpanAttributes.AGENTOPS_SPAN_KIND,
-                                        "unknown") if span.attributes else "unknown"
+        span_kind = (
+            span.attributes.get(semconv.SpanAttributes.AGENTOPS_SPAN_KIND, "unknown") if span.attributes else "unknown"
+        )
 
         # Print basic information about the span
         logger.debug(f"Started span: {span.name} (kind: {span_kind})")
@@ -148,8 +146,9 @@ class InternalSpanProcessor(SpanProcessor):
             return
 
         # Get the span kind from attributes
-        span_kind = span.attributes.get(semconv.SpanAttributes.AGENTOPS_SPAN_KIND,
-                                        "unknown") if span.attributes else "unknown"
+        span_kind = (
+            span.attributes.get(semconv.SpanAttributes.AGENTOPS_SPAN_KIND, "unknown") if span.attributes else "unknown"
+        )
 
         # Special handling for session spans
         if span_kind == semconv.SpanKind.SESSION:

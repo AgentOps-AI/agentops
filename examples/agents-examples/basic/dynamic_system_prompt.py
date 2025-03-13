@@ -13,14 +13,13 @@ load_dotenv()
 AGENTOPS_API_KEY = os.getenv("AGENTOPS_API_KEY") or "your-api-key"
 agentops.init(api_key=AGENTOPS_API_KEY)
 
+
 class CustomContext:
     def __init__(self, style: Literal["haiku", "pirate", "robot"]):
         self.style = style
 
 
-def custom_instructions(
-    run_context: RunContextWrapper[CustomContext], agent: Agent[CustomContext]
-) -> str:
+def custom_instructions(run_context: RunContextWrapper[CustomContext], agent: Agent[CustomContext]) -> str:
     context = run_context.context
     if context.style == "haiku":
         return "Only respond in haikus."

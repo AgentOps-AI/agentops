@@ -5,18 +5,15 @@ import threading
 from typing import Any, Dict, List, Optional, Set, Type, Union, cast
 
 from opentelemetry import context, metrics, trace
-from opentelemetry.exporter.otlp.proto.http.metric_exporter import \
-    OTLPMetricExporter
-from opentelemetry.exporter.otlp.proto.http.trace_exporter import \
-    OTLPSpanExporter
+from opentelemetry.exporter.otlp.proto.http.metric_exporter import OTLPMetricExporter
+from opentelemetry.exporter.otlp.proto.http.trace_exporter import OTLPSpanExporter
 from opentelemetry.sdk._logs import LoggerProvider, LoggingHandler
 from opentelemetry.sdk._logs.export import SimpleLogRecordProcessor
 from opentelemetry.sdk.metrics import MeterProvider
 from opentelemetry.sdk.metrics.export import PeriodicExportingMetricReader
 from opentelemetry.sdk.resources import Resource
 from opentelemetry.sdk.trace import ReadableSpan, SpanProcessor, TracerProvider
-from opentelemetry.sdk.trace.export import (BatchSpanProcessor,
-                                            SimpleSpanProcessor, SpanExporter)
+from opentelemetry.sdk.trace.export import BatchSpanProcessor, SimpleSpanProcessor, SpanExporter
 from opentelemetry.trace import Span
 
 from agentops.exceptions import AgentOpsClientNotInitializedException
@@ -60,11 +57,7 @@ class TracingCore:
         # Register shutdown handler
         atexit.register(self.shutdown)
 
-    def initialize(
-        self,
-        jwt: Optional[str] = None,
-        **kwargs
-    ) -> None:
+    def initialize(self, jwt: Optional[str] = None, **kwargs) -> None:
         """
         Initialize the tracing core with the given configuration.
 
@@ -87,20 +80,20 @@ class TracingCore:
                 return
 
             # Set default values for required fields
-            max_queue_size = kwargs.get('max_queue_size', 512)
-            max_wait_time = kwargs.get('max_wait_time', 5000)
+            max_queue_size = kwargs.get("max_queue_size", 512)
+            max_wait_time = kwargs.get("max_wait_time", 5000)
 
             # Create a TracingConfig from kwargs with proper defaults
             config: TracingConfig = {
-                'service_name': kwargs.get('service_name', 'agentops'),
-                'exporter': kwargs.get('exporter'),
-                'processor': kwargs.get('processor'),
-                'exporter_endpoint': kwargs.get('exporter_endpoint', 'https://otlp.agentops.ai/v1/traces'),
-                'metrics_endpoint': kwargs.get('metrics_endpoint', 'https://otlp.agentops.ai/v1/metrics'),
-                'max_queue_size': max_queue_size,
-                'max_wait_time': max_wait_time,
-                'api_key': kwargs.get('api_key'),
-                'project_id': kwargs.get('project_id')
+                "service_name": kwargs.get("service_name", "agentops"),
+                "exporter": kwargs.get("exporter"),
+                "processor": kwargs.get("processor"),
+                "exporter_endpoint": kwargs.get("exporter_endpoint", "https://otlp.agentops.ai/v1/traces"),
+                "metrics_endpoint": kwargs.get("metrics_endpoint", "https://otlp.agentops.ai/v1/metrics"),
+                "max_queue_size": max_queue_size,
+                "max_wait_time": max_wait_time,
+                "api_key": kwargs.get("api_key"),
+                "project_id": kwargs.get("project_id"),
             }
 
             self._config = config
@@ -109,46 +102,43 @@ class TracingCore:
             # No need to register them here anymore
 
             # Create provider with safe access to service_name
-            service_name = config.get('service_name') or 'agentops'
+            service_name = config.get("service_name") or "agentops"
 
             # Create resource attributes dictionary
             resource_attrs = {ResourceAttributes.SERVICE_NAME: service_name}
 
             # Add project_id to resource attributes if available
-            project_id = config.get('project_id')
+            project_id = config.get("project_id")
             if project_id:
                 # Add project_id as a custom resource attribute
                 resource_attrs[ResourceAttributes.PROJECT_ID] = project_id
                 logger.debug(f"Including project_id in resource attributes: {project_id}")
 
             resource = Resource(resource_attrs)
-            self._provider = TracerProvider(
-                resource=resource
-            )
+            self._provider = TracerProvider(resource=resource)
 
             # Set as global provider
             trace.set_tracer_provider(self._provider)
 
             # Use default authenticated processor and exporter if api_key is available
-            exporter = OTLPSpanExporter(endpoint=config.get('exporter_endpoint'), headers={
-                'Authorization': f'Bearer {kwargs.get("jwt")}'
-            })
+            exporter = OTLPSpanExporter(
+                endpoint=config.get("exporter_endpoint"), headers={"Authorization": f"Bearer {kwargs.get('jwt')}"}
+            )
             # Regular processor for normal spans and immediate export
             processor = BatchSpanProcessor(
                 exporter,
-                max_export_batch_size=config.get('max_queue_size', max_queue_size),
-                schedule_delay_millis=config.get('max_wait_time', max_wait_time),
+                max_export_batch_size=config.get("max_queue_size", max_queue_size),
+                schedule_delay_millis=config.get("max_wait_time", max_wait_time),
             )
             self._provider.add_span_processor(processor)
-            self._provider.add_span_processor(InternalSpanProcessor())  # Catches spans for AgentOps on-terminal printing
+            self._provider.add_span_processor(
+                InternalSpanProcessor()
+            )  # Catches spans for AgentOps on-terminal printing
             self._processors.append(processor)
 
             metric_reader = PeriodicExportingMetricReader(
                 OTLPMetricExporter(
-                    endpoint=config.get('metrics_endpoint'),
-                    headers={
-                        'Authorization': f'Bearer {kwargs.get("jwt")}'
-                    }
+                    endpoint=config.get("metrics_endpoint"), headers={"Authorization": f"Bearer {kwargs.get('jwt')}"}
                 )
             )
             meter_provider = MeterProvider(resource=resource, metric_readers=[metric_reader])
@@ -222,16 +212,20 @@ class TracingCore:
             # For backward compatibility with old Config object
             # Extract tracing-specific configuration from the Config object
             # Use getattr with default values to ensure we don't pass None for required fields
-            tracing_kwargs = {k: v for k, v in {
-                'exporter': getattr(config, 'exporter', None),
-                'processor': getattr(config, 'processor', None),
-                'exporter_endpoint': getattr(config, 'exporter_endpoint', None),
-                'max_queue_size': getattr(config, 'max_queue_size', 512),
-                'max_wait_time': getattr(config, 'max_wait_time', 5000),
-                'api_key': getattr(config, 'api_key', None),
-                'project_id': getattr(config, 'project_id', None),
-                'endpoint': getattr(config, 'endpoint', None),
-            }.items() if v is not None}
+            tracing_kwargs = {
+                k: v
+                for k, v in {
+                    "exporter": getattr(config, "exporter", None),
+                    "processor": getattr(config, "processor", None),
+                    "exporter_endpoint": getattr(config, "exporter_endpoint", None),
+                    "max_queue_size": getattr(config, "max_queue_size", 512),
+                    "max_wait_time": getattr(config, "max_wait_time", 5000),
+                    "api_key": getattr(config, "api_key", None),
+                    "project_id": getattr(config, "project_id", None),
+                    "endpoint": getattr(config, "endpoint", None),
+                }.items()
+                if v is not None
+            }
         # Update with any additional kwargs
         tracing_kwargs.update(kwargs)
 

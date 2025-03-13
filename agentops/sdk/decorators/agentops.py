@@ -13,99 +13,83 @@ from agentops.sdk.decorators.utility import instrument_operation, instrument_cla
 from agentops.semconv.span_kinds import SpanKind
 
 # Type variables for better type hinting
-F = TypeVar('F', bound=Callable[..., Any])
-C = TypeVar('C', bound=Type)
+F = TypeVar("F", bound=Callable[..., Any])
+C = TypeVar("C", bound=Type)
 
 
 def _create_decorator(span_kind: str):
     """
     Factory function that creates a universal decorator that can be applied to
     both functions and class methods.
-    
+
     Args:
         span_kind: The span kind to use for the decorator
-        
+
     Returns:
         A universal decorator function
     """
+
     @wrapt.decorator
     def universal_wrapper(wrapped, instance, args, kwargs):
         # First parameter might be the method name if called as decorator factory
         if len(args) > 0 and isinstance(args[0], str) and instance is None and inspect.isclass(wrapped):
             # Being used as a class decorator with the first argument as method_name
             method_name = args[0]
-            name = kwargs.get('name')
-            version = kwargs.get('version')
-            
+            name = kwargs.get("name")
+            version = kwargs.get("version")
+
             # Create and return a class decorator
-            return instrument_class(
-                method_name=method_name, 
-                name=name, 
-                version=version, 
-                span_kind=span_kind
-            )(wrapped)
+            return instrument_class(method_name=method_name, name=name, version=version, span_kind=span_kind)(wrapped)
         else:
             # Being used as a normal function/method decorator
             return wrapped(*args, **kwargs)
-    
+
     # We need to handle optional parameters for the decorator
     def decorator_factory(*args, **kwargs):
-        name = kwargs.pop('name', None)
-        version = kwargs.pop('version', None)
-        
+        name = kwargs.pop("name", None)
+        version = kwargs.pop("version", None)
+
         if len(args) == 1 and callable(args[0]) and not kwargs:
             # Called as @decorator without parentheses
             return instrument_operation(span_kind=span_kind)(args[0])
         else:
             # Called as @decorator() or @decorator(name="name")
-            return lambda wrapped: instrument_operation(
-                span_kind=span_kind,
-                name=name,
-                version=version
-            )(wrapped)
-    
+            return lambda wrapped: instrument_operation(span_kind=span_kind, name=name, version=version)(wrapped)
+
     return decorator_factory
 
 
 def _create_decorator_specifiable(default_span_kind: Optional[str] = None):
     """
     Factory function that creates a universal decorator that allows specifying the span kind.
-    
+
     Args:
         default_span_kind: The default span kind to use if none is specified
-        
+
     Returns:
         A universal decorator function that accepts span_kind
     """
+
     def decorator_factory(*args, **kwargs):
-        span_kind = kwargs.pop('span_kind', default_span_kind)
-        name = kwargs.pop('name', None)
-        version = kwargs.pop('version', None)
-        
+        span_kind = kwargs.pop("span_kind", default_span_kind)
+        name = kwargs.pop("name", None)
+        version = kwargs.pop("version", None)
+
         if len(args) == 1 and callable(args[0]) and not kwargs:
             # Called as @decorator without parentheses
             return instrument_operation(span_kind=span_kind)(args[0])
-        elif len(args) == 1 and isinstance(args[0], str) and 'method_name' not in kwargs:
+        elif len(args) == 1 and isinstance(args[0], str) and "method_name" not in kwargs:
             # Handle the class decorator case where the first arg is method_name
             method_name = args[0]
-            
+
             def class_decorator(cls):
-                return instrument_class(
-                    method_name=method_name,
-                    name=name,
-                    version=version,
-                    span_kind=span_kind
-                )(cls)
-            
+                return instrument_class(method_name=method_name, name=name, version=version, span_kind=span_kind)(cls)
+
             return class_decorator
         else:
             # Called as @decorator() or @decorator(name="name")
-            return lambda wrapped: instrument_operation(
-                span_kind=span_kind,
-                name=name,
-                version=version
-            )(wrapped)
-    
+            return lambda wrapped: instrument_operation(span_kind=span_kind, name=name, version=version)(wrapped)
+
     return decorator_factory
 
 
@@ -232,4 +216,4 @@ record.__doc__ = """
         
     Returns:
         Decorated function or class
-""" 
+"""

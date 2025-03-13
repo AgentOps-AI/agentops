@@ -1,5 +1,7 @@
 """Enum for LLM request types."""
+
 from enum import Enum
+
 
 class LLMRequestTypeValues(Enum):
     COMPLETION = "completion"

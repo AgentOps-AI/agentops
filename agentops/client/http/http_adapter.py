@@ -33,11 +33,7 @@ class BaseHTTPAdapter(HTTPAdapter):
                 status_forcelist=[500, 502, 503, 504],
             )
 
-        super().__init__(
-            pool_connections=pool_connections,
-            pool_maxsize=pool_maxsize,
-            max_retries=max_retries
-        )
+        super().__init__(pool_connections=pool_connections, pool_maxsize=pool_maxsize, max_retries=max_retries)
 
 
 # class AuthenticatedHttpAdapter(BaseHTTPAdapter):
@@ -89,7 +85,7 @@ class BaseHTTPAdapter(HTTPAdapter):
 #         """Send the request with authentication retry logic"""
 #         # Ensure allow_redirects is set to False
 #         kwargs["allow_redirects"] = False
-#         
+#
 #         # Add auth headers to initial request
 #         request = self.add_headers(request, **kwargs)
 #
@@ -121,6 +117,3 @@ class BaseHTTPAdapter(HTTPAdapter):
 #                 logger.error(f"Unexpected error during token refresh: {e}")
 #
 #         return response
-
-
- 

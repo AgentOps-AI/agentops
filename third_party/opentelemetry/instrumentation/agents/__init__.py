@@ -12,7 +12,7 @@ from .agentops_agents_instrumentor import (
     AgentsInstrumentor,
     AgentsDetailedProcessor,
     AgentsDetailedExporter,
-    __version__
+    __version__,
 )
 
 __all__ = [

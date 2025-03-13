@@ -18,9 +18,7 @@ class Printer:
     def hide_done_checkmark(self, item_id: str) -> None:
         self.hide_done_ids.add(item_id)
 
-    def update_item(
-        self, item_id: str, content: str, is_done: bool = False, hide_checkmark: bool = False
-    ) -> None:
+    def update_item(self, item_id: str, content: str, is_done: bool = False, hide_checkmark: bool = False) -> None:
         self.items[item_id] = (content, is_done)
         if hide_checkmark:
             self.hide_done_ids.add(item_id)

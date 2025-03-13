@@ -15,6 +15,7 @@ load_dotenv()
 AGENTOPS_API_KEY = os.getenv("AGENTOPS_API_KEY") or "your-api-key"
 agentops.init(api_key=AGENTOPS_API_KEY)
 
+
 class ExampleHooks(RunHooks):
     def __init__(self):
         self.event_counter = 0
@@ -24,9 +25,7 @@ class ExampleHooks(RunHooks):
 
     async def on_agent_start(self, context: RunContextWrapper, agent: Agent) -> None:
         self.event_counter += 1
-        print(
-            f"### {self.event_counter}: Agent {agent.name} started. Usage: {self._usage_to_str(context.usage)}"
-        )
+        print(f"### {self.event_counter}: Agent {agent.name} started. Usage: {self._usage_to_str(context.usage)}")
 
     async def on_agent_end(self, context: RunContextWrapper, agent: Agent, output: Any) -> None:
         self.event_counter += 1
@@ -36,21 +35,15 @@ class ExampleHooks(RunHooks):
 
     async def on_tool_start(self, context: RunContextWrapper, agent: Agent, tool: Tool) -> None:
         self.event_counter += 1
-        print(
-            f"### {self.event_counter}: Tool {tool.name} started. Usage: {self._usage_to_str(context.usage)}"
-        )
+        print(f"### {self.event_counter}: Tool {tool.name} started. Usage: {self._usage_to_str(context.usage)}")
 
-    async def on_tool_end(
-        self, context: RunContextWrapper, agent: Agent, tool: Tool, result: str
-    ) -> None:
+    async def on_tool_end(self, context: RunContextWrapper, agent: Agent, tool: Tool, result: str) -> None:
         self.event_counter += 1
         print(
             f"### {self.event_counter}: Tool {tool.name} ended with result {result}. Usage: {self._usage_to_str(context.usage)}"
         )
 
-    async def on_handoff(
-        self, context: RunContextWrapper, from_agent: Agent, to_agent: Agent
-    ) -> None:
+    async def on_handoff(self, context: RunContextWrapper, from_agent: Agent, to_agent: Agent) -> None:
         self.event_counter += 1
         print(
             f"### {self.event_counter}: Handoff from {from_agent.name} to {to_agent.name}. Usage: {self._usage_to_str(context.usage)}"

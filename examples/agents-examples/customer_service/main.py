@@ -2,7 +2,6 @@
 This example shows a customer service agent that can handle a customer's request.
 """
 
-
 from __future__ import annotations as _annotations
 
 import asyncio

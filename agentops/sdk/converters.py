@@ -1,6 +1,7 @@
 """
 Legacy helpers that were being used throughout the SDK
 """
+
 from opentelemetry.util.types import Attributes, AttributeValue
 from datetime import datetime, timezone
 from typing import Optional
@@ -93,10 +94,10 @@ def uuid_to_int(uuid_str):
     # If input is a UUID object, convert to string
     if isinstance(uuid_str, uuid.UUID):
         uuid_str = str(uuid_str)
-    
+
     # Remove hyphens if they exist
-    uuid_str = uuid_str.replace('-', '')
-    
+    uuid_str = uuid_str.replace("-", "")
+
     # Convert the hex string to an integer
     return int(uuid_str, 16)
 
@@ -105,12 +106,12 @@ def int_to_uuid(integer):
     """Convert a decimal integer back to a UUID object."""
     # Convert the integer to hex and remove '0x' prefix
     hex_str = hex(integer)[2:]
-    
+
     # Pad with zeros to ensure it's 32 characters long (128 bits)
     hex_str = hex_str.zfill(32)
-    
+
     # Insert hyphens in the correct positions
     uuid_str = f"{hex_str[:8]}-{hex_str[8:12]}-{hex_str[12:16]}-{hex_str[16:20]}-{hex_str[20:]}"
-    
+
     # Return as UUID object
     return uuid.UUID(uuid_str)

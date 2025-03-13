@@ -24,7 +24,7 @@ def start_span(
     name: str = "manual_span",
     span_kind: str = SpanKind.OPERATION,
     attributes: Dict[str, Any] = {},
-    version: Optional[int] = None
+    version: Optional[int] = None,
 ) -> Tuple[Any, Any]:
     """
     Start a new AgentOps span manually.
@@ -56,6 +56,7 @@ def start_span(
     """
     # Skip if tracing is not initialized
     from agentops.client.client import Client
+
     cli = Client()
     if not cli.initialized:
         # Attempt to initialize the client if not already initialized
@@ -67,12 +68,7 @@ def start_span(
     attributes.setdefault(SpanAttributes.AGENTOPS_SPAN_KIND, span_kind)
 
     # Use the standardized _make_span function to create the span
-    span, context, token = _make_span(
-        operation_name=name,
-        span_kind=span_kind,
-        version=version,
-        attributes=attributes
-    )
+    span, context, token = _make_span(operation_name=name, span_kind=span_kind, version=version, attributes=attributes)
 
     return span, token
 

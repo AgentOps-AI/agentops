@@ -12,6 +12,7 @@ load_dotenv()
 AGENTOPS_API_KEY = os.getenv("AGENTOPS_API_KEY") or "your-api-key"
 agentops.init(api_key=AGENTOPS_API_KEY)
 
+
 @function_tool
 def how_many_jokes() -> int:
     return random.randint(1, 10)

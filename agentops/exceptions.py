@@ -18,7 +18,7 @@ class NoApiKeyException(Exception):
         + "\n\t    Find your API key at https://app.agentops.ai/settings/projects",
     ):
         super().__init__(message)
-        
+
 
 class InvalidApiKeyException(Exception):
     def __init__(self, api_key, endpoint):

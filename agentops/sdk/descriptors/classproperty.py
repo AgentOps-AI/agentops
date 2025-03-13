@@ -1,7 +1,4 @@
-
-
 class ClassPropertyDescriptor(object):
-
     def __init__(self, fget, fset=None):
         self.fget = fget
         self.fset = fset
@@ -22,6 +19,7 @@ class ClassPropertyDescriptor(object):
             func = classmethod(func)
         self.fset = func
         return self
+
 
 def classproperty(func):
     if not isinstance(func, (classmethod, staticmethod)):

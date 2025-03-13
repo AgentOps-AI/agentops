@@ -1,8 +1,10 @@
 import logging
 import re
 
+
 class AgentOpsLogFormatter(logging.Formatter):
     """Formatter for console logging with colors and prefix."""
+
     blue = "\x1b[34m"
     bold_red = "\x1b[31;1m"
     reset = "\x1b[0m"
@@ -24,8 +26,9 @@ class AgentOpsLogFormatter(logging.Formatter):
 
 class AgentOpsLogFileFormatter(logging.Formatter):
     """Formatter for file logging that removes ANSI escape codes."""
+
     ANSI_ESCAPE_PATTERN = re.compile(r"\x1b\[[0-9;]*m")
 
     def format(self, record):
         record.msg = self.ANSI_ESCAPE_PATTERN.sub("", str(record.msg))
-        return super().format(record) 
+        return super().format(record)

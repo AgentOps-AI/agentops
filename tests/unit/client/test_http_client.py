@@ -17,17 +17,17 @@
 #         """Test that get_session creates a new session if none exists."""
 #         # Reset the session to ensure we're testing from a clean state
 #         HttpClient._session = None
-#         
+#
 #         # Call get_session
 #         session = HttpClient.get_session()
-#         
+#
 #         # Verify a session was created
 #         assert session is not None
 #         assert isinstance(session, requests.Session)
-#         
+#
 #         # Verify the session has the expected adapters
 #         assert any(isinstance(adapter, BaseHTTPAdapter) for adapter in session.adapters.values())
-#         
+#
 #         # Verify the session has the expected headers
 #         assert "Content-Type" in session.headers
 #         assert "Connection" in session.headers
@@ -38,10 +38,10 @@
 #         # Create a session
 #         HttpClient._session = None
 #         session1 = HttpClient.get_session()
-#         
+#
 #         # Call get_session again
 #         session2 = HttpClient.get_session()
-#         
+#
 #         # Verify the same session was returned
 #         assert session2 is session1
 #
@@ -52,14 +52,14 @@
 #             endpoint="https://api.example.com",
 #             api_key="test-api-key"
 #         )
-#         
+#
 #         # Verify a session was created
 #         assert session is not None
 #         assert isinstance(session, requests.Session)
-#         
+#
 #         # Verify the session has the expected adapters
 #         assert any(isinstance(adapter, AuthenticatedHttpAdapter) for adapter in session.adapters.values())
-#         
+#
 #         # Verify the session has the expected headers
 #         assert "Content-Type" in session.headers
 #         assert "Connection" in session.headers
@@ -69,22 +69,22 @@
 #         """Test that get_authenticated_session accepts a custom token fetcher."""
 #         # Create a mock token fetcher
 #         mock_token_fetcher = mock.Mock(return_value="test-token")
-#         
+#
 #         # Call get_authenticated_session with the custom token fetcher
 #         session = HttpClient.get_authenticated_session(
 #             endpoint="https://api.example.com",
 #             api_key="test-api-key",
 #             token_fetcher=mock_token_fetcher
 #         )
-#         
+#
 #         # Verify a session was created
 #         assert session is not None
 #         assert isinstance(session, requests.Session)
-#         
+#
 #         # Get the adapter
-#         adapter = next(adapter for adapter in session.adapters.values() 
+#         adapter = next(adapter for adapter in session.adapters.values()
 #                       if isinstance(adapter, AuthenticatedHttpAdapter))
-#         
+#
 #         # Verify the adapter has the custom token fetcher
 #         assert adapter.token_fetcher is mock_token_fetcher
 #
@@ -94,10 +94,10 @@
 #         mock_session = mock.Mock()
 #         mock_get = mock.Mock()
 #         mock_session.get = mock_get
-#         
+#
 #         # Mock get_session to return our mock session
 #         mocker.patch.object(HttpClient, "get_session", return_value=mock_session)
-#         
+#
 #         # Call request
 #         HttpClient.request(
 #             method="get",
@@ -105,7 +105,7 @@
 #             headers={"X-Test": "test"},
 #             timeout=10
 #         )
-#         
+#
 #         # Verify the session method was called with the expected arguments
 #         mock_get.assert_called_once_with(
 #             "https://api.example.com/test",
@@ -120,10 +120,10 @@
 #         mock_session = mock.Mock()
 #         mock_post = mock.Mock()
 #         mock_session.post = mock_post
-#         
+#
 #         # Mock get_session to return our mock session
 #         mocker.patch.object(HttpClient, "get_session", return_value=mock_session)
-#         
+#
 #         # Call request
 #         HttpClient.request(
 #             method="post",
@@ -132,7 +132,7 @@
 #             headers={"X-Test": "test"},
 #             timeout=10
 #         )
-#         
+#
 #         # Verify the session method was called with the expected arguments
 #         mock_post.assert_called_once_with(
 #             "https://api.example.com/test",
@@ -148,10 +148,10 @@
 #         mock_session = mock.Mock()
 #         mock_put = mock.Mock()
 #         mock_session.put = mock_put
-#         
+#
 #         # Mock get_session to return our mock session
 #         mocker.patch.object(HttpClient, "get_session", return_value=mock_session)
-#         
+#
 #         # Call request
 #         HttpClient.request(
 #             method="put",
@@ -160,7 +160,7 @@
 #             headers={"X-Test": "test"},
 #             timeout=10
 #         )
-#         
+#
 #         # Verify the session method was called with the expected arguments
 #         mock_put.assert_called_once_with(
 #             "https://api.example.com/test",
@@ -176,10 +176,10 @@
 #         mock_session = mock.Mock()
 #         mock_delete = mock.Mock()
 #         mock_session.delete = mock_delete
-#         
+#
 #         # Mock get_session to return our mock session
 #         mocker.patch.object(HttpClient, "get_session", return_value=mock_session)
-#         
+#
 #         # Call request
 #         HttpClient.request(
 #             method="delete",
@@ -187,7 +187,7 @@
 #             headers={"X-Test": "test"},
 #             timeout=10
 #         )
-#         
+#
 #         # Verify the session method was called with the expected arguments
 #         mock_delete.assert_called_once_with(
 #             "https://api.example.com/test",
@@ -203,4 +203,4 @@
 #             HttpClient.request(
 #                 method="patch",
 #                 url="https://api.example.com/test"
-#             ) 
+#             )

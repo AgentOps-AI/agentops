@@ -7,7 +7,6 @@ agentops.init()
 
 @agent
 class Agent:
-
     @operation
     def my_operation(self):
         print("Hello, world!")

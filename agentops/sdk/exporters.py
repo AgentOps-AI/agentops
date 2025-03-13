@@ -4,13 +4,11 @@ from typing import Dict, Optional, Sequence
 
 import requests
 from opentelemetry.exporter.otlp.proto.http import Compression
-from opentelemetry.exporter.otlp.proto.http.trace_exporter import \
-    OTLPSpanExporter
+from opentelemetry.exporter.otlp.proto.http.trace_exporter import OTLPSpanExporter
 from opentelemetry.sdk.trace import ReadableSpan
 from opentelemetry.sdk.trace.export import SpanExportResult
 
-from agentops.exceptions import (AgentOpsApiJwtExpiredException,
-                                 ApiServerException)
+from agentops.exceptions import AgentOpsApiJwtExpiredException, ApiServerException
 from agentops.logging import logger
 
 
@@ -32,7 +30,6 @@ class AuthenticatedOTLPExporter(OTLPSpanExporter):
         compression: Optional[Compression] = None,
         **kwargs,
     ):
-
         # TODO: Implement re-authentication
         # FIXME: endpoint here is not "endpoint" from config
         # self._session = HttpClient.get_authenticated_session(endpoint, api_key)
@@ -41,7 +38,7 @@ class AuthenticatedOTLPExporter(OTLPSpanExporter):
         super().__init__(
             endpoint=endpoint,
             headers={
-                'Authorization': f'Bearer {jwt}',
+                "Authorization": f"Bearer {jwt}",
             },  # Base headers
             timeout=timeout,
             compression=compression,

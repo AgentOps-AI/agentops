@@ -59,22 +59,14 @@ def _set_token_usage(
     total_tokens = input_tokens + completion_tokens
 
     set_span_attribute(span, SpanAttributes.LLM_USAGE_PROMPT_TOKENS, input_tokens)
-    set_span_attribute(
-        span, SpanAttributes.LLM_USAGE_COMPLETION_TOKENS, completion_tokens
-    )
+    set_span_attribute(span, SpanAttributes.LLM_USAGE_COMPLETION_TOKENS, completion_tokens)
     set_span_attribute(span, SpanAttributes.LLM_USAGE_TOTAL_TOKENS, total_tokens)
 
-    set_span_attribute(
-        span, SpanAttributes.LLM_RESPONSE_MODEL, complete_response.get("model")
-    )
-    set_span_attribute(
-        span, SpanAttributes.LLM_USAGE_CACHE_READ_INPUT_TOKENS, cache_read_tokens
-    )
-    set_span_attribute(
-        span, SpanAttributes.LLM_USAGE_CACHE_CREATION_INPUT_TOKENS, cache_creation_tokens
-    )
+    set_span_attribute(span, SpanAttributes.LLM_RESPONSE_MODEL, complete_response.get("model"))
+    set_span_attribute(span, SpanAttributes.LLM_USAGE_CACHE_READ_INPUT_TOKENS, cache_read_tokens)
+    set_span_attribute(span, SpanAttributes.LLM_USAGE_CACHE_CREATION_INPUT_TOKENS, cache_creation_tokens)
 
-    if token_histogram and type(input_tokens) is int and input_tokens >= 0:
+    if token_histogram and isinstance(input_tokens, int) and input_tokens >= 0:
         token_histogram.record(
             input_tokens,
             attributes={
@@ -83,7 +75,7 @@ def _set_token_usage(
             },
         )
 
-    if token_histogram and type(completion_tokens) is int and completion_tokens >= 0:
+    if token_histogram and isinstance(completion_tokens, int) and completion_tokens >= 0:
         token_histogram.record(
             completion_tokens,
             attributes={
@@ -92,15 +84,13 @@ def _set_token_usage(
             },
         )
 
-    if type(complete_response.get("events")) is list and choice_counter:
+    if isinstance(complete_response.get("events"), list) and choice_counter:
         for event in complete_response.get("events"):
             choice_counter.add(
                 1,
                 attributes={
                     **metric_attributes,
-                    SpanAttributes.LLM_RESPONSE_FINISH_REASON: event.get(
-                        "finish_reason"
-                    ),
+                    SpanAttributes.LLM_RESPONSE_FINISH_REASON: event.get("finish_reason"),
                 },
             )
 
@@ -113,9 +103,7 @@ def _set_completions(span, events):
         for event in events:
             index = event.get("index")
             prefix = f"{SpanAttributes.LLM_COMPLETIONS}.{index}"
-            set_span_attribute(
-                span, f"{prefix}.finish_reason", event.get("finish_reason")
-            )
+            set_span_attribute(span, f"{prefix}.finish_reason", event.get("finish_reason"))
             set_span_attribute(span, f"{prefix}.content", event.get("text"))
     except Exception as e:
         logger.warning("Failed to set completion attributes, error: %s", str(e))

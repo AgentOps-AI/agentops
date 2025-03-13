@@ -14,6 +14,7 @@ load_dotenv()
 AGENTOPS_API_KEY = os.getenv("AGENTOPS_API_KEY") or "your-api-key"
 agentops.init(api_key=AGENTOPS_API_KEY)
 
+
 async def main():
     agent = Agent(
         name="Joker",

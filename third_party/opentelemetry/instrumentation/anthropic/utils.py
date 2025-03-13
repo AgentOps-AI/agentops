@@ -19,9 +19,9 @@ def set_span_attribute(span, name, value):
 
 
 def should_send_prompts():
-    return (
-        os.getenv("TRACELOOP_TRACE_CONTENT") or "true"
-    ).lower() == "true" or context_api.get_value("override_enable_content_tracing")
+    return (os.getenv("TRACELOOP_TRACE_CONTENT") or "true").lower() == "true" or context_api.get_value(
+        "override_enable_content_tracing"
+    )
 
 
 def dont_throw(func):
@@ -93,9 +93,7 @@ def count_prompt_tokens_from_request(anthropic, request):
                     for item in content:
                         # TODO: handle image and tool tokens
                         if isinstance(item, dict) and item.get("type") == "text":
-                            prompt_tokens += anthropic.count_tokens(
-                                item.get("text", "")
-                            )
+                            prompt_tokens += anthropic.count_tokens(item.get("text", ""))
     return prompt_tokens
 
 
@@ -115,9 +113,7 @@ async def acount_prompt_tokens_from_request(anthropic, request):
                     for item in content:
                         # TODO: handle image and tool tokens
                         if isinstance(item, dict) and item.get("type") == "text":
-                            prompt_tokens += await anthropic.count_tokens(
-                                item.get("text", "")
-                            )
+                            prompt_tokens += await anthropic.count_tokens(item.get("text", ""))
     return prompt_tokens
 
 

@@ -15,6 +15,7 @@ load_dotenv()
 AGENTOPS_API_KEY = os.getenv("AGENTOPS_API_KEY") or "your-api-key"
 agentops.init(api_key=AGENTOPS_API_KEY)
 
+
 @function_tool
 def random_number_tool(max: int) -> int:
     """Return a random integer between 0 and the given maximum."""
@@ -53,9 +54,7 @@ spanish_agent = Agent(
 
 second_agent = Agent(
     name="Assistant",
-    instructions=(
-        "Be a helpful assistant. If the user speaks Spanish, handoff to the Spanish assistant."
-    ),
+    instructions=("Be a helpful assistant. If the user speaks Spanish, handoff to the Spanish assistant."),
     handoffs=[handoff(spanish_agent, input_filter=spanish_handoff_message_filter)],
 )
 

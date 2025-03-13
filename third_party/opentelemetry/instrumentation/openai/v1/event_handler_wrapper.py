@@ -7,7 +7,6 @@ from typing_extensions import override
 
 
 class EventHandleWrapper(AssistantEventHandler):
-
     _current_text_index = 0
     _prompt_tokens = 0
     _completion_tokens = 0

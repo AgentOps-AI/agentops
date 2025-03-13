@@ -17,9 +17,7 @@ def is_openai_v1():
 
 
 def is_azure_openai(instance):
-    return is_openai_v1() and isinstance(
-        instance._client, (openai.AsyncAzureOpenAI, openai.AzureOpenAI)
-    )
+    return is_openai_v1() and isinstance(instance._client, (openai.AsyncAzureOpenAI, openai.AzureOpenAI))
 
 
 def is_metrics_enabled() -> bool:
@@ -33,9 +31,7 @@ def should_record_stream_token_usage():
 def _with_image_gen_metric_wrapper(func):
     def _with_metric(duration_histogram, exception_counter):
         def wrapper(wrapped, instance, args, kwargs):
-            return func(
-                duration_histogram, exception_counter, wrapped, instance, args, kwargs
-            )
+            return func(duration_histogram, exception_counter, wrapped, instance, args, kwargs)
 
         return wrapper
 

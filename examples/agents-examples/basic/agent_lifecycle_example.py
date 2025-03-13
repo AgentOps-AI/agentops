@@ -15,6 +15,7 @@ load_dotenv()
 AGENTOPS_API_KEY = os.getenv("AGENTOPS_API_KEY") or "your-api-key"
 agentops.init(api_key=AGENTOPS_API_KEY)
 
+
 class CustomAgentHooks(AgentHooks):
     def __init__(self, display_name: str):
         self.event_counter = 0
@@ -26,25 +27,17 @@ class CustomAgentHooks(AgentHooks):
 
     async def on_end(self, context: RunContextWrapper, agent: Agent, output: Any) -> None:
         self.event_counter += 1
-        print(
-            f"### ({self.display_name}) {self.event_counter}: Agent {agent.name} ended with output {output}"
-        )
+        print(f"### ({self.display_name}) {self.event_counter}: Agent {agent.name} ended with output {output}")
 
     async def on_handoff(self, context: RunContextWrapper, agent: Agent, source: Agent) -> None:
         self.event_counter += 1
-        print(
-            f"### ({self.display_name}) {self.event_counter}: Agent {source.name} handed off to {agent.name}"
-        )
+        print(f"### ({self.display_name}) {self.event_counter}: Agent {source.name} handed off to {agent.name}")
 
     async def on_tool_start(self, context: RunContextWrapper, agent: Agent, tool: Tool) -> None:
         self.event_counter += 1
-        print(
-            f"### ({self.display_name}) {self.event_counter}: Agent {agent.name} started tool {tool.name}"
-        )
+        print(f"### ({self.display_name}) {self.event_counter}: Agent {agent.name} started tool {tool.name}")
 
-    async def on_tool_end(
-        self, context: RunContextWrapper, agent: Agent, tool: Tool, result: str
-    ) -> None:
+    async def on_tool_end(self, context: RunContextWrapper, agent: Agent, tool: Tool, result: str) -> None:
         self.event_counter += 1
         print(
             f"### ({self.display_name}) {self.event_counter}: Agent {agent.name} ended tool {tool.name} with result {result}"

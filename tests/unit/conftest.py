@@ -41,6 +41,7 @@ def noinstrument():
     # Tells the client to not instrument LLM calls
     yield
 
+
 @pytest.fixture
 def mock_config(mocker):
     """Mock the Client.configure method"""
@@ -53,4 +54,3 @@ def instrumentation():
     tester = InstrumentationTester()
     yield tester
     tester.reset()
-
