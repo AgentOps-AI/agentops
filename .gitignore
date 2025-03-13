@@ -179,4 +179,7 @@ agentops_time_travel.json
 .agentops_time_travel.yaml
 
 # Node
-node_modules
+node_modules'
+
+# Ignore uv.lock
+uv.lock
