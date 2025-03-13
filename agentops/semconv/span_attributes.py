@@ -54,7 +54,3 @@ class SpanAttributes:
     AGENTOPS_ENTITY_INPUT = "agentops.entity.input"
     AGENTOPS_SPAN_KIND = "agentops.span.kind"
     AGENTOPS_ENTITY_NAME = "agentops.entity.name"
-    
-    # Haystack
-    HAYSTACK_OPENAI_CHAT = "haystack.openai.chat"
-    HAYSTACK_OPENAI_COMPLETION = "haystack.openai.completion"
