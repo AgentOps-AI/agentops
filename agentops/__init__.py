@@ -1,9 +1,11 @@
-from typing import List, Optional, Union
+from typing import Dict, List, Optional, Union, Any
 
 from dotenv import load_dotenv
 
 from .sdk._compat import *
 from .client import Client
+from .sdk.commands import record as sdk_record, start_span as sdk_start_span, end_span as sdk_end_span
+from .semconv.span_kinds import SpanKind
 
 load_dotenv()
 
@@ -141,14 +143,57 @@ def start_session(**kwargs):
     return _client.start_session(**kwargs)
 
 
-def record():
+def start_span(
+    name: str = "manual_span",
+    span_kind: str = SpanKind.OPERATION,
+    attributes: Optional[Dict[str, Any]] = None,
+    version: Optional[int] = None
+):
     """
-    Record an event with the AgentOps service.
+    Start a new span manually.
+
+    This function creates and starts a new span, which can be used to track
+    operations. The span will remain active until end_span is called with 
+    the returned span and token.
 
     Args:
-        event (Event): The event to record.
+        name: Name of the span
+        span_kind: Kind of span (defaults to SpanKind.OPERATION)
+        attributes: Optional attributes to set on the span
+        version: Optional version identifier for the span
+
+    Returns:
+        A tuple of (span, token) that should be passed to end_span
     """
-    raise NotImplementedError
+    return sdk_start_span(name, span_kind, attributes, version)
+
+
+def end_span(span, token):
+    """
+    End a previously started span.
+
+    This function ends the span and detaches the context token,
+    completing the span lifecycle.
+
+    Args:
+        span: The span returned by start_span
+        token: The token returned by start_span
+    """
+    sdk_end_span(span, token)
+
+
+def record(message: str, attributes: Optional[Dict[str, Any]] = None):
+    """
+    Record an event with a message within the current session.
+
+    This function creates a simple operation span with the provided message
+    and attributes, which will be automatically associated with the current session.
+
+    Args:
+        message: The message to record
+        attributes: Optional attributes to set on the span
+    """
+    sdk_record(message, attributes)
 
 
 def add_tags(tags: List[str]):

@@ -1,6 +1,8 @@
 """
 Mid-level command layer for working with AgentOps SDK
 
+This module provides functions for creating and managing spans in AgentOps.
+
 !! NOTE !!
 If you are looking for the legacy start_session / end_session, look
 at the `agentops.sdk.legacy` module.
@@ -8,6 +10,7 @@ at the `agentops.sdk.legacy` module.
 
 from typing import Dict, Any, Optional, Tuple
 import contextlib
+import warnings
 
 from opentelemetry import trace
 from opentelemetry import context as context_api
@@ -15,6 +18,60 @@ from opentelemetry import context as context_api
 from agentops.sdk.core import TracingCore
 from agentops.semconv.span_kinds import SpanKind
 from agentops.sdk.decorators.utility import _make_span, _finalize_span
+
+
+def start_span(
+    name: str = "manual_span",
+    span_kind: str = SpanKind.OPERATION,
+    attributes: Optional[Dict[str, Any]] = None,
+    version: Optional[int] = None
+) -> Tuple[Any, Any]:
+    """
+    Start a new AgentOps span manually.
+
+    This function creates and starts a new span, which can be used to track
+    operations. The span will remain active until end_span is called with 
+    the returned span and token.
+
+    Args:
+        name: Name of the span
+        span_kind: Kind of span (e.g., SpanKind.OPERATION, SpanKind.SESSION)
+        attributes: Optional attributes to set on the span
+        version: Optional version identifier for the span
+
+    Returns:
+        A tuple of (span, token) that should be passed to end_span
+
+    Example:
+        ```python
+        # Start a span
+        my_span, token = agentops.start_span("my_custom_span")
+
+        # Perform operations within the span
+        # ...
+
+        # End the span
+        agentops.end_span(my_span, token)
+        ```
+    """
+    # Skip if tracing is not initialized
+    if not TracingCore.get_instance()._initialized:
+        # Return dummy values that can be safely passed to end_span
+        return None, None
+
+    # Use the standardized _make_span function to create the span
+    span, context, token = _make_span(
+        operation_name=name,
+        operation_type=span_kind,
+        version=version
+    )
+
+    # Add custom attributes if provided
+    if attributes:
+        for key, value in attributes.items():
+            span.set_attribute(key, value)
+
+    return span, token
 
 
 def start_session(
@@ -28,6 +85,8 @@ def start_session(
     This function creates and starts a new session span, which can be used to group
     related operations together. The session will remain active until end_session
     is called with the returned span and token.
+
+    This is a convenience wrapper around start_span with span_kind=SpanKind.SESSION.
 
     Args:
         name: Name of the session
@@ -49,24 +108,12 @@ def start_session(
         agentops.end_session(session_span, token)
         ```
     """
-    # Skip if tracing is not initialized
-    if not TracingCore.get_instance()._initialized:
-        # Return dummy values that can be safely passed to end_session
-        return None, None
-
-    # Use the standardized _make_span function to create the span
-    span, context, token = _make_span(
-        operation_name=name,
-        operation_type=SpanKind.SESSION,
+    return start_span(
+        name=name,
+        span_kind=SpanKind.SESSION,
+        attributes=attributes,
         version=version
     )
-
-    # Add custom attributes if provided
-    if attributes:
-        for key, value in attributes.items():
-            span.set_attribute(key, value)
-
-    return span, token
 
 
 def record(message: str, attributes: Optional[Dict[str, Any]] = None):
@@ -114,27 +161,27 @@ def record(message: str, attributes: Optional[Dict[str, Any]] = None):
                 span.set_attribute(key, value)
 
 
-def end_session(span, token):
+def end_span(span, token):
     """
-    End a previously started AgentOps session.
+    End a previously started AgentOps span.
 
-    This function ends the session span and detaches the context token,
-    completing the session lifecycle.
+    This function ends the span and detaches the context token,
+    completing the span lifecycle.
 
     Args:
-        span: The span returned by start_session
-        token: The token returned by start_session
+        span: The span returned by start_span
+        token: The token returned by start_span
 
     Example:
         ```python
-        # Start a session
-        session_span, token = agentops.start_session("my_custom_session")
+        # Start a span
+        my_span, token = agentops.start_span("my_custom_span")
 
-        # Perform operations within the session
+        # Perform operations within the span
         # ...
 
-        # End the session
-        agentops.end_session(session_span, token)
+        # End the span
+        agentops.end_span(my_span, token)
         ```
     """
     # Handle case where tracing wasn't initialized
