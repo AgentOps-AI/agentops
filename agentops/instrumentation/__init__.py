@@ -77,11 +77,6 @@ available_instrumentors: list[InstrumentorLoader] = [
         provider_import_name='groq', 
     ),
     InstrumentorLoader(
-        module_name='opentelemetry.instrumentation.haystack', 
-        class_name='HaystackInstrumentor', 
-        provider_import_name='haystack', 
-    ),
-    InstrumentorLoader(
         module_name='opentelemetry.instrumentation.mistralai', 
         class_name='MistralAiInstrumentor', 
         provider_import_name='mistralai', 
