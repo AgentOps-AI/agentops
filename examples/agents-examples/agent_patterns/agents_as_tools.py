@@ -1,12 +1,12 @@
-import asyncio
-
-from agents import Agent, ItemHelpers, MessageOutputItem, Runner, trace
-
 """
 This example shows the agents-as-tools pattern. The frontline agent receives a user message and
 then picks which agents to call, as tools. In this case, it picks from a set of translation
 agents.
 """
+
+import asyncio
+
+from agents import Agent, ItemHelpers, MessageOutputItem, Runner, trace
 from dotenv import load_dotenv
 import os
 import agentops
@@ -76,9 +76,7 @@ async def main():
                 if text:
                     print(f"  - Translation step: {text}")
 
-        synthesizer_result = await Runner.run(
-            synthesizer_agent, orchestrator_result.to_input_list()
-        )
+        synthesizer_result = await Runner.run(synthesizer_agent, orchestrator_result.to_input_list())
 
     print(f"\n\nFinal response:\n{synthesizer_result.final_output}")
 

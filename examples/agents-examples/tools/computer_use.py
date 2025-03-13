@@ -9,11 +9,6 @@ from dotenv import load_dotenv
 import os
 import agentops
 
-load_dotenv()
-
-AGENTOPS_API_KEY = os.getenv("AGENTOPS_API_KEY") or "your-api-key"
-agentops.init(api_key=AGENTOPS_API_KEY)
-
 from agents import (
     Agent,
     AsyncComputer,
@@ -27,6 +22,13 @@ from agents import (
 
 logging.getLogger("openai.agents").setLevel(logging.DEBUG)
 logging.getLogger("openai.agents").addHandler(logging.StreamHandler())
+
+# Load the environment variables for the script
+load_dotenv()
+
+# Initialize the agentops module
+AGENTOPS_API_KEY = os.getenv("AGENTOPS_API_KEY") or "your-api-key"
+agentops.init(api_key=AGENTOPS_API_KEY)
 
 
 async def main():

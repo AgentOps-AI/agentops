@@ -1,3 +1,8 @@
+"""
+This example shows a customer service agent that can handle a customer's request.
+"""
+
+
 from __future__ import annotations as _annotations
 
 import asyncio
@@ -9,11 +14,6 @@ from pydantic import BaseModel
 from dotenv import load_dotenv
 import os
 import agentops
-
-load_dotenv()
-
-AGENTOPS_API_KEY = os.getenv("AGENTOPS_API_KEY") or "your-api-key"
-agentops.init(api_key=AGENTOPS_API_KEY)
 
 from agents import (
     Agent,
@@ -32,6 +32,13 @@ from agents import (
 from agents.extensions.handoff_prompt import RECOMMENDED_PROMPT_PREFIX
 ### CONTEXT
 
+# Load the environment variables for the script
+load_dotenv()
+
+# Initialize the agentops module
+AGENTOPS_API_KEY = os.getenv("AGENTOPS_API_KEY") or "your-api-key"
+agentops.init(api_key=AGENTOPS_API_KEY)
+
 
 class AirlineAgentContext(BaseModel):
     passenger_name: str | None = None
@@ -43,9 +50,7 @@ class AirlineAgentContext(BaseModel):
 ### TOOLS
 
 
-@function_tool(
-    name_override="faq_lookup_tool", description_override="Lookup frequently asked questions."
-)
+@function_tool(name_override="faq_lookup_tool", description_override="Lookup frequently asked questions.")
 async def faq_lookup_tool(question: str) -> str:
     if "bag" in question or "baggage" in question:
         return (
@@ -65,9 +70,7 @@ async def faq_lookup_tool(question: str) -> str:
 
 
 @function_tool
-async def update_seat(
-    context: RunContextWrapper[AirlineAgentContext], confirmation_number: str, new_seat: str
-) -> str:
+async def update_seat(context: RunContextWrapper[AirlineAgentContext], confirmation_number: str, new_seat: str) -> str:
     """
     Update the seat for a given confirmation number.
 
@@ -160,9 +163,7 @@ async def main():
                 if isinstance(new_item, MessageOutputItem):
                     print(f"{agent_name}: {ItemHelpers.text_message_output(new_item)}")
                 elif isinstance(new_item, HandoffOutputItem):
-                    print(
-                        f"Handed off from {new_item.source_agent.name} to {new_item.target_agent.name}"
-                    )
+                    print(f"Handed off from {new_item.source_agent.name} to {new_item.target_agent.name}")
                 elif isinstance(new_item, ToolCallItem):
                     print(f"{agent_name}: Calling a tool")
                 elif isinstance(new_item, ToolCallOutputItem):
