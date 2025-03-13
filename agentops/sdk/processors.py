@@ -124,12 +124,12 @@ class InternalSpanProcessor(SpanProcessor):
             # Convert trace_id to hex string if it's not already
             if isinstance(trace_id, int):
                 session_url = f"{self.app_url}/drilldown?session_id={trace_id_to_uuid(trace_id)}"
-                logger.info(
-                    colored(
-                        f"\x1b[34mSession started: {session_url}\x1b[0m",
-                        "light_green",
-                    )
-                )
+                # Always log session URLs regardless of log level
+                # This ensures session links are visible even with DEBUG level
+                print(colored(
+                    f"🖇 AgentOps: Session started: {session_url}",
+                    "light_green",
+                ))
         else:
             # Print basic information for other span kinds
             logger.debug(f"Ended span: {span.name} (kind: {span_kind})")
@@ -156,12 +156,12 @@ class InternalSpanProcessor(SpanProcessor):
             # Convert trace_id to hex string if it's not already
             if isinstance(trace_id, int):
                 session_url = f"{self.app_url}/drilldown?session_id={trace_id_to_uuid(trace_id)}"
-                logger.info(
-                    colored(
-                        f"\x1b[34mSession Replay: {session_url}\x1b[0m",
-                        "blue",
-                    )
-                )
+                # Always log session URLs regardless of log level
+                # This ensures session links are visible even with DEBUG level
+                print(colored(
+                    f"🖇 AgentOps: Session Replay: {session_url}",
+                    "blue",
+                ))
         else:
             # Print basic information for other span kinds
             logger.debug(f"Ended span: {span.name} (kind: {span_kind})")

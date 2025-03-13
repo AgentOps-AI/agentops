@@ -356,12 +356,12 @@ class Session:
             finally:
                 active_sessions.remove(self)  # First thing, get rid of the session
 
-                logger.info(
-                    colored(
-                        f"\x1b[34mSession Replay: {self.session_url}\x1b[0m",
-                        "blue",
-                    )
-                )
+                # Always log session URLs regardless of log level
+                # This ensures session links are visible even with DEBUG level
+                print(colored(
+                    f"🖇 AgentOps: Session Replay: {self.session_url}",
+                    "blue",
+                ))
             return self.token_cost
 
     def add_tags(self, tags: List[str]) -> None:
@@ -533,12 +533,12 @@ class Session:
             if jwt is None:
                 return False
 
-            logger.info(
-                colored(
-                    f"\x1b[34mSession Replay: {self.session_url}\x1b[0m",
-                    "blue",
-                )
-            )
+            # Always log session URLs regardless of log level
+            # This ensures session links are visible even with DEBUG level
+            print(colored(
+                f"🖇 AgentOps: Session Replay: {self.session_url}",
+                "blue",
+            ))
 
             return True
 
