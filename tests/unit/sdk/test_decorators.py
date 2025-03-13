@@ -1,250 +1,215 @@
 import pytest
-from unittest.mock import patch, MagicMock, ANY
-
 from opentelemetry import trace
-from opentelemetry.trace import Span, SpanContext, TraceFlags
 
-from agentops.sdk.decorators.session import session
-from agentops.sdk.decorators.agent import agent
-from agentops.sdk.decorators.tool import tool
-from agentops.sdk.spans.session import SessionSpan
-from agentops.sdk.spans.agent import AgentSpan
-from agentops.sdk.spans.tool import ToolSpan
+from agentops.sdk.decorators.agentops import agent, operation, session
+from agentops.semconv import SpanKind
 
 
-# Session Decorator Tests
-@patch("agentops.sdk.decorators.session.TracingCore")
-def test_session_class_decoration(mock_tracing_core):
-    """Test decorating a class with session."""
-    # Setup mock
-    mock_span = MagicMock(spec=SessionSpan)
-    mock_span.span = MagicMock(spec=Span)
-    mock_instance = mock_tracing_core.get_instance.return_value
-    mock_instance.create_span.return_value = mock_span
+class TestSpanNesting:
+    """Tests for proper nesting of spans in the tracing hierarchy."""
 
-    # Create a decorated class
-    @session(name="test_session", tags=["tag1", "tag2"])
-    class TestClass:
-        def __init__(self, arg1, arg2=None):
-            self.arg1 = arg1
-            self.arg2 = arg2
-
-        def method(self):
-            return f"{self.arg1}:{self.arg2}"
-
-    # Instantiate and test
-    test = TestClass("test1", "test2")
-    assert test.arg1 == "test1"
-    assert test.arg2 == "test2"
-    assert test._session_span == mock_span
-
-    # Verify that TracingCore was called correctly
-    mock_instance.create_span.assert_called_once_with(
-        kind="session", name="test_session", attributes={}, immediate_export=True, config=ANY, tags=["tag1", "tag2"]
-    )
-
-    # Verify the span was started
-    mock_span.start.assert_called_once()
-
-
-@patch("agentops.sdk.decorators.session.TracingCore")
-def test_session_function_decoration(mock_tracing_core):
-    """Test decorating a function with session."""
-    # Setup mock
-    mock_span = MagicMock(spec=SessionSpan)
-    mock_span.span = MagicMock(spec=Span)
-    mock_instance = mock_tracing_core.get_instance.return_value
-    mock_instance.create_span.return_value = mock_span
-
-    # Create a decorated function
-    @session(name="test_session", tags=["tag1", "tag2"])
-    def test_function(arg1, arg2=None):
-        current_span = trace.get_current_span()
-        return f"{arg1}:{arg2}:{current_span}"
-
-    # Mock trace.get_current_span to return our mock span
-    with patch("opentelemetry.trace.get_current_span", return_value=mock_span.span):
-        # Call and test
-        result = test_function("test1", "test2")
-
-    # Verify that TracingCore was called correctly
-    mock_instance.create_span.assert_called_once_with(
-        kind="session", name="test_session", attributes={}, immediate_export=True, config=ANY, tags=["tag1", "tag2"]
-    )
-
-    # Verify the span was started and ended
-    mock_span.start.assert_called_once()
-    mock_span.end.assert_called_once_with("SUCCEEDED")
-
-    # Result should include the mock_span
-    assert "test1:test2:" in result
-    assert str(mock_span.span) in result
-
-
-# Agent Decorator Tests
-@patch("agentops.sdk.decorators.agent.trace.get_current_span")
-@patch("agentops.sdk.decorators.agent.TracingCore")
-def test_agent_class_decoration(mock_tracing_core, mock_get_current_span):
-    """Test decorating a class with agent."""
-    # Setup mocks
-    mock_parent_span = MagicMock(spec=Span)
-    mock_parent_span.is_recording.return_value = True
-    mock_parent_context = SpanContext(
-        trace_id=0x12345678901234567890123456789012,
-        span_id=0x1234567890123456,
-        trace_flags=TraceFlags(TraceFlags.SAMPLED),
-        is_remote=False,
-    )
-    mock_parent_span.get_span_context.return_value = mock_parent_context
-    mock_get_current_span.return_value = mock_parent_span
-
-    mock_agent_span = MagicMock(spec=AgentSpan)
-    mock_agent_span.span = MagicMock(spec=Span)
-    mock_instance = mock_tracing_core.get_instance.return_value
-    mock_instance.create_span.return_value = mock_agent_span
-
-    # Create a decorated class
-    @agent(name="test_agent", agent_type="assistant")
-    class TestAgent:
-        def __init__(self, arg1, arg2=None):
-            self.arg1 = arg1
-            self.arg2 = arg2
-
-        def method(self):
-            return f"{self.arg1}:{self.arg2}"
-
-    # Instantiate and test
-    test = TestAgent("test1", "test2")
-    assert test.arg1 == "test1"
-    assert test.arg2 == "test2"
-    assert test._agent_span == mock_agent_span
-
-    # Verify that trace.get_current_span was called
-    mock_get_current_span.assert_called()
-
-    # Verify that TracingCore was called correctly
-    mock_instance.create_span.assert_called_once_with(
-        kind="agent",
-        name="test_agent",
-        parent=mock_parent_span,
-        attributes={},
-        immediate_export=True,
-        agent_type="assistant",
-    )
-
-    # Verify the span was started
-    mock_agent_span.start.assert_called_once()
-
-    # Test a method call
-    result = test.method()
-    assert result == "test1:test2"
+    def test_operation_nests_under_agent(self, instrumentation):
+        """Test that operation spans are properly nested under their agent spans."""
+        
+        # Define the test agent with nested operations
+        @agent
+        class NestedAgent:
+            def __init__(self):
+                pass  # No logic needed
+            
+            @operation
+            def nested_operation(self, message):
+                """Nested operation that should appear as a child of the agent"""
+                return f"Processed: {message}"
+            
+            @operation
+            def main_operation(self):
+                """Main operation that calls the nested operation"""
+                # Call the nested operation
+                result = self.nested_operation("test message")
+                return result
+        
+        # Test session with the agent
+        @session
+        def test_session():
+            agent = NestedAgent()
+            return agent.main_operation()
+        
+        # Run the test with our instrumentor
+        result = test_session()
+        
+        # Verify the result
+        assert result == "Processed: test message"
+        
+        # Get all spans from the instrumentation
+        spans = instrumentation.get_finished_spans()
+        
+        # Verify we have the expected number of spans (1 session + 1 agent + 2 operations)
+        assert len(spans) == 4
+        
+        # Find the spans by their names
+        session_span = None
+        agent_span = None
+        main_op_span = None
+        nested_op_span = None
+        
+        for span in spans:
+            if span.name.endswith(f".{SpanKind.SESSION}"):
+                session_span = span
+            elif span.name.endswith(f".{SpanKind.AGENT}"):
+                agent_span = span
+            elif span.name == "main_operation.operation":
+                main_op_span = span
+            elif span.name == "nested_operation.operation":
+                nested_op_span = span
+        
+        # Verify all spans were found
+        assert session_span is not None, "Session span not found"
+        assert agent_span is not None, "Agent span not found"
+        assert main_op_span is not None, "Main operation span not found"
+        assert nested_op_span is not None, "Nested operation span not found"
+        
+        # Verify the hierarchy:
+        # 1. Session span is the root
+        # 2. Agent span is a child of the session span
+        # 3. Main operation span is a child of the agent span
+        # 4. Nested operation span is a child of the agent span
+        
+        # Check parent-child relationships using span's context
+        # ReadableSpan doesn't have parent_span_id attribute directly, 
+        # use parent_span_id from span context or attributes
+        assert session_span.parent is None, "Session span should not have a parent"
+        
+        # Agent should be a child of session
+        assert agent_span.parent is not None
+        assert agent_span.parent.span_id == session_span.context.span_id
+        
+        # Main operation should be a child of agent
+        assert main_op_span.parent is not None
+        assert main_op_span.parent.span_id == agent_span.context.span_id
+        
+        # Nested operation should be a child of its immediate caller (main operation)
+        assert nested_op_span.parent is not None
+        assert nested_op_span.parent.span_id == main_op_span.context.span_id
+        
+        # All spans should have the same trace ID
+        trace_id = session_span.context.trace_id
+        assert agent_span.context.trace_id == trace_id
+        assert main_op_span.context.trace_id == trace_id
+        assert nested_op_span.context.trace_id == trace_id
+        
+        # Check proper span nesting timing (a parent's time range should contain its children)
+        assert session_span.start_time <= agent_span.start_time
+        assert agent_span.end_time <= session_span.end_time
+        
+        assert agent_span.start_time <= main_op_span.start_time
+        assert main_op_span.end_time <= agent_span.end_time
+        
+        assert main_op_span.start_time <= nested_op_span.start_time
+        assert nested_op_span.end_time <= main_op_span.end_time
+        
+        # Verify span attributes for proper classification
+        assert session_span.attributes.get("agentops.span.kind") == SpanKind.SESSION
+        assert agent_span.attributes.get("agentops.span.kind") == SpanKind.AGENT
+        assert main_op_span.attributes.get("agentops.span.kind") == SpanKind.OPERATION
+        assert nested_op_span.attributes.get("agentops.span.kind") == SpanKind.OPERATION
 
 
-@patch("agentops.sdk.decorators.agent.trace.get_current_span")
-@patch("agentops.sdk.decorators.agent.TracingCore")
-def test_agent_function_decoration(mock_tracing_core, mock_get_current_span):
-    """Test decorating a function with agent."""
-    # Setup mocks
-    mock_parent_span = MagicMock(spec=Span)
-    mock_parent_span.is_recording.return_value = True
-    mock_parent_context = SpanContext(
-        trace_id=0x12345678901234567890123456789012,
-        span_id=0x1234567890123456,
-        trace_flags=TraceFlags(TraceFlags.SAMPLED),
-        is_remote=False,
-    )
-    mock_parent_span.get_span_context.return_value = mock_parent_context
-    mock_get_current_span.return_value = mock_parent_span
+    def test_nested_operations_maintain_proper_hierarchy(self, instrumentation):
+        """Test that deeply nested operations maintain the correct parent-child hierarchy."""
+        
+        @agent
+        class DeepNestedAgent:
+            def __init__(self):
+                pass
+            
+            @operation
+            def level3_operation(self, message):
+                """Deepest level operation (level 3)"""
+                return f"L3: {message}"
+            
+            @operation
+            def level2_operation(self, message):
+                """Level 2 operation that calls level 3"""
+                result = self.level3_operation(f"{message} → L3")
+                return f"L2: {result}"
+            
+            @operation
+            def level1_operation(self, message):
+                """Level 1 operation that calls level 2"""
+                result = self.level2_operation(f"{message} → L2")
+                return f"L1: {result}"
+            
+            @operation
+            def root_operation(self):
+                """Root operation that starts the chain"""
+                result = self.level1_operation("start")
+                return result
+        
+        # Run the test
+        @session
+        def deep_test_session():
+            agent = DeepNestedAgent()
+            return agent.root_operation()
+        
+        result = deep_test_session()
+        
+        # Verify result
+        assert result == "L1: L2: L3: start → L2 → L3"
+        
+        # Get spans
+        spans = instrumentation.get_finished_spans()
+        
+        # Expect 6 spans (session + agent + 4 operations)
+        assert len(spans) == 6
+        
+        # Extract spans by name
+        spans_by_name = {}
+        
+        # We need to find the spans more carefully since they might have different formats
+        session_span = None
+        agent_span = None
+        root_op_span = None
+        l1_op_span = None
+        l2_op_span = None
+        l3_op_span = None
+        
+        for span in spans:
+            if span.attributes.get("agentops.span.kind") == SpanKind.SESSION:
+                session_span = span
+            elif span.attributes.get("agentops.span.kind") == SpanKind.AGENT:
+                agent_span = span
+            elif span.name == "root_operation.operation":
+                root_op_span = span
+            elif span.name == "level1_operation.operation":
+                l1_op_span = span
+            elif span.name == "level2_operation.operation":
+                l2_op_span = span
+            elif span.name == "level3_operation.operation":
+                l3_op_span = span
 
-    mock_agent_span = MagicMock(spec=AgentSpan)
-    mock_agent_span.span = MagicMock(spec=Span)
-    mock_instance = mock_tracing_core.get_instance.return_value
-    mock_instance.create_span.return_value = mock_agent_span
-
-    # Create a decorated function that uses trace.get_current_span()
-    @agent(name="test_agent", agent_type="assistant")
-    def test_function(arg1, arg2=None):
-        current_span = trace.get_current_span()
-        return f"{arg1}:{arg2}:{current_span}"
-
-    # Mock trace.get_current_span inside the function to return our agent span
-    with patch("opentelemetry.trace.get_current_span", side_effect=[mock_parent_span, mock_agent_span.span]):
-        # Call and test
-        result = test_function("test1", "test2")
-
-    # Verify that TracingCore was called correctly
-    mock_instance.create_span.assert_called_once_with(
-        kind="agent",
-        name="test_agent",
-        parent=mock_parent_span,
-        attributes={},
-        immediate_export=True,
-        agent_type="assistant",
-    )
-
-    # Verify the span was started
-    mock_agent_span.start.assert_called_once()
-
-    # Result should include the mock_span
-    assert "test1:test2:" in result
-    assert str(mock_agent_span.span) in result
-
-    # Test when no parent span is found
-    mock_get_current_span.return_value = None
-    result = test_function("test1", "test2")
-    assert result == "test1:test2:None"
-
-
-# Tool Decorator Tests
-@patch("agentops.sdk.decorators.tool.trace.get_current_span")
-@patch("agentops.sdk.decorators.tool.TracingCore")
-def test_tool_function_decoration(mock_tracing_core, mock_get_current_span):
-    """Test decorating a function with tool."""
-    # Setup mocks
-    mock_parent_span = MagicMock(spec=Span)
-    mock_parent_span.is_recording.return_value = True
-    mock_parent_context = SpanContext(
-        trace_id=0x12345678901234567890123456789012,
-        span_id=0x1234567890123456,
-        trace_flags=TraceFlags(TraceFlags.SAMPLED),
-        is_remote=False,
-    )
-    mock_parent_span.get_span_context.return_value = mock_parent_context
-    mock_get_current_span.return_value = mock_parent_span
-
-    mock_tool_span = MagicMock(spec=ToolSpan)
-    mock_tool_span.span = MagicMock(spec=Span)
-    mock_instance = mock_tracing_core.get_instance.return_value
-    mock_instance.create_span.return_value = mock_tool_span
-
-    # Create a decorated function that uses trace.get_current_span()
-    @tool(name="test_tool", tool_type="search")
-    def test_function(arg1, arg2=None):
-        current_span = trace.get_current_span()
-        return f"{arg1}:{arg2}:{current_span}"
-
-    # Mock trace.get_current_span inside the function to return our tool span
-    with patch("opentelemetry.trace.get_current_span", side_effect=[mock_parent_span, mock_tool_span.span]):
-        # Call and test
-        result = test_function("test1", "test2")
-
-    # Verify that TracingCore was called correctly
-    mock_instance.create_span.assert_called_once_with(
-        kind="tool", name="test_tool", parent=mock_parent_span, attributes={}, immediate_export=True, tool_type="search"
-    )
-
-    # Verify the span was started
-    mock_tool_span.start.assert_called_once()
-
-    # Result should include the mock_span
-    assert "test1:test2:" in result
-    assert str(mock_tool_span.span) in result
-
-    # Test set_input and set_output
-    mock_tool_span.set_input.assert_called_once()
-    mock_tool_span.set_output.assert_called_once()
-
-    # Test when no parent span is found
-    mock_get_current_span.return_value = None
-    result = test_function("test1", "test2")
-    assert result == "test1:test2:None"
+        assert session_span is not None, "Session span not found"
+        assert agent_span is not None, "Agent span not found"
+        assert root_op_span is not None, "Root operation span not found"
+        assert l1_op_span is not None, "Level 1 operation span not found"
+        assert l2_op_span is not None, "Level 2 operation span not found"
+        assert l3_op_span is not None, "Level 3 operation span not found"
+        
+        # Check the chain of parents
+        assert session_span.parent is None
+        assert agent_span.parent is not None
+        assert agent_span.parent.span_id == session_span.context.span_id
+        assert root_op_span.parent is not None
+        assert root_op_span.parent.span_id == agent_span.context.span_id
+        assert l1_op_span.parent is not None
+        assert l1_op_span.parent.span_id == root_op_span.context.span_id
+        assert l2_op_span.parent is not None
+        assert l2_op_span.parent.span_id == l1_op_span.context.span_id
+        assert l3_op_span.parent is not None
+        assert l3_op_span.parent.span_id == l2_op_span.context.span_id
+        
+        # Same trace ID for all spans
+        trace_id = session_span.context.trace_id
+        all_spans = [session_span, agent_span, root_op_span, l1_op_span, l2_op_span, l3_op_span]
+        for span in all_spans:
+            assert span.context.trace_id == trace_id
