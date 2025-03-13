@@ -224,7 +224,7 @@ def _finalize_span(span: trace.Span, token: Any) -> None:
 
 
 def instrument_operation(
-    span_kind: Optional[str] = SpanKind.OPERATION,
+    span_kind: str = SpanKind.OPERATION,
     name: Optional[str] = None,
     version: Optional[int] = None,
 ):
@@ -242,6 +242,7 @@ def instrument_operation(
         is_async = _is_coroutine_or_generator(fn)
         operation_name = name or fn.__name__
         # Use default span_kind if None is provided
+        nonlocal span_kind
         span_kind = span_kind or SpanKind.OPERATION  # noqa: F823
 
         if is_async:
