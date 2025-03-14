@@ -27,8 +27,44 @@ def create_entity_decorator(entity_kind: str):
         # Handle case where decorator is called with parameters
         if wrapped is None:
             return functools.partial(decorator, name=name, version=version)
+        
+        # Handle class decoration
+        if inspect.isclass(wrapped):
+            # Create a proxy class that wraps the original class
+            class WrappedClass(wrapped):
+                def __init__(self, *args, **kwargs):
+                    # Start span when instance is created
+                    operation_name = name or wrapped.__name__
+                    self._span_context = _create_as_current_span(operation_name, entity_kind, version)
+                    self._span = self._span_context.__enter__()
+                    
+                    try:
+                        _record_entity_input(self._span, args, kwargs)
+                    except Exception as e:
+                        logger.warning(f"Failed to record entity input: {e}")
+                    
+                    # Call the original __init__
+                    super().__init__(*args, **kwargs)
+                
+                def __del__(self):
+                    # End span when instance is destroyed
+                    if hasattr(self, '_span') and hasattr(self, '_span_context'):
+                        try:
+                            _record_entity_output(self._span, self)
+                        except Exception as e:
+                            logger.warning(f"Failed to record entity output: {e}")
+                        
+                        self._span_context.__exit__(None, None, None)
             
-        # Create the actual decorator wrapper function
+            # Preserve metadata of the original class
+            WrappedClass.__name__ = wrapped.__name__
+            WrappedClass.__qualname__ = wrapped.__qualname__
+            WrappedClass.__module__ = wrapped.__module__
+            WrappedClass.__doc__ = wrapped.__doc__
+            
+            return WrappedClass
+            
+        # Create the actual decorator wrapper function for functions
         @wrapt.decorator
         def wrapper(wrapped, instance, args, kwargs):
             # Skip instrumentation if tracer not initialized
@@ -108,6 +144,7 @@ def create_entity_decorator(entity_kind: str):
                         span.record_exception(e)
                         raise
 
+        # Return the wrapper for functions, we already returned WrappedClass for classes
         return wrapper(wrapped) # type: ignore
     
     return decorator
