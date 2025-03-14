@@ -9,7 +9,7 @@ from typing import Any, Callable, ContextManager, Dict, Generator, Optional
 from opentelemetry import context as context_api
 from opentelemetry import trace
 from opentelemetry.context import attach, set_value
-from opentelemetry.trace import Span
+from opentelemetry.trace import Span, SpanContext
 
 from agentops.helpers.serialization import safe_serialize
 from agentops.logging import logger
@@ -64,6 +64,20 @@ async def _process_async_generator(span: trace.Span, context_token: Any, generat
         context_api.detach(context_token)
 
 
+def _get_current_span_info():
+    """Helper to get information about the current span for debugging"""
+    current_span = trace.get_current_span()
+    if hasattr(current_span, "get_span_context"):
+        ctx = current_span.get_span_context()
+        return {
+            "span_id": f"{ctx.span_id:x}" if hasattr(ctx, "span_id") else "None",
+            "trace_id": f"{ctx.trace_id:x}" if hasattr(ctx, "trace_id") else "None",
+            "name": getattr(current_span, "name", "Unknown"),
+            "is_recording": getattr(current_span, "is_recording", False)
+        }
+    return {"name": "No current span"}
+
+
 @contextmanager
 def _create_as_current_span(
     operation_name: str,
@@ -87,6 +101,10 @@ def _create_as_current_span(
     Yields:
         A span with proper context that will be automatically closed when exiting the context
     """
+    # Log before we do anything
+    before_span = _get_current_span_info()
+    logger.debug(f"[DEBUG] BEFORE {operation_name}.{span_kind} - Current context: {before_span}")
+    
     # Create span with proper naming convention
     span_name = f"{operation_name}.{span_kind}"
 
@@ -105,9 +123,21 @@ def _create_as_current_span(
     if version is not None:
         attributes["agentops.operation.version"] = version
 
+    # Get current context explicitly to debug it
+    current_context = context_api.get_current()
+    
     # Use OpenTelemetry's context manager to properly handle span lifecycle
-    with tracer.start_as_current_span(span_name, attributes=attributes) as span:
+    with tracer.start_as_current_span(span_name, attributes=attributes, context=current_context) as span:
+        # Log after span creation
+        if hasattr(span, "get_span_context"):
+            span_ctx = span.get_span_context()
+            logger.debug(f"[DEBUG] CREATED {span_name} - span_id: {span_ctx.span_id:x}, parent: {before_span.get('span_id', 'None')}")
+        
         yield span
+    
+    # Log after we're done
+    after_span = _get_current_span_info()
+    logger.debug(f"[DEBUG] AFTER {operation_name}.{span_kind} - Returned to context: {after_span}")
 
 
 def _make_span(
@@ -134,6 +164,10 @@ def _make_span(
         - context is the span context
         - token is the context token needed for detaching
     """
+    # Log before we do anything
+    before_span = _get_current_span_info()
+    logger.debug(f"[DEBUG] BEFORE _make_span {operation_name}.{span_kind} - Current context: {before_span}")
+    
     # Create span with proper naming convention
     span_name = f"{operation_name}.{span_kind}"
 
@@ -152,12 +186,20 @@ def _make_span(
     if version is not None:
         attributes["agentops.operation.version"] = version
 
-    # Create the span (not as current)
-    span = tracer.start_span(span_name, attributes=attributes)
+    # Get current context explicitly
+    current_context = context_api.get_current()
+    
+    # Create the span with explicit context
+    span = tracer.start_span(span_name, context=current_context, attributes=attributes)
 
     # Set as current context and get token for later detachment
     ctx = trace.set_span_in_context(span)
     token = context_api.attach(ctx)
+    
+    # Log after span creation
+    if hasattr(span, "get_span_context"):
+        span_ctx = span.get_span_context()
+        logger.debug(f"[DEBUG] CREATED _make_span {span_name} - span_id: {span_ctx.span_id:x}, parent: {before_span.get('span_id', 'None')}")
 
     return span, ctx, token
 
@@ -191,5 +233,18 @@ def _record_entity_output(span: trace.Span, result: Any) -> None:
 
 def _finalize_span(span: trace.Span, token: Any) -> None:
     """End the span and detach the context token"""
+    if hasattr(span, "get_span_context") and hasattr(span.get_span_context(), "span_id"):
+        span_id = f"{span.get_span_context().span_id:x}"
+        logger.debug(f"[DEBUG] ENDING span {getattr(span, 'name', 'unknown')} - span_id: {span_id}")
+    
     span.end()
+    
+    # Debug info before detaching
+    current_after_end = _get_current_span_info()
+    logger.debug(f"[DEBUG] AFTER span.end() - Current context: {current_after_end}")
+    
     context_api.detach(token)
+    
+    # Debug info after detaching
+    final_context = _get_current_span_info()
+    logger.debug(f"[DEBUG] AFTER detach - Final context: {final_context}")
