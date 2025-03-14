@@ -105,7 +105,7 @@ OPENAI_API_KEY = os.getenv("OPENAI_API_KEY") or "<your_openai_key>"
 
 
 ```python
-agentops.init(api_key=AGENTOPS_API_KEY, default_tags=["openai", "beta-assistants"])
+agentops.init(api_key=AGENTOPS_API_KEY, tags=["openai", "beta-assistants"])
 client = OpenAI(api_key=OPENAI_API_KEY)
 ```
 
