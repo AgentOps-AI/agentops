@@ -2,27 +2,22 @@ from __future__ import annotations
 
 import atexit
 import threading
-from typing import Any, Dict, List, Optional, Set, Type, Union, cast
+from typing import List, Optional
 
-from opentelemetry import context, metrics, trace
+from opentelemetry import metrics, trace
 from opentelemetry.exporter.otlp.proto.http.metric_exporter import OTLPMetricExporter
 from opentelemetry.exporter.otlp.proto.http.trace_exporter import OTLPSpanExporter
-from opentelemetry.sdk._logs import LoggerProvider, LoggingHandler
-from opentelemetry.sdk._logs.export import SimpleLogRecordProcessor
 from opentelemetry.sdk.metrics import MeterProvider
 from opentelemetry.sdk.metrics.export import PeriodicExportingMetricReader
 from opentelemetry.sdk.resources import Resource
-from opentelemetry.sdk.trace import ReadableSpan, SpanProcessor, TracerProvider
-from opentelemetry.sdk.trace.export import BatchSpanProcessor, SimpleSpanProcessor, SpanExporter
-from opentelemetry.trace import Span
+from opentelemetry.sdk.trace import SpanProcessor, TracerProvider
+from opentelemetry.sdk.trace.export import BatchSpanProcessor
 
 from agentops.exceptions import AgentOpsClientNotInitializedException
 from agentops.logging import logger
-from agentops.sdk.exporters import AuthenticatedOTLPExporter
 from agentops.sdk.processors import InternalSpanProcessor
 from agentops.sdk.types import TracingConfig
 from agentops.semconv import ResourceAttributes
-from agentops.semconv.core import CoreAttributes
 
 # No need to create shortcuts since we're using our own ResourceAttributes class now
 

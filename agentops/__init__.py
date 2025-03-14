@@ -1,10 +1,8 @@
-from typing import Dict, List, Optional, Union, Any
+from typing import Any, Dict, List, Optional, Union
+
+from agentops.legacy import ErrorEvent, ToolEvent, end_session, start_session
 
 from .client import Client
-from .sdk.commands import record as sdk_record, start_span as sdk_start_span, end_span as sdk_end_span
-from .semconv.span_kinds import SpanKind
-import agentops.legacy as legacy
-from agentops.legacy import ErrorEvent, ToolEvent
 
 # Client global instance; one per process runtime
 _client = Client()
@@ -126,110 +124,21 @@ def configure(**kwargs):
 
     _client.configure(**kwargs)
 
-
-def start_session(**kwargs):
-    """Start a new session for recording events.
-
-    Args:
-        tags (List[str], optional): Tags that can be used for grouping or sorting later.
-            e.g. ["test_run"]
-
-    Returns:
-        Optional[Session]: Returns Session if successful, None otherwise.
-    """
-    return _client.start_session(**kwargs)
-
-
-def end_session(span, token):
-    """
-    End a previously started AgentOps session.
-
-    This function ends the session span and detaches the context token,
-    completing the session lifecycle.
-
-    Args:
-        span: The span returned by start_session
-        token: The token returned by start_session
-    """
-    legacy.end_session(span, token)
-
-
-def start_span(
-    name: str = "manual_span",
-    span_kind: str = SpanKind.OPERATION,
-    attributes: Optional[Dict[str, Any]] = None,
-    version: Optional[int] = None,
-):
-    """
-    Start a new span manually.
-
-    This function creates and starts a new span, which can be used to track
-    operations. The span will remain active until end_span is called with
-    the returned span and token.
-
-    Args:
-        name: Name of the span
-        span_kind: Kind of span (defaults to SpanKind.OPERATION)
-        attributes: Optional attributes to set on the span
-        version: Optional version identifier for the span
-
-    Returns:
-        A tuple of (span, token) that should be passed to end_span
-    """
-    return sdk_start_span(name, span_kind, attributes, version)
-
-
-def end_span(span, token):
-    """
-    End a previously started span.
-
-    This function ends the span and detaches the context token,
-    completing the span lifecycle.
-
-    Args:
-        span: The span returned by start_span
-        token: The token returned by start_span
-    """
-    sdk_end_span(span, token)
-
-
-def record(message: str, attributes: Optional[Dict[str, Any]] = None):
-    """
-    Record an event with a message within the current session.
-
-    This function creates a simple operation span with the provided message
-    and attributes, which will be automatically associated with the current session.
-
-    Args:
-        message: The message to record
-        attributes: Optional attributes to set on the span
-    """
-    sdk_record(message, attributes)
-
-
-def add_tags(tags: List[str]):
-    """
-    Append to session tags at runtime.
-
-    TODO: How do we retrieve the session context to add tags to?
-
-    Args:
-        tags (List[str]): The list of tags to append.
-    """
-    raise NotImplementedError
-
-
-def set_tags(tags: List[str]):
-    """
-    Replace session tags at runtime.
-
-    Args:
-        tags (List[str]): The list of tags to set.
-    """
-    raise NotImplementedError
-
-
 # For backwards compatibility and testing
+
+
 def get_client() -> Client:
     """Get the singleton client instance"""
     return _client
+
+
+
+from agentops.legacy import * # type: ignore
+
+__all__ = [
+    "init",
+    "configure",
+    "get_client",
+    "start_session",
+    "end_session",
+]
