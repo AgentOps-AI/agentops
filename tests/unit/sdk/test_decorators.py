@@ -57,7 +57,7 @@ class TestSpanNesting:
         session_spans = [s for s in spans if s.attributes.get(SpanAttributes.AGENTOPS_SPAN_KIND) == SpanKind.SESSION]
         agent_spans = [s for s in spans if s.attributes.get(SpanAttributes.AGENTOPS_SPAN_KIND) == SpanKind.AGENT]
         operation_spans = [s for s in spans if s.attributes.get(
-            SpanAttributes.AGENTOPS_SPAN_KIND) == SpanKind.OPERATION]
+            SpanAttributes.AGENTOPS_SPAN_KIND) == SpanKind.TASK]
 
         assert len(session_spans) == 1
         assert len(agent_spans) == 1
