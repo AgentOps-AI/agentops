@@ -61,12 +61,11 @@ class Client:
         self.initialized = True
 
         # Only start a session if auto_start_session is True and we're not already in start_session
-        # Prevents infinite recursion
         if self.config.auto_start_session and not getattr(self, "_in_start_session", False):
             from agentops.legacy import start_session
 
             # Pass the tags from the config to ensure they're included in the session
-            start_session(tags=list(self.config.default_tags) if self.config.default_tags else None)
+            start_session(tags=list(self.config.default_tags) if self.config.default_tags else None
 
     def configure(self, **kwargs):
         """Update client configuration"""
