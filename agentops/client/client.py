@@ -31,6 +31,8 @@ class Client:
         self.config = Config()
 
     def init(self, **kwargs):
+        # Recreate the Config object to parse environment variables at the time of initialization
+        self.config = Config()
         self.configure(**kwargs)
 
         if not self.config.api_key:
