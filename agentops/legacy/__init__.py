@@ -6,7 +6,7 @@ CrewAI codebase contains an AgentOps integration which is now deprecated.
 This maintains compatibility with codebases that adhere to the previous API.
 """
 
-from typing import Any, Dict, Tuple
+from typing import Any, Dict, Tuple, Union, List
 
 from agentops.semconv.span_kinds import SpanKind
 from agentops.logging import logger
@@ -23,7 +23,7 @@ class Session:
 
 
 def start_session(
-    name: str = "manual_session", attributes: Dict[str, Any] = {}, tags=None,
+    tags: Union[Dict[str, Any], List[str], None] = None,
 ) -> Session:
     """
     Start a new AgentOps session manually.
@@ -36,15 +36,16 @@ def start_session(
 
     Args:
         name: Name of the session
-        attributes: Optional attributes to set on the session span
-        version: Optional version identifier for the session
+        attributes: Optional {key: value} dict
+        tags: Optional | forwards to `attributes`
 
     Returns:
         A Session object that should be passed to end_session
     """
-    if tags is not None:
-        attributes = {**attributes, **tags}
     from agentops.sdk.decorators.utility import _make_span
+    attributes = {}
+    if tags:
+        attributes["tags"] = tags
     span, context, token = _make_span('session', span_kind=SpanKind.SESSION, attributes=attributes)
     return Session(span, token)
 
