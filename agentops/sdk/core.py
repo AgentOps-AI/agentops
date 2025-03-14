@@ -190,9 +190,6 @@ class TracingCore:
             return
 
         with self._lock:
-            if not self._initialized:
-                return
-
             # Flush processors
             for processor in self._provider._span_processors: # type: ignore
                 try:
