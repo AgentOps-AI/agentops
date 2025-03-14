@@ -35,11 +35,11 @@ def create_entity_decorator(entity_kind: str):
                 def __init__(self, *args, **kwargs):
                     # Start span when instance is created
                     operation_name = name or wrapped.__name__
-                    self._span_context = _create_as_current_span(operation_name, entity_kind, version)
-                    self._span = self._span_context.__enter__()
+                    self._agentops_span_context_manager = _create_as_current_span(operation_name, entity_kind, version)
+                    self._agentops_active_span = self._agentops_span_context_manager.__enter__()
                     
                     try:
-                        _record_entity_input(self._span, args, kwargs)
+                        _record_entity_input(self._agentops_active_span, args, kwargs)
                     except Exception as e:
                         logger.warning(f"Failed to record entity input: {e}")
                     
@@ -48,13 +48,13 @@ def create_entity_decorator(entity_kind: str):
                 
                 def __del__(self):
                     # End span when instance is destroyed
-                    if hasattr(self, '_span') and hasattr(self, '_span_context'):
+                    if hasattr(self, '_agentops_active_span') and hasattr(self, '_agentops_span_context_manager'):
                         try:
-                            _record_entity_output(self._span, self)
+                            _record_entity_output(self._agentops_active_span, self)
                         except Exception as e:
                             logger.warning(f"Failed to record entity output: {e}")
                         
-                        self._span_context.__exit__(None, None, None)
+                        self._agentops_span_context_manager.__exit__(None, None, None)
             
             # Preserve metadata of the original class
             WrappedClass.__name__ = wrapped.__name__
