@@ -1,13 +1,8 @@
 from typing import Any, Dict, List, Optional, Union
 
-import agentops.legacy as legacy
-from agentops.legacy import ErrorEvent, ToolEvent
+from agentops.legacy import ErrorEvent, ToolEvent, end_session, start_session
 
 from .client import Client
-from .sdk.commands import end_span as sdk_end_span
-from .sdk.commands import record as sdk_record
-from .sdk.commands import start_span as sdk_start_span
-from .semconv.span_kinds import SpanKind
 
 # Client global instance; one per process runtime
 _client = Client()
@@ -130,6 +125,18 @@ def configure(**kwargs):
     _client.configure(**kwargs)
 
 # For backwards compatibility and testing
+
+
 def get_client() -> Client:
     """Get the singleton client instance"""
     return _client
+
+
+
+__all__ = [
+    "init",
+    "configure",
+    "get_client",
+    "start_session",
+    "end_session",
+]
