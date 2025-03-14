@@ -22,7 +22,7 @@ from agentops.sdk.types import TracingConfig
 from agentops.semconv import ResourceAttributes
 
 # No need to create shortcuts since we're using our own ResourceAttributes class now
-# 
+#
 
 
 def setup_telemetry(
@@ -36,7 +36,7 @@ def setup_telemetry(
 ) -> tuple[TracerProvider, MeterProvider]:
     """
     Setup the telemetry system.
-    
+
     Args:
         service_name: Name of the OpenTelemetry service
         project_id: Project ID to include in resource attributes
@@ -45,7 +45,7 @@ def setup_telemetry(
         max_queue_size: Maximum number of spans to queue before forcing a flush
         max_wait_time: Maximum time in milliseconds to wait before flushing
         jwt: JWT token for authentication
-        
+
     Returns:
         Tuple of (TracerProvider, MeterProvider)
     """
@@ -66,10 +66,10 @@ def setup_telemetry(
 
     # Create exporter with authentication
     exporter = OTLPSpanExporter(
-        endpoint=exporter_endpoint, 
+        endpoint=exporter_endpoint,
         headers={"Authorization": f"Bearer {jwt}"} if jwt else {}
     )
-    
+
     # Regular processor for normal spans and immediate export
     processor = BatchSpanProcessor(
         exporter,
@@ -82,15 +82,15 @@ def setup_telemetry(
     # Setup metrics
     metric_reader = PeriodicExportingMetricReader(
         OTLPMetricExporter(
-            endpoint=metrics_endpoint, 
+            endpoint=metrics_endpoint,
             headers={"Authorization": f"Bearer {jwt}"} if jwt else {}
         )
     )
     meter_provider = MeterProvider(resource=resource, metric_readers=[metric_reader])
     metrics.set_meter_provider(meter_provider)
-    
+
     logger.debug("Telemetry system initialized")
-    
+
     return provider, meter_provider
 
 
@@ -184,18 +184,19 @@ class TracingCore:
         """Check if the tracing core is initialized."""
         return self._initialized
 
+    @property
+    def config(self) -> TracingConfig:
+        """Get the tracing configuration."""
+        return self._config  # type: ignore
+
     def shutdown(self) -> None:
         """Shutdown the tracing core."""
         if not self._initialized:
             return
 
         with self._lock:
-            # Flush processors
-            for processor in self._provider._span_processors: # type: ignore
-                try:
-                    processor.force_flush()
-                except Exception as e:
-                    logger.warning(f"Error flushing processor: {e}")
+            # Perform a single flush on the SynchronousSpanProcessor (which takes care of all processors' shutdown)
+            self._provider._active_span_processor.force_flush(self.config['max_wait_time'])  # type: ignore
 
             # Shutdown provider
             if self._provider:
