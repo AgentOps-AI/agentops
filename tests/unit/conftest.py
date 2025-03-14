@@ -6,11 +6,11 @@ from unittest import mock
 
 import pytest
 import requests_mock
-from tests.unit.sdk.instrumentation_tester import InstrumentationTester
 
 import agentops
 from agentops.config import Config
 from tests.fixtures.client import *  # noqa
+from tests.unit.sdk.instrumentation_tester import InstrumentationTester
 
 
 @pytest.fixture
@@ -26,13 +26,14 @@ def endpoint() -> str:
 
 
 @pytest.fixture(autouse=True)
-def mock_req(endpoint):
+def mock_req(endpoint, api_key):
     """
     Mocks AgentOps backend API requests.
     """
     with requests_mock.Mocker(real_http=False) as m:
         # Map session IDs to their JWTs
-        m.post(endpoint + "/v3/auth/token", json={"token": str(uuid.uuid4())})
+        m.post(endpoint + "/v3/auth/token", json={"token": str(uuid.uuid4()),
+               "project_id": "test-project-id", "api_key": api_key})
         yield m
 
 
