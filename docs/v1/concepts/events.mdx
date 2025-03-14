@@ -1,110 +1,118 @@
 ---
-title: "Events"
-description: "AgentOps currently supports four event types: ActionEvent, LLMEvent, ToolEvent, and ErrorEvent."
+title: "Spans"
+description: "AgentOps uses spans to track different types of operations in your agent workflows."
 ---
 
-## Event Class
+## Spans Overview
 
-The Event class is an abstract base class for events that will be recorded. It should not be instantiated directly.
+In AgentOps v0.4, the concept of "Events" has been replaced with "Spans" for all operation tracking. Spans represent different types of operations and are organized hierarchically.
 
-| Parameter      | Type | Default                      | Example                              | Description                                                 |
-| -------------- | ---- | ---------------------------- | ------------------------------------ | ----------------------------------------------------------- |
-| params         | dict | None                         | `{"param1": "value1"}`               | Additional parameters for the event                         |
-| returns        | str  | None                         | "Success"                            | Return value of the event                                   |
-| init_timestamp | str  | A timestamp of instantiation | "2023-03-15T18:59:13Z"               | The time when the Event was initiated                       |
-| end_timestamp  | str  | A timestamp of instantiation | "2023-03-15T19:00:13Z"               | The time when the Event was completed                       |
-| agent_id       | UUID | UUID of the triggering agent | 123e4567-e89b-12d3-a456-426614174000 | The unique identifier of the agent that triggered the event |
-| id             | UUID | A new UUID                   | 123e4567-e89b-12d3-a456-426614170000 | The unique identifier of the event                          |
+A span is a unit of work or operation in your agent workflow. Spans are created using decorators and are automatically nested to create a hierarchical trace of your agent's execution.
 
-## ActionEvent
+## Span Types
 
-The `ActionEvent` is a generic event for recording events that do not fit into the bounds of a more specific Event type.
+AgentOps supports several types of spans, each representing a different kind of operation:
 
-| Parameter   | Type | Default | Example                        | Description                                         |
-| ----------- | ---- | ------- | ------------------------------ | --------------------------------------------------- |
-| action_type | str  | None    | "Click"                        | Type of the action                                  |
-| logs        | str  | None    | "Executed action successfully" | Logs generated during the action event              |
-| screenshot  | str  | None    | "/path/to/screenshot.png"      | Path to screenshot captured during the action event |
+### Session Spans
 
-An action or tool event can be used the [same way as other events](/v1/usage/recording-events) but also with the `record_action` or `record_tool`
-decorators.
+Session spans serve as the root for all other spans. They represent a complete execution of your agent workflow.
 
-<CodeGroup>
-```python python
-from agentops import record_action
+```python
+from agentops.sdk.decorators import session
 
-@record_action()
-def some_action(params):
-    return "some response"
+@session
+def my_workflow():
+    # Your session code here
+    return result
 ```
-</CodeGroup>
 
-This decorator will record an `ActionEvent` with the params and returns of the function as well as execution time.
+### Agent Spans
 
-## LLMEvent
+Agent spans represent operations performed by a specific agent. They are typically children of session spans.
 
-The LLMEvent class is for recording calls to LLMs. AgentOps auto-instruments calls to the most popular LLMs e.g. GPT, Claude, Gemini, etc.
+```python
+from agentops.sdk.decorators import agent
 
-_In most cases, `LLMEvent` should not be used by the developer. These are created automatically._
-
-| Parameter         | Type          | Default | Example                              | Description                    |
-| ----------------- | ------------- | ------- | ------------------------------------ | ------------------------------ |
-| thread_id         | UUID          | None    | 123e4567-e89b-12d3-a456-426614174000 | Thread ID of the event         |
-| prompt            | str or List   | None    | "What's the weather today?"          | The prompt for the event       |
-| prompt_tokens     | int           | None    | 5                                    | Number of tokens in the prompt |
-| completion        | str or object | None    | "It's sunny and warm."               | The completion of the event    |
-| completion_tokens | int           | None    | 4                                    | Number of tokens in completion |
-| model             | Models or str | None    | Models.MODEL_NAME or "model_name"    | The model used for the event   |
-
-## ToolEvent
-
-The ToolEvent class is for recording calls to tools e.g. searchWeb, fetchFromDB.
-
-| Parameter | Type        | Default | Example                                                 | Description                  |
-| --------- | ----------- | ------- | ------------------------------------------------------- | ---------------------------- |
-| name      | str         | None    | "Parsing Tool"                                          | Name of the tool             |
-| logs      | str or dict | None    | "Tool executed successfully" or `{"status": "success"}` | Logs from the tool execution |
-
-The tool event should be created before running the tool in order to track the execution time.
-
-<CodeGroup>
-```python python
-from agentops import ToolEvent, record
-def scrape_website(url: str):
-    tool_event = ToolEvent(name='scrape_website', params={'url':url}) # the start timestamp is set when the obj is created
-    result = integration.scrape_website(data) # perform tool logic
-    tool_event.returns = result # set result
-    record(tool_event)
+@agent
+class MyAgent:
+    def __init__(self, name):
+        self.name = name
 ```
-</CodeGroup>
 
-## ErrorEvent
+### Operation/Task Spans
 
-Error events can be used alone or in reference to another event. The can reference errors that the LLM made or errors
-in execution, up to the developer.
+Operation spans represent specific tasks or operations performed by an agent. They are typically children of agent spans.
 
-| Parameter     | Type  | Default                                          | Example                     | Description                               |
-| ------------- | ----- | ------------------------------------------------ | --------------------------- | ----------------------------------------- |
-| trigger_event | Event | None                                             | Event instance              | The Event that triggered the ErrorEvent   |
-| error_type    | str   | None                                             | "Runtime Error"             | Type of the error                         |
-| code          | str   | None                                             | "ERR001"                    | Code of the error                         |
-| details       | str   | None                                             | "Null pointer exception"    | Detailed description of the error         |
-| logs          | str   | None                                             | "Error occurred at line 10" | Logs related to the error                 |
-| timestamp     | str   | A timestamp when the ErrorEvent was instantiated | "2023-03-15T18:59:13Z"      | Timestamp when the ErrorEvent was created |
+```python
+from agentops.sdk.decorators import operation
 
-<CodeGroup>
-```python python
-from agentops import ToolEvent, record, ErrorEvent
-def scrape_website(url: str):
-    tool_event = ToolEvent(name='scrape_website', params={'url':url}) # the start timestamp is set when the obj is created
-    try:
-        result = integration.scrape_website(data) # perform tool logic
-        tool_event.returns = result
-    except Error as e:
-        record(ErrorEvent(message=e, trigger_event=tool_event))
-    record(tool_event)
+@operation
+def process_data(data):
+    # Process the data
+    return result
 ```
-</CodeGroup>
+
+### Workflow Spans
+
+Workflow spans represent a sequence of operations that form a workflow. They can contain multiple operations.
+
+```python
+from agentops.sdk.decorators import workflow
+
+@workflow
+def my_workflow(data):
+    # Workflow implementation
+    return result
+```
+
+### LLM Spans
+
+LLM spans are automatically created when you make calls to supported LLM providers. They represent interactions with language models.
+
+## Span Attributes
+
+All spans share a set of common attributes:
+
+| Attribute | Description |
+|-----------|-------------|
+| span_id | A unique identifier for the span |
+| trace_id | The ID of the trace this span belongs to |
+| parent_id | The ID of the parent span |
+| name | The name of the span |
+| kind | The kind of span (session, agent, operation, etc.) |
+| start_time | When the span started |
+| end_time | When the span ended |
+| attributes | Custom attributes for the span |
+
+Additionally, spans automatically capture:
+
+- Input parameters to the decorated function
+- Return values from the decorated function
+- Exceptions that occur during execution
+
+## Span Hierarchy
+
+Spans are organized hierarchically to create a trace of your agent's execution. The typical hierarchy is:
+
+1. Session (root)
+2. Agent
+3. Operation/Task
+4. Nested Operations
+
+This hierarchy allows you to visualize the flow of your agent's execution and understand how different operations relate to each other.
+
+## Error Handling
+
+When an exception occurs within a decorated function, it's automatically recorded in the span. This allows you to easily identify and debug errors in your agent workflow.
+
+```python
+from agentops.sdk.decorators import operation
+
+@operation
+def risky_operation():
+    # This exception will be recorded in the span
+    raise ValueError("Something went wrong")
+```
 
 <script type="module" src="/scripts/github_stars.js"></script>
 <script type="module" src="/scripts/adjust_api_dynamically.js"></script>

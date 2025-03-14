@@ -17,7 +17,7 @@ At a high level, AgentOps gives you the ability to monitor LLM calls, costs, lat
 
 ## Quickstart
 - [Single LLM](./openai-gpt.ipynb)
-- [Recording Events](./recording-events.ipynb)
+- [Recording Events](./recording-operations.ipynb)
 - [Multi-Agent](./multi_agent_example.ipynb)
 
 ## Integrations

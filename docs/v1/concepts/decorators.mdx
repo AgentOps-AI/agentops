@@ -11,22 +11,141 @@ description: "Seemingly magic tools that can be added to functions and classes f
 >    ...
 > ```
 
-## `@track_agent()`
-If your implementation uses Classes to denote Agents, this decorator enables automatic agent tracking.
+AgentOps provides a set of decorators that allow you to easily instrument your code for tracing and monitoring AI agent workflows. These decorators create spans (units of work) that are organized hierarchically to track different types of operations.
 
-Learn more about tracking agents [here](/v1/usage/tracking-agents).
+## `@session`
 
-## `@record_action()`
-Sometimes, your agent system uses functions that are important to track as [`Actions`](/v1/concepts/events/#actionevent).
+The `@session` decorator creates a session span, which serves as the root for all other spans. No spans can exist without a session at the top.
 
-Adding this decorator above any function will allow every instance of that function call to be tracked and displayed
-in your [Session](v1/concepts/sessions) Drill-Down on the dashboard.
+```python
+from agentops.sdk.decorators import session
 
-## `@record_tool()`
-Some functions are used as Tools. If you are not using an agent framework that records [`ToolEvents`](/v1/concepts/events/#toolevent) with AgentOps automatically, this decorator will record `ToolEvents` when the function is called.
+@session
+def my_workflow():
+    # Your session code here
+    return result
+```
 
-Adding this decorator above any function will allow every instance of that function call to be tracked and displayed
-in your [Session](v1/concepts/sessions) Drill-Down on the dashboard.
+You can also use the decorator with parameters:
+
+```python
+@session(name="custom-session-name", version=1)
+def my_workflow():
+    # Your session code here
+    return result
+```
+
+## `@agent`
+
+The `@agent` decorator creates an agent span for tracking agent operations. Agent spans are typically children of session spans and parents of operation spans.
+
+```python
+from agentops.sdk.decorators import agent
+
+@agent
+class MyAgent:
+    def __init__(self, name):
+        self.name = name
+        
+    # Agent methods here
+```
+
+You can also specify a custom name for the agent:
+
+```python
+@agent(name="research-assistant")
+class MyAgent:
+    # Agent implementation
+```
+
+## `@operation` / `@task`
+
+The `@operation` and `@task` decorators are aliases that create operation/task spans for tracking specific operations. These spans are typically children of agent spans.
+
+```python
+from agentops.sdk.decorators import agent, operation
+
+@agent
+class MyAgent:
+    @operation
+    def perform_task(self, task):
+        # Operation implementation
+        return result
+```
+
+Operations can also be used outside of agent classes:
+
+```python
+from agentops.sdk.decorators import operation
+
+@operation
+def process_data(data):
+    # Process the data
+    return result
+```
+
+## `@workflow`
+
+The `@workflow` decorator creates workflow spans for tracking workflows, which can contain multiple operations.
+
+```python
+from agentops.sdk.decorators import workflow
+
+@workflow
+def my_workflow(data):
+    # Workflow implementation
+    return result
+```
+
+## Nesting and Hierarchy
+
+The decorators automatically manage the context propagation, ensuring that spans are properly nested within their parent spans. The typical hierarchy is:
+
+1. Session (root)
+2. Agent
+3. Operation/Task
+4. Nested Operations
+
+Example of proper nesting:
+
+```python
+from agentops.sdk.decorators import session, agent, operation
+
+@agent
+class MyAgent:
+    @operation
+    def nested_operation(self, message):
+        return f"Processed: {message}"
+        
+    @operation
+    def main_operation(self):
+        result = self.nested_operation("test message")
+        return result
+
+@session
+def my_session():
+    agent = MyAgent()
+    return agent.main_operation()
+    
+# Run the session
+result = my_session()
+```
+
+## Additional Features
+
+The decorators provide several additional features:
+
+1. **Input/Output Recording**: The decorators automatically record the input arguments and output results of the decorated functions.
+
+2. **Exception Handling**: If an exception occurs within a decorated function, it's recorded in the span.
+
+3. **Support for Different Function Types**: The decorators handle different types of functions:
+   - Regular synchronous functions
+   - Asynchronous functions (using `async/await`)
+   - Generator functions (using `yield`)
+   - Asynchronous generator functions (using `async` and `yield`)
+
+4. **Custom Attributes**: You can add custom attributes to spans using the decorator parameters.
 
 <script type="module" src="/scripts/github_stars.js"></script>
 <script type="module" src="/scripts/adjust_api_dynamically.js"></script>

@@ -44,37 +44,53 @@ import EnvTooltip from '/snippets/add-env-tooltip.mdx'
 
 <CardGroup cols={1}>
 
-<Card icon="code" title="Decorate Functions">
-  You can instrument other functions inside your code with the handy `@record_action`
-  decorator, which will record an `action_type`, the parameters, and the returns. You
-  will see these function calls alongside your LLM calls from instantiating the AgentOps client.
+<Card icon="code" title="Decorate Operations">
+  You can instrument functions inside your code with the `@operation` decorator, which will create spans that track function execution, parameters, and return values. These operations will be displayed in your session visualization alongside LLM calls.
   ```python python
-  # (record specific functions)
-  @agentops.record_action('sample function being recorded')
-  def sample_function(...):
-    ...
+  # Instrument a function as an operation
+  from agentops.sdk.decorators import operation
+  
+  @operation
+  def process_data(data):
+      # Your function logic here
+      result = data.upper()
+      return result
 ```
 
 </Card>
 <Card icon="robot" title="Track Agents">
-  If you use specific named agents within your system, you can tie all downstream [Events](/v1/concepts/events) to a
-  Named Agent with the `@track_agent` decorator.
+  If you use specific named agents within your system, you can create agent spans that contain all downstream operations using the `@agent` decorator.
   ```python python
-  # (track a named agent)
-  @agentops.track_agent(name='my-expert-agent')
-  class sample_agent(...):
-    ...
+  # Create an agent class
+  from agentops.sdk.decorators import agent, operation
+  
+  @agent
+  class MyAgent:
+      def __init__(self, name):
+          self.name = name
+          
+      @operation
+      def perform_task(self, task):
+          # Agent task logic here
+          return f"Completed {task}"
 ```
 
 </Card>
-<Card icon="stop" title="Ending Your Session">
-  Finally, you should end your session by calling `.end_session()` indicating whether your session 
-  was successful or not `(Success|Fail)`. We suggest setting session state depending on how 
-  your agent exits or whether your agent succeeded or not. You can also specify a end state reason,
-  such as user interrupted, ran to completion, or unhandled exception.
+<Card icon="stop" title="Creating Sessions">
+  Create a session to group all your agent operations by using the `@session` decorator. Sessions serve as the root span for all operations.
   ```python python
-  # End of program
-  agentops.end_session('Success')
+  # Create a session
+  from agentops.sdk.decorators import session
+  
+  @session
+  def my_workflow():
+      # Your session code here
+      agent = MyAgent("research-agent")
+      result = agent.perform_task("data analysis")
+      return result
+      
+  # Run the session
+  my_workflow()
   ```
 </Card>
 </CardGroup>
@@ -85,24 +101,33 @@ import EnvTooltip from '/snippets/add-env-tooltip.mdx'
 Here is the complete code from the sections above
 
 ```python python
-import openai
 import agentops
+from agentops.sdk.decorators import session, agent, operation
 
-# Beginning of program (i.e. main.py, __init__.py)
+# Initialize AgentOps
 agentops.init(<INSERT YOUR API KEY HERE>)
 
-# (record specific functions)
-@agentops.record_action('sample function being record')
-def sample_function(...):
-  ...
+# Create an agent class
+@agent
+class MyAgent:
+    def __init__(self, name):
+        self.name = name
+        
+    @operation
+    def perform_task(self, task):
+        # Agent task logic here
+        return f"Completed {task}"
 
-# (track a named agent)
-@agentops.track_agent(name='my-expert-agent')
-class sample_agent(...):
-  ...
-
-# End of program
-agentops.end_session('Success')
+# Create a session
+@session
+def my_workflow():
+    # Your session code here
+    agent = MyAgent("research-agent")
+    result = agent.perform_task("data analysis")
+    return result
+    
+# Run the session
+my_workflow()
 ```
 
 <Card
@@ -114,7 +139,7 @@ agentops.end_session('Success')
 </Card>
 
 <Check>
-  That's all you need to get started! Check out the documentation below to see how you can record other events. AgentOps is a lot more powerful this way!
+  That's all you need to get started! Check out the documentation below to see how you can record other operations. AgentOps is a lot more powerful this way!
 </Check>
 
 ## Explore our more advanced functionality!
@@ -125,10 +150,10 @@ agentops.end_session('Success')
     icon="square-code"
     href="/v1/examples"
   >
-    Record all of your other events the way AgentOps intends.
+    Record all of your operations the way AgentOps intends.
   </Card>
   <Card title="Tracking Agents" icon="robot" href="/v1/usage/tracking-agents">
-    Associate Events with specific named agents.
+    Associate operations with specific named agents.
   </Card>
 </CardGroup>
 
