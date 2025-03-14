@@ -2,11 +2,12 @@
 Legacy helpers that were being used throughout the SDK
 """
 
-from opentelemetry.util.types import Attributes, AttributeValue
+import uuid
 from datetime import datetime, timezone
 from typing import Optional
 from uuid import UUID
-import uuid
+
+from opentelemetry.util.types import Attributes, AttributeValue
 
 
 def ns_to_iso(ns_time: Optional[int]) -> Optional[str]:
@@ -115,3 +116,11 @@ def int_to_uuid(integer):
 
     # Return as UUID object
     return uuid.UUID(uuid_str)
+
+
+def camel_to_snake(text: str) -> str:
+    """Convert CamelCase class names to snake_case format"""
+    import re
+
+    text = re.sub("(.)([A-Z][a-z]+)", r"\1_\2", text)
+    return re.sub("([a-z0-9])([A-Z])", r"\1_\2", text).lower()

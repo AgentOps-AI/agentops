@@ -5,20 +5,12 @@ This module provides a high-level API for creating and managing spans
 for different types of operations in AI agent workflows.
 """
 
-# Import command functions
-from agentops.sdk.commands import end_span, record, start_span
-
 # Import core components
 from agentops.sdk.core import TracingCore
-
 # Import decorators
-from agentops.sdk.decorators.agentops import agent, operation, record as record_decorator, session
-
+from agentops.sdk.decorators import agent, operation, session, task, workflow
 # from agentops.sdk.traced import TracedObject  # Merged into TracedObject
 from agentops.sdk.types import TracingConfig
-
-# Import span types
-
 
 __all__ = [
     # Core components
@@ -27,10 +19,7 @@ __all__ = [
     # Decorators
     "session",
     "operation",
-    "record_decorator",
     "agent",
-    # Command functions
-    "start_span",
-    "end_span",
-    "record",
+    "task",
+    "workflow",
 ]

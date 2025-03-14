@@ -1,9 +1,11 @@
 from typing import Any, Dict, List, Optional, Protocol, Tuple, Union
+import importlib
 
 from opentelemetry import trace as trace_api
 from opentelemetry.sdk.trace import ReadableSpan, Span, TracerProvider
 from opentelemetry.sdk.trace.export import SimpleSpanProcessor
-from opentelemetry.sdk.trace.export.in_memory_span_exporter import InMemorySpanExporter
+from opentelemetry.sdk.trace.export.in_memory_span_exporter import \
+    InMemorySpanExporter
 from opentelemetry.util.types import Attributes
 
 import agentops
@@ -13,31 +15,34 @@ from agentops.sdk.processors import LiveSpanProcessor
 
 def create_tracer_provider(
     **kwargs,
-) -> Tuple[TracerProvider, InMemorySpanExporter, LiveSpanProcessor, SimpleSpanProcessor]:
+) -> Tuple[TracerProvider, InMemorySpanExporter, SimpleSpanProcessor]:
     """Helper to create a configured tracer provider.
 
     Creates and configures a `TracerProvider` with a
-    `LiveSpanProcessor` and a `InMemorySpanExporter`.
+    `SimpleSpanProcessor` and a `InMemorySpanExporter`.
     All the parameters passed are forwarded to the TracerProvider
     constructor.
 
     Returns:
-        A tuple with the tracer provider in the first element and the
-        in-memory span exporter in the second.
+        A tuple with the tracer provider, memory exporter, and span processor.
     """
     tracer_provider = TracerProvider(**kwargs)
     memory_exporter = InMemorySpanExporter()
 
-    # Create a processor for the exporter
-    # Use a shorter interval for testing
-    span_processor = LiveSpanProcessor(memory_exporter, schedule_delay_millis=100)
+    # Use SimpleSpanProcessor instead of both processors to avoid duplication
+    span_processor = SimpleSpanProcessor(memory_exporter)
     tracer_provider.add_span_processor(span_processor)
 
-    # Also add a SimpleSpanProcessor as a backup to ensure spans are exported
-    simple_processor = SimpleSpanProcessor(memory_exporter)
-    tracer_provider.add_span_processor(simple_processor)
+    return tracer_provider, memory_exporter, span_processor
 
-    return tracer_provider, memory_exporter, span_processor, simple_processor
+
+def reset_trace_globals():
+    """Reset the global trace state to avoid conflicts."""
+    # Reset tracer provider
+    trace_api._TRACER_PROVIDER = None
+    
+    # Reload the trace module to clear warning state
+    importlib.reload(trace_api)
 
 
 class HasAttributesViaProperty(Protocol):
@@ -63,25 +68,25 @@ class InstrumentationTester:
 
     tracer_provider: TracerProvider
     memory_exporter: InMemorySpanExporter
-    span_processor: LiveSpanProcessor
-    simple_processor: SimpleSpanProcessor
+    span_processor: SimpleSpanProcessor
 
     def __init__(self):
         """Initialize the instrumentation tester."""
-        # Create a new tracer provider and memory exporter with both processors
+        # Reset any global state first
+        reset_trace_globals()
+        
+        # Shut down any existing tracing core
+        self._shutdown_core()
+        
+        # Create a new tracer provider and memory exporter
         (
             self.tracer_provider,
             self.memory_exporter,
             self.span_processor,
-            self.simple_processor,
         ) = create_tracer_provider()
 
-        # Reset the global tracer provider and set the new one
-        trace_api._TRACER_PROVIDER = None
+        # Set the tracer provider
         trace_api.set_tracer_provider(self.tracer_provider)
-
-        # Shut down any existing tracing core
-        self._shutdown_core()
 
         # Get a fresh instance of the tracing core
         core = TracingCore.get_instance()
@@ -90,16 +95,6 @@ class InstrumentationTester:
         core._provider = self.tracer_provider
         core._initialized = True
 
-        # Reset the factory
-        from agentops.sdk.factory import SpanFactory
-
-        SpanFactory._span_types = {}
-        SpanFactory._initialized = False
-
-        # Auto-register span types
-        SpanFactory.auto_register_span_types()
-
-        # Clear any existing spans
         self.clear_spans()
 
     def _shutdown_core(self):
@@ -111,12 +106,8 @@ class InstrumentationTester:
 
     def clear_spans(self):
         """Clear all spans from the memory exporter."""
-        # First export any in-flight spans
-        self.span_processor.export_in_flight_spans()
-
         # Force flush spans
         self.span_processor.force_flush()
-        self.simple_processor.force_flush()
 
         # Then clear the memory
         self.memory_exporter.clear()
@@ -124,20 +115,17 @@ class InstrumentationTester:
 
     def reset(self):
         """Reset the instrumentation tester."""
-        # Export any in-flight spans before clearing
-        self.span_processor.export_in_flight_spans()
-
         # Force flush any pending spans
         self.span_processor.force_flush()
-        self.simple_processor.force_flush()
 
         # Clear any existing spans
         self.clear_spans()
-
-        # Reset the global tracer provider if needed
-        if trace_api._TRACER_PROVIDER != self.tracer_provider:
-            trace_api._TRACER_PROVIDER = None
-            trace_api.set_tracer_provider(self.tracer_provider)
+        
+        # Reset global trace state
+        reset_trace_globals()
+        
+        # Set our tracer provider again
+        trace_api.set_tracer_provider(self.tracer_provider)
 
         # Shut down and re-initialize the tracing core
         self._shutdown_core()
@@ -149,23 +137,10 @@ class InstrumentationTester:
         core._provider = self.tracer_provider
         core._initialized = True
 
-        # Reset the factory
-        from agentops.sdk.factory import SpanFactory
-
-        SpanFactory._span_types = {}
-        SpanFactory._initialized = False
-
-        # Auto-register span types
-        SpanFactory.auto_register_span_types()
-
     def get_finished_spans(self) -> List[ReadableSpan]:
         """Get all finished spans."""
-        # First, export any in-flight spans to make sure they're captured
-        self.span_processor.export_in_flight_spans()
-
         # Force flush any pending spans
         self.span_processor.force_flush()
-        self.simple_processor.force_flush()
 
         # Get the spans
         spans = list(self.memory_exporter.get_finished_spans())

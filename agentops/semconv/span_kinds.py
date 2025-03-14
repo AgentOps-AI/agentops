@@ -16,6 +16,7 @@ class SpanKind:
 
     # Workflow kinds
     WORKFLOW_STEP = "workflow.step"  # Step in a workflow
+    WORKFLOW = 'workflow'
     SESSION = "session"
     TASK = "task"
     OPERATION = "operation"

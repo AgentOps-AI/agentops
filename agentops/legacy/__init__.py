@@ -6,23 +6,43 @@ CrewAI codebase contains an AgentOps integration which is now deprecated.
 This maintains compatibility with codebases that adhere to the previous API.
 """
 
-from typing import Dict, Any, Optional, Tuple
+from typing import Any, Dict, List, Tuple, Union
 
-from agentops.sdk.commands import start_span, end_span
+from httpx import Client
+
+from agentops.logging import logger
 from agentops.semconv.span_kinds import SpanKind
 
-__all__ = [
-    "start_session",
-    "end_session",
-    "ToolEvent",
-    "ErrorEvent",
-    "session",
-]
+
+class Session:
+    """
+    A legacy session object that holds a span and token.
+    """
+
+    def __init__(self, span: Any, token: Any):
+        self.span = span
+        self.token = token
+
+    def __del__(self):
+        try:
+            self.span.end()
+        except:
+            pass
+
+    def create_agent(self):
+        pass
+
+    def record(self):
+        pass
+
+    def end_session(self):
+        self.span.end()
+
 
 
 def start_session(
-    name: str = "manual_session", attributes: Optional[Dict[str, Any]] = None, version: Optional[int] = None
-) -> Tuple[Any, Any]:
+    tags: Union[Dict[str, Any], List[str], None] = None,
+) -> Session:
     """
     Start a new AgentOps session manually.
 
@@ -34,16 +54,25 @@ def start_session(
 
     Args:
         name: Name of the session
-        attributes: Optional attributes to set on the session span
-        version: Optional version identifier for the session
+        attributes: Optional {key: value} dict
+        tags: Optional | forwards to `attributes`
 
     Returns:
-        A tuple of (span, token) that should be passed to end_session
+        A Session object that should be passed to end_session
     """
-    return start_span(name=name, span_kind=SpanKind.SESSION, attributes=attributes, version=version)
+    from agentops import Client
+    if not Client().initialized:
+        Client().init()
+
+    from agentops.sdk.decorators.utility import _make_span
+    attributes = {}
+    if tags:
+        attributes["tags"] = tags
+    span, context, token = _make_span('session', span_kind=SpanKind.SESSION, attributes=attributes)
+    return Session(span, token)
 
 
-def end_session(span, token) -> None:
+def end_session(session: Session) -> None:
     """
     End a previously started AgentOps session.
 
@@ -53,10 +82,10 @@ def end_session(span, token) -> None:
     This is a legacy function that uses end_span.
 
     Args:
-        span: The span returned by start_session
-        token: The token returned by start_session
+        session: The session object returned by start_session
     """
-    end_span(span, token)
+    from agentops.sdk.decorators.utility import _finalize_span
+    _finalize_span(session.span, session.token)
 
 
 def ToolEvent(*args, **kwargs) -> None:
@@ -75,27 +104,26 @@ def ErrorEvent(*args, **kwargs) -> None:
     return None
 
 
-class session:
-    @classmethod
-    def record(cls, *args, **kwargs):
-        """
-        @deprecated
-        Use tracing instead.
-        """
-        pass  # noop silently
+def ActionEvent(*args, **kwargs) -> None:
+    """
+    @deprecated
+    Use tracing instead.
+    """
+    return None
 
-    @classmethod
-    def create_agent(cls, *args, **kwargs):
-        """
-        @deprecated
-        Agents are registered automatically.
-        """
-        pass  # noop silently
 
-    @classmethod
-    def end_session(cls, *args, **kwargs):
-        """
-        @deprecated
-        Sessions are ended automatically.
-        """
-        pass  # noop silently
+def LLMEvent(*args, **kwargs) -> None:
+    """
+    @deprecated
+    Use tracing instead.
+    """
+    return None
+
+
+__all__ = [
+    "start_session",
+    "end_session",
+    "ToolEvent",
+    "ErrorEvent",
+    "ActionEvent",
+]
