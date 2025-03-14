@@ -87,6 +87,9 @@ def end_session(session: Session) -> None:
     from agentops.sdk.decorators.utility import _finalize_span
     _finalize_span(session.span, session.token)
 
+def end_all_sessions():
+    pass
+
 
 def ToolEvent(*args, **kwargs) -> None:
     """
@@ -119,6 +122,9 @@ def LLMEvent(*args, **kwargs) -> None:
     """
     return None
 
+def track_agent(*args, **kwargs):
+    """@deprecated"""
+    pass
 
 __all__ = [
     "start_session",
@@ -126,4 +132,6 @@ __all__ = [
     "ToolEvent",
     "ErrorEvent",
     "ActionEvent",
+    "track_agent",
+    "end_all_sessions"
 ]
