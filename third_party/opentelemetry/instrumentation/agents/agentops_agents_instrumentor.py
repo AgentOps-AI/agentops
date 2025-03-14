@@ -42,6 +42,7 @@ __version__ = "0.1.0"
 
 logger = logging.getLogger(__name__)
 
+
 # Helper function to safely convert model objects to dictionaries
 def model_as_dict(model):
     """Convert a model object to a dictionary safely."""
@@ -59,6 +60,7 @@ def model_as_dict(model):
             return model.__dict__
         except:
             return model
+
 
 # Global metrics objects
 _agent_run_counter = None
@@ -205,27 +207,29 @@ class AgentsDetailedExporter:
         # Handle output - extract specific fields instead of using str()
         if hasattr(span_data, "output") and span_data.output:
             output = span_data.output
-            
+
             # Convert to dict if possible using model_as_dict
             try:
                 output_dict = model_as_dict(output)
             except Exception:
                 # If conversion fails, try to access attributes directly
                 output_dict = None
-            
+
             if output_dict:
                 # Extract model
                 if "model" in output_dict:
                     attributes[SpanAttributes.LLM_RESPONSE_MODEL] = output_dict["model"]
-                
+
                 # Extract ID
                 if "id" in output_dict:
                     attributes[SpanAttributes.LLM_RESPONSE_ID] = output_dict["id"]
-                    
+
                 # Extract system fingerprint (OpenAI specific)
                 if "system_fingerprint" in output_dict:
-                    attributes[SpanAttributes.LLM_OPENAI_RESPONSE_SYSTEM_FINGERPRINT] = output_dict["system_fingerprint"]
-                
+                    attributes[SpanAttributes.LLM_OPENAI_RESPONSE_SYSTEM_FINGERPRINT] = output_dict[
+                        "system_fingerprint"
+                    ]
+
                 # Handle usage metrics
                 if "usage" in output_dict and output_dict["usage"]:
                     usage = output_dict["usage"]
@@ -236,17 +240,17 @@ class AgentsDetailedExporter:
                             attributes[SpanAttributes.LLM_USAGE_COMPLETION_TOKENS] = usage["completion_tokens"]
                         if "prompt_tokens" in usage:
                             attributes[SpanAttributes.LLM_USAGE_PROMPT_TOKENS] = usage["prompt_tokens"]
-                
+
                 # Handle completions - extract specific fields from choices
                 if "choices" in output_dict and output_dict["choices"]:
                     for choice in output_dict["choices"]:
                         index = choice.get("index", 0)
                         prefix = f"{SpanAttributes.LLM_COMPLETIONS}.{index}"
-                        
+
                         # Extract finish reason
                         if "finish_reason" in choice:
                             attributes[f"{prefix}.finish_reason"] = choice["finish_reason"]
-                        
+
                         # Extract message content
                         message = choice.get("message", {})
                         if message:
@@ -254,13 +258,13 @@ class AgentsDetailedExporter:
                                 attributes[f"{prefix}.role"] = message["role"]
                             if "content" in message:
                                 attributes[f"{prefix}.content"] = message["content"]
-                            
+
                             # Handle function calls if present
                             if "function_call" in message:
                                 function_call = message["function_call"]
                                 attributes[f"{prefix}.function_call.name"] = function_call.get("name")
                                 attributes[f"{prefix}.function_call.arguments"] = function_call.get("arguments")
-                            
+
                             # Handle tool calls if present
                             if "tool_calls" in message:
                                 for i, tool_call in enumerate(message["tool_calls"]):
