@@ -59,8 +59,7 @@ async def _process_async_generator(span: trace.Span, context_token: Any, generat
         context_api.detach(context_token)
 
 def _make_span(
-    operation_name: str, span_kind: str, version: Optional[int] = None, attributes: Dict[str, Any] = {}, 
-    parent_context: Optional[Any] = None
+    operation_name: str, span_kind: str, version: Optional[int] = None, attributes: Dict[str, Any] = {}
 ) -> tuple:
     """
     Create and initialize a new instrumentation span with proper context.
@@ -73,7 +72,6 @@ def _make_span(
         span_kind: Type of operation (from SpanKind)
         version: Optional version identifier for the operation
         attributes: Optional dictionary of attributes to set on the span
-        parent_context: Optional explicit parent context to use instead of current context
 
     Returns:
         A tuple of (span, context, token) for span management
@@ -84,17 +82,16 @@ def _make_span(
     # Get tracer
     tracer = TracingCore.get_instance().get_tracer()
 
-    # Use provided parent context or get current context
-    current_context = parent_context if parent_context is not None else context_api.get_current()
+    # Get current context - this automatically maintains the parent-child relationship
+    current_context = context_api.get_current()
 
-    # Create a new attributes dictionary to avoid modifying the input
-    span_attributes = attributes.copy()
-    
-    # Add span kind to attributes using the correct attribute name
-    span_attributes[SpanAttributes.AGENTOPS_SPAN_KIND] = span_kind
+    # Add span kind to attributes
+    attributes.update({
+        SpanAttributes.AGENTOPS_SPAN_KIND: span_kind,
+    })
 
     # Create span with current context to maintain parent-child relationship
-    span = tracer.start_span(span_name, context=current_context, attributes=span_attributes)
+    span = tracer.start_span(span_name, context=current_context, attributes=attributes)
 
     # Create a new context with this span and attach it
     context = trace.set_span_in_context(span)
@@ -105,7 +102,10 @@ def _make_span(
     if version is not None:
         span.set_attribute("agentops.operation.version", version)
 
-    # No need to set attributes again, as we've already included them when creating the span
+    # Set additional attributes
+    if attributes:
+        for key, value in attributes.items():
+            span.set_attribute(key, value)
 
     return span, context, token
 
