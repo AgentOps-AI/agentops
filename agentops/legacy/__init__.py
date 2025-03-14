@@ -6,10 +6,12 @@ CrewAI codebase contains an AgentOps integration which is now deprecated.
 This maintains compatibility with codebases that adhere to the previous API.
 """
 
-from typing import Any, Dict, Tuple, Union, List
+from typing import Any, Dict, List, Tuple, Union
 
-from agentops.semconv.span_kinds import SpanKind
+from httpx import Client
+
 from agentops.logging import logger
+from agentops.semconv.span_kinds import SpanKind
 
 
 class Session:
@@ -20,6 +22,9 @@ class Session:
     def __init__(self, span: Any, token: Any):
         self.span = span
         self.token = token
+
+    def __del__(self):
+        self.span.end()
 
 
 def start_session(
@@ -42,6 +47,10 @@ def start_session(
     Returns:
         A Session object that should be passed to end_session
     """
+    from agentops import Client
+    if not Client().initialized:
+        Client().init()
+
     from agentops.sdk.decorators.utility import _make_span
     attributes = {}
     if tags:
