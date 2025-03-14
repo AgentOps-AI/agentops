@@ -3,7 +3,7 @@ from typing import TYPE_CHECKING
 import pytest
 from opentelemetry import trace
 
-from agentops.sdk.decorators.agentops import agent, operation, session
+from agentops.sdk.decorators import agent, operation, session
 from agentops.semconv import SpanKind
 from agentops.semconv.span_attributes import SpanAttributes
 from tests.unit.sdk.instrumentation_tester import InstrumentationTester
