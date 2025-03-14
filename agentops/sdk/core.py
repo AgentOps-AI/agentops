@@ -22,7 +22,6 @@ from agentops.sdk.types import TracingConfig
 from agentops.semconv import ResourceAttributes
 
 # No need to create shortcuts since we're using our own ResourceAttributes class now
-#
 
 
 def setup_telemetry(
