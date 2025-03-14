@@ -29,7 +29,7 @@ class V3Client(BaseApiClient):
     def fetch_auth_token(self, api_key: str) -> AuthTokenResponse:
         path = "/v3/auth/token"
         data = {"api_key": api_key}
-        headers = self.prepare_headers({"X-API-Key": api_key})
+        headers = self.prepare_headers()
 
         r = self.post(path, data, headers)
 
