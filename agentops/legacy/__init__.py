@@ -24,7 +24,20 @@ class Session:
         self.token = token
 
     def __del__(self):
+        try:
+            self.span.end()
+        except:
+            pass
+
+    def create_agent(self):
+        pass
+
+    def record(self):
+        pass
+
+    def end_session(self):
         self.span.end()
+
 
 
 def start_session(
