@@ -63,7 +63,8 @@ class Client:
 
             self._in_start_session = True
             try:
-                start_session()
+                # Pass the tags from the config to ensure they're included in the session
+                start_session(tags=list(self.config.default_tags) if self.config.default_tags else None)
             finally:
                 self._in_start_session = False
 
