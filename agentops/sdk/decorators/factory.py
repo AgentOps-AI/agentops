@@ -82,7 +82,7 @@ def create_entity_decorator(entity_kind: str):
                 _finalize_span(span, token)
                 raise
 
-        return wrapper(wrapped)
+        return wrapper(wrapped) # type: ignore
     
     return decorator
 
