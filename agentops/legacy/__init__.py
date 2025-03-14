@@ -9,14 +9,7 @@ This maintains compatibility with codebases that adhere to the previous API.
 from typing import Any, Dict, Tuple
 
 from agentops.semconv.span_kinds import SpanKind
-
-__all__ = [
-    "start_session",
-    "end_session",
-    "ToolEvent",
-    "ErrorEvent",
-    "session",
-]
+from agentops.logging import logger
 
 
 class Session:
@@ -30,7 +23,7 @@ class Session:
 
 
 def start_session(
-    name: str = "manual_session", attributes: Dict[str, Any] = {}
+    name: str = "manual_session", attributes: Dict[str, Any] = {}, tags=None,
 ) -> Session:
     """
     Start a new AgentOps session manually.
@@ -49,8 +42,10 @@ def start_session(
     Returns:
         A Session object that should be passed to end_session
     """
+    if tags is not None:
+        attributes = {**attributes, **tags}
     from agentops.sdk.decorators.utility import _make_span
-    span, token = _make_span('session', span_kind=SpanKind.SESSION, attributes=attributes)
+    span, context, token = _make_span('session', span_kind=SpanKind.SESSION, attributes=attributes)
     return Session(span, token)
 
 
@@ -86,27 +81,26 @@ def ErrorEvent(*args, **kwargs) -> None:
     return None
 
 
-class session:
-    @classmethod
-    def record(cls, *args, **kwargs):
-        """
-        @deprecated
-        Use tracing instead.
-        """
-        pass  # noop silently
+def ActionEvent(*args, **kwargs) -> None:
+    """
+    @deprecated
+    Use tracing instead.
+    """
+    return None
 
-    @classmethod
-    def create_agent(cls, *args, **kwargs):
-        """
-        @deprecated
-        Agents are registered automatically.
-        """
-        pass  # noop silently
 
-    @classmethod
-    def end_session(cls, *args, **kwargs):
-        """
-        @deprecated
-        Sessions are ended automatically.
-        """
-        pass  # noop silently
+def LLMEvent(*args, **kwargs) -> None:
+    """
+    @deprecated
+    Use tracing instead.
+    """
+    return None
+
+
+__all__ = [
+    "start_session",
+    "end_session",
+    "ToolEvent",
+    "ErrorEvent",
+    "ActionEvent",
+]

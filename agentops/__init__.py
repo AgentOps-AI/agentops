@@ -133,6 +133,8 @@ def get_client() -> Client:
 
 
 
+from agentops.legacy import * # type: ignore
+
 __all__ = [
     "init",
     "configure",
