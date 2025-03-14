@@ -228,7 +228,7 @@ from camel.models import ModelFactory
 from camel.types import ModelPlatformType, ModelType
 
 # Initialize AgentOps
-agentops.init(os.getenv("AGENTOPS_API_KEY"), default_tags=["CAMEL Example"])
+agentops.init(os.getenv("AGENTOPS_API_KEY"), tags=["CAMEL Example"])
 
 # Import toolkits after AgentOps init for tracking
 from camel.toolkits import SearchToolkit

@@ -49,7 +49,7 @@ AGENTOPS_API_KEY = os.getenv("AGENTOPS_API_KEY") or "<your_agentops_key>"
 
 ```python
 # Initialize AgentOps with some default tags
-agentops.init(AGENTOPS_API_KEY, default_tags=["ollama-example"])
+agentops.init(AGENTOPS_API_KEY, tags=["ollama-example"])
 ```
 
 Now let's make some basic calls to Ollama. Make sure you have pulled the model first, use the following or replace with whichever model you want to use.

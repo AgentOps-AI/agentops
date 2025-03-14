@@ -1,6 +1,6 @@
 ---
 title: 'Multi-Agent Example'
-description: 'How to track events from multiple different agents'
+description: 'How to track operations from multiple different agents'
 mode: "wide"
 ---
 _View Notebook on <a href={'https://github.com/AgentOps-AI/agentops/blob/main/examples/multi_agent_example.ipynb'} target={'_blank'}>Github</a>_
@@ -9,7 +9,7 @@ _View Notebook on <a href={'https://github.com/AgentOps-AI/agentops/blob/main/ex
 {/*  SOURCE_FILE: examples/multi_agent_example.ipynb  */}
 
 # Multi-Agent Support
-This is an example implementation of tracking events from two separate agents
+This is an example implementation of tracking operations from two separate agents
 
 First let's install the required packages
 
@@ -25,7 +25,7 @@ Then import them
 
 ```python
 import agentops
-from agentops import track_agent
+from agentops.sdk.decorators import agent, operation
 from openai import OpenAI
 import os
 from dotenv import load_dotenv
@@ -53,7 +53,7 @@ logging.basicConfig(
 
 
 ```python
-agentops.init(AGENTOPS_API_KEY, default_tags=["multi-agent-notebook"])
+agentops.init(AGENTOPS_API_KEY, tags=["multi-agent-notebook"])
 openai_client = OpenAI(api_key=OPENAI_API_KEY)
 ```
 
@@ -61,8 +61,12 @@ Now lets create a few agents!
 
 
 ```python
-@track_agent(name="qa")
+@agent(name="qa")
 class QaAgent:
+    def __init__(self):
+        pass
+        
+    @operation
     def completion(self, prompt: str):
         res = openai_client.chat.completions.create(
             model="gpt-3.5-turbo",
@@ -78,8 +82,12 @@ class QaAgent:
         return res.choices[0].message.content
 
 
-@track_agent(name="engineer")
+@agent(name="engineer")
 class EngineerAgent:
+    def __init__(self):
+        pass
+        
+    @operation
     def completion(self, prompt: str):
         res = openai_client.chat.completions.create(
             model="gpt-3.5-turbo",
@@ -101,7 +109,7 @@ qa = QaAgent()
 engineer = EngineerAgent()
 ```
 
-Now we have our agents and we tagged them with the `@track_agent` decorator. Any LLM calls that go through this class will now be tagged as agent calls in AgentOps.
+Now we have our agents and we tagged them with the `@agent` decorator. Any LLM calls that go through this class will now be tagged as agent calls in AgentOps.
 
 Let's use these agents!
 

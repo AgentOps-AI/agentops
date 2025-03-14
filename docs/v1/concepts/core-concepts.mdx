@@ -11,7 +11,7 @@ The AgentOps SDK works to provide as much functionality with as little developer
 - Auto-Instrumenting
   - After calling `agentops.init()` we automatically look for installed LLM providers and auto-instrument their calls. This allows us to capture calls between your code and the provider to collect data for your dashboard.
 - Decorators
-  - With [Decorators](/v1/concepts/decorators), the SDK can add code to your existing functions and classes.
+  - With [Decorators](/v1/concepts/decorators), the SDK can add tracing to your existing functions and classes to create hierarchical spans for monitoring and analysis.
 - Process monitoring
   - The SDK establishes a couple process monitors that allow us to understand the state and health of your agents.
 
@@ -55,36 +55,53 @@ If multiple sessions exist, you are expected to call the function on the relevan
 <CodeGroup>
 ```python single session
 import agentops
-agentops.start_session()
-agentops.end_session(end_state='Success')
+from agentops.sdk.decorators import session
+
+@session
+def my_session():
+    # Your session code here
+    pass
+
+# Run the session
+my_session()
 ```
 
 ```python multi-session
 import agentops
-session_1 = agentops.start_session()
-session_2 = agentops.start_session()
+from agentops.sdk.decorators import session
 
-session_1.end_session(end_state='Success')
-session_2.end_session(end_state='Failure')
+@session
+def session_1():
+    # Session 1 code
+    pass
+
+@session
+def session_2():
+    # Session 2 code
+    pass
+
+# Run both sessions
+session_1()
+session_2()
 ```
 </CodeGroup>
 
 For more documentation on using multiple concurrent sessions, please see [Multiple Sessions](v1/usage/multiple-sessions) and [FastAPI Example](/v1/examples/fastapi).
 
-### LLMs, Tools, and Actions (Events)
+### LLMs, Tools, and Operations (Spans)
 
-Within AgentOps, **LLMs**, **Tools**, and **Actions** are categorized as **Events**, executed by Agents. Agents primarily initiate LLM calls, potentially leading to API/Tool calls, while Actions encompass any other significant procedures, such as executing functions, taking screenshots, etc.
+Within AgentOps, **LLMs**, **Tools**, and **Operations** are categorized as **Spans**, executed by Agents. Agents primarily initiate LLM calls, potentially leading to API/Tool calls, while Operations encompass any other significant procedures, such as executing functions, taking screenshots, etc.
 
-All events share the following characteristics:
+All spans share the following characteristics:
 - **ID**: A unique identifier.
-- **Session ID**: The session to which the event belongs.
-- **Agent ID**: Identifies the agent responsible for the event.
-- **Parameters**: The inputs provided to the event.
-- **Returns**: The outputs or results of the event.
-- **Starting Timestamp**: The time at which the event began.
-- **Ending Timestamp**: The time at which the event concluded.
+- **Session ID**: The session to which the span belongs.
+- **Agent ID**: Identifies the agent responsible for the span.
+- **Parameters**: The inputs provided to the span.
+- **Returns**: The outputs or results of the span.
+- **Starting Timestamp**: The time at which the span began.
+- **Ending Timestamp**: The time at which the span concluded.
 
-Additionally, each event type has its own specific properties:
+Additionally, each span type has its own specific properties:
 
 **LLMs**:
 - **Model**: The specific LLM model used.
@@ -92,22 +109,21 @@ Additionally, each event type has its own specific properties:
 - **Completion Messages**: The responses received from the model.
 - **Prompt Tokens**: The number of tokens used in the prompts.
 - **Completion Tokens**: The number of tokens in the model's responses.
-- **Cost**: The cost incurred by the event.
-- **Thread ID**: Associates the event with a specific thread for execution tracking.
+- **Cost**: The cost incurred by the span.
+- **Thread ID**: Associates the span with a specific thread for execution tracking.
 
 **Tools**:
 - **Logs**: Records of the tool's operation, including any outputs and errors.
 
-**Actions**:
-- **Action Type**: Specifies the nature of the action (e.g., function execution, screenshot).
-- **Logs**: Detailed records of the action's execution, including parameters and outcomes.
-- **Screenshot**: If applicable, an image capture of the screen at the time of the action.
+**Operations**:
+- **Operation Type**: Specifies the nature of the operation (e.g., function execution, screenshot).
+- **Logs**: Detailed records of the operation's execution, including parameters and outcomes.
 
 ### Errors
 
-Errors are an inevitable aspect of operational processes. AgentOps comprehensively documents errors related to Events, providing a wealth of information for troubleshooting.
+Errors are an inevitable aspect of operational processes. AgentOps comprehensively documents errors related to Spans, providing a wealth of information for troubleshooting.
 
-- **Error Type**: The event type (LLM, Tool, or Action) the error is associated with.
+- **Error Type**: The span type (LLM, Tool, or Operation) the error is associated with.
 - **Error Code**: A specific code identifying the error.
 - **Details**: A detailed description of the error.
 - **Logs/Stack Trace**: Logs or stack traces capturing the error context.
@@ -125,7 +141,7 @@ Agents are characterized by:
 Optionally, agents may also have:
 - **Logs**: Textual records of the tasks performed by the agent.
 
-**Note**: For events not specifically assigned to an agent, AgentOps will automatically create and assign a default agent.
+**Note**: For spans not specifically assigned to an agent, AgentOps will automatically create and assign a default agent.
 
 ### Threads
 

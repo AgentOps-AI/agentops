@@ -1,0 +1,112 @@
+---
+title: "Recording Operations"
+description: "Instrument your code with decorators to track operations, tasks, and workflows."
+---
+
+To get the most out of AgentOps, it's important to properly instrument your code to track operations. AgentOps provides a set of decorators that make this easy.
+
+## Using Decorators for Instrumentation
+
+AgentOps provides several decorators that allow you to easily instrument your code:
+
+### `@operation` / `@task` Decorator
+
+The `@operation` and `@task` decorators are aliases that create operation/task spans for tracking specific operations.
+
+```python
+from agentops.sdk.decorators import operation
+
+@operation
+def process_data(data):
+    # Process the data
+    return result
+```
+
+You can also use these decorators with parameters:
+
+```python
+@operation(name="custom-operation-name", version=1)
+def process_data(data):
+    # Process the data
+    return result
+```
+
+When used within an agent class, operations are automatically nested under the agent:
+
+```python
+from agentops.sdk.decorators import agent, operation
+
+@agent
+class MyAgent:
+    @operation
+    def perform_task(self, task):
+        # Operation implementation
+        return result
+```
+
+### `@workflow` Decorator
+
+The `@workflow` decorator creates workflow spans for tracking workflows, which can contain multiple operations.
+
+```python
+from agentops.sdk.decorators import workflow
+
+@workflow
+def my_workflow(data):
+    # Workflow implementation
+    return result
+```
+
+### `@agent` Decorator
+
+The `@agent` decorator creates an agent span for tracking agent operations.
+
+```python
+from agentops.sdk.decorators import agent
+
+@agent
+class MyAgent:
+    def __init__(self, name):
+        self.name = name
+        
+    # Agent methods here
+```
+
+### `@session` Decorator
+
+The `@session` decorator creates a session span, which serves as the root for all other spans.
+
+```python
+from agentops.sdk.decorators import session
+
+@session
+def my_workflow():
+    # Your session code here
+    return result
+```
+
+## Automatic Instrumentation
+
+AgentOps automatically instruments calls to popular LLM providers (OpenAI, Anthropic, etc.). These calls are automatically tracked as LLM spans and are properly nested within your agent and operation spans.
+
+## Best Practices
+
+1. **Use the Right Decorator**: Choose the appropriate decorator based on what you're instrumenting:
+   - `@session` for the root of your application
+   - `@agent` for agent classes
+   - `@operation` for specific operations
+   - `@workflow` for sequences of operations
+
+2. **Proper Nesting**: Ensure that your spans are properly nested:
+   - Session spans should be at the top
+   - Agent spans should be children of session spans
+   - Operation spans should be children of agent spans
+
+3. **Meaningful Names**: Use meaningful names for your spans to make them easier to identify in the dashboard.
+
+4. **Record Important Data**: The decorators automatically record function parameters and return values, but you can also add custom attributes to spans for additional context.
+
+<script type="module" src="/scripts/github_stars.js"></script>
+<script type="module" src="/scripts/scroll-img-fadein-animation.js"></script>
+<script type="module" src="/scripts/button_heartbeat_animation.js"></script>
+<script type="module" src="/scripts/adjust_api_dynamically.js"></script>

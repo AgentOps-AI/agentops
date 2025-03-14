@@ -1,56 +1,76 @@
 ---
 title: "Tracking Agents"
-description: "Use the `@track_agent()` decorator to tag your agents"
+description: "Use the `@agent` decorator to create agent spans"
 ---
 
-All Events are automatically associated with the agent that originated them. Agents are given a name which is what you will see in the dashboard.
+All operations are automatically associated with the agent that originated them. Agents are given a name which is what you will see in the dashboard.
 
-<Frame type="glass" caption="This event is labeled with the name of the Agent that originated it">
+<Frame type="glass" caption="This operation is labeled with the name of the Agent that originated it">
   <img height="200" src="/images/agent-name.png" />
 </Frame>
 
-The example below tags the agent MyAgent with name `SomeCustomName`.
+The example below creates an agent class with a custom name:
 
-```python python
-from agentops import track_agent
+```python
+from agentops.sdk.decorators import agent
 
-@track_agent(name='SomeCustomName')
+@agent(name='ResearchAgent')
 class MyAgent:
-    ...
+    def __init__(self):
+        # Agent initialization
+        pass
+        
+    # Agent methods
 ```
 
-Alternatively, to name an agent in runtime, the `@track_agent` decorator creates an additional keyword argument in the class constructor. Using the above example, you can create an agent with a dynamic name with:
-```python
-research_agent = MyAgent(agentops_name='ResearchAgent')
-```
-
-`trackagent.name` is optional. <br></br>
-If omitted, agent name defaults to the name of the class (e.g. MyAgent). <br></br>
-If an event does not originate from a tracked agent, agent name defaults to "Default Agent".
-
-
-
-## Assigning Agents to a Session
-If you are using multiple concurrent sessions, it's important to assign a new agent to a session.
-
-When the `@track_agent()` decorator is used on an agent class, it adds an additional keyword param `session`.
+If you don't specify a name, the agent will use the class name by default:
 
 ```python
-@track_agent()
-class custom_agent:
-  def completion(self, ...):
-    ...
-
-session = agentops.create_session()
-agent = custom_agent(session=session)
-agent.completion(...)
-
-session.end_session()
+@agent
+class ResearchAgent:
+    # This agent will have the name "ResearchAgent"
+    pass
 ```
 
-In this example, we create a custom agent class. We initialize an agent object and pass in the session to ensure the agent is assigned properly.
+## Nesting Operations Under Agents
 
-<script type="module" src="/scripts/github_stars.js"></script>
-<script type="module" src="/scripts/adjust_api_dynamically.js"></script>
-<script type="module" src="/scripts/scroll-img-fadein-animation.js"></script>
-<script type="module" src="/scripts/button_heartbeat_animation.js"></script>
+Operations performed by an agent should be decorated with the `@operation` decorator to ensure they're properly nested under the agent:
+
+```python
+from agentops.sdk.decorators import agent, operation
+
+@agent
+class ResearchAgent:
+    @operation
+    def search_web(self, query):
+        # Search implementation
+        return results
+        
+    @operation
+    def analyze_data(self, data):
+        # Analysis implementation
+        return analysis
+```
+
+## Session Context
+
+Agents should be created within a session context to ensure proper tracing:
+
+```python
+from agentops.sdk.decorators import session, agent, operation
+
+@agent
+class ResearchAgent:
+    @operation
+    def perform_research(self, topic):
+        # Research implementation
+        return results
+
+@session
+def research_workflow(topic):
+    agent = ResearchAgent()
+    return agent.perform_research(topic)
+    
+# Run the session
+result = research_workflow("quantum computing")
+```
