@@ -2,12 +2,14 @@ import inspect
 import os
 import types
 import warnings
+from contextlib import contextmanager
 from functools import wraps
-from typing import Any, Dict, Optional
+from typing import Any, Callable, ContextManager, Dict, Generator, Optional
 
 from opentelemetry import context as context_api
 from opentelemetry import trace
 from opentelemetry.context import attach, set_value
+from opentelemetry.trace import Span
 
 from agentops.helpers.serialization import safe_serialize
 from agentops.logging import logger
@@ -30,9 +32,12 @@ def set_entity_path(entity_path: str) -> None:
     attach(set_value("entity_path", entity_path))
 
 # Helper functions for content management
+
+
 def _check_content_size(content_json: str) -> bool:
     """Verify that a JSON string is within acceptable size limits (1MB)"""
     return len(content_json) < 1_000_000
+
 
 def _process_sync_generator(span: trace.Span, generator: types.GeneratorType):
     """Process a synchronous generator and manage its span lifecycle"""
@@ -58,14 +63,64 @@ async def _process_async_generator(span: trace.Span, context_token: Any, generat
         span.end()
         context_api.detach(context_token)
 
-def _make_span(
-    operation_name: str, span_kind: str, version: Optional[int] = None, attributes: Dict[str, Any] = {}
-) -> tuple:
+
+@contextmanager
+def _create_as_current_span(
+    operation_name: str,
+    span_kind: str,
+    version: Optional[int] = None,
+    attributes: Optional[Dict[str, Any]] = None
+) -> Generator[Span, None, None]:
     """
-    Create and initialize a new instrumentation span with proper context.
+    Create and yield an instrumentation span as the current span using proper context management.
 
     This function creates a span that will automatically be nested properly
-    within any parent span based on the current execution context.
+    within any parent span based on the current execution context, using OpenTelemetry's
+    context management to properly handle span lifecycle.
+
+    Args:
+        operation_name: Name of the operation being traced
+        span_kind: Type of operation (from SpanKind)
+        version: Optional version identifier for the operation
+        attributes: Optional dictionary of attributes to set on the span
+
+    Yields:
+        A span with proper context that will be automatically closed when exiting the context
+    """
+    # Create span with proper naming convention
+    span_name = f"{operation_name}.{span_kind}"
+
+    # Get tracer
+    tracer = TracingCore.get_instance().get_tracer()
+
+    # Prepare attributes
+    if attributes is None:
+        attributes = {}
+
+    # Add span kind to attributes
+    attributes[SpanAttributes.AGENTOPS_SPAN_KIND] = span_kind
+
+    # Add standard attributes
+    attributes["agentops.operation.name"] = operation_name
+    if version is not None:
+        attributes["agentops.operation.version"] = version
+
+    # Use OpenTelemetry's context manager to properly handle span lifecycle
+    with tracer.start_as_current_span(span_name, attributes=attributes) as span:
+        yield span
+
+
+def _make_span(
+    operation_name: str,
+    span_kind: str,
+    version: Optional[int] = None,
+    attributes: Optional[Dict[str, Any]] = None
+) -> tuple:
+    """
+    Create a span without context management for manual span lifecycle control.
+
+    This function creates a span that will be properly nested within any parent span
+    based on the current execution context, but requires manual ending via _finalize_span.
 
     Args:
         operation_name: Name of the operation being traced
@@ -74,7 +129,10 @@ def _make_span(
         attributes: Optional dictionary of attributes to set on the span
 
     Returns:
-        A tuple of (span, context, token) for span management
+        A tuple of (span, context, token) where:
+        - span is the created span
+        - context is the span context
+        - token is the context token needed for detaching
     """
     # Create span with proper naming convention
     span_name = f"{operation_name}.{span_kind}"
@@ -82,32 +140,26 @@ def _make_span(
     # Get tracer
     tracer = TracingCore.get_instance().get_tracer()
 
-    # Get current context - this automatically maintains the parent-child relationship
-    current_context = context_api.get_current()
+    # Prepare attributes
+    if attributes is None:
+        attributes = {}
 
     # Add span kind to attributes
-    attributes.update({
-        SpanAttributes.AGENTOPS_SPAN_KIND: span_kind,
-    })
-
-    # Create span with current context to maintain parent-child relationship
-    span = tracer.start_span(span_name, context=current_context, attributes=attributes)
-
-    # Create a new context with this span and attach it
-    context = trace.set_span_in_context(span)
-    token = context_api.attach(context)
+    attributes[SpanAttributes.AGENTOPS_SPAN_KIND] = span_kind
 
     # Add standard attributes
-    span.set_attribute("agentops.operation.name", operation_name)
+    attributes["agentops.operation.name"] = operation_name
     if version is not None:
-        span.set_attribute("agentops.operation.version", version)
+        attributes["agentops.operation.version"] = version
 
-    # Set additional attributes
-    if attributes:
-        for key, value in attributes.items():
-            span.set_attribute(key, value)
+    # Create the span (not as current)
+    span = tracer.start_span(span_name, attributes=attributes)
 
-    return span, context, token
+    # Set as current context and get token for later detachment
+    ctx = trace.set_span_in_context(span)
+    token = context_api.attach(ctx)
+
+    return span, ctx, token
 
 
 def _record_entity_input(span: trace.Span, args: tuple, kwargs: Dict[str, Any]) -> None:
