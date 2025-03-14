@@ -28,7 +28,7 @@ from agentops.semconv import (
     SpanAttributes,
     Meters,
 )
-from agentops.helpers.serialization import serialize_if_complex
+from agentops.helpers.serialization import safe_serialize
 
 # Agents SDK imports
 from agents.tracing.processor_interface import TracingProcessor as AgentsTracingProcessor
@@ -51,7 +51,6 @@ _agent_token_usage_histogram = None
 
 # Keep track of active streaming operations to prevent premature shutdown
 _active_streaming_operations = set()
-
 
 def safe_execute(func):
     """Decorator to safely execute a function and log any exceptions."""
@@ -183,10 +182,10 @@ class AgentsDetailedExporter:
             attributes[AgentAttributes.AGENT_NAME] = span_data.name
 
         if hasattr(span_data, "input") and span_data.input:
-            attributes[SpanAttributes.LLM_PROMPTS] = serialize_if_complex(span_data.input)
+            attributes[SpanAttributes.LLM_PROMPTS] = safe_serialize(span_data.input)
 
         if hasattr(span_data, "output") and span_data.output:
-            attributes[SpanAttributes.LLM_COMPLETIONS] = serialize_if_complex(span_data.output)
+            attributes[SpanAttributes.LLM_COMPLETIONS] = safe_serialize(span_data.output)
 
         # Extract model information - check for GenerationSpanData specifically
         if span_type == "Generation" and hasattr(span_data, "model") and span_data.model:
@@ -412,7 +411,7 @@ class AgentsInstrumentor(BaseInstrumentor):
                     attributes = {
                         "span.kind": WorkflowAttributes.WORKFLOW_STEP,
                         "agent.name": starting_agent.name,
-                        WorkflowAttributes.WORKFLOW_INPUT: serialize_if_complex(input),
+                        WorkflowAttributes.WORKFLOW_INPUT: safe_serialize(input),
                         WorkflowAttributes.MAX_TURNS: max_turns,
                         "service.name": "agentops.agents",
                         WorkflowAttributes.WORKFLOW_TYPE: "agents.run_streamed",
@@ -610,7 +609,7 @@ class AgentsInstrumentor(BaseInstrumentor):
                                         # Add result attributes to the span
                                         if hasattr(result, "final_output"):
                                             usage_span.set_attribute(
-                                                WorkflowAttributes.FINAL_OUTPUT, serialize_if_complex(result.final_output)
+                                                WorkflowAttributes.FINAL_OUTPUT, safe_serialize(result.final_output)
                                             )
 
                                         # Extract model and response information
@@ -867,7 +866,7 @@ class AgentsInstrumentor(BaseInstrumentor):
                     attributes = {
                         "span.kind": WorkflowAttributes.WORKFLOW_STEP,
                         "agent.name": starting_agent.name,
-                        WorkflowAttributes.WORKFLOW_INPUT: serialize_if_complex(input),
+                        WorkflowAttributes.WORKFLOW_INPUT: safe_serialize(input),
                         WorkflowAttributes.MAX_TURNS: max_turns,
                         "service.name": "agentops.agents",
                         WorkflowAttributes.WORKFLOW_TYPE: f"agents.{_method_name}",
@@ -972,7 +971,7 @@ class AgentsInstrumentor(BaseInstrumentor):
 
                             # Add result attributes to the span
                             if hasattr(result, "final_output"):
-                                span.set_attribute(WorkflowAttributes.FINAL_OUTPUT, serialize_if_complex(result.final_output))
+                                span.set_attribute(WorkflowAttributes.FINAL_OUTPUT, safe_serialize(result.final_output))
 
                             # Extract model and response information
                             response_id = None
@@ -1137,7 +1136,7 @@ class AgentsInstrumentor(BaseInstrumentor):
                     attributes = {
                         "span.kind": WorkflowAttributes.WORKFLOW_STEP,
                         "agent.name": starting_agent.name,
-                        WorkflowAttributes.WORKFLOW_INPUT: serialize_if_complex(input),
+                        WorkflowAttributes.WORKFLOW_INPUT: safe_serialize(input),
                         WorkflowAttributes.MAX_TURNS: max_turns,
                         "service.name": "agentops.agents",
                         WorkflowAttributes.WORKFLOW_TYPE: f"agents.{_method_name}",
@@ -1242,7 +1241,7 @@ class AgentsInstrumentor(BaseInstrumentor):
 
                             # Add result attributes to the span
                             if hasattr(result, "final_output"):
-                                span.set_attribute(WorkflowAttributes.FINAL_OUTPUT, serialize_if_complex(result.final_output))
+                                span.set_attribute(WorkflowAttributes.FINAL_OUTPUT, safe_serialize(result.final_output))
 
                             # Extract model and response information
                             response_id = None

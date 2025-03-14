@@ -79,10 +79,3 @@ def safe_serialize(obj: Any) -> Any:
     except (TypeError, ValueError) as e:
         logger.warning(f"Failed to serialize object: {e}")
         return str(obj)
-
-def serialize_if_complex(obj: Any) -> Any:
-    """Serialize an object if it's a list or dictionary, otherwise return the object as is"""
-    if isinstance(obj, (list, dict)):
-        return safe_serialize(obj)
-    return str(obj)
-
