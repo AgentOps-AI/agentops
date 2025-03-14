@@ -64,13 +64,8 @@ def _make_span(
     """
     Create and initialize a new instrumentation span with proper context.
 
-    This function:
-    - Creates a span with proper naming convention ({operation_name}.{span_kind})
-    - Gets the current context to establish parent-child relationships
-    - Creates the span with the current context
-    - Sets up a new context with the span
-    - Attaches the context
-    - Adds standard attributes to the span
+    This function creates a span that will automatically be nested properly
+    within any parent span based on the current execution context.
 
     Args:
         operation_name: Name of the operation being traced
@@ -81,40 +76,33 @@ def _make_span(
     Returns:
         A tuple of (span, context, token) for span management
     """
-    # Set session-level information for specified operation types
-    if span_kind in [SpanKind.SESSION, SpanKind.AGENT]:
-        # Nesting logic would go here
-        pass
-
     # Create span with proper naming convention
     span_name = f"{operation_name}.{span_kind}"
 
-    # Get tracer and create span
+    # Get tracer
     tracer = TracingCore.get_instance().get_tracer()
 
-    # Get current context to establish parent-child relationship
+    # Get current context - this automatically maintains the parent-child relationship
     current_context = context_api.get_current()
 
-    attributes.update(
-        {
-            SpanAttributes.AGENTOPS_SPAN_KIND: span_kind,
-        }
-    )
+    # Add span kind to attributes
+    attributes.update({
+        SpanAttributes.AGENTOPS_SPAN_KIND: span_kind,
+    })
 
     # Create span with current context to maintain parent-child relationship
     span = tracer.start_span(span_name, context=current_context, attributes=attributes)
 
-    # Set up context
+    # Create a new context with this span and attach it
     context = trace.set_span_in_context(span)
     token = context_api.attach(context)
 
     # Add standard attributes
-    # FIXME: Use SpanAttributes
     span.set_attribute("agentops.operation.name", operation_name)
     if version is not None:
         span.set_attribute("agentops.operation.version", version)
 
-    # Set attributes during creation
+    # Set additional attributes
     if attributes:
         for key, value in attributes.items():
             span.set_attribute(key, value)
