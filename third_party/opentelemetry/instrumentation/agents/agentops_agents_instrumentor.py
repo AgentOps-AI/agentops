@@ -14,6 +14,8 @@ import json
 import weakref
 from typing import Any, Collection, Dict, List, Optional, Union, Set
 
+from .model_as_dict import model_as_dict
+
 # OpenTelemetry imports
 from opentelemetry.instrumentation.instrumentor import BaseInstrumentor
 from opentelemetry.trace import get_tracer, SpanKind, Status, StatusCode, get_current_span
@@ -184,8 +186,78 @@ class AgentsDetailedExporter:
         if hasattr(span_data, "input") and span_data.input:
             attributes[SpanAttributes.LLM_PROMPTS] = str(span_data.input)[:1000]  # Truncate long inputs
 
+        # Handle output - extract specific fields instead of using str()
         if hasattr(span_data, "output") and span_data.output:
-            attributes[SpanAttributes.LLM_COMPLETIONS] = str(span_data.output)[:1000]  # Truncate long outputs
+            output = span_data.output
+            
+            # Convert to dict if possible using model_as_dict
+            try:
+                output_dict = model_as_dict(output)
+            except Exception:
+                # If conversion fails, try to access attributes directly
+                output_dict = None
+            
+            if output_dict:
+                # Extract model
+                if "model" in output_dict:
+                    attributes[SpanAttributes.LLM_RESPONSE_MODEL] = output_dict["model"]
+                
+                # Extract ID
+                if "id" in output_dict:
+                    attributes[SpanAttributes.LLM_RESPONSE_ID] = output_dict["id"]
+                
+                # Extract system fingerprint (OpenAI specific)
+                if "system_fingerprint" in output_dict:
+                    attributes[SpanAttributes.LLM_OPENAI_RESPONSE_SYSTEM_FINGERPRINT] = (
+                        output_dict["system_fingerprint"]
+                    )
+                
+                # Handle usage metrics
+                if "usage" in output_dict and output_dict["usage"]:
+                    usage = output_dict["usage"]
+                    if isinstance(usage, dict):
+                        if "total_tokens" in usage:
+                            attributes[SpanAttributes.LLM_USAGE_TOTAL_TOKENS] = usage["total_tokens"]
+                        if "completion_tokens" in usage:
+                            attributes[SpanAttributes.LLM_USAGE_COMPLETION_TOKENS] = usage["completion_tokens"]
+                        if "prompt_tokens" in usage:
+                            attributes[SpanAttributes.LLM_USAGE_PROMPT_TOKENS] = usage["prompt_tokens"]
+                
+                # Handle completions - extract specific fields from choices
+                if "choices" in output_dict and output_dict["choices"]:
+                    for choice in output_dict["choices"]:
+                        index = choice.get("index", 0)
+                        prefix = f"{SpanAttributes.LLM_COMPLETIONS}.{index}"
+                        
+                        # Extract finish reason
+                        if "finish_reason" in choice:
+                            attributes[f"{prefix}.finish_reason"] = choice["finish_reason"]
+                        
+                        # Extract message content
+                        message = choice.get("message", {})
+                        if message:
+                            if "role" in message:
+                                attributes[f"{prefix}.role"] = message["role"]
+                            if "content" in message:
+                                attributes[f"{prefix}.content"] = message["content"]
+                            
+                            # Handle function calls if present
+                            if "function_call" in message:
+                                function_call = message["function_call"]
+                                attributes[f"{prefix}.function_call.name"] = function_call.get("name")
+                                attributes[f"{prefix}.function_call.arguments"] = function_call.get("arguments")
+                            
+                            # Handle tool calls if present
+                            if "tool_calls" in message:
+                                for i, tool_call in enumerate(message["tool_calls"]):
+                                    if "function" in tool_call:
+                                        function = tool_call["function"]
+                                        attributes[f"{prefix}.tool_calls.{i}.id"] = tool_call.get("id")
+                                        attributes[f"{prefix}.tool_calls.{i}.name"] = function.get("name")
+                                        attributes[f"{prefix}.tool_calls.{i}.arguments"] = function.get("arguments")
+            else:
+                # Fallback to string representation if we couldn't convert to dict
+                attributes[SpanAttributes.LLM_COMPLETIONS] = str(span_data.output)[:1000]
 
         # Extract model information - check for GenerationSpanData specifically
         if span_type == "Generation" and hasattr(span_data, "model") and span_data.model:
