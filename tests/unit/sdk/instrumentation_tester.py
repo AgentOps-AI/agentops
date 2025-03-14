@@ -4,8 +4,7 @@ import importlib
 from opentelemetry import trace as trace_api
 from opentelemetry.sdk.trace import ReadableSpan, Span, TracerProvider
 from opentelemetry.sdk.trace.export import SimpleSpanProcessor
-from opentelemetry.sdk.trace.export.in_memory_span_exporter import \
-    InMemorySpanExporter
+from opentelemetry.sdk.trace.export.in_memory_span_exporter import InMemorySpanExporter
 from opentelemetry.util.types import Attributes
 
 import agentops
@@ -40,7 +39,7 @@ def reset_trace_globals():
     """Reset the global trace state to avoid conflicts."""
     # Reset tracer provider
     trace_api._TRACER_PROVIDER = None
-    
+
     # Reload the trace module to clear warning state
     importlib.reload(trace_api)
 
@@ -74,10 +73,10 @@ class InstrumentationTester:
         """Initialize the instrumentation tester."""
         # Reset any global state first
         reset_trace_globals()
-        
+
         # Shut down any existing tracing core
         self._shutdown_core()
-        
+
         # Create a new tracer provider and memory exporter
         (
             self.tracer_provider,
@@ -120,10 +119,10 @@ class InstrumentationTester:
 
         # Clear any existing spans
         self.clear_spans()
-        
+
         # Reset global trace state
         reset_trace_globals()
-        
+
         # Set our tracer provider again
         trace_api.set_tracer_provider(self.tracer_provider)
 

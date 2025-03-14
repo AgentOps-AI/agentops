@@ -39,7 +39,6 @@ class Session:
         self.span.end()
 
 
-
 def start_session(
     tags: Union[Dict[str, Any], List[str], None] = None,
 ) -> Session:
@@ -60,15 +59,15 @@ def start_session(
     Returns:
         A Session object that should be passed to end_session
     """
-    from agentops import Client
     if not Client().initialized:
         Client().init()
 
     from agentops.sdk.decorators.utility import _make_span
+
     attributes = {}
     if tags:
         attributes["tags"] = tags
-    span, context, token = _make_span('session', span_kind=SpanKind.SESSION, attributes=attributes)
+    span, context, token = _make_span("session", span_kind=SpanKind.SESSION, attributes=attributes)
     return Session(span, token)
 
 
@@ -85,6 +84,7 @@ def end_session(session: Session) -> None:
         session: The session object returned by start_session
     """
     from agentops.sdk.decorators.utility import _finalize_span
+
     _finalize_span(session.span, session.token)
 
 

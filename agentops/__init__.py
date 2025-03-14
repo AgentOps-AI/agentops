@@ -124,6 +124,7 @@ def configure(**kwargs):
 
     _client.configure(**kwargs)
 
+
 # For backwards compatibility and testing
 
 
@@ -132,8 +133,7 @@ def get_client() -> Client:
     return _client
 
 
-
-from agentops.legacy import * # type: ignore
+from agentops.legacy import *  # type: ignore
 
 __all__ = [
     "init",
