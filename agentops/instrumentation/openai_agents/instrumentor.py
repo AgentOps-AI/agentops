@@ -69,6 +69,29 @@ class AgentsInstrumentor(BaseInstrumentor):
     _agent_run_counter = None
     _agent_execution_time_histogram = None
     _agent_token_usage_histogram = None
+    
+    def _set_completion_attributes(self, span, content, role="assistant"):
+        """Set completion and final output attributes consistently.
+        
+        Args:
+            span: The span to set attributes on
+            content: The content to set
+            role: The role to assign to the content (defaults to "assistant")
+        """
+        if content is None:
+            return
+            
+        if not isinstance(content, str):
+            content = safe_serialize(content)
+            
+        # Limit content length if needed
+        if len(content) > 1000:
+            content = content[:1000]
+            
+        # Set both attributes consistently
+        span.set_attribute(WorkflowAttributes.FINAL_OUTPUT, content)
+        span.set_attribute(MessageAttributes.COMPLETION_CONTENT.format(i=0), content)
+        span.set_attribute(MessageAttributes.COMPLETION_ROLE.format(i=0), role)
 
     def instrumentation_dependencies(self) -> Collection[str]:
         return ["openai-agents >= 0.0.1"]
@@ -333,17 +356,18 @@ class AgentsInstrumentor(BaseInstrumentor):
             attributes=usage_attributes,
         ) as usage_span:
             if hasattr(result, "final_output"):
-                final_output = str(result.final_output)[:1000]
-                usage_span.set_attribute(
-                    WorkflowAttributes.FINAL_OUTPUT, final_output
-                )
-                # Also set the final output as the completion content using MessageAttributes
-                usage_span.set_attribute(MessageAttributes.COMPLETION_CONTENT.format(i=0), final_output)
-                usage_span.set_attribute(MessageAttributes.COMPLETION_ROLE.format(i=0), "assistant")
+                self._set_completion_attributes(usage_span, result.final_output)
             
             self._process_token_usage_from_responses(usage_span, result, model_name)
             
+            # Record execution time for metrics
             self._record_execution_time(execution_time, model_name, agent_name, "true")
+            
+            # Add operation lifecycle events
+            self._add_operation_events(usage_span)
+            
+            # Add custom attributes
+            self._set_custom_attributes(usage_span, result)
             
             self._add_instrumentation_metadata(usage_span)
 
@@ -420,17 +444,19 @@ class AgentsInstrumentor(BaseInstrumentor):
 
     def _process_result_and_update_span(self, span, result, model_name, start_time, is_streaming, agent_name):
         if hasattr(result, "final_output"):
-            final_output = safe_serialize(result.final_output)
-            span.set_attribute(WorkflowAttributes.FINAL_OUTPUT, final_output)
-            
-            # Also set the final output as the completion content using MessageAttributes
-            span.set_attribute(MessageAttributes.COMPLETION_CONTENT.format(i=0), final_output)
-            span.set_attribute(MessageAttributes.COMPLETION_ROLE.format(i=0), "assistant")
+            self._set_completion_attributes(span, result.final_output)
         
         self._process_token_usage_from_responses(span, result, model_name)
         
+        # Calculate execution time for metrics
         execution_time = time.time() - start_time
         self._record_execution_time(execution_time, model_name, agent_name, is_streaming)
+        
+        # Add operation lifecycle events to span
+        self._add_operation_events(span)
+        
+        # Add any custom attributes from the result object
+        self._set_custom_attributes(span, result)
         
         self._add_instrumentation_metadata(span)
 
@@ -525,6 +551,80 @@ class AgentsInstrumentor(BaseInstrumentor):
     def _add_instrumentation_metadata(self, span):
         span.set_attribute(InstrumentationAttributes.NAME, "agentops.agents")
         span.set_attribute(InstrumentationAttributes.VERSION, LIBRARY_VERSION)
+    
+    def _add_operation_events(self, span):
+        """Add events for operation lifecycle to the span.
+        
+        This adds standardized events that will populate the event arrays in the output JSON.
+        OpenTelemetry will automatically handle the timestamps for these events.
+        
+        Args:
+            span: The span to add events to
+        """
+        # Add operation start event
+        span.add_event(
+            name="operation.start",
+            attributes={"event.type": "operation_lifecycle"}
+        )
+        
+        # Add LLM request event
+        span.add_event(
+            name="llm.request",
+            attributes={
+                "event.type": "llm_operation",
+                "llm.request.type": "completion"
+            }
+        )
+        
+        # Add operation end event
+        span.add_event(
+            name="operation.end",
+            attributes={"event.type": "operation_lifecycle"}
+        )
+    
+    def _set_custom_attributes(self, span, result):
+        """Set custom attributes on the span from the result object.
+        
+        This method extracts custom attributes from the result object and adds them
+        to the span. These attributes will be included in the "attributes" field
+        of the output JSON rather than in "span_attributes".
+        
+        Args:
+            span: The span to add attributes to
+            result: The result object containing potential custom attributes
+        """
+        # Extract metadata if present
+        if hasattr(result, "metadata") and isinstance(result.metadata, dict):
+            for key, value in result.metadata.items():
+                if isinstance(value, (str, int, float, bool)):
+                    span.set_attribute(f"metadata.{key}", value)
+        
+        # Extract custom fields that should go in attributes rather than span_attributes
+        custom_fields = [
+            "run_id", "environment", "version", "session_id",
+            "execution_environment", "deployment", "region"
+        ]
+        
+        for field in custom_fields:
+            if hasattr(result, field):
+                value = getattr(result, field)
+                if isinstance(value, (str, int, float, bool)):
+                    span.set_attribute(field, value)
+        
+        # If handoffs exists and is a list, add as a custom attribute
+        if hasattr(result, "handoffs") and isinstance(result.handoffs, list):
+            span.set_attribute("handoffs", ",".join(map(str, result.handoffs)))
+        
+        # If run_config has additional fields, extract them
+        if hasattr(result, "run_config") and result.run_config:
+            run_config = result.run_config
+            
+            # Extract non-standard fields from run_config
+            for key in dir(run_config):
+                if not key.startswith("_") and key not in ["model", "model_settings", "workflow_name"]:
+                    value = getattr(run_config, key)
+                    if isinstance(value, (str, int, float, bool)):
+                        span.set_attribute(f"run_config.{key}", value)
 
     def _uninstrument(self, **kwargs):
         try:

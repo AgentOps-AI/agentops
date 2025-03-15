@@ -29,6 +29,46 @@ IMPORTANT FOR TESTING:
 - Tests should verify attribute existence using MessageAttributes constants
 - Do not check for the presence of SpanAttributes.LLM_COMPLETIONS
 - Verify individual content/tool attributes instead of root attributes
+
+WAYS TO USE SEMANTIC CONVENTIONS WHEN REFERENCING SPAN ATTRIBUTES:
+1. Always use the constant values from the semantic convention classes rather than hardcoded strings:
+   ```python
+   # Good
+   attributes[SpanAttributes.LLM_PROMPTS] = input_value
+   
+   # Avoid
+   attributes["gen_ai.prompt"] = input_value
+   ```
+
+2. For structured attributes like completions, use the format methods from MessageAttributes:
+   ```python
+   # Good
+   attributes[MessageAttributes.COMPLETION_CONTENT.format(i=0)] = content
+   
+   # Avoid
+   attributes["gen_ai.completion.0.content"] = content
+   ```
+
+3. Be consistent with naming patterns across different span types:
+   - Use `SpanAttributes.LLM_PROMPTS` for input/prompt data
+   - Use `MessageAttributes.COMPLETION_CONTENT.format(i=0)` for output/response content
+   - Use `WorkflowAttributes.FINAL_OUTPUT` for workflow outputs
+
+4. Keep special attributes at their correct levels:
+   - Don't manually set root completion attributes (`SpanAttributes.LLM_COMPLETIONS`) 
+   - Set MessageAttributes for each individual message component
+   - Let the OpenTelemetry backend derive the root attributes
+
+5. When searching for attributes in spans, use the constants from the semantic convention classes:
+   ```python
+   # Good
+   if SpanAttributes.LLM_PROMPTS in span.attributes:
+       # Do something
+   
+   # Avoid
+   if "gen_ai.prompt" in span.attributes:
+       # Do something
+   ```
 """
 import json
 from typing import Any, Dict
@@ -66,6 +106,20 @@ class OpenAIAgentsExporter:
 
     def __init__(self, tracer_provider=None):
         self.tracer_provider = tracer_provider
+    
+    def _set_completion_and_final_output(self, attributes: Dict[str, Any], value: Any, role: str = "assistant") -> None:
+        """Set completion content attributes and final output consistently across span types."""
+        if isinstance(value, str):
+            serialized_value = value
+        else:
+            serialized_value = safe_serialize(value)
+        
+        # Set as completion content
+        attributes[MessageAttributes.COMPLETION_CONTENT.format(i=0)] = serialized_value
+        attributes[MessageAttributes.COMPLETION_ROLE.format(i=0)] = role
+        
+        # Also set as final output
+        attributes[WorkflowAttributes.FINAL_OUTPUT] = serialized_value
         
     def _process_model_config(self, model_config: Dict[str, Any], attributes: Dict[str, Any]) -> None:
         for target_attr, source_attr in MODEL_CONFIG_MAPPING.items():
@@ -191,16 +245,14 @@ class OpenAIAgentsExporter:
                     
                     # If this is the output, also set it as a completion content
                     if source_key == "output":
-                        attributes[MessageAttributes.COMPLETION_CONTENT.format(i=0)] = value
-                        attributes[MessageAttributes.COMPLETION_ROLE.format(i=0)] = "assistant"
+                        self._set_completion_and_final_output(attributes, value)
                 elif source_key in ("input", "output"):
                     serialized_value = safe_serialize(value)
                     attributes[target_attr] = serialized_value
                     
                     # If this is the output, also set it as a completion content
                     if source_key == "output":
-                        attributes[MessageAttributes.COMPLETION_CONTENT.format(i=0)] = serialized_value
-                        attributes[MessageAttributes.COMPLETION_ROLE.format(i=0)] = "assistant"
+                        self._set_completion_and_final_output(attributes, value)
                 else:
                     attributes[target_attr] = value
         
@@ -233,6 +285,11 @@ class OpenAIAgentsExporter:
                     attributes[target_attr] = safe_serialize(value)
                 else:
                     attributes[target_attr] = value
+        
+        # If this function has an output, add it as completion content using MessageAttributes
+        if hasattr(span_data, "output"):
+            output_value = getattr(span_data, "output")
+            self._set_completion_and_final_output(attributes, output_value, role="function")
         
         if hasattr(span_data, "tools"):
             tools = getattr(span_data, "tools")
@@ -315,6 +372,22 @@ class OpenAIAgentsExporter:
         # Process any usage data directly on the span
         if hasattr(span_data, "usage"):
             self._process_extended_token_usage(span_data.usage, attributes)
+        
+        # If we have output but no completion attributes were set during processing,
+        # set the output as completion content
+        if hasattr(span_data, "output") and "gen_ai.completion.0.content" not in attributes:
+            output = span_data.output
+            if isinstance(output, str):
+                self._set_completion_and_final_output(attributes, output)
+            elif hasattr(output, "output") and isinstance(output.output, list) and output.output:
+                # Handle API response format
+                first_output = output.output[0]
+                if hasattr(first_output, "content") and first_output.content:
+                    content_value = first_output.content
+                    if isinstance(content_value, list) and content_value and hasattr(content_value[0], "text"):
+                        self._set_completion_and_final_output(attributes, content_value[0].text)
+                    elif isinstance(content_value, str):
+                        self._set_completion_and_final_output(attributes, content_value)
             
         return SpanKind.CLIENT
 
@@ -348,6 +421,13 @@ class OpenAIAgentsExporter:
 
         span_data = span.span_data
         span_type = span_data.__class__.__name__
+        
+        # Log debug information about span types
+        logger.debug(f"Processing span: type={span_type}, span_id={span.span_id}, parent_id={span.parent_id if hasattr(span, 'parent_id') else 'None'}")
+        
+        # Debug span data attributes
+        span_data_attrs = [attr for attr in dir(span_data) if not attr.startswith('_')]
+        logger.debug(f"Span data attributes: {span_data_attrs}")
 
         attributes = {
             CoreAttributes.TRACE_ID: span.trace_id,
@@ -391,6 +471,57 @@ class OpenAIAgentsExporter:
             span_kind = self._process_function_span(span, span_data, attributes)
         elif span_type == "GenerationSpanData":
             span_kind = self._process_generation_span(span, span_data, attributes)
+        elif span_type == "ResponseSpanData":
+            # For ResponseSpanData, process input and response attributes
+            if hasattr(span_data, "input"):
+                input_value = span_data.input
+                input_str = input_value if isinstance(input_value, str) else safe_serialize(input_value)
+                attributes[SpanAttributes.LLM_PROMPTS] = input_str
+                attributes[WorkflowAttributes.WORKFLOW_INPUT] = input_str
+            
+            if hasattr(span_data, "response"):
+                response = span_data.response
+                response_str = response if isinstance(response, str) else safe_serialize(response)
+                attributes[MessageAttributes.COMPLETION_CONTENT.format(i=0)] = response_str
+                attributes[MessageAttributes.COMPLETION_ROLE.format(i=0)] = "assistant"
+                attributes[WorkflowAttributes.FINAL_OUTPUT] = response_str
+            
+            span_kind = SpanKind.CLIENT
+        
+        # Ensure all spans have essential attributes - make sure we at least set the right prompt and completion
+        # attributes so all spans are properly represented
+        
+        # For any span with input/prompt data, ensure gen_ai.prompt is set
+        if hasattr(span_data, "input"):
+            input_value = getattr(span_data, "input")
+            prompt_str = input_value if isinstance(input_value, str) else safe_serialize(input_value)
+            
+            # Set prompt if not already set
+            if SpanAttributes.LLM_PROMPTS not in attributes:
+                attributes[SpanAttributes.LLM_PROMPTS] = prompt_str
+                
+            # Set workflow input if not already set
+            if WorkflowAttributes.WORKFLOW_INPUT not in attributes:
+                attributes[WorkflowAttributes.WORKFLOW_INPUT] = prompt_str
+        
+        # For any span with output/completion data, ensure gen_ai.completion attributes are set
+        completion_content_attr = MessageAttributes.COMPLETION_CONTENT.format(i=0)
+        if hasattr(span_data, "output") and completion_content_attr not in attributes:
+            output_value = getattr(span_data, "output")
+            self._set_completion_and_final_output(attributes, output_value)
+        
+        # If a span has final_output set but no completion content, use it
+        if hasattr(span_data, "final_output") and completion_content_attr not in attributes:
+            final_output = getattr(span_data, "final_output")
+            self._set_completion_and_final_output(attributes, final_output)
+        
+        # Ensure agent spans have agent attributes
+        if hasattr(span_data, "name") and AgentAttributes.AGENT_NAME not in attributes:
+            attributes[AgentAttributes.AGENT_NAME] = getattr(span_data, "name")
+            
+        # Ensure LLM spans have system attribute
+        if SpanAttributes.LLM_REQUEST_MODEL in attributes and SpanAttributes.LLM_SYSTEM not in attributes:
+            attributes[SpanAttributes.LLM_SYSTEM] = "openai"
         
         return self._create_span(tracer, span_name, span_kind, attributes, span)
     

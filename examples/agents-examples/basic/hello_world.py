@@ -1,3 +1,4 @@
+# To run this file from project root: AGENTOPS_LOG_LEVEL=debug uv run python examples/agents-examples/basic/hello_world.py
 import asyncio
 
 from agents import Agent, Runner

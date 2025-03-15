@@ -16,13 +16,13 @@ from typing import Optional
 import importlib.metadata
 from agentops.logging import logger
 
-def get_version():
+def get_version() -> Optional[str]:
     """Get the version of the agents SDK, or 'unknown' if not found"""
     try:
-        installed_version = importlib.metadata.version("agents")
-        return installed_version
-    except importlib.metadata.PackageNotFoundError:
-        logger.debug("`agents` package not found; unable to determine installed version.")
+        import agents.version
+        if hasattr(agents.version, '__version__'):
+            return agents.version.__version__
+    except ImportError:
         return None
 
 LIBRARY_NAME = "openai-agents"
