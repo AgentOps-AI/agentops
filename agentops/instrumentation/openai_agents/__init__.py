@@ -25,7 +25,7 @@ def get_version():
         logger.debug("`agents` package not found; unable to determine installed version.")
         return None
 
-LIBRARY_NAME = "agents-sdk"
+LIBRARY_NAME = "openai-agents"
 LIBRARY_VERSION: Optional[str] = get_version()  # Actual OpenAI Agents SDK version
 
 # Import after defining constants to avoid circular imports
