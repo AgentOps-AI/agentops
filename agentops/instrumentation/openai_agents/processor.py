@@ -1,12 +1,12 @@
 from typing import Any
 
-from agentops.instrumentation.openai_agents.exporter import AgentsDetailedExporter
+from agentops.instrumentation.openai_agents.exporter import OpenAIAgentsExporter
 
-class AgentsDetailedProcessor:
+class OpenAIAgentsProcessor:
     """A processor for Agents SDK traces and spans that forwards them to AgentOps."""
 
     def __init__(self):
-        self.exporter = AgentsDetailedExporter(None)
+        self.exporter = OpenAIAgentsExporter(None)
 
     def on_trace_start(self, trace: Any) -> None:
         self.exporter.export_trace(trace)

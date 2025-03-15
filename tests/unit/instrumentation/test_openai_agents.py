@@ -52,9 +52,9 @@ from agentops.semconv import (
     InstrumentationAttributes
 )
 from tests.unit.sdk.instrumentation_tester import InstrumentationTester
-from agentops.instrumentation.openai_agents.exporter import AgentsDetailedExporter
+from agentops.instrumentation.openai_agents.exporter import OpenAIAgentsExporter
 # These are in separate modules, import directly from those
-from agentops.instrumentation.openai_agents.processor import AgentsDetailedProcessor
+from agentops.instrumentation.openai_agents.processor import OpenAIAgentsProcessor
 from agentops.instrumentation.openai_agents.instrumentor import AgentsInstrumentor, get_model_info
 from tests.unit.instrumentation.mock_span import MockSpan, MockTracer, process_with_instrumentor
 
@@ -110,8 +110,8 @@ class TestAgentsSdkInstrumentation:
             # Create the mock span with our prepared data
             mock_span = MockSpan(span_data, span_type="GenerationSpanData")
             
-            # Process the mock span with the actual AgentsDetailedExporter
-            process_with_instrumentor(mock_span, AgentsDetailedExporter, captured_attributes)
+            # Process the mock span with the actual OpenAIAgentsExporter
+            process_with_instrumentor(mock_span, OpenAIAgentsExporter, captured_attributes)
             
             # Set attributes on our test span too (so we can verify them)
             for key, val in captured_attributes.items():
@@ -205,8 +205,8 @@ class TestAgentsSdkInstrumentation:
             # Create a mock span with our prepared data
             mock_span = MockSpan(span_data, span_type="GenerationSpanData")
             
-            # Process the mock span with the actual AgentsDetailedExporter
-            process_with_instrumentor(mock_span, AgentsDetailedExporter, captured_attributes)
+            # Process the mock span with the actual OpenAIAgentsExporter
+            process_with_instrumentor(mock_span, OpenAIAgentsExporter, captured_attributes)
             
             # Set attributes on our test span too (so we can verify them)
             for key, val in captured_attributes.items():
@@ -308,7 +308,7 @@ class TestAgentsSdkInstrumentation:
             captured_spans.append(span)
             
             # Process with actual exporter
-            process_with_instrumentor(span, AgentsDetailedExporter, captured_attributes)
+            process_with_instrumentor(span, OpenAIAgentsExporter, captured_attributes)
         
         # Create a mock processor
         mock_processor = MagicMock()
@@ -318,8 +318,8 @@ class TestAgentsSdkInstrumentation:
         mock_processor.exporter._export_span = mock_export_span
         
         # Use the real processor but without patching the SDK
-        processor = AgentsDetailedProcessor()
-        processor.exporter = AgentsDetailedExporter(tracer_provider)
+        processor = OpenAIAgentsProcessor()
+        processor.exporter = OpenAIAgentsExporter(tracer_provider)
             
         # Create span data using the real SDK classes
         gen_span_data = GenerationSpanData(
@@ -335,8 +335,8 @@ class TestAgentsSdkInstrumentation:
         span.span_data = gen_span_data
         
         # Create a direct processor with its exporter
-        processor = AgentsDetailedProcessor()
-        processor.exporter = AgentsDetailedExporter()
+        processor = OpenAIAgentsProcessor()
+        processor.exporter = OpenAIAgentsExporter()
         
         # Create a capture mechanism for export
         attributes_dict = {}
@@ -406,7 +406,7 @@ class TestAgentsSdkInstrumentation:
         mock_span.parent_id = "parent789"
         
         # Initialize the exporter
-        exporter = AgentsDetailedExporter()
+        exporter = OpenAIAgentsExporter()
         
         # Create a mock _create_span method to capture attributes
         def mock_create_span(tracer, span_name, span_kind, attributes, span):
@@ -451,7 +451,7 @@ class TestAgentsSdkInstrumentation:
         captured_attributes_tool_calls = {}
         
         # Initialize the exporter
-        exporter = AgentsDetailedExporter()
+        exporter = OpenAIAgentsExporter()
         
         # Process the standard chat completion fixture
         exporter._process_chat_completions(OPENAI_CHAT_COMPLETION, captured_attributes_standard)
@@ -515,7 +515,7 @@ class TestAgentsSdkInstrumentation:
         mock_span.parent_id = "parent_func_789"
         
         # Initialize the exporter
-        exporter = AgentsDetailedExporter()
+        exporter = OpenAIAgentsExporter()
         
         # Create a mock _create_span method to capture attributes
         def mock_create_span(tracer, span_name, span_kind, attributes, span):
@@ -585,7 +585,7 @@ class TestAgentsSdkInstrumentation:
                 mock_tracer.start_as_current_span.return_value.__enter__.return_value = mock_otel_span
                 
                 # Initialize the exporter
-                exporter = AgentsDetailedExporter()
+                exporter = OpenAIAgentsExporter()
                 
                 # Call the original method
                 exporter._create_span(mock_tracer, "test_span", None, {}, mock_span)
@@ -600,7 +600,7 @@ class TestAgentsSdkInstrumentation:
         captured_attributes = {}
         
         # Initialize the exporter
-        exporter = AgentsDetailedExporter()
+        exporter = OpenAIAgentsExporter()
         
         # Create a simple mock trace object
         mock_trace = MagicMock()
@@ -803,8 +803,8 @@ class TestAgentsSdkInstrumentation:
             mock_span.trace_id = "trace123"
             mock_span.span_id = "span456"
             
-            # Process the mock span with the actual AgentsDetailedExporter
-            process_with_instrumentor(mock_span, AgentsDetailedExporter, captured_attributes)
+            # Process the mock span with the actual OpenAIAgentsExporter
+            process_with_instrumentor(mock_span, OpenAIAgentsExporter, captured_attributes)
             
             # Set attributes on our test span too (so we can verify them)
             for key, val in captured_attributes.items():
@@ -874,8 +874,8 @@ class TestAgentsSdkInstrumentation:
             mock_span.trace_id = "tool_trace123"
             mock_span.span_id = "tool_span456"
             
-            # Process the mock span with the actual AgentsDetailedExporter
-            process_with_instrumentor(mock_span, AgentsDetailedExporter, captured_attributes_tool)
+            # Process the mock span with the actual OpenAIAgentsExporter
+            process_with_instrumentor(mock_span, OpenAIAgentsExporter, captured_attributes_tool)
             
             # Set attributes on our test span too (so we can verify them)
             for key, val in captured_attributes_tool.items():
@@ -901,10 +901,10 @@ class TestAgentsSdkInstrumentation:
         assert "San Francisco" in tool_instrumented_span.attributes[f"{SpanAttributes.LLM_COMPLETIONS}.0.tool_calls.0.arguments"]
 
     def test_processor_integration_with_agent_tracing(self, instrumentation):
-        """Test the integration of AgentsDetailedProcessor with the Agents SDK tracing system."""
+        """Test the integration of OpenAIAgentsProcessor with the Agents SDK tracing system."""
         # Create the processor directly
-        processor = AgentsDetailedProcessor()
-        assert isinstance(processor, AgentsDetailedProcessor)
+        processor = OpenAIAgentsProcessor()
+        assert isinstance(processor, OpenAIAgentsProcessor)
         
         # Verify the processor has the correct methods
         assert hasattr(processor, 'on_span_start')
@@ -913,13 +913,15 @@ class TestAgentsSdkInstrumentation:
         assert hasattr(processor, 'on_trace_end')
         
         # Initialize the exporter
-        processor.exporter = AgentsDetailedExporter()
-        assert isinstance(processor.exporter, AgentsDetailedExporter)
+        processor.exporter = OpenAIAgentsExporter()
+        assert isinstance(processor.exporter, OpenAIAgentsExporter)
         
         # Create a capture mechanism for export calls
         exported_spans = []
-        original_export = processor.exporter.export
-        processor.exporter.export = lambda spans: exported_spans.extend(spans)
+        
+        # Replace with our capturing methods
+        processor.exporter.export_span = lambda span: exported_spans.append(span)
+        processor.exporter.export_trace = lambda trace: exported_spans.append(trace)
         
         # Create simple span data about SF weather
         model_settings = ModelSettings(temperature=0.7, top_p=1.0)
@@ -967,6 +969,3 @@ class TestAgentsSdkInstrumentation:
         # Test shutdown and force_flush for coverage
         processor.shutdown()
         processor.force_flush()
-        
-        # Restore original export method
-        processor.exporter.export = original_export

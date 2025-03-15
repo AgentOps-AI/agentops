@@ -30,7 +30,7 @@ TOKEN_USAGE_EXTENDED_MAPPING = {
     SpanAttributes.LLM_USAGE_COMPLETION_TOKENS: "output_tokens",
 }
 
-class AgentsDetailedExporter:
+class OpenAIAgentsExporter:
     """A detailed exporter for Agents SDK traces and spans that forwards them to AgentOps."""
 
     def __init__(self, tracer_provider=None):

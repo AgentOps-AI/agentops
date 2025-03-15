@@ -17,8 +17,8 @@ from agentops.semconv import (
 from agentops.logging import logger
 from agentops.helpers.serialization import safe_serialize, model_to_dict
 from agentops.instrumentation.openai_agents import LIBRARY_NAME, LIBRARY_VERSION
-from agentops.instrumentation.openai_agents.exporter import AgentsDetailedExporter
-from agentops.instrumentation.openai_agents.processor import AgentsDetailedProcessor
+from agentops.instrumentation.openai_agents.exporter import OpenAIAgentsExporter
+from agentops.instrumentation.openai_agents.processor import OpenAIAgentsProcessor
 
 
 def get_model_info(agent: Any, run_config: Any = None) -> Dict[str, Any]:
@@ -82,11 +82,11 @@ class AgentsInstrumentor(BaseInstrumentor):
         try:
             from agents import add_trace_processor
             
-            processor = AgentsDetailedProcessor()
-            processor.exporter = AgentsDetailedExporter(tracer_provider)
+            processor = OpenAIAgentsProcessor()
+            processor.exporter = OpenAIAgentsExporter(tracer_provider)
             add_trace_processor(processor)
         except Exception as e:
-            logger.warning(f"Failed to add AgentsDetailedProcessor: {e}")
+            logger.warning(f"Failed to add OpenAIAgentsProcessor: {e}")
         
         try:
             self._patch_runner_class(tracer_provider)
