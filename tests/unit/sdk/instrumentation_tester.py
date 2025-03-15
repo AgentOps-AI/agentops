@@ -1,5 +1,6 @@
-from typing import Any, Dict, List, Optional, Protocol, Tuple, Union
+from typing import Any, Dict, List, Protocol, Tuple, Union
 import importlib
+import unittest.mock as mock
 
 from opentelemetry import trace as trace_api
 from opentelemetry.sdk.trace import ReadableSpan, Span, TracerProvider
@@ -8,9 +9,7 @@ from opentelemetry.sdk.trace.export.in_memory_span_exporter import \
     InMemorySpanExporter
 from opentelemetry.util.types import Attributes
 
-import agentops
-from agentops.sdk.core import TracingCore
-from agentops.sdk.processors import LiveSpanProcessor
+from agentops.sdk.core import TracingCore, setup_telemetry
 
 
 def create_tracer_provider(
@@ -40,7 +39,7 @@ def reset_trace_globals():
     """Reset the global trace state to avoid conflicts."""
     # Reset tracer provider
     trace_api._TRACER_PROVIDER = None
-    
+
     # Reload the trace module to clear warning state
     importlib.reload(trace_api)
 
@@ -74,10 +73,10 @@ class InstrumentationTester:
         """Initialize the instrumentation tester."""
         # Reset any global state first
         reset_trace_globals()
-        
+
         # Shut down any existing tracing core
-        self._shutdown_core()
-        
+        # self._shutdown_core()
+
         # Create a new tracer provider and memory exporter
         (
             self.tracer_provider,
@@ -88,12 +87,23 @@ class InstrumentationTester:
         # Set the tracer provider
         trace_api.set_tracer_provider(self.tracer_provider)
 
-        # Get a fresh instance of the tracing core
-        core = TracingCore.get_instance()
+        # Create a mock for the meter provider
+        self.mock_meter_provider = mock.MagicMock()
 
-        # Set the tracing core's provider to our provider
-        core._provider = self.tracer_provider
-        core._initialized = True
+        # Patch the setup_telemetry function to return our test providers
+        self.setup_telemetry_patcher = mock.patch(
+            'agentops.sdk.core.setup_telemetry',
+            return_value=(self.tracer_provider, self.mock_meter_provider)
+        )
+        self.mock_setup_telemetry = self.setup_telemetry_patcher.start()
+
+        # Reset the tracing core to force reinitialization
+        core = TracingCore.get_instance()
+        core._initialized = False
+        core._provider = None
+
+        # Initialize the core, which will now use our mocked setup_telemetry
+        core.initialize()
 
         self.clear_spans()
 
@@ -120,22 +130,34 @@ class InstrumentationTester:
 
         # Clear any existing spans
         self.clear_spans()
-        
+
         # Reset global trace state
         reset_trace_globals()
-        
+
         # Set our tracer provider again
         trace_api.set_tracer_provider(self.tracer_provider)
 
         # Shut down and re-initialize the tracing core
         self._shutdown_core()
 
-        # Get a fresh instance of the tracing core
-        core = TracingCore.get_instance()
+        # Reset the mock setup_telemetry function
+        self.mock_setup_telemetry.reset_mock()
 
-        # Set the tracing core's provider to our provider
-        core._provider = self.tracer_provider
-        core._initialized = True
+        # Reset the tracing core to force reinitialization
+        core = TracingCore.get_instance()
+        core._initialized = False
+        core._provider = None
+
+        # Initialize the core, which will now use our mocked setup_telemetry
+        core.initialize()
+
+    def __del__(self):
+        """Clean up resources when the tester is garbage collected."""
+        try:
+            # Stop the patcher when the tester is deleted
+            self.setup_telemetry_patcher.stop()
+        except Exception:
+            pass
 
     def get_finished_spans(self) -> List[ReadableSpan]:
         """Get all finished spans."""

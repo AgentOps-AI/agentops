@@ -12,6 +12,7 @@ from httpx import Client
 
 from agentops.logging import logger
 from agentops.semconv.span_kinds import SpanKind
+from agentops.exceptions import AgentOpsClientNotInitializedException
 
 
 class Session:
@@ -39,6 +40,23 @@ class Session:
         self.span.end()
 
 
+def _create_session_span(tags: Union[Dict[str, Any], List[str], None] = None) -> tuple:
+    """
+    Helper function to create a session span with tags.
+
+    Args:
+        tags: Optional tags to attach to the span
+
+    Returns:
+        A tuple of (span, context, token)
+    """
+    from agentops.sdk.decorators.utility import _make_span
+
+    attributes = {}
+    if tags:
+        attributes["tags"] = tags
+    return _make_span("session", span_kind=SpanKind.SESSION, attributes=attributes)
+
 
 def start_session(
     tags: Union[Dict[str, Any], List[str], None] = None,
@@ -59,17 +77,20 @@ def start_session(
 
     Returns:
         A Session object that should be passed to end_session
-    """
-    from agentops import Client
-    if not Client().initialized:
-        Client().init()
 
-    from agentops.sdk.decorators.utility import _make_span
-    attributes = {}
-    if tags:
-        attributes["tags"] = tags
-    span, context, token = _make_span('session', span_kind=SpanKind.SESSION, attributes=attributes)
-    return Session(span, token)
+    Raises:
+        AgentOpsClientNotInitializedException: If the client is not initialized
+    """
+    try:
+        span, context, token = _create_session_span(tags)
+        return Session(span, token)
+    except AgentOpsClientNotInitializedException:
+        from agentops import Client
+
+        Client().init()
+        # Try again after initialization
+        span, context, token = _create_session_span(tags)
+        return Session(span, token)
 
 
 def end_session(session: Session) -> None:
@@ -85,7 +106,9 @@ def end_session(session: Session) -> None:
         session: The session object returned by start_session
     """
     from agentops.sdk.decorators.utility import _finalize_span
+
     _finalize_span(session.span, session.token)
+
 
 def end_all_sessions():
     pass
@@ -122,16 +145,10 @@ def LLMEvent(*args, **kwargs) -> None:
     """
     return None
 
+
 def track_agent(*args, **kwargs):
     """@deprecated"""
     pass
 
-__all__ = [
-    "start_session",
-    "end_session",
-    "ToolEvent",
-    "ErrorEvent",
-    "ActionEvent",
-    "track_agent",
-    "end_all_sessions"
-]
+
+__all__ = ["start_session", "end_session", "ToolEvent", "ErrorEvent", "ActionEvent", "track_agent", "end_all_sessions"]
