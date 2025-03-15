@@ -52,7 +52,7 @@ from agentops.semconv import (
     InstrumentationAttributes
 )
 from tests.unit.sdk.instrumentation_tester import InstrumentationTester
-from agentops.instrumentation.openai_agents import AgentsDetailedExporter
+from agentops.instrumentation.openai_agents.exporter import AgentsDetailedExporter
 # These are in separate modules, import directly from those
 from agentops.instrumentation.openai_agents.processor import AgentsDetailedProcessor
 from agentops.instrumentation.openai_agents.instrumentor import AgentsInstrumentor, get_model_info
