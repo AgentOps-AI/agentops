@@ -68,7 +68,7 @@ from agentops.semconv import (
     InstrumentationAttributes
 )
 from tests.unit.sdk.instrumentation_tester import InstrumentationTester
-from third_party.opentelemetry.instrumentation.agents.agentops_agents_instrumentor import (
+from agentops.instrumentation.openai_agents import (
     AgentsDetailedExporter, 
     get_model_info
 )

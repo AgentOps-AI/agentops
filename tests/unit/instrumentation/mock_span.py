@@ -143,8 +143,8 @@ def process_with_instrumentor(mock_span, exporter_class, captured_attributes: Di
     
     # For debugging, print the output dictionary
     if hasattr(mock_span.span_data, "output"):
-        from third_party.opentelemetry.instrumentation.agents.agentops_agents_instrumentor import model_as_dict
-        output_dict = model_as_dict(mock_span.span_data.output)
+        from agentops.instrumentation.openai_agents import model_to_dict
+        output_dict = model_to_dict(mock_span.span_data.output)
         print(f"\n\nDEBUG OUTPUT DICT: {json.dumps(output_dict, indent=2)}\n\n")
     
     # Monkey patch the get_tracer function to return our MockTracer

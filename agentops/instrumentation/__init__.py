@@ -68,7 +68,7 @@ available_instrumentors: list[InstrumentorLoader] = [
         provider_import_name="crewai",
     ),
     InstrumentorLoader(
-        module_name="opentelemetry.instrumentation.agents",
+        module_name="agentops.instrumentation.openai_agents",
         class_name="AgentsInstrumentor",
         provider_import_name="agents",
     ),
