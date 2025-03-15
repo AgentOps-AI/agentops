@@ -28,7 +28,15 @@ def configure_logging(config=None):  # Remove type hint temporarily to avoid cir
     if log_level_env and hasattr(logging, log_level_env):
         log_level = getattr(logging, log_level_env)
     else:
-        log_level = config.log_level if isinstance(config.log_level, int) else logging.CRITICAL
+        # Handle string log levels from config
+        if isinstance(config.log_level, str):
+            log_level_str = config.log_level.upper()
+            if hasattr(logging, log_level_str):
+                log_level = getattr(logging, log_level_str)
+            else:
+                log_level = logging.INFO
+        else:
+            log_level = config.log_level if isinstance(config.log_level, int) else logging.INFO
 
     logger.setLevel(log_level)
 
@@ -38,7 +46,7 @@ def configure_logging(config=None):  # Remove type hint temporarily to avoid cir
 
     # Configure console logging
     stream_handler = logging.StreamHandler()
-    stream_handler.setLevel(logging.DEBUG)
+    stream_handler.setLevel(log_level)
     stream_handler.setFormatter(AgentOpsLogFormatter())
     logger.addHandler(stream_handler)
 
@@ -46,7 +54,7 @@ def configure_logging(config=None):  # Remove type hint temporarily to avoid cir
     log_to_file = os.environ.get("AGENTOPS_LOGGING_TO_FILE", "True").lower() == "true"
     if log_to_file:
         file_handler = logging.FileHandler("agentops.log", mode="w")
-        file_handler.setLevel(logging.DEBUG)
+        file_handler.setLevel(log_level)
         formatter = AgentOpsLogFileFormatter("%(asctime)s - %(levelname)s - %(message)s")
         file_handler.setFormatter(formatter)
         logger.addHandler(file_handler)

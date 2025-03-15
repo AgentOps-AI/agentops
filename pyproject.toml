@@ -51,7 +51,7 @@ dependencies = [
 
 [dependency-groups]
 test = [
-    "openai>=1.0.0",
+    "openai>=1.60.0",
     "anthropic",
     # ;;
     # The below is a really hard dependency, that can be installed only between python >=3.10,<3.13.
