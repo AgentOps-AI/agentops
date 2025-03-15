@@ -68,10 +68,9 @@ The instrumentor collects the following metrics:
 We use a consistent pattern for attribute mapping where dictionary keys represent the target attribute names (what we want in the final span), and values represent the source field names (where the data comes from):
 
 ```python
-# Example from exporter.py
-field_mapping = {
-    AgentAttributes.AGENT_NAME: "name",     # target → source
-    WorkflowAttributes.WORKFLOW_INPUT: "input",
+_CONFIG_MAPPING = {
+    # Target semantic convention → source field
+    <SemanticConvention>: Union[str, list[str]], 
     # ...
 }
 ```
@@ -87,17 +86,6 @@ The instrumentor handles both OpenAI API formats:
 
 The implementation intelligently detects which format is being used and processes accordingly.
 
-### Extended Token Mapping
-
-We support both naming conventions for token metrics, following our consistent target→source pattern:
-
-```python
-TOKEN_USAGE_EXTENDED_MAPPING = {
-    # Target semantic convention → source field
-    SpanAttributes.LLM_USAGE_PROMPT_TOKENS: "input_tokens",
-    SpanAttributes.LLM_USAGE_COMPLETION_TOKENS: "output_tokens",
-}
-```
 
 ### Streaming Operation Tracking
 
@@ -106,12 +94,6 @@ When instrumenting streaming operations, we:
 1. Track active streaming operations using unique IDs
 2. Handle proper flushing of spans to ensure metrics are recorded
 3. Create separate spans for token usage metrics to avoid premature span closure
-
-## Gotchas and Special Considerations
-
-### Span Closure in Streaming Operations
-
-Streaming operations in async contexts require special handling to avoid premature span closure. We use dedicated usage spans for streaming operations and maintain a tracking set of active stream IDs.
 
 ### Response API Content Extraction
 
@@ -136,28 +118,9 @@ if isinstance(content_items, list):
     attributes[f"{prefix}.content"] = " ".join(texts)
 ```
 
-### Normalized Model Configuration
-
-Model configuration parameters are normalized using a standard target→source mapping:
-
-```python
-MODEL_CONFIG_MAPPING = {
-    # Target semantic convention → source field
-    SpanAttributes.LLM_REQUEST_TEMPERATURE: "temperature",
-    SpanAttributes.LLM_REQUEST_TOP_P: "top_p",
-    SpanAttributes.LLM_REQUEST_FREQUENCY_PENALTY: "frequency_penalty",
-    # ...
-}
-```
-
-This ensures consistent attribute names regardless of source format, while maintaining our standard pattern where dictionary keys are always target attributes and values are source fields.
-
-## Implementation Details
-
-The instrumentor processes Agents SDK objects by extracting attributes using a standard mapping pattern, with attribute extraction based on the object's properties.
-
-The implementation handles both Agents SDK object formats and serializes complex data appropriately when needed.
 
 ## TODO
 - Add support for additional semantic conventions
     - `gen_ai` doesn't have conventions for response data beyond `role` and `content`
+    - We're shoehorning `responses` into `completions` since the spec doesn't
+      have a convention in place for this yet. 

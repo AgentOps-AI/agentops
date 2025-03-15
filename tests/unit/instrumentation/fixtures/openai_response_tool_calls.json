@@ -1,0 +1,79 @@
+{
+  "id": "resp_67d51e518d708192a58adad5e9b5745f0a6d4ee5c79f8d47",
+  "created_at": 1742020177.0,
+  "error": null,
+  "incomplete_details": null,
+  "instructions": "You are a helpful assistant.",
+  "metadata": {},
+  "model": "gpt-4o-2024-08-06",
+  "object": "response",
+  "output": [
+    {
+      "id": "fc_67d51e51f4d88192a8a50a5aa3ee70440a6d4ee5c79f8d47",
+      "arguments": "{\"location\":\"San Francisco, CA\",\"unit\":\"celsius\"}",
+      "call_id": "call_q24YLlyrHwUO2NNVSr1LFWFD",
+      "name": "get_weather",
+      "type": "function_call",
+      "status": "completed"
+    }
+  ],
+  "parallel_tool_calls": true,
+  "temperature": 0.7,
+  "tool_choice": "auto",
+  "tools": [
+    {
+      "name": "get_weather",
+      "parameters": {
+        "properties": {
+          "location": {
+            "description": "The city and state, e.g. San Francisco, CA",
+            "title": "Location",
+            "type": "string"
+          },
+          "unit": {
+            "description": "The unit of temperature to use (celsius or fahrenheit)",
+            "title": "Unit",
+            "type": "string"
+          }
+        },
+        "required": [
+          "location",
+          "unit"
+        ],
+        "title": "get_weather_args",
+        "type": "object",
+        "additionalProperties": false
+      },
+      "strict": true,
+      "type": "function",
+      "description": "Get the current weather in a location"
+    }
+  ],
+  "top_p": 1.0,
+  "max_output_tokens": null,
+  "previous_response_id": null,
+  "reasoning": {
+    "effort": null,
+    "generate_summary": null
+  },
+  "status": "completed",
+  "text": {
+    "format": {
+      "type": "text"
+    }
+  },
+  "truncation": "disabled",
+  "usage": {
+    "input_tokens": 315,
+    "output_tokens": 23,
+    "output_tokens_details": {
+      "reasoning_tokens": 0
+    },
+    "total_tokens": 338,
+    "input_tokens_details": {
+      "cached_tokens": 0
+    }
+  },
+  "user": null,
+  "store": true
+}

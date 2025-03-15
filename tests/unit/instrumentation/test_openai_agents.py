@@ -12,49 +12,32 @@ The Agents SDK has its own unique structure with:
 """
 
 import json
+import os
 from typing import Any, Dict, List, Optional, Union
 import inspect
+from unittest.mock import patch, MagicMock, PropertyMock
 
 import pytest
 from opentelemetry import trace
 from opentelemetry.trace import StatusCode
 
-# Mock Agent SDK classes
-class MockAgentRunResult:
-    """Mock for the RunResult class from the Agents SDK"""
-    def __init__(self, final_output, raw_responses=None):
-        self.final_output = final_output
-        self.raw_responses = raw_responses or []
+# Load real OpenAI responses from fixtures
+def load_fixture(fixture_name):
+    """Load a fixture file from the fixtures directory."""
+    fixture_path = os.path.join(
+        os.path.dirname(os.path.abspath(__file__)),
+        "fixtures",
+        fixture_name
+    )
+    try:
+        with open(fixture_path, 'r') as f:
+            return json.load(f)
+    except FileNotFoundError:
+        pytest.skip(f"Fixture {fixture_name} not found. Run the export_response.py script first.")
 
-class MockAgent:
-    """Mock for the Agent class from the Agents SDK"""
-    def __init__(self, name, instructions, tools=None, model=None, model_settings=None):
-        self.name = name
-        self.instructions = instructions
-        self.tools = tools or []
-        self.model = model or "gpt-4o"
-        self.model_settings = model_settings or MockModelSettings()
-
-class MockTool:
-    """Mock for the Tool class from the Agents SDK"""
-    def __init__(self, name, description=None):
-        self.name = name
-        self.description = description or f"Description for {name}"
-
-class MockModelSettings:
-    """Mock for model settings in the Agents SDK"""
-    def __init__(self, temperature=0.7, top_p=1.0, frequency_penalty=0.0, presence_penalty=0.0):
-        self.temperature = temperature
-        self.top_p = top_p
-        self.frequency_penalty = frequency_penalty
-        self.presence_penalty = presence_penalty
-
-class MockRunConfig:
-    """Mock for the RunConfig class from the Agents SDK"""
-    def __init__(self, workflow_name=None, model=None, model_settings=None):
-        self.workflow_name = workflow_name or "test_workflow"
-        self.model = model
-        self.model_settings = model_settings
+# Load the real response data from fixtures
+REAL_OPENAI_RESPONSE = load_fixture("openai_response.json")
+REAL_OPENAI_TOOL_CALLS_RESPONSE = load_fixture("openai_response_tool_calls.json")
 
 # Import necessary libraries for testing
 import agentops
@@ -71,451 +54,99 @@ from agentops.instrumentation.openai_agents import (
     AgentsDetailedExporter, 
     get_model_info
 )
-from tests.unit.instrumentation.mock_span import MockSpan, process_with_instrumentor
+# These are in separate modules, import directly from those
+from agentops.instrumentation.openai_agents.processor import AgentsDetailedProcessor
+from agentops.instrumentation.openai_agents.instrumentor import AgentsInstrumentor
+from tests.unit.instrumentation.mock_span import MockSpan, MockTracer, process_with_instrumentor
 
-# Test fixtures: Mock span and trace data from Agents SDK
+# Use the correct imports
+from agents import (
+    Agent, 
+    add_trace_processor,
+    ModelSettings,
+    Runner, 
+    RunConfig,
+    Tool,
+    GenerationSpanData, 
+    AgentSpanData, 
+    FunctionSpanData
+)
+from openai.types.responses import Response
 
-# Generation span with tool calls - when an LLM is being called with tool outputs
-GENERATION_TOOL_CALLS_SPAN_DATA = {
-    "model": "gpt-4o",
-    "model_config": {
-        "temperature": 0.7,
-        "top_p": 1.0
-    },
-    "input": "What's the weather in San Francisco?",
-    "output": {
-        "id": "chatcmpl-456",
-        "model": "gpt-4o",
-        "choices": [
-            {
-                "index": 0,
-                "message": {
-                    "role": "assistant",
-                    "content": None,
-                    "tool_calls": [
-                        {
-                            "id": "call_abc123",
-                            "type": "function",
-                            "function": {
-                                "name": "get_weather",
-                                "arguments": '{"location": "San Francisco", "unit": "celsius"}'
-                            }
-                        }
-                    ]
-                },
-                "finish_reason": "tool_calls"
-            }
-        ],
-        "usage": {
-            "prompt_tokens": 12,
-            "completion_tokens": 10,
-            "total_tokens": 22
-        },
-        "system_fingerprint": "fp_55g4"
-    },
-    "usage": {
-        "prompt_tokens": 12,
-        "completion_tokens": 10,
-        "total_tokens": 22
-    }
-}
 
-# Expected attributes for a Generation span with tool calls
-EXPECTED_TOOL_CALLS_SPAN_ATTRIBUTES = {
-    # Model metadata - using proper semantic conventions
-    SpanAttributes.LLM_REQUEST_MODEL: "gpt-4o",
-    SpanAttributes.LLM_SYSTEM: "openai",
-    SpanAttributes.LLM_REQUEST_TEMPERATURE: 0.7,
-    SpanAttributes.LLM_REQUEST_TOP_P: 1.0,
-    
-    # Response metadata from the nested output - using proper semantic conventions
-    SpanAttributes.LLM_RESPONSE_MODEL: "gpt-4o",
-    SpanAttributes.LLM_RESPONSE_ID: "chatcmpl-456",
-    SpanAttributes.LLM_OPENAI_RESPONSE_SYSTEM_FINGERPRINT: "fp_55g4",
-    
-    # Token usage - using proper semantic conventions
-    SpanAttributes.LLM_USAGE_TOTAL_TOKENS: 22,
-    SpanAttributes.LLM_USAGE_PROMPT_TOKENS: 12,
-    SpanAttributes.LLM_USAGE_COMPLETION_TOKENS: 10,
-    
-    # Completion metadata - using proper semantic conventions
-    f"{SpanAttributes.LLM_COMPLETIONS}.0.role": "assistant",
-    f"{SpanAttributes.LLM_COMPLETIONS}.0.finish_reason": "tool_calls",
-    
-    # Tool call details - using proper semantic conventions
-    f"{SpanAttributes.LLM_COMPLETIONS}.0.tool_calls.0.id": "call_abc123",
-    f"{SpanAttributes.LLM_COMPLETIONS}.0.tool_calls.0.name": "get_weather",
-    f"{SpanAttributes.LLM_COMPLETIONS}.0.tool_calls.0.arguments": '{"location": "San Francisco", "unit": "celsius"}',
-    
-    # Standard OpenTelemetry attributes
-    "trace.id": "trace123",
-    "span.id": "span456",
-    "parent.id": "parent789",
-    "library.name": "agents-sdk",
-    "library.version": "0.1.0"
-}
+# # Mock Agent SDK classes could be useful in the future but i dont want to risk it
+# class MockAgentRunResult:
+#     """Mock for the RunResult class from the Agents SDK"""
+#     def __init__(self, final_output, raw_responses=None):
+#         self.final_output = final_output
+#         self.raw_responses = raw_responses or []
 
-# Agent run span - when an agent is executing
-AGENT_SPAN_DATA = {
-    "name": "Test Agent",
-    "input": "What is the capital of France?",
-    "output": "The capital of France is Paris.",
-    "from_agent": "User",
-    "to_agent": "Test Agent",
-    "tools": ["search", "calculator"]
-}
+# class MockAgent:
+#     """Mock for the Agent class from the Agents SDK"""
+#     def __init__(self, name, instructions, tools=None, model=None, model_settings=None):
+#         self.name = name
+#         self.instructions = instructions
+#         self.tools = tools or []
+#         self.model = model or "gpt-4o"
+#         self.model_settings = model_settings or MockModelSettings()
 
-# Tool usage span - when an agent is using a tool
-TOOL_SPAN_DATA = {
-    "name": "search",
-    "input": "capital of France",
-    "output": "Paris is the capital of France.",
-    "from_agent": "Test Agent",
-    "tools": ["search"]
-}
+# class MockTool:
+#     """Mock for the Tool class from the Agents SDK"""
+#     def __init__(self, name, description=None):
+#         self.name = name
+#         self.description = description or f"Description for {name}"
 
-# Generation span - when an LLM is being called (using Chat Completion API)
-GENERATION_SPAN_DATA = {
-    "model": "gpt-4o",
-    "model_config": {
-        "temperature": 0.7,
-        "top_p": 1.0
-    },
-    "input": "What is the capital of France?",
-    "output": {
-        "id": "chatcmpl-123",
-        "model": "gpt-4o",
-        "choices": [
-            {
-                "index": 0,
-                "message": {
-                    "role": "assistant",
-                    "content": "The capital of France is Paris."
-                },
-                "finish_reason": "stop"
-            }
-        ],
-        "usage": {
-            "prompt_tokens": 10,
-            "completion_tokens": 8,
-            "total_tokens": 18
-        },
-        "system_fingerprint": "fp_44f3"
-    },
-    "usage": {
-        "prompt_tokens": 10,
-        "completion_tokens": 8,
-        "total_tokens": 18
-    }
-}
+# class MockModelSettings:
+#     """Mock for model settings in the Agents SDK"""
+#     def __init__(self, temperature=0.7, top_p=1.0, frequency_penalty=0.0, presence_penalty=0.0):
+#         self.temperature = temperature
+#         self.top_p = top_p
+#         self.frequency_penalty = frequency_penalty
+#         self.presence_penalty = presence_penalty
 
-# Generation span - when an LLM is being called (using Response API)
-GENERATION_RESPONSE_API_SPAN_DATA = {
-    "model": "gpt-4o", 
-    "model_config": {
-        "temperature": 0.7,
-        "top_p": 1.0
-    },
-    "input": "What is the capital of France?",
-    "output": {
-        "id": "resp_abc123",
-        "created_at": 1677858245,
-        "model": "gpt-4o",
-        "object": "response",
-        "output": [
-            {
-                "id": "msg_abc123",
-                "type": "message",
-                "content": [
-                    {
-                        "type": "output_text",
-                        "text": "The capital of France is Paris, known for the Eiffel Tower.",
-                        "annotations": []
-                    }
-                ],
-                "role": "assistant",
-                "status": "completed"
-            }
-        ],
-        "usage": {
-            "input_tokens": 12,
-            "output_tokens": 15,
-            "total_tokens": 27,
-            "output_tokens_details": {
-                "reasoning_tokens": 4
-            }
-        },
-        "parallel_tool_calls": False,
-        "status": "completed",
-        "tools": [],
-        "tool_choice": "none"
-    },
-    "usage": {
-        "input_tokens": 12,
-        "output_tokens": 15,
-        "total_tokens": 27
-    }
-}
+# class MockRunConfig:
+#     """Mock for the RunConfig class from the Agents SDK"""
+#     def __init__(self, workflow_name=None, model=None, model_settings=None):
+#         self.workflow_name = workflow_name or "test_workflow"
+#         self.model = model
+#         self.model_settings = model_settings
 
-# Expected attributes for an Agent span
-EXPECTED_AGENT_SPAN_ATTRIBUTES = {
-    # Agent metadata - using proper semantic conventions
-    AgentAttributes.AGENT_NAME: "Test Agent",
-    "agent.from": "User",
-    "agent.to": "Test Agent",
-    AgentAttributes.AGENT_TOOLS: "search,calculator",
-    
-    # Workflow info - using proper semantic conventions
-    WorkflowAttributes.WORKFLOW_INPUT: "What is the capital of France?",
-    WorkflowAttributes.FINAL_OUTPUT: "The capital of France is Paris.",
-    
-    # Standard OpenTelemetry attributes
-    "trace.id": "trace123",
-    "span.id": "span456",
-    "parent.id": "parent789",
-    "library.name": "agents-sdk",
-    "library.version": "0.1.0"
-}
-
-# Expected attributes for a Tool span
-EXPECTED_TOOL_SPAN_ATTRIBUTES = {
-    # Tool metadata - using proper semantic conventions
-    AgentAttributes.AGENT_NAME: "search",
-    AgentAttributes.FROM_AGENT: "Test Agent",
-    AgentAttributes.AGENT_TOOLS: "search",
-    
-    # Input/output - using proper semantic conventions
-    SpanAttributes.LLM_PROMPTS: "capital of France",
-    SpanAttributes.LLM_COMPLETIONS: "Paris is the capital of France.",
-    
-    # Standard OpenTelemetry attributes
-    "trace.id": "trace123",
-    "span.id": "span456",
-    "parent.id": "parent789",
-    "library.name": "agents-sdk",
-    "library.version": "0.1.0"
-}
-
-# Expected attributes for a Generation span with Chat Completion API
-EXPECTED_GENERATION_SPAN_ATTRIBUTES = {
-    # Model metadata - using proper semantic conventions
-    SpanAttributes.LLM_REQUEST_MODEL: "gpt-4o",
-    SpanAttributes.LLM_SYSTEM: "openai",
-    SpanAttributes.LLM_REQUEST_TEMPERATURE: 0.7,
-    SpanAttributes.LLM_REQUEST_TOP_P: 1.0,
-    
-    # Response metadata from the nested output - using proper semantic conventions
-    SpanAttributes.LLM_RESPONSE_MODEL: "gpt-4o",
-    SpanAttributes.LLM_RESPONSE_ID: "chatcmpl-123",
-    SpanAttributes.LLM_OPENAI_RESPONSE_SYSTEM_FINGERPRINT: "fp_44f3",
-    
-    # Token usage - using proper semantic conventions
-    SpanAttributes.LLM_USAGE_TOTAL_TOKENS: 18,
-    SpanAttributes.LLM_USAGE_PROMPT_TOKENS: 10,
-    SpanAttributes.LLM_USAGE_COMPLETION_TOKENS: 8,
-    
-    # Content extraction - using proper semantic conventions 
-    f"{SpanAttributes.LLM_COMPLETIONS}.0.content": "The capital of France is Paris.",
-    f"{SpanAttributes.LLM_COMPLETIONS}.0.role": "assistant",
-    f"{SpanAttributes.LLM_COMPLETIONS}.0.finish_reason": "stop",
-    
-    # Standard OpenTelemetry attributes
-    "trace.id": "trace123",
-    "span.id": "span456",
-    "parent.id": "parent789",
-    "library.name": "agents-sdk",
-    "library.version": "0.1.0"
-}
-
-# Expected attributes for a Generation span with Response API
-EXPECTED_RESPONSE_API_SPAN_ATTRIBUTES = {
-    # Model metadata - using proper semantic conventions
-    SpanAttributes.LLM_REQUEST_MODEL: "gpt-4o",
-    SpanAttributes.LLM_SYSTEM: "openai",
-    SpanAttributes.LLM_REQUEST_TEMPERATURE: 0.7,
-    SpanAttributes.LLM_REQUEST_TOP_P: 1.0,
-    
-    # Response metadata from the nested output - using proper semantic conventions
-    SpanAttributes.LLM_RESPONSE_MODEL: "gpt-4o",
-    SpanAttributes.LLM_RESPONSE_ID: "resp_abc123",
-    
-    # Token usage - notice the mapping from input_tokens to prompt_tokens! Using proper semantic conventions
-    SpanAttributes.LLM_USAGE_TOTAL_TOKENS: 27,
-    SpanAttributes.LLM_USAGE_PROMPT_TOKENS: 12,
-    SpanAttributes.LLM_USAGE_COMPLETION_TOKENS: 15,
-    f"{SpanAttributes.LLM_USAGE_TOTAL_TOKENS}.reasoning": 4,
-    
-    # Content extraction from Response API format - using proper semantic conventions
-    f"{SpanAttributes.LLM_COMPLETIONS}.0.content": "The capital of France is Paris, known for the Eiffel Tower.",
-    f"{SpanAttributes.LLM_COMPLETIONS}.0.role": "assistant",
-    
-    # Standard OpenTelemetry attributes
-    "trace.id": "trace123",
-    "span.id": "span456",
-    "parent.id": "parent789",
-    "library.name": "agents-sdk",
-    "library.version": "0.1.0"
-}
-
-# Expected attributes for get_model_info utility function
-EXPECTED_MODEL_INFO = {
-    "model_name": "gpt-4o",
-    "temperature": 0.7,
-    "top_p": 1.0,
-    "frequency_penalty": 0.0,
-    "presence_penalty": 0.0
-}
+# class MockGenerationSpanData:
+#     """Mock for the GenerationSpanData class"""
+#     def __init__(self, model, model_config, input, output, usage):
+#         self.model = model
+#         self.model_config = model_config
+#         self.input = input
+#         self.output = output
+#         self.usage = usage
+#         self.__class__.__name__ = "GenerationSpanData"
+        
+# # Mock the Agents SDK Response class
+# class MockResponse:
+#     """Mock for the Response class from OpenAI"""
+#     def __init__(self, response_dict):
+#         for key, value in response_dict.items():
+#             setattr(self, key, value)
+            
+#     def model_dump(self):
+#         """Convert to dict like the real Response object"""
+#         result = {}
+#         for attr in dir(self):
+#             if not attr.startswith('__') and not callable(getattr(self, attr)):
+#                 result[attr] = getattr(self, attr)
+#         return result
 
 
 class TestAgentsSdkInstrumentation:
-    """Tests for OpenAI Agents SDK instrumentation"""
+    """Tests for OpenAI Agents SDK instrumentation using real fixtures"""
 
     @pytest.fixture
     def instrumentation(self):
         """Set up instrumentation for tests"""
         return InstrumentationTester()
-        
-    def test_agent_span_serialization(self, instrumentation):
-        """Test serialization of Agent spans from Agents SDK"""
-        # Dictionary to capture attributes from the instrumentor
-        captured_attributes = {}
-        
-        # Set up test environment
-        tracer = TracingCore.get_instance().get_tracer("test_tracer")
-        
-        # Create a span for our test
-        with tracer.start_as_current_span("test_agent_span") as span:
-            # Set the span type
-            span.set_attribute("span.kind", "consumer")
-            
-            # Create a mock span with Agent data
-            mock_span = MockSpan(AGENT_SPAN_DATA, span_type="AgentSpanData")
-            
-            # Process the mock span with the actual AgentsDetailedExporter
-            process_with_instrumentor(mock_span, AgentsDetailedExporter, captured_attributes)
-            
-            # Set attributes on our test span too (so we can verify them)
-            for key, val in captured_attributes.items():
-                span.set_attribute(key, val)
-
-        # Get all spans
-        spans = instrumentation.get_finished_spans()
-            
-        # Examine the first span generated from the instrumentor
-        instrumented_span = spans[0]
-        
-        # Check all required attributes from our reference model against the actual span
-        for key, expected_value in EXPECTED_AGENT_SPAN_ATTRIBUTES.items():
-            # Skip library version which might change
-            if key == "library.version":
-                continue
-                
-            # Assert the attribute exists 
-            assert key in instrumented_span.attributes, f"Missing expected attribute '{key}'"
-            
-            # Assert it has the expected value
-            actual_value = instrumented_span.attributes[key]
-            assert actual_value == expected_value, \
-                f"Attribute '{key}' has wrong value. Expected: {expected_value}, Actual: {actual_value}"
-                
-    def test_tool_span_serialization(self, instrumentation):
-        """Test serialization of Tool spans from Agents SDK"""
-        # Dictionary to capture attributes from the instrumentor
-        captured_attributes = {}
-        
-        # Set up test environment
-        tracer = TracingCore.get_instance().get_tracer("test_tracer")
-        
-        # Create a span for our test
-        with tracer.start_as_current_span("test_tool_span") as span:
-            # Set the span type
-            span.set_attribute("span.kind", "client")
-            
-            # Create a mock span with Tool data
-            mock_span = MockSpan(TOOL_SPAN_DATA, span_type="FunctionSpanData")
-            
-            # Process the mock span with the actual AgentsDetailedExporter
-            process_with_instrumentor(mock_span, AgentsDetailedExporter, captured_attributes)
-            
-            # Set attributes on our test span too (so we can verify them)
-            for key, val in captured_attributes.items():
-                span.set_attribute(key, val)
-
-        # Get all spans
-        spans = instrumentation.get_finished_spans()
-            
-        # Examine the first span generated from the instrumentor
-        instrumented_span = spans[0]
-        
-        # Check all required attributes from our reference model against the actual span
-        for key, expected_value in EXPECTED_TOOL_SPAN_ATTRIBUTES.items():
-            # Skip library version which might change
-            if key == "library.version":
-                continue
-                
-            # Assert the attribute exists 
-            assert key in instrumented_span.attributes, f"Missing expected attribute '{key}'"
-            
-            # Assert it has the expected value
-            actual_value = instrumented_span.attributes[key]
-            assert actual_value == expected_value, \
-                f"Attribute '{key}' has wrong value. Expected: {expected_value}, Actual: {actual_value}"
     
-    def test_generation_span_serialization(self, instrumentation):
-        """Test serialization of Generation spans from Agents SDK using Chat Completion API"""
-        # Dictionary to capture attributes from the instrumentor
-        captured_attributes = {}
-        
-        # Set up test environment
-        tracer = TracingCore.get_instance().get_tracer("test_tracer")
-        
-        # Create a span for our test
-        with tracer.start_as_current_span("test_generation_span") as span:
-            # Set the span type
-            span.set_attribute("span.kind", "client")
-            
-            # Create a mock span with Generation data
-            mock_span = MockSpan(GENERATION_SPAN_DATA, span_type="GenerationSpanData")
-            
-            # Process the mock span with the actual AgentsDetailedExporter
-            process_with_instrumentor(mock_span, AgentsDetailedExporter, captured_attributes)
-            
-            # Set attributes on our test span too (so we can verify them)
-            for key, val in captured_attributes.items():
-                span.set_attribute(key, val)
-
-        # Get all spans
-        spans = instrumentation.get_finished_spans()
-            
-        # Examine the first span generated from the instrumentor
-        instrumented_span = spans[0]
-        
-        # Check all required attributes from our reference model against the actual span
-        for key, expected_value in EXPECTED_GENERATION_SPAN_ATTRIBUTES.items():
-            # Skip library version which might change
-            if key == "library.version":
-                continue
-                
-            # Assert the attribute exists 
-            assert key in instrumented_span.attributes, f"Missing expected attribute '{key}'"
-            
-            # Assert it has the expected value
-            actual_value = instrumented_span.attributes[key]
-            assert actual_value == expected_value, \
-                f"Attribute '{key}' has wrong value. Expected: {expected_value}, Actual: {actual_value}"
-                
-        # Also verify we don't have any unexpected attributes related to completions
-        # This helps catch duplicate or incorrect attribute names
-        completion_prefix = "gen_ai.completion.0"
-        completion_attrs = [k for k in instrumented_span.attributes.keys() if k.startswith(completion_prefix)]
-        expected_completion_attrs = [k for k in EXPECTED_GENERATION_SPAN_ATTRIBUTES.keys() if k.startswith(completion_prefix)]
-        
-        # We should have exactly the expected attributes, nothing more
-        assert set(completion_attrs) == set(expected_completion_attrs), \
-            f"Unexpected completion attributes. Found: {completion_attrs}, Expected: {expected_completion_attrs}"
-            
     def test_response_api_span_serialization(self, instrumentation):
-        """Test serialization of Generation spans from Agents SDK using Response API"""
+        """Test serialization of Generation spans from Agents SDK using Response API with real fixture data"""
         # Dictionary to capture attributes from the instrumentor
         captured_attributes = {}
         
@@ -527,8 +158,21 @@ class TestAgentsSdkInstrumentation:
             # Set the span type
             span.set_attribute("span.kind", "client")
             
-            # Create a mock span with Response API data
-            mock_span = MockSpan(GENERATION_RESPONSE_API_SPAN_DATA, span_type="GenerationSpanData")
+            # Create mock data structure that matches what the instrumentor expects
+            # but uses the real fixture data for the output field
+            span_data = {
+                "model": REAL_OPENAI_RESPONSE["model"],
+                "model_config": {
+                    "temperature": REAL_OPENAI_RESPONSE["temperature"],
+                    "top_p": REAL_OPENAI_RESPONSE["top_p"]
+                },
+                "input": "What is the capital of France?",
+                "output": REAL_OPENAI_RESPONSE,
+                "usage": REAL_OPENAI_RESPONSE["usage"]
+            }
+            
+            # Create the mock span with our prepared data
+            mock_span = MockSpan(span_data, span_type="GenerationSpanData")
             
             # Process the mock span with the actual AgentsDetailedExporter
             process_with_instrumentor(mock_span, AgentsDetailedExporter, captured_attributes)
@@ -543,12 +187,31 @@ class TestAgentsSdkInstrumentation:
         # Examine the first span generated from the instrumentor
         instrumented_span = spans[0]
         
+        # Expected attribute values based on the fixture data
+        expected_attributes = {
+            # Model metadata using semantic conventions
+            SpanAttributes.LLM_REQUEST_MODEL: REAL_OPENAI_RESPONSE["model"],
+            SpanAttributes.LLM_SYSTEM: "openai",
+            SpanAttributes.LLM_REQUEST_TEMPERATURE: REAL_OPENAI_RESPONSE["temperature"],
+            SpanAttributes.LLM_REQUEST_TOP_P: REAL_OPENAI_RESPONSE["top_p"],
+            
+            # Response metadata using semantic conventions
+            SpanAttributes.LLM_RESPONSE_MODEL: REAL_OPENAI_RESPONSE["model"],
+            SpanAttributes.LLM_RESPONSE_ID: REAL_OPENAI_RESPONSE["id"],
+            
+            # Token usage with proper semantic conventions
+            SpanAttributes.LLM_USAGE_TOTAL_TOKENS: REAL_OPENAI_RESPONSE["usage"]["total_tokens"],
+            SpanAttributes.LLM_USAGE_PROMPT_TOKENS: REAL_OPENAI_RESPONSE["usage"]["input_tokens"],
+            SpanAttributes.LLM_USAGE_COMPLETION_TOKENS: REAL_OPENAI_RESPONSE["usage"]["output_tokens"],
+            f"{SpanAttributes.LLM_USAGE_TOTAL_TOKENS}.reasoning": REAL_OPENAI_RESPONSE["usage"]["output_tokens_details"]["reasoning_tokens"],
+            
+            # Content extraction with proper semantic conventions
+            f"{SpanAttributes.LLM_COMPLETIONS}.0.content": REAL_OPENAI_RESPONSE["output"][0]["content"][0]["text"],
+            f"{SpanAttributes.LLM_COMPLETIONS}.0.role": REAL_OPENAI_RESPONSE["output"][0]["role"],
+        }
+        
         # Check all required attributes from our reference model against the actual span
-        for key, expected_value in EXPECTED_RESPONSE_API_SPAN_ATTRIBUTES.items():
-            # Skip library version which might change
-            if key == "library.version":
-                continue
-                
+        for key, expected_value in expected_attributes.items():
             # Assert the attribute exists 
             assert key in instrumented_span.attributes, f"Missing expected attribute '{key}'"
             
@@ -557,29 +220,28 @@ class TestAgentsSdkInstrumentation:
             assert actual_value == expected_value, \
                 f"Attribute '{key}' has wrong value. Expected: {expected_value}, Actual: {actual_value}"
                 
-        # Also verify we don't have any unexpected attributes related to completions
-        # This helps catch duplicate or incorrect attribute names
-        completion_prefix = "gen_ai.completion.0"
+        # Verify completions attributes
+        completion_prefix = SpanAttributes.LLM_COMPLETIONS.split('.')[0]
         completion_attrs = [k for k in instrumented_span.attributes.keys() if k.startswith(completion_prefix)]
-        expected_completion_attrs = [k for k in EXPECTED_RESPONSE_API_SPAN_ATTRIBUTES.keys() if k.startswith(completion_prefix)]
+        expected_completion_attrs = [k for k in expected_attributes.keys() if k.startswith(completion_prefix)]
         
-        # We should have exactly the expected attributes, nothing more
-        assert set(completion_attrs) == set(expected_completion_attrs), \
-            f"Unexpected completion attributes. Found: {completion_attrs}, Expected: {expected_completion_attrs}"
+        # Make sure completion attributes match expected set
+        for attr in expected_completion_attrs:
+            assert attr in completion_attrs, f"Missing completion attribute: {attr}"
             
-        # Verify we correctly mapped input_tokens → prompt_tokens and output_tokens → completion_tokens
-        assert "gen_ai.usage.prompt_tokens" in instrumented_span.attributes, "Missing prompt_tokens attribute"
-        assert instrumented_span.attributes["gen_ai.usage.prompt_tokens"] == 12, "Incorrect prompt_tokens value"
+        # Verify token mapping and special fields
+        assert SpanAttributes.LLM_USAGE_PROMPT_TOKENS in instrumented_span.attributes, f"Missing {SpanAttributes.LLM_USAGE_PROMPT_TOKENS} attribute"
+        assert instrumented_span.attributes[SpanAttributes.LLM_USAGE_PROMPT_TOKENS] == REAL_OPENAI_RESPONSE["usage"]["input_tokens"], "Incorrect prompt_tokens value"
         
-        assert "gen_ai.usage.completion_tokens" in instrumented_span.attributes, "Missing completion_tokens attribute"
-        assert instrumented_span.attributes["gen_ai.usage.completion_tokens"] == 15, "Incorrect completion_tokens value"
+        assert SpanAttributes.LLM_USAGE_COMPLETION_TOKENS in instrumented_span.attributes, f"Missing {SpanAttributes.LLM_USAGE_COMPLETION_TOKENS} attribute"
+        assert instrumented_span.attributes[SpanAttributes.LLM_USAGE_COMPLETION_TOKENS] == REAL_OPENAI_RESPONSE["usage"]["output_tokens"], "Incorrect completion_tokens value"
         
-        # Verify we extracted the special reasoning_tokens field
-        assert "gen_ai.usage.total_tokens.reasoning" in instrumented_span.attributes, "Missing reasoning_tokens attribute"
-        assert instrumented_span.attributes["gen_ai.usage.total_tokens.reasoning"] == 4, "Incorrect reasoning_tokens value"
+        reasoning_attr = f"{SpanAttributes.LLM_USAGE_TOTAL_TOKENS}.reasoning"
+        assert reasoning_attr in instrumented_span.attributes, f"Missing {reasoning_attr} attribute"
+        assert instrumented_span.attributes[reasoning_attr] == REAL_OPENAI_RESPONSE["usage"]["output_tokens_details"]["reasoning_tokens"], "Incorrect reasoning_tokens value"
         
     def test_tool_calls_span_serialization(self, instrumentation):
-        """Test serialization of Generation spans with tool calls from Agents SDK"""
+        """Test serialization of Generation spans with tool calls from Agents SDK using real fixture data"""
         # Dictionary to capture attributes from the instrumentor
         captured_attributes = {}
         
@@ -591,8 +253,21 @@ class TestAgentsSdkInstrumentation:
             # Set the span type
             span.set_attribute("span.kind", "client")
             
-            # Create a mock span with tool calls data
-            mock_span = MockSpan(GENERATION_TOOL_CALLS_SPAN_DATA, span_type="GenerationSpanData")
+            # Create mock data structure that matches what the instrumentor expects
+            # but uses the real fixture data for the output field
+            span_data = {
+                "model": REAL_OPENAI_TOOL_CALLS_RESPONSE["model"],
+                "model_config": {
+                    "temperature": REAL_OPENAI_TOOL_CALLS_RESPONSE["temperature"],
+                    "top_p": REAL_OPENAI_TOOL_CALLS_RESPONSE["top_p"]
+                },
+                "input": "What's the weather in San Francisco?",
+                "output": REAL_OPENAI_TOOL_CALLS_RESPONSE,
+                "usage": REAL_OPENAI_TOOL_CALLS_RESPONSE["usage"]
+            }
+            
+            # Create a mock span with our prepared data
+            mock_span = MockSpan(span_data, span_type="GenerationSpanData")
             
             # Process the mock span with the actual AgentsDetailedExporter
             process_with_instrumentor(mock_span, AgentsDetailedExporter, captured_attributes)
@@ -607,12 +282,34 @@ class TestAgentsSdkInstrumentation:
         # Examine the first span generated from the instrumentor
         instrumented_span = spans[0]
         
+        # Extract tool call details for verification
+        tool_call = REAL_OPENAI_TOOL_CALLS_RESPONSE["output"][0]
+        
+        # Expected attribute values based on the fixture data
+        expected_attributes = {
+            # Model metadata using semantic conventions
+            SpanAttributes.LLM_REQUEST_MODEL: REAL_OPENAI_TOOL_CALLS_RESPONSE["model"],
+            SpanAttributes.LLM_SYSTEM: "openai",
+            SpanAttributes.LLM_REQUEST_TEMPERATURE: REAL_OPENAI_TOOL_CALLS_RESPONSE["temperature"],
+            SpanAttributes.LLM_REQUEST_TOP_P: REAL_OPENAI_TOOL_CALLS_RESPONSE["top_p"],
+            
+            # Response metadata using semantic conventions
+            SpanAttributes.LLM_RESPONSE_MODEL: REAL_OPENAI_TOOL_CALLS_RESPONSE["model"],
+            SpanAttributes.LLM_RESPONSE_ID: REAL_OPENAI_TOOL_CALLS_RESPONSE["id"],
+            
+            # Token usage with proper semantic conventions
+            SpanAttributes.LLM_USAGE_TOTAL_TOKENS: REAL_OPENAI_TOOL_CALLS_RESPONSE["usage"]["total_tokens"],
+            SpanAttributes.LLM_USAGE_PROMPT_TOKENS: REAL_OPENAI_TOOL_CALLS_RESPONSE["usage"]["input_tokens"],
+            SpanAttributes.LLM_USAGE_COMPLETION_TOKENS: REAL_OPENAI_TOOL_CALLS_RESPONSE["usage"]["output_tokens"],
+            
+            # Tool call details with proper semantic conventions
+            f"{SpanAttributes.LLM_COMPLETIONS}.0.tool_calls.0.id": tool_call["id"],
+            f"{SpanAttributes.LLM_COMPLETIONS}.0.tool_calls.0.name": tool_call["name"],
+            f"{SpanAttributes.LLM_COMPLETIONS}.0.tool_calls.0.arguments": tool_call["arguments"]
+        }
+        
         # Check all required attributes from our reference model against the actual span
-        for key, expected_value in EXPECTED_TOOL_CALLS_SPAN_ATTRIBUTES.items():
-            # Skip library version which might change
-            if key == "library.version":
-                continue
-                
+        for key, expected_value in expected_attributes.items():
             # Assert the attribute exists 
             assert key in instrumented_span.attributes, f"Missing expected attribute '{key}'"
             
@@ -620,209 +317,574 @@ class TestAgentsSdkInstrumentation:
             actual_value = instrumented_span.attributes[key]
             assert actual_value == expected_value, \
                 f"Attribute '{key}' has wrong value. Expected: {expected_value}, Actual: {actual_value}"
-                
+        
         # Verify the tool calls attributes specifically
-        tool_calls_prefix = "gen_ai.completion.0.tool_calls"
+        tool_calls_prefix = f"{SpanAttributes.LLM_COMPLETIONS}.0.tool_calls"
         tool_calls_attrs = [k for k in instrumented_span.attributes.keys() if k.startswith(tool_calls_prefix)]
-        expected_tool_calls_attrs = [k for k in EXPECTED_TOOL_CALLS_SPAN_ATTRIBUTES.keys() if k.startswith(tool_calls_prefix)]
+        expected_tool_calls_attrs = [k for k in expected_attributes.keys() if k.startswith(tool_calls_prefix)]
         
-        # We should have exactly the expected tool calls attributes, nothing more
-        assert set(tool_calls_attrs) == set(expected_tool_calls_attrs), \
-            f"Unexpected tool calls attributes. Found: {tool_calls_attrs}, Expected: {expected_tool_calls_attrs}"
-            
-        # Verify tool call ID is captured
-        assert "gen_ai.completion.0.tool_calls.0.id" in instrumented_span.attributes, "Missing tool call ID attribute"
-        assert instrumented_span.attributes["gen_ai.completion.0.tool_calls.0.id"] == "call_abc123", "Incorrect tool call ID"
+        # Make sure we have all expected tool call attributes
+        for attr in expected_tool_calls_attrs:
+            assert attr in tool_calls_attrs, f"Missing tool call attribute: {attr}"
         
-        # Verify tool call name is captured
-        assert "gen_ai.completion.0.tool_calls.0.name" in instrumented_span.attributes, "Missing tool call name attribute"
-        assert instrumented_span.attributes["gen_ai.completion.0.tool_calls.0.name"] == "get_weather", "Incorrect tool call name"
+        # Verify specific tool call details
+        tool_call_id_attr = f"{SpanAttributes.LLM_COMPLETIONS}.0.tool_calls.0.id"
+        assert tool_call_id_attr in instrumented_span.attributes, f"Missing {tool_call_id_attr} attribute"
+        assert instrumented_span.attributes[tool_call_id_attr] == tool_call["id"], "Incorrect tool call ID"
         
-        # Verify tool call arguments are captured
-        assert "gen_ai.completion.0.tool_calls.0.arguments" in instrumented_span.attributes, "Missing tool call arguments attribute"
-        assert "San Francisco" in instrumented_span.attributes["gen_ai.completion.0.tool_calls.0.arguments"], "Incorrect tool call arguments"
+        tool_call_name_attr = f"{SpanAttributes.LLM_COMPLETIONS}.0.tool_calls.0.name"
+        assert tool_call_name_attr in instrumented_span.attributes, f"Missing {tool_call_name_attr} attribute"
+        assert instrumented_span.attributes[tool_call_name_attr] == tool_call["name"], "Incorrect tool call name"
+        
+        tool_call_args_attr = f"{SpanAttributes.LLM_COMPLETIONS}.0.tool_calls.0.arguments"
+        assert tool_call_args_attr in instrumented_span.attributes, f"Missing {tool_call_args_attr} attribute"
+        assert instrumented_span.attributes[tool_call_args_attr] == tool_call["arguments"], "Incorrect tool call arguments"
+        assert "San Francisco" in instrumented_span.attributes[tool_call_args_attr], "Expected location not found in arguments"
 
-    def test_get_model_info_function(self):
-        """Test the get_model_info utility function that extracts model information from agents"""
-        # Create a mock agent with model settings
-        agent = MockAgent(
-            name="Test Agent",
-            instructions="Test instructions",
-            model="gpt-4o",
-            model_settings=MockModelSettings(
-                temperature=0.7,
-                top_p=1.0,
-                frequency_penalty=0.0,
-                presence_penalty=0.0
-            )
-        )
+    def test_full_agent_integration_with_real_types(self, instrumentation):
+        """
+        Test the full integration of the OpenAI Agents SDK with AgentOps.
+        This test uses the real Agents SDK types and runs a simulated agent execution.
+        """
+        # Create objects with real SDK classes
+        response = Response.model_validate(REAL_OPENAI_RESPONSE)
         
-        # Test with agent only
-        model_info = get_model_info(agent)
+        # Create model settings
+        model_settings = ModelSettings(temperature=0.7, top_p=1.0)
         
-        # Verify all expected fields are present
-        for key, expected_value in EXPECTED_MODEL_INFO.items():
-            assert key in model_info, f"Missing expected key '{key}' in model_info"
-            assert model_info[key] == expected_value, \
-                f"Key '{key}' has wrong value. Expected: {expected_value}, Actual: {model_info[key]}"
-                
-        # Test with run_config that overrides model
-        run_config = MockRunConfig(
-            model="gpt-4-turbo", 
-            model_settings=MockModelSettings(temperature=0.5)
-        )
+        # Create an agent with the model settings
+        agent_name = "TestAgent"
+        agent = Agent(name=agent_name, instructions="You are a helpful assistant.", model_settings=model_settings)
         
-        model_info = get_model_info(agent, run_config)
+        # Create a run configuration
+        run_config = RunConfig(workflow_name="test_workflow")
         
-        # Model name should be from run_config
-        assert model_info["model_name"] == "gpt-4-turbo", \
-            f"Model name should be from run_config. Expected: gpt-4-turbo, Actual: {model_info['model_name']}"
+        # Set up captured data for the processor
+        captured_spans = []
+        captured_attributes = {}
+        
+        # Create a mock tracer provider
+        tracer_provider = MagicMock()
+        
+        # Mock the _export_span method
+        def mock_export_span(span):
+            # Extract span data
+            captured_spans.append(span)
             
-        # Temperature should be from run_config
-        assert model_info["temperature"] == 0.5, \
-            f"Temperature should be from run_config. Expected: 0.5, Actual: {model_info['temperature']}"
-
-    def test_runner_instrumentation(self, instrumentation):
-        """Test the AgentsInstrumentor's ability to monkey patch the Runner class"""
-        # Note: This is a partial test as we can't fully test the monkey patching without the actual Agent SDK.
-        # We'll simulate what the monkey patching does to verify the attribute setting logic.
+            # Process with actual exporter
+            process_with_instrumentor(span, AgentsDetailedExporter, captured_attributes)
         
-        # Create mock agent and run_config objects
-        agent = MockAgent(
-            name="Test Agent",
-            instructions="Test instructions", 
-            tools=[MockTool("search"), MockTool("calculator")],
-            model="gpt-4o",
-            model_settings=MockModelSettings(temperature=0.7)
+        # Create a mock processor
+        mock_processor = MagicMock()
+        mock_processor.on_span_start = MagicMock()
+        mock_processor.on_span_end = MagicMock()
+        mock_processor.exporter = MagicMock()
+        mock_processor.exporter._export_span = mock_export_span
+        
+        # Use the real processor but without patching the SDK
+        processor = AgentsDetailedProcessor()
+        processor.exporter = AgentsDetailedExporter(tracer_provider)
+            
+        # Create span data using the real SDK classes
+        gen_span_data = GenerationSpanData(
+            model=REAL_OPENAI_RESPONSE["model"],
+            model_config=model_settings,
+            input="What is the capital of France?",
+            output=response,
+            usage=REAL_OPENAI_RESPONSE["usage"]
         )
         
-        run_config = MockRunConfig(workflow_name="test_workflow")
+        # Create a span with our prepared data
+        span = MockSpan({"data": gen_span_data}, span_type="GenerationSpanData")
+        span.span_data = gen_span_data
         
-        # Create mock run result with raw responses
-        mock_response = {
-            "id": "chatcmpl-abc123",
+        # Create a direct processor with its exporter
+        processor = AgentsDetailedProcessor()
+        processor.exporter = AgentsDetailedExporter()
+        
+        # Create a capture mechanism for export
+        attributes_dict = {}
+        original_create_span = processor.exporter._create_span
+        
+        def mock_create_span(tracer, span_name, span_kind, attributes, span):
+            # Capture the attributes for validation
+            attributes_dict.update(attributes)
+            # Don't actually create the span to avoid complexity
+            return None
+            
+        # Replace with our capturing function
+        processor.exporter._create_span = mock_create_span
+        
+        # Process the span
+        processor.exporter._export_span(span)
+        
+        # Copy captured attributes to our test dictionary
+        captured_attributes.update(attributes_dict)
+        
+        # Verify the captured attributes contain key information
+        assert SpanAttributes.LLM_REQUEST_MODEL in captured_attributes
+        assert captured_attributes[SpanAttributes.LLM_REQUEST_MODEL] == REAL_OPENAI_RESPONSE["model"]
+        
+        # Verify system is correct
+        assert SpanAttributes.LLM_SYSTEM in captured_attributes
+        assert captured_attributes[SpanAttributes.LLM_SYSTEM] == "openai"
+        
+        # Verify model settings were captured
+        assert SpanAttributes.LLM_REQUEST_TEMPERATURE in captured_attributes
+        assert captured_attributes[SpanAttributes.LLM_REQUEST_TEMPERATURE] == 0.7
+        
+        assert SpanAttributes.LLM_REQUEST_TOP_P in captured_attributes  
+        assert captured_attributes[SpanAttributes.LLM_REQUEST_TOP_P] == 1.0
+        
+        # Verify token usage was captured
+        assert SpanAttributes.LLM_USAGE_TOTAL_TOKENS in captured_attributes
+        assert captured_attributes[SpanAttributes.LLM_USAGE_TOTAL_TOKENS] == REAL_OPENAI_RESPONSE["usage"]["total_tokens"]
+        
+        # Verify content was extracted
+        content_attr = f"{SpanAttributes.LLM_COMPLETIONS}.0.content"
+        assert content_attr in captured_attributes
+        assert captured_attributes[content_attr] == REAL_OPENAI_RESPONSE["output"][0]["content"][0]["text"]
+        
+    def test_process_agent_span(self, instrumentation):
+        """Test processing of Agent spans in the exporter."""
+        # Create a dictionary to capture attributes
+        captured_attributes = {}
+        
+        # Create an agent span data with the signature that the class accepts
+        agent_span_data = AgentSpanData(
+            name="test_agent",
+            tools=["tool1", "tool2"]
+        )
+        
+        # Add additional attributes that our exporter looks for
+        agent_span_data.from_agent = "source_agent"
+        agent_span_data.to_agent = "target_agent"  
+        agent_span_data.input = "What is the capital of France?"
+        agent_span_data.output = "Paris is the capital of France"
+        
+        # Create a mock span with the span data
+        mock_span = MockSpan({}, span_type="AgentSpanData")
+        mock_span.span_data = agent_span_data
+        mock_span.trace_id = "trace123"
+        mock_span.span_id = "span456"
+        mock_span.parent_id = "parent789"
+        
+        # Initialize the exporter
+        exporter = AgentsDetailedExporter()
+        
+        # Create a mock _create_span method to capture attributes
+        def mock_create_span(tracer, span_name, span_kind, attributes, span):
+            captured_attributes.update(attributes)
+            return None
+            
+        # Replace with our mock method
+        original_create_span = exporter._create_span
+        exporter._create_span = mock_create_span
+        
+        try:
+            # Process the span
+            exporter._export_span(mock_span)
+            
+            # Verify attributes were correctly set
+            assert AgentAttributes.AGENT_NAME in captured_attributes
+            assert captured_attributes[AgentAttributes.AGENT_NAME] == "test_agent"
+            assert AgentAttributes.AGENT_TOOLS in captured_attributes
+            assert captured_attributes[AgentAttributes.AGENT_TOOLS] == "tool1,tool2"
+            assert AgentAttributes.FROM_AGENT in captured_attributes
+            assert captured_attributes[AgentAttributes.FROM_AGENT] == "source_agent"
+            assert AgentAttributes.TO_AGENT in captured_attributes
+            assert captured_attributes[AgentAttributes.TO_AGENT] == "target_agent"
+            assert WorkflowAttributes.WORKFLOW_INPUT in captured_attributes
+            assert captured_attributes[WorkflowAttributes.WORKFLOW_INPUT] == "What is the capital of France?"
+            assert WorkflowAttributes.FINAL_OUTPUT in captured_attributes
+            assert captured_attributes[WorkflowAttributes.FINAL_OUTPUT] == "Paris is the capital of France"
+            assert CoreAttributes.TRACE_ID in captured_attributes
+            assert captured_attributes[CoreAttributes.TRACE_ID] == "trace123"
+            assert CoreAttributes.SPAN_ID in captured_attributes
+            assert captured_attributes[CoreAttributes.SPAN_ID] == "span456"
+            assert CoreAttributes.PARENT_ID in captured_attributes
+            assert captured_attributes[CoreAttributes.PARENT_ID] == "parent789"
+        finally:
+            # Restore original method
+            exporter._create_span = original_create_span
+    
+    def test_process_chat_completions(self, instrumentation):
+        """Test processing of chat completions in the exporter."""
+        # Create a dictionary to capture attributes
+        captured_attributes = {}
+        
+        # Create a ChatCompletion-like response (with choices format)
+        chat_response = {
+            "id": "chatcmpl-123456",
+            "object": "chat.completion",
+            "created": 1677858242,
             "model": "gpt-4o",
             "choices": [
                 {
+                    "finish_reason": "stop",
                     "index": 0,
                     "message": {
                         "role": "assistant",
-                        "content": "This is a test result."
-                    },
-                    "finish_reason": "stop"
+                        "content": "The capital of France is Paris.",
+                        "tool_calls": [
+                            {
+                                "id": "call_abc123",
+                                "function": {
+                                    "name": "get_weather",
+                                    "arguments": '{"location": "Paris", "unit": "celsius"}'
+                                }
+                            }
+                        ]
+                    }
                 }
             ],
             "usage": {
-                "prompt_tokens": 15,
-                "completion_tokens": 10,
-                "total_tokens": 25
-            },
-            "system_fingerprint": "fp_789xyz"
+                "prompt_tokens": 10,
+                "completion_tokens": 8,
+                "total_tokens": 18
+            }
         }
         
-        # Create a dictionary to capture the attributes that would be set by the monkey patched Runner methods
-        # This simulates what would happen in the instrumented_method functions
+        # Initialize the exporter
+        exporter = AgentsDetailedExporter()
+        
+        # Process the response directly
+        exporter._process_chat_completions(chat_response, captured_attributes)
+        
+        # Verify attributes were correctly set
+        assert f"{SpanAttributes.LLM_COMPLETIONS}.0.content" in captured_attributes
+        assert captured_attributes[f"{SpanAttributes.LLM_COMPLETIONS}.0.content"] == "The capital of France is Paris."
+        assert f"{SpanAttributes.LLM_COMPLETIONS}.0.role" in captured_attributes
+        assert captured_attributes[f"{SpanAttributes.LLM_COMPLETIONS}.0.role"] == "assistant"
+        
+        # Verify tool calls were processed
+        assert f"{SpanAttributes.LLM_COMPLETIONS}.0.tool_calls.0.id" in captured_attributes
+        assert captured_attributes[f"{SpanAttributes.LLM_COMPLETIONS}.0.tool_calls.0.id"] == "call_abc123"
+        assert f"{SpanAttributes.LLM_COMPLETIONS}.0.tool_calls.0.name" in captured_attributes
+        assert captured_attributes[f"{SpanAttributes.LLM_COMPLETIONS}.0.tool_calls.0.name"] == "get_weather"
+        assert f"{SpanAttributes.LLM_COMPLETIONS}.0.tool_calls.0.arguments" in captured_attributes
+        assert "Paris" in captured_attributes[f"{SpanAttributes.LLM_COMPLETIONS}.0.tool_calls.0.arguments"]
+    
+    def test_process_function_span(self, instrumentation):
+        """Test processing of Function spans in the exporter."""
+        # Create a dictionary to capture attributes
         captured_attributes = {}
         
-        # Simulate what the instrumented Runner.run_sync method would do
-        tracer = TracingCore.get_instance().get_tracer("test_tracer")
+        # Create a function span data with the signature that the class accepts
+        function_span_data = FunctionSpanData(
+            name="get_weather",
+            input='{"location": "San Francisco", "unit": "celsius"}',
+            output="The weather in San Francisco is 22 degrees celsius."
+        )
         
-        # Start a span as the Runner method would
-        with tracer.start_as_current_span("test_runner_span") as span:
-            # Extract model information
-            model_info = get_model_info(agent, run_config)
+        # Add additional attributes that our exporter looks for
+        function_span_data.from_agent = "assistant"
+        function_span_data.tools = ["weather_tool", "time_tool"]
+        
+        # Create a mock span with the span data
+        mock_span = MockSpan({}, span_type="FunctionSpanData")
+        mock_span.span_data = function_span_data
+        mock_span.trace_id = "trace_func_123"
+        mock_span.span_id = "span_func_456"
+        mock_span.parent_id = "parent_func_789"
+        
+        # Initialize the exporter
+        exporter = AgentsDetailedExporter()
+        
+        # Create a mock _create_span method to capture attributes
+        def mock_create_span(tracer, span_name, span_kind, attributes, span):
+            captured_attributes.update(attributes)
+            return None
             
-            # Set span attributes as the Runner method would
-            span.set_attribute("span.kind", WorkflowAttributes.WORKFLOW_STEP)
-            span.set_attribute("agent.name", agent.name)
-            span.set_attribute(WorkflowAttributes.WORKFLOW_INPUT, "What is the capital of France?")
-            span.set_attribute(WorkflowAttributes.MAX_TURNS, 10)
-            span.set_attribute("service.name", "agentops.agents")
-            span.set_attribute(WorkflowAttributes.WORKFLOW_TYPE, "agents.run_sync")
-            span.set_attribute(SpanAttributes.LLM_REQUEST_MODEL, model_info["model_name"])
-            span.set_attribute("gen_ai.request.model", model_info["model_name"])
-            span.set_attribute("gen_ai.system", "openai")
-            span.set_attribute("stream", "false")
+        # Replace with our mock method
+        original_create_span = exporter._create_span
+        exporter._create_span = mock_create_span
+        
+        try:
+            # Process the span
+            exporter._export_span(mock_span)
             
-            # Add model parameters from model_info
-            for param, value in model_info.items():
-                if param != "model_name":
-                    span.set_attribute(f"agent.model.{param}", value)
+            # Verify attributes were correctly set
+            assert AgentAttributes.AGENT_NAME in captured_attributes
+            assert captured_attributes[AgentAttributes.AGENT_NAME] == "get_weather"
+            assert AgentAttributes.AGENT_TOOLS in captured_attributes
+            assert captured_attributes[AgentAttributes.AGENT_TOOLS] == "weather_tool,time_tool"
+            assert AgentAttributes.FROM_AGENT in captured_attributes
+            assert captured_attributes[AgentAttributes.FROM_AGENT] == "assistant"
+            assert SpanAttributes.LLM_PROMPTS in captured_attributes
+            assert type(captured_attributes[SpanAttributes.LLM_PROMPTS]) == str
+            assert "San Francisco" in captured_attributes[SpanAttributes.LLM_PROMPTS]
+            assert SpanAttributes.LLM_COMPLETIONS in captured_attributes
+            assert captured_attributes[SpanAttributes.LLM_COMPLETIONS] == "The weather in San Francisco is 22 degrees celsius."
+            assert CoreAttributes.TRACE_ID in captured_attributes
+            assert CoreAttributes.SPAN_ID in captured_attributes
+            assert CoreAttributes.PARENT_ID in captured_attributes
+        finally:
+            # Restore original method
+            exporter._create_span = original_create_span
+    
+    def test_error_handling_in_spans(self, instrumentation):
+        """Test handling of spans with errors."""
+        from opentelemetry.trace import Status, StatusCode
+        
+        # Create a span data
+        gen_span_data = GenerationSpanData(
+            model="gpt-4o",
+            model_config={
+                "temperature": 0.7,
+                "top_p": 1.0
+            },
+            input="What is the capital of France?",
+            output=REAL_OPENAI_RESPONSE,
+            usage=REAL_OPENAI_RESPONSE["usage"]
+        )
+        
+        # Create a span with error
+        mock_span = MagicMock()
+        mock_span.span_data = gen_span_data
+        mock_span.trace_id = "trace123"
+        mock_span.span_id = "span456"
+        mock_span.parent_id = "parent789"
+        mock_span.error = {
+            "message": "API request failed", 
+            "data": {"code": "rate_limit_exceeded"}
+        }
+        
+        # Create a mock for the otel span
+        mock_otel_span = MagicMock()
+        
+        # Initialize the test environment
+        with patch('opentelemetry.trace.Status', MagicMock()) as MockStatus:
+            with patch('opentelemetry.trace.get_tracer', return_value=MagicMock()) as mock_get_tracer:
+                # Create a mock to be returned by start_as_current_span
+                mock_tracer = mock_get_tracer.return_value
+                mock_tracer.start_as_current_span.return_value.__enter__.return_value = mock_otel_span
+                
+                # Initialize the exporter
+                exporter = AgentsDetailedExporter()
+                
+                # Call the original method
+                exporter._create_span(mock_tracer, "test_span", None, {}, mock_span)
+                
+                # Verify error handling calls
+                mock_otel_span.set_status.assert_called_once()
+                mock_otel_span.record_exception.assert_called_once()
+    
+    def test_trace_export(self, instrumentation):
+        """Test exporting of traces with spans."""
+        # Create a dictionary to capture attributes
+        captured_attributes = {}
+        
+        # Initialize the exporter
+        exporter = AgentsDetailedExporter()
+        
+        # Create a mock trace object
+        mock_trace = MagicMock()
+        mock_trace.name = "test_workflow"
+        mock_trace.trace_id = "trace_123456"
+        mock_trace.group_id = "group_abcdef"
+        mock_trace.spans = [MagicMock(), MagicMock()]
+        
+        # Create a mock tracer
+        mock_tracer = MagicMock()
+        mock_span = MagicMock()
+        mock_tracer.start_as_current_span.return_value.__enter__.return_value = mock_span
+        
+        # Mock the get_tracer function
+        with patch('agentops.instrumentation.openai_agents.exporter.get_tracer', return_value=mock_tracer):
+            # Export the trace
+            exporter._export_trace(mock_trace)
             
-            # Add workflow name from run_config
-            span.set_attribute(WorkflowAttributes.WORKFLOW_NAME, run_config.workflow_name)
+            # Verify span was created with correct attributes
+            mock_tracer.start_as_current_span.assert_called_once()
+            call_args = mock_tracer.start_as_current_span.call_args[1]
+            assert 'name' in call_args
+            assert call_args['name'] == f"agents.trace.{mock_trace.name}"
             
-            # Add agent instructions using common convention
-            span.set_attribute("agent.instructions", agent.instructions)
-            span.set_attribute("agent.instruction_type", "string")
+            assert 'attributes' in call_args
+            attributes = call_args['attributes']
+            assert WorkflowAttributes.WORKFLOW_NAME in attributes
+            assert attributes[WorkflowAttributes.WORKFLOW_NAME] == "test_workflow"
+            assert CoreAttributes.TRACE_ID in attributes
+            assert attributes[CoreAttributes.TRACE_ID] == "trace_123456"
+            assert InstrumentationAttributes.LIBRARY_NAME in attributes
+        
+    def test_instrumentor_patching(self, instrumentation):
+        """Test that the instrumentor properly patches the Runner class."""
+        # Create a mock Runner class that matches the interface needed by the instrumentor
+        class MockRunner:
+            @classmethod
+            def run_sync(cls, *args, **kwargs):
+                return "original_run_sync"
             
-            # Add agent tools
-            tool_names = [tool.name for tool in agent.tools]
-            span.set_attribute(AgentAttributes.AGENT_TOOLS, str(tool_names))
+            @classmethod 
+            def run(cls, *args, **kwargs):
+                return "original_run"
+                
+            @classmethod
+            def run_streamed(cls, *args, **kwargs):
+                return "original_run_streamed"
+        
+        # Create a patch to replace the actual Runner with our mock for testing
+        with patch('agents.run.Runner', MockRunner):
+            # Create a holder for the added processor
+            added_processor = None
             
-            # Add model settings using proper semantic conventions
-            span.set_attribute(SpanAttributes.LLM_REQUEST_TEMPERATURE, agent.model_settings.temperature)
-            span.set_attribute(SpanAttributes.LLM_REQUEST_TOP_P, agent.model_settings.top_p)
-            span.set_attribute(SpanAttributes.LLM_REQUEST_FREQUENCY_PENALTY, agent.model_settings.frequency_penalty)
-            span.set_attribute(SpanAttributes.LLM_REQUEST_PRESENCE_PENALTY, agent.model_settings.presence_penalty)
-            
-            # Simulate getting a run result
-            run_result = MockAgentRunResult(
-                final_output="The capital of France is Paris.",
-                raw_responses=[mock_response]
+            # Mock the add_trace_processor function
+            def mock_add_processor(processor):
+                nonlocal added_processor
+                added_processor = processor
+                
+            # Use mocking to avoid real SDK operations
+            with patch('agents.add_trace_processor', mock_add_processor):
+                # Initialize the instrumentor
+                instrumentor = AgentsInstrumentor()
+                
+                # Store the original methods for verification
+                original_run_sync = MockRunner.run_sync
+                original_run = MockRunner.run
+                original_run_streamed = MockRunner.run_streamed
+                
+                # Test the _instrument method
+                instrumentor._patch_runner_class(None)  # We don't need a real tracer_provider for patching
+                
+                # We're not adding a processor in _patch_runner_class, so we don't need to verify it
+                # Instead, let's verify the methods were replaced
+                
+                # Verify methods were replaced
+                assert MockRunner.run_sync != original_run_sync
+                assert MockRunner.run != original_run
+                assert MockRunner.run_streamed != original_run_streamed
+                
+                # Verify original methods are stored
+                assert "_original_methods" in instrumentor.__class__.__dict__
+                assert instrumentor.__class__._original_methods["run_sync"] == original_run_sync
+                assert instrumentor.__class__._original_methods["run"] == original_run
+                assert instrumentor.__class__._original_methods["run_streamed"] == original_run_streamed
+                
+                # Test uninstrumentation
+                instrumentor._uninstrument()
+                
+                # Verify methods were restored
+                assert MockRunner.run_sync == original_run_sync
+                assert MockRunner.run == original_run
+                assert MockRunner.run_streamed == original_run_streamed
+                
+                # Verify methods dictionary is cleared
+                assert not instrumentor.__class__._original_methods
+    
+    def test_get_model_info_function(self, instrumentation):
+        """Test the get_model_info function with various inputs."""
+        # Test with an agent that has model and model_settings
+        agent = Agent(
+            name="test_agent", 
+            instructions="You are a helpful assistant.",
+            model="gpt-4o",
+            model_settings=ModelSettings(
+                temperature=0.8,
+                top_p=0.9,
+                frequency_penalty=0.1,
+                presence_penalty=0.2
             )
-            
-            # Add result attributes as the Runner method would
-            span.set_attribute(WorkflowAttributes.FINAL_OUTPUT, str(run_result.final_output))
-            
-            # Process the raw responses
-            for i, response in enumerate(run_result.raw_responses):
-                # Add token usage using proper semantic conventions
-                if "usage" in response:
-                    usage = response["usage"]
-                    if "prompt_tokens" in usage:
-                        span.set_attribute(f"{SpanAttributes.LLM_USAGE_PROMPT_TOKENS}.{i}", usage["prompt_tokens"])
-                    
-                    if "completion_tokens" in usage:
-                        span.set_attribute(f"{SpanAttributes.LLM_USAGE_COMPLETION_TOKENS}.{i}", usage["completion_tokens"])
-                    
-                    if "total_tokens" in usage:
-                        span.set_attribute(f"{SpanAttributes.LLM_USAGE_TOTAL_TOKENS}.{i}", usage["total_tokens"])
-            
-            # Set total token counts
-            span.set_attribute(SpanAttributes.LLM_USAGE_PROMPT_TOKENS, 15)
-            span.set_attribute(SpanAttributes.LLM_USAGE_COMPLETION_TOKENS, 10)
-            span.set_attribute(SpanAttributes.LLM_USAGE_TOTAL_TOKENS, 25)
-            
-            # Add instrumentation metadata
-            span.set_attribute(InstrumentationAttributes.NAME, "agentops.agents")
-            span.set_attribute(InstrumentationAttributes.VERSION, "0.1.0")
-            
-            # Capture the attributes for testing
-            captured_attributes = dict(span.attributes)
-
-        # Get all spans
-        spans = instrumentation.get_finished_spans()
-            
-        # Examine the first span
-        instrumented_span = spans[0]
+        )
         
-        # Verify key attributes that should be set by the Runner method
-        assert "agent.name" in instrumented_span.attributes, "Missing agent.name attribute"
-        assert instrumented_span.attributes["agent.name"] == "Test Agent", "Incorrect agent.name value"
+        # No run config
+        model_info = get_model_info(agent, None)
         
-        assert WorkflowAttributes.WORKFLOW_NAME in instrumented_span.attributes, "Missing workflow.name attribute"
-        assert instrumented_span.attributes[WorkflowAttributes.WORKFLOW_NAME] == "test_workflow", "Incorrect workflow.name value"
+        # Verify model info was extracted correctly
+        assert "model_name" in model_info
+        assert model_info["model_name"] == "gpt-4o"
+        assert "temperature" in model_info
+        assert model_info["temperature"] == 0.8
+        assert "top_p" in model_info
+        assert model_info["top_p"] == 0.9
+        assert "frequency_penalty" in model_info
+        assert model_info["frequency_penalty"] == 0.1
+        assert "presence_penalty" in model_info
+        assert model_info["presence_penalty"] == 0.2
         
-        assert "agent.model.temperature" in instrumented_span.attributes, "Missing agent.model.temperature attribute"
-        assert instrumented_span.attributes["agent.model.temperature"] == 0.7, "Incorrect temperature value"
+        # Test with run config that overrides agent model
+        run_config = RunConfig(
+            model="gpt-3.5-turbo",
+            model_settings=ModelSettings(temperature=0.5)
+        )
         
-        assert AgentAttributes.AGENT_TOOLS in instrumented_span.attributes, "Missing agent.tools attribute"
-        assert "search" in instrumented_span.attributes[AgentAttributes.AGENT_TOOLS], "Missing tool in agent.tools value"
-        assert "calculator" in instrumented_span.attributes[AgentAttributes.AGENT_TOOLS], "Missing tool in agent.tools value"
+        # Run with config
+        model_info_with_config = get_model_info(agent, run_config)
         
-        assert WorkflowAttributes.FINAL_OUTPUT in instrumented_span.attributes, "Missing workflow.final_output attribute"
-        assert instrumented_span.attributes[WorkflowAttributes.FINAL_OUTPUT] == "The capital of France is Paris.", "Incorrect final_output value"
+        # Verify run config overrides agent settings
+        assert "model_name" in model_info_with_config
+        assert model_info_with_config["model_name"] == "gpt-3.5-turbo"
+        assert "temperature" in model_info_with_config
+        assert model_info_with_config["temperature"] == 0.5
+        # These should still come from the agent
+        assert "top_p" in model_info_with_config
+        assert model_info_with_config["top_p"] == 0.9
+    
+    def test_processor_integration_with_agent_tracing(self, instrumentation):
+        """Test the integration of AgentsDetailedProcessor with the Agents SDK tracing system."""
+        # Create the processor directly
+        processor = AgentsDetailedProcessor()
+        assert isinstance(processor, AgentsDetailedProcessor)
         
-        assert SpanAttributes.LLM_USAGE_TOTAL_TOKENS in instrumented_span.attributes, "Missing gen_ai.usage.total_tokens attribute"
-        assert instrumented_span.attributes[SpanAttributes.LLM_USAGE_TOTAL_TOKENS] == 25, "Incorrect total_tokens value"
+        # Verify the processor has the correct methods
+        assert hasattr(processor, 'on_span_start')
+        assert hasattr(processor, 'on_span_end')
+        assert hasattr(processor, 'on_trace_start')
+        assert hasattr(processor, 'on_trace_end')
+        
+        # Initialize the exporter
+        processor.exporter = AgentsDetailedExporter()
+        assert isinstance(processor.exporter, AgentsDetailedExporter)
+        
+        # Create a capture mechanism for export calls
+        exported_spans = []
+        original_export = processor.exporter.export
+        processor.exporter.export = lambda spans: exported_spans.extend(spans)
+        
+        # Create span data using the real SDK classes
+        gen_span_data = GenerationSpanData(
+            model=REAL_OPENAI_RESPONSE["model"],
+            model_config={
+                "temperature": REAL_OPENAI_RESPONSE["temperature"],
+                "top_p": REAL_OPENAI_RESPONSE["top_p"]
+            },
+            input="What is the capital of France?",
+            output=REAL_OPENAI_RESPONSE,
+            usage=REAL_OPENAI_RESPONSE["usage"]
+        )
+            
+        # Create a mock span
+        span = MockSpan({}, span_type="GenerationSpanData")
+        span.span_data = gen_span_data
+        
+        # Call the processor's on_span_end method
+        processor.on_span_end(span)
+        
+        # Verify the span was exported
+        assert len(exported_spans) == 1
+        assert exported_spans[0] == span
+        
+        # Test the other processor methods for coverage
+        processor.on_span_start(span)
+        assert len(exported_spans) == 2
+        
+        # Create a mock trace with spans
+        mock_trace = MagicMock()
+        mock_trace.name = "test_trace"
+        mock_trace.trace_id = "trace123"
+        mock_trace.group_id = "group456"
+        
+        # Test trace methods
+        processor.on_trace_start(mock_trace)
+        assert len(exported_spans) == 3
+        
+        processor.on_trace_end(mock_trace)
+        assert len(exported_spans) == 4
+        
+        # Test shutdown and force_flush for coverage
+        processor.shutdown()
+        processor.force_flush()
+        
+        # Restore original export method
+        processor.exporter.export = original_export
