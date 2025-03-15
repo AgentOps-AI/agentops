@@ -85,20 +85,21 @@ def get_agents_version():
         pass
     return "unknown"
 
-# Define standard model configuration mapping
+# Define standard model configuration mapping (target → source)
 MODEL_CONFIG_MAPPING = {
-    "temperature": SpanAttributes.LLM_REQUEST_TEMPERATURE,
-    "top_p": SpanAttributes.LLM_REQUEST_TOP_P,
-    "frequency_penalty": SpanAttributes.LLM_REQUEST_FREQUENCY_PENALTY,
-    "presence_penalty": SpanAttributes.LLM_REQUEST_PRESENCE_PENALTY,
-    "max_tokens": SpanAttributes.LLM_REQUEST_MAX_TOKENS,
+    # Target semantic convention → source field
+    SpanAttributes.LLM_REQUEST_TEMPERATURE: "temperature",
+    SpanAttributes.LLM_REQUEST_TOP_P: "top_p",
+    SpanAttributes.LLM_REQUEST_FREQUENCY_PENALTY: "frequency_penalty",
+    SpanAttributes.LLM_REQUEST_PRESENCE_PENALTY: "presence_penalty",
+    SpanAttributes.LLM_REQUEST_MAX_TOKENS: "max_tokens",
 }
 
-# Additional token usage mapping to handle different naming conventions
+# Additional token usage mapping to handle different naming conventions (target → source)
 TOKEN_USAGE_EXTENDED_MAPPING = {
-    # Response API mappings (handle both naming conventions)
-    "input_tokens": SpanAttributes.LLM_USAGE_PROMPT_TOKENS,
-    "output_tokens": SpanAttributes.LLM_USAGE_COMPLETION_TOKENS,
+    # Target semantic convention → source field
+    SpanAttributes.LLM_USAGE_PROMPT_TOKENS: "input_tokens",
+    SpanAttributes.LLM_USAGE_COMPLETION_TOKENS: "output_tokens",
 }
 
 class AgentsDetailedExporter:
@@ -118,8 +119,8 @@ class AgentsDetailedExporter:
             model_config: Model configuration dictionary or object
             attributes: Attributes dictionary to update
         """
-        # Apply the mapping for all model configuration parameters
-        for source_attr, target_attr in MODEL_CONFIG_MAPPING.items():
+        # Apply the mapping for all model configuration parameters (target → source)
+        for target_attr, source_attr in MODEL_CONFIG_MAPPING.items():
             # Try to access as object attribute
             if hasattr(model_config, source_attr) and getattr(model_config, source_attr) is not None:
                 attributes[target_attr] = getattr(model_config, source_attr)
@@ -139,8 +140,8 @@ class AgentsDetailedExporter:
         # First use the standard token usage processor
         process_token_usage(usage, attributes)
         
-        # Then apply extended mappings for tokens if not already set by the standard processor
-        for source_attr, target_attr in TOKEN_USAGE_EXTENDED_MAPPING.items():
+        # Then apply extended mappings for tokens if not already set by the standard processor (target → source)
+        for target_attr, source_attr in TOKEN_USAGE_EXTENDED_MAPPING.items():
             if source_attr in usage and target_attr not in attributes:
                 attributes[target_attr] = usage[source_attr]
                 
@@ -152,17 +153,18 @@ class AgentsDetailedExporter:
             response: Response dictionary
             attributes: Attributes dictionary to update
         """
-        # Extract model from response
-        if "model" in response:
-            attributes[SpanAttributes.LLM_RESPONSE_MODEL] = response["model"]
+        # Define field mappings - target attribute → source field
+        field_mapping = {
+            # Target semantic convention → source field
+            SpanAttributes.LLM_RESPONSE_MODEL: "model",
+            SpanAttributes.LLM_RESPONSE_ID: "id",
+            SpanAttributes.LLM_OPENAI_RESPONSE_SYSTEM_FINGERPRINT: "system_fingerprint",
+        }
         
-        # Extract ID
-        if "id" in response:
-            attributes[SpanAttributes.LLM_RESPONSE_ID] = response["id"]
-        
-        # Extract system fingerprint (OpenAI specific)
-        if "system_fingerprint" in response:
-            attributes[SpanAttributes.LLM_OPENAI_RESPONSE_SYSTEM_FINGERPRINT] = response["system_fingerprint"]
+        # Apply the mapping for all response metadata fields
+        for target_attr, source_key in field_mapping.items():
+            if source_key in response:
+                attributes[target_attr] = response[source_key]
             
     def _process_chat_completions(self, response: Dict[str, Any], attributes: Dict[str, Any]) -> None:
         """
@@ -260,14 +262,13 @@ class AgentsDetailedExporter:
         elif "output" in response:
             self._process_response_api(response, attributes)
             
-    def _process_agent_span(self, span: Any, span_data: Any, output_dict: Optional[Dict], attributes: Dict[str, Any]) -> SpanKind:
+    def _process_agent_span(self, span: Any, span_data: Any, attributes: Dict[str, Any]) -> SpanKind:
         """
         Process Agent span data and update attributes.
         
         Args:
             span: The original span object
             span_data: The span data object
-            output_dict: Optional dictionary output (for test mode)
             attributes: Attributes dictionary to update
             
         Returns:
@@ -280,59 +281,44 @@ class AgentsDetailedExporter:
             WorkflowAttributes.WORKFLOW_INPUT: "input",
             WorkflowAttributes.FINAL_OUTPUT: "output",
             AgentAttributes.FROM_AGENT: "from_agent",
-            "agent.from": "from_agent",  # Also map to test-expected attribute
+            "agent.from": "from_agent",  # Also map to gen_ai attribute
             AgentAttributes.TO_AGENT: "to_agent",
-            "agent.to": "to_agent",      # Also map to test-expected attribute
+            "agent.to": "to_agent",      # Also map to gen_ai attribute
         }
         
-        # In test mode with dictionary output
-        if output_dict:
-            # Process attributes using the mapping
-            for target_attr, source_key in field_mapping.items():
-                if source_key in output_dict:
-                    # For Agent spans, tests expect the raw input/output strings without quotes
-                    if source_key in ["input", "output"] and isinstance(output_dict[source_key], str):
-                        attributes[target_attr] = output_dict[source_key]
-                    # For complex objects, still use serialization
-                    elif source_key in ["input", "output"]:
-                        attributes[target_attr] = safe_serialize(output_dict[source_key])
-                    # For other fields, pass directly
-                    else:
-                        attributes[target_attr] = output_dict[source_key]
-                        
-            # Process special collections
-            if "tools" in output_dict:
-                attributes[AgentAttributes.AGENT_TOOLS] = ",".join(output_dict["tools"] or [])
+        # Process attributes using the mapping
+        for target_attr, source_key in field_mapping.items():
+            if hasattr(span_data, source_key):
+                value = getattr(span_data, source_key)
+                
+                # For Agent spans, pass string values directly
+                if source_key in ("input", "output") and isinstance(value, str):
+                    attributes[target_attr] = value
+                # For complex objects, use serialization
+                elif source_key in ("input", "output"):
+                    attributes[target_attr] = safe_serialize(value)
+                # For other fields, pass directly
+                else:
+                    attributes[target_attr] = value
         
-        # Normal mode with object properties
-        else:
-            # Process attributes using the mapping
-            for target_attr, source_key in field_mapping.items():
-                if hasattr(span_data, source_key):
-                    value = getattr(span_data, source_key)
-                    
-                    # For Agent spans, tests expect raw input/output strings without quotes
-                    if source_key in ["input", "output"] and isinstance(value, str):
-                        attributes[target_attr] = value
-                    # For complex objects, still use serialization
-                    elif source_key in ["input", "output"]:
-                        # Don't double-process dict outputs (already handled in the other branch)
-                        if not (source_key == "output" and isinstance(value, dict)):
-                            attributes[target_attr] = safe_serialize(value)
-                    else:
-                        attributes[target_attr] = value
+        # Process special collections
+        if hasattr(span_data, "tools"):
+            tools = getattr(span_data, "tools")
+            if isinstance(tools, list) and tools is not None:
+                attributes[AgentAttributes.AGENT_TOOLS] = ",".join(tools)
+            else:
+                logger.debug(f"Got Agent tools in an unexpected format: {type(tools)}")
         
         # Always return CONSUMER for Agent spans
         return SpanKind.CONSUMER
         
-    def _process_function_span(self, span: Any, span_data: Any, output_dict: Optional[Dict], attributes: Dict[str, Any]) -> SpanKind:
+    def _process_function_span(self, span: Any, span_data: Any, attributes: Dict[str, Any]) -> SpanKind:
         """
         Process Function span data and update attributes.
         
         Args:
             span: The original span object
             span_data: The span data object
-            output_dict: Optional dictionary output (for test mode)
             attributes: Attributes dictionary to update
             
         Returns:
@@ -341,126 +327,65 @@ class AgentsDetailedExporter:
         # Define field mappings - target attribute → source field
         field_mapping = {
             AgentAttributes.AGENT_NAME: "name",
-            SpanAttributes.LLM_PROMPTS: "input",
-            SpanAttributes.LLM_COMPLETIONS: "output",
+            SpanAttributes.LLM_PROMPTS: "input",             # For OTel spec
+            "gen_ai.prompt": "input",                        # For test compatibility 
+            SpanAttributes.LLM_COMPLETIONS: "output",        # For OTel spec
+            "gen_ai.completion": "output",                   # For test compatibility
             AgentAttributes.FROM_AGENT: "from_agent",
         }
         
-        # In test mode with dictionary output
-        if output_dict:
-            # Process attributes using the mapping
-            for target_attr, source_key in field_mapping.items():
-                if source_key in output_dict:
-                    # The test expects raw strings for both input and output in function spans, not serialized JSON
-                    if source_key in ["input", "output"] and isinstance(output_dict[source_key], str):
-                        attributes[target_attr] = output_dict[source_key]
-                    # For non-string inputs/outputs, still serialize
-                    elif source_key in ["input", "output"] and not isinstance(output_dict[source_key], str):
-                        attributes[target_attr] = safe_serialize(output_dict[source_key])
-                    # For other fields, pass directly
-                    else:
-                        attributes[target_attr] = output_dict[source_key]
-                        
-            # Process special collections
-            if "tools" in output_dict:
-                attributes[AgentAttributes.AGENT_TOOLS] = ",".join(output_dict["tools"] or [])
+        # Process attributes using the mapping
+        for target_attr, source_key in field_mapping.items():
+            if hasattr(span_data, source_key):
+                value = getattr(span_data, source_key)
+                
+                # Handle string values directly
+                if source_key in ["input", "output"] and isinstance(value, str):
+                    attributes[target_attr] = value
+                # For non-string inputs/outputs, serialize
+                elif source_key in ["input", "output"]:
+                    attributes[target_attr] = safe_serialize(value)
+                # For other fields, pass directly
+                else:
+                    attributes[target_attr] = value
         
-        # Normal mode with object properties
-        else:
-            # Process attributes using the mapping
-            for target_attr, source_key in field_mapping.items():
-                if hasattr(span_data, source_key):
-                    value = getattr(span_data, source_key)
-                    
-                    # The test expects raw strings for both input and output in function spans
-                    if source_key in ["input", "output"] and isinstance(value, str):
-                        attributes[target_attr] = value
-                    # For non-string inputs/outputs, still serialize
-                    elif source_key in ["input", "output"] and not isinstance(value, str):
-                        # Don't double-process dict outputs (already handled in the other branch)
-                        if not (source_key == "output" and isinstance(value, dict)):
-                            attributes[target_attr] = safe_serialize(value)
-                    else:
-                        attributes[target_attr] = value
+        # Process special collections
+        if hasattr(span_data, "tools"):
+            tools = getattr(span_data, "tools")
+            if isinstance(tools, list) and tools is not None:
+                attributes[AgentAttributes.AGENT_TOOLS] = ",".join(tools)
+            else:
+                logger.debug(f"Got Function tools in an unexpected format: {type(tools)}")
         
         # Always return CLIENT for Function spans
         return SpanKind.CLIENT
         
-    def _process_generation_span(self, span: Any, span_data: Any, output_dict: Optional[Dict], attributes: Dict[str, Any]) -> SpanKind:
+    def _process_generation_span(self, span: Any, span_data: Any, attributes: Dict[str, Any]) -> SpanKind:
         """
         Process Generation span data and update attributes.
         
         Args:
             span: The original span object
             span_data: The span data object
-            output_dict: Optional dictionary output (for test mode)
             attributes: Attributes dictionary to update
             
         Returns:
             The appropriate SpanKind for this span
         """
-        # Process data based on mode (test or normal)
-        if output_dict:  # Test mode
-            self._process_generation_test_mode(output_dict, attributes)
-        else:  # Normal mode
-            self._process_generation_normal_mode(span_data, attributes)
-        
-        # Always return CLIENT for Generation spans
-        return SpanKind.CLIENT
-        
-    def _process_generation_test_mode(self, output_dict: Dict[str, Any], attributes: Dict[str, Any]) -> None:
-        """Helper method to process Generation span in test mode"""
-        # Common fields to extract from the output dictionary
-        common_fields = {
-            "model": SpanAttributes.LLM_REQUEST_MODEL,
+        # Define field mappings - target attribute → source field
+        field_mapping = {
+            # Target semantic convention → source field
+            SpanAttributes.LLM_REQUEST_MODEL: "model",
         }
         
-        # Process common fields
-        for source_key, target_attr in common_fields.items():
-            if source_key in output_dict:
-                attributes[target_attr] = output_dict[source_key]
-                
-                # Special case for model - set the system attribute
-                if source_key == "model":
-                    attributes[SpanAttributes.LLM_SYSTEM] = "openai"
-        
-        # Process model configuration if available
-        if "model_config" in output_dict and isinstance(output_dict["model_config"], dict):
-            self._process_model_config(output_dict["model_config"], attributes)
-        
-        # Process nested output if available
-        if "output" in output_dict and isinstance(output_dict["output"], dict):
-            nested_output = output_dict["output"]
-            
-            # Process response metadata
-            self._process_response_metadata(nested_output, attributes)
-            
-            # Process token usage
-            if "usage" in nested_output and isinstance(nested_output["usage"], dict):
-                self._process_extended_token_usage(nested_output["usage"], attributes)
-            
-            # Process completions
-            self._process_completions(nested_output, attributes)
-        
-        # Process outer usage if available
-        if "usage" in output_dict and isinstance(output_dict["usage"], dict):
-            self._process_extended_token_usage(output_dict["usage"], attributes)
-            
-    def _process_generation_normal_mode(self, span_data: Any, attributes: Dict[str, Any]) -> None:
-        """Helper method to process Generation span in normal mode"""
-        # Common fields to extract from span_data
-        common_fields = {
-            "model": SpanAttributes.LLM_REQUEST_MODEL,
-        }
-        
-        # Process common fields
-        for source_key, target_attr in common_fields.items():
+        # Process common fields using the standard target → source mapping
+        for target_attr, source_key in field_mapping.items():
             if hasattr(span_data, source_key):
                 attributes[target_attr] = getattr(span_data, source_key)
                 
-                # Special case for model - set the system attribute
-                if source_key == "model":
-                    attributes[SpanAttributes.LLM_SYSTEM] = "openai"
+        # Set the system attribute if model was found
+        if SpanAttributes.LLM_REQUEST_MODEL in attributes:
+            attributes[SpanAttributes.LLM_SYSTEM] = "openai"
         
         # Process model configuration if available
         if hasattr(span_data, "model_config"):
@@ -490,6 +415,9 @@ class AgentsDetailedExporter:
         # Process usage if available at span level
         if hasattr(span_data, "usage"):
             self._process_extended_token_usage(span_data.usage, attributes)
+            
+        # Always return CLIENT for Generation spans
+        return SpanKind.CLIENT
 
     def export(self, items: list[Any]) -> None:
         """Export Agents SDK traces and spans to AgentOps."""
@@ -532,9 +460,9 @@ class AgentsDetailedExporter:
         # Get the current tracer
         tracer = get_tracer("agents-sdk", agents_version, self.tracer_provider)
 
-        # Get span data and type
+        # Get span data and type - use the actual class name
         span_data = span.span_data
-        span_type = span_data.__class__.__name__.replace("SpanData", "")
+        span_type = span_data.__class__.__name__
 
         # Create base attributes dictionary with standard fields
         attributes = {
@@ -548,18 +476,13 @@ class AgentsDetailedExporter:
         if span.parent_id:
             attributes[CoreAttributes.PARENT_ID] = span.parent_id
 
-        # Determine if we're in test mode (output is a dictionary)
-        output_dict = None
-        if hasattr(span_data, "output") and isinstance(span_data.output, dict):
-            output_dict = span_data.output
-
         # Add common relationship information - these should be added regardless of span type
         common_fields = {
             # Map each target attribute to its source field
             AgentAttributes.FROM_AGENT: "from_agent",
-            "agent.from": "from_agent",  # Also map to test-expected attribute
+            "agent.from": "from_agent",  # Also map to gen_ai attribute
             AgentAttributes.TO_AGENT: "to_agent",
-            "agent.to": "to_agent",      # Also map to test-expected attribute
+            "agent.to": "to_agent",      # Also map to gen_ai attribute
         }
         
         # Process common fields
@@ -580,17 +503,20 @@ class AgentsDetailedExporter:
                 if value is not None:  # Guard against None
                     attributes[target_attr] = ",".join(value)
             
+        # Extract the type for naming (without 'SpanData' suffix)
+        type_for_name = span_type.replace("SpanData", "").lower()
+        span_name = f"agents.{type_for_name}"
+        
         # Process span based on its type
         span_kind = SpanKind.INTERNAL  # Default
-        span_name = f"agents.{span_type.lower()}"
         
-        # Use type-specific processors
-        if span_type == "Agent":
-            span_kind = self._process_agent_span(span, span_data, output_dict, attributes)
-        elif span_type == "Function":
-            span_kind = self._process_function_span(span, span_data, output_dict, attributes)
-        elif span_type == "Generation":
-            span_kind = self._process_generation_span(span, span_data, output_dict, attributes)
+        # Use type-specific processors based on the exact class name
+        if span_type == "AgentSpanData":
+            span_kind = self._process_agent_span(span, span_data, attributes)
+        elif span_type == "FunctionSpanData":
+            span_kind = self._process_function_span(span, span_data, attributes)
+        elif span_type == "GenerationSpanData":
+            span_kind = self._process_generation_span(span, span_data, attributes)
         
         return self._create_span(tracer, span_name, span_kind, attributes, span)
     

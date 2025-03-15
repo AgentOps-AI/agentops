@@ -18,7 +18,6 @@ import inspect
 import pytest
 from opentelemetry import trace
 from opentelemetry.trace import StatusCode
-from agentops.logging import logger
 
 # Mock Agent SDK classes
 class MockAgentRunResult:
@@ -399,15 +398,11 @@ class TestAgentsSdkInstrumentation:
             for key, val in captured_attributes.items():
                 span.set_attribute(key, val)
 
-        # Get all spans and log them for debugging
+        # Get all spans
         spans = instrumentation.get_finished_spans()
-        logger.info(f"Instrumentation Tester: Found {len(spans)} finished spans")
-        for i, s in enumerate(spans):
-            logger.info(f"Span {i}: name={s.name}, attributes={s.attributes}")
             
         # Examine the first span generated from the instrumentor
         instrumented_span = spans[0]
-        logger.info(f"Validating span: {instrumented_span.name}")
         
         # Check all required attributes from our reference model against the actual span
         for key, expected_value in EXPECTED_AGENT_SPAN_ATTRIBUTES.items():
@@ -446,15 +441,11 @@ class TestAgentsSdkInstrumentation:
             for key, val in captured_attributes.items():
                 span.set_attribute(key, val)
 
-        # Get all spans and log them for debugging
+        # Get all spans
         spans = instrumentation.get_finished_spans()
-        logger.info(f"Instrumentation Tester: Found {len(spans)} finished spans")
-        for i, s in enumerate(spans):
-            logger.info(f"Span {i}: name={s.name}, attributes={s.attributes}")
             
         # Examine the first span generated from the instrumentor
         instrumented_span = spans[0]
-        logger.info(f"Validating span: {instrumented_span.name}")
         
         # Check all required attributes from our reference model against the actual span
         for key, expected_value in EXPECTED_TOOL_SPAN_ATTRIBUTES.items():
@@ -493,15 +484,11 @@ class TestAgentsSdkInstrumentation:
             for key, val in captured_attributes.items():
                 span.set_attribute(key, val)
 
-        # Get all spans and log them for debugging
+        # Get all spans
         spans = instrumentation.get_finished_spans()
-        logger.info(f"Instrumentation Tester: Found {len(spans)} finished spans")
-        for i, s in enumerate(spans):
-            logger.info(f"Span {i}: name={s.name}, attributes={s.attributes}")
             
         # Examine the first span generated from the instrumentor
         instrumented_span = spans[0]
-        logger.info(f"Validating span: {instrumented_span.name}")
         
         # Check all required attributes from our reference model against the actual span
         for key, expected_value in EXPECTED_GENERATION_SPAN_ATTRIBUTES.items():
@@ -550,15 +537,11 @@ class TestAgentsSdkInstrumentation:
             for key, val in captured_attributes.items():
                 span.set_attribute(key, val)
 
-        # Get all spans and log them for debugging
+        # Get all spans
         spans = instrumentation.get_finished_spans()
-        logger.info(f"Instrumentation Tester: Found {len(spans)} finished spans")
-        for i, s in enumerate(spans):
-            logger.info(f"Span {i}: name={s.name}, attributes={s.attributes}")
             
         # Examine the first span generated from the instrumentor
         instrumented_span = spans[0]
-        logger.info(f"Validating span: {instrumented_span.name}")
         
         # Check all required attributes from our reference model against the actual span
         for key, expected_value in EXPECTED_RESPONSE_API_SPAN_ATTRIBUTES.items():
@@ -618,15 +601,11 @@ class TestAgentsSdkInstrumentation:
             for key, val in captured_attributes.items():
                 span.set_attribute(key, val)
 
-        # Get all spans and log them for debugging
+        # Get all spans
         spans = instrumentation.get_finished_spans()
-        logger.info(f"Instrumentation Tester: Found {len(spans)} finished spans")
-        for i, s in enumerate(spans):
-            logger.info(f"Span {i}: name={s.name}, attributes={s.attributes}")
             
         # Examine the first span generated from the instrumentor
         instrumented_span = spans[0]
-        logger.info(f"Validating span: {instrumented_span.name}")
         
         # Check all required attributes from our reference model against the actual span
         for key, expected_value in EXPECTED_TOOL_CALLS_SPAN_ATTRIBUTES.items():
@@ -824,9 +803,6 @@ class TestAgentsSdkInstrumentation:
 
         # Get all spans
         spans = instrumentation.get_finished_spans()
-        logger.info(f"Instrumentation Tester: Found {len(spans)} finished spans")
-        for i, s in enumerate(spans):
-            logger.info(f"Span {i}: name={s.name}, attributes={s.attributes}")
             
         # Examine the first span
         instrumented_span = spans[0]

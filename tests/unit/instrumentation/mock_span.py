@@ -11,31 +11,34 @@ from typing import Any, Dict, Optional
 class MockSpanData:
     """Mock span data object for testing instrumentation."""
     
-    def __init__(self, output: Any, span_type: str = "GenerationSpanData"):
+    def __init__(self, data: Any, span_type: str = "GenerationSpanData"):
         """Initialize mock span data.
         
         Args:
-            output: The output to include in the span data
+            data: The data dictionary to include in the span data
             span_type: The type of span data (used for __class__.__name__)
         """
-        self.output = output
+        # Set all keys from the data dictionary as attributes
+        for key, value in data.items():
+            setattr(self, key, value)
+            
         self.__class__.__name__ = span_type
 
 
 class MockSpan:
     """Mock span object for testing instrumentation."""
     
-    def __init__(self, output: Any, span_type: str = "GenerationSpanData"):
+    def __init__(self, data: Any, span_type: str = "GenerationSpanData"):
         """Initialize mock span.
         
         Args:
-            output: The output to include in the span data
+            data: The data dictionary to include in the span data
             span_type: The type of span data
         """
         self.trace_id = "trace123"
         self.span_id = "span456"
         self.parent_id = "parent789"
-        self.span_data = MockSpanData(output, span_type)
+        self.span_data = MockSpanData(data, span_type)
         self.error = None
 
 
@@ -141,11 +144,8 @@ def process_with_instrumentor(mock_span, exporter_class, captured_attributes: Di
     # Create a direct instance of the exporter
     exporter = exporter_class()
     
-    # For debugging, print the output dictionary
-    if hasattr(mock_span.span_data, "output"):
-        from agentops.instrumentation.openai_agents import model_to_dict
-        output_dict = model_to_dict(mock_span.span_data.output)
-        print(f"\n\nDEBUG OUTPUT DICT: {json.dumps(output_dict, indent=2)}\n\n")
+    # Avoid cluttering the test output with debug info
+    pass
     
     # Monkey patch the get_tracer function to return our MockTracer
     original_import = setup_mock_tracer(captured_attributes)
