@@ -68,22 +68,28 @@ from agentops.semconv import (
     WorkflowAttributes,
     InstrumentationAttributes,
     AgentAttributes,
-    SpanAttributes
+    SpanAttributes,
+    MessageAttributes
 )
 from agentops.helpers.serialization import safe_serialize, model_to_dict
 from agentops.instrumentation.openai import process_token_usage, process_token_details
 from agentops.logging import logger
 
-# Define version handling function locally to avoid circular imports
-def get_agents_version():
+
+LIBRARY_NAME = "agents-sdk"
+
+_library_version: Optional[str] = None
+
+def get_version():
     """Get the version of the agents SDK, or 'unknown' if not found"""
+    global _library_version
     try:
-        import agents
-        if hasattr(agents, '__version__'):
-            return agents.__version__
-    except (ImportError, AttributeError):
-        pass
-    return "unknown"
+        _library_version = importlib.metadata.version("agents")
+        return _library_version
+    except importlib.metadata.PackageNotFoundError:
+        logger.debug("`agents` package not found; unable to determine installed version.")
+        return "unknown"
+
 
 # Define standard model configuration mapping (target → source)
 MODEL_CONFIG_MAPPING = {
@@ -182,18 +188,18 @@ class AgentsDetailedExporter:
             
             # Add finish reason
             if "finish_reason" in choice:
-                attributes[f"{prefix}.finish_reason"] = choice["finish_reason"]
+                attributes[MessageAttributes.COMPLETION_FINISH_REASON.format(i=i)] = choice["finish_reason"]
             
             # Extract message content
             message = choice.get("message", {})
             
             # Include role (even if None/empty)
             if "role" in message:
-                attributes[f"{prefix}.role"] = message["role"]
+                attributes[MessageAttributes.COMPLETION_ROLE.format(i=i)] = message["role"]
                 
             # Include content (even if None/empty)
             if "content" in message:
-                attributes[f"{prefix}.content"] = message["content"]
+                attributes[MessageAttributes.COMPLETION_CONTENT.format(i=i)] = message["content"]
                 
             # Handle tool calls
             if "tool_calls" in message:
@@ -201,15 +207,15 @@ class AgentsDetailedExporter:
                 for j, tool_call in enumerate(tool_calls):
                     if "function" in tool_call:
                         function = tool_call["function"]
-                        attributes[f"{prefix}.tool_calls.{j}.id"] = tool_call.get("id")
-                        attributes[f"{prefix}.tool_calls.{j}.name"] = function.get("name")
-                        attributes[f"{prefix}.tool_calls.{j}.arguments"] = function.get("arguments")
+                        attributes[MessageAttributes.TOOL_CALL_ID.format(i=i, j=j)] = tool_call.get("id")
+                        attributes[MessageAttributes.TOOL_CALL_NAME.format(i=i, j=j)] = function.get("name")
+                        attributes[MessageAttributes.TOOL_CALL_ARGUMENTS.format(i=i, j=j)] = function.get("arguments")
                 
             # Handle function calls (legacy)
             if "function_call" in message:
                 function_call = message["function_call"]
-                attributes[f"{prefix}.function_call.name"] = function_call.get("name")
-                attributes[f"{prefix}.function_call.arguments"] = function_call.get("arguments")
+                attributes[MessageAttributes.FUNCTION_CALL_NAME.format(i=i)] = function_call.get("name")
+                attributes[MessageAttributes.FUNCTION_CALL_ARGUMENTS.format(i=i)] = function_call.get("arguments")
 
     def _process_response_api(self, response: Dict[str, Any], attributes: Dict[str, Any]) -> None:
         """
@@ -219,6 +225,8 @@ class AgentsDetailedExporter:
             response: Response dictionary containing outputs in Response API format
             attributes: Attributes dictionary to update
         """
+        # It's pretty funny that the whole point of the Responses API was to get 
+        # us past completions[0], and here we are committing to it for the foreseeable future. 
         if "output" not in response:
             return
             
@@ -227,7 +235,7 @@ class AgentsDetailedExporter:
             
             # Include role (even if None/empty)
             if "role" in item:
-                attributes[f"{prefix}.role"] = item["role"]
+                attributes[MessageAttributes.COMPLETION_ROLE.format(i=i)] = item["role"]
             
             # Process content (handle both simple and complex content formats)
             if "content" in item:
@@ -241,10 +249,10 @@ class AgentsDetailedExporter:
                             texts.append(content_item["text"])
                     
                     # Join texts (even if empty)
-                    attributes[f"{prefix}.content"] = " ".join(texts)
+                    attributes[MessageAttributes.COMPLETION_CONTENT.format(i=i)] = " ".join(texts)
                 else:
                     # Include content (even if None/empty)
-                    attributes[f"{prefix}.content"] = safe_serialize(content_items)
+                    attributes[MessageAttributes.COMPLETION_CONTENT.format(i=i)] = safe_serialize(content_items)
     
     def _process_completions(self, response: Dict[str, Any], attributes: Dict[str, Any]) -> None:
         """
@@ -327,10 +335,10 @@ class AgentsDetailedExporter:
         # Define field mappings - target attribute → source field
         field_mapping = {
             AgentAttributes.AGENT_NAME: "name",
-            SpanAttributes.LLM_PROMPTS: "input",             # For OTel spec
-            "gen_ai.prompt": "input",                        # For test compatibility 
-            SpanAttributes.LLM_COMPLETIONS: "output",        # For OTel spec
-            "gen_ai.completion": "output",                   # For test compatibility
+            SpanAttributes.LLM_PROMPTS: "input",
+            "gen_ai.prompt": "input",                  # For OTel spec
+            SpanAttributes.LLM_COMPLETIONS: "output",
+            "gen_ai.completion": "output",             # For OTel spec
             AgentAttributes.FROM_AGENT: "from_agent",
         }
         
@@ -431,10 +439,10 @@ class AgentsDetailedExporter:
     def _export_trace(self, trace: Any) -> None:
         """Export an Agents SDK trace to AgentOps."""
         # Get the agents SDK version
-        agents_version = get_agents_version()
+        LIBRARY_VERSION = get_version()
         
         # Get the current tracer
-        tracer = get_tracer("agents-sdk", agents_version, self.tracer_provider)
+        tracer = get_tracer(LIBRARY_NAME, LIBRARY_VERSION, self.tracer_provider)
 
         # Create a new span for the trace
         with tracer.start_as_current_span(
@@ -443,8 +451,8 @@ class AgentsDetailedExporter:
             attributes={
                 WorkflowAttributes.WORKFLOW_NAME: trace.name,
                 CoreAttributes.TRACE_ID: trace.trace_id,
-                InstrumentationAttributes.LIBRARY_NAME: "agents-sdk",
-                InstrumentationAttributes.LIBRARY_VERSION: agents_version,
+                InstrumentationAttributes.LIBRARY_NAME: LIBRARY_NAME,
+                InstrumentationAttributes.LIBRARY_VERSION: LIBRARY_VERSION,
                 WorkflowAttributes.WORKFLOW_STEP_TYPE: "trace",
             },
         ) as span:
@@ -455,12 +463,11 @@ class AgentsDetailedExporter:
     def _export_span(self, span: Any) -> None:
         """Export an Agents SDK span to AgentOps following semantic conventions."""
         # Get the agents SDK version
-        agents_version = get_agents_version()
+        LIBRARY_VERSION = get_version()
         
         # Get the current tracer
-        tracer = get_tracer("agents-sdk", agents_version, self.tracer_provider)
+        tracer = get_tracer(LIBRARY_NAME, LIBRARY_VERSION, self.tracer_provider)
 
-        # Get span data and type - use the actual class name
         span_data = span.span_data
         span_type = span_data.__class__.__name__
 
@@ -468,8 +475,8 @@ class AgentsDetailedExporter:
         attributes = {
             CoreAttributes.TRACE_ID: span.trace_id,
             CoreAttributes.SPAN_ID: span.span_id,
-            InstrumentationAttributes.LIBRARY_NAME: "agents-sdk",
-            InstrumentationAttributes.LIBRARY_VERSION: agents_version,
+            InstrumentationAttributes.LIBRARY_NAME: LIBRARY_NAME,
+            InstrumentationAttributes.LIBRARY_VERSION: LIBRARY_VERSION,
         }
 
         # Add parent ID if available
@@ -506,8 +513,6 @@ class AgentsDetailedExporter:
         # Extract the type for naming (without 'SpanData' suffix)
         type_for_name = span_type.replace("SpanData", "").lower()
         span_name = f"agents.{type_for_name}"
-        
-        # Process span based on its type
         span_kind = SpanKind.INTERNAL  # Default
         
         # Use type-specific processors based on the exact class name

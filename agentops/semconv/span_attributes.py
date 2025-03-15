@@ -4,6 +4,24 @@
 class SpanAttributes:
     # Semantic Conventions for LLM requests based on OpenTelemetry Gen AI conventions
     # Refer to https://github.com/open-telemetry/semantic-conventions/blob/main/docs/gen-ai/gen-ai-spans.md
+    #
+    # TODO: There is an important deviation from the OpenTelemetry spec in our current implementation.
+    # In our OpenAI instrumentation, we're mapping from source→target keys incorrectly in the _token_type function
+    # in shared/__init__.py. According to our established pattern, mapping dictionaries should consistently use 
+    # target→source format (where keys are target attributes and values are source fields).
+    #
+    # Current implementation (incorrect):
+    # def _token_type(token_type: str):
+    #     if token_type == "prompt_tokens":  # source
+    #         return "input"  # target
+    #
+    # Correct implementation should be:
+    # token_type_mapping = {
+    #     "input": "prompt_tokens",  # target → source
+    #     "output": "completion_tokens"
+    # }
+    # 
+    # Then we have to adapt code using the function to handle the inverted mapping.
 
     # System
     LLM_SYSTEM = "gen_ai.system"
