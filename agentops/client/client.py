@@ -58,12 +58,15 @@ class Client:
 
         self.initialized = True
 
-        # Only start a session if auto_start_session is True and we're not already in start_session
+        # Start a session if auto_start_session is True
         if self.config.auto_start_session:
             from agentops.legacy import start_session
 
-            # Pass the tags from the config to ensure they're included in the session
-            start_session(tags=list(self.config.default_tags)) if self.config.default_tags else None
+            # Pass default_tags if they exist
+            if self.config.default_tags:
+                start_session(tags=list(self.config.default_tags))
+            else:
+                start_session()
 
     def configure(self, **kwargs):
         """Update client configuration"""
