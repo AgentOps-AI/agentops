@@ -2,12 +2,10 @@ from typing import List, Optional, Union
 
 from agentops.client.api import ApiClient
 from agentops.config import Config
-from agentops.exceptions import (AgentOpsClientNotInitializedException,
-                                 NoApiKeyException, NoSessionException)
+from agentops.exceptions import AgentOpsClientNotInitializedException, NoApiKeyException, NoSessionException
 from agentops.instrumentation import instrument_all
 from agentops.logging import logger
-from agentops.logging.config import (configure_logging,
-                                     intercept_opentelemetry_logging)
+from agentops.logging.config import configure_logging, intercept_opentelemetry_logging
 from agentops.sdk.core import TracingCore
 
 
@@ -61,7 +59,7 @@ class Client:
         self.initialized = True
 
         # Only start a session if auto_start_session is True and we're not already in start_session
-        if self.config.auto_start_session and not getattr(self, "_in_start_session", False):
+        if self.config.auto_start_session:
             from agentops.legacy import start_session
 
             # Pass the tags from the config to ensure they're included in the session
