@@ -9,16 +9,16 @@ class AgentsDetailedProcessor:
         self.exporter = AgentsDetailedExporter(None)
 
     def on_trace_start(self, trace: Any) -> None:
-        self.exporter.export([trace])
+        self.exporter.export_trace(trace)
 
     def on_trace_end(self, trace: Any) -> None:
-        self.exporter.export([trace])
+        self.exporter.export_trace(trace)
 
     def on_span_start(self, span: Any) -> None:
-        self.exporter.export([span])
+        self.exporter.export_span(span)
 
     def on_span_end(self, span: Any) -> None:
-        self.exporter.export([span])
+        self.exporter.export_span(span)
 
     def shutdown(self) -> None:
         pass

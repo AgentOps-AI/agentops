@@ -224,12 +224,13 @@ class AgentsDetailedExporter:
             
         return SpanKind.CLIENT
 
-    def export(self, items: list[Any]) -> None:
-        for item in items:
-            if hasattr(item, "spans"):
-                self._export_trace(item)
-            else:
-                self._export_span(item)
+    def export_trace(self, trace: Any) -> None:
+        """Export a trace object directly."""
+        self._export_trace(trace)
+        
+    def export_span(self, span: Any) -> None:
+        """Export a span object directly."""
+        self._export_span(span)
 
     def _export_trace(self, trace: Any) -> None:
         tracer = get_tracer(LIBRARY_NAME, LIBRARY_VERSION, self.tracer_provider)
