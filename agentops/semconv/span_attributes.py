@@ -40,8 +40,8 @@ class SpanAttributes:
 
     # Content
     LLM_PROMPTS = "gen_ai.prompt"
-    LLM_COMPLETIONS = "gen_ai.completion"
-    LLM_CONTENT_COMPLETION_CHUNK = "gen_ai.completion.chunk"
+    #LLM_COMPLETIONS = "gen_ai.completion"  # DO NOT SET THIS DIRECTLY
+    #LLM_CONTENT_COMPLETION_CHUNK = "gen_ai.completion.chunk"
 
     # Response attributes
     LLM_RESPONSE_MODEL = "gen_ai.response.model"
@@ -56,6 +56,9 @@ class SpanAttributes:
     LLM_USAGE_CACHE_CREATION_INPUT_TOKENS = "gen_ai.usage.cache_creation_input_tokens"
     LLM_USAGE_CACHE_READ_INPUT_TOKENS = "gen_ai.usage.cache_read_input_tokens"
     LLM_USAGE_REASONING_TOKENS = "gen_ai.usage.reasoning_tokens"
+
+    # Message attributes
+    # see ./message.py for message-related attributes
 
     # Token type
     LLM_TOKEN_TYPE = "gen_ai.token.type"

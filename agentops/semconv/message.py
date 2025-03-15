@@ -5,8 +5,9 @@ class MessageAttributes:
     """Semantic conventions for message-related attributes in AI systems."""
 
     # Message identity and metadata (following gen_ai prefix pattern)
-    MESSAGE_ROLE = "gen_ai.message.role"  # Role of the message (system, user, assistant, tool, function)
-    MESSAGE_CONTENT = "gen_ai.message.content"  # Content of the message
+    # DO NOT USE THESE we map responses types to use the completion conventions for now
+    # MESSAGE_ROLE = "gen_ai.message.role"  # Role of the message (system, user, assistant, tool, function)
+    # MESSAGE_CONTENT = "gen_ai.message.content"  # Content of the message
     
     # Indexed completions (with {i} for interpolation)
     COMPLETION_ROLE = "gen_ai.completion.{i}.role"  # Role of the completion message at index {i}

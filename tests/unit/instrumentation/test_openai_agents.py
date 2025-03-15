@@ -5,6 +5,9 @@ This module contains tests for properly handling and serializing data from the O
 It verifies that our instrumentation correctly captures and instruments agent runs, tool usage,
 and other operations specific to the OpenAI Agents SDK.
 
+NOTE: All tests must define expected_attributes dictionaries to validate response data in spans.
+This helps ensure consistent attribute structure for downstream OpenTelemetry consumers.
+
 The Agents SDK has its own unique structure with:
 - Agent runs with specific attributes and properties
 - Tool calls and agent handoffs
@@ -49,7 +52,8 @@ from agentops.semconv import (
     AgentAttributes, 
     WorkflowAttributes, 
     CoreAttributes,
-    InstrumentationAttributes
+    InstrumentationAttributes,
+    MessageAttributes
 )
 from tests.unit.sdk.instrumentation_tester import InstrumentationTester
 from agentops.instrumentation.openai_agents.exporter import OpenAIAgentsExporter
@@ -123,7 +127,7 @@ class TestAgentsSdkInstrumentation:
         # Examine the first span generated from the instrumentor
         instrumented_span = spans[0]
         
-        # Expected attribute values based on the fixture data
+        # Expected attribute values based on the fixture data using proper semantic conventions
         expected_attributes = {
             # Model metadata using semantic conventions
             SpanAttributes.LLM_REQUEST_MODEL: REAL_OPENAI_RESPONSE["model"],
@@ -141,9 +145,9 @@ class TestAgentsSdkInstrumentation:
             SpanAttributes.LLM_USAGE_COMPLETION_TOKENS: REAL_OPENAI_RESPONSE["usage"]["output_tokens"],
             f"{SpanAttributes.LLM_USAGE_TOTAL_TOKENS}.reasoning": REAL_OPENAI_RESPONSE["usage"]["output_tokens_details"]["reasoning_tokens"],
             
-            # Content extraction with proper semantic conventions
-            f"{SpanAttributes.LLM_COMPLETIONS}.0.content": REAL_OPENAI_RESPONSE["output"][0]["content"][0]["text"],
-            f"{SpanAttributes.LLM_COMPLETIONS}.0.role": REAL_OPENAI_RESPONSE["output"][0]["role"],
+            # Content extraction with proper message semantic conventions
+            MessageAttributes.COMPLETION_CONTENT.format(i=0): REAL_OPENAI_RESPONSE["output"][0]["content"][0]["text"],
+            MessageAttributes.COMPLETION_ROLE.format(i=0): REAL_OPENAI_RESPONSE["output"][0]["role"],
         }
         
         # Check all required attributes from our reference model against the actual span
@@ -155,15 +159,25 @@ class TestAgentsSdkInstrumentation:
             actual_value = instrumented_span.attributes[key]
             assert actual_value == expected_value, \
                 f"Attribute '{key}' has wrong value. Expected: {expected_value}, Actual: {actual_value}"
-                
-        # Verify completions attributes
-        completion_prefix = SpanAttributes.LLM_COMPLETIONS.split('.')[0]
-        completion_attrs = [k for k in instrumented_span.attributes.keys() if k.startswith(completion_prefix)]
-        expected_completion_attrs = [k for k in expected_attributes.keys() if k.startswith(completion_prefix)]
         
-        # Make sure completion attributes match expected set
-        for attr in expected_completion_attrs:
-            assert attr in completion_attrs, f"Missing completion attribute: {attr}"
+        # Per the semantic conventions, we do not set the root completion attribute
+        # Instead, verify the message-specific content attribute is set correctly
+        expected_text = REAL_OPENAI_RESPONSE["output"][0]["content"][0]["text"]
+        content_attr = MessageAttributes.COMPLETION_CONTENT.format(i=0)
+        assert content_attr in instrumented_span.attributes, f"Missing content attribute: {content_attr}"
+        assert instrumented_span.attributes[content_attr] == expected_text, \
+            f"Content attribute has incorrect value. Expected: '{expected_text}', got: '{instrumented_span.attributes[content_attr]}'"
+                
+        # Verify message attributes using the message semantic conventions
+        message_prefix = "gen_ai.completion"
+        message_attrs = [k for k in instrumented_span.attributes.keys() if k.startswith(message_prefix)]
+        
+        # Make sure we have the expected message attributes
+        assert len(message_attrs) > 0, "No message attributes found with prefix 'gen_ai.completion'"
+        
+        # Check key message attributes are present
+        assert MessageAttributes.COMPLETION_CONTENT.format(i=0) in message_attrs, "Missing completion content attribute"
+        assert MessageAttributes.COMPLETION_ROLE.format(i=0) in message_attrs, "Missing completion role attribute"
             
         # Verify token mapping and special fields
         assert SpanAttributes.LLM_USAGE_PROMPT_TOKENS in instrumented_span.attributes, f"Missing {SpanAttributes.LLM_USAGE_PROMPT_TOKENS} attribute"
@@ -221,7 +235,7 @@ class TestAgentsSdkInstrumentation:
         # Extract tool call details for verification
         tool_call = REAL_OPENAI_TOOL_CALLS_RESPONSE["output"][0]
         
-        # Expected attribute values based on the fixture data
+        # Expected attribute values based on the fixture data using proper semantic conventions
         expected_attributes = {
             # Model metadata using semantic conventions
             SpanAttributes.LLM_REQUEST_MODEL: REAL_OPENAI_TOOL_CALLS_RESPONSE["model"],
@@ -238,10 +252,10 @@ class TestAgentsSdkInstrumentation:
             SpanAttributes.LLM_USAGE_PROMPT_TOKENS: REAL_OPENAI_TOOL_CALLS_RESPONSE["usage"]["input_tokens"],
             SpanAttributes.LLM_USAGE_COMPLETION_TOKENS: REAL_OPENAI_TOOL_CALLS_RESPONSE["usage"]["output_tokens"],
             
-            # Tool call details with proper semantic conventions
-            f"{SpanAttributes.LLM_COMPLETIONS}.0.tool_calls.0.id": tool_call["id"],
-            f"{SpanAttributes.LLM_COMPLETIONS}.0.tool_calls.0.name": tool_call["name"],
-            f"{SpanAttributes.LLM_COMPLETIONS}.0.tool_calls.0.arguments": tool_call["arguments"]
+            # Tool call details with proper message semantic conventions
+            MessageAttributes.TOOL_CALL_ID.format(i=0, j=0): tool_call["id"],
+            MessageAttributes.TOOL_CALL_NAME.format(i=0, j=0): tool_call["name"],
+            MessageAttributes.TOOL_CALL_ARGUMENTS.format(i=0, j=0): tool_call["arguments"]
         }
         
         # Check all required attributes from our reference model against the actual span
@@ -254,28 +268,23 @@ class TestAgentsSdkInstrumentation:
             assert actual_value == expected_value, \
                 f"Attribute '{key}' has wrong value. Expected: {expected_value}, Actual: {actual_value}"
         
-        # Verify the tool calls attributes specifically
-        tool_calls_prefix = f"{SpanAttributes.LLM_COMPLETIONS}.0.tool_calls"
-        tool_calls_attrs = [k for k in instrumented_span.attributes.keys() if k.startswith(tool_calls_prefix)]
-        expected_tool_calls_attrs = [k for k in expected_attributes.keys() if k.startswith(tool_calls_prefix)]
+        # Verify the tool calls attributes by checking for specific semantic convention attributes
+        # We need to look for the three core tool call attributes from MessageAttributes
         
-        # Make sure we have all expected tool call attributes
-        for attr in expected_tool_calls_attrs:
-            assert attr in tool_calls_attrs, f"Missing tool call attribute: {attr}"
+        # First, check that all three required tool call attributes exist
+        tool_id_attr = MessageAttributes.TOOL_CALL_ID.format(i=0, j=0)
+        tool_name_attr = MessageAttributes.TOOL_CALL_NAME.format(i=0, j=0)
+        tool_args_attr = MessageAttributes.TOOL_CALL_ARGUMENTS.format(i=0, j=0)
         
-        # Verify specific tool call details
-        tool_call_id_attr = f"{SpanAttributes.LLM_COMPLETIONS}.0.tool_calls.0.id"
-        assert tool_call_id_attr in instrumented_span.attributes, f"Missing {tool_call_id_attr} attribute"
-        assert instrumented_span.attributes[tool_call_id_attr] == tool_call["id"], "Incorrect tool call ID"
+        assert tool_id_attr in instrumented_span.attributes, f"Missing tool call ID attribute: {tool_id_attr}"
+        assert tool_name_attr in instrumented_span.attributes, f"Missing tool call name attribute: {tool_name_attr}"
+        assert tool_args_attr in instrumented_span.attributes, f"Missing tool call arguments attribute: {tool_args_attr}"
         
-        tool_call_name_attr = f"{SpanAttributes.LLM_COMPLETIONS}.0.tool_calls.0.name"
-        assert tool_call_name_attr in instrumented_span.attributes, f"Missing {tool_call_name_attr} attribute"
-        assert instrumented_span.attributes[tool_call_name_attr] == tool_call["name"], "Incorrect tool call name"
-        
-        tool_call_args_attr = f"{SpanAttributes.LLM_COMPLETIONS}.0.tool_calls.0.arguments"
-        assert tool_call_args_attr in instrumented_span.attributes, f"Missing {tool_call_args_attr} attribute"
-        assert instrumented_span.attributes[tool_call_args_attr] == tool_call["arguments"], "Incorrect tool call arguments"
-        assert "San Francisco" in instrumented_span.attributes[tool_call_args_attr], "Expected location not found in arguments"
+        # Verify specific tool call details using MessageAttributes for the correct paths
+        assert instrumented_span.attributes[tool_id_attr] == tool_call["id"], "Incorrect tool call ID"
+        assert instrumented_span.attributes[tool_name_attr] == tool_call["name"], "Incorrect tool call name"
+        assert instrumented_span.attributes[tool_args_attr] == tool_call["arguments"], "Incorrect tool call arguments"
+        assert "San Francisco" in instrumented_span.attributes[tool_args_attr], "Expected location not found in arguments"
 
     def test_full_agent_integration_with_real_types(self, instrumentation):
         """
@@ -376,8 +385,8 @@ class TestAgentsSdkInstrumentation:
         assert SpanAttributes.LLM_USAGE_TOTAL_TOKENS in captured_attributes
         assert captured_attributes[SpanAttributes.LLM_USAGE_TOTAL_TOKENS] == REAL_OPENAI_RESPONSE["usage"]["total_tokens"]
         
-        # Verify content was extracted
-        content_attr = f"{SpanAttributes.LLM_COMPLETIONS}.0.content"
+        # Verify content was extracted using MessageAttributes
+        content_attr = MessageAttributes.COMPLETION_CONTENT.format(i=0)
         assert content_attr in captured_attributes
         assert captured_attributes[content_attr] == REAL_OPENAI_RESPONSE["output"][0]["content"][0]["text"]
         
@@ -440,6 +449,14 @@ class TestAgentsSdkInstrumentation:
             assert captured_attributes[CoreAttributes.SPAN_ID] == "span456"
             assert CoreAttributes.PARENT_ID in captured_attributes
             assert captured_attributes[CoreAttributes.PARENT_ID] == "parent789"
+            
+            # Verify our new completion content and role attributes (added in our bugfix)
+            completion_content_attr = MessageAttributes.COMPLETION_CONTENT.format(i=0)
+            completion_role_attr = MessageAttributes.COMPLETION_ROLE.format(i=0)
+            assert completion_content_attr in captured_attributes
+            assert captured_attributes[completion_content_attr] == "Paris is the capital of France"
+            assert completion_role_attr in captured_attributes
+            assert captured_attributes[completion_role_attr] == "assistant"
         finally:
             # Restore original method
             exporter._create_span = original_create_span
@@ -456,37 +473,40 @@ class TestAgentsSdkInstrumentation:
         # Process the standard chat completion fixture
         exporter._process_chat_completions(OPENAI_CHAT_COMPLETION, captured_attributes_standard)
         
-        # Verify standard chat completion attributes were correctly set
-        assert f"{SpanAttributes.LLM_COMPLETIONS}.0.content" in captured_attributes_standard
-        assert captured_attributes_standard[f"{SpanAttributes.LLM_COMPLETIONS}.0.content"] == "The capital of France is Paris."
-        assert f"{SpanAttributes.LLM_COMPLETIONS}.0.role" in captured_attributes_standard
-        assert captured_attributes_standard[f"{SpanAttributes.LLM_COMPLETIONS}.0.role"] == "assistant"
-        assert f"{SpanAttributes.LLM_COMPLETIONS}.0.finish_reason" in captured_attributes_standard
-        assert captured_attributes_standard[f"{SpanAttributes.LLM_COMPLETIONS}.0.finish_reason"] == "stop"
+        # Verify standard chat completion attributes were correctly set using MessageAttributes
+        assert MessageAttributes.COMPLETION_CONTENT.format(i=0) in captured_attributes_standard
+        assert captured_attributes_standard[MessageAttributes.COMPLETION_CONTENT.format(i=0)] == "The capital of France is Paris."
+        assert MessageAttributes.COMPLETION_ROLE.format(i=0) in captured_attributes_standard
+        assert captured_attributes_standard[MessageAttributes.COMPLETION_ROLE.format(i=0)] == "assistant"
+        assert MessageAttributes.COMPLETION_FINISH_REASON.format(i=0) in captured_attributes_standard
+        assert captured_attributes_standard[MessageAttributes.COMPLETION_FINISH_REASON.format(i=0)] == "stop"
         
         # Process the tool calls chat completion fixture
         exporter._process_chat_completions(OPENAI_CHAT_TOOL_CALLS, captured_attributes_tool_calls)
         
-        # Verify tool calls attributes were correctly set
-        assert f"{SpanAttributes.LLM_COMPLETIONS}.0.role" in captured_attributes_tool_calls
-        assert captured_attributes_tool_calls[f"{SpanAttributes.LLM_COMPLETIONS}.0.role"] == "assistant"
-        assert f"{SpanAttributes.LLM_COMPLETIONS}.0.finish_reason" in captured_attributes_tool_calls
-        assert captured_attributes_tool_calls[f"{SpanAttributes.LLM_COMPLETIONS}.0.finish_reason"] == "tool_calls"
+        # Verify tool calls attributes were correctly set using MessageAttributes
+        assert MessageAttributes.COMPLETION_ROLE.format(i=0) in captured_attributes_tool_calls
+        assert captured_attributes_tool_calls[MessageAttributes.COMPLETION_ROLE.format(i=0)] == "assistant"
+        assert MessageAttributes.COMPLETION_FINISH_REASON.format(i=0) in captured_attributes_tool_calls
+        assert captured_attributes_tool_calls[MessageAttributes.COMPLETION_FINISH_REASON.format(i=0)] == "tool_calls"
         
         # Verify content is an empty string when null in the fixture
-        assert f"{SpanAttributes.LLM_COMPLETIONS}.0.content" in captured_attributes_tool_calls
-        assert captured_attributes_tool_calls[f"{SpanAttributes.LLM_COMPLETIONS}.0.content"] == ""
+        assert MessageAttributes.COMPLETION_CONTENT.format(i=0) in captured_attributes_tool_calls
+        assert captured_attributes_tool_calls[MessageAttributes.COMPLETION_CONTENT.format(i=0)] == ""
         
-        # Verify tool calls were processed correctly
-        tool_call_id = captured_attributes_tool_calls[f"{SpanAttributes.LLM_COMPLETIONS}.0.tool_calls.0.id"]
-        assert tool_call_id == "call_EKUsxI7LNqe2beBJlNAGNsd3"
+        # Verify tool calls were processed correctly using MessageAttributes
+        tool_call_id_attr = MessageAttributes.TOOL_CALL_ID.format(i=0, j=0)
+        assert tool_call_id_attr in captured_attributes_tool_calls
+        assert captured_attributes_tool_calls[tool_call_id_attr] == "call_EKUsxI7LNqe2beBJlNAGNsd3"
         
-        tool_call_name = captured_attributes_tool_calls[f"{SpanAttributes.LLM_COMPLETIONS}.0.tool_calls.0.name"]
-        assert tool_call_name == "get_weather"
+        tool_call_name_attr = MessageAttributes.TOOL_CALL_NAME.format(i=0, j=0)
+        assert tool_call_name_attr in captured_attributes_tool_calls
+        assert captured_attributes_tool_calls[tool_call_name_attr] == "get_weather"
         
-        tool_call_args = captured_attributes_tool_calls[f"{SpanAttributes.LLM_COMPLETIONS}.0.tool_calls.0.arguments"]
-        assert tool_call_args == '{"location":"San Francisco, CA","unit":"celsius"}'
-        assert "San Francisco" in tool_call_args
+        tool_call_args_attr = MessageAttributes.TOOL_CALL_ARGUMENTS.format(i=0, j=0)
+        assert tool_call_args_attr in captured_attributes_tool_calls
+        assert captured_attributes_tool_calls[tool_call_args_attr] == '{"location":"San Francisco, CA","unit":"celsius"}'
+        assert "San Francisco" in captured_attributes_tool_calls[tool_call_args_attr]
     
     def test_process_function_span(self, instrumentation):
         """Test processing of Function spans in the exporter."""
@@ -539,8 +559,7 @@ class TestAgentsSdkInstrumentation:
             assert isinstance(captured_attributes[AgentAttributes.FROM_AGENT], str)
             assert SpanAttributes.LLM_PROMPTS in captured_attributes
             assert isinstance(captured_attributes[SpanAttributes.LLM_PROMPTS], str)
-            assert SpanAttributes.LLM_COMPLETIONS in captured_attributes
-            assert isinstance(captured_attributes[SpanAttributes.LLM_COMPLETIONS], str)
+            # We don't check for LLM_COMPLETIONS as we no longer set it directly per serialization rules
             assert CoreAttributes.TRACE_ID in captured_attributes
             assert CoreAttributes.SPAN_ID in captured_attributes
             assert CoreAttributes.PARENT_ID in captured_attributes
@@ -703,6 +722,32 @@ class TestAgentsSdkInstrumentation:
                 assert instrumentor.__class__._original_methods["run"] == original_run
                 assert instrumentor.__class__._original_methods["run_streamed"] == original_run_streamed
                 
+                # Test agent instructions getting mapped to prompt
+                agent = Agent(
+                    name="instruction_test_agent",
+                    instructions="You are a helpful assistant. Your task is to answer questions."
+                )
+                
+                # Create a dictionary to capture attributes
+                captured_attributes = {}
+                
+                # Create mock span
+                mock_span = MagicMock()
+                mock_span.set_attribute = MagicMock(side_effect=lambda k, v: captured_attributes.update({k: v}))
+                
+                # Call the method to test instructions
+                instrumentor._add_agent_attributes_to_span(mock_span, agent)
+                
+                # Verify instructions were set as agent attributes
+                assert "agent.instructions" in captured_attributes
+                assert captured_attributes["agent.instructions"] == "You are a helpful assistant. Your task is to answer questions."
+                assert "agent.instruction_type" in captured_attributes
+                assert captured_attributes["agent.instruction_type"] == "string"
+                
+                # Verify instructions were also set as gen_ai.prompt (our bugfix)
+                assert SpanAttributes.LLM_PROMPTS in captured_attributes
+                assert captured_attributes[SpanAttributes.LLM_PROMPTS] == "You are a helpful assistant. Your task is to answer questions."
+                
                 # Test uninstrumentation
                 instrumentor._uninstrument()
                 
@@ -835,10 +880,10 @@ class TestAgentsSdkInstrumentation:
             SpanAttributes.LLM_USAGE_PROMPT_TOKENS: OPENAI_CHAT_COMPLETION["usage"]["prompt_tokens"],
             SpanAttributes.LLM_USAGE_COMPLETION_TOKENS: OPENAI_CHAT_COMPLETION["usage"]["completion_tokens"],
             
-            # Message attributes
-            f"{SpanAttributes.LLM_COMPLETIONS}.0.role": "assistant",
-            f"{SpanAttributes.LLM_COMPLETIONS}.0.content": "The capital of France is Paris.",
-            f"{SpanAttributes.LLM_COMPLETIONS}.0.finish_reason": "stop",
+            # Message attributes using proper semantic conventions
+            MessageAttributes.COMPLETION_ROLE.format(i=0): "assistant",
+            MessageAttributes.COMPLETION_CONTENT.format(i=0): "The capital of France is Paris.",
+            MessageAttributes.COMPLETION_FINISH_REASON.format(i=0): "stop",
         }
         
         # Check all required attributes from our reference model against the actual span
@@ -890,15 +935,19 @@ class TestAgentsSdkInstrumentation:
         # Ensure we found the right span
         assert tool_instrumented_span is not None, "Failed to find the tool calls generation span"
         
-        # Verify tool calls were correctly processed
-        assert f"{SpanAttributes.LLM_COMPLETIONS}.0.tool_calls.0.id" in tool_instrumented_span.attributes
-        assert f"{SpanAttributes.LLM_COMPLETIONS}.0.tool_calls.0.name" in tool_instrumented_span.attributes
-        assert f"{SpanAttributes.LLM_COMPLETIONS}.0.tool_calls.0.arguments" in tool_instrumented_span.attributes
+        # Verify tool calls were correctly processed using MessageAttributes
+        tool_id_attr = MessageAttributes.TOOL_CALL_ID.format(i=0, j=0)
+        tool_name_attr = MessageAttributes.TOOL_CALL_NAME.format(i=0, j=0)
+        tool_args_attr = MessageAttributes.TOOL_CALL_ARGUMENTS.format(i=0, j=0)
+        
+        assert tool_id_attr in tool_instrumented_span.attributes
+        assert tool_name_attr in tool_instrumented_span.attributes
+        assert tool_args_attr in tool_instrumented_span.attributes
         
         # Verify the specific tool call values
-        assert tool_instrumented_span.attributes[f"{SpanAttributes.LLM_COMPLETIONS}.0.tool_calls.0.id"] == "call_EKUsxI7LNqe2beBJlNAGNsd3"
-        assert tool_instrumented_span.attributes[f"{SpanAttributes.LLM_COMPLETIONS}.0.tool_calls.0.name"] == "get_weather"
-        assert "San Francisco" in tool_instrumented_span.attributes[f"{SpanAttributes.LLM_COMPLETIONS}.0.tool_calls.0.arguments"]
+        assert tool_instrumented_span.attributes[tool_id_attr] == "call_EKUsxI7LNqe2beBJlNAGNsd3"
+        assert tool_instrumented_span.attributes[tool_name_attr] == "get_weather"
+        assert "San Francisco" in tool_instrumented_span.attributes[tool_args_attr]
 
     def test_processor_integration_with_agent_tracing(self, instrumentation):
         """Test the integration of OpenAIAgentsProcessor with the Agents SDK tracing system."""

@@ -12,6 +12,7 @@ from agentops.semconv import (
     InstrumentationAttributes,
     AgentAttributes,
     SpanAttributes,
+    MessageAttributes,
     Meters,
 )
 from agentops.logging import logger
@@ -332,9 +333,13 @@ class AgentsInstrumentor(BaseInstrumentor):
             attributes=usage_attributes,
         ) as usage_span:
             if hasattr(result, "final_output"):
+                final_output = str(result.final_output)[:1000]
                 usage_span.set_attribute(
-                    WorkflowAttributes.FINAL_OUTPUT, str(result.final_output)[:1000]
+                    WorkflowAttributes.FINAL_OUTPUT, final_output
                 )
+                # Also set the final output as the completion content using MessageAttributes
+                usage_span.set_attribute(MessageAttributes.COMPLETION_CONTENT.format(i=0), final_output)
+                usage_span.set_attribute(MessageAttributes.COMPLETION_ROLE.format(i=0), "assistant")
             
             self._process_token_usage_from_responses(usage_span, result, model_name)
             
@@ -387,13 +392,18 @@ class AgentsInstrumentor(BaseInstrumentor):
             if isinstance(agent.instructions, str):
                 instruction_type = "string"
                 span.set_attribute("agent.instructions", agent.instructions)
+                # Map agent instructions to gen_ai.prompt (LLM_PROMPTS)
+                span.set_attribute(SpanAttributes.LLM_PROMPTS, agent.instructions)
             elif callable(agent.instructions):
                 instruction_type = "function"
                 func_name = getattr(agent.instructions, "__name__", str(agent.instructions))
                 span.set_attribute("agent.instruction_function", func_name)
             else:
                 instructions_dict = model_to_dict(agent.instructions)
-                span.set_attribute("agent.instructions", safe_serialize(instructions_dict))
+                instructions_str = safe_serialize(instructions_dict)
+                span.set_attribute("agent.instructions", instructions_str)
+                # Map agent instructions to gen_ai.prompt (LLM_PROMPTS)
+                span.set_attribute(SpanAttributes.LLM_PROMPTS, instructions_str)
             
             span.set_attribute("agent.instruction_type", instruction_type)
         
@@ -410,7 +420,12 @@ class AgentsInstrumentor(BaseInstrumentor):
 
     def _process_result_and_update_span(self, span, result, model_name, start_time, is_streaming, agent_name):
         if hasattr(result, "final_output"):
-            span.set_attribute(WorkflowAttributes.FINAL_OUTPUT, safe_serialize(result.final_output))
+            final_output = safe_serialize(result.final_output)
+            span.set_attribute(WorkflowAttributes.FINAL_OUTPUT, final_output)
+            
+            # Also set the final output as the completion content using MessageAttributes
+            span.set_attribute(MessageAttributes.COMPLETION_CONTENT.format(i=0), final_output)
+            span.set_attribute(MessageAttributes.COMPLETION_ROLE.format(i=0), "assistant")
         
         self._process_token_usage_from_responses(span, result, model_name)
         

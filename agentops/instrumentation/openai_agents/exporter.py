@@ -1,4 +1,35 @@
-"""OpenAI Agents SDK Instrumentation Exporter for AgentOps"""
+"""OpenAI Agents SDK Instrumentation Exporter for AgentOps
+
+IMPORTANT SERIALIZATION RULES:
+1. We do not serialize data structures arbitrarily; everything has a semantic convention.
+2. Span attributes should use semantic conventions and avoid complex serialized structures.
+3. Keep all string data in its original form - do not parse JSON within strings.
+4. If a function has JSON attributes for its arguments, do not parse that JSON - keep as string.
+5. If a completion or response body text/content contains JSON, keep it as a string.
+6. When a semantic convention requires a value to be added to span attributes:
+   - DO NOT apply JSON serialization
+   - All attribute values should be strings or simple numeric/boolean values
+   - If we encounter JSON or an object in an area that expects a string, raise an exception
+7. Function arguments and tool call arguments should remain in their raw string form.
+
+CRITICAL: NEVER MANUALLY SET THE ROOT COMPLETION ATTRIBUTES
+- DO NOT set SpanAttributes.LLM_COMPLETIONS or "gen_ai.completion" manually
+- Let OpenTelemetry backend derive these values from the detailed attributes
+- Setting root completion attributes creates duplication and inconsistency
+
+STRUCTURED ATTRIBUTE HANDLING:
+- Always use MessageAttributes semantic conventions for content and tool calls
+- For chat completions, use MessageAttributes.COMPLETION_CONTENT.format(i=0) 
+- For tool calls, use MessageAttributes.TOOL_CALL_NAME.format(i=0, j=0), etc.
+- Never try to combine or aggregate contents into a single attribute
+- Each message component should have its own properly formatted attribute
+- This ensures proper display in OpenTelemetry backends and dashboards
+
+IMPORTANT FOR TESTING:
+- Tests should verify attribute existence using MessageAttributes constants
+- Do not check for the presence of SpanAttributes.LLM_COMPLETIONS
+- Verify individual content/tool attributes instead of root attributes
+"""
 import json
 from typing import Any, Dict
 
@@ -93,34 +124,46 @@ class OpenAIAgentsExporter:
                 attributes[MessageAttributes.FUNCTION_CALL_ARGUMENTS.format(i=i)] = function_call.get("arguments")
 
     def _process_response_api(self, response: Dict[str, Any], attributes: Dict[str, Any]) -> None:
+        """Process a response from the OpenAI Response API format (used by Agents SDK)"""
         if "output" not in response:
             return
-            
+        
+        # Process each output item for detailed attributes
         for i, item in enumerate(response["output"]):
+            # Extract role if present
             if "role" in item:
                 attributes[MessageAttributes.COMPLETION_ROLE.format(i=i)] = item["role"]
             
+            # Extract text content if present
             if "content" in item:
                 content_items = item["content"]
                 
                 if isinstance(content_items, list):
-                    texts = []
+                    # Handle content items list (typically for text responses)
                     for content_item in content_items:
                         if content_item.get("type") == "output_text" and "text" in content_item:
-                            texts.append(content_item["text"])
-                    
-                    attributes[MessageAttributes.COMPLETION_CONTENT.format(i=i)] = " ".join(texts)
-                else:
-                    attributes[MessageAttributes.COMPLETION_CONTENT.format(i=i)] = safe_serialize(content_items)
+                            # Set the content attribute with the text - keep as raw string
+                            attributes[MessageAttributes.COMPLETION_CONTENT.format(i=i)] = content_item["text"]
+                
+                elif isinstance(content_items, str):
+                    # Handle string content - keep as raw string
+                    attributes[MessageAttributes.COMPLETION_CONTENT.format(i=i)] = content_items
             
+            # Extract function/tool call information
             if item.get("type") == "function_call":
-                attributes[MessageAttributes.TOOL_CALL_ID.format(i=i, j=0)] = item.get("id", "")
-                attributes[MessageAttributes.TOOL_CALL_NAME.format(i=i, j=0)] = item.get("name", "")
-                attributes[MessageAttributes.TOOL_CALL_ARGUMENTS.format(i=i, j=0)] = item.get("arguments", "{}")
+                # Get tool call details - keep as raw strings, don't parse JSON
+                item_id = item.get("id", "")
+                tool_name = item.get("name", "")
+                tool_args = item.get("arguments", "")
+                
+                # Set tool call attributes using standard semantic conventions
+                attributes[MessageAttributes.TOOL_CALL_ID.format(i=i, j=0)] = item_id
+                attributes[MessageAttributes.TOOL_CALL_NAME.format(i=i, j=0)] = tool_name
+                attributes[MessageAttributes.TOOL_CALL_ARGUMENTS.format(i=i, j=0)] = tool_args
             
-            if "call_id" in item:
-                if not attributes.get(MessageAttributes.TOOL_CALL_ID.format(i=i, j=0), ""):
-                    attributes[MessageAttributes.TOOL_CALL_ID.format(i=i, j=0)] = item["call_id"]
+            # Ensure call_id is captured if present
+            if "call_id" in item and not attributes.get(MessageAttributes.TOOL_CALL_ID.format(i=i, j=0), ""):
+                attributes[MessageAttributes.TOOL_CALL_ID.format(i=i, j=0)] = item["call_id"]
     
     def _process_completions(self, response: Dict[str, Any], attributes: Dict[str, Any]) -> None:
         if "choices" in response:
@@ -145,8 +188,19 @@ class OpenAIAgentsExporter:
                 
                 if source_key in ("input", "output") and isinstance(value, str):
                     attributes[target_attr] = value
+                    
+                    # If this is the output, also set it as a completion content
+                    if source_key == "output":
+                        attributes[MessageAttributes.COMPLETION_CONTENT.format(i=0)] = value
+                        attributes[MessageAttributes.COMPLETION_ROLE.format(i=0)] = "assistant"
                 elif source_key in ("input", "output"):
-                    attributes[target_attr] = safe_serialize(value)
+                    serialized_value = safe_serialize(value)
+                    attributes[target_attr] = serialized_value
+                    
+                    # If this is the output, also set it as a completion content
+                    if source_key == "output":
+                        attributes[MessageAttributes.COMPLETION_CONTENT.format(i=0)] = serialized_value
+                        attributes[MessageAttributes.COMPLETION_ROLE.format(i=0)] = "assistant"
                 else:
                     attributes[target_attr] = value
         
@@ -164,8 +218,8 @@ class OpenAIAgentsExporter:
             AgentAttributes.AGENT_NAME: "name",
             SpanAttributes.LLM_PROMPTS: "input",
             "gen_ai.prompt": "input",
-            SpanAttributes.LLM_COMPLETIONS: "output",
-            "gen_ai.completion": "output",
+            # Note: We don't set LLM_COMPLETIONS directly per serialization rules
+            # Instead, use MessageAttributes for structured completion data
             AgentAttributes.FROM_AGENT: "from_agent",
         }
         
@@ -190,6 +244,20 @@ class OpenAIAgentsExporter:
         return SpanKind.CLIENT
         
     def _process_generation_span(self, span: Any, span_data: Any, attributes: Dict[str, Any]) -> SpanKind:
+        """Process a generation span from the Agents SDK
+        
+        This method extracts information from a GenerationSpanData object and
+        sets appropriate span attributes for the OpenTelemetry backend.
+        
+        Args:
+            span: The original span object from the SDK
+            span_data: The span_data object containing generation details
+            attributes: Dictionary to add attributes to
+        
+        Returns:
+            The appropriate span kind (CLIENT)
+        """
+        # Map basic model information
         field_mapping = {
             SpanAttributes.LLM_REQUEST_MODEL: "model",
         }
@@ -198,27 +266,53 @@ class OpenAIAgentsExporter:
             if hasattr(span_data, source_key):
                 attributes[target_attr] = getattr(span_data, source_key)
                 
+        # Set the system to OpenAI when we have model information
         if SpanAttributes.LLM_REQUEST_MODEL in attributes:
             attributes[SpanAttributes.LLM_SYSTEM] = "openai"
         
+        # Process model configuration if present
         if hasattr(span_data, "model_config"):
             self._process_model_config(span_data.model_config, attributes)
         
+        # Set input in standardized location
+        # Dude, I think what we really want to do here instead of safely serializing 
+        # any input that's not a string is to reference the original input content. 
+        # We're getting tripped up on serialization because sometimes the input is a 
+        # JSON object. On the way out, as we decode the response from the LLM, it 
+        # might contain a JSON object. But we don't need to handle those. We should 
+        # just keep unparsed JSON as a string. This applies to any attributes (mostly 
+        # input and output) but also when you're looking at function call keys or even
+        # function call responses. If a function call response is JSON but is not part 
+        # of our schema, then we should put a stringified JSON in place. 
+        if hasattr(span_data, "input"):
+            attributes[SpanAttributes.LLM_PROMPTS] = (
+                span_data.input if isinstance(span_data.input, str) 
+                else safe_serialize(span_data.input)
+            )
+        
+        # Process output/response data
         if hasattr(span_data, "output"):
             output = span_data.output
             
+            # Convert model to dictionary for easier processing
             response_dict = model_to_dict(output)
             
             if response_dict:
+                # Extract metadata (model, id, system fingerprint)
                 self._process_response_metadata(response_dict, attributes)
                 
+                # Process token usage metrics
                 if "usage" in response_dict:
                     self._process_extended_token_usage(response_dict["usage"], attributes)
                 
+                # Process response content based on format (chat completion or response API)
                 self._process_completions(response_dict, attributes)
-            else:
-                attributes[SpanAttributes.LLM_COMPLETIONS] = safe_serialize(output)
+                
+                # NOTE: We don't set the root completion attribute (gen_ai.completion)
+                # The OpenTelemetry backend will derive it from detailed attributes
+                # See the note at the top of this file for why we don't do this
         
+        # Process any usage data directly on the span
         if hasattr(span_data, "usage"):
             self._process_extended_token_usage(span_data.usage, attributes)
             
