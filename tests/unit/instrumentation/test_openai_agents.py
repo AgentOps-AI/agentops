@@ -52,13 +52,10 @@ from agentops.semconv import (
     InstrumentationAttributes
 )
 from tests.unit.sdk.instrumentation_tester import InstrumentationTester
-from agentops.instrumentation.openai_agents import (
-    AgentsDetailedExporter, 
-    get_model_info
-)
+from agentops.instrumentation.openai_agents import AgentsDetailedExporter
 # These are in separate modules, import directly from those
 from agentops.instrumentation.openai_agents.processor import AgentsDetailedProcessor
-from agentops.instrumentation.openai_agents.instrumentor import AgentsInstrumentor
+from agentops.instrumentation.openai_agents.instrumentor import AgentsInstrumentor, get_model_info
 from tests.unit.instrumentation.mock_span import MockSpan, MockTracer, process_with_instrumentor
 
 # Use the correct imports
