@@ -1,6 +1,17 @@
 """
-these tests relate specifically to the responses type from the open AI API, 
-not to be confused with the completion type from the open AIAPI
+Tests for OpenAI Response API Serialization
+
+This module contains tests for properly handling and serializing the new OpenAI Response API format.
+
+Important distinction:
+- OpenAI Response API: Used exclusively by the OpenAI Agents SDK, these objects use 
+  the "Response" class with an "output" array containing messages and their content.
+  
+- OpenAI Chat Completion API: The traditional OpenAI API format that uses the "ChatCompletion" 
+  class with a "choices" array containing messages.
+
+This separation ensures we correctly implement attribute extraction for both formats
+in our instrumentation.
 """
 
 import json
@@ -9,6 +20,7 @@ from typing import Any, Dict, List, Optional, Union
 import pytest
 from opentelemetry import trace
 from opentelemetry.trace import StatusCode
+from agentops.logging import logger
 
 from openai.types.responses import (
     Response,
@@ -22,9 +34,21 @@ import agentops
 from agentops.sdk.core import TracingCore
 from agentops.semconv import SpanAttributes
 from tests.unit.sdk.instrumentation_tester import InstrumentationTester
+from third_party.opentelemetry.instrumentation.agents.agentops_agents_instrumentor import AgentsDetailedExporter
+from tests.unit.instrumentation.mock_span import MockSpan, process_with_instrumentor
 
 
-# New OpenAI Response API object
+# Test fixture: A representative OpenAI Response API object
+# 
+# This is a complete instance of the Response class from the OpenAI Agents SDK.
+# It demonstrates the structure we need to handle in our instrumentation:
+# - Has an "output" array (instead of "choices")
+# - Content is nested in a specific structure: output→message→content→text item
+# - Uses input_tokens/output_tokens instead of prompt_tokens/completion_tokens
+# - Includes special details like output_tokens_details.reasoning_tokens
+#
+# Our instrumentation must correctly extract all relevant fields from this structure
+# and map them to the appropriate span attributes.
 OPENAI_RESPONSE = Response(
     id="resp_123abc",
     created_at=1677858245,
@@ -59,28 +83,44 @@ OPENAI_RESPONSE = Response(
     tool_choice="none"
 )
 
-# Keep the dictionary version for comparison with direct dictionary handling
-MODEL_RESPONSE_DICT = {
-    "id": "chatcmpl-123",
-    "model": "gpt-4-0125-preview",
-    "choices": [
-        {
-            "index": 0,
-            "message": {
-                "role": "assistant",
-                "content": "This is a test response."
-            },
-            "finish_reason": "stop"
-        }
-    ],
-    "usage": {
-        "prompt_tokens": 10,
-        "completion_tokens": 8,
-        "total_tokens": 18
-    },
-    "system_fingerprint": "fp_44f3",
-    "object": "chat.completion",
-    "created": 1677858242
+# We don't need the Chat Completion example here - this test focuses only on the Response API
+
+# Test reference: Expected span attributes from processing a Response API object
+#
+# This dictionary defines precisely what span attributes we expect our instrumentor
+# to produce when processing an OpenAI Response API object (like OPENAI_RESPONSE above).
+# 
+# The goal of our test is to ensure that when our instrumentation processes a Response API 
+# object, it correctly extracts and maps all these attributes with the correct values.
+#
+# Key aspects we're testing:
+# 1. Correct extraction of metadata (model, id)
+# 2. Proper mapping of token usage (input→prompt, output→completion) 
+# 3. Extraction of special fields like reasoning_tokens
+# 4. Most importantly: proper extraction of content from the nested output structure
+#
+# This serves as our "source of truth" for verification in the test.
+EXPECTED_RESPONSE_SPAN_ATTRIBUTES = {
+    # Basic response metadata
+    "gen_ai.response.model": "gpt-4o",
+    "gen_ai.response.id": "resp_123abc",
+    
+    # Token usage metrics - note input_tokens/output_tokens from Responses API get mapped to prompt/completion
+    "gen_ai.usage.total_tokens": 18,
+    "gen_ai.usage.prompt_tokens": 10,
+    "gen_ai.usage.completion_tokens": 8,
+    "gen_ai.usage.total_tokens.reasoning": 2,  # Special field from output_tokens_details
+    
+    # Content extraction from Response API format
+    "gen_ai.completion.0.content": "This is a test response from the new Responses API.",
+    "gen_ai.completion.0.role": "assistant",
+    
+    # Standard OpenTelemetry attributes
+    "trace.id": "trace123",
+    "span.id": "span456",
+    "parent.id": "parent789",
+    "library.name": "agents-sdk",
+    "library.version": "0.1.0"
 }
 
 
@@ -93,92 +133,59 @@ class TestModelResponseSerialization:
         return InstrumentationTester()
         
     def test_openai_response_serialization(self, instrumentation):
-        """Test serialization of OpenAI Response API object"""
-        # Set up
+        """Test serialization of OpenAI Response API object using the actual instrumentor"""
+        # Dictionary to capture attributes from the instrumentor
+        captured_attributes = {}
+        
+        # Set up test environment
         tracer = TracingCore.get_instance().get_tracer("test_tracer")
         
-        # Create a span and add response as output
+        # Create a span for our test
         with tracer.start_as_current_span("test_openai_response_api_span") as span:
             # Set the span type
             span.set_attribute("span.kind", "llm")
             
-            # Use the model_as_dict functionality from Agents SDK
-            from third_party.opentelemetry.instrumentation.agents.agentops_agents_instrumentor import model_as_dict
+            # Create a mock span with the Response API object
+            mock_span = MockSpan(OPENAI_RESPONSE)
             
-            # Create a mock span data object
-            class MockSpanData:
-                def __init__(self, output):
-                    self.output = output
+            # Process the mock span with the actual AgentsDetailedExporter from the instrumentor
+            process_with_instrumentor(mock_span, AgentsDetailedExporter, captured_attributes)
             
-            # Create span data with the model response
-            span_data = MockSpanData(OPENAI_RESPONSE)
-            
-            # Extract attributes using the same logic as in the Agent SDK
-            attributes = {}
-            if hasattr(span_data, "output") and span_data.output:
-                output = span_data.output
-                
-                # Convert to dict using model_as_dict
-                output_dict = model_as_dict(output)
-                
-                # Log the output dict to understand its structure
-                print(f"Output dict: {output_dict}")
-                
-                if output_dict:
-                    # Extract model
-                    if "model" in output_dict:
-                        attributes[SpanAttributes.LLM_RESPONSE_MODEL] = output_dict["model"]
-                    
-                    # Extract ID
-                    if "id" in output_dict:
-                        attributes[SpanAttributes.LLM_RESPONSE_ID] = output_dict["id"]
-                    
-                    # Handle usage metrics with different naming for Responses API
-                    if "usage" in output_dict and output_dict["usage"]:
-                        usage = output_dict["usage"]
-                        if isinstance(usage, dict):
-                            if "total_tokens" in usage:
-                                attributes[SpanAttributes.LLM_USAGE_TOTAL_TOKENS] = usage["total_tokens"]
-                            
-                            if "input_tokens" in usage:
-                                # Handle Responses API format
-                                attributes[SpanAttributes.LLM_USAGE_PROMPT_TOKENS] = usage["input_tokens"]
-                                
-                            if "output_tokens" in usage:
-                                # Handle Responses API format
-                                attributes[SpanAttributes.LLM_USAGE_COMPLETION_TOKENS] = usage["output_tokens"]
-                                
-                            # Original chat completion format    
-                            if "completion_tokens" in usage:
-                                attributes[SpanAttributes.LLM_USAGE_COMPLETION_TOKENS] = usage["completion_tokens"]
-                            if "prompt_tokens" in usage:
-                                attributes[SpanAttributes.LLM_USAGE_PROMPT_TOKENS] = usage["prompt_tokens"]
-                    
-                    # Extract output text from responses API format
-                    if "output" in output_dict and isinstance(output_dict["output"], list):
-                        for idx, item in enumerate(output_dict["output"]):
-                            if isinstance(item, dict):
-                                if item.get("type") == "message" and "content" in item:
-                                    for content_idx, content in enumerate(item.get("content", [])):
-                                        if isinstance(content, dict) and content.get("type") == "output_text":
-                                            prefix = f"{SpanAttributes.LLM_COMPLETIONS}.{idx}"
-                                            attributes[f"{prefix}.content"] = content.get("text", "")
-                                            attributes[f"{prefix}.role"] = item.get("role", "assistant")
-            
-            # Set attributes on the span
-            for key, val in attributes.items():
+            # Set attributes on our test span too (so we can verify them)
+            for key, val in captured_attributes.items():
                 span.set_attribute(key, val)
 
-        # Get all spans
+        # Get all spans and log them for debugging
         spans = instrumentation.get_finished_spans()
-        assert len(spans) > 0
+        logger.info(f"Instrumentation Tester: Found {len(spans)} finished spans")
+        for i, s in enumerate(spans):
+            logger.info(f"Span {i}: name={s.name}, attributes={s.attributes}")
+            
+        # Examine the first span generated from the instrumentor
+        instrumented_span = spans[0]
+        logger.info(f"Validating span: {instrumented_span.name}")
         
-        # Get the test span
-        test_span = spans[0]
-        print(f"Span 0: name=test_openai_response_api_span, attributes={test_span.attributes}")
+        # Check all required attributes from our reference model against the actual span
+        for key, expected_value in EXPECTED_RESPONSE_SPAN_ATTRIBUTES.items():
+            # Skip library version which might change
+            if key == "library.version":
+                continue
+                
+            # Assert the attribute exists 
+            assert key in instrumented_span.attributes, f"Missing expected attribute '{key}'"
+            
+            # Assert it has the expected value
+            actual_value = instrumented_span.attributes[key]
+            assert actual_value == expected_value, \
+                f"Attribute '{key}' has wrong value. Expected: {expected_value}, Actual: {actual_value}"
+                
+        # Also verify we don't have any unexpected attributes related to completions
+        # This helps catch duplicate or incorrect attribute names
+        completion_prefix = "gen_ai.completion.0"
+        completion_attrs = [k for k in instrumented_span.attributes.keys() if k.startswith(completion_prefix)]
+        expected_completion_attrs = [k for k in EXPECTED_RESPONSE_SPAN_ATTRIBUTES.keys() if k.startswith(completion_prefix)]
         
-        # Verify the response attributes were properly serialized
-        assert test_span.attributes.get(SpanAttributes.LLM_RESPONSE_MODEL) == OPENAI_RESPONSE.model
-        assert test_span.attributes.get(SpanAttributes.LLM_RESPONSE_ID) == OPENAI_RESPONSE.id
-        assert test_span.attributes.get(SpanAttributes.LLM_USAGE_TOTAL_TOKENS) == 18
+        # We should have exactly the expected attributes, nothing more
+        assert set(completion_attrs) == set(expected_completion_attrs), \
+            f"Unexpected completion attributes. Found: {completion_attrs}, Expected: {expected_completion_attrs}"
 
