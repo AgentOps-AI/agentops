@@ -12,29 +12,18 @@ IMPORTANT DISTINCTION BETWEEN OPENAI API FORMATS:
 The Agents SDK uses the Response API format, which we handle using shared utilities from
 agentops.instrumentation.openai.
 """
-import asyncio
-import functools
-import json
-import logging
-import time
-from typing import Any, Collection, Optional, Union, Set
+from typing import Any
 
-# OpenTelemetry imports
-from opentelemetry.instrumentation.instrumentor import BaseInstrumentor
-from opentelemetry.trace import get_tracer, SpanKind, Status, StatusCode, get_current_span
-from opentelemetry.metrics import get_meter
-
-# AgentOps imports
+# AgentOps imports - only import what we actually use
 from agentops.semconv import (
     CoreAttributes,
     WorkflowAttributes,
     InstrumentationAttributes,
     AgentAttributes,
     SpanAttributes,
-    Meters,
 )
 from agentops.logging import logger
-from agentops.helpers.serialization import safe_serialize, filter_unjsonable, model_to_dict
+from agentops.helpers.serialization import safe_serialize, model_to_dict
 
 # Import shared OpenAI instrumentation utilities
 from agentops.instrumentation.openai import process_token_usage, process_token_details
@@ -42,59 +31,8 @@ from agentops.instrumentation.openai import process_token_usage, process_token_d
 # Version
 __version__ = "0.1.0"
 
-# Try to find the agents SDK version
-agents_sdk_version = "unknown"
-
-def get_agents_sdk_version() -> str:
-    """
-    Try to find the version of the agents SDK.
-    
-    TODO: Improve this to try harder to find the version by:
-    1. Checking for agents.__version__
-    2. Checking package metadata
-    3. Using importlib.metadata if available
-    
-    Returns:
-        The agents SDK version string or "unknown" if not found
-    """
-    global agents_sdk_version
-    
-    if agents_sdk_version != "unknown":
-        return agents_sdk_version
-        
-    # Try to import agents and get the version
-    try:
-        import agents
-        if hasattr(agents, '__version__'):
-            agents_sdk_version = agents.__version__
-            return agents_sdk_version
-    except (ImportError, AttributeError):
-        pass
-    
-    # For now, return unknown if we can't find it
-    return agents_sdk_version
-
-# Import after defining helpers to avoid circular imports
+# Import the actual implementation
 from .exporter import AgentsDetailedExporter
-
-
-def safe_extract(obj: Any, attr_path: str, default: Any = None) -> Any:
-    """Safely extract a nested attribute from an object using dot notation."""
-    attrs = attr_path.split(".")
-    current = obj
-    
-    try:
-        for attr in attrs:
-            if isinstance(current, dict):
-                current = current.get(attr)
-            else:
-                current = getattr(current, attr, None)
-            
-            if current is None:
-                return default
-        return current
-    except (AttributeError, KeyError):
-        return default
 
 
 def get_model_info(agent: Any, run_config: Any = None) -> dict:
@@ -145,48 +83,4 @@ def get_model_info(agent: Any, run_config: Any = None) -> dict:
                 result[param] = getattr(model_settings, param)
 
     return result
-
-
-def flush_active_streaming_operations(tracer_provider=None):
-    """
-    Manually flush spans for active streaming operations.
-    
-    This function can be called to force flush spans for active streaming operations
-    before shutting down the trace provider.
-    """
-    if not AgentsInstrumentor._active_streaming_operations:
-        return
-    
-    # Create a new span for each active streaming operation
-    if tracer_provider:
-        tracer = get_tracer(__name__, __version__, tracer_provider)
-        
-        for stream_id in list(AgentsInstrumentor._active_streaming_operations):
-            try:
-                # Create attributes for the flush span
-                flush_attributes = {
-                    "stream_id": str(stream_id),
-                    "service.name": "agentops.agents",
-                    "flush_type": "manual",
-                    InstrumentationAttributes.NAME: "agentops.agents",
-                    InstrumentationAttributes.VERSION: __version__,
-                }
-                
-                # Create a new span for this streaming operation
-                with tracer.start_as_current_span(
-                    name=f"agents.streaming.flush.{stream_id}", 
-                    kind=SpanKind.INTERNAL, 
-                    attributes=flush_attributes
-                ) as span:
-                    # Add a marker to indicate this is a flush span
-                    span.set_attribute("flush_marker", "true")
-                    
-                    # Force flush this span
-                    if hasattr(tracer_provider, "force_flush"):
-                        try:
-                            tracer_provider.force_flush()
-                        except Exception as e:
-                            logger.warning(f"Error flushing span for streaming operation {stream_id}: {e}")
-            except Exception as e:
-                logger.warning(f"Error creating flush span for streaming operation {stream_id}: {e}")
 

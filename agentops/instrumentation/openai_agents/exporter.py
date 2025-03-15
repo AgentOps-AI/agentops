@@ -200,10 +200,12 @@ class AgentsDetailedExporter:
                 
             # Include content (even if None/empty)
             if "content" in message:
-                attributes[MessageAttributes.COMPLETION_CONTENT.format(i=i)] = message["content"]
+                # Convert None to empty string to avoid OTel warnings
+                content = message["content"] if message["content"] is not None else ""
+                attributes[MessageAttributes.COMPLETION_CONTENT.format(i=i)] = content
                 
             # Handle tool calls
-            if "tool_calls" in message:
+            if "tool_calls" in message and message["tool_calls"] is not None:
                 tool_calls = message["tool_calls"]
                 for j, tool_call in enumerate(tool_calls):
                     if "function" in tool_call:
@@ -213,7 +215,7 @@ class AgentsDetailedExporter:
                         attributes[MessageAttributes.TOOL_CALL_ARGUMENTS.format(i=i, j=j)] = function.get("arguments")
                 
             # Handle function calls (legacy)
-            if "function_call" in message:
+            if "function_call" in message and message["function_call"] is not None:
                 function_call = message["function_call"]
                 attributes[MessageAttributes.FUNCTION_CALL_NAME.format(i=i)] = function_call.get("name")
                 attributes[MessageAttributes.FUNCTION_CALL_ARGUMENTS.format(i=i)] = function_call.get("arguments")

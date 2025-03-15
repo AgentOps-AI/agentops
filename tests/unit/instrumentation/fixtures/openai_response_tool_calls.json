@@ -1,6 +1,6 @@
 {
-  "id": "resp_67d51e518d708192a58adad5e9b5745f0a6d4ee5c79f8d47",
-  "created_at": 1742020177.0,
+  "id": "resp_67d5328491388192bec10f88bd3100970ff2fe545808f558",
+  "created_at": 1742025348.0,
   "error": null,
   "incomplete_details": null,
   "instructions": "You are a helpful assistant.",
@@ -9,9 +9,9 @@
   "object": "response",
   "output": [
     {
-      "id": "fc_67d51e51f4d88192a8a50a5aa3ee70440a6d4ee5c79f8d47",
-      "arguments": "{\"location\":\"San Francisco, CA\",\"unit\":\"celsius\"}",
-      "call_id": "call_q24YLlyrHwUO2NNVSr1LFWFD",
+      "id": "fc_67d532850424819283268d29132a29dc0ff2fe545808f558",
+      "arguments": "{\"location\":\"San Francisco\",\"unit\":\"metric\"}",
+      "call_id": "call_qVCWmymIoOH1B9nFUSr9r4mc",
       "name": "get_weather",
       "type": "function_call",
       "status": "completed"
@@ -26,12 +26,10 @@
       "parameters": {
         "properties": {
           "location": {
-            "description": "The city and state, e.g. San Francisco, CA",
             "title": "Location",
             "type": "string"
           },
           "unit": {
-            "description": "The unit of temperature to use (celsius or fahrenheit)",
             "title": "Unit",
             "type": "string"
           }
@@ -64,12 +62,12 @@
   },
   "truncation": "disabled",
   "usage": {
-    "input_tokens": 315,
-    "output_tokens": 23,
+    "input_tokens": 287,
+    "output_tokens": 20,
     "output_tokens_details": {
       "reasoning_tokens": 0
     },
-    "total_tokens": 338,
+    "total_tokens": 307,
     "input_tokens_details": {
       "cached_tokens": 0
     }
