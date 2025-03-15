@@ -129,20 +129,20 @@ OPENAI_CHAT_COMPLETION_WITH_FUNCTION_CALL = ChatCompletion(
 # This dictionary defines precisely what span attributes we expect our instrumentor
 # to produce when processing a standard ChatCompletion object.
 EXPECTED_CHAT_COMPLETION_SPAN_ATTRIBUTES = {
-    # Basic response metadata
-    "gen_ai.response.model": "gpt-4-0125-preview",
-    "gen_ai.response.id": "chatcmpl-123",
-    "gen_ai.openai.system_fingerprint": "fp_44f3",
+    # Basic response metadata - using proper semantic conventions
+    SpanAttributes.LLM_RESPONSE_MODEL: "gpt-4-0125-preview",
+    SpanAttributes.LLM_RESPONSE_ID: "chatcmpl-123",
+    SpanAttributes.LLM_OPENAI_RESPONSE_SYSTEM_FINGERPRINT: "fp_44f3",
     
-    # Token usage metrics
-    "gen_ai.usage.total_tokens": 18,
-    "gen_ai.usage.prompt_tokens": 10,
-    "gen_ai.usage.completion_tokens": 8,
+    # Token usage metrics - using proper semantic conventions
+    SpanAttributes.LLM_USAGE_TOTAL_TOKENS: 18,
+    SpanAttributes.LLM_USAGE_PROMPT_TOKENS: 10,
+    SpanAttributes.LLM_USAGE_COMPLETION_TOKENS: 8,
     
-    # Content extraction from Chat Completion API format
-    "gen_ai.completion.0.content": "This is a test response.",
-    "gen_ai.completion.0.role": "assistant",
-    "gen_ai.completion.0.finish_reason": "stop",
+    # Content extraction from Chat Completion API format - using proper semantic conventions
+    f"{SpanAttributes.LLM_COMPLETIONS}.0.content": "This is a test response.",
+    f"{SpanAttributes.LLM_COMPLETIONS}.0.role": "assistant",
+    f"{SpanAttributes.LLM_COMPLETIONS}.0.finish_reason": "stop",
     
     # Standard OpenTelemetry attributes
     "trace.id": "trace123",
@@ -154,24 +154,24 @@ EXPECTED_CHAT_COMPLETION_SPAN_ATTRIBUTES = {
 
 # Test reference: Expected span attributes from processing a ChatCompletion with tool calls
 EXPECTED_TOOL_CALLS_SPAN_ATTRIBUTES = {
-    # Basic response metadata
-    "gen_ai.response.model": "gpt-4-0125-preview",
-    "gen_ai.response.id": "chatcmpl-456",
-    "gen_ai.openai.system_fingerprint": "fp_55g4",
+    # Basic response metadata - using proper semantic conventions
+    SpanAttributes.LLM_RESPONSE_MODEL: "gpt-4-0125-preview",
+    SpanAttributes.LLM_RESPONSE_ID: "chatcmpl-456",
+    SpanAttributes.LLM_OPENAI_RESPONSE_SYSTEM_FINGERPRINT: "fp_55g4",
     
-    # Token usage metrics
-    "gen_ai.usage.total_tokens": 22,
-    "gen_ai.usage.prompt_tokens": 12,
-    "gen_ai.usage.completion_tokens": 10,
+    # Token usage metrics - using proper semantic conventions
+    SpanAttributes.LLM_USAGE_TOTAL_TOKENS: 22,
+    SpanAttributes.LLM_USAGE_PROMPT_TOKENS: 12,
+    SpanAttributes.LLM_USAGE_COMPLETION_TOKENS: 10,
     
-    # Completion metadata
-    "gen_ai.completion.0.role": "assistant",
-    "gen_ai.completion.0.finish_reason": "tool_calls",
+    # Completion metadata - using proper semantic conventions
+    f"{SpanAttributes.LLM_COMPLETIONS}.0.role": "assistant",
+    f"{SpanAttributes.LLM_COMPLETIONS}.0.finish_reason": "tool_calls",
     
-    # Tool call details
-    "gen_ai.completion.0.tool_calls.0.id": "call_abc123",
-    "gen_ai.completion.0.tool_calls.0.name": "get_weather",
-    "gen_ai.completion.0.tool_calls.0.arguments": '{"location": "San Francisco", "unit": "celsius"}',
+    # Tool call details - using proper semantic conventions
+    f"{SpanAttributes.LLM_COMPLETIONS}.0.tool_calls.0.id": "call_abc123",
+    f"{SpanAttributes.LLM_COMPLETIONS}.0.tool_calls.0.name": "get_weather",
+    f"{SpanAttributes.LLM_COMPLETIONS}.0.tool_calls.0.arguments": '{"location": "San Francisco", "unit": "celsius"}',
     
     # Standard OpenTelemetry attributes
     "trace.id": "trace123",
@@ -183,22 +183,22 @@ EXPECTED_TOOL_CALLS_SPAN_ATTRIBUTES = {
 
 # Test reference: Expected span attributes from processing a ChatCompletion with function call
 EXPECTED_FUNCTION_CALL_SPAN_ATTRIBUTES = {
-    # Basic response metadata
-    "gen_ai.response.model": "gpt-3.5-turbo",
-    "gen_ai.response.id": "chatcmpl-789",
+    # Basic response metadata - using proper semantic conventions
+    SpanAttributes.LLM_RESPONSE_MODEL: "gpt-3.5-turbo",
+    SpanAttributes.LLM_RESPONSE_ID: "chatcmpl-789",
     
-    # Token usage metrics
-    "gen_ai.usage.total_tokens": 14,
-    "gen_ai.usage.prompt_tokens": 8,
-    "gen_ai.usage.completion_tokens": 6,
+    # Token usage metrics - using proper semantic conventions
+    SpanAttributes.LLM_USAGE_TOTAL_TOKENS: 14,
+    SpanAttributes.LLM_USAGE_PROMPT_TOKENS: 8,
+    SpanAttributes.LLM_USAGE_COMPLETION_TOKENS: 6,
     
-    # Completion metadata
-    "gen_ai.completion.0.role": "assistant",
-    "gen_ai.completion.0.finish_reason": "function_call",
+    # Completion metadata - using proper semantic conventions
+    f"{SpanAttributes.LLM_COMPLETIONS}.0.role": "assistant",
+    f"{SpanAttributes.LLM_COMPLETIONS}.0.finish_reason": "function_call",
     
-    # Function call details
-    "gen_ai.completion.0.function_call.name": "get_stock_price",
-    "gen_ai.completion.0.function_call.arguments": '{"symbol": "AAPL"}',
+    # Function call details - using proper semantic conventions
+    f"{SpanAttributes.LLM_COMPLETIONS}.0.function_call.name": "get_stock_price",
+    f"{SpanAttributes.LLM_COMPLETIONS}.0.function_call.arguments": '{"symbol": "AAPL"}',
     
     # Standard OpenTelemetry attributes
     "trace.id": "trace123",

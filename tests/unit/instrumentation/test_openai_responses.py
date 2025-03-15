@@ -101,19 +101,20 @@ OPENAI_RESPONSE = Response(
 #
 # This serves as our "source of truth" for verification in the test.
 EXPECTED_RESPONSE_SPAN_ATTRIBUTES = {
-    # Basic response metadata
-    "gen_ai.response.model": "gpt-4o",
-    "gen_ai.response.id": "resp_123abc",
+    # Basic response metadata - using proper semantic conventions
+    SpanAttributes.LLM_RESPONSE_MODEL: "gpt-4o",
+    SpanAttributes.LLM_RESPONSE_ID: "resp_123abc",
     
-    # Token usage metrics - note input_tokens/output_tokens from Responses API get mapped to prompt/completion
-    "gen_ai.usage.total_tokens": 18,
-    "gen_ai.usage.prompt_tokens": 10,
-    "gen_ai.usage.completion_tokens": 8,
-    "gen_ai.usage.total_tokens.reasoning": 2,  # Special field from output_tokens_details
+    # Token usage metrics - using proper semantic conventions
+    # Note input_tokens/output_tokens from Responses API get mapped to prompt/completion
+    SpanAttributes.LLM_USAGE_TOTAL_TOKENS: 18,
+    SpanAttributes.LLM_USAGE_PROMPT_TOKENS: 10,
+    SpanAttributes.LLM_USAGE_COMPLETION_TOKENS: 8,
+    f"{SpanAttributes.LLM_USAGE_TOTAL_TOKENS}.reasoning": 2,  # Special field from output_tokens_details
     
-    # Content extraction from Response API format
-    "gen_ai.completion.0.content": "This is a test response from the new Responses API.",
-    "gen_ai.completion.0.role": "assistant",
+    # Content extraction from Response API format - using proper semantic conventions
+    f"{SpanAttributes.LLM_COMPLETIONS}.0.content": "This is a test response from the new Responses API.",
+    f"{SpanAttributes.LLM_COMPLETIONS}.0.role": "assistant",
     
     # Standard OpenTelemetry attributes
     "trace.id": "trace123",
