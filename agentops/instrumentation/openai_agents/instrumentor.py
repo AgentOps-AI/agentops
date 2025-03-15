@@ -262,6 +262,25 @@ class AgentsInstrumentor(BaseInstrumentor):
                                             },
                                         )
                                 
+                                # Handle reasoning_tokens if present in output_tokens_details
+                                output_tokens_details = getattr(usage, "output_tokens_details", {})
+                                if isinstance(output_tokens_details, dict):
+                                    reasoning_tokens = output_tokens_details.get("reasoning_tokens", 0)
+                                    if reasoning_tokens:
+                                        span.set_attribute(f"{SpanAttributes.LLM_USAGE_REASONING_TOKENS}.{i}", reasoning_tokens)
+                                        total_reasoning_tokens += reasoning_tokens
+                                        
+                                        if self.__class__._agent_token_usage_histogram:
+                                            self.__class__._agent_token_usage_histogram.record(
+                                                reasoning_tokens,
+                                                {
+                                                    "token_type": "reasoning",
+                                                    "model": model_name,
+                                                    SpanAttributes.LLM_REQUEST_MODEL: model_name,
+                                                    SpanAttributes.LLM_SYSTEM: "openai",
+                                                },
+                                            )
+                                
                                 # Total tokens
                                 if hasattr(usage, "total_tokens"):
                                     span.set_attribute(f"{SpanAttributes.LLM_USAGE_TOTAL_TOKENS}.{i}", usage.total_tokens)
@@ -273,6 +292,9 @@ class AgentsInstrumentor(BaseInstrumentor):
                         
                         if total_output_tokens > 0:
                             span.set_attribute(SpanAttributes.LLM_USAGE_COMPLETION_TOKENS, total_output_tokens)
+                        
+                        if total_reasoning_tokens > 0:
+                            span.set_attribute(SpanAttributes.LLM_USAGE_REASONING_TOKENS, total_reasoning_tokens)
                         
                         if total_tokens > 0:
                             span.set_attribute(SpanAttributes.LLM_USAGE_TOTAL_TOKENS, total_tokens)
@@ -424,6 +446,7 @@ class AgentsInstrumentor(BaseInstrumentor):
                             total_input_tokens = 0
                             total_output_tokens = 0
                             total_tokens = 0
+                            total_reasoning_tokens = 0
                             
                             for i, response in enumerate(result.raw_responses):
                                 # Try to extract model directly
@@ -469,6 +492,25 @@ class AgentsInstrumentor(BaseInstrumentor):
                                                 },
                                             )
                                     
+                                    # Handle reasoning_tokens if present in output_tokens_details
+                                    output_tokens_details = getattr(usage, "output_tokens_details", {})
+                                    if isinstance(output_tokens_details, dict):
+                                        reasoning_tokens = output_tokens_details.get("reasoning_tokens", 0)
+                                        if reasoning_tokens:
+                                            span.set_attribute(f"{SpanAttributes.LLM_USAGE_REASONING_TOKENS}.{i}", reasoning_tokens)
+                                            total_reasoning_tokens += reasoning_tokens
+                                            
+                                            if self.__class__._agent_token_usage_histogram:
+                                                self.__class__._agent_token_usage_histogram.record(
+                                                    reasoning_tokens,
+                                                    {
+                                                        "token_type": "reasoning",
+                                                        "model": model_name,
+                                                        SpanAttributes.LLM_REQUEST_MODEL: model_name,
+                                                        SpanAttributes.LLM_SYSTEM: "openai",
+                                                    },
+                                                )
+                                    
                                     # Total tokens
                                     if hasattr(usage, "total_tokens"):
                                         span.set_attribute(f"{SpanAttributes.LLM_USAGE_TOTAL_TOKENS}.{i}", usage.total_tokens)
@@ -480,6 +522,9 @@ class AgentsInstrumentor(BaseInstrumentor):
                             
                             if total_output_tokens > 0:
                                 span.set_attribute(SpanAttributes.LLM_USAGE_COMPLETION_TOKENS, total_output_tokens)
+                            
+                            if total_reasoning_tokens > 0:
+                                span.set_attribute(SpanAttributes.LLM_USAGE_REASONING_TOKENS, total_reasoning_tokens)
                             
                             if total_tokens > 0:
                                 span.set_attribute(SpanAttributes.LLM_USAGE_TOTAL_TOKENS, total_tokens)
@@ -672,6 +717,7 @@ class AgentsInstrumentor(BaseInstrumentor):
                                         total_input_tokens = 0
                                         total_output_tokens = 0
                                         total_tokens = 0
+                                        total_reasoning_tokens = 0
                                         
                                         for i, response in enumerate(result.raw_responses):
                                             # Extract usage information
@@ -712,6 +758,25 @@ class AgentsInstrumentor(BaseInstrumentor):
                                                             },
                                                         )
                                                 
+                                                # Handle reasoning_tokens if present in output_tokens_details
+                                                output_tokens_details = getattr(usage, "output_tokens_details", {})
+                                                if isinstance(output_tokens_details, dict):
+                                                    reasoning_tokens = output_tokens_details.get("reasoning_tokens", 0)
+                                                    if reasoning_tokens:
+                                                        usage_span.set_attribute(f"{SpanAttributes.LLM_USAGE_REASONING_TOKENS}.{i}", reasoning_tokens)
+                                                        total_reasoning_tokens += reasoning_tokens
+                                                        
+                                                        if self.__class__._agent_token_usage_histogram:
+                                                            self.__class__._agent_token_usage_histogram.record(
+                                                                reasoning_tokens,
+                                                                {
+                                                                    "token_type": "reasoning",
+                                                                    "model": model_name,
+                                                                    SpanAttributes.LLM_REQUEST_MODEL: model_name,
+                                                                    SpanAttributes.LLM_SYSTEM: "openai",
+                                                                },
+                                                            )
+                                                
                                                 # Total tokens
                                                 if hasattr(usage, "total_tokens"):
                                                     usage_span.set_attribute(f"{SpanAttributes.LLM_USAGE_TOTAL_TOKENS}.{i}", usage.total_tokens)
@@ -723,6 +788,9 @@ class AgentsInstrumentor(BaseInstrumentor):
                                         
                                         if total_output_tokens > 0:
                                             usage_span.set_attribute(SpanAttributes.LLM_USAGE_COMPLETION_TOKENS, total_output_tokens)
+                                        
+                                        if total_reasoning_tokens > 0:
+                                            usage_span.set_attribute(SpanAttributes.LLM_USAGE_REASONING_TOKENS, total_reasoning_tokens)
                                         
                                         if total_tokens > 0:
                                             usage_span.set_attribute(SpanAttributes.LLM_USAGE_TOTAL_TOKENS, total_tokens)
