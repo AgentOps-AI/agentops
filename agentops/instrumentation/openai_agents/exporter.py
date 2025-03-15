@@ -59,6 +59,7 @@
 | `gen_ai.system`  | string |
 ```
 """
+import importlib.metadata
 import json
 from typing import Any, Dict, List, Optional, Union
 
@@ -253,6 +254,19 @@ class AgentsDetailedExporter:
                 else:
                     # Include content (even if None/empty)
                     attributes[MessageAttributes.COMPLETION_CONTENT.format(i=i)] = safe_serialize(content_items)
+            
+            # Handle function/tool calls in the Response API format
+            if item.get("type") == "function_call":
+                # Map the function call attributes to tool call attributes for consistency
+                attributes[MessageAttributes.TOOL_CALL_ID.format(i=i, j=0)] = item.get("id", "")
+                attributes[MessageAttributes.TOOL_CALL_NAME.format(i=i, j=0)] = item.get("name", "")
+                attributes[MessageAttributes.TOOL_CALL_ARGUMENTS.format(i=i, j=0)] = item.get("arguments", "{}")
+            
+            # Handle call_id attribute for backward compatibility
+            if "call_id" in item:
+                # If there's a call_id but no ID was set, use it
+                if not attributes.get(MessageAttributes.TOOL_CALL_ID.format(i=i, j=0), ""):
+                    attributes[MessageAttributes.TOOL_CALL_ID.format(i=i, j=0)] = item["call_id"]
     
     def _process_completions(self, response: Dict[str, Any], attributes: Dict[str, Any]) -> None:
         """
