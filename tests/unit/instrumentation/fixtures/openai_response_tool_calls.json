@@ -1,0 +1,77 @@
+{
+  "id": "resp_67d5328491388192bec10f88bd3100970ff2fe545808f558",
+  "created_at": 1742025348.0,
+  "error": null,
+  "incomplete_details": null,
+  "instructions": "You are a helpful assistant.",
+  "metadata": {},
+  "model": "gpt-4o-2024-08-06",
+  "object": "response",
+  "output": [
+    {
+      "id": "fc_67d532850424819283268d29132a29dc0ff2fe545808f558",
+      "arguments": "{\"location\":\"San Francisco\",\"unit\":\"metric\"}",
+      "call_id": "call_qVCWmymIoOH1B9nFUSr9r4mc",
+      "name": "get_weather",
+      "type": "function_call",
+      "status": "completed"
+    }
+  ],
+  "parallel_tool_calls": true,
+  "temperature": 0.7,
+  "tool_choice": "auto",
+  "tools": [
+    {
+      "name": "get_weather",
+      "parameters": {
+        "properties": {
+          "location": {
+            "title": "Location",
+            "type": "string"
+          },
+          "unit": {
+            "title": "Unit",
+            "type": "string"
+          }
+        },
+        "required": [
+          "location",
+          "unit"
+        ],
+        "title": "get_weather_args",
+        "type": "object",
+        "additionalProperties": false
+      },
+      "strict": true,
+      "type": "function",
+      "description": "Get the current weather in a location"
+    }
+  ],
+  "top_p": 1.0,
+  "max_output_tokens": null,
+  "previous_response_id": null,
+  "reasoning": {
+    "effort": null,
+    "generate_summary": null
+  },
+  "status": "completed",
+  "text": {
+    "format": {
+      "type": "text"
+    }
+  },
+  "truncation": "disabled",
+  "usage": {
+    "input_tokens": 287,
+    "output_tokens": 20,
+    "output_tokens_details": {
+      "reasoning_tokens": 0
+    },
+    "total_tokens": 307,
+    "input_tokens_details": {
+      "cached_tokens": 0
+    }
+  },
+  "user": null,
+  "store": true
+}

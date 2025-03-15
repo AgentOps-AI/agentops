@@ -1,0 +1,404 @@
+"""OpenAI Agents SDK Instrumentation Exporter for AgentOps
+
+IMPORTANT SERIALIZATION RULES:
+1. We do not serialize data structures arbitrarily; everything has a semantic convention.
+2. Span attributes should use semantic conventions and avoid complex serialized structures.
+3. Keep all string data in its original form - do not parse JSON within strings.
+4. If a function has JSON attributes for its arguments, do not parse that JSON - keep as string.
+5. If a completion or response body text/content contains JSON, keep it as a string.
+6. When a semantic convention requires a value to be added to span attributes:
+   - DO NOT apply JSON serialization
+   - All attribute values should be strings or simple numeric/boolean values
+   - If we encounter JSON or an object in an area that expects a string, raise an exception
+7. Function arguments and tool call arguments should remain in their raw string form.
+
+CRITICAL: NEVER MANUALLY SET THE ROOT COMPLETION ATTRIBUTES
+- DO NOT set SpanAttributes.LLM_COMPLETIONS or "gen_ai.completion" manually
+- Let OpenTelemetry backend derive these values from the detailed attributes
+- Setting root completion attributes creates duplication and inconsistency
+
+STRUCTURED ATTRIBUTE HANDLING:
+- Always use MessageAttributes semantic conventions for content and tool calls
+- For chat completions, use MessageAttributes.COMPLETION_CONTENT.format(i=0) 
+- For tool calls, use MessageAttributes.TOOL_CALL_NAME.format(i=0, j=0), etc.
+- Never try to combine or aggregate contents into a single attribute
+- Each message component should have its own properly formatted attribute
+- This ensures proper display in OpenTelemetry backends and dashboards
+
+IMPORTANT FOR TESTING:
+- Tests should verify attribute existence using MessageAttributes constants
+- Do not check for the presence of SpanAttributes.LLM_COMPLETIONS
+- Verify individual content/tool attributes instead of root attributes
+"""
+import json
+from typing import Any, Dict
+
+from opentelemetry.trace import get_tracer, SpanKind, Status, StatusCode
+from agentops.semconv import (
+    CoreAttributes, 
+    WorkflowAttributes,
+    InstrumentationAttributes,
+    AgentAttributes,
+    SpanAttributes,
+    MessageAttributes
+)
+from agentops.helpers.serialization import safe_serialize, model_to_dict
+from agentops.instrumentation.openai import process_token_usage
+from agentops.logging import logger
+from agentops.instrumentation.openai_agents import LIBRARY_NAME, LIBRARY_VERSION
+
+
+MODEL_CONFIG_MAPPING = {
+    SpanAttributes.LLM_REQUEST_TEMPERATURE: "temperature",
+    SpanAttributes.LLM_REQUEST_TOP_P: "top_p",
+    SpanAttributes.LLM_REQUEST_FREQUENCY_PENALTY: "frequency_penalty",
+    SpanAttributes.LLM_REQUEST_PRESENCE_PENALTY: "presence_penalty",
+    SpanAttributes.LLM_REQUEST_MAX_TOKENS: "max_tokens",
+}
+
+TOKEN_USAGE_EXTENDED_MAPPING = {
+    SpanAttributes.LLM_USAGE_PROMPT_TOKENS: "input_tokens",
+    SpanAttributes.LLM_USAGE_COMPLETION_TOKENS: "output_tokens",
+}
+
+class OpenAIAgentsExporter:
+    """A detailed exporter for Agents SDK traces and spans that forwards them to AgentOps."""
+
+    def __init__(self, tracer_provider=None):
+        self.tracer_provider = tracer_provider
+        
+    def _process_model_config(self, model_config: Dict[str, Any], attributes: Dict[str, Any]) -> None:
+        for target_attr, source_attr in MODEL_CONFIG_MAPPING.items():
+            if hasattr(model_config, source_attr) and getattr(model_config, source_attr) is not None:
+                attributes[target_attr] = getattr(model_config, source_attr)
+            elif isinstance(model_config, dict) and source_attr in model_config:
+                attributes[target_attr] = model_config[source_attr]
+                
+    def _process_extended_token_usage(self, usage: Dict[str, Any], attributes: Dict[str, Any]) -> None:
+        process_token_usage(usage, attributes)
+        
+        for target_attr, source_attr in TOKEN_USAGE_EXTENDED_MAPPING.items():
+            if source_attr in usage and target_attr not in attributes:
+                attributes[target_attr] = usage[source_attr]
+                
+    def _process_response_metadata(self, response: Dict[str, Any], attributes: Dict[str, Any]) -> None:
+        field_mapping = {
+            SpanAttributes.LLM_RESPONSE_MODEL: "model",
+            SpanAttributes.LLM_RESPONSE_ID: "id",
+            SpanAttributes.LLM_OPENAI_RESPONSE_SYSTEM_FINGERPRINT: "system_fingerprint",
+        }
+        
+        for target_attr, source_key in field_mapping.items():
+            if source_key in response:
+                attributes[target_attr] = response[source_key]
+            
+    def _process_chat_completions(self, response: Dict[str, Any], attributes: Dict[str, Any]) -> None:
+        if "choices" not in response:
+            return
+            
+        for i, choice in enumerate(response["choices"]):
+            if "finish_reason" in choice:
+                attributes[MessageAttributes.COMPLETION_FINISH_REASON.format(i=i)] = choice["finish_reason"]
+            
+            message = choice.get("message", {})
+            
+            if "role" in message:
+                attributes[MessageAttributes.COMPLETION_ROLE.format(i=i)] = message["role"]
+                
+            if "content" in message:
+                content = message["content"] if message["content"] is not None else ""
+                attributes[MessageAttributes.COMPLETION_CONTENT.format(i=i)] = content
+                
+            if "tool_calls" in message and message["tool_calls"] is not None:
+                tool_calls = message["tool_calls"]
+                for j, tool_call in enumerate(tool_calls):
+                    if "function" in tool_call:
+                        function = tool_call["function"]
+                        attributes[MessageAttributes.TOOL_CALL_ID.format(i=i, j=j)] = tool_call.get("id")
+                        attributes[MessageAttributes.TOOL_CALL_NAME.format(i=i, j=j)] = function.get("name")
+                        attributes[MessageAttributes.TOOL_CALL_ARGUMENTS.format(i=i, j=j)] = function.get("arguments")
+                
+            if "function_call" in message and message["function_call"] is not None:
+                function_call = message["function_call"]
+                attributes[MessageAttributes.FUNCTION_CALL_NAME.format(i=i)] = function_call.get("name")
+                attributes[MessageAttributes.FUNCTION_CALL_ARGUMENTS.format(i=i)] = function_call.get("arguments")
+
+    def _process_response_api(self, response: Dict[str, Any], attributes: Dict[str, Any]) -> None:
+        """Process a response from the OpenAI Response API format (used by Agents SDK)"""
+        if "output" not in response:
+            return
+        
+        # Process each output item for detailed attributes
+        for i, item in enumerate(response["output"]):
+            # Extract role if present
+            if "role" in item:
+                attributes[MessageAttributes.COMPLETION_ROLE.format(i=i)] = item["role"]
+            
+            # Extract text content if present
+            if "content" in item:
+                content_items = item["content"]
+                
+                if isinstance(content_items, list):
+                    # Handle content items list (typically for text responses)
+                    for content_item in content_items:
+                        if content_item.get("type") == "output_text" and "text" in content_item:
+                            # Set the content attribute with the text - keep as raw string
+                            attributes[MessageAttributes.COMPLETION_CONTENT.format(i=i)] = content_item["text"]
+                
+                elif isinstance(content_items, str):
+                    # Handle string content - keep as raw string
+                    attributes[MessageAttributes.COMPLETION_CONTENT.format(i=i)] = content_items
+            
+            # Extract function/tool call information
+            if item.get("type") == "function_call":
+                # Get tool call details - keep as raw strings, don't parse JSON
+                item_id = item.get("id", "")
+                tool_name = item.get("name", "")
+                tool_args = item.get("arguments", "")
+                
+                # Set tool call attributes using standard semantic conventions
+                attributes[MessageAttributes.TOOL_CALL_ID.format(i=i, j=0)] = item_id
+                attributes[MessageAttributes.TOOL_CALL_NAME.format(i=i, j=0)] = tool_name
+                attributes[MessageAttributes.TOOL_CALL_ARGUMENTS.format(i=i, j=0)] = tool_args
+            
+            # Ensure call_id is captured if present
+            if "call_id" in item and not attributes.get(MessageAttributes.TOOL_CALL_ID.format(i=i, j=0), ""):
+                attributes[MessageAttributes.TOOL_CALL_ID.format(i=i, j=0)] = item["call_id"]
+    
+    def _process_completions(self, response: Dict[str, Any], attributes: Dict[str, Any]) -> None:
+        if "choices" in response:
+            self._process_chat_completions(response, attributes)
+        elif "output" in response:
+            self._process_response_api(response, attributes)
+            
+    def _process_agent_span(self, span: Any, span_data: Any, attributes: Dict[str, Any]) -> SpanKind:
+        field_mapping = {
+            AgentAttributes.AGENT_NAME: "name",
+            WorkflowAttributes.WORKFLOW_INPUT: "input",
+            WorkflowAttributes.FINAL_OUTPUT: "output",
+            AgentAttributes.FROM_AGENT: "from_agent",
+            "agent.from": "from_agent",
+            AgentAttributes.TO_AGENT: "to_agent",
+            "agent.to": "to_agent",
+        }
+        
+        for target_attr, source_key in field_mapping.items():
+            if hasattr(span_data, source_key):
+                value = getattr(span_data, source_key)
+                
+                if source_key in ("input", "output") and isinstance(value, str):
+                    attributes[target_attr] = value
+                    
+                    # If this is the output, also set it as a completion content
+                    if source_key == "output":
+                        attributes[MessageAttributes.COMPLETION_CONTENT.format(i=0)] = value
+                        attributes[MessageAttributes.COMPLETION_ROLE.format(i=0)] = "assistant"
+                elif source_key in ("input", "output"):
+                    serialized_value = safe_serialize(value)
+                    attributes[target_attr] = serialized_value
+                    
+                    # If this is the output, also set it as a completion content
+                    if source_key == "output":
+                        attributes[MessageAttributes.COMPLETION_CONTENT.format(i=0)] = serialized_value
+                        attributes[MessageAttributes.COMPLETION_ROLE.format(i=0)] = "assistant"
+                else:
+                    attributes[target_attr] = value
+        
+        if hasattr(span_data, "tools"):
+            tools = getattr(span_data, "tools")
+            if isinstance(tools, list) and tools is not None:
+                attributes[AgentAttributes.AGENT_TOOLS] = ",".join(tools)
+            else:
+                logger.debug(f"Got Agent tools in an unexpected format: {type(tools)}")
+        
+        return SpanKind.CONSUMER
+        
+    def _process_function_span(self, span: Any, span_data: Any, attributes: Dict[str, Any]) -> SpanKind:
+        field_mapping = {
+            AgentAttributes.AGENT_NAME: "name",
+            SpanAttributes.LLM_PROMPTS: "input",
+            "gen_ai.prompt": "input",
+            # Note: We don't set LLM_COMPLETIONS directly per serialization rules
+            # Instead, use MessageAttributes for structured completion data
+            AgentAttributes.FROM_AGENT: "from_agent",
+        }
+        
+        for target_attr, source_key in field_mapping.items():
+            if hasattr(span_data, source_key):
+                value = getattr(span_data, source_key)
+                
+                if source_key in ["input", "output"] and isinstance(value, str):
+                    attributes[target_attr] = value
+                elif source_key in ["input", "output"]:
+                    attributes[target_attr] = safe_serialize(value)
+                else:
+                    attributes[target_attr] = value
+        
+        if hasattr(span_data, "tools"):
+            tools = getattr(span_data, "tools")
+            if isinstance(tools, list) and tools is not None:
+                attributes[AgentAttributes.AGENT_TOOLS] = ",".join(tools)
+            else:
+                logger.debug(f"Got Function tools in an unexpected format: {type(tools)}")
+        
+        return SpanKind.CLIENT
+        
+    def _process_generation_span(self, span: Any, span_data: Any, attributes: Dict[str, Any]) -> SpanKind:
+        """Process a generation span from the Agents SDK
+        
+        This method extracts information from a GenerationSpanData object and
+        sets appropriate span attributes for the OpenTelemetry backend.
+        
+        Args:
+            span: The original span object from the SDK
+            span_data: The span_data object containing generation details
+            attributes: Dictionary to add attributes to
+        
+        Returns:
+            The appropriate span kind (CLIENT)
+        """
+        # Map basic model information
+        field_mapping = {
+            SpanAttributes.LLM_REQUEST_MODEL: "model",
+        }
+        
+        for target_attr, source_key in field_mapping.items():
+            if hasattr(span_data, source_key):
+                attributes[target_attr] = getattr(span_data, source_key)
+                
+        # Set the system to OpenAI when we have model information
+        if SpanAttributes.LLM_REQUEST_MODEL in attributes:
+            attributes[SpanAttributes.LLM_SYSTEM] = "openai"
+        
+        # Process model configuration if present
+        if hasattr(span_data, "model_config"):
+            self._process_model_config(span_data.model_config, attributes)
+        
+        # Set input in standardized location
+        # Dude, I think what we really want to do here instead of safely serializing 
+        # any input that's not a string is to reference the original input content. 
+        # We're getting tripped up on serialization because sometimes the input is a 
+        # JSON object. On the way out, as we decode the response from the LLM, it 
+        # might contain a JSON object. But we don't need to handle those. We should 
+        # just keep unparsed JSON as a string. This applies to any attributes (mostly 
+        # input and output) but also when you're looking at function call keys or even
+        # function call responses. If a function call response is JSON but is not part 
+        # of our schema, then we should put a stringified JSON in place. 
+        if hasattr(span_data, "input"):
+            attributes[SpanAttributes.LLM_PROMPTS] = (
+                span_data.input if isinstance(span_data.input, str) 
+                else safe_serialize(span_data.input)
+            )
+        
+        # Process output/response data
+        if hasattr(span_data, "output"):
+            output = span_data.output
+            
+            # Convert model to dictionary for easier processing
+            response_dict = model_to_dict(output)
+            
+            if response_dict:
+                # Extract metadata (model, id, system fingerprint)
+                self._process_response_metadata(response_dict, attributes)
+                
+                # Process token usage metrics
+                if "usage" in response_dict:
+                    self._process_extended_token_usage(response_dict["usage"], attributes)
+                
+                # Process response content based on format (chat completion or response API)
+                self._process_completions(response_dict, attributes)
+                
+                # NOTE: We don't set the root completion attribute (gen_ai.completion)
+                # The OpenTelemetry backend will derive it from detailed attributes
+                # See the note at the top of this file for why we don't do this
+        
+        # Process any usage data directly on the span
+        if hasattr(span_data, "usage"):
+            self._process_extended_token_usage(span_data.usage, attributes)
+            
+        return SpanKind.CLIENT
+
+    def export_trace(self, trace: Any) -> None:
+        """Export a trace object directly."""
+        self._export_trace(trace)
+        
+    def export_span(self, span: Any) -> None:
+        """Export a span object directly."""
+        self._export_span(span)
+
+    def _export_trace(self, trace: Any) -> None:
+        tracer = get_tracer(LIBRARY_NAME, LIBRARY_VERSION, self.tracer_provider)
+
+        with tracer.start_as_current_span(
+            name=f"agents.trace.{trace.name}",
+            kind=SpanKind.INTERNAL,
+            attributes={
+                WorkflowAttributes.WORKFLOW_NAME: trace.name,
+                CoreAttributes.TRACE_ID: trace.trace_id,
+                InstrumentationAttributes.LIBRARY_NAME: LIBRARY_NAME,
+                InstrumentationAttributes.LIBRARY_VERSION: LIBRARY_VERSION,
+                WorkflowAttributes.WORKFLOW_STEP_TYPE: "trace",
+            },
+        ) as span:
+            if hasattr(trace, "group_id") and trace.group_id:
+                span.set_attribute(CoreAttributes.GROUP_ID, trace.group_id)
+
+    def _export_span(self, span: Any) -> None:
+        tracer = get_tracer(LIBRARY_NAME, LIBRARY_VERSION, self.tracer_provider)
+
+        span_data = span.span_data
+        span_type = span_data.__class__.__name__
+
+        attributes = {
+            CoreAttributes.TRACE_ID: span.trace_id,
+            CoreAttributes.SPAN_ID: span.span_id,
+            InstrumentationAttributes.LIBRARY_NAME: LIBRARY_NAME,
+            InstrumentationAttributes.LIBRARY_VERSION: LIBRARY_VERSION,
+        }
+
+        if span.parent_id:
+            attributes[CoreAttributes.PARENT_ID] = span.parent_id
+
+        common_fields = {
+            AgentAttributes.FROM_AGENT: "from_agent",
+            "agent.from": "from_agent",
+            AgentAttributes.TO_AGENT: "to_agent",
+            "agent.to": "to_agent",
+        }
+        
+        for target_attr, source_key in common_fields.items():
+            if hasattr(span_data, source_key):
+                attributes[target_attr] = getattr(span_data, source_key)
+        
+        list_fields = {
+            AgentAttributes.AGENT_TOOLS: "tools",
+            AgentAttributes.HANDOFFS: "handoffs",
+        }
+        
+        for target_attr, source_key in list_fields.items():
+            if hasattr(span_data, source_key):
+                value = getattr(span_data, source_key)
+                if value is not None:
+                    attributes[target_attr] = ",".join(value)
+            
+        type_for_name = span_type.replace("SpanData", "").lower()
+        span_name = f"agents.{type_for_name}"
+        span_kind = SpanKind.INTERNAL
+        
+        if span_type == "AgentSpanData":
+            span_kind = self._process_agent_span(span, span_data, attributes)
+        elif span_type == "FunctionSpanData":
+            span_kind = self._process_function_span(span, span_data, attributes)
+        elif span_type == "GenerationSpanData":
+            span_kind = self._process_generation_span(span, span_data, attributes)
+        
+        return self._create_span(tracer, span_name, span_kind, attributes, span)
+    
+    def _create_span(self, tracer, span_name, span_kind, attributes, span):
+        with tracer.start_as_current_span(name=span_name, kind=span_kind, attributes=attributes) as otel_span:
+            if hasattr(span, "error") and span.error:
+                otel_span.set_status(Status(StatusCode.ERROR))
+                otel_span.record_exception(
+                    exception=Exception(span.error.get("message", "Unknown error")),
+                    attributes={"error.data": json.dumps(span.error.get("data", {}))},
+                )

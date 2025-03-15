@@ -72,8 +72,57 @@ def serialize_uuid(obj: UUID) -> str:
     return str(obj)
 
 
+def model_to_dict(obj: Any) -> dict:
+    """Convert a model object to a dictionary safely.
+    
+    Handles various model types including:
+    - Pydantic models (model_dump/dict methods)
+    - Dictionary-like objects
+    - API response objects with parse method
+    - Objects with __dict__ attribute
+    
+    Args:
+        obj: The model object to convert to dictionary
+        
+    Returns:
+        Dictionary representation of the object, or empty dict if conversion fails
+    """
+    if obj is None:
+        return {}
+    if isinstance(obj, dict):
+        return obj
+    if hasattr(obj, "model_dump"):  # Pydantic v2
+        return obj.model_dump()
+    elif hasattr(obj, "dict"):  # Pydantic v1
+        return obj.dict()
+    elif hasattr(obj, "parse"):  # Raw API response
+        return model_to_dict(obj.parse())
+    else:
+        # Try to use __dict__ as fallback
+        try:
+            return obj.__dict__
+        except:
+            return {}
+
+
 def safe_serialize(obj: Any) -> Any:
-    """Safely serialize an object to JSON-compatible format"""
+    """Safely serialize an object to JSON-compatible format
+    
+    This function handles complex objects by:
+    1. Converting models to dictionaries
+    2. Using custom JSON encoder to handle special types
+    3. Falling back to string representation only when necessary
+    
+    Args:
+        obj: The object to serialize
+        
+    Returns:
+        JSON string representation of the object
+    """
+    # First convert any model objects to dictionaries
+    if hasattr(obj, "model_dump") or hasattr(obj, "dict") or hasattr(obj, "parse"):
+        obj = model_to_dict(obj)
+    
     try:
         return json.dumps(obj, cls=AgentOpsJSONEncoder)
     except (TypeError, ValueError) as e:

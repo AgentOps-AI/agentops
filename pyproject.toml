@@ -63,6 +63,7 @@ test = [
     # ;;
     "pytest-cov",
     "fastapi[standard]",
+    "openai-agents",
 ]
 
 dev = [
