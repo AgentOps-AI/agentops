@@ -65,7 +65,7 @@ class Config:
     )
 
     auto_start_session: bool = field(
-        default_factory=lambda: get_env_bool("AGENTOPS_AUTO_START_SESSION", False),
+        default_factory=lambda: get_env_bool("AGENTOPS_AUTO_START_SESSION", True),
         metadata={"description": "Whether to automatically start a session when initializing"},
     )
 
@@ -85,7 +85,7 @@ class Config:
     )
 
     log_level: Union[str, int] = field(
-        default_factory=lambda: os.getenv("AGENTOPS_LOG_LEVEL", "WARNING"),
+        default_factory=lambda: os.getenv("AGENTOPS_LOG_LEVEL", "INFO"),
         metadata={"description": "Logging level for AgentOps logs"},
     )
 
@@ -170,7 +170,14 @@ class Config:
             self.env_data_opt_out = env_data_opt_out
 
         if log_level is not None:
-            self.log_level = log_level
+            if isinstance(log_level, str):
+                log_level_str = log_level.upper()
+                if hasattr(logging, log_level_str):
+                    self.log_level = getattr(logging, log_level_str)
+                else:
+                    self.log_level = logging.INFO
+            else:
+                self.log_level = log_level
 
         if fail_safe is not None:
             self.fail_safe = fail_safe
