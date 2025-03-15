@@ -147,18 +147,19 @@ class TracingCore:
                 return
 
             # Set default values for required fields
-            max_queue_size = kwargs.get("max_queue_size", 512)
-            max_wait_time = kwargs.get("max_wait_time", 5000)
+            kwargs.setdefault("service_name", "agentops")
+            kwargs.setdefault("exporter_endpoint", "https://otlp.agentops.ai/v1/traces")
+            kwargs.setdefault("metrics_endpoint", "https://otlp.agentops.ai/v1/metrics")
+            kwargs.setdefault("max_queue_size", 512)
+            kwargs.setdefault("max_wait_time", 5000)
 
             # Create a TracingConfig from kwargs with proper defaults
             config: TracingConfig = {
-                "service_name": kwargs.get("service_name", "agentops"),
-                "exporter": kwargs.get("exporter"),
-                "processor": kwargs.get("processor"),
-                "exporter_endpoint": kwargs.get("exporter_endpoint", "https://otlp.agentops.ai/v1/traces"),
-                "metrics_endpoint": kwargs.get("metrics_endpoint", "https://otlp.agentops.ai/v1/metrics"),
-                "max_queue_size": max_queue_size,
-                "max_wait_time": max_wait_time,
+                "service_name": kwargs["service_name"],
+                "exporter_endpoint": kwargs["exporter_endpoint"],
+                "metrics_endpoint": kwargs["metrics_endpoint"],
+                "max_queue_size": kwargs["max_queue_size"],
+                "max_wait_time": kwargs["max_wait_time"],
                 "api_key": kwargs.get("api_key"),
                 "project_id": kwargs.get("project_id"),
             }
@@ -167,12 +168,12 @@ class TracingCore:
 
             # Setup telemetry using the extracted configuration
             self._provider, self._meter_provider = setup_telemetry(
-                service_name=config.get("service_name", "agentops"),
+                service_name=config["service_name"],
                 project_id=config.get("project_id"),
-                exporter_endpoint=config.get("exporter_endpoint"),
-                metrics_endpoint=config.get("metrics_endpoint"),
-                max_queue_size=config.get("max_queue_size"),
-                max_wait_time=config.get("max_wait_time"),
+                exporter_endpoint=config["exporter_endpoint"],
+                metrics_endpoint=config["metrics_endpoint"],
+                max_queue_size=config["max_queue_size"],
+                max_wait_time=config["max_wait_time"],
                 jwt=jwt,
             )
 
