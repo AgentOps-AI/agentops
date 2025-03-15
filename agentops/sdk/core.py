@@ -192,11 +192,11 @@ class TracingCore:
 
     def shutdown(self) -> None:
         """Shutdown the tracing core."""
-        if not self._initialized:
-            return
 
         with self._lock:
             # Perform a single flush on the SynchronousSpanProcessor (which takes care of all processors' shutdown)
+            if not self._initialized:
+                return
             self._provider._active_span_processor.force_flush(self.config['max_wait_time'])  # type: ignore
 
             # Shutdown provider
@@ -207,7 +207,6 @@ class TracingCore:
                     logger.warning(f"Error shutting down provider: {e}")
 
             self._initialized = False
-            logger.debug("Tracing core shutdown")
 
     def get_tracer(self, name: str = "agentops") -> trace.Tracer:
         """
