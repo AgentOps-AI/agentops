@@ -51,13 +51,14 @@ from agentops.logging import logger
 from agentops.helpers.serialization import safe_serialize, model_to_dict
 from agentops.instrumentation.openai_agents import LIBRARY_NAME, LIBRARY_VERSION
 from agentops.instrumentation.openai_agents.processor import OpenAIAgentsProcessor
-
+from agentops.instrumentation.openai_agents.exporter import OpenAIAgentsExporter
 
 
 class OpenAIAgentsInstrumentor(BaseInstrumentor):
     """An instrumentor for OpenAI Agents SDK that primarily uses the built-in tracing API."""
     
     _processor = None
+    _exporter = None
     _default_processor = None
     _original_run_streamed = None
     _original_methods = {}
@@ -216,10 +217,13 @@ class OpenAIAgentsInstrumentor(BaseInstrumentor):
             except ImportError as e:
                 logger.debug(f"Agents SDK import failed: {e}")
                 return
+            
+            # Create exporter
+            self.__class__._exporter = OpenAIAgentsExporter(tracer_provider=tracer_provider)
                 
             # Create our processor with both tracer and exporter
             self.__class__._processor = OpenAIAgentsProcessor(
-                tracer_provider=tracer_provider,
+                exporter=self.__class__._exporter,
                 meter_provider=meter_provider
             )
             
@@ -281,6 +285,7 @@ class OpenAIAgentsInstrumentor(BaseInstrumentor):
                 set_trace_processors([self.__class__._default_processor])
                 self.__class__._default_processor = None
             self.__class__._processor = None
+            self.__class__._exporter = None
             
             # Restore original methods
             try:
@@ -310,12 +315,7 @@ class OpenAIAgentsInstrumentor(BaseInstrumentor):
             logger.warning(f"Failed to restore original streaming method: {e}")
     
     def _add_agent_attributes_to_span(self, span, agent):
-        """Add agent-related attributes to a span.
-        
-        Args:
-            span: The span to add attributes to
-            agent: The agent object with attributes to extract
-        """
+        """Add agent-related attributes to a span."""
         if hasattr(agent, "instructions"):
             instruction_type = "unknown"
             if isinstance(agent.instructions, str):

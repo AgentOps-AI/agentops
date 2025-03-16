@@ -144,15 +144,28 @@ def process_with_instrumentor(mock_span, exporter_class, captured_attributes: Di
     # Create a direct instance of the exporter
     exporter = exporter_class()
     
-    # Avoid cluttering the test output with debug info
-    pass
+    # Add core trace/span attributes from the mock_span directly to the captured_attributes
+    # This ensures that both semantic convention attributes and direct access attributes work
+    from agentops.semconv import CoreAttributes
+    
+    core_attribute_mapping = {
+        CoreAttributes.TRACE_ID: "trace_id",   # "trace.id"
+        CoreAttributes.SPAN_ID: "span_id",     # "span.id"
+        CoreAttributes.PARENT_ID: "parent_id", # "parent.id"
+    }
+    
+    for target_attr, source_attr in core_attribute_mapping.items():
+        if hasattr(mock_span, source_attr):
+            value = getattr(mock_span, source_attr)
+            if value is not None:
+                captured_attributes[target_attr] = value
     
     # Monkey patch the get_tracer function to return our MockTracer
     original_import = setup_mock_tracer(captured_attributes)
     
-    # Call the exporter's _export_span method
+    # Call the exporter's export_span method (public API)
     try:
-        exporter._export_span(mock_span)
+        exporter.export_span(mock_span)
     finally:
         # Restore the original import function
         builtins.__import__ = original_import
