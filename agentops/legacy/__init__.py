@@ -93,7 +93,7 @@ def start_session(
         return Session(span, token)
 
 
-def end_session(session_or_status: any) -> None:
+def end_session(session_or_status: Any, **kwargs) -> None:
     """
     End a previously started AgentOps session.
 
@@ -105,6 +105,7 @@ def end_session(session_or_status: any) -> None:
     Args:
         session_or_status: The session object returned by start_session,
                           or a string representing the status (for backwards compatibility)
+        **kwargs: Additional arguments for backward compatibility (e.g., end_state)
     """
     from agentops.sdk.decorators.utility import _finalize_span
 
