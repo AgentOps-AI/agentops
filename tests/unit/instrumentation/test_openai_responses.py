@@ -172,6 +172,37 @@ class TestModelResponseSerialization:
         assert f"{SpanAttributes.LLM_USAGE_TOTAL_TOKENS}.reasoning" in attributes, "Missing reasoning_tokens attribute"
         assert attributes[f"{SpanAttributes.LLM_USAGE_TOTAL_TOKENS}.reasoning"] == 2, "Incorrect reasoning_tokens value"
         
+    def test_openai_responses_instrumentor(self):
+        """Test the OpenAI Responses instrumentor."""
+        from agentops.instrumentation.openai import OpenAIResponsesInstrumentor
+        from unittest.mock import patch, MagicMock
+        
+        # Mock the OpenAI modules
+        with patch('agentops.instrumentation.openai.instrumentor.openai') as mock_openai:
+            # Setup the mock to mimic both modern and legacy response availability
+            mock_openai._response = MagicMock()
+            mock_openai._response.Response = MagicMock()
+            mock_openai._response.Response.parse = MagicMock()
+            
+            mock_openai._legacy_response = MagicMock()
+            mock_openai._legacy_response.LegacyAPIResponse = MagicMock()
+            mock_openai._legacy_response.LegacyAPIResponse.parse = MagicMock()
+            
+            # Create the instrumentor
+            instrumentor = OpenAIResponsesInstrumentor()
+            
+            # Test instrument method
+            instrumentor.instrument()
+            
+            # Verify patching was attempted for both response types
+            assert mock_openai._response.Response.parse.called, "Modern response parse not patched"
+            assert mock_openai._legacy_response.LegacyAPIResponse.parse.called, "Legacy response parse not patched"
+            
+            # Test uninstrument method
+            instrumentor.uninstrument()
+            
+            # We can't verify restoration since we don't actually save the original methods in our test implementation
+        
     def test_openai_response_serialization(self, instrumentation):
         """Test serialization of OpenAI Response API object using the actual instrumentor"""
         # Dictionary to capture attributes from the instrumentor

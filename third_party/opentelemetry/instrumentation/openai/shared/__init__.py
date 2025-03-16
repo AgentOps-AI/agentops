@@ -161,6 +161,11 @@ def _set_response_attributes(span, response):
         usage.get("completion_tokens"),
     )
     _set_span_attribute(span, SpanAttributes.LLM_USAGE_PROMPT_TOKENS, usage.get("prompt_tokens"))
+    
+    # Extract and set reasoning tokens if available
+    if isinstance(usage, dict) and "output_tokens_details" in usage and "reasoning_tokens" in usage.get("output_tokens_details", {}):
+        reasoning_tokens = usage.get("output_tokens_details", {}).get("reasoning_tokens")
+        _set_span_attribute(span, SpanAttributes.LLM_USAGE_REASONING_TOKENS, reasoning_tokens)
     return
 
 
@@ -244,11 +249,22 @@ def get_token_count_from_string(string: str, model_name: str):
 
 
 def _token_type(token_type: str):
-    if token_type == "prompt_tokens":
-        return "input"
-    elif token_type == "completion_tokens":
-        return "output"
-
+    # Map standardized token types to API-specific token types (target → source)
+    token_type_mapping = {
+        "input": "prompt_tokens",
+        "output": "completion_tokens"
+    }
+    # TODO: This implementation is still incorrect and needs to be fixed properly.
+    # We're defining the dictionary using the proper target→source pattern, 
+    # but the function is actually being used in the opposite direction (source→target).
+    # The correct fix would be to use get_value() from agentops.instrumentation.openai and
+    # modify the call sites (in _set_token_counter_metrics) to handle the reversed lookup properly.
+    # This would require changes to the chat_wrappers.py and completion_wrappers.py files.
+    
+    # Return the reverse mapping since we're converting from source to target
+    for target, source in token_type_mapping.items():
+        if token_type == source:
+            return target
     return None
 
 

@@ -13,6 +13,16 @@ IMPORTANT DISTINCTION BETWEEN OPENAI API FORMATS:
 This module implements utilities that handle both formats consistently.
 """
 
+# Import and expose the instrumentor class
+from agentops.instrumentation.openai.instrumentor import OpenAIResponsesInstrumentor
+
+__all__ = [
+    "OpenAIResponsesInstrumentor",
+    "process_token_usage",
+    "process_token_details",
+    "get_value",
+]
+
 import logging
 from typing import Any, Dict, List, Optional, Union
 

@@ -72,6 +72,11 @@ available_instrumentors: list[InstrumentorLoader] = [
         class_name="OpenAIAgentsInstrumentor",
         provider_import_name="agents",
     ),
+    InstrumentorLoader(
+        module_name="agentops.instrumentation.openai",
+        class_name="OpenAIResponsesInstrumentor",
+        provider_import_name="openai",
+    ),
 ]
 
 
