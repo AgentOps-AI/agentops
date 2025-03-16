@@ -163,6 +163,7 @@ def _set_response_attributes(span, response):
     _set_span_attribute(span, SpanAttributes.LLM_USAGE_PROMPT_TOKENS, usage.get("prompt_tokens"))
     
     # Extract and set reasoning tokens if available
+    # Using the standardized SpanAttributes.LLM_USAGE_REASONING_TOKENS attribute
     if isinstance(usage, dict) and "output_tokens_details" in usage and "reasoning_tokens" in usage.get("output_tokens_details", {}):
         reasoning_tokens = usage.get("output_tokens_details", {}).get("reasoning_tokens")
         _set_span_attribute(span, SpanAttributes.LLM_USAGE_REASONING_TOKENS, reasoning_tokens)
