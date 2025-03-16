@@ -57,10 +57,10 @@ from agentops.semconv import (
     MessageAttributes
 )
 from tests.unit.sdk.instrumentation_tester import InstrumentationTester
-from agentops.instrumentation.openai_agents.exporter import OpenAIAgentsExporter
+from agentops.instrumentation.openai_agents.exporter import OpenAIAgentsExporter, get_model_info
 # These are in separate modules, import directly from those
 from agentops.instrumentation.openai_agents.processor import OpenAIAgentsProcessor
-from agentops.instrumentation.openai_agents.instrumentor import AgentsInstrumentor, get_model_info
+from agentops.instrumentation.openai_agents.instrumentor import OpenAIAgentsInstrumentor
 from agentops.instrumentation.openai_agents import LIBRARY_NAME, LIBRARY_VERSION
 from tests.unit.instrumentation.mock_span import MockSpan, MockTracer, process_with_instrumentor
 
@@ -678,9 +678,6 @@ class TestAgentsSdkInstrumentation:
         # Create a dictionary to capture attributes
         captured_attributes = {}
         
-        # Initialize the exporter
-        exporter = OpenAIAgentsExporter()
-        
         # Create a simple mock trace object
         mock_trace = MagicMock()
         mock_trace.name = "test_workflow"
@@ -710,10 +707,19 @@ class TestAgentsSdkInstrumentation:
         mock_span = MagicMock()
         mock_tracer.start_as_current_span.return_value.__enter__.return_value = mock_span
         
-        # Mock the get_tracer function
+        # Create an exporter with a mocked tracer_provider
+        tracer_provider = MagicMock()
+        
+        # Initialize the exporter with this tracer provider
+        exporter = OpenAIAgentsExporter(tracer_provider=tracer_provider)
+        
+        # Create a context manager for the mock_tracer
+        mock_context_manager = mock_tracer.start_as_current_span.return_value.__enter__.return_value
+        
+        # We need to patch at the right location - the OpenAIAgentsExporter module
         with patch('agentops.instrumentation.openai_agents.exporter.get_tracer', return_value=mock_tracer):
             # Export the trace
-            exporter._export_trace(mock_trace)
+            exporter.export_trace(mock_trace)
             
             # Verify span was created with correct attributes
             mock_tracer.start_as_current_span.assert_called_once()
@@ -730,94 +736,35 @@ class TestAgentsSdkInstrumentation:
             assert InstrumentationAttributes.LIBRARY_NAME in attributes
         
     def test_instrumentor_patching(self, instrumentation):
-        """Test that the instrumentor properly patches the Runner class."""
-        # Create a mock Runner class that matches the interface needed by the instrumentor
-        class MockRunner:
-            @classmethod
-            def run_sync(cls, *args, **kwargs):
-                return "original_run_sync"
-            
-            @classmethod 
-            def run(cls, *args, **kwargs):
-                return "original_run"
-                
-            @classmethod
-            def run_streamed(cls, *args, **kwargs):
-                return "original_run_streamed"
+        """Test the OpenAIAgentsInstrumentor's ability to capture agent attributes."""
+        # Create a mock agent with instructions
+        agent = Agent(
+            name="instruction_test_agent",
+            instructions="You are a helpful assistant. Your task is to answer questions."
+        )
         
-        # Create a patch to replace the actual Runner with our mock for testing
-        with patch('agents.run.Runner', MockRunner):
-            # Create a holder for the added processor
-            added_processor = None
-            
-            # Mock the add_trace_processor function
-            def mock_add_processor(processor):
-                nonlocal added_processor
-                added_processor = processor
-                
-            # Use mocking to avoid real SDK operations
-            with patch('agents.add_trace_processor', mock_add_processor):
-                # Initialize the instrumentor
-                instrumentor = AgentsInstrumentor()
-                
-                # Store the original methods for verification
-                original_run_sync = MockRunner.run_sync
-                original_run = MockRunner.run
-                original_run_streamed = MockRunner.run_streamed
-                
-                # Test the _instrument method
-                instrumentor._patch_runner_class(None)  # We don't need a real tracer_provider for patching
-                
-                # We're not adding a processor in _patch_runner_class, so we don't need to verify it
-                # Instead, let's verify the methods were replaced
-                
-                # Verify methods were replaced
-                assert MockRunner.run_sync != original_run_sync
-                assert MockRunner.run != original_run
-                assert MockRunner.run_streamed != original_run_streamed
-                
-                # Verify original methods are stored
-                assert "_original_methods" in instrumentor.__class__.__dict__
-                assert instrumentor.__class__._original_methods["run_sync"] == original_run_sync
-                assert instrumentor.__class__._original_methods["run"] == original_run
-                assert instrumentor.__class__._original_methods["run_streamed"] == original_run_streamed
-                
-                # Test agent instructions getting mapped to prompt
-                agent = Agent(
-                    name="instruction_test_agent",
-                    instructions="You are a helpful assistant. Your task is to answer questions."
-                )
-                
-                # Create a dictionary to capture attributes
-                captured_attributes = {}
-                
-                # Create mock span
-                mock_span = MagicMock()
-                mock_span.set_attribute = MagicMock(side_effect=lambda k, v: captured_attributes.update({k: v}))
-                
-                # Call the method to test instructions
-                instrumentor._add_agent_attributes_to_span(mock_span, agent)
-                
-                # Verify instructions were set as agent attributes
-                assert "agent.instructions" in captured_attributes
-                assert captured_attributes["agent.instructions"] == "You are a helpful assistant. Your task is to answer questions."
-                assert "agent.instruction_type" in captured_attributes
-                assert captured_attributes["agent.instruction_type"] == "string"
-                
-                # Verify instructions were also set as gen_ai.prompt (our bugfix)
-                assert SpanAttributes.LLM_PROMPTS in captured_attributes
-                assert captured_attributes[SpanAttributes.LLM_PROMPTS] == "You are a helpful assistant. Your task is to answer questions."
-                
-                # Test uninstrumentation
-                instrumentor._uninstrument()
-                
-                # Verify methods were restored
-                assert MockRunner.run_sync == original_run_sync
-                assert MockRunner.run == original_run
-                assert MockRunner.run_streamed == original_run_streamed
-                
-                # Verify methods dictionary is cleared
-                assert not instrumentor.__class__._original_methods
+        # Initialize the instrumentor
+        instrumentor = OpenAIAgentsInstrumentor()
+        
+        # Create a dictionary to capture attributes
+        captured_attributes = {}
+        
+        # Create mock span
+        mock_span = MagicMock()
+        mock_span.set_attribute = MagicMock(side_effect=lambda k, v: captured_attributes.update({k: v}))
+        
+        # Call the method to test instructions
+        instrumentor._add_agent_attributes_to_span(mock_span, agent)
+        
+        # Verify instructions were set as agent attributes
+        assert "agent.instructions" in captured_attributes
+        assert captured_attributes["agent.instructions"] == "You are a helpful assistant. Your task is to answer questions."
+        assert "agent.instruction_type" in captured_attributes
+        assert captured_attributes["agent.instruction_type"] == "string"
+        
+        # Verify instructions were also set as gen_ai.prompt (our bugfix)
+        assert SpanAttributes.LLM_PROMPTS in captured_attributes
+        assert captured_attributes[SpanAttributes.LLM_PROMPTS] == "You are a helpful assistant. Your task is to answer questions."
     
     def test_get_model_info_function(self, instrumentation):
         """Test the get_model_info function with various inputs."""

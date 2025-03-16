@@ -71,7 +71,7 @@ WAYS TO USE SEMANTIC CONVENTIONS WHEN REFERENCING SPAN ATTRIBUTES:
    ```
 """
 import json
-from typing import Any, Dict
+from typing import Any, Dict, Optional
 
 from opentelemetry.trace import get_tracer, SpanKind, Status, StatusCode
 from agentops.semconv import (
@@ -86,6 +86,46 @@ from agentops.helpers.serialization import safe_serialize, model_to_dict
 from agentops.instrumentation.openai import process_token_usage
 from agentops.logging import logger
 from agentops.instrumentation.openai_agents import LIBRARY_NAME, LIBRARY_VERSION
+
+
+def get_model_info(agent: Any, run_config: Any = None) -> Dict[str, Any]:
+    """Extract model information from agent and run_config."""
+    result = {"model_name": "unknown"}
+
+    if run_config and hasattr(run_config, "model") and run_config.model:
+        if isinstance(run_config.model, str):
+            result["model_name"] = run_config.model
+        elif hasattr(run_config.model, "model") and run_config.model.model:
+            result["model_name"] = run_config.model.model
+
+    if result["model_name"] == "unknown" and hasattr(agent, "model") and agent.model:
+        if isinstance(agent.model, str):
+            result["model_name"] = agent.model
+        elif hasattr(agent.model, "model") and agent.model.model:
+            result["model_name"] = agent.model.model
+
+    if result["model_name"] == "unknown":
+        try:
+            from agents.models.openai_provider import DEFAULT_MODEL
+            result["model_name"] = DEFAULT_MODEL
+        except ImportError:
+            pass
+
+    if hasattr(agent, "model_settings") and agent.model_settings:
+        model_settings = agent.model_settings
+
+        for param in ["temperature", "top_p", "frequency_penalty", "presence_penalty"]:
+            if hasattr(model_settings, param) and getattr(model_settings, param) is not None:
+                result[param] = getattr(model_settings, param)
+
+    if run_config and hasattr(run_config, "model_settings") and run_config.model_settings:
+        model_settings = run_config.model_settings
+
+        for param in ["temperature", "top_p", "frequency_penalty", "presence_penalty"]:
+            if hasattr(model_settings, param) and getattr(model_settings, param) is not None:
+                result[param] = getattr(model_settings, param)
+
+    return result
 
 
 MODEL_CONFIG_MAPPING = {
@@ -106,6 +146,215 @@ class OpenAIAgentsExporter:
 
     def __init__(self, tracer_provider=None):
         self.tracer_provider = tracer_provider
+    
+    def export_trace(self, trace: Any) -> None:
+        """Export a trace object with enhanced attribute extraction."""
+        # Export the trace directly
+        self._export_trace(trace)
+        
+    def export_span(self, span: Any) -> None:
+        """Export a span object with enhanced attribute extraction."""
+        # Export the span directly
+        self._export_span(span)
+    
+    def _export_enhanced_trace(self, trace: Any) -> None:
+        """Export enhanced trace information."""
+        if not self.tracer_provider or not hasattr(trace, 'trace_id'):
+            return
+            
+        tracer = get_tracer(LIBRARY_NAME, LIBRARY_VERSION, self.tracer_provider)
+        
+        with tracer.start_as_current_span(
+            name=f"agents.enhanced_trace.{getattr(trace, 'name', 'unknown')}",
+            kind=SpanKind.INTERNAL,
+            attributes={
+                WorkflowAttributes.WORKFLOW_NAME: getattr(trace, 'name', 'unknown'),
+                CoreAttributes.TRACE_ID: trace.trace_id,
+                InstrumentationAttributes.NAME: LIBRARY_NAME,
+                InstrumentationAttributes.VERSION: LIBRARY_VERSION,
+                WorkflowAttributes.WORKFLOW_STEP_TYPE: "trace",
+            },
+        ) as span:
+            # Add any additional trace attributes
+            if hasattr(trace, "group_id") and trace.group_id:
+                span.set_attribute(CoreAttributes.GROUP_ID, trace.group_id)
+                
+            if hasattr(trace, "metadata") and trace.metadata:
+                for key, value in trace.metadata.items():
+                    if isinstance(value, (str, int, float, bool)):
+                        span.set_attribute(f"trace.metadata.{key}", value)
+    
+    def _export_enhanced_span(self, span: Any) -> None:
+        """Export enhanced span information."""
+        if not self.tracer_provider or not hasattr(span, 'span_data'):
+            return
+            
+        span_data = span.span_data
+        span_type = span_data.__class__.__name__
+        
+        if span_type not in ["AgentSpanData", "FunctionSpanData", "GenerationSpanData", 
+                            "HandoffSpanData", "GuardrailSpanData", "CustomSpanData"]:
+            return  # Skip unsupported span types
+            
+        # Process the span based on its type
+        self._create_enhanced_span(span, span_type)
+    
+    def _create_enhanced_span(self, span: Any, span_type: str) -> None:
+        """Create an enhanced OpenTelemetry span from an Agents SDK span."""
+        tracer = get_tracer(LIBRARY_NAME, LIBRARY_VERSION, self.tracer_provider)
+        
+        # Default span attributes
+        attributes = self._get_common_span_attributes(span)
+        
+        span_name = f"agents.enhanced_{span_type.replace('SpanData', '').lower()}"
+        span_kind = SpanKind.INTERNAL
+        
+        # Process specific span types
+        if span_type == "AgentSpanData":
+            span_kind = SpanKind.CONSUMER
+            self._process_agent_span_attributes(span.span_data, attributes)
+        elif span_type == "FunctionSpanData":
+            span_kind = SpanKind.CLIENT
+            self._process_function_span_attributes(span.span_data, attributes)
+        elif span_type == "GenerationSpanData":
+            span_kind = SpanKind.CLIENT
+            self._process_generation_span_attributes(span.span_data, attributes)
+        elif span_type == "HandoffSpanData":
+            self._process_handoff_span_attributes(span.span_data, attributes)
+        
+        # Create OpenTelemetry span
+        with tracer.start_as_current_span(
+            name=span_name,
+            kind=span_kind,
+            attributes=attributes
+        ) as otel_span:
+            # Record error if present
+            if hasattr(span, 'error') and span.error:
+                otel_span.set_status(Status(StatusCode.ERROR))
+                otel_span.record_exception(Exception(str(span.error)))
+                otel_span.set_attribute(CoreAttributes.ERROR_TYPE, "AgentError")
+                otel_span.set_attribute(CoreAttributes.ERROR_MESSAGE, str(span.error))
+    
+    def _get_common_span_attributes(self, span: Any) -> Dict[str, Any]:
+        """Get common attributes for any span type."""
+        attributes = {
+            CoreAttributes.TRACE_ID: getattr(span, 'trace_id', 'unknown'),
+            CoreAttributes.SPAN_ID: getattr(span, 'span_id', 'unknown'),
+            InstrumentationAttributes.NAME: LIBRARY_NAME,
+            InstrumentationAttributes.VERSION: LIBRARY_VERSION,
+        }
+        
+        if hasattr(span, 'parent_id') and span.parent_id:
+            attributes[CoreAttributes.PARENT_ID] = span.parent_id
+            
+        return attributes
+    
+    def _process_agent_span_attributes(self, span_data: Any, attributes: Dict[str, Any]) -> None:
+        """Process agent span specific attributes."""
+        if hasattr(span_data, 'name'):
+            attributes[AgentAttributes.AGENT_NAME] = span_data.name
+        
+        if hasattr(span_data, 'input'):
+            attributes[WorkflowAttributes.WORKFLOW_INPUT] = safe_serialize(span_data.input)
+            
+        if hasattr(span_data, 'output'):
+            attributes[WorkflowAttributes.FINAL_OUTPUT] = safe_serialize(span_data.output)
+            
+        if hasattr(span_data, 'tools') and span_data.tools:
+            attributes[AgentAttributes.AGENT_TOOLS] = ",".join(span_data.tools)
+            
+        if hasattr(span_data, 'handoffs') and span_data.handoffs:
+            attributes[AgentAttributes.HANDOFFS] = ",".join(span_data.handoffs)
+    
+    def _process_function_span_attributes(self, span_data: Any, attributes: Dict[str, Any]) -> None:
+        """Process function span specific attributes."""
+        if hasattr(span_data, 'name'):
+            attributes[AgentAttributes.AGENT_NAME] = span_data.name
+            
+        if hasattr(span_data, 'input'):
+            attributes[SpanAttributes.LLM_PROMPTS] = safe_serialize(span_data.input)
+            
+        if hasattr(span_data, 'output'):
+            attributes[SpanAttributes.LLM_COMPLETIONS] = safe_serialize(span_data.output)
+            
+        if hasattr(span_data, 'from_agent'):
+            attributes[AgentAttributes.FROM_AGENT] = span_data.from_agent
+    
+    def _process_generation_span_attributes(self, span_data: Any, attributes: Dict[str, Any]) -> None:
+        """Process generation span specific attributes."""
+        if hasattr(span_data, 'model'):
+            attributes[SpanAttributes.LLM_REQUEST_MODEL] = span_data.model
+            attributes[SpanAttributes.LLM_SYSTEM] = "openai"
+            
+        if hasattr(span_data, 'input'):
+            attributes[SpanAttributes.LLM_PROMPTS] = safe_serialize(span_data.input)
+            
+        if hasattr(span_data, 'output'):
+            attributes[SpanAttributes.LLM_COMPLETIONS] = safe_serialize(span_data.output)
+            
+        if hasattr(span_data, 'model_config'):
+            self._process_model_config(span_data.model_config, attributes)
+            
+        if hasattr(span_data, 'usage'):
+            self._process_usage_attributes(span_data.usage, attributes)
+    
+    def _process_handoff_span_attributes(self, span_data: Any, attributes: Dict[str, Any]) -> None:
+        """Process handoff span specific attributes."""
+        if hasattr(span_data, 'from_agent'):
+            attributes[AgentAttributes.FROM_AGENT] = span_data.from_agent
+            
+        if hasattr(span_data, 'to_agent'):
+            attributes[AgentAttributes.TO_AGENT] = span_data.to_agent
+    
+    def _process_model_config(self, model_config: Any, attributes: Dict[str, Any]) -> None:
+        """Process model configuration parameters."""
+        param_mapping = {
+            "temperature": SpanAttributes.LLM_REQUEST_TEMPERATURE,
+            "top_p": SpanAttributes.LLM_REQUEST_TOP_P,
+            "frequency_penalty": SpanAttributes.LLM_REQUEST_FREQUENCY_PENALTY,
+            "presence_penalty": SpanAttributes.LLM_REQUEST_PRESENCE_PENALTY,
+            "max_tokens": SpanAttributes.LLM_REQUEST_MAX_TOKENS,
+        }
+        
+        for source_param, target_attr in param_mapping.items():
+            # Handle both object and dictionary syntax
+            if hasattr(model_config, source_param) and getattr(model_config, source_param) is not None:
+                attributes[target_attr] = getattr(model_config, source_param)
+            elif isinstance(model_config, dict) and source_param in model_config:
+                attributes[target_attr] = model_config[source_param]
+    
+    def _process_usage_attributes(self, usage: Any, attributes: Dict[str, Any]) -> None:
+        """Process token usage information."""
+        # Handle both object and dictionary syntax
+        if hasattr(usage, "prompt_tokens") or hasattr(usage, "input_tokens"):
+            prompt_tokens = getattr(usage, "prompt_tokens", getattr(usage, "input_tokens", 0))
+            attributes[SpanAttributes.LLM_USAGE_PROMPT_TOKENS] = prompt_tokens
+            
+        if hasattr(usage, "completion_tokens") or hasattr(usage, "output_tokens"):
+            completion_tokens = getattr(usage, "completion_tokens", getattr(usage, "output_tokens", 0))
+            attributes[SpanAttributes.LLM_USAGE_COMPLETION_TOKENS] = completion_tokens
+            
+        if hasattr(usage, "total_tokens"):
+            attributes[SpanAttributes.LLM_USAGE_TOTAL_TOKENS] = usage.total_tokens
+        
+        # Dictionary style access
+        if isinstance(usage, dict):
+            if "prompt_tokens" in usage or "input_tokens" in usage:
+                prompt_tokens = usage.get("prompt_tokens", usage.get("input_tokens", 0))
+                attributes[SpanAttributes.LLM_USAGE_PROMPT_TOKENS] = prompt_tokens
+                
+            if "completion_tokens" in usage or "output_tokens" in usage:
+                completion_tokens = usage.get("completion_tokens", usage.get("output_tokens", 0))
+                attributes[SpanAttributes.LLM_USAGE_COMPLETION_TOKENS] = completion_tokens
+                
+            if "total_tokens" in usage:
+                attributes[SpanAttributes.LLM_USAGE_TOTAL_TOKENS] = usage["total_tokens"]
+                
+            # Handle extended token details
+            if "output_tokens_details" in usage:
+                details = usage["output_tokens_details"]
+                if isinstance(details, dict) and "reasoning_tokens" in details:
+                    attributes[SpanAttributes.LLM_USAGE_REASONING_TOKENS] = details["reasoning_tokens"]
     
     def _set_completion_and_final_output(self, attributes: Dict[str, Any], value: Any, role: str = "assistant") -> None:
         """Set completion content attributes and final output consistently across span types."""
@@ -391,18 +640,25 @@ class OpenAIAgentsExporter:
             
         return SpanKind.CLIENT
 
-    def export_trace(self, trace: Any) -> None:
-        """Export a trace object directly."""
-        self._export_trace(trace)
+    # def export_trace(self, trace: Any) -> None:
+    #     """Export a trace object directly."""
+    #     self._export_trace(trace)
         
-    def export_span(self, span: Any) -> None:
-        """Export a span object directly."""
-        self._export_span(span)
+    # def export_span(self, span: Any) -> None:
+    #     """Export a span object directly."""
+    #     self._export_span(span)
 
     def _export_trace(self, trace: Any) -> None:
+        """Export a trace object with enhanced attribute extraction."""
+        # Get tracer from provider or use direct get_tracer if no provider
         tracer = get_tracer(LIBRARY_NAME, LIBRARY_VERSION, self.tracer_provider)
-
-        with tracer.start_as_current_span(
+        
+        if not hasattr(trace, 'trace_id'):
+            logger.warning("Cannot export trace: missing trace_id")
+            return
+        
+        # Create the trace span directly
+        span = tracer.start_span(
             name=f"agents.trace.{trace.name}",
             kind=SpanKind.INTERNAL,
             attributes={
@@ -412,9 +668,22 @@ class OpenAIAgentsExporter:
                 InstrumentationAttributes.LIBRARY_VERSION: LIBRARY_VERSION,
                 WorkflowAttributes.WORKFLOW_STEP_TYPE: "trace",
             },
-        ) as span:
-            if hasattr(trace, "group_id") and trace.group_id:
-                span.set_attribute(CoreAttributes.GROUP_ID, trace.group_id)
+        )
+        
+        # Add any additional trace attributes
+        if hasattr(trace, "group_id") and trace.group_id:
+            span.set_attribute(CoreAttributes.GROUP_ID, trace.group_id)
+            
+        if hasattr(trace, "metadata") and trace.metadata:
+            for key, value in trace.metadata.items():
+                if isinstance(value, (str, int, float, bool)):
+                    span.set_attribute(f"trace.metadata.{key}", value)
+        
+        # End the span to ensure it's exported
+        span.end()
+        
+        # Debug log to verify span creation 
+        logger.debug(f"Created and ended trace span: agents.trace.{trace.name}")
 
     def _export_span(self, span: Any) -> None:
         tracer = get_tracer(LIBRARY_NAME, LIBRARY_VERSION, self.tracer_provider)
@@ -422,12 +691,12 @@ class OpenAIAgentsExporter:
         span_data = span.span_data
         span_type = span_data.__class__.__name__
         
-        # Log debug information about span types
-        logger.debug(f"Processing span: type={span_type}, span_id={span.span_id}, parent_id={span.parent_id if hasattr(span, 'parent_id') else 'None'}")
-        
-        # Debug span data attributes
-        span_data_attrs = [attr for attr in dir(span_data) if not attr.startswith('_')]
-        logger.debug(f"Span data attributes: {span_data_attrs}")
+        # Verify this is a known span type
+        if span_type not in ["AgentSpanData", "FunctionSpanData", "GenerationSpanData", 
+                            "HandoffSpanData", "GuardrailSpanData", "CustomSpanData", "ResponseSpanData"]:
+            span_id = getattr(span, 'span_id', 'unknown')
+            logger.debug(f"Unknown span type: {span_type}, span_id={span_id}")
+            # Continue anyway...
 
         attributes = {
             CoreAttributes.TRACE_ID: span.trace_id,
@@ -526,10 +795,20 @@ class OpenAIAgentsExporter:
         return self._create_span(tracer, span_name, span_kind, attributes, span)
     
     def _create_span(self, tracer, span_name, span_kind, attributes, span):
-        with tracer.start_as_current_span(name=span_name, kind=span_kind, attributes=attributes) as otel_span:
-            if hasattr(span, "error") and span.error:
-                otel_span.set_status(Status(StatusCode.ERROR))
-                otel_span.record_exception(
-                    exception=Exception(span.error.get("message", "Unknown error")),
-                    attributes={"error.data": json.dumps(span.error.get("data", {}))},
-                )
+        # Create a span directly instead of using a context manager to ensure it's exported
+        otel_span = tracer.start_span(name=span_name, kind=span_kind, attributes=attributes)
+        
+        if hasattr(span, "error") and span.error:
+            otel_span.set_status(Status(StatusCode.ERROR))
+            otel_span.record_exception(
+                exception=Exception(span.error.get("message", "Unknown error")),
+                attributes={"error.data": json.dumps(span.error.get("data", {}))},
+            )
+        
+        # End the span immediately to ensure it's exported to the backend
+        otel_span.end()
+        
+        # Debug log to verify span creation
+        logger.debug(f"Created and ended span: {span_name} (kind: {span_kind})")
+        
+        return otel_span

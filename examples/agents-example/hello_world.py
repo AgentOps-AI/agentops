@@ -1,3 +1,4 @@
+# To run this file from project root: AGENTOPS_LOG_LEVEL=debug uv run examples/agents-example/hello_world.py
 import asyncio
 from dotenv import load_dotenv
 from agents import Agent, Runner
@@ -5,6 +6,7 @@ from agents import Agent, Runner
 load_dotenv()
 
 import agentops
+import os
 
 async def main():
     agentops.init()
@@ -14,6 +16,7 @@ async def main():
         instructions="You are a helpful assistant. Your task is to answer questions about programming concepts.",
     )
 
+    # Regular agent run
     result = await Runner.run(agent, "Tell me about recursion in programming.")
     print(result.final_output)
 

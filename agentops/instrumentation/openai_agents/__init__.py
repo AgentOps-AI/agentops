@@ -13,7 +13,6 @@ The Agents SDK uses the Response API format, which we handle using shared utilit
 agentops.instrumentation.openai.
 """
 from typing import Optional
-import importlib.metadata
 from agentops.logging import logger
 
 def get_version() -> Optional[str]:
@@ -29,11 +28,10 @@ LIBRARY_NAME = "openai-agents"
 LIBRARY_VERSION: Optional[str] = get_version()  # Actual OpenAI Agents SDK version
 
 # Import after defining constants to avoid circular imports
-from .instrumentor import AgentsInstrumentor
+from .instrumentor import OpenAIAgentsInstrumentor
 
 __all__ = [
     "LIBRARY_NAME",
     "LIBRARY_VERSION",
-    "SDK_VERSION",
-    "AgentsInstrumentor",
+    "OpenAIAgentsInstrumentor",
 ]
