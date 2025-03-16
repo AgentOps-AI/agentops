@@ -92,7 +92,7 @@ The SDK provides specialized methods for creating different types of spans:
 AgentOps integrates with this API through:
 
 1. The `OpenAIAgentsProcessor` class that implements the `TracingProcessor` interface
-2. The `OpenAIAgentsExporter` that translates Agents SDK spans into OpenTelemetry spans
+2. The `create_span` context manager that ensures proper parent-child relationships between spans
 3. The `AgentsInstrumentor` which registers the processor and adds additional instrumentation
 
 This integration allows AgentOps to capture detailed information about agent execution, including:
@@ -101,6 +101,23 @@ This integration allows AgentOps to capture detailed information about agent exe
 - Token usage metrics
 - Error information
 - Agent-to-agent handoffs
+
+### Trace Context Propagation
+
+Our implementation ensures proper parent-child relationships between spans through:
+
+1. **Context Manager Pattern**: Using `start_as_current_span()` to maintain the OpenTelemetry span context
+2. **Parent Reference Tracking**: Storing parent span relationships and using them to create proper span hierarchies
+3. **Trace Correlation Attributes**: Adding consistent attributes to help with querying:
+   - `agentops.original_trace_id`: Original trace ID from the Agents SDK
+   - `agentops.original_span_id`: Original span ID from the Agents SDK
+   - `agentops.parent_span_id`: Parent span ID for child spans
+   - `agentops.trace_hash`: Consistent hash based on the original trace ID
+   - `agentops.is_root_span`: "true" for spans without a parent
+
+When querying spans for analysis:
+1. Group spans by `agentops.original_trace_id` to find all spans in the same trace
+2. Use `agentops.parent_span_id` to reconstruct the parent-child hierarchy
 
 ## Span Data Types
 

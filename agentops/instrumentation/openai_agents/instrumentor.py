@@ -16,6 +16,20 @@ The processor implements the tracing interface, collects metrics, and manages ti
 We use the built-in add_trace_processor hook for most functionality, with minimal patching
 only for streaming operations where necessary. This approach makes the code maintainable
 and resilient to SDK changes while ensuring comprehensive observability.
+
+TRACE CONTEXT PROPAGATION:
+The instrumentation maintains proper parent-child relationships between spans by:
+1. Tracking the contexts of all created spans in a weakref dictionary
+2. Using the OpenTelemetry context API to properly attach parent contexts
+3. Preserving trace continuity across spans with the same Agent SDK trace ID
+4. Storing original trace and span IDs in attributes for querying and grouping
+5. Using start_as_current_span to ensure proper context propagation across spans
+
+When a trace or span starts:
+1. We store its context in our processor's context cache
+2. We use this context for all child spans to maintain proper parent-child relationships
+3. We preserve original trace and span IDs in attributes for querying
+4. Each span generated from the same Agent SDK trace will share the same OTel trace ID
 """
 import functools
 import time

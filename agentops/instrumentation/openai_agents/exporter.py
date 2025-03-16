@@ -73,6 +73,7 @@ WAYS TO USE SEMANTIC CONVENTIONS WHEN REFERENCING SPAN ATTRIBUTES:
 import json
 from typing import Any, Dict, Optional
 
+from opentelemetry import trace
 from opentelemetry.trace import get_tracer, SpanKind, Status, StatusCode
 from agentops.semconv import (
     CoreAttributes, 
@@ -146,16 +147,26 @@ class OpenAIAgentsExporter:
 
     def __init__(self, tracer_provider=None):
         self.tracer_provider = tracer_provider
+        self._current_trace_id = None  # Store the current trace ID for consistency
     
     def export_trace(self, trace: Any) -> None:
         """Export a trace object with enhanced attribute extraction."""
+        logger.debug(f"[OpenAIAgentsExporter] Exporting trace: {getattr(trace, 'trace_id', 'unknown')}")
         # Export the trace directly
-        self._export_trace(trace)
+        result = self._export_trace(trace)
+        logger.debug(f"[OpenAIAgentsExporter] Trace export complete: {getattr(trace, 'trace_id', 'unknown')}")
+        return result
         
     def export_span(self, span: Any) -> None:
         """Export a span object with enhanced attribute extraction."""
+        span_id = getattr(span, 'span_id', 'unknown')
+        span_type = getattr(span.span_data, '__class__', object).__name__ if hasattr(span, 'span_data') else 'unknown'
+        logger.debug(f"[OpenAIAgentsExporter] Exporting span: {span_id} (type: {span_type})")
+        
         # Export the span directly
-        self._export_span(span)
+        result = self._export_span(span)
+        logger.debug(f"[OpenAIAgentsExporter] Span export result: {span_id}, success={result is not None}")
+        return result
     
     def _export_enhanced_trace(self, trace: Any) -> None:
         """Export enhanced trace information."""
@@ -795,9 +806,84 @@ class OpenAIAgentsExporter:
         return self._create_span(tracer, span_name, span_kind, attributes, span)
     
     def _create_span(self, tracer, span_name, span_kind, attributes, span):
-        # Create a span directly instead of using a context manager to ensure it's exported
-        otel_span = tracer.start_span(name=span_name, kind=span_kind, attributes=attributes)
+        """Create an OpenTelemetry span from an Agents SDK span."""
+        from opentelemetry import trace, context as context_api
         
+        # Get span_id and trace_id from the original span for debugging
+        orig_span_id = getattr(span, "span_id", "unknown")
+        orig_trace_id = getattr(span, "trace_id", "unknown")
+        
+        # Store span parent ID for context linking
+        parent_span_id = None
+        if hasattr(span, "parent_id") and span.parent_id:
+            parent_span_id = span.parent_id
+            attributes["parent_span_id"] = parent_span_id
+            logger.debug(f"Adding parent_span_id={parent_span_id} to span {span_name}")
+        
+        # Detailed debug logging of attributes being set on the span
+        logger.debug(f"[OpenAIAgentsExporter] Creating OTel span from {orig_span_id}, trace={orig_trace_id}")
+        
+        # We need to track spans by their trace ID and organize their context relationships
+        # Add original trace and span IDs as attributes for query/grouping
+        if hasattr(span, "trace_id") and span.trace_id:
+            attributes["agentops.original_trace_id"] = span.trace_id
+            attributes["openai.agents.trace_id"] = span.trace_id
+            
+            if hasattr(span, "span_id") and span.span_id:
+                attributes["agentops.original_span_id"] = span.span_id
+                
+            # Track if this is a root span (no parent) for later grouping
+            if not parent_span_id:
+                attributes["agentops.is_root_span"] = "true"
+                
+            # Create a consistent hash of the trace ID to help with grouping
+            if span.trace_id.startswith("trace_"):
+                try:
+                    trace_hash = hash(span.trace_id) % 10000
+                    attributes["agentops.trace_hash"] = str(trace_hash)
+                    logger.debug(f"[OpenAIAgentsExporter] Using trace hash {trace_hash} for grouping")
+                except Exception as e:
+                    logger.error(f"[OpenAIAgentsExporter] Error creating trace hash: {e}")
+        
+        # Map parent-child relationships for responses
+        if hasattr(span, "span_data") and span.span_data.__class__.__name__ == "ResponseSpanData" and parent_span_id:
+            attributes["agentops.response_for_agent"] = parent_span_id
+            attributes["agentops.parent_span_id"] = parent_span_id
+        
+        # Store the current context before we create a new span
+        current_context = context_api.get_current()
+        parent_context = None
+        
+        # If this is a child span, we need to find the parent span context to maintain trace continuity
+        if parent_span_id:
+            # Look for the parent span ID in our exporter's known spans
+            # This allows us to properly establish parent-child relationships
+            
+            # For demonstration, log the attempt to link to parent
+            logger.debug(f"[OpenAIAgentsExporter] Linking span {orig_span_id} to parent {parent_span_id}")
+            
+            # Set proper parent relationship in attributes since we can't modify the context directly
+            attributes["agentops.parent_span_id"] = parent_span_id
+        
+        # Create the OpenTelemetry span with the current context
+        # This ensures the span is properly linked to any active parent context
+        otel_span = tracer.start_span(
+            name=span_name, 
+            kind=span_kind, 
+            attributes=attributes
+        )
+        
+        # Make this the current span
+        context_api.attach(context_api.set_value("current-span", otel_span))
+        
+        # Log the created span's details
+        if hasattr(otel_span, "context") and hasattr(otel_span.context, "span_id"):
+            otel_span_id = f"{otel_span.context.span_id:x}"
+            otel_trace_id = f"{otel_span.context.trace_id:x}"
+            logger.debug(f"[OpenAIAgentsExporter] Created OTel span: {otel_span_id}, trace={otel_trace_id}")
+            logger.debug(f"[OpenAIAgentsExporter] Original span: {orig_span_id}, trace={orig_trace_id}")
+        
+        # Handle errors if any
         if hasattr(span, "error") and span.error:
             otel_span.set_status(Status(StatusCode.ERROR))
             otel_span.record_exception(
@@ -805,10 +891,10 @@ class OpenAIAgentsExporter:
                 attributes={"error.data": json.dumps(span.error.get("data", {}))},
             )
         
-        # End the span immediately to ensure it's exported to the backend
+        # End the span to ensure it's exported
         otel_span.end()
         
-        # Debug log to verify span creation
-        logger.debug(f"Created and ended span: {span_name} (kind: {span_kind})")
+        # Final debug log to verify span creation and ending
+        logger.debug(f"[OpenAIAgentsExporter] Ended OTel span from {orig_span_id}")
         
         return otel_span
