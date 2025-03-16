@@ -109,17 +109,23 @@ def safe_serialize(obj: Any) -> Any:
     """Safely serialize an object to JSON-compatible format
     
     This function handles complex objects by:
-    1. Converting models to dictionaries
-    2. Using custom JSON encoder to handle special types
-    3. Falling back to string representation only when necessary
+    1. Returning strings untouched (even if they contain JSON)
+    2. Converting models to dictionaries
+    3. Using custom JSON encoder to handle special types
+    4. Falling back to string representation only when necessary
     
     Args:
         obj: The object to serialize
         
     Returns:
-        JSON string representation of the object
+        If obj is a string, returns the original string untouched.
+        Otherwise, returns a JSON string representation of the object.
     """
-    # First convert any model objects to dictionaries
+    # Return strings untouched
+    if isinstance(obj, str):
+        return obj
+        
+    # Convert any model objects to dictionaries
     if hasattr(obj, "model_dump") or hasattr(obj, "dict") or hasattr(obj, "parse"):
         obj = model_to_dict(obj)
     
