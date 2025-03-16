@@ -159,4 +159,6 @@ __all__ = [
     "record",
     "start_session",
     "end_session",
+    "track_agent",
+    "track_tool",
 ]

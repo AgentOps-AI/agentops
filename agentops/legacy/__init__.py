@@ -181,4 +181,9 @@ def track_agent(*args, **kwargs):
     pass
 
 
-__all__ = ["start_session", "end_session", "ToolEvent", "ErrorEvent", "ActionEvent", "track_agent", "end_all_sessions"]
+def track_tool(*args, **kwargs):
+    """@deprecated"""
+    pass
+
+
+__all__ = ["start_session", "end_session", "ToolEvent", "ErrorEvent", "ActionEvent", "track_agent", "track_tool", "end_all_sessions"]
