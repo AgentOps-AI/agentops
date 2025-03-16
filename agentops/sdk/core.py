@@ -167,10 +167,10 @@ class TracingCore:
 
             # Setup telemetry using the extracted configuration
             self._provider, self._meter_provider = setup_telemetry(
-                service_name=config["service_name"],
+                service_name=config["service_name"] or "",
                 project_id=config.get("project_id"),
-                exporter_endpoint=config["exporter_endpoint"],
-                metrics_endpoint=config["metrics_endpoint"],
+                exporter_endpoint=config["exporter_endpoint"] or "",
+                metrics_endpoint=config["metrics_endpoint"] or "",
                 max_queue_size=config["max_queue_size"],
                 max_wait_time=config["max_wait_time"],
                 jwt=jwt,
