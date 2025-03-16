@@ -46,7 +46,7 @@ class Event:
     }
     """
 
-    event_type: EventType
+    event_type: str
     params: Optional[dict] = None
     returns: Optional[Union[str, List[str]]] = None
     init_timestamp: str = field(default_factory=get_ISO_time)
