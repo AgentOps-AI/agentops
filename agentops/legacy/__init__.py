@@ -39,7 +39,7 @@ class Session:
         except:
             pass
 
-    def create_agent(self, name: str = None, agent_id: str = None, **kwargs):
+    def create_agent(self, name: Optional[str] = None, agent_id: Optional[str] = None, **kwargs):
         """
         Method to create an agent for CrewAI >= 0.105.0 compatibility.
         
@@ -160,7 +160,7 @@ def _flush_span_processors() -> None:
     try:
         from opentelemetry.trace import get_tracer_provider
         tracer_provider = get_tracer_provider()
-        tracer_provider.force_flush()
+        tracer_provider.force_flush()  # type: ignore
     except Exception as e:
         logger.warning(f"Failed to force flush span processor: {e}")
         
