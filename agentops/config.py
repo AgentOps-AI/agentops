@@ -65,7 +65,7 @@ class Config:
     )
 
     auto_start_session: bool = field(
-        default_factory=lambda: get_env_bool("AGENTOPS_AUTO_START_SESSION", False),
+        default_factory=lambda: get_env_bool("AGENTOPS_AUTO_START_SESSION", True),
         metadata={"description": "Whether to automatically start a session when initializing"},
     )
 
