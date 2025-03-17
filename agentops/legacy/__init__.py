@@ -21,8 +21,6 @@ _current_session: Optional["Session"] = None
 
 class Session:
     """
-    A session object that holds a span and token for OpenTelemetry tracing.
-    
     This class provides compatibility with CrewAI >= 0.105.0, which uses an event-based
     integration pattern where it calls methods directly on the Session object:
     
@@ -67,7 +65,6 @@ class Session:
         - end_state="Success"
         - end_state_reason="Finished Execution"
         
-        This implementation properly ends the OpenTelemetry span and
         forces a flush to ensure the span is exported immediately.
         """
         _set_span_attributes(self.span, kwargs)
@@ -80,7 +77,6 @@ def _create_session_span(tags: Union[Dict[str, Any], List[str], None] = None) ->
     Helper function to create a session span with tags.
     
     This is an internal function used by start_session() to create the
-    OpenTelemetry span for the session. It uses the _make_span utility
     from the SDK to create a span with kind=SpanKind.SESSION.
 
     Args:
@@ -89,7 +85,6 @@ def _create_session_span(tags: Union[Dict[str, Any], List[str], None] = None) ->
 
     Returns:
         A tuple of (span, context, token) where:
-        - span is the OpenTelemetry span object
         - context is the span context
         - token is the context token needed for detaching
     """
@@ -105,6 +100,7 @@ def start_session(
     tags: Union[Dict[str, Any], List[str], None] = None,
 ) -> Session:
     """
+    @deprecated
     Start a new AgentOps session manually.
 
     This function creates and starts a new session span, which can be used to group
@@ -160,12 +156,8 @@ def _set_span_attributes(span: Any, attributes: Dict[str, Any]) -> None:
 def _flush_span_processors() -> None:
     """
     Helper to force flush all span processors.
-    
-    Returns:
-        True if flush was successful, False otherwise
     """
     try:
-        # Use OpenTelemetry API directly to force flush
         from opentelemetry.trace import get_tracer_provider
         tracer_provider = get_tracer_provider()
         tracer_provider.force_flush()
@@ -175,6 +167,7 @@ def _flush_span_processors() -> None:
 
 def end_session(session_or_status: Any = None, **kwargs) -> None:
     """
+    @deprecated
     End a previously started AgentOps session.
 
     This function ends the session span and detaches the context token,
@@ -219,15 +212,11 @@ def end_session(session_or_status: Any = None, **kwargs) -> None:
     if session_or_status is None and kwargs:
         global _current_session
         
-        # Use the globally stored session if available
         if _current_session is not None:
             _set_span_attributes(_current_session.span, kwargs)
             _finalize_span(_current_session.span, _current_session.token)
             _flush_span_processors()
             _current_session = None
-        else:
-            logger.warning("CrewAI called end_session with kwargs, but no global session was found")
-        
         return
     
     # Handle the standard pattern and CrewAI >= 0.105.0 pattern where a Session object is passed.
@@ -240,7 +229,12 @@ def end_session(session_or_status: Any = None, **kwargs) -> None:
 
 
 def end_all_sessions():
-    pass
+    """
+    @deprecated
+    We don't automatically track more than one session, so just end the session 
+    that we are tracking. 
+    """
+    end_session()
 
 
 def ToolEvent(*args, **kwargs) -> None:
@@ -306,8 +300,13 @@ def track_agent(*args, **kwargs):
 
 
 def track_tool(*args, **kwargs):
-    """@deprecated"""
-    pass
+    """
+    @deprecated
+    Decorator for marking tools and legacy projects. 
+    """
+    def noop(f):
+        return f
+    return noop
 
 
 __all__ = [
