@@ -179,7 +179,9 @@ def LLMEvent(*args, **kwargs) -> None:
 
 def track_agent(*args, **kwargs):
     """@deprecated"""
-    pass
+    def noop(f):
+        return f
+    return noop
 
 
 def track_tool(*args, **kwargs):
