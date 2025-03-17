@@ -1,3 +1,6 @@
+from dotenv import load_dotenv
+load_dotenv()
+
 import agentops
 from crewai import Agent, Crew, Task
 from crewai.tools import tool
