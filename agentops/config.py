@@ -33,7 +33,7 @@ class ConfigDict(TypedDict):
     prefetch_jwt_token: Optional[bool]
 
 
-@dataclass(slots=True)
+@dataclass
 class Config:
     api_key: Optional[str] = field(
         default_factory=lambda: os.getenv("AGENTOPS_API_KEY"),
