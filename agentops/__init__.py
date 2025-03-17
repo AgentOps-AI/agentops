@@ -1,11 +1,28 @@
 from typing import Any, Dict, List, Optional, Union
 
-from agentops.legacy import ErrorEvent, ToolEvent, end_session, start_session
+from agentops.legacy import ActionEvent, ErrorEvent, ToolEvent, start_session, end_session
 
 from .client import Client
 
 # Client global instance; one per process runtime
 _client = Client()
+
+def record(event):
+    """
+    Legacy function to record an event. This is kept for backward compatibility.
+    
+    In the current version, this simply sets the end_timestamp on the event.
+    
+    Args:
+        event: The event to record
+    """
+    from agentops.helpers.time import get_ISO_time
+    
+    # TODO: Manual timestamp assignment is a temporary fix; should use proper event lifecycle
+    if event and hasattr(event, 'end_timestamp'):
+        event.end_timestamp = get_ISO_time()
+    
+    return event
 
 
 def init(
@@ -139,6 +156,9 @@ __all__ = [
     "init",
     "configure",
     "get_client",
+    "record",
     "start_session",
     "end_session",
+    "track_agent",
+    "track_tool",
 ]

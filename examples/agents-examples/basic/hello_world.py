@@ -1,16 +1,13 @@
 import asyncio
-
 from agents import Agent, Runner
-
 from dotenv import load_dotenv
 import os
-import agentops
 
 load_dotenv()
 
-AGENTOPS_API_KEY = os.getenv("AGENTOPS_API_KEY") or "your-api-key"
-agentops.init(api_key=AGENTOPS_API_KEY)
+import agentops
 
+agentops.init()
 
 async def main():
     agent = Agent(

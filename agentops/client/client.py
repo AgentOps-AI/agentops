@@ -29,6 +29,8 @@ class Client:
         self.config = Config()
 
     def init(self, **kwargs):
+        # Recreate the Config object to parse environment variables at the time of initialization
+        self.config = Config()
         self.configure(**kwargs)
 
         if not self.config.api_key:
@@ -56,10 +58,18 @@ class Client:
 
         self.initialized = True
 
+        # Start a session if auto_start_session is True
+        session = None
         if self.config.auto_start_session:
             from agentops.legacy import start_session
 
-            start_session()
+            # Pass default_tags if they exist
+            if self.config.default_tags:
+                session = start_session(tags=list(self.config.default_tags))
+            else:
+                session = start_session()
+        
+        return session
 
     def configure(self, **kwargs):
         """Update client configuration"""

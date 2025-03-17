@@ -3,7 +3,7 @@ from types import ModuleType
 from dataclasses import dataclass
 import importlib
 
-from opentelemetry.instrumentation.instrumentor import BaseInstrumentor
+from opentelemetry.instrumentation.instrumentor import BaseInstrumentor  # type: ignore
 
 from agentops.logging import logger
 from agentops.sdk.core import TracingCore
