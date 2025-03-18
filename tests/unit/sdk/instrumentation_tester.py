@@ -45,8 +45,7 @@ def reset_trace_globals():
 
 class HasAttributesViaProperty(Protocol):
     @property
-    def attributes(self) -> Attributes:
-        ...
+    def attributes(self) -> Attributes: ...
 
 
 class HasAttributesViaAttr(Protocol):
