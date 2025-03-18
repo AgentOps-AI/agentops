@@ -32,8 +32,10 @@ def mock_req(endpoint, api_key):
     """
     with requests_mock.Mocker(real_http=False) as m:
         # Map session IDs to their JWTs
-        m.post(endpoint + "/v3/auth/token", json={"token": str(uuid.uuid4()),
-               "project_id": "test-project-id", "api_key": api_key})
+        m.post(
+            endpoint + "/v3/auth/token",
+            json={"token": str(uuid.uuid4()), "project_id": "test-project-id", "api_key": api_key},
+        )
         yield m
 
 

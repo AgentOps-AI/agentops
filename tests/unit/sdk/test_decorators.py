@@ -61,10 +61,15 @@ class TestSpanNesting:
         assert len(spans) == 4
 
         # Verify span kinds
-        session_spans = [s for s in spans if s.attributes and s.attributes.get(SpanAttributes.AGENTOPS_SPAN_KIND) == SpanKind.SESSION]
-        agent_spans = [s for s in spans if s.attributes and s.attributes.get(SpanAttributes.AGENTOPS_SPAN_KIND) == SpanKind.AGENT]
-        operation_spans = [s for s in spans if s.attributes and s.attributes.get(
-            SpanAttributes.AGENTOPS_SPAN_KIND) == SpanKind.TASK]
+        session_spans = [
+            s for s in spans if s.attributes and s.attributes.get(SpanAttributes.AGENTOPS_SPAN_KIND) == SpanKind.SESSION
+        ]
+        agent_spans = [
+            s for s in spans if s.attributes and s.attributes.get(SpanAttributes.AGENTOPS_SPAN_KIND) == SpanKind.AGENT
+        ]
+        operation_spans = [
+            s for s in spans if s.attributes and s.attributes.get(SpanAttributes.AGENTOPS_SPAN_KIND) == SpanKind.TASK
+        ]
 
         assert len(session_spans) == 1
         assert len(agent_spans) == 1
@@ -73,31 +78,31 @@ class TestSpanNesting:
         # Find the main_operation and nested_operation spans
         main_operation = None
         nested_operation = None
-        
+
         for span in operation_spans:
-            if span.attributes and span.attributes.get('agentops.operation.name') == 'main_operation':
+            if span.attributes and span.attributes.get("agentops.operation.name") == "main_operation":
                 main_operation = span
-            elif span.attributes and span.attributes.get('agentops.operation.name') == 'nested_operation':
+            elif span.attributes and span.attributes.get("agentops.operation.name") == "nested_operation":
                 nested_operation = span
-        
+
         assert main_operation is not None, "main_operation span not found"
         assert nested_operation is not None, "nested_operation span not found"
-        
+
         # Verify the session span is the root
         session_span = session_spans[0]
         assert session_span.parent is None
-        
+
         # Verify the agent span is a child of the session span
         agent_span = agent_spans[0]
         assert agent_span.parent is not None
         assert session_span.context is not None
         assert agent_span.parent.span_id == session_span.context.span_id
-        
+
         # Verify main_operation is a child of the agent span
         assert main_operation.parent is not None
         assert agent_span.context is not None
         assert main_operation.parent.span_id == agent_span.context.span_id
-        
+
         # Verify nested_operation is a child of main_operation
         assert nested_operation.parent is not None
         assert main_operation.context is not None
@@ -150,10 +155,15 @@ class TestSpanNesting:
         assert len(spans) == 4
 
         # Verify span kinds
-        session_spans = [s for s in spans if s.attributes and s.attributes.get(SpanAttributes.AGENTOPS_SPAN_KIND) == SpanKind.SESSION]
-        agent_spans = [s for s in spans if s.attributes and s.attributes.get(SpanAttributes.AGENTOPS_SPAN_KIND) == SpanKind.AGENT]
-        operation_spans = [s for s in spans if s.attributes and s.attributes.get(
-            SpanAttributes.AGENTOPS_SPAN_KIND) == SpanKind.TASK]
+        session_spans = [
+            s for s in spans if s.attributes and s.attributes.get(SpanAttributes.AGENTOPS_SPAN_KIND) == SpanKind.SESSION
+        ]
+        agent_spans = [
+            s for s in spans if s.attributes and s.attributes.get(SpanAttributes.AGENTOPS_SPAN_KIND) == SpanKind.AGENT
+        ]
+        operation_spans = [
+            s for s in spans if s.attributes and s.attributes.get(SpanAttributes.AGENTOPS_SPAN_KIND) == SpanKind.TASK
+        ]
 
         assert len(session_spans) == 1
         assert len(agent_spans) == 1
@@ -162,31 +172,31 @@ class TestSpanNesting:
         # Find the main_operation and nested_operation spans
         main_operation = None
         nested_operation = None
-        
+
         for span in operation_spans:
-            if span.attributes and span.attributes.get('agentops.operation.name') == 'main_async_operation':
+            if span.attributes and span.attributes.get("agentops.operation.name") == "main_async_operation":
                 main_operation = span
-            elif span.attributes and span.attributes.get('agentops.operation.name') == 'nested_async_operation':
+            elif span.attributes and span.attributes.get("agentops.operation.name") == "nested_async_operation":
                 nested_operation = span
-        
+
         assert main_operation is not None, "main_async_operation span not found"
         assert nested_operation is not None, "nested_async_operation span not found"
-        
+
         # Verify the session span is the root
         session_span = session_spans[0]
         assert session_span.parent is None
-        
+
         # Verify the agent span is a child of the session span
         agent_span = agent_spans[0]
         assert agent_span.parent is not None
         assert session_span.context is not None
         assert agent_span.parent.span_id == session_span.context.span_id
-        
+
         # Verify main_operation is a child of the agent span
         assert main_operation.parent is not None
         assert agent_span.context is not None
         assert main_operation.parent.span_id == agent_span.context.span_id
-        
+
         # Verify nested_operation is a child of main_operation
         assert nested_operation.parent is not None
         assert main_operation.context is not None
@@ -241,10 +251,15 @@ class TestSpanNesting:
         assert len(spans) == 4
 
         # Verify span kinds
-        session_spans = [s for s in spans if s.attributes and s.attributes.get(SpanAttributes.AGENTOPS_SPAN_KIND) == SpanKind.SESSION]
-        agent_spans = [s for s in spans if s.attributes and s.attributes.get(SpanAttributes.AGENTOPS_SPAN_KIND) == SpanKind.AGENT]
-        operation_spans = [s for s in spans if s.attributes and s.attributes.get(
-            SpanAttributes.AGENTOPS_SPAN_KIND) == SpanKind.TASK]
+        session_spans = [
+            s for s in spans if s.attributes and s.attributes.get(SpanAttributes.AGENTOPS_SPAN_KIND) == SpanKind.SESSION
+        ]
+        agent_spans = [
+            s for s in spans if s.attributes and s.attributes.get(SpanAttributes.AGENTOPS_SPAN_KIND) == SpanKind.AGENT
+        ]
+        operation_spans = [
+            s for s in spans if s.attributes and s.attributes.get(SpanAttributes.AGENTOPS_SPAN_KIND) == SpanKind.TASK
+        ]
 
         assert len(session_spans) == 1
         assert len(agent_spans) == 1
@@ -253,31 +268,31 @@ class TestSpanNesting:
         # Find the main_operation and nested_operation spans
         main_operation = None
         nested_operation = None
-        
+
         for span in operation_spans:
-            if span.attributes and span.attributes.get('agentops.operation.name') == 'main_generator_operation':
+            if span.attributes and span.attributes.get("agentops.operation.name") == "main_generator_operation":
                 main_operation = span
-            elif span.attributes and span.attributes.get('agentops.operation.name') == 'nested_generator':
+            elif span.attributes and span.attributes.get("agentops.operation.name") == "nested_generator":
                 nested_operation = span
-        
+
         assert main_operation is not None, "main_generator_operation span not found"
         assert nested_operation is not None, "nested_generator span not found"
-        
+
         # Verify the session span is the root
         session_span = session_spans[0]
         assert session_span.parent is None
-        
+
         # Verify the agent span is a child of the session span
         agent_span = agent_spans[0]
         assert agent_span.parent is not None
         assert session_span.context is not None
         assert agent_span.parent.span_id == session_span.context.span_id
-        
+
         # Verify main_operation is a child of the agent span
         assert main_operation.parent is not None
         assert agent_span.context is not None
         assert main_operation.parent.span_id == agent_span.context.span_id
-        
+
         # Verify nested_operation is a child of main_operation
         assert nested_operation.parent is not None
         assert main_operation.context is not None
@@ -333,10 +348,15 @@ class TestSpanNesting:
         assert len(spans) == 4
 
         # Verify span kinds
-        session_spans = [s for s in spans if s.attributes and s.attributes.get(SpanAttributes.AGENTOPS_SPAN_KIND) == SpanKind.SESSION]
-        agent_spans = [s for s in spans if s.attributes and s.attributes.get(SpanAttributes.AGENTOPS_SPAN_KIND) == SpanKind.AGENT]
-        operation_spans = [s for s in spans if s.attributes and s.attributes.get(
-            SpanAttributes.AGENTOPS_SPAN_KIND) == SpanKind.TASK]
+        session_spans = [
+            s for s in spans if s.attributes and s.attributes.get(SpanAttributes.AGENTOPS_SPAN_KIND) == SpanKind.SESSION
+        ]
+        agent_spans = [
+            s for s in spans if s.attributes and s.attributes.get(SpanAttributes.AGENTOPS_SPAN_KIND) == SpanKind.AGENT
+        ]
+        operation_spans = [
+            s for s in spans if s.attributes and s.attributes.get(SpanAttributes.AGENTOPS_SPAN_KIND) == SpanKind.TASK
+        ]
 
         assert len(session_spans) == 1
         assert len(agent_spans) == 1
@@ -345,31 +365,31 @@ class TestSpanNesting:
         # Find the main_operation and nested_operation spans
         main_operation = None
         nested_operation = None
-        
+
         for span in operation_spans:
-            if span.attributes and span.attributes.get('agentops.operation.name') == 'main_async_generator_operation':
+            if span.attributes and span.attributes.get("agentops.operation.name") == "main_async_generator_operation":
                 main_operation = span
-            elif span.attributes and span.attributes.get('agentops.operation.name') == 'nested_async_generator':
+            elif span.attributes and span.attributes.get("agentops.operation.name") == "nested_async_generator":
                 nested_operation = span
-        
+
         assert main_operation is not None, "main_async_generator_operation span not found"
         assert nested_operation is not None, "nested_async_generator span not found"
-        
+
         # Verify the session span is the root
         session_span = session_spans[0]
         assert session_span.parent is None
-        
+
         # Verify the agent span is a child of the session span
         agent_span = agent_spans[0]
         assert agent_span.parent is not None
         assert session_span.context is not None
         assert agent_span.parent.span_id == session_span.context.span_id
-        
+
         # Verify main_operation is a child of the agent span
         assert main_operation.parent is not None
         assert agent_span.context is not None
         assert main_operation.parent.span_id == agent_span.context.span_id
-        
+
         # Verify nested_operation is a child of main_operation
         assert nested_operation.parent is not None
         assert main_operation.context is not None
@@ -427,10 +447,15 @@ class TestSpanNesting:
         assert len(spans) == 5
 
         # Verify span kinds
-        session_spans = [s for s in spans if s.attributes and s.attributes.get(SpanAttributes.AGENTOPS_SPAN_KIND) == SpanKind.SESSION]
-        agent_spans = [s for s in spans if s.attributes and s.attributes.get(SpanAttributes.AGENTOPS_SPAN_KIND) == SpanKind.AGENT]
-        operation_spans = [s for s in spans if s.attributes and s.attributes.get(
-            SpanAttributes.AGENTOPS_SPAN_KIND) == SpanKind.TASK]
+        session_spans = [
+            s for s in spans if s.attributes and s.attributes.get(SpanAttributes.AGENTOPS_SPAN_KIND) == SpanKind.SESSION
+        ]
+        agent_spans = [
+            s for s in spans if s.attributes and s.attributes.get(SpanAttributes.AGENTOPS_SPAN_KIND) == SpanKind.AGENT
+        ]
+        operation_spans = [
+            s for s in spans if s.attributes and s.attributes.get(SpanAttributes.AGENTOPS_SPAN_KIND) == SpanKind.TASK
+        ]
 
         assert len(session_spans) == 1
         assert len(agent_spans) == 1
@@ -440,42 +465,40 @@ class TestSpanNesting:
         level1_operation = None
         level2_operation = None
         level3_operation = None
-        
+
         for span in operation_spans:
-            if span.attributes and span.attributes.get('agentops.operation.name') == 'level1_operation':
+            if span.attributes and span.attributes.get("agentops.operation.name") == "level1_operation":
                 level1_operation = span
-            elif span.attributes and span.attributes.get('agentops.operation.name') == 'level2_operation':
+            elif span.attributes and span.attributes.get("agentops.operation.name") == "level2_operation":
                 level2_operation = span
-            elif span.attributes and span.attributes.get('agentops.operation.name') == 'level3_operation':
+            elif span.attributes and span.attributes.get("agentops.operation.name") == "level3_operation":
                 level3_operation = span
-        
+
         assert level1_operation is not None, "level1_operation span not found"
         assert level2_operation is not None, "level2_operation span not found"
         assert level3_operation is not None, "level3_operation span not found"
-        
+
         # Verify the session span is the root
         session_span = session_spans[0]
         assert session_span.parent is None
-        
+
         # Verify the agent span is a child of the session span
         agent_span = agent_spans[0]
         assert agent_span.parent is not None
         assert session_span.context is not None
         assert agent_span.parent.span_id == session_span.context.span_id
-        
+
         # Verify level1_operation is a child of the agent span
         assert level1_operation.parent is not None
         assert agent_span.context is not None
         assert level1_operation.parent.span_id == agent_span.context.span_id
-        
+
         # Verify level2_operation is a child of level1_operation
         assert level2_operation.parent is not None
         assert level1_operation.context is not None
         assert level2_operation.parent.span_id == level1_operation.context.span_id
-        
+
         # Verify level3_operation is a child of level2_operation
         assert level3_operation.parent is not None
         assert level2_operation.context is not None
         assert level3_operation.parent.span_id == level2_operation.context.span_id
-
-    
