@@ -57,7 +57,8 @@ from agentops.semconv import (
     MessageAttributes
 )
 from tests.unit.sdk.instrumentation_tester import InstrumentationTester
-from agentops.instrumentation.openai_agents.exporter import OpenAIAgentsExporter, get_model_info
+from agentops.instrumentation.openai_agents.exporter import OpenAIAgentsExporter
+from agentops.instrumentation.openai_agents.span_attributes import get_model_info
 # These are in separate modules, import directly from those
 from agentops.instrumentation.openai_agents.processor import OpenAIAgentsProcessor
 from agentops.instrumentation.openai_agents.instrumentor import OpenAIAgentsInstrumentor
@@ -145,7 +146,8 @@ class TestAgentsSdkInstrumentation:
             SpanAttributes.LLM_USAGE_TOTAL_TOKENS: REAL_OPENAI_RESPONSE["usage"]["total_tokens"],
             SpanAttributes.LLM_USAGE_PROMPT_TOKENS: REAL_OPENAI_RESPONSE["usage"]["input_tokens"],
             SpanAttributes.LLM_USAGE_COMPLETION_TOKENS: REAL_OPENAI_RESPONSE["usage"]["output_tokens"],
-            f"{SpanAttributes.LLM_USAGE_TOTAL_TOKENS}.reasoning": REAL_OPENAI_RESPONSE["usage"]["output_tokens_details"]["reasoning_tokens"],
+            SpanAttributes.LLM_USAGE_REASONING_TOKENS: REAL_OPENAI_RESPONSE["usage"]["output_tokens_details"]["reasoning_tokens"],
+            SpanAttributes.LLM_USAGE_CACHE_READ_INPUT_TOKENS: REAL_OPENAI_RESPONSE["usage"]["input_tokens_details"]["cached_tokens"],
             
             # Content extraction with proper message semantic conventions
             MessageAttributes.COMPLETION_CONTENT.format(i=0): REAL_OPENAI_RESPONSE["output"][0]["content"][0]["text"],
@@ -188,9 +190,13 @@ class TestAgentsSdkInstrumentation:
         assert SpanAttributes.LLM_USAGE_COMPLETION_TOKENS in instrumented_span.attributes, f"Missing {SpanAttributes.LLM_USAGE_COMPLETION_TOKENS} attribute"
         assert instrumented_span.attributes[SpanAttributes.LLM_USAGE_COMPLETION_TOKENS] == REAL_OPENAI_RESPONSE["usage"]["output_tokens"], "Incorrect completion_tokens value"
         
-        reasoning_attr = f"{SpanAttributes.LLM_USAGE_TOTAL_TOKENS}.reasoning"
-        assert reasoning_attr in instrumented_span.attributes, f"Missing {reasoning_attr} attribute"
-        assert instrumented_span.attributes[reasoning_attr] == REAL_OPENAI_RESPONSE["usage"]["output_tokens_details"]["reasoning_tokens"], "Incorrect reasoning_tokens value"
+        # Verify reasoning tokens with proper semantic convention
+        assert SpanAttributes.LLM_USAGE_REASONING_TOKENS in instrumented_span.attributes, f"Missing {SpanAttributes.LLM_USAGE_REASONING_TOKENS} attribute"
+        assert instrumented_span.attributes[SpanAttributes.LLM_USAGE_REASONING_TOKENS] == REAL_OPENAI_RESPONSE["usage"]["output_tokens_details"]["reasoning_tokens"], "Incorrect reasoning_tokens value"
+        
+        # Verify cached tokens with proper semantic convention
+        assert SpanAttributes.LLM_USAGE_CACHE_READ_INPUT_TOKENS in instrumented_span.attributes, f"Missing {SpanAttributes.LLM_USAGE_CACHE_READ_INPUT_TOKENS} attribute"
+        assert instrumented_span.attributes[SpanAttributes.LLM_USAGE_CACHE_READ_INPUT_TOKENS] == REAL_OPENAI_RESPONSE["usage"]["input_tokens_details"]["cached_tokens"], "Incorrect cached_tokens value"
         
     def test_tool_calls_span_serialization(self, instrumentation):
         """Test serialization of Generation spans with tool calls from Agents SDK using real fixture data"""
