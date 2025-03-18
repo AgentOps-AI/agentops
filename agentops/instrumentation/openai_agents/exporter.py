@@ -152,7 +152,7 @@ class OpenAIAgentsExporter:
     
     def _export_trace(self, trace: Any) -> None:
         """Internal method to export a trace - can be mocked in tests."""
-        logger.debug(f"[OpenAIAgentsExporter] Exporting trace: {getattr(trace, 'trace_id', 'unknown')}")
+        trace_id = getattr(trace, 'trace_id', 'unknown')
         
         # Get tracer from provider or use direct get_tracer
         tracer = get_tracer(LIBRARY_NAME, LIBRARY_VERSION, self.tracer_provider)
@@ -191,9 +191,6 @@ class OpenAIAgentsExporter:
             for key, value in trace.metadata.items():
                 if isinstance(value, (str, int, float, bool)):
                     span.set_attribute(f"trace.metadata.{key}", value)
-        
-        # Debug log to verify span creation 
-        logger.debug(f"Created span for trace: agents.trace.{trace.name}")
     
     def export_span(self, span: Any) -> None:
         """Export a span to create OpenTelemetry spans."""
@@ -211,10 +208,8 @@ class OpenAIAgentsExporter:
         span_data = span.span_data
         span_type = span_data.__class__.__name__
         span_id = getattr(span, 'span_id', 'unknown')
-        trace_id = getattr(span, 'trace_id', None)
+        trace_id = getattr(span, 'trace_id', 'unknown')
         parent_id = getattr(span, 'parent_id', None)
-        
-        logger.debug(f"[OpenAIAgentsExporter] Exporting span: {span_id} (type: {span_type})")
         
         # Get tracer from provider or use direct get_tracer
         tracer = get_tracer(LIBRARY_NAME, LIBRARY_VERSION, self.tracer_provider)
@@ -281,8 +276,18 @@ class OpenAIAgentsExporter:
                 trace_hash = hash(trace_id) % 10000
                 attributes["agentops.trace_hash"] = str(trace_hash)
             except Exception as e:
-                logger.error(f"[OpenAIAgentsExporter] Error creating trace hash: {e}")
+                logger.error(f"[EXPORTER] Error creating trace hash: {e}")
         
+        # Log the trace ID for debugging
+        if "agentops.original_trace_id" in attributes:
+            # Import the helper function from processor.py
+            from agentops.instrumentation.openai_agents.processor import get_otel_trace_id
+            
+            # Get the OTel trace ID
+            otel_trace_id = get_otel_trace_id()
+            if otel_trace_id:
+                logger.debug(f"[SPAN] Export | Type: {span_type} | TRACE ID: {otel_trace_id}")
+
         # Use the internal method to create the span
         self._create_span(tracer, span_name, span_kind, attributes, span)
             
@@ -309,14 +314,6 @@ class OpenAIAgentsExporter:
         ) as otel_span:
             # Record error if present
             self._handle_span_error(span, otel_span)
-            
-            # Any additional debug logging
-            if hasattr(otel_span, "context") and hasattr(otel_span.context, "span_id"):
-                if isinstance(otel_span.context.span_id, int):  # Ensure it's an integer
-                    otel_span_id = f"{otel_span.context.span_id:x}"
-                    span_id = getattr(span, 'span_id', 'unknown')
-                    logger.debug(f"[OpenAIAgentsExporter] Created span {otel_span_id} for {span_id}")
-                    
             return otel_span
     
     def _get_span_kind(self, span_type: str) -> SpanKind:

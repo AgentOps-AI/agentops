@@ -1,4 +1,4 @@
-from typing import Any, Dict, Optional
+from typing import Any, Dict, Optional, Union
 import time
 import weakref
 from contextlib import contextmanager
@@ -10,6 +10,28 @@ from agentops.logging import logger
 from agentops.instrumentation.openai_agents import LIBRARY_NAME, LIBRARY_VERSION
 from agentops.instrumentation.openai_agents.tokens import process_token_usage
 from agentops.instrumentation.openai_agents.metrics import record_token_usage
+
+
+def get_otel_trace_id() -> Union[str, None]:
+    """
+    Get the current OpenTelemetry trace ID as a hexadecimal string.
+    
+    This is the native trace ID that appears in the AgentOps API and is used
+    for correlation between logs and the API.
+    
+    Returns:
+        The trace ID as a 32-character hex string, or None if not available
+    """
+    try:
+        current_span = trace.get_current_span()
+        if hasattr(current_span, "get_span_context"):
+            ctx = current_span.get_span_context()
+            if hasattr(ctx, "trace_id") and ctx.trace_id:
+                # Convert trace_id to 32-character hex string as shown in the API
+                return f"{ctx.trace_id:032x}" if isinstance(ctx.trace_id, int) else str(ctx.trace_id)
+    except Exception:
+        pass
+    return None
 
 
 class OpenAIAgentsProcessor:
@@ -71,13 +93,12 @@ class OpenAIAgentsProcessor:
     def on_trace_start(self, sdk_trace: Any) -> None:
         """Called when a trace starts in the Agents SDK."""
         if not hasattr(sdk_trace, 'trace_id'):
-            logger.debug("Trace does not have trace_id attribute, skipping")
+            logger.debug("[TRACE] Missing trace_id attribute, operation skipped")
             return
         
         # Record trace start time and metadata
         workflow_name = getattr(sdk_trace, 'name', 'unknown')
         trace_id = getattr(sdk_trace, 'trace_id', 'unknown')
-        logger.debug(f"Starting trace: {workflow_name} (ID: {trace_id})")
         
         # Store basic trace information
         self._active_traces[trace_id] = {
@@ -90,24 +111,42 @@ class OpenAIAgentsProcessor:
         
         # Forward to exporter if available
         if self.exporter:
+            # Get the OpenTelemetry root trace ID that appears in the AgentOps API
+            otel_trace_id = get_otel_trace_id()
+            
+            # Log trace start with root trace ID if available
+            if otel_trace_id:
+                logger.debug(f"[TRACE] Started: {workflow_name} | TRACE ID: {otel_trace_id}")
+            else:
+                logger.debug(f"[TRACE] Started: {workflow_name} | No OTel trace ID available")
+                
             self.exporter.export_trace(sdk_trace)
 
     def on_trace_end(self, sdk_trace: Any) -> None:
         """Called when a trace ends in the Agents SDK."""
         if not hasattr(sdk_trace, 'trace_id'):
-            logger.debug("Trace does not have trace_id attribute, skipping")
+            logger.debug("[TRACE] Missing trace_id attribute, operation skipped")
             return
             
         trace_id = sdk_trace.trace_id
         if trace_id not in self._active_traces:
-            logger.debug(f"Trace ID {trace_id} not found in active traces, may be missing start event")
+            logger.debug(f"[TRACE] Trace ID {trace_id} not found in active traces, may be missing start event")
             return
         
         # Get trace metadata and calculate duration
         trace_data = self._active_traces[trace_id]
         start_time = trace_data.get('start_time', time.time())
         execution_time = time.time() - start_time
-        logger.debug(f"Ending trace: {trace_data.get('workflow_name', 'unknown')} (ID: {trace_id}), duration: {execution_time:.2f}s")
+        workflow_name = trace_data.get('workflow_name', 'unknown')
+        
+        # Get the OpenTelemetry root trace ID that appears in the AgentOps API
+        otel_trace_id = get_otel_trace_id()
+        
+        # Log trace end with root trace ID if available
+        if otel_trace_id:
+            logger.debug(f"[TRACE] Ended: {workflow_name} | TRACE ID: {otel_trace_id} | Duration: {execution_time:.2f}s")
+        else:
+            logger.debug(f"[TRACE] Ended: {workflow_name} | Duration: {execution_time:.2f}s")
         
         # Record execution time metric
         if self._agent_execution_time_histogram:
@@ -131,7 +170,6 @@ class OpenAIAgentsProcessor:
         
         # Clean up trace resources
         self._active_traces.pop(trace_id, None)
-        logger.debug(f"Cleaned up trace resources for trace {trace_id}")
 
     def on_span_start(self, span: Any) -> None:
         """Called when a span starts in the Agents SDK."""
@@ -144,7 +182,7 @@ class OpenAIAgentsProcessor:
         trace_id = getattr(span, 'trace_id', None)
         parent_id = getattr(span, 'parent_id', None)
         
-        logger.debug(f"Processing span start: Type={span_type}, ID={span_id}, Parent={parent_id}")
+        logger.debug(f"[SPAN] Started: {span_type} | ID: {span_id} | Parent: {parent_id}")
         
         # Extract agent name for metrics
         agent_name = self._extract_agent_name(span_data)
@@ -187,7 +225,7 @@ class OpenAIAgentsProcessor:
         span_id = getattr(span, 'span_id', 'unknown')
         trace_id = getattr(span, 'trace_id', None)
         
-        logger.debug(f"Processing span end: Type={span_type}, ID={span_id}")
+        logger.debug(f"[SPAN] Ended: {span_type} | ID: {span_id}")
         
         # Process generation spans for token usage metrics
         if span_type == "GenerationSpanData" and self._agent_token_usage_histogram:
@@ -217,17 +255,13 @@ class OpenAIAgentsProcessor:
     
     def shutdown(self) -> None:
         """Called when the application stops."""
-        # Log debug info about resources being cleaned up
-        logger.debug(f"Shutting down OpenAIAgentsProcessor - cleaning up {len(self._active_traces)} traces")
-        
-        # Clean up all resources
+        # Log debug info about resources being cleaned up and clear
+        logger.debug(f"[PROCESSOR] Shutting down - cleaning up {len(self._active_traces)} traces")
         self._active_traces.clear()
-        logger.debug("OpenAIAgentsProcessor resources successfully cleaned up")
 
     def force_flush(self) -> None:
         """Forces an immediate flush of all queued spans/traces."""
-        # We don't queue spans, but we could log any pending spans if needed
-        logger.debug("Force flush called on OpenAIAgentsProcessor")
+        # We don't queue spans so this is a no-op
         pass
     
     def _extract_agent_name(self, span_data: Any) -> str:

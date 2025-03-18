@@ -1,6 +1,6 @@
-# OpenTelemetry Context Propagation
+# OpenTelemetry Implementation Notes
 
-This document outlines best practices and implementation details for OpenTelemetry context propagation in AgentOps instrumentations.
+This document outlines best practices and implementation details for OpenTelemetry in AgentOps instrumentations.
 
 ## Key Concepts
 
@@ -88,4 +88,46 @@ To verify proper context propagation:
 ```python
 # Example debug logging
 logging.debug(f"Span {span.name} has trace ID: {format_trace_id(span.get_span_context().trace_id)}")
+```
+
+## Timestamp Handling in OpenTelemetry
+
+When working with OpenTelemetry spans and timestamps:
+
+1. **Automatic Timestamp Tracking:** OpenTelemetry automatically tracks timestamps for spans. When a span is created with `tracer.start_span()` or `tracer.start_as_current_span()`, the start time is captured automatically. When `span.end()` is called, the end time is recorded.
+
+2. **No Manual Timestamp Setting Required:** The standard instrumentation pattern does not require manually setting timestamp attributes on spans. Instead, OpenTelemetry handles this internally through the SpanProcessor and Exporter classes.
+
+3. **Timestamp Representation:** In the OpenTelemetry data model, timestamps are stored as nanoseconds since the Unix epoch (January 1, 1970).
+
+4. **Serialization Responsibility:** The serialization of timestamps from OTel spans to output formats like JSON is handled by the Exporter components. If timestamps aren't appearing correctly in output APIs, the issue is likely in the API exporter, not in the span creation code.
+
+5. **Debugging Timestamps:** To debug timestamp issues, verify that spans are properly starting and ending, rather than manually setting timestamp attributes:
+
+```python
+# Good pattern - timestamps handled by OpenTelemetry automatically
+with tracer.start_as_current_span("my_operation") as span:
+    # Do work
+    pass  # span.end() is called automatically
+```
+
+Note: If timestamps are missing in API output (e.g., empty "start_time" fields), focus on fixes in the exporter and serialization layer, not by manually tracking timestamps in instrumentation code.
+
+## Attributes in OpenTelemetry
+
+When working with span attributes in OpenTelemetry:
+
+1. **Root Attributes Node:** The root `attributes` object in the API output JSON should always be empty. This is by design. All attribute data should be stored in the `span_attributes` object.
+
+2. **Span Attributes:** The `span_attributes` object is where all user-defined and semantic attribute data should be stored. This allows for a structured, hierarchical representation of attributes.
+
+3. **Structure Difference:** While the root `attributes` appears as an empty object in the API output, this is normal and expected. Do not attempt to populate this object directly or duplicate data from `span_attributes` into it.
+
+4. **Setting Attributes:** Always set span attributes using the semantic conventions defined in the `agentops/semconv` module:
+
+```python
+from agentops.semconv import agent
+
+# Good pattern - using semantic conventions
+span.set_attribute(agent.AGENT_NAME, "My Agent")
 ```
