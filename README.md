@@ -82,7 +82,7 @@ pip install agentops
 ```
 
 
-#### Session replays in 2 lines of code
+#### Trace replays in 2 lines of code
 
 Initialize the AgentOps client and automatically get analytics on all your LLM calls.
 
@@ -97,10 +97,10 @@ agentops.init( < INSERT YOUR API KEY HERE >)
 ...
 
 # End of program
-agentops.end_session('Success')
+agentops.end_trace('Success')
 ```
 
-All your sessions can be viewed on the [AgentOps dashboard](https://app.agentops.ai?ref=gh)
+All your traces can be viewed on the [AgentOps dashboard](https://app.agentops.ai?ref=gh)
 <br/>
 
 <details>
@@ -117,9 +117,9 @@ All your sessions can be viewed on the [AgentOps dashboard](https://app.agentops
 </details>
 
 <details>
-  <summary>Session Replays</summary>
+  <summary>Trace Replays</summary>
   <a href="https://app.agentops.ai?ref=gh">
-    <img src="docs/images/external/app_screenshots/session-replay.png" style="width: 90%;" alt="Session Replays"/>
+    <img src="docs/images/external/app_screenshots/session-replay.png" style="width: 90%;" alt="Trace Replays"/>
   </a>
 </details>
 
@@ -140,12 +140,12 @@ Add powerful observability to your agents, tools, and functions with as little c
 Refer to our [documentation](http://docs.agentops.ai)
 
 ```python
-# Create a session span (root for all other spans)
-from agentops.sdk.decorators import session
+# Create a trace span (root for all other spans)
+from agentops.sdk.decorators import trace
 
-@session
+@trace
 def my_workflow():
-    # Your session code here
+    # Your trace code here
     return result
 ```
 
@@ -183,7 +183,7 @@ def my_workflow(data):
 
 ```python
 # Nest decorators for proper span hierarchy
-from agentops.sdk.decorators import session, agent, operation
+from agentops.sdk.decorators import trace, agent, operation
 
 @agent
 class MyAgent:
@@ -196,8 +196,8 @@ class MyAgent:
         result = self.nested_operation("test message")
         return result
 
-@session
-def my_session():
+@trace
+def my_trace():
     agent = MyAgent()
     return agent.main_operation()
 ```
