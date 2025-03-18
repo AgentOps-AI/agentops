@@ -68,7 +68,7 @@ class Client:
                 session = start_session(tags=list(self.config.default_tags))
             else:
                 session = start_session()
-        
+
         return session
 
     def configure(self, **kwargs):

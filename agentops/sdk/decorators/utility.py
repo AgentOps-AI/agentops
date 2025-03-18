@@ -31,6 +31,7 @@ def set_workflow_name(workflow_name: str) -> None:
 def set_entity_path(entity_path: str) -> None:
     attach(set_value("entity_path", entity_path))
 
+
 # Helper functions for content management
 
 
@@ -73,17 +74,14 @@ def _get_current_span_info():
             "span_id": f"{ctx.span_id:x}" if hasattr(ctx, "span_id") else "None",
             "trace_id": f"{ctx.trace_id:x}" if hasattr(ctx, "trace_id") else "None",
             "name": getattr(current_span, "name", "Unknown"),
-            "is_recording": getattr(current_span, "is_recording", False)
+            "is_recording": getattr(current_span, "is_recording", False),
         }
     return {"name": "No current span"}
 
 
 @contextmanager
 def _create_as_current_span(
-    operation_name: str,
-    span_kind: str,
-    version: Optional[int] = None,
-    attributes: Optional[Dict[str, Any]] = None
+    operation_name: str, span_kind: str, version: Optional[int] = None, attributes: Optional[Dict[str, Any]] = None
 ) -> Generator[Span, None, None]:
     """
     Create and yield an instrumentation span as the current span using proper context management.
@@ -104,7 +102,7 @@ def _create_as_current_span(
     # Log before we do anything
     before_span = _get_current_span_info()
     logger.debug(f"[DEBUG] BEFORE {operation_name}.{span_kind} - Current context: {before_span}")
-    
+
     # Create span with proper naming convention
     span_name = f"{operation_name}.{span_kind}"
 
@@ -125,26 +123,25 @@ def _create_as_current_span(
 
     # Get current context explicitly to debug it
     current_context = context_api.get_current()
-    
+
     # Use OpenTelemetry's context manager to properly handle span lifecycle
     with tracer.start_as_current_span(span_name, attributes=attributes, context=current_context) as span:
         # Log after span creation
         if hasattr(span, "get_span_context"):
             span_ctx = span.get_span_context()
-            logger.debug(f"[DEBUG] CREATED {span_name} - span_id: {span_ctx.span_id:x}, parent: {before_span.get('span_id', 'None')}")
-        
+            logger.debug(
+                f"[DEBUG] CREATED {span_name} - span_id: {span_ctx.span_id:x}, parent: {before_span.get('span_id', 'None')}"
+            )
+
         yield span
-    
+
     # Log after we're done
     after_span = _get_current_span_info()
     logger.debug(f"[DEBUG] AFTER {operation_name}.{span_kind} - Returned to context: {after_span}")
 
 
 def _make_span(
-    operation_name: str,
-    span_kind: str,
-    version: Optional[int] = None,
-    attributes: Optional[Dict[str, Any]] = None
+    operation_name: str, span_kind: str, version: Optional[int] = None, attributes: Optional[Dict[str, Any]] = None
 ) -> tuple:
     """
     Create a span without context management for manual span lifecycle control.
@@ -167,7 +164,7 @@ def _make_span(
     # Log before we do anything
     before_span = _get_current_span_info()
     logger.debug(f"[DEBUG] BEFORE _make_span {operation_name}.{span_kind} - Current context: {before_span}")
-    
+
     # Create span with proper naming convention
     span_name = f"{operation_name}.{span_kind}"
 
@@ -188,18 +185,20 @@ def _make_span(
 
     # Get current context explicitly
     current_context = context_api.get_current()
-    
+
     # Create the span with explicit context
     span = tracer.start_span(span_name, context=current_context, attributes=attributes)
 
     # Set as current context and get token for later detachment
     ctx = trace.set_span_in_context(span)
     token = context_api.attach(ctx)
-    
+
     # Log after span creation
     if hasattr(span, "get_span_context"):
         span_ctx = span.get_span_context()
-        logger.debug(f"[DEBUG] CREATED _make_span {span_name} - span_id: {span_ctx.span_id:x}, parent: {before_span.get('span_id', 'None')}")
+        logger.debug(
+            f"[DEBUG] CREATED _make_span {span_name} - span_id: {span_ctx.span_id:x}, parent: {before_span.get('span_id', 'None')}"
+        )
 
     return span, ctx, token
 
@@ -236,15 +235,15 @@ def _finalize_span(span: trace.Span, token: Any) -> None:
     if hasattr(span, "get_span_context") and hasattr(span.get_span_context(), "span_id"):
         span_id = f"{span.get_span_context().span_id:x}"
         logger.debug(f"[DEBUG] ENDING span {getattr(span, 'name', 'unknown')} - span_id: {span_id}")
-    
+
     span.end()
-    
+
     # Debug info before detaching
     current_after_end = _get_current_span_info()
     logger.debug(f"[DEBUG] AFTER span.end() - Current context: {current_after_end}")
-    
+
     context_api.detach(token)
-    
+
     # Debug info after detaching
     final_context = _get_current_span_info()
     logger.debug(f"[DEBUG] AFTER detach - Final context: {final_context}")

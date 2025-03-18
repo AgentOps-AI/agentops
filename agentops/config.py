@@ -49,7 +49,7 @@ class Config:
         default_factory=lambda: get_env_int("AGENTOPS_MAX_WAIT_TIME", 5000),
         metadata={"description": "Maximum time in milliseconds to wait for API responses"},
     )
-    
+
     export_flush_interval: int = field(
         default_factory=lambda: get_env_int("AGENTOPS_EXPORT_FLUSH_INTERVAL", 1000),
         metadata={"description": "Time interval in milliseconds between automatic exports of telemetry data"},
@@ -154,7 +154,7 @@ class Config:
 
         if max_wait_time is not None:
             self.max_wait_time = max_wait_time
-            
+
         if export_flush_interval is not None:
             self.export_flush_interval = export_flush_interval
 
