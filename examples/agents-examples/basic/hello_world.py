@@ -9,6 +9,7 @@ import agentops
 
 agentops.init()
 
+
 async def main():
     agent = Agent(
         name="Assistant",

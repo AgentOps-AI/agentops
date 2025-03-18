@@ -13,12 +13,14 @@ class NoTraceException(Exception):
 
 class MultiSessionException(Exception):
     """@deprecated Use MultiTraceException instead."""
+
     def __init__(self, message):
         super().__init__(message)
 
 
 class NoSessionException(Exception):
     """@deprecated Use NoTraceException instead."""
+
     def __init__(self, message="No session found"):
         super().__init__(message)
 

@@ -7,10 +7,11 @@ from agentops.sdk.core import TracingCore
 Benchmark script for measuring TracingCore initialization time.
 """
 
+
 def run_benchmark():
     """
     Run a benchmark of TracingCore initialization.
-    
+
     Returns:
         Dictionary with timing results
     """
@@ -24,19 +25,19 @@ def run_benchmark():
 
     return {
         "init": init_time,
-        "total": init_time  # Total time is just init time now
+        "total": init_time,  # Total time is just init time now
     }
 
 
 def print_results(results):
     """
     Print benchmark results in a formatted way.
-    
+
     Args:
         results: Dictionary with timing results
     """
     print("\n=== BENCHMARK RESULTS ===")
-    
+
     print(f"\nINIT TIME: {results['init']:.6f}s")
     print(f"TOTAL TIME: {results['total']:.6f}s")
 
@@ -44,4 +45,4 @@ def print_results(results):
 if __name__ == "__main__":
     print("Running TracingCore benchmark...")
     results = run_benchmark()
-    print_results(results) 
+    print_results(results)

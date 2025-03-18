@@ -68,7 +68,7 @@ class Client:
                 trace = start_trace(tags=list(self.config.default_tags))
             else:
                 trace = start_trace()
-        
+
         return trace
 
     def configure(self, **kwargs):

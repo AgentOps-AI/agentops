@@ -5,10 +5,8 @@ import threading
 from typing import List, Optional
 
 from opentelemetry import metrics, trace
-from opentelemetry.exporter.otlp.proto.http.metric_exporter import \
-    OTLPMetricExporter
-from opentelemetry.exporter.otlp.proto.http.trace_exporter import \
-    OTLPSpanExporter
+from opentelemetry.exporter.otlp.proto.http.metric_exporter import OTLPMetricExporter
+from opentelemetry.exporter.otlp.proto.http.trace_exporter import OTLPSpanExporter
 from opentelemetry.sdk.metrics import MeterProvider
 from opentelemetry.sdk.metrics.export import PeriodicExportingMetricReader
 from opentelemetry.sdk.resources import Resource
@@ -66,10 +64,7 @@ def setup_telemetry(
     trace.set_tracer_provider(provider)
 
     # Create exporter with authentication
-    exporter = OTLPSpanExporter(
-        endpoint=exporter_endpoint,
-        headers={"Authorization": f"Bearer {jwt}"} if jwt else {}
-    )
+    exporter = OTLPSpanExporter(endpoint=exporter_endpoint, headers={"Authorization": f"Bearer {jwt}"} if jwt else {})
 
     # Regular processor for normal spans and immediate export
     processor = BatchSpanProcessor(
@@ -82,10 +77,7 @@ def setup_telemetry(
 
     # Setup metrics
     metric_reader = PeriodicExportingMetricReader(
-        OTLPMetricExporter(
-            endpoint=metrics_endpoint,
-            headers={"Authorization": f"Bearer {jwt}"} if jwt else {}
-        )
+        OTLPMetricExporter(endpoint=metrics_endpoint, headers={"Authorization": f"Bearer {jwt}"} if jwt else {})
     )
     meter_provider = MeterProvider(resource=resource, metric_readers=[metric_reader])
     metrics.set_meter_provider(meter_provider)
@@ -201,7 +193,7 @@ class TracingCore:
             # Perform a single flush on the SynchronousSpanProcessor (which takes care of all processors' shutdown)
             if not self._initialized:
                 return
-            self._provider._active_span_processor.force_flush(self.config['max_wait_time'])  # type: ignore
+            self._provider._active_span_processor.force_flush(self.config["max_wait_time"])  # type: ignore
 
             # Shutdown provider
             if self._provider:
