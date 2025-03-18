@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "agentops"
-version = "0.4.3"
+version = "0.4.4"
 authors = [
   { name="Alex Reibman", email="areibman@gmail.com" },
   { name="Shawn Qiu", email="siyangqiu@gmail.com" },
@@ -34,24 +34,26 @@ dependencies = [
     "termcolor>=2.3.0,<2.5.0",
     "PyYAML>=5.3,<7.0",
     "packaging>=21.0,<25.0", # Lower bound of 21.0 ensures compatibility with Python 3.9+
-    "opentelemetry-api==1.22.0; python_version<'3.10'",
-    "opentelemetry-api>=1.27.0; python_version>='3.10'",
-    "opentelemetry-sdk==1.22.0; python_version<'3.10'",
-    "opentelemetry-sdk>=1.27.0; python_version>='3.10'",
-    "opentelemetry-exporter-otlp-proto-http==1.22.0; python_version<'3.10'",
-    "opentelemetry-exporter-otlp-proto-http>=1.27.0; python_version>='3.10'",
+    "opentelemetry-sdk==1.29.0; python_version<'3.10'",
+    "opentelemetry-sdk>1.29.0; python_version>='3.10'",
+    "opentelemetry-api==1.29.0; python_version<'3.10'",
+    "opentelemetry-api>1.29.0; python_version>='3.10'",
+    "opentelemetry-exporter-otlp-proto-http==1.29.0; python_version<'3.10'",
+    "opentelemetry-exporter-otlp-proto-http>1.29.0; python_version>='3.10'",
     # "opentelemetry-exporter-otlp-proto-grpc==1.22.0; python_version<'3.10'",
     # "opentelemetry-exporter-otlp-proto-grpc>=1.27.0; python_version>='3.10'",
     "ordered-set>=4.0.0,<5.0.0",
     "wrapt>=1.0.0,<2.0.0",
-    "opentelemetry-instrumentation>=0.48b0",
-    "opentelemetry-semantic-conventions>=0.43b0",
-    "opentelemetry-semantic-conventions-ai>=0.4.2",
+    # "opentelemetry-instrumentation",
+    "opentelemetry-instrumentation==0.50b0; python_version<'3.10'",
+    "opentelemetry-instrumentation>0.50b0; python_version>='3.10'",
+    "opentelemetry-semantic-conventions==0.50b0; python_version<'3.10'",
+    "opentelemetry-semantic-conventions>0.50b0; python_version>='3.10'",
 ]
 
 [dependency-groups]
 test = [
-    "openai>=1.0.0",
+    "openai>=1.60.0",
     "anthropic",
     # ;;
     # The below is a really hard dependency, that can be installed only between python >=3.10,<3.13.
@@ -94,18 +96,11 @@ Issues = "https://github.com/AgentOps-AI/agentops/issues"
 
 [tool.uv]
 compile-bytecode = true  # Enable bytecode compilation for better performance
+resolution = "highest"
 default-groups = ["test", "dev"]  # Default groups to install for development
 constraint-dependencies = [
     "pydantic>=2.8.0; python_version>='3.13'",  # Ensure Python 3.13 compatibility
     "typing-extensions; python_version>='3.13'",  # Required for Pydantic with Python 3.13
-    # For Python 3.9, use original OpenTelemetry versions
-    "opentelemetry-api==1.22.0; python_version<'3.10'",
-    "opentelemetry-sdk==1.22.0; python_version<'3.10'",
-    "opentelemetry-exporter-otlp-proto-http==1.22.0; python_version<'3.10'",
-    # For Python ≥3.10 (where autogen-core might be present), use newer versions
-    "opentelemetry-api>=1.27.0; python_version>='3.10'",
-    "opentelemetry-sdk>=1.27.0; python_version>='3.10'",
-    "opentelemetry-exporter-otlp-proto-http>=1.27.0; python_version>='3.10'",
 ]
 
 [tool.autopep8]

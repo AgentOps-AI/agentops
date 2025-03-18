@@ -20,6 +20,7 @@ class ConfigDict(TypedDict):
     api_key: Optional[str]
     endpoint: Optional[str]
     max_wait_time: Optional[int]
+    export_flush_interval: Optional[int]
     max_queue_size: Optional[int]
     default_tags: Optional[List[str]]
     instrument_llm_calls: Optional[bool]
@@ -32,7 +33,7 @@ class ConfigDict(TypedDict):
     prefetch_jwt_token: Optional[bool]
 
 
-@dataclass(slots=True)
+@dataclass
 class Config:
     api_key: Optional[str] = field(
         default_factory=lambda: os.getenv("AGENTOPS_API_KEY"),
@@ -47,6 +48,11 @@ class Config:
     max_wait_time: int = field(
         default_factory=lambda: get_env_int("AGENTOPS_MAX_WAIT_TIME", 5000),
         metadata={"description": "Maximum time in milliseconds to wait for API responses"},
+    )
+    
+    export_flush_interval: int = field(
+        default_factory=lambda: get_env_int("AGENTOPS_EXPORT_FLUSH_INTERVAL", 1000),
+        metadata={"description": "Time interval in milliseconds between automatic exports of telemetry data"},
     )
 
     max_queue_size: int = field(
@@ -65,7 +71,7 @@ class Config:
     )
 
     auto_start_session: bool = field(
-        default_factory=lambda: get_env_bool("AGENTOPS_AUTO_START_SESSION", False),
+        default_factory=lambda: get_env_bool("AGENTOPS_AUTO_START_SESSION", True),
         metadata={"description": "Whether to automatically start a session when initializing"},
     )
 
@@ -85,7 +91,7 @@ class Config:
     )
 
     log_level: Union[str, int] = field(
-        default_factory=lambda: os.getenv("AGENTOPS_LOG_LEVEL", "WARNING"),
+        default_factory=lambda: os.getenv("AGENTOPS_LOG_LEVEL", "INFO"),
         metadata={"description": "Logging level for AgentOps logs"},
     )
 
@@ -119,6 +125,7 @@ class Config:
         api_key: Optional[str] = None,
         endpoint: Optional[str] = None,
         max_wait_time: Optional[int] = None,
+        export_flush_interval: Optional[int] = None,
         max_queue_size: Optional[int] = None,
         default_tags: Optional[List[str]] = None,
         instrument_llm_calls: Optional[bool] = None,
@@ -147,6 +154,9 @@ class Config:
 
         if max_wait_time is not None:
             self.max_wait_time = max_wait_time
+            
+        if export_flush_interval is not None:
+            self.export_flush_interval = export_flush_interval
 
         if max_queue_size is not None:
             self.max_queue_size = max_queue_size
@@ -170,7 +180,14 @@ class Config:
             self.env_data_opt_out = env_data_opt_out
 
         if log_level is not None:
-            self.log_level = log_level
+            if isinstance(log_level, str):
+                log_level_str = log_level.upper()
+                if hasattr(logging, log_level_str):
+                    self.log_level = getattr(logging, log_level_str)
+                else:
+                    self.log_level = logging.INFO
+            else:
+                self.log_level = log_level
 
         if fail_safe is not None:
             self.fail_safe = fail_safe
@@ -195,6 +212,7 @@ class Config:
             "api_key": self.api_key,
             "endpoint": self.endpoint,
             "max_wait_time": self.max_wait_time,
+            "export_flush_interval": self.export_flush_interval,
             "max_queue_size": self.max_queue_size,
             "default_tags": self.default_tags,
             "instrument_llm_calls": self.instrument_llm_calls,
