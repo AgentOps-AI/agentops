@@ -15,17 +15,18 @@ agentops.instrumentation.openai.
 from typing import Optional
 from agentops.logging import logger
 
-def get_version() -> Optional[str]:
+def get_version() -> str:
     """Get the version of the agents SDK, or 'unknown' if not found"""
     try:
         import agents.version
         if hasattr(agents.version, '__version__'):
-            return agents.version.__version__
+            return str(agents.version.__version__)
+        return "unknown"
     except ImportError:
-        return None
+        return "unknown"
 
 LIBRARY_NAME = "openai-agents"
-LIBRARY_VERSION: Optional[str] = get_version()  # Actual OpenAI Agents SDK version
+LIBRARY_VERSION: str = get_version()  # Actual OpenAI Agents SDK version
 
 # Import after defining constants to avoid circular imports
 from .instrumentor import OpenAIAgentsInstrumentor
