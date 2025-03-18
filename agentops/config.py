@@ -24,9 +24,9 @@ class ConfigDict(TypedDict):
     max_queue_size: Optional[int]
     default_tags: Optional[List[str]]
     instrument_llm_calls: Optional[bool]
-    auto_start_session: Optional[bool]
+    auto_start_trace: Optional[bool]
     auto_init: Optional[bool]
-    skip_auto_end_session: Optional[bool]
+    skip_auto_end_trace: Optional[bool]
     env_data_opt_out: Optional[bool]
     log_level: Optional[Union[str, int]]
     fail_safe: Optional[bool]
@@ -70,9 +70,9 @@ class Config:
         metadata={"description": "Whether to automatically instrument and track LLM API calls"},
     )
 
-    auto_start_session: bool = field(
-        default_factory=lambda: get_env_bool("AGENTOPS_AUTO_START_SESSION", True),
-        metadata={"description": "Whether to automatically start a session when initializing"},
+    auto_start_trace: bool = field(
+        default_factory=lambda: get_env_bool("AGENTOPS_AUTO_START_TRACE", True),
+        metadata={"description": "Whether to automatically start a trace when initializing"},
     )
 
     auto_init: bool = field(
@@ -80,9 +80,9 @@ class Config:
         metadata={"description": "Whether to automatically initialize the client on import"},
     )
 
-    skip_auto_end_session: bool = field(
-        default_factory=lambda: get_env_bool("AGENTOPS_SKIP_AUTO_END_SESSION", False),
-        metadata={"description": "Whether to skip automatically ending sessions on program exit"},
+    skip_auto_end_trace: bool = field(
+        default_factory=lambda: get_env_bool("AGENTOPS_SKIP_AUTO_END_TRACE", False),
+        metadata={"description": "Whether to skip automatically ending traces on program exit"},
     )
 
     env_data_opt_out: bool = field(
@@ -129,9 +129,9 @@ class Config:
         max_queue_size: Optional[int] = None,
         default_tags: Optional[List[str]] = None,
         instrument_llm_calls: Optional[bool] = None,
-        auto_start_session: Optional[bool] = None,
+        auto_start_trace: Optional[bool] = None,
         auto_init: Optional[bool] = None,
-        skip_auto_end_session: Optional[bool] = None,
+        skip_auto_end_trace: Optional[bool] = None,
         env_data_opt_out: Optional[bool] = None,
         log_level: Optional[Union[str, int]] = None,
         fail_safe: Optional[bool] = None,
@@ -167,14 +167,14 @@ class Config:
         if instrument_llm_calls is not None:
             self.instrument_llm_calls = instrument_llm_calls
 
-        if auto_start_session is not None:
-            self.auto_start_session = auto_start_session
+        if auto_start_trace is not None:
+            self.auto_start_trace = auto_start_trace
 
         if auto_init is not None:
             self.auto_init = auto_init
 
-        if skip_auto_end_session is not None:
-            self.skip_auto_end_session = skip_auto_end_session
+        if skip_auto_end_trace is not None:
+            self.skip_auto_end_trace = skip_auto_end_trace
 
         if env_data_opt_out is not None:
             self.env_data_opt_out = env_data_opt_out
@@ -216,9 +216,9 @@ class Config:
             "max_queue_size": self.max_queue_size,
             "default_tags": self.default_tags,
             "instrument_llm_calls": self.instrument_llm_calls,
-            "auto_start_session": self.auto_start_session,
+            "auto_start_trace": self.auto_start_trace,
             "auto_init": self.auto_init,
-            "skip_auto_end_session": self.skip_auto_end_session,
+            "skip_auto_end_trace": self.skip_auto_end_trace,
             "env_data_opt_out": self.env_data_opt_out,
             "log_level": self.log_level,
             "fail_safe": self.fail_safe,

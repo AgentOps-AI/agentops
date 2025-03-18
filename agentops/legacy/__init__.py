@@ -16,17 +16,17 @@ from agentops.sdk.core import TracingCore
 from agentops.semconv.span_kinds import SpanKind
 from agentops.exceptions import AgentOpsClientNotInitializedException
 
-_current_session: Optional["Session"] = None
+_current_trace: Optional["Trace"] = None
 
 
-class Session:
+class Trace:
     """
     This class provides compatibility with CrewAI >= 0.105.0, which uses an event-based
-    integration pattern where it calls methods directly on the Session object:
+    integration pattern where it calls methods directly on the Trace object:
     
     - create_agent(): Called when a CrewAI agent is created
     - record(): Called when a CrewAI tool is used
-    - end_session(): Called when a CrewAI run completes
+    - end_trace(): Called when a CrewAI run completes
     """
 
     def __init__(self, span: Any, token: Any):
@@ -57,9 +57,9 @@ class Session:
         """
         pass
 
-    def end_session(self, **kwargs):
+    def end_trace(self, **kwargs):
         """
-        Method to end the session for CrewAI >= 0.105.0 compatibility.
+        Method to end the trace for CrewAI >= 0.105.0 compatibility.
         
         CrewAI >= 0.105.0 calls this with:
         - end_state="Success"
@@ -70,6 +70,16 @@ class Session:
         _set_span_attributes(self.span, kwargs)
         self.span.end()
         _flush_span_processors()
+        
+    def end_session(self, **kwargs):
+        """
+        @deprecated
+        Use end_trace instead.
+        
+        Method to end the session for CrewAI >= 0.105.0 compatibility.
+        Maintained for backward compatibility.
+        """
+        return self.end_trace(**kwargs)
 
 
 def _create_session_span(tags: Union[Dict[str, Any], List[str], None] = None) -> tuple:
@@ -96,46 +106,46 @@ def _create_session_span(tags: Union[Dict[str, Any], List[str], None] = None) ->
     return _make_span("session", span_kind=SpanKind.SESSION, attributes=attributes)
 
 
-def start_session(
+def start_trace(
     tags: Union[Dict[str, Any], List[str], None] = None,
-) -> Session:
+) -> Trace:
     """
     @deprecated
-    Start a new AgentOps session manually.
+    Start a new AgentOps trace manually.
 
-    This function creates and starts a new session span, which can be used to group
-    related operations together. The session will remain active until end_session
-    is called either with the Session object or with kwargs.
+    This function creates and starts a new trace span, which can be used to group
+    related operations together. The trace will remain active until end_trace
+    is called either with the Trace object or with kwargs.
     
     Usage patterns:
-    1. Standard pattern: session = start_session(); end_session(session)
-    2. CrewAI < 0.105.0: start_session(); end_session(end_state="Success", ...)
-    3. CrewAI >= 0.105.0: session = start_session(); session.end_session(end_state="Success", ...)
+    1. Standard pattern: trace = start_trace(); end_trace(trace)
+    2. CrewAI < 0.105.0: start_trace(); end_trace(end_state="Success", ...)
+    3. CrewAI >= 0.105.0: trace = start_trace(); trace.end_trace(end_state="Success", ...)
     
-    This function stores the session in a global variable to support the CrewAI
-    < 0.105.0 pattern where end_session is called without the session object.
+    This function stores the trace in a global variable to support the CrewAI
+    < 0.105.0 pattern where end_trace is called without the trace object.
 
     Args:
-        tags: Optional tags to attach to the session, useful for filtering in the dashboard.
+        tags: Optional tags to attach to the trace, useful for filtering in the dashboard.
              Can be a list of strings or a dict of key-value pairs.
 
     Returns:
-        A Session object that should be passed to end_session (except in the
-        CrewAI < 0.105.0 pattern where end_session is called with kwargs only)
+        A Trace object that should be passed to end_trace (except in the
+        CrewAI < 0.105.0 pattern where end_trace is called with kwargs only)
 
     Raises:
         AgentOpsClientNotInitializedException: If the client is not initialized
     """
-    global _current_session
+    global _current_trace
     
     if not TracingCore.get_instance().initialized:
         from agentops import Client
         Client().init()
     
     span, context, token = _create_session_span(tags)
-    session = Session(span, token)
-    _current_session = session
-    return session
+    trace = Trace(span, token)
+    _current_trace = trace
+    return trace
 
 
 def _set_span_attributes(span: Any, attributes: Dict[str, Any]) -> None:
@@ -165,21 +175,21 @@ def _flush_span_processors() -> None:
         logger.warning(f"Failed to force flush span processor: {e}")
         
 
-def end_session(session_or_status: Any = None, **kwargs) -> None:
+def end_trace(trace_or_status: Any = None, **kwargs) -> None:
     """
     @deprecated
-    End a previously started AgentOps session.
+    End a previously started AgentOps trace.
 
-    This function ends the session span and detaches the context token,
-    completing the session lifecycle.
+    This function ends the trace span and detaches the context token,
+    completing the trace lifecycle.
 
     This function supports multiple calling patterns for backward compatibility:
-    1. With a Session object: Used by most code and CrewAI >= 0.105.0 event system
+    1. With a Trace object: Used by most code and CrewAI >= 0.105.0 event system
     2. With named parameters only: Used by CrewAI < 0.105.0 direct integration
     3. With a string status: Used by some older code
 
     Args:
-        session_or_status: The session object returned by start_session,
+        trace_or_status: The trace object returned by start_trace,
                           or a string representing the status (for backwards compatibility)
         **kwargs: Additional arguments for CrewAI < 0.105.0 compatibility. 
                  CrewAI < 0.105.0 passes these named arguments:
@@ -188,53 +198,74 @@ def end_session(session_or_status: Any = None, **kwargs) -> None:
                  - is_auto_end=True
                  
                  When called this way, the function will use the most recently
-                 created session via start_session().
+                 created trace via start_trace().
     """
     from agentops.sdk.decorators.utility import _finalize_span
     
     from agentops.sdk.core import TracingCore
     if not TracingCore.get_instance().initialized:
-        logger.debug("Ignoring end_session call - TracingCore not initialized")
+        logger.debug("Ignoring end_trace call - TracingCore not initialized")
         return
 
-    # In some old implementations, and in crew < 0.10.5 `end_session` will be 
+    # In some old implementations, and in crew < 0.10.5 `end_trace` will be 
     # called with a single string as a positional argument like: "Success" 
 
-    # Handle the CrewAI < 0.105.0 integration pattern where end_session is called
+    # Handle the CrewAI < 0.105.0 integration pattern where end_trace is called
     # with only named parameters. In this pattern, CrewAI does not keep a reference
-    # to the Session object, instead it calls:
+    # to the Trace object, instead it calls:
     #
-    # agentops.end_session(
+    # agentops.end_trace(
     #     end_state="Success",
     #     end_state_reason="Finished Execution",
     #     is_auto_end=True
     # )
-    if session_or_status is None and kwargs:
-        global _current_session
+    if trace_or_status is None and kwargs:
+        global _current_trace
         
-        if _current_session is not None:
-            _set_span_attributes(_current_session.span, kwargs)
-            _finalize_span(_current_session.span, _current_session.token)
+        if _current_trace is not None:
+            _set_span_attributes(_current_trace.span, kwargs)
+            _finalize_span(_current_trace.span, _current_trace.token)
             _flush_span_processors()
-            _current_session = None
+            _current_trace = None
         return
     
-    # Handle the standard pattern and CrewAI >= 0.105.0 pattern where a Session object is passed.
-    # In both cases, we call _finalize_span with the span and token from the Session.
-    # This is the most direct and precise way to end a specific session.
-    if hasattr(session_or_status, 'span') and hasattr(session_or_status, 'token'):
-        _set_span_attributes(session_or_status.span, kwargs)
-        _finalize_span(session_or_status.span, session_or_status.token)
+    # Handle the standard pattern and CrewAI >= 0.105.0 pattern where a Trace object is passed.
+    # In both cases, we call _finalize_span with the span and token from the Trace.
+    # This is the most direct and precise way to end a specific trace.
+    if hasattr(trace_or_status, 'span') and hasattr(trace_or_status, 'token'):
+        _set_span_attributes(trace_or_status.span, kwargs)
+        _finalize_span(trace_or_status.span, trace_or_status.token)
         _flush_span_processors()
 
 
+def end_session(session_or_status: Any = None, **kwargs) -> None:
+    """
+    @deprecated
+    Use end_trace instead.
+    
+    End a previously started AgentOps session.
+    This function is maintained for backward compatibility.
+    """
+    return end_trace(session_or_status, **kwargs)
+
+
+def end_all_traces():
+    """
+    @deprecated
+    We don't automatically track more than one trace, so just end the trace 
+    that we are tracking. 
+    """
+    end_trace()
+    
 def end_all_sessions():
     """
     @deprecated
+    Use end_all_traces instead.
+    
     We don't automatically track more than one session, so just end the session 
     that we are tracking. 
     """
-    end_session()
+    end_all_traces()
 
 
 def ToolEvent(*args, **kwargs) -> None:
@@ -310,12 +341,15 @@ def track_tool(*args, **kwargs):
 
 
 __all__ = [
-    "start_session", 
-    "end_session", 
+    "start_trace",
+    "end_trace",
+    "end_all_traces",
+    "start_session",  # For backward compatibility
+    "end_session",    # For backward compatibility
+    "end_all_sessions",  # For backward compatibility
     "ToolEvent", 
     "ErrorEvent", 
     "ActionEvent", 
     "track_agent", 
-    "track_tool",
-    "end_all_sessions"
+    "track_tool"
 ]

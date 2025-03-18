@@ -2,7 +2,7 @@ from typing import List, Optional, Union
 
 from agentops.client.api import ApiClient
 from agentops.config import Config
-from agentops.exceptions import AgentOpsClientNotInitializedException, NoApiKeyException, NoSessionException
+from agentops.exceptions import AgentOpsClientNotInitializedException, NoApiKeyException, NoTraceException
 from agentops.instrumentation import instrument_all
 from agentops.logging import logger
 from agentops.logging.config import configure_logging, intercept_opentelemetry_logging
@@ -58,18 +58,18 @@ class Client:
 
         self.initialized = True
 
-        # Start a session if auto_start_session is True
-        session = None
-        if self.config.auto_start_session:
-            from agentops.legacy import start_session
+        # Start a trace if auto_start_trace is True
+        trace = None
+        if self.config.auto_start_trace:
+            from agentops.legacy import start_trace
 
             # Pass default_tags if they exist
             if self.config.default_tags:
-                session = start_session(tags=list(self.config.default_tags))
+                trace = start_trace(tags=list(self.config.default_tags))
             else:
-                session = start_session()
+                trace = start_trace()
         
-        return session
+        return trace
 
     def configure(self, **kwargs):
         """Update client configuration"""
