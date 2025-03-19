@@ -8,6 +8,7 @@ from opentelemetry.sdk.trace import ReadableSpan
 from agentops.sdk.decorators import agent, operation, session, workflow, task
 from agentops.semconv import SpanKind
 from agentops.semconv.span_attributes import SpanAttributes
+from agentops.semconv import SpanAttributes
 from tests.unit.sdk.instrumentation_tester import InstrumentationTester
 
 
@@ -75,9 +76,9 @@ class TestSpanNesting:
         nested_operation = None
         
         for span in operation_spans:
-            if span.attributes and span.attributes.get('agentops.operation.name') == 'main_operation':
+            if span.attributes and span.attributes.get(SpanAttributes.OPERATION_NAME) == 'main_operation':
                 main_operation = span
-            elif span.attributes and span.attributes.get('agentops.operation.name') == 'nested_operation':
+            elif span.attributes and span.attributes.get(SpanAttributes.OPERATION_NAME) == 'nested_operation':
                 nested_operation = span
         
         assert main_operation is not None, "main_operation span not found"
@@ -164,9 +165,9 @@ class TestSpanNesting:
         nested_operation = None
         
         for span in operation_spans:
-            if span.attributes and span.attributes.get('agentops.operation.name') == 'main_async_operation':
+            if span.attributes and span.attributes.get(SpanAttributes.OPERATION_NAME) == 'main_async_operation':
                 main_operation = span
-            elif span.attributes and span.attributes.get('agentops.operation.name') == 'nested_async_operation':
+            elif span.attributes and span.attributes.get(SpanAttributes.OPERATION_NAME) == 'nested_async_operation':
                 nested_operation = span
         
         assert main_operation is not None, "main_async_operation span not found"
@@ -255,9 +256,9 @@ class TestSpanNesting:
         nested_operation = None
         
         for span in operation_spans:
-            if span.attributes and span.attributes.get('agentops.operation.name') == 'main_generator_operation':
+            if span.attributes and span.attributes.get(SpanAttributes.OPERATION_NAME) == 'main_generator_operation':
                 main_operation = span
-            elif span.attributes and span.attributes.get('agentops.operation.name') == 'nested_generator':
+            elif span.attributes and span.attributes.get(SpanAttributes.OPERATION_NAME) == 'nested_generator':
                 nested_operation = span
         
         assert main_operation is not None, "main_generator_operation span not found"
@@ -347,9 +348,9 @@ class TestSpanNesting:
         nested_operation = None
         
         for span in operation_spans:
-            if span.attributes and span.attributes.get('agentops.operation.name') == 'main_async_generator_operation':
+            if span.attributes and span.attributes.get(SpanAttributes.OPERATION_NAME) == 'main_async_generator_operation':
                 main_operation = span
-            elif span.attributes and span.attributes.get('agentops.operation.name') == 'nested_async_generator':
+            elif span.attributes and span.attributes.get(SpanAttributes.OPERATION_NAME) == 'nested_async_generator':
                 nested_operation = span
         
         assert main_operation is not None, "main_async_generator_operation span not found"
@@ -442,11 +443,11 @@ class TestSpanNesting:
         level3_operation = None
         
         for span in operation_spans:
-            if span.attributes and span.attributes.get('agentops.operation.name') == 'level1_operation':
+            if span.attributes and span.attributes.get(SpanAttributes.OPERATION_NAME) == 'level1_operation':
                 level1_operation = span
-            elif span.attributes and span.attributes.get('agentops.operation.name') == 'level2_operation':
+            elif span.attributes and span.attributes.get(SpanAttributes.OPERATION_NAME) == 'level2_operation':
                 level2_operation = span
-            elif span.attributes and span.attributes.get('agentops.operation.name') == 'level3_operation':
+            elif span.attributes and span.attributes.get(SpanAttributes.OPERATION_NAME) == 'level3_operation':
                 level3_operation = span
         
         assert level1_operation is not None, "level1_operation span not found"
@@ -539,11 +540,11 @@ class TestSpanNesting:
         transform_task = None
         
         for span in spans:
-            if span.attributes and span.attributes.get('agentops.operation.name') == 'data_processing_workflow':
+            if span.attributes and span.attributes.get(SpanAttributes.OPERATION_NAME) == 'data_processing_workflow':
                 workflow_span = span
-            elif span.attributes and span.attributes.get('agentops.operation.name') == 'process_input':
+            elif span.attributes and span.attributes.get(SpanAttributes.OPERATION_NAME) == 'process_input':
                 process_task = span
-            elif span.attributes and span.attributes.get('agentops.operation.name') == 'transform_data':
+            elif span.attributes and span.attributes.get(SpanAttributes.OPERATION_NAME) == 'transform_data':
                 transform_task = span
         
         assert workflow_span is not None, "workflow span not found"
