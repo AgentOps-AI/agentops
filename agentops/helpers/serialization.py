@@ -95,8 +95,9 @@ def model_to_dict(obj: Any) -> dict:
         return obj.model_dump()
     elif hasattr(obj, "dict"):  # Pydantic v1
         return obj.dict()
-    elif hasattr(obj, "parse"):  # Raw API response
-        return model_to_dict(obj.parse())
+    # TODO this is causing recursion on nested objects. 
+    # elif hasattr(obj, "parse"):  # Raw API response
+    #     return model_to_dict(obj.parse())
     else:
         # Try to use __dict__ as fallback
         try:

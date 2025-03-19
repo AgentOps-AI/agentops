@@ -279,6 +279,12 @@ class OpenAIAgentsInstrumentor(BaseInstrumentor):
     def _uninstrument(self, **kwargs):
         """Remove instrumentation from OpenAI Agents SDK."""
         try:
+            # Clean up any active spans in the exporter
+            if hasattr(self.__class__, '_exporter') and self.__class__._exporter:
+                # Call cleanup to properly handle any active spans
+                if hasattr(self.__class__._exporter, 'cleanup'):
+                    self.__class__._exporter.cleanup()
+            
             # Put back the default processor
             from agents import set_trace_processors
             if hasattr(self.__class__, '_default_processor') and self.__class__._default_processor:

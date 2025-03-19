@@ -1,0 +1,40 @@
+{
+  "final_output": "I'll help you find the current weather for New York City.",
+  "input": "What's the weather like in New York City?",
+  "raw_responses": [
+    {
+      "referenceable_id": "resp_abc123def456",
+      "output": [
+        {
+          "id": "msg_abc123def456",
+          "content": [
+            {
+              "text": "I'll help you find the current weather for New York City.",
+              "type": "output_text",
+              "annotations": []
+            }
+          ],
+          "tool_calls": [
+            {
+              "id": "call_xyz789",
+              "type": "tool_call",
+              "function": {
+                "name": "get_weather",
+                "arguments": "{\"location\":\"New York City\",\"units\":\"celsius\"}"
+              }
+            }
+          ],
+          "role": "assistant",
+          "status": "completed",
+          "type": "message"
+        }
+      ],
+      "usage": {
+        "input_tokens": 48,
+        "output_tokens": 12,
+        "requests": 1,
+        "total_tokens": 60
+      }
+    }
+  ]
+}

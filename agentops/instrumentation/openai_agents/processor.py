@@ -1,3 +1,4 @@
+# TODO this file duplicates a lot of code from exporter.py; most of this logic should be in there instead
 from typing import Any, Dict, Optional, Union
 import time
 import weakref
@@ -8,8 +9,7 @@ from agentops.helpers.serialization import model_to_dict, safe_serialize
 from agentops.logging import logger
 
 from agentops.instrumentation.openai_agents import LIBRARY_NAME, LIBRARY_VERSION
-from agentops.instrumentation.openai_agents.tokens import process_token_usage
-from agentops.instrumentation.openai_agents.metrics import record_token_usage
+from agentops.instrumentation.openai_agents.attributes.tokens import process_token_usage, get_token_metric_attributes
 
 
 def get_otel_trace_id() -> Union[str, None]:
@@ -139,6 +139,20 @@ class OpenAIAgentsProcessor:
         execution_time = time.time() - start_time
         workflow_name = trace_data.get('workflow_name', 'unknown')
         
+        # Check for final_output attribute on the trace
+        if hasattr(sdk_trace, "finalOutput") and sdk_trace.finalOutput:
+            logger.debug(f"[TRACE] Found finalOutput on trace: {sdk_trace.finalOutput[:100]}...")
+            # This is the actual human-readable output
+            self._active_traces[trace_id]['human_readable_output'] = sdk_trace.finalOutput
+            
+        # Check for result attribute on the trace which is another source of output
+        if hasattr(sdk_trace, "result"):
+            logger.debug(f"[TRACE] Found result object on trace")
+            if hasattr(sdk_trace.result, "final_output"):
+                logger.debug(f"[TRACE] Found final_output on result: {sdk_trace.result.final_output[:100]}...")
+                # This is the human-readable output from the agent
+                self._active_traces[trace_id]['human_readable_output'] = sdk_trace.result.final_output
+        
         # Get the OpenTelemetry root trace ID that appears in the AgentOps API
         otel_trace_id = get_otel_trace_id()
         
@@ -184,6 +198,9 @@ class OpenAIAgentsProcessor:
         
         logger.debug(f"[SPAN] Started: {span_type} | ID: {span_id} | Parent: {parent_id}")
         
+        # For start events, we don't set a status
+        # This implicitly means the span is in progress (UNSET status in OpenTelemetry)
+        
         # Extract agent name for metrics
         agent_name = self._extract_agent_name(span_data)
         
@@ -225,6 +242,28 @@ class OpenAIAgentsProcessor:
         span_id = getattr(span, 'span_id', 'unknown')
         trace_id = getattr(span, 'trace_id', None)
         
+        # Mark this as an end event
+        # This is used by the exporter to determine whether to create or update a span
+        span.status = "OK"  # Use this as a marker for end events
+        
+        # Determine if we need to create a new span or update an existing one
+        is_new_span = True
+        span_lookup_key = f"span:{trace_id}:{span_id}"
+        
+        # Process AgentSpanData specially to ensure final output is captured
+        if span_type == "AgentSpanData":
+            if hasattr(span_data, 'output') and span_data.output:
+                logger.debug(f"[SPAN] AgentSpanData output: {span_data.output[:100]}...")
+                # Store the output as a final_output attribute directly on the span
+                # This allows us to find it later to set on the span
+                span.final_output = span_data.output
+                logger.debug(f"[SPAN] Stored final_output attribute on span: {span_id}")
+                
+            if hasattr(span_data, 'input') and span_data.input:
+                logger.debug(f"[SPAN] AgentSpanData input: {span_data.input[:100]}...")
+                # Store the input as a prompt attribute directly on the span
+                span.prompt = span_data.input
+                
         logger.debug(f"[SPAN] Ended: {span_type} | ID: {span_id}")
         
         # Process generation spans for token usage metrics
@@ -242,8 +281,16 @@ class OpenAIAgentsProcessor:
                         usage = output_dict.get('usage', {})
             
             # Record token usage metrics
-            if usage:
-                record_token_usage(self._agent_token_usage_histogram, usage, model_name)
+            if usage and self._agent_token_usage_histogram:
+                # Get token metrics attributes
+                metrics_data = get_token_metric_attributes(usage, model_name)
+                
+                # Record each metric
+                for token_type, data in metrics_data.items():
+                    self._agent_token_usage_histogram.record(
+                        data["value"],
+                        data["attributes"]
+                    )
                 
                 # Update trace with model information if available
                 if trace_id in self._active_traces and model_name != 'unknown':
@@ -251,6 +298,12 @@ class OpenAIAgentsProcessor:
         
         # Forward to exporter if available
         if self.exporter:
+            # Include all the span data in this one export, since we now know:
+            # 1. The span will be created or updated + ended in a single operation
+            # 2. We won't have an opportunity to add more data later
+            
+            # Make sure all important attributes are passed to the exporter
+            # The exporter will now create a complete span in one go
             self.exporter.export_span(span)
     
     def shutdown(self) -> None:
