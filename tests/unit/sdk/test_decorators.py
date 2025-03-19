@@ -5,7 +5,7 @@ import pytest
 from opentelemetry import trace
 from opentelemetry.sdk.trace import ReadableSpan
 
-from agentops.sdk.decorators import agent, operation, session, workflow
+from agentops.sdk.decorators import agent, operation, session, workflow, task
 from agentops.semconv import SpanKind
 from agentops.semconv.span_attributes import SpanAttributes
 from tests.unit.sdk.instrumentation_tester import InstrumentationTester
@@ -80,9 +80,9 @@ class TestSpanNesting:
         nested_operation = None
 
         for span in operation_spans:
-            if span.attributes and span.attributes.get("agentops.operation.name") == "main_operation":
+            if span.attributes and span.attributes.get(SpanAttributes.OPERATION_NAME) == "main_operation":
                 main_operation = span
-            elif span.attributes and span.attributes.get("agentops.operation.name") == "nested_operation":
+            elif span.attributes and span.attributes.get(SpanAttributes.OPERATION_NAME) == "nested_operation":
                 nested_operation = span
 
         assert main_operation is not None, "main_operation span not found"
@@ -174,9 +174,9 @@ class TestSpanNesting:
         nested_operation = None
 
         for span in operation_spans:
-            if span.attributes and span.attributes.get("agentops.operation.name") == "main_async_operation":
+            if span.attributes and span.attributes.get(SpanAttributes.OPERATION_NAME) == "main_async_operation":
                 main_operation = span
-            elif span.attributes and span.attributes.get("agentops.operation.name") == "nested_async_operation":
+            elif span.attributes and span.attributes.get(SpanAttributes.OPERATION_NAME) == "nested_async_operation":
                 nested_operation = span
 
         assert main_operation is not None, "main_async_operation span not found"
@@ -270,9 +270,9 @@ class TestSpanNesting:
         nested_operation = None
 
         for span in operation_spans:
-            if span.attributes and span.attributes.get("agentops.operation.name") == "main_generator_operation":
+            if span.attributes and span.attributes.get(SpanAttributes.OPERATION_NAME) == "main_generator_operation":
                 main_operation = span
-            elif span.attributes and span.attributes.get("agentops.operation.name") == "nested_generator":
+            elif span.attributes and span.attributes.get(SpanAttributes.OPERATION_NAME) == "nested_generator":
                 nested_operation = span
 
         assert main_operation is not None, "main_generator_operation span not found"
@@ -367,9 +367,12 @@ class TestSpanNesting:
         nested_operation = None
 
         for span in operation_spans:
-            if span.attributes and span.attributes.get("agentops.operation.name") == "main_async_generator_operation":
+            if (
+                span.attributes
+                and span.attributes.get(SpanAttributes.OPERATION_NAME) == "main_async_generator_operation"
+            ):
                 main_operation = span
-            elif span.attributes and span.attributes.get("agentops.operation.name") == "nested_async_generator":
+            elif span.attributes and span.attributes.get(SpanAttributes.OPERATION_NAME) == "nested_async_generator":
                 nested_operation = span
 
         assert main_operation is not None, "main_async_generator_operation span not found"
@@ -467,11 +470,11 @@ class TestSpanNesting:
         level3_operation = None
 
         for span in operation_spans:
-            if span.attributes and span.attributes.get("agentops.operation.name") == "level1_operation":
+            if span.attributes and span.attributes.get(SpanAttributes.OPERATION_NAME) == "level1_operation":
                 level1_operation = span
-            elif span.attributes and span.attributes.get("agentops.operation.name") == "level2_operation":
+            elif span.attributes and span.attributes.get(SpanAttributes.OPERATION_NAME) == "level2_operation":
                 level2_operation = span
-            elif span.attributes and span.attributes.get("agentops.operation.name") == "level3_operation":
+            elif span.attributes and span.attributes.get(SpanAttributes.OPERATION_NAME) == "level3_operation":
                 level3_operation = span
 
         assert level1_operation is not None, "level1_operation span not found"
@@ -502,3 +505,101 @@ class TestSpanNesting:
         assert level3_operation.parent is not None
         assert level2_operation.context is not None
         assert level3_operation.parent.span_id == level2_operation.context.span_id
+
+    def test_workflow_and_task_nesting(self, instrumentation: InstrumentationTester):
+        """Test that workflow and task decorators create proper span nesting."""
+
+        # Define a workflow with tasks
+        @workflow
+        def data_processing_workflow(data):
+            """Main workflow that processes data through multiple tasks"""
+            result = process_input(data)
+            result = transform_data(result)
+            return result
+
+        @task
+        def process_input(data):
+            """Task to process input data"""
+            return f"Processed: {data}"
+
+        @task
+        def transform_data(data):
+            """Task to transform processed data"""
+            return f"Transformed: {data}"
+
+        # Test session with the workflow
+        @session
+        def test_workflow_session():
+            return data_processing_workflow("test data")
+
+        # Run the test
+        result = test_workflow_session()
+
+        # Verify the result
+        assert result == "Transformed: Processed: test data"
+
+        # Get all spans captured during the test
+        spans = instrumentation.get_finished_spans()
+
+        # Print detailed span information for debugging
+        print("\nDetailed span information for workflow and task test:")
+        for i, span in enumerate(spans):
+            parent_id = span.parent.span_id if span.parent else "None"
+            span_id = span.context.span_id if span.context else "None"
+            print(f"Span {i}: name={span.name}, span_id={span_id}, parent_id={parent_id}")
+
+        # We should have 4 spans: session, workflow, and two tasks
+        assert len(spans) == 4
+
+        # Verify span kinds
+        session_spans = [
+            s for s in spans if s.attributes and s.attributes.get(SpanAttributes.AGENTOPS_SPAN_KIND) == SpanKind.SESSION
+        ]
+        workflow_spans = [
+            s
+            for s in spans
+            if s.attributes and s.attributes.get(SpanAttributes.AGENTOPS_SPAN_KIND) == SpanKind.WORKFLOW
+        ]
+        task_spans = [
+            s for s in spans if s.attributes and s.attributes.get(SpanAttributes.AGENTOPS_SPAN_KIND) == SpanKind.TASK
+        ]
+
+        assert len(session_spans) == 1
+        assert len(workflow_spans) == 1
+        assert len(task_spans) == 2
+
+        # Find the workflow and task spans
+        workflow_span = None
+        process_task = None
+        transform_task = None
+
+        for span in spans:
+            if span.attributes and span.attributes.get(SpanAttributes.OPERATION_NAME) == "data_processing_workflow":
+                workflow_span = span
+            elif span.attributes and span.attributes.get(SpanAttributes.OPERATION_NAME) == "process_input":
+                process_task = span
+            elif span.attributes and span.attributes.get(SpanAttributes.OPERATION_NAME) == "transform_data":
+                transform_task = span
+
+        assert workflow_span is not None, "workflow span not found"
+        assert process_task is not None, "process_input task span not found"
+        assert transform_task is not None, "transform_data task span not found"
+
+        # Verify the session span is the root
+        session_span = session_spans[0]
+        assert session_span.parent is None
+
+        # Verify the workflow span is a child of the session span
+        assert workflow_span.parent is not None
+        assert session_span.context is not None
+        assert workflow_span.parent.span_id == session_span.context.span_id
+
+        # Verify process_task is a child of the workflow span
+        assert process_task.parent is not None
+        assert workflow_span.context is not None
+        assert process_task.parent.span_id == workflow_span.context.span_id
+
+        # Verify transform_task is a child of the workflow span
+        assert transform_task.parent is not None
+        assert workflow_span.context is not None
+        assert transform_task.parent.span_id == workflow_span.context.span_id

@@ -117,9 +117,9 @@ def _create_as_current_span(
     attributes[SpanAttributes.AGENTOPS_SPAN_KIND] = span_kind
 
     # Add standard attributes
-    attributes["agentops.operation.name"] = operation_name
+    attributes[SpanAttributes.OPERATION_NAME] = operation_name
     if version is not None:
-        attributes["agentops.operation.version"] = version
+        attributes[SpanAttributes.OPERATION_VERSION] = version
 
     # Get current context explicitly to debug it
     current_context = context_api.get_current()
@@ -179,9 +179,9 @@ def _make_span(
     attributes[SpanAttributes.AGENTOPS_SPAN_KIND] = span_kind
 
     # Add standard attributes
-    attributes["agentops.operation.name"] = operation_name
+    attributes[SpanAttributes.OPERATION_NAME] = operation_name
     if version is not None:
-        attributes["agentops.operation.version"] = version
+        attributes[SpanAttributes.OPERATION_VERSION] = version
 
     # Get current context explicitly
     current_context = context_api.get_current()
