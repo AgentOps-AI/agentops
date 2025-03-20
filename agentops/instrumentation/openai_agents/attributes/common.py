@@ -5,14 +5,12 @@ trace and span attributes in OpenAI Agents instrumentation. It provides the core
 for extracting and formatting attributes according to OpenTelemetry semantic conventions.
 """
 import importlib.metadata
-from typing import Any, Dict
-
+from typing import TypeVar, Generic
+from typing import Any, Dict, List, Union
 from opentelemetry.trace import SpanKind
-from agentops.instrumentation.openai_agents import LIBRARY_NAME, LIBRARY_VERSION
 from agentops.logging import logger
-from agentops.helpers.serialization import safe_serialize
+from agentops.helpers import get_agentops_version, safe_serialize
 from agentops.semconv import (
-    SpanKind as AOSpanKind,
     CoreAttributes,
     AgentAttributes,
     WorkflowAttributes,
@@ -20,13 +18,16 @@ from agentops.semconv import (
     MessageAttributes,
     InstrumentationAttributes
 )
+from agentops.instrumentation.openai_agents import LIBRARY_NAME, LIBRARY_VERSION
 from agentops.instrumentation.openai_agents.attributes.completion import get_generation_output_attributes
 from agentops.instrumentation.openai_agents.attributes.model import extract_model_config
 
+# target_attribute_key: source_attribute
+AttributeMap = Dict[str, Any]
+
 
 # Common attribute mapping for all span types
-COMMON_ATTRIBUTES = {
-    # target_attribute_key: source_attribute
+COMMON_ATTRIBUTES: AttributeMap = {
     CoreAttributes.TRACE_ID: "trace_id",
     CoreAttributes.SPAN_ID: "span_id",
     CoreAttributes.PARENT_ID: "parent_id",
@@ -34,23 +35,18 @@ COMMON_ATTRIBUTES = {
 
 
 # Attribute mapping for AgentSpanData
-AGENT_SPAN_ATTRIBUTES = {
+AGENT_SPAN_ATTRIBUTES: AttributeMap = {
     AgentAttributes.AGENT_NAME: "name",
     WorkflowAttributes.WORKFLOW_INPUT: "input",
     WorkflowAttributes.FINAL_OUTPUT: "output",
     AgentAttributes.AGENT_TOOLS: "tools",
     AgentAttributes.HANDOFFS: "handoffs",
-    SpanAttributes.LLM_PROMPTS: "input",
-    # TODO this is wrong these need to have a proper index
-    MessageAttributes.COMPLETION_CONTENT.format(i=0): "output",
-    MessageAttributes.COMPLETION_ROLE.format(i=0): "assistant_role",  # Special constant value
 }
 
 
 # Attribute mapping for FunctionSpanData
-FUNCTION_SPAN_ATTRIBUTES = {
+FUNCTION_SPAN_ATTRIBUTES: AttributeMap = {
     AgentAttributes.AGENT_NAME: "name",
-    SpanAttributes.LLM_PROMPTS: "input",
     WorkflowAttributes.WORKFLOW_INPUT: "input",
     WorkflowAttributes.FINAL_OUTPUT: "output",
     AgentAttributes.FROM_AGENT: "from_agent",
@@ -58,52 +54,90 @@ FUNCTION_SPAN_ATTRIBUTES = {
 
 
 # Attribute mapping for GenerationSpanData
-GENERATION_SPAN_ATTRIBUTES = {
+GENERATION_SPAN_ATTRIBUTES: AttributeMap = {
     SpanAttributes.LLM_REQUEST_MODEL: "model",
+    SpanAttributes.LLM_RESPONSE_MODEL: "model",
     SpanAttributes.LLM_PROMPTS: "input",
-    WorkflowAttributes.WORKFLOW_INPUT: "input", 
-    WorkflowAttributes.FINAL_OUTPUT: "output",
-    AgentAttributes.AGENT_TOOLS: "tools",
-    AgentAttributes.FROM_AGENT: "from_agent",
+    # TODO tools - we don't have a semantic convention for this yet
 }
 
 
 # Attribute mapping for HandoffSpanData
-HANDOFF_SPAN_ATTRIBUTES = {
+HANDOFF_SPAN_ATTRIBUTES: AttributeMap = {
     AgentAttributes.FROM_AGENT: "from_agent",
     AgentAttributes.TO_AGENT: "to_agent",
 }
 
 
 # Attribute mapping for ResponseSpanData
-RESPONSE_SPAN_ATTRIBUTES = {
-    SpanAttributes.LLM_PROMPTS: "input",
+RESPONSE_SPAN_ATTRIBUTES: AttributeMap = {
     WorkflowAttributes.WORKFLOW_INPUT: "input",
+    WorkflowAttributes.FINAL_OUTPUT: "response",
 }
 
 
-def get_common_instrumentation_attributes() -> Dict[str, Any]:
+def _extract_attributes_from_mapping(span_data: Any, attribute_mapping: AttributeMap) -> AttributeMap:
+    """Helper function to extract attributes based on a mapping.
+    
+    Args:
+        span_data: The span data object to extract attributes from
+        attribute_mapping: Dictionary mapping target attributes to source attributes
+        
+    Returns:
+        Dictionary of extracted attributes
+    """
+    attributes = {}
+    for target_attr, source_attr in attribute_mapping.items():
+        if hasattr(span_data, source_attr):
+            value = getattr(span_data, source_attr)
+            
+            # Skip if value is None or empty
+            if value is None or (isinstance(value, (list, dict, str)) and not value):
+                continue
+            
+            # Join lists to comma-separated strings
+            if source_attr == "tools" or source_attr == "handoffs":
+                if isinstance(value, list):
+                    value = ",".join(value)
+                else:
+                    value = str(value)
+            # Serialize complex objects
+            elif isinstance(value, (dict, list, object)) and not isinstance(value, (str, int, float, bool)):
+                value = safe_serialize(value)
+            
+            attributes[target_attr] = value
+    
+    return attributes
+
+
+def get_span_kind(span: Any) -> SpanKind:
+    """Determine the appropriate span kind based on span type."""
+    span_data = span.span_data
+    span_type = span_data.__class__.__name__
+    
+    if span_type == "AgentSpanData":
+        return SpanKind.CONSUMER
+    elif span_type in ["FunctionSpanData", "GenerationSpanData", "ResponseSpanData"]:
+        return SpanKind.CLIENT
+    else:
+        return SpanKind.INTERNAL
+
+
+def get_common_instrumentation_attributes() -> AttributeMap:
     """Get common instrumentation attributes used across traces and spans.
     
     Returns:
         Dictionary of common instrumentation attributes
     """
-    # Get agentops version using importlib.metadata
-    try:
-        # TODO import this from agentops.helpers
-        agentops_version = importlib.metadata.version('agentops')
-    except importlib.metadata.PackageNotFoundError:
-        agentops_version = "unknown"
-        
     return {
         InstrumentationAttributes.NAME: "agentops",
-        InstrumentationAttributes.VERSION: agentops_version,
+        InstrumentationAttributes.VERSION: get_agentops_version(),
         InstrumentationAttributes.LIBRARY_NAME: LIBRARY_NAME,
         InstrumentationAttributes.LIBRARY_VERSION: LIBRARY_VERSION,
     }
 
 
-def get_base_trace_attributes(trace: Any) -> Dict[str, Any]:
+def get_base_trace_attributes(trace: Any) -> AttributeMap:
     """Create the base attributes dictionary for an OpenTelemetry trace.
     
     Args:
@@ -116,58 +150,87 @@ def get_base_trace_attributes(trace: Any) -> Dict[str, Any]:
         logger.warning("Cannot create trace attributes: missing trace_id")
         return {}
     
-    # Create attributes dictionary with all standard fields
     attributes = {
         WorkflowAttributes.WORKFLOW_NAME: trace.name,
         CoreAttributes.TRACE_ID: trace.trace_id,
         WorkflowAttributes.WORKFLOW_STEP_TYPE: "trace",
-        # Set LLM system to openai for proper attribution
-        SpanAttributes.LLM_SYSTEM: "openai",
         **get_common_instrumentation_attributes()
     }
     
     return attributes
 
 
-def get_agent_span_attributes(span_data: Any) -> Dict[str, Any]:
-    """Extract attributes from an AgentSpanData object.
+def get_base_span_attributes(span: Any) -> AttributeMap:
+    """Create the base attributes dictionary for an OpenTelemetry span.
     
     Args:
-        span_data: The AgentSpanData object
+        span: The span object to extract attributes from
         
     Returns:
-        Dictionary of attributes for agent span
+        Dictionary containing base span attributes
     """
-    attributes = _extract_attributes_from_mapping(span_data, AGENT_SPAN_ATTRIBUTES)
+    span_id = getattr(span, 'span_id', 'unknown')
+    trace_id = getattr(span, 'trace_id', 'unknown')
+    parent_id = getattr(span, 'parent_id', None)
     
-    # Process output for AgentSpanData if available
-    if hasattr(span_data, 'output') and span_data.output:
-        output_value = span_data.output
-        logger.debug(f"[ATTRIBUTES] Found output on agent span_data: {str(output_value)[:100]}...")
-        attributes[WorkflowAttributes.FINAL_OUTPUT] = safe_serialize(output_value)
+    attributes = {
+        CoreAttributes.TRACE_ID: trace_id,
+        CoreAttributes.SPAN_ID: span_id,
+        **get_common_instrumentation_attributes(),
+    }
     
+    if parent_id:
+        attributes[CoreAttributes.PARENT_ID] = parent_id
+        
     return attributes
 
 
-def get_function_span_attributes(span_data: Any) -> Dict[str, Any]:
-    """Extract attributes from a FunctionSpanData object.
-    
-    Args:
-        span_data: The FunctionSpanData object
-        
-    Returns:
-        Dictionary of attributes for function span
-    """
-    attributes = _extract_attributes_from_mapping(span_data, FUNCTION_SPAN_ATTRIBUTES)
-    
-    # Process output for FunctionSpanData if available
-    if hasattr(span_data, 'output') and span_data.output:
-        attributes[WorkflowAttributes.FINAL_OUTPUT] = safe_serialize(span_data.output)
-    
-    return attributes
+get_agent_span_attributes = lambda span_data: \
+    _extract_attributes_from_mapping(span_data, AGENT_SPAN_ATTRIBUTES)
+
+get_function_span_attributes = lambda span_data: \
+    _extract_attributes_from_mapping(span_data, FUNCTION_SPAN_ATTRIBUTES)
+
+get_response_span_attributes = lambda span_data: \
+    _extract_attributes_from_mapping(span_data, RESPONSE_SPAN_ATTRIBUTES)
+
+get_handoff_span_attributes = lambda span_data: \
+    _extract_attributes_from_mapping(span_data, HANDOFF_SPAN_ATTRIBUTES)
 
 
-def get_generation_span_attributes(span_data: Any) -> Dict[str, Any]:
+"""
+Response(
+    id='resp_67dc7bcf54808192a4595217d26bc8790bfa203c23b48a1d', 
+    created_at=1742502863.0, error=None, incomplete_details=None, 
+    instructions='You are a helpful assistant. Your task is to answer questions about programming concepts.', 
+    metadata={}, model='gpt-4o-2024-08-06', object='response', 
+    output=[ResponseOutputMessage(
+        id='msg_67dc7bcfeecc8192846c9ce302a646c80bfa203c23b48a1d', 
+        content=[ResponseOutputText(
+            annotations=[], 
+            text="Recursion in programming is a technique where a function calls itself in order to solve a problem. This method is often used to break down complex problems into simpler, more manageable subproblems. Here's a basic rundown of how recursion works:\n\n### Key Concepts\n\n1. **Base Case**: Every recursive function needs a base case to terminate. This prevents the function from calling itself indefinitely. The base case is a condition that, when true, stops further recursive calls.\n\n2. **Recursive Case**: This is where the function calls itself with a different set of parameters, moving towards the base case.\n\n### How It Works:\n\n- **Define the problem in terms of itself**: Break the problem into smaller instances of the same problem.\n- **Base Case**: Identify a simple instance of the problem that can be solved directly.\n- **Recursive Step**: Define a rule that relates the problem to simpler versions of itself.\n\n### Advantages\n\n- **Simplicity**: Recursion can simplify code, making it more readable and easier to understand.\n- **Problem Solving**: Suitable for problems that are naturally hierarchical, like tree traversals, fractals, or problems that can be divided into similar subproblems.\n\n### Disadvantages\n\n- **Performance**: Recursive solutions can be memory-intensive and slower because each function call adds a new layer to the call stack.\n- **Stack Overflow**: Too many recursive calls can lead to a stack overflow error if the base case is not correctly defined or reached.\n\n### Example: Factorial\n\nA classic example of a recursive function is the factorial calculation:\n\n```python\ndef factorial(n):\n    if n == 0:  # Base case\n        return 1\n    else:\n        return n * factorial(n - 1)  # Recursive case\n```\n\n### Considerations\n\n- Always ensure there is a base case that will eventually be reached.\n- Be mindful of the computational and memory overhead.\n- Sometimes, iterative solutions may be more efficient than recursive ones.\n\nRecursion is a powerful tool, but it needs to be used judiciously to balance clarity and performance.", 
+            type='output_text')], 
+        role='assistant', 
+        status='completed', 
+        type='message')], 
+    parallel_tool_calls=True,
+    temperature=1.0, 
+    tool_choice='auto', 
+    tools=[], 
+    top_p=1.0, 
+    max_output_tokens=None, 
+    previous_response_id=None, 
+    reasoning=Reasoning(effort=None, generate_summary=None), 
+    status='completed', 
+    text=ResponseTextConfig(format=ResponseFormatText(type='text')), 
+    truncation='disabled', 
+    usage=ResponseUsage(input_tokens=52, output_tokens=429, output_tokens_details=OutputTokensDetails(reasoning_tokens=0),
+    total_tokens=481, 
+    input_tokens_details={'cached_tokens': 0}), 
+    user=None, store=True)
+"""
+
+def get_generation_span_attributes(span_data: Any) -> AttributeMap:
     """Extract attributes from a GenerationSpanData object.
     
     Args:
@@ -192,89 +255,7 @@ def get_generation_span_attributes(span_data: Any) -> Dict[str, Any]:
     return attributes
 
 
-def get_handoff_span_attributes(span_data: Any) -> Dict[str, Any]:
-    """Extract attributes from a HandoffSpanData object.
-    
-    Args:
-        span_data: The HandoffSpanData object
-        
-    Returns:
-        Dictionary of attributes for handoff span
-    """
-    return _extract_attributes_from_mapping(span_data, HANDOFF_SPAN_ATTRIBUTES)
-
-
-def get_response_span_attributes(span_data: Any) -> Dict[str, Any]:
-    """Extract attributes from a ResponseSpanData object.
-    
-    Args:
-        span_data: The ResponseSpanData object
-        
-    Returns:
-        Dictionary of attributes for response span
-    """
-    attributes = _extract_attributes_from_mapping(span_data, RESPONSE_SPAN_ATTRIBUTES)
-    
-    # Process response field for ResponseSpanData if available
-    if hasattr(span_data, 'response') and span_data.response:
-        attributes[WorkflowAttributes.FINAL_OUTPUT] = safe_serialize(span_data.response)
-    
-    return attributes
-
-
-def _extract_attributes_from_mapping(span_data: Any, attribute_mapping: Dict[str, str]) -> Dict[str, Any]:
-    """Helper function to extract attributes based on a mapping.
-    
-    Args:
-        span_data: The span data object to extract attributes from
-        attribute_mapping: Dictionary mapping target attributes to source attributes
-        
-    Returns:
-        Dictionary of extracted attributes
-    """
-    attributes = {}
-    
-    # Process attributes based on the mapping
-    for target_attr, source_attr in attribute_mapping.items():
-        # Special case for the assistant role constant
-        if source_attr == "assistant_role":
-            attributes[target_attr] = "assistant"
-            logger.debug(f"[ATTRIBUTES] Set {target_attr} = assistant (constant value)")
-            continue
-            
-        # If source attribute exists on span_data, process it
-        if hasattr(span_data, source_attr):
-            value = getattr(span_data, source_attr)
-            
-            # Skip if value is None or empty
-            if value is None or (isinstance(value, (list, dict, str)) and not value):
-                continue
-                
-            # Apply appropriate transformations based on attribute type
-            if source_attr == "tools" or source_attr == "handoffs":
-                # Join lists to comma-separated strings
-                if isinstance(value, list):
-                    value = ",".join(value)
-                else:
-                    value = str(value)
-            elif isinstance(value, (dict, list, object)) and not isinstance(value, (str, int, float, bool)):
-                # Serialize complex objects
-                value = safe_serialize(value)
-            
-            # Set the attribute
-            attributes[target_attr] = value
-            
-            # Log the set value for debugging
-            logger.debug(f"[ATTRIBUTES] Set {target_attr} = {str(value)[:50]}...")
-            
-            # Special handling for model field to set LLM_SYSTEM
-            if source_attr == "model" and value:
-                attributes[SpanAttributes.LLM_SYSTEM] = "openai"
-    
-    return attributes
-
-
-def get_span_attributes(span_data: Any) -> Dict[str, Any]:
+def get_span_attributes(span_data: Any) -> AttributeMap:
     """Get attributes for a span based on its type.
     
     This function centralizes attribute extraction by delegating to type-specific
@@ -288,12 +269,6 @@ def get_span_attributes(span_data: Any) -> Dict[str, Any]:
     """
     span_type = span_data.__class__.__name__
     
-    # Log the span data properties for debugging
-    if span_type == "AgentSpanData" and hasattr(span_data, 'output'):
-        logger.debug(f"[ATTRIBUTES] Extracting from {span_type}")
-        logger.debug(f"[ATTRIBUTES] AgentSpanData 'output' attribute: {str(span_data.output)[:100]}...")
-    
-    # Call the appropriate getter function based on span type
     if span_type == "AgentSpanData":
         attributes = get_agent_span_attributes(span_data)
     elif span_type == "FunctionSpanData":
@@ -305,57 +280,9 @@ def get_span_attributes(span_data: Any) -> Dict[str, Any]:
     elif span_type == "ResponseSpanData":
         attributes = get_response_span_attributes(span_data)
     else:
-        # Fallback for unknown span types
-        logger.warning(f"[ATTRIBUTES] Unknown span type: {span_type}")
+        logger.debug(f"[agentops.instrumentation.openai_agents.attributes] Unknown span type: {span_type}")
         attributes = {}
     
-    # Log completion data for debugging
-    completion_content_key = MessageAttributes.COMPLETION_CONTENT.format(i=0)
-    if completion_content_key in attributes:
-        logger.debug(f"[ATTRIBUTES] Final completion content: {attributes[completion_content_key][:100]}...")
-    else:
-        logger.debug(f"[ATTRIBUTES] WARNING: No completion content set for {span_type}")
-    
     return attributes
 
 
-def get_span_kind(span: Any) -> SpanKind:
-    """Determine the appropriate span kind based on span type."""
-    span_data = span.span_data
-    span_type = span_data.__class__.__name__
-    
-    # Map span types to appropriate span kinds
-    if span_type == "AgentSpanData":
-        return SpanKind.CONSUMER
-    elif span_type in ["FunctionSpanData", "GenerationSpanData", "ResponseSpanData"]:
-        return SpanKind.CLIENT
-    else:
-        return SpanKind.INTERNAL
-
-
-def get_base_span_attributes(span: Any, library_name: str, library_version: str) -> Dict[str, Any]:
-    """Create the base attributes dictionary for an OpenTelemetry span.
-    
-    Args:
-        span: The span object to extract attributes from
-        library_name: The name of the library being instrumented
-        library_version: The version of the library being instrumented
-        
-    Returns:
-        Dictionary containing base span attributes
-    """
-    span_id = getattr(span, 'span_id', 'unknown')
-    trace_id = getattr(span, 'trace_id', 'unknown')
-    parent_id = getattr(span, 'parent_id', None)
-    
-    # Base attributes common to all spans
-    attributes = {
-        CoreAttributes.TRACE_ID: trace_id,
-        CoreAttributes.SPAN_ID: span_id,
-        **get_common_instrumentation_attributes(),
-    }
-    
-    if parent_id:
-        attributes[CoreAttributes.PARENT_ID] = parent_id
-        
-    return attributes

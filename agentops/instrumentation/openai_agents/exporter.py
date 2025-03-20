@@ -427,7 +427,7 @@ class OpenAIAgentsExporter:
         span_lookup_key = f"span:{trace_id}:{span_id}"
         
         # Get base attributes common to all spans
-        attributes = get_base_span_attributes(span, LIBRARY_NAME, LIBRARY_VERSION)
+        attributes = get_base_span_attributes(span)
         
         # Get span attributes using the attribute getter
         span_attributes = get_span_attributes(span_data)
