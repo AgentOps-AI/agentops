@@ -114,34 +114,23 @@ from typing import Any, Dict, Optional
 from opentelemetry import trace, context as context_api
 from opentelemetry.trace import get_tracer, SpanKind, Status, StatusCode, NonRecordingSpan
 from opentelemetry import trace as trace_api
+from opentelemetry.sdk.trace import Span
+
+from agentops.logging import logger
 from agentops.semconv import (
     CoreAttributes, 
     WorkflowAttributes,
-    InstrumentationAttributes,
-    AgentAttributes,
     SpanAttributes,
-    MessageAttributes
 )
-from agentops.helpers.serialization import safe_serialize, model_to_dict
-
-# Import directly from attribute modules
-from agentops.instrumentation.openai_agents.attributes.tokens import process_token_usage, safe_parse
+from agentops.instrumentation.openai_agents import LIBRARY_NAME, LIBRARY_VERSION
 from agentops.instrumentation.openai_agents.attributes.common import (
     get_span_kind,
     get_base_trace_attributes,
     get_base_span_attributes,
     get_span_attributes,
-    get_common_instrumentation_attributes
+    get_agent_span_attributes,
+    get_generation_span_attributes,
 )
-from agentops.instrumentation.openai_agents.attributes.model import (
-    extract_model_config,
-    get_model_info
-)
-from agentops.instrumentation.openai_agents.attributes.completion import get_generation_output_attributes
-
-from agentops.logging import logger
-from agentops.instrumentation.openai_agents import LIBRARY_NAME, LIBRARY_VERSION
-
 
 TRACE_PREFIX = "agents.trace"
 
@@ -176,6 +165,22 @@ def log_otel_trace_id(span_type):
     return None
 
 
+def _get_span_lookup_key(trace_id: str, span_id: str) -> str:
+    """Generate a unique lookup key for spans based on trace and span IDs.
+    
+    This key is used to track spans in the exporter and allows for efficient
+    lookups and management of spans during their lifecycle.
+    
+    Args:
+        trace_id: The trace ID for the current span
+        span_id: The span ID for the current span
+        
+    Returns:
+        str: A unique lookup key for the span
+    """
+    return f"span:{trace_id}:{span_id}"
+
+
 class OpenAIAgentsExporter:
     """Exporter for Agents SDK traces and spans that forwards them to OpenTelemetry.
     
@@ -204,25 +209,19 @@ class OpenAIAgentsExporter:
         trace_id = getattr(trace, 'trace_id', 'unknown')
         
         if not hasattr(trace, 'trace_id'):
-            logger.warning("Cannot export trace: missing trace_id")
+            logger.debug("Cannot export trace: missing trace_id")
             return
         
-        attributes = get_base_trace_attributes(trace)
-        
         # Determine if this is a trace end event using status field
-        # Status field is the OpenTelemetry standard way to track completion
+        # We use the status field to determine if this is an end event
         is_end_event = hasattr(trace, "status") and trace.status == StatusCode.OK.name
-        
-        # Create a unique lookup key for the trace span
-        # Using trace_id for both the trace and span identifier to ensure uniqueness
-        trace_lookup_key = f"span:{trace_id}:{trace_id}"
+        trace_lookup_key = _get_span_lookup_key(trace_id, trace_id)
+        attributes = get_base_trace_attributes(trace)
         
         # For end events, check if we already have the span
         if is_end_event and trace_lookup_key in self._span_map:
             existing_span = self._span_map[trace_lookup_key]
             
-            # Check if span is already ended
-            from opentelemetry.sdk.trace import Span
             span_is_ended = False
             if isinstance(existing_span, Span) and hasattr(existing_span, "_end_time"):
                 span_is_ended = existing_span._end_time is not None
@@ -235,28 +234,20 @@ class OpenAIAgentsExporter:
                 # Handle error if present
                 if hasattr(trace, "error") and trace.error:
                     self._handle_span_error(trace, existing_span)
-                    
                 # Set status to OK if no error
                 else:
                     existing_span.set_status(Status(StatusCode.OK))
                 
-                # End the span now
                 existing_span.end()
-                logger.debug(f"[TRACE] Updated and ended existing trace span: {trace_id}")
                 
                 # Clean up our tracking resources
                 self._active_spans.pop(trace_id, None)
                 self._span_map.pop(trace_lookup_key, None)
                 return
-            else:
-                logger.debug(f"Cannot update trace {trace_id} as it is already ended - creating new one")
-        
-        # Create the trace span
-        span_name = f"{TRACE_PREFIX}.{trace.name}"
         
         # Create span directly instead of using context manager
         span = tracer.start_span(
-            name=span_name,
+            name=f"{TRACE_PREFIX}.{trace.name}",
             kind=SpanKind.INTERNAL,
             attributes=attributes
         )
@@ -270,19 +261,12 @@ class OpenAIAgentsExporter:
                 if isinstance(value, (str, int, float, bool)):
                     span.set_attribute(f"trace.metadata.{key}", value)
         
-        # Set the trace input as the prompt if available
-        if hasattr(trace, "input") and trace.input:
-            input_text = safe_serialize(trace.input)
-            span.set_attribute(SpanAttributes.LLM_PROMPTS, input_text)
-            span.set_attribute(WorkflowAttributes.WORKFLOW_INPUT, input_text)
-            
         # Record error if present
         if hasattr(trace, "error") and trace.error:
             self._handle_span_error(trace, span)
         
         # For start events, store the span for later reference
         if not is_end_event:
-            # Store the span for later updates
             self._span_map[trace_lookup_key] = span
             self._active_spans[trace_id] = {
                 'span': span,
@@ -290,19 +274,8 @@ class OpenAIAgentsExporter:
                 'trace_id': trace_id,
                 'parent_id': None  # Trace spans don't have parents
             }
-            
-            # Log the span and tracking dictionaries state for debugging
-            span_context = span.get_span_context() if hasattr(span, "get_span_context") else None
-            span_id_hex = f"{span_context.span_id:016x}" if span_context and hasattr(span_context, "span_id") else "unknown"
-            
-            logger.debug(f"[TRACE] Created and stored trace span for future reference: {trace_id}")
-            logger.debug(f"[TRACE] Span context: trace_id={trace_id}, span_id={span_id_hex}")
-            logger.debug(f"[TRACE] Active spans count: {len(self._active_spans)}")
-            logger.debug(f"[TRACE] Span map keys: {list(self._span_map.keys())[:5]}")
         else:
-            # End the span manually now that all attributes are set
             span.end()
-            logger.debug(f"[TRACE] Created and immediately ended trace span: {trace_id}")
     
     def _get_parent_context(self, trace_id: str, span_id: str, parent_id: Optional[str] = None) -> Any:
         """Find the parent span context for proper span nesting.
@@ -320,7 +293,6 @@ class OpenAIAgentsExporter:
         Returns:
             The OpenTelemetry span context to use as parent
         """
-        # Only attempt parent lookup if we have a parent_id
         parent_span_ctx = None
         
         if parent_id:
@@ -331,30 +303,23 @@ class OpenAIAgentsExporter:
                 # Get the context from the parent span if it exists
                 if hasattr(parent_span, "get_span_context"):
                     parent_span_ctx = parent_span.get_span_context()
-                    logger.debug(f"[SPAN] Found parent span context for {parent_id}")
         
         # If parent not found by span ID, check if trace span should be the parent
         if not parent_span_ctx and parent_id is None:
             # Try using the trace span as parent
-            trace_lookup_key = f"span:{trace_id}:{trace_id}"
-            logger.debug(f"[SPAN] Looking for trace parent with key: {trace_lookup_key}")
+            trace_lookup_key = _get_span_lookup_key(trace_id, trace_id)
             
             if trace_lookup_key in self._span_map:
                 trace_span = self._span_map[trace_lookup_key]
                 if hasattr(trace_span, "get_span_context"):
                     parent_span_ctx = trace_span.get_span_context()
-                    logger.debug(f"[SPAN] Using trace span as parent for {span_id}")
-                else:
-                    logger.debug(f"[SPAN] Trace span doesn't have get_span_context method")
         
         # If we couldn't find the parent by ID, use the current span context as parent
         if not parent_span_ctx:
             # Get the current span context from the context API
             ctx = context_api.get_current()
             parent_span_ctx = trace_api.get_current_span(ctx).get_span_context()
-            msg = "parent for new span" if parent_id else "parent"
-            logger.debug(f"[SPAN] Using current span context as {msg}")
-            
+        
         return parent_span_ctx
 
     def _create_span_with_parent(self, name: str, kind: SpanKind, attributes: Dict[str, Any], 
@@ -421,44 +386,14 @@ class OpenAIAgentsExporter:
         is_end_event = hasattr(span, 'status') and span.status == StatusCode.OK.name
         
         # Unique lookup key for this span
-        span_lookup_key = f"span:{trace_id}:{span_id}"
-        
-        # Get base attributes common to all spans
+        span_lookup_key = _get_span_lookup_key(trace_id, span_id)
         attributes = get_base_span_attributes(span)
-        
-        # Get span attributes using the attribute getter
         span_attributes = get_span_attributes(span_data)
         attributes.update(span_attributes)
         
-        # Log parent ID information for debugging
-        if parent_id:
-            logger.debug(f"[SPAN] Creating span {span_id} with parent ID: {parent_id}")
-        
-        # Add final output data if available for end events
         if is_end_event:
-            # For agent spans, set the output
-            if hasattr(span_data, 'output') and span_data.output:
-                output_text = safe_serialize(span_data.output)
-                # TODO this should be a semantic convention in the attributes module
-                attributes[WorkflowAttributes.FINAL_OUTPUT] = output_text
-                logger.debug(f"[SPAN] Added final output to attributes for span: {span_id[:8]}...")
-                
-            # Process token usage for generation spans
-            if span_type == "GenerationSpanData":
-                usage = getattr(span_data, 'usage', {})
-                if usage and "token_metrics" not in attributes:
-                    # Add token usage metrics to attributes
-                    # TODO these should be semantic conventions in the attributes module
-                    attributes["token_metrics"] = "true"
-                    input_tokens = getattr(usage, "prompt_tokens", getattr(usage, "input_tokens", 0))
-                    if input_tokens:
-                        attributes["gen_ai.token.input.count"] = input_tokens
-                    output_tokens = getattr(usage, "completion_tokens", getattr(usage, "output_tokens", 0))
-                    if output_tokens:
-                        attributes["gen_ai.token.output.count"] = output_tokens
-                    total_tokens = getattr(usage, "total_tokens", input_tokens + output_tokens)
-                    if total_tokens:
-                        attributes["gen_ai.token.total.count"] = total_tokens
+            # Update all attributes for end events
+            attributes.update(span_attributes)
         
         # Log the trace ID for debugging and correlation with AgentOps API
         log_otel_trace_id(span_type)
@@ -490,7 +425,6 @@ class OpenAIAgentsExporter:
                     'trace_id': trace_id,
                     'parent_id': parent_id
                 }
-                logger.debug(f"[SPAN] Created and stored span for future reference: {span_id}")
             
             # Handle any error information
             self._handle_span_error(span, otel_span)
@@ -503,8 +437,6 @@ class OpenAIAgentsExporter:
             existing_span = self._span_map[span_lookup_key]
             
             # Check if span is already ended
-            # TODO move this import to the top of the file, unless circular import
-            from opentelemetry.sdk.trace import Span
             span_is_ended = False
             if isinstance(existing_span, Span) and hasattr(existing_span, "_end_time"):
                 span_is_ended = existing_span._end_time is not None
@@ -514,17 +446,12 @@ class OpenAIAgentsExporter:
                 for key, value in attributes.items():
                     existing_span.set_attribute(key, value)
                 
-                # Set status
+                # Set status and handle any error information
                 existing_span.set_status(Status(StatusCode.OK if span.status == "OK" else StatusCode.ERROR))
-                
-                # Handle any error information
                 self._handle_span_error(span, existing_span)
                 
-                # End the span now
                 existing_span.end()
-                logger.debug(f"[SPAN] Updated and ended existing span: {span_id}")
             else:
-                logger.debug(f"Cannot update span {span_id} as it is already ended - creating new one")
                 # Create a new span with the complete data (already ended state)
                 self.create_span(span, span_type, attributes)
         else:
@@ -534,50 +461,6 @@ class OpenAIAgentsExporter:
         # Clean up our tracking resources
         self._active_spans.pop(span_id, None)
         self._span_map.pop(span_lookup_key, None)
-    
-    def create_span(self, span: Any, span_type: str, attributes: Dict[str, Any]) -> None:
-        """Create a new OpenTelemetry span for complete data.
-        
-        This method is used for end events without a matching start event.
-        It creates a complete span with all data and ends it immediately.
-        
-        Args:
-            span: The SDK span data
-            span_type: The type of span being created
-            attributes: Attributes to add to the span
-        """
-        if not hasattr(span, 'span_data'):
-            return
-            
-        span_data = span.span_data
-        span_kind = get_span_kind(span)
-        span_id = getattr(span, 'span_id', 'unknown')
-        trace_id = getattr(span, 'trace_id', 'unknown')
-        parent_id = getattr(span, 'parent_id', None)
-        
-        # Process the span based on its type
-        span_name = f"agents.{span_type.replace('SpanData', '').lower()}"
-        
-        # Get parent context for proper nesting
-        parent_span_ctx = self._get_parent_context(trace_id, span_id, parent_id)
-        
-        # Create span with parent context
-        otel_span = self._create_span_with_parent(
-            name=span_name,
-            kind=span_kind,
-            attributes=attributes,
-            parent_ctx=parent_span_ctx
-        )
-        
-        # Set appropriate status for end event
-        otel_span.set_status(Status(StatusCode.OK if getattr(span, 'status', None) == "OK" else StatusCode.ERROR))
-            
-        # Record error if present
-        self._handle_span_error(span, otel_span)
-        
-        # End the span now that all attributes are set
-        otel_span.end()
-        logger.debug(f"[SPAN] Created and immediately ended span: {span_id}")
         
     def _handle_span_error(self, span: Any, otel_span: Any) -> None:
         """Handle error information from spans."""
@@ -632,7 +515,6 @@ class OpenAIAgentsExporter:
         
         This ensures we don't leak span resources when the exporter is shutdown.
         """
-        logger.debug(f"[EXPORTER] Cleaning up {len(self._active_spans)} active spans")
         # Clear all tracking dictionaries
         self._active_spans.clear()
         self._span_map.clear()
