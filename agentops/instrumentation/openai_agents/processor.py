@@ -2,6 +2,7 @@ from typing import Any, Union
 import time
 
 from opentelemetry import trace
+from opentelemetry.trace import StatusCode
 from agentops.helpers.serialization import model_to_dict
 from agentops.logging import logger
 
@@ -178,6 +179,9 @@ class OpenAIAgentsProcessor:
         
         # Forward to exporter if available
         if self.exporter:
+            # Mark this as an end event - same pattern as in on_span_end
+            sdk_trace.status = StatusCode.OK.name  # Use OTel StatusCode constant
+            logger.debug(f"[TRACE] Marking trace as end event with ID: {trace_id}")
             self.exporter.export_trace(sdk_trace)
         
         # Clean up trace resources
@@ -242,7 +246,7 @@ class OpenAIAgentsProcessor:
         
         # Mark this as an end event
         # This is used by the exporter to determine whether to create or update a span
-        span.status = "OK"  # Use this as a marker for end events
+        span.status = StatusCode.OK.name  # Use OTel StatusCode constant
         
         # Determine if we need to create a new span or update an existing one
         is_new_span = True
