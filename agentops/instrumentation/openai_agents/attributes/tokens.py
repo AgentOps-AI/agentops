@@ -5,7 +5,7 @@ including standardized handling of different API formats (Chat Completions API v
 and recording token usage metrics.
 """
 import json
-from typing import Any, Dict, Optional, Union
+from typing import Any, Dict, Optional
 
 from agentops.semconv import SpanAttributes
 from agentops.logging import logger

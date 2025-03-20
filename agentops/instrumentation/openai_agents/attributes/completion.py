@@ -5,13 +5,12 @@ and the OpenAI Response API formats, extracting messages, tool calls, function c
 """
 from typing import Any, Dict
 
+from agentops.logging import logger
+from agentops.helpers.serialization import model_to_dict
 from agentops.semconv import (
     SpanAttributes,
     MessageAttributes,
-    WorkflowAttributes
 )
-from agentops.logging import logger
-from agentops.helpers.serialization import safe_serialize, model_to_dict
 from agentops.instrumentation.openai_agents.attributes.model import get_model_and_params_attributes
 from agentops.instrumentation.openai_agents.attributes.tokens import process_token_usage
 

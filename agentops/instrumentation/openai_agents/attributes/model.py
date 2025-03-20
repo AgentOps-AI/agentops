@@ -4,7 +4,6 @@ This module provides utilities for extracting model information and parameters
 from various object types, centralizing model attribute handling logic.
 """
 from typing import Any, Dict, Optional
-
 from agentops.semconv import SpanAttributes
 
 
