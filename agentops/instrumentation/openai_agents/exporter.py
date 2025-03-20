@@ -212,10 +212,7 @@ class OpenAIAgentsExporter:
         # Determine if this is a trace end event using status field
         # Status field is the OpenTelemetry standard way to track completion
         is_end_event = hasattr(trace, "status") and trace.status == StatusCode.OK.name
-        if is_end_event:
-            # If status is explicitly set, this is the end of a trace
-            attributes["workflow.is_end_event"] = "true"
-            
+        
         # Create a unique lookup key for the trace span
         # Using trace_id for both the trace and span identifier to ensure uniqueness
         trace_lookup_key = f"span:{trace_id}:{trace_id}"
