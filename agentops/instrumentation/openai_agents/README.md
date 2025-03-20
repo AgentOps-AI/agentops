@@ -10,117 +10,105 @@ The OpenAI Agents SDK instrumentor works by:
 2. Monkey-patching the Agents SDK `Runner` class to capture the full execution lifecycle, including streaming operations
 3. Converting all captured data to OpenTelemetry spans and metrics following semantic conventions
 
+The instrumentation is organized into several key components:
+
+1. **Instrumentor (`instrumentor.py`)**: The entry point that patches the Agents SDK and configures trace capture
+2. **Processor (`processor.py`)**: Receives events from the SDK and prepares them for export
+3. **Exporter (`exporter.py`)**: Converts SDK spans to OpenTelemetry spans and exports them
+4. **Attributes Module (`attributes/`)**: Specialized modules for extracting and formatting span attributes
+
+## Attribute Processing Modules
+
+The attribute modules extract and format OpenTelemetry-compatible attributes from span data:
+
+- **Common (`attributes/common.py`)**: Core attribute extraction functions for all span types and utility functions
+- **Completion (`attributes/completion.py`)**: Handles different completion content formats (Chat Completions API, Response API, Agents SDK) 
+- **Model (`attributes/model.py`)**: Extracts model information and parameters
+- **Tokens (`attributes/tokens.py`)**: Processes token usage data and metrics
+
+Each getter function in these modules is focused on a single responsibility and does not modify global state. Functions are designed to be composable, allowing different attribute types to be combined as needed in the exporter.
+
 ## Span Types
 
 The instrumentor captures the following span types:
 
 - **Trace**: The root span representing an entire agent workflow execution
-  - Implementation: `_export_trace()` method in `exporter.py`
-  - Creates a span with the trace name, ID, and workflow metadata
+  - Created using `get_base_trace_attributes()` to initialize with standard fields
+  - Captures workflow name, trace ID, and workflow-level metadata
 
 - **Agent**: Represents an agent's execution lifecycle
-  - Implementation: `_process_agent_span()` method in `exporter.py`
+  - Processed using `get_agent_span_attributes()` with `AGENT_SPAN_ATTRIBUTES` mapping
   - Uses `SpanKind.CONSUMER` to indicate an agent receiving a request
   - Captures agent name, input, output, tools, and other metadata
 
 - **Function**: Represents a tool/function call
-  - Implementation: `_process_function_span()` method in `exporter.py`
+  - Processed using `get_function_span_attributes()` with `FUNCTION_SPAN_ATTRIBUTES` mapping
   - Uses `SpanKind.CLIENT` to indicate an outbound call to a function
-  - Captures function name, input arguments, output results, and error information
+  - Captures function name, input arguments, output results, and from_agent information
 
 - **Generation**: Captures details of model generation
-  - Implementation: `_process_generation_span()` method in `exporter.py`
+  - Processed using `get_generation_span_attributes()` with `GENERATION_SPAN_ATTRIBUTES` mapping
   - Uses `SpanKind.CLIENT` to indicate an outbound call to an LLM
   - Captures model name, configuration, usage statistics, and response content
 
-- **Response**: Lightweight span for tracking model response IDs
-  - Implementation: Handled within `_process_response_api()` and `_process_completions()` methods
-  - Extracts response IDs and metadata from both Chat Completion API and Response API formats
+- **Response**: Lightweight span for tracking model response data
+  - Processed using `get_response_span_attributes()` with `RESPONSE_SPAN_ATTRIBUTES` mapping
+  - Extracts response content and metadata from different API formats
 
 - **Handoff**: Represents control transfer between agents
-  - Implementation: Captured through the `AgentAttributes.HANDOFFS` attribute
-  - Maps from the Agents SDK's "handoffs" field to standardized attribute name
+  - Processed using `get_handoff_span_attributes()` with `HANDOFF_SPAN_ATTRIBUTES` mapping
+  - Tracks from_agent and to_agent information
 
-## Metrics
+## Span Lifecycle Management
 
-The instrumentor collects the following metrics:
+The exporter (`exporter.py`) handles the full span lifecycle:
 
-- **Agent Runs**: Number of agent runs
-  - Implementation: `_agent_run_counter` in `instrumentor.py`
-  - Incremented at the start of each agent run with metadata about the agent and run configuration
+1. **Start Events**:
+   - Create spans but DO NOT END them
+   - Store span references in tracking dictionaries
+   - Use OpenTelemetry's start_span to control when spans end
+   - Leave status as UNSET to indicate in-progress
 
-- **Agent Turns**: Number of agent turns
-  - Implementation: Inferred from raw responses processing
-  - Each raw response represents a turn in the conversation
+2. **End Events**:
+   - Look up existing span by ID in tracking dictionaries
+   - If found and not ended:
+     - Update span with all final attributes
+     - Set status to OK or ERROR based on task outcome
+     - End the span manually
+   - If not found or already ended:
+     - Create a new complete span with all data
+     - End it immediately
 
-- **Agent Execution Time**: Time taken for agent execution
-  - Implementation: `_agent_execution_time_histogram` in `instrumentor.py`
-  - Measured from the start of an agent run to its completion
-
-- **Token Usage**: Number of input and output tokens used
-  - Implementation: `_agent_token_usage_histogram` in `instrumentor.py`
-  - Records both prompt and completion tokens separately with appropriate labels
+3. **Error Handling**:
+   - Check if spans are already ended before attempting updates
+   - Provide informative log messages about span lifecycle
+   - Properly clean up tracking resources
 
 ## Key Design Patterns
 
-### Target → Source Mapping Pattern
+### Semantic Conventions
 
-We use a consistent pattern for attribute mapping where dictionary keys represent the target attribute names (what we want in the final span), and values represent the source field names (where the data comes from):
+All attribute names follow the OpenTelemetry semantic conventions defined in `agentops.semconv`:
 
 ```python
-_CONFIG_MAPPING = {
-    # Target semantic convention → source field
-    <SemanticConvention>: Union[str, list[str]], 
+# Using constants from semconv module
+attributes[CoreAttributes.TRACE_ID] = trace_id
+attributes[WorkflowAttributes.WORKFLOW_NAME] = trace.name
+attributes[SpanAttributes.LLM_SYSTEM] = "openai"
+attributes[MessageAttributes.COMPLETION_CONTENT.format(i=0)] = content
+```
+
+### Target → Source Attribute Mapping
+
+We use a consistent pattern for attribute extraction with typed mapping dictionaries:
+
+```python
+# Attribute mapping example
+AGENT_SPAN_ATTRIBUTES: AttributeMap = {
+    # target_attribute: source_attribute
+    AgentAttributes.AGENT_NAME: "name",
+    WorkflowAttributes.WORKFLOW_INPUT: "input",
+    WorkflowAttributes.FINAL_OUTPUT: "output",
     # ...
 }
 ```
-
-This pattern makes it easy to maintain mappings and apply them consistently.
-
-### Multi-API Format Support
-
-The instrumentor handles both OpenAI API formats:
-
-1. **Chat Completion API**: Traditional format with "choices" array and prompt_tokens/completion_tokens
-2. **Response API**: Newer format with "output" array and input_tokens/output_tokens
-
-The implementation intelligently detects which format is being used and processes accordingly.
-
-
-### Streaming Operation Tracking
-
-When instrumenting streaming operations, we:
-
-1. Track active streaming operations using unique IDs
-2. Handle proper flushing of spans to ensure metrics are recorded
-3. Create separate spans for token usage metrics to avoid premature span closure
-
-### Response API Content Extraction
-
-The Response API has a nested structure for content:
-
-```
-output → message → content → [items] → text
-```
-
-Extracting the actual text requires special handling:
-
-```python
-# From _process_response_api in exporter.py
-if isinstance(content_items, list):
-    # Combine text from all text items
-    texts = []
-    for content_item in content_items:
-        if content_item.get("type") == "output_text" and "text" in content_item:
-            texts.append(content_item["text"])
-    
-    # Join texts (even if empty)
-    attributes[f"{prefix}.content"] = " ".join(texts)
-```
-
-
-## TODO
-- Add support for additional semantic conventions
-    - `gen_ai` doesn't have conventions for response data beyond `role` and `content`
-    - We're shoehorning `responses` into `completions` since the spec doesn't
-      have a convention in place for this yet. 

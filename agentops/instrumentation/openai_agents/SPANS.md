@@ -1,38 +1,58 @@
 # OpenAI Agents Spans and Traces
 
-This document describes how AgentOps implements the OpenAI Agents Traces API, including span naming conventions, hierarchies, and search patterns.
+This document describes the span types, naming conventions, and attribute patterns used by the AgentOps instrumentation for the OpenAI Agents SDK.
+
+## Span Types and Classes
+
+The instrumentation works with these specific span data classes:
+
+1. **AgentSpanData**: Represents a single agent's operation
+   - Has attributes for name, input, output, tools, and handoffs
+   - Processed by `get_agent_span_attributes()` using `AGENT_SPAN_ATTRIBUTES` mapping
+
+2. **FunctionSpanData**: Represents tool or function calls
+   - Has attributes for name, input, output, and from_agent
+   - Processed by `get_function_span_attributes()` using `FUNCTION_SPAN_ATTRIBUTES` mapping
+
+3. **GenerationSpanData**: Represents LLM model invocations
+   - Has attributes for model, input, output, tools, and from_agent
+   - Processed by `get_generation_span_attributes()` using `GENERATION_SPAN_ATTRIBUTES` mapping
+
+4. **HandoffSpanData**: Represents agent-to-agent handoffs
+   - Has attributes for from_agent and to_agent
+   - Processed by `get_handoff_span_attributes()` using `HANDOFF_SPAN_ATTRIBUTES` mapping
+
+5. **ResponseSpanData**: Represents model response data
+   - Has attributes for input and response
+   - Processed by `get_response_span_attributes()` using `RESPONSE_SPAN_ATTRIBUTES` mapping
 
 ## Span Naming Conventions
 
-Our instrumentation follows these naming patterns:
+Spans are named according to these conventions:
 
 1. **Trace Spans**: `agents.trace.{workflow_name}`
    - Represents the entire agent workflow
-   - Named after the workflow or agent name
+   - Named after the workflow or trace name
 
-2. **Agent Spans**: `agents.agent.{agent_name}`
+2. **Agent Spans**: `agents.agent`
    - Represents a single agent's operation
-   - Named after the agent's name
+   - Uses `SpanKind.CONSUMER`
 
-3. **Function Spans**: `agents.function.{function_name}`
+3. **Function Spans**: `agents.function`
    - Represents tool or function calls
-   - Named after the function's name
+   - Uses `SpanKind.CLIENT`
 
-4. **Generation Spans**: `agents.generation.{model_name}`
+4. **Generation Spans**: `agents.generation`
    - Represents LLM model invocations
-   - Named after the model name when available
+   - Uses `SpanKind.CLIENT`
 
-5. **Handoff Spans**: `agents.handoff.{from_agent}_to_{to_agent}`
+5. **Handoff Spans**: `agents.handoff`
    - Represents agent-to-agent handoffs
-   - Named with both the origin and destination agents
+   - Uses `SpanKind.INTERNAL`
 
-6. **Response Spans**: `agents.response.{response_id}`
-   - Lightweight spans for model responses
-   - Named with response ID when available
-
-7. **Streaming Operation Spans**: `agents.run_streamed.{agent_name}`
-   - Special spans for streaming operations
-   - Include `stream: true` attribute and unique `stream_id`
+6. **Response Spans**: `agents.response`
+   - Represents model response data
+   - Uses `SpanKind.CLIENT`
 
 ## Span Hierarchy
 
@@ -40,125 +60,86 @@ The spans follow a parent-child relationship that reflects the execution flow:
 
 ```
 agents.trace.{workflow_name}
-  └── agents.agent.{agent_name}
-      ├── agents.generation.{model_name}
-      ├── agents.function.{function_name}
-      └── agents.handoff.{from_agent}_to_{to_agent}
+  └── agents.agent
+      ├── agents.generation
+      ├── agents.function
+      ├── agents.response
+      └── agents.handoff
 ```
 
-For streaming operations, there's an additional usage span:
+## Semantic Conventions and Attributes
 
-```
-agents.run_streamed.{agent_name}
-  └── agents.run_streamed.usage.{agent_name}
-```
+Each span type has attributes following OpenTelemetry semantic conventions:
 
-## Key Attributes for Finding Spans
+### Common Attributes (All Spans)
 
-To locate specific spans in traces and logs, use these key attributes:
+- `trace.id`: OpenTelemetry trace ID
+- `span.id`: OpenTelemetry span ID
+- `parent.id`: Parent span ID (if applicable)
+- `instrumentation.name`: "agentops"
+- `instrumentation.version`: AgentOps library version
+- `instrumentation.library.name`: "openai_agents"
+- `instrumentation.library.version`: Library version
 
-1. **Agent Identification**:
-   - `agent.name`: The name of the agent
-   - `agent.from`: Source agent in handoffs
-   - `agent.to`: Destination agent in handoffs
+### Workflow and Trace Attributes
 
-2. **Operation Type**:
-   - `workflow.type`: Identifies the operation type (e.g., "agents.run_sync")
-   - `workflow.step_type`: Distinguishes between trace, span, and other step types
+- `workflow.name`: Name of the workflow or trace
+- `workflow.step_type`: "trace" for trace spans
+- `workflow.input`: Input to the workflow
+- `workflow.final_output`: Final output from the workflow
 
-3. **Streaming Operations**:
-   - `stream`: "true" or "false" to identify streaming operations
-   - `stream_id`: Unique identifier for correlating streaming events
+### Agent Attributes
 
-4. **Model Information**:
-   - `gen_ai.request.model`: The model used for generation
-   - `gen_ai.response.model`: The model that provided the response (may differ)
+- `agent.name`: The name of the agent
+- `agent.tools`: Comma-separated list of available tools
+- `agent.handoffs`: Comma-separated list of handoff targets
+- `agent.from`: Source agent in handoffs (used in HandoffSpanData)
+- `agent.to`: Destination agent in handoffs (used in HandoffSpanData)
 
-5. **Execution Context**:
-   - `trace.id`: OpenTelemetry trace ID
-   - `span.id`: OpenTelemetry span ID
-   - `parent.id`: Parent span ID for reconstructing hierarchies
+### LLM Attributes
 
-## Metrics and Token Usage
+- `gen_ai.system`: "openai" for all OpenAI spans
+- `gen_ai.request.model`: Model used for generation
+- `gen_ai.response.model`: Model that provided the response
+- `gen_ai.prompt`: Input prompt or message
+- `gen_ai.completion.0.role`: Role of the completion message (usually "assistant")
+- `gen_ai.completion.0.content`: Content of the completion message
+- `gen_ai.tool_call.0.0.name`: Name of the tool called (if applicable)
+- `gen_ai.tool_call.0.0.arguments`: Arguments for the tool call (if applicable)
 
-Token usage is captured on spans with these attributes:
+### Token Usage Attributes
 
-1. **Token Counters**:
-   - `gen_ai.usage.prompt_tokens`: Input token count
-   - `gen_ai.usage.completion_tokens`: Output token count
-   - `gen_ai.usage.total_tokens`: Total token usage
-   - `gen_ai.usage.reasoning_tokens`: Tokens used for reasoning (when available)
-
-2. **Histograms**:
-   - `gen_ai.operation.duration`: Duration of operations in seconds
-   - `gen_ai.token_usage`: Token usage broken down by token type
-
-## Searching and Filtering Examples
-
-To find specific spans and analyze operations:
-
-1. **Find all operations from a specific agent**:
-   - Filter by `agent.name = "your_agent_name"`
-
-2. **Find all streaming operations**:
-   - Filter by `stream = "true"`
-
-3. **Find all function calls**:
-   - Filter by name prefix `agents.function`
-
-4. **Find generation spans with a specific model**:
-   - Filter by `gen_ai.request.model = "gpt-4-turbo"`
-
-5. **Find spans with errors**:
-   - Filter by `error.type IS NOT NULL`
-
-## OpenTelemetry Compatibility
-
-Our implementation bridges the OpenAI Agents tracing system with OpenTelemetry by:
-
-1. Mapping Agents SDK span types to OpenTelemetry span kinds:
-   - Agent spans → `SpanKind.CONSUMER`
-   - Function/Generation spans → `SpanKind.CLIENT`
-   - Trace spans → `SpanKind.INTERNAL`
-
-2. Using semantic convention attributes from the OpenTelemetry AI conventions
-   - All spans include the `service.name = "agentops.agents"` attribute
-   - LLM-specific attributes use the `gen_ai.*` namespace
-
-3. Preserving context for distributed tracing:
-   - All spans include trace, span, and parent IDs
-   - Follows W3C Trace Context specification
+- `gen_ai.usage.prompt_tokens`: Number of input tokens
+- `gen_ai.usage.completion_tokens`: Number of output tokens
+- `gen_ai.usage.total_tokens`: Total number of tokens
+- `gen_ai.usage.reasoning_tokens`: Tokens used for reasoning (Response API)
+- `gen_ai.usage.cache_read.input_tokens`: Cached input tokens (Response API)
 
 ## Span Lifecycle Management
 
-The lifecycle of spans is managed following this flow:
+The exporter handles span lifecycle with these stages:
 
-```
-on_trace_start:
-  ├── Create trace span with start_as_current_span
-  ├── Store span in _active_spans for future reference
-  └── Store OTel trace ID for debugging
+1. **Start Events**:
+   - Create spans with `start_span()` (not using context manager)
+   - Store span references in tracking dictionaries
+   - Leave status as UNSET to indicate in-progress
 
-on_span_start:
-  ├── Build attributes based on span type
-  ├── Add original trace/span ID and parent relationships
-  ├── Create span with create_span context manager
-  └── Store span in _active_spans dictionary
+2. **End Events**:
+   - Look up existing span by ID
+   - Update with final attributes
+   - Set appropriate status and end the span manually
 
-on_span_end:
-  ├── Process metrics if needed
-  └── Clean up span reference from _active_spans
-  (The span is ended automatically when exiting the context manager)
+3. **Error Handling**:
+   - Set status to ERROR for spans with errors
+   - Add error type and message as attributes
+   - Record exceptions with `record_exception()`
 
-on_trace_end:
-  ├── Record execution time metrics
-  ├── Create a final trace end span
-  └── Clean up trace references
-```
+## OpenTelemetry Span Kinds
 
-Using this context manager approach:
-1. OpenTelemetry automatically handles span context propagation
-2. Parent-child relationships are properly preserved
-3. Spans are automatically ended when the context manager exits
-4. The original Agents SDK trace and span IDs are preserved in attributes
-5. Implementation is simpler and follows OpenTelemetry best practices
+Span kinds map to OpenTelemetry concepts:
+
+- `AgentSpanData` → `SpanKind.CONSUMER`
+- `FunctionSpanData` → `SpanKind.CLIENT`
+- `GenerationSpanData` → `SpanKind.CLIENT`
+- `ResponseSpanData` → `SpanKind.CLIENT`
+- `HandoffSpanData` → `SpanKind.INTERNAL`
