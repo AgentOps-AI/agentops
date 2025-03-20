@@ -1,15 +1,13 @@
-# TODO this file duplicates a lot of code from exporter.py; most of this logic should be in there instead
-from typing import Any, Dict, Optional, Union
+from typing import Any, Union
 import time
-import weakref
-from contextlib import contextmanager
 
-from opentelemetry import trace, context as context_api
-from agentops.helpers.serialization import model_to_dict, safe_serialize
+from opentelemetry import trace
+from agentops.helpers.serialization import model_to_dict
 from agentops.logging import logger
 
 from agentops.instrumentation.openai_agents import LIBRARY_NAME, LIBRARY_VERSION
-from agentops.instrumentation.openai_agents.attributes.tokens import process_token_usage, get_token_metric_attributes
+from agentops.instrumentation.openai_agents.attributes.tokens import get_token_metric_attributes
+from agentops.instrumentation.openai_agents.attributes.model import get_model_info
 
 
 def get_otel_trace_id() -> Union[str, None]:
@@ -210,7 +208,7 @@ class OpenAIAgentsProcessor:
         
         # Record agent run metrics for AgentSpanData
         if span_type == "AgentSpanData" and self._agent_run_counter:
-            model_name = self._extract_model_name(span_data)
+            model_name = get_model_info(span_data).get("model_name", "unknown")
             is_streaming = self._active_traces.get(trace_id, {}).get('is_streaming', 'false')
             
             # Update trace data with model information
@@ -250,25 +248,11 @@ class OpenAIAgentsProcessor:
         is_new_span = True
         span_lookup_key = f"span:{trace_id}:{span_id}"
         
-        # Process AgentSpanData specially to ensure final output is captured
-        if span_type == "AgentSpanData":
-            if hasattr(span_data, 'output') and span_data.output:
-                logger.debug(f"[SPAN] AgentSpanData output: {span_data.output[:100]}...")
-                # Store the output as a final_output attribute directly on the span
-                # This allows us to find it later to set on the span
-                span.final_output = span_data.output
-                logger.debug(f"[SPAN] Stored final_output attribute on span: {span_id}")
-                
-            if hasattr(span_data, 'input') and span_data.input:
-                logger.debug(f"[SPAN] AgentSpanData input: {span_data.input[:100]}...")
-                # Store the input as a prompt attribute directly on the span
-                span.prompt = span_data.input
-                
         logger.debug(f"[SPAN] Ended: {span_type} | ID: {span_id}")
         
         # Process generation spans for token usage metrics
         if span_type == "GenerationSpanData" and self._agent_token_usage_histogram:
-            model_name = self._extract_model_name(span_data)
+            model_name = get_model_info(span_data).get("model_name", "unknown")
             
             # Extract usage data
             usage = getattr(span_data, 'usage', {})
@@ -328,33 +312,3 @@ class OpenAIAgentsProcessor:
             
         return "unknown"
     
-    def _extract_model_name(self, span_data: Any) -> str:
-        """Extract model name from span data."""
-        if hasattr(span_data, 'model') and span_data.model:
-            return span_data.model
-            
-        # For generation spans with model_config
-        if hasattr(span_data, 'model_config') and span_data.model_config:
-            model_config = span_data.model_config
-            if isinstance(model_config, dict) and 'model' in model_config:
-                return model_config['model']
-            if hasattr(model_config, 'model') and model_config.model:
-                return model_config.model
-                
-        # For spans with output containing model info
-        if hasattr(span_data, 'output') and span_data.output:
-            output = span_data.output
-            if hasattr(output, 'model') and output.model:
-                return output.model
-            
-            # Try to extract from dict representation
-            output_dict = model_to_dict(output)
-            if isinstance(output_dict, dict) and 'model' in output_dict:
-                return output_dict['model']
-        
-        # Default model
-        try:
-            from agents.models.openai_provider import DEFAULT_MODEL
-            return DEFAULT_MODEL
-        except ImportError:
-            return "unknown"
