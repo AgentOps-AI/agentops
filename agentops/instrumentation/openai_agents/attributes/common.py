@@ -4,10 +4,9 @@ This module contains shared constants, attribute mappings, and utility functions
 trace and span attributes in OpenAI Agents instrumentation. It provides the core functionality
 for extracting and formatting attributes according to OpenTelemetry semantic conventions.
 """
-from typing import Any, Dict
-from opentelemetry.trace import SpanKind
+from typing import Any
 from agentops.logging import logger
-from agentops.helpers import get_agentops_version, safe_serialize
+from agentops.helpers import get_agentops_version
 from agentops.semconv import (
     CoreAttributes,
     AgentAttributes,
@@ -17,8 +16,7 @@ from agentops.semconv import (
 )
 from agentops.instrumentation.openai_agents import LIBRARY_NAME, LIBRARY_VERSION
 from agentops.instrumentation.openai_agents.attributes import AttributeMap, _extract_attributes_from_mapping
-from agentops.instrumentation.openai_agents.attributes.model import extract_model_config, get_model_and_params_attributes
-from agentops.instrumentation.openai_agents.attributes.tokens import process_token_usage
+from agentops.instrumentation.openai_agents.attributes.model import extract_model_config
 from agentops.instrumentation.openai_agents.attributes.response import get_response_response_attributes
 from agentops.instrumentation.openai_agents.attributes.completion import get_generation_output_attributes
 
@@ -152,6 +150,8 @@ def get_response_span_attributes(span_data: Any) -> AttributeMap:
     the rich response object to extract LLM-specific attributes like token usage,
     model information, content, etc.
     
+    TODO tool calls arrive from this span type; need to figure out why that is. 
+    
     Args:
         span_data: The ResponseSpanData object
         
@@ -172,7 +172,7 @@ def get_generation_span_attributes(span_data: Any) -> AttributeMap:
     
     Generations are requests made to the `openai.completions` endpoint.
     
-    # TODO this has not been tested yet as there is a flag that needs ot be set to use the 
+    # TODO this has not been extensively tested yet as there is a flag that needs ot be set to use the 
     # completions API with the Agents SDK. 
     
     Args:
