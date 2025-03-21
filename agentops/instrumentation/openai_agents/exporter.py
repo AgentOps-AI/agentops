@@ -124,7 +124,6 @@ from agentops.semconv import (
 )
 from agentops.instrumentation.openai_agents import LIBRARY_NAME, LIBRARY_VERSION
 from agentops.instrumentation.openai_agents.attributes.common import (
-    get_span_kind,
     get_base_trace_attributes,
     get_base_span_attributes,
     get_span_attributes,
@@ -163,6 +162,30 @@ def log_otel_trace_id(span_type):
     
     logger.debug(f"[SPAN] Export | Type: {span_type} | NO TRACE ID AVAILABLE")
     return None
+
+
+def get_span_kind(span: Any) -> SpanKind:
+    """Determine the appropriate span kind based on span type."""
+    span_data = span.span_data
+    span_type = span_data.__class__.__name__
+    
+    if span_type == "AgentSpanData":
+        return SpanKind.CONSUMER
+    elif span_type in ["FunctionSpanData", "GenerationSpanData", "ResponseSpanData"]:
+        return SpanKind.CLIENT
+    else:
+        return SpanKind.INTERNAL
+
+
+def get_span_name(span: Any) -> str:
+    """Get the name of the span based on its type and attributes."""
+    span_data = span.span_data
+    span_type = span_data.__class__.__name__
+    
+    if hasattr(span_data, "name") and span_data.name:
+        return span_data.name
+    else:
+        return f"agents.{span_type.replace('SpanData', '').lower()}"
 
 
 def _get_span_lookup_key(trace_id: str, span_id: str) -> str:
@@ -247,7 +270,7 @@ class OpenAIAgentsExporter:
         
         # Create span directly instead of using context manager
         span = tracer.start_span(
-            name=f"{TRACE_PREFIX}.{trace.name}",
+            name=f"{TRACE_PREFIX}.{trace.name}",  # TODO
             kind=SpanKind.INTERNAL,
             attributes=attributes
         )
@@ -402,7 +425,7 @@ class OpenAIAgentsExporter:
         if not is_end_event:
             # Process the span based on its type
             # TODO span_name should come from the attributes module
-            span_name = f"agents.{span_type.replace('SpanData', '').lower()}"
+            span_name = get_span_name(span)
             span_kind = get_span_kind(span)
             
             # Get parent context for proper nesting
