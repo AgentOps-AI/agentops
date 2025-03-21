@@ -17,16 +17,20 @@ from agentops.instrumentation.openai_agents.attributes.tokens import process_tok
 
 
 def get_generation_output_attributes(output: Any) -> Dict[str, Any]:
-    """Get attributes from generation span output data.
+    """Extract LLM response attributes from any OpenAI response format.
     
-    This function centralizes the extraction of output data from generation spans,
-    handling both Chat Completions API and Response API formats as well as OpenAI Agents SDK responses.
+    This unified function centralizes attribute extraction from multiple response formats:
+    1. Chat Completions API format (with 'choices' array)
+    2. Response API format (with 'output' array)
+    3. OpenAI Agents SDK format (with 'raw_responses' array)
+    
+    It automatically detects the format and delegates to the appropriate handler.
     
     Args:
-        output: The output object from a generation span
+        output: The response object (can be dict, Response object, or other format)
         
     Returns:
-        Dictionary of attributes extracted from the output
+        Dictionary of attributes extracted from the response in a consistent format
     """
     # Convert model to dictionary for easier processing
     response_dict = model_to_dict(output)
@@ -41,7 +45,6 @@ def get_generation_output_attributes(output: Any) -> Dict[str, Any]:
     
     # Check for OpenAI Agents SDK response format (has raw_responses array)
     if "raw_responses" in response_dict and isinstance(response_dict["raw_responses"], list):
-        logger.debug("Detected OpenAI Agents SDK response format with raw_responses")
         result.update(get_agents_response_attributes(response_dict))
     else:
         # Extract metadata for standard formats (model, id, system fingerprint)
@@ -69,13 +72,14 @@ def get_generation_output_attributes(output: Any) -> Dict[str, Any]:
 
 
 def get_agents_response_attributes(response: Dict[str, Any]) -> Dict[str, Any]:
-    """Extract attributes from OpenAI Agents SDK response format.
+    """Extract attributes from OpenAI Agents SDK response format (with raw_responses).
     
     This function handles the specific structure of OpenAI Agents SDK responses,
     which include a raw_responses array containing the actual API responses.
+    This is the format used specifically by the Agents SDK, not the standard OpenAI API.
     
     Args:
-        response: The OpenAI Agents SDK response dictionary
+        response: The OpenAI Agents SDK response dictionary (containing raw_responses array)
         
     Returns:
         Dictionary of attributes extracted from the Agents SDK response
@@ -152,10 +156,14 @@ def get_response_metadata_attributes(response: Dict[str, Any]) -> Dict[str, Any]
 
 
 def get_chat_completions_attributes(response: Dict[str, Any]) -> Dict[str, Any]:
-    """Get attributes from chat completions format.
+    """Get attributes from OpenAI Chat Completions API format (with choices array).
+    
+    This function specifically handles the original Chat Completions API format
+    that uses a 'choices' array with 'message' objects, as opposed to the newer
+    Response API format that uses an 'output' array.
     
     Args:
-        response: The response dictionary containing chat completions
+        response: The response dictionary containing chat completions (with choices array)
         
     Returns:
         Dictionary of chat completion attributes
@@ -196,10 +204,14 @@ def get_chat_completions_attributes(response: Dict[str, Any]) -> Dict[str, Any]:
 
 
 def get_response_api_attributes(response: Dict[str, Any]) -> Dict[str, Any]:
-    """Get attributes from a response in the OpenAI Response API format.
+    """Get attributes from a response in the OpenAI Response API format (with output array).
+    
+    This function specifically handles the new Response API format that uses an 'output' 
+    array instead of the older 'choices' array used by the Chat Completions API.
+    This is the direct API format without the Agents SDK wrapper.
     
     Args:
-        response: The response dictionary in Response API format
+        response: The response dictionary in Response API format (containing output array)
         
     Returns:
         Dictionary of attributes from Response API format
@@ -208,10 +220,6 @@ def get_response_api_attributes(response: Dict[str, Any]) -> Dict[str, Any]:
     
     if "output" not in response:
         return result
-        
-    # Log the full response to debug where model information is located
-    logger.debug(f"[OpenAI Agents] Response API content: {response}")
-    
     # Extract model information and parameters using the helper function
     result.update(get_model_and_params_attributes(response))
     

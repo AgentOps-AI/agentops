@@ -48,7 +48,6 @@ def extract_nested_usage(content: Any) -> Optional[Dict[str, Any]]:
     """
     # Case: direct dictionary with usage field
     if isinstance(content, dict) and "usage" in content:
-        logger.debug("Found direct usage field in dictionary")
         return content["usage"]
     
     # Case: JSON string that might contain usage
@@ -57,15 +56,12 @@ def extract_nested_usage(content: Any) -> Optional[Dict[str, Any]]:
         if parsed_data:
             # Direct usage field in parsed JSON
             if "usage" in parsed_data and isinstance(parsed_data["usage"], dict):
-                logger.debug("Found usage in parsed JSON string")
                 return parsed_data["usage"]
             
             # Response API format with nested output structure
             if "output" in parsed_data and isinstance(parsed_data["output"], list):
-                logger.debug("Found Response API output format, checking for nested usage")
                 # Usage at top level in Response format
                 if "usage" in parsed_data:
-                    logger.debug("Found usage at top level in Response API format")
                     return parsed_data["usage"]
     
     # Case: complex nested structure with output array
@@ -73,10 +69,8 @@ def extract_nested_usage(content: Any) -> Optional[Dict[str, Any]]:
     if isinstance(content, dict):
         if "output" in content and isinstance(content["output"], list):
             if "usage" in content:
-                logger.debug("Found usage in Response API format object")
                 return content["usage"]
     
-    logger.debug("No usage data found in content")
     return None
 
 
@@ -94,60 +88,95 @@ def process_token_usage(usage: Dict[str, Any], attributes: Dict[str, Any], compl
     # Result dictionary for metric recording
     result = {}
     
-    logger.debug(f"TOKENS: Processing token usage: {usage}")
-    logger.debug(f"TOKENS: Before processing, attributes has keys: {list(attributes.keys())}")
-    
     # If usage is empty or None, use completion_content to find usage data
-    if not usage or len(usage) == 0:
+    if not usage or (isinstance(usage, dict) and len(usage) == 0):
         if completion_content:
             logger.debug("TOKENS: Usage is empty, trying to extract from completion content")
             extracted_usage = extract_nested_usage(completion_content)
             if extracted_usage:
                 usage = extracted_usage
-                logger.debug(f"TOKENS: Extracted usage data from completion content: {usage}")
     
     # Always set token usage attributes directly on the span to ensure they're captured
     # For both Chat Completions API and Response API formats
-    if "prompt_tokens" in usage:
-        logger.debug(f"Setting LLM_USAGE_PROMPT_TOKENS from prompt_tokens: {usage['prompt_tokens']}")
-        attributes[SpanAttributes.LLM_USAGE_PROMPT_TOKENS] = usage["prompt_tokens"]
-        result["prompt_tokens"] = usage["prompt_tokens"]
-    elif "input_tokens" in usage:
-        logger.debug(f"Setting LLM_USAGE_PROMPT_TOKENS from input_tokens: {usage['input_tokens']}")
-        attributes[SpanAttributes.LLM_USAGE_PROMPT_TOKENS] = usage["input_tokens"]
-        result["prompt_tokens"] = usage["input_tokens"]
-        
-    if "completion_tokens" in usage:
-        logger.debug(f"Setting LLM_USAGE_COMPLETION_TOKENS from completion_tokens: {usage['completion_tokens']}")
-        attributes[SpanAttributes.LLM_USAGE_COMPLETION_TOKENS] = usage["completion_tokens"]
-        result["completion_tokens"] = usage["completion_tokens"]
-    elif "output_tokens" in usage:
-        logger.debug(f"Setting LLM_USAGE_COMPLETION_TOKENS from output_tokens: {usage['output_tokens']}")
-        attributes[SpanAttributes.LLM_USAGE_COMPLETION_TOKENS] = usage["output_tokens"]
-        result["completion_tokens"] = usage["output_tokens"]
-        
-    if "total_tokens" in usage:
-        logger.debug(f"Setting LLM_USAGE_TOTAL_TOKENS from total_tokens: {usage['total_tokens']}")
-        attributes[SpanAttributes.LLM_USAGE_TOTAL_TOKENS] = usage["total_tokens"]
-        result["total_tokens"] = usage["total_tokens"]
+    
+    # Helper to get an attribute from either a dict or an object
+    def get_value(obj, key):
+        if isinstance(obj, dict) and key in obj:
+            return obj[key]
+        elif hasattr(obj, key):
+            return getattr(obj, key)
+        return None
+    
+    # Helper to check if an object has an attribute
+    def has_key(obj, key):
+        if isinstance(obj, dict):
+            return key in obj
+        return hasattr(obj, key)
+    
+    # Process prompt/input tokens
+    if has_key(usage, "prompt_tokens"):
+        prompt_tokens = get_value(usage, "prompt_tokens")
+        attributes[SpanAttributes.LLM_USAGE_PROMPT_TOKENS] = prompt_tokens
+        result["prompt_tokens"] = prompt_tokens
+    elif has_key(usage, "input_tokens"):
+        input_tokens = get_value(usage, "input_tokens")
+        attributes[SpanAttributes.LLM_USAGE_PROMPT_TOKENS] = input_tokens
+        result["prompt_tokens"] = input_tokens
+    
+    # Process completion/output tokens    
+    if has_key(usage, "completion_tokens"):
+        completion_tokens = get_value(usage, "completion_tokens")
+        attributes[SpanAttributes.LLM_USAGE_COMPLETION_TOKENS] = completion_tokens
+        result["completion_tokens"] = completion_tokens
+    elif has_key(usage, "output_tokens"):
+        output_tokens = get_value(usage, "output_tokens")
+        attributes[SpanAttributes.LLM_USAGE_COMPLETION_TOKENS] = output_tokens
+        result["completion_tokens"] = output_tokens
+    
+    # Process total tokens    
+    if has_key(usage, "total_tokens"):
+        total_tokens = get_value(usage, "total_tokens")
+        attributes[SpanAttributes.LLM_USAGE_TOTAL_TOKENS] = total_tokens
+        result["total_tokens"] = total_tokens
     
     # Process Response API specific token details using defined semantic conventions
     
     # Process reasoning tokens (from Response API output_tokens_details)
-    if "output_tokens_details" in usage and isinstance(usage["output_tokens_details"], dict):
-        details = usage["output_tokens_details"]
-        if "reasoning_tokens" in details:
-            logger.debug(f"Setting LLM_USAGE_REASONING_TOKENS: {details['reasoning_tokens']}")
-            attributes[SpanAttributes.LLM_USAGE_REASONING_TOKENS] = details["reasoning_tokens"]
-            result["reasoning_tokens"] = details["reasoning_tokens"]
+    output_tokens_details = None
+    if has_key(usage, "output_tokens_details"):
+        output_tokens_details = get_value(usage, "output_tokens_details")
+        
+    if output_tokens_details:
+        # Handle both dict and object types
+        if isinstance(output_tokens_details, dict):
+            details = output_tokens_details
+            if "reasoning_tokens" in details:
+                attributes[SpanAttributes.LLM_USAGE_REASONING_TOKENS] = details["reasoning_tokens"]
+                result["reasoning_tokens"] = details["reasoning_tokens"]
+        elif hasattr(output_tokens_details, "reasoning_tokens"):
+            reasoning_tokens = output_tokens_details.reasoning_tokens
+            attributes[SpanAttributes.LLM_USAGE_REASONING_TOKENS] = reasoning_tokens
+            result["reasoning_tokens"] = reasoning_tokens
     
     # Process cached tokens (from Response API input_tokens_details)
-    if "input_tokens_details" in usage and isinstance(usage["input_tokens_details"], dict):
-        details = usage["input_tokens_details"]
-        if "cached_tokens" in details:
-            logger.debug(f"Setting LLM_USAGE_CACHE_READ_INPUT_TOKENS: {details['cached_tokens']}")
-            attributes[SpanAttributes.LLM_USAGE_CACHE_READ_INPUT_TOKENS] = details["cached_tokens"]
-            result["cached_input_tokens"] = details["cached_tokens"]
+    input_tokens_details = None
+    if has_key(usage, "input_tokens_details"):
+        input_tokens_details = get_value(usage, "input_tokens_details")
+        
+    if input_tokens_details:
+        # Handle both dict and object types
+        if isinstance(input_tokens_details, dict):
+            details = input_tokens_details
+            if "cached_tokens" in details:
+                logger.debug(f"Setting LLM_USAGE_CACHE_READ_INPUT_TOKENS: {details['cached_tokens']}")
+                attributes[SpanAttributes.LLM_USAGE_CACHE_READ_INPUT_TOKENS] = details["cached_tokens"]
+                result["cached_input_tokens"] = details["cached_tokens"]
+        # Handle object with cached_tokens attribute
+        elif hasattr(input_tokens_details, "cached_tokens"):
+            cached_tokens = input_tokens_details.cached_tokens
+            logger.debug(f"Setting LLM_USAGE_CACHE_READ_INPUT_TOKENS: {cached_tokens}")
+            attributes[SpanAttributes.LLM_USAGE_CACHE_READ_INPUT_TOKENS] = cached_tokens
+            result["cached_input_tokens"] = cached_tokens
     
     # Log all token-related attributes that were set
     token_attrs = {k: v for k, v in attributes.items() if k.startswith("gen_ai.usage")}

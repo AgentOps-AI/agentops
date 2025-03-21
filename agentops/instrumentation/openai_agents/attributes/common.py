@@ -4,9 +4,7 @@ This module contains shared constants, attribute mappings, and utility functions
 trace and span attributes in OpenAI Agents instrumentation. It provides the core functionality
 for extracting and formatting attributes according to OpenTelemetry semantic conventions.
 """
-import importlib.metadata
-from typing import TypeVar, Generic
-from typing import Any, Dict, List, Union
+from typing import Any, Dict
 from opentelemetry.trace import SpanKind
 from agentops.logging import logger
 from agentops.helpers import get_agentops_version, safe_serialize
@@ -15,12 +13,12 @@ from agentops.semconv import (
     AgentAttributes,
     WorkflowAttributes,
     SpanAttributes,
-    MessageAttributes,
     InstrumentationAttributes
 )
 from agentops.instrumentation.openai_agents import LIBRARY_NAME, LIBRARY_VERSION
 from agentops.instrumentation.openai_agents.attributes.completion import get_generation_output_attributes
-from agentops.instrumentation.openai_agents.attributes.model import extract_model_config
+from agentops.instrumentation.openai_agents.attributes.model import extract_model_config, get_model_and_params_attributes
+from agentops.instrumentation.openai_agents.attributes.tokens import process_token_usage
 
 # target_attribute_key: source_attribute
 AttributeMap = Dict[str, Any]
@@ -191,44 +189,46 @@ get_agent_span_attributes = lambda span_data: \
 get_function_span_attributes = lambda span_data: \
     _extract_attributes_from_mapping(span_data, FUNCTION_SPAN_ATTRIBUTES)
 
-get_response_span_attributes = lambda span_data: \
-    _extract_attributes_from_mapping(span_data, RESPONSE_SPAN_ATTRIBUTES)
-
 get_handoff_span_attributes = lambda span_data: \
     _extract_attributes_from_mapping(span_data, HANDOFF_SPAN_ATTRIBUTES)
 
 
-"""
-Response(
-    id='resp_67dc7bcf54808192a4595217d26bc8790bfa203c23b48a1d', 
-    created_at=1742502863.0, error=None, incomplete_details=None, 
-    instructions='You are a helpful assistant. Your task is to answer questions about programming concepts.', 
-    metadata={}, model='gpt-4o-2024-08-06', object='response', 
-    output=[ResponseOutputMessage(
-        id='msg_67dc7bcfeecc8192846c9ce302a646c80bfa203c23b48a1d', 
-        content=[ResponseOutputText(
-            annotations=[], 
-            text="Recursion in programming is a technique where a function calls itself in order to solve a problem. This method is often used to break down complex problems into simpler, more manageable subproblems. Here's a basic rundown of how recursion works:\n\n### Key Concepts\n\n1. **Base Case**: Every recursive function needs a base case to terminate. This prevents the function from calling itself indefinitely. The base case is a condition that, when true, stops further recursive calls.\n\n2. **Recursive Case**: This is where the function calls itself with a different set of parameters, moving towards the base case.\n\n### How It Works:\n\n- **Define the problem in terms of itself**: Break the problem into smaller instances of the same problem.\n- **Base Case**: Identify a simple instance of the problem that can be solved directly.\n- **Recursive Step**: Define a rule that relates the problem to simpler versions of itself.\n\n### Advantages\n\n- **Simplicity**: Recursion can simplify code, making it more readable and easier to understand.\n- **Problem Solving**: Suitable for problems that are naturally hierarchical, like tree traversals, fractals, or problems that can be divided into similar subproblems.\n\n### Disadvantages\n\n- **Performance**: Recursive solutions can be memory-intensive and slower because each function call adds a new layer to the call stack.\n- **Stack Overflow**: Too many recursive calls can lead to a stack overflow error if the base case is not correctly defined or reached.\n\n### Example: Factorial\n\nA classic example of a recursive function is the factorial calculation:\n\n```python\ndef factorial(n):\n    if n == 0:  # Base case\n        return 1\n    else:\n        return n * factorial(n - 1)  # Recursive case\n```\n\n### Considerations\n\n- Always ensure there is a base case that will eventually be reached.\n- Be mindful of the computational and memory overhead.\n- Sometimes, iterative solutions may be more efficient than recursive ones.\n\nRecursion is a powerful tool, but it needs to be used judiciously to balance clarity and performance.", 
-            type='output_text')], 
-        role='assistant', 
-        status='completed', 
-        type='message')], 
-    parallel_tool_calls=True,
-    temperature=1.0, 
-    tool_choice='auto', 
-    tools=[], 
-    top_p=1.0, 
-    max_output_tokens=None, 
-    previous_response_id=None, 
-    reasoning=Reasoning(effort=None, generate_summary=None), 
-    status='completed', 
-    text=ResponseTextConfig(format=ResponseFormatText(type='text')), 
-    truncation='disabled', 
-    usage=ResponseUsage(input_tokens=52, output_tokens=429, output_tokens_details=OutputTokensDetails(reasoning_tokens=0),
-    total_tokens=481, 
-    input_tokens_details={'cached_tokens': 0}), 
-    user=None, store=True)
-"""
+def get_response_span_attributes(span_data: Any) -> AttributeMap:
+    """Extract attributes from a ResponseSpanData object with full LLM response processing.
+    
+    This function extracts not just the basic input/response mapping but also processes
+    the rich response object to extract LLM-specific attributes like token usage,
+    model information, content, etc.
+    
+    Args:
+        span_data: The ResponseSpanData object
+        
+    Returns:
+        Dictionary of attributes for response span
+    """
+    # Get basic attributes from mapping
+    attributes = _extract_attributes_from_mapping(span_data, RESPONSE_SPAN_ATTRIBUTES)
+    
+    # Process response object if available
+    if hasattr(span_data, 'response') and span_data.response:
+        response = span_data.response
+        
+        # Extract model and parameter information
+        attributes.update(get_model_and_params_attributes(response))
+        
+        # Extract token usage if available
+        if hasattr(response, 'usage') and response.usage:
+            process_token_usage(response.usage, attributes)
+        
+        # Extract completion content, tool calls, etc.
+        generation_attributes = get_generation_output_attributes(response)
+        attributes.update(generation_attributes)
+        
+        # Ensure LLM system attribute is set
+        attributes[SpanAttributes.LLM_SYSTEM] = "openai"
+    
+    return attributes
+
 
 def get_generation_span_attributes(span_data: Any) -> AttributeMap:
     """Extract attributes from a GenerationSpanData object.
