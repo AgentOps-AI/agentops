@@ -119,19 +119,13 @@ from opentelemetry.sdk.trace import Span
 from agentops.logging import logger
 from agentops.semconv import (
     CoreAttributes, 
-    WorkflowAttributes,
-    SpanAttributes,
 )
 from agentops.instrumentation.openai_agents import LIBRARY_NAME, LIBRARY_VERSION
 from agentops.instrumentation.openai_agents.attributes.common import (
     get_base_trace_attributes,
     get_base_span_attributes,
     get_span_attributes,
-    get_agent_span_attributes,
-    get_generation_span_attributes,
 )
-
-TRACE_PREFIX = "agents.trace"
 
 
 def log_otel_trace_id(span_type):
@@ -185,7 +179,7 @@ def get_span_name(span: Any) -> str:
     if hasattr(span_data, "name") and span_data.name:
         return span_data.name
     else:
-        return f"agents.{span_type.replace('SpanData', '').lower()}"
+        return span_type.replace('SpanData', '').lower()  # fallback
 
 
 def _get_span_lookup_key(trace_id: str, span_id: str) -> str:
@@ -270,7 +264,7 @@ class OpenAIAgentsExporter:
         
         # Create span directly instead of using context manager
         span = tracer.start_span(
-            name=f"{TRACE_PREFIX}.{trace.name}",  # TODO
+            name=trace.name,
             kind=SpanKind.INTERNAL,
             attributes=attributes
         )
