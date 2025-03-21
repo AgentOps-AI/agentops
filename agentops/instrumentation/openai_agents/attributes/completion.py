@@ -11,20 +11,12 @@ from agentops.semconv import (
     SpanAttributes,
     MessageAttributes,
 )
-from agentops.instrumentation.openai_agents.attributes.model import get_model_and_params_attributes
 from agentops.instrumentation.openai_agents.attributes.tokens import process_token_usage
 
 
 
 def get_generation_output_attributes(output: Any) -> Dict[str, Any]:
-    """Extract LLM response attributes from any OpenAI response format.
-    
-    This unified function centralizes attribute extraction from multiple response formats:
-    1. Chat Completions API format (with 'choices' array)
-    2. Response API format (with 'output' array)
-    3. OpenAI Agents SDK format (with 'raw_responses' array)
-    
-    It automatically detects the format and delegates to the appropriate handler.
+    """Extract LLM response attributes from an `openai/completions` object.
     
     Args:
         output: The response object (can be dict, Response object, or other format)
@@ -45,16 +37,13 @@ def get_generation_output_attributes(output: Any) -> Dict[str, Any]:
     
     # Check for OpenAI Agents SDK response format (has raw_responses array)
     if "raw_responses" in response_dict and isinstance(response_dict["raw_responses"], list):
-        result.update(get_agents_response_attributes(response_dict))
+        result.update(get_raw_response_attributes(response_dict))
     else:
-        # Extract metadata for standard formats (model, id, system fingerprint)
-        result.update(get_response_metadata_attributes(response_dict))
+        # TODO base attributes for completion type
         
         # Get completions or response API output attributes first
         if "choices" in response_dict:
             result.update(get_chat_completions_attributes(response_dict))
-        elif "output" in response_dict:
-            result.update(get_response_api_attributes(response_dict))
         
         # Extract token usage from dictionary for standard formats
         usage_attributes = {}
@@ -71,7 +60,7 @@ def get_generation_output_attributes(output: Any) -> Dict[str, Any]:
     return result
 
 
-def get_agents_response_attributes(response: Dict[str, Any]) -> Dict[str, Any]:
+def get_raw_response_attributes(response: Dict[str, Any]) -> Dict[str, Any]:
     """Extract attributes from OpenAI Agents SDK response format (with raw_responses).
     
     This function handles the specific structure of OpenAI Agents SDK responses,
@@ -127,34 +116,6 @@ def get_agents_response_attributes(response: Dict[str, Any]) -> Dict[str, Any]:
     return result
 
 
-def get_response_metadata_attributes(response: Dict[str, Any]) -> Dict[str, Any]:
-    """Get response metadata fields as attributes.
-    
-    Args:
-        response: The response dictionary
-        
-    Returns:
-        Dictionary of metadata attributes
-    """
-    field_mapping = {
-        SpanAttributes.LLM_RESPONSE_MODEL: "model",
-        SpanAttributes.LLM_RESPONSE_ID: "id",
-        SpanAttributes.LLM_OPENAI_RESPONSE_SYSTEM_FINGERPRINT: "system_fingerprint",
-    }
-    
-    result = {}
-    
-    for target_attr, source_key in field_mapping.items():
-        if source_key in response:
-            result[target_attr] = response[source_key]
-    
-    # Add model information if available
-    if "model" in response:
-        result.update(get_model_and_params_attributes(response))
-        
-    return result
-
-
 def get_chat_completions_attributes(response: Dict[str, Any]) -> Dict[str, Any]:
     """Get attributes from OpenAI Chat Completions API format (with choices array).
     
@@ -202,62 +163,3 @@ def get_chat_completions_attributes(response: Dict[str, Any]) -> Dict[str, Any]:
             
     return result
 
-
-def get_response_api_attributes(response: Dict[str, Any]) -> Dict[str, Any]:
-    """Get attributes from a response in the OpenAI Response API format (with output array).
-    
-    This function specifically handles the new Response API format that uses an 'output' 
-    array instead of the older 'choices' array used by the Chat Completions API.
-    This is the direct API format without the Agents SDK wrapper.
-    
-    Args:
-        response: The response dictionary in Response API format (containing output array)
-        
-    Returns:
-        Dictionary of attributes from Response API format
-    """
-    result = {}
-    
-    if "output" not in response:
-        return result
-    # Extract model information and parameters using the helper function
-    result.update(get_model_and_params_attributes(response))
-    
-    # Process each output item for detailed attributes
-    for i, item in enumerate(response["output"]):
-        # Extract role if present
-        if "role" in item:
-            result[MessageAttributes.COMPLETION_ROLE.format(i=i)] = item["role"]
-        
-        # Extract text content if present
-        if "content" in item:
-            content_items = item["content"]
-            
-            if isinstance(content_items, list):
-                # Handle content items list (typically for text responses)
-                for content_item in content_items:
-                    if content_item.get("type") == "output_text" and "text" in content_item:
-                        # Set the content attribute with the text
-                        result[MessageAttributes.COMPLETION_CONTENT.format(i=i)] = content_item["text"]
-            
-            elif isinstance(content_items, str):
-                # Handle string content
-                result[MessageAttributes.COMPLETION_CONTENT.format(i=i)] = content_items
-        
-        # Extract function/tool call information
-        if item.get("type") == "function_call":
-            # Get tool call details
-            item_id = item.get("id", "")
-            tool_name = item.get("name", "")
-            tool_args = item.get("arguments", "")
-            
-            # Set tool call attributes using standard semantic conventions
-            result[MessageAttributes.TOOL_CALL_ID.format(i=i, j=0)] = item_id
-            result[MessageAttributes.TOOL_CALL_NAME.format(i=i, j=0)] = tool_name
-            result[MessageAttributes.TOOL_CALL_ARGUMENTS.format(i=i, j=0)] = tool_args
-        
-        # Ensure call_id is captured if present
-        if "call_id" in item and not result.get(MessageAttributes.TOOL_CALL_ID.format(i=i, j=0), ""):
-            result[MessageAttributes.TOOL_CALL_ID.format(i=i, j=0)] = item["call_id"]
-            
-    return result

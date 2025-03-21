@@ -23,76 +23,42 @@ The separation of attribute extraction (getters in this module) from
 attribute application (managed by exporter) follows the principle of
 separation of concerns.
 """
+from typing import Dict, Any
+from agentops.helpers import safe_serialize
 
-from agentops.instrumentation.openai_agents.attributes.tokens import (
-    process_token_usage,
-    extract_nested_usage,
-    map_token_type_to_metric_name,
-    get_token_metric_attributes
-)
 
-from agentops.instrumentation.openai_agents.attributes.common import (
-    get_span_attributes,
-    get_agent_span_attributes,
-    get_function_span_attributes,
-    get_generation_span_attributes,
-    get_handoff_span_attributes,
-    get_response_span_attributes,
-    get_span_kind,
-    get_base_span_attributes,
-    get_base_trace_attributes
-)
+# target_attribute_key: source_attribute
+AttributeMap = Dict[str, Any]
 
-from agentops.instrumentation.openai_agents.attributes.model import (
-    get_model_info,
-    extract_model_config,
-    get_model_and_params_attributes,
-    get_model_attributes
-)
-
-from agentops.instrumentation.openai_agents.attributes.completion import (
-    get_generation_output_attributes,
-    get_chat_completions_attributes,
-    get_response_api_attributes,
-    get_response_metadata_attributes
-)
-
-from agentops.instrumentation.openai_agents.attributes.common import (
-    get_common_instrumentation_attributes
-)
-
-__all__ = [
-    # Tokens
-    "process_token_usage",
-    "extract_nested_usage",
-    "map_token_type_to_metric_name",
+def _extract_attributes_from_mapping(span_data: Any, attribute_mapping: AttributeMap) -> AttributeMap:
+    """Helper function to extract attributes based on a mapping.
     
-    # Metrics
-    "get_token_metric_attributes",
+    Args:
+        span_data: The span data object to extract attributes from
+        attribute_mapping: Dictionary mapping target attributes to source attributes
+        
+    Returns:
+        Dictionary of extracted attributes
+    """
+    attributes = {}
+    for target_attr, source_attr in attribute_mapping.items():
+        if hasattr(span_data, source_attr):
+            value = getattr(span_data, source_attr)
+            
+            # Skip if value is None or empty
+            if value is None or (isinstance(value, (list, dict, str)) and not value):
+                continue
+            
+            # Join lists to comma-separated strings
+            if source_attr == "tools" or source_attr == "handoffs":
+                if isinstance(value, list):
+                    value = ",".join(value)
+                else:
+                    value = str(value)
+            # Serialize complex objects
+            elif isinstance(value, (dict, list, object)) and not isinstance(value, (str, int, float, bool)):
+                value = safe_serialize(value)
+            
+            attributes[target_attr] = value
     
-    # Spans
-    "get_span_attributes",
-    "get_agent_span_attributes",
-    "get_function_span_attributes",
-    "get_generation_span_attributes",
-    "get_handoff_span_attributes",
-    "get_response_span_attributes",
-    "get_span_kind",
-    "get_base_span_attributes",
-    "get_base_trace_attributes",
-    
-    # Model
-    "get_model_info",
-    "extract_model_config",
-    "get_model_and_params_attributes",
-    "get_model_attributes",
-    
-    # Completion
-    "get_generation_output_attributes",
-    "get_chat_completions_attributes",
-    "get_response_api_attributes",
-    "get_response_metadata_attributes",
-    
-    # Common
-    "get_common_instrumentation_attributes"
-]
+    return attributes

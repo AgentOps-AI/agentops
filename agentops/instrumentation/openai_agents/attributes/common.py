@@ -16,12 +16,11 @@ from agentops.semconv import (
     InstrumentationAttributes
 )
 from agentops.instrumentation.openai_agents import LIBRARY_NAME, LIBRARY_VERSION
-from agentops.instrumentation.openai_agents.attributes.completion import get_generation_output_attributes
+from agentops.instrumentation.openai_agents.attributes import AttributeMap, _extract_attributes_from_mapping
 from agentops.instrumentation.openai_agents.attributes.model import extract_model_config, get_model_and_params_attributes
 from agentops.instrumentation.openai_agents.attributes.tokens import process_token_usage
-
-# target_attribute_key: source_attribute
-AttributeMap = Dict[str, Any]
+from agentops.instrumentation.openai_agents.attributes.response import get_response_response_attributes
+from agentops.instrumentation.openai_agents.attributes.completion import get_generation_output_attributes
 
 
 # Common attribute mapping for all span types
@@ -35,10 +34,10 @@ COMMON_ATTRIBUTES: AttributeMap = {
 # Attribute mapping for AgentSpanData
 AGENT_SPAN_ATTRIBUTES: AttributeMap = {
     AgentAttributes.AGENT_NAME: "name",
-    WorkflowAttributes.WORKFLOW_INPUT: "input",
-    WorkflowAttributes.FINAL_OUTPUT: "output",
     AgentAttributes.AGENT_TOOLS: "tools",
     AgentAttributes.HANDOFFS: "handoffs",
+    WorkflowAttributes.WORKFLOW_INPUT: "input",
+    WorkflowAttributes.FINAL_OUTPUT: "output",
 }
 
 
@@ -51,6 +50,13 @@ FUNCTION_SPAN_ATTRIBUTES: AttributeMap = {
 }
 
 
+# Attribute mapping for HandoffSpanData
+HANDOFF_SPAN_ATTRIBUTES: AttributeMap = {
+    AgentAttributes.FROM_AGENT: "from_agent",
+    AgentAttributes.TO_AGENT: "to_agent",
+}
+
+
 # Attribute mapping for GenerationSpanData
 GENERATION_SPAN_ATTRIBUTES: AttributeMap = {
     SpanAttributes.LLM_REQUEST_MODEL: "model",
@@ -59,65 +65,10 @@ GENERATION_SPAN_ATTRIBUTES: AttributeMap = {
 }
 
 
-# Attribute mapping for HandoffSpanData
-HANDOFF_SPAN_ATTRIBUTES: AttributeMap = {
-    AgentAttributes.FROM_AGENT: "from_agent",
-    AgentAttributes.TO_AGENT: "to_agent",
-}
-
-
 # Attribute mapping for ResponseSpanData
 RESPONSE_SPAN_ATTRIBUTES: AttributeMap = {
     WorkflowAttributes.WORKFLOW_INPUT: "input",
-    WorkflowAttributes.FINAL_OUTPUT: "response",
 }
-
-
-def _extract_attributes_from_mapping(span_data: Any, attribute_mapping: AttributeMap) -> AttributeMap:
-    """Helper function to extract attributes based on a mapping.
-    
-    Args:
-        span_data: The span data object to extract attributes from
-        attribute_mapping: Dictionary mapping target attributes to source attributes
-        
-    Returns:
-        Dictionary of extracted attributes
-    """
-    attributes = {}
-    for target_attr, source_attr in attribute_mapping.items():
-        if hasattr(span_data, source_attr):
-            value = getattr(span_data, source_attr)
-            
-            # Skip if value is None or empty
-            if value is None or (isinstance(value, (list, dict, str)) and not value):
-                continue
-            
-            # Join lists to comma-separated strings
-            if source_attr == "tools" or source_attr == "handoffs":
-                if isinstance(value, list):
-                    value = ",".join(value)
-                else:
-                    value = str(value)
-            # Serialize complex objects
-            elif isinstance(value, (dict, list, object)) and not isinstance(value, (str, int, float, bool)):
-                value = safe_serialize(value)
-            
-            attributes[target_attr] = value
-    
-    return attributes
-
-
-def get_span_kind(span: Any) -> SpanKind:
-    """Determine the appropriate span kind based on span type."""
-    span_data = span.span_data
-    span_type = span_data.__class__.__name__
-    
-    if span_type == "AgentSpanData":
-        return SpanKind.CONSUMER
-    elif span_type in ["FunctionSpanData", "GenerationSpanData", "ResponseSpanData"]:
-        return SpanKind.CLIENT
-    else:
-        return SpanKind.INTERNAL
 
 
 def get_common_instrumentation_attributes() -> AttributeMap:
@@ -195,6 +146,8 @@ get_handoff_span_attributes = lambda span_data: \
 def get_response_span_attributes(span_data: Any) -> AttributeMap:
     """Extract attributes from a ResponseSpanData object with full LLM response processing.
     
+    Responses are requests made to the `openai.responses` endpoint. 
+    
     This function extracts not just the basic input/response mapping but also processes
     the rich response object to extract LLM-specific attributes like token usage,
     model information, content, etc.
@@ -207,30 +160,20 @@ def get_response_span_attributes(span_data: Any) -> AttributeMap:
     """
     # Get basic attributes from mapping
     attributes = _extract_attributes_from_mapping(span_data, RESPONSE_SPAN_ATTRIBUTES)
-    
-    # Process response object if available
-    if hasattr(span_data, 'response') and span_data.response:
-        response = span_data.response
-        
-        # Extract model and parameter information
-        attributes.update(get_model_and_params_attributes(response))
-        
-        # Extract token usage if available
-        if hasattr(response, 'usage') and response.usage:
-            process_token_usage(response.usage, attributes)
-        
-        # Extract completion content, tool calls, etc.
-        generation_attributes = get_generation_output_attributes(response)
-        attributes.update(generation_attributes)
-        
-        # Ensure LLM system attribute is set
-        attributes[SpanAttributes.LLM_SYSTEM] = "openai"
+
+    if span_data.response:
+        attributes.update(get_response_response_attributes(span_data.response))
     
     return attributes
 
 
 def get_generation_span_attributes(span_data: Any) -> AttributeMap:
     """Extract attributes from a GenerationSpanData object.
+    
+    Generations are requests made to the `openai.completions` endpoint.
+    
+    # TODO this has not been tested yet as there is a flag that needs ot be set to use the 
+    # completions API with the Agents SDK. 
     
     Args:
         span_data: The GenerationSpanData object
@@ -241,15 +184,15 @@ def get_generation_span_attributes(span_data: Any) -> AttributeMap:
     attributes = _extract_attributes_from_mapping(span_data, GENERATION_SPAN_ATTRIBUTES)
     
     # Process output for GenerationSpanData if available
-    if hasattr(span_data, 'output') and span_data.output:
+    if span_data.output:
         # Get attributes with the dedicated method that handles all formats
         generation_attributes = get_generation_output_attributes(span_data.output)
         attributes.update(generation_attributes)
         
-        # Add model config attributes if present
-        if hasattr(span_data, 'model_config'):
-            model_config_attributes = extract_model_config(span_data.model_config)
-            attributes.update(model_config_attributes)
+    # Add model config attributes if present
+    if span_data.model_config:
+        model_config_attributes = extract_model_config(span_data.model_config)
+        attributes.update(model_config_attributes)
     
     return attributes
 
