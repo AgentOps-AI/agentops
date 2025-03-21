@@ -25,6 +25,7 @@ The attribute modules extract and format OpenTelemetry-compatible attributes fro
 - **Completion (`attributes/completion.py`)**: Handles different completion content formats (Chat Completions API, Response API, Agents SDK) 
 - **Model (`attributes/model.py`)**: Extracts model information and parameters
 - **Tokens (`attributes/tokens.py`)**: Processes token usage data and metrics
+- **Response (`attributes/response.py`)**: Handles interpretation of Response API objects
 
 Each getter function in these modules is focused on a single responsibility and does not modify global state. Functions are designed to be composable, allowing different attribute types to be combined as needed in the exporter.
 
@@ -84,6 +85,20 @@ The exporter (`exporter.py`) handles the full span lifecycle:
    - Provide informative log messages about span lifecycle
    - Properly clean up tracking resources
 
+This approach is essential because:
+- Agents SDK sends separate start and end events for each task
+- We need to maintain a single span for the entire task lifecycle to get accurate timing
+- Final data (outputs, token usage, etc.) is only available at the end event
+- We want to avoid creating duplicate spans for the same task
+- Spans must be properly created and ended to avoid leaks
+
+The span lifecycle management ensures spans have:
+- Accurate start and end times (preserving the actual task duration)
+- Complete attribute data from both start and end events
+- Proper status reflecting task completion
+- All final outputs, errors, and metrics
+- Clean resource management with no memory leaks
+
 ## Key Design Patterns
 
 ### Semantic Conventions
@@ -112,3 +127,30 @@ AGENT_SPAN_ATTRIBUTES: AttributeMap = {
     # ...
 }
 ```
+
+### Structured Attribute Handling
+
+- Always use MessageAttributes semantic conventions for content and tool calls
+- For chat completions, use MessageAttributes.COMPLETION_CONTENT.format(i=0) 
+- For tool calls, use MessageAttributes.TOOL_CALL_NAME.format(i=0, j=0), etc.
+- Never try to combine or aggregate contents into a single attribute
+- Each message component should have its own properly formatted attribute
+- This ensures proper display in OpenTelemetry backends and dashboards
+
+### Serialization Rules
+
+1. We do not serialize data structures arbitrarily; everything has a semantic convention
+2. Span attributes should use semantic conventions and avoid complex serialized structures
+3. Keep all string data in its original form - do not parse JSON within strings
+4. If a function has JSON attributes for its arguments, do not parse that JSON - keep as string
+5. If a completion or response body text/content contains JSON, keep it as a string
+7. Function arguments and tool call arguments should remain in their raw string form
+
+### Critical Notes for Attribute Handling
+
+- NEVER manually set the root completion attributes (`SpanAttributes.LLM_COMPLETIONS` or "gen_ai.completion")
+- Let OpenTelemetry backend derive these values from the detailed attributes
+- Setting root completion attributes creates duplication and inconsistency
+- Tests should verify attribute existence using MessageAttributes constants
+- Do not check for the presence of SpanAttributes.LLM_COMPLETIONS
+- Verify individual content/tool attributes instead of root attributes
