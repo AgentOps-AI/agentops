@@ -37,13 +37,26 @@ async def main():
     
     # Print tool calls for debugging
     print("\nTool Calls Made:")
-    for step in result.steps:
-        if hasattr(step, 'tool_calls') and step.tool_calls:
-            for tool_call in step.tool_calls:
-                print(f"Tool: {tool_call.name}")
-                print(f"Arguments: {tool_call.arguments}")
-                print(f"Response: {tool_call.response}")
-                print()
+    
+    # Try to access raw_responses attribute
+    if hasattr(result, 'raw_responses'):
+        # Print information about the response to debug
+        print("Response type:", type(result.raw_responses))
+        
+        # Handle raw_responses based on its type
+        if isinstance(result.raw_responses, list):
+            # If it's a list, iterate through it
+            for response in result.raw_responses:
+                if hasattr(response, 'output'):
+                    # If response has output attribute, print it
+                    print(f"Response output: {response.output}")
+                elif isinstance(response, dict) and 'tool_calls' in response:
+                    # If it's a dict with tool_calls
+                    for tool_call in response['tool_calls']:
+                        print(f"Tool: {tool_call.get('name', '')}")
+                        print(f"Arguments: {tool_call.get('arguments', {})}")
+                        print(f"Response: {tool_call.get('response', '')}")
+                        print()
 
 if __name__ == "__main__":
     asyncio.run(main())
