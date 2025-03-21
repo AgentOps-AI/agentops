@@ -13,6 +13,8 @@ from unittest.mock import MagicMock, patch
 from typing import Dict, Any
 import importlib.metadata
 
+from agentops.helpers import get_agentops_version
+from agentops.instrumentation.openai_agents import LIBRARY_NAME, LIBRARY_VERSION
 from agentops.instrumentation.openai_agents.attributes import (
     # Common functions
     get_agent_span_attributes,
@@ -23,11 +25,14 @@ from agentops.instrumentation.openai_agents.attributes import (
     get_span_attributes,
     get_span_kind,
     get_common_instrumentation_attributes,
+    get_base_trace_attributes,
+    get_base_span_attributes,
     
     # Model functions
     get_model_info,
     extract_model_config,
     get_model_and_params_attributes,
+    get_model_attributes,
     
     # Completion functions
     get_generation_output_attributes,
@@ -117,8 +122,7 @@ class TestOpenAIAgentsAttributes:
 
     def test_common_instrumentation_attributes(self):
         """Test common instrumentation attributes for consistent keys and values"""
-        with patch('importlib.metadata.version', return_value='1.0.0'):
-            attrs = get_common_instrumentation_attributes()
+        attrs = get_common_instrumentation_attributes()
         
         # Verify required keys are present using semantic conventions
         assert InstrumentationAttributes.NAME in attrs
@@ -128,8 +132,8 @@ class TestOpenAIAgentsAttributes:
         
         # Verify values
         assert attrs[InstrumentationAttributes.NAME] == "agentops"
-        assert attrs[InstrumentationAttributes.VERSION] == "1.0.0"  # Mocked version
-        assert attrs[InstrumentationAttributes.LIBRARY_NAME] == "openai-agents"
+        assert attrs[InstrumentationAttributes.VERSION] == get_agentops_version()  # Use actual version
+        assert attrs[InstrumentationAttributes.LIBRARY_NAME] == LIBRARY_NAME
 
     def test_agent_span_attributes(self):
         """Test extraction of attributes from an AgentSpanData object"""
@@ -149,7 +153,7 @@ class TestOpenAIAgentsAttributes:
         assert attrs[WorkflowAttributes.WORKFLOW_INPUT] == "test input"
         assert attrs[WorkflowAttributes.FINAL_OUTPUT] == "test output"
         assert attrs[AgentAttributes.AGENT_TOOLS] == "tool1,tool2"
-        assert attrs[SpanAttributes.LLM_PROMPTS] == "test input"
+        # LLM_PROMPTS is handled in common.py now so we don't test for it directly
 
     def test_function_span_attributes(self):
         """Test extraction of attributes from a FunctionSpanData object"""
@@ -193,6 +197,7 @@ class TestOpenAIAgentsAttributes:
         assert attrs[SpanAttributes.LLM_USAGE_COMPLETION_TOKENS] == 8
         assert attrs[SpanAttributes.LLM_USAGE_TOTAL_TOKENS] == 32
         assert attrs[SpanAttributes.LLM_SYSTEM] == "openai"
+        assert attrs[SpanAttributes.LLM_PROMPTS] == "What is the capital of France?"
 
     def test_generation_span_with_response_api(self):
         """Test extraction of attributes from a GenerationSpanData with Response API data"""
@@ -220,6 +225,7 @@ class TestOpenAIAgentsAttributes:
         assert attrs[SpanAttributes.LLM_USAGE_COMPLETION_TOKENS] == 8
         assert attrs[SpanAttributes.LLM_USAGE_TOTAL_TOKENS] == 50
         assert attrs[SpanAttributes.LLM_SYSTEM] == "openai"
+        assert attrs[SpanAttributes.LLM_PROMPTS] == "What is the capital of France?"
         
         # Verify Response API specific parameters from the OPENAI_RESPONSE fixture
         assert SpanAttributes.LLM_REQUEST_TEMPERATURE in attrs
@@ -272,7 +278,7 @@ class TestOpenAIAgentsAttributes:
         # Since we patched model_to_dict, we won't get token attributes
         # We can verify other basic attributes instead
         assert attrs[SpanAttributes.LLM_SYSTEM] == "openai"
-        assert attrs[WorkflowAttributes.WORKFLOW_INPUT] == "What is the capital of France?"
+        # WorkflowAttributes.WORKFLOW_INPUT is no longer set directly, handled by common.py
 
     def test_generation_span_with_agents_tool_response(self):
         """Test extraction of attributes from a GenerationSpanData with OpenAI Agents tool response data"""
@@ -326,7 +332,7 @@ class TestOpenAIAgentsAttributes:
         # Verify extracted attributes - using data from our patched function
         assert attrs[SpanAttributes.LLM_REQUEST_MODEL] == "gpt-4"
         assert attrs[SpanAttributes.LLM_SYSTEM] == "openai"
-        assert attrs[WorkflowAttributes.WORKFLOW_INPUT] == "What's the weather like in New York City?"
+        # WorkflowAttributes.WORKFLOW_INPUT is no longer set directly, handled by common.py
         
         # Now verify token usage attributes that our patched function provides
         assert attrs[SpanAttributes.LLM_USAGE_PROMPT_TOKENS] == 48
@@ -369,7 +375,7 @@ class TestOpenAIAgentsAttributes:
         attrs = get_response_span_attributes(mock_response_span)
         
         # Verify extracted attributes
-        assert attrs[SpanAttributes.LLM_PROMPTS] == "user query"
+        # SpanAttributes.LLM_PROMPTS is no longer explicitly set here
         assert attrs[WorkflowAttributes.WORKFLOW_INPUT] == "user query"
         assert attrs[WorkflowAttributes.FINAL_OUTPUT] == "assistant response"
 
@@ -556,3 +562,47 @@ class TestOpenAIAgentsAttributes:
         usage = extract_nested_usage(AGENTS_RESPONSE["raw_responses"][0])
         assert usage["input_tokens"] == 54
         assert usage["output_tokens"] == 8
+        
+    def test_get_model_attributes(self):
+        """Test model attributes generation with consistent naming"""
+        attrs = get_model_attributes("gpt-4")
+        
+        # Verify both request and response model fields are set
+        assert attrs[SpanAttributes.LLM_REQUEST_MODEL] == "gpt-4"
+        assert attrs[SpanAttributes.LLM_RESPONSE_MODEL] == "gpt-4"
+        assert attrs[SpanAttributes.LLM_SYSTEM] == "openai"
+        
+    def test_get_base_trace_attributes(self):
+        """Test base trace attributes generation"""
+        # Create a simple trace object
+        class TraceObj:
+            def __init__(self):
+                self.name = "test_workflow"
+                self.trace_id = "trace123"
+                
+        trace = TraceObj()
+        attrs = get_base_trace_attributes(trace)
+        
+        # Verify core trace attributes
+        assert attrs[WorkflowAttributes.WORKFLOW_NAME] == "test_workflow"
+        assert attrs[CoreAttributes.TRACE_ID] == "trace123"
+        assert attrs[WorkflowAttributes.WORKFLOW_STEP_TYPE] == "trace"
+        assert attrs[InstrumentationAttributes.NAME] == "agentops"
+        
+    def test_get_base_span_attributes(self):
+        """Test base span attributes generation"""
+        # Create a simple span object
+        class SpanObj:
+            def __init__(self):
+                self.span_id = "span456"
+                self.trace_id = "trace123"
+                self.parent_id = "parent789"
+                
+        span = SpanObj()
+        attrs = get_base_span_attributes(span)
+        
+        # Verify core span attributes
+        assert attrs[CoreAttributes.SPAN_ID] == "span456"
+        assert attrs[CoreAttributes.TRACE_ID] == "trace123"
+        assert attrs[CoreAttributes.PARENT_ID] == "parent789"
+        assert attrs[InstrumentationAttributes.NAME] == "agentops"

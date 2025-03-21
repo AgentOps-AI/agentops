@@ -168,20 +168,16 @@ def process_token_usage(usage: Dict[str, Any], attributes: Dict[str, Any], compl
         if isinstance(input_tokens_details, dict):
             details = input_tokens_details
             if "cached_tokens" in details:
-                logger.debug(f"Setting LLM_USAGE_CACHE_READ_INPUT_TOKENS: {details['cached_tokens']}")
                 attributes[SpanAttributes.LLM_USAGE_CACHE_READ_INPUT_TOKENS] = details["cached_tokens"]
                 result["cached_input_tokens"] = details["cached_tokens"]
         # Handle object with cached_tokens attribute
         elif hasattr(input_tokens_details, "cached_tokens"):
             cached_tokens = input_tokens_details.cached_tokens
-            logger.debug(f"Setting LLM_USAGE_CACHE_READ_INPUT_TOKENS: {cached_tokens}")
             attributes[SpanAttributes.LLM_USAGE_CACHE_READ_INPUT_TOKENS] = cached_tokens
             result["cached_input_tokens"] = cached_tokens
     
     # Log all token-related attributes that were set
     token_attrs = {k: v for k, v in attributes.items() if k.startswith("gen_ai.usage")}
-    logger.debug(f"TOKENS: After processing, token attributes: {token_attrs}")
-    logger.debug(f"TOKENS: Result dictionary: {result}")
     
     # If we still have no token attributes, try one more approach - look for nested output structure
     if not token_attrs and completion_content:

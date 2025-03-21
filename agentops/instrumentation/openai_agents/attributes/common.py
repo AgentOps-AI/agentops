@@ -56,7 +56,6 @@ GENERATION_SPAN_ATTRIBUTES: AttributeMap = {
     SpanAttributes.LLM_REQUEST_MODEL: "model",
     SpanAttributes.LLM_RESPONSE_MODEL: "model",
     SpanAttributes.LLM_PROMPTS: "input",
-    # TODO tools - we don't have a semantic convention for this yet
 }
 
 
