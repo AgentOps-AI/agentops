@@ -110,11 +110,11 @@ class TestAgentsSdkInstrumentation:
         # Modify the mock_span_data to create proper response extraction logic
         from agentops.instrumentation.openai_agents.attributes.completion import (
             get_chat_completions_attributes,
-            get_response_api_attributes
+            get_raw_response_attributes
         )
         
         # Mock the attribute extraction functions to return the expected message attributes
-        with patch('agentops.instrumentation.openai_agents.attributes.completion.get_response_api_attributes') as mock_response_attrs:
+        with patch('agentops.instrumentation.openai_agents.attributes.completion.get_raw_response_attributes') as mock_response_attrs:
             # Set up the mock to return attributes we want to verify
             mock_response_attrs.return_value = {
                 MessageAttributes.COMPLETION_CONTENT.format(i=0): "The capital of France is Paris.",
@@ -133,7 +133,11 @@ class TestAgentsSdkInstrumentation:
                 'model': 'gpt-4o',
                 'input': 'What is the capital of France?',
                 'output': AGENTS_RESPONSE,
-                'from_agent': 'test_agent'
+                'from_agent': 'test_agent',
+                'model_config': {
+                    'temperature': 0.7,
+                    'top_p': 1.0
+                }
             }
             
             # Create a mock span
@@ -176,7 +180,7 @@ class TestAgentsSdkInstrumentation:
         - Appropriate metadata for the model and response is maintained
         """
         # Mock the attribute extraction functions to return the expected message attributes
-        with patch('agentops.instrumentation.openai_agents.attributes.completion.get_response_api_attributes') as mock_response_attrs:
+        with patch('agentops.instrumentation.openai_agents.attributes.completion.get_raw_response_attributes') as mock_response_attrs:
             # Set up the mock to return attributes we want to verify
             mock_response_attrs.return_value = {
                 MessageAttributes.COMPLETION_CONTENT.format(i=0): "I'll help you find the current weather for New York City.",
@@ -198,7 +202,11 @@ class TestAgentsSdkInstrumentation:
                 'model': 'gpt-4o',
                 'input': "What's the weather like in New York City?",
                 'output': AGENTS_TOOL_RESPONSE,
-                'from_agent': 'test_agent'
+                'from_agent': 'test_agent',
+                'model_config': {
+                    'temperature': 0.8,
+                    'top_p': 1.0
+                }
             }
             
             # Create a mock span
