@@ -10,7 +10,7 @@ from opentelemetry import context as context_api
 from opentelemetry.metrics import Counter, Histogram
 from agentops.semconv import (
     SUPPRESS_LANGUAGE_MODEL_INSTRUMENTATION_KEY,
-    SpanAttributes,
+    SpanAttributes as BaseSpanAttributes,
     LLMRequestTypeValues,
 )
 
@@ -44,13 +44,18 @@ from opentelemetry.trace.status import Status, StatusCode
 
 from opentelemetry.instrumentation.openai.utils import is_openai_v1
 
-SPAN_NAME = "openai.chat"
+SPAN_NAME = "openai.chat.completion"
 PROMPT_FILTER_KEY = "prompt_filter_results"
 CONTENT_FILTER_KEY = "content_filter_results"
 
 LLM_REQUEST_TYPE = LLMRequestTypeValues.CHAT
 
 logger = logging.getLogger(__name__)
+
+
+# TODO get rid of this and also why are we patching this file like this?...
+class SpanAttributes(BaseSpanAttributes):
+    LLM_COMPLETIONS = "gen_ai.completion"
 
 
 @_with_chat_telemetry_wrapper

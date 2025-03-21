@@ -1,0 +1,30 @@
+{
+  "final_output": "The capital of France is Paris.",
+  "input": "What is the capital of France?",
+  "raw_responses": [
+    {
+      "referenceable_id": "resp_67db29270db8819290bc1ef0b7e0cf530eb1154d079a2e67",
+      "output": [
+        {
+          "id": "msg_67db29277e6c81928cdceaea2b4893f30eb1154d079a2e67",
+          "content": [
+            {
+              "text": "The capital of France is Paris.",
+              "type": "output_text",
+              "annotations": []
+            }
+          ],
+          "role": "assistant",
+          "status": "completed",
+          "type": "message"
+        }
+      ],
+      "usage": {
+        "input_tokens": 54,
+        "output_tokens": 8,
+        "requests": 1,
+        "total_tokens": 62
+      }
+    }
+  ]
+}

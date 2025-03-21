@@ -87,6 +87,11 @@ class InternalSpanProcessor(SpanProcessor):
     This processor is particularly useful for debugging and monitoring
     as it prints information about spans as they are created and ended.
     For session spans, it prints a URL to the AgentOps dashboard.
+    
+    Note about span kinds:
+    - OpenTelemetry spans have a native 'kind' property (INTERNAL, CLIENT, CONSUMER, etc.)
+    - AgentOps also uses a semantic convention attribute AGENTOPS_SPAN_KIND for domain-specific kinds
+    - This processor tries to use the native kind first, then falls back to the attribute
     """
 
     def __init__(self, app_url: str = "https://app.agentops.ai"):
@@ -110,8 +115,8 @@ class InternalSpanProcessor(SpanProcessor):
         if not span.context or not span.context.trace_flags.sampled:
             return
 
-        # Get the span kind from attributes
-        span_kind = (
+        # Get the span kind from the span.kind property or the attributes
+        span_kind = span.kind.name if hasattr(span, "kind") else (
             span.attributes.get(semconv.SpanAttributes.AGENTOPS_SPAN_KIND, "unknown") if span.attributes else "unknown"
         )
 
@@ -132,7 +137,9 @@ class InternalSpanProcessor(SpanProcessor):
                 )
         else:
             # Print basic information for other span kinds
-            logger.debug(f"Ended span: {span.name} (kind: {span_kind})")
+            # For native OpenTelemetry SpanKind values (INTERNAL, CLIENT, CONSUMER, etc.),
+            # we'll see the actual kind rather than "unknown"
+            logger.debug(f"Started span: {span.name} (kind: {span_kind})")
 
     def on_end(self, span: ReadableSpan) -> None:
         """
@@ -145,8 +152,8 @@ class InternalSpanProcessor(SpanProcessor):
         if not span.context or not span.context.trace_flags.sampled:
             return
 
-        # Get the span kind from attributes
-        span_kind = (
+        # Get the span kind from the span.kind property or the attributes
+        span_kind = span.kind.name if hasattr(span, "kind") else (
             span.attributes.get(semconv.SpanAttributes.AGENTOPS_SPAN_KIND, "unknown") if span.attributes else "unknown"
         )
 
@@ -164,6 +171,8 @@ class InternalSpanProcessor(SpanProcessor):
                 )
         else:
             # Print basic information for other span kinds
+            # For native OpenTelemetry SpanKind values (INTERNAL, CLIENT, CONSUMER, etc.),
+            # we'll see the actual kind rather than "unknown"
             logger.debug(f"Ended span: {span.name} (kind: {span_kind})")
 
     def shutdown(self) -> None:
