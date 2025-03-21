@@ -174,6 +174,9 @@ def get_generation_span_attributes(span_data: Any) -> AttributeMap:
     
     # TODO this has not been extensively tested yet as there is a flag that needs ot be set to use the 
     # completions API with the Agents SDK. 
+    # We can enable chat.completions API by calling:
+    # `from agents import set_default_openai_api`
+    # `set_default_openai_api("chat_completions")`
     
     Args:
         span_data: The GenerationSpanData object
