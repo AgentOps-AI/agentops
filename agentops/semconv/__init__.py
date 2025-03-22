@@ -12,6 +12,7 @@ from .span_attributes import SpanAttributes
 from .meters import Meters
 from .span_kinds import AgentOpsSpanKindValues
 from .resource import ResourceAttributes
+from .langchain import LangChainAttributes, LangChainAttributeValues
 
 SUPPRESS_LANGUAGE_MODEL_INSTRUMENTATION_KEY = "suppress_language_model_instrumentation"
 __all__ = [
@@ -26,5 +27,8 @@ __all__ = [
     "LLMRequestTypeValues",
     "SpanAttributes",
     "Meters",
-    "AgentOpsSpanKindValuesResourceAttributes",
+    "AgentOpsSpanKindValues",
+    "ResourceAttributes",
+    "LangChainAttributes",
+    "LangChainAttributeValues",
 ]

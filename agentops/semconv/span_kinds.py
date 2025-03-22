@@ -25,7 +25,8 @@ class SpanKind:
     LLM = "llm"
     TEAM = "team"
     UNKNOWN = "unknown"
-
+    CHAIN = "chain"
+    TEXT = "text"
 
 class AgentOpsSpanKindValues(Enum):
     WORKFLOW = "workflow"
