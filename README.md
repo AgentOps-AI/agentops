@@ -213,10 +213,10 @@ All decorators support:
 
 ### OpenAI Agents SDK 🖇️
 
-Build multi-agent systems with tools, handoffs, and guardrails. AgentOps provides first-class integration with OpenAI Agents.
+Build multi-agent systems with tools, handoffs, and guardrails. AgentOps natively integrates with OpenAI Agents.
 
 ```bash
-pip install agents-sdk
+pip install openai-agents
 ```
 
 - [AgentOps integration example](https://docs.agentops.ai/v1/integrations/agentssdk)
