@@ -19,7 +19,9 @@ from .logging.config import logger
 class ConfigDict(TypedDict):
     api_key: Optional[str]
     endpoint: Optional[str]
+    app_url: Optional[str]
     max_wait_time: Optional[int]
+    export_flush_interval: Optional[int]
     max_queue_size: Optional[int]
     default_tags: Optional[List[str]]
     instrument_llm_calls: Optional[bool]
@@ -32,7 +34,7 @@ class ConfigDict(TypedDict):
     prefetch_jwt_token: Optional[bool]
 
 
-@dataclass(slots=True)
+@dataclass
 class Config:
     api_key: Optional[str] = field(
         default_factory=lambda: os.getenv("AGENTOPS_API_KEY"),
@@ -44,9 +46,19 @@ class Config:
         metadata={"description": "Base URL for the AgentOps API"},
     )
 
+    app_url: str = field(
+        default_factory=lambda: os.getenv("AGENTOPS_APP_URL", "https://app.agentops.ai"),
+        metadata={"description": "Dashboard URL for the AgentOps application"},
+    )
+
     max_wait_time: int = field(
         default_factory=lambda: get_env_int("AGENTOPS_MAX_WAIT_TIME", 5000),
         metadata={"description": "Maximum time in milliseconds to wait for API responses"},
+    )
+    
+    export_flush_interval: int = field(
+        default_factory=lambda: get_env_int("AGENTOPS_EXPORT_FLUSH_INTERVAL", 1000),
+        metadata={"description": "Time interval in milliseconds between automatic exports of telemetry data"},
     )
 
     max_queue_size: int = field(
@@ -65,7 +77,7 @@ class Config:
     )
 
     auto_start_session: bool = field(
-        default_factory=lambda: get_env_bool("AGENTOPS_AUTO_START_SESSION", False),
+        default_factory=lambda: get_env_bool("AGENTOPS_AUTO_START_SESSION", True),
         metadata={"description": "Whether to automatically start a session when initializing"},
     )
 
@@ -118,7 +130,9 @@ class Config:
         self,
         api_key: Optional[str] = None,
         endpoint: Optional[str] = None,
+        app_url: Optional[str] = None,
         max_wait_time: Optional[int] = None,
+        export_flush_interval: Optional[int] = None,
         max_queue_size: Optional[int] = None,
         default_tags: Optional[List[str]] = None,
         instrument_llm_calls: Optional[bool] = None,
@@ -144,9 +158,15 @@ class Config:
 
         if endpoint is not None:
             self.endpoint = endpoint
+            
+        if app_url is not None:
+            self.app_url = app_url
 
         if max_wait_time is not None:
             self.max_wait_time = max_wait_time
+            
+        if export_flush_interval is not None:
+            self.export_flush_interval = export_flush_interval
 
         if max_queue_size is not None:
             self.max_queue_size = max_queue_size
@@ -201,7 +221,9 @@ class Config:
         return {
             "api_key": self.api_key,
             "endpoint": self.endpoint,
+            "app_url": self.app_url,
             "max_wait_time": self.max_wait_time,
+            "export_flush_interval": self.export_flush_interval,
             "max_queue_size": self.max_queue_size,
             "default_tags": self.default_tags,
             "instrument_llm_calls": self.instrument_llm_calls,

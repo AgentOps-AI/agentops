@@ -31,6 +31,7 @@ def setup_telemetry(
     metrics_endpoint: str = "https://otlp.agentops.ai/v1/metrics",
     max_queue_size: int = 512,
     max_wait_time: int = 5000,
+    export_flush_interval: int = 1000,
     jwt: Optional[str] = None,
 ) -> tuple[TracerProvider, MeterProvider]:
     """
@@ -43,6 +44,7 @@ def setup_telemetry(
         metrics_endpoint: Endpoint for the metrics exporter
         max_queue_size: Maximum number of spans to queue before forcing a flush
         max_wait_time: Maximum time in milliseconds to wait before flushing
+        export_flush_interval: Time interval in milliseconds between automatic exports of telemetry data
         jwt: JWT token for authentication
 
     Returns:
@@ -73,7 +75,7 @@ def setup_telemetry(
     processor = BatchSpanProcessor(
         exporter,
         max_export_batch_size=max_queue_size,
-        schedule_delay_millis=max_wait_time,
+        schedule_delay_millis=export_flush_interval,
     )
     provider.add_span_processor(processor)
     provider.add_span_processor(InternalSpanProcessor())  # Catches spans for AgentOps on-terminal printing
@@ -151,6 +153,7 @@ class TracingCore:
             kwargs.setdefault("metrics_endpoint", "https://otlp.agentops.ai/v1/metrics")
             kwargs.setdefault("max_queue_size", 512)
             kwargs.setdefault("max_wait_time", 5000)
+            kwargs.setdefault("export_flush_interval", 1000)
 
             # Create a TracingConfig from kwargs with proper defaults
             config: TracingConfig = {
@@ -159,6 +162,7 @@ class TracingCore:
                 "metrics_endpoint": kwargs["metrics_endpoint"],
                 "max_queue_size": kwargs["max_queue_size"],
                 "max_wait_time": kwargs["max_wait_time"],
+                "export_flush_interval": kwargs["export_flush_interval"],
                 "api_key": kwargs.get("api_key"),
                 "project_id": kwargs.get("project_id"),
             }
@@ -167,12 +171,13 @@ class TracingCore:
 
             # Setup telemetry using the extracted configuration
             self._provider, self._meter_provider = setup_telemetry(
-                service_name=config["service_name"],
+                service_name=config["service_name"] or "",
                 project_id=config.get("project_id"),
-                exporter_endpoint=config["exporter_endpoint"],
-                metrics_endpoint=config["metrics_endpoint"],
+                exporter_endpoint=config["exporter_endpoint"] or "",
+                metrics_endpoint=config["metrics_endpoint"] or "",
                 max_queue_size=config["max_queue_size"],
                 max_wait_time=config["max_wait_time"],
+                export_flush_interval=config["export_flush_interval"],
                 jwt=jwt,
             )
 
@@ -250,6 +255,7 @@ class TracingCore:
                     "exporter_endpoint": getattr(config, "exporter_endpoint", None),
                     "max_queue_size": getattr(config, "max_queue_size", 512),
                     "max_wait_time": getattr(config, "max_wait_time", 5000),
+                    "export_flush_interval": getattr(config, "export_flush_interval", 1000),
                     "api_key": getattr(config, "api_key", None),
                     "project_id": getattr(config, "project_id", None),
                     "endpoint": getattr(config, "endpoint", None),

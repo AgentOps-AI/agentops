@@ -1,0 +1,56 @@
+{
+  "id": "resp_67d532841d1881929076b53e76e6b37a0d15a4cc30215d60",
+  "created_at": 1742025348.0,
+  "error": null,
+  "incomplete_details": null,
+  "instructions": "You are a helpful assistant.",
+  "metadata": {},
+  "model": "gpt-4o-2024-08-06",
+  "object": "response",
+  "output": [
+    {
+      "id": "msg_67d5328463d881929e9adeb6cd0eff6c0d15a4cc30215d60",
+      "content": [
+        {
+          "annotations": [],
+          "text": "The capital of France is Paris.",
+          "type": "output_text"
+        }
+      ],
+      "role": "assistant",
+      "status": "completed",
+      "type": "message"
+    }
+  ],
+  "parallel_tool_calls": true,
+  "temperature": 0.7,
+  "tool_choice": "auto",
+  "tools": [],
+  "top_p": 1.0,
+  "max_output_tokens": null,
+  "previous_response_id": null,
+  "reasoning": {
+    "effort": null,
+    "generate_summary": null
+  },
+  "status": "completed",
+  "text": {
+    "format": {
+      "type": "text"
+    }
+  },
+  "truncation": "disabled",
+  "usage": {
+    "input_tokens": 42,
+    "output_tokens": 8,
+    "output_tokens_details": {
+      "reasoning_tokens": 0
+    },
+    "total_tokens": 50,
+    "input_tokens_details": {
+      "cached_tokens": 0
+    }
+  },
+  "user": null,
+  "store": true
+}

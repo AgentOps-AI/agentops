@@ -3,7 +3,7 @@ from types import ModuleType
 from dataclasses import dataclass
 import importlib
 
-from opentelemetry.instrumentation.instrumentor import BaseInstrumentor
+from opentelemetry.instrumentation.instrumentor import BaseInstrumentor  # type: ignore
 
 from agentops.logging import logger
 from agentops.sdk.core import TracingCore
@@ -68,8 +68,8 @@ available_instrumentors: list[InstrumentorLoader] = [
         provider_import_name="crewai",
     ),
     InstrumentorLoader(
-        module_name="opentelemetry.instrumentation.agents",
-        class_name="AgentsInstrumentor",
+        module_name="agentops.instrumentation.openai_agents",
+        class_name="OpenAIAgentsInstrumentor",
         provider_import_name="agents",
     ),
 ]

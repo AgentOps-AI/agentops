@@ -140,47 +140,83 @@ Add powerful observability to your agents, tools, and functions with as little c
 Refer to our [documentation](http://docs.agentops.ai)
 
 ```python
-# Automatically associate all Events with the agent that originated them
-from agentops import track_agent
+# Create a session span (root for all other spans)
+from agentops.sdk.decorators import session
 
-@track_agent(name='SomeCustomName')
+@session
+def my_workflow():
+    # Your session code here
+    return result
+```
+
+```python
+# Create an agent span for tracking agent operations
+from agentops.sdk.decorators import agent
+
+@agent
 class MyAgent:
-  ...
+    def __init__(self, name):
+        self.name = name
+        
+    # Agent methods here
 ```
 
 ```python
-# Automatically create ToolEvents for tools that agents will use
-from agentops import record_tool
+# Create operation/task spans for tracking specific operations
+from agentops.sdk.decorators import operation, task
 
-@record_tool('SampleToolName')
-def sample_tool(...):
-  ...
+@operation  # or @task
+def process_data(data):
+    # Process the data
+    return result
 ```
 
 ```python
-# Automatically create ActionEvents for other functions.
-from agentops import record_action
+# Create workflow spans for tracking multi-operation workflows
+from agentops.sdk.decorators import workflow
 
-@agentops.record_action('sample function being record')
-def sample_function(...):
-  ...
+@workflow
+def my_workflow(data):
+    # Workflow implementation
+    return result
 ```
 
 ```python
-# Manually record any other Events
-from agentops import record, ActionEvent
+# Nest decorators for proper span hierarchy
+from agentops.sdk.decorators import session, agent, operation
 
-record(ActionEvent("received_user_input"))
+@agent
+class MyAgent:
+    @operation
+    def nested_operation(self, message):
+        return f"Processed: {message}"
+        
+    @operation
+    def main_operation(self):
+        result = self.nested_operation("test message")
+        return result
+
+@session
+def my_session():
+    agent = MyAgent()
+    return agent.main_operation()
 ```
+
+All decorators support:
+- Input/Output Recording
+- Exception Handling
+- Async/await functions
+- Generator functions
+- Custom attributes and names
 
 ## Integrations 🦾
 
 ### OpenAI Agents SDK 🖇️
 
-Build multi-agent systems with tools, handoffs, and guardrails. AgentOps provides first-class integration with OpenAI Agents.
+Build multi-agent systems with tools, handoffs, and guardrails. AgentOps natively integrates with OpenAI Agents.
 
 ```bash
-pip install agents-sdk
+pip install openai-agents
 ```
 
 - [AgentOps integration example](https://docs.agentops.ai/v1/integrations/agentssdk)

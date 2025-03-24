@@ -1,16 +1,34 @@
 from typing import Any, Dict, List, Optional, Union
 
-from agentops.legacy import ErrorEvent, ToolEvent, end_session, start_session
+from agentops.legacy import ActionEvent, ErrorEvent, ToolEvent, start_session, end_session
 
 from .client import Client
 
 # Client global instance; one per process runtime
 _client = Client()
 
+def record(event):
+    """
+    Legacy function to record an event. This is kept for backward compatibility.
+    
+    In the current version, this simply sets the end_timestamp on the event.
+    
+    Args:
+        event: The event to record
+    """
+    from agentops.helpers.time import get_ISO_time
+    
+    # TODO: Manual timestamp assignment is a temporary fix; should use proper event lifecycle
+    if event and hasattr(event, 'end_timestamp'):
+        event.end_timestamp = get_ISO_time()
+    
+    return event
+
 
 def init(
     api_key: Optional[str] = None,
     endpoint: Optional[str] = None,
+    app_url: Optional[str] = None,
     max_wait_time: Optional[int] = None,
     max_queue_size: Optional[int] = None,
     tags: Optional[List[str]] = None,
@@ -33,6 +51,8 @@ def init(
             be read from the AGENTOPS_API_KEY environment variable.
         endpoint (str, optional): The endpoint for the AgentOps service. If none is provided, key will
             be read from the AGENTOPS_API_ENDPOINT environment variable. Defaults to 'https://api.agentops.ai'.
+        app_url (str, optional): The dashboard URL for the AgentOps app. If none is provided, key will
+            be read from the AGENTOPS_APP_URL environment variable. Defaults to 'https://app.agentops.ai'.
         max_wait_time (int, optional): The maximum time to wait in milliseconds before flushing the queue.
             Defaults to 5,000 (5 seconds)
         max_queue_size (int, optional): The maximum size of the event queue. Defaults to 512.
@@ -62,6 +82,7 @@ def init(
     return _client.init(
         api_key=api_key,
         endpoint=endpoint,
+        app_url=app_url,
         max_wait_time=max_wait_time,
         max_queue_size=max_queue_size,
         default_tags=merged_tags,
@@ -84,6 +105,7 @@ def configure(**kwargs):
         **kwargs: Configuration parameters. Supported parameters include:
             - api_key: API Key for AgentOps services
             - endpoint: The endpoint for the AgentOps service
+            - app_url: The dashboard URL for the AgentOps app
             - max_wait_time: Maximum time to wait in milliseconds before flushing the queue
             - max_queue_size: Maximum size of the event queue
             - default_tags: Default tags for the sessions
@@ -101,6 +123,7 @@ def configure(**kwargs):
     valid_params = {
         "api_key",
         "endpoint",
+        "app_url",
         "max_wait_time",
         "max_queue_size",
         "default_tags",
@@ -139,6 +162,9 @@ __all__ = [
     "init",
     "configure",
     "get_client",
+    "record",
     "start_session",
     "end_session",
+    "track_agent",
+    "track_tool",
 ]

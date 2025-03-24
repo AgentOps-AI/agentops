@@ -18,6 +18,7 @@ def mock_env():
         env_vars = {
             "AGENTOPS_API_KEY": "test-api-key",
             "AGENTOPS_API_ENDPOINT": "https://test.agentops.ai",
+            "AGENTOPS_APP_URL": "https://test-app.agentops.ai",
             "AGENTOPS_MAX_WAIT_TIME": "1000",
             "AGENTOPS_MAX_QUEUE_SIZE": "256",
             "AGENTOPS_DEFAULT_TAGS": "tag1,tag2,tag3",
@@ -43,6 +44,7 @@ def test_config_from_env(mock_env):
 
     assert config.api_key == "test-api-key"
     assert config.endpoint == "https://test.agentops.ai"
+    assert config.app_url == "https://test-app.agentops.ai"
     assert config.max_wait_time == 1000
     assert config.max_queue_size == 256
     assert config.default_tags == {"tag1", "tag2", "tag3"}
@@ -63,6 +65,7 @@ def test_config_override_env(mock_env, valid_uuid):
     config.configure(
         api_key=valid_uuid,
         endpoint="https://override.agentops.ai",
+        app_url="https://override-app.agentops.ai",
         max_wait_time=2000,
         default_tags=["new-tag"],
         instrument_llm_calls=True,
@@ -71,6 +74,7 @@ def test_config_override_env(mock_env, valid_uuid):
 
     assert config.api_key == valid_uuid
     assert config.endpoint == "https://override.agentops.ai"
+    assert config.app_url == "https://override-app.agentops.ai"
     assert config.max_wait_time == 2000
     assert config.default_tags == {"new-tag"}
     assert config.instrument_llm_calls is True

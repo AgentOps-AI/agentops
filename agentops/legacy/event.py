@@ -11,7 +11,7 @@ from enum import Enum
 from typing import Any, Dict, List, Optional, Sequence, Union
 from uuid import UUID, uuid4
 
-from .helpers import check_call_stack_for_agent_id, get_ISO_time
+from agentops.helpers import get_ISO_time
 
 
 class EventType(Enum):
@@ -46,12 +46,12 @@ class Event:
     }
     """
 
-    event_type: EventType
+    event_type: str
     params: Optional[dict] = None
     returns: Optional[Union[str, List[str]]] = None
     init_timestamp: str = field(default_factory=get_ISO_time)
     end_timestamp: Optional[str] = None
-    agent_id: Optional[UUID] = field(default_factory=check_call_stack_for_agent_id)
+    agent_id: Optional[UUID] = None
     id: UUID = field(default_factory=uuid4)
     session_id: Optional[UUID] = None
 

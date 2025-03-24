@@ -18,3 +18,4 @@ class TracingConfig(TypedDict, total=False):
     project_id: Optional[str]  # Project ID to include in resource attributes
     max_queue_size: int  # Required with a default value
     max_wait_time: int  # Required with a default value
+    export_flush_interval: int  # Time interval between automatic exports
