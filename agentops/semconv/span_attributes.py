@@ -37,6 +37,7 @@ class SpanAttributes:
     LLM_USAGE_TOTAL_TOKENS = "gen_ai.usage.total_tokens"
     LLM_USAGE_CACHE_CREATION_INPUT_TOKENS = "gen_ai.usage.cache_creation_input_tokens"
     LLM_USAGE_CACHE_READ_INPUT_TOKENS = "gen_ai.usage.cache_read_input_tokens"
+    LLM_USAGE_STREAMING_TOKENS = "gen_ai.usage.streaming_tokens"
 
     # Token type
     LLM_TOKEN_TYPE = "gen_ai.token.type"
