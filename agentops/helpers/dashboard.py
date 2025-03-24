@@ -9,8 +9,6 @@ from agentops.logging import logger
 from agentops.sdk.converters import trace_id_to_uuid
 
 
-APP_URL = "https://app.agentops.ai"
-
 def get_trace_url(span: Union[Span, ReadableSpan]) -> str:
     """
     Generate a trace URL for a direct link to the session on the AgentOps dashboard.
@@ -27,7 +25,11 @@ def get_trace_url(span: Union[Span, ReadableSpan]) -> str:
     if isinstance(trace_id, int):
         trace_id = trace_id_to_uuid(trace_id)
     
-    return f"{APP_URL}/sessions?trace_id={trace_id}"
+    # Get the app_url from the config - import here to avoid circular imports
+    from agentops import get_client
+    app_url = get_client().config.app_url
+    
+    return f"{app_url}/sessions?trace_id={trace_id}"
 
 
 def log_trace_url(span: Union[Span, ReadableSpan]) -> None:
