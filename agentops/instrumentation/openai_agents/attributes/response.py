@@ -252,7 +252,7 @@ def get_response_output_tool_attributes(index: int, output: 'ResponseFunctionToo
     return attributes
 
 
-def get_response_tools_attributes(tools: List[FunctionTool]) -> AttributeMap:
+def get_response_tools_attributes(tools: List[Any]) -> AttributeMap:
     """Handles interpretation of openai Response `tools` list."""
     # FunctionTool(
     #     name='get_weather', 
@@ -294,14 +294,15 @@ def get_response_usage_attributes(usage: 'ResponseUsage') -> AttributeMap:
     # )
     attributes = {}
     
-    # input_tokens_details is a dict
-    input_details = usage.input_tokens_details
-    if input_details and isinstance(input_details, dict):
-        attributes.update(_extract_attributes_from_mapping(
-            input_details, 
-            RESPONSE_USAGE_DETAILS_ATTRIBUTES))
-    else:
-        logger.debug(f"[agentops.instrumentation.openai_agents] '{input_details}' is not a recognized input details type.")
+    # input_tokens_details is a dict if it exists
+    if hasattr(usage, 'input_tokens_details'):
+        input_details = usage.input_tokens_details
+        if input_details and isinstance(input_details, dict):
+            attributes.update(_extract_attributes_from_mapping(
+                input_details, 
+                RESPONSE_USAGE_DETAILS_ATTRIBUTES))
+        else:
+            logger.debug(f"[agentops.instrumentation.openai_agents] '{input_details}' is not a recognized input details type.")
     
     # output_tokens_details is an `OutputTokensDetails` object
     output_details = usage.output_tokens_details

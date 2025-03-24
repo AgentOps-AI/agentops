@@ -18,7 +18,7 @@ from agentops.logging import logger
 def get_version() -> str:
     """Get the version of the agents SDK, or 'unknown' if not found"""
     try:
-        import agents.version
+        import agents.version  # type: ignore
         if hasattr(agents.version, '__version__'):
             return str(agents.version.__version__)
         return "unknown"

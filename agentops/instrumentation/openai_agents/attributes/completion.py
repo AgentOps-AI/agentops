@@ -5,6 +5,8 @@ and the OpenAI Response API formats, extracting messages, tool calls, function c
 """
 from typing import Any, Dict
 
+from agentops.instrumentation.openai_agents.attributes import AttributeMap
+
 from agentops.logging import logger
 from agentops.helpers.serialization import model_to_dict
 from agentops.semconv import (
@@ -26,7 +28,7 @@ def get_generation_output_attributes(output: Any) -> Dict[str, Any]:
     """
     # Convert model to dictionary for easier processing
     response_dict = model_to_dict(output)
-    result = {}
+    result: AttributeMap = {}
     
     if not response_dict:
         # Handle output as string if it's not a dict
@@ -46,16 +48,16 @@ def get_generation_output_attributes(output: Any) -> Dict[str, Any]:
             result.update(get_chat_completions_attributes(response_dict))
         
         # Extract token usage from dictionary for standard formats
-        usage_attributes = {}
+        usage_attributes: AttributeMap = {}
         if "usage" in response_dict:
             process_token_usage(response_dict["usage"], usage_attributes)
             result.update(usage_attributes)
         
         # Extract token usage from Response object directly if dict conversion didn't work
         if hasattr(output, 'usage') and output.usage:
-            usage_attributes = {}
-            process_token_usage(output.usage, usage_attributes)
-            result.update(usage_attributes)
+            direct_usage_attributes: AttributeMap = {}
+            process_token_usage(output.usage, direct_usage_attributes)
+            result.update(direct_usage_attributes)
     
     return result
 
@@ -73,7 +75,7 @@ def get_raw_response_attributes(response: Dict[str, Any]) -> Dict[str, Any]:
     Returns:
         Dictionary of attributes extracted from the Agents SDK response
     """
-    result = {}
+    result: AttributeMap = {}
     
     # Set the LLM system to OpenAI
     result[SpanAttributes.LLM_SYSTEM] = "openai"
@@ -83,7 +85,7 @@ def get_raw_response_attributes(response: Dict[str, Any]) -> Dict[str, Any]:
         for i, raw_response in enumerate(response["raw_responses"]):
             # Extract token usage from the first raw response
             if "usage" in raw_response and isinstance(raw_response["usage"], dict):
-                usage_attrs = {}
+                usage_attrs: AttributeMap = {}
                 process_token_usage(raw_response["usage"], usage_attrs)
                 result.update(usage_attrs)
                 logger.debug(f"Extracted token usage from raw_responses[{i}]: {usage_attrs}")
@@ -129,7 +131,7 @@ def get_chat_completions_attributes(response: Dict[str, Any]) -> Dict[str, Any]:
     Returns:
         Dictionary of chat completion attributes
     """
-    result = {}
+    result: AttributeMap = {}
     
     if "choices" not in response:
         return result

@@ -74,7 +74,7 @@ def extract_nested_usage(content: Any) -> Optional[Dict[str, Any]]:
     return None
 
 
-def process_token_usage(usage: Dict[str, Any], attributes: Dict[str, Any], completion_content: str = None) -> Dict[str, Any]:
+def process_token_usage(usage: Dict[str, Any], attributes: Dict[str, Any], completion_content: Optional[str] = None) -> Dict[str, Any]:
     """Process token usage data from OpenAI responses using standardized attribute naming.
     
     Args:

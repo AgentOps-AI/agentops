@@ -20,7 +20,7 @@ spans we create here, it's probably easier (or even required) that we incorporat
 that here as well. 
 """
 from typing import Collection
-from opentelemetry.instrumentation.instrumentor import BaseInstrumentor
+from opentelemetry.instrumentation.instrumentor import BaseInstrumentor  # type: ignore
 from agentops.logging import logger
 from agentops.instrumentation.openai_agents.processor import OpenAIAgentsProcessor
 from agentops.instrumentation.openai_agents.exporter import OpenAIAgentsExporter
@@ -44,7 +44,7 @@ class OpenAIAgentsInstrumentor(BaseInstrumentor):
         try:
             # Check if Agents SDK is available
             try:
-                import agents
+                import agents  # type: ignore
                 logger.debug(f"Agents SDK detected, version: {getattr(agents, '__version__', 'unknown')}")
             except ImportError as e:
                 logger.debug(f"Agents SDK import failed: {e}")
@@ -56,8 +56,8 @@ class OpenAIAgentsInstrumentor(BaseInstrumentor):
             )
             
             # Replace the default processor with our processor
-            from agents import set_trace_processors
-            from agents.tracing.processors import default_processor
+            from agents import set_trace_processors  # type: ignore
+            from agents.tracing.processors import default_processor  # type: ignore
             # Store reference to default processor for later restoration
             self._default_processor = default_processor()
             set_trace_processors([self._processor])

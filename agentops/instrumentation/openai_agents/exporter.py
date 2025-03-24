@@ -385,6 +385,41 @@ class OpenAIAgentsExporter:
         self._active_spans.pop(span_id, None)
         self._span_map.pop(span_lookup_key, None)
         
+    def create_span(self, span: Any, span_type: str, attributes: Dict[str, Any]) -> None:
+        """Create a new span with the provided data and end it immediately.
+        
+        This method creates a span using the appropriate parent context, applies
+        all attributes, and ends it immediately since it's for spans that are
+        already in an ended state.
+        
+        Args:
+            span: The span data from the Agents SDK
+            span_type: The type of span being created
+            attributes: The attributes to set on the span
+        """
+        # For simplicity and backward compatibility, use None as the parent context
+        # In a real implementation, you might want to look up the parent
+        parent_ctx = None
+        if hasattr(span, "parent_id") and span.parent_id:
+            # Get parent context from trace_id and parent_id if available
+            parent_ctx = self._get_parent_context(
+                getattr(span, "trace_id", "unknown"),
+                getattr(span, "id", "unknown"),
+                span.parent_id
+            )
+        
+        name = get_span_name(span)
+        kind = get_span_kind(span)
+        
+        # Create the span with parent context and end it immediately
+        self._create_span_with_parent(
+            name=name,
+            kind=kind, 
+            attributes=attributes,
+            parent_ctx=parent_ctx,
+            end_immediately=True
+        )
+    
     def _handle_span_error(self, span: Any, otel_span: Any) -> None:
         """Handle error information from spans."""
         if hasattr(span, "error") and span.error:

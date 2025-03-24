@@ -3,7 +3,7 @@ import types
 import functools
 import asyncio
 
-import wrapt
+import wrapt  # type: ignore
 
 from agentops.logging import logger
 from agentops.sdk.core import TracingCore
