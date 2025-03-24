@@ -2,15 +2,16 @@
 Helpers for interacting with the AgentOps dashboard. 
 """
 from typing import Union
+from uuid import UUID
 from termcolor import colored
-from opentelemetry.sdk.trace import Span
+from opentelemetry.sdk.trace import Span, ReadableSpan
 from agentops.logging import logger
 from agentops.sdk.converters import trace_id_to_uuid
 
 
 APP_URL = "https://app.agentops.ai"
 
-def get_trace_url(span: Span) -> str:
+def get_trace_url(span: Union[Span, ReadableSpan]) -> str:
     """
     Generate a trace URL for a direct link to the session on the AgentOps dashboard.
 
@@ -20,7 +21,7 @@ def get_trace_url(span: Span) -> str:
     Returns:
         The session URL.
     """
-    trace_id: Union[str, int] = span.context.trace_id
+    trace_id: Union[int, UUID] = span.context.trace_id
     
     # Convert trace_id to hex string if it's not already
     if isinstance(trace_id, int):
@@ -29,7 +30,7 @@ def get_trace_url(span: Span) -> str:
     return f"{APP_URL}/sessions?trace_id={trace_id}"
 
 
-def log_trace_url(span: Span) -> None:
+def log_trace_url(span: Union[Span, ReadableSpan]) -> None:
     """
     Log the trace URL for the AgentOps dashboard.
 
