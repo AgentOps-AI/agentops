@@ -12,24 +12,28 @@ IMPORTANT DISTINCTION BETWEEN OPENAI API FORMATS:
 The Agents SDK uses the Response API format, which we handle using shared utilities from
 agentops.instrumentation.openai.
 """
-from typing import Optional
+
 from agentops.logging import logger
+
 
 def get_version() -> str:
     """Get the version of the agents SDK, or 'unknown' if not found"""
     try:
-        import agents.version  # type: ignore
-        if hasattr(agents.version, '__version__'):
-            return str(agents.version.__version__)
-        return "unknown"
+        from importlib.metadata import version
+
+        library_version = version("openai-agents")
+        logger.debug(f"OpenAI Agents SDK version: {library_version}")
+        return library_version
     except ImportError:
+        logger.warning("Could not find OpenAI Agents SDK version")
         return "unknown"
+
 
 LIBRARY_NAME = "openai-agents"
 LIBRARY_VERSION: str = get_version()  # Actual OpenAI Agents SDK version
 
 # Import after defining constants to avoid circular imports
-from .instrumentor import OpenAIAgentsInstrumentor
+from .instrumentor import OpenAIAgentsInstrumentor  # noqa: E402
 
 __all__ = [
     "LIBRARY_NAME",
