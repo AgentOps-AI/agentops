@@ -19,6 +19,7 @@ from .logging.config import logger
 class ConfigDict(TypedDict):
     api_key: Optional[str]
     endpoint: Optional[str]
+    app_url: Optional[str]
     max_wait_time: Optional[int]
     export_flush_interval: Optional[int]
     max_queue_size: Optional[int]
@@ -43,6 +44,11 @@ class Config:
     endpoint: str = field(
         default_factory=lambda: os.getenv("AGENTOPS_API_ENDPOINT", "https://api.agentops.ai"),
         metadata={"description": "Base URL for the AgentOps API"},
+    )
+
+    app_url: str = field(
+        default_factory=lambda: os.getenv("AGENTOPS_APP_URL", "https://app.agentops.ai"),
+        metadata={"description": "Dashboard URL for the AgentOps application"},
     )
 
     max_wait_time: int = field(
@@ -124,6 +130,7 @@ class Config:
         self,
         api_key: Optional[str] = None,
         endpoint: Optional[str] = None,
+        app_url: Optional[str] = None,
         max_wait_time: Optional[int] = None,
         export_flush_interval: Optional[int] = None,
         max_queue_size: Optional[int] = None,
@@ -151,6 +158,9 @@ class Config:
 
         if endpoint is not None:
             self.endpoint = endpoint
+            
+        if app_url is not None:
+            self.app_url = app_url
 
         if max_wait_time is not None:
             self.max_wait_time = max_wait_time
@@ -211,6 +221,7 @@ class Config:
         return {
             "api_key": self.api_key,
             "endpoint": self.endpoint,
+            "app_url": self.app_url,
             "max_wait_time": self.max_wait_time,
             "export_flush_interval": self.export_flush_interval,
             "max_queue_size": self.max_queue_size,
