@@ -22,10 +22,9 @@ def get_version() -> str:
         from importlib.metadata import version
 
         library_version = version("openai-agents")
-        logger.debug(f"OpenAI Agents SDK version: {library_version}")
         return library_version
     except ImportError:
-        logger.warning("Could not find OpenAI Agents SDK version")
+        logger.debug("Could not find OpenAI Agents SDK version")
         return "unknown"
 
 
