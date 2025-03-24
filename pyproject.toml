@@ -122,13 +122,10 @@ line-length = 120
 
 [tool.ruff.lint]
 ignore = [
-    "F401",  # Unused imports
     "E712",  # Comparison to True/False
     "E711",  # Comparison to None
     "E722",  # Bare except
     "E731",  # Use lambda instead of def
-    "F821",  # Undefined names
-    "F841",  # Unused variables
 ]
 
 exclude = [
