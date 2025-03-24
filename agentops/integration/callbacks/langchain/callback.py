@@ -13,8 +13,8 @@ from opentelemetry.trace import SpanContext, set_span_in_context
 from agentops.helpers.serialization import safe_serialize
 from agentops.logging import logger
 from agentops.sdk.core import TracingCore
-from agentops.semconv import SpanKind, SpanAttributes, LangChainAttributes, LangChainAttributeValues
-from agentops.sdk.callbacks.langchain.utils import get_model_info
+from agentops.semconv import SpanKind, SpanAttributes, LangChainAttributes, LangChainAttributeValues, CoreAttributes
+from agentops.integration.callbacks.langchain.utils import get_model_info
 
 from langchain_core.callbacks.base import BaseCallbackHandler, AsyncCallbackHandler
 from langchain_core.outputs import LLMResult
@@ -78,7 +78,7 @@ class LangchainCallbackHandler(BaseCallbackHandler):
         
         attributes = {
             SpanAttributes.AGENTOPS_SPAN_KIND: SpanKind.SESSION,
-            LangChainAttributes.SESSION_TAGS: self.tags,
+            "session.tags": self.tags,
             "agentops.operation.name": "session",
             "span.kind": SpanKind.SESSION,
         }
@@ -196,30 +196,23 @@ class LangchainCallbackHandler(BaseCallbackHandler):
             model_info = get_model_info(serialized)
             # Ensure default values if model_info returns unknown
             model_name = model_info.get("model_name", "unknown")
-            model_provider = model_info.get("provider", "unknown")
             
             attributes = {
+                # Use both standard and LangChain-specific attributes
                 SpanAttributes.LLM_REQUEST_MODEL: model_name,
-                SpanAttributes.LLM_PROMPTS: safe_serialize(prompts),
                 LangChainAttributes.LLM_MODEL: model_name,
+                SpanAttributes.LLM_PROMPTS: safe_serialize(prompts),
                 LangChainAttributes.LLM_NAME: serialized.get("id", "unknown_llm"),
-                LangChainAttributes.LLM_PROVIDER: model_provider,
             }
             
             if "kwargs" in serialized:
                 for key, value in serialized["kwargs"].items():
                     if key == "temperature":
-                        param_key = f"gen_ai.request.{key}"
-                        attributes[param_key] = value
-                        attributes[LangChainAttributes.LLM_TEMPERATURE] = value
+                        attributes[SpanAttributes.LLM_REQUEST_TEMPERATURE] = value
                     elif key == "max_tokens":
-                        param_key = f"gen_ai.request.{key}"
-                        attributes[param_key] = value
-                        attributes[LangChainAttributes.LLM_MAX_TOKENS] = value
+                        attributes[SpanAttributes.LLM_REQUEST_MAX_TOKENS] = value
                     elif key == "top_p":
-                        param_key = f"gen_ai.request.{key}"
-                        attributes[param_key] = value
-                        attributes[LangChainAttributes.LLM_TOP_P] = value
+                        attributes[SpanAttributes.LLM_REQUEST_TOP_P] = value
             
             run_id = kwargs.get("run_id", id(serialized or {}))
             parent_run_id = kwargs.get("parent_run_id", None)
@@ -233,7 +226,7 @@ class LangchainCallbackHandler(BaseCallbackHandler):
             
             self._create_span("llm", SpanKind.LLM, run_id, attributes, parent_run_id)
             
-            logger.debug(f"Started LLM span for {model_name} ({model_provider})")
+            logger.debug(f"Started LLM span for {model_name}")
         except Exception as e:
             logger.warning(f"Error in on_llm_start: {e}")
     
@@ -298,7 +291,7 @@ class LangchainCallbackHandler(BaseCallbackHandler):
             if run_id in self.token_counts and self.token_counts[run_id] > 0:
                 try:
                     span.set_attribute(
-                        "llm.usage.streaming_tokens",
+                        SpanAttributes.LLM_USAGE_STREAMING_TOKENS,
                         self.token_counts[run_id]
                     )
                 except Exception as e:
@@ -554,7 +547,6 @@ class LangchainCallbackHandler(BaseCallbackHandler):
             model_info = get_model_info(serialized)
             # Ensure default values if model_info returns unknown
             model_name = model_info.get("model_name", "unknown")
-            model_provider = model_info.get("provider", "unknown")
             
             # Extract message contents and roles
             formatted_messages = []
@@ -569,11 +561,11 @@ class LangchainCallbackHandler(BaseCallbackHandler):
                     roles.append(message.type)
             
             attributes = {
+                # Use both standard and LangChain-specific attributes
                 SpanAttributes.LLM_REQUEST_MODEL: model_name,
-                SpanAttributes.LLM_PROMPTS: safe_serialize(formatted_messages),
                 LangChainAttributes.LLM_MODEL: model_name,
+                SpanAttributes.LLM_PROMPTS: safe_serialize(formatted_messages),
                 LangChainAttributes.LLM_NAME: serialized.get("id", "unknown_chat_model"),
-                LangChainAttributes.LLM_PROVIDER: model_provider,
                 LangChainAttributes.CHAT_MESSAGE_ROLES: safe_serialize(roles),
                 LangChainAttributes.CHAT_MODEL_TYPE: "chat",
             }
@@ -582,17 +574,11 @@ class LangchainCallbackHandler(BaseCallbackHandler):
             if "kwargs" in serialized:
                 for key, value in serialized["kwargs"].items():
                     if key == "temperature":
-                        param_key = f"gen_ai.request.{key}"
-                        attributes[param_key] = value
-                        attributes[LangChainAttributes.LLM_TEMPERATURE] = value
+                        attributes[SpanAttributes.LLM_REQUEST_TEMPERATURE] = value
                     elif key == "max_tokens":
-                        param_key = f"gen_ai.request.{key}"
-                        attributes[param_key] = value
-                        attributes[LangChainAttributes.LLM_MAX_TOKENS] = value
+                        attributes[SpanAttributes.LLM_REQUEST_MAX_TOKENS] = value
                     elif key == "top_p":
-                        param_key = f"gen_ai.request.{key}"
-                        attributes[param_key] = value
-                        attributes[LangChainAttributes.LLM_TOP_P] = value
+                        attributes[SpanAttributes.LLM_REQUEST_TOP_P] = value
             
             run_id = kwargs.get("run_id", id(serialized or {}))
             parent_run_id = kwargs.get("parent_run_id", None)
@@ -602,7 +588,7 @@ class LangchainCallbackHandler(BaseCallbackHandler):
             
             self._create_span("chat_model", SpanKind.LLM, run_id, attributes, parent_run_id)
             
-            logger.debug(f"Started Chat Model span for {model_name} ({model_provider})")
+            logger.debug(f"Started Chat Model span for {model_name}")
         except Exception as e:
             logger.warning(f"Error in on_chat_model_start: {e}")
     
@@ -625,10 +611,10 @@ class LangchainCallbackHandler(BaseCallbackHandler):
                     "error", True
                 )
                 span.set_attribute(
-                    "error.type", error.__class__.__name__
+                    CoreAttributes.ERROR_TYPE, error.__class__.__name__
                 )
                 span.set_attribute(
-                    "error.message", str(error)
+                    CoreAttributes.ERROR_MESSAGE, str(error)
                 )
                 span.set_attribute(
                     LangChainAttributes.LLM_ERROR, str(error)
@@ -661,10 +647,10 @@ class LangchainCallbackHandler(BaseCallbackHandler):
                     "error", True
                 )
                 span.set_attribute(
-                    "error.type", error.__class__.__name__
+                    CoreAttributes.ERROR_TYPE, error.__class__.__name__
                 )
                 span.set_attribute(
-                    "error.message", str(error)
+                    CoreAttributes.ERROR_MESSAGE, str(error)
                 )
                 span.set_attribute(
                     LangChainAttributes.CHAIN_ERROR, str(error)
@@ -697,10 +683,10 @@ class LangchainCallbackHandler(BaseCallbackHandler):
                     "error", True
                 )
                 span.set_attribute(
-                    "error.type", error.__class__.__name__
+                    CoreAttributes.ERROR_TYPE, error.__class__.__name__
                 )
                 span.set_attribute(
-                    "error.message", str(error)
+                    CoreAttributes.ERROR_MESSAGE, str(error)
                 )
                 span.set_attribute(
                     LangChainAttributes.TOOL_ERROR, str(error)
