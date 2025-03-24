@@ -2,11 +2,9 @@
 Helpers for interacting with the AgentOps dashboard. 
 """
 from typing import Union
-from uuid import UUID
 from termcolor import colored
 from opentelemetry.sdk.trace import Span, ReadableSpan
 from agentops.logging import logger
-from agentops.sdk.converters import trace_id_to_uuid
 
 
 def get_trace_url(span: Union[Span, ReadableSpan]) -> str:
@@ -19,11 +17,12 @@ def get_trace_url(span: Union[Span, ReadableSpan]) -> str:
     Returns:
         The session URL.
     """
-    trace_id: Union[int, UUID] = span.context.trace_id
+    trace_id: Union[int, str] = span.context.trace_id
     
     # Convert trace_id to hex string if it's not already
+    # We don't add dashes to this to format it as a UUID since the dashboard doesn't either
     if isinstance(trace_id, int):
-        trace_id = trace_id_to_uuid(trace_id)
+        trace_id = format(trace_id, "032x")
     
     # Get the app_url from the config - import here to avoid circular imports
     from agentops import get_client

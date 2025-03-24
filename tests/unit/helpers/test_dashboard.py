@@ -19,15 +19,15 @@ class TestDashboardHelpers(unittest.TestCase):
         mock_client.config.app_url = "https://test-app.agentops.ai"
         mock_get_client.return_value = mock_client
         
-        # Create a mock span with a hex string trace ID
+        # Create a mock span with a hex string trace ID (using a full 32-character trace ID)
         mock_span = MagicMock()
-        mock_span.context.trace_id = "1234567890abcdef"
+        mock_span.context.trace_id = "1234567890abcdef1234567890abcdef"
         
         # Call get_trace_url
         url = get_trace_url(mock_span)
         
         # Assert that the URL is correctly formed with the config's app_url
-        self.assertEqual(url, "https://test-app.agentops.ai/sessions?trace_id=1234567890abcdef")
+        self.assertEqual(url, "https://test-app.agentops.ai/sessions?trace_id=1234567890abcdef1234567890abcdef")
 
     @patch('agentops.get_client')
     def test_get_trace_url_with_int_trace_id(self, mock_get_client):
@@ -44,11 +44,16 @@ class TestDashboardHelpers(unittest.TestCase):
         # Call get_trace_url
         url = get_trace_url(mock_span)
         
-        # Assert that the URL follows the expected format with a UUID
+        # Assert that the URL follows the expected format with a 32-character hex string
         self.assertTrue(url.startswith("https://test-app.agentops.ai/sessions?trace_id="))
-        # Verify the format matches UUID pattern (8-4-4-4-12 hex digits)
-        uuid_part = url.split("trace_id=")[1]
-        self.assertRegex(uuid_part, r"^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$")
+        
+        # Verify the format is a 32-character hex string (no dashes)
+        hex_part = url.split("trace_id=")[1]
+        self.assertRegex(hex_part, r"^[0-9a-f]{32}$")
+        
+        # Verify the value is correctly formatted from the integer 12345
+        expected_hex = format(12345, "032x")
+        self.assertEqual(hex_part, expected_hex)
 
     @patch('agentops.helpers.dashboard.logger')
     @patch('agentops.get_client')
