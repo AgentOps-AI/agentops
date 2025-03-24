@@ -4,20 +4,17 @@ Span processors for AgentOps SDK.
 This module contains processors for OpenTelemetry spans.
 """
 
-import copy
-import threading
 import time
 from threading import Event, Lock, Thread
-from typing import Any, Dict, List, Optional
+from typing import Dict, Optional
 
 from opentelemetry.context import Context
 from opentelemetry.sdk.trace import ReadableSpan, Span, SpanProcessor
 from opentelemetry.sdk.trace.export import SpanExporter
-from termcolor import colored
 
 import agentops.semconv as semconv
 from agentops.logging import logger
-from agentops.sdk.converters import trace_id_to_uuid, uuid_to_int16
+from agentops.helpers.dashboard import log_trace_url
 from agentops.semconv.core import CoreAttributes
 
 
@@ -89,14 +86,7 @@ class InternalSpanProcessor(SpanProcessor):
     For session spans, it prints a URL to the AgentOps dashboard.
     """
 
-    def __init__(self, app_url: str = "https://app.agentops.ai"):
-        """
-        Initialize the PrintSpanProcessor.
-
-        Args:
-            app_url: The base URL for the AgentOps dashboard.
-        """
-        self.app_url = app_url
+    _root_span_id: Optional[Span] = None
 
     def on_start(self, span: Span, parent_context: Optional[Context] = None) -> None:
         """
@@ -110,29 +100,10 @@ class InternalSpanProcessor(SpanProcessor):
         if not span.context or not span.context.trace_flags.sampled:
             return
 
-        # Get the span kind from attributes
-        span_kind = (
-            span.attributes.get(semconv.SpanAttributes.AGENTOPS_SPAN_KIND, "unknown") if span.attributes else "unknown"
-        )
-
-        # Print basic information about the span
-        logger.debug(f"Started span: {span.name} (kind: {span_kind})")
-
-        # Special handling for session spans
-        if span_kind == semconv.SpanKind.SESSION:
-            trace_id = span.context.trace_id
-            # Convert trace_id to hex string if it's not already
-            if isinstance(trace_id, int):
-                session_url = f"{self.app_url}/drilldown?session_id={trace_id_to_uuid(trace_id)}"
-                logger.info(
-                    colored(
-                        f"\x1b[34mSession started: {session_url}\x1b[0m",
-                        "light_green",
-                    )
-                )
-        else:
-            # Print basic information for other span kinds
-            logger.debug(f"Ended span: {span.name} (kind: {span_kind})")
+        if not self._root_span_id:
+            self._root_span_id = span.context.span_id
+            logger.debug(f"[agentops.InternalSpanProcessor] Found root span: {span.name}")
+            log_trace_url(span)
 
     def on_end(self, span: ReadableSpan) -> None:
         """
@@ -145,30 +116,13 @@ class InternalSpanProcessor(SpanProcessor):
         if not span.context or not span.context.trace_flags.sampled:
             return
 
-        # Get the span kind from attributes
-        span_kind = (
-            span.attributes.get(semconv.SpanAttributes.AGENTOPS_SPAN_KIND, "unknown") if span.attributes else "unknown"
-        )
-
-        # Special handling for session spans
-        if span_kind == semconv.SpanKind.SESSION:
-            trace_id = span.context.trace_id
-            # Convert trace_id to hex string if it's not already
-            if isinstance(trace_id, int):
-                session_url = f"{self.app_url}/drilldown?session_id={trace_id_to_uuid(trace_id)}"
-                logger.info(
-                    colored(
-                        f"\x1b[34mSession Replay: {session_url}\x1b[0m",
-                        "blue",
-                    )
-                )
-        else:
-            # Print basic information for other span kinds
-            logger.debug(f"Ended span: {span.name} (kind: {span_kind})")
+        if self._root_span_id and (span.context.span_id is self._root_span_id):
+            logger.debug(f"[agentops.InternalSpanProcessor] Ending root span: {span.name}")
+            log_trace_url(span)
 
     def shutdown(self) -> None:
         """Shutdown the processor."""
-        pass
+        self._root_span_id = None
 
     def force_flush(self, timeout_millis: int = 30000) -> bool:
         """Force flush the processor."""
