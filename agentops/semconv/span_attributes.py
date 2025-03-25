@@ -28,6 +28,7 @@ class SpanAttributes:
 
     # Request attributes
     LLM_REQUEST_MODEL = "gen_ai.request.model"
+    LLM_REQUEST_PROVIDER = "gen_ai.request.provider"
     LLM_REQUEST_MAX_TOKENS = "gen_ai.request.max_tokens"
     LLM_REQUEST_TEMPERATURE = "gen_ai.request.temperature"
     LLM_REQUEST_TOP_P = "gen_ai.request.top_p"
