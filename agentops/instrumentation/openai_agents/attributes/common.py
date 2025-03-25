@@ -7,7 +7,6 @@ for extracting and formatting attributes according to OpenTelemetry semantic con
 from typing import Any
 from agentops.logging import logger
 from agentops.semconv import (
-    CoreAttributes,
     AgentAttributes,
     WorkflowAttributes,
     SpanAttributes,
@@ -78,17 +77,6 @@ def get_common_instrumentation_attributes() -> AttributeMap:
     })
     return attributes
 
-def get_library_attributes() -> AttributeMap:
-    """Get common attributes for the OpenAI Agents library.
-    
-    Returns:
-        Dictionary of common library attributes
-    """
-    return {
-        InstrumentationAttributes.NAME: LIBRARY_NAME,
-        InstrumentationAttributes.VERSION: LIBRARY_VERSION,
-    }
-
 
 def get_agent_span_attributes(span_data: Any) -> AttributeMap:
     """Extract attributes from an AgentSpanData object.
@@ -103,7 +91,6 @@ def get_agent_span_attributes(span_data: Any) -> AttributeMap:
     """
     attributes = _extract_attributes_from_mapping(span_data, AGENT_SPAN_ATTRIBUTES)
     attributes.update(get_common_attributes())
-    attributes.update(get_library_attributes())
     
     return attributes
 
@@ -121,7 +108,6 @@ def get_function_span_attributes(span_data: Any) -> AttributeMap:
     """
     attributes = _extract_attributes_from_mapping(span_data, FUNCTION_SPAN_ATTRIBUTES)
     attributes.update(get_common_attributes())
-    attributes.update(get_library_attributes())
     
     return attributes
 
@@ -139,7 +125,6 @@ def get_handoff_span_attributes(span_data: Any) -> AttributeMap:
     """
     attributes = _extract_attributes_from_mapping(span_data, HANDOFF_SPAN_ATTRIBUTES)
     attributes.update(get_common_attributes())
-    attributes.update(get_library_attributes())
     
     return attributes
 
@@ -165,7 +150,6 @@ def get_response_span_attributes(span_data: Any) -> AttributeMap:
     # Get basic attributes from mapping
     attributes = _extract_attributes_from_mapping(span_data, RESPONSE_SPAN_ATTRIBUTES)
     attributes.update(get_common_attributes())
-    attributes.update(get_library_attributes())
 
     if span_data.response:
         attributes.update(get_response_response_attributes(span_data.response))
@@ -192,7 +176,6 @@ def get_generation_span_attributes(span_data: Any) -> AttributeMap:
     """
     attributes = _extract_attributes_from_mapping(span_data, GENERATION_SPAN_ATTRIBUTES)
     attributes.update(get_common_attributes())
-    attributes.update(get_library_attributes())
     
     # Process output for GenerationSpanData if available
     if span_data.output:
