@@ -56,6 +56,7 @@ logger = logging.getLogger(__name__)
 # TODO get rid of this and also why are we patching this file like this?...
 class SpanAttributes(BaseSpanAttributes):
     LLM_COMPLETIONS = "gen_ai.completion"
+    LLM_CONTENT_COMPLETION_CHUNK = "gen_ai.completion.chunk"
 
 
 @_with_chat_telemetry_wrapper
