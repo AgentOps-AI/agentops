@@ -288,7 +288,7 @@ class TestAgentsSdkInstrumentation:
         assert parent_captured_attributes[AgentAttributes.AGENT_NAME] == "parent_agent"
         assert parent_captured_attributes[WorkflowAttributes.WORKFLOW_INPUT] == "parent input"
         assert parent_captured_attributes[WorkflowAttributes.FINAL_OUTPUT] == "parent output"
-        assert parent_captured_attributes[AgentAttributes.AGENT_TOOLS] == "tool1,tool2"
+        assert parent_captured_attributes[AgentAttributes.AGENT_TOOLS] == '["tool1", "tool2"]' # JSON encoded is fine.
         
         # Verify child span attributes
         assert child_captured_attributes[AgentAttributes.AGENT_NAME] == "child_agent"
