@@ -296,6 +296,10 @@ def get_response_usage_attributes(usage: 'ResponseUsage') -> AttributeMap:
     # )
     attributes = {}
     
+    attributes.update(_extract_attributes_from_mapping(
+        usage.__dict__,
+        RESPONSE_USAGE_ATTRIBUTES))
+    
     # input_tokens_details is a dict if it exists
     if hasattr(usage, 'input_tokens_details'):
         input_details = usage.input_tokens_details

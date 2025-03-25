@@ -40,8 +40,8 @@ class SpanAttributes:
 
     # Content
     LLM_PROMPTS = "gen_ai.prompt"
-    #LLM_COMPLETIONS = "gen_ai.completion"  # DO NOT SET THIS DIRECTLY
-    #LLM_CONTENT_COMPLETION_CHUNK = "gen_ai.completion.chunk"
+    LLM_COMPLETIONS = "gen_ai.completion"  # DO NOT SET THIS DIRECTLY
+    LLM_CONTENT_COMPLETION_CHUNK = "gen_ai.completion.chunk"
 
     # Response attributes
     LLM_RESPONSE_MODEL = "gen_ai.response.model"
