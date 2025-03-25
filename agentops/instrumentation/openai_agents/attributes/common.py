@@ -6,7 +6,6 @@ for extracting and formatting attributes according to OpenTelemetry semantic con
 """
 from typing import Any
 from agentops.logging import logger
-from agentops.helpers import get_agentops_version
 from agentops.semconv import (
     CoreAttributes,
     AgentAttributes,
@@ -14,19 +13,14 @@ from agentops.semconv import (
     SpanAttributes,
     InstrumentationAttributes
 )
+
+from agentops.instrumentation.common.attributes import AttributeMap, _extract_attributes_from_mapping
+from agentops.instrumentation.common.attributes import get_common_attributes
+from agentops.instrumentation.openai.attributes.response import get_response_response_attributes
+
 from agentops.instrumentation.openai_agents import LIBRARY_NAME, LIBRARY_VERSION
-from agentops.instrumentation.openai_agents.attributes import AttributeMap, _extract_attributes_from_mapping
 from agentops.instrumentation.openai_agents.attributes.model import extract_model_config
-from agentops.instrumentation.openai_agents.attributes.response import get_response_response_attributes
 from agentops.instrumentation.openai_agents.attributes.completion import get_generation_output_attributes
-
-
-# Common attribute mapping for all span types
-COMMON_ATTRIBUTES: AttributeMap = {
-    CoreAttributes.TRACE_ID: "trace_id",
-    CoreAttributes.SPAN_ID: "span_id",
-    CoreAttributes.PARENT_ID: "parent_id",
-}
 
 
 # Attribute mapping for AgentSpanData
@@ -69,76 +63,71 @@ RESPONSE_SPAN_ATTRIBUTES: AttributeMap = {
 }
 
 
-def get_common_instrumentation_attributes() -> AttributeMap:
-    """Get common instrumentation attributes used across traces and spans.
+def get_library_attributes() -> AttributeMap:
+    """Get common attributes for the OpenAI Agents library.
     
     Returns:
-        Dictionary of common instrumentation attributes
+        Dictionary of common library attributes
     """
     return {
-        InstrumentationAttributes.NAME: "agentops",
-        InstrumentationAttributes.VERSION: get_agentops_version(),
-        InstrumentationAttributes.LIBRARY_NAME: LIBRARY_NAME,
-        InstrumentationAttributes.LIBRARY_VERSION: LIBRARY_VERSION,
+        InstrumentationAttributes.NAME: LIBRARY_NAME,
+        InstrumentationAttributes.VERSION: LIBRARY_VERSION,
     }
 
 
-def get_base_trace_attributes(trace: Any) -> AttributeMap:
-    """Create the base attributes dictionary for an OpenTelemetry trace.
+def get_agent_span_attributes(span_data: Any) -> AttributeMap:
+    """Extract attributes from an AgentSpanData object.
+    
+    Agents are requests made to the `openai.agents` endpoint.
     
     Args:
-        trace: The trace object to extract attributes from
+        span_data: The AgentSpanData object
         
     Returns:
-        Dictionary containing base trace attributes
+        Dictionary of attributes for agent span
     """
-    if not hasattr(trace, 'trace_id'):
-        logger.warning("Cannot create trace attributes: missing trace_id")
-        return {}
-    
-    attributes = {
-        WorkflowAttributes.WORKFLOW_NAME: trace.name,
-        CoreAttributes.TRACE_ID: trace.trace_id,
-        WorkflowAttributes.WORKFLOW_STEP_TYPE: "trace",
-        **get_common_instrumentation_attributes()
-    }
+    attributes = _extract_attributes_from_mapping(span_data, AGENT_SPAN_ATTRIBUTES)
+    attributes.update(get_common_attributes())
+    attributes.update(get_library_attributes())
     
     return attributes
 
 
-def get_base_span_attributes(span: Any) -> AttributeMap:
-    """Create the base attributes dictionary for an OpenTelemetry span.
+def get_function_span_attributes(span_data: Any) -> AttributeMap:
+    """Extract attributes from a FunctionSpanData object.
+    
+    Functions are requests made to the `openai.functions` endpoint.
     
     Args:
-        span: The span object to extract attributes from
+        span_data: The FunctionSpanData object
         
     Returns:
-        Dictionary containing base span attributes
+        Dictionary of attributes for function span
     """
-    span_id = getattr(span, 'span_id', 'unknown')
-    trace_id = getattr(span, 'trace_id', 'unknown')
-    parent_id = getattr(span, 'parent_id', None)
+    attributes = _extract_attributes_from_mapping(span_data, FUNCTION_SPAN_ATTRIBUTES)
+    attributes.update(get_common_attributes())
+    attributes.update(get_library_attributes())
     
-    attributes = {
-        CoreAttributes.TRACE_ID: trace_id,
-        CoreAttributes.SPAN_ID: span_id,
-        **get_common_instrumentation_attributes(),
-    }
-    
-    if parent_id:
-        attributes[CoreAttributes.PARENT_ID] = parent_id
-        
     return attributes
 
 
-get_agent_span_attributes = lambda span_data: \
-    _extract_attributes_from_mapping(span_data, AGENT_SPAN_ATTRIBUTES)
+def get_handoff_span_attributes(span_data: Any) -> AttributeMap:
+    """Extract attributes from a HandoffSpanData object.
+    
+    Handoffs are requests made to the `openai.handoffs` endpoint.
+    
+    Args:
+        span_data: The HandoffSpanData object
+        
+    Returns:
+        Dictionary of attributes for handoff span
+    """
+    attributes = _extract_attributes_from_mapping(span_data, HANDOFF_SPAN_ATTRIBUTES)
+    attributes.update(get_common_attributes())
+    attributes.update(get_library_attributes())
+    
+    return attributes
 
-get_function_span_attributes = lambda span_data: \
-    _extract_attributes_from_mapping(span_data, FUNCTION_SPAN_ATTRIBUTES)
-
-get_handoff_span_attributes = lambda span_data: \
-    _extract_attributes_from_mapping(span_data, HANDOFF_SPAN_ATTRIBUTES)
 
 
 def get_response_span_attributes(span_data: Any) -> AttributeMap:
@@ -160,6 +149,8 @@ def get_response_span_attributes(span_data: Any) -> AttributeMap:
     """
     # Get basic attributes from mapping
     attributes = _extract_attributes_from_mapping(span_data, RESPONSE_SPAN_ATTRIBUTES)
+    attributes.update(get_common_attributes())
+    attributes.update(get_library_attributes())
 
     if span_data.response:
         attributes.update(get_response_response_attributes(span_data.response))
@@ -185,6 +176,8 @@ def get_generation_span_attributes(span_data: Any) -> AttributeMap:
         Dictionary of attributes for generation span
     """
     attributes = _extract_attributes_from_mapping(span_data, GENERATION_SPAN_ATTRIBUTES)
+    attributes.update(get_common_attributes())
+    attributes.update(get_library_attributes())
     
     # Process output for GenerationSpanData if available
     if span_data.output:
