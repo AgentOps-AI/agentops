@@ -276,9 +276,10 @@ class LiteLLMCallbackHandler(CustomLogger):
                 self._safe_set_attribute(span, SpanAttributes.LLM_USAGE_TOTAL_TOKENS, response_obj.usage.total_tokens)
             
             if hasattr(response_obj, "choices") and len(response_obj.choices) > 0:
-                content = response_obj.choices[0].message.content
-                if content:
-                    self._safe_set_attribute(span, SpanAttributes.AGENTOPS_ENTITY_OUTPUT, str(content))
+                message = response_obj.choices[0].message
+                if message.content:
+                    self._safe_set_attribute(span, SpanAttributes.AGENTOPS_ENTITY_OUTPUT, str(message.content))
+                    self._safe_set_attribute(span, SpanAttributes.LLM_COMPLETIONS, safe_serialize(message))
             
             duration = (end_time - start_time).total_seconds()
             self._safe_set_attribute(span, "llm.duration", float(duration))
@@ -382,9 +383,10 @@ class LiteLLMCallbackHandler(CustomLogger):
                 self._safe_set_attribute(span, SpanAttributes.LLM_USAGE_TOTAL_TOKENS, response_obj.usage.total_tokens)
             
             if hasattr(response_obj, "choices") and len(response_obj.choices) > 0:
-                content = response_obj.choices[0].message.content
-                if content:
-                    self._safe_set_attribute(span, SpanAttributes.AGENTOPS_ENTITY_OUTPUT, str(content))
+                message = response_obj.choices[0].message
+                if message.content:
+                    self._safe_set_attribute(span, SpanAttributes.AGENTOPS_ENTITY_OUTPUT, str(message.content))
+                    self._safe_set_attribute(span, SpanAttributes.LLM_COMPLETIONS, safe_serialize(message))
             
             duration = (end_time - start_time).total_seconds()
             self._safe_set_attribute(span, "llm.duration", float(duration))
