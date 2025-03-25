@@ -34,7 +34,7 @@ def _extract_attributes_from_mapping(span_data: Any, attribute_mapping: Attribut
     """Helper function to extract attributes based on a mapping.
     
     Args:
-        span_data: The span data object to extract attributes from
+        span_data: The span data object or dict to extract attributes from
         attribute_mapping: Dictionary mapping target attributes to source attributes
         
     Returns:
@@ -43,22 +43,22 @@ def _extract_attributes_from_mapping(span_data: Any, attribute_mapping: Attribut
     attributes = {}
     for target_attr, source_attr in attribute_mapping.items():
         if hasattr(span_data, source_attr):
+            # Use getattr to handle properties
             value = getattr(span_data, source_attr)
-            
-            # Skip if value is None or empty
-            if value is None or (isinstance(value, (list, dict, str)) and not value):
-                continue
-            
-            # Join lists to comma-separated strings
-            if source_attr == "tools" or source_attr == "handoffs":
-                if isinstance(value, list):
-                    value = ",".join(value)
-                else:
-                    value = str(value)
-            # Serialize complex objects
-            elif isinstance(value, (dict, list, object)) and not isinstance(value, (str, int, float, bool)):
-                value = safe_serialize(value)
-            
-            attributes[target_attr] = value
+        elif isinstance(span_data, dict) and source_attr in span_data:
+            # Use direct key access for dicts
+            value = span_data[source_attr]
+        else:
+            continue
+
+        # Skip if value is None or empty
+        if value is None or (isinstance(value, (list, dict, str)) and not value):
+            continue
+        
+        # Serialize complex objects
+        elif isinstance(value, (dict, list, object)) and not isinstance(value, (str, int, float, bool)):
+            value = safe_serialize(value)
+        
+        attributes[target_attr] = value
     
     return attributes
