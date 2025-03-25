@@ -105,6 +105,8 @@ RESPONSE_REASONING_ATTRIBUTES: AttributeMap = {
 }
 
 
+# TODO we call this `response_response` because in OpenAI Agents the `Response` is nested 
+# in a `ResponseSpan` object
 def get_response_response_attributes(response: 'Response') -> AttributeMap:
     """Handles interpretation of an openai Response object."""
     # Response(

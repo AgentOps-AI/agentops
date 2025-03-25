@@ -34,6 +34,7 @@ from opentelemetry.instrumentation.openai.version import __version__
 
 from agentops.logging import logger
 from agentops.instrumentation.openai.wrappers import sync_responses_wrapper, async_responses_wrapper
+from agentops.instrumentation.openai.attributes.response import get_response_response_attributes
 
 # Methods to wrap beyond what the third-party instrumentation handles
 WRAPPED_METHODS = [
@@ -42,12 +43,14 @@ WRAPPED_METHODS = [
         "object": "Responses",
         "method": "create",
         "wrapper": sync_responses_wrapper,
+        "formatter": get_response_response_attributes,
     },
     {
         "package": "openai.resources.responses",
         "object": "AsyncResponses",
         "method": "create",
         "wrapper": async_responses_wrapper,
+        "formatter": get_response_response_attributes,
     },
 ]
 
@@ -78,12 +81,13 @@ class OpenAIInstrumentor(ThirdPartyOpenAIV1Instrumentor):
             object_name = wrapped_method["object"]
             method_name = wrapped_method["method"]
             wrapper_func = wrapped_method["wrapper"]
+            formatter = wrapped_method["formatter"]
             
             try:
                 wrap_function_wrapper(
                     package,
                     f"{object_name}.{method_name}",
-                    wrapper_func(tracer),
+                    wrapper_func(tracer, formatter),
                 )
                 logger.debug(f"Successfully wrapped {package}.{object_name}.{method_name}")
             except (AttributeError, ModuleNotFoundError) as e:

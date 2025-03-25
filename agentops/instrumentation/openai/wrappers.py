@@ -46,14 +46,15 @@ def _handle_response_span(span, start_time, success=True, exception=None):
     span.set_attribute("duration_s", duration)
 
 
-def sync_responses_wrapper(tracer):
+def sync_responses_wrapper(tracer, formatter):
     """Wrapper for synchronous openai.resources.responses.Responses.create API calls.
     
     This wrapper creates a span for tracking OpenAI Responses API calls.
-    The detailed attribute extraction will be handled separately.
+    It uses the provided formatter to extract attributes from the response.
     
     Args:
         tracer: The OpenTelemetry tracer to use for creating spans
+        formatter: Function to extract attributes from the response object
         
     Returns:
         A wrapper function that instruments the synchronous OpenAI Responses API
@@ -74,6 +75,13 @@ def sync_responses_wrapper(tracer):
             # Execute the wrapped function and get the response
             try:
                 response = wrapped(*args, **kwargs)
+                
+                # Use the formatter to extract and set attributes from response
+                if response:
+                    attributes = formatter(response)
+                    for key, value in attributes.items():
+                        span.set_attribute(key, value)
+                
                 _handle_response_span(span, start_time, success=True)
             except Exception as e:
                 _handle_response_span(span, start_time, success=False, exception=e)
@@ -84,14 +92,15 @@ def sync_responses_wrapper(tracer):
     return wrapper
 
 
-def async_responses_wrapper(tracer):
+def async_responses_wrapper(tracer, formatter):
     """Wrapper for asynchronous openai.resources.responses.AsyncResponses.create API calls.
     
     This wrapper creates a span for tracking asynchronous OpenAI Responses API calls.
-    The detailed attribute extraction will be handled separately.
+    It uses the provided formatter to extract attributes from the response.
     
     Args:
         tracer: The OpenTelemetry tracer to use for creating spans
+        formatter: Function to extract attributes from the response object
         
     Returns:
         A wrapper function that instruments the asynchronous OpenAI Responses API
@@ -112,6 +121,13 @@ def async_responses_wrapper(tracer):
             # Execute the wrapped function and get the response
             try:
                 response = await wrapped(*args, **kwargs)
+                
+                # Use the formatter to extract and set attributes from response
+                if response:
+                    attributes = formatter(response)
+                    for key, value in attributes.items():
+                        span.set_attribute(key, value)
+                        
                 _handle_response_span(span, start_time, success=True)
             except Exception as e:
                 _handle_response_span(span, start_time, success=False, exception=e)
