@@ -1,31 +1,27 @@
-"""Attribute processing modules for OpenAI Agents instrumentation.
+"""Common attribute processing utilities shared across all instrumentors.
 
-This package provides specialized getter functions that extract and format
-OpenTelemetry-compatible attributes from span data. Each function follows a
-consistent pattern:
+This module provides core utilities for extracting and formatting
+OpenTelemetry-compatible attributes from span data. These functions
+are provider-agnostic and used by all instrumentors in the AgentOps
+package.
 
-1. Takes span data (or specific parts of span data) as input
-2. Processes the data according to semantic conventions
-3. Returns a dictionary of formatted attributes
+The module includes:
 
-The modules are organized by functional domain:
+1. Helper functions for attribute extraction and mapping
+2. Common attribute getters used across all providers
+3. Base trace and span attribute functions
 
-- common: Core attribute extraction functions for all span types
-- tokens: Token usage extraction and processing
-- model: Model information and parameter extraction
-- completion: Completion content and tool call processing
+All functions follow a consistent pattern:
+- Accept span/trace data as input
+- Process according to semantic conventions
+- Return a dictionary of formatted attributes
 
-Each getter function is focused on a single responsibility and does not
-modify any global state. Functions are designed to be composable, allowing 
-different attribute types to be combined as needed in the exporter.
-
-The separation of attribute extraction (getters in this module) from 
-attribute application (managed by exporter) follows the principle of
-separation of concerns.
+These utilities ensure consistent attribute handling across different
+LLM service instrumentors while maintaining separation of concerns.
 """
-from typing import Dict, Any
+from typing import Dict, Any, Optional, List
 from agentops.logging import logger
-from agentops.helpers import safe_serialize, get_agentops_version
+from agentops.helpers import safe_serialize, get_agentops_version, get_tags_from_config
 from agentops.semconv import (
     CoreAttributes,
     InstrumentationAttributes,
@@ -34,14 +30,6 @@ from agentops.semconv import (
 
 # target_attribute_key: source_attribute
 AttributeMap = Dict[str, Any]
-
-
-# Common attribute mapping for all span types
-COMMON_ATTRIBUTES: AttributeMap = {
-    CoreAttributes.TRACE_ID: "trace_id",
-    CoreAttributes.SPAN_ID: "span_id",
-    CoreAttributes.PARENT_ID: "parent_id",
-}
 
 
 def _extract_attributes_from_mapping(span_data: Any, attribute_mapping: AttributeMap) -> AttributeMap:
@@ -109,6 +97,10 @@ def get_base_trace_attributes(trace: Any) -> AttributeMap:
         WorkflowAttributes.WORKFLOW_STEP_TYPE: "trace",
         **get_common_attributes(),
     }
+    
+    # Add tags from the config to the trace attributes (these should only be added to the trace)
+    if tags := get_tags_from_config():
+        attributes[CoreAttributes.TAGS] = tags
     
     return attributes
 

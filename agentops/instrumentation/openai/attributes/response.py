@@ -6,7 +6,7 @@ from agentops.semconv import (
     MessageAttributes, 
     ToolAttributes, 
 )
-from agentops.instrumentation.openai_agents.attributes import (
+from agentops.instrumentation.common.attributes import (
     AttributeMap, 
     _extract_attributes_from_mapping, 
 )

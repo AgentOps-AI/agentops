@@ -63,6 +63,21 @@ RESPONSE_SPAN_ATTRIBUTES: AttributeMap = {
 }
 
 
+def get_common_instrumentation_attributes() -> AttributeMap:
+    """Get common instrumentation attributes for the OpenAI Agents instrumentation.
+    
+    This combines the generic AgentOps attributes with OpenAI Agents specific library attributes.
+    
+    Returns:
+        Dictionary of common instrumentation attributes
+    """
+    attributes = get_common_attributes()
+    attributes.update({
+        InstrumentationAttributes.LIBRARY_NAME: LIBRARY_NAME,
+        InstrumentationAttributes.LIBRARY_VERSION: LIBRARY_VERSION,
+    })
+    return attributes
+
 def get_library_attributes() -> AttributeMap:
     """Get common attributes for the OpenAI Agents library.
     
