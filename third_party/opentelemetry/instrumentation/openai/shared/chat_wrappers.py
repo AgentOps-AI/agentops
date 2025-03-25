@@ -53,11 +53,6 @@ LLM_REQUEST_TYPE = LLMRequestTypeValues.CHAT
 logger = logging.getLogger(__name__)
 
 
-# TODO get rid of this and also why are we patching this file like this?...
-class SpanAttributes(BaseSpanAttributes):
-    LLM_COMPLETIONS = "gen_ai.completion"
-
-
 @_with_chat_telemetry_wrapper
 def chat_wrapper(
     tracer: Tracer,
@@ -81,7 +76,7 @@ def chat_wrapper(
     span = tracer.start_span(
         SPAN_NAME,
         kind=SpanKind.CLIENT,
-        attributes={SpanAttributes.LLM_REQUEST_TYPE: LLM_REQUEST_TYPE.value},
+        attributes={BaseSpanAttributes.LLM_REQUEST_TYPE: LLM_REQUEST_TYPE.value},
     )
 
     run_async(_handle_request(span, kwargs, instance))
@@ -175,7 +170,7 @@ async def achat_wrapper(
     span = tracer.start_span(
         SPAN_NAME,
         kind=SpanKind.CLIENT,
-        attributes={SpanAttributes.LLM_REQUEST_TYPE: LLM_REQUEST_TYPE.value},
+        attributes={BaseSpanAttributes.LLM_REQUEST_TYPE: LLM_REQUEST_TYPE.value},
     )
     await _handle_request(span, kwargs, instance)
 
@@ -324,7 +319,7 @@ def _set_choice_counter_metrics(choice_counter, choices, shared_attributes):
     for choice in choices:
         attributes_with_reason = {**shared_attributes}
         if choice.get("finish_reason"):
-            attributes_with_reason[SpanAttributes.LLM_RESPONSE_FINISH_REASON] = choice.get("finish_reason")
+            attributes_with_reason[BaseSpanAttributes.LLM_RESPONSE_FINISH_REASON] = choice.get("finish_reason")
         choice_counter.add(1, attributes=attributes_with_reason)
 
 
@@ -333,7 +328,7 @@ def _set_token_counter_metrics(token_counter, usage, shared_attributes):
         if name in OPENAI_LLM_USAGE_TOKEN_TYPES:
             attributes_with_token_type = {
                 **shared_attributes,
-                SpanAttributes.LLM_TOKEN_TYPE: _token_type(name),
+                BaseSpanAttributes.LLM_TOKEN_TYPE: _token_type(name),
             }
             token_counter.record(val, attributes=attributes_with_token_type)
 
@@ -369,7 +364,7 @@ async def _set_prompts(span, messages):
         return
 
     for i, msg in enumerate(messages):
-        prefix = f"{SpanAttributes.LLM_PROMPTS}.{i}"
+        prefix = f"{BaseSpanAttributes.LLM_PROMPTS}.{i}"
 
         _set_span_attribute(span, f"{prefix}.role", msg.get("role"))
         if msg.get("content"):
@@ -418,7 +413,7 @@ def _set_completions(span, choices):
 
     for choice in choices:
         index = choice.get("index")
-        prefix = f"{SpanAttributes.LLM_COMPLETIONS}.{index}"
+        prefix = f"{BaseSpanAttributes.LLM_COMPLETIONS}.{index}"
         _set_span_attribute(span, f"{prefix}.finish_reason", choice.get("finish_reason"))
 
         if choice.get("content_filter_results"):
@@ -519,14 +514,14 @@ def _set_streaming_token_metrics(request_kwargs, complete_response, span, token_
         if isinstance(prompt_usage, int) and prompt_usage >= 0:
             attributes_with_token_type = {
                 **shared_attributes,
-                SpanAttributes.LLM_TOKEN_TYPE: "input",
+                BaseSpanAttributes.LLM_TOKEN_TYPE: "input",
             }
             token_counter.record(prompt_usage, attributes=attributes_with_token_type)
 
         if isinstance(completion_usage, int) and completion_usage >= 0:
             attributes_with_token_type = {
                 **shared_attributes,
-                SpanAttributes.LLM_TOKEN_TYPE: "output",
+                BaseSpanAttributes.LLM_TOKEN_TYPE: "output",
             }
             token_counter.record(completion_usage, attributes=attributes_with_token_type)
 
@@ -613,7 +608,7 @@ class ChatStream(ObjectProxy):
             return chunk
 
     def _process_item(self, item):
-        self._span.add_event(name=f"{SpanAttributes.LLM_CONTENT_COMPLETION_CHUNK}")
+        self._span.add_event(name=f"{BaseSpanAttributes.LLM_CONTENT_COMPLETION_CHUNK}")
 
         if self._first_token and self._streaming_time_to_first_token:
             self._time_of_first_token = time.time()
@@ -695,7 +690,7 @@ def _build_from_streaming_response(
     time_of_first_token = start_time  # will be updated when first token is received
 
     for item in response:
-        span.add_event(name=f"{SpanAttributes.LLM_CONTENT_COMPLETION_CHUNK}")
+        span.add_event(name=f"{BaseSpanAttributes.LLM_CONTENT_COMPLETION_CHUNK}")
 
         item_to_yield = item
 
@@ -709,7 +704,7 @@ def _build_from_streaming_response(
         yield item_to_yield
 
     shared_attributes = {
-        SpanAttributes.LLM_RESPONSE_MODEL: complete_response.get("model") or None,
+        BaseSpanAttributes.LLM_RESPONSE_MODEL: complete_response.get("model") or None,
         "server.address": _get_openai_base_url(instance),
         "stream": True,
     }
@@ -758,7 +753,7 @@ async def _abuild_from_streaming_response(
     time_of_first_token = start_time  # will be updated when first token is received
 
     async for item in response:
-        span.add_event(name=f"{SpanAttributes.LLM_CONTENT_COMPLETION_CHUNK}")
+        span.add_event(name=f"{BaseSpanAttributes.LLM_CONTENT_COMPLETION_CHUNK}")
 
         item_to_yield = item
 
@@ -772,7 +767,7 @@ async def _abuild_from_streaming_response(
         yield item_to_yield
 
     shared_attributes = {
-        SpanAttributes.LLM_RESPONSE_MODEL: complete_response.get("model") or None,
+        BaseSpanAttributes.LLM_RESPONSE_MODEL: complete_response.get("model") or None,
         "server.address": _get_openai_base_url(instance),
         "stream": True,
     }

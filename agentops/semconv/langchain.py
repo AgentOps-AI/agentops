@@ -25,6 +25,9 @@ class LangChainAttributes:
     # Session attributes
     SESSION_TAGS = "langchain.session.tags"
     
+    LLM_NAME = "langchain.llm.name"
+    LLM_MODEL = "langchain.llm.model"
+    
     # Chain attributes - specific to LangChain
     CHAIN_NAME = "langchain.chain.name"
     CHAIN_TYPE = "langchain.chain.type"
