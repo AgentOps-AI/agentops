@@ -8,7 +8,7 @@ spans with attributes, and functions for creating and applying wrappers.
 
 from typing import Any, Optional, Tuple, Dict, Callable
 from dataclasses import dataclass
-from wrapt import wrap_function_wrapper
+from wrapt import wrap_function_wrapper  # type: ignore
 from opentelemetry.instrumentation.utils import unwrap as _unwrap
 from opentelemetry.trace import Tracer
 from opentelemetry.trace import Span, SpanKind, Status, StatusCode

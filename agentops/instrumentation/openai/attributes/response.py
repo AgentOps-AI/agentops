@@ -138,13 +138,14 @@ def get_response_kwarg_attributes(kwargs: dict) -> AttributeMap:
     # timeout: float | httpx.Timeout | None | NotGiven = NOT_GIVEN,
     attributes = {}
     
-    # `input` can either be a `str` of a complex object type
-    _input: Union[str, ResponseInputParam] = kwargs.get("input")
+    # `input` can either be a `str` or a list of many internal types, so we duck
+    # type our way into some usable common attributes
+    _input: Union[str, list, None] = kwargs.get("input")
     if isinstance(_input, str):
         attributes[MessageAttributes.PROMPT_ROLE.format(i=0)] = "user"
         attributes[MessageAttributes.PROMPT_CONTENT.format(i=0)] = _input
-    elif isinstance(_input, ResponseInputParam):
-        for i, prompt in enumerate(_input.prompts):
+    elif isinstance(_input, list):
+        for i, prompt in enumerate(_input):
             # Object type is pretty diverse, so we handle common attributes, but do so
             # conditionally because not all attributes are guaranteed to exist
             if hasattr(prompt, "type"):
@@ -153,9 +154,11 @@ def get_response_kwarg_attributes(kwargs: dict) -> AttributeMap:
                 attributes[MessageAttributes.PROMPT_ROLE.format(i=i)] = prompt.role
             if hasattr(prompt, "content"):
                 attributes[MessageAttributes.PROMPT_CONTENT.format(i=i)] = prompt.content
+    else:
+        logger.debug(f"[agentops.instrumentation.openai_agents] '{type(_input)}' is not a recognized input type.")
     
     # `model` is always `str` (`ChatModel` type is just a string literal)
-    _model: str = kwargs.get("model")
+    _model: str = str(kwargs.get("model"))
     attributes[SpanAttributes.LLM_REQUEST_MODEL] = _model
     
     return attributes
