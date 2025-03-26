@@ -16,7 +16,6 @@ except ImportError as e:
     logger.debug(f"[agentops.instrumentation.openai] Could not import OpenAI types: {e}")
 
 
-
 def get_common_instrumentation_attributes() -> AttributeMap:
     """Get common instrumentation attributes for the OpenAI Agents instrumentation.
     
@@ -33,7 +32,7 @@ def get_common_instrumentation_attributes() -> AttributeMap:
     return attributes
 
 
-def get_response_attributes(args: Optional[Tuple] = None, kwargs: Optional[Dict] = None, return_value: Optional[Response] = None) -> AttributeMap:
+def get_response_attributes(args: Optional[Tuple] = None, kwargs: Optional[Dict] = None, return_value: Optional['Response'] = None) -> AttributeMap:
     """
     
     """
