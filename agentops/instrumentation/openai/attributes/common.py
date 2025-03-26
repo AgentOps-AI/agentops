@@ -1,4 +1,4 @@
-from typing import Any
+from agentops.logging import logger
 from agentops.semconv import (
     InstrumentationAttributes
 )
@@ -7,10 +7,11 @@ from agentops.instrumentation.common.attributes import AttributeMap
 from agentops.instrumentation.common.attributes import get_common_attributes
 from agentops.instrumentation.openai.attributes.response import get_response_response_attributes
 
+try:
+    from openai.types.responses import Response
+except ImportError as e:
+    logger.debug(f"[agentops.instrumentation.openai_agents] Could not import OpenAI Agents SDK types: {e}")
 
-# Attribute mapping for ResponseSpanData
-RESPONSE_SPAN_ATTRIBUTES: AttributeMap = {
-}
 
 
 def get_common_instrumentation_attributes() -> AttributeMap:
@@ -29,18 +30,19 @@ def get_common_instrumentation_attributes() -> AttributeMap:
     return attributes
 
 
-def get_response_span_attributes(span_data: Any) -> AttributeMap:
+def get_response_attributes(response: Response) -> AttributeMap:
     """Extract attributes from a ResponseSpanData object.
     
     Responses are requests made to the `openai.responses` endpoint.
     
     Args:
-        span_data: The ResponseSpanData object
+        response: The `openai` `Response` object
         
     Returns:
-        Dictionary of attributes for response span
+        Dictionary of attributes for the span
     """
-    attributes = get_response_response_attributes(span_data)
+    # TODO include prompt(s)
+    attributes = get_response_response_attributes(response)
     attributes.update(get_common_attributes())
     
     return attributes

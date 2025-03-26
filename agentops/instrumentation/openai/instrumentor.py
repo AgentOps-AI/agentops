@@ -23,18 +23,17 @@ When instrumenting, we need to:
 3. Create spans with appropriate attributes for observability
 """
 from typing import Collection
-
 from wrapt import wrap_function_wrapper
+from opentelemetry.trace import get_tracer
 from opentelemetry.instrumentation.utils import unwrap
 
-# Import third-party OpenAIV1Instrumentor
 from opentelemetry.instrumentation.openai.v1 import OpenAIV1Instrumentor as ThirdPartyOpenAIV1Instrumentor
-from opentelemetry.trace import get_tracer
-from opentelemetry.instrumentation.openai.version import __version__
 
 from agentops.logging import logger
+from agentops.instrumentation.openai import LIBRARY_NAME, LIBRARY_VERSION
 from agentops.instrumentation.openai.wrappers import sync_responses_wrapper, async_responses_wrapper
-from agentops.instrumentation.openai.attributes.response import get_response_response_attributes
+from agentops.instrumentation.openai.attributes.common import get_response_attributes
+
 
 # Methods to wrap beyond what the third-party instrumentation handles
 WRAPPED_METHODS = [
@@ -43,14 +42,14 @@ WRAPPED_METHODS = [
         "object": "Responses",
         "method": "create",
         "wrapper": sync_responses_wrapper,
-        "formatter": get_response_response_attributes,
+        "formatter": get_response_attributes,
     },
     {
         "package": "openai.resources.responses",
         "object": "AsyncResponses",
         "method": "create",
         "wrapper": async_responses_wrapper,
-        "formatter": get_response_response_attributes,
+        "formatter": get_response_attributes,
     },
 ]
 
@@ -58,9 +57,11 @@ WRAPPED_METHODS = [
 class OpenAIInstrumentor(ThirdPartyOpenAIV1Instrumentor):
     """An instrumentor for OpenAI API that extends the third-party implementation."""
 
-    def instrumentation_dependencies(self) -> Collection[str]:
-        """Return packages required for instrumentation."""
-        return ["openai >= 1.0.0"]
+    # TODO we should only activate the `responses` feature if we are above a certain version,
+    # otherwise fallback to the third-party implementation
+    # def instrumentation_dependencies(self) -> Collection[str]:
+    #     """Return packages required for instrumentation."""
+    #     return ["openai >= 1.0.0"]
 
     def _instrument(self, **kwargs):
         """Instrument the OpenAI API, extending the third-party instrumentation.
@@ -73,7 +74,7 @@ class OpenAIInstrumentor(ThirdPartyOpenAIV1Instrumentor):
         super()._instrument(**kwargs)
         
         tracer_provider = kwargs.get("tracer_provider")
-        tracer = get_tracer(__name__, __version__, tracer_provider)
+        tracer = get_tracer(LIBRARY_NAME, LIBRARY_VERSION, tracer_provider)
         
         # Add our own wrappers for additional modules
         for wrapped_method in WRAPPED_METHODS:
