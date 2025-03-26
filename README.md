@@ -123,7 +123,7 @@ All your sessions can be viewed on the [AgentOps dashboard](https://app.agentops
   </a>
 </details>
 
-<details open>
+<details>
   <summary>Summary Analytics</summary>
   <a href="https://app.agentops.ai?ref=gh">
    <img src="docs/images/external/app_screenshots/overview.png" style="width: 90%;" alt="Summary Analytics"/>
