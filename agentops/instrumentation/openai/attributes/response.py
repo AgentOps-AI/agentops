@@ -1,4 +1,4 @@
-from typing import Any, List
+from typing import Any, List, Union
 from agentops.logging import logger
 from agentops.helpers import safe_serialize
 from agentops.semconv import (
@@ -21,6 +21,7 @@ try:
         ResponseOutputText, 
         ResponseReasoningItem, 
         ResponseFunctionToolCall, 
+        ResponseInputParam,
         # ResponseComputerToolCall,
         # ResponseFileSearchToolCall,
         # ResponseFunctionWebSearch,
@@ -105,8 +106,63 @@ RESPONSE_REASONING_ATTRIBUTES: AttributeMap = {
 }
 
 
-# TODO we call this `response_response` because in OpenAI Agents the `Response` is nested 
-# in a `ResponseSpan` object
+def get_response_kwarg_attributes(kwargs: dict) -> AttributeMap:
+    """Handles interpretation of openai Responses.create method keyword arguments."""
+    
+    # Just gather the attributes that are not present in the Response object
+    # TODO We could gather more here and have more context available in the 
+    # event of an error during the request execution.
+    
+    # Method signature for `Responses.create`:
+    # input: Union[str, ResponseInputParam],
+    # model: Union[str, ChatModel],
+    # include: Optional[List[ResponseIncludable]] | NotGiven = NOT_GIVEN,
+    # instructions: Optional[str] | NotGiven = NOT_GIVEN,
+    # max_output_tokens: Optional[int] | NotGiven = NOT_GIVEN,
+    # metadata: Optional[Metadata] | NotGiven = NOT_GIVEN,
+    # parallel_tool_calls: Optional[bool] | NotGiven = NOT_GIVEN,
+    # previous_response_id: Optional[str] | NotGiven = NOT_GIVEN,
+    # reasoning: Optional[Reasoning] | NotGiven = NOT_GIVEN,
+    # store: Optional[bool] | NotGiven = NOT_GIVEN,
+    # stream: Optional[Literal[False]] | NotGiven = NOT_GIVEN,
+    # temperature: Optional[float] | NotGiven = NOT_GIVEN,
+    # text: ResponseTextConfigParam | NotGiven = NOT_GIVEN,
+    # tool_choice: response_create_params.ToolChoice | NotGiven = NOT_GIVEN,
+    # tools: Iterable[ToolParam] | NotGiven = NOT_GIVEN,
+    # top_p: Optional[float] | NotGiven = NOT_GIVEN,
+    # truncation: Optional[Literal["auto", "disabled"]] | NotGiven = NOT_GIVEN,
+    # user: str | NotGiven = NOT_GIVEN,
+    # extra_headers: Headers | None = None,
+    # extra_query: Query | None = None,
+    # extra_body: Body | None = None,
+    # timeout: float | httpx.Timeout | None | NotGiven = NOT_GIVEN,
+    attributes = {}
+    
+    # `input` can either be a `str` of a complex object type
+    _input: Union[str, ResponseInputParam] = kwargs.get("input")
+    if isinstance(_input, str):
+        attributes[MessageAttributes.PROMPT_ROLE.format(i=0)] = "user"
+        attributes[MessageAttributes.PROMPT_CONTENT.format(i=0)] = _input
+    elif isinstance(_input, ResponseInputParam):
+        for i, prompt in enumerate(_input.prompts):
+            # Object type is pretty diverse, so we handle common attributes, but do so
+            # conditionally because not all attributes are guaranteed to exist
+            if hasattr(prompt, "type"):
+                attributes[MessageAttributes.PROMPT_TYPE.format(i=i)] = prompt.type
+            if hasattr(prompt, "role"):
+                attributes[MessageAttributes.PROMPT_ROLE.format(i=i)] = prompt.role
+            if hasattr(prompt, "content"):
+                attributes[MessageAttributes.PROMPT_CONTENT.format(i=i)] = prompt.content
+    
+    # `model` is always `str` (`ChatModel` type is just a string literal)
+    _model: str = kwargs.get("model")
+    attributes[SpanAttributes.LLM_REQUEST_MODEL] = _model
+    
+    return attributes
+
+
+# We call this `response_response` because in OpenAI Agents the `Response` is
+# a return type from the `responses` module
 def get_response_response_attributes(response: 'Response') -> AttributeMap:
     """Handles interpretation of an openai Response object."""
     # Response(

@@ -22,35 +22,32 @@ When instrumenting, we need to:
 2. Extract data from both the request parameters and response object
 3. Create spans with appropriate attributes for observability
 """
-from typing import Collection
-from wrapt import wrap_function_wrapper
+from typing import List, Collection
 from opentelemetry.trace import get_tracer
-from opentelemetry.instrumentation.utils import unwrap
-
 from opentelemetry.instrumentation.openai.v1 import OpenAIV1Instrumentor as ThirdPartyOpenAIV1Instrumentor
 
 from agentops.logging import logger
+from agentops.instrumentation.common.wrappers import WrapConfig, wrap, unwrap
 from agentops.instrumentation.openai import LIBRARY_NAME, LIBRARY_VERSION
-from agentops.instrumentation.openai.wrappers import sync_responses_wrapper, async_responses_wrapper
 from agentops.instrumentation.openai.attributes.common import get_response_attributes
 
 
 # Methods to wrap beyond what the third-party instrumentation handles
-WRAPPED_METHODS = [
-    {
-        "package": "openai.resources.responses",
-        "object": "Responses",
-        "method": "create",
-        "wrapper": sync_responses_wrapper,
-        "formatter": get_response_attributes,
-    },
-    {
-        "package": "openai.resources.responses",
-        "object": "AsyncResponses",
-        "method": "create",
-        "wrapper": async_responses_wrapper,
-        "formatter": get_response_attributes,
-    },
+WRAPPED_METHODS: List[WrapConfig] = [
+    WrapConfig(
+        trace_name="openai.responses.create",
+        package="openai.resources.responses",
+        class_name="Responses",
+        method_name="create",
+        handler=get_response_attributes,
+    ), 
+    WrapConfig(
+        trace_name="openai.responses.create",
+        package="openai.resources.responses",
+        class_name="AsyncResponses",
+        method_name="create",
+        handler=get_response_attributes,
+    ),
 ]
 
 
@@ -70,47 +67,30 @@ class OpenAIInstrumentor(ThirdPartyOpenAIV1Instrumentor):
         standard OpenAI API endpoints, then adds our own instrumentation for
         the responses module.
         """
-        # Call the parent _instrument method first to handle all standard cases
         super()._instrument(**kwargs)
         
         tracer_provider = kwargs.get("tracer_provider")
         tracer = get_tracer(LIBRARY_NAME, LIBRARY_VERSION, tracer_provider)
         
-        # Add our own wrappers for additional modules
-        for wrapped_method in WRAPPED_METHODS:
-            package = wrapped_method["package"]
-            object_name = wrapped_method["object"]
-            method_name = wrapped_method["method"]
-            wrapper_func = wrapped_method["wrapper"]
-            formatter = wrapped_method["formatter"]
-            
+        for wrap_config in WRAPPED_METHODS:
             try:
-                wrap_function_wrapper(
-                    package,
-                    f"{object_name}.{method_name}",
-                    wrapper_func(tracer, formatter),
-                )
-                logger.debug(f"Successfully wrapped {package}.{object_name}.{method_name}")
+                wrap(wrap_config, tracer)
+                logger.debug(f"Successfully wrapped {wrap_config}")
             except (AttributeError, ModuleNotFoundError) as e:
-                logger.debug(f"Failed to wrap {package}.{object_name}.{method_name}: {e}")
+                logger.debug(f"Failed to wrap {wrap_config}: {e}")
         
-        logger.debug("Successfully instrumented OpenAI API with AgentOps extensions")
+        logger.debug("Successfully instrumented OpenAI API with Response extensions")
 
     def _uninstrument(self, **kwargs):
         """Remove instrumentation from OpenAI API."""
-        # Call the parent _uninstrument method to handle the standard instrumentations
         super()._uninstrument(**kwargs)
         
-        # Unwrap our additional methods
-        for wrapped_method in WRAPPED_METHODS:
-            package = wrapped_method["package"]
-            object_name = wrapped_method["object"]
-            method_name = wrapped_method["method"]
-            
+        for wrap_config in WRAPPED_METHODS:
             try:
-                unwrap(f"{package}.{object_name}", method_name)
-                logger.debug(f"Successfully unwrapped {package}.{object_name}.{method_name}")
+                unwrap(wrap_config)
+                logger.debug(f"Successfully unwrapped {wrap_config}")
             except Exception as e:
-                logger.debug(f"Failed to unwrap {package}.{object_name}.{method_name}: {e}")
+                logger.debug(f"Failed to unwrap {wrap_config}: {e}")
         
-        logger.debug("Successfully removed OpenAI API instrumentation with AgentOps extensions")
+        logger.debug("Successfully removed OpenAI API instrumentation with Response extensions")
+
