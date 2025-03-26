@@ -245,8 +245,10 @@ class LiteLLMCallbackHandler(CustomLogger):
                 attributes[SpanAttributes.LLM_REQUEST_STREAMING] = bool(kwargs["async"])
             
             if "litellm_params" in kwargs and "metadata" in kwargs["litellm_params"]:
-                for key, value in kwargs["litellm_params"]["metadata"].items():
-                    attributes[f"llm.metadata.{key}"] = str(value)
+                metadata = kwargs["litellm_params"].get("metadata")
+                if metadata is not None:
+                    for key, value in metadata.items():
+                        attributes[f"llm.metadata.{key}"] = str(value)
             
             span = self._create_span(
                 operation_name="litellm.completion",
@@ -352,8 +354,10 @@ class LiteLLMCallbackHandler(CustomLogger):
             attributes[SpanAttributes.LLM_REQUEST_STREAMING] = True
             
             if "litellm_params" in kwargs and "metadata" in kwargs["litellm_params"]:
-                for key, value in kwargs["litellm_params"]["metadata"].items():
-                    attributes[f"llm.metadata.{key}"] = str(value)
+                metadata = kwargs["litellm_params"].get("metadata")
+                if metadata is not None:
+                    for key, value in metadata.items():
+                        attributes[f"llm.metadata.{key}"] = str(value)
             
             span = self._create_span(
                 operation_name="litellm.completion",
