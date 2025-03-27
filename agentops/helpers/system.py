@@ -7,7 +7,7 @@ import sys
 import psutil  # type: ignore
 
 from agentops.logging import logger
-from agentops.version import get_agentops_version
+from agentops.helpers.version import get_agentops_version
 
 
 def get_sdk_details():

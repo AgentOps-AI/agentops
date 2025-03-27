@@ -136,7 +136,6 @@ def start_session(
     session = Session(span, token)
     
     # Set the global session reference
-    global _current_session
     _current_session = session
     
     return session
@@ -195,9 +194,10 @@ def end_session(session_or_status: Any = None, **kwargs) -> None:
                  created session via start_session().
     """
     global _current_session
-    from agentops.sdk.decorators.utility import _finalize_span
     
+    from agentops.sdk.decorators.utility import _finalize_span
     from agentops.sdk.core import TracingCore
+    
     if not TracingCore.get_instance().initialized:
         logger.debug("Ignoring end_session call - TracingCore not initialized")
         return
