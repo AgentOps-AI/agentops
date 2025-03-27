@@ -1,11 +1,17 @@
-from typing import Any, Dict, List, Optional, Union
+from typing import List, Optional, Union
+from agentops.client import Client
 
-from agentops.legacy import ActionEvent, ErrorEvent, ToolEvent, start_session, end_session
-
-from .client import Client
 
 # Client global instance; one per process runtime
 _client = Client()
+
+
+def get_client() -> Client:
+    """Get the singleton client instance"""
+    global _client
+
+    return _client
+
 
 def record(event):
     """
@@ -70,6 +76,8 @@ def init(
             be read from the AGENTOPS_EXPORTER_ENDPOINT environment variable.
         **kwargs: Additional configuration parameters to be passed to the client.
     """
+    global _client
+    
     # Merge tags and default_tags if both are provided
     merged_tags = None
     if tags and default_tags:
@@ -119,6 +127,8 @@ def configure(**kwargs):
             - processor: Custom span processor for OpenTelemetry trace data
             - exporter_endpoint: Endpoint for the exporter
     """
+    global _client
+    
     # List of valid parameters that can be passed to configure
     valid_params = {
         "api_key",
@@ -147,14 +157,8 @@ def configure(**kwargs):
 
     _client.configure(**kwargs)
 
-# For backwards compatibility and testing
 
-
-def get_client() -> Client:
-    """Get the singleton client instance"""
-    return _client
-
-
+# For backwards compatibility
 
 from agentops.legacy import * # type: ignore
 

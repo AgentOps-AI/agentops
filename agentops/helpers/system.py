@@ -4,11 +4,10 @@ import platform
 import socket
 import sys
 
-import psutil
+import psutil  # type: ignore
 
 from agentops.logging import logger
-
-from .version import get_agentops_version
+from agentops.version import get_agentops_version
 
 
 def get_sdk_details():

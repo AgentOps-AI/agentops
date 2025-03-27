@@ -9,14 +9,13 @@ These integrations use different patterns:
 This module maintains backward compatibility with all these API patterns.
 """
 
-from typing import Optional, Any, Dict, List, Tuple, Union
+from typing import Optional, Any, Dict, List, Union
 
 from agentops.logging import logger
 from agentops.sdk.core import TracingCore
 from agentops.semconv.span_kinds import SpanKind
-from agentops.exceptions import AgentOpsClientNotInitializedException
 
-_current_session: Optional["Session"] = None
+_current_session: Optional['Session'] = None
 
 
 class Session:
