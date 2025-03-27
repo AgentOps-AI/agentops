@@ -130,11 +130,16 @@ def start_session(
     
     if not TracingCore.get_instance().initialized:
         from agentops import Client
-        Client().init()
+        # Pass auto_start_session=False to prevent circular dependency
+        Client().init(auto_start_session=False)
     
     span, context, token = _create_session_span(tags)
     session = Session(span, token)
+    
+    # Set the global session reference
+    global _current_session
     _current_session = session
+    
     return session
 
 
@@ -190,6 +195,7 @@ def end_session(session_or_status: Any = None, **kwargs) -> None:
                  When called this way, the function will use the most recently
                  created session via start_session().
     """
+    global _current_session
     from agentops.sdk.decorators.utility import _finalize_span
     
     from agentops.sdk.core import TracingCore
@@ -210,8 +216,6 @@ def end_session(session_or_status: Any = None, **kwargs) -> None:
     #     is_auto_end=True
     # )
     if session_or_status is None and kwargs:
-        global _current_session
-        
         if _current_session is not None:
             _set_span_attributes(_current_session.span, kwargs)
             _finalize_span(_current_session.span, _current_session.token)
@@ -223,9 +227,14 @@ def end_session(session_or_status: Any = None, **kwargs) -> None:
     # In both cases, we call _finalize_span with the span and token from the Session.
     # This is the most direct and precise way to end a specific session.
     if hasattr(session_or_status, 'span') and hasattr(session_or_status, 'token'):
+        # Set attributes and finalize the span
         _set_span_attributes(session_or_status.span, kwargs)
         _finalize_span(session_or_status.span, session_or_status.token)
         _flush_span_processors()
+        
+        # Clear the global session reference if this is the current session
+        if _current_session is session_or_status:
+            _current_session = None
 
 
 def end_all_sessions():
