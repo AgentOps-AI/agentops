@@ -11,6 +11,8 @@ class CoreAttributes:
     IN_FLIGHT = "agentops.in-flight"  # Whether the span is in-flight
     EXPORT_IMMEDIATELY = "agentops.export.immediate"  # Whether the span should be exported immediately
 
+    TAGS = "agentops.tags"  # Tags passed to agentops.init
+
     # Trace context attributes
     TRACE_ID = "trace.id"  # Trace ID
     SPAN_ID = "span.id"  # Span ID

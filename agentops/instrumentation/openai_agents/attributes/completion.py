@@ -5,7 +5,7 @@ and the OpenAI Response API formats, extracting messages, tool calls, function c
 """
 from typing import Any, Dict
 
-from agentops.instrumentation.openai_agents.attributes import AttributeMap
+from agentops.instrumentation.common.attributes import AttributeMap
 
 from agentops.logging import logger
 from agentops.helpers.serialization import model_to_dict
