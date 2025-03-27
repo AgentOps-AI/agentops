@@ -20,6 +20,7 @@ from .system import (
 from .version import get_agentops_version, check_agentops_update
 from .debug import debug_print_function_params
 from .env import get_env_bool, get_env_int, get_env_list
+from .config import get_tags_from_config
 
 __all__ = [
     "get_ISO_time",
@@ -45,4 +46,5 @@ __all__ = [
     "get_env_bool",
     "get_env_int",
     "get_env_list",
+    "get_tags_from_config",
 ]

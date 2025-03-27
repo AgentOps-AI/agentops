@@ -21,15 +21,14 @@ def get_version() -> str:
     try:
         from importlib.metadata import version
 
-        library_version = version("openai-agents")
-        return library_version
+        return version("openai-agents")
     except ImportError:
         logger.debug("Could not find OpenAI Agents SDK version")
         return "unknown"
 
 
 LIBRARY_NAME = "openai-agents"
-LIBRARY_VERSION: str = get_version()  # Actual OpenAI Agents SDK version
+LIBRARY_VERSION: str = get_version()
 
 # Import after defining constants to avoid circular imports
 from .instrumentor import OpenAIAgentsInstrumentor  # noqa: E402

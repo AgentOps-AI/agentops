@@ -25,8 +25,6 @@ from agentops.instrumentation.openai_agents.attributes.common import (
     get_response_span_attributes,
     get_span_attributes,
     get_common_instrumentation_attributes,
-    get_base_trace_attributes,
-    get_base_span_attributes,
 )
 
 # Import model-related functions
@@ -642,37 +640,4 @@ class TestOpenAIAgentsAttributes:
         assert attrs[SpanAttributes.LLM_RESPONSE_MODEL] == "gpt-4"
         assert attrs[SpanAttributes.LLM_SYSTEM] == "openai"
         
-    def test_get_base_trace_attributes(self):
-        """Test base trace attributes generation"""
-        # Create a simple trace object
-        class TraceObj:
-            def __init__(self):
-                self.name = "test_workflow"
-                self.trace_id = "trace123"
-                
-        trace = TraceObj()
-        attrs = get_base_trace_attributes(trace)
-        
-        # Verify core trace attributes
-        assert attrs[WorkflowAttributes.WORKFLOW_NAME] == "test_workflow"
-        assert attrs[CoreAttributes.TRACE_ID] == "trace123"
-        assert attrs[WorkflowAttributes.WORKFLOW_STEP_TYPE] == "trace"
-        assert attrs[InstrumentationAttributes.NAME] == "agentops"
-        
-    def test_get_base_span_attributes(self):
-        """Test base span attributes generation"""
-        # Create a simple span object
-        class SpanObj:
-            def __init__(self):
-                self.span_id = "span456"
-                self.trace_id = "trace123"
-                self.parent_id = "parent789"
-                
-        span = SpanObj()
-        attrs = get_base_span_attributes(span)
-        
-        # Verify core span attributes
-        assert attrs[CoreAttributes.SPAN_ID] == "span456"
-        assert attrs[CoreAttributes.TRACE_ID] == "trace123"
-        assert attrs[CoreAttributes.PARENT_ID] == "parent789"
-        assert attrs[InstrumentationAttributes.NAME] == "agentops"
+    # Common attribute tests have been moved to test_common_attributes.py

@@ -26,10 +26,14 @@ from agentops.logging import logger
 from agentops.semconv import (
     CoreAttributes, 
 )
-from agentops.instrumentation.openai_agents import LIBRARY_NAME, LIBRARY_VERSION
-from agentops.instrumentation.openai_agents.attributes.common import (
+
+from agentops.instrumentation.common.attributes import (
     get_base_trace_attributes,
     get_base_span_attributes,
+)
+
+from agentops.instrumentation.openai_agents import LIBRARY_NAME, LIBRARY_VERSION
+from agentops.instrumentation.openai_agents.attributes.common import (
     get_span_attributes,
 )
 
