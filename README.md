@@ -220,7 +220,7 @@ pip install openai-agents
 ```
 
 - [AgentOps integration example](https://docs.agentops.ai/v1/integrations/agentssdk)
-- [Official CrewAI documentation](https://docs.crewai.com/how-to/AgentOps-Observability)
+- [Official OpenAI Agents SDK documentation](https://openai.github.io/openai-agents-python/)
 
 ### CrewAI 🛶
 
