@@ -45,6 +45,9 @@ class Client:
         # Prefetch JWT token if enabled
         # TODO: Move this validation somewhere else (and integrate with self.config.prefetch_jwt_token once we have a solution to that)
         response = self.api.v3.fetch_auth_token(self.config.api_key)
+        
+        # Save the bearer for use with the v4 API
+        self.api.v4.set_auth_token(response["token"])
 
         # Initialize TracingCore with the current configuration and project_id
         tracing_config = self.config.dict()
