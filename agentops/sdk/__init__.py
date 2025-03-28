@@ -11,7 +11,11 @@ from agentops.sdk.core import TracingCore
 from agentops.sdk.decorators import agent, operation, session, task, workflow
 # from agentops.sdk.traced import TracedObject  # Merged into TracedObject
 from agentops.sdk.types import TracingConfig
+# Initialize SDK first
+from agentops.sdk.decorators.sentry_manager import set_opt_out_sentry
 
+# Initialize sentry settings
+set_opt_out_sentry(False)  # Enable Sentry error tracking
 __all__ = [
     # Core components
     "TracingCore",
