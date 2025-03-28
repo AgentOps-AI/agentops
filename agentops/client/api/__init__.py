@@ -9,6 +9,7 @@ from typing import Dict, Optional, Type, TypeVar, cast
 from agentops.client.api.base import BaseApiClient
 from agentops.client.api.types import AuthTokenResponse
 from agentops.client.api.versions.v3 import V3Client
+from agentops.client.api.versions.v4 import V4Client
 
 # Define a type variable for client classes
 T = TypeVar("T", bound=BaseApiClient)
@@ -43,6 +44,16 @@ class ApiClient:
             The V3 API client
         """
         return self._get_client("v3", V3Client)
+
+    @property
+    def v4(self) -> V4Client:
+        """
+        Get the V4 API client.
+
+        Returns:
+            The V4 API client
+        """
+        return self._get_client("v4", V4Client)
 
     def _get_client(self, version: str, client_class: Type[T]) -> T:
         """

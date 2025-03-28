@@ -13,10 +13,21 @@ from agentops.semconv import SpanAttributes, LLMRequestTypeValues
 from opentelemetry.instrumentation.openai.utils import _with_tracer_wrapper, dont_throw
 from opentelemetry.instrumentation.openai.shared.config import Config
 
-from openai._legacy_response import LegacyAPIResponse
-from openai.types.beta.threads.run import Run
+logger = logging.getLogger(__name__)  # noqa
 
-logger = logging.getLogger(__name__)
+try:
+    from openai._legacy_response import LegacyAPIResponse
+except (ImportError, ModuleNotFoundError):
+    # This was removed from the `openai` package at some point
+    logger.debug("LegacyAPIResponse not found in openai package")
+    LegacyAPIResponse = None
+
+try:
+    from openai.types.beta.threads.run import Run
+except (ImportError, ModuleNotFoundError):
+    logger.debug("Run not found in openai package")
+    Run = None
+
 
 assistants = {}
 runs = {}

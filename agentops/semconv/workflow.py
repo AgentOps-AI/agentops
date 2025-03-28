@@ -7,8 +7,13 @@ class WorkflowAttributes:
     # Workflow attributes
     WORKFLOW_NAME = "workflow.name"  # Name of the workflow
     WORKFLOW_TYPE = "workflow.type"  # Type of workflow
+    
     WORKFLOW_INPUT = "workflow.input"  # Input to the workflow
+    WORKFLOW_INPUT_TYPE = "workflow.input.type"  # Type of input to the workflow
+    
     WORKFLOW_OUTPUT = "workflow.output"  # Output from the workflow
+    WORKFLOW_OUTPUT_TYPE = "workflow.output.type"  # Type of output from the workflow
+    
     MAX_TURNS = "workflow.max_turns"  # Maximum number of turns in a workflow
     FINAL_OUTPUT = "workflow.final_output"  # Final output of the workflow
 
