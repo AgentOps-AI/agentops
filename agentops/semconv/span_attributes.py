@@ -37,6 +37,9 @@ class SpanAttributes:
     LLM_REQUEST_PRESENCE_PENALTY = "gen_ai.request.presence_penalty"
     LLM_REQUEST_FUNCTIONS = "gen_ai.request.functions"
     LLM_REQUEST_HEADERS = "gen_ai.request.headers"
+    LLM_REQUEST_INSTRUCTIONS = "gen_ai.request.instructions"
+    LLM_REQUEST_VOICE = "gen_ai.request.voice"
+    LLM_REQUEST_SPEED = "gen_ai.request.speed"
 
     # Content
     LLM_PROMPTS = "gen_ai.prompt"
