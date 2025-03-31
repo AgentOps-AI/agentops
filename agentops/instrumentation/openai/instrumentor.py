@@ -47,6 +47,7 @@ WRAPPED_METHODS: List[WrapConfig] = [
         class_name="AsyncResponses",
         method_name="create",
         handler=get_response_attributes,
+        is_async=True,
     ),
 ]
 

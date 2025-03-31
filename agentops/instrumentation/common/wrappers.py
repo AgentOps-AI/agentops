@@ -5,7 +5,7 @@ around functions and methods for OpenTelemetry instrumentation. It includes
 a configuration class for wrapping methods, helper functions for updating
 spans with attributes, and functions for creating and applying wrappers.
 """
-
+import asyncio
 from typing import Any, Optional, Tuple, Dict, Callable
 from dataclasses import dataclass
 from wrapt import wrap_function_wrapper  # type: ignore
@@ -34,6 +34,9 @@ class WrapConfig:
         class_name: The name of the class containing the method
         method_name: The name of the method to wrap
         handler: A function that extracts attributes from args, kwargs, or return value
+        is_async: Whether the method is asynchronous (default: False)
+            We explicitly specify async methods since `asyncio.iscoroutinefunction` 
+            is not reliable in this context. 
         span_kind: The kind of span to create (default: CLIENT)
     """
     trace_name: str
@@ -41,6 +44,7 @@ class WrapConfig:
     class_name: str
     method_name: str
     handler: AttributeHandler
+    is_async: bool = False
     span_kind: SpanKind = SpanKind.CLIENT
     
     def __repr__(self):
@@ -78,7 +82,7 @@ def _finish_span_error(span: Span, exception: Exception) -> None:
     span.set_status(Status(StatusCode.ERROR, str(exception)))
 
 
-def _create_wrapper(wrap_config: WrapConfig, tracer: Tracer):
+def _create_wrapper(wrap_config: WrapConfig, tracer: Tracer) -> Callable:
     """Create a wrapper function for the specified configuration.
     
     This function creates a wrapper that:
@@ -96,6 +100,38 @@ def _create_wrapper(wrap_config: WrapConfig, tracer: Tracer):
         A wrapper function compatible with wrapt.wrap_function_wrapper
     """
     handler = wrap_config.handler
+    
+    async def awrapper(wrapped, instance, args, kwargs):
+        # Skip instrumentation if it's suppressed in the current context
+        # TODO I don't understand what this actually does
+        if context_api.get_value(_SUPPRESS_INSTRUMENTATION_KEY):
+            return wrapped(*args, **kwargs)
+        
+        return_value = None
+        
+        with tracer.start_as_current_span(
+            wrap_config.trace_name,
+            kind=wrap_config.span_kind,
+        ) as span:
+            try:
+                # Add the input attributes to the span before execution
+                attributes = handler(args=args, kwargs=kwargs)
+                _update_span(span, attributes)
+                
+                return_value = await wrapped(*args, **kwargs)
+                
+                # Add the output attributes to the span after execution
+                attributes = handler(return_value=return_value)
+                _update_span(span, attributes)
+                _finish_span_success(span)
+            except Exception as e:
+                # Add everything we have in the case of an error
+                attributes = handler(args=args, kwargs=kwargs, return_value=return_value)
+                _update_span(span, attributes)
+                _finish_span_error(span, e)
+                raise
+        
+        return return_value
     
     def wrapper(wrapped, instance, args, kwargs):
         # Skip instrumentation if it's suppressed in the current context
@@ -129,10 +165,13 @@ def _create_wrapper(wrap_config: WrapConfig, tracer: Tracer):
         
         return return_value
     
-    return wrapper
+    if wrap_config.is_async:
+        return awrapper
+    else:
+        return wrapper
 
 
-def wrap(wrap_config: WrapConfig, tracer: Tracer):
+def wrap(wrap_config: WrapConfig, tracer: Tracer) -> Callable:
     """Wrap a method with OpenTelemetry instrumentation.
     
     This function applies the wrapper created by _create_wrapper
