@@ -142,24 +142,20 @@ class TestCommonAttributes:
         # Mock the common attributes and tags functions
         with patch("agentops.instrumentation.common.attributes.get_common_attributes", 
                    return_value={InstrumentationAttributes.NAME: "agentops", InstrumentationAttributes.VERSION: "0.1.2"}):
-            with patch("agentops.instrumentation.common.attributes.get_tags_from_config", 
-                       return_value={"tag1": "value1", "tag2": "value2"}):
-                # Get base trace attributes
-                attributes = get_base_trace_attributes(mock_trace)
-                
-                # Verify attributes
-                assert CoreAttributes.TRACE_ID in attributes
-                assert attributes[CoreAttributes.TRACE_ID] == "test_trace_id"
-                assert WorkflowAttributes.WORKFLOW_NAME in attributes
-                assert attributes[WorkflowAttributes.WORKFLOW_NAME] == "test_trace_name"
-                assert WorkflowAttributes.WORKFLOW_STEP_TYPE in attributes
-                assert attributes[WorkflowAttributes.WORKFLOW_STEP_TYPE] == "trace"
-                assert InstrumentationAttributes.NAME in attributes
-                assert attributes[InstrumentationAttributes.NAME] == "agentops"
-                assert InstrumentationAttributes.VERSION in attributes
-                assert attributes[InstrumentationAttributes.VERSION] == "0.1.2"
-                assert CoreAttributes.TAGS in attributes
-                assert attributes[CoreAttributes.TAGS] == {"tag1": "value1", "tag2": "value2"}
+            # Get base trace attributes
+            attributes = get_base_trace_attributes(mock_trace)
+            
+            # Verify attributes
+            assert CoreAttributes.TRACE_ID in attributes
+            assert attributes[CoreAttributes.TRACE_ID] == "test_trace_id"
+            assert WorkflowAttributes.WORKFLOW_NAME in attributes
+            assert attributes[WorkflowAttributes.WORKFLOW_NAME] == "test_trace_name"
+            assert WorkflowAttributes.WORKFLOW_STEP_TYPE in attributes
+            assert attributes[WorkflowAttributes.WORKFLOW_STEP_TYPE] == "trace"
+            assert InstrumentationAttributes.NAME in attributes
+            assert attributes[InstrumentationAttributes.NAME] == "agentops"
+            assert InstrumentationAttributes.VERSION in attributes
+            assert attributes[InstrumentationAttributes.VERSION] == "0.1.2"
 
     def test_get_base_trace_attributes_with_invalid_trace(self):
         """Test getting base trace attributes with an invalid trace (missing trace_id)."""

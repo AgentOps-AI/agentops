@@ -21,7 +21,7 @@ LLM service instrumentors while maintaining separation of concerns.
 """
 from typing import Dict, Any, Optional, List
 from agentops.logging import logger
-from agentops.helpers import safe_serialize, get_agentops_version, get_tags_from_config
+from agentops.helpers import safe_serialize, get_agentops_version
 from agentops.semconv import (
     CoreAttributes,
     InstrumentationAttributes,
@@ -99,8 +99,15 @@ def get_base_trace_attributes(trace: Any) -> AttributeMap:
     }
     
     # Add tags from the config to the trace attributes (these should only be added to the trace)
-    if tags := get_tags_from_config():
-        attributes[CoreAttributes.TAGS] = tags
+    from agentops import get_client
+    
+    config = get_client().config
+    tags = []
+    if config.default_tags:
+        # `default_tags` can either be a `set` or a `list`
+        tags = list(config.default_tags)
+    
+    attributes[CoreAttributes.TAGS] = tags
     
     return attributes
 
