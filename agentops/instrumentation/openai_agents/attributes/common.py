@@ -6,7 +6,6 @@ for extracting and formatting attributes according to OpenTelemetry semantic con
 """
 from typing import Any
 from agentops.logging import logger
-from agentops.helpers import upload_object
 from agentops.semconv import (
     AgentAttributes,
     WorkflowAttributes,
@@ -225,12 +224,17 @@ def get_transcription_span_attributes(span_data: Any) -> AttributeMap:
     Returns:
         Dictionary of attributes for transcription span
     """
+    from agentops import get_client
+    from agentops.client.api.types import UploadedObjectResponse
+    
+    client = get_client()
+    
     attributes = _extract_attributes_from_mapping(span_data, TRANSCRIPTION_SPAN_ATTRIBUTES)
     attributes.update(get_common_attributes())
     
     if span_data.input:
         prefix = WorkflowAttributes.WORKFLOW_INPUT
-        uploaded_object = upload_object(span_data.input)
+        uploaded_object: UploadedObjectResponse = client.api.v4.upload_object(span_data.input)
         attributes.update(get_uploaded_object_attributes(uploaded_object, prefix))
     
     if span_data.model:
@@ -253,12 +257,17 @@ def get_speech_span_attributes(span_data: Any) -> AttributeMap:
     Returns:
         Dictionary of attributes for speech span
     """
+    from agentops import get_client
+    from agentops.client.api.types import UploadedObjectResponse
+    
+    client = get_client()
+    
     attributes = _extract_attributes_from_mapping(span_data, SPEECH_SPAN_ATTRIBUTES)
     attributes.update(get_common_attributes())
     
     if span_data.output:
         prefix = WorkflowAttributes.WORKFLOW_OUTPUT
-        uploaded_object = upload_object(span_data.output)
+        uploaded_object: UploadedObjectResponse = client.api.v4.upload_object(span_data.output)
         attributes.update(get_uploaded_object_attributes(uploaded_object, prefix))
     
     if span_data.model:
