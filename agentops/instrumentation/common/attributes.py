@@ -19,9 +19,9 @@ All functions follow a consistent pattern:
 These utilities ensure consistent attribute handling across different
 LLM service instrumentors while maintaining separation of concerns.
 """
-from typing import Dict, Any, Optional, List
+from typing import Dict, Any
 from agentops.logging import logger
-from agentops.helpers import safe_serialize, get_agentops_version, get_tags_from_config
+from agentops.helpers import safe_serialize, get_agentops_version
 from agentops.semconv import (
     CoreAttributes,
     InstrumentationAttributes,
@@ -34,11 +34,11 @@ AttributeMap = Dict[str, Any]
 
 def _extract_attributes_from_mapping(span_data: Any, attribute_mapping: AttributeMap) -> AttributeMap:
     """Helper function to extract attributes based on a mapping.
-    
+
     Args:
         span_data: The span data object or dict to extract attributes from
         attribute_mapping: Dictionary mapping target attributes to source attributes
-        
+
     Returns:
         Dictionary of extracted attributes
     """
@@ -56,19 +56,19 @@ def _extract_attributes_from_mapping(span_data: Any, attribute_mapping: Attribut
         # Skip if value is None or empty
         if value is None or (isinstance(value, (list, dict, str)) and not value):
             continue
-        
+
         # Serialize complex objects
         elif isinstance(value, (dict, list, object)) and not isinstance(value, (str, int, float, bool)):
             value = safe_serialize(value)
-        
+
         attributes[target_attr] = value
-    
+
     return attributes
 
 
 def get_common_attributes() -> AttributeMap:
     """Get common instrumentation attributes used across traces and spans.
-    
+
     Returns:
         Dictionary of common instrumentation attributes
     """
@@ -80,51 +80,58 @@ def get_common_attributes() -> AttributeMap:
 
 def get_base_trace_attributes(trace: Any) -> AttributeMap:
     """Create the base attributes dictionary for an OpenTelemetry trace.
-    
+
     Args:
         trace: The trace object to extract attributes from
-        
+
     Returns:
         Dictionary containing base trace attributes
     """
-    if not hasattr(trace, 'trace_id'):
+    if not hasattr(trace, "trace_id"):
         logger.warning("Cannot create trace attributes: missing trace_id")
         return {}
-    
+
     attributes = {
         WorkflowAttributes.WORKFLOW_NAME: trace.name,
         CoreAttributes.TRACE_ID: trace.trace_id,
         WorkflowAttributes.WORKFLOW_STEP_TYPE: "trace",
         **get_common_attributes(),
     }
-    
+
     # Add tags from the config to the trace attributes (these should only be added to the trace)
-    if tags := get_tags_from_config():
-        attributes[CoreAttributes.TAGS] = tags
-    
+    from agentops import get_client
+
+    config = get_client().config
+    tags = []
+    if config.default_tags:
+        # `default_tags` can either be a `set` or a `list`
+        tags = list(config.default_tags)
+
+    attributes[CoreAttributes.TAGS] = tags
+
     return attributes
 
 
 def get_base_span_attributes(span: Any) -> AttributeMap:
     """Create the base attributes dictionary for an OpenTelemetry span.
-    
+
     Args:
         span: The span object to extract attributes from
-        
+
     Returns:
         Dictionary containing base span attributes
     """
-    span_id = getattr(span, 'span_id', 'unknown')
-    trace_id = getattr(span, 'trace_id', 'unknown')
-    parent_id = getattr(span, 'parent_id', None)
-    
+    span_id = getattr(span, "span_id", "unknown")
+    trace_id = getattr(span, "trace_id", "unknown")
+    parent_id = getattr(span, "parent_id", None)
+
     attributes = {
         CoreAttributes.TRACE_ID: trace_id,
         CoreAttributes.SPAN_ID: span_id,
         **get_common_attributes(),
     }
-    
+
     if parent_id:
         attributes[CoreAttributes.PARENT_ID] = parent_id
-        
+
     return attributes

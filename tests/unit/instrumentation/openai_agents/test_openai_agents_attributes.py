@@ -29,10 +29,8 @@ from agentops.instrumentation.openai_agents.attributes.common import (
 
 # Import model-related functions
 from agentops.instrumentation.openai_agents.attributes.model import (
-    get_model_info,
-    extract_model_config,
-    get_model_and_params_attributes,
     get_model_attributes,
+    get_model_config_attributes,
 )
 
 # Import completion processing functions
@@ -492,43 +490,6 @@ class TestOpenAIAgentsAttributes:
             # Unknown span type should return empty dict
             unknown_attrs = get_span_attributes(unknown_span)
             assert unknown_attrs == {}
-
-    def test_get_model_info(self):
-        """Test extraction of model information from agent and run_config"""
-        # Create simple classes instead of MagicMock to avoid serialization issues
-        class ModelSettings:
-            def __init__(self, temperature=None, top_p=None):
-                self.temperature = temperature
-                self.top_p = top_p
-                
-        class Agent:
-            def __init__(self, model=None, settings=None):
-                self.model = model
-                self.model_settings = settings
-                
-        class RunConfig:
-            def __init__(self, model=None, settings=None):
-                self.model = model
-                self.model_settings = settings
-        
-        # Create test objects with the required properties
-        agent = Agent(model="gpt-4", settings=ModelSettings(temperature=0.7, top_p=0.95))
-        run_config = RunConfig(model="gpt-4-turbo", settings=ModelSettings(temperature=0.8))
-        
-        # Test model info extraction with both agent and run_config
-        model_info = get_model_info(agent, run_config)
-        
-        # Run config should override agent settings
-        assert model_info["model_name"] == "gpt-4-turbo"
-        assert model_info["temperature"] == 0.8
-        
-        # Original agent settings that weren't overridden should be preserved
-        assert model_info["top_p"] == 0.95
-        
-        # Test with only agent (no run_config)
-        model_info_agent_only = get_model_info(agent)
-        assert model_info_agent_only["model_name"] == "gpt-4"
-        assert model_info_agent_only["temperature"] == 0.7
 
     def test_chat_completions_attributes_from_fixture(self):
         """Test extraction of attributes from Chat Completions API fixture"""
