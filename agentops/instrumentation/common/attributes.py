@@ -19,7 +19,7 @@ All functions follow a consistent pattern:
 These utilities ensure consistent attribute handling across different
 LLM service instrumentors while maintaining separation of concerns.
 """
-from typing import Dict, Any
+from typing import runtime_checkable, Protocol, Any, Optional, Dict, TypedDict
 from agentops.logging import logger
 from agentops.helpers import safe_serialize, get_agentops_version
 from agentops.semconv import (
@@ -28,8 +28,28 @@ from agentops.semconv import (
     WorkflowAttributes,
 )
 
+
+class IndexedAttributeData(TypedDict, total=False):
+    """
+    """
+    i: int
+    j: Optional[int] = None
+
+
+@runtime_checkable
+class IndexedAttribute(Protocol):
+    """
+    """
+    def format(self, *, i: int, j: Optional[int] = None) -> str:
+        ...
+
+
 # target_attribute_key: source_attribute
-AttributeMap = Dict[str, Any]
+AttributeMap = Dict[str, str]
+
+# target_attribute_key: source_attribute
+# target_attribute_key must be formattable with `i` and optionally `j`
+IndexedAttributeMap = Dict[IndexedAttribute, str]
 
 
 def _extract_attributes_from_mapping(span_data: Any, attribute_mapping: AttributeMap) -> AttributeMap:
@@ -64,6 +84,35 @@ def _extract_attributes_from_mapping(span_data: Any, attribute_mapping: Attribut
         attributes[target_attr] = value
 
     return attributes
+
+
+def _extract_attributes_from_mapping_with_index(span_data: Any, attribute_mapping: IndexedAttributeMap, i: int, j: Optional[int] = None) -> AttributeMap:
+    """Helper function to extract attributes based on a mapping with index.
+    
+    This function extends `_extract_attributes_from_mapping` by allowing for indexed keys in the attribute mapping.
+    
+    Span data is expected to have keys which contain format strings for i/j, e.g. `my_attr_{i}` or `my_attr_{i}_{j}`.
+    
+    Args:
+        span_data: The span data object or dict to extract attributes from
+        attribute_mapping: Dictionary mapping target attributes to source attributes, with format strings for i/j
+        i: The primary index to use in formatting the attribute keys
+        j: An optional secondary index (default is None)
+    Returns:
+        Dictionary of extracted attributes with formatted indexed keys.
+    """
+    
+    # `i` is required for formatting the attribute keys, `j` is optional
+    format_kwargs: IndexedAttributeData = {'i': i}
+    if j is not None:
+        format_kwargs['j'] = j
+    
+    # Update the attribute mapping to include the index for the span
+    attribute_mapping_with_index: AttributeMap = {}
+    for target_attr, source_attr in attribute_mapping.items():
+        attribute_mapping_with_index[target_attr.format(**format_kwargs)] = source_attr
+    
+    return _extract_attributes_from_mapping(span_data, attribute_mapping_with_index)
 
 
 def get_common_attributes() -> AttributeMap:
