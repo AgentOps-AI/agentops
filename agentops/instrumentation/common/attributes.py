@@ -1,5 +1,8 @@
 """Common attribute processing utilities shared across all instrumentors.
 
+This utility ensures consistent attribute extraction and transformation across different
+instrumentation use cases.
+
 This module provides core utilities for extracting and formatting
 OpenTelemetry-compatible attributes from span data. These functions
 are provider-agnostic and used by all instrumentors in the AgentOps
@@ -29,27 +32,96 @@ from agentops.semconv import (
 )
 
 
-class IndexedAttributeData(TypedDict, total=False):
-    """
-    """
-    i: int
-    j: Optional[int] = None
+# AttributeMap is a dictionary that maps target attribute keys to source attribute keys.
+# It is used to extract and transform attributes from a span or trace data object
+# into a standardized format following OpenTelemetry semantic conventions.
+#
+# Key-Value Format:
+# - Key (str): The target attribute key in the standardized output format
+# - Value (str): The source attribute key in the input data object
+#
+# Example Usage:
+# --------------
+# Suppose you have a span data object:
+#     span_data = {
+#         "user_id": "12345",
+#         "operation_name": "process_order",
+#         "status_code": 200
+#     }
+#
+# Create your mapping:
+#     attribute_mapping = {
+#         "user.id": "user_id",              # Maps "user_id" to "user.id"
+#         "operation.name": "operation_name", # Maps "operation_name" to "operation.name"
+#         "http.status_code": "status_code"   # Maps "status_code" to "http.status_code"
+#     }
+#
+# Extract the attributes:
+#     extracted_attributes = _extract_attributes_from_mapping(span_data, attribute_mapping)
+#     # Result: {"user.id": "12345", "operation.name": "process_order", "http.status_code": 200}
+AttributeMap = Dict[str, str]  # target_attribute_key: source_attribute
 
+
+# IndexedAttributeMap differs from AttributeMap in that it allows for dynamic formatting of 
+# target attribute keys using indices `i` and optionally `j`. This is particularly useful 
+# when dealing with collections of similar attributes that should be uniquely identified
+# in the output.
+#
+# Key-Value Format:
+# - Key (IndexedAttribute): An object implementing the IndexedAttribute protocol with a format method
+# - Value (str): The source attribute key in the input data object
+#
+# Example Usage:
+# --------------
+# Suppose you are processing tool calls in an LLM response:
+#
+# Define an IndexedAttribute implementation:
+#     class MessageAttributes:
+#         TOOL_CALL_ID = IndexedAttribute("ai.message.tool.{i}.id")
+#         TOOL_CALL_TYPE = IndexedAttribute("ai.message.tool.{i}.type")
+#
+# Create your mapping:
+#     tool_attribute_mapping = {
+#         MessageAttributes.TOOL_CALL_ID: "id",      # Maps tool's "id" to "ai.message.tool.{i}.id"
+#         MessageAttributes.TOOL_CALL_TYPE: "type"   # Maps tool's "type" to "ai.message.tool.{i}.type"
+#     }
+#
+# Process tool calls:
+#     tools = [
+#         {"id": "tool_1", "type": "search"},
+#         {"id": "tool_2", "type": "calculator"}
+#     ]
+#     
+#     # For the first tool (i=0)
+#     first_tool_attributes = _extract_attributes_from_mapping_with_index(
+#         tools[0], tool_attribute_mapping, i=0
+#     )
+#     # Result: {"ai.message.tool.0.id": "tool_1", "ai.message.tool.0.type": "search"}
 
 @runtime_checkable
 class IndexedAttribute(Protocol):
     """
+    Protocol for objects that define a method to format indexed attributes using
+    only the provided indices `i` and optionally `j`. This allows for dynamic
+    formatting of attribute keys based on the indices.
     """
+
     def format(self, *, i: int, j: Optional[int] = None) -> str:
         ...
 
+IndexedAttributeMap = Dict[IndexedAttribute, str]  # target_attribute_key: source_attribute
 
-# target_attribute_key: source_attribute
-AttributeMap = Dict[str, str]
 
-# target_attribute_key: source_attribute
-# target_attribute_key must be formattable with `i` and optionally `j`
-IndexedAttributeMap = Dict[IndexedAttribute, str]
+class IndexedAttributeData(TypedDict, total=False):
+    """
+    Represents a dictionary structure for indexed attribute data.
+
+    Attributes:
+        i (int): The primary index value. This field is required.
+        j (Optional[int]): An optional secondary index value. 
+    """
+    i: int
+    j: Optional[int] = None
 
 
 def _extract_attributes_from_mapping(span_data: Any, attribute_mapping: AttributeMap) -> AttributeMap:
