@@ -32,7 +32,7 @@ from agentops.semconv import (
 )
 
 
-# AttributeMap is a dictionary that maps target attribute keys to source attribute keys.
+# `AttributeMap` is a dictionary that maps target attribute keys to source attribute keys.
 # It is used to extract and transform attributes from a span or trace data object
 # into a standardized format following OpenTelemetry semantic conventions.
 #
@@ -42,27 +42,25 @@ from agentops.semconv import (
 #
 # Example Usage:
 # --------------
-# Suppose you have a span data object:
-#     span_data = {
-#         "user_id": "12345",
-#         "operation_name": "process_order",
-#         "status_code": 200
-#     }
 #
 # Create your mapping:
-#     attribute_mapping = {
-#         "user.id": "user_id",              # Maps "user_id" to "user.id"
-#         "operation.name": "operation_name", # Maps "operation_name" to "operation.name"
-#         "http.status_code": "status_code"   # Maps "status_code" to "http.status_code"
+#     attribute_mapping: AttributeMap = {
+#         CoreAttributes.TRACE_ID: "trace_id", 
+#         CoreAttributes.SPAN_ID: "span_id"
 #     }
 #
 # Extract the attributes:
-#     extracted_attributes = _extract_attributes_from_mapping(span_data, attribute_mapping)
-#     # Result: {"user.id": "12345", "operation.name": "process_order", "http.status_code": 200}
+#     span_data = {
+#         "trace_id": "12345",
+#         "span_id": "67890",
+#     }
+#     
+#     attributes = _extract_attributes_from_mapping(span_data, attribute_mapping)
+#     # >> {"trace.id": "12345", "span.id": "67890"}
 AttributeMap = Dict[str, str]  # target_attribute_key: source_attribute
 
 
-# IndexedAttributeMap differs from AttributeMap in that it allows for dynamic formatting of 
+# `IndexedAttributeMap` differs from `AttributeMap` in that it allows for dynamic formatting of 
 # target attribute keys using indices `i` and optionally `j`. This is particularly useful 
 # when dealing with collections of similar attributes that should be uniquely identified
 # in the output.
@@ -73,30 +71,22 @@ AttributeMap = Dict[str, str]  # target_attribute_key: source_attribute
 #
 # Example Usage:
 # --------------
-# Suppose you are processing tool calls in an LLM response:
-#
-# Define an IndexedAttribute implementation:
-#     class MessageAttributes:
-#         TOOL_CALL_ID = IndexedAttribute("ai.message.tool.{i}.id")
-#         TOOL_CALL_TYPE = IndexedAttribute("ai.message.tool.{i}.type")
 #
 # Create your mapping:
-#     tool_attribute_mapping = {
-#         MessageAttributes.TOOL_CALL_ID: "id",      # Maps tool's "id" to "ai.message.tool.{i}.id"
-#         MessageAttributes.TOOL_CALL_TYPE: "type"   # Maps tool's "type" to "ai.message.tool.{i}.type"
+#     attribute_mapping: IndexedAttributeMap = {
+#         MessageAttributes.TOOL_CALL_ID: "id", 
+#         MessageAttributes.TOOL_CALL_TYPE: "type"
 #     }
 #
 # Process tool calls:
-#     tools = [
-#         {"id": "tool_1", "type": "search"},
-#         {"id": "tool_2", "type": "calculator"}
-#     ]
+#     span_data = {
+#         "id": "tool_1",
+#         "type": "search",
+#     }
 #     
-#     # For the first tool (i=0)
-#     first_tool_attributes = _extract_attributes_from_mapping_with_index(
-#         tools[0], tool_attribute_mapping, i=0
-#     )
-#     # Result: {"ai.message.tool.0.id": "tool_1", "ai.message.tool.0.type": "search"}
+#     attributes = _extract_attributes_from_mapping_with_index(
+#         span_data, attribute_mapping, i=0)
+#     # >> {"gen_ai.request.tools.0.id": "tool_1", "gen_ai.request.tools.0.type": "search"}
 
 @runtime_checkable
 class IndexedAttribute(Protocol):
