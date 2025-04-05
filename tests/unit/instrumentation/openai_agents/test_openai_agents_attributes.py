@@ -400,10 +400,10 @@ class TestOpenAIAgentsAttributes:
         assert attrs[SpanAttributes.LLM_USAGE_COMPLETION_TOKENS] == 12
         assert attrs[SpanAttributes.LLM_USAGE_TOTAL_TOKENS] == 60
         
-        # Verify tool call information
-        tool_id_key = MessageAttributes.TOOL_CALL_ID.format(i=0, j=0)
-        tool_name_key = MessageAttributes.TOOL_CALL_NAME.format(i=0, j=0)
-        tool_args_key = MessageAttributes.TOOL_CALL_ARGUMENTS.format(i=0, j=0)
+        # Verify tool call information - note raw_responses is in index 0, output item 0, tool_call 0
+        tool_id_key = MessageAttributes.COMPLETION_TOOL_CALL_ID.format(i=0, j=0)
+        tool_name_key = MessageAttributes.COMPLETION_TOOL_CALL_NAME.format(i=0, j=0)
+        tool_args_key = MessageAttributes.COMPLETION_TOOL_CALL_ARGUMENTS.format(i=0, j=0)
         
         assert attrs[tool_id_key] == "call_xyz789"
         assert attrs[tool_name_key] == "get_weather"
@@ -510,13 +510,13 @@ class TestOpenAIAgentsAttributes:
         attrs = get_chat_completions_attributes(OPENAI_CHAT_TOOL_CALLS)
         
         # Verify tool call information is extracted
-        assert MessageAttributes.TOOL_CALL_ID.format(i=0, j=0) in attrs
-        assert MessageAttributes.TOOL_CALL_NAME.format(i=0, j=0) in attrs
-        assert MessageAttributes.TOOL_CALL_ARGUMENTS.format(i=0, j=0) in attrs
+        assert MessageAttributes.COMPLETION_TOOL_CALL_ID.format(i=0, j=0) in attrs
+        assert MessageAttributes.COMPLETION_TOOL_CALL_NAME.format(i=0, j=0) in attrs
+        assert MessageAttributes.COMPLETION_TOOL_CALL_ARGUMENTS.format(i=0, j=0) in attrs
         
         # Verify values match fixture data (specific values will depend on your fixture content)
-        tool_id = attrs[MessageAttributes.TOOL_CALL_ID.format(i=0, j=0)]
-        tool_name = attrs[MessageAttributes.TOOL_CALL_NAME.format(i=0, j=0)]
+        tool_id = attrs[MessageAttributes.COMPLETION_TOOL_CALL_ID.format(i=0, j=0)]
+        tool_name = attrs[MessageAttributes.COMPLETION_TOOL_CALL_NAME.format(i=0, j=0)]
         assert tool_id is not None and len(tool_id) > 0
         assert tool_name is not None and len(tool_name) > 0
 

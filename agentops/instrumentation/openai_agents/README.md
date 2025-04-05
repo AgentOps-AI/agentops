@@ -132,7 +132,7 @@ AGENT_SPAN_ATTRIBUTES: AttributeMap = {
 
 - Always use MessageAttributes semantic conventions for content and tool calls
 - For chat completions, use MessageAttributes.COMPLETION_CONTENT.format(i=0) 
-- For tool calls, use MessageAttributes.TOOL_CALL_NAME.format(i=0, j=0), etc.
+- For tool calls, use MessageAttributes.COMPLETION_TOOL_CALL_NAME.format(i=0, j=0), etc.
 - Never try to combine or aggregate contents into a single attribute
 - Each message component should have its own properly formatted attribute
 - This ensures proper display in OpenTelemetry backends and dashboards

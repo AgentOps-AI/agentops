@@ -6,12 +6,7 @@ for extracting and formatting attributes according to OpenTelemetry semantic con
 """
 from typing import Any
 from agentops.logging import logger
-from agentops.semconv import (
-    AgentAttributes,
-    WorkflowAttributes,
-    SpanAttributes,
-    InstrumentationAttributes
-)
+from agentops.semconv import AgentAttributes, WorkflowAttributes, SpanAttributes, InstrumentationAttributes
 
 from agentops.instrumentation.common import AttributeMap, _extract_attributes_from_mapping
 from agentops.instrumentation.common.attributes import get_common_attributes
@@ -19,11 +14,10 @@ from agentops.instrumentation.common.objects import get_uploaded_object_attribut
 from agentops.instrumentation.openai.attributes.response import get_response_response_attributes
 from agentops.instrumentation.openai_agents import LIBRARY_NAME, LIBRARY_VERSION
 from agentops.instrumentation.openai_agents.attributes.model import (
-    get_model_attributes, 
-    get_model_config_attributes, 
+    get_model_attributes,
+    get_model_config_attributes,
 )
 from agentops.instrumentation.openai_agents.attributes.completion import get_generation_output_attributes
-
 
 
 # Attribute mapping for AgentSpanData
@@ -87,86 +81,87 @@ SPEECH_GROUP_SPAN_ATTRIBUTES: AttributeMap = {
 
 def get_common_instrumentation_attributes() -> AttributeMap:
     """Get common instrumentation attributes for the OpenAI Agents instrumentation.
-    
+
     This combines the generic AgentOps attributes with OpenAI Agents specific library attributes.
-    
+
     Returns:
         Dictionary of common instrumentation attributes
     """
     attributes = get_common_attributes()
-    attributes.update({
-        InstrumentationAttributes.LIBRARY_NAME: LIBRARY_NAME,
-        InstrumentationAttributes.LIBRARY_VERSION: LIBRARY_VERSION,
-    })
+    attributes.update(
+        {
+            InstrumentationAttributes.LIBRARY_NAME: LIBRARY_NAME,
+            InstrumentationAttributes.LIBRARY_VERSION: LIBRARY_VERSION,
+        }
+    )
     return attributes
 
 
 def get_agent_span_attributes(span_data: Any) -> AttributeMap:
     """Extract attributes from an AgentSpanData object.
-    
+
     Agents are requests made to the `openai.agents` endpoint.
-    
+
     Args:
         span_data: The AgentSpanData object
-        
+
     Returns:
         Dictionary of attributes for agent span
     """
     attributes = _extract_attributes_from_mapping(span_data, AGENT_SPAN_ATTRIBUTES)
     attributes.update(get_common_attributes())
-    
+
     return attributes
 
 
 def get_function_span_attributes(span_data: Any) -> AttributeMap:
     """Extract attributes from a FunctionSpanData object.
-    
+
     Functions are requests made to the `openai.functions` endpoint.
-    
+
     Args:
         span_data: The FunctionSpanData object
-        
+
     Returns:
         Dictionary of attributes for function span
     """
     attributes = _extract_attributes_from_mapping(span_data, FUNCTION_SPAN_ATTRIBUTES)
     attributes.update(get_common_attributes())
-    
+
     return attributes
 
 
 def get_handoff_span_attributes(span_data: Any) -> AttributeMap:
     """Extract attributes from a HandoffSpanData object.
-    
+
     Handoffs are requests made to the `openai.handoffs` endpoint.
-    
+
     Args:
         span_data: The HandoffSpanData object
-        
+
     Returns:
         Dictionary of attributes for handoff span
     """
     attributes = _extract_attributes_from_mapping(span_data, HANDOFF_SPAN_ATTRIBUTES)
     attributes.update(get_common_attributes())
-    
-    return attributes
 
+    return attributes
 
 
 def get_response_span_attributes(span_data: Any) -> AttributeMap:
     """Extract attributes from a ResponseSpanData object with full LLM response processing.
-    
-    Responses are requests made to the `openai.responses` endpoint. 
-    
+
+    Responses are requests made to the `openai.responses` endpoint.
+
     This function extracts not just the basic input/response mapping but also processes
     the rich response object to extract LLM-specific attributes like token usage,
     model information, content, etc.
-    
-    TODO tool calls arrive from this span type; need to figure out why that is. 
-    
+
+    TODO tool calls arrive from this span type; need to figure out why that is.
+
     Args:
         span_data: The ResponseSpanData object
-        
+
     Returns:
         Dictionary of attributes for response span
     """
@@ -176,49 +171,49 @@ def get_response_span_attributes(span_data: Any) -> AttributeMap:
 
     if span_data.response:
         attributes.update(get_response_response_attributes(span_data.response))
-    
+
     return attributes
 
 
 def get_generation_span_attributes(span_data: Any) -> AttributeMap:
     """Extract attributes from a GenerationSpanData object.
-    
+
     Generations are requests made to the `openai.completions` endpoint.
-    
-    # TODO this has not been extensively tested yet as there is a flag that needs ot be set to use the 
-    # completions API with the Agents SDK. 
+
+    # TODO this has not been extensively tested yet as there is a flag that needs ot be set to use the
+    # completions API with the Agents SDK.
     # We can enable chat.completions API by calling:
     # `from agents import set_default_openai_api`
     # `set_default_openai_api("chat_completions")`
-    
+
     Args:
         span_data: The GenerationSpanData object
-        
+
     Returns:
         Dictionary of attributes for generation span
     """
     attributes = _extract_attributes_from_mapping(span_data, GENERATION_SPAN_ATTRIBUTES)
     attributes.update(get_common_attributes())
-    
+
     if span_data.model:
         attributes.update(get_model_attributes(span_data.model))
-    
+
     # Process output for GenerationSpanData if available
     if span_data.output:
         attributes.update(get_generation_output_attributes(span_data.output))
-        
+
     # Add model config attributes if present
     if span_data.model_config:
         attributes.update(get_model_config_attributes(span_data.model_config))
-    
+
     return attributes
 
 
 def get_transcription_span_attributes(span_data: Any) -> AttributeMap:
     """Extract attributes from a TranscriptionSpanData object.
-    
+
     This represents a conversion from audio to text.
-    
+
     Args:
         span_data: The TranscriptionSpanData object
     Returns:
@@ -226,90 +221,90 @@ def get_transcription_span_attributes(span_data: Any) -> AttributeMap:
     """
     from agentops import get_client
     from agentops.client.api.types import UploadedObjectResponse
-    
+
     client = get_client()
-    
+
     attributes = _extract_attributes_from_mapping(span_data, TRANSCRIPTION_SPAN_ATTRIBUTES)
     attributes.update(get_common_attributes())
-    
+
     if span_data.input:
         prefix = WorkflowAttributes.WORKFLOW_INPUT
         uploaded_object: UploadedObjectResponse = client.api.v4.upload_object(span_data.input)
         attributes.update(get_uploaded_object_attributes(uploaded_object, prefix))
-    
+
     if span_data.model:
         attributes.update(get_model_attributes(span_data.model))
-    
+
     if span_data.model_config:
         attributes.update(get_model_config_attributes(span_data.model_config))
-    
+
     return attributes
 
 
 def get_speech_span_attributes(span_data: Any) -> AttributeMap:
     """Extract attributes from a SpeechSpanData object.
-    
+
     This represents a conversion from audio to text.
-    
+
     Args:
         span_data: The SpeechSpanData object
-        
+
     Returns:
         Dictionary of attributes for speech span
     """
     from agentops import get_client
     from agentops.client.api.types import UploadedObjectResponse
-    
+
     client = get_client()
-    
+
     attributes = _extract_attributes_from_mapping(span_data, SPEECH_SPAN_ATTRIBUTES)
     attributes.update(get_common_attributes())
-    
+
     if span_data.output:
         prefix = WorkflowAttributes.WORKFLOW_OUTPUT
         uploaded_object: UploadedObjectResponse = client.api.v4.upload_object(span_data.output)
         attributes.update(get_uploaded_object_attributes(uploaded_object, prefix))
-    
+
     if span_data.model:
         attributes.update(get_model_attributes(span_data.model))
-    
+
     if span_data.model_config:
         attributes.update(get_model_config_attributes(span_data.model_config))
-    
+
     return attributes
 
 
 def get_speech_group_span_attributes(span_data: Any) -> AttributeMap:
     """Extract attributes from a SpeechGroupSpanData object.
-    
+
     This represents a conversion from audio to text.
-    
+
     Args:
         span_data: The SpeechGroupSpanData object
-        
+
     Returns:
         Dictionary of attributes for speech group span
     """
     attributes = _extract_attributes_from_mapping(span_data, SPEECH_GROUP_SPAN_ATTRIBUTES)
     attributes.update(get_common_attributes())
-    
+
     return attributes
 
 
 def get_span_attributes(span_data: Any) -> AttributeMap:
     """Get attributes for a span based on its type.
-    
+
     This function centralizes attribute extraction by delegating to type-specific
     getter functions.
-    
+
     Args:
         span_data: The span data object
-        
+
     Returns:
         Dictionary of attributes for the span
     """
     span_type = span_data.__class__.__name__
-    
+
     if span_type == "AgentSpanData":
         attributes = get_agent_span_attributes(span_data)
     elif span_type == "FunctionSpanData":
@@ -329,7 +324,5 @@ def get_span_attributes(span_data: Any) -> AttributeMap:
     else:
         logger.debug(f"[agentops.instrumentation.openai_agents.attributes] Unknown span type: {span_type}")
         attributes = {}
-    
+
     return attributes
-
-
