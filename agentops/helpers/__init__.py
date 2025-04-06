@@ -45,4 +45,5 @@ __all__ = [
     "get_env_bool",
     "get_env_int",
     "get_env_list",
+    "get_tags_from_config",
 ]

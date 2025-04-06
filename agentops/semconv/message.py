@@ -4,6 +4,10 @@
 class MessageAttributes:
     """Semantic conventions for message-related attributes in AI systems."""
 
+    PROMPT_ROLE = "gen_ai.prompt.{i}.role"  # Role of the prompt message
+    PROMPT_CONTENT = "gen_ai.prompt.{i}.content"  # Content of the prompt message
+    PROMPT_TYPE = "gen_ai.prompt.{i}.type"  # Type of the prompt message
+
     # Indexed completions (with {i} for interpolation)
     COMPLETION_ID = "gen_ai.completion.{i}.id"  # Unique identifier for the completion
     

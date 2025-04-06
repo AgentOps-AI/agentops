@@ -6,27 +6,24 @@ for extracting and formatting attributes according to OpenTelemetry semantic con
 """
 from typing import Any
 from agentops.logging import logger
-from agentops.helpers import get_agentops_version
 from agentops.semconv import (
-    CoreAttributes,
     AgentAttributes,
     WorkflowAttributes,
     SpanAttributes,
     InstrumentationAttributes
 )
+
+from agentops.instrumentation.common import AttributeMap, _extract_attributes_from_mapping
+from agentops.instrumentation.common.attributes import get_common_attributes
+from agentops.instrumentation.common.objects import get_uploaded_object_attributes
+from agentops.instrumentation.openai.attributes.response import get_response_response_attributes
 from agentops.instrumentation.openai_agents import LIBRARY_NAME, LIBRARY_VERSION
-from agentops.instrumentation.openai_agents.attributes import AttributeMap, _extract_attributes_from_mapping
-from agentops.instrumentation.openai_agents.attributes.model import extract_model_config
-from agentops.instrumentation.openai_agents.attributes.response import get_response_response_attributes
+from agentops.instrumentation.openai_agents.attributes.model import (
+    get_model_attributes, 
+    get_model_config_attributes, 
+)
 from agentops.instrumentation.openai_agents.attributes.completion import get_generation_output_attributes
 
-
-# Common attribute mapping for all span types
-COMMON_ATTRIBUTES: AttributeMap = {
-    CoreAttributes.TRACE_ID: "trace_id",
-    CoreAttributes.SPAN_ID: "span_id",
-    CoreAttributes.PARENT_ID: "parent_id",
-}
 
 
 # Attribute mapping for AgentSpanData
@@ -57,8 +54,6 @@ HANDOFF_SPAN_ATTRIBUTES: AttributeMap = {
 
 # Attribute mapping for GenerationSpanData
 GENERATION_SPAN_ATTRIBUTES: AttributeMap = {
-    SpanAttributes.LLM_REQUEST_MODEL: "model",
-    SpanAttributes.LLM_RESPONSE_MODEL: "model",
     SpanAttributes.LLM_PROMPTS: "input",
 }
 
@@ -69,76 +64,93 @@ RESPONSE_SPAN_ATTRIBUTES: AttributeMap = {
 }
 
 
+# Attribute mapping for TranscriptionSpanData
+TRANSCRIPTION_SPAN_ATTRIBUTES: AttributeMap = {
+    # `input` and `input_format` are handled below
+    WorkflowAttributes.WORKFLOW_OUTPUT: "output",
+}
+
+
+# Attribute mapping for SpeechSpanData
+SPEECH_SPAN_ATTRIBUTES: AttributeMap = {
+    WorkflowAttributes.WORKFLOW_INPUT: "input",
+    # `output` and `output_format` are handled below
+    # TODO `first_content_at` is not converted
+}
+
+
+# Attribute mapping for SpeechGroupSpanData
+SPEECH_GROUP_SPAN_ATTRIBUTES: AttributeMap = {
+    WorkflowAttributes.WORKFLOW_INPUT: "input",
+}
+
+
 def get_common_instrumentation_attributes() -> AttributeMap:
-    """Get common instrumentation attributes used across traces and spans.
+    """Get common instrumentation attributes for the OpenAI Agents instrumentation.
+    
+    This combines the generic AgentOps attributes with OpenAI Agents specific library attributes.
     
     Returns:
         Dictionary of common instrumentation attributes
     """
-    return {
-        InstrumentationAttributes.NAME: "agentops",
-        InstrumentationAttributes.VERSION: get_agentops_version(),
+    attributes = get_common_attributes()
+    attributes.update({
         InstrumentationAttributes.LIBRARY_NAME: LIBRARY_NAME,
         InstrumentationAttributes.LIBRARY_VERSION: LIBRARY_VERSION,
-    }
+    })
+    return attributes
 
 
-def get_base_trace_attributes(trace: Any) -> AttributeMap:
-    """Create the base attributes dictionary for an OpenTelemetry trace.
+def get_agent_span_attributes(span_data: Any) -> AttributeMap:
+    """Extract attributes from an AgentSpanData object.
+    
+    Agents are requests made to the `openai.agents` endpoint.
     
     Args:
-        trace: The trace object to extract attributes from
+        span_data: The AgentSpanData object
         
     Returns:
-        Dictionary containing base trace attributes
+        Dictionary of attributes for agent span
     """
-    if not hasattr(trace, 'trace_id'):
-        logger.warning("Cannot create trace attributes: missing trace_id")
-        return {}
-    
-    attributes = {
-        WorkflowAttributes.WORKFLOW_NAME: trace.name,
-        CoreAttributes.TRACE_ID: trace.trace_id,
-        WorkflowAttributes.WORKFLOW_STEP_TYPE: "trace",
-        **get_common_instrumentation_attributes()
-    }
+    attributes = _extract_attributes_from_mapping(span_data, AGENT_SPAN_ATTRIBUTES)
+    attributes.update(get_common_attributes())
     
     return attributes
 
 
-def get_base_span_attributes(span: Any) -> AttributeMap:
-    """Create the base attributes dictionary for an OpenTelemetry span.
+def get_function_span_attributes(span_data: Any) -> AttributeMap:
+    """Extract attributes from a FunctionSpanData object.
+    
+    Functions are requests made to the `openai.functions` endpoint.
     
     Args:
-        span: The span object to extract attributes from
+        span_data: The FunctionSpanData object
         
     Returns:
-        Dictionary containing base span attributes
+        Dictionary of attributes for function span
     """
-    span_id = getattr(span, 'span_id', 'unknown')
-    trace_id = getattr(span, 'trace_id', 'unknown')
-    parent_id = getattr(span, 'parent_id', None)
+    attributes = _extract_attributes_from_mapping(span_data, FUNCTION_SPAN_ATTRIBUTES)
+    attributes.update(get_common_attributes())
     
-    attributes = {
-        CoreAttributes.TRACE_ID: trace_id,
-        CoreAttributes.SPAN_ID: span_id,
-        **get_common_instrumentation_attributes(),
-    }
-    
-    if parent_id:
-        attributes[CoreAttributes.PARENT_ID] = parent_id
-        
     return attributes
 
 
-get_agent_span_attributes = lambda span_data: \
-    _extract_attributes_from_mapping(span_data, AGENT_SPAN_ATTRIBUTES)
+def get_handoff_span_attributes(span_data: Any) -> AttributeMap:
+    """Extract attributes from a HandoffSpanData object.
+    
+    Handoffs are requests made to the `openai.handoffs` endpoint.
+    
+    Args:
+        span_data: The HandoffSpanData object
+        
+    Returns:
+        Dictionary of attributes for handoff span
+    """
+    attributes = _extract_attributes_from_mapping(span_data, HANDOFF_SPAN_ATTRIBUTES)
+    attributes.update(get_common_attributes())
+    
+    return attributes
 
-get_function_span_attributes = lambda span_data: \
-    _extract_attributes_from_mapping(span_data, FUNCTION_SPAN_ATTRIBUTES)
-
-get_handoff_span_attributes = lambda span_data: \
-    _extract_attributes_from_mapping(span_data, HANDOFF_SPAN_ATTRIBUTES)
 
 
 def get_response_span_attributes(span_data: Any) -> AttributeMap:
@@ -160,6 +172,7 @@ def get_response_span_attributes(span_data: Any) -> AttributeMap:
     """
     # Get basic attributes from mapping
     attributes = _extract_attributes_from_mapping(span_data, RESPONSE_SPAN_ATTRIBUTES)
+    attributes.update(get_common_attributes())
 
     if span_data.response:
         attributes.update(get_response_response_attributes(span_data.response))
@@ -185,17 +198,100 @@ def get_generation_span_attributes(span_data: Any) -> AttributeMap:
         Dictionary of attributes for generation span
     """
     attributes = _extract_attributes_from_mapping(span_data, GENERATION_SPAN_ATTRIBUTES)
+    attributes.update(get_common_attributes())
+    
+    if span_data.model:
+        attributes.update(get_model_attributes(span_data.model))
     
     # Process output for GenerationSpanData if available
     if span_data.output:
-        # Get attributes with the dedicated method that handles all formats
-        generation_attributes = get_generation_output_attributes(span_data.output)
-        attributes.update(generation_attributes)
+        attributes.update(get_generation_output_attributes(span_data.output))
         
     # Add model config attributes if present
     if span_data.model_config:
-        model_config_attributes = extract_model_config(span_data.model_config)
-        attributes.update(model_config_attributes)
+        attributes.update(get_model_config_attributes(span_data.model_config))
+    
+    return attributes
+
+
+def get_transcription_span_attributes(span_data: Any) -> AttributeMap:
+    """Extract attributes from a TranscriptionSpanData object.
+    
+    This represents a conversion from audio to text.
+    
+    Args:
+        span_data: The TranscriptionSpanData object
+    Returns:
+        Dictionary of attributes for transcription span
+    """
+    from agentops import get_client
+    from agentops.client.api.types import UploadedObjectResponse
+    
+    client = get_client()
+    
+    attributes = _extract_attributes_from_mapping(span_data, TRANSCRIPTION_SPAN_ATTRIBUTES)
+    attributes.update(get_common_attributes())
+    
+    if span_data.input:
+        prefix = WorkflowAttributes.WORKFLOW_INPUT
+        uploaded_object: UploadedObjectResponse = client.api.v4.upload_object(span_data.input)
+        attributes.update(get_uploaded_object_attributes(uploaded_object, prefix))
+    
+    if span_data.model:
+        attributes.update(get_model_attributes(span_data.model))
+    
+    if span_data.model_config:
+        attributes.update(get_model_config_attributes(span_data.model_config))
+    
+    return attributes
+
+
+def get_speech_span_attributes(span_data: Any) -> AttributeMap:
+    """Extract attributes from a SpeechSpanData object.
+    
+    This represents a conversion from audio to text.
+    
+    Args:
+        span_data: The SpeechSpanData object
+        
+    Returns:
+        Dictionary of attributes for speech span
+    """
+    from agentops import get_client
+    from agentops.client.api.types import UploadedObjectResponse
+    
+    client = get_client()
+    
+    attributes = _extract_attributes_from_mapping(span_data, SPEECH_SPAN_ATTRIBUTES)
+    attributes.update(get_common_attributes())
+    
+    if span_data.output:
+        prefix = WorkflowAttributes.WORKFLOW_OUTPUT
+        uploaded_object: UploadedObjectResponse = client.api.v4.upload_object(span_data.output)
+        attributes.update(get_uploaded_object_attributes(uploaded_object, prefix))
+    
+    if span_data.model:
+        attributes.update(get_model_attributes(span_data.model))
+    
+    if span_data.model_config:
+        attributes.update(get_model_config_attributes(span_data.model_config))
+    
+    return attributes
+
+
+def get_speech_group_span_attributes(span_data: Any) -> AttributeMap:
+    """Extract attributes from a SpeechGroupSpanData object.
+    
+    This represents a conversion from audio to text.
+    
+    Args:
+        span_data: The SpeechGroupSpanData object
+        
+    Returns:
+        Dictionary of attributes for speech group span
+    """
+    attributes = _extract_attributes_from_mapping(span_data, SPEECH_GROUP_SPAN_ATTRIBUTES)
+    attributes.update(get_common_attributes())
     
     return attributes
 
@@ -224,6 +320,12 @@ def get_span_attributes(span_data: Any) -> AttributeMap:
         attributes = get_handoff_span_attributes(span_data)
     elif span_type == "ResponseSpanData":
         attributes = get_response_span_attributes(span_data)
+    elif span_type == "TranscriptionSpanData":
+        attributes = get_transcription_span_attributes(span_data)
+    elif span_type == "SpeechSpanData":
+        attributes = get_speech_span_attributes(span_data)
+    elif span_type == "SpeechGroupSpanData":
+        attributes = get_speech_group_span_attributes(span_data)
     else:
         logger.debug(f"[agentops.instrumentation.openai_agents.attributes] Unknown span type: {span_type}")
         attributes = {}

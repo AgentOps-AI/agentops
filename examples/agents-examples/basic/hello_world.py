@@ -9,7 +9,7 @@ load_dotenv()
 import agentops
 
 async def main():
-    agentops.init()
+    agentops.init(tags=["test", "openai-agents"])
     
     agent = Agent(
         name="Hello World Agent",
