@@ -7,7 +7,7 @@ class SpanAttributes:
     #
     # TODO: There is an important deviation from the OpenTelemetry spec in our current implementation.
     # In our OpenAI instrumentation, we're mapping from source→target keys incorrectly in the _token_type function
-    # in shared/__init__.py. According to our established pattern, mapping dictionaries should consistently use 
+    # in shared/__init__.py. According to our established pattern, mapping dictionaries should consistently use
     # target→source format (where keys are target attributes and values are source fields).
     #
     # Current implementation (incorrect):
@@ -20,7 +20,7 @@ class SpanAttributes:
     #     "input": "prompt_tokens",  # target → source
     #     "output": "completion_tokens"
     # }
-    # 
+    #
     # Then we have to adapt code using the function to handle the inverted mapping.
 
     # System
@@ -82,3 +82,19 @@ class SpanAttributes:
     # Operation attributes
     OPERATION_NAME = "operation.name"
     OPERATION_VERSION = "operation.version"
+
+    # Autogen specific attributes
+    GEN_AI_ENDPOINT = "gen_ai.endpoint"
+    GEN_AI_SYSTEM = "gen_ai.system"
+    GEN_AI_SYSTEM_AG2 = "ag2"
+    GEN_AI_OPERATION = "gen_ai.operation.name"
+    GEN_AI_OPERATION_TYPE_AGENT = "agent"
+    GEN_AI_AGENT_ROLE = "gen_ai.agent.role"
+    GEN_AI_REQUEST_MODEL = "gen_ai.request.model"
+    GEN_AI_AGENT_NAME = "gen_ai.agent.name"
+    GEN_AI_SDK_VERSION = "gen_ai.sdk.version"
+    GEN_AI_OPERATION_TYPE_CREATE_AGENT = "create_agent"
+    GEN_AI_AGENT_DESCRIPTION = "gen_ai.agent.description"
+    GEN_AI_RESPONSE_MODEL = "gen_ai.response.model"
+    GEN_AI_SERVER_TTFT = "gen_ai.server.time_to_first_token"
+    GEN_AI_OPERATION_TYPE_EXECUTE_AGENT_TASK = "execute_task"
