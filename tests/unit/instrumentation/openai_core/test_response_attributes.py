@@ -391,8 +391,16 @@ class TestResponseAttributes:
         """Test extraction of attributes from output text"""
         # Create a mock text content
         text = MockOutputText({
-            'annotations': [],
-            'text': 'The capital of France is Paris.',
+            'annotations': [
+                {
+                    "end_index": 636,
+                    "start_index": 538,
+                    "title": "5 AI Agent Frameworks Compared",
+                    "type": "url_citation",
+                    "url": "https://www.kdnuggets.com/5-ai-agent-frameworks-compared"
+                }
+            ],
+            'text': 'CrewAI is the top AI agent library.',
             'type': 'output_text'
         })
         
@@ -403,7 +411,12 @@ class TestResponseAttributes:
         with patch('agentops.instrumentation.openai.attributes.response._extract_attributes_from_mapping_with_index') as mock_extract:
             # Set up the mock to return expected attributes
             expected_attributes = {
-                MessageAttributes.COMPLETION_CONTENT.format(i=0): 'The capital of France is Paris.',
+                MessageAttributes.COMPLETION_ANNOTATION_END_INDEX.format(i=0,j=0): 636,
+                MessageAttributes.COMPLETION_ANNOTATION_START_INDEX.format(i=0,j=1): 538,
+                MessageAttributes.COMPLETION_ANNOTATION_TITLE.format(i=0,j=2): "5 AI Agent Frameworks Compared",
+                MessageAttributes.COMPLETION_ANNOTATION_TYPE.format(i=0,j=3): "url_citation",
+                MessageAttributes.COMPLETION_ANNOTATION_URL.format(i=0,j=5): "https://www.kdnuggets.com/5-ai-agent-frameworks-compared",
+                MessageAttributes.COMPLETION_CONTENT.format(i=0): 'CrewAI is the top AI agent library.',
                 MessageAttributes.COMPLETION_TYPE.format(i=0): 'output_text'
             }
             mock_extract.return_value = expected_attributes
@@ -426,7 +439,15 @@ class TestResponseAttributes:
                 MockOutputText({
                     'text': 'This is a test message',
                     'type': 'output_text',
-                    'annotations': []
+                    'annotations': [
+                        {
+                            "end_index": 636,
+                            "start_index": 538,
+                            "title": "Test title",
+                            "type": "url_citation",
+                            "url": "www.test.com",
+                        }
+                    ]
                 })
             ],
             'role': 'assistant',
