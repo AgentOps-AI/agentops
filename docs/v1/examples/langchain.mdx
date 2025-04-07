@@ -65,7 +65,7 @@ Pass in your API key, and optionally any tags to describe this session for easie
 
 ```python
 agentops_handler = AgentOpsLangchainCallbackHandler(
-    api_key=AGENTOPS_API_KEY, tags=["Langchain Example"]
+    api_key=AGENTOPS_API_KEY, default_tags=["Langchain Example"]
 )
 
 llm = ChatOpenAI(

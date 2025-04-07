@@ -49,6 +49,7 @@ We'll take a look at how these can be used to create powerful, stateful experien
 ```python
 import json
 
+
 def show_json(obj):
     display(json.loads(obj.model_dump_json()))
 ```
@@ -105,7 +106,7 @@ OPENAI_API_KEY = os.getenv("OPENAI_API_KEY") or "<your_openai_key>"
 
 
 ```python
-agentops.init(api_key=AGENTOPS_API_KEY, tags=["openai", "beta-assistants"])
+agentops.init(api_key=AGENTOPS_API_KEY, default_tags=["openai", "beta-assistants"])
 client = OpenAI(api_key=OPENAI_API_KEY)
 ```
 
@@ -186,6 +187,7 @@ To know when the Assistant has completed processing, we can poll the Run in a lo
 ```python
 import time
 
+
 def wait_on_run(run, thread):
     while run.status == "queued" or run.status == "in_progress":
         run = client.beta.threads.runs.retrieve(
@@ -223,9 +225,7 @@ Let's ask our Assistant to explain the result a bit further!
 
 ```python
 # Create a message to append to our thread
-message = client.beta.threads.messages.create(
-    thread_id=thread.id, role="user", content="Could you explain this to me?"
-)
+message = client.beta.threads.messages.create(thread_id=thread.id, role="user", content="Could you explain this to me?")
 
 # Execute our run
 run = client.beta.threads.runs.create(
@@ -237,9 +237,7 @@ run = client.beta.threads.runs.create(
 wait_on_run(run, thread)
 
 # Retrieve all the messages added after our last user message
-messages = client.beta.threads.messages.list(
-    thread_id=thread.id, order="asc", after=message.id
-)
+messages = client.beta.threads.messages.list(thread_id=thread.id, order="asc", after=message.id)
 show_json(messages)
 ```
 
@@ -265,10 +263,9 @@ MATH_ASSISTANT_ID = assistant.id  # or a hard-coded ID like "asst-..."
 
 client = OpenAI(api_key=os.environ.get("OPENAI_API_KEY", "<your OpenAI API key if not set as env var>"))
 
+
 def submit_message(assistant_id, thread, user_message):
-    client.beta.threads.messages.create(
-        thread_id=thread.id, role="user", content=user_message
-    )
+    client.beta.threads.messages.create(thread_id=thread.id, role="user", content=user_message)
     return client.beta.threads.runs.create(
         thread_id=thread.id,
         assistant_id=assistant_id,
@@ -293,9 +290,7 @@ def create_thread_and_run(user_input):
 
 
 # Emulating concurrent user requests
-thread1, run1 = create_thread_and_run(
-    "I need to solve the equation `3x + 11 = 14`. Can you help me?"
-)
+thread1, run1 = create_thread_and_run("I need to solve the equation `3x + 11 = 14`. Can you help me?")
 thread2, run2 = create_thread_and_run("Could you explain linear algebra to me?")
 thread3, run3 = create_thread_and_run("I don't like math. What can I do?")
 
@@ -307,8 +302,6 @@ Once all Runs are going, we can wait on each and get the responses.
 
 
 ```python
-import time
-
 # Pretty printing helper
 def pretty_print(messages):
     print("# Messages")
@@ -380,9 +373,7 @@ Now, let's ask the Assistant to use its new tool.
 
 
 ```python
-thread, run = create_thread_and_run(
-    "Generate the first 20 fibbonaci numbers with code."
-)
+thread, run = create_thread_and_run("Generate the first 20 fibbonaci numbers with code.")
 run = wait_on_run(run, thread)
 pretty_print(get_response(thread))
 ```
@@ -399,9 +390,7 @@ A Run is composed of one or more Steps. Like a Run, each Step has a `status` tha
 
 
 ```python
-run_steps = client.beta.threads.runs.steps.list(
-    thread_id=thread.id, run_id=run.id, order="asc"
-)
+run_steps = client.beta.threads.runs.steps.list(thread_id=thread.id, run_id=run.id, order="asc")
 ```
 
 Let's take a look at each Step's `step_details`.
@@ -653,19 +642,17 @@ tool_calls = run.required_action.submit_tool_outputs.tool_calls
 for tool_call in tool_calls:
     arguments = json.loads(tool_call.function.arguments)
     responses = display_quiz(arguments["title"], arguments["questions"])
-    tool_outputs.append({
-        "tool_call_id": tool_call.id,
-        "output": json.dumps(responses),
-    })
+    tool_outputs.append(
+        {
+            "tool_call_id": tool_call.id,
+            "output": json.dumps(responses),
+        }
+    )
 ```
 
 
 ```python
-run = client.beta.threads.runs.submit_tool_outputs(
-    thread_id=thread.id,
-    run_id=run.id,
-    tool_outputs=tool_outputs
-)
+run = client.beta.threads.runs.submit_tool_outputs(thread_id=thread.id, run_id=run.id, tool_outputs=tool_outputs)
 show_json(run)
 ```
 
@@ -676,15 +663,6 @@ We can now wait for the Run to complete once again, and check our Thread!
 ```python
 run = wait_on_run(run, thread)
 pretty_print(get_response(thread))
-```
-
-Now let's end the AgentOps session. By default, AgentOps will end the session in the "Intedeterminate" state. You can also end the session in the "Success" or "Failure" state.
-
-We will end the session in the "Success" state.
-
-
-```python
-agentops.end_session(end_state="Success")
 ```
 
 Woohoo 🎉
