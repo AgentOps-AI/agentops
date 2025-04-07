@@ -185,9 +185,9 @@ class TestAgentsSdkInstrumentation:
             mock_response_attrs.return_value = {
                 MessageAttributes.COMPLETION_CONTENT.format(i=0): "I'll help you find the current weather for New York City.",
                 MessageAttributes.COMPLETION_ROLE.format(i=0): "assistant",
-                MessageAttributes.TOOL_CALL_ID.format(i=0, j=0): "call_xyz789",
-                MessageAttributes.TOOL_CALL_NAME.format(i=0, j=0): "get_weather",
-                MessageAttributes.TOOL_CALL_ARGUMENTS.format(i=0, j=0): "{\"location\":\"New York City\",\"units\":\"celsius\"}",
+                MessageAttributes.COMPLETION_TOOL_CALL_ID.format(i=0, j=0): "call_xyz789",
+                MessageAttributes.COMPLETION_TOOL_CALL_NAME.format(i=0, j=0): "get_weather",
+                MessageAttributes.COMPLETION_TOOL_CALL_ARGUMENTS.format(i=0, j=0): "{\"location\":\"New York City\",\"units\":\"celsius\"}",
                 SpanAttributes.LLM_SYSTEM: "openai",
                 SpanAttributes.LLM_USAGE_PROMPT_TOKENS: 48,
                 SpanAttributes.LLM_USAGE_COMPLETION_TOKENS: 12,
@@ -225,12 +225,12 @@ class TestAgentsSdkInstrumentation:
             captured_attributes[SpanAttributes.LLM_RESPONSE_MODEL] = "gpt-4o"
             
             # Verify tool call attributes were set correctly
-            assert MessageAttributes.TOOL_CALL_NAME.format(i=0, j=0) in captured_attributes
-            assert captured_attributes[MessageAttributes.TOOL_CALL_NAME.format(i=0, j=0)] == "get_weather"
-            assert MessageAttributes.TOOL_CALL_ID.format(i=0, j=0) in captured_attributes
-            assert captured_attributes[MessageAttributes.TOOL_CALL_ID.format(i=0, j=0)] == "call_xyz789"
-            assert MessageAttributes.TOOL_CALL_ARGUMENTS.format(i=0, j=0) in captured_attributes
-            assert "{\"location\":\"New York City\",\"units\":\"celsius\"}" in captured_attributes[MessageAttributes.TOOL_CALL_ARGUMENTS.format(i=0, j=0)]
+            assert MessageAttributes.COMPLETION_TOOL_CALL_NAME.format(i=0, j=0) in captured_attributes
+            assert captured_attributes[MessageAttributes.COMPLETION_TOOL_CALL_NAME.format(i=0, j=0)] == "get_weather"
+            assert MessageAttributes.COMPLETION_TOOL_CALL_ID.format(i=0, j=0) in captured_attributes
+            assert captured_attributes[MessageAttributes.COMPLETION_TOOL_CALL_ID.format(i=0, j=0)] == "call_xyz789"
+            assert MessageAttributes.COMPLETION_TOOL_CALL_ARGUMENTS.format(i=0, j=0) in captured_attributes
+            assert "{\"location\":\"New York City\",\"units\":\"celsius\"}" in captured_attributes[MessageAttributes.COMPLETION_TOOL_CALL_ARGUMENTS.format(i=0, j=0)]
             
             # Verify the text content is also captured
             assert MessageAttributes.COMPLETION_CONTENT.format(i=0) in captured_attributes
