@@ -27,4 +27,5 @@ class MessageAttributes:
     COMPLETION_TOOL_CALL_TYPE = "gen_ai.completion.{i}.tool_calls.{j}.type"  # Type of tool call {j} in completion {i}
     COMPLETION_TOOL_CALL_NAME = "gen_ai.completion.{i}.tool_calls.{j}.name"  # Name of the tool called in tool call {j} in completion {i}
     COMPLETION_TOOL_CALL_DESCRIPTION = "gen_ai.completion.{i}.tool_calls.{j}.description"  # Description of the tool call {j} in completion {i}
+    COMPLETION_TOOL_CALL_STATUS = "gen_ai.completion.{i}.tool_calls.{j}.status" # Status of the tool call {j} in completion {i}
     COMPLETION_TOOL_CALL_ARGUMENTS = "gen_ai.completion.{i}.tool_calls.{j}.arguments"  # Arguments for tool call {j} in completion {i}

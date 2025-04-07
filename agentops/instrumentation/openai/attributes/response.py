@@ -244,7 +244,7 @@ RESPONSE_OUTPUT_TOOL_WEB_SEARCH_ATTRIBUTES: IndexedAttributeMap = {
     # )
     MessageAttributes.COMPLETION_TOOL_CALL_ID: "id",
     MessageAttributes.COMPLETION_TOOL_CALL_TYPE: "type",
-    MessageAttributes.COMPLETION_TOOL_CALL_NAME: "type",
+    MessageAttributes.COMPLETION_TOOL_CALL_STATUS: "status",
 }
 
 
