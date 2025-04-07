@@ -247,6 +247,21 @@ RESPONSE_OUTPUT_TOOL_WEB_SEARCH_ATTRIBUTES: IndexedAttributeMap = {
     MessageAttributes.COMPLETION_TOOL_CALL_STATUS: "status",
 }
 
+RESPONSE_OUTPUT_TOOL_WEB_SEARCH_URL_ANNOTATIONS: IndexedAttributeMap = {
+    # AnnotationURLCitation(
+    #     end_index=747,
+    #     start_index=553,
+    #     title="You can now play a real-time AI-rendered Quake II in your browser",
+    #     type='url_citation',
+    #     url='https://www.tomshardware.com/video-games/you-can-now-play-a-real-time-ai-rendered-quake-ii-in-your-browser-microsofts-whamm-offers-generative-ai-for-games?utm_source=openai'
+    # )
+    MessageAttributes.COMPLETION_ANNOTATION_END_INDEX: "end_index",
+    MessageAttributes.COMPLETION_ANNOTATION_START_INDEX: "start_index",
+    MessageAttributes.COMPLETION_ANNOTATION_TITLE: "title",
+    MessageAttributes.COMPLETION_ANNOTATION_TYPE: "type",
+    MessageAttributes.COMPLETION_ANNOTATION_URL: "url",
+}
+
 
 RESPONSE_OUTPUT_TOOL_COMPUTER_ATTRIBUTES: IndexedAttributeMap = {
     # ResponseComputerToolCall(
@@ -432,8 +447,18 @@ def get_response_output_attributes(output: List['ResponseOutputTypes']) -> Attri
 def get_response_output_text_attributes(output_text: 'ResponseOutputText', index: int) -> AttributeMap:
     """Handles interpretation of an openai ResponseOutputText object."""
     # This function is a helper to handle the ResponseOutputText type specifically
-    return _extract_attributes_from_mapping_with_index(
+    attributes = _extract_attributes_from_mapping_with_index(
         output_text, RESPONSE_OUTPUT_TEXT_ATTRIBUTES, index)
+
+    if hasattr(output_text, "annotations"):
+        for j, output_text_annotation in enumerate(output_text.annotations):
+            attributes.update(
+                _extract_attributes_from_mapping_with_index(
+                    output_text_annotation, RESPONSE_OUTPUT_TOOL_WEB_SEARCH_URL_ANNOTATIONS, i=index, j=j
+                )
+            )
+
+    return attributes
 
 
 def get_response_output_message_attributes(index: int, message: 'ResponseOutputMessage') -> AttributeMap:
