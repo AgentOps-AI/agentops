@@ -14,6 +14,7 @@ from opentelemetry.sdk.metrics.export import PeriodicExportingMetricReader
 from opentelemetry.sdk.resources import Resource
 from opentelemetry.sdk.trace import SpanProcessor, TracerProvider
 from opentelemetry.sdk.trace.export import BatchSpanProcessor
+from opentelemetry import context as context_api
 
 from agentops.exceptions import AgentOpsClientNotInitializedException
 from agentops.logging import logger
@@ -89,6 +90,9 @@ def setup_telemetry(
     )
     meter_provider = MeterProvider(resource=resource, metric_readers=[metric_reader])
     metrics.set_meter_provider(meter_provider)
+
+    # Initialize root context
+    context_api.get_current()
 
     logger.debug("Telemetry system initialized")
 
