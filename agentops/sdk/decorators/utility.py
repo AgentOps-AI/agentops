@@ -227,7 +227,26 @@ def _record_entity_output(span: trace.Span, result: Any) -> None:
 
 
 def _finalize_span(span: trace.Span, token: Any) -> None:
-    """End the span and detach the context token"""
+    """
+    Finalizes a span and cleans up its context.
+    
+    This function performs three critical tasks needed for proper span lifecycle management:
+    1. Ends the span to mark it complete and calculate its duration
+    2. Detaches the context token to prevent memory leaks and maintain proper context hierarchy
+    3. Forces immediate span export rather than waiting for batch processing
+    
+    Use cases:
+    - Session span termination: Ensures root spans are properly ended and exported
+    - Shutdown handling: Ensures spans are flushed during application termination
+    - Async operations: Finalizes spans from asynchronous execution contexts
+    
+    Without proper finalization, spans may not trigger on_end events in processors,
+    potentially resulting in missing or incomplete telemetry data.
+    
+    Args:
+        span: The span to finalize
+        token: The context token to detach
+    """
     # End the span
     if span:
         try:
@@ -243,10 +262,14 @@ def _finalize_span(span: trace.Span, token: Any) -> None:
             pass
     
     # Try to flush span processors
+    # Note: force_flush() might not be available in certain scenarios:
+    # - During application shutdown when the provider may be partially destroyed
+    # We use try/except to gracefully handle these cases while ensuring spans are 
+    # flushed when possible, which is especially critical for session spans.
     try:
         from opentelemetry.trace import get_tracer_provider
         tracer_provider = get_tracer_provider()
-        if hasattr(tracer_provider, "force_flush"):
-            tracer_provider.force_flush()
-    except Exception:
+        tracer_provider.force_flush()
+    except (AttributeError, Exception):
+        # Either force_flush doesn't exist or there was an error calling it
         pass
