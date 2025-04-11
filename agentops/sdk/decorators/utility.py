@@ -233,6 +233,9 @@ def _record_entity_output(span: trace.Span, result: Any) -> None:
 
 def _finalize_span(span: trace.Span, token: Any) -> None:
     """End the span and detach the context token"""
+    if span is None:
+        return
+        
     if hasattr(span, "get_span_context") and hasattr(span.get_span_context(), "span_id"):
         span_id = f"{span.get_span_context().span_id:x}"
         logger.debug(f"[DEBUG] ENDING span {getattr(span, 'name', 'unknown')} - span_id: {span_id}")
@@ -243,7 +246,8 @@ def _finalize_span(span: trace.Span, token: Any) -> None:
     current_after_end = _get_current_span_info()
     logger.debug(f"[DEBUG] AFTER span.end() - Current context: {current_after_end}")
     
-    context_api.detach(token)
+    if token is not None:
+        context_api.detach(token)
     
     # Debug info after detaching
     final_context = _get_current_span_info()
