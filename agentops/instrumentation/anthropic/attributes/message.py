@@ -101,199 +101,132 @@ def get_completion_attributes(args: Optional[Tuple] = None, kwargs: Optional[Dic
     return attributes
 
 
+def _process_content(content, role, index):
+    """Helper function to process content and extract attributes.
+    
+    Args:
+        content: The content to process
+        role: The role of the message
+        index: The index of the message
+        
+    Returns:
+        Dictionary of attributes for this content
+    """
+    attributes = {}
+    
+    if isinstance(content, str):
+        # String content is easy
+        attributes[MessageAttributes.PROMPT_ROLE.format(i=index)] = role
+        attributes[MessageAttributes.PROMPT_CONTENT.format(i=index)] = content
+        attributes[MessageAttributes.PROMPT_TYPE.format(i=index)] = "text"
+    elif isinstance(content, list):
+        # For list content, create a simplified representation
+        content_str = ""
+        for item in content:
+            if isinstance(item, dict) and "type" in item:
+                if item["type"] == "text" and "text" in item:
+                    content_str += item["text"] + " "
+                elif item["type"] == "tool_result" and "content" in item:
+                    content_str += f"[Tool Result: {str(item['content'])}] "
+            elif hasattr(item, "type"):
+                if item.type == "text" and hasattr(item, "text"):
+                    content_str += item.text + " "
+        
+        attributes[MessageAttributes.PROMPT_ROLE.format(i=index)] = role
+        attributes[MessageAttributes.PROMPT_CONTENT.format(i=index)] = content_str.strip()
+        attributes[MessageAttributes.PROMPT_TYPE.format(i=index)] = "text"
+    else:
+        # Other types - try to convert to string
+        try:
+            simple_content = str(content)
+            attributes[MessageAttributes.PROMPT_ROLE.format(i=index)] = role
+            attributes[MessageAttributes.PROMPT_CONTENT.format(i=index)] = simple_content
+            attributes[MessageAttributes.PROMPT_TYPE.format(i=index)] = "text"
+        except:
+            # Ultimate fallback
+            attributes[MessageAttributes.PROMPT_ROLE.format(i=index)] = role
+            attributes[MessageAttributes.PROMPT_CONTENT.format(i=index)] = "(complex content)"
+            attributes[MessageAttributes.PROMPT_TYPE.format(i=index)] = "unknown"
+    
+    return attributes
+
+def _create_simplified_message(msg):
+    """Helper function to create a simplified message for LLM_PROMPTS attribute.
+    
+    Args:
+        msg: The message to simplify
+        
+    Returns:
+        Dictionary with role and content
+    """
+    role = msg.get("role", "user")
+    content = msg.get("content", "")
+    
+    if isinstance(content, str):
+        return {"role": role, "content": content}
+    elif isinstance(content, list):
+        content_str = ""
+        for item in content:
+            if isinstance(item, dict) and "type" in item:
+                if item["type"] == "text" and "text" in item:
+                    content_str += item["text"] + " "
+                elif item["type"] == "tool_result" and "content" in item:
+                    content_str += f"[Tool Result: {str(item['content'])}] "
+            elif hasattr(item, "type"):
+                if item.type == "text" and hasattr(item, "text"):
+                    content_str += item.text + " "
+        return {"role": role, "content": content_str.strip()}
+    else:
+        try:
+            return {"role": role, "content": str(content)}
+        except:
+            return {"role": role, "content": "(complex content)"}
+
 def get_message_request_attributes(kwargs: Dict[str, Any]) -> AttributeMap:
     """Extract attributes from message request parameters.
     
-    This function processes Anthropic API request parameters and converts them into
-    standardized OpenTelemetry attributes for instrumentation. It handles a wide range
-    of request formats, from simple text-only messages to complex structured content.
+    This function processes the request parameters for the Messages API call and extracts
+    standardized attributes for telemetry. It handles different message formats including
+    system prompts, user/assistant messages, and tool-using messages.
     
-    Use Cases:
-    1. Simple chat messages - Basic text exchanges with role/content pairs
-       Example: {"messages": [{"role": "user", "content": "Hello Claude"}]}
-       
-    2. System-prompted conversations - Conversations that include system instructions
-       Example: {"system": "You are a helpful AI", "messages": [...]}
-       
-    3. Multi-modal content - Messages containing text, images, and other media types
-       Example: {"messages": [{"role": "user", "content": [
-                   {"type": "text", "text": "What's in this image?"},
-                   {"type": "image", "source": {"type": "base64", "data": "..."}}
-                ]}]}
-       
-    4. Tool-using conversations - Messages with tool use and tool result blocks
-       Example: {"messages": [..., {"role": "assistant", "content": [
-                   {"type": "tool_use", "name": "get_weather", "input": {"location": "NYC"}}
-                ]}]}
-       
-    5. Mixed content types - Messages with various content block types in a single request
-       Example: {"messages": [{"role": "user", "content": [
-                   {"type": "text", "text": "Results:"},
-                   {"type": "tool_result", "content": {"temperature": 72}}
-                ]}]}
-    
-    Flow:
-    1. Extract basic parameters (model, max_tokens, temperature)
-    2. Process system prompt if present (sets index 0)
-    3. Process message content with appropriate indexing:
-       - Simple string content → Direct attribute setting
-       - Complex list content → Process each block with sub-indices
-       - Handle special content types (text, tool_use, tool_result, image)
-    4. Process tool definitions if present
-    
-    The function creates indexed attributes using the pattern gen_ai.prompt.{i}.{attribute}
-    where {i} is the message index (with system at 0 if present), and optionally uses
-    nested indexing gen_ai.prompt.{i}.{j}.{attribute} for complex content blocks.
+    It extracts:
+    - System prompt (if present)
+    - User and assistant messages
+    - Tool definitions (if present)
+    - Model parameters (temperature, max_tokens, etc.)
     
     Args:
-        kwargs: Keyword arguments from the API call
+        kwargs: Request keyword arguments
         
     Returns:
         Dictionary of extracted attributes
     """
     attributes = extract_request_attributes(kwargs=kwargs)
     
+    # Extract system prompt if present
     system = kwargs.get("system", "")
     if system:
         attributes[MessageAttributes.PROMPT_ROLE.format(i=0)] = "system"
         attributes[MessageAttributes.PROMPT_CONTENT.format(i=0)] = system
         attributes[MessageAttributes.PROMPT_TYPE.format(i=0)] = "text"
-        
+    
+    # Extract messages
     messages = kwargs.get("messages", [])
-    if messages:
-        message_index_start = 1 if system else 0
+    for index, msg in enumerate(messages):
+        role = msg.get("role", "user")
+        content = msg.get("content", "")
         
-        for i, msg in enumerate(messages):
-            index = i + message_index_start
-            role = msg.get("role", "user")
-            
-            # Handle content which can be a string, list of blocks, or complex objects
-            content = msg.get("content", "")
-            content_type = "text"  # Default type
-            
-            # Process different content formats
-            if isinstance(content, str):
-                # Simple string content
-                attributes[MessageAttributes.PROMPT_ROLE.format(i=index)] = role
-                attributes[MessageAttributes.PROMPT_CONTENT.format(i=index)] = content
-                attributes[MessageAttributes.PROMPT_TYPE.format(i=index)] = content_type
-            elif isinstance(content, list):
-                # Content is a list of blocks (could be text blocks, tool_use, etc.)
-                try:
-                    # Handle each block
-                    for j, block in enumerate(content):
-                        block_sub_index = f"{index}.{j}"  # Create sub-index for blocks
-                        
-                        # Extract block type and content
-                        if isinstance(block, dict):
-                            # Dictionary block (likely from JSON)
-                            block_type = block.get("type", "text")
-                            block_content = ""
-                            
-                            if block_type == "text":
-                                block_content = block.get("text", "")
-                            elif block_type == "tool_result":
-                                block_content = json.dumps(block.get("content", {}))
-                            elif block_type == "image":
-                                block_content = block.get("source", {}).get("url", "")
-                            
-                            attributes[MessageAttributes.PROMPT_TYPE.format(i=block_sub_index)] = block_type
-                            attributes[MessageAttributes.PROMPT_CONTENT.format(i=block_sub_index)] = block_content
-                        elif hasattr(block, "type"):
-                            # Anthropic API object with type attribute
-                            block_type = getattr(block, "type", "text")
-                            
-                            # Handle different block types
-                            if block_type == "text":
-                                if hasattr(block, "text"):
-                                    attributes[MessageAttributes.PROMPT_TYPE.format(i=block_sub_index)] = "text"
-                                    attributes[MessageAttributes.PROMPT_CONTENT.format(i=block_sub_index)] = block.text
-                            elif block_type == "tool_use":
-                                if hasattr(block, "name") and hasattr(block, "input"):
-                                    tool_input = block.input
-                                    if not isinstance(tool_input, str):
-                                        try:
-                                            tool_input = json.dumps(tool_input)
-                                        except:
-                                            tool_input = str(tool_input)
-                                    
-                                    attributes[MessageAttributes.PROMPT_TYPE.format(i=block_sub_index)] = "tool_use"
-                                    attributes[MessageAttributes.PROMPT_CONTENT.format(i=block_sub_index)] = f"{block.name}: {tool_input}"
-                            elif block_type == "tool_result":
-                                attributes[MessageAttributes.PROMPT_TYPE.format(i=block_sub_index)] = "tool_result"
-                                
-                                # Try to extract and serialize content safely
-                                result_content = getattr(block, "content", "{}")
-                                try:
-                                    if not isinstance(result_content, str):
-                                        result_content = json.dumps(result_content)
-                                except:
-                                    result_content = str(result_content)
-                                    
-                                attributes[MessageAttributes.PROMPT_CONTENT.format(i=block_sub_index)] = result_content
-                    
-                    attributes[MessageAttributes.PROMPT_ROLE.format(i=index)] = role
-                except Exception as e:
-                    # Fall back to basic string representation if complex serialization fails
-                    logger.debug(f"[agentops.instrumentation.anthropic] Error processing complex content: {e}")
-                    try:
-                        # Try a simple stringification as fallback
-                        simple_content = str(content)
-                        attributes[MessageAttributes.PROMPT_ROLE.format(i=index)] = role
-                        attributes[MessageAttributes.PROMPT_CONTENT.format(i=index)] = simple_content
-                        attributes[MessageAttributes.PROMPT_TYPE.format(i=index)] = "text"
-                    except:
-                        # Ultimate fallback
-                        attributes[MessageAttributes.PROMPT_ROLE.format(i=index)] = role
-                        attributes[MessageAttributes.PROMPT_CONTENT.format(i=index)] = "(complex content)"
-                        attributes[MessageAttributes.PROMPT_TYPE.format(i=index)] = "unknown"
-            else:
-                # Other types - try to convert to string
-                try:
-                    simple_content = str(content)
-                    attributes[MessageAttributes.PROMPT_ROLE.format(i=index)] = role
-                    attributes[MessageAttributes.PROMPT_CONTENT.format(i=index)] = simple_content
-                    attributes[MessageAttributes.PROMPT_TYPE.format(i=index)] = "text"
-                except:
-                    # Ultimate fallback
-                    attributes[MessageAttributes.PROMPT_ROLE.format(i=index)] = role
-                    attributes[MessageAttributes.PROMPT_CONTENT.format(i=index)] = "(complex content)"
-                    attributes[MessageAttributes.PROMPT_TYPE.format(i=index)] = "unknown"
-        
-        if not system:
-            try:
-                # Try to create a simplified version of messages for the LLM_PROMPTS attribute
-                simplified_messages = []
-                for msg in messages:
-                    role = msg.get("role", "user")
-                    content = msg.get("content", "")
-                    
-                    # Handle different content types for serialization
-                    if isinstance(content, str):
-                        # String content is easy
-                        simplified_messages.append({"role": role, "content": content})
-                    elif isinstance(content, list):
-                        # For list content, create a simplified representation
-                        content_str = ""
-                        for item in content:
-                            if isinstance(item, dict) and "type" in item:
-                                if item["type"] == "text" and "text" in item:
-                                    content_str += item["text"] + " "
-                                elif item["type"] == "tool_result" and "content" in item:
-                                    content_str += f"[Tool Result: {str(item['content'])}] "
-                            elif hasattr(item, "type"):
-                                if item.type == "text" and hasattr(item, "text"):
-                                    content_str += item.text + " "
-                        simplified_messages.append({"role": role, "content": content_str.strip()})
-                    else:
-                        try:
-                            content_str = str(content)
-                            simplified_messages.append({"role": role, "content": content_str})
-                        except:
-                            simplified_messages.append({"role": role, "content": "(complex content)"})
-                
-            except Exception as e:
-                logger.debug(f"[agentops.instrumentation.anthropic] Error creating simplified prompts: {e}")
+        # Process content and extract attributes
+        content_attributes = _process_content(content, role, index)
+        attributes.update(content_attributes)
+    
+    # Create simplified messages for LLM_PROMPTS attribute if no system prompt
+    if not system:
+        try:
+            simplified_messages = [_create_simplified_message(msg) for msg in messages]
+            attributes[MessageAttributes.LLM_PROMPTS] = json.dumps(simplified_messages)
+        except Exception as e:
+            logger.debug(f"[agentops.instrumentation.anthropic] Error creating simplified prompts: {e}")
     
     # Extract tools if present
     tools = kwargs.get("tools", [])
