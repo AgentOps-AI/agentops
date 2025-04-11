@@ -40,10 +40,10 @@ def extract_tool_definitions(tools: List[Dict[str, Any]]) -> AttributeMap:
                 attributes[MessageAttributes.TOOL_CALL_ARGUMENTS.format(i=i)] = json.dumps(tool["input_schema"])
             
             tool_id = tool.get("id", f"tool-{i}")
-            attributes[f"{ToolAttributes.TOOL_ID}.{i}"] = tool_id
-            attributes[f"{ToolAttributes.TOOL_NAME}.{i}"] = name
+            attributes[MessageAttributes.TOOL_CALL_ID.format(i=i)] = tool_id
+            attributes[MessageAttributes.TOOL_CALL_NAME.format(i=i)] = name
             if description:
-                attributes[f"{ToolAttributes.TOOL_DESCRIPTION}.{i}"] = description
+                attributes[MessageAttributes.TOOL_CALL_DESCRIPTION.format(i=i)] = description
         
         tool_names = [tool.get("name", "unknown") for tool in tools]
         attributes[SpanAttributes.LLM_REQUEST_FUNCTIONS] = json.dumps(tool_names)
@@ -192,9 +192,9 @@ def get_tool_attributes(message_content: List[Any]) -> AttributeMap:
                     input_str = str(tool_input)
                 attributes[MessageAttributes.COMPLETION_TOOL_CALL_ARGUMENTS.format(i=0, j=j)] = input_str
                 
-                attributes[f"{ToolAttributes.TOOL_ID}.{j}"] = tool_id
-                attributes[f"{ToolAttributes.TOOL_NAME}.{j}"] = tool_name
-                attributes[f"{ToolAttributes.TOOL_PARAMETERS}.{j}"] = input_str
+                attributes[MessageAttributes.TOOL_CALL_ID.format(i=j)] = tool_id
+                attributes[MessageAttributes.TOOL_CALL_NAME.format(i=j)] = tool_name
+                attributes[MessageAttributes.TOOL_CALL_ARGUMENTS.format(i=j)] = input_str
                 attributes[f"{ToolAttributes.TOOL_STATUS}.{j}"] = ToolStatus.EXECUTING.value
             
             attributes["anthropic.tool_calls.count"] = len(tool_uses)
