@@ -58,7 +58,7 @@ available_instrumentors: list[InstrumentorLoader] = [
         provider_import_name="openai",
     ),
     InstrumentorLoader(
-        module_name="opentelemetry.instrumentation.anthropic",
+        module_name="agentops.instrumentation.anthropic",
         class_name="AnthropicInstrumentor",
         provider_import_name="anthropic",
     ),

@@ -1,0 +1,21 @@
+{
+  "id": "msg_01NdttFm4EZyLDk6s4hutk9P",
+  "content": [
+    {
+      "citations": null,
+      "text": "Japan is an excellent choice for a trip! It has a rich culture, delicious food, and stunning landscapes. Here are a few steps to help you plan your trip:\n\n1. Decide when to go: Japan has four distinct seasons, each offering unique experiences. Cherry blossom season (late March to early April) and autumn foliage season (October to November) are popular times to visit.\n\n2. Choose your destinations: Some popular cities include Tokyo, Kyoto",
+      "type": "text"
+    }
+  ],
+  "model": "claude-3-opus-20240229",
+  "role": "assistant",
+  "stop_reason": "max_tokens",
+  "stop_sequence": null,
+  "type": "message",
+  "usage": {
+    "cache_creation_input_tokens": 0,
+    "cache_read_input_tokens": 0,
+    "input_tokens": 43,
+    "output_tokens": 100
+  }
+}
