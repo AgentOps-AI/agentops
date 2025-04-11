@@ -15,6 +15,17 @@ The instrumentation captures:
 2. Response data (completion content, token usage, etc.)
 3. Timing information (latency, time to first token, etc.)
 4. Tool usage information (tool calls, tool outputs)
+
+1. Standard Method Wrapping:
+   - Uses the common wrappers module to wrap methods with tracers
+   - Applies to both sync and async methods
+   - Captures request/response attributes via attribute extractors
+
+2. Streaming Approach:
+   - Special handling for streaming responses
+   - Uses direct wrapt.wrap_function_wrapper for stream methods
+   - Captures events as they arrive rather than waiting for completion
+   - Maintains span context across multiple events
 """
 from typing import List, Optional, Collection
 from opentelemetry.trace import get_tracer
@@ -132,12 +143,17 @@ class AnthropicInstrumentor(BaseInstrumentor):
             description="Number of exceptions occurred during Anthropic completions",
         )
         
+        # Standard method wrapping approach
+        # Uses the common wrappers module to wrap methods with tracers
         for wrap_config in WRAPPED_METHODS:
             try:
                 wrap(wrap_config, tracer)
             except (AttributeError, ModuleNotFoundError):
                 logger.debug(f"Could not wrap {wrap_config.package}.{wrap_config.class_name}.{wrap_config.method_name}")
         
+        # Special handling for streaming responses
+        # Uses direct wrapt.wrap_function_wrapper for stream methods
+        # This approach captures events as they arrive rather than waiting for completion
         try:
             wrap_function_wrapper(
                 "anthropic.resources.messages.messages",
@@ -162,12 +178,14 @@ class AnthropicInstrumentor(BaseInstrumentor):
         Args:
             **kwargs: Configuration options for uninstrumentation.
         """
+        # Unwrap standard methods
         for wrap_config in WRAPPED_METHODS:
             try:
                 unwrap(wrap_config)
             except Exception:
                 logger.debug(f"Failed to unwrap {wrap_config.package}.{wrap_config.class_name}.{wrap_config.method_name}")
         
+        # Unwrap streaming methods
         try:
             from opentelemetry.instrumentation.utils import unwrap as otel_unwrap
             otel_unwrap("anthropic.resources.messages.messages", "Messages.stream")

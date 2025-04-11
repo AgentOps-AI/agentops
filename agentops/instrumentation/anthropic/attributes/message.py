@@ -44,17 +44,15 @@ def get_message_attributes(args: Optional[Tuple] = None, kwargs: Optional[Dict] 
     
     if return_value:
         try:
-            if hasattr(return_value, "__class__") and return_value.__class__.__name__ == "Message":
+            from anthropic.types import Message, MessageStartEvent, ContentBlockStartEvent, ContentBlockDeltaEvent, MessageStopEvent
+            
+            if isinstance(return_value, Message):
                 attributes.update(get_message_response_attributes(return_value))
                 
                 if hasattr(return_value, "content"):
                     attributes.update(get_tool_attributes(return_value.content))
                     
-            elif hasattr(return_value, "__class__") and return_value.__class__.__name__ == "Stream":
-                attributes.update(get_stream_attributes(return_value))
-            elif hasattr(return_value, "__class__") and return_value.__class__.__name__ in [
-                "MessageStartEvent", "ContentBlockStartEvent", "ContentBlockDeltaEvent", "MessageStopEvent"
-            ]:
+            elif isinstance(return_value, (MessageStartEvent, ContentBlockStartEvent, ContentBlockDeltaEvent, MessageStopEvent)):
                 attributes.update(get_stream_event_attributes(return_value))
             else:
                 logger.debug(f"[agentops.instrumentation.anthropic] Unrecognized return type: {type(return_value)}")

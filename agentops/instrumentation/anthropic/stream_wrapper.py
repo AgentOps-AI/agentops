@@ -13,7 +13,7 @@ from opentelemetry.trace import SpanKind
 from opentelemetry.instrumentation.utils import _SUPPRESS_INSTRUMENTATION_KEY
 
 from agentops.semconv import SpanAttributes, LLMRequestTypeValues, CoreAttributes, MessageAttributes
-from agentops.instrumentation.anthropic.utils import _with_tracer_wrapper
+from agentops.instrumentation.common.wrappers import _with_tracer_wrapper
 from agentops.instrumentation.anthropic.attributes.message import (
     get_message_request_attributes,
     get_stream_attributes,
