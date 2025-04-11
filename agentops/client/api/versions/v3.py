@@ -54,7 +54,7 @@ class V3Client(BaseApiClient):
             except Exception as e:
                 raise ApiServerException(f"Failed to process authentication response: {str(e)}")
         except Exception as e:
-            logger.error(f"{str(e)} - Perhaps an invalid AgentOps API key?")
+            logger.error(f"{str(e)} - Perhaps an invalid API key?")
             return None
 
     # Add V3-specific API methods here
