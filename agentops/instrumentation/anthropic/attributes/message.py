@@ -44,14 +44,15 @@ def get_message_attributes(args: Optional[Tuple] = None, kwargs: Optional[Dict] 
     
     if return_value:
         try:
-            from anthropic.types import Message, MessageStartEvent, ContentBlockStartEvent, ContentBlockDeltaEvent, MessageStopEvent
+            from anthropic.types import Message, MessageStartEvent, ContentBlockStartEvent, ContentBlockDeltaEvent, MessageStopEvent, MessageStreamEvent
             
             if isinstance(return_value, Message):
                 attributes.update(get_message_response_attributes(return_value))
                 
                 if hasattr(return_value, "content"):
                     attributes.update(get_tool_attributes(return_value.content))
-                    
+            elif isinstance(return_value, MessageStreamEvent):
+                attributes.update(get_stream_attributes(return_value))
             elif isinstance(return_value, (MessageStartEvent, ContentBlockStartEvent, ContentBlockDeltaEvent, MessageStopEvent)):
                 attributes.update(get_stream_event_attributes(return_value))
             else:
@@ -217,14 +218,6 @@ def get_message_request_attributes(kwargs: Dict[str, Any]) -> AttributeMap:
         # Process content and extract attributes
         content_attributes = _process_content(content, role, index)
         attributes.update(content_attributes)
-    
-    # Create simplified messages for LLM_PROMPTS attribute if no system prompt
-    if not system:
-        try:
-            simplified_messages = [_create_simplified_message(msg) for msg in messages]
-            attributes[MessageAttributes.LLM_PROMPTS] = json.dumps(simplified_messages)
-        except Exception as e:
-            logger.debug(f"[agentops.instrumentation.anthropic] Error creating simplified prompts: {e}")
     
     # Extract tools if present
     tools = kwargs.get("tools", [])
