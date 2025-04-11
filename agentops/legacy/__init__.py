@@ -132,14 +132,20 @@ def start_session(
         # Pass auto_start_session=False to prevent circular dependency
         Client().init(auto_start_session=False)
     
-    span, context, token = _create_session_span(tags)
+    span, ctx, token = _create_session_span(tags)
     session = Session(span, token)
     
     # Set the global session reference
     _current_session = session
     
+    # Also register with the client's session registry for consistent behavior
+    try:
+        import agentops.client.client
+        agentops.client.client._active_session = session
+    except Exception:
+        pass
+    
     return session
-
 
 def _set_span_attributes(span: Any, attributes: Dict[str, Any]) -> None:
     """
@@ -202,6 +208,18 @@ def end_session(session_or_status: Any = None, **kwargs) -> None:
         logger.debug("Ignoring end_session call - TracingCore not initialized")
         return
 
+    # Clear client active session reference
+    try:
+        import agentops.client.client
+        if session_or_status is None and kwargs:
+            if _current_session is agentops.client.client._active_session:
+                agentops.client.client._active_session = None
+        elif hasattr(session_or_status, 'span'):
+            if session_or_status is agentops.client.client._active_session:
+                agentops.client.client._active_session = None
+    except Exception:
+        pass
+
     # In some old implementations, and in crew < 0.10.5 `end_session` will be 
     # called with a single string as a positional argument like: "Success" 
 
@@ -216,24 +234,45 @@ def end_session(session_or_status: Any = None, **kwargs) -> None:
     # )
     if session_or_status is None and kwargs:
         if _current_session is not None:
-            _set_span_attributes(_current_session.span, kwargs)
-            _finalize_span(_current_session.span, _current_session.token)
-            _flush_span_processors()
-            _current_session = None
+            try:
+                _set_span_attributes(_current_session.span, kwargs)
+                _finalize_span(_current_session.span, _current_session.token)
+                _flush_span_processors()
+                _current_session = None
+            except Exception as e:
+                logger.warning(f"Error ending current session: {e}")
+                # Fallback: try direct span ending
+                try:
+                    if hasattr(_current_session.span, "end"):
+                        _current_session.span.end()
+                        _current_session = None
+                except:
+                    pass
         return
     
     # Handle the standard pattern and CrewAI >= 0.105.0 pattern where a Session object is passed.
     # In both cases, we call _finalize_span with the span and token from the Session.
     # This is the most direct and precise way to end a specific session.
     if hasattr(session_or_status, 'span') and hasattr(session_or_status, 'token'):
-        # Set attributes and finalize the span
-        _set_span_attributes(session_or_status.span, kwargs)
-        _finalize_span(session_or_status.span, session_or_status.token)
-        _flush_span_processors()
-        
-        # Clear the global session reference if this is the current session
-        if _current_session is session_or_status:
-            _current_session = None
+        try:
+            # Set attributes and finalize the span
+            _set_span_attributes(session_or_status.span, kwargs)
+            _finalize_span(session_or_status.span, session_or_status.token)
+            _flush_span_processors()
+            
+            # Clear the global session reference if this is the current session
+            if _current_session is session_or_status:
+                _current_session = None
+        except Exception as e:
+            logger.warning(f"Error ending session object: {e}")
+            # Fallback: try direct span ending
+            try:
+                if hasattr(session_or_status.span, "end"):
+                    session_or_status.span.end()
+                    if _current_session is session_or_status:
+                        _current_session = None
+            except:
+                pass
 
 
 def end_all_sessions():
