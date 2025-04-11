@@ -12,47 +12,6 @@ from agentops.semconv import CoreAttributes
 
 logger = logging.getLogger(__name__)
 
-class EventHandler:
-    """Base EventHandler for Anthropic streams.
-    
-    This is used as a fallback if anthropic.EventHandler is not available.
-    """
-    def on_event(self, event: Dict[str, Any]) -> None:
-        """Handle any event."""
-        pass
-    
-    def on_text_delta(self, delta: Dict[str, Any], snapshot: Dict[str, Any]) -> None:
-        """Handle a text delta event."""
-        pass
-    
-    def on_content_block_start(self, content_block_start: Dict[str, Any]) -> None:
-        """Handle a content block start event."""
-        pass
-    
-    def on_content_block_delta(self, delta: Dict[str, Any], snapshot: Dict[str, Any]) -> None:
-        """Handle a content block delta event."""
-        pass
-    
-    def on_content_block_stop(self, content_block_stop: Dict[str, Any]) -> None:
-        """Handle a content block stop event."""
-        pass
-    
-    def on_message_start(self, message_start: Dict[str, Any]) -> None:
-        """Handle a message start event."""
-        pass
-    
-    def on_message_delta(self, delta: Dict[str, Any], snapshot: Dict[str, Any]) -> None:
-        """Handle a message delta event."""
-        pass
-    
-    def on_message_stop(self, message_stop: Dict[str, Any]) -> None:
-        """Handle a message stop event."""
-        pass
-    
-    def on_error(self, error: Exception) -> None:
-        """Handle an error event."""
-        pass
-
 
 class EventHandleWrapper:
     """Wrapper for Anthropic's EventHandler.
@@ -61,7 +20,7 @@ class EventHandleWrapper:
     capturing metrics and adding them to the provided span.
     """
     
-    def __init__(self, original_handler: Optional[EventHandler], span: Span):
+    def __init__(self, original_handler: Optional[Any], span: Span):
         """Initialize the wrapper with the original handler and a span.
         
         Args:
@@ -70,116 +29,56 @@ class EventHandleWrapper:
         """
         self._original_handler = original_handler
         self._span = span
-        self._current_text_index = 0
-        self._prompt_tokens = 0
-        self._completion_tokens = 0
-        self._text_accumulator = ""
+    
+    def _forward_event(self, method_name: str, *args, **kwargs) -> None:
+        """Forward an event to the original handler if it exists.
+        
+        Args:
+            method_name: Name of the method to call on the original handler
+            *args: Positional arguments to pass to the method
+            **kwargs: Keyword arguments to pass to the method
+        """
+        try:
+            if self._original_handler is not None and hasattr(self._original_handler, method_name):
+                method = getattr(self._original_handler, method_name)
+                method(*args, **kwargs)
+        except Exception as e:
+            logger.debug(f"Error in event handler {method_name}: {e}")
     
     def on_event(self, event: Dict[str, Any]) -> None:
-        """Handle any event by forwarding it to the original handler.
-        
-        Args:
-            event: The event data
-        """
-        try:
-            if self._original_handler is not None and hasattr(self._original_handler, "on_event"):
-                self._original_handler.on_event(event)
-        except Exception as e:
-            logger.debug(f"Error in event handler on_event: {e}")
+        """Handle any event by forwarding it to the original handler."""
+        self._forward_event("on_event", event)
     
     def on_text_delta(self, delta: Dict[str, Any], snapshot: Dict[str, Any]) -> None:
-        """Handle a text delta event.
-        
-        Args:
-            delta: The delta data
-            snapshot: The current snapshot
-        """
-        try:
-            if self._original_handler is not None and hasattr(self._original_handler, "on_text_delta"):
-                self._original_handler.on_text_delta(delta, snapshot)
-        except Exception as e:
-            logger.debug(f"Error in event handler on_text_delta: {e}")
+        """Handle a text delta event."""
+        self._forward_event("on_text_delta", delta, snapshot)
     
     def on_content_block_start(self, content_block_start: Dict[str, Any]) -> None:
-        """Handle a content block start event.
-        
-        Args:
-            content_block_start: The content block start data
-        """
-        try:
-            if self._original_handler is not None and hasattr(self._original_handler, "on_content_block_start"):
-                self._original_handler.on_content_block_start(content_block_start)
-        except Exception as e:
-            logger.debug(f"Error in event handler on_content_block_start: {e}")
+        """Handle a content block start event."""
+        self._forward_event("on_content_block_start", content_block_start)
     
     def on_content_block_delta(self, delta: Dict[str, Any], snapshot: Dict[str, Any]) -> None:
-        """Handle a content block delta event.
-        
-        Args:
-            delta: The delta data
-            snapshot: The current snapshot
-        """
-        try:
-            if self._original_handler is not None and hasattr(self._original_handler, "on_content_block_delta"):
-                self._original_handler.on_content_block_delta(delta, snapshot)
-        except Exception as e:
-            logger.debug(f"Error in event handler on_content_block_delta: {e}")
+        """Handle a content block delta event."""
+        self._forward_event("on_content_block_delta", delta, snapshot)
     
     def on_content_block_stop(self, content_block_stop: Dict[str, Any]) -> None:
-        """Handle a content block stop event.
-        
-        Args:
-            content_block_stop: The content block stop data
-        """
-        try:
-            if self._original_handler is not None and hasattr(self._original_handler, "on_content_block_stop"):
-                self._original_handler.on_content_block_stop(content_block_stop)
-        except Exception as e:
-            logger.debug(f"Error in event handler on_content_block_stop: {e}")
+        """Handle a content block stop event."""
+        self._forward_event("on_content_block_stop", content_block_stop)
     
     def on_message_start(self, message_start: Dict[str, Any]) -> None:
-        """Handle a message start event.
-        
-        Args:
-            message_start: The message start data
-        """
-        try:
-            if self._original_handler is not None and hasattr(self._original_handler, "on_message_start"):
-                self._original_handler.on_message_start(message_start)
-        except Exception as e:
-            logger.debug(f"Error in event handler on_message_start: {e}")
+        """Handle a message start event."""
+        self._forward_event("on_message_start", message_start)
     
     def on_message_delta(self, delta: Dict[str, Any], snapshot: Dict[str, Any]) -> None:
-        """Handle a message delta event.
-        
-        Args:
-            delta: The delta data
-            snapshot: The current snapshot
-        """
-        try:
-            if self._original_handler is not None and hasattr(self._original_handler, "on_message_delta"):
-                self._original_handler.on_message_delta(delta, snapshot)
-        except Exception as e:
-            logger.debug(f"Error in event handler on_message_delta: {e}")
+        """Handle a message delta event."""
+        self._forward_event("on_message_delta", delta, snapshot)
     
     def on_message_stop(self, message_stop: Dict[str, Any]) -> None:
-        """Handle a message stop event.
-        
-        Args:
-            message_stop: The message stop data
-        """
-        try:
-            if self._original_handler is not None and hasattr(self._original_handler, "on_message_stop"):
-                self._original_handler.on_message_stop(message_stop)
-        except Exception as e:
-            logger.debug(f"Error in event handler on_message_stop: {e}")
+        """Handle a message stop event."""
+        self._forward_event("on_message_stop", message_stop)
     
     def on_error(self, error: Exception) -> None:
-        """Handle an error event.
-        
-        Args:
-            error: The error that occurred
-        """
+        """Handle an error event."""
         try:
             self._span.record_exception(error)
             self._span.set_attribute(CoreAttributes.ERROR_MESSAGE, str(error))
