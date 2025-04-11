@@ -98,7 +98,10 @@ def messages_stream_wrapper(tracer, wrapped, instance, args, kwargs):
                 except Exception as e:
                     logger.debug(f"Error getting stream attributes: {e}")
                 
-                if original_event_handler is None:
+                # Set the event handler on the stream if provided
+                if original_event_handler is not None:
+                    self.stream.event_handler = kwargs["event_handler"]
+                else:
                     try:
                         original_text_stream = self.stream.text_stream
                         token_count = 0
@@ -274,7 +277,7 @@ def messages_stream_async_wrapper(tracer, wrapped, instance, args, kwargs):
         return wrapped(*args, **kwargs)
     
     span = tracer.start_span(
-        "anthropic.messages.stream.async",
+        "anthropic.messages.stream",
         kind=SpanKind.CLIENT,
         attributes={SpanAttributes.LLM_REQUEST_TYPE: LLMRequestTypeValues.CHAT.value},
     )
