@@ -164,10 +164,6 @@ def _make_span(
         - context is the span context
         - token is the context token needed for detaching
     """
-    # Log before we do anything
-    before_span = _get_current_span_info()
-    logger.debug(f"[DEBUG] BEFORE _make_span {operation_name}.{span_kind} - Current context: {before_span}")
-    
     # Create span with proper naming convention
     span_name = f"{operation_name}.{span_kind}"
 
@@ -186,20 +182,19 @@ def _make_span(
     if version is not None:
         attributes[SpanAttributes.OPERATION_VERSION] = version
 
-    # Get current context explicitly
     current_context = context_api.get_current()
     
-    # Create the span with explicit context
-    span = tracer.start_span(span_name, context=current_context, attributes=attributes)
-
-    # Set as current context and get token for later detachment
+    # Create the span with proper context management
+    if span_kind == SpanKind.SESSION:
+        # For session spans, create as a root span
+        span = tracer.start_span(span_name, attributes=attributes)
+    else:
+        # For other spans, use the current context
+        span = tracer.start_span(span_name, context=current_context, attributes=attributes)
+    
+    # Set as current context and get token for detachment
     ctx = trace.set_span_in_context(span)
     token = context_api.attach(ctx)
-    
-    # Log after span creation
-    if hasattr(span, "get_span_context"):
-        span_ctx = span.get_span_context()
-        logger.debug(f"[DEBUG] CREATED _make_span {span_name} - span_id: {span_ctx.span_id:x}, parent: {before_span.get('span_id', 'None')}")
 
     return span, ctx, token
 
@@ -232,19 +227,49 @@ def _record_entity_output(span: trace.Span, result: Any) -> None:
 
 
 def _finalize_span(span: trace.Span, token: Any) -> None:
-    """End the span and detach the context token"""
-    if hasattr(span, "get_span_context") and hasattr(span.get_span_context(), "span_id"):
-        span_id = f"{span.get_span_context().span_id:x}"
-        logger.debug(f"[DEBUG] ENDING span {getattr(span, 'name', 'unknown')} - span_id: {span_id}")
+    """
+    Finalizes a span and cleans up its context.
     
-    span.end()
+    This function performs three critical tasks needed for proper span lifecycle management:
+    1. Ends the span to mark it complete and calculate its duration
+    2. Detaches the context token to prevent memory leaks and maintain proper context hierarchy
+    3. Forces immediate span export rather than waiting for batch processing
     
-    # Debug info before detaching
-    current_after_end = _get_current_span_info()
-    logger.debug(f"[DEBUG] AFTER span.end() - Current context: {current_after_end}")
+    Use cases:
+    - Session span termination: Ensures root spans are properly ended and exported
+    - Shutdown handling: Ensures spans are flushed during application termination
+    - Async operations: Finalizes spans from asynchronous execution contexts
     
-    context_api.detach(token)
+    Without proper finalization, spans may not trigger on_end events in processors,
+    potentially resulting in missing or incomplete telemetry data.
     
-    # Debug info after detaching
-    final_context = _get_current_span_info()
-    logger.debug(f"[DEBUG] AFTER detach - Final context: {final_context}")
+    Args:
+        span: The span to finalize
+        token: The context token to detach
+    """
+    # End the span
+    if span:
+        try:
+            span.end()
+        except Exception as e:
+            logger.warning(f"Error ending span: {e}")
+
+    # Detach context token if provided
+    if token:
+        try:
+            context_api.detach(token)
+        except Exception:
+            pass
+    
+    # Try to flush span processors
+    # Note: force_flush() might not be available in certain scenarios:
+    # - During application shutdown when the provider may be partially destroyed
+    # We use try/except to gracefully handle these cases while ensuring spans are 
+    # flushed when possible, which is especially critical for session spans.
+    try:
+        from opentelemetry.trace import get_tracer_provider
+        tracer_provider = get_tracer_provider()
+        tracer_provider.force_flush()
+    except (AttributeError, Exception):
+        # Either force_flush doesn't exist or there was an error calling it
+        pass
