@@ -5,9 +5,9 @@ import importlib.metadata
 from opentelemetry.instrumentation.instrumentor import BaseInstrumentor
 from wrapt import wrap_function_wrapper
 from opentelemetry.trace import get_tracer
-from .utils import conversable_agent, agent_run
+from .utils import conversable_agent
 from opentelemetry.instrumentation.utils import unwrap
-
+from opentelemetry.instrumentation.autogen import LIBRARY_NAME, LIBRARY_VERSION
 _instruments = ("ag2 >= 0.3.2",)
 
 
@@ -23,7 +23,7 @@ class AutogenInstrumentor(BaseInstrumentor):
         application_name = kwargs.get("application_name", "default_application")
         environment = kwargs.get("environment", "default_environment")
         tracer_provider = kwargs.get("tracer_provider")
-        tracer = get_tracer(__name__, tracer_provider)
+        tracer = get_tracer(LIBRARY_NAME,LIBRARY_VERSION, tracer_provider)
         event_provider = kwargs.get("event_provider")
         metrics = kwargs.get("metrics_dict")
         pricing_info = kwargs.get("pricing_info", {})
@@ -47,22 +47,5 @@ class AutogenInstrumentor(BaseInstrumentor):
             ),
         )
 
-        wrap_function_wrapper(
-            "autogen.agentchat.conversable_agent",
-            "ConversableAgent.run",
-            agent_run(
-                version,
-                environment,
-                application_name,
-                tracer,
-                event_provider,
-                pricing_info,
-                capture_message_content,
-                metrics,
-                disable_metrics,
-            ),
-        )
-
     def _uninstrument(self, **kwargs):
         unwrap("autogen.agentchat.conversable_agent", "initiate_chat")
-        unwrap("autogen.agentchat.conversable_agent", "run")
