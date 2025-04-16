@@ -5,7 +5,7 @@ and the OpenAI Response API formats, extracting messages, tool calls, function c
 """
 from typing import Any, Dict
 
-from agentops.instrumentation.openai_agents.attributes import AttributeMap
+from agentops.instrumentation.common.attributes import AttributeMap
 
 from agentops.logging import logger
 from agentops.helpers.serialization import model_to_dict
@@ -111,9 +111,9 @@ def get_raw_response_attributes(response: Dict[str, Any]) -> Dict[str, Any]:
                             # Handle function format
                             if "function" in tool_call and isinstance(tool_call["function"], dict):
                                 function = tool_call["function"]
-                                result[MessageAttributes.TOOL_CALL_ID.format(i=j, j=k)] = tool_id
-                                result[MessageAttributes.TOOL_CALL_NAME.format(i=j, j=k)] = function.get("name", "")
-                                result[MessageAttributes.TOOL_CALL_ARGUMENTS.format(i=j, j=k)] = function.get("arguments", "")
+                                result[MessageAttributes.COMPLETION_TOOL_CALL_ID.format(i=j, j=k)] = tool_id
+                                result[MessageAttributes.COMPLETION_TOOL_CALL_NAME.format(i=j, j=k)] = function.get("name", "")
+                                result[MessageAttributes.COMPLETION_TOOL_CALL_ARGUMENTS.format(i=j, j=k)] = function.get("arguments", "")
     
     return result
 
@@ -154,14 +154,14 @@ def get_chat_completions_attributes(response: Dict[str, Any]) -> Dict[str, Any]:
             for j, tool_call in enumerate(tool_calls):
                 if "function" in tool_call:
                     function = tool_call["function"]
-                    result[MessageAttributes.TOOL_CALL_ID.format(i=i, j=j)] = tool_call.get("id")
-                    result[MessageAttributes.TOOL_CALL_NAME.format(i=i, j=j)] = function.get("name")
-                    result[MessageAttributes.TOOL_CALL_ARGUMENTS.format(i=i, j=j)] = function.get("arguments")
+                    result[MessageAttributes.COMPLETION_TOOL_CALL_ID.format(i=i, j=j)] = tool_call.get("id")
+                    result[MessageAttributes.COMPLETION_TOOL_CALL_NAME.format(i=i, j=j)] = function.get("name")
+                    result[MessageAttributes.COMPLETION_TOOL_CALL_ARGUMENTS.format(i=i, j=j)] = function.get("arguments")
             
         if "function_call" in message and message["function_call"] is not None:
             function_call = message["function_call"]
-            result[MessageAttributes.FUNCTION_CALL_NAME.format(i=i)] = function_call.get("name")
-            result[MessageAttributes.FUNCTION_CALL_ARGUMENTS.format(i=i)] = function_call.get("arguments")
+            result[MessageAttributes.COMPLETION_TOOL_CALL_NAME.format(i=i)] = function_call.get("name")
+            result[MessageAttributes.COMPLETION_TOOL_CALL_ARGUMENTS.format(i=i)] = function_call.get("arguments")
             
     return result
 

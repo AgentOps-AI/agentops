@@ -2,6 +2,10 @@ from __future__ import annotations
 
 import atexit
 import threading
+import platform
+import sys
+import os
+import psutil
 from typing import List, Optional
 
 from opentelemetry import metrics, trace
@@ -14,6 +18,7 @@ from opentelemetry.sdk.metrics.export import PeriodicExportingMetricReader
 from opentelemetry.sdk.resources import Resource
 from opentelemetry.sdk.trace import SpanProcessor, TracerProvider
 from opentelemetry.sdk.trace.export import BatchSpanProcessor
+from opentelemetry import context as context_api
 
 from agentops.exceptions import AgentOpsClientNotInitializedException
 from agentops.logging import logger
@@ -22,6 +27,73 @@ from agentops.sdk.types import TracingConfig
 from agentops.semconv import ResourceAttributes
 
 # No need to create shortcuts since we're using our own ResourceAttributes class now
+
+
+def get_imported_libraries():
+    """
+    Get the top-level imported libraries in the current script.
+    
+    Returns:
+        list: List of imported libraries
+    """
+    user_libs = []
+    
+    builtin_modules = {
+        'builtins', 'sys', 'os', '_thread', 'abc', 'io', 're', 'types', 
+        'collections', 'enum', 'math', 'datetime', 'time', 'warnings'
+    }
+    
+    try:
+        main_module = sys.modules.get('__main__')
+        if main_module and hasattr(main_module, '__dict__'):
+            for name, obj in main_module.__dict__.items():
+                if isinstance(obj, type(sys)) and hasattr(obj, '__name__'):
+                    mod_name = obj.__name__.split('.')[0]
+                    if (mod_name and 
+                        not mod_name.startswith('_') and
+                        mod_name not in builtin_modules):
+                        user_libs.append(mod_name)
+    except Exception as e:
+        logger.debug(f"Error getting imports: {e}")
+    
+    return user_libs
+
+
+def get_system_stats():
+    """
+    Get basic system stats including CPU and memory information.
+    
+    Returns:
+        dict: Dictionary with system information
+    """
+    system_info = {
+        ResourceAttributes.HOST_MACHINE: platform.machine(),
+        ResourceAttributes.HOST_NAME: platform.node(),
+        ResourceAttributes.HOST_NODE: platform.node(),
+        ResourceAttributes.HOST_PROCESSOR: platform.processor(),
+        ResourceAttributes.HOST_SYSTEM: platform.system(),
+        ResourceAttributes.HOST_VERSION: platform.version(),
+        ResourceAttributes.HOST_OS_RELEASE: platform.release(),
+    }
+    
+    # Add CPU stats
+    try:
+        system_info[ResourceAttributes.CPU_COUNT] = os.cpu_count() or 0
+        system_info[ResourceAttributes.CPU_PERCENT] = psutil.cpu_percent(interval=0.1)
+    except Exception as e:
+        logger.debug(f"Error getting CPU stats: {e}")
+    
+    # Add memory stats
+    try:
+        memory = psutil.virtual_memory()
+        system_info[ResourceAttributes.MEMORY_TOTAL] = memory.total
+        system_info[ResourceAttributes.MEMORY_AVAILABLE] = memory.available
+        system_info[ResourceAttributes.MEMORY_USED] = memory.used
+        system_info[ResourceAttributes.MEMORY_PERCENT] = memory.percent
+    except Exception as e:
+        logger.debug(f"Error getting memory stats: {e}")
+    
+    return system_info
 
 
 def setup_telemetry(
@@ -58,6 +130,14 @@ def setup_telemetry(
         # Add project_id as a custom resource attribute
         resource_attrs[ResourceAttributes.PROJECT_ID] = project_id
         logger.debug(f"Including project_id in resource attributes: {project_id}")
+    
+    # Add system information
+    system_stats = get_system_stats()
+    resource_attrs.update(system_stats)
+    
+    # Add imported libraries
+    imported_libraries = get_imported_libraries()
+    resource_attrs[ResourceAttributes.IMPORTED_LIBRARIES] = imported_libraries
 
     resource = Resource(resource_attrs)
     provider = TracerProvider(resource=resource)
@@ -89,6 +169,9 @@ def setup_telemetry(
     )
     meter_provider = MeterProvider(resource=resource, metric_readers=[metric_reader])
     metrics.set_meter_provider(meter_provider)
+
+    # Initialize root context
+    context_api.get_current()
 
     logger.debug("Telemetry system initialized")
 

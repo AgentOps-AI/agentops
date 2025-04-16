@@ -23,7 +23,7 @@ class InstrumentorLoader:
         We use the `provider_import_name` to determine if the library is installed i
     n the environment.
 
-        `modue_name` is the name of the module to import from.
+        `module_name` is the name of the module to import from.
         `class_name` is the name of the class to instantiate from the module.
         `provider_import_name` is the name of the package to check for availability.
     """
@@ -53,12 +53,12 @@ class InstrumentorLoader:
 
 available_instrumentors: list[InstrumentorLoader] = [
     InstrumentorLoader(
-        module_name="opentelemetry.instrumentation.openai",
+        module_name="agentops.instrumentation.openai",
         class_name="OpenAIInstrumentor",
         provider_import_name="openai",
     ),
     InstrumentorLoader(
-        module_name="opentelemetry.instrumentation.anthropic",
+        module_name="agentops.instrumentation.anthropic",
         class_name="AnthropicInstrumentor",
         provider_import_name="anthropic",
     ),
