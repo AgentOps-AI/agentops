@@ -68,6 +68,8 @@ class Client:
         # Prefetch JWT token if enabled
         # TODO: Move this validation somewhere else (and integrate with self.config.prefetch_jwt_token once we have a solution to that)
         response = self.api.v3.fetch_auth_token(self.config.api_key)
+        if response is None:
+            return
         
         # Save the bearer for use with the v4 API
         self.api.v4.set_auth_token(response["token"])

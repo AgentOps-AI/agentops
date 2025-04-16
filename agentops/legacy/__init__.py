@@ -34,7 +34,8 @@ class Session:
 
     def __del__(self):
         try:
-            self.span.end()
+            if self.span is not None:
+                self.span.end()
         except:
             pass
 
@@ -66,9 +67,10 @@ class Session:
         
         forces a flush to ensure the span is exported immediately.
         """
-        _set_span_attributes(self.span, kwargs)
-        self.span.end()
-        _flush_span_processors()
+        if self.span is not None:
+            _set_span_attributes(self.span, kwargs)
+            self.span.end()
+            _flush_span_processors()
 
 
 def _create_session_span(tags: Union[Dict[str, Any], List[str], None] = None) -> tuple:
@@ -130,7 +132,21 @@ def start_session(
     if not TracingCore.get_instance().initialized:
         from agentops import Client
         # Pass auto_start_session=False to prevent circular dependency
-        Client().init(auto_start_session=False)
+        try:
+            Client().init(auto_start_session=False)
+            # If initialization failed (returned None), create a dummy session
+            if not TracingCore.get_instance().initialized:
+                logger.warning("AgentOps client initialization failed. Creating a dummy session that will not send data.")
+                # Create a dummy session that won't send data but won't throw exceptions
+                dummy_session = Session(None, None)
+                _current_session = dummy_session
+                return dummy_session
+        except Exception as e:
+            logger.warning(f"AgentOps client initialization failed: {str(e)}. Creating a dummy session that will not send data.")
+            # Create a dummy session that won't send data but won't throw exceptions
+            dummy_session = Session(None, None)
+            _current_session = dummy_session
+            return dummy_session
     
     span, ctx, token = _create_session_span(tags)
     session = Session(span, token)
@@ -155,7 +171,7 @@ def _set_span_attributes(span: Any, attributes: Dict[str, Any]) -> None:
         span: The span to set attributes on
         attributes: The attributes to set as a dictionary
     """
-    if not attributes or not hasattr(span, "set_attribute"):
+    if span is None:
         return
         
     for key, value in attributes.items():
@@ -235,9 +251,10 @@ def end_session(session_or_status: Any = None, **kwargs) -> None:
     if session_or_status is None and kwargs:
         if _current_session is not None:
             try:
-                _set_span_attributes(_current_session.span, kwargs)
-                _finalize_span(_current_session.span, _current_session.token)
-                _flush_span_processors()
+                if _current_session.span is not None:
+                    _set_span_attributes(_current_session.span, kwargs)
+                    _finalize_span(_current_session.span, _current_session.token)
+                    _flush_span_processors()
                 _current_session = None
             except Exception as e:
                 logger.warning(f"Error ending current session: {e}")
@@ -256,9 +273,11 @@ def end_session(session_or_status: Any = None, **kwargs) -> None:
     if hasattr(session_or_status, 'span') and hasattr(session_or_status, 'token'):
         try:
             # Set attributes and finalize the span
-            _set_span_attributes(session_or_status.span, kwargs)
-            _finalize_span(session_or_status.span, session_or_status.token)
-            _flush_span_processors()
+            if session_or_status.span is not None:
+                _set_span_attributes(session_or_status.span, kwargs)
+            if session_or_status.span is not None:
+                _finalize_span(session_or_status.span, session_or_status.token)
+                _flush_span_processors()
             
             # Clear the global session reference if this is the current session
             if _current_session is session_or_status:
