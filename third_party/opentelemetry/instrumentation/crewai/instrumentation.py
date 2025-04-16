@@ -1,5 +1,6 @@
 import os
 import time
+import logging
 from typing import Collection
 
 from wrapt import wrap_function_wrapper
@@ -8,9 +9,13 @@ from opentelemetry.trace.status import Status, StatusCode
 from opentelemetry.metrics import Histogram, Meter, get_meter
 from opentelemetry.instrumentation.utils import unwrap
 from opentelemetry.instrumentation.instrumentor import BaseInstrumentor
+from opentelemetry.sdk.resources import SERVICE_NAME, TELEMETRY_SDK_NAME, DEPLOYMENT_ENVIRONMENT
 from opentelemetry.instrumentation.crewai.version import __version__
 from agentops.semconv import SpanAttributes, AgentOpsSpanKindValues, Meters
 from .crewai_span_attributes import CrewAISpanAttributes, set_span_attribute
+
+# Initialize logger for logging potential issues and operations
+logger = logging.getLogger(__name__)
 
 _instruments = ("crewai >= 0.70.0",)
 
@@ -20,6 +25,8 @@ class CrewAIInstrumentor(BaseInstrumentor):
         return _instruments
 
     def _instrument(self, **kwargs):
+        application_name = kwargs.get("application_name", "default_application")
+        environment = kwargs.get("environment", "default_environment")
         tracer_provider = kwargs.get("tracer_provider")
         tracer = get_tracer(__name__, __version__, tracer_provider)
 
@@ -35,16 +42,16 @@ class CrewAIInstrumentor(BaseInstrumentor):
             (
                 token_histogram,
                 duration_histogram,
-            ) = (None, None, None, None)
+            ) = (None, None)
 
-        wrap_function_wrapper("crewai.crew", "Crew.kickoff", wrap_kickoff(tracer, duration_histogram, token_histogram))
+        wrap_function_wrapper("crewai.crew", "Crew.kickoff", wrap_kickoff(tracer, duration_histogram, token_histogram, environment, application_name))
         wrap_function_wrapper(
-            "crewai.agent", "Agent.execute_task", wrap_agent_execute_task(tracer, duration_histogram, token_histogram)
+            "crewai.agent", "Agent.execute_task", wrap_agent_execute_task(tracer, duration_histogram, token_histogram, environment, application_name)
         )
         wrap_function_wrapper(
-            "crewai.task", "Task.execute_sync", wrap_task_execute(tracer, duration_histogram, token_histogram)
+            "crewai.task", "Task.execute_sync", wrap_task_execute(tracer, duration_histogram, token_histogram, environment, application_name)
         )
-        wrap_function_wrapper("crewai.llm", "LLM.call", wrap_llm_call(tracer, duration_histogram, token_histogram))
+        wrap_function_wrapper("crewai.llm", "LLM.call", wrap_llm_call(tracer, duration_histogram, token_histogram, environment, application_name))
 
     def _uninstrument(self, **kwargs):
         unwrap("crewai.crew.Crew", "kickoff")
@@ -56,9 +63,9 @@ class CrewAIInstrumentor(BaseInstrumentor):
 def with_tracer_wrapper(func):
     """Helper for providing tracer for wrapper functions."""
 
-    def _with_tracer(tracer, duration_histogram, token_histogram):
+    def _with_tracer(tracer, duration_histogram, token_histogram, environment, application_name):
         def wrapper(wrapped, instance, args, kwargs):
-            return func(tracer, duration_histogram, token_histogram, wrapped, instance, args, kwargs)
+            return func(tracer, duration_histogram, token_histogram, environment, application_name, wrapped, instance, args, kwargs)
 
         return wrapper
 
@@ -67,7 +74,7 @@ def with_tracer_wrapper(func):
 
 @with_tracer_wrapper
 def wrap_kickoff(
-    tracer: Tracer, duration_histogram: Histogram, token_histogram: Histogram, wrapped, instance, args, kwargs
+    tracer: Tracer, duration_histogram: Histogram, token_histogram: Histogram, environment, application_name, wrapped, instance, args, kwargs
 ):
     with tracer.start_as_current_span(
         "crewai.workflow",
@@ -77,8 +84,17 @@ def wrap_kickoff(
         },
     ) as span:
         try:
+            # Set base span attributes
+            span.set_attribute(TELEMETRY_SDK_NAME, "agentops")
+            span.set_attribute(SERVICE_NAME, application_name)
+            span.set_attribute(DEPLOYMENT_ENVIRONMENT, environment)
+            
+            # Process instance attributes
             CrewAISpanAttributes(span=span, instance=instance)
+            
+            # Execute the wrapped function
             result = wrapped(*args, **kwargs)
+            
             if result:
                 class_name = instance.__class__.__name__
                 span.set_attribute(f"crewai.{class_name.lower()}.result", str(result))
@@ -90,11 +106,12 @@ def wrap_kickoff(
             return result
         except Exception as ex:
             span.set_status(Status(StatusCode.ERROR, str(ex)))
+            logger.error("Error in trace creation: %s", ex)
             raise
 
 
 @with_tracer_wrapper
-def wrap_agent_execute_task(tracer, duration_histogram, token_histogram, wrapped, instance, args, kwargs):
+def wrap_agent_execute_task(tracer, duration_histogram, token_histogram, environment, application_name, wrapped, instance, args, kwargs):
     agent_name = instance.role if hasattr(instance, "role") else "agent"
     with tracer.start_as_current_span(
         f"{agent_name}.agent",
@@ -104,9 +121,18 @@ def wrap_agent_execute_task(tracer, duration_histogram, token_histogram, wrapped
         },
     ) as span:
         try:
+            # Set base span attributes
+            span.set_attribute(TELEMETRY_SDK_NAME, "agentops")
+            span.set_attribute(SERVICE_NAME, application_name)
+            span.set_attribute(DEPLOYMENT_ENVIRONMENT, environment)
+            
+            # Process instance attributes
             CrewAISpanAttributes(span=span, instance=instance)
+            
+            # Execute the wrapped function
             result = wrapped(*args, **kwargs)
-            if token_histogram:
+            
+            if token_histogram and hasattr(instance, "_token_process"):
                 token_histogram.record(
                     instance._token_process.get_summary().prompt_tokens,
                     attributes={
@@ -124,17 +150,20 @@ def wrap_agent_execute_task(tracer, duration_histogram, token_histogram, wrapped
                     },
                 )
 
-            set_span_attribute(span, SpanAttributes.LLM_REQUEST_MODEL, str(instance.llm.model))
-            set_span_attribute(span, SpanAttributes.LLM_RESPONSE_MODEL, str(instance.llm.model))
+            if hasattr(instance, "llm") and hasattr(instance.llm, "model"):
+                set_span_attribute(span, SpanAttributes.LLM_REQUEST_MODEL, str(instance.llm.model))
+                set_span_attribute(span, SpanAttributes.LLM_RESPONSE_MODEL, str(instance.llm.model))
+            
             span.set_status(Status(StatusCode.OK))
             return result
         except Exception as ex:
             span.set_status(Status(StatusCode.ERROR, str(ex)))
+            logger.error("Error in trace creation: %s", ex)
             raise
 
 
 @with_tracer_wrapper
-def wrap_task_execute(tracer, duration_histogram, token_histogram, wrapped, instance, args, kwargs):
+def wrap_task_execute(tracer, duration_histogram, token_histogram, environment, application_name, wrapped, instance, args, kwargs):
     task_name = instance.description if hasattr(instance, "description") else "task"
 
     with tracer.start_as_current_span(
@@ -145,23 +174,41 @@ def wrap_task_execute(tracer, duration_histogram, token_histogram, wrapped, inst
         },
     ) as span:
         try:
+            # Set base span attributes
+            span.set_attribute(TELEMETRY_SDK_NAME, "agentops")
+            span.set_attribute(SERVICE_NAME, application_name)
+            span.set_attribute(DEPLOYMENT_ENVIRONMENT, environment)
+            
+            # Process instance attributes
             CrewAISpanAttributes(span=span, instance=instance)
+            
+            # Execute the wrapped function
             result = wrapped(*args, **kwargs)
+            
             set_span_attribute(span, SpanAttributes.AGENTOPS_ENTITY_OUTPUT, str(result))
             span.set_status(Status(StatusCode.OK))
             return result
         except Exception as ex:
             span.set_status(Status(StatusCode.ERROR, str(ex)))
+            logger.error("Error in trace creation: %s", ex)
             raise
 
 
 @with_tracer_wrapper
-def wrap_llm_call(tracer, duration_histogram, token_histogram, wrapped, instance, args, kwargs):
+def wrap_llm_call(tracer, duration_histogram, token_histogram, environment, application_name, wrapped, instance, args, kwargs):
     llm = instance.model if hasattr(instance, "model") else "llm"
     with tracer.start_as_current_span(f"{llm}.llm", kind=SpanKind.CLIENT, attributes={}) as span:
         start_time = time.time()
         try:
+            # Set base span attributes
+            span.set_attribute(TELEMETRY_SDK_NAME, "agentops")
+            span.set_attribute(SERVICE_NAME, application_name)
+            span.set_attribute(DEPLOYMENT_ENVIRONMENT, environment)
+            
+            # Process instance attributes
             CrewAISpanAttributes(span=span, instance=instance)
+            
+            # Execute the wrapped function
             result = wrapped(*args, **kwargs)
 
             if duration_histogram:
@@ -178,6 +225,7 @@ def wrap_llm_call(tracer, duration_histogram, token_histogram, wrapped, instance
             return result
         except Exception as ex:
             span.set_status(Status(StatusCode.ERROR, str(ex)))
+            logger.error("Error in trace creation: %s", ex)
             raise
 
 
