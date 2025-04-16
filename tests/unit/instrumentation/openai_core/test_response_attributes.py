@@ -17,11 +17,11 @@ from agentops.instrumentation.openai.attributes.response import (
     get_response_output_attributes,
     get_response_output_message_attributes,
     get_response_output_text_attributes,
-    get_response_output_reasoning_attributes,
-    get_response_output_tool_attributes,
     get_response_tools_attributes,
     get_response_usage_attributes,
-    get_response_reasoning_attributes
+    get_response_tool_web_search_attributes,
+    get_response_tool_file_search_attributes,
+    get_response_tool_computer_attributes
 )
 from agentops.semconv import (
     SpanAttributes,
@@ -94,7 +94,103 @@ class MockFunctionTool:
     def __init__(self, data):
         for key, value in data.items():
             setattr(self, key, value)
-        self.type = "function"
+        if not hasattr(self, "type"):
+            self.type = "function"
+        self.__dict__.update(data)
+
+
+class MockWebSearchTool:
+    """Mock WebSearchTool object for testing"""
+    def __init__(self, data):
+        for key, value in data.items():
+            setattr(self, key, value)
+        if not hasattr(self, "type"):
+            self.type = "web_search_preview"
+        self.__dict__.update(data)
+
+
+class MockFileSearchTool:
+    """Mock FileSearchTool object for testing"""
+    def __init__(self, data):
+        for key, value in data.items():
+            setattr(self, key, value)
+        if not hasattr(self, "type"):
+            self.type = "file_search"
+        self.__dict__.update(data)
+
+
+class MockComputerTool:
+    """Mock ComputerTool object for testing"""
+    def __init__(self, data):
+        for key, value in data.items():
+            setattr(self, key, value)
+        if not hasattr(self, "type"):
+            self.type = "computer_use_preview"
+        self.__dict__.update(data)
+
+
+class MockUserLocation:
+    """Mock UserLocation object for testing"""
+    def __init__(self, data):
+        for key, value in data.items():
+            setattr(self, key, value)
+        self.__dict__.update(data)
+
+
+class MockFilters:
+    """Mock Filters object for testing"""
+    def __init__(self, data):
+        for key, value in data.items():
+            setattr(self, key, value)
+        self.__dict__.update(data)
+
+
+class MockRankingOptions:
+    """Mock RankingOptions object for testing"""
+    def __init__(self, data):
+        for key, value in data.items():
+            setattr(self, key, value)
+        self.__dict__.update(data)
+
+
+class MockFunctionWebSearch:
+    """Mock ResponseFunctionWebSearch object for testing"""
+    def __init__(self, data):
+        for key, value in data.items():
+            setattr(self, key, value)
+        if not hasattr(self, "type"):
+            self.type = "web_search_call"
+        self.__dict__.update(data)
+
+
+class MockFileSearchToolCall:
+    """Mock ResponseFileSearchToolCall object for testing"""
+    def __init__(self, data):
+        for key, value in data.items():
+            setattr(self, key, value)
+        if not hasattr(self, "type"):
+            self.type = "file_search_call"
+        self.__dict__.update(data)
+
+
+class MockComputerToolCall:
+    """Mock ResponseComputerToolCall object for testing"""
+    def __init__(self, data):
+        for key, value in data.items():
+            setattr(self, key, value)
+        if not hasattr(self, "type"):
+            self.type = "computer_call"
+        self.__dict__.update(data)
+
+
+class MockReasoningItem:
+    """Mock ResponseReasoningItem object for testing"""
+    def __init__(self, data):
+        for key, value in data.items():
+            setattr(self, key, value)
+        if not hasattr(self, "type"):
+            self.type = "reasoning"
+        self.__dict__.update(data)
 
 
 class MockFunctionToolCall:
@@ -295,21 +391,70 @@ class TestResponseAttributes:
         """Test extraction of attributes from output text"""
         # Create a mock text content
         text = MockOutputText({
-            'annotations': [],
-            'text': 'The capital of France is Paris.',
+            'annotations': [
+                {
+                    "end_index": 636,
+                    "start_index": 538,
+                    "title": "5 AI Agent Frameworks Compared",
+                    "type": "url_citation",
+                    "url": "https://www.kdnuggets.com/5-ai-agent-frameworks-compared"
+                }
+            ],
+            'text': 'CrewAI is the top AI agent library.',
             'type': 'output_text'
         })
         
-        # Extract attributes
-        attributes = get_response_output_text_attributes(0, text)
+        # The function doesn't use the mock directly but extracts attributes from it
+        # Using _extract_attributes_from_mapping_with_index internally
+        # We'll test by using patch to simulate the extraction
         
-        # Check attributes
-        assert MessageAttributes.COMPLETION_CONTENT.format(i=0) in attributes
-        assert attributes[MessageAttributes.COMPLETION_CONTENT.format(i=0)] == 'The capital of France is Paris.'
+        with patch('agentops.instrumentation.openai.attributes.response._extract_attributes_from_mapping_with_index') as mock_extract:
+            # Set up the mock to return expected attributes
+            expected_attributes = {
+                MessageAttributes.COMPLETION_ANNOTATION_END_INDEX.format(i=0,j=0): 636,
+                MessageAttributes.COMPLETION_ANNOTATION_START_INDEX.format(i=0,j=1): 538,
+                MessageAttributes.COMPLETION_ANNOTATION_TITLE.format(i=0,j=2): "5 AI Agent Frameworks Compared",
+                MessageAttributes.COMPLETION_ANNOTATION_TYPE.format(i=0,j=3): "url_citation",
+                MessageAttributes.COMPLETION_ANNOTATION_URL.format(i=0,j=5): "https://www.kdnuggets.com/5-ai-agent-frameworks-compared",
+                MessageAttributes.COMPLETION_CONTENT.format(i=0): 'CrewAI is the top AI agent library.',
+                MessageAttributes.COMPLETION_TYPE.format(i=0): 'output_text'
+            }
+            mock_extract.return_value = expected_attributes
+            
+            # Call the function
+            attributes = get_response_output_text_attributes(0, text)
+            
+            # Verify mock was called with correct arguments
+            mock_extract.assert_called_once()
+            
+            # Check that the return value matches our expected attributes
+            assert attributes == expected_attributes
 
-    def test_get_response_output_tool_attributes(self):
-        """Test extraction of attributes from output tool"""
-        # Create a mock tool call
+    def test_get_response_output_attributes(self):
+        """Test extraction of attributes from output items with all output types"""
+        # Create a mock response output list with all different output types
+        message = MockOutputMessage({
+            'id': 'msg_12345',
+            'content': [
+                MockOutputText({
+                    'text': 'This is a test message',
+                    'type': 'output_text',
+                    'annotations': [
+                        {
+                            "end_index": 636,
+                            "start_index": 538,
+                            "title": "Test title",
+                            "type": "url_citation",
+                            "url": "www.test.com",
+                        }
+                    ]
+                })
+            ],
+            'role': 'assistant',
+            'status': 'completed',
+            'type': 'message'
+        })
+        
         tool_call = MockFunctionToolCall({
             'id': 'call_67890',
             'name': 'get_weather',
@@ -317,52 +462,200 @@ class TestResponseAttributes:
             'type': 'function'
         })
         
-        # Extract attributes
-        attributes = get_response_output_tool_attributes(0, tool_call)
+        web_search = MockFunctionWebSearch({
+            'id': 'ws_12345',
+            'status': 'completed',
+            'type': 'web_search_call'
+        })
         
-        # Check attributes
-        assert MessageAttributes.FUNCTION_CALL_ID.format(i=0) in attributes
-        assert attributes[MessageAttributes.FUNCTION_CALL_ID.format(i=0)] == 'call_67890'
-        assert MessageAttributes.FUNCTION_CALL_NAME.format(i=0) in attributes
-        assert attributes[MessageAttributes.FUNCTION_CALL_NAME.format(i=0)] == 'get_weather'
-        assert MessageAttributes.FUNCTION_CALL_ARGUMENTS.format(i=0) in attributes
-        assert attributes[MessageAttributes.FUNCTION_CALL_ARGUMENTS.format(i=0)] == '{"location":"Paris"}'
-        assert MessageAttributes.FUNCTION_CALL_TYPE.format(i=0) in attributes
-        assert attributes[MessageAttributes.FUNCTION_CALL_TYPE.format(i=0)] == 'function'
+        file_search = MockFileSearchToolCall({
+            'id': 'fsc_12345',
+            'queries': ['search term'],
+            'status': 'completed',
+            'type': 'file_search_call'
+        })
+        
+        computer_call = MockComputerToolCall({
+            'id': 'comp_12345',
+            'status': 'completed',
+            'type': 'computer_call'
+        })
+        
+        reasoning_item = MockReasoningItem({
+            'id': 'reason_12345',
+            'status': 'completed',
+            'type': 'reasoning'
+        })
+        
+        # Create an unrecognized output item to test error handling
+        unrecognized_item = MagicMock()
+        unrecognized_item.type = 'unknown_type'
+        
+        # Patch all the necessary type checks and logger
+        with patch('agentops.instrumentation.openai.attributes.response.ResponseOutputMessage', MockOutputMessage), \
+             patch('agentops.instrumentation.openai.attributes.response.ResponseOutputText', MockOutputText), \
+             patch('agentops.instrumentation.openai.attributes.response.ResponseFunctionToolCall', MockFunctionToolCall), \
+             patch('agentops.instrumentation.openai.attributes.response.ResponseFunctionWebSearch', MockFunctionWebSearch), \
+             patch('agentops.instrumentation.openai.attributes.response.ResponseFileSearchToolCall', MockFileSearchToolCall), \
+             patch('agentops.instrumentation.openai.attributes.response.ResponseComputerToolCall', MockComputerToolCall), \
+             patch('agentops.instrumentation.openai.attributes.response.ResponseReasoningItem', MockReasoningItem), \
+             patch('agentops.instrumentation.openai.attributes.response.logger.debug') as mock_logger:
+            
+            # Test with an output list containing all different types of output items
+            output = [message, tool_call, web_search, file_search, computer_call, reasoning_item, unrecognized_item]
+            
+            # Call the function
+            attributes = get_response_output_attributes(output)
+            
+            # Check that it extracted attributes from all items
+            assert isinstance(attributes, dict)
+            
+            # Check message attributes were extracted (index 0)
+            assert MessageAttributes.COMPLETION_ROLE.format(i=0) in attributes
+            assert attributes[MessageAttributes.COMPLETION_ROLE.format(i=0)] == 'assistant'
+            assert MessageAttributes.COMPLETION_CONTENT.format(i=0) in attributes
+            assert attributes[MessageAttributes.COMPLETION_CONTENT.format(i=0)] == 'This is a test message'
+            
+            # Check function tool call attributes were extracted (index 1)
+            tool_attr_key = MessageAttributes.COMPLETION_TOOL_CALL_ID.format(i=1, j=0)
+            assert tool_attr_key in attributes
+            assert attributes[tool_attr_key] == 'call_67890'
+            
+            # Check web search attributes were extracted (index 2)
+            web_attr_key = MessageAttributes.COMPLETION_TOOL_CALL_ID.format(i=2, j=0)
+            assert web_attr_key in attributes
+            assert attributes[web_attr_key] == 'ws_12345'
+            
+            # Verify that logger was called for unrecognized item
+            assert any(call.args[0].startswith('[agentops.instrumentation.openai.response]') 
+                      for call in mock_logger.call_args_list)
 
     def test_get_response_tools_attributes(self):
         """Test extraction of attributes from tools list"""
-        # Simplify the test to just verify the function can be called without error
+        # Create a mock function tool
+        function_tool = MockFunctionTool({
+            'name': 'get_weather',
+            'parameters': {'properties': {'location': {'type': 'string'}}, 'required': ['location']},
+            'description': 'Get weather information for a location',
+            'type': 'function',
+            'strict': True
+        })
         
-        # Patch the FunctionTool class to make testing simpler
+        # Patch all tool types to make testing simpler
         with patch('agentops.instrumentation.openai.attributes.response.FunctionTool', MockFunctionTool):
-            # Test with empty list for simplicity
-            tools = []
-            
-            # Call the function
-            result = get_response_tools_attributes(tools)
-            
-            # Verify basic expected attributes
-            assert isinstance(result, dict)
+            with patch('agentops.instrumentation.openai.attributes.response.WebSearchTool', MagicMock):
+                with patch('agentops.instrumentation.openai.attributes.response.FileSearchTool', MagicMock):
+                    with patch('agentops.instrumentation.openai.attributes.response.ComputerTool', MagicMock):
+                        # Test with a function tool
+                        tools = [function_tool]
+                        
+                        # Call the function
+                        result = get_response_tools_attributes(tools)
+                        
+                        # Verify extracted attributes
+                        assert isinstance(result, dict)
+                        assert MessageAttributes.TOOL_CALL_TYPE.format(i=0) in result
+                        assert result[MessageAttributes.TOOL_CALL_TYPE.format(i=0)] == 'function'
+                        assert MessageAttributes.TOOL_CALL_NAME.format(i=0) in result
+                        assert result[MessageAttributes.TOOL_CALL_NAME.format(i=0)] == 'get_weather'
+                        assert MessageAttributes.TOOL_CALL_DESCRIPTION.format(i=0) in result
+                        assert result[MessageAttributes.TOOL_CALL_DESCRIPTION.format(i=0)] == 'Get weather information for a location'
 
+    def test_get_response_tool_web_search_attributes(self):
+        """Test extraction of attributes from web search tool"""
+        # Create a mock web search tool
+        user_location = MockUserLocation({
+            'type': 'approximate',
+            'country': 'US'
+        })
+        
+        web_search_tool = MockWebSearchTool({
+            'type': 'web_search_preview',
+            'search_context_size': 'medium',
+            'user_location': user_location
+        })
+        
+        # Call the function directly
+        with patch('agentops.instrumentation.openai.attributes.response.WebSearchTool', MockWebSearchTool):
+            result = get_response_tool_web_search_attributes(web_search_tool, 0)
+            
+            # Verify attributes
+            assert isinstance(result, dict)
+            assert MessageAttributes.TOOL_CALL_NAME.format(i=0) in result
+            assert result[MessageAttributes.TOOL_CALL_NAME.format(i=0)] == 'web_search_preview'
+            assert MessageAttributes.TOOL_CALL_ARGUMENTS.format(i=0) in result
+            # Parameters should be serialized 
+            assert 'search_context_size' in result[MessageAttributes.TOOL_CALL_ARGUMENTS.format(i=0)]
+            assert 'user_location' in result[MessageAttributes.TOOL_CALL_ARGUMENTS.format(i=0)]
+    
+    def test_get_response_tool_file_search_attributes(self):
+        """Test extraction of attributes from file search tool"""
+        # Create a mock file search tool
+        filters = MockFilters({
+            'key': 'value'
+        })
+        
+        ranking_options = MockRankingOptions({
+            'ranker': 'default-2024-11-15',
+            'score_threshold': 0.8
+        })
+        
+        file_search_tool = MockFileSearchTool({
+            'type': 'file_search',
+            'vector_store_ids': ['store_123', 'store_456'],
+            'filters': filters,
+            'max_num_results': 10,
+            'ranking_options': ranking_options
+        })
+        
+        # Call the function directly
+        with patch('agentops.instrumentation.openai.attributes.response.FileSearchTool', MockFileSearchTool):
+            result = get_response_tool_file_search_attributes(file_search_tool, 0)
+            
+            # Verify attributes
+            assert isinstance(result, dict)
+            assert MessageAttributes.TOOL_CALL_TYPE.format(i=0) in result
+            assert result[MessageAttributes.TOOL_CALL_TYPE.format(i=0)] == 'file_search'
+            assert MessageAttributes.TOOL_CALL_ARGUMENTS.format(i=0) in result
+            # Parameters should be serialized
+            assert 'vector_store_ids' in result[MessageAttributes.TOOL_CALL_ARGUMENTS.format(i=0)]
+            assert 'filters' in result[MessageAttributes.TOOL_CALL_ARGUMENTS.format(i=0)]
+            assert 'max_num_results' in result[MessageAttributes.TOOL_CALL_ARGUMENTS.format(i=0)]
+            assert 'ranking_options' in result[MessageAttributes.TOOL_CALL_ARGUMENTS.format(i=0)]
+    
+    def test_get_response_tool_computer_attributes(self):
+        """Test extraction of attributes from computer tool"""
+        # Create a mock computer tool
+        computer_tool = MockComputerTool({
+            'type': 'computer_use_preview',
+            'display_height': 1080.0,
+            'display_width': 1920.0,
+            'environment': 'mac'
+        })
+        
+        # Call the function directly
+        with patch('agentops.instrumentation.openai.attributes.response.ComputerTool', MockComputerTool):
+            result = get_response_tool_computer_attributes(computer_tool, 0)
+            
+            # Verify attributes
+            assert isinstance(result, dict)
+            assert MessageAttributes.TOOL_CALL_TYPE.format(i=0) in result
+            assert result[MessageAttributes.TOOL_CALL_TYPE.format(i=0)] == 'computer_use_preview'
+            assert MessageAttributes.TOOL_CALL_ARGUMENTS.format(i=0) in result
+            # Parameters should be serialized
+            assert 'display_height' in result[MessageAttributes.TOOL_CALL_ARGUMENTS.format(i=0)]
+            assert 'display_width' in result[MessageAttributes.TOOL_CALL_ARGUMENTS.format(i=0)]
+            assert 'environment' in result[MessageAttributes.TOOL_CALL_ARGUMENTS.format(i=0)]
+    
     def test_get_response_usage_attributes(self):
         """Test extraction of attributes from usage data"""
-        # Simplify test to verify function can be called without error
+        # Create a more comprehensive test for usage attributes
         
         # Patch the OutputTokensDetails class to make testing simpler
         with patch('agentops.instrumentation.openai.attributes.response.OutputTokensDetails', MockOutputTokensDetails):
-            # Create a minimal mock usage object with all necessary attributes
-            usage = MockResponseUsage({
-                'input_tokens': 50,
-                'output_tokens': 20,
-                'total_tokens': 70,
-                'output_tokens_details': MockOutputTokensDetails({
-                    'reasoning_tokens': 5
-                }),
-                'input_tokens_details': {
-                    'cached_tokens': 10
-                },
-                '__dict__': {
+            with patch('agentops.instrumentation.openai.attributes.response.InputTokensDetails', MagicMock):
+                # Test with all fields
+                usage = MockResponseUsage({
                     'input_tokens': 50,
                     'output_tokens': 20,
                     'total_tokens': 70,
@@ -371,34 +664,64 @@ class TestResponseAttributes:
                     }),
                     'input_tokens_details': {
                         'cached_tokens': 10
+                    },
+                    '__dict__': {
+                        'input_tokens': 50,
+                        'output_tokens': 20,
+                        'total_tokens': 70,
+                        'output_tokens_details': MockOutputTokensDetails({
+                            'reasoning_tokens': 5
+                        }),
+                        'input_tokens_details': {
+                            'cached_tokens': 10
+                        }
                     }
-                }
-            })
-            
-            # Call the function
-            result = get_response_usage_attributes(usage)
-            
-            # Verify it returns a dictionary with at least these basic attributes
-            assert isinstance(result, dict)
-            assert SpanAttributes.LLM_USAGE_PROMPT_TOKENS in result
-            assert result[SpanAttributes.LLM_USAGE_PROMPT_TOKENS] == 50
-            assert SpanAttributes.LLM_USAGE_COMPLETION_TOKENS in result
-            assert result[SpanAttributes.LLM_USAGE_COMPLETION_TOKENS] == 20
-            assert SpanAttributes.LLM_USAGE_TOTAL_TOKENS in result
-            assert result[SpanAttributes.LLM_USAGE_TOTAL_TOKENS] == 70
+                })
+                
+                # Test without token details (edge cases)
+                usage_without_details = MockResponseUsage({
+                    'input_tokens': 30,
+                    'output_tokens': 15,
+                    'total_tokens': 45,
+                    'output_tokens_details': None,
+                    'input_tokens_details': None,
+                    '__dict__': {
+                        'input_tokens': 30,
+                        'output_tokens': 15,
+                        'total_tokens': 45,
+                        'output_tokens_details': None,
+                        'input_tokens_details': None
+                    }
+                })
+                
+                # Call the function for complete usage
+                result = get_response_usage_attributes(usage)
+                
+                # Verify it returns a dictionary with all attributes
+                assert isinstance(result, dict)
+                assert SpanAttributes.LLM_USAGE_PROMPT_TOKENS in result
+                assert result[SpanAttributes.LLM_USAGE_PROMPT_TOKENS] == 50
+                assert SpanAttributes.LLM_USAGE_COMPLETION_TOKENS in result
+                assert result[SpanAttributes.LLM_USAGE_COMPLETION_TOKENS] == 20
+                assert SpanAttributes.LLM_USAGE_TOTAL_TOKENS in result
+                assert result[SpanAttributes.LLM_USAGE_TOTAL_TOKENS] == 70
+                assert SpanAttributes.LLM_USAGE_REASONING_TOKENS in result
+                assert result[SpanAttributes.LLM_USAGE_REASONING_TOKENS] == 5
+                assert SpanAttributes.LLM_USAGE_CACHE_READ_INPUT_TOKENS in result
+                assert result[SpanAttributes.LLM_USAGE_CACHE_READ_INPUT_TOKENS] == 10
+                
+                # Call the function for usage without details
+                result_without_details = get_response_usage_attributes(usage_without_details)
+                
+                # Verify basic attributes are still present
+                assert isinstance(result_without_details, dict)
+                assert SpanAttributes.LLM_USAGE_PROMPT_TOKENS in result_without_details
+                assert result_without_details[SpanAttributes.LLM_USAGE_PROMPT_TOKENS] == 30
+                assert SpanAttributes.LLM_USAGE_COMPLETION_TOKENS in result_without_details
+                assert result_without_details[SpanAttributes.LLM_USAGE_COMPLETION_TOKENS] == 15
+                assert SpanAttributes.LLM_USAGE_TOTAL_TOKENS in result_without_details
+                assert result_without_details[SpanAttributes.LLM_USAGE_TOTAL_TOKENS] == 45
+                # Detailed attributes shouldn't be present
+                assert SpanAttributes.LLM_USAGE_REASONING_TOKENS not in result_without_details
+                assert SpanAttributes.LLM_USAGE_CACHE_READ_INPUT_TOKENS not in result_without_details
 
-    def test_get_response_reasoning_attributes(self):
-        """Test extraction of attributes from reasoning data"""
-        # Create mock reasoning object
-        reasoning = MockReasoning({
-            'effort': 'medium',
-            'generate_summary': True
-        })
-        
-        # Extract attributes - currently no attributes are mapped for reasoning
-        attributes = get_response_reasoning_attributes(reasoning)
-        
-        # The current implementation returns an empty dictionary because
-        # there are no defined attributes in RESPONSE_REASONING_ATTRIBUTES
-        assert isinstance(attributes, dict)
-        assert len(attributes) == 0  # Currently no attributes are mapped
