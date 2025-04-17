@@ -78,6 +78,12 @@ def init(
     """
     global _client
     
+    if _client.initialized:
+        from .logging.config import logger
+
+        return logger.warning(
+            "AgentOps has already been initialized. If you are trying to start a session, call agentops.start_session() instead."
+        )
     # Merge tags and default_tags if both are provided
     merged_tags = None
     if tags and default_tags:
