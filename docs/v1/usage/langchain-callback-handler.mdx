@@ -43,7 +43,7 @@ properly include `instrument_llm_calls=False`. In this case, call
 
 Initialize the handler with its constructor and pass it into the callbacks array from LangChain.
 ```python
-from agentops.langchain_callback_handler import LangchainCallbackHandler
+from agentops.integration.callbacks.langchain import LangchainCallbackHandler
 ChatOpenAI(callbacks=[LangchainCallbackHandler()])
 ```
 
