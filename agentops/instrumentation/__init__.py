@@ -1,4 +1,4 @@
-from typing import Any, Optional
+from typing import Optional
 from types import ModuleType
 from dataclasses import dataclass
 import importlib
@@ -71,6 +71,11 @@ available_instrumentors: list[InstrumentorLoader] = [
         module_name="agentops.instrumentation.openai_agents",
         class_name="OpenAIAgentsInstrumentor",
         provider_import_name="agents",
+    ),
+    InstrumentorLoader(
+        module_name="opentelemetry.instrumentation.autogen",
+        class_name="AutogenInstrumentor",
+        provider_import_name="autogen",
     ),
 ]
 
