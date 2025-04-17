@@ -30,7 +30,7 @@ AgentOps works seamlessly with applications built using LangChain.
 			import os
 			from langchain.chat_models import ChatOpenAI
 			from langchain.agents import initialize_agent, AgentType
-			from agentops.langchain_callback_handler import LangchainCallbackHandler
+			from agentops.integration.callbacks.langchain import LangchainCallbackHandler
 			```
 		</CodeGroup>
 	</Step>
@@ -84,7 +84,7 @@ AgentOps works seamlessly with applications built using LangChain.
 	import os
 	from langchain.chat_models import ChatOpenAI
 	from langchain.agents import initialize_agent, AgentType
-	from agentops.langchain_callback_handler import LangchainCallbackHandler
+	from agentops.integration.callbacks.langchain import LangchainCallbackHandler
 
 	handler = LangchainCallbackHandler(api_key=AGENTOPS_API_KEY, tags=['LangChain Example'])
 
