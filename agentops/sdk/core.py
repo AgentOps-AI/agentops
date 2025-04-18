@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import atexit
+import logging
 import threading
 from typing import List, Optional
 
@@ -16,6 +17,7 @@ from opentelemetry.sdk.trace import SpanProcessor, TracerProvider
 from opentelemetry.sdk.trace.export import BatchSpanProcessor
 
 from agentops.exceptions import AgentOpsClientNotInitializedException
+from agentops.instrumentation.common.logs import setup_print_logger
 from agentops.logging import logger
 from agentops.sdk.processors import InternalSpanProcessor
 from agentops.sdk.types import TracingConfig
@@ -29,6 +31,7 @@ def setup_telemetry(
     project_id: Optional[str] = None,
     exporter_endpoint: str = "https://otlp.agentops.ai/v1/traces",
     metrics_endpoint: str = "https://otlp.agentops.ai/v1/metrics",
+    logs_endpoint: str = "https://otlp.agentops.ai/v1/logs",
     max_queue_size: int = 512,
     max_wait_time: int = 5000,
     export_flush_interval: int = 1000,
@@ -42,6 +45,7 @@ def setup_telemetry(
         project_id: Project ID to include in resource attributes
         exporter_endpoint: Endpoint for the span exporter
         metrics_endpoint: Endpoint for the metrics exporter
+        logs_endpoint: Endpoint for the logs exporter
         max_queue_size: Maximum number of spans to queue before forcing a flush
         max_wait_time: Maximum time in milliseconds to wait before flushing
         export_flush_interval: Time interval in milliseconds between automatic exports of telemetry data
@@ -89,6 +93,9 @@ def setup_telemetry(
     )
     meter_provider = MeterProvider(resource=resource, metric_readers=[metric_reader])
     metrics.set_meter_provider(meter_provider)
+
+    ### Logging
+    setup_print_logger()
 
     logger.debug("Telemetry system initialized")
 
@@ -151,6 +158,7 @@ class TracingCore:
             kwargs.setdefault("service_name", "agentops")
             kwargs.setdefault("exporter_endpoint", "https://otlp.agentops.ai/v1/traces")
             kwargs.setdefault("metrics_endpoint", "https://otlp.agentops.ai/v1/metrics")
+            kwargs.setdefault("logs_endpoint", "https://otlp.agentops.ai/v1/logs")
             kwargs.setdefault("max_queue_size", 512)
             kwargs.setdefault("max_wait_time", 5000)
             kwargs.setdefault("export_flush_interval", 1000)
@@ -160,6 +168,7 @@ class TracingCore:
                 "service_name": kwargs["service_name"],
                 "exporter_endpoint": kwargs["exporter_endpoint"],
                 "metrics_endpoint": kwargs["metrics_endpoint"],
+                "logs_endpoint": kwargs["logs_endpoint"],
                 "max_queue_size": kwargs["max_queue_size"],
                 "max_wait_time": kwargs["max_wait_time"],
                 "export_flush_interval": kwargs["export_flush_interval"],
@@ -173,8 +182,9 @@ class TracingCore:
             self._provider, self._meter_provider = setup_telemetry(
                 service_name=config["service_name"] or "",
                 project_id=config.get("project_id"),
-                exporter_endpoint=config["exporter_endpoint"] or "",
-                metrics_endpoint=config["metrics_endpoint"] or "",
+                exporter_endpoint=config["exporter_endpoint"],
+                metrics_endpoint=config["metrics_endpoint"],
+                logs_endpoint=config["logs_endpoint"],
                 max_queue_size=config["max_queue_size"],
                 max_wait_time=config["max_wait_time"],
                 export_flush_interval=config["export_flush_interval"],
