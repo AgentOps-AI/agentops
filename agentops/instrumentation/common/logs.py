@@ -4,17 +4,21 @@ import os
 import atexit
 from datetime import datetime
 from typing import Any, TextIO
+from agents import Span
 
 # Store the original print function
 _original_print = builtins.print
 
+LOGFILE_NAME = "agentops-tmp.log"
+
+## Instrument loggers and print function to log to a file
 def setup_print_logger() -> None:
     """
-    Monkeypatches the built-in print function and configures logging to also log to a file.
+    ~Monkeypatches~ *Instruments the built-in print function and configures logging to also log to a file.
     Preserves existing logging configuration and console output behavior.
     """
     # Create a unique log file name with timestamp
-    log_file = os.path.join(os.getcwd(), f"agentops-tmp.log")
+    log_file = os.path.join(os.getcwd(), LOGFILE_NAME)
     
     # Get the root logger
     root_logger = logging.getLogger()
@@ -76,3 +80,23 @@ def setup_print_logger() -> None:
 
     # Register the cleanup function to run when the process exits
     atexit.register(cleanup) 
+
+
+def upload_logfile(trace_id: int) -> None:
+    """
+    Upload the log file to the API.
+    """
+    from agentops import get_client
+
+    log_file = os.path.join(os.getcwd(), LOGFILE_NAME)
+    # Check if the log file exists before attempting to upload
+    if not os.path.exists(log_file):
+        return
+    with open(log_file, "r") as f:
+        log_content = f.read()
+
+    client = get_client()
+    client.api.v4.upload_logfile(log_content, trace_id)
+
+    os.remove(log_file)
+    

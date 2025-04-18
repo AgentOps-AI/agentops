@@ -16,7 +16,7 @@ import agentops.semconv as semconv
 from agentops.logging import logger
 from agentops.helpers.dashboard import log_trace_url
 from agentops.semconv.core import CoreAttributes
-
+from agentops.instrumentation.common.logs import upload_logfile
 
 class LiveSpanProcessor(SpanProcessor):
     def __init__(self, span_exporter: SpanExporter, **kwargs):
@@ -127,6 +127,7 @@ class InternalSpanProcessor(SpanProcessor):
 
     def shutdown(self) -> None:
         """Shutdown the processor."""
+        upload_logfile(self._root_span_id)
         self._root_span_id = None
 
     def force_flush(self, timeout_millis: int = 30000) -> bool:

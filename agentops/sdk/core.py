@@ -31,7 +31,6 @@ def setup_telemetry(
     project_id: Optional[str] = None,
     exporter_endpoint: str = "https://otlp.agentops.ai/v1/traces",
     metrics_endpoint: str = "https://otlp.agentops.ai/v1/metrics",
-    logs_endpoint: str = "https://otlp.agentops.ai/v1/logs",
     max_queue_size: int = 512,
     max_wait_time: int = 5000,
     export_flush_interval: int = 1000,
@@ -45,7 +44,6 @@ def setup_telemetry(
         project_id: Project ID to include in resource attributes
         exporter_endpoint: Endpoint for the span exporter
         metrics_endpoint: Endpoint for the metrics exporter
-        logs_endpoint: Endpoint for the logs exporter
         max_queue_size: Maximum number of spans to queue before forcing a flush
         max_wait_time: Maximum time in milliseconds to wait before flushing
         export_flush_interval: Time interval in milliseconds between automatic exports of telemetry data
@@ -158,7 +156,6 @@ class TracingCore:
             kwargs.setdefault("service_name", "agentops")
             kwargs.setdefault("exporter_endpoint", "https://otlp.agentops.ai/v1/traces")
             kwargs.setdefault("metrics_endpoint", "https://otlp.agentops.ai/v1/metrics")
-            kwargs.setdefault("logs_endpoint", "https://otlp.agentops.ai/v1/logs")
             kwargs.setdefault("max_queue_size", 512)
             kwargs.setdefault("max_wait_time", 5000)
             kwargs.setdefault("export_flush_interval", 1000)
@@ -168,7 +165,6 @@ class TracingCore:
                 "service_name": kwargs["service_name"],
                 "exporter_endpoint": kwargs["exporter_endpoint"],
                 "metrics_endpoint": kwargs["metrics_endpoint"],
-                "logs_endpoint": kwargs["logs_endpoint"],
                 "max_queue_size": kwargs["max_queue_size"],
                 "max_wait_time": kwargs["max_wait_time"],
                 "export_flush_interval": kwargs["export_flush_interval"],
@@ -184,7 +180,6 @@ class TracingCore:
                 project_id=config.get("project_id"),
                 exporter_endpoint=config["exporter_endpoint"],
                 metrics_endpoint=config["metrics_endpoint"],
-                logs_endpoint=config["logs_endpoint"],
                 max_queue_size=config["max_queue_size"],
                 max_wait_time=config["max_wait_time"],
                 export_flush_interval=config["export_flush_interval"],
