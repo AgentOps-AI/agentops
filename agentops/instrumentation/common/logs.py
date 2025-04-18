@@ -6,7 +6,6 @@ from datetime import datetime
 from typing import Any, TextIO
 from agents import Span
 
-# Store the original print function
 _original_print = builtins.print
 
 LOGFILE_NAME = "agentops-tmp.log"
@@ -17,17 +16,11 @@ def setup_print_logger() -> None:
     ~Monkeypatches~ *Instruments the built-in print function and configures logging to also log to a file.
     Preserves existing logging configuration and console output behavior.
     """
-    # Create a unique log file name with timestamp
     log_file = os.path.join(os.getcwd(), LOGFILE_NAME)
     
-    # Get the root logger
-    root_logger = logging.getLogger()
-    
-    # Create a new logger specifically for our file logging
     file_logger = logging.getLogger('agentops_file_logger')
     file_logger.setLevel(logging.DEBUG)
     
-    # Add our file handler to the new logger
     file_handler = logging.FileHandler(log_file)
     file_handler.setFormatter(logging.Formatter('%(asctime)s - %(levelname)s - %(message)s'))
     file_handler.setLevel(logging.DEBUG)
@@ -44,16 +37,13 @@ def setup_print_logger() -> None:
             *args: Arguments to print
             **kwargs: Keyword arguments to print
         """
-        # Convert all arguments to strings and join them
         message = " ".join(str(arg) for arg in args)
-        
-        # Log to our file logger
         file_logger.info(message)
         
-        # Then print to console using original print
+        # print to console using original print
         _original_print(*args, **kwargs)
     
-    # Replace the built-in print with our custom version
+    # replace the built-in print with ours
     builtins.print = print_logger
 
     def cleanup():
@@ -66,11 +56,6 @@ def setup_print_logger() -> None:
             for handler in file_logger.handlers[:]:
                 handler.close()
                 file_logger.removeHandler(handler)
-            
-            # Delete the log file
-            if os.path.exists(log_file):
-                # os.remove(log_file)
-                pass
             
             # Restore the original print function
             builtins.print = _original_print
@@ -89,7 +74,6 @@ def upload_logfile(trace_id: int) -> None:
     from agentops import get_client
 
     log_file = os.path.join(os.getcwd(), LOGFILE_NAME)
-    # Check if the log file exists before attempting to upload
     if not os.path.exists(log_file):
         return
     with open(log_file, "r") as f:
