@@ -19,19 +19,18 @@ def setup_print_logger() -> None:
     # Get the root logger
     root_logger = logging.getLogger()
     
-    # Add our file handler without removing existing ones
+    # Create a new logger specifically for our file logging
+    file_logger = logging.getLogger('agentops_file_logger')
+    file_logger.setLevel(logging.DEBUG)
+    
+    # Add our file handler to the new logger
     file_handler = logging.FileHandler(log_file)
     file_handler.setFormatter(logging.Formatter('%(asctime)s - %(levelname)s - %(message)s'))
-    file_handler.setLevel(logging.INFO)  # Capture all log levels
-    root_logger.addHandler(file_handler)
+    file_handler.setLevel(logging.DEBUG)
+    file_logger.addHandler(file_handler)
     
-    # Set root logger level to DEBUG to ensure we capture everything
-    root_logger.setLevel(logging.DEBUG)
-    
-    # Test logging
-    logging.debug("Test debug message")
-    logging.info("Test info message")
-    logging.warning("Test warning message")
+    # Ensure the new logger doesn't propagate to root
+    file_logger.propagate = False
     
     def print_logger(*args: Any, **kwargs: Any) -> None:
         """
@@ -44,8 +43,8 @@ def setup_print_logger() -> None:
         # Convert all arguments to strings and join them
         message = " ".join(str(arg) for arg in args)
         
-        # First log to file
-        logging.info(message)
+        # Log to our file logger
+        file_logger.info(message)
         
         # Then print to console using original print
         _original_print(*args, **kwargs)
@@ -59,11 +58,10 @@ def setup_print_logger() -> None:
         Removes the log file and restores the original print function.
         """
         try:
-            # Only remove our file handler
-            for handler in root_logger.handlers[:]:
-                if isinstance(handler, logging.FileHandler) and handler.baseFilename == log_file:
-                    handler.close()
-                    root_logger.removeHandler(handler)
+            # Remove our file handler
+            for handler in file_logger.handlers[:]:
+                handler.close()
+                file_logger.removeHandler(handler)
             
             # Delete the log file
             if os.path.exists(log_file):
