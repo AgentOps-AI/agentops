@@ -68,4 +68,35 @@ class V4Client(BaseApiClient):
             return UploadedObjectResponse(**response_data)
         except Exception as e:
             raise ApiServerException(f"Failed to process upload response: {str(e)}")
+        
+
+    def upload_logfile(self, body: Union[str, bytes], trace_id: int) -> UploadedObjectResponse:
+        """
+        Upload an log file to the API and return the response.
+        
+        Args:
+            body: The log file to upload, either as a string or bytes.
+        Returns:
+            UploadedObjectResponse: The response from the API after upload.
+        """
+        if isinstance(body, bytes):
+            body = body.decode("utf-8")
+        
+        response = self.post("/v4/logs/upload/", body, {**self.prepare_headers(), "Trace-Id": str(trace_id)})
+        
+        if response.status_code != 200:
+            error_msg = f"Upload failed: {response.status_code}"
+            try:
+                error_data = response.json()
+                if "error" in error_data:
+                    error_msg = error_data["error"]
+            except Exception:
+                pass
+            raise ApiServerException(error_msg)
+    
+        try:
+            response_data = response.json()
+            return UploadedObjectResponse(**response_data)
+        except Exception as e:
+            raise ApiServerException(f"Failed to process upload response: {str(e)}")
 
