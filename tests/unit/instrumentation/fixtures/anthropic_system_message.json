@@ -1,0 +1,21 @@
+{
+  "id": "msg_01B6YbGDPQbBzjnz9F8uXZe3",
+  "content": [
+    {
+      "citations": null,
+      "text": "Python is a high-level, general-purpose programming language known for its simplicity, readability, and versatility. It supports multiple programming paradigms, including procedural, object-oriented, and functional programming. Python is widely used for web development, scientific computing, artificial intelligence, data analysis, and automation tasks. Its extensive standard library and vast ecosystem of third-party packages make it a popular choice among developers.",
+      "type": "text"
+    }
+  ],
+  "model": "claude-3-opus-20240229",
+  "role": "assistant",
+  "stop_reason": "end_turn",
+  "stop_sequence": null,
+  "type": "message",
+  "usage": {
+    "cache_creation_input_tokens": 0,
+    "cache_read_input_tokens": 0,
+    "input_tokens": 22,
+    "output_tokens": 88
+  }
+}
