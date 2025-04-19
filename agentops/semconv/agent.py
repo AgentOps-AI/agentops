@@ -8,6 +8,7 @@ class AgentAttributes:
     AGENT_ID = "agent.id"  # Unique identifier for the agent
     AGENT_NAME = "agent.name"  # Name of the agent
     AGENT_ROLE = "agent.role"  # Role of the agent
+    AGENT = "agent"  # Root prefix for agent attributes
 
     # Capabilities
     AGENT_TOOLS = "agent.tools"  # Tools available to the agent
