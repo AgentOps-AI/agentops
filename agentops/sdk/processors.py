@@ -16,7 +16,7 @@ import agentops.semconv as semconv
 from agentops.logging import logger
 from agentops.helpers.dashboard import log_trace_url
 from agentops.semconv.core import CoreAttributes
-from agentops.instrumentation.common.logs import upload_logfile
+from agentops.logging import upload_logfile
 
 class LiveSpanProcessor(SpanProcessor):
     def __init__(self, span_exporter: SpanExporter, **kwargs):

@@ -21,8 +21,7 @@ from opentelemetry.sdk.trace.export import BatchSpanProcessor
 from opentelemetry import context as context_api
 
 from agentops.exceptions import AgentOpsClientNotInitializedException
-from agentops.instrumentation.common.logs import setup_print_logger
-from agentops.logging import logger
+from agentops.logging import logger, setup_print_logger
 from agentops.sdk.processors import InternalSpanProcessor
 from agentops.sdk.types import TracingConfig
 from agentops.semconv import ResourceAttributes
