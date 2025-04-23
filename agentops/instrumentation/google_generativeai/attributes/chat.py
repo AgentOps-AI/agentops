@@ -74,8 +74,8 @@ def _set_chat_history_attributes(attributes: AttributeMap, args: Tuple, kwargs: 
                 elif hasattr(message, "role"):
                     role = message.role
                 
-                attributes[f"{SpanAttributes.LLM_PROMPTS}.{i}.content"] = content
-                attributes[f"{SpanAttributes.LLM_PROMPTS}.{i}.role"] = role
+                attributes[MessageAttributes.PROMPT_CONTENT.format(i=i)] = content
+                attributes[MessageAttributes.PROMPT_ROLE.format(i=i)] = role
         except Exception as e:
             logger.debug(f"Error extracting chat message at index {i}: {e}")
 
