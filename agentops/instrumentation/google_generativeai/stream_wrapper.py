@@ -81,7 +81,6 @@ def generate_content_stream_wrapper(tracer, wrapped, instance, args, kwargs):
             Yields:
                 Items from the original stream with added instrumentation
             """
-            token_count = 0
             full_text = ""
             last_chunk_with_metadata = None
             
@@ -93,7 +92,6 @@ def generate_content_stream_wrapper(tracer, wrapped, instance, args, kwargs):
                     
                     # Track token count (approximate by word count if metadata not available)
                     if hasattr(chunk, "text"):
-                        token_count += len(chunk.text.split())
                         full_text += chunk.text
                     
                     yield chunk
@@ -187,7 +185,6 @@ async def generate_content_stream_async_wrapper(tracer, wrapped, instance, args,
             Yields:
                 Items from the original stream with added instrumentation
             """
-            token_count = 0
             full_text = ""
             last_chunk_with_metadata = None
             
@@ -197,9 +194,7 @@ async def generate_content_stream_async_wrapper(tracer, wrapped, instance, args,
                     if hasattr(chunk, "usage_metadata") and chunk.usage_metadata:
                         last_chunk_with_metadata = chunk
                     
-                    # Track token count (approximate by word count if metadata not available)
                     if hasattr(chunk, "text"):
-                        token_count += len(chunk.text.split())
                         full_text += chunk.text
                     
                     yield chunk
