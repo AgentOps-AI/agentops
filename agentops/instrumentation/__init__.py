@@ -75,7 +75,7 @@ available_instrumentors: list[InstrumentorLoader] = [
     InstrumentorLoader(
         module_name="agentops.instrumentation.google_generativeai",
         class_name="GoogleGenerativeAIInstrumentor",
-        provider_import_name="google.generativeai",
+        provider_import_name="google.genai",
     ),
 ]
 
