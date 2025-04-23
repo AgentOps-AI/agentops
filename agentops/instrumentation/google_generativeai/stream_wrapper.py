@@ -90,13 +90,6 @@ def generate_content_stream_wrapper(tracer, wrapped, instance, args, kwargs):
                     # Keep track of the last chunk that might have metadata
                     if hasattr(chunk, "usage_metadata") and chunk.usage_metadata:
                         last_chunk_with_metadata = chunk
-                    
-                    # Track token count (approximate by word count if metadata not available)
-                    if hasattr(chunk, "text"):
-                        token_count += len(chunk.text.split())
-                        full_text += chunk.text
-                        span.set_attribute(SpanAttributes.LLM_USAGE_STREAMING_TOKENS, token_count)
-                    
                     yield chunk
                 
                 # Set final content when complete
@@ -197,13 +190,6 @@ async def generate_content_stream_async_wrapper(tracer, wrapped, instance, args,
                     # Keep track of the last chunk that might have metadata
                     if hasattr(chunk, "usage_metadata") and chunk.usage_metadata:
                         last_chunk_with_metadata = chunk
-                    
-                    # Track token count (approximate by word count if metadata not available)
-                    if hasattr(chunk, "text"):
-                        token_count += len(chunk.text.split())
-                        full_text += chunk.text
-                        span.set_attribute(SpanAttributes.LLM_USAGE_STREAMING_TOKENS, token_count)
-                    
                     yield chunk
                 
                 # Set final content when complete
