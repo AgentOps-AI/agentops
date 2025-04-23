@@ -31,6 +31,7 @@ class SpanAttributes:
     LLM_REQUEST_MAX_TOKENS = "gen_ai.request.max_tokens"
     LLM_REQUEST_TEMPERATURE = "gen_ai.request.temperature"
     LLM_REQUEST_TOP_P = "gen_ai.request.top_p"
+    LLM_REQUEST_TOP_K = "gen_ai.request.top_k"
     LLM_REQUEST_TYPE = "gen_ai.request.type"
     LLM_REQUEST_STREAMING = "gen_ai.request.streaming"
     LLM_REQUEST_FREQUENCY_PENALTY = "gen_ai.request.frequency_penalty"
