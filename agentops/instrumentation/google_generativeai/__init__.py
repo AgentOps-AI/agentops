@@ -23,7 +23,7 @@ def get_version() -> str:
         logger.debug("Could not find Google Generative AI SDK version")
         return "unknown"
 
-LIBRARY_NAME = "google-generativeai"
+LIBRARY_NAME = "google-genai"
 LIBRARY_VERSION: str = get_version()
 
 logger = logging.getLogger(__name__)
