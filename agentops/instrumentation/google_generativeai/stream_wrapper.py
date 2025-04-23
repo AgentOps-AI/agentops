@@ -12,7 +12,7 @@ from opentelemetry import context as context_api
 from opentelemetry.trace import SpanKind, Status, StatusCode
 from opentelemetry.instrumentation.utils import _SUPPRESS_INSTRUMENTATION_KEY
 
-from agentops.semconv import SpanAttributes, LLMRequestTypeValues, CoreAttributes
+from agentops.semconv import SpanAttributes, LLMRequestTypeValues, CoreAttributes, MessageAttributes
 from agentops.instrumentation.common.wrappers import _with_tracer_wrapper
 from agentops.instrumentation.google_generativeai.attributes.model import (
     get_generate_content_attributes,
@@ -101,8 +101,8 @@ def generate_content_stream_wrapper(tracer, wrapped, instance, args, kwargs):
                 
                 # Set final content when complete
                 if full_text:
-                    span.set_attribute(f"{SpanAttributes.LLM_COMPLETIONS}.0.content", full_text)
-                    span.set_attribute(f"{SpanAttributes.LLM_COMPLETIONS}.0.role", "assistant")
+                    span.set_attribute(MessageAttributes.COMPLETION_CONTENT.format(i=0), full_text)
+                    span.set_attribute(MessageAttributes.COMPLETION_ROLE.format(i=0), "assistant")
                 
                 # Get token usage from the last chunk if available
                 if last_chunk_with_metadata and hasattr(last_chunk_with_metadata, "usage_metadata"):
@@ -208,8 +208,8 @@ async def generate_content_stream_async_wrapper(tracer, wrapped, instance, args,
                 
                 # Set final content when complete
                 if full_text:
-                    span.set_attribute(f"{SpanAttributes.LLM_COMPLETIONS}.0.content", full_text)
-                    span.set_attribute(f"{SpanAttributes.LLM_COMPLETIONS}.0.role", "assistant")
+                    span.set_attribute(MessageAttributes.COMPLETION_CONTENT.format(i=0), full_text)
+                    span.set_attribute(MessageAttributes.COMPLETION_ROLE.format(i=0), "assistant")
                 
                 # Get token usage from the last chunk if available
                 if last_chunk_with_metadata and hasattr(last_chunk_with_metadata, "usage_metadata"):

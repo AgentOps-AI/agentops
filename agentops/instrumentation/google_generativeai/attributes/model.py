@@ -100,21 +100,21 @@ def _set_prompt_attributes(attributes: AttributeMap, args: Tuple, kwargs: Dict[s
             try:
                 extracted_text = _extract_content_from_prompt(item)
                 if extracted_text:
-                    attributes[f"{SpanAttributes.LLM_PROMPTS}.{i}.content"] = extracted_text
+                    attributes[MessageAttributes.PROMPT_CONTENT.format(i=i)] = extracted_text
                     role = "user"
                     if isinstance(item, dict) and "role" in item:
                         role = item["role"]
                     elif hasattr(item, "role"):
                         role = item.role
-                    attributes[f"{SpanAttributes.LLM_PROMPTS}.{i}.role"] = role
+                    attributes[MessageAttributes.PROMPT_ROLE.format(i=i)] = role
             except Exception as e:
                 logger.debug(f"Error extracting prompt content at index {i}: {e}")
     else:
         try:
             extracted_text = _extract_content_from_prompt(content)
             if extracted_text:
-                attributes[f"{SpanAttributes.LLM_PROMPTS}.0.content"] = extracted_text
-                attributes[f"{SpanAttributes.LLM_PROMPTS}.0.role"] = "user"
+                attributes[MessageAttributes.PROMPT_CONTENT.format(i=0)] = extracted_text
+                attributes[MessageAttributes.PROMPT_ROLE.format(i=0)] = "user"
         except Exception as e:
             logger.debug(f"Error extracting prompt content: {e}")
 
@@ -143,8 +143,8 @@ def _set_response_attributes(attributes: AttributeMap, response: Any) -> None:
     
     try:
         if hasattr(response, "text"):
-            attributes[f"{SpanAttributes.LLM_COMPLETIONS}.0.content"] = response.text
-            attributes[f"{SpanAttributes.LLM_COMPLETIONS}.0.role"] = "assistant"
+            attributes[MessageAttributes.COMPLETION_CONTENT.format(i=0)] = response.text
+            attributes[MessageAttributes.COMPLETION_ROLE.format(i=0)] = "assistant"
         elif hasattr(response, "candidates"):
             # List of candidates
             for i, candidate in enumerate(response.candidates):
@@ -157,11 +157,11 @@ def _set_response_attributes(attributes: AttributeMap, response: Any) -> None:
                         elif hasattr(part, "text"):
                             text += part.text
                     
-                    attributes[f"{SpanAttributes.LLM_COMPLETIONS}.{i}.content"] = text
-                    attributes[f"{SpanAttributes.LLM_COMPLETIONS}.{i}.role"] = "assistant"
+                    attributes[MessageAttributes.COMPLETION_CONTENT.format(i=i)] = text
+                    attributes[MessageAttributes.COMPLETION_ROLE.format(i=i)] = "assistant"
                 
                 if hasattr(candidate, "finish_reason"):
-                    attributes[SpanAttributes.LLM_RESPONSE_FINISH_REASON] = candidate.finish_reason
+                    attributes[MessageAttributes.COMPLETION_FINISH_REASON.format(i=i)] = candidate.finish_reason
     except Exception as e:
         logger.debug(f"Error extracting completion content: {e}")
 
