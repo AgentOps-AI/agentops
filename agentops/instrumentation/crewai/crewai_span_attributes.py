@@ -9,7 +9,6 @@ from agentops.semconv.span_attributes import SpanAttributes
 from agentops.semconv.agent import AgentAttributes
 from agentops.semconv.tool import ToolAttributes
 from agentops.semconv.message import MessageAttributes
-from agentops.instrumentation.common.attributes import AttributeMap
 
 # Initialize logger for logging potential issues and operations
 logger = logging.getLogger(__name__)
@@ -200,106 +199,132 @@ class CrewAISpanAttributes:
                 for i, tool in enumerate(tools):
                     self._set_attribute(MessageAttributes.TOOL_CALL_NAME.format(i=i), tool.get("name", ""))
                     self._set_attribute(MessageAttributes.TOOL_CALL_DESCRIPTION.format(i=i), tool.get("description", ""))
-            except:
-                logger.warning(f"Failed to parse tools json: {task['tools']}")
+            except (json.JSONDecodeError, TypeError):
+                logger.warning(f"Failed to parse tools for task: {task.get('id', 'unknown')}")
 
     def _process_llm(self):
         """Process an LLM instance."""
+        llm = {}
         self._set_attribute(SpanAttributes.AGENTOPS_SPAN_KIND, "llm")
         
-        # Parse model parameters
-        model_name = getattr(self.instance, "model", None) or getattr(self.instance, "model_name", None) or ""
-        temp = getattr(self.instance, "temperature", None)
-        max_tokens = getattr(self.instance, "max_tokens", None)
-        
-        self._set_attribute(SpanAttributes.LLM_REQUEST_MODEL, model_name)
-        if temp is not None:
-            self._set_attribute(SpanAttributes.LLM_REQUEST_TEMPERATURE, str(temp))
-        if max_tokens is not None:
-            self._set_attribute(SpanAttributes.LLM_REQUEST_MAX_TOKENS, str(max_tokens))
-        
-        # Add provider info based on class attributes or parent class
-        if hasattr(self.instance, 'provider'):
-            provider = self.instance.provider
-            self._set_attribute(SpanAttributes.LLM_PROVIDER, provider)
-            
-        # Set additional LLM attributes
         for key, value in self.instance.__dict__.items():
             if value is None:
                 continue
-            self._set_attribute(f"crewai.llm.{key}", str(value))
+            llm[key] = str(value)
+
+        model_name = llm.get('model_name', '') or llm.get('model', '')
+        self._set_attribute(SpanAttributes.LLM_REQUEST_MODEL, model_name)
+        self._set_attribute(SpanAttributes.LLM_REQUEST_TEMPERATURE, llm.get('temperature', ''))
+        self._set_attribute(SpanAttributes.LLM_REQUEST_MAX_TOKENS, llm.get('max_tokens', ''))
+        self._set_attribute(SpanAttributes.LLM_REQUEST_TOP_P, llm.get('top_p', ''))
+        
+        if 'frequency_penalty' in llm:
+            self._set_attribute(SpanAttributes.LLM_REQUEST_FREQUENCY_PENALTY, llm.get('frequency_penalty', ''))
+        if 'presence_penalty' in llm:
+            self._set_attribute(SpanAttributes.LLM_REQUEST_PRESENCE_PENALTY, llm.get('presence_penalty', ''))
+        if 'streaming' in llm:
+            self._set_attribute(SpanAttributes.LLM_REQUEST_STREAMING, llm.get('streaming', ''))
+        
+        if 'api_key' in llm:
+            self._set_attribute("gen_ai.request.api_key_present", "true")
+            
+        if 'base_url' in llm:
+            self._set_attribute(SpanAttributes.LLM_OPENAI_API_BASE, llm.get('base_url', ''))
+        
+        if 'api_version' in llm:
+            self._set_attribute(SpanAttributes.LLM_OPENAI_API_VERSION, llm.get('api_version', ''))
 
     def _parse_agents(self, agents):
-        """Process a list of agents for a crew instance."""
-        # Track agents in an array
-        for i, agent in enumerate(agents):
-            if not agent:
+        """Parse agents into a list of dictionaries."""
+        if not agents:
+            logger.debug("CrewAI: No agents to parse")
+            return
+
+        agent_count = len(agents)
+        logger.debug(f"CrewAI: Parsing {agent_count} agents")
+        
+        # Pre-process all agents to collect their data first
+        agent_data_list = []
+        
+        for idx, agent in enumerate(agents):
+            if agent is None:
+                logger.debug(f"CrewAI: Agent at index {idx} is None, skipping")
+                agent_data_list.append(None)
                 continue
-                
-            agent_data = self._extract_agent_data(agent)
             
-            # Set span attributes for each agent
-            agent_prefix = f"crewai.crew.agent.{i}."
+            logger.debug(f"CrewAI: Processing agent at index {idx}")
+            try:
+                agent_data = self._extract_agent_data(agent)
+                agent_data_list.append(agent_data)
+            except Exception as e:
+                logger.error(f"CrewAI: Error extracting data for agent at index {idx}: {str(e)}")
+                agent_data_list.append(None)
+        
+        # Now set all attributes at once for each agent
+        for idx, agent_data in enumerate(agent_data_list):
+            if agent_data is None:
+                continue
+            
             for key, value in agent_data.items():
-                self._set_attribute(f"{agent_prefix}{key}", value)
-            
-            # Process tools if available
-            if hasattr(agent, "tools") and agent.tools:
-                parsed_tools = _parse_tools(agent.tools)
-                for j, tool in enumerate(parsed_tools):
-                    tool_prefix = f"{agent_prefix}tool.{j}."
-                    for tool_key, tool_value in tool.items():
-                        self._set_attribute(f"{tool_prefix}{tool_key}", str(tool_value))
-            
-            # Process LLM if available
-            if hasattr(agent, "llm") and agent.llm:
-                llm = agent.llm
-                if hasattr(llm, "model") and llm.model:
-                    self._set_attribute(f"{agent_prefix}llm.model", str(llm.model))
-                elif hasattr(llm, "model_name") and llm.model_name:
-                    self._set_attribute(f"{agent_prefix}llm.model", str(llm.model_name))
+                if key == "tools" and isinstance(value, list):
+                    for tool_idx, tool in enumerate(value):
+                        for tool_key, tool_value in tool.items():
+                            self._set_attribute(f"crewai.agents.{idx}.tools.{tool_idx}.{tool_key}", str(tool_value))
+                else:
+                    self._set_attribute(f"crewai.agents.{idx}.{key}", value)
 
     def _parse_llms(self, llms):
-        """Process a dictionary of LLMs for a crew instance."""
-        if not llms or not isinstance(llms, dict):
-            return
-        
-        # Track LLMs in an array
-        for i, (role, llm) in enumerate(llms.items()):
-            if not llm:
-                continue
-            
-            # Set basic LLM information
-            llm_prefix = f"crewai.crew.llm.{i}."
-            self._set_attribute(f"{llm_prefix}role", str(role))
-            
-            # Extract model information
-            if hasattr(llm, "model") and llm.model:
-                self._set_attribute(f"{llm_prefix}model", str(llm.model))
-            elif hasattr(llm, "model_name") and llm.model_name:
-                self._set_attribute(f"{llm_prefix}model", str(llm.model_name))
-            
-            # Extract other important LLM parameters
-            for key in ["temperature", "max_tokens", "top_p"]:
-                if hasattr(llm, key) and getattr(llm, key) is not None:
-                    self._set_attribute(f"{llm_prefix}{key}", str(getattr(llm, key)))
+        """Parse LLMs into a list of dictionaries."""
+        for idx, llm in enumerate(llms):
+            if llm is not None:
+                model_name = getattr(llm, "model", None) or getattr(llm, "model_name", None) or ""
+                llm_data = {
+                    "model": model_name,
+                    "temperature": llm.temperature,
+                    "max_tokens": llm.max_tokens,
+                    "max_completion_tokens": llm.max_completion_tokens,
+                    "top_p": llm.top_p,
+                    "n": llm.n,
+                    "seed": llm.seed,
+                    "base_url": llm.base_url,
+                    "api_version": llm.api_version,
+                }
+                
+                self._set_attribute(f"{SpanAttributes.LLM_REQUEST_MODEL}.{idx}", model_name)
+                if hasattr(llm, "temperature"):
+                    self._set_attribute(f"{SpanAttributes.LLM_REQUEST_TEMPERATURE}.{idx}", str(llm.temperature))
+                if hasattr(llm, "max_tokens"):
+                    self._set_attribute(f"{SpanAttributes.LLM_REQUEST_MAX_TOKENS}.{idx}", str(llm.max_tokens))
+                if hasattr(llm, "top_p"):
+                    self._set_attribute(f"{SpanAttributes.LLM_REQUEST_TOP_P}.{idx}", str(llm.top_p))
+                
+                for key, value in llm_data.items():
+                    if value is not None:
+                        self._set_attribute(f"crewai.llms.{idx}.{key}", str(value))
 
     def _extract_agent_data(self, agent):
-        """Extract relevant data from an agent instance."""
-        agent_data = {}
-        
-        # Extract basic agent information
-        for key in ["id", "role", "name", "goal", "backstory"]:
-            if hasattr(agent, key) and getattr(agent, key):
-                agent_data[key] = str(getattr(agent, key))
-        
-        # Extract configuration settings
-        for key in ["allow_delegation", "allow_code_execution", "max_iter", "max_rpm", "verbose"]:
-            if hasattr(agent, key) and getattr(agent, key) is not None:
-                agent_data[key] = str(getattr(agent, key))
-        
-        return agent_data
+        """Extract data from an agent."""
+        model = getattr(agent.llm, "model", None) or getattr(agent.llm, "model_name", None) or ""
+
+        tools_list = []
+        if hasattr(agent, "tools") and agent.tools:
+            tools_list = _parse_tools(agent.tools)
+
+        return {
+            "id": str(agent.id),
+            "role": agent.role,
+            "goal": agent.goal,
+            "backstory": agent.backstory,
+            "cache": agent.cache,
+            "config": agent.config,
+            "verbose": agent.verbose,
+            "allow_delegation": agent.allow_delegation,
+            "tools": tools_list,
+            "max_iter": agent.max_iter,
+            "llm": str(model),
+        }
 
     def _set_attribute(self, key, value):
-        """Set an attribute on the span with validation."""
-        set_span_attribute(self.span, key, value) 
+        """Set an attribute on the span."""
+        if value is not None and value != "":
+            set_span_attribute(self.span, key, value)
