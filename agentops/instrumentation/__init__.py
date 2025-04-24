@@ -63,7 +63,7 @@ available_instrumentors: list[InstrumentorLoader] = [
         provider_import_name="anthropic",
     ),
     InstrumentorLoader(
-        module_name="opentelemetry.instrumentation.crewai",
+        module_name="agentops.instrumentation.crewai",
         class_name="CrewAIInstrumentor",
         provider_import_name="crewai",
     ),
