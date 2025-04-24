@@ -21,7 +21,7 @@ from opentelemetry.sdk.trace.export import BatchSpanProcessor
 from opentelemetry import context as context_api
 
 from agentops.exceptions import AgentOpsClientNotInitializedException
-from agentops.logging import logger
+from agentops.logging import logger, setup_print_logger
 from agentops.sdk.processors import InternalSpanProcessor
 from agentops.sdk.types import TracingConfig
 from agentops.semconv import ResourceAttributes
@@ -170,6 +170,9 @@ def setup_telemetry(
     meter_provider = MeterProvider(resource=resource, metric_readers=[metric_reader])
     metrics.set_meter_provider(meter_provider)
 
+    ### Logging
+    setup_print_logger()
+    
     # Initialize root context
     context_api.get_current()
 
@@ -256,8 +259,8 @@ class TracingCore:
             self._provider, self._meter_provider = setup_telemetry(
                 service_name=config["service_name"] or "",
                 project_id=config.get("project_id"),
-                exporter_endpoint=config["exporter_endpoint"] or "",
-                metrics_endpoint=config["metrics_endpoint"] or "",
+                exporter_endpoint=config["exporter_endpoint"],
+                metrics_endpoint=config["metrics_endpoint"],
                 max_queue_size=config["max_queue_size"],
                 max_wait_time=config["max_wait_time"],
                 export_flush_interval=config["export_flush_interval"],
