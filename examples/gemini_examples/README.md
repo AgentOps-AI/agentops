@@ -6,7 +6,7 @@ This directory contains examples demonstrating how to use AgentOps with Google's
 
 - Python 3.7+
 - `agentops` package installed (`pip install -U agentops`)
-- `google-generativeai` package installed (`pip install -U google-generativeai>=0.1.0`)
+- `google-genai` package installed (`pip install -U google-genai>=0.1.0`)
 - A Gemini API key (get one at [Google AI Studio](https://ai.google.dev/tutorials/setup))
 - An AgentOps API key (get one at [AgentOps Dashboard](https://app.agentops.ai/settings/projects))
 
@@ -14,7 +14,7 @@ This directory contains examples demonstrating how to use AgentOps with Google's
 
 1. Install required packages:
 ```bash
-pip install -U agentops google-generativeai
+pip install -U agentops google-genai
 ```
 
 2. Set your API keys as environment variables:
@@ -27,36 +27,44 @@ export AGENTOPS_API_KEY='your-agentops-api-key'
 
 ### Synchronous and Streaming Example
 
-The [gemini_example_sync.ipynb](./gemini_example_sync.ipynb) notebook demonstrates:
+The [gemini_example.ipynb](./gemini_example.ipynb) notebook demonstrates:
 - Basic synchronous text generation
 - Streaming text generation with chunk handling
+- Token counting operations
 - Automatic event tracking and token usage monitoring
 - Session management and statistics
 
 ```python
-import google.generativeai as genai
+from google import genai
 import agentops
-
-# Configure API keys
-genai.configure(api_key=GEMINI_API_KEY)
 
 # Initialize AgentOps (provider detection is automatic)
 agentops.init()
 
-# Create Gemini model
-model = genai.GenerativeModel("gemini-1.5-flash")
+# Create Gemini client
+client = genai.Client(api_key='YOUR_GEMINI_API_KEY')
 
 # Generate text (synchronous)
-response = model.generate_content("What are the three laws of robotics?")
+response = client.models.generate_content(
+    model="gemini-1.5-flash",
+    contents="What are the three laws of robotics?"
+)
 print(response.text)
 
 # Generate text (streaming)
-response = model.generate_content(
-    "Explain machine learning in simple terms.",
-    stream=True
+response_stream = client.models.generate_content_stream(
+    model="gemini-1.5-flash",
+    contents="Explain machine learning in simple terms."
 )
-for chunk in response:
+for chunk in response_stream:
     print(chunk.text, end="")
+
+# Token counting
+token_response = client.models.count_tokens(
+    model="gemini-1.5-flash",
+    contents="This is a test sentence to count tokens."
+)
+print(f"Token count: {token_response.total_tokens}")
 
 # End session and view stats
 agentops.end_session(
@@ -67,7 +75,7 @@ agentops.end_session(
 
 To run the example:
 1. Make sure you have set up your environment variables
-2. Open and run the notebook: `jupyter notebook gemini_example_sync.ipynb`
+2. Open and run the notebook: `jupyter notebook gemini_example.ipynb`
 3. View your session in the AgentOps dashboard using the URL printed at the end
 
 ## Features
