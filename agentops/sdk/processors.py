@@ -12,11 +12,10 @@ from opentelemetry.context import Context
 from opentelemetry.sdk.trace import ReadableSpan, Span, SpanProcessor
 from opentelemetry.sdk.trace.export import SpanExporter
 
-import agentops.semconv as semconv
 from agentops.logging import logger
 from agentops.helpers.dashboard import log_trace_url
 from agentops.semconv.core import CoreAttributes
-
+from agentops.logging import upload_logfile
 
 class LiveSpanProcessor(SpanProcessor):
     def __init__(self, span_exporter: SpanExporter, **kwargs):
@@ -91,7 +90,7 @@ class InternalSpanProcessor(SpanProcessor):
     - This processor tries to use the native kind first, then falls back to the attribute
     """
 
-    _root_span_id: Optional[Span] = None
+    _root_span_id: Optional[int] = None
 
     def on_start(self, span: Span, parent_context: Optional[Context] = None) -> None:
         """
@@ -124,6 +123,10 @@ class InternalSpanProcessor(SpanProcessor):
         if self._root_span_id and (span.context.span_id is self._root_span_id):
             logger.debug(f"[agentops.InternalSpanProcessor] Ending root span: {span.name}")
             log_trace_url(span)
+            try:
+                upload_logfile(span.context.trace_id)
+            except Exception as e:
+                logger.error(f"[agentops.InternalSpanProcessor] Error uploading logfile: {e}")
 
     def shutdown(self) -> None:
         """Shutdown the processor."""

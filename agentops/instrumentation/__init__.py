@@ -63,7 +63,7 @@ available_instrumentors: list[InstrumentorLoader] = [
         provider_import_name="anthropic",
     ),
     InstrumentorLoader(
-        module_name="opentelemetry.instrumentation.crewai",
+        module_name="agentops.instrumentation.crewai",
         class_name="CrewAIInstrumentor",
         provider_import_name="crewai",
     ),
@@ -71,6 +71,11 @@ available_instrumentors: list[InstrumentorLoader] = [
         module_name="agentops.instrumentation.openai_agents",
         class_name="OpenAIAgentsInstrumentor",
         provider_import_name="agents",
+    ),
+    InstrumentorLoader(
+        module_name="agentops.instrumentation.google_generativeai",
+        class_name="GoogleGenerativeAIInstrumentor",
+        provider_import_name="google.genai",
     ),
 ]
 
