@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "agentops"
-version = "0.4.7"
+version = "0.4.8"
 authors = [
   { name="Alex Reibman", email="areibman@gmail.com" },
   { name="Shawn Qiu", email="siyangqiu@gmail.com" },
