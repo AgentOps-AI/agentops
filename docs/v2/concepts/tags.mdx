@@ -1,0 +1,91 @@
+---
+title: 'Tags'
+description: 'Organize and filter your sessions with customizable tags'
+---
+## Adding Tags
+
+You can add tags when initializing AgentOps, which is the most common approach:
+
+```python
+import agentops
+
+# Initialize AgentOps with tags
+agentops.init(
+    api_key="YOUR_API_KEY",
+    tags=["production", "customer-service", "gpt-4"]
+)
+```
+
+Alternatively, when using manual session creation:
+
+```python
+# Initialize without auto-starting a session
+agentops.init(api_key="YOUR_API_KEY", auto_start_session=False)
+
+# Later start a session with specific tags
+agentops.start_session(tags=["development", "testing", "claude-3"])
+```
+
+## Tag Use Cases
+
+Tags can be used for various purposes:
+
+### Environment Identification
+
+Tag sessions based on their environment:
+
+```python
+tags=["production"] # or ["development", "staging", "testing"]
+```
+
+### Feature Tracking
+
+Tag sessions related to specific features or components:
+
+```python
+tags=["search-functionality", "user-authentication", "content-generation"]
+```
+
+### User Segmentation
+
+Tag sessions based on user characteristics:
+
+```python
+tags=["premium-user", "new-user", "enterprise-customer"]
+```
+
+### Experiment Tracking
+
+Tag sessions as part of specific experiments:
+
+```python
+tags=["experiment-123", "control-group", "variant-A"]
+```
+
+### Model Identification
+
+Tag sessions with the models being used:
+
+```python
+tags=["gpt-4", "claude-3-opus", "mistral-large"]
+```
+
+## Viewing Tagged Sessions
+
+In the AgentOps dashboard:
+
+1. Use the tag filter to select specific tags
+2. Combine multiple tags to refine your view
+3. Save filtered views for quick access
+
+## Best Practices
+
+- Use a consistent naming convention for tags
+- Include both broad categories and specific identifiers
+- Avoid using too many tags per session (3-5 is typically sufficient)
+- Consider using hierarchical tag structures (e.g., "env:production", "model:gpt-4")
+- Update your tagging strategy as your application evolves
+
+<script type="module" src="/scripts/github_stars.js"></script>
+<script type="module" src="/scripts/scroll-img-fadein-animation.js"></script>
+<script type="module" src="/scripts/button_heartbeat_animation.js"></script>

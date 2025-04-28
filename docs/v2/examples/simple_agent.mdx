@@ -1,0 +1,108 @@
+---
+title: 'Simple Agent Example'
+description: 'Most basic usage with OpenAI API'
+mode: "wide"
+---
+_View Notebook on <a href={'https://github.com/AgentOps-AI/agentops/blob/main/examples/openai-gpt.ipynb'} target={'_blank'}>Github</a>_
+
+# AgentOps Basic Monitoring 
+This is an example of how to use the AgentOps library for basic Agent monitoring with OpenAI's GPT
+
+## Installation
+
+<CodeGroup>
+  ```bash pip
+  pip install -U openai agentops
+  ```
+  ```bash poetry
+  poetry add openai agentops
+  ```
+</CodeGroup>
+
+## Setup
+
+Import the necessary libraries:
+
+```python
+from openai import OpenAI
+import agentops
+import os
+from dotenv import load_dotenv
+```
+
+Set up your API keys:
+
+```python
+load_dotenv()
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY") or "<your_openai_key>"
+AGENTOPS_API_KEY = os.getenv("AGENTOPS_API_KEY") or "<your_agentops_key>"
+```
+
+Initialize AgentOps at the beginning of your application:
+
+```python
+# Initialize OpenAI client
+openai = OpenAI(api_key=OPENAI_API_KEY)
+
+# Initialize AgentOps with tags
+agentops.init(AGENTOPS_API_KEY, tags=["openai-gpt-example"])
+```
+
+## Single Completion Example
+
+Now just use OpenAI as you would normally!
+
+```python
+message = [{"role": "user", "content": "Write a 12 word poem about secret agents."}]
+response = openai.chat.completions.create(
+    model="gpt-3.5-turbo", messages=message, temperature=0.5, stream=False
+)
+print(response.choices[0].message.content)
+```
+
+Sessions are automatically managed by AgentOps. When your program exits, the session will be properly closed.
+
+## Tracking Custom Events
+
+You can track custom operations using decorators:
+
+```python
+from agentops.sdk.decorators import operation
+
+@operation(name="add numbers")
+def add(x, y):
+    return x + y
+
+result = add(2, 4)
+print(f"Result: {result}")
+```
+
+You can also create operations for more complex tracking:
+
+```python
+from agentops.sdk.decorators import operation
+
+@operation(name="check greeting")
+def check_greeting():
+    message = [{"role": "user", "content": "Hello"}]
+    response = openai.chat.completions.create(
+        model="gpt-3.5-turbo", messages=message, temperature=0.5
+    )
+    
+    print(response.choices[0].message.content)
+    
+    if "hello" in str(response.choices[0].message.content).lower():
+        return "Greeting detected"
+    return "No greeting detected"
+    
+result = check_greeting()
+print(f"Greeting check: {result}")
+```
+
+## Further Reading
+
+Check out more advanced examples like [Multi-Agent](/v2/examples/multi_agent) or [OpenAI Assistants](/v2/examples/openai_assistants) integration.
+
+<script type="module" src="/scripts/github_stars.js"></script>
+<script type="module" src="/scripts/scroll-img-fadein-animation.js"></script>
+<script type="module" src="/scripts/button_heartbeat_animation.js"></script> 

@@ -1,0 +1,293 @@
+---
+title: 'OpenAI Assistants Example'
+description: 'Learn how to use OpenAI Assistants API with AgentOps'
+mode: "wide"
+---
+_View Notebook on <a href={'https://github.com/AgentOps-AI/agentops/blob/main/examples/openai_examples/openai_assistants_example.ipynb'} target={'_blank'}>Github</a>_
+
+# Assistants API with AgentOps
+
+This guide shows how to monitor and track OpenAI's Assistants API using AgentOps. The Assistants API is a stateful evolution of the Chat Completions API for creating assistant-like experiences with powerful tools like Code Interpreter and Retrieval.
+
+![Assistants API Diagram](https://github.com/AgentOps-AI/agentops/blob/main/examples/openai_examples/images/assistants_overview_diagram.png)
+
+## Installation
+
+<CodeGroup>
+  ```bash pip
+  pip install -U openai agentops
+  ```
+  ```bash poetry
+  poetry add openai agentops
+  ```
+</CodeGroup>
+
+## Setup
+
+Import the necessary libraries:
+
+```python
+from openai import OpenAI
+import agentops
+from dotenv import load_dotenv
+import os
+import json
+import time
+
+# Helper function for displaying JSON
+def show_json(obj):
+    display(json.loads(obj.model_dump_json()))
+```
+
+Set up your API keys:
+
+```python
+load_dotenv()
+AGENTOPS_API_KEY = os.getenv("AGENTOPS_API_KEY") or "<your_agentops_key>"
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY") or "<your_openai_key>"
+```
+
+Initialize AgentOps at the beginning of your application:
+
+```python
+# Initialize AgentOps with tags
+agentops.init(api_key=AGENTOPS_API_KEY, tags=["openai", "assistants"])
+
+# Initialize OpenAI client
+client = OpenAI(api_key=OPENAI_API_KEY)
+```
+
+## Creating an Assistant
+
+Create a Math Tutor assistant:
+
+```python
+assistant = client.beta.assistants.create(
+    name="Math Tutor",
+    instructions="You are a personal math tutor. Answer questions briefly, in a sentence or less.",
+    model="gpt-4o-mini",
+)
+show_json(assistant)
+```
+
+## Working with Threads
+
+Create a new thread to hold the conversation:
+
+```python
+thread = client.beta.threads.create()
+show_json(thread)
+```
+
+Add a message to the thread:
+
+```python
+message = client.beta.threads.messages.create(
+    thread_id=thread.id,
+    role="user",
+    content="I need to solve the equation `3x + 11 = 14`. Can you help me?",
+)
+show_json(message)
+```
+
+## Running an Assistant
+
+Create a Run to get a completion from the Assistant:
+
+```python
+run = client.beta.threads.runs.create(
+    thread_id=thread.id,
+    assistant_id=assistant.id,
+)
+show_json(run)
+```
+
+Wait for the Run to complete:
+
+```python
+def wait_on_run(run, thread):
+    while run.status == "queued" or run.status == "in_progress":
+        run = client.beta.threads.runs.retrieve(
+            thread_id=thread.id,
+            run_id=run.id,
+        )
+        time.sleep(0.5)
+    return run
+
+run = wait_on_run(run, thread)
+show_json(run)
+```
+
+## Retrieving Messages
+
+List the messages in the thread:
+
+```python
+messages = client.beta.threads.messages.list(thread_id=thread.id)
+show_json(messages)
+```
+
+Continue the conversation with a follow-up question:
+
+```python
+# Create a message to append to our thread
+message = client.beta.threads.messages.create(
+    thread_id=thread.id, role="user", content="Could you explain this to me?"
+)
+
+# Execute our run
+run = client.beta.threads.runs.create(
+    thread_id=thread.id,
+    assistant_id=assistant.id,
+)
+
+# Wait for completion
+wait_on_run(run, thread)
+
+# Retrieve all the messages added after our last user message
+messages = client.beta.threads.messages.list(
+    thread_id=thread.id, order="asc", after=message.id
+)
+show_json(messages)
+```
+
+## Complete Example Function
+
+Here's a practical example of implementing Assistants API with helper functions:
+
+```python
+def submit_message(assistant_id, thread, user_message):
+    client.beta.threads.messages.create(
+        thread_id=thread.id, role="user", content=user_message
+    )
+    return client.beta.threads.runs.create(
+        thread_id=thread.id,
+        assistant_id=assistant_id,
+    )
+
+def get_response(thread):
+    return client.beta.threads.messages.list(thread_id=thread.id, order="asc")
+
+def create_thread_and_run(assistant_id, user_input):
+    thread = client.beta.threads.create()
+    run = submit_message(assistant_id, thread, user_input)
+    return thread, run
+
+def pretty_print(messages):
+    print("# Messages")
+    for m in messages:
+        print(f"{m.role}: {m.content[0].text.value}")
+    print()
+```
+
+## Using Tools with Assistants
+
+### Code Interpreter
+
+Enable Code Interpreter for your Assistant:
+
+```python
+assistant = client.beta.assistants.update(
+    assistant.id,
+    tools=[{"type": "code_interpreter"}],
+)
+show_json(assistant)
+```
+
+Test it with a coding task:
+
+```python
+thread, run = create_thread_and_run(
+    assistant.id,
+    "Generate the first 20 fibonacci numbers with code."
+)
+run = wait_on_run(run, thread)
+pretty_print(get_response(thread))
+```
+
+### Function Calling
+
+Define a custom function for your Assistant:
+
+```python
+function_json = {
+    "name": "display_quiz",
+    "description": "Displays a quiz to the student, and returns the student's response.",
+    "parameters": {
+        "type": "object",
+        "properties": {
+            "title": {"type": "string"},
+            "questions": {
+                "type": "array",
+                "items": {
+                    "type": "object",
+                    "properties": {
+                        "question_text": {"type": "string"},
+                        "question_type": {
+                            "type": "string",
+                            "enum": ["MULTIPLE_CHOICE", "FREE_RESPONSE"],
+                        },
+                        "choices": {"type": "array", "items": {"type": "string"}},
+                    },
+                    "required": ["question_text"],
+                },
+            },
+        },
+        "required": ["title", "questions"],
+    },
+}
+
+assistant = client.beta.assistants.update(
+    assistant.id,
+    tools=[
+        {"type": "code_interpreter"},
+        {"type": "function", "function": function_json},
+    ],
+)
+```
+
+Implement the function on your end:
+
+```python
+def display_quiz(title, questions):
+    print("Quiz:", title)
+    print()
+    responses = []
+
+    for q in questions:
+        print(q["question_text"])
+        response = ""
+
+        # If multiple choice, print options
+        if q["question_type"] == "MULTIPLE_CHOICE":
+            for i, choice in enumerate(q["choices"]):
+                print(f"{i}. {choice}")
+            response = "a"  # Mock response
+
+        # Otherwise, just get response
+        elif q["question_type"] == "FREE_RESPONSE":
+            response = "I don't know."  # Mock response
+
+        responses.append(response)
+        print()
+
+    return responses
+```
+
+## Ending the Session
+
+End the AgentOps session when done:
+
+```python
+agentops.end_session(end_state="Success")
+```
+
+## Further Reading
+
+Check out more advanced examples like [Multi-Agent](/v2/examples/multi_agent) integration.
+
+<script type="module" src="/scripts/github_stars.js"></script>
+<script type="module" src="/scripts/scroll-img-fadein-animation.js"></script>
+<script type="module" src="/scripts/button_heartbeat_animation.js"></script>
+
+
