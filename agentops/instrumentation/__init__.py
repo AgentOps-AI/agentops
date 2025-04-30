@@ -77,6 +77,11 @@ available_instrumentors: list[InstrumentorLoader] = [
         class_name="GoogleGenerativeAIInstrumentor",
         provider_import_name="google.genai",
     ),
+    InstrumentorLoader(
+        module_name="agentops.instrumentation.ibm_watsonx_ai",
+        class_name="IBMWatsonXInstrumentor",
+        provider_import_name="ibm_watsonx_ai",
+    ),
 ]
 
 
