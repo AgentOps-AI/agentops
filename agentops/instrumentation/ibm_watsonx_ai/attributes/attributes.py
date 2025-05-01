@@ -1,47 +1,36 @@
 """Attributes for IBM watsonx.ai model instrumentation.
 
-This module provides attribute extraction functions for IBM watsonx.ai model operations,
-focusing on token usage recording.
+This module provides attribute extraction functions for IBM watsonx.ai model operations.
 """
 from typing import Any, Dict, Optional, Tuple
 from agentops.instrumentation.common.attributes import AttributeMap
 from agentops.semconv import SpanAttributes, MessageAttributes
-from agentops.instrumentation.ibm_watsonx_ai.attributes.common import extract_params_attributes
+from agentops.instrumentation.ibm_watsonx_ai.attributes.common import (
+    extract_params_attributes,
+    convert_params_to_dict,
+    extract_prompt_from_args,
+    extract_messages_from_args,
+    extract_params_from_args
+)
+from ibm_watsonx_ai.foundation_models.schema import TextGenParameters, TextChatParameters
 
 def get_generate_attributes(args: Optional[Tuple] = None, kwargs: Optional[Dict] = None, return_value: Optional[Any] = None) -> AttributeMap:
-    """Extract token usage attributes from generate method calls.
-    
-    Args:
-        args: Positional arguments passed to the method
-        kwargs: Keyword arguments passed to the method
-        return_value: Return value from the method
-        
-    Returns:
-        Dictionary of token usage attributes to set on the span
-    """
+    """Extract token usage attributes from generate method calls."""
     attributes = {}
     
-    # Extract prompt from args or kwargs
-    prompt = None
-    if args and len(args) > 0:
-        prompt = args[0]
-    elif kwargs and 'prompt' in kwargs:
-        prompt = kwargs['prompt']
-        
+    # Extract prompt using helper function
+    prompt = extract_prompt_from_args(args, kwargs)
     if prompt:
         attributes[MessageAttributes.PROMPT_ROLE.format(i=0)] = "user"
         attributes[MessageAttributes.PROMPT_CONTENT.format(i=0)] = prompt
         attributes[MessageAttributes.PROMPT_TYPE.format(i=0)] = "text"
     
-    # Extract parameters from args or kwargs
-    params = None
-    if args and len(args) > 1:
-        params = args[1]
-    elif kwargs and 'params' in kwargs:
-        params = kwargs['params']
-        
+    # Extract parameters using helper functions
+    params = extract_params_from_args(args, kwargs)
     if params:
-        attributes.update(extract_params_attributes(params))
+        params_dict = convert_params_to_dict(params)
+        if params_dict:
+            attributes.update(extract_params_attributes(params_dict))
                 
     # Extract response information
     if return_value:
@@ -73,25 +62,11 @@ def get_generate_attributes(args: Optional[Tuple] = None, kwargs: Optional[Dict]
     return attributes
 
 def get_tokenize_attributes(args: Optional[Tuple] = None, kwargs: Optional[Dict] = None, return_value: Optional[Any] = None) -> AttributeMap:
-    """Extract attributes from tokenize method calls.
-    
-    Args:
-        args: Positional arguments passed to the method
-        kwargs: Keyword arguments passed to the method
-        return_value: Return value from the method
-        
-    Returns:
-        Dictionary of attributes to set on the span
-    """
+    """Extract attributes from tokenize method calls."""
     attributes = {}
     
-    # Extract input from args or kwargs
-    prompt = None
-    if args and len(args) > 0:
-        prompt = args[0]
-    elif kwargs and "prompt" in kwargs:
-        prompt = kwargs["prompt"]
-        
+    # Extract input from args or kwargs using helper function
+    prompt = extract_prompt_from_args(args, kwargs)
     if prompt:
         attributes[MessageAttributes.PROMPT_ROLE.format(i=0)] = "user"
         attributes[MessageAttributes.PROMPT_CONTENT.format(i=0)] = prompt
@@ -109,16 +84,7 @@ def get_tokenize_attributes(args: Optional[Tuple] = None, kwargs: Optional[Dict]
     return attributes
 
 def get_model_details_attributes(args: Optional[Tuple] = None, kwargs: Optional[Dict] = None, return_value: Optional[Any] = None) -> AttributeMap:
-    """Extract attributes from get_details method calls.
-    
-    Args:
-        args: Positional arguments passed to the method
-        kwargs: Keyword arguments passed to the method
-        return_value: Return value from the method
-        
-    Returns:
-        Dictionary of attributes to set on the span
-    """
+    """Extract attributes from get_details method calls."""
     if not isinstance(return_value, dict):
         return {}
         
@@ -177,65 +143,102 @@ def get_model_details_attributes(args: Optional[Tuple] = None, kwargs: Optional[
         
     return attributes
 
-def get_generate_text_stream_attributes(args: Optional[Tuple] = None, kwargs: Optional[Dict] = None, return_value: Optional[Any] = None) -> AttributeMap:
-    """Extract token usage attributes from generate_text_stream method calls.
-    
-    Args:
-        args: Positional arguments passed to the method
-        kwargs: Keyword arguments passed to the method
-        return_value: Return value from the method
-        
-    Returns:
-        Dictionary of token usage attributes to set on the span
-    """
+def get_chat_attributes(args: Optional[Tuple] = None, kwargs: Optional[Dict] = None, return_value: Optional[Any] = None) -> AttributeMap:
+    """Extract attributes from chat method calls."""
     attributes = {}
     
-    # Extract prompt from args or kwargs
-    prompt = None
-    if args and len(args) > 0:
-        prompt = args[0]
-    elif kwargs and 'prompt' in kwargs:
-        prompt = kwargs['prompt']
-        
-    if prompt:
-        attributes[MessageAttributes.PROMPT_ROLE.format(i=0)] = "user"
-        attributes[MessageAttributes.PROMPT_CONTENT.format(i=0)] = prompt
-        attributes[MessageAttributes.PROMPT_TYPE.format(i=0)] = "text"
-    
-    # Extract parameters from args or kwargs
-    params = None
-    if args and len(args) > 1:
-        params = args[1]
-    elif kwargs and 'params' in kwargs:
-        params = kwargs['params']
-        
-    if params:
-        attributes.update(extract_params_attributes(params))
+    # Extract messages using helper function
+    messages = extract_messages_from_args(args, kwargs)
+    if messages:
+        # Process each message in the conversation
+        for i, message in enumerate(messages):
+            if not isinstance(message, dict):
+                continue
                 
-    # For streaming responses, we'll update the attributes as we receive chunks
+            # Extract role and content
+            role = message.get('role', '')
+            content = message.get('content', [])
+            
+            # Handle content which can be a list of different types (text, image_url)
+            if isinstance(content, list):
+                # Combine all text content
+                text_content = []
+                image_urls = []
+                
+                for content_item in content:
+                    if isinstance(content_item, dict):
+                        if content_item.get('type') == 'text':
+                            text_content.append(content_item.get('text', ''))
+                        elif content_item.get('type') == 'image_url':
+                            image_url = content_item.get('image_url', {})
+                            if isinstance(image_url, dict) and 'url' in image_url:
+                                url = image_url['url']
+                                # Only store URLs that start with http, otherwise use placeholder
+                                if url and isinstance(url, str) and url.startswith(('http://', 'https://')):
+                                    image_urls.append(url)
+                                else:
+                                    image_urls.append("[IMAGE_PLACEHOLDER]")
+                
+                # Set text content if any
+                if text_content:
+                    attributes[MessageAttributes.PROMPT_CONTENT.format(i=i)] = ' '.join(text_content)
+                    attributes[MessageAttributes.PROMPT_TYPE.format(i=i)] = "text"
+                    attributes[MessageAttributes.PROMPT_ROLE.format(i=i)] = role
+                
+                # Set image URLs if any
+                if image_urls:
+                    attributes[f"ibm.watsonx.chat.message.{i}.images"] = str(image_urls)
+            else:
+                # Handle string content
+                attributes[MessageAttributes.PROMPT_CONTENT.format(i=i)] = str(content)
+                attributes[MessageAttributes.PROMPT_TYPE.format(i=i)] = "text"
+                attributes[MessageAttributes.PROMPT_ROLE.format(i=i)] = role
+    
+    # Extract parameters using helper functions
+    params = extract_params_from_args(args, kwargs)
+    if params:
+        params_dict = convert_params_to_dict(params)
+        if params_dict:
+            attributes.update(extract_params_attributes(params_dict))
+
+    # Extract response information
     if return_value and isinstance(return_value, dict):
         # Extract model information
         if 'model_id' in return_value:
             attributes[SpanAttributes.LLM_REQUEST_MODEL] = return_value['model_id']
+        elif 'model' in return_value:
+            attributes[SpanAttributes.LLM_REQUEST_MODEL] = return_value['model']
             
-        # Handle results
-        if 'results' in return_value:
-            for idx, result in enumerate(return_value['results']):
-                # Extract completion
-                if 'generated_text' in result:
-                    attributes[MessageAttributes.COMPLETION_CONTENT.format(i=idx)] = result['generated_text']
-                    attributes[MessageAttributes.COMPLETION_ROLE.format(i=idx)] = "assistant"
-                    attributes[MessageAttributes.COMPLETION_TYPE.format(i=idx)] = "text"
-                
-                # Extract token usage
-                if 'input_token_count' in result:
-                    attributes[SpanAttributes.LLM_USAGE_PROMPT_TOKENS] = result['input_token_count']
-                if 'generated_token_count' in result:
-                    attributes[SpanAttributes.LLM_USAGE_COMPLETION_TOKENS] = result['generated_token_count']
-                if 'input_token_count' in result and 'generated_token_count' in result:
-                    attributes[SpanAttributes.LLM_USAGE_TOTAL_TOKENS] = result['input_token_count'] + result['generated_token_count']
-                    
-                if 'stop_reason' in result:
-                    attributes[SpanAttributes.LLM_RESPONSE_STOP_REASON] = result['stop_reason']
+        # Extract completion from choices
+        if 'choices' in return_value:
+            for idx, choice in enumerate(return_value['choices']):
+                if isinstance(choice, dict) and 'message' in choice:
+                    message = choice['message']
+                    if isinstance(message, dict):
+                        if 'content' in message:
+                            attributes[MessageAttributes.COMPLETION_CONTENT.format(i=idx)] = message['content']
+                            attributes[MessageAttributes.COMPLETION_ROLE.format(i=idx)] = message.get('role', 'assistant')
+                            attributes[MessageAttributes.COMPLETION_TYPE.format(i=idx)] = "text"
+                        if 'finish_reason' in choice:
+                            attributes[SpanAttributes.LLM_RESPONSE_STOP_REASON] = choice['finish_reason']
+        
+        # Extract token usage
+        if 'usage' in return_value:
+            usage = return_value['usage']
+            if isinstance(usage, dict):
+                if 'prompt_tokens' in usage:
+                    attributes[SpanAttributes.LLM_USAGE_PROMPT_TOKENS] = usage['prompt_tokens']
+                if 'completion_tokens' in usage:
+                    attributes[SpanAttributes.LLM_USAGE_COMPLETION_TOKENS] = usage['completion_tokens']
+                if 'total_tokens' in usage:
+                    attributes[SpanAttributes.LLM_USAGE_TOTAL_TOKENS] = usage['total_tokens']
+        
+        # Extract additional metadata
+        if 'id' in return_value:
+            attributes['ibm.watsonx.chat.id'] = return_value['id']
+        if 'model_version' in return_value:
+            attributes['ibm.watsonx.model.version'] = return_value['model_version']
+        if 'created_at' in return_value:
+            attributes['ibm.watsonx.chat.created_at'] = return_value['created_at']
                 
     return attributes 
