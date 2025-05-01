@@ -1,7 +1,8 @@
-"""IBM watsonx.ai Instrumentation for AgentOps
+"""IBM Machine Learning Instrumentation for AgentOps
 
-This module provides instrumentation for the IBM watsonx.ai API, implementing OpenTelemetry
-instrumentation for model requests and responses.
+This module provides instrumentation for the IBM Machine Learning API (deprecated), implementing OpenTelemetry
+instrumentation for model requests and responses. This instrumentor is for the legacy IBM Machine Learning SDK.
+For the new WatsonX AI SDK, use the watsonx_ai instrumentor instead.
 
 We focus on instrumenting the following key endpoints:
 - Model.generate - Text generation API
@@ -16,8 +17,8 @@ from wrapt import wrap_function_wrapper
 
 from agentops.logging import logger
 from agentops.instrumentation.common.wrappers import WrapConfig, wrap, unwrap
-from agentops.instrumentation.ibm_watsonx_ai import LIBRARY_NAME, LIBRARY_VERSION
-from agentops.instrumentation.ibm_watsonx_ai.attributes.attributes import (
+from agentops.instrumentation.ibm_machine_learning import LIBRARY_NAME, LIBRARY_VERSION
+from agentops.instrumentation.ibm_machine_learning.attributes.attributes import (
     get_generate_attributes,
     get_tokenize_attributes,
     get_model_details_attributes,
@@ -33,60 +34,39 @@ from agentops.semconv import (
 
 # Methods to wrap for instrumentation
 WRAPPED_METHODS: List[WrapConfig] = [
-    # Core generation methods
+    # Model-based API methods
     WrapConfig(
-        trace_name="watsonx.generate",
-        package="ibm_watsonx_ai.foundation_models.inference",
-        class_name="ModelInference",
+        trace_name="ibm_ml.generate",
+        package="ibm_watson_machine_learning.foundation_models",
+        class_name="Model",
         method_name="generate",
         handler=get_generate_attributes,
     ),
     WrapConfig(
-        trace_name="watsonx.generate_text",
-        package="ibm_watsonx_ai.foundation_models.inference",
-        class_name="ModelInference",
-        method_name="generate_text",
-        handler=get_generate_attributes,
-    ),
-    WrapConfig(
-        trace_name="watsonx.generate_text_stream",
-        package="ibm_watsonx_ai.foundation_models.inference",
-        class_name="ModelInference",
+        trace_name="ibm_ml.generate_text_stream",
+        package="ibm_watson_machine_learning.foundation_models",
+        class_name="Model",
         method_name="generate_text_stream",
         handler=get_generate_text_stream_attributes,
     ),
     WrapConfig(
-        trace_name="watsonx.chat",
-        package="ibm_watsonx_ai.foundation_models.inference",
-        class_name="ModelInference",
-        method_name="chat",
-        handler=get_generate_attributes,
-    ),
-    WrapConfig(
-        trace_name="watsonx.chat_stream",
-        package="ibm_watsonx_ai.foundation_models.inference",
-        class_name="ModelInference",
-        method_name="chat_stream",
-        handler=get_generate_text_stream_attributes,
-    ),
-    WrapConfig(
-        trace_name="watsonx.tokenize",
-        package="ibm_watsonx_ai.foundation_models.inference",
-        class_name="ModelInference",
+        trace_name="ibm_ml.tokenize",
+        package="ibm_watson_machine_learning.foundation_models",
+        class_name="Model",
         method_name="tokenize",
         handler=get_tokenize_attributes,
     ),
     WrapConfig(
-        trace_name="watsonx.get_details",
-        package="ibm_watsonx_ai.foundation_models.inference",
-        class_name="ModelInference",
+        trace_name="ibm_ml.get_details",
+        package="ibm_watson_machine_learning.foundation_models",
+        class_name="Model",
         method_name="get_details",
         handler=get_model_details_attributes,
     ),
 ]
 
 class TracedStream:
-    """A wrapper for IBM watsonx.ai's streaming response that adds telemetry.
+    """A wrapper for IBM Machine Learning's streaming response that adds telemetry.
     
     This class wraps the original stream to capture metrics about the streaming process,
     including token counts, content, and errors.
@@ -96,7 +76,7 @@ class TracedStream:
         """Initialize with the original stream and span.
         
         Args:
-            original_stream: The IBM watsonx.ai stream to wrap
+            original_stream: The IBM Machine Learning stream to wrap
             span: The OpenTelemetry span to record metrics on
         """
         self.original_stream = original_stream
@@ -161,7 +141,7 @@ def generate_text_stream_wrapper(wrapped, instance, args, kwargs):
     """
     tracer = get_tracer(LIBRARY_NAME, LIBRARY_VERSION)
     span = tracer.start_span(
-        "watsonx.generate_text_stream",
+        "ibm_ml.generate_text_stream",
         kind=SpanKind.CLIENT,
         attributes={SpanAttributes.LLM_REQUEST_TYPE: LLMRequestTypeValues.COMPLETION.value},
     )
@@ -187,7 +167,7 @@ def generate_text_stream_wrapper(wrapped, instance, args, kwargs):
         
     if params:
         # Use common attribute extraction
-        from agentops.instrumentation.ibm_watsonx_ai.attributes.common import extract_params_attributes
+        from agentops.instrumentation.ibm_machine_learning.attributes.common import extract_params_attributes
         span_attributes = extract_params_attributes(params)
         for key, value in span_attributes.items():
             span.set_attribute(key, value)
@@ -204,12 +184,13 @@ def generate_text_stream_wrapper(wrapped, instance, args, kwargs):
         span.end()
         raise
 
-class IBMWatsonXInstrumentor(BaseInstrumentor):
-    """An instrumentor for IBM watsonx.ai API.
+class IBMMachineLearningInstrumentor(BaseInstrumentor):
+    """An instrumentor for IBM Machine Learning API (deprecated).
     
-    This class provides instrumentation for IBM's watsonx.ai API by wrapping key methods
+    This class provides instrumentation for IBM's Machine Learning API by wrapping key methods
     in the client library and capturing telemetry data. It supports both synchronous and
-    asynchronous API calls.
+    asynchronous API calls. This is for the legacy IBM Machine Learning SDK - for the new
+    WatsonX AI SDK, use the watsonx_ai instrumentor instead.
     
     It captures metrics including token usage, operation duration, and exceptions.
     """
@@ -220,70 +201,43 @@ class IBMWatsonXInstrumentor(BaseInstrumentor):
         Returns:
             A collection of package specifications required for this instrumentation.
         """
-        return ["ibm-watson-machine-learning >= 1.0.0"]
+        return ["ibm-watson-machine-learning"]
     
     def _instrument(self, **kwargs):
-        """Instrument the IBM watsonx.ai API.
+        """Instrument the IBM Machine Learning API.
         
-        This method wraps the key methods in the IBM watsonx.ai client to capture
-        telemetry data for API calls. It sets up tracers, meters, and wraps the appropriate
-        methods for instrumentation.
-        
-        Args:
-            **kwargs: Configuration options for instrumentation.
+        This method wraps key methods in the IBM Machine Learning API to add telemetry.
+        It sets up tracing for model operations and token usage tracking.
         """
-        tracer_provider = kwargs.get("tracer_provider")
-        tracer = get_tracer(LIBRARY_NAME, LIBRARY_VERSION, tracer_provider)
-        
-        meter_provider = kwargs.get("meter_provider")
-        meter = get_meter(LIBRARY_NAME, LIBRARY_VERSION, meter_provider)
-        
-        tokens_histogram = meter.create_histogram(
-            name=Meters.LLM_TOKEN_USAGE,
-            unit="token",
-            description="Measures number of input and output tokens used with IBM watsonx.ai models",
+        # Wrap the generate_text_stream method separately since it needs custom handling
+        wrap_function_wrapper(
+            "ibm_watson_machine_learning.foundation_models",
+            "Model.generate_text_stream",
+            generate_text_stream_wrapper
         )
         
-        duration_histogram = meter.create_histogram(
-            name=Meters.LLM_OPERATION_DURATION,
-            unit="s",
-            description="IBM watsonx.ai operation duration",
-        )
-        
-        exception_counter = meter.create_counter(
-            name=Meters.LLM_COMPLETIONS_EXCEPTIONS,
-            unit="time",
-            description="Number of exceptions occurred during IBM watsonx.ai completions",
-        )
-        
-        # Standard method wrapping approach for regular methods
-        for wrap_config in WRAPPED_METHODS:
-            try:
-                if wrap_config.method_name == "generate_text_stream":
-                    wrap_function_wrapper(
-                        wrap_config.package,
-                        f"{wrap_config.class_name}.{wrap_config.method_name}",
-                        generate_text_stream_wrapper,
-                    )
-                else:
-                    wrap(wrap_config, tracer)
-                logger.debug(f"Wrapped {wrap_config.package}.{wrap_config.class_name}.{wrap_config.method_name}")
-            except (AttributeError, ModuleNotFoundError) as e:
-                logger.debug(f"Could not wrap {wrap_config.package}.{wrap_config.class_name}.{wrap_config.method_name}: {e}")
+        # Wrap other methods using the standard wrapper
+        for method in WRAPPED_METHODS:
+            if method.method_name != "generate_text_stream":  # Skip since we handled it above
+                wrap(method)
+                
+        logger.debug("Instrumented IBM Machine Learning API")
     
     def _uninstrument(self, **kwargs):
-        """Remove instrumentation from IBM watsonx.ai API.
+        """Remove instrumentation from the IBM Machine Learning API.
         
-        This method unwraps all methods that were wrapped during instrumentation,
-        restoring the original behavior of the IBM watsonx.ai API.
-        
-        Args:
-            **kwargs: Configuration options for uninstrumentation.
+        This method removes the telemetry wrappers from the API methods.
         """
-        # Unwrap standard methods
-        for wrap_config in WRAPPED_METHODS:
-            try:
-                unwrap(wrap_config)
-                logger.debug(f"Unwrapped {wrap_config.package}.{wrap_config.class_name}.{wrap_config.method_name}")
-            except Exception as e:
-                logger.debug(f"Failed to unwrap {wrap_config.package}.{wrap_config.class_name}.{wrap_config.method_name}: {e}") 
+        unwrap(
+            "ibm_watson_machine_learning.foundation_models",
+            "Model.generate_text_stream"
+        )
+        
+        for method in WRAPPED_METHODS:
+            if method.method_name != "generate_text_stream":
+                unwrap(
+                    method.package,
+                    f"{method.class_name}.{method.method_name}"
+                )
+                
+        logger.debug("Uninstrumented IBM Machine Learning API") 

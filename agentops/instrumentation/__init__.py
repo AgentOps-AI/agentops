@@ -82,6 +82,11 @@ available_instrumentors: list[InstrumentorLoader] = [
         class_name="IBMWatsonXInstrumentor",
         provider_import_name="ibm_watsonx_ai",
     ),
+    InstrumentorLoader(
+        module_name="agentops.instrumentation.ibm_machine_learning",
+        class_name="IBMMachineLearningInstrumentor",
+        provider_import_name="ibm_watson_machine_learning",
+    ),
 ]
 
 
