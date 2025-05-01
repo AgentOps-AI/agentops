@@ -1,0 +1,318 @@
+---
+title: 'Decorators'
+description: 'Use decorators to track activities in your agent system'
+---
+## Available Decorators
+
+AgentOps provides the following decorators:
+
+| Decorator | Purpose | Creates |
+|-----------|---------|---------|
+| `@session` | Track an entire user interaction | SESSION span |
+| `@agent` | Track agent classes and their lifecycle | AGENT span |
+| `@operation` | Track discrete operations performed by agents | OPERATION span |
+| `@workflow` | Track a sequence of operations | WORKFLOW span |
+| `@task` | Track smaller units of work (similar to operations) | TASK span |
+
+## Decorator Hierarchy
+
+The decorators create spans that form a hierarchy:
+
+```
+SESSION
+  ├── AGENT
+  │     ├── OPERATION or TASK
+  │     │     ├── LLM
+  │     │     └── TOOL
+  │     └── WORKFLOW
+  │           └── OPERATION or TASK
+  └── AGENT
+        └── OPERATION or TASK
+```
+
+## Using Decorators
+
+### @session
+
+The `@session` decorator tracks an entire user interaction from start to finish:
+
+```python
+from agentops.sdk.decorators import session
+import agentops
+
+# Initialize AgentOps
+agentops.init(api_key="YOUR_API_KEY")
+
+@session
+def answer_question(question):
+    # Create and use agents
+    weather_agent = WeatherAgent()
+    result = weather_agent.get_forecast(question)
+    
+    # Return the final result
+    return result
+```
+
+Each `@session` function call creates a new session span that contains all the agents, operations, and workflows used during that interaction.
+
+### @agent
+
+The `@agent` decorator instruments a class to track its lifecycle and operations:
+
+```python
+from agentops.sdk.decorators import agent, operation
+import agentops
+
+# Initialize AgentOps
+agentops.init(api_key="YOUR_API_KEY")
+
+@agent
+class WeatherAgent:
+    def __init__(self):
+        self.api_key = "weather_api_key"
+        
+    @operation
+    def get_forecast(self, location):
+        # Get weather data
+        return f"The weather in {location} is sunny."
+
+def check_weather(city):
+    weather_agent = WeatherAgent()
+    forecast = weather_agent.get_forecast(city)
+    return forecast
+
+weather_info = check_weather("San Francisco")
+```
+
+When an agent-decorated class is instantiated within a session, an AGENT span is created automatically.
+
+### @operation
+
+The `@operation` decorator tracks discrete functions performed by an agent:
+
+```python
+from agentops.sdk.decorators import agent, operation
+import agentops
+
+# Initialize AgentOps
+agentops.init(api_key="YOUR_API_KEY")
+
+@agent
+class MathAgent:
+    @operation
+    def add(self, a, b):
+        return a + b
+        
+    @operation
+    def multiply(self, a, b):
+        return a * b
+
+def calculate(x, y):
+    math_agent = MathAgent()
+    sum_result = math_agent.add(x, y)
+    product_result = math_agent.multiply(x, y)
+    return {"sum": sum_result, "product": product_result}
+
+results = calculate(5, 3)
+```
+
+Operations represent the smallest meaningful units of work in your agent system. Each operation creates an OPERATION span with:
+- Inputs (function arguments)
+- Output (return value)
+- Duration
+- Success/failure status
+
+### @workflow
+
+The `@workflow` decorator tracks a sequence of operations that work together:
+
+```python
+from agentops.sdk.decorators import agent, operation, workflow
+import agentops
+
+# Initialize AgentOps
+agentops.init(api_key="YOUR_API_KEY")
+
+@agent
+class TravelAgent:
+    def __init__(self):
+        self.flight_api = FlightAPI()
+        self.hotel_api = HotelAPI()
+    
+    @workflow
+    def plan_trip(self, destination, dates):
+        # This workflow contains multiple operations
+        flights = self.find_flights(destination, dates)
+        hotels = self.find_hotels(destination, dates)
+        
+        return {
+            "flights": flights,
+            "hotels": hotels
+        }
+        
+    @operation
+    def find_flights(self, destination, dates):
+        return self.flight_api.search(destination, dates)
+        
+    @operation
+    def find_hotels(self, destination, dates):
+        return self.hotel_api.search(destination, dates)
+```
+
+Workflows help you organize related operations and see their collective performance.
+
+### @task
+
+The `@task` decorator is similar to `@operation` but can be used for smaller units of work:
+
+```python
+from agentops.sdk.decorators import agent, task
+import agentops
+
+# Initialize AgentOps
+agentops.init(api_key="YOUR_API_KEY")
+
+@agent
+class DataProcessor:
+    @task
+    def normalize_data(self, data):
+        # Normalize the data
+        return [x / sum(data) for x in data]
+    
+    @task
+    def filter_outliers(self, data, threshold=3):
+        # Filter outliers
+        mean = sum(data) / len(data)
+        std_dev = (sum((x - mean) ** 2 for x in data) / len(data)) ** 0.5
+        
+        return [x for x in data if abs(x - mean) <= threshold * std_dev]
+```
+
+The `@task` and `@operation` decorators function identically (they are aliases in the codebase), and you can choose the one that best fits your semantic needs.
+
+## Decorator Attributes
+
+You can pass additional attributes to decorators:
+
+```python
+from agentops.sdk.decorators import agent, operation
+import agentops
+
+# Initialize AgentOps
+agentops.init(api_key="YOUR_API_KEY")
+
+@agent(name="custom_agent_name", attributes={"version": "1.0"})
+class CustomAgent:
+    @operation(name="custom_operation", attributes={"importance": "high"})
+    def process(self, data):
+        return data
+```
+
+Common attributes include:
+
+| Attribute | Description | Example |
+|-----------|-------------|---------|
+| `name` | Custom name for the span | `name="weather_forecast"` |
+| `attributes` | Dictionary of custom attributes | `attributes={"model": "gpt-4"}` |
+
+## Complete Example
+
+Here's a complete example using all the decorators together:
+
+```python
+from agentops.sdk.decorators import session, agent, operation, workflow, task
+import agentops
+
+# Initialize AgentOps
+agentops.init(api_key="YOUR_API_KEY")
+
+@session
+def assist_user(query):
+    # Create the main assistant
+    assistant = Assistant()
+    
+    # Process the query
+    return assistant.process_query(query)
+
+@agent
+class Assistant:
+    def __init__(self):
+        pass
+    
+    @workflow
+    def process_query(self, query):
+        research_agent = ResearchAgent()
+        writing_agent = WritingAgent()
+        
+        # Research phase
+        research = research_agent.gather_information(query)
+        
+        # Writing phase
+        response = writing_agent.generate_response(query, research)
+        
+        return response
+
+@agent
+class ResearchAgent:
+    @operation
+    def gather_information(self, query):
+        # Perform web search
+        search_results = self.search(query)
+        
+        # Analyze results
+        return self.analyze_results(search_results)
+    
+    @task
+    def search(self, query):
+        # Simulate web search
+        return [f"Result for {query}", f"Another result for {query}"]
+    
+    @task
+    def analyze_results(self, results):
+        # Analyze search results
+        return {"summary": "Analysis of " + ", ".join(results)}
+
+@agent
+class WritingAgent:
+    @operation
+    def generate_response(self, query, research):
+        # Generate a response based on the research
+        return f"Answer to '{query}' based on: {research['summary']}"
+
+assist_user("What is the capital of France?")
+```
+
+In this example:
+1. The `@session` decorator wraps the entire interaction
+2. The `@agent` decorator defines multiple agent classes
+3. The `@workflow` decorator creates a workflow that coordinates agents
+4. The `@operation` and `@task` decorators track individual operations
+5. All spans are properly nested in the hierarchy
+
+Note that LLM and TOOL spans are automatically created when you use compatible LLM libraries or tool integrations.
+
+## Best Practices
+
+- **Use @session for top-level functions** that represent complete user interactions
+- **Apply @agent to classes** that represent distinct components of your system
+- **Use @operation for significant functions** that represent complete units of work
+- **Use @task for smaller functions** that are part of larger operations
+- **Apply @workflow to methods** that coordinate multiple operations
+- **Keep decorator nesting consistent** with the logical hierarchy of your code
+- **Add custom attributes** to provide additional context for analysis
+- **Use meaningful names** for all decorated components
+
+## Dashboard Visualization
+
+In the AgentOps dashboard, decorators create spans that appear in:
+
+1. **Timeline View**: Shows the execution sequence and duration
+2. **Hierarchy View**: Displays the parent-child relationships
+3. **Detail Panels**: Shows inputs, outputs, and attributes
+4. **Performance Metrics**: Tracks execution times and success rates
+
+This visualization helps you understand the flow and performance of your agent system.
+
+<script type="module" src="/scripts/github_stars.js"></script>
+<script type="module" src="/scripts/scroll-img-fadein-animation.js"></script>
+<script type="module" src="/scripts/button_heartbeat_animation.js"></script>

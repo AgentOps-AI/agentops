@@ -1,0 +1,92 @@
+---
+title: 'Sessions'
+description: 'Effectively manage sessions in your agent workflow'
+---
+## Automatic Session Management
+
+The simplest way to create and manage sessions is to use the `init` function with automatic session management:
+
+```python
+import agentops
+
+# Initialize with automatic session creation (default)
+agentops.init(api_key="YOUR_API_KEY", tags=["production"])
+```
+
+This approach:
+- Creates a session automatically when you initialize the SDK
+- Tracks all events in the context of this session
+- Manages the session throughout the lifecycle of your application
+
+## Manual Session Creation
+
+For more control, you can disable automatic session creation and start sessions manually:
+
+```python
+import agentops
+
+# Initialize without auto-starting a session
+agentops.init(api_key="YOUR_API_KEY", auto_start_session=False)
+
+# Later, manually start a session when needed
+agentops.start_session(tags=["customer-query", "high-priority"])
+```
+
+Manual session management is useful when:
+- You want to control exactly when session tracking begins
+- You need to associate different sessions with different sets of tags
+- Your application has distinct workflows that should be tracked separately
+
+## Using the Session Decorator
+
+As an alternative to the methods above, you can use the `@session` decorator to create a session for a specific function:
+
+```python
+from agentops.sdk.decorators import session
+
+@session
+def process_customer_data(customer_id):
+    # This entire function execution will be tracked as a session
+    return analyze_data(customer_id)
+```
+
+## Session State
+
+Every session has an associated state that includes:
+
+- **Session ID**: A unique identifier
+- **Start Time**: When the session began
+- **Tags**: Labels associated with the session
+- **Events**: All events recorded during the session
+
+This state is automatically managed by AgentOps and synchronized with the dashboard.
+
+## Session Context
+
+Sessions create a context for all event recording. When an event is recorded:
+
+1. It's associated with the current active session
+2. It's automatically included in the session's timeline
+3. It inherits the session's tags for filtering and analysis
+
+## Viewing Sessions in the Dashboard
+
+The AgentOps dashboard provides several views for analyzing your sessions:
+
+1. **Session List**: Overview of all sessions with filtering options
+2. **Session Details**: In-depth view of a single session
+3. **Timeline View**: Chronological display of all events in a session
+4. **Tree View**: Hierarchical representation of agents, operations, and events
+5. **Analytics**: Aggregated metrics across sessions
+
+## Best Practices
+
+- **Start sessions at logical boundaries** in your application workflow
+- **Use descriptive session names** to easily identify them in the dashboard
+- **Apply consistent tags** to group related sessions
+- **Use fewer, longer sessions** rather than many short ones for better analysis
+- **Use automatic session management** unless you have specific needs for manual control
+
+<script type="module" src="/scripts/github_stars.js"></script>
+<script type="module" src="/scripts/scroll-img-fadein-animation.js"></script>
+<script type="module" src="/scripts/button_heartbeat_animation.js"></script>

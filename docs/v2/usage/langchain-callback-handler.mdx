@@ -1,0 +1,62 @@
+---
+title: 'LangChain Callback Handler'
+description: 'How to use AgentOps with LangChain'
+---
+
+By default, AgentOps is compatible with agents using LangChain with our LLM Instrumentor as long as they're using
+supported models.
+
+As an alternative to instrumenting, the LangChain Callback Handler is available.
+
+## Constructor
+
+- `api_key` (Optional, string): API Key for AgentOps services. If not provided, the key will be read from the `AGENTOPS_API_KEY` environment variable.
+- `endpoint` (Optional, string): The endpoint for the AgentOps service. Defaults to 'https://api.agentops.ai'.
+- `max_wait_time` (Optional, int): The maximum time to wait in milliseconds before flushing the queue. Defaults to 30,000 (30 seconds).
+- `max_queue_size` (Optional, int): The maximum size of the event queue. Defaults to 100.
+- `tags` (Optional, List[string]): Tags for the sessions for grouping or sorting (e.g., ["GPT-4"]).
+
+## Usage
+
+### Install Dependencies
+<CodeGroup>
+```bash pip 
+pip install agentops
+```
+```bash poetry
+poetry add agentops
+```
+</CodeGroup>
+
+### Implement Callback Handler
+
+Initialize the handler with its constructor and pass it into the callbacks array from LangChain.
+```python
+from agentops.integration.callbacks.langchain import LangchainCallbackHandler
+ChatOpenAI(callbacks=[LangchainCallbackHandler()])
+```
+
+Example:
+```python
+from langchain_core.prompts import ChatPromptTemplate
+from langchain_openai import ChatOpenAI
+from agentops import LangchainCallbackHandler
+
+prompt = ChatPromptTemplate.from_messages(["Tell me a joke about {animal}"])
+
+model = ChatOpenAI(callbacks=[LangchainCallbackHandler()])
+
+chain = prompt | model
+response = chain.invoke({"animal": "bears"})
+```
+
+## Why use the handler?
+
+If your project uses LangChain for Agents, Events and Tools, it may be easier to use the callback Handler for observability.
+
+If your project uses models with LangChain that are not yet supported by AgentOps, they can be supported by the Handler.
+
+<script type="module" src="/scripts/github_stars.js"></script>
+<script type="module" src="/scripts/scroll-img-fadein-animation.js"></script>
+<script type="module" src="/scripts/button_heartbeat_animation.js"></script>
+<script type="module" src="/scripts/adjust_api_dynamically.js"></script>

@@ -1,0 +1,98 @@
+---
+title: 'CrewAI'
+description: 'AgentOps and CrewAI teamed up to make monitoring Crew agents dead simple.'
+---
+
+import CodeTooltip from '/snippets/add-code-tooltip.mdx'
+import EnvTooltip from '/snippets/add-env-tooltip.mdx'
+
+[CrewAI](https://www.crewai.com/) is a framework for easily building multi-agent applications. Crew has comprehensive [documentation](https://docs.crewai.com) available as well as a great [quickstart](https://docs.crewai.com/how-to/Creating-a-Crew-and-kick-it-off/) guide.
+
+<Steps>
+	<Step title="Install the AgentOps SDK">
+		<CodeGroup>
+			```bash pip 
+			pip install agentops crewai
+			```
+			```bash poetry
+			poetry add agentops crewai
+			```
+		</CodeGroup>
+	</Step>
+	<Step title="Add AgentOps to your code">
+		<CodeTooltip/>
+			<CodeGroup>
+				```python python
+				import agentops
+				from crewai import Agent, Task, Crew, LLM
+				import os
+				from dotenv import load_dotenv
+				
+				# Load environment variables
+				load_dotenv()
+				OPENAI_API_KEY = os.getenv("OPENAI_API_KEY") or "YOUR_OPENAI_API_KEY"
+				AGENTOPS_API_KEY = os.getenv("AGENTOPS_API_KEY") or "YOUR_AGENTOPS_API_KEY"
+				
+				# Initialize AgentOps at the start of your application
+				agentops.init(AGENTOPS_API_KEY)
+				
+				# Set up your CrewAI elements as you normally would
+				# AgentOps will automatically track all interactions
+				llm = LLM(model="openai/gpt-4o", api_key=OPENAI_API_KEY)
+				
+				researcher = Agent(
+				    role="Researcher",
+				    goal="Find accurate information about a topic",
+				    backstory="You're an expert researcher with keen attention to detail",
+				    llm=llm
+				)
+				
+				research_task = Task(
+				    description="Research the latest developments in quantum computing",
+				    expected_output="A comprehensive report on the latest breakthroughs in quantum computing, including advancements in quantum algorithms, hardware, and potential applications.",
+				    agent=researcher
+				)
+				
+				crew = Crew(
+				    agents=[researcher],
+				    tasks=[research_task],
+				    verbose=True
+				)
+				
+				# Run the crew - AgentOps will track everything
+				result = crew.kickoff()
+				```
+			</CodeGroup>
+		<EnvTooltip />
+      <CodeGroup>
+        ```python .env
+        AGENTOPS_API_KEY=<YOUR API KEY>
+        ```
+      </CodeGroup>
+      Read more about environment variables in [Advanced Configuration](/v2/usage/advanced-configuration)
+	</Step>
+	<Step title="Run your crew">
+		Execute your program and visit [app.agentops.ai/traces](https://app.agentops.ai/traces) to observe your Crew! 🕵️
+		<Tip>
+			After your run, AgentOps prints a clickable url to console linking directly to your session in the Dashboard
+		</Tip> 
+		<div/>{/* Intentionally blank div for newline */}
+		<Frame type="glass" caption="Clickable link to session">
+			<img height="200" src="https://github.com/AgentOps-AI/agentops/blob/main/docs/images/link-to-session.gif?raw=true" />
+		</Frame>
+	</Step>
+</Steps>
+
+## Crew + AgentOps Examples
+
+<CardGroup cols={3}>
+    <Card title="Job Posting" icon="briefcase" href="https://github.com/Agentops-AI/crewAI-examples/tree/main/job-posting" />
+	<Card title="Instagram Post" icon="instagram" href="https://github.com/Agentops-AI/crewAI-examples/tree/main/instagram_post" />
+    <Card title="Markdown Validator" icon="markdown" href="https://github.com/Agentops-AI/crewAI-examples/tree/main/markdown_validator" />
+</CardGroup>
+
+<script type="module" src="/scripts/github_stars.js"></script>
+<script type="module" src="/scripts/scroll-img-fadein-animation.js"></script>
+<script type="module" src="/scripts/button_heartbeat_animation.js"></script>
+<script type="css" src="/styles/styles.css"></script>
+<script type="module" src="/scripts/adjust_api_dynamically.js"></script>
