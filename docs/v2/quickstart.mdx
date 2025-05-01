@@ -25,28 +25,8 @@ import EnvTooltip from '/snippets/add-env-tooltip.mdx'
         agentops.init(<INSERT YOUR API KEY HERE>)
         ```
       </CodeGroup>
+      That's it! These two lines automatically instrument your code and start tracking sessions. Sessions automatically end when your program exits.
     <EnvTooltip />
-    
-    <Tip>
-      That's it! These two lines automatically instrument your code and start tracking sessions.
-    </Tip>
-    
-    If you need more control over when sessions start, you can set `auto_start_session=False`:
-    
-    <CodeGroup>
-      ```python python
-      import agentops
-      agentops.init(<INSERT YOUR API KEY HERE>, auto_start_session=False)
-      
-      # Later, start sessions explicitly:
-      agentops.start_session("my-workflow-session")
-      
-      # Your code here
-      # ...
-      
-      # Sessions automatically end when your program exits
-      ```
-    </CodeGroup>
   </Step>
   <Step title="Run your agent">
     Execute your program and visit [app.agentops.ai/traces](https://app.agentops.ai/traces) to observe your Agent! 🕵️
