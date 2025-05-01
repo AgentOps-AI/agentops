@@ -6,6 +6,7 @@ including text generation, embeddings, and model management.
 
 import logging
 from typing import Collection
+logger = logging.getLogger(__name__)
 
 def get_version() -> str:
     """Get the version of the IBM watsonx.ai SDK, or 'unknown' if not found
@@ -23,10 +24,8 @@ def get_version() -> str:
         logger.debug("Could not find IBM watsonx.ai SDK version")
         return "unknown"
 
-LIBRARY_NAME = "ibm-watsonx"
+LIBRARY_NAME = "ibm-watsonx-ai"
 LIBRARY_VERSION: str = get_version()
-
-logger = logging.getLogger(__name__)
 
 # Import after defining constants to avoid circular imports
 from agentops.instrumentation.ibm_watsonx_ai.instrumentor import IBMWatsonXInstrumentor  # noqa: E402

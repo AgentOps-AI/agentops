@@ -220,7 +220,7 @@ class IBMWatsonXInstrumentor(BaseInstrumentor):
         Returns:
             A collection of package specifications required for this instrumentation.
         """
-        return ["ibm-watson-machine-learning >= 1.0.0"]
+        return ["ibm-watsonx-ai >= 1.3.11"]
     
     def _instrument(self, **kwargs):
         """Instrument the IBM watsonx.ai API.
