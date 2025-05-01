@@ -159,7 +159,7 @@
         "v2/concepts/core-concepts",
         "v2/concepts/decorators",
         "v2/concepts/sessions",
-        "v2/concepts/events",
+        "v2/concepts/spans",
         "v2/concepts/tags"
       ],
       "version": "v2"
