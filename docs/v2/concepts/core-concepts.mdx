@@ -1,0 +1,180 @@
+---
+title: 'Core Concepts'
+description: 'Understanding the fundamental concepts of AgentOps'
+---
+
+# The AgentOps SDK Architecture
+
+AgentOps is designed to provide comprehensive monitoring and analytics for AI agent workflows with minimal implementation effort. The SDK follows these key design principles:
+
+## Automated Instrumentation
+
+After calling `agentops.init()`, the SDK automatically identifies installed LLM providers and instruments their API calls. This allows AgentOps to capture interactions between your code and the LLM providers to collect data for your dashboard without requiring manual instrumentation for every call.
+
+## Declarative Tracing with Decorators
+
+The [decorators](/v2/concepts/decorators) system allows you to add tracing to your existing functions and classes with minimal code changes. Decorators create hierarchical spans that provide a structured view of your agent's operations for monitoring and analysis.
+
+## OpenTelemetry Foundation
+
+AgentOps is built on [OpenTelemetry](https://opentelemetry.io/), a widely-adopted standard for observability instrumentation. This provides a robust and standardized approach to collecting, processing, and exporting telemetry data.
+
+# Sessions
+
+A [Session](/v2/concepts/sessions) represents a single user interaction with your agent. When you initialize AgentOps using the `init` function, a session is automatically created for you:
+
+```python
+import agentops
+
+# Initialize AgentOps with automatic session creation
+agentops.init(api_key="YOUR_API_KEY")
+```
+
+By default, all events and API calls will be associated with this session. For more advanced use cases, you can control session creation manually:
+
+```python
+# Initialize without auto-starting a session
+agentops.init(api_key="YOUR_API_KEY", auto_start_session=False)
+
+# Later, manually start a session when needed
+agentops.start_session(tags=["customer-query"])
+```
+
+# Span Hierarchy
+
+In AgentOps, activities are organized into a hierarchical structure of spans:
+
+- **SESSION**: The root container for all activities in a single execution of your workflow
+- **AGENT**: Represents an autonomous entity with specialized capabilities
+- **WORKFLOW**: A logical grouping of related operations
+- **OPERATION/TASK**: A specific task or function performed by an agent
+- **LLM**: An interaction with a language model
+- **TOOL**: The use of a tool or API by an agent
+
+This hierarchy creates a complete trace of your agent's execution:
+
+```
+SESSION
+  ├── AGENT
+  │     ├── OPERATION/TASK
+  │     │     ├── LLM
+  │     │     └── TOOL
+  │     └── WORKFLOW
+  │           └── OPERATION/TASK
+  └── LLM (unattributed to a specific agent)
+```
+
+# Agents
+
+An **Agent** represents a component in your application that performs tasks. You can create and track agents using the `@agent` decorator:
+
+```python
+from agentops.sdk.decorators import agent, operation
+
+@agent(name="customer_service")
+class CustomerServiceAgent:
+    @operation
+    def answer_query(self, query):
+        # Agent logic here
+        pass
+```
+
+# LLM Events
+
+AgentOps automatically tracks LLM API calls from supported providers, collecting valuable information like:
+
+- **Model**: The specific model used (e.g., "gpt-4", "claude-3-opus")
+- **Provider**: The LLM provider (e.g., "OpenAI", "Anthropic")
+- **Prompt Tokens**: Number of tokens in the input
+- **Completion Tokens**: Number of tokens in the output
+- **Cost**: The estimated cost of the interaction
+- **Messages**: The prompt and completion content
+
+```python
+import agentops
+from openai import OpenAI
+
+# Initialize AgentOps
+agentops.init(api_key="YOUR_API_KEY")
+
+# Initialize the OpenAI client
+client = OpenAI()
+
+# This LLM call is automatically tracked
+response = client.chat.completions.create(
+    model="gpt-4",
+    messages=[{"role": "user", "content": "What's the capital of France?"}]
+)
+```
+
+# Tags
+
+[Tags](/v2/concepts/tags) help you organize and filter your sessions. You can add tags when initializing AgentOps or when starting a session:
+
+```python
+# Add tags when initializing
+agentops.init(api_key="YOUR_API_KEY", tags=["production", "web-app"])
+
+# Or when manually starting a session
+agentops.start_session(tags=["customer-service", "tier-1"])
+```
+
+# Host Environment
+
+AgentOps automatically collects basic [information](/v2/concepts/host-env) about the environment where your agent is running:
+
+- **Operating System**: The OS type and version
+- **Python Version**: The version of Python being used
+- **Hostname**: The name of the host machine (anonymized)
+- **SDK Version**: The version of the AgentOps SDK being used
+
+# Dashboard Views
+
+The AgentOps dashboard provides several ways to visualize and analyze your agent's performance:
+
+- **Session List**: Overview of all sessions with filtering options
+- **Timeline View**: Chronological display of spans showing duration and relationships
+- **Tree View**: Hierarchical representation of spans showing parent-child relationships
+- **Message View**: Detailed view of LLM interactions with prompt and completion content
+- **Analytics**: Aggregated metrics across sessions and operations
+
+# Putting It All Together
+
+A typical implementation looks like this:
+
+```python
+import agentops
+from openai import OpenAI
+from agentops.sdk.decorators import agent, operation
+
+# Initialize AgentOps
+agentops.init(api_key="YOUR_API_KEY", tags=["production"])
+
+# Define an agent
+@agent(name="assistant")
+class AssistantAgent:
+    def __init__(self):
+        self.client = OpenAI()
+    
+    @operation
+    def answer_question(self, question):
+        # This LLM call will be automatically tracked and associated with this agent
+        response = self.client.chat.completions.create(
+            model="gpt-4",
+            messages=[{"role": "user", "content": question}]
+        )
+        return response.choices[0].message.content
+
+def workflow():
+    # Use the agent
+    assistant = AssistantAgent()
+    answer = assistant.answer_question("What's the capital of France?")
+    print(answer)
+
+workflow()
+# Session is automatically tracked until application terminates
+```
+
+<script type="module" src="/scripts/github_stars.js"></script>
+<script type="module" src="/scripts/scroll-img-fadein-animation.js"></script>
+<script type="module" src="/scripts/button_heartbeat_animation.js"></script>

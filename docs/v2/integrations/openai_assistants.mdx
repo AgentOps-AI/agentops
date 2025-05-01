@@ -1,0 +1,173 @@
+---
+title: OpenAI Assistants
+description: "Track and analyze your OpenAI Assistants API calls with AgentOps"
+---
+
+import CodeTooltip from '/snippets/add-code-tooltip.mdx'
+import EnvTooltip from '/snippets/add-env-tooltip.mdx'
+
+AgentOps provides seamless integration with [OpenAI's Assistants API](https://platform.openai.com/docs/assistants/overview), allowing you to track and analyze all your Assistants interactions automatically.
+
+## Installation
+
+<CodeTooltip />
+
+<CodeGroup>
+  ```bash pip
+  pip install agentops openai
+  ```
+  ```bash poetry
+  poetry add agentops openai
+  ```
+</CodeGroup>
+
+## Usage
+
+Initialize AgentOps at the beginning of your application to automatically track all Assistants API calls:
+
+<CodeGroup>
+```python Python
+import agentops
+from openai import OpenAI
+
+# Initialize AgentOps
+agentops.init(<INSERT YOUR API KEY HERE>)
+
+# Create OpenAI client
+client = OpenAI()
+
+# Create an Assistant
+assistant = client.beta.assistants.create(
+    name="Math Tutor",
+    instructions="You are a personal math tutor. Write and run code to answer math questions.",
+    tools=[{"type": "code_interpreter"}],
+    model="gpt-4-turbo"
+)
+
+# Create a Thread
+thread = client.beta.threads.create()
+
+# Add a Message to the Thread
+message = client.beta.threads.messages.create(
+    thread_id=thread.id,
+    role="user",
+    content="I need to solve the equation 3x + 11 = 14. Can you help me?"
+)
+
+# Run the Assistant
+run = client.beta.threads.runs.create(
+    thread_id=thread.id,
+    assistant_id=assistant.id
+)
+
+# Wait for the Run to complete
+from time import sleep
+while run.status in ["queued", "in_progress"]:
+    sleep(1)
+    run = client.beta.threads.runs.retrieve(
+        thread_id=thread.id,
+        run_id=run.id
+    )
+
+# Get the Assistant's messages
+messages = client.beta.threads.messages.list(
+    thread_id=thread.id
+)
+
+# Print the last message from the assistant
+for message in messages.data:
+    if message.role == "assistant":
+        print(message.content[0].text.value)
+        break
+
+# All Assistants API calls are automatically tracked by AgentOps
+```
+</CodeGroup>
+
+## File Upload Example
+
+AgentOps tracks file uploads and interactions with the Assistants API:
+
+<CodeGroup>
+```python File Upload Example
+import agentops
+from openai import OpenAI
+import os
+
+# Initialize AgentOps
+agentops.init(<INSERT YOUR API KEY HERE>)
+
+# Create OpenAI client
+client = OpenAI()
+
+# Upload a file
+file_path = "data.csv"  # Replace with the path to your file
+with open(file_path, "rb") as file:
+    file_object = client.files.create(
+        file=file,
+        purpose="assistants"
+    )
+
+# Create an Assistant with the file
+assistant = client.beta.assistants.create(
+    name="Data Analyst",
+    instructions="You are a data analysis assistant. Analyze the provided CSV files and answer questions about the data.",
+    tools=[{"type": "code_interpreter"}],
+    model="gpt-4-turbo"
+)
+
+# Create a Thread with the file
+thread = client.beta.threads.create()
+
+# Add a File to the Thread
+message = client.beta.threads.messages.create(
+    thread_id=thread.id,
+    role="user",
+    content="Please analyze this CSV file and give me a summary of the data.",
+    file_ids=[file_object.id]
+)
+
+# Run the Assistant
+run = client.beta.threads.runs.create(
+    thread_id=thread.id,
+    assistant_id=assistant.id
+)
+
+# Wait for the Run to complete
+from time import sleep
+while run.status in ["queued", "in_progress"]:
+    sleep(2)
+    run = client.beta.threads.runs.retrieve(
+        thread_id=thread.id,
+        run_id=run.id
+    )
+
+# Get the Assistant's messages
+messages = client.beta.threads.messages.list(
+    thread_id=thread.id
+)
+
+# Print the last message from the assistant
+for message in messages.data:
+    if message.role == "assistant":
+        print(message.content[0].text.value)
+        break
+```
+</CodeGroup>
+
+## Environment Variables
+
+<EnvTooltip />
+<CodeGroup>
+  ```python .env
+  AGENTOPS_API_KEY=<YOUR API KEY>
+  OPENAI_API_KEY=<YOUR OPENAI API KEY>
+  ```
+</CodeGroup>
+
+Read more about environment variables in [Advanced Configuration](/v2/usage/advanced-configuration)
+
+<script type="module" src="/scripts/github_stars.js"></script>
+<script type="module" src="/scripts/scroll-img-fadein-animation.js"></script>
+<script type="module" src="/scripts/button_heartbeat_animation.js"></script>
+<script type="css" src="/styles/styles.css"></script> 

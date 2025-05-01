@@ -1,0 +1,62 @@
+---
+title: "Tracking LLM Calls"
+description: "Tracking LLM Calls using the AgentOps SDK"
+---
+
+## Automatic LLM Call Tracking
+
+AgentOps makes tracking LLM calls incredibly simple. Just initialize the SDK with your API key, and AgentOps will automatically track all your LLM calls:
+
+```python
+import agentops
+from openai import OpenAI
+
+# Initialize AgentOps
+agentops.init("your-api-key")
+
+# Make LLM calls as usual - they'll be tracked automatically
+client = OpenAI()
+response = client.chat.completions.create(
+    model="gpt-4o",
+    messages=[{"role": "user", "content": "Hello, world!"}]
+)
+```
+
+### How it works
+
+When the AgentOps SDK detects a supported LLM provider module installed, it will automatically
+start tracking its usage. No further work is required from you! 😊
+
+### Supported LLM Providers
+
+AgentOps supports automatic tracking for many popular LLM providers, including:
+
+- OpenAI
+- Anthropic
+- Google (Gemini)
+- LiteLLM
+- And more
+
+### Not working? 
+
+Try these steps:
+1. Make sure you have the latest version of the AgentOps SDK installed. We are constantly updating it to support new LLM libraries and releases.
+2. Make sure you are calling `agentops.init()` *after* importing the LLM module but *before* you are calling the LLM method.
+3. Make sure the `instrument_llm_calls` parameter of `agentops.init()` is set to `True` (default).
+
+Still not working? Please let us know! You can find us on [Discord](https://discord.gg/DR2abmETjZ),
+ [GitHub](https://github.com/AgentOps-AI/agentops), 
+ or email us at [engineering@agentops.ai](mailto:engineering@agentops.ai).
+
+To get started, just follow the quick start guide.
+
+<CardGroup cols={2}>
+  <Card title="Quick Start" icon="code" href="/v2/quickstart">
+    Get started with AgentOps in under 5 minutes
+  </Card>
+</CardGroup>
+
+<script type="module" src="/scripts/github_stars.js"></script>
+<script type="module" src="/scripts/scroll-img-fadein-animation.js"></script>
+<script type="module" src="/scripts/button_heartbeat_animation.js"></script>
+<script type="module" src="/scripts/adjust_api_dynamically.js"></script>

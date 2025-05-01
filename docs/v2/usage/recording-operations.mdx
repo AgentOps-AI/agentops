@@ -1,0 +1,120 @@
+---
+title: "Recording Operations"
+description: "Track operations and LLM calls in your agent applications."
+---
+
+AgentOps makes it easy to track operations and interactions in your AI applications with minimal setup.
+
+## Basic Setup
+
+The simplest way to get started with AgentOps is to initialize it at the beginning of your application:
+
+```python
+import agentops
+
+# Initialize AgentOps with your API key
+agentops.init("your-api-key")
+```
+
+That's it! This single line of code will:
+- Automatically create a session for tracking your application run
+- Intercept and track all LLM calls to supported providers (OpenAI, Anthropic, etc.)
+- Record relevant metrics such as token counts, costs, and response times
+
+## Automatic Instrumentation
+
+AgentOps automatically instruments calls to popular LLM providers without requiring any additional code:
+
+```python
+import agentops
+from openai import OpenAI
+
+# Initialize AgentOps
+agentops.init("your-api-key")
+
+# Make LLM calls as usual - AgentOps will track them automatically
+client = OpenAI()
+response = client.chat.completions.create(
+    model="gpt-4o",
+    messages=[{"role": "user", "content": "Hello, world!"}]
+)
+```
+
+This works with many popular LLM providers including:
+- OpenAI
+- Anthropic
+- Google (Gemini)
+- Cohere
+- And more
+
+## Advanced: Using Decorators for Detailed Instrumentation
+
+For more detailed tracking, AgentOps provides decorators that allow you to explicitly instrument your code. This is optional but can provide more context in the dashboard.
+
+### `@operation` Decorator
+
+The `@operation` decorator helps track specific operations in your application:
+
+```python
+from agentops.sdk.decorators import operation
+
+@operation
+def process_data(data):
+    # Process the data
+    return result
+```
+
+### `@agent` Decorator
+
+If you use agent classes, you can track them with the `@agent` decorator:
+
+```python
+from agentops.sdk.decorators import agent, operation
+
+@agent
+class ResearchAgent:
+    @operation
+    def search(self, query):
+        # Implementation of search
+        return f"Results for: {query}"
+
+def research_workflow(topic):
+    agent = ResearchAgent()
+    results = agent.search(topic)
+    return results
+    
+results = research_workflow("quantum computing")
+```
+
+### Advanced Session Management
+
+If you need more control over session lifecycle, you can disable automatic session creation:
+
+```python
+import agentops
+from agentops.sdk.decorators import session
+
+# Disable automatic session creation
+agentops.init("your-api-key", auto_start_session=False)
+
+@session
+def my_workflow():
+    # Your code here
+    pass
+    
+# Run the workflow to create a session
+my_workflow()
+```
+
+## Best Practices
+
+1. **Keep it Simple**: For most applications, just initializing AgentOps with `agentops.init()` is sufficient.
+
+2. **Use Decorators Sparingly**: Only add decorators when you need more detailed tracking of specific operations.
+
+3. **Meaningful Operation Names**: When using decorators, choose descriptive names to make them easier to identify in the dashboard.
+
+<script type="module" src="/scripts/github_stars.js"></script>
+<script type="module" src="/scripts/scroll-img-fadein-animation.js"></script>
+<script type="module" src="/scripts/button_heartbeat_animation.js"></script>
+<script type="module" src="/scripts/adjust_api_dynamically.js"></script>

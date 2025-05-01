@@ -1,0 +1,46 @@
+---
+title: 'Host Environment'
+description: 'Automatically collected information about the environment where your agent runs'
+---
+## Collected Information
+
+The following information is automatically collected:
+
+- **Operating System**: The OS type and version (e.g., "Linux", "Windows", "macOS")
+- **Python Version**: The version of Python being used
+- **Hostname**: The name of the host machine (anonymized)
+- **AgentOps SDK Version**: The version of the AgentOps SDK being used
+- **Process ID**: The ID of the process running the agent
+
+## Usage in Analytics
+
+Host environment information enables:
+
+- Identifying environment-specific issues
+- Tracking performance across different platforms
+- Ensuring compatibility with specific OS versions
+- Monitoring SDK version adoption
+
+## Privacy Considerations
+
+AgentOps is designed with privacy in mind:
+
+- No personally identifiable information is collected
+- Hostnames are anonymized
+- No network scanning or detailed system analysis is performed
+- Only the minimum necessary information for debugging is gathered
+
+## Disabling Host Environment Collection
+
+If needed, you can disable host environment collection when initializing AgentOps:
+
+```python
+import agentops
+
+# Disable host environment collection
+agentops.init(api_key="YOUR_API_KEY", collect_host_env=False)
+```
+
+<script type="module" src="/scripts/github_stars.js"></script>
+<script type="module" src="/scripts/scroll-img-fadein-animation.js"></script>
+<script type="module" src="/scripts/button_heartbeat_animation.js"></script>

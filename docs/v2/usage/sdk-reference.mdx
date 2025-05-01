@@ -1,0 +1,163 @@
+---
+title: "SDK Reference"
+description: "All functions and classes exposed in the top layer of the SDK"
+---
+
+# SDK Reference
+
+This reference documents the functions and classes available with `import agentops`. The AgentOps SDK is designed for easy integration with your agent applications, offering both simple auto-instrumentation and more detailed manual tracing capabilities.
+
+## Core Functions
+
+These are the primary functions you'll use to initialize and configure AgentOps in your application.
+
+### `init()`
+
+Initializes the AgentOps SDK and automatically starts tracking your application.
+
+**Parameters**:
+
+- `api_key` (str, optional): API Key for AgentOps services. If not provided, the key will be read from the `AGENTOPS_API_KEY` environment variable.
+- `endpoint` (str, optional): The endpoint for the AgentOps service. If not provided, will be read from the `AGENTOPS_API_ENDPOINT` environment variable. Defaults to 'https://api.agentops.ai'.
+- `app_url` (str, optional): The dashboard URL for the AgentOps app. If not provided, will be read from the `AGENTOPS_APP_URL` environment variable. Defaults to 'https://app.agentops.ai'.
+- `max_wait_time` (int, optional): The maximum time to wait in milliseconds before flushing the queue. Defaults to 5,000 (5 seconds).
+- `max_queue_size` (int, optional): The maximum size of the event queue. Defaults to 512.
+- `default_tags` (List[str], optional): Default tags for the sessions that can be used for grouping or sorting later (e.g. ["GPT-4"]).
+- `tags` (List[str], optional): [Deprecated] Use `default_tags` instead.
+- `instrument_llm_calls` (bool, optional): Whether to instrument LLM calls automatically. Defaults to True.
+- `auto_start_session` (bool, optional): Whether to start a session automatically when the client is created. Defaults to True.
+- `auto_init` (bool, optional): Whether to automatically initialize the client on import. Defaults to True.
+- `skip_auto_end_session` (bool, optional): Don't automatically end session based on your framework's decision-making. Defaults to False.
+- `env_data_opt_out` (bool, optional): Whether to opt out of collecting environment data. Defaults to False.
+- `log_level` (str, int, optional): The log level to use for the client. Defaults to 'INFO'.
+- `fail_safe` (bool, optional): Whether to suppress errors and continue execution when possible. Defaults to False.
+- `exporter_endpoint` (str, optional): Endpoint for the exporter. If not provided, will be read from the `AGENTOPS_EXPORTER_ENDPOINT` environment variable. Defaults to 'https://otlp.agentops.ai/v1/traces'.
+- `export_flush_interval` (int, optional): Time interval in milliseconds between automatic exports of telemetry data. Defaults to 1000.
+
+**Returns**:
+
+- If `auto_start_session=True`, returns the created Session object. Otherwise, returns None.
+
+**Example**:
+
+```python
+import agentops
+
+# Basic initialization with automatic session creation
+agentops.init("your-api-key")
+```
+
+### `configure()`
+
+Updates client configuration after initialization. Supports the same parameters as `init()`.
+
+**Parameters**:
+
+- `api_key` (str, optional): API Key for AgentOps services.
+- `endpoint` (str, optional): The endpoint for the AgentOps service.
+- `app_url` (str, optional): The dashboard URL for the AgentOps app.
+- `max_wait_time` (int, optional): Maximum time to wait in milliseconds before flushing the queue.
+- `max_queue_size` (int, optional): Maximum size of the event queue.
+- `default_tags` (List[str], optional): Default tags for the sessions.
+- `instrument_llm_calls` (bool, optional): Whether to instrument LLM calls.
+- `auto_start_session` (bool, optional): Whether to start a session automatically.
+- `auto_init` (bool, optional): Whether to automatically initialize the client on import.
+- `skip_auto_end_session` (bool, optional): Don't automatically end session.
+- `env_data_opt_out` (bool, optional): Whether to opt out of collecting environment data.
+- `log_level` (str, int, optional): The log level to use for the client.
+- `fail_safe` (bool, optional): Whether to suppress errors and continue execution.
+- `exporter` (object, optional): Custom span exporter for OpenTelemetry trace data.
+- `processor` (object, optional): Custom span processor for OpenTelemetry trace data.
+- `exporter_endpoint` (str, optional): Endpoint for the exporter.
+- `export_flush_interval` (int, optional): Time interval in milliseconds between automatic exports of telemetry data.
+
+**Example**:
+
+```python
+import agentops
+
+# Initialize first
+agentops.init()
+
+# Later, update configuration
+agentops.configure(
+    max_wait_time=10000,
+    max_queue_size=200,
+    default_tags=["production", "gpt-4"]
+)
+```
+
+### `get_client()`
+
+Gets the singleton client instance. Most users won't need to use this function directly.
+
+**Returns**:
+
+- The AgentOps client instance.
+
+## Session Management
+
+These functions help you manage the lifecycle of tracking sessions.
+
+### `start_session()`
+
+Starts a new AgentOps session manually. This is useful when you've disabled automatic session creation or need multiple separate sessions.
+
+**Parameters**:
+
+- `tags` (Union[Dict[str, Any], List[str]], optional): Optional tags to attach to the session, useful for filtering in the dashboard. Can be a list of strings or a dict of key-value pairs.
+
+**Example**:
+
+```python
+import agentops
+
+# Initialize without auto-starting a session
+agentops.init("your-api-key", auto_start_session=False)
+
+# Later, manually start a session
+session = agentops.start_session(tags=["customer-query"])
+```
+## Decorators for Detailed Instrumentation
+
+For more granular control, AgentOps provides decorators that explicitly track different components of your application. These decorators are imported from `agentops.sdk.decorators`.
+
+```python
+import agentops
+from agentops.sdk.decorators import session, agent, operation, workflow, task
+
+# Initialize without automatic session creation
+agentops.init("your-api-key", auto_start_session=False)
+
+# Create and run a session using the decorator
+@session
+def my_workflow():
+    # Your workflow code here
+    pass
+
+# Run the workflow, which creates and manages the session
+my_workflow()
+```
+
+### Available Decorators
+
+- `@session`: Creates a session span, which serves as the root for all other spans
+- `@agent`: Creates an agent span for tracking agent operations
+- `@operation` / `@task`: Creates operation/task spans for tracking specific operations (these are aliases)
+- `@workflow`: Creates workflow spans for organizing related operations
+
+See [Decorators](/v2/concepts/decorators) for more detailed documentation on using these decorators.
+
+## Legacy Functions
+
+The following functions are maintained for backward compatibility with older versions of the SDK and integrations. New code should use the functions and decorators described above instead.
+
+- `record(event)`: Legacy function to record an event. Replaced by decorator-based tracing.
+- `track_agent()`: Legacy decorator for marking agents. Replaced by the `@agent` decorator.
+- `track_tool()`: Legacy decorator for marking tools. Replaced by the `@tool` decorator.
+- `ToolEvent()`, `ErrorEvent()`, `ActionEvent()`, `LLMEvent()`: Legacy event types. Replaced by automatic instrumentation and decorators.
+
+<script type="module" src="/scripts/github_stars.js"></script>
+<script type="module" src="/scripts/scroll-img-fadein-animation.js"></script>
+<script type="module" src="/scripts/button_heartbeat_animation.js"></script>
+<script type="module" src="/scripts/adjust_api_dynamically.js"></script>

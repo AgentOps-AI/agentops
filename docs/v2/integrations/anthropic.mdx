@@ -1,0 +1,201 @@
+---
+title: Anthropic
+description: "Track and analyze your Anthropic API calls with AgentOps"
+---
+
+import CodeTooltip from '/snippets/add-code-tooltip.mdx'
+import EnvTooltip from '/snippets/add-env-tooltip.mdx'
+
+AgentOps provides seamless integration with [Anthropic's Python SDK](https://github.com/anthropics/anthropic-sdk-python), allowing you to track and analyze all your Claude model interactions automatically.
+
+## Installation
+
+<CodeTooltip />
+
+    <CodeGroup>
+      ```bash pip 
+  pip install agentops anthropic
+      ```
+      ```bash poetry
+  poetry add agentops anthropic
+      ```
+    </CodeGroup>
+
+## Usage
+
+Initialize AgentOps at the beginning of your application to automatically track all Anthropic API calls:
+
+    <CodeGroup>
+```python Basic Usage
+import agentops
+import anthropic
+
+# Initialize AgentOps
+agentops.init(<INSERT YOUR API KEY HERE>)
+
+# Create Anthropic client
+client = anthropic.Anthropic(api_key="<YOUR_ANTHROPIC_API_KEY>")
+
+# Make a completion request - AgentOps will track it automatically
+message = client.messages.create(
+    model="claude-3-opus-20240229",
+    max_tokens=1000,
+    messages=[
+        {"role": "user", "content": "What is artificial intelligence?"}
+    ]
+)
+
+print(message.content[0].text)
+      ```
+    </CodeGroup>
+
+## Advanced Examples
+
+### Streaming Example
+
+AgentOps automatically tracks streaming completions:
+
+    <CodeGroup>
+```python Streaming Example
+import agentops
+import anthropic
+      
+# Initialize AgentOps
+      agentops.init(<INSERT YOUR API KEY HERE>)
+
+# Create Anthropic client
+client = anthropic.Anthropic(api_key="<YOUR_ANTHROPIC_API_KEY>")
+
+# Make a streaming request
+with client.messages.stream(
+    model="claude-3-haiku-20240307",
+    max_tokens=1000,
+    messages=[
+        {"role": "user", "content": "Write a short poem about artificial intelligence."}
+    ]
+) as stream:
+    for text in stream.text_stream:
+        print(text, end="", flush=True)
+    print()  # Add a newline at the end
+      ```
+    </CodeGroup>
+
+### System Prompt Example
+
+AgentOps tracks interactions with system prompts:
+
+      <CodeGroup>
+```python System Prompt
+import agentops
+import anthropic
+
+# Initialize AgentOps
+agentops.init(<INSERT YOUR API KEY HERE>)
+
+# Create Anthropic client
+client = anthropic.Anthropic(api_key="<YOUR_ANTHROPIC_API_KEY>")
+
+# Make a request with a system prompt
+message = client.messages.create(
+    model="claude-3-sonnet-20240229",
+    max_tokens=1000,
+    system="You are a helpful AI assistant with expertise in science and technology. Keep your answers concise and accurate.",
+    messages=[
+        {"role": "user", "content": "Explain quantum computing in simple terms."}
+    ]
+)
+
+print(message.content[0].text)
+        ```
+      </CodeGroup>
+
+### Tool Use Example
+
+AgentOps tracks tool use with Claude:
+
+<CodeGroup>
+```python Tool Use
+import agentops
+import anthropic
+import json
+from datetime import datetime
+
+# Initialize AgentOps
+  agentops.init(<INSERT YOUR API KEY HERE>)
+
+# Create Anthropic client
+client = anthropic.Anthropic(api_key="<YOUR_ANTHROPIC_API_KEY>")
+
+# Define tools
+tools = [
+    {
+        "name": "get_current_time",
+        "description": "Get the current date and time",
+        "input_schema": {},
+    }
+]
+
+def get_current_time():
+    return {"current_time": datetime.now().isoformat()}
+
+# Make a request with tools
+  message = client.messages.create(
+      model="claude-3-opus-20240229",
+    max_tokens=1000,
+    tools=tools,
+    messages=[
+        {"role": "user", "content": "What time is it now?"}
+    ]
+  )
+
+# Handle tool use
+if message.content[0].type == "tool_use":
+    tool_use = message.content[0].tool_use
+    tool_name = tool_use.name
+    
+    if tool_name == "get_current_time":
+        tool_response = get_current_time()
+        
+        # Continue the conversation with the tool response
+        second_message = client.messages.create(
+          model="claude-3-opus-20240229",
+            max_tokens=1000,
+            messages=[
+                {"role": "user", "content": "What time is it now?"},
+                {"role": "assistant", "content": [
+                    {"type": "tool_use", "tool_use": {
+                        "name": "get_current_time",
+                        "input": {}
+                    }}
+                ]},
+                {"role": "user", "content": [
+                    {"type": "tool_result", "tool_result": {
+                        "tool_name": "get_current_time",
+                        "content": json.dumps(tool_response)
+                    }}
+                ]}
+            ]
+      )
+
+        print(second_message.content[0].text)
+else:
+    print(message.content[0].text)
+```
+</CodeGroup>
+
+## Environment Variables
+
+<EnvTooltip />
+<CodeGroup>
+  ```python .env
+  AGENTOPS_API_KEY=<YOUR API KEY>
+  ANTHROPIC_API_KEY=<YOUR ANTHROPIC API KEY>
+  ```
+</CodeGroup>
+
+Read more about environment variables in [Advanced Configuration](/v2/usage/advanced-configuration)
+
+<script type="module" src="/scripts/github_stars.js"></script>
+<script type="module" src="/scripts/scroll-img-fadein-animation.js"></script>
+<script type="module" src="/scripts/button_heartbeat_animation.js"></script>
+<script type="css" src="/styles/styles.css"></script>

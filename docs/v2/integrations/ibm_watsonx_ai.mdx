@@ -1,0 +1,297 @@
+---
+title: IBM Watsonx.ai
+description: "Track and analyze your IBM Watsonx.ai API calls with AgentOps"
+---
+
+import CodeTooltip from '/snippets/add-code-tooltip.mdx'
+import EnvTooltip from '/snippets/add-env-tooltip.mdx'
+
+AgentOps provides seamless integration with [IBM Watsonx.ai Python SDK](https://ibm.github.io/watsonx-ai-python-sdk/), allowing you to track and analyze all your Watsonx.ai model interactions automatically.
+
+## Installation
+
+<CodeTooltip />
+
+    <CodeGroup>
+      ```bash pip 
+  pip install agentops ibm-watsonx-ai
+      ```
+      ```bash poetry
+  poetry add agentops ibm-watsonx-ai
+      ```
+    </CodeGroup>
+
+## Basic Usage
+
+Initialize AgentOps at the beginning of your application to automatically track all IBM Watsonx.ai API calls:
+
+    <CodeGroup>
+```python Basic Usage
+import agentops
+from ibm_watsonx_ai import Credentials
+from ibm_watsonx_ai.foundation_models import ModelInference
+
+# Initialize AgentOps
+agentops.init(api_key="<INSERT YOUR API KEY HERE>")
+
+# Initialize credentials
+credentials = Credentials(
+    url="<YOUR_IBM_URL>",
+    api_key="<YOUR_IBM_API_KEY>",
+)
+
+# Project ID
+project_id = "<YOUR_PROJECT_ID>"
+
+# Create a model instance
+model = ModelInference(
+    model_id="meta-llama/llama-3-3-70b-instruct",
+    credentials=credentials,
+    project_id=project_id
+)
+
+# Make a completion request - AgentOps will track it automatically
+response = model.generate_text("What is artificial intelligence?")
+print(f"Generated Text:\n{response}")
+
+# Don't forget to close connection when done
+model.close_persistent_connection()
+      ```
+    </CodeGroup>
+
+## Chat Completion Example
+
+Using the Watsonx.ai SDK for chat-based interactions:
+
+    <CodeGroup>
+```python Chat Example
+import agentops
+from ibm_watsonx_ai import Credentials
+from ibm_watsonx_ai.foundation_models import ModelInference
+
+# Initialize AgentOps
+agentops.init(api_key="<INSERT YOUR API KEY HERE>")
+
+# Initialize credentials
+credentials = Credentials(
+    url="<YOUR_IBM_URL>",
+    api_key="<YOUR_IBM_API_KEY>",
+)
+
+# Project ID
+project_id = "<YOUR_PROJECT_ID>"
+
+# Create model for chat
+chat_model = ModelInference(
+    model_id="meta-llama/llama-3-3-70b-instruct",
+    credentials=credentials,
+    project_id=project_id
+)
+
+# Format messages for chat method
+messages = [
+    {"role": "system", "content": "You are a helpful AI assistant."},
+    {"role": "user", "content": "What are the three laws of robotics?"}
+]
+
+# Get chat response
+chat_response = chat_model.chat(messages)
+print(f"Chat Response:\n{chat_response['choices'][0]['message']['content']}")
+
+# Close connection
+chat_model.close_persistent_connection()
+      ```
+    </CodeGroup>
+
+## Advanced Examples
+
+### Streaming Example
+
+AgentOps automatically tracks streaming completions:
+
+    <CodeGroup>
+```python Streaming Example
+import agentops
+from ibm_watsonx_ai import Credentials
+from ibm_watsonx_ai.foundation_models import ModelInference
+
+# Initialize AgentOps
+agentops.init(api_key="<INSERT YOUR API KEY HERE>")
+
+# Initialize credentials
+credentials = Credentials(
+    url="<YOUR_IBM_URL>",
+    api_key="<YOUR_IBM_API_KEY>",
+)
+
+project_id = "<YOUR_PROJECT_ID>"
+
+# Create model for streaming
+model = ModelInference(
+    model_id="google/flan-ul2",
+    credentials=credentials,
+    project_id=project_id
+)
+
+# Text streaming
+stream_response = model.generate_text_stream(
+    prompt="Write a short poem about artificial intelligence."
+)
+
+print("Streaming Response:")
+for chunk in stream_response:
+    if isinstance(chunk, str):
+        print(chunk, end="", flush=True)
+
+# Close connection
+model.close_persistent_connection()
+      ```
+    </CodeGroup>
+
+### Chat Streaming Example
+
+Stream responses from chat-based models:
+
+    <CodeGroup>
+```python Chat Streaming
+import agentops
+from ibm_watsonx_ai import Credentials
+from ibm_watsonx_ai.foundation_models import ModelInference
+
+# Initialize AgentOps
+agentops.init(api_key="<INSERT YOUR API KEY HERE>")
+
+# Initialize credentials
+credentials = Credentials(
+    url="<YOUR_IBM_URL>",
+    api_key="<YOUR_IBM_API_KEY>",
+)
+
+project_id = "<YOUR_PROJECT_ID>"
+
+# Create model for chat streaming
+chat_model = ModelInference(
+    model_id="meta-llama/llama-3-3-70b-instruct",
+    credentials=credentials,
+    project_id=project_id
+)
+
+# Format messages for chat method
+chat_messages = [
+    {"role": "system", "content": "You are a concise assistant."},
+    {"role": "user", "content": "Explain the concept of photosynthesis in one sentence."}
+]
+
+# Get streaming chat response
+chat_stream = chat_model.chat_stream(messages=chat_messages)
+
+print("Chat Stream Response:")
+for chunk in chat_stream:
+    if chunk and 'choices' in chunk and chunk['choices']:
+        delta = chunk['choices'][0].get('delta', {})
+        content = delta.get('content')
+        if content:
+            print(content, end="", flush=True)
+
+# Close connection
+chat_model.close_persistent_connection()
+      ```
+    </CodeGroup>
+
+### With Parameters Example
+
+Using the Watsonx.ai SDK with specific generation parameters:
+
+    <CodeGroup>
+```python With Parameters
+import agentops
+from ibm_watsonx_ai import Credentials
+from ibm_watsonx_ai.foundation_models import ModelInference
+from ibm_watsonx_ai.foundation_models.schema import TextGenParameters
+
+# Initialize AgentOps
+agentops.init(api_key="<INSERT YOUR API KEY HERE>")
+
+# Initialize credentials
+credentials = Credentials(
+    url="<YOUR_IBM_URL>",
+    api_key="<YOUR_IBM_API_KEY>",
+)
+
+project_id = "<YOUR_PROJECT_ID>"
+
+# Create model with parameters
+model = ModelInference(
+    model_id="google/flan-ul2",
+    credentials=credentials,
+    project_id=project_id,
+    params=TextGenParameters(
+        decoding_method="sample",
+        max_new_tokens=100,
+        min_new_tokens=10,
+        temperature=0.7,
+        top_p=0.9,
+        top_k=50,
+        repetition_penalty=1.2,
+        random_seed=42
+    )
+)
+
+# Generate text
+response = model.generate_text("Explain quantum computing in simple terms.")
+print(f"Response:\n{response}")
+
+# Close connection
+model.close_persistent_connection()
+      ```
+    </CodeGroup>
+
+### Tokenization Example
+
+Tokenize text with the Watsonx.ai SDK:
+
+    <CodeGroup>
+```python Tokenization
+import agentops
+from ibm_watsonx_ai import Credentials
+from ibm_watsonx_ai.foundation_models import ModelInference
+
+# Initialize AgentOps
+agentops.init(api_key="<INSERT YOUR API KEY HERE>")
+
+# Initialize credentials
+credentials = Credentials(
+    url="<YOUR_IBM_URL>",
+    api_key="<YOUR_IBM_API_KEY>",
+)
+
+project_id = "<YOUR_PROJECT_ID>"
+
+# Create model
+model = ModelInference(
+    model_id="google/flan-ul2",
+    credentials=credentials,
+    project_id=project_id
+)
+
+# Tokenize text
+text_to_tokenize = "Hello, how are you today?"
+tokens = model.tokenize(text_to_tokenize)
+print(f"Tokenization Result:\n{tokens}")
+
+# Close connection
+model.close_persistent_connection()
+      ```
+    </CodeGroup>
+
+Read more about environment variables in [Advanced Configuration](/v2/usage/advanced-configuration)
+
+## Additional Resources
+
+- [IBM Watsonx.ai Python SDK Documentation](https://ibm.github.io/watsonx-ai-python-sdk/)
+- [IBM Watsonx.ai Models](http://ibm.com/products/watsonx-ai/foundation-models)
+
+<script type="module" src="/scripts/github_stars.js"></script>
+<script type="module" src="/scripts/scroll-img-fadein-animation.js"></script>
+<script type="module" src="/scripts/button_heartbeat_animation.js"></script>
+<script type="css" src="/styles/styles.css"></script> 

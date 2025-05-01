@@ -1,0 +1,176 @@
+---
+title: LiteLLM
+description: "Track and analyze your LiteLLM calls across multiple providers with AgentOps"
+---
+
+import CodeTooltip from '/snippets/add-code-tooltip.mdx'
+import EnvTooltip from '/snippets/add-env-tooltip.mdx'
+
+AgentOps provides seamless integration with [LiteLLM](https://github.com/BerriAI/litellm), allowing you to automatically track all your LLM API calls across different providers through a unified interface.
+
+## Installation
+
+<CodeGroup>
+  ```bash pip
+  pip install agentops litellm
+  ```
+  ```bash poetry
+  poetry add agentops litellm
+  ```
+</CodeGroup>
+
+## Usage
+
+The simplest way to integrate AgentOps with LiteLLM is to set up the success_callback:
+
+<CodeGroup>
+```python Simple Integration
+import litellm
+
+# Configure LiteLLM to use AgentOps
+litellm.success_callback = ["agentops"]
+
+# Make completion requests with LiteLLM
+response = litellm.completion(
+    model="gpt-3.5-turbo",
+    messages=[{"role": "user", "content": "Hello, how are you?"}]
+)
+
+print(response.choices[0].message.content)
+
+# All LiteLLM API calls are automatically tracked by AgentOps
+```
+</CodeGroup>
+
+You can also initialize AgentOps separately for additional configuration:
+
+<CodeGroup>
+```python With AgentOps Init
+import agentops
+from litellm import completion
+
+# Initialize AgentOps
+agentops.init(<INSERT YOUR API KEY HERE>)
+
+# Configure LiteLLM to use AgentOps
+litellm.success_callback = ["agentops"]
+
+# Make completion requests with LiteLLM
+response = completion(
+    model="gpt-3.5-turbo",
+    messages=[{"role": "user", "content": "Hello, how are you?"}]
+)
+
+print(response.choices[0].message.content)
+
+# All LiteLLM API calls are automatically tracked by AgentOps
+```
+</CodeGroup>
+
+## Using the LiteLLM Client
+
+<CodeGroup>
+```python Python
+import litellm
+from litellm import LiteLLM
+
+# Configure LiteLLM to use AgentOps
+litellm.success_callback = ["agentops"]
+
+# Create a LiteLLM client
+client = LiteLLM()
+
+# Make a completion request
+response = client.completion(
+    model="anthropic/claude-3-opus-20240229",
+    messages=[{"role": "user", "content": "What are the benefits of using LiteLLM?"}]
+)
+
+print(response.choices[0].message.content)
+
+# All client requests are automatically tracked by AgentOps
+```
+</CodeGroup>
+
+## Streaming Example
+
+AgentOps also tracks streaming requests with LiteLLM:
+
+<CodeGroup>
+```python Python
+import litellm
+from litellm import completion
+
+# Configure LiteLLM to use AgentOps
+litellm.success_callback = ["agentops"]
+
+# Make a streaming completion request
+response = completion(
+    model="gpt-4",
+    messages=[{"role": "user", "content": "Write a short poem about AI."}],
+    stream=True
+)
+
+# Process the streaming response
+for chunk in response:
+    if chunk.choices[0].delta.content:
+        print(chunk.choices[0].delta.content, end="", flush=True)
+
+# All streaming requests are automatically tracked by AgentOps
+```
+</CodeGroup>
+
+## Multi-Provider Example
+
+One of LiteLLM's key features is the ability to switch between providers easily:
+
+<CodeGroup>
+```python Python
+import litellm
+from litellm import completion
+
+# Configure LiteLLM to use AgentOps
+litellm.success_callback = ["agentops"]
+
+# OpenAI request
+openai_response = completion(
+    model="gpt-4",
+    messages=[{"role": "user", "content": "What are the advantages of GPT-4?"}]
+)
+
+print("OpenAI Response:", openai_response.choices[0].message.content)
+
+# Anthropic request using the same interface
+anthropic_response = completion(
+    model="anthropic/claude-3-opus-20240229",
+    messages=[{"role": "user", "content": "What are the advantages of Claude?"}]
+)
+
+print("Anthropic Response:", anthropic_response.choices[0].message.content)
+
+# All requests across different providers are automatically tracked by AgentOps
+```
+</CodeGroup>
+
+## Environment Variables
+
+<EnvTooltip />
+<CodeGroup>
+  ```python .env
+  AGENTOPS_API_KEY=<YOUR API KEY>
+  OPENAI_API_KEY=<YOUR OPENAI API KEY>
+  ANTHROPIC_API_KEY=<YOUR ANTHROPIC API KEY>
+  # Add any other provider API keys you need
+  ```
+</CodeGroup>
+
+Read more about environment variables in [Advanced Configuration](/v2/usage/advanced-configuration)
+
+## Additional Resources
+
+For more information on integrating AgentOps with LiteLLM, refer to the [LiteLLM documentation on AgentOps integration](https://docs.litellm.ai/docs/observability/agentops_integration).
+
+<script type="module" src="/scripts/github_stars.js"></script>
+<script type="module" src="/scripts/scroll-img-fadein-animation.js"></script>
+<script type="module" src="/scripts/button_heartbeat_animation.js"></script>
+<script type="css" src="/styles/styles.css"></script>

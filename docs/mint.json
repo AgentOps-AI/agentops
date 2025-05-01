@@ -60,19 +60,26 @@
       "url": "https://agentops.ai/contact"
     }
   ],
+  "versions": [
+    "v2",
+    "v1",
+    "v0"
+  ],
   "navigation": [
     {
       "group": "",
       "pages": [
         "v1/introduction"
-      ]
+      ],
+      "version": "v1"
     },
     {
       "group": "Getting Started",
       "pages": [
         "v1/quickstart",
         "v1/examples/examples"
-      ]
+      ],
+      "version": "v1"
     },
     {
       "group": "Concepts",
@@ -82,7 +89,8 @@
         "v1/concepts/sessions",
         "v1/concepts/events",
         "v1/concepts/tags"
-      ]
+      ],
+      "version": "v1"
     },
     {
       "group": "Integrations",
@@ -109,7 +117,8 @@
         "v1/integrations/swarmzero",
         "v1/integrations/taskweaver",
         "v1/integrations/xai"
-      ]
+      ],
+      "version": "v1"
     },
     {
       "group": "Usage",
@@ -121,11 +130,72 @@
         "v1/usage/tracking-agents",
         "v1/usage/recording-operations",
         "v1/usage/multiple-sessions"
-      ]
+      ],
+      "version": "v1"
     },
     {
       "group": "Other Info",
-      "pages": ["v1/concepts/host-env"]
+      "pages": ["v1/concepts/host-env"],
+      "version": "v1"
+    },
+    {
+      "group": "",
+      "pages": [
+        "v2/introduction"
+      ],
+      "version": "v2"
+    },
+    {
+      "group": "Getting Started",
+      "pages": [
+        "v2/quickstart",
+        "v2/examples/examples"
+      ],
+      "version": "v2"
+    },
+    {
+      "group": "Concepts",
+      "pages": [
+        "v2/concepts/core-concepts",
+        "v2/concepts/decorators",
+        "v2/concepts/sessions",
+        "v2/concepts/spans",
+        "v2/concepts/tags"
+      ],
+      "version": "v2"
+    },
+    {
+      "group": "Integrations",
+      "pages": [
+        "v2/integrations/anthropic",
+        "v2/integrations/autogen",
+        "v2/integrations/crewai",
+        "v2/integrations/google_adk",
+        "v2/integrations/gemini",
+        "v2/integrations/langchain",
+        "v2/integrations/litellm",
+        "v2/integrations/openai",
+        "v2/integrations/agentssdk",
+        "v2/integrations/ibm_watsonx_ai"
+      ],
+      "version": "v2"
+    },
+    {
+      "group": "Usage",
+      "pages": [
+        "v2/usage/dashboard-info",
+        "v2/usage/sdk-reference",
+        "v2/usage/advanced-configuration",
+        "v2/usage/tracking-llm-calls",
+        "v2/usage/tracking-agents",
+        "v2/usage/recording-operations"
+      ],
+      "version": "v2"
+    },
+    {
+      "group": "Other Info",
+      "pages": ["v2/concepts/host-env"],
+      "version": "v2"
     }
   ],
   "footerSocials": {

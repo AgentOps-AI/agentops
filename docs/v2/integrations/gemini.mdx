@@ -1,0 +1,208 @@
+---
+title: Google Generative AI (Gemini)
+description: "Monitor and analyze your Google Gemini API calls with AgentOps"
+---
+
+import CodeTooltip from '/snippets/add-code-tooltip.mdx'
+import EnvTooltip from '/snippets/add-env-tooltip.mdx'
+
+AgentOps provides seamless integration with [Google's Generative AI API](https://ai.google.dev/), allowing you to monitor and analyze all your Gemini model interactions automatically.
+
+## Installation
+
+<CodeGroup>
+  ```bash pip
+  pip install agentops google-genai
+  ```
+  ```bash poetry
+  poetry add agentops google-genai
+  ```
+</CodeGroup>
+
+## Usage
+
+Initialize AgentOps at the beginning of your application to automatically track all Gemini API calls:
+
+<CodeGroup>
+```python Python
+import agentops
+from google import genai
+
+# Initialize AgentOps
+agentops.init(<INSERT YOUR API KEY HERE>)
+
+# Create a client for Gemini Developer API
+client = genai.Client(api_key="YOUR_GEMINI_API_KEY")
+
+# Generate content with a model
+response = client.models.generate_content(
+    model='gemini-2.0-flash-001',
+    contents='What is AI observability?'
+)
+
+print(response.text)
+
+# All Gemini API calls are automatically tracked by AgentOps
+```
+</CodeGroup>
+
+## Alternative Client Setup
+
+You can also set up the client using environment variables or with Vertex AI:
+
+<CodeGroup>
+```python Using Environment Variables
+import agentops
+from google import genai
+
+# Initialize AgentOps
+agentops.init(<INSERT YOUR API KEY HERE>)
+
+# Set GOOGLE_API_KEY environment variable before running
+# export GOOGLE_API_KEY='your-api-key'
+client = genai.Client()
+
+# Generate content
+response = client.models.generate_content(
+    model='gemini-2.0-flash-001',
+    contents='What is AI observability?'
+)
+
+print(response.text)
+```
+
+```python Vertex AI
+import agentops
+from google import genai
+
+# Initialize AgentOps
+agentops.init(<INSERT YOUR API KEY HERE>)
+
+# Using Vertex AI
+client = genai.Client(
+    vertexai=True,
+    project='your-project-id',
+    location='us-central1'
+)
+
+# Generate content
+response = client.models.generate_content(
+    model='gemini-2.0-flash-001',
+    contents='What is AI observability?'
+)
+
+print(response.text)
+```
+</CodeGroup>
+
+## System Instructions and Settings
+
+You can customize the model behavior with system instructions and other settings:
+
+<CodeGroup>
+```python With System Instructions
+import agentops
+from google import genai
+from google.genai import types
+
+# Initialize AgentOps
+agentops.init(<INSERT YOUR API KEY HERE>)
+
+# Create a client
+client = genai.Client(api_key="YOUR_GEMINI_API_KEY")
+
+# Generate content with system instructions
+response = client.models.generate_content(
+    model='gemini-2.0-flash-001',
+    contents='Write a short poem',
+    config=types.GenerateContentConfig(
+        system_instruction='You are a professional poet who specializes in sonnets',
+        max_output_tokens=200,
+        temperature=0.7,
+    ),
+)
+
+print(response.text)
+```
+</CodeGroup>
+
+## Streaming Example
+
+AgentOps also supports tracking streaming requests with Gemini:
+
+<CodeGroup>
+```python Streaming
+import agentops
+from google import genai
+
+# Initialize AgentOps
+agentops.init(<INSERT YOUR API KEY HERE>)
+
+# Create a client
+client = genai.Client(api_key="YOUR_GEMINI_API_KEY")
+
+# Generate streaming content
+for chunk in client.models.generate_content(
+    model='gemini-2.0-flash-001',
+    contents='Explain quantum computing in simple terms.',
+    stream=True
+):
+    print(chunk.text, end="", flush=True)
+
+# All streaming requests are automatically tracked by AgentOps
+```
+</CodeGroup>
+
+## Chat Example
+
+<CodeGroup>
+```python Chat
+import agentops
+from google import genai
+
+# Initialize AgentOps
+agentops.init(<INSERT YOUR API KEY HERE>)
+
+# Create a client
+client = genai.Client(api_key="YOUR_GEMINI_API_KEY")
+
+# Start a chat session
+chat = client.chats.create(model='gemini-2.0-flash-001')
+
+# Send messages and get responses
+response = chat.send_message('Hello, how can you help me with AI development?')
+print(response.text)
+
+# Continue the conversation
+response = chat.send_message('What are the best practices for prompt engineering?')
+print(response.text)
+
+# All chat interactions are automatically tracked by AgentOps
+```
+</CodeGroup>
+
+## Environment Variables
+
+<EnvTooltip />
+<CodeGroup>
+  ```python .env
+  AGENTOPS_API_KEY=<YOUR API KEY>
+  GOOGLE_API_KEY=<YOUR GEMINI API KEY>
+  
+  # For Vertex AI
+  # GOOGLE_GENAI_USE_VERTEXAI=true
+  # GOOGLE_CLOUD_PROJECT=your-project-id
+  # GOOGLE_CLOUD_LOCATION=us-central1
+  ```
+</CodeGroup>
+
+Read more about environment variables in [Advanced Configuration](/v2/usage/advanced-configuration)
+
+## Additional Resources
+
+For more information on using the Google Gen AI SDK, refer to the [official documentation](https://googleapis.github.io/python-genai/).
+
+<script type="module" src="/scripts/github_stars.js"></script>
+<script type="module" src="/scripts/scroll-img-fadein-animation.js"></script>
+<script type="module" src="/scripts/button_heartbeat_animation.js"></script>
+<script type="css" src="/styles/styles.css"></script> 
