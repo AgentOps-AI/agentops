@@ -1,0 +1,115 @@
+---
+title: LangChain
+description: "Track your LangChain agents with AgentOps"
+---
+
+import CodeTooltip from '/snippets/add-code-tooltip.mdx'
+import EnvTooltip from '/snippets/add-env-tooltip.mdx'
+
+[LangChain](https://python.langchain.com/docs/tutorials/) is a framework for developing applications powered by language models. AgentOps automatically tracks your LangChain agents by simply initializing the SDK at the beginning of your application.
+
+## Adding AgentOps to LangChain applications
+
+<Steps>
+	<Step title="Install the AgentOps SDK and the additional LangChain dependencies">
+		<CodeGroup>
+			```bash pip
+			pip install agentops langchain langchain-community
+			```
+			```bash poetry
+			poetry add agentops langchain langchain-community
+			```
+		</CodeGroup>
+		<Check>[Give us a star](https://github.com/AgentOps-AI/agentops) on GitHub while you're at it (you may be our <span id="stars-text">3,000th</span> 😊)</Check>
+	</Step>
+	<Step title="Set up your import statements">
+		Import the following LangChain and AgentOps dependencies
+		<CodeGroup>
+			```python python
+			import os
+			from langchain_community.chat_models import ChatOpenAI
+			from langchain.agents import initialize_agent, AgentType
+			from langchain.tools import DuckDuckGoSearchRun
+			from agentops.integration.callbacks.langchain import LangchainCallbackHandler
+			```
+		</CodeGroup>
+	</Step>
+	<Step title="Set up your LangChain handler to make the calls">
+		<Tip>
+			Note that you don't need to set up a separate agentops.init() call, as the LangChain callback handler will automatically initialize the AgentOps client for you.
+		</Tip>
+		Set up your LangChain agent with the AgentOps callback handler, and AgentOps will automatically record your LangChain sessions.
+			<CodeGroup>
+				```python python
+				handler = LangchainCallbackHandler(api_key=AGENTOPS_API_KEY, tags=['LangChain Example'])
+
+				# Define tools for the agent
+				search_tool = DuckDuckGoSearchRun()
+				tools = [search_tool]
+
+				llm = ChatOpenAI(openai_api_key=OPENAI_API_KEY,
+					callbacks=[handler],
+					model='gpt-3.5-turbo')
+
+				agent = initialize_agent(tools,
+					llm,
+					agent=AgentType.CHAT_ZERO_SHOT_REACT_DESCRIPTION,
+					verbose=True,
+					callbacks=[handler], # You must pass in a callback handler to record your agent
+					handle_parsing_errors=True)
+				```
+			</CodeGroup>
+			<EnvTooltip />
+			<CodeGroup>
+				```python .env
+				AGENTOPS_API_KEY=<YOUR API KEY>
+				```
+			</CodeGroup>
+			Read more about environment variables in [Advanced Configuration](/v1/usage/advanced-configuration)
+	</Step>
+	<Step title="Run your agent">
+		Execute your program and visit [app.agentops.ai/traces](https://app.agentops.ai/traces) to observe your LangChain Agent! 🕵️
+		<Tip>
+			After your run, AgentOps prints a clickable URL to the console linking directly to your session in the Dashboard
+		</Tip>
+		<div/>{/* Intentionally blank div for newline */}
+		<Frame type="glass" caption="Clickable link to session">
+			<img height="200" src="https://github.com/AgentOps-AI/agentops/blob/main/docs/images/link-to-session.gif?raw=true" />
+		</Frame>
+	</Step>
+</Steps>
+
+## Full Examples
+
+<CodeGroup>
+	```python python
+	import os
+	from langchain_community.chat_models import ChatOpenAI
+	from langchain.agents import initialize_agent, AgentType
+	from langchain.tools import DuckDuckGoSearchRun
+	from agentops.integration.callbacks.langchain import LangchainCallbackHandler
+
+	handler = LangchainCallbackHandler(api_key=AGENTOPS_API_KEY, tags=['LangChain Example'])
+
+	# Define tools for the agent
+	search_tool = DuckDuckGoSearchRun()
+	tools = [search_tool]
+
+	llm = ChatOpenAI(openai_api_key=OPENAI_API_KEY,
+		callbacks=[handler],
+		model='gpt-3.5-turbo')
+
+	agent = initialize_agent(tools,
+		llm,
+		agent=AgentType.CHAT_ZERO_SHOT_REACT_DESCRIPTION,
+		verbose=True,
+		callbacks=[handler], # You must pass in a callback handler to record your agent
+		handle_parsing_errors=True)
+	```
+</CodeGroup>
+
+<script type="module" src="/scripts/github_stars.js"></script>
+<script type="module" src="/scripts/scroll-img-fadein-animation.js"></script>
+<script type="module" src="/scripts/button_heartbeat_animation.js"></script>
+<script type="css" src="/styles/styles.css"></script>
+<script type="module" src="/scripts/adjust_api_dynamically.js"></script>

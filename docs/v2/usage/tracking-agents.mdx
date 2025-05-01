@@ -1,0 +1,91 @@
+---
+title: "Tracking Agents"
+description: "Associate operations with specific named agents"
+---
+
+AgentOps automatically tracks LLM interactions in your application. For more detailed tracking, especially in multi-agent systems, you can use additional features to associate operations with specific agents.
+
+## Basic Agent Tracking
+
+For simple applications, AgentOps will automatically track your LLM calls without additional configuration:
+
+```python
+import agentops
+from openai import OpenAI
+
+# Initialize AgentOps
+agentops.init("your-api-key")
+
+# Create a simple agent function
+def research_agent(query):
+    client = OpenAI()
+    response = client.chat.completions.create(
+        model="gpt-4o",
+        messages=[{"role": "user", "content": f"Research about: {query}"}]
+    )
+    return response.choices[0].message.content
+
+# Use your agent - all LLM calls will be tracked automatically
+result = research_agent("quantum computing")
+```
+
+## Advanced: Using the Agent Decorator
+
+For more structured tracking in complex applications, you can use the `@agent` decorator to explicitly identify different agents in your system:
+
+```python
+import agentops
+from agentops.sdk.decorators import agent, operation
+from openai import OpenAI
+
+# Initialize AgentOps
+agentops.init("your-api-key")
+
+# Create a decorated agent class
+@agent(name='ResearchAgent')
+class MyAgent:
+    def __init__(self):
+        self.client = OpenAI()
+        
+    @operation
+    def search(self, query):
+        response = self.client.chat.completions.create(
+            model="gpt-4o",
+            messages=[{"role": "user", "content": f"Research about: {query}"}]
+        )
+        return response.choices[0].message.content
+
+# Create and use the agent within a function
+def research_workflow(topic):
+    agent = MyAgent()
+    result = agent.search(topic)
+    return result
+
+# Execute the function to properly register the agent span
+result = research_workflow("quantum computing")
+```
+
+If you don't specify a name, the agent will use the class name by default:
+
+```python
+@agent
+class ResearchAgent:
+    # This agent will have the name "ResearchAgent"
+    pass
+```
+
+## Dashboard Visualization
+
+All operations are automatically associated with the agent that originated them. Agents are given a name which is what you will see in the dashboard.
+
+<Frame type="glass" caption="Operations are labeled with the name of the Agent that originated them">
+  <img height="200" src="/images/agent-name.png" />
+</Frame>
+
+## Best Practices
+
+1. **Start Simple**: For most applications, just using `agentops.init()` is sufficient.
+
+2. **Use Decorators When Needed**: Add the `@agent` decorator when you need to clearly distinguish between multiple agents in your system.
+
+3. **Meaningful Names**: Choose descriptive names for your agents to make them easier to identify in the dashboard.

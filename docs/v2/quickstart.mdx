@@ -1,0 +1,168 @@
+---
+title: "Quickstart"
+description: "Start using AgentOps with just 2 lines of code"
+---
+import CodeTooltip from '/snippets/add-code-tooltip.mdx'
+import EnvTooltip from '/snippets/add-env-tooltip.mdx'
+
+<Steps>
+  <Step title="Install the AgentOps SDK">
+    <CodeGroup>
+      ```bash pip 
+      pip install agentops
+      ```
+      ```bash poetry
+      poetry add agentops
+      ```
+    </CodeGroup>
+  </Step>
+  <Step title="Add 2 lines of code">
+    <CodeTooltip />
+    Get an AgentOps API key [here](https://app.agentops.ai/settings/projects)
+      <CodeGroup>
+        ```python python
+        import agentops
+        agentops.init(<INSERT YOUR API KEY HERE>)
+        ```
+      </CodeGroup>
+      That's it! These two lines automatically instrument your code and start tracking sessions. Sessions automatically end when your program exits.
+    <EnvTooltip />
+  </Step>
+  <Step title="Run your agent">
+    Execute your program and visit [app.agentops.ai/traces](https://app.agentops.ai/traces) to observe your Agent! 🕵️
+
+    <Tip>After your run, AgentOps prints a clickable URL to console linking directly to your session in the Dashboard</Tip> 
+     <div/>{/* Intentionally blank div for newline */}
+
+     <Frame type="glass" caption="Clickable link to session">
+        <img height="200" src="https://github.com/AgentOps-AI/agentops/blob/main/docs/images/link-to-session.gif?raw=true" />
+    </Frame>
+  </Step>
+</Steps>
+<Check>[Give us a star](https://github.com/AgentOps-AI/agentops) if you liked AgentOps! (you may be our <span id="stars-text">3,000th</span> 😊)</Check>
+
+## More basic functionality
+
+<CardGroup cols={1}>
+
+<Card icon="code" title="Decorate Operations">
+  You can instrument functions inside your code with the `@operation` decorator, which will create spans that track function execution, parameters, and return values. These operations will be displayed in your session visualization alongside LLM calls.
+  ```python python
+  # Instrument a function as an operation
+  from agentops.sdk.decorators import operation
+  
+  @operation
+  def process_data(data):
+      # Your function logic here
+      result = data.upper()
+      return result
+```
+
+</Card>
+<Card icon="robot" title="Track Agents">
+  If you use specific named agents within your system, you can create agent spans that contain all downstream operations using the `@agent` decorator.
+  ```python python
+  # Create an agent class
+  from agentops.sdk.decorators import agent, operation
+  
+  @agent
+  class MyAgent:
+      def __init__(self, name):
+          self.name = name
+          
+      @operation
+      def perform_task(self, task):
+          # Agent task logic here
+          return f"Completed {task}"
+
+  def run_agent_task(task_name):
+      agent = MyAgent("research-agent")
+      result = agent.perform_task(task_name)
+      return result
+
+  result = run_agent_task("data analysis")
+  ```
+
+</Card>
+<Card icon="stop" title="Creating Sessions">
+  Create a session to group all your agent operations by using the `@session` decorator. Sessions serve as the root span for all operations.
+  ```python python
+  # Create a session
+  from agentops.sdk.decorators import session
+  
+  @session
+  def my_workflow():
+      # Your session code here
+      agent = MyAgent("research-agent")
+      result = agent.perform_task("data analysis")
+      return result
+      
+  # Run the session
+  my_workflow()
+  ```
+</Card>
+</CardGroup>
+
+
+## Example Code
+
+Here is the complete code from the sections above
+
+```python python
+import agentops
+from agentops.sdk.decorators import agent, operation
+
+# Initialize AgentOps
+agentops.init(<INSERT YOUR API KEY HERE>)
+
+# Create an agent class
+@agent
+class MyAgent:
+    def __init__(self, name):
+        self.name = name
+        
+    @operation
+    def perform_task(self, task):
+        # Agent task logic here
+        return f"Completed {task}"
+
+def run_agent_task(task_name):
+    agent = MyAgent("research-agent")
+    result = agent.perform_task(task_name)
+    return result
+
+result = run_agent_task("data analysis")
+```
+
+<Card
+  title="Simple Code Example"
+  icon="square-code"
+  href="https://github.com/AgentOps-AI/agentops-py/blob/main/examples/openai-gpt.ipynb"
+>
+  Jupyter Notebook with sample code that you can run!
+</Card>
+
+<Check>
+  That's all you need to get started! Check out the documentation below to see how you can record other operations. AgentOps is a lot more powerful this way!
+</Check>
+
+## Explore our more advanced functionality!
+
+<CardGroup cols={2}>
+  <Card
+    title="Examples and Video Guides"
+    icon="square-code"
+    href="/v2/examples"
+  >
+    Record all of your operations the way AgentOps intends.
+  </Card>
+  <Card title="Tracking Agents" icon="robot" href="/v2/usage/tracking-agents">
+    Associate operations with specific named agents.
+  </Card>
+</CardGroup>
+
+<script type="module" src="/scripts/github_stars.js"></script>
+<script type="module" src="/scripts/scroll-img-fadein-animation.js"></script>
+<script type="module" src="/scripts/button_heartbeat_animation.js"></script>
+<script type="css" src="/styles/styles.css"></script>
+<script type="module" src="/scripts/adjust_api_dynamically.js"></script>

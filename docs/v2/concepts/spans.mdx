@@ -1,0 +1,143 @@
+---
+title: 'Spans'
+description: 'Understanding the different types of spans in AgentOps'
+---
+## Core Span Types
+
+AgentOps organizes all spans with specific kinds:
+
+| Span Kind | Description |
+|-----------|-------------|
+| `SESSION` | The root container for all activities in a single execution of your workflow |
+| `AGENT` | Represents an autonomous entity with specialized capabilities |
+| `WORKFLOW` | A logical grouping of related operations |
+| `OPERATION` | A specific task or function performed by an agent |
+| `TASK` | Alias for OPERATION, used interchangeably |
+| `LLM` | An interaction with a language model |
+| `TOOL` | The use of a tool or API by an agent |
+
+## Span Hierarchy
+
+Spans in AgentOps are organized hierarchically:
+
+```
+SESSION
+  ├── AGENT
+  │     ├── OPERATION/TASK
+  │     │     ├── LLM
+  │     │     └── TOOL
+  │     └── WORKFLOW
+  │           └── OPERATION/TASK
+  └── LLM (unattributed to a specific agent)
+```
+
+Every span exists within the context of a session, and most spans (other than the session itself) have a parent span that provides context.
+
+## Span Attributes
+
+All spans in AgentOps include:
+
+- **ID**: A unique identifier
+- **Name**: A descriptive name
+- **Kind**: The type of span (SESSION, AGENT, etc.)
+- **Start Time**: When the span began
+- **End Time**: When the span completed
+- **Status**: Success or error status
+- **Attributes**: Key-value pairs with additional metadata
+
+Different span types have specialized attributes:
+
+### LLM Spans
+
+LLM spans track interactions with large language models and include:
+
+- **Model**: The specific model used (e.g., "gpt-4", "claude-3-opus")
+- **Provider**: The LLM provider (e.g., "OpenAI", "Anthropic")
+- **Prompt Tokens**: Number of tokens in the input
+- **Completion Tokens**: Number of tokens in the output
+- **Cost**: The estimated cost of the interaction
+- **Messages**: The prompt and completion content
+
+### Tool Spans
+
+Tool spans track the use of tools or APIs and include:
+
+- **Tool Name**: The name of the tool used
+- **Input**: The data provided to the tool
+- **Output**: The result returned by the tool
+- **Duration**: How long the tool operation took
+
+### Operation/Task Spans
+
+Operation spans track specific functions or tasks:
+
+- **Operation Type**: The kind of operation performed
+- **Parameters**: Input parameters to the operation
+- **Result**: The output of the operation
+- **Duration**: How long the operation took
+
+## Creating Spans
+
+There are several ways to create spans in AgentOps:
+
+### Using Decorators
+
+The recommended way to create spans is using decorators:
+
+```python
+from agentops.sdk.decorators import agent, operation, session, workflow, task
+
+@session
+def my_workflow():
+    agent_instance = MyAgent()
+    return agent_instance.perform_task()
+
+@agent
+class MyAgent:
+    @operation
+    def perform_task(self):
+        # Perform the task
+        return result
+```
+
+### Automatic Instrumentation
+
+AgentOps automatically instruments LLM API calls from supported providers when `auto_instrument=True` (the default):
+
+```python
+import agentops
+from openai import OpenAI
+
+# Initialize AgentOps
+agentops.init(api_key="YOUR_API_KEY")
+
+# Initialize the OpenAI client
+client = OpenAI()
+
+# This LLM call will be automatically tracked
+response = client.chat.completions.create(
+    model="gpt-4",
+    messages=[{"role": "user", "content": "Hello!"}]
+)
+```
+
+## Viewing Spans in the Dashboard
+
+All recorded spans are visible in the AgentOps dashboard:
+
+1. **Timeline View**: Shows the sequence and duration of spans
+2. **Tree View**: Displays the hierarchical relationship between spans
+3. **Details Panel**: Provides in-depth information about each span
+4. **Analytics**: Aggregates statistics across spans
+
+## Best Practices
+
+- Use descriptive names for spans to make them easily identifiable
+- Create a logical hierarchy with sessions, agents, and operations
+- Record relevant parameters and results for better debugging
+- Use consistent naming conventions for span types
+- Track costs and token usage to monitor resource consumption
+
+<script type="module" src="/scripts/github_stars.js"></script>
+<script type="module" src="/scripts/scroll-img-fadein-animation.js"></script>
+<script type="module" src="/scripts/button_heartbeat_animation.js"></script>

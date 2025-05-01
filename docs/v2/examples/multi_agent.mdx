@@ -1,0 +1,147 @@
+---
+title: 'Multi-Agent Example'
+description: 'How to track operations from multiple different agents'
+mode: "wide"
+---
+_View Notebook on <a href={'https://github.com/AgentOps-AI/agentops/blob/main/examples/multi_agent_example.ipynb'} target={'_blank'}>Github</a>_
+
+# Multi-Agent Support
+This is an example implementation of tracking operations from two separate agents
+
+## Installation
+
+<CodeGroup>
+  ```bash pip
+  pip install -U openai agentops
+  ```
+  ```bash poetry
+  poetry add openai agentops
+  ```
+</CodeGroup>
+
+## Setup
+
+Import the necessary libraries:
+
+```python
+import agentops
+from agentops.sdk.decorators import agent, operation
+from openai import OpenAI
+import os
+from dotenv import load_dotenv
+from IPython.display import display, Markdown
+```
+
+Set up your API keys:
+
+```python
+load_dotenv()
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY") or "<your_openai_key>"
+AGENTOPS_API_KEY = os.getenv("AGENTOPS_API_KEY") or "<your_agentops_key>"
+```
+
+Initialize AgentOps at the beginning of your application:
+
+```python
+agentops.init(AGENTOPS_API_KEY, tags=["multi-agent-example"])
+openai_client = OpenAI(api_key=OPENAI_API_KEY)
+```
+
+## Creating Multiple Agents
+
+Now let's create a few agents using the `@agent` decorator:
+
+```python
+@agent(name="qa")
+class QaAgent:
+    def __init__(self):
+        pass
+        
+    @operation
+    def completion(self, prompt: str):
+        res = openai_client.chat.completions.create(
+            model="gpt-3.5-turbo",
+            messages=[
+                {
+                    "role": "system",
+                    "content": "You are a qa engineer and only output python code, no markdown tags.",
+                },
+                {"role": "user", "content": prompt},
+            ],
+            temperature=0.5,
+        )
+        return res.choices[0].message.content
+
+
+@agent(name="engineer")
+class EngineerAgent:
+    def __init__(self):
+        pass
+        
+    @operation
+    def completion(self, prompt: str):
+        res = openai_client.chat.completions.create(
+            model="gpt-3.5-turbo",
+            messages=[
+                {
+                    "role": "system",
+                    "content": "You are a software engineer and only output python code, no markdown tags.",
+                },
+                {"role": "user", "content": prompt},
+            ],
+            temperature=0.5,
+        )
+        return res.choices[0].message.content
+```
+
+Instantiate your agents:
+
+```python
+def get_qa_response(prompt):
+    qa = QaAgent()
+    return qa.completion(prompt)
+    
+def get_engineer_response(prompt):
+    engineer = EngineerAgent()
+    return engineer.completion(prompt)
+```
+
+## Using Different Agents
+
+Now we can use these agents to complete different tasks. Any LLM calls that go through these classes will be tagged as agent calls in AgentOps.
+
+```python
+# Get code from the engineer
+generated_func = get_engineer_response("python function to test prime number")
+display(Markdown("```python\n" + generated_func + "\n```"))
+
+# Get a test from the QA agent
+generated_test = get_qa_response(
+    "Write a python unit test that test the following function: \n " + generated_func
+)
+display(Markdown("```python\n" + generated_test + "\n```"))
+```
+
+## Default Agent Behavior
+
+If we make an LLM call outside of the context of a tracked agent, it gets assigned to the Default Agent.
+
+```python
+# This will be assigned to the Default Agent
+res = openai_client.chat.completions.create(
+    model="gpt-3.5-turbo",
+    messages=[
+        {"role": "system", "content": "You are not a tracked agent"},
+        {"role": "user", "content": "Say hello"},
+    ],
+)
+print(res.choices[0].message.content)
+```
+
+## Further Reading
+
+Check out other advanced examples like [OpenAI Assistants](/v2/examples/openai_assistants) integration.
+
+<script type="module" src="/scripts/github_stars.js"></script>
+<script type="module" src="/scripts/scroll-img-fadein-animation.js"></script>
+<script type="module" src="/scripts/button_heartbeat_animation.js"></script> 

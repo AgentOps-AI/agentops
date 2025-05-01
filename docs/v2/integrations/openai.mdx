@@ -1,0 +1,194 @@
+---
+title: OpenAI
+description: "Track and analyze your OpenAI API calls with AgentOps"
+---
+
+import CodeTooltip from '/snippets/add-code-tooltip.mdx'
+import EnvTooltip from '/snippets/add-env-tooltip.mdx'
+
+AgentOps seamlessly integrates with [OpenAI's Python SDK](https://github.com/openai/openai-python), allowing you to track and analyze all your OpenAI API calls automatically.
+
+## Installation
+
+<CodeTooltip />
+
+    <CodeGroup>
+      ```bash pip 
+  pip install agentops openai
+      ```
+      ```bash poetry
+  poetry add agentops openai
+      ```
+    </CodeGroup>
+
+## Usage
+
+Initialize AgentOps at the beginning of your application to automatically track all OpenAI API calls:
+
+    <CodeGroup>
+```python Basic Usage
+      import agentops
+      from openai import OpenAI
+      
+# Initialize AgentOps
+      agentops.init(<INSERT YOUR API KEY HERE>)
+
+# Create OpenAI client
+client = OpenAI(api_key="<YOUR_OPENAI_API_KEY>")
+
+# Make API calls as usual - AgentOps will track them automatically
+response = client.chat.completions.create(
+    model="gpt-4",
+    messages=[
+        {"role": "system", "content": "You are a helpful assistant."},
+        {"role": "user", "content": "What is the capital of France?"}
+    ]
+)
+
+print(response.choices[0].message.content)
+      ```
+    </CodeGroup>
+
+## Advanced Examples
+
+### Streaming Completions
+
+AgentOps automatically tracks streaming completions:
+
+<CodeGroup>
+```python Streaming Example
+import agentops
+  from openai import OpenAI
+
+# Initialize AgentOps
+  agentops.init(<INSERT YOUR API KEY HERE>)
+
+# Create OpenAI client
+  client = OpenAI()
+
+# Make a streaming API call
+stream = client.chat.completions.create(
+    model="gpt-4",
+    messages=[
+        {"role": "system", "content": "You are a helpful assistant."},
+        {"role": "user", "content": "Write a short poem about AI."}
+    ],
+    stream=True
+)
+
+# Process the streaming response
+for chunk in stream:
+    if chunk.choices[0].delta.content is not None:
+        print(chunk.choices[0].delta.content, end="")
+  ```
+</CodeGroup>
+
+### Function Calling
+
+AgentOps tracks function-calling conversations with OpenAI models:
+
+<CodeGroup>
+```python Function Calling
+import agentops
+import json
+  from openai import OpenAI
+
+# Initialize AgentOps
+  agentops.init(<INSERT YOUR API KEY HERE>)
+
+# Create OpenAI client
+  client = OpenAI()
+
+# Define functions
+tools = [
+    {
+        "type": "function",
+        "function": {
+            "name": "get_weather",
+            "description": "Get the current weather in a given location",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "location": {
+                        "type": "string",
+                        "description": "The city and state, e.g. San Francisco, CA",
+                    }
+                },
+                "required": ["location"],
+            },
+        },
+    }
+]
+
+# Function implementation
+def get_weather(location):
+    return json.dumps({"location": location, "temperature": "72", "unit": "fahrenheit", "forecast": ["sunny", "windy"]})
+
+# Make a function call API request
+response = client.chat.completions.create(
+    model="gpt-4",
+    messages=[
+        {"role": "system", "content": "You are a helpful weather assistant."},
+        {"role": "user", "content": "What's the weather like in Boston?"}
+    ],
+    tools=tools,
+    tool_choice="auto"
+)
+
+# Process response
+response_message = response.choices[0].message
+tool_calls = response_message.tool_calls
+
+if tool_calls:
+    # Handle tool calls
+    messages = [
+        {"role": "system", "content": "You are a helpful weather assistant."},
+        {"role": "user", "content": "What's the weather like in Boston?"},
+        response_message
+    ]
+    
+    # Process each tool call
+    for tool_call in tool_calls:
+        function_name = tool_call.function.name
+        function_args = json.loads(tool_call.function.arguments)
+        
+        if function_name == "get_weather":
+            function_response = get_weather(function_args.get("location"))
+            
+            messages.append(
+                {
+                    "tool_call_id": tool_call.id,
+                    "role": "tool",
+                    "name": function_name,
+                    "content": function_response,
+                }
+            )
+    
+    # Get a new response from the model
+    second_response = client.chat.completions.create(
+        model="gpt-4",
+        messages=messages,
+    )
+    
+    print(second_response.choices[0].message.content)
+else:
+    print(response_message.content)
+```
+</CodeGroup>
+
+## Environment Variables
+
+<EnvTooltip />
+<CodeGroup>
+  ```python .env
+  AGENTOPS_API_KEY=<YOUR API KEY>
+  OPENAI_API_KEY=<YOUR OPENAI API KEY>
+  ```
+</CodeGroup>
+
+Read more about environment variables in [Advanced Configuration](/v2/usage/advanced-configuration)
+
+<script type="module" src="/scripts/github_stars.js"></script>
+<script type="module" src="/scripts/scroll-img-fadein-animation.js"></script>
+<script type="module" src="/scripts/button_heartbeat_animation.js"></script>
+<script type="css" src="/styles/styles.css"></script>
