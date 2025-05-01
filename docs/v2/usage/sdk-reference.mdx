@@ -107,10 +107,6 @@ Starts a new AgentOps session manually. This is useful when you've disabled auto
 
 - `tags` (Union[Dict[str, Any], List[str]], optional): Optional tags to attach to the session, useful for filtering in the dashboard. Can be a list of strings or a dict of key-value pairs.
 
-**Returns**:
-
-- A Session object that should be passed to `end_session()`.
-
 **Example**:
 
 ```python
@@ -121,44 +117,7 @@ agentops.init("your-api-key", auto_start_session=False)
 
 # Later, manually start a session
 session = agentops.start_session(tags=["customer-query"])
-
-# End the session when done
-agentops.end_session(session)
 ```
-
-### `end_session()`
-
-Ends a previously started AgentOps session.
-
-**Parameters**:
-
-- `session_or_status` (Any, optional): Either a Session object returned by `start_session()`, or status information.
-- `**kwargs`: Additional attributes to attach to the session span, such as `end_state` and `end_state_reason`.
-
-**Example**:
-
-```python
-import agentops
-
-# Start a session
-session = agentops.start_session()
-
-# End the session with additional status information
-agentops.end_session(session, end_state="Success", end_state_reason="Task completed")
-```
-
-## Classes
-
-### `Session`
-
-Represents an active tracking session in AgentOps. Instances are created by `start_session()` or automatically with `init()` when `auto_start_session=True`.
-
-**Methods**:
-
-- `create_agent(name=None, agent_id=None, **kwargs)`: Creates an agent span within the session.
-- `record(event=None)`: Records events like tool usage within the session.
-- `end_session(**kwargs)`: Ends the session, with optional attributes.
-
 ## Decorators for Detailed Instrumentation
 
 For more granular control, AgentOps provides decorators that explicitly track different components of your application. These decorators are imported from `agentops.sdk.decorators`.

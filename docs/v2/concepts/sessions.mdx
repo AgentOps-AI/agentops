@@ -37,17 +37,6 @@ Manual session management is useful when:
 - You need to associate different sessions with different sets of tags
 - Your application has distinct workflows that should be tracked separately
 
-### Start Session Parameters
-
-When starting a session manually, you can configure it with:
-
-```python
-agentops.start_session(
-    name="customer_support_session",  # Optional name for the session
-    tags=["customer-support", "tier-1"]  # Optional tags for filtering
-)
-```
-
 ## Using the Session Decorator
 
 As an alternative to the methods above, you can use the `@session` decorator to create a session for a specific function:

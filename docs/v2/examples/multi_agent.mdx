@@ -29,7 +29,6 @@ from agentops.sdk.decorators import agent, operation
 from openai import OpenAI
 import os
 from dotenv import load_dotenv
-import logging
 from IPython.display import display, Markdown
 ```
 
@@ -39,9 +38,6 @@ Set up your API keys:
 load_dotenv()
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY") or "<your_openai_key>"
 AGENTOPS_API_KEY = os.getenv("AGENTOPS_API_KEY") or "<your_agentops_key>"
-logging.basicConfig(
-    level=logging.DEBUG
-)  # this will let us see that calls are assigned to an agent
 ```
 
 Initialize AgentOps at the beginning of your application:
@@ -101,8 +97,13 @@ class EngineerAgent:
 Instantiate your agents:
 
 ```python
-qa = QaAgent()
-engineer = EngineerAgent()
+def get_qa_response(prompt):
+    qa = QaAgent()
+    return qa.completion(prompt)
+    
+def get_engineer_response(prompt):
+    engineer = EngineerAgent()
+    return engineer.completion(prompt)
 ```
 
 ## Using Different Agents
@@ -111,11 +112,11 @@ Now we can use these agents to complete different tasks. Any LLM calls that go t
 
 ```python
 # Get code from the engineer
-generated_func = engineer.completion("python function to test prime number")
+generated_func = get_engineer_response("python function to test prime number")
 display(Markdown("```python\n" + generated_func + "\n```"))
 
 # Get a test from the QA agent
-generated_test = qa.completion(
+generated_test = get_qa_response(
     "Write a python unit test that test the following function: \n " + generated_func
 )
 display(Markdown("```python\n" + generated_test + "\n```"))
@@ -134,7 +135,7 @@ res = openai_client.chat.completions.create(
         {"role": "user", "content": "Say hello"},
     ],
 )
-res.choices[0].message.content
+print(res.choices[0].message.content)
 ```
 
 ## Further Reading

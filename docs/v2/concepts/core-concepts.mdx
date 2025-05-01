@@ -165,11 +165,13 @@ class AssistantAgent:
         )
         return response.choices[0].message.content
 
-# Use the agent
-assistant = AssistantAgent()
-answer = assistant.answer_question("What's the capital of France?")
-print(answer)
+def workflow():
+    # Use the agent
+    assistant = AssistantAgent()
+    answer = assistant.answer_question("What's the capital of France?")
+    print(answer)
 
+workflow()
 # Session is automatically tracked until application terminates
 ```
 

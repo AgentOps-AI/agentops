@@ -72,11 +72,18 @@ If you use agent classes, you can track them with the `@agent` decorator:
 from agentops.sdk.decorators import agent, operation
 
 @agent
-class MyAgent:
+class ResearchAgent:
     @operation
-    def perform_task(self, task):
-        # Operation implementation
-        return result
+    def search(self, query):
+        # Implementation of search
+        return f"Results for: {query}"
+
+def research_workflow(topic):
+    agent = ResearchAgent()
+    results = agent.search(topic)
+    return results
+    
+results = research_workflow("quantum computing")
 ```
 
 ### Advanced Session Management

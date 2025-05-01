@@ -74,7 +74,14 @@ import EnvTooltip from '/snippets/add-env-tooltip.mdx'
       def perform_task(self, task):
           # Agent task logic here
           return f"Completed {task}"
-```
+
+  def run_agent_task(task_name):
+      agent = MyAgent("research-agent")
+      result = agent.perform_task(task_name)
+      return result
+
+  result = run_agent_task("data analysis")
+  ```
 
 </Card>
 <Card icon="stop" title="Creating Sessions">
@@ -103,7 +110,7 @@ Here is the complete code from the sections above
 
 ```python python
 import agentops
-from agentops.sdk.decorators import session, agent, operation
+from agentops.sdk.decorators import agent, operation
 
 # Initialize AgentOps
 agentops.init(<INSERT YOUR API KEY HERE>)
@@ -119,16 +126,12 @@ class MyAgent:
         # Agent task logic here
         return f"Completed {task}"
 
-# Create a session
-@session
-def my_workflow():
-    # Your session code here
+def run_agent_task(task_name):
     agent = MyAgent("research-agent")
-    result = agent.perform_task("data analysis")
+    result = agent.perform_task(task_name)
     return result
-    
-# Run the session
-my_workflow()
+
+result = run_agent_task("data analysis")
 ```
 
 <Card

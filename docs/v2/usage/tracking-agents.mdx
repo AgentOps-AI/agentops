@@ -55,9 +55,14 @@ class MyAgent:
         )
         return response.choices[0].message.content
 
-# Create and use the agent
-agent = MyAgent()
-result = agent.search("quantum computing")
+# Create and use the agent within a function
+def research_workflow(topic):
+    agent = MyAgent()
+    result = agent.search(topic)
+    return result
+
+# Execute the function to properly register the agent span
+result = research_workflow("quantum computing")
 ```
 
 If you don't specify a name, the agent will use the class name by default:

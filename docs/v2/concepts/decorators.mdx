@@ -75,6 +75,13 @@ class WeatherAgent:
     def get_forecast(self, location):
         # Get weather data
         return f"The weather in {location} is sunny."
+
+def check_weather(city):
+    weather_agent = WeatherAgent()
+    forecast = weather_agent.get_forecast(city)
+    return forecast
+
+weather_info = check_weather("San Francisco")
 ```
 
 When an agent-decorated class is instantiated within a session, an AGENT span is created automatically.
@@ -99,6 +106,14 @@ class MathAgent:
     @operation
     def multiply(self, a, b):
         return a * b
+
+def calculate(x, y):
+    math_agent = MathAgent()
+    sum_result = math_agent.add(x, y)
+    product_result = math_agent.multiply(x, y)
+    return {"sum": sum_result, "product": product_result}
+
+results = calculate(5, 3)
 ```
 
 Operations represent the smallest meaningful units of work in your agent system. Each operation creates an OPERATION span with:
@@ -222,16 +237,18 @@ def assist_user(query):
 @agent
 class Assistant:
     def __init__(self):
-        self.research_agent = ResearchAgent()
-        self.writing_agent = WritingAgent()
+        pass
     
     @workflow
     def process_query(self, query):
+        research_agent = ResearchAgent()
+        writing_agent = WritingAgent()
+        
         # Research phase
-        research = self.research_agent.gather_information(query)
+        research = research_agent.gather_information(query)
         
         # Writing phase
-        response = self.writing_agent.generate_response(query, research)
+        response = writing_agent.generate_response(query, research)
         
         return response
 
@@ -261,6 +278,8 @@ class WritingAgent:
     def generate_response(self, query, research):
         # Generate a response based on the research
         return f"Answer to '{query}' based on: {research['summary']}"
+
+assist_user("What is the capital of France?")
 ```
 
 In this example:
