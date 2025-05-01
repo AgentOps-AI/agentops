@@ -170,6 +170,7 @@
         "v2/integrations/anthropic",
         "v2/integrations/autogen",
         "v2/integrations/crewai",
+        "v2/integrations/google_adk",
         "v2/integrations/gemini",
         "v2/integrations/langchain",
         "v2/integrations/litellm",
