@@ -1,0 +1,200 @@
+---
+title: IBM Watsonx.ai
+description: "Track and analyze your IBM Watsonx.ai API calls with AgentOps"
+---
+
+import CodeTooltip from '/snippets/add-code-tooltip.mdx'
+import EnvTooltip from '/snippets/add-env-tooltip.mdx'
+
+AgentOps provides seamless integration with [IBM Watsonx.ai Python SDK](https://ibm.github.io/watsonx-ai-python-sdk/), allowing you to track and analyze all your Watsonx.ai model interactions automatically.
+
+## Installation
+
+<CodeTooltip />
+
+    <CodeGroup>
+      ```bash pip 
+  pip install agentops ibm-watson-machine-learning
+      ```
+      ```bash poetry
+  poetry add agentops ibm-watson-machine-learning
+      ```
+    </CodeGroup>
+
+## Usage
+
+Initialize AgentOps at the beginning of your application to automatically track all IBM Watsonx.ai API calls:
+
+    <CodeGroup>
+```python Basic Usage
+import agentops
+from ibm_watson_machine_learning.foundation_models import Model
+
+# Initialize AgentOps
+agentops.init(<INSERT YOUR API KEY HERE>)
+
+# Create Watsonx.ai client
+model = Model(
+    model_id="meta-llama/llama-2-70b-chat",
+    credentials={
+        "apikey": "<YOUR_IBM_API_KEY>",
+        "url": "<YOUR_IBM_URL>"
+    }
+)
+
+# Make a completion request - AgentOps will track it automatically
+response = model.generate(
+    prompt="What is artificial intelligence?",
+    parameters={
+        "max_new_tokens": 1000,
+        "temperature": 0.7,
+        "top_p": 0.9
+    }
+)
+
+print(response["results"][0]["generated_text"])
+      ```
+    </CodeGroup>
+
+## Advanced Examples
+
+### Streaming Example
+
+AgentOps automatically tracks streaming completions:
+
+    <CodeGroup>
+```python Streaming Example
+import agentops
+from ibm_watson_machine_learning.foundation_models import Model
+
+# Initialize AgentOps
+agentops.init(<INSERT YOUR API KEY HERE>)
+
+# Create Watsonx.ai client
+model = Model(
+    model_id="meta-llama/llama-2-70b-chat",
+    credentials={
+        "apikey": "<YOUR_IBM_API_KEY>",
+        "url": "<YOUR_IBM_URL>"
+    }
+)
+
+# Make a streaming request
+for chunk in model.generate_text_stream(
+    prompt="Write a short poem about artificial intelligence.",
+    parameters={
+        "max_new_tokens": 1000,
+        "temperature": 0.7
+    }
+):
+    if "results" in chunk:
+        for result in chunk["results"]:
+            if "generated_text" in result:
+                print(result["generated_text"], end="", flush=True)
+    print()  # Add a newline at the end
+      ```
+    </CodeGroup>
+
+### Guardrails Example
+
+AgentOps tracks interactions with guardrails enabled:
+
+      <CodeGroup>
+```python Guardrails
+import agentops
+from ibm_watson_machine_learning.foundation_models import Model
+
+# Initialize AgentOps
+agentops.init(<INSERT YOUR API KEY HERE>)
+
+# Create Watsonx.ai client
+model = Model(
+    model_id="meta-llama/llama-2-70b-chat",
+    credentials={
+        "apikey": "<YOUR_IBM_API_KEY>",
+        "url": "<YOUR_IBM_URL>"
+    }
+)
+
+# Make a request with guardrails enabled
+response = model.generate(
+    prompt="Explain quantum computing in simple terms.",
+    parameters={
+        "max_new_tokens": 1000,
+        "temperature": 0.7,
+        "guardrails": True,
+        "guardrails_hap_params": {
+            "threshold": 0.5
+        }
+    }
+)
+
+print(response["results"][0]["generated_text"])
+        ```
+      </CodeGroup>
+
+### Advanced Parameters Example
+
+AgentOps tracks all generation parameters:
+
+<CodeGroup>
+```python Advanced Parameters
+import agentops
+from ibm_watson_machine_learning.foundation_models import Model
+
+# Initialize AgentOps
+agentops.init(<INSERT YOUR API KEY HERE>)
+
+# Create Watsonx.ai client
+model = Model(
+    model_id="meta-llama/llama-2-70b-chat",
+    credentials={
+        "apikey": "<YOUR_IBM_API_KEY>",
+        "url": "<YOUR_IBM_URL>"
+    }
+)
+
+# Make a request with advanced parameters
+response = model.generate(
+    prompt="What time is it now?",
+    parameters={
+        "max_new_tokens": 1000,
+        "min_new_tokens": 10,
+        "temperature": 0.7,
+        "top_p": 0.9,
+        "top_k": 50,
+        "repetition_penalty": 1.2,
+        "time_limit": 30,
+        "random_seed": 42,
+        "stop_sequences": ["\n", "."],
+        "truncate_input_tokens": 2048,
+        "decoding_method": "greedy"
+    }
+)
+
+print(response["results"][0]["generated_text"])
+```
+</CodeGroup>
+
+## Environment Variables
+
+<EnvTooltip />
+<CodeGroup>
+  ```python .env
+  AGENTOPS_API_KEY=<YOUR API KEY>
+  IBM_API_KEY=<YOUR IBM API KEY>
+  IBM_URL=<YOUR IBM URL>
+  ```
+</CodeGroup>
+
+Read more about environment variables in [Advanced Configuration](/v2/usage/advanced-configuration)
+
+## Additional Resources
+
+- [IBM Watsonx.ai Python SDK Documentation](https://ibm.github.io/watsonx-ai-python-sdk/)
+- [IBM Watsonx.ai Models](http://ibm.com/products/watsonx-ai/foundation-models)
+
+<script type="module" src="/scripts/github_stars.js"></script>
+<script type="module" src="/scripts/scroll-img-fadein-animation.js"></script>
+<script type="module" src="/scripts/button_heartbeat_animation.js"></script>
+<script type="css" src="/styles/styles.css"></script> 

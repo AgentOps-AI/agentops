@@ -167,14 +167,15 @@
     {
       "group": "Integrations",
       "pages": [
-        "v2/integrations/agentssdk",
         "v2/integrations/anthropic",
         "v2/integrations/autogen",
         "v2/integrations/crewai",
         "v2/integrations/gemini",
         "v2/integrations/langchain",
         "v2/integrations/litellm",
-        "v2/integrations/openai"
+        "v2/integrations/openai",
+        "v2/integrations/agentssdk",
+        "v2/integrations/ibm_watsonx_ai"
       ],
       "version": "v2"
     },
