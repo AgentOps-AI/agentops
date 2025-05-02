@@ -117,17 +117,6 @@ class AG2Instrumentor(BaseInstrumentor):
             if param in llm_config and llm_config[param] is not None:
                 span.set_attribute(attr, llm_config[param])
     
-    def _safe_content(self, content, max_len=300):
-        """Safely extract and truncate content, handling None and non-string values"""
-        if content is None:
-            return ""
-        if not isinstance(content, str):
-            try:
-                content = str(content)
-            except:
-                content = "[non-string content]"
-        return content[:max_len] if content else ""
-    
     def _agent_init_wrapper(self, tracer):
         """Wrapper for capturing agent initialization."""
         def wrapper(wrapped, instance, args, kwargs):
@@ -178,11 +167,13 @@ class AG2Instrumentor(BaseInstrumentor):
                     # Extract system message from both agents
                     initiator_system_msg = getattr(instance, "system_message", "")
                     if initiator_system_msg:
-                        span.set_attribute("ag2.initiator.system_message", self._safe_content(initiator_system_msg))
+                        initiator_system_msg = "" if initiator_system_msg is None else str(initiator_system_msg) if not isinstance(initiator_system_msg, str) else initiator_system_msg
+                        span.set_attribute("ag2.initiator.system_message", initiator_system_msg)
                     
                     recipient_system_msg = getattr(recipient_agent, "system_message", "")
                     if recipient_system_msg:
-                        span.set_attribute(SpanAttributes.LLM_REQUEST_SYSTEM_INSTRUCTION, self._safe_content(recipient_system_msg))
+                        recipient_system_msg = "" if recipient_system_msg is None else str(recipient_system_msg) if not isinstance(recipient_system_msg, str) else recipient_system_msg
+                        span.set_attribute(SpanAttributes.LLM_REQUEST_SYSTEM_INSTRUCTION, recipient_system_msg)
                     
                     # Extract LLM config from both agents
                     initiator_llm_config = getattr(instance, "llm_config", {})
@@ -196,7 +187,8 @@ class AG2Instrumentor(BaseInstrumentor):
                     # Extract initial message
                     initial_message = kwargs.get("message", "")
                     if initial_message:
-                        span.set_attribute("ag2.chat.initial_message", self._safe_content(initial_message))
+                        initial_message = "" if initial_message is None else str(initial_message) if not isinstance(initial_message, str) else initial_message
+                        span.set_attribute("ag2.chat.initial_message", initial_message)
                     
                     # Execute initiate_chat
                     start_time = time.time()
@@ -225,7 +217,8 @@ class AG2Instrumentor(BaseInstrumentor):
                                     name = first_msg.get("name", "unknown")
                                     
                                     span.set_attribute("messaging.prompt.role.0", role)
-                                    span.set_attribute("messaging.prompt.content.0", self._safe_content(content))
+                                    content = "" if content is None else str(content) if not isinstance(content, str) else content
+                                    span.set_attribute("messaging.prompt.content.0", content)
                                     span.set_attribute("messaging.prompt.speaker.0", name)
                                 
                                 # Last message
@@ -236,7 +229,8 @@ class AG2Instrumentor(BaseInstrumentor):
                                     name = last_msg.get("name", "unknown")
                                     
                                     span.set_attribute("messaging.completion.role.0", role)
-                                    span.set_attribute("messaging.completion.content.0", self._safe_content(content))
+                                    content = "" if content is None else str(content) if not isinstance(content, str) else content
+                                    span.set_attribute("messaging.completion.content.0", content)
                                     span.set_attribute("messaging.completion.speaker.0", name)
                                     
                                     # Check for tool usage
@@ -281,13 +275,16 @@ class AG2Instrumentor(BaseInstrumentor):
                     # Capture input message if available
                     message = kwargs.get("message", "")
                     if message:
+                        content_to_set = ""
                         if isinstance(message, dict):
                             content = message.get("content", "")
-                            span.set_attribute("ag2.run.input_message", self._safe_content(content))
+                            content_to_set = "" if content is None else str(content) if not isinstance(content, str) else content
                         elif isinstance(message, str):
-                            span.set_attribute("ag2.run.input_message", self._safe_content(message))
+                            content_to_set = message
                         else:
-                            span.set_attribute("ag2.run.input_message", self._safe_content(str(message)))
+                            content_to_set = str(message)
+                        
+                        span.set_attribute("ag2.run.input_message", content_to_set)
                     
                     # Initialize completions and prompts count
                     span.set_attribute(SpanAttributes.LLM_COMPLETIONS, 0)
@@ -330,12 +327,16 @@ class AG2Instrumentor(BaseInstrumentor):
                     # Capture input message if available
                     message = kwargs.get("message", "")
                     if message:
+                        content_to_set = ""
                         if isinstance(message, dict):
-                            span.set_attribute("ag2.groupchat.input_message", self._safe_content(message.get("content", "")))
+                            content = message.get("content", "")
+                            content_to_set = "" if content is None else str(content) if not isinstance(content, str) else content
                         elif isinstance(message, str):
-                            span.set_attribute("ag2.groupchat.input_message", self._safe_content(message))
+                            content_to_set = message
                         else:
-                            span.set_attribute("ag2.groupchat.input_message", self._safe_content(str(message)))
+                            content_to_set = str(message)
+                                
+                        span.set_attribute("ag2.groupchat.input_message", content_to_set)
                     
                     result = wrapped(*args, **kwargs)
                     self._capture_group_chat_summary(span, instance, result)
@@ -397,10 +398,14 @@ class AG2Instrumentor(BaseInstrumentor):
                         span.set_attribute(ToolAttributes.TOOL_STATUS, "success" if exit_code == 0 else "failure")
                         
                         if len(result) > 1 and result[1]:
-                            span.set_attribute("ag2.tool.code.stdout", self._safe_content(result[1]))
+                            stdout = result[1]
+                            stdout = "" if stdout is None else str(stdout) if not isinstance(stdout, str) else stdout
+                            span.set_attribute("ag2.tool.code.stdout", stdout)
                         
                         if len(result) > 2 and result[2]:
-                            span.set_attribute("ag2.tool.code.stderr", self._safe_content(result[2]))
+                            stderr = result[2]
+                            stderr = "" if stderr is None else str(stderr) if not isinstance(stderr, str) else stderr
+                            span.set_attribute("ag2.tool.code.stderr", stderr)
                     
                     span.set_status(Status(StatusCode.OK))
                     return result
@@ -439,7 +444,8 @@ class AG2Instrumentor(BaseInstrumentor):
                     name = msg.get("name", "")
                     
                     span.set_attribute(f"messaging.prompt.role.{i}", role)
-                    span.set_attribute(f"messaging.prompt.content.{i}", self._safe_content(content))
+                    content = "" if content is None else str(content) if not isinstance(content, str) else content
+                    span.set_attribute(f"messaging.prompt.content.{i}", content)
                     
                     if name:
                         span.set_attribute(f"messaging.prompt.speaker.{i}", name)
@@ -451,7 +457,8 @@ class AG2Instrumentor(BaseInstrumentor):
                     name = last_msg.get("name", "")
                     
                     span.set_attribute("messaging.completion.role.0", role)
-                    span.set_attribute("messaging.completion.content.0", self._safe_content(content))
+                    content = "" if content is None else str(content) if not isinstance(content, str) else content
+                    span.set_attribute("messaging.completion.content.0", content)
                     
                     if name:
                         span.set_attribute("messaging.completion.speaker.0", name)
@@ -487,7 +494,8 @@ class AG2Instrumentor(BaseInstrumentor):
                     name = msg.get("name", "unknown")
                     
                     span.set_attribute(MessageAttributes.PROMPT_ROLE.format(i=i), role)
-                    span.set_attribute(MessageAttributes.PROMPT_CONTENT.format(i=i), self._safe_content(content))
+                    content = "" if content is None else str(content) if not isinstance(content, str) else content
+                    span.set_attribute(MessageAttributes.PROMPT_CONTENT.format(i=i), content)
                     span.set_attribute(MessageAttributes.PROMPT_SPEAKER.format(i=i), name)
                 
                 if message_count > 2:
@@ -497,7 +505,8 @@ class AG2Instrumentor(BaseInstrumentor):
                     name = last_msg.get("name", "unknown")
                     
                     span.set_attribute(MessageAttributes.COMPLETION_ROLE.format(i=0), role)
-                    span.set_attribute(MessageAttributes.COMPLETION_CONTENT.format(i=0), self._safe_content(content))
+                    content = "" if content is None else str(content) if not isinstance(content, str) else content
+                    span.set_attribute(MessageAttributes.COMPLETION_CONTENT.format(i=0), content)
                     span.set_attribute(MessageAttributes.COMPLETION_SPEAKER.format(i=0), name)
                     
                     if "metadata" in last_msg and isinstance(last_msg["metadata"], dict):
@@ -531,7 +540,8 @@ class AG2Instrumentor(BaseInstrumentor):
                     
                     system_message = getattr(selected_speaker, "system_message", "")
                     if system_message:
-                        span.set_attribute(SpanAttributes.LLM_REQUEST_SYSTEM_INSTRUCTION, self._safe_content(system_message))
+                        system_message = "" if system_message is None else str(system_message) if not isinstance(system_message, str) else system_message
+                        span.set_attribute(SpanAttributes.LLM_REQUEST_SYSTEM_INSTRUCTION, system_message)
                     
                     self._set_llm_config_attributes(span, getattr(selected_speaker, "llm_config", None))
                     
