@@ -82,6 +82,7 @@ available_instrumentors: list[InstrumentorLoader] = [
         class_name="IBMWatsonXInstrumentor",
         provider_import_name="ibm_watsonx_ai",
     ),
+    InstrumentorLoader(
         module_name="agentops.instrumentation.ag2",
         class_name="AG2Instrumentor",
         provider_import_name="autogen",
