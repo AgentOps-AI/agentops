@@ -7,6 +7,7 @@ class MessageAttributes:
     PROMPT_ROLE = "gen_ai.prompt.{i}.role"  # Role of the prompt message
     PROMPT_CONTENT = "gen_ai.prompt.{i}.content"  # Content of the prompt message
     PROMPT_TYPE = "gen_ai.prompt.{i}.type"  # Type of the prompt message
+    PROMPT_SPEAKER = "gen_ai.prompt.{i}.speaker"  # Speaker/agent name for the prompt message
 
     # Indexed function calls (with {i} for interpolation)
     TOOL_CALL_ID = "gen_ai.request.tools.{i}.id"  # Unique identifier for the function call at index {i}
@@ -21,6 +22,7 @@ class MessageAttributes:
     COMPLETION_ROLE = "gen_ai.completion.{i}.role"  # Role of the completion message at index {i}
     COMPLETION_CONTENT = "gen_ai.completion.{i}.content"  # Content of the completion message at index {i}
     COMPLETION_FINISH_REASON = "gen_ai.completion.{i}.finish_reason"  # Finish reason for completion at index {i}
+    COMPLETION_SPEAKER = "gen_ai.completion.{i}.speaker"  # Speaker/agent name for the completion message
     
     # Indexed tool calls (with {i}/{j} for nested interpolation)
     COMPLETION_TOOL_CALL_ID = "gen_ai.completion.{i}.tool_calls.{j}.id"  # ID of tool call {j} in completion {i}
