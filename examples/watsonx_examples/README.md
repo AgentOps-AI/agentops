@@ -1,6 +1,6 @@
 # IBM Watsonx AI Examples with AgentOps
 
-This directory contains examples of using IBM Watson.x AI with AgentOps instrumentation for various natural language processing tasks.
+This directory contains examples of using IBM Watsonx AI with AgentOps instrumentation for various natural language processing tasks.
 
 ## Prerequisites
 
@@ -27,7 +27,7 @@ WATSONX_PROJECT_ID=your-project-id-here
 
 File: [watsonx-text-chat.ipynb](https://github.com/AgentOps-AI/agentops/blob/0.4.9/examples/watsonx_examples/watsonx-text-chat.ipynb)
 This notebook demonstrates:
-- Basic text generation with IBM Watson.x AI
+- Basic text generation with IBM Watsonx AI
 - Chat completion with system and user messages
 - Multiple examples of chat interactions
 
@@ -45,20 +45,20 @@ This notebook demonstrates:
 File: [watsonx-tokenization-model.ipynb](https://github.com/AgentOps-AI/agentops/blob/0.4.9/examples/watsonx_examples/watsonx-tokeniation-model.ipynb)
 
 This notebook demonstrates:
-- Tokenizing text with IBM Watson.x AI models
+- Tokenizing text with IBM Watsonx AI models
 - Retrieving model details
 - Comparing tokenization between different models
 
-## IBM Watson.x AI Models
+## IBM Watsonx AI Models
 
-The examples use the following IBM Watson.x AI models:
+The examples use the following IBM Watsonx AI models:
 - `google/flan-ul2`: A text generation model
 - `meta-llama/llama-3-3-70b-instruct`: A chat completion model
 
-You can explore other available models through the IBM Watson.x platform.
+You can explore other available models through the IBM Watsonx platform.
 
 ## AgentOps Integration
 
-These examples show how to use AgentOps to monitor and analyze your AI applications. AgentOps automatically instruments your IBM Watson.x AI calls to provide insights into performance, usage patterns, and model behavior.
+These examples show how to use AgentOps to monitor and analyze your AI applications. AgentOps automatically instruments your IBM Watsonx AI calls to provide insights into performance, usage patterns, and model behavior.
 
 To learn more about AgentOps, visit [https://www.agentops.ai](https://www.agentops.ai) 
