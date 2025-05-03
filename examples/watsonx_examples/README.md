@@ -1,11 +1,11 @@
-# IBM Watson.x AI Examples with AgentOps
+# IBM Watsonx AI Examples with AgentOps
 
 This directory contains examples of using IBM Watson.x AI with AgentOps instrumentation for various natural language processing tasks.
 
 ## Prerequisites
 
-- IBM Watson.x AI account with API key
-- Python 3.10+
+- IBM Watsonx AI account with API key
+- Python >=3.10 <3.13
 - Install required dependencies:
   ```
   pip install agentops ibm-watsonx-ai python-dotenv
@@ -25,8 +25,7 @@ WATSONX_PROJECT_ID=your-project-id-here
 
 ### 1. Basic Text Generation and Chat Completion
 
-File: `watsonx-example-text-and-chat.ipynb`
-
+File: [watsonx-text-chat.ipynb](https://github.com/AgentOps-AI/agentops/blob/0.4.9/examples/watsonx_examples/watsonx-text-chat.ipynb)
 This notebook demonstrates:
 - Basic text generation with IBM Watson.x AI
 - Chat completion with system and user messages
@@ -34,7 +33,7 @@ This notebook demonstrates:
 
 ### 2. Streaming Generation
 
-File: `watsonx-example-streaming.ipynb`
+File: [watsonx-streaming.ipynb](https://github.com/AgentOps-AI/agentops/blob/0.4.9/examples/watsonx_examples/watsonx-streaming.ipynb)
 
 This notebook demonstrates:
 - Streaming text generation
@@ -43,7 +42,7 @@ This notebook demonstrates:
 
 ### 3. Tokenization and Model Details
 
-File: `watsonx-example-tokenization-model.ipynb`
+File: [watsonx-tokenization-model.ipynb](https://github.com/AgentOps-AI/agentops/blob/0.4.9/examples/watsonx_examples/watsonx-tokeniation-model.ipynb)
 
 This notebook demonstrates:
 - Tokenizing text with IBM Watson.x AI models
