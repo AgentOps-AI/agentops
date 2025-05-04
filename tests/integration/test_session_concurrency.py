@@ -3,7 +3,7 @@ import concurrent.futures
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 import agentops
-from agentops import record_tool
+from agentops import track_tool as record_tool
 import time
 
 # Create FastAPI app
