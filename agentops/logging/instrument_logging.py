@@ -3,35 +3,33 @@ import logging
 import os
 import atexit
 from typing import Any
+from io import StringIO
 
 _original_print = builtins.print
 
-LOGFILE_NAME = "agentops-tmp.log"
-
-# Instrument loggers and print function to log to a file
-
+# Global buffer to store logs
+_log_buffer = StringIO()
 
 def setup_print_logger() -> None:
     """
-    ~Monkeypatches~ *Instruments the built-in print function and configures logging to also log to a file.
+    Instruments the built-in print function and configures logging to use a memory buffer.
     Preserves existing logging configuration and console output behavior.
     """
-    log_file = os.path.join(os.getcwd(), LOGFILE_NAME)
-
     file_logger = logging.getLogger('agentops_file_logger')
     file_logger.setLevel(logging.DEBUG)
 
-    file_handler = logging.FileHandler(log_file)
-    file_handler.setFormatter(logging.Formatter('%(asctime)s - %(levelname)s - %(message)s'))
-    file_handler.setLevel(logging.DEBUG)
-    file_logger.addHandler(file_handler)
+    # Create a StreamHandler that writes to our StringIO buffer
+    buffer_handler = logging.StreamHandler(_log_buffer)
+    buffer_handler.setFormatter(logging.Formatter('%(asctime)s - %(levelname)s - %(message)s'))
+    buffer_handler.setLevel(logging.DEBUG)
+    file_logger.addHandler(buffer_handler)
 
     # Ensure the new logger doesn't propagate to root
     file_logger.propagate = False
 
     def print_logger(*args: Any, **kwargs: Any) -> None:
         """
-        Custom print function that logs to file and console.
+        Custom print function that logs to buffer and console.
 
         Args:
             *args: Arguments to print
@@ -49,13 +47,17 @@ def setup_print_logger() -> None:
     def cleanup():
         """
         Cleanup function to be called when the process exits.
-        Removes the log file and restores the original print function.
+        Restores the original print function and clears the buffer.
         """
         try:
-            # Remove our file handler
+            # Remove our buffer handler
             for handler in file_logger.handlers[:]:
                 handler.close()
                 file_logger.removeHandler(handler)
+
+            # Clear the buffer
+            _log_buffer.seek(0)
+            _log_buffer.truncate()
 
             # Restore the original print function
             builtins.print = _original_print
@@ -69,17 +71,18 @@ def setup_print_logger() -> None:
 
 def upload_logfile(trace_id: int) -> None:
     """
-    Upload the log file to the API.
+    Upload the log content from the memory buffer to the API.
     """
     from agentops import get_client
 
-    log_file = os.path.join(os.getcwd(), LOGFILE_NAME)
-    if not os.path.exists(log_file):
+    # Get the content from the buffer
+    log_content = _log_buffer.getvalue()
+    if not log_content:
         return
-    with open(log_file, "r") as f:
-        log_content = f.read()
 
     client = get_client()
     client.api.v4.upload_logfile(log_content, trace_id)
 
-    os.remove(log_file)
+    # Clear the buffer after upload
+    _log_buffer.seek(0)
+    _log_buffer.truncate()
