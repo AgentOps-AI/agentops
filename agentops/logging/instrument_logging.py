@@ -18,14 +18,16 @@ def setup_print_logger() -> None:
     buffer_logger = logging.getLogger('agentops_buffer_logger')
     buffer_logger.setLevel(logging.DEBUG)
 
-    # Create a StreamHandler that writes to our StringIO buffer
-    buffer_handler = logging.StreamHandler(_log_buffer)
-    buffer_handler.setFormatter(logging.Formatter('%(asctime)s - %(levelname)s - %(message)s'))
-    buffer_handler.setLevel(logging.DEBUG)
-    buffer_logger.addHandler(buffer_handler)
+    # Check if the logger already has handlers to prevent duplicates
+    if not buffer_logger.handlers:
+        # Create a StreamHandler that writes to our StringIO buffer
+        buffer_handler = logging.StreamHandler(_log_buffer)
+        buffer_handler.setFormatter(logging.Formatter('%(asctime)s - %(levelname)s - %(message)s'))
+        buffer_handler.setLevel(logging.DEBUG)
+        buffer_logger.addHandler(buffer_handler)
 
-    # Ensure the new logger doesn't propagate to root
-    buffer_logger.propagate = False
+        # Ensure the new logger doesn't propagate to root
+        buffer_logger.propagate = False
 
     def print_logger(*args: Any, **kwargs: Any) -> None:
         """
@@ -41,8 +43,9 @@ def setup_print_logger() -> None:
         # print to console using original print
         _original_print(*args, **kwargs)
 
-    # replace the built-in print with ours
-    builtins.print = print_logger
+    # Only replace print if it hasn't been replaced already
+    if builtins.print is _original_print:
+        builtins.print = print_logger
 
     def cleanup():
         """
