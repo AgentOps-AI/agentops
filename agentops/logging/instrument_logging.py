@@ -15,17 +15,17 @@ def setup_print_logger() -> None:
     Instruments the built-in print function and configures logging to use a memory buffer.
     Preserves existing logging configuration and console output behavior.
     """
-    file_logger = logging.getLogger('agentops_file_logger')
-    file_logger.setLevel(logging.DEBUG)
+    buffer_logger = logging.getLogger('agentops_buffer_logger')
+    buffer_logger.setLevel(logging.DEBUG)
 
     # Create a StreamHandler that writes to our StringIO buffer
     buffer_handler = logging.StreamHandler(_log_buffer)
     buffer_handler.setFormatter(logging.Formatter('%(asctime)s - %(levelname)s - %(message)s'))
     buffer_handler.setLevel(logging.DEBUG)
-    file_logger.addHandler(buffer_handler)
+    buffer_logger.addHandler(buffer_handler)
 
     # Ensure the new logger doesn't propagate to root
-    file_logger.propagate = False
+    buffer_logger.propagate = False
 
     def print_logger(*args: Any, **kwargs: Any) -> None:
         """
@@ -36,7 +36,7 @@ def setup_print_logger() -> None:
             **kwargs: Keyword arguments to print
         """
         message = " ".join(str(arg) for arg in args)
-        file_logger.info(message)
+        buffer_logger.info(message)
 
         # print to console using original print
         _original_print(*args, **kwargs)
@@ -51,9 +51,9 @@ def setup_print_logger() -> None:
         """
         try:
             # Remove our buffer handler
-            for handler in file_logger.handlers[:]:
+            for handler in buffer_logger.handlers[:]:
                 handler.close()
-                file_logger.removeHandler(handler)
+                buffer_logger.removeHandler(handler)
 
             # Clear the buffer
             _log_buffer.seek(0)
