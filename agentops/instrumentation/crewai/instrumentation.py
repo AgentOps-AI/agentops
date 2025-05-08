@@ -12,7 +12,7 @@ from opentelemetry.instrumentation.utils import unwrap
 from opentelemetry.instrumentation.instrumentor import BaseInstrumentor
 from opentelemetry.sdk.resources import SERVICE_NAME, TELEMETRY_SDK_NAME, DEPLOYMENT_ENVIRONMENT
 from agentops.instrumentation.crewai.version import __version__
-from agentops.semconv import SpanAttributes, AgentOpsSpanKindValues, Meters, ToolAttributes
+from agentops.semconv import SpanAttributes, AgentOpsSpanKindValues, Meters, ToolAttributes, MessageAttributes
 from .crewai_span_attributes import CrewAISpanAttributes, set_span_attribute
 
 # Initialize logger
@@ -366,6 +366,30 @@ def wrap_llm_call(tracer, duration_histogram, token_histogram, environment, appl
             CrewAISpanAttributes(span=span, instance=instance)
             
             result = wrapped(*args, **kwargs)
+
+            # Set prompt attributes from args
+            if args and isinstance(args[0], list):
+                for i, message in enumerate(args[0]):
+                    if isinstance(message, dict):
+                        if 'role' in message:
+                            span.set_attribute(MessageAttributes.PROMPT_ROLE.format(i=i), message['role'])
+                        if 'content' in message:
+                            span.set_attribute(MessageAttributes.PROMPT_CONTENT.format(i=i), message['content'])
+
+            # Set completion attributes from result
+            if result:
+                span.set_attribute(MessageAttributes.COMPLETION_CONTENT.format(i=0), str(result))
+                span.set_attribute(MessageAttributes.COMPLETION_ROLE.format(i=0), "assistant")
+
+            # Set token usage attributes from callbacks
+            if 'callbacks' in kwargs and kwargs['callbacks'] and hasattr(kwargs['callbacks'][0], 'token_cost_process'):
+                token_process = kwargs['callbacks'][0].token_cost_process
+                if hasattr(token_process, 'completion_tokens'):
+                    span.set_attribute(SpanAttributes.LLM_USAGE_COMPLETION_TOKENS, token_process.completion_tokens)
+                if hasattr(token_process, 'prompt_tokens'):
+                    span.set_attribute(SpanAttributes.LLM_USAGE_PROMPT_TOKENS, token_process.prompt_tokens)
+                if hasattr(token_process, 'total_tokens'):
+                    span.set_attribute(SpanAttributes.LLM_USAGE_TOTAL_TOKENS, token_process.total_tokens)
 
             if duration_histogram:
                 duration = time.time() - start_time
