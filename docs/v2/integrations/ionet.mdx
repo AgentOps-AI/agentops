@@ -1,0 +1,199 @@
+---
+title: IO Intelligence
+description: "Track and analyze your IO Intelligence API calls with AgentOps"
+---
+
+import CodeTooltip from '/snippets/add-code-tooltip.mdx'
+import EnvTooltip from '/snippets/add-env-tooltip.mdx'
+
+AgentOps seamlessly integrates with IO Intelligence's OpenAI‑compatible API, allowing you to track and analyze every request without changing your workflow.
+
+## Installation
+
+<CodeTooltip />
+
+<CodeGroup>
+```bash pip
+pip install openai
+```
+</CodeGroup>
+
+## Basic Usage
+
+Initialize AgentOps at the beginning of your application. Then create an **OpenAI** client that points at IO Intelligence's endpoint:
+
+<CodeGroup>
+```python Basic Usage
+import agentops
+from openai import OpenAI
+
+# Initialise AgentOps (tracks every request automatically)
+agentops.init("<YOUR_AGENTOPS_API_KEY>")
+
+# Create IO Intelligence client (just add base_url)
+client = OpenAI(
+    api_key="<YOUR_IO_INTELLIGENCE_API_KEY>",
+    base_url="https://api.intelligence.io.solutions/api/v1/"
+)
+
+response = client.chat.completions.create(
+    model="meta-llama/Llama-3.3-70B-Instruct",
+    messages=[{"role": "user", "content": "Say this is a test!"}]
+)
+
+print(response.choices[0].message.content)
+```
+</CodeGroup>
+
+## Model Limits & Daily Quotas
+
+Below are the free daily limits for each model (tokens are counted across input *and* output):
+
+| LLM Model Name | Daily Chat quote | Daily API quote | Daily Embeddings quote | Context Length |
+| --- | --- | --- | --- | --- |
+| deepseek-ai/DeepSeek-R1 | 1,000,000 tk | 500,000 tk | N/A | 128,
+| deepseek-ai/DeepSeek-R1-Distill-Llama-70B | 1,000,000 tk | 500,000 tk | N/A | 128,000 tk |
+| meta-llama/Llama-3.3-70B-Instruct | 1,000,000 tk | 500,000 tk | N/A | 128,000 tk |
+| deepseek-ai/DeepSeek-R1-Distill-Qwen-32B | 1,000,000 tk | 500,000 tk | N/A | 128,000 tk |
+| Qwen/QwQ-32B-Preview | 1,000,000 tk | 500,000 tk | N/A | 32,000 tk |
+| databricks/dbrx-instruct | 1,000,000 tk | 500,000 tk | N/A | 32,000 tk |
+| deepseek-ai/DeepSeek-R1-Distill-Llama-8B | 1,000,000 tk | 500,000 tk | N/A | 128,000 tk |
+| deepseek-ai/DeepSeek-R1-Distill-Qwen-14B | 1,000,000 tk | 500,000 tk | N/A | 128,000 tk |
+| deepseek-ai/DeepSeek-R1-Distill-Qwen-7B | 1,000,000 tk | 500,000 tk | N/A | 128,000 tk |
+| deepseek-ai/DeepSeek-R1-Distill-Qwen-1.5B | 1,000,000 tk | 500,000 tk | N/A | 128,000 tk |
+| microsoft/phi-4 | 1,000,000 tk | 500,000 tk | N/A | 16,000 tk |
+| mistralai/Mistral-Large-Instruct-2411 | 1,000,000 tk | 500,000 tk | N/A | 128,000 tk |
+| neuralmagic/Llama-3.1-Nemotron-70B-Instruct-HF-FP8-dynamic | 1,000,000 tk | 500,000 tk | N/A | 128,000 tk |
+| google/gemma-2-9b-it | 1,000,000 tk | 500,000 tk | N/A | 8,000 tk |
+| nvidia/AceMath-7B-Instruct | 1,000,000 tk | 500,000 tk | N/A | 4,000 tk |
+| CohereForAI/aya-expanse-32b | 1,000,000 tk | 500,000 tk | N/A | 8,000 tk |
+| Qwen/Qwen2.5-Coder-32B-Instruct | 1,000,000 tk | 500,000 tk | N/A | 32,000 tk |
+| THUDM/glm-4-9b-chat | 1,000,000 tk | 500,000 tk | N/A | 128,000 tk |
+| CohereForAI/c4ai-command-r-plus-08-2024 | 1,000,000 tk | 500,000 tk | N/A | 128,000 tk |
+| tiiuae/Falcon3-10B-Instruct | 1,000,000 tk | 500,000 tk | N/A | 32,000 tk |
+| NovaSky-AI/Sky-T1-32B-Preview | 1,000,000 tk | 500,000 tk | N/A | 32,000 tk |
+| bespokelabs/Bespoke-Stratos-32B | 1,000,000 tk | 500,000 tk | N/A | 32,000 tk |
+| netease-youdao/Confucius-o1-14B | 1,000,000 tk | 500,000 tk | N/A | 32,000 tk |
+| Qwen/Qwen2.5-1.5B-Instruct | 1,000,000 tk | 500,000 tk | N/A | 32,000 tk |
+| mistralai/Ministral-8B-Instruct-2410 | 1,000,000 tk | 500,000 tk | N/A | 32,000 tk |
+| openbmb/MiniCPM3-4B | 1,000,000 tk | 500,000 tk | N/A | 32,000 tk |
+| jinaai/ReaderLM-v2 | 1,000,000 tk | 500,000 tk | N/A | 512,000 tk |
+| ibm-granite/granite-3.1-8b-instruct | 1,000,000 tk | 500,000 tk | N/A | 128,000 tk |
+| microsoft/Phi-3.5-mini-instruct | 1,000,000 tk | 500,000 tk | N/A | 128,000 tk |
+| ozone-ai/0x-lite | 1,000,000 tk | 500,000 tk | N/A | 32,000 tk |
+| mixedbread-ai/mxbai-embed-large-v1 | N/A | N/A | 500,000 tk | 512 tk |
+| meta-llama/Llama-4-Maverick-17B-128E-Instruct-FP8 | 1,000,000 tk | 500,000 tk | N/A | 430,000 tk |
+
+## Quick Test (cURL)
+
+<CodeGroup>
+```bash cURL
+curl https://api.intelligence.io.solutions/api/v1/chat/completions \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer <YOUR_IO_INTELLIGENCE_API_KEY>" \
+  -d '{
+    "model": "meta-llama/Llama-3.3-70B-Instruct",
+    "messages": [{"role": "user", "content": "Say this is a test!"}],
+    "temperature": 0.7
+  }'
+```
+</CodeGroup>
+
+## Streaming Completions
+
+AgentOps also captures streaming responses:
+
+<CodeGroup>
+```python Streaming Example
+import agentops
+from openai import OpenAI
+
+agentops.init("<YOUR_AGENTOPS_API_KEY>")
+
+client = OpenAI(
+    api_key="<YOUR_IO_INTELLIGENCE_API_KEY>",
+    base_url="https://api.intelligence.io.solutions/api/v1/"
+)
+
+stream = client.chat.completions.create(
+    model="meta-llama/Llama-3.3-70B-Instruct",
+    messages=[{"role": "user", "content": "Stream please"}],
+    stream=True
+)
+for chunk in stream:
+    print(chunk.choices[0].delta.content, end="", flush=True)
+```
+</CodeGroup>
+
+## Advanced: Tool Calls
+
+All OpenAI‑style tool calls work the same way—AgentOps will record parameters and results automatically.
+
+<CodeGroup>
+```python Tool Calls
+import agentops, json
+from openai import OpenAI
+
+agentops.init("<YOUR_AGENTOPS_API_KEY>")
+client = OpenAI(
+    api_key="<YOUR_IO_INTELLIGENCE_API_KEY>",
+    base_url="https://api.intelligence.io.solutions/api/v1/"
+)
+
+def get_weather(location):
+    return f"The weather in {location} is sunny."
+
+messages = [
+    {"role": "system", "content": "You are a weather bot."},
+    {"role": "user", "content": "What's the weather like in Boston?"}
+]
+
+response = client.chat.completions.create(
+    model="meta-llama/Llama-3.3-70B-Instruct",
+    messages=messages,
+    tools=[{
+        "type":"function",
+        "function":{
+            "name":"get_weather",
+            "description":"Get weather for a city",
+            "parameters":{
+                "type":"object",
+                "properties":{
+                    "location":{"type":"string"}
+                },
+                "required":["location"]
+            }
+        }
+    }]
+)
+
+tool_calls = response.choices[0].message.tool_calls
+for call in tool_calls:
+    if call.function.name == "get_weather":
+        function_response = get_weather(json.loads(call.function.arguments)["location"])
+        messages.append({"role":"tool","tool_call_id":call.id,"content":function_response})
+
+follow_up = client.chat.completions.create(
+    model="meta-llama/Llama-3.3-70B-Instruct",
+    messages=messages
+)
+print(follow_up.choices[0].message.content)
+```
+</CodeGroup>
+
+## Environment Variables
+
+<EnvTooltip />
+<CodeGroup>
+```python .env
+AGENTOPS_API_KEY=<YOUR_AGENTOPS_API_KEY>
+IO_INTELLIGENCE_API_KEY=<YOUR_IO_INTELLIGENCE_API_KEY>
+```
+</CodeGroup>
+
+Read more about configuration and best practices in [Advanced Configuration](/v2/usage/advanced-configuration).
+
+<script type="module" src="/scripts/github_stars.js"></script>
+<script type="module" src="/scripts/scroll-img-fadein-animation.js"></script>
+<script type="module" src="/scripts/button_heartbeat_animation.js"></script>
+<script type="css" src="/styles/styles.css"></script>
