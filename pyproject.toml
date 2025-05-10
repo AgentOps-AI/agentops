@@ -34,6 +34,7 @@ dependencies = [
     "termcolor>=2.3.0,<2.5.0",
     "PyYAML>=5.3,<7.0",
     "packaging>=21.0,<25.0", # Lower bound of 21.0 ensures compatibility with Python 3.9+
+    "httpx>=0.24.0,<0.29.0", # Required for legacy module compatibility
     "opentelemetry-sdk==1.29.0; python_version<'3.10'",
     "opentelemetry-sdk>1.29.0; python_version>='3.10'",
     "opentelemetry-api==1.29.0; python_version<'3.10'",
