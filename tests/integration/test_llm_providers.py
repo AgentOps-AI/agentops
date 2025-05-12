@@ -4,8 +4,8 @@ from typing import Any, Dict, List
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
-from openai import OpenAI, AsyncOpenAI
-from anthropic import Anthropic, AsyncAnthropic
+from openai import AsyncOpenAI
+from anthropic import AsyncAnthropic
 
 
 def collect_stream_content(stream_response: Any, provider: str) -> List[str]:
@@ -128,7 +128,7 @@ async def test_openai_assistants_provider(openai_client):
             await asyncio.sleep(1)
 
     try:
-        run_status = await asyncio.wait_for(check_run_status(), timeout=10)  # Shorter timeout
+        await asyncio.wait_for(check_run_status(), timeout=10)  # Shorter timeout
     except TimeoutError:
         # Cancel the run if it's taking too long
         openai_client.beta.threads.runs.cancel(thread_id=thread.id, run_id=run.id)

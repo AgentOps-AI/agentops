@@ -1,6 +1,5 @@
 import builtins
 import logging
-import os
 import atexit
 from typing import Any
 from io import StringIO

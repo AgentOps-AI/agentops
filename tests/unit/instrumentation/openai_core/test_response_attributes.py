@@ -8,7 +8,6 @@ responses into the appropriate OpenTelemetry span attributes.
 
 import json
 import os
-import pytest
 from unittest.mock import MagicMock, patch
 
 from agentops.instrumentation.openai.attributes.response import (
@@ -26,7 +25,6 @@ from agentops.instrumentation.openai.attributes.response import (
 from agentops.semconv import (
     SpanAttributes,
     MessageAttributes,
-    ToolAttributes,
 )
 
 
@@ -353,11 +351,8 @@ class TestResponseAttributes:
         assert SpanAttributes.LLM_USAGE_TOTAL_TOKENS in attributes
         assert attributes[SpanAttributes.LLM_USAGE_TOTAL_TOKENS] == response_data["usage"]["total_tokens"]
 
-    def test_get_response_output_attributes(self):
-        """Test extraction of attributes from output list"""
-        # Create a simple dictionary for testing
-        attributes = {}  # We'll use an empty dict to simplify the test
-
+    def test_get_response_output_attributes_simple(self):
+        """Test extraction of attributes from output list - simple case"""
         # Now just verify the function exists and doesn't throw an exception
         output = []  # Empty list is fine for this test
 
@@ -445,7 +440,7 @@ class TestResponseAttributes:
             # Check that the return value matches our expected attributes
             assert attributes == expected_attributes
 
-    def test_get_response_output_attributes(self):
+    def test_get_response_output_attributes_comprehensive(self):
         """Test extraction of attributes from output items with all output types"""
         # Create a mock response output list with all different output types
         message = MockOutputMessage(

@@ -1,7 +1,5 @@
-import json
 import time
 
-from agentops.sdk.core import TracingCore
 
 """
 Benchmark script for measuring TracingCore initialization time.

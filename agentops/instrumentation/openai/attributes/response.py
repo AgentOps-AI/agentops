@@ -1,10 +1,8 @@
-from typing import Any, List, Union
+from typing import List, Union
 from agentops.logging import logger
-from agentops.helpers import safe_serialize
 from agentops.semconv import (
     SpanAttributes,
     MessageAttributes,
-    ToolAttributes,
 )
 from agentops.instrumentation.common.attributes import (
     AttributeMap,
@@ -14,7 +12,6 @@ from agentops.instrumentation.common.attributes import (
 )
 
 try:
-    from openai.types import Reasoning
     from openai.types.responses import (
         FunctionTool,
         WebSearchTool,
@@ -23,17 +20,12 @@ try:
         Response,
         ResponseUsage,
         ResponseReasoningItem,
-        ResponseInputParam,
-        # ResponseInputItemParam,
         ResponseOutputMessage,
         ResponseOutputText,
         ResponseFunctionToolCall,
         ResponseFunctionWebSearch,
         ResponseFileSearchToolCall,
         ResponseComputerToolCall,
-        # ResponseOutputItem,
-        # ResponseOutputRefusal,
-        # ResponseStreamEvent,
     )
     from openai.types.responses.response_usage import InputTokensDetails, OutputTokensDetails
 

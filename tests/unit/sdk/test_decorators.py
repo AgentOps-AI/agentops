@@ -1,14 +1,10 @@
-from typing import TYPE_CHECKING, cast, AsyncGenerator, Generator
+from typing import AsyncGenerator
 import asyncio
 
-import pytest
-from opentelemetry import trace
-from opentelemetry.sdk.trace import ReadableSpan
 
 from agentops.sdk.decorators import agent, operation, session, workflow, task
 from agentops.semconv import SpanKind
 from agentops.semconv.span_attributes import SpanAttributes
-from agentops.semconv import SpanAttributes
 from tests.unit.sdk.instrumentation_tester import InstrumentationTester
 
 

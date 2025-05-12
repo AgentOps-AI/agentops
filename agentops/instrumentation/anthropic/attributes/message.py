@@ -3,6 +3,12 @@
 import json
 from typing import Dict, Any, Optional, Tuple
 
+try:
+    from anthropic.types import Message, Completion
+except ImportError:
+    Message = Any  # type: ignore
+    Completion = Any  # type: ignore
+
 from agentops.logging import logger
 from agentops.semconv import (
     SpanAttributes,

@@ -2,7 +2,6 @@
 
 from typing import Dict, Any
 
-from agentops.logging import logger
 from agentops.semconv import InstrumentationAttributes, SpanAttributes
 from agentops.instrumentation.common.attributes import AttributeMap, get_common_attributes
 from agentops.instrumentation.anthropic import LIBRARY_NAME, LIBRARY_VERSION

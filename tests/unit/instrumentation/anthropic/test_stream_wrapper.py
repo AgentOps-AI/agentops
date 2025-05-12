@@ -1,5 +1,5 @@
 import pytest
-from unittest.mock import patch, MagicMock, ANY
+from unittest.mock import MagicMock
 from opentelemetry.trace import SpanKind
 
 from agentops.instrumentation.anthropic.stream_wrapper import (

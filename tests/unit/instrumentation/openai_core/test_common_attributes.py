@@ -6,8 +6,7 @@ specifically focusing on the get_response_attributes function which combines var
 extraction functions.
 """
 
-import pytest
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 
 from agentops.instrumentation.openai.attributes.common import (
     get_common_instrumentation_attributes,

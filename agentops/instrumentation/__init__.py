@@ -1,4 +1,4 @@
-from typing import Any, Optional
+from typing import Optional
 from types import ModuleType
 from dataclasses import dataclass
 import importlib

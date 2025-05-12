@@ -1,12 +1,8 @@
 """Tests for Anthropic attribute extraction functionality."""
 
-import pytest
-from typing import Dict, Any
-
 from agentops.semconv import (
     InstrumentationAttributes,
     SpanAttributes,
-    LLMRequestTypeValues,
     MessageAttributes,
     ToolAttributes,
     ToolStatus,
@@ -16,9 +12,7 @@ from agentops.instrumentation.anthropic.attributes.common import (
     extract_request_attributes,
 )
 from agentops.instrumentation.anthropic.attributes.message import (
-    get_message_attributes,
     get_message_request_attributes,
-    get_message_response_attributes,
     get_stream_attributes,
     get_stream_event_attributes,
 )

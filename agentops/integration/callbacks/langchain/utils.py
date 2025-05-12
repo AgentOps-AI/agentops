@@ -4,7 +4,6 @@ Utility functions for LangChain integration.
 
 from typing import Any, Dict, Optional
 
-from agentops.helpers.serialization import safe_serialize
 from agentops.logging import logger
 
 

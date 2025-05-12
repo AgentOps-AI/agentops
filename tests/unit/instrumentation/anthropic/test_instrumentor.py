@@ -1,10 +1,7 @@
-import pytest
 from unittest.mock import patch, MagicMock, ANY
-from opentelemetry.trace import SpanKind
 
 from agentops.instrumentation.anthropic.instrumentor import AnthropicInstrumentor
 from agentops.instrumentation.anthropic import LIBRARY_NAME, LIBRARY_VERSION
-from agentops.semconv import Meters, SpanAttributes, LLMRequestTypeValues
 
 
 def test_instrumentor_initialization():

@@ -7,7 +7,7 @@ This module provides the LangChain callback handler for AgentOps tracing and mon
 from typing import Any, Dict, List, Optional, Union
 
 from opentelemetry import trace
-from opentelemetry.context import attach, detach, get_current
+from opentelemetry.context import attach, detach
 from opentelemetry.trace import SpanContext, set_span_in_context
 
 from agentops.helpers.serialization import safe_serialize
@@ -129,9 +129,6 @@ class LangchainCallbackHandler(BaseCallbackHandler):
 
         if run_id is None:
             run_id = id(attributes)
-
-        # Get the current active context
-        current_context = get_current()
 
         parent_span = None
         if parent_run_id is not None and parent_run_id in self.active_spans:

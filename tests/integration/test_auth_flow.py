@@ -2,7 +2,6 @@ import pytest
 from unittest.mock import patch, MagicMock
 from agentops.client import Client
 from agentops.exceptions import NoApiKeyException, InvalidApiKeyException, ApiServerException
-from agentops.client.api import ApiClient
 
 
 @pytest.mark.vcr()

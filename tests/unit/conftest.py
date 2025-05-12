@@ -1,13 +1,8 @@
-import os
-import re
 import uuid
-from collections import defaultdict
-from unittest import mock
 
 import pytest
 import requests_mock
 
-import agentops
 from agentops.config import Config
 from tests.fixtures.client import *  # noqa
 from tests.unit.sdk.instrumentation_tester import InstrumentationTester

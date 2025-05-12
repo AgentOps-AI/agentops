@@ -6,9 +6,9 @@ def test_openai():
     import agentops
 
     agentops.init(exporter=InMemorySpanExporter())
-    session = agentops.start_session()
+    agentops.start_session()
 
-    response = openai.chat.completions.create(
+    openai.chat.completions.create(
         model="gpt-3.5-turbo", messages=[{"role": "user", "content": "Write a one-line joke"}]
     )
 

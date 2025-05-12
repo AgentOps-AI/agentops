@@ -10,11 +10,8 @@ import json
 import os
 import pytest
 from unittest.mock import MagicMock, patch
-from typing import Dict, Any
-import importlib.metadata
 
-from agentops.helpers import get_agentops_version
-from agentops.instrumentation.openai_agents import LIBRARY_NAME, LIBRARY_VERSION
+from agentops.instrumentation.openai_agents import LIBRARY_NAME
 
 # Import common attribute functions
 from agentops.instrumentation.openai_agents.attributes.common import (
@@ -30,12 +27,10 @@ from agentops.instrumentation.openai_agents.attributes.common import (
 # Import model-related functions
 from agentops.instrumentation.openai_agents.attributes.model import (
     get_model_attributes,
-    get_model_config_attributes,
 )
 
 # Import completion processing functions
 from agentops.instrumentation.openai_agents.attributes.completion import (
-    get_generation_output_attributes,
     get_chat_completions_attributes,
     get_raw_response_attributes,
 )
@@ -44,14 +39,12 @@ from agentops.instrumentation.openai_agents.attributes.completion import (
 from agentops.instrumentation.openai_agents.attributes.tokens import (
     process_token_usage,
     extract_nested_usage,
-    map_token_type_to_metric_name,
     get_token_metric_attributes,
 )
 
 from agentops.semconv import (
     SpanAttributes,
     MessageAttributes,
-    CoreAttributes,
     AgentAttributes,
     WorkflowAttributes,
     InstrumentationAttributes,

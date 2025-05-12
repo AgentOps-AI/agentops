@@ -8,7 +8,7 @@ We focus on instrumenting the following key endpoints:
 - Streaming responses - Special handling for streaming responses
 """
 
-from typing import List, Optional, Collection
+from typing import List, Collection
 from opentelemetry.trace import get_tracer
 from opentelemetry.instrumentation.instrumentor import BaseInstrumentor
 from opentelemetry.metrics import get_meter
@@ -20,9 +20,6 @@ from agentops.instrumentation.google_generativeai import LIBRARY_NAME, LIBRARY_V
 from agentops.instrumentation.google_generativeai.attributes.model import (
     get_generate_content_attributes,
     get_token_counting_attributes,
-)
-from agentops.instrumentation.google_generativeai.attributes.chat import (
-    get_chat_attributes,
 )
 from agentops.instrumentation.google_generativeai.stream_wrapper import (
     generate_content_stream_wrapper,
@@ -133,19 +130,19 @@ class GoogleGenerativeAIInstrumentor(BaseInstrumentor):
         meter_provider = kwargs.get("meter_provider")
         meter = get_meter(LIBRARY_NAME, LIBRARY_VERSION, meter_provider)
 
-        tokens_histogram = meter.create_histogram(
+        meter.create_histogram(
             name=Meters.LLM_TOKEN_USAGE,
             unit="token",
             description="Measures number of input and output tokens used with Google Generative AI models",
         )
 
-        duration_histogram = meter.create_histogram(
+        meter.create_histogram(
             name=Meters.LLM_OPERATION_DURATION,
             unit="s",
             description="Google Generative AI operation duration",
         )
 
-        exception_counter = meter.create_counter(
+        meter.create_counter(
             name=Meters.LLM_COMPLETIONS_EXCEPTIONS,
             unit="time",
             description="Number of exceptions occurred during Google Generative AI completions",

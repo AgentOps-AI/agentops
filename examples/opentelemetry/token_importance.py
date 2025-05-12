@@ -1,11 +1,9 @@
 from opentelemetry import trace, context, baggage
 from opentelemetry.sdk.trace import TracerProvider
-from opentelemetry.sdk.trace.export import ConsoleSpanExporter, BatchSpanProcessor, SpanExporter
+from opentelemetry.sdk.trace.export import BatchSpanProcessor, SpanExporter
 from opentelemetry.trace import Status, StatusCode
 import time
-import sys
-import json
-from typing import Dict, Any, List, Optional, Sequence
+from typing import Dict, Any, Sequence
 
 
 # Create a no-op exporter to prevent spans from being printed
@@ -197,7 +195,7 @@ def run_basic_scenarios():
     print("This scenario demonstrates correct context management with proper token handling.")
     print("We'll create a parent span, then a child span, and properly detach the context.")
 
-    with tracer.start_as_current_span("parent") as parent:
+    with tracer.start_as_current_span("parent"):
         print_step(1, "Created parent span and set as current")
         parent_name = get_current_span_name()
         print_context_state(parent_name, ["parent"])
@@ -229,7 +227,7 @@ def run_basic_scenarios():
     print("This scenario demonstrates what happens when we don't detach the context token.")
     print("We'll create a parent span, then a child span, but NOT detach the context.")
 
-    with tracer.start_as_current_span("parent2") as parent:
+    with tracer.start_as_current_span("parent2"):
         print_step(1, "Created parent2 span and set as current")
         parent_name = get_current_span_name()
         print_context_state(parent_name, ["parent2"])
@@ -262,7 +260,7 @@ def run_basic_scenarios():
     print("This scenario demonstrates proper context management with multiple nested spans.")
     print("We'll create an outer → middle1 → middle2 span hierarchy and properly restore contexts.")
 
-    with tracer.start_as_current_span("outer") as outer:
+    with tracer.start_as_current_span("outer"):
         print_step(1, "Created outer span and set as current")
         outer_name = get_current_span_name()
         print_context_state(outer_name, ["outer"])
@@ -312,7 +310,7 @@ def run_basic_scenarios():
     print("This scenario demonstrates the impact of context leaks on the span hierarchy.")
     print("We'll create a parent span, leak a child context, then create another span.")
 
-    with tracer.start_as_current_span("root") as root:
+    with tracer.start_as_current_span("root"):
         print_step(1, "Created root span and set as current")
         root_name = get_current_span_name()
         print_context_state(root_name, ["root"])
@@ -335,7 +333,7 @@ def run_basic_scenarios():
 
         print_step(4, "Creating new_child span after context leak")
         # This span will be created with leaky_child as parent, not root!
-        with tracer.start_as_current_span("new_child") as new_child:
+        with tracer.start_as_current_span("new_child"):
             new_child_name = get_current_span_name()
             print_context_state(new_child_name, ["new_child", "leaky_child (ended but context active)", "root"])
             print_span_tree(["root", "leaky_child (ended)", "new_child"])
@@ -393,7 +391,7 @@ def run_advanced_scenarios():
 
                 print_step(4, "Back to main tracer")
                 # Create another span with the first tracer
-                with tracer.start_as_current_span("post_processing") as post_span:
+                with tracer.start_as_current_span("post_processing"):
                     post_span_name = get_current_span_name()
                     print_context_state(
                         post_span_name, ["post_processing", "llm_inference", "main_operation"], baggage_items
@@ -428,7 +426,7 @@ def run_advanced_scenarios():
     print("This scenario demonstrates saving a context and restoring it later.")
 
     print_step(1, "Creating initial context")
-    with tracer.start_as_current_span("initial_operation") as initial_span:
+    with tracer.start_as_current_span("initial_operation"):
         # Set some baggage
         ctx = baggage.set_baggage("checkpoint", "saved_point")
 
@@ -437,7 +435,7 @@ def run_advanced_scenarios():
         print_context_state("initial_operation", ["initial_operation"], {"checkpoint": "saved_point"})
 
         print_step(2, "Creating a different context")
-        with tracer.start_as_current_span("intermediate_operation") as intermediate_span:
+        with tracer.start_as_current_span("intermediate_operation"):
             # Change the baggage
             ctx = baggage.set_baggage("checkpoint", "intermediate_point")
             print_context_state(

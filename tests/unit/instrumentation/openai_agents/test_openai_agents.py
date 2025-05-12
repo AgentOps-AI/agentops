@@ -18,7 +18,6 @@ import json
 import os
 import pytest
 from unittest.mock import MagicMock, patch
-from opentelemetry import trace
 from opentelemetry.trace import StatusCode
 
 from agentops.instrumentation.openai_agents.instrumentor import OpenAIAgentsInstrumentor
@@ -30,13 +29,9 @@ from agentops.semconv import (
     CoreAttributes,
     AgentAttributes,
     WorkflowAttributes,
-    InstrumentationAttributes,
 )
 from tests.unit.instrumentation.mock_span import (
     MockSpan,
-    MockSpanData,
-    MockTracingSpan,
-    MockTracer,
     process_with_instrumentor,
 )
 
@@ -108,10 +103,6 @@ class TestAgentsSdkInstrumentation:
         - Message content is properly formatted with appropriate attributes
         """
         # Modify the mock_span_data to create proper response extraction logic
-        from agentops.instrumentation.openai_agents.attributes.completion import (
-            get_chat_completions_attributes,
-            get_raw_response_attributes,
-        )
 
         # Mock the attribute extraction functions to return the expected message attributes
         with patch(
@@ -427,8 +418,6 @@ class TestAgentsSdkInstrumentation:
         - OpenTelemetry status codes are correctly set
         - Exception recording functions properly
         """
-        # Create mock span data with an error
-        mock_span_data = MockTracingSpan()
         mock_exporter = MagicMock()
         mock_exporter.export_span = MagicMock()
 
@@ -511,7 +500,7 @@ class TestAgentsSdkInstrumentation:
                 mock_export_trace.assert_called_once_with(mock_trace)
 
         # Verify cleanup on uninstrument
-        with patch.object(exporter, "cleanup", MagicMock()) as mock_cleanup:
+        with patch.object(exporter, "cleanup", MagicMock()):
             instrumentor._uninstrument()
             # Verify the default processor is restored
             mock_set_trace_processors.assert_called()

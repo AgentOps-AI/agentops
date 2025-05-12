@@ -1,6 +1,5 @@
 import pytest
 import concurrent.futures
-from unittest.mock import MagicMock
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 import agentops

@@ -1,8 +1,7 @@
 import pytest
-from unittest.mock import MagicMock, AsyncMock
+from unittest.mock import MagicMock
 
 import agentops
-from tests.fixtures.vcr import vcr_config
 
 import openai
 import anthropic

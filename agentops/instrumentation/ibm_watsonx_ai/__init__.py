@@ -5,7 +5,6 @@ capturing telemetry for model interactions including completions, chat, and stre
 """
 
 import logging
-from typing import Collection
 
 logger = logging.getLogger(__name__)
 

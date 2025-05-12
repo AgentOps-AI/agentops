@@ -5,7 +5,6 @@ including chat completions, streaming, and event handling.
 """
 
 import logging
-from typing import Collection
 
 
 def get_version() -> str:

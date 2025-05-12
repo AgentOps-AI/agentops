@@ -1,12 +1,10 @@
 # To run this file from project root: AGENTOPS_LOG_LEVEL=debug uv run examples/agents-example/hello_world_tools.py
+import agentops
 import asyncio
 from agents import Agent, Runner, function_tool
 from dotenv import load_dotenv
-import os
 
 load_dotenv()
-
-import agentops
 
 
 @function_tool

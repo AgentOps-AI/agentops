@@ -1,3 +1,12 @@
+# For backwards compatibility
+from agentops.legacy import (
+    start_session,
+    end_session,
+    track_agent,
+    track_tool,
+    end_all_sessions,
+)  # type: ignore
+
 from typing import List, Optional, Union
 from agentops.client import Client
 
@@ -158,10 +167,6 @@ def configure(**kwargs):
     _client.configure(**kwargs)
 
 
-# For backwards compatibility
-
-from agentops.legacy import *  # type: ignore
-
 __all__ = [
     "init",
     "configure",
@@ -171,4 +176,5 @@ __all__ = [
     "end_session",
     "track_agent",
     "track_tool",
+    "end_all_sessions",
 ]

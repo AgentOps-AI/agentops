@@ -4,7 +4,7 @@ API client for the AgentOps API.
 This module provides the client for the AgentOps API.
 """
 
-from typing import Dict, Optional, Type, TypeVar, cast
+from typing import Dict, Type, TypeVar, cast
 
 from agentops.client.api.base import BaseApiClient
 from agentops.client.api.types import AuthTokenResponse

@@ -5,7 +5,6 @@ including content generation, streaming, and chat functionality.
 """
 
 import logging
-from typing import Collection
 
 
 def get_version() -> str:

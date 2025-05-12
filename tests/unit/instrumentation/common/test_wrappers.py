@@ -20,7 +20,6 @@ from agentops.instrumentation.common.wrappers import (
     _create_wrapper,
     wrap,
     unwrap,
-    AttributeHandler,
 )
 from agentops.instrumentation.common.attributes import AttributeMap
 from tests.unit.instrumentation.mock_span import MockTracingSpan

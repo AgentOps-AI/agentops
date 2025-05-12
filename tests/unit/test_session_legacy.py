@@ -134,7 +134,7 @@ def test_crewai_kwargs_force_flush():
     agentops.init(api_key="test-api-key")
 
     # Create a session
-    session = agentops.start_session(tags=["test", "crewai-integration"])
+    agentops.start_session(tags=["test", "crewai-integration"])
 
     # Simulate some work
     time.sleep(0.1)

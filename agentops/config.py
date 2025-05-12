@@ -2,8 +2,8 @@ import json
 import logging
 import os
 import sys
-from dataclasses import asdict, dataclass, field
-from typing import Any, List, Optional, Set, TypedDict, Union
+from dataclasses import dataclass, field
+from typing import List, Optional, Set, TypedDict, Union
 from uuid import UUID
 
 from opentelemetry.sdk.trace import SpanProcessor
@@ -12,8 +12,6 @@ from opentelemetry.sdk.trace.export import SpanExporter
 from agentops.exceptions import InvalidApiKeyException
 from agentops.helpers.env import get_env_bool, get_env_int, get_env_list
 from agentops.helpers.serialization import AgentOpsJSONEncoder
-
-from .logging.config import logger
 
 
 class ConfigDict(TypedDict):

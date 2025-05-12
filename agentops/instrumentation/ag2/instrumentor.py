@@ -4,10 +4,8 @@ This module provides the main instrumentor class and wrapping functions for AG2 
 It focuses on collecting summary-level telemetry rather than individual message events.
 """
 
-import logging
 import json
-import time
-from typing import Any, Collection, Dict, Optional, Union, List, Tuple, Callable
+from typing import Collection
 
 from opentelemetry.instrumentation.instrumentor import BaseInstrumentor
 from opentelemetry.trace import get_tracer, SpanKind, Status, StatusCode
@@ -15,8 +13,7 @@ from opentelemetry.metrics import get_meter
 from wrapt import wrap_function_wrapper
 
 from agentops.logging import logger
-from agentops.instrumentation.common.wrappers import WrapConfig, wrap, unwrap
-from agentops.instrumentation.ag2 import LIBRARY_NAME, LIBRARY_VERSION
+from agentops.instrumentation.ag2.version import LIBRARY_NAME, LIBRARY_VERSION
 from agentops.semconv import Meters
 from agentops.semconv.message import MessageAttributes
 from agentops.semconv.span_attributes import SpanAttributes
@@ -46,13 +43,13 @@ class AG2Instrumentor(BaseInstrumentor):
         meter = get_meter(LIBRARY_NAME, LIBRARY_VERSION, meter_provider)
 
         # Create metrics
-        duration_histogram = meter.create_histogram(
+        meter.create_histogram(
             name=Meters.LLM_OPERATION_DURATION,
             unit="s",
             description="AG2 operation duration",
         )
 
-        exception_counter = meter.create_counter(
+        meter.create_counter(
             name=Meters.LLM_COMPLETIONS_EXCEPTIONS,
             unit="time",
             description="Exceptions in AG2 operations",
@@ -213,8 +210,6 @@ class AG2Instrumentor(BaseInstrumentor):
                         )
                         span.set_attribute("ag2.chat.initial_message", initial_message)
 
-                    # Execute initiate_chat
-                    start_time = time.time()
                     result = wrapped(*args, **kwargs)
 
                     # Extract chat history from both agents after completion
@@ -425,7 +420,6 @@ class AG2Instrumentor(BaseInstrumentor):
                             span.set_attribute("ag2.tool.code.size", len(code))
                             span.set_attribute("ag2.tool.code.language", kwargs.get("lang", "unknown"))
 
-                    start_time = time.time()
                     result = wrapped(*args, **kwargs)
 
                     if tool_type == "function" and isinstance(result, tuple) and len(result) > 0:

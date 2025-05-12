@@ -14,13 +14,9 @@ import os
 import pytest
 from unittest.mock import MagicMock, patch
 
-from opentelemetry.trace import get_tracer, StatusCode
 
 from agentops.instrumentation.openai.instrumentor import OpenAIInstrumentor
 from agentops.instrumentation.common.wrappers import WrapConfig
-from agentops.instrumentation.openai import LIBRARY_NAME, LIBRARY_VERSION
-from agentops.semconv import SpanAttributes, MessageAttributes, InstrumentationAttributes
-from tests.unit.instrumentation.mock_span import MockTracingSpan, setup_mock_tracer
 
 
 # Utility function to load fixtures

@@ -16,7 +16,6 @@ Usage:
 import asyncio
 import json
 import os
-import logging
 from dotenv import load_dotenv
 from typing import Any, Dict
 

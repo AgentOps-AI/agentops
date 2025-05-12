@@ -8,7 +8,7 @@ from opentelemetry.sdk.trace.export import SimpleSpanProcessor
 from opentelemetry.sdk.trace.export.in_memory_span_exporter import InMemorySpanExporter
 from opentelemetry.util.types import Attributes
 
-from agentops.sdk.core import TracingCore, setup_telemetry
+from agentops.sdk.core import TracingCore
 
 
 def create_tracer_provider(
@@ -45,7 +45,8 @@ def reset_trace_globals():
 
 class HasAttributesViaProperty(Protocol):
     @property
-    def attributes(self) -> Attributes: ...
+    def attributes(self) -> Attributes:
+        ...
 
 
 class HasAttributesViaAttr(Protocol):

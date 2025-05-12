@@ -8,14 +8,14 @@ from typing import Any, Dict, Optional, Protocol
 
 import requests
 
-from agentops.client.api.types import AuthTokenResponse
 from agentops.client.http.http_client import HttpClient
 
 
 class TokenFetcher(Protocol):
     """Protocol for token fetching functions"""
 
-    def __call__(self, api_key: str) -> str: ...
+    def __call__(self, api_key: str) -> str:
+        ...
 
 
 class BaseApiClient:

@@ -28,7 +28,7 @@ The instrumentation captures:
    - Maintains span context across multiple events
 """
 
-from typing import List, Optional, Collection
+from typing import List, Collection
 from opentelemetry.trace import get_tracer
 from opentelemetry.instrumentation.instrumentor import BaseInstrumentor
 from opentelemetry.metrics import get_meter
@@ -37,7 +37,6 @@ from wrapt import wrap_function_wrapper
 from agentops.logging import logger
 from agentops.instrumentation.common.wrappers import WrapConfig, wrap, unwrap
 from agentops.instrumentation.anthropic import LIBRARY_NAME, LIBRARY_VERSION
-from agentops.instrumentation.anthropic.attributes.common import get_common_instrumentation_attributes
 from agentops.instrumentation.anthropic.attributes.message import get_message_attributes, get_completion_attributes
 from agentops.instrumentation.anthropic.stream_wrapper import (
     messages_stream_wrapper,
@@ -123,19 +122,19 @@ class AnthropicInstrumentor(BaseInstrumentor):
         meter_provider = kwargs.get("meter_provider")
         meter = get_meter(LIBRARY_NAME, LIBRARY_VERSION, meter_provider)
 
-        tokens_histogram = meter.create_histogram(
+        meter.create_histogram(
             name=Meters.LLM_TOKEN_USAGE,
             unit="token",
             description="Measures number of input and output tokens used with Anthropic models",
         )
 
-        duration_histogram = meter.create_histogram(
+        meter.create_histogram(
             name=Meters.LLM_OPERATION_DURATION,
             unit="s",
             description="Anthropic API operation duration",
         )
 
-        exception_counter = meter.create_counter(
+        meter.create_counter(
             name=Meters.LLM_COMPLETIONS_EXCEPTIONS,
             unit="time",
             description="Number of exceptions occurred during Anthropic completions",

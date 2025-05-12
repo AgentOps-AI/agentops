@@ -6,7 +6,7 @@ trace and span attributes in IBM watsonx.ai instrumentation.
 
 from typing import Any, Dict, Optional, Tuple, List
 from agentops.instrumentation.common.attributes import AttributeMap
-from agentops.semconv import SpanAttributes, MessageAttributes
+from agentops.semconv import SpanAttributes
 from agentops.logging import logger
 from ibm_watsonx_ai.foundation_models.schema import TextGenParameters, TextChatParameters
 

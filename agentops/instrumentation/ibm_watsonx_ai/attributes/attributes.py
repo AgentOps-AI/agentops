@@ -13,7 +13,6 @@ from agentops.instrumentation.ibm_watsonx_ai.attributes.common import (
     extract_messages_from_args,
     extract_params_from_args,
 )
-from ibm_watsonx_ai.foundation_models.schema import TextGenParameters, TextChatParameters
 
 
 def get_generate_attributes(

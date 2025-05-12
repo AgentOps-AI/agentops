@@ -1,7 +1,5 @@
 import time
 
-import pytest
-import requests_mock
 
 import agentops
 from agentops import ActionEvent, ErrorEvent

@@ -4,16 +4,12 @@ import json
 import uuid
 from datetime import datetime
 from decimal import Decimal
-from enum import Enum, auto
-from typing import Dict, List, Optional
+from enum import Enum
+from typing import Dict
 
 import pytest
-from pydantic import BaseModel
 
 from agentops.helpers.serialization import (
-    AgentOpsJSONEncoder,
-    filter_unjsonable,
-    is_jsonable,
     model_to_dict,
     safe_serialize,
 )

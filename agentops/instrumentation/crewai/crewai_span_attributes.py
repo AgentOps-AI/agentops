@@ -7,7 +7,6 @@ from opentelemetry.trace import Span
 
 from agentops.semconv.span_attributes import SpanAttributes
 from agentops.semconv.agent import AgentAttributes
-from agentops.semconv.tool import ToolAttributes
 from agentops.semconv.message import MessageAttributes
 
 # Initialize logger for logging potential issues and operations

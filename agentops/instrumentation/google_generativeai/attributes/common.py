@@ -1,9 +1,9 @@
 """Common attribute extraction for Google Generative AI instrumentation."""
 
-from typing import Dict, Any, Optional
+from typing import Dict, Any
 
 from agentops.logging import logger
-from agentops.semconv import InstrumentationAttributes, SpanAttributes, LLMRequestTypeValues
+from agentops.semconv import InstrumentationAttributes, SpanAttributes
 from agentops.instrumentation.common.attributes import (
     AttributeMap,
     get_common_attributes,

@@ -2,10 +2,10 @@
 import asyncio
 from dotenv import load_dotenv
 
-load_dotenv()
-
 from openai import OpenAI, AsyncOpenAI
 import agentops
+
+load_dotenv()
 
 
 def sync_responses_request():

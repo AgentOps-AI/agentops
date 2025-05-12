@@ -1,7 +1,7 @@
 import os
 import time
 import logging
-from typing import Collection, Dict, List, Any
+from typing import Collection
 from contextlib import contextmanager
 
 from wrapt import wrap_function_wrapper
@@ -550,7 +550,6 @@ def wrap_tool_usage(tracer, environment, application_name):
 
     def wrapper(wrapped, instance, args, kwargs):
         calling = args[0] if args else None
-        tool_string = args[1] if len(args) > 1 else ""
 
         if not calling:
             return wrapped(*args, **kwargs)

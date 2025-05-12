@@ -36,8 +36,6 @@ class TracedStream:
             for yielded_chunk in self.original_stream:
                 # Initialize data for this chunk
                 generated_text_chunk = ""
-                input_token_chunk = 0
-                output_token_chunk = 0
                 model_id_chunk = None
 
                 try:
@@ -62,10 +60,8 @@ class TracedStream:
                                             # Use the first non-zero input token count found
                                             if self.input_tokens == 0 and result.get("input_token_count", 0) > 0:
                                                 self.input_tokens = result.get("input_token_count", 0)
-                                                input_token_chunk = self.input_tokens
                                             # Accumulate output tokens
                                             self.output_tokens += result.get("generated_token_count", 0)
-                                            output_token_chunk = result.get("generated_token_count", 0)
 
                             elif "choices" in json_payload:  # Likely chat_stream
                                 # model_id might be at top level or within choices in other APIs, check top first

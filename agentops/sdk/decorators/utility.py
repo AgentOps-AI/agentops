@@ -1,15 +1,11 @@
-import inspect
-import os
 import types
-import warnings
 from contextlib import contextmanager
-from functools import wraps
-from typing import Any, Callable, ContextManager, Dict, Generator, Optional
+from typing import Any, Dict, Generator, Optional
 
 from opentelemetry import context as context_api
 from opentelemetry import trace
 from opentelemetry.context import attach, set_value
-from opentelemetry.trace import Span, SpanContext
+from opentelemetry.trace import Span
 
 from agentops.helpers.serialization import safe_serialize
 from agentops.logging import logger

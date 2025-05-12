@@ -6,7 +6,7 @@ This provides reusable mock classes for testing instrumentation.
 import builtins
 import json
 from unittest.mock import MagicMock, patch
-from typing import Any, Dict, Optional, List
+from typing import Any, Dict, Optional
 
 
 class MockSpanData:
@@ -232,7 +232,7 @@ def process_with_instrumentor(mock_span, exporter_class, captured_attributes: Di
     with patch("opentelemetry.trace.get_tracer", return_value=MockTracer(captured_attributes)):
         with patch("opentelemetry.trace.SpanKind"):
             # Create a mocked Status class
-            with patch("opentelemetry.trace.Status") as mock_status:
+            with patch("opentelemetry.trace.Status"):
                 with patch("opentelemetry.trace.StatusCode"):
                     # Create a direct instance of the exporter with mocked tracer provider
                     mock_tracer_provider = MagicMock()

@@ -1,18 +1,15 @@
 # To run this file from project root: AGENTOPS_LOG_LEVEL=debug uv run examples/openai_responses/dual_api_example.py
 import asyncio
-import os
 from dotenv import load_dotenv
 
-# Load environment variables for API keys
-load_dotenv()
-
 # Import OpenAI for both API types
-import openai
 from openai import OpenAI
-from agents import Agent, Runner
 
 # Import AgentOps
 import agentops
+
+# Load environment variables for API keys
+load_dotenv()
 
 
 async def chat_completions_request(client, prompt):

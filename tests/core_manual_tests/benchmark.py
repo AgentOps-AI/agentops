@@ -1,9 +1,5 @@
-import logging
-
 # logging.basicConfig(level=logging.DEBUG)
 
-from datetime import datetime, timezone
-from uuid import uuid4
 
 import openai
 from pyinstrument import Profiler

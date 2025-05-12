@@ -1,5 +1,4 @@
 import inspect
-import types
 import functools
 import asyncio
 
@@ -10,7 +9,6 @@ from agentops.sdk.core import TracingCore
 
 from .utility import (
     _create_as_current_span,
-    _finalize_span,
     _make_span,
     _process_async_generator,
     _process_sync_generator,

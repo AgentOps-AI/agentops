@@ -6,7 +6,7 @@ It instruments streams to collect telemetry data for monitoring and analysis.
 """
 
 import logging
-from typing import TypeVar, Any, Awaitable
+from typing import TypeVar
 
 from opentelemetry import context as context_api
 from opentelemetry.trace import SpanKind

@@ -1,6 +1,6 @@
 """Model attribute extraction for Google Generative AI instrumentation."""
 
-from typing import Dict, Any, Optional, Tuple, List, Union
+from typing import Dict, Any, Optional, Tuple
 
 from agentops.logging import logger
 from agentops.semconv import SpanAttributes, LLMRequestTypeValues, MessageAttributes

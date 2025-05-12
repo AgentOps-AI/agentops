@@ -1,5 +1,4 @@
 import pytest
-import sys
 from unittest.mock import patch, MagicMock
 
 # Tests for the session auto-start functionality
@@ -115,7 +114,7 @@ def test_auto_init_from_start_session(mock_tracing_core, mock_api_client, mock_s
     # For the second part of the test, we'll use patching to avoid the _finalize_span call
     with patch("agentops.sdk.decorators.utility._finalize_span") as mock_finalize_span:
         # Import the functions we need
-        from agentops.legacy import Session, start_session, end_session, _current_session
+        from agentops.legacy import Session, end_session
 
         # Create a fake session directly
         mock_span = MagicMock()
@@ -129,9 +128,9 @@ def test_auto_init_from_start_session(mock_tracing_core, mock_api_client, mock_s
         end_session(test_session)
 
         # Verify _current_session was cleared
-        assert agentops.legacy._current_session is None, (
-            "_current_session should be None after end_session with the same session"
-        )
+        assert (
+            agentops.legacy._current_session is None
+        ), "_current_session should be None after end_session with the same session"
 
         # Verify _finalize_span was called with the right parameters
         mock_finalize_span.assert_called_once_with(mock_span, mock_token)
@@ -155,7 +154,7 @@ def test_multiple_start_session_calls(mock_tracing_core, mock_api_client, mock_s
     assert mock_span_creation.call_count == 1
 
     # Capture warnings to check if the multiple session warning is issued
-    with warnings.catch_warnings(record=True) as w:
+    with warnings.catch_warnings(record=True):
         # Start another session without ending the first
         session2 = agentops.start_session(tags=["test2"])
 

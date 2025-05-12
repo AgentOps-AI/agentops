@@ -12,7 +12,7 @@ Key endpoints instrumented:
 - Model.get_details - Model details API
 """
 
-from typing import List, Optional, Collection
+from typing import List, Collection
 from opentelemetry.trace import get_tracer
 from opentelemetry.instrumentation.instrumentor import BaseInstrumentor
 from opentelemetry.metrics import get_meter
@@ -92,19 +92,19 @@ class IBMWatsonXInstrumentor(BaseInstrumentor):
         meter_provider = kwargs.get("meter_provider")
         meter = get_meter(LIBRARY_NAME, LIBRARY_VERSION, meter_provider)
 
-        tokens_histogram = meter.create_histogram(
+        meter.create_histogram(
             name=Meters.LLM_TOKEN_USAGE,
             unit="token",
             description="Measures number of input and output tokens used with IBM watsonx.ai models",
         )
 
-        duration_histogram = meter.create_histogram(
+        meter.create_histogram(
             name=Meters.LLM_OPERATION_DURATION,
             unit="s",
             description="IBM watsonx.ai operation duration",
         )
 
-        exception_counter = meter.create_counter(
+        meter.create_counter(
             name=Meters.LLM_COMPLETIONS_EXCEPTIONS,
             unit="time",
             description="Number of exceptions occurred during IBM watsonx.ai completions",
