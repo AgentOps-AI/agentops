@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "agentops"
-version = "0.4.9"
+version = "0.4.11"
 authors = [
   { name="Alex Reibman", email="areibman@gmail.com" },
   { name="Shawn Qiu", email="siyangqiu@gmail.com" },
@@ -34,21 +34,20 @@ dependencies = [
     "termcolor>=2.3.0,<2.5.0",
     "PyYAML>=5.3,<7.0",
     "packaging>=21.0,<25.0", # Lower bound of 21.0 ensures compatibility with Python 3.9+
+    "httpx>=0.24.0,<0.29.0", # Required for legacy module compatibility
     "opentelemetry-sdk==1.29.0; python_version<'3.10'",
     "opentelemetry-sdk>1.29.0; python_version>='3.10'",
     "opentelemetry-api==1.29.0; python_version<'3.10'",
     "opentelemetry-api>1.29.0; python_version>='3.10'",
     "opentelemetry-exporter-otlp-proto-http==1.29.0; python_version<'3.10'",
     "opentelemetry-exporter-otlp-proto-http>1.29.0; python_version>='3.10'",
-    # "opentelemetry-exporter-otlp-proto-grpc==1.22.0; python_version<'3.10'",
-    # "opentelemetry-exporter-otlp-proto-grpc>=1.27.0; python_version>='3.10'",
     "ordered-set>=4.0.0,<5.0.0",
     "wrapt>=1.0.0,<2.0.0",
     # "opentelemetry-instrumentation",
     "opentelemetry-instrumentation==0.50b0; python_version<'3.10'",
-    "opentelemetry-instrumentation>0.50b0; python_version>='3.10'",
+    "opentelemetry-instrumentation>=0.50b0; python_version>='3.10'",
     "opentelemetry-semantic-conventions==0.50b0; python_version<'3.10'",
-    "opentelemetry-semantic-conventions>0.50b0; python_version>='3.10'",
+    "opentelemetry-semantic-conventions>=0.50b0; python_version>='3.10'",
 ]
 
 [dependency-groups]
