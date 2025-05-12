@@ -44,7 +44,7 @@ dependencies = [
     "wrapt>=1.0.0,<2.0.0",
     # "opentelemetry-instrumentation",
     "opentelemetry-instrumentation==0.50b0; python_version<'3.10'",
-    "opentelemetry-instrumentation>0.50b0; python_version>='3.10'",
+    "opentelemetry-instrumentation>=0.50b0; python_version>='3.10'",
     "opentelemetry-semantic-conventions==0.50b0; python_version<'3.10'",
     "opentelemetry-semantic-conventions>=0.50b0; python_version>='3.10'",
 ]
