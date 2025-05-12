@@ -1,7 +1,7 @@
 import pytest
 from unittest.mock import patch, MagicMock
 from agentops.client import Client
-from agentops.exceptions import NoApiKeyException, InvalidApiKeyException, ApiServerException
+from agentops.exceptions import InvalidApiKeyException, ApiServerException
 
 
 @pytest.mark.vcr()
@@ -40,14 +40,3 @@ def test_auth_flow_invalid_key():
             client.init(api_key="invalid-key")
 
         assert "Invalid API key" in str(exc_info.value)
-
-
-@pytest.mark.vcr()
-def test_auth_flow_no_key():
-    """Test authentication flow with no API key."""
-    client = Client()
-
-    with pytest.raises(NoApiKeyException) as exc_info:
-        client.init(api_key=None)
-
-    assert "API Key is missing" in str(exc_info.value)

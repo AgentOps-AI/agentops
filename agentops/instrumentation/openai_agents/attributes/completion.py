@@ -115,9 +115,9 @@ def get_raw_response_attributes(response: Dict[str, Any]) -> Dict[str, Any]:
                                 result[MessageAttributes.COMPLETION_TOOL_CALL_NAME.format(i=j, j=k)] = function.get(
                                     "name", ""
                                 )
-                                result[MessageAttributes.COMPLETION_TOOL_CALL_ARGUMENTS.format(i=j, j=k)] = (
-                                    function.get("arguments", "")
-                                )
+                                result[
+                                    MessageAttributes.COMPLETION_TOOL_CALL_ARGUMENTS.format(i=j, j=k)
+                                ] = function.get("arguments", "")
 
     return result
 

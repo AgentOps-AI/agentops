@@ -98,7 +98,8 @@ class IndexedAttribute(Protocol):
     formatting of attribute keys based on the indices.
     """
 
-    def format(self, *, i: int, j: Optional[int] = None) -> str: ...
+    def format(self, *, i: int, j: Optional[int] = None) -> str:
+        ...
 
 
 IndexedAttributeMap = Dict[IndexedAttribute, str]  # target_attribute_key: source_attribute
