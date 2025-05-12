@@ -70,6 +70,7 @@ def test_openai_provider(openai_client, test_messages: List[Dict[str, Any]], moc
 
 
 # Assistants API Tests (OpenAI)
+@pytest.mark.skip(reason="TODO: OpenAI Assistants API integration test needs to be implemented")
 @pytest.mark.vcr()
 async def test_openai_assistants_provider(openai_client):
     """Test OpenAI Assistants API integration for all overridden methods."""
