@@ -1,11 +1,9 @@
 import asyncio
 from asyncio import TimeoutError
 from typing import Any, Dict, List
-from unittest.mock import AsyncMock, MagicMock
+from unittest.mock import MagicMock
 
 import pytest
-from openai import AsyncOpenAI
-from anthropic import AsyncAnthropic
 
 
 def collect_stream_content(stream_response: Any, provider: str) -> List[str]:
@@ -360,60 +358,3 @@ def test_ollama_provider(test_messages: List[Dict[str, Any]]):
 
     except Exception as e:
         pytest.skip(f"Ollama test failed: {e}")
-
-
-@pytest.mark.asyncio
-async def test_async_providers():
-    """Test async providers."""
-    # Mock async clients
-    mock_openai = AsyncMock(spec=AsyncOpenAI)
-    mock_anthropic = AsyncMock(spec=AsyncAnthropic)
-
-    # Mock responses
-    mock_response = MagicMock(choices=[MagicMock(message=MagicMock(content="Test response"))])
-
-    # Configure mocks
-    mock_openai.chat.completions.create = AsyncMock(return_value=mock_response)
-    mock_anthropic.messages.create = AsyncMock(return_value=mock_response)
-
-    # Test OpenAI async
-    openai_response = await mock_openai.chat.completions.create(
-        model="gpt-4",
-        messages=[{"role": "user", "content": "Hello"}],
-    )
-    assert openai_response.choices[0].message.content == "Test response"
-
-    # Test Anthropic async
-    anthropic_response = await mock_anthropic.messages.create(
-        model="claude-3-sonnet-20240229",
-        messages=[{"role": "user", "content": "Hello"}],
-    )
-    assert anthropic_response.choices[0].message.content == "Test response"
-
-
-@pytest.mark.asyncio
-async def test_error_handling():
-    """Test error handling for providers."""
-    # Mock clients with error responses
-    mock_openai = AsyncMock(spec=AsyncOpenAI)
-    mock_anthropic = AsyncMock(spec=AsyncAnthropic)
-
-    # Configure mocks to raise exceptions
-    mock_openai.chat.completions.create = AsyncMock(side_effect=Exception("OpenAI API error"))
-    mock_anthropic.messages.create = AsyncMock(side_effect=Exception("Anthropic API error"))
-
-    # Test OpenAI error handling
-    with pytest.raises(Exception) as exc_info:
-        await mock_openai.chat.completions.create(
-            model="gpt-4",
-            messages=[{"role": "user", "content": "Hello"}],
-        )
-    assert "OpenAI API error" in str(exc_info.value)
-
-    # Test Anthropic error handling
-    with pytest.raises(Exception) as exc_info:
-        await mock_anthropic.messages.create(
-            model="claude-3-sonnet-20240229",
-            messages=[{"role": "user", "content": "Hello"}],
-        )
-    assert "Anthropic API error" in str(exc_info.value)
