@@ -86,7 +86,7 @@ available_instrumentors: list[InstrumentorLoader] = [
         module_name="agentops.instrumentation.ag2",
         class_name="AG2Instrumentor",
         provider_import_name="autogen",
-    )
+    ),
 ]
 
 

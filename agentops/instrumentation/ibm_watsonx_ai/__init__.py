@@ -9,14 +9,17 @@ from typing import Collection
 
 logger = logging.getLogger(__name__)
 
+
 def get_version() -> str:
     """Get the version of the IBM watsonx.ai SDK, or 'unknown' if not found."""
     try:
         from importlib.metadata import version
+
         return version("ibm-watsonx-ai")
     except ImportError:
         logger.debug("Could not find IBM WatsonX AI SDK version")
         return "1.3.11"  # Default to known supported version if not found
+
 
 # Library identification for instrumentation
 LIBRARY_NAME = "ibm_watsonx_ai"
@@ -29,4 +32,4 @@ __all__ = [
     "LIBRARY_NAME",
     "LIBRARY_VERSION",
     "IBMWatsonXInstrumentor",
-] 
+]

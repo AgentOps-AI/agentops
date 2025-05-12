@@ -14,17 +14,16 @@ from agents import Agent, Runner
 # Import AgentOps
 import agentops
 
+
 async def chat_completions_request(client, prompt):
     """Make a request using the OpenAI Chat Completions API."""
     response = client.chat.completions.create(
         model="gpt-3.5-turbo",
-        messages=[
-            {"role": "system", "content": "You are a helpful assistant."},
-            {"role": "user", "content": prompt}
-        ]
+        messages=[{"role": "system", "content": "You are a helpful assistant."}, {"role": "user", "content": prompt}],
     )
-    
+
     return response.choices[0].message.content
+
 
 async def responses_request(client, prompt):
     """Make a request using the OpenAI Agents SDK (Response API format)."""
@@ -34,27 +33,25 @@ async def responses_request(client, prompt):
     )
     return response
 
+
 async def main():
     """Run both API formats to demonstrate response instrumentation."""
     # Initialize AgentOps with instrumentation enabled
     agentops.init()
-    
+
     # Set up the OpenAI client
     client = OpenAI()
-    
+
     # Make a Chat Completions API request
     chat_result = await chat_completions_request(
-        client, 
-        "Explain the concept of async/await in Python in one sentence."
+        client, "Explain the concept of async/await in Python in one sentence."
     )
     print(f"Chat Completions Result: {chat_result}")
-    
+
     # Make an Responses API request
-    responses_result = await responses_request(
-        client,
-        "Explain the concept of recursion in one sentence."
-    )
+    responses_result = await responses_request(client, "Explain the concept of recursion in one sentence.")
     print(f"Responses Result: {responses_result}")
+
 
 if __name__ == "__main__":
     asyncio.run(main())

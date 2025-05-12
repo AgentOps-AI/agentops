@@ -16,18 +16,18 @@ def get_client() -> Client:
 def record(event):
     """
     Legacy function to record an event. This is kept for backward compatibility.
-    
+
     In the current version, this simply sets the end_timestamp on the event.
-    
+
     Args:
         event: The event to record
     """
     from agentops.helpers.time import get_ISO_time
-    
+
     # TODO: Manual timestamp assignment is a temporary fix; should use proper event lifecycle
-    if event and hasattr(event, 'end_timestamp'):
+    if event and hasattr(event, "end_timestamp"):
         event.end_timestamp = get_ISO_time()
-    
+
     return event
 
 
@@ -77,7 +77,7 @@ def init(
         **kwargs: Additional configuration parameters to be passed to the client.
     """
     global _client
-    
+
     # Merge tags and default_tags if both are provided
     merged_tags = None
     if tags and default_tags:
@@ -128,7 +128,7 @@ def configure(**kwargs):
             - exporter_endpoint: Endpoint for the exporter
     """
     global _client
-    
+
     # List of valid parameters that can be passed to configure
     valid_params = {
         "api_key",
@@ -160,7 +160,7 @@ def configure(**kwargs):
 
 # For backwards compatibility
 
-from agentops.legacy import * # type: ignore
+from agentops.legacy import *  # type: ignore
 
 __all__ = [
     "init",

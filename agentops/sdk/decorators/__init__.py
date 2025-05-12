@@ -16,12 +16,6 @@ workflow = create_entity_decorator(SpanKind.WORKFLOW)
 session = create_entity_decorator(SpanKind.SESSION)
 operation = task
 
-__all__ = [
-    'agent',
-    'task',
-    'workflow',
-    'session',
-    'operation'
-]
+__all__ = ["agent", "task", "workflow", "session", "operation"]
 
 # Create decorators task, workflow, session, agent

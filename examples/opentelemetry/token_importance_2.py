@@ -9,8 +9,10 @@ provider.add_span_processor(processor)
 trace.set_tracer_provider(provider)
 tracer = trace.get_tracer("demo")
 
+
 def get_current_span_name():
     return getattr(trace.get_current_span(), "name", "None")
+
 
 print("\n=== Scenario: Multiple contexts with the same span ===")
 print("This demonstrates why coupling spans and tokens can be problematic")

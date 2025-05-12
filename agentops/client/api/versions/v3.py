@@ -13,6 +13,7 @@ from agentops.client.api.types import AuthTokenResponse
 from agentops.exceptions import ApiServerException
 from agentops.logging import logger
 
+
 class V3Client(BaseApiClient):
     """Client for the AgentOps V3 API"""
 

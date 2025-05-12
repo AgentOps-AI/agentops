@@ -14,11 +14,12 @@ more data than we already have, since the `Response` object is always passed to 
 from the `agents.tracing` module.
 
 TODO Calls to the OpenAI API are not available in this tracing context, so we may
-need to monkey-patch the `openai` from here to get that data. While we do have 
-separate instrumentation for the OpenAI API, in order to get it to nest with the 
+need to monkey-patch the `openai` from here to get that data. While we do have
+separate instrumentation for the OpenAI API, in order to get it to nest with the
 spans we create here, it's probably easier (or even required) that we incorporate
-that here as well. 
+that here as well.
 """
+
 from typing import Collection
 from opentelemetry.instrumentation.instrumentor import BaseInstrumentor  # type: ignore
 from agentops.logging import logger

@@ -17,6 +17,6 @@ class AuthTokenResponse(TypedDict):
 
 class UploadedObjectResponse(BaseModel):
     """Response from the v4/objects/upload endpoint"""
+
     url: str
     size: int
-

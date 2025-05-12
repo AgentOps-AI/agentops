@@ -13,8 +13,14 @@ from typing import Dict, Any, Optional, Tuple
 from opentelemetry.trace import SpanKind
 
 from agentops.instrumentation.common.wrappers import (
-    WrapConfig, _update_span, _finish_span_success, _finish_span_error,
-    _create_wrapper, wrap, unwrap, AttributeHandler
+    WrapConfig,
+    _update_span,
+    _finish_span_success,
+    _finish_span_error,
+    _create_wrapper,
+    wrap,
+    unwrap,
+    AttributeHandler,
 )
 from agentops.instrumentation.common.attributes import AttributeMap
 from tests.unit.instrumentation.mock_span import MockTracingSpan
@@ -25,11 +31,10 @@ class TestWrapConfig:
 
     def test_wrap_config_initialization(self):
         """Test that WrapConfig is initialized properly with default values."""
+
         # Create a simple attribute handler
         def dummy_handler(
-            args: Optional[Tuple] = None,
-            kwargs: Optional[Dict] = None,
-            return_value: Optional[Any] = None
+            args: Optional[Tuple] = None, kwargs: Optional[Dict] = None, return_value: Optional[Any] = None
         ) -> AttributeMap:
             return {"key": "value"}
 
@@ -39,7 +44,7 @@ class TestWrapConfig:
             package="test_package",
             class_name="TestClass",
             method_name="test_method",
-            handler=dummy_handler
+            handler=dummy_handler,
         )
 
         # Verify config values
@@ -52,11 +57,10 @@ class TestWrapConfig:
 
     def test_wrap_config_repr(self):
         """Test the string representation of WrapConfig."""
+
         # Create a simple attribute handler
         def dummy_handler(
-            args: Optional[Tuple] = None,
-            kwargs: Optional[Dict] = None,
-            return_value: Optional[Any] = None
+            args: Optional[Tuple] = None, kwargs: Optional[Dict] = None, return_value: Optional[Any] = None
         ) -> AttributeMap:
             return {"key": "value"}
 
@@ -66,7 +70,7 @@ class TestWrapConfig:
             package="test_package",
             class_name="TestClass",
             method_name="test_method",
-            handler=dummy_handler
+            handler=dummy_handler,
         )
 
         # Verify the string representation
@@ -74,11 +78,10 @@ class TestWrapConfig:
 
     def test_wrap_config_with_custom_span_kind(self):
         """Test that WrapConfig accepts a custom span kind."""
+
         # Create a simple attribute handler
         def dummy_handler(
-            args: Optional[Tuple] = None,
-            kwargs: Optional[Dict] = None,
-            return_value: Optional[Any] = None
+            args: Optional[Tuple] = None, kwargs: Optional[Dict] = None, return_value: Optional[Any] = None
         ) -> AttributeMap:
             return {"key": "value"}
 
@@ -89,7 +92,7 @@ class TestWrapConfig:
             class_name="TestClass",
             method_name="test_method",
             handler=dummy_handler,
-            span_kind=SpanKind.SERVER
+            span_kind=SpanKind.SERVER,
         )
 
         # Verify the span kind
@@ -139,7 +142,7 @@ class TestSpanHelpers:
         _finish_span_error(mock_span, test_exception)
 
         # Verify status was set to ERROR
-        assert mock_span.status is not None 
+        assert mock_span.status is not None
         # The actual object is a real Status with StatusCode.ERROR
         # We're not checking the exact type, just that it was called with ERROR status code
 
@@ -157,15 +160,13 @@ class TestCreateWrapper:
         # Create a mock tracer
         mock_tracer = MagicMock()
         mock_span = MockTracingSpan()
-        
+
         # Mock start_as_current_span to return our mock span
         mock_tracer.start_as_current_span.return_value.__enter__.return_value = mock_span
 
         # Create a simple attribute handler
         def dummy_handler(
-            args: Optional[Tuple] = None,
-            kwargs: Optional[Dict] = None,
-            return_value: Optional[Any] = None
+            args: Optional[Tuple] = None, kwargs: Optional[Dict] = None, return_value: Optional[Any] = None
         ) -> AttributeMap:
             result = {}
             if args:
@@ -182,7 +183,7 @@ class TestCreateWrapper:
             package="test_package",
             class_name="TestClass",
             method_name="test_method",
-            handler=dummy_handler
+            handler=dummy_handler,
         )
 
         # Create the wrapper
@@ -199,10 +200,7 @@ class TestCreateWrapper:
         assert result == "success"
 
         # Verify tracer was called correctly
-        mock_tracer.start_as_current_span.assert_called_once_with(
-            "test_trace",
-            kind=SpanKind.CLIENT
-        )
+        mock_tracer.start_as_current_span.assert_called_once_with("test_trace", kind=SpanKind.CLIENT)
 
         # Verify attributes were set on the span
         assert "args" in mock_span.attributes
@@ -217,15 +215,13 @@ class TestCreateWrapper:
         # Create a mock tracer
         mock_tracer = MagicMock()
         mock_span = MockTracingSpan()
-        
+
         # Mock start_as_current_span to return our mock span
         mock_tracer.start_as_current_span.return_value.__enter__.return_value = mock_span
 
         # Create a simple attribute handler
         def dummy_handler(
-            args: Optional[Tuple] = None,
-            kwargs: Optional[Dict] = None,
-            return_value: Optional[Any] = None
+            args: Optional[Tuple] = None, kwargs: Optional[Dict] = None, return_value: Optional[Any] = None
         ) -> AttributeMap:
             result = {}
             if args:
@@ -242,7 +238,7 @@ class TestCreateWrapper:
             package="test_package",
             class_name="TestClass",
             method_name="test_method",
-            handler=dummy_handler
+            handler=dummy_handler,
         )
 
         # Create the wrapper
@@ -257,10 +253,7 @@ class TestCreateWrapper:
             wrapper(mock_wrapped, None, ("arg1", "arg2"), {"kwarg1": "value1"})
 
         # Verify tracer was called correctly
-        mock_tracer.start_as_current_span.assert_called_once_with(
-            "test_trace",
-            kind=SpanKind.CLIENT
-        )
+        mock_tracer.start_as_current_span.assert_called_once_with("test_trace", kind=SpanKind.CLIENT)
 
         # Verify attributes were set on the span
         assert "args" in mock_span.attributes
@@ -280,9 +273,7 @@ class TestCreateWrapper:
 
         # Create a simple attribute handler
         def dummy_handler(
-            args: Optional[Tuple] = None,
-            kwargs: Optional[Dict] = None,
-            return_value: Optional[Any] = None
+            args: Optional[Tuple] = None, kwargs: Optional[Dict] = None, return_value: Optional[Any] = None
         ) -> AttributeMap:
             return {}
 
@@ -292,7 +283,7 @@ class TestCreateWrapper:
             package="test_package",
             class_name="TestClass",
             method_name="test_method",
-            handler=dummy_handler
+            handler=dummy_handler,
         )
 
         # Create the wrapper
@@ -302,7 +293,7 @@ class TestCreateWrapper:
         mock_wrapped = MagicMock(return_value="success")
 
         # Mock the context_api to return True for suppressed instrumentation
-        with patch('agentops.instrumentation.common.wrappers.context_api.get_value', return_value=True):
+        with patch("agentops.instrumentation.common.wrappers.context_api.get_value", return_value=True):
             result = wrapper(mock_wrapped, None, ("arg1", "arg2"), {"kwarg1": "value1"})
 
         # Verify the result
@@ -320,11 +311,10 @@ class TestWrapUnwrap:
 
     def test_wrap_function(self):
         """Test that wrap calls wrap_function_wrapper with correct arguments."""
+
         # Create a simple attribute handler
         def dummy_handler(
-            args: Optional[Tuple] = None,
-            kwargs: Optional[Dict] = None,
-            return_value: Optional[Any] = None
+            args: Optional[Tuple] = None, kwargs: Optional[Dict] = None, return_value: Optional[Any] = None
         ) -> AttributeMap:
             return {}
 
@@ -334,26 +324,24 @@ class TestWrapUnwrap:
             package="test_package",
             class_name="TestClass",
             method_name="test_method",
-            handler=dummy_handler
+            handler=dummy_handler,
         )
 
         # Create a mock tracer
         mock_tracer = MagicMock()
 
         # Mock wrap_function_wrapper
-        with patch('agentops.instrumentation.common.wrappers.wrap_function_wrapper') as mock_wrap:
+        with patch("agentops.instrumentation.common.wrappers.wrap_function_wrapper") as mock_wrap:
             # Mock _create_wrapper to return a simple function
-            with patch('agentops.instrumentation.common.wrappers._create_wrapper') as mock_create_wrapper:
+            with patch("agentops.instrumentation.common.wrappers._create_wrapper") as mock_create_wrapper:
                 mock_create_wrapper.return_value = lambda *args: None
-                
+
                 # Call wrap
                 wrap(config, mock_tracer)
 
                 # Verify wrap_function_wrapper was called correctly
                 mock_wrap.assert_called_once_with(
-                    "test_package",
-                    "TestClass.test_method",
-                    mock_create_wrapper.return_value
+                    "test_package", "TestClass.test_method", mock_create_wrapper.return_value
                 )
 
                 # Verify _create_wrapper was called correctly
@@ -361,11 +349,10 @@ class TestWrapUnwrap:
 
     def test_unwrap_function(self):
         """Test that unwrap calls _unwrap with correct arguments."""
+
         # Create a simple attribute handler
         def dummy_handler(
-            args: Optional[Tuple] = None,
-            kwargs: Optional[Dict] = None,
-            return_value: Optional[Any] = None
+            args: Optional[Tuple] = None, kwargs: Optional[Dict] = None, return_value: Optional[Any] = None
         ) -> AttributeMap:
             return {}
 
@@ -375,19 +362,16 @@ class TestWrapUnwrap:
             package="test_package",
             class_name="TestClass",
             method_name="test_method",
-            handler=dummy_handler
+            handler=dummy_handler,
         )
 
         # Mock _unwrap
-        with patch('agentops.instrumentation.common.wrappers._unwrap') as mock_unwrap:
+        with patch("agentops.instrumentation.common.wrappers._unwrap") as mock_unwrap:
             # Call unwrap
             unwrap(config)
 
             # Verify _unwrap was called correctly
-            mock_unwrap.assert_called_once_with(
-                "test_package.TestClass",
-                "test_method"
-            )
+            mock_unwrap.assert_called_once_with("test_package.TestClass", "test_method")
 
 
 if __name__ == "__main__":
