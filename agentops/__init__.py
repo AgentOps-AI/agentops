@@ -5,6 +5,11 @@ from agentops.legacy import (
     track_agent,
     track_tool,
     end_all_sessions,
+    Session,
+    ToolEvent,
+    ErrorEvent,
+    ActionEvent,
+    LLMEvent,
 )  # type: ignore
 
 from typing import List, Optional, Union
@@ -177,4 +182,9 @@ __all__ = [
     "track_agent",
     "track_tool",
     "end_all_sessions",
+    "Session",
+    "ToolEvent",
+    "ErrorEvent",
+    "ActionEvent",
+    "LLMEvent",
 ]

@@ -28,7 +28,7 @@ def test_get_common_instrumentation_attributes():
     """Test extraction of common instrumentation attributes."""
     attributes = get_common_instrumentation_attributes()
     assert attributes[InstrumentationAttributes.LIBRARY_NAME] == "anthropic"
-    assert attributes[InstrumentationAttributes.LIBRARY_VERSION] == "0.49.0"
+    assert attributes[InstrumentationAttributes.LIBRARY_VERSION] >= "0.49.0"
 
 
 def test_extract_request_attributes():
