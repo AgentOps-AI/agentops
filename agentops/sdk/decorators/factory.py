@@ -33,7 +33,6 @@ def create_entity_decorator(entity_kind: str):
             # Create a proxy class that wraps the original class
             class WrappedClass(wrapped):
                 def __init__(self, *args, **kwargs):
-                    # Start span when instance is created
                     operation_name = name or wrapped.__name__
                     self._agentops_span_context_manager = _create_as_current_span(operation_name, entity_kind, version)
                     self._agentops_active_span = self._agentops_span_context_manager.__enter__()
@@ -45,23 +44,58 @@ def create_entity_decorator(entity_kind: str):
                     
                     # Call the original __init__
                     super().__init__(*args, **kwargs)
-                
-                def __del__(self):
-                    # End span when instance is destroyed
+                    
+                async def __aenter__(self):
+                    # Added for async context manager support
+                    # This allows using the class with 'async with' statement
+                    
+                    # If span is already created in __init__, just return self
+                    if hasattr(self, '_agentops_active_span') and self._agentops_active_span is not None:
+                        return self
+                    
+                    # Otherwise create span (for backward compatibility)
+                    operation_name = name or wrapped.__name__
+                    self._agentops_span_context_manager = _create_as_current_span(operation_name, entity_kind, version)
+                    self._agentops_active_span = self._agentops_span_context_manager.__enter__()
+                    return self      
+
+                async def __aexit__(self, exc_type, exc_val, exc_tb):
+                    # Added for proper async cleanup
+                    # This ensures spans are properly closed when using 'async with'
+                    
+                    # Added proper async cleanup
                     if hasattr(self, '_agentops_active_span') and hasattr(self, '_agentops_span_context_manager'):
                         try:
                             _record_entity_output(self._agentops_active_span, self)
                         except Exception as e:
                             logger.warning(f"Failed to record entity output: {e}")
-                        
+                            
+                        self._agentops_span_context_manager.__exit__(exc_type, exc_val, exc_tb)
+                        # Clear the span references after cleanup
+                        self._agentops_span_context_manager = None
+                        self._agentops_active_span = None
+                
+
+                def __del__(self):
+                    # Only try to cleanup if we have valid span references
+                    if (hasattr(self, '_agentops_active_span') and 
+                        hasattr(self, '_agentops_span_context_manager') and 
+                        self._agentops_span_context_manager is not None and 
+                        self._agentops_active_span is not None):
+                        try:
+                            _record_entity_output(self._agentops_active_span, self)
+                        except Exception as e:
+                            logger.warning(f"Failed to record entity output: {e}")
                         self._agentops_span_context_manager.__exit__(None, None, None)
-            
+                        # Clear the span references after cleanup
+                        self._agentops_span_context_manager = None
+                        self._agentops_active_span = None       
             # Preserve metadata of the original class
             WrappedClass.__name__ = wrapped.__name__
             WrappedClass.__qualname__ = wrapped.__qualname__
             WrappedClass.__module__ = wrapped.__module__
             WrappedClass.__doc__ = wrapped.__doc__
-            
+
             return WrappedClass
             
         # Create the actual decorator wrapper function for functions
@@ -114,6 +148,7 @@ def create_entity_decorator(entity_kind: str):
                         
                         try:
                             result = await wrapped(*args, **kwargs)
+                            print(result,"result here in decorator factory is async")
                             try:
                                 _record_entity_output(span, result)
                             except Exception as e:
@@ -128,13 +163,16 @@ def create_entity_decorator(entity_kind: str):
             # Handle sync functions
             else:
                 with _create_as_current_span(operation_name, entity_kind, version) as span:
+                    print(operation_name,entity_kind,"operation name and entity kind here in decorator factory")
                     try:
                         _record_entity_input(span, args, kwargs)
+                        print(span,"span here in decorator factory is sync")
                     except Exception as e:
                         logger.warning(f"Failed to record entity input: {e}")
                     
                     try:
                         result = wrapped(*args, **kwargs)
+                        print(result,"result here in decorator factory is sync")
                         try:
                             _record_entity_output(span, result)
                         except Exception as e:
