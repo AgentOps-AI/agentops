@@ -21,55 +21,65 @@ import EnvTooltip from '/snippets/add-env-tooltip.mdx'
 	</Step>
 	<Step title="Add AgentOps to your code">
 		<CodeTooltip/>
-			<CodeGroup>
-				```python python
-				import agentops
-				from crewai import Agent, Task, Crew, LLM
-				import os
-				from dotenv import load_dotenv
-				
-				# Load environment variables
-				load_dotenv()
-				OPENAI_API_KEY = os.getenv("OPENAI_API_KEY") or "YOUR_OPENAI_API_KEY"
-				AGENTOPS_API_KEY = os.getenv("AGENTOPS_API_KEY") or "YOUR_AGENTOPS_API_KEY"
-				
-				# Initialize AgentOps at the start of your application
-				agentops.init(AGENTOPS_API_KEY)
-				
-				# Set up your CrewAI elements as you normally would
-				# AgentOps will automatically track all interactions
-				llm = LLM(model="openai/gpt-4o", api_key=OPENAI_API_KEY)
-				
-				researcher = Agent(
-				    role="Researcher",
-				    goal="Find accurate information about a topic",
-				    backstory="You're an expert researcher with keen attention to detail",
-				    llm=llm
-				)
-				
-				research_task = Task(
-				    description="Research the latest developments in quantum computing",
-				    expected_output="A comprehensive report on the latest breakthroughs in quantum computing, including advancements in quantum algorithms, hardware, and potential applications.",
-				    agent=researcher
-				)
-				
-				crew = Crew(
-				    agents=[researcher],
-				    tasks=[research_task],
-				    verbose=True
-				)
-				
-				# Run the crew - AgentOps will track everything
-				result = crew.kickoff()
-				```
-			</CodeGroup>
+		<CodeGroup>
+			```python python
+			import os
+			from dotenv import load_dotenv
+			import agentops
+			from crewai import Agent, Task, Crew
+			from langchain_openai import ChatOpenAI
+
+			# Load environment variables
+			load_dotenv()
+
+			# Initialize AgentOps
+			agentops.init(os.getenv("AGENTOPS_API_KEY"))
+
+			# Create LLM
+			llm = ChatOpenAI(
+				model="gpt-4",
+				temperature=0.7,
+				api_key=os.getenv("OPENAI_API_KEY")
+			)
+
+			# Create an agent
+			researcher = Agent(
+				role='Researcher',
+				goal='Research and provide accurate information about cities and their history',
+				backstory='You are an expert researcher with vast knowledge of world geography and history.',
+				llm=llm,
+				verbose=True
+			)
+
+			# Create a task
+			research_task = Task(
+				description='What is the capital of France? Provide a detailed answer about its history, culture, and significance.',
+				expected_output='A comprehensive response about Paris, including its status as the capital of France, historical significance, cultural importance, and key landmarks.',
+				agent=researcher
+			)
+
+			# Create a crew with the researcher
+			crew = Crew(
+				agents=[researcher],
+				tasks=[research_task],
+				verbose=True
+			)
+
+			# Execute the task - AgentOps will automatically track all LLM calls
+			result = crew.kickoff()
+
+			print("\nCrew Research Results:")
+			print(result)
+			```
+		</CodeGroup>
 		<EnvTooltip />
-      <CodeGroup>
-        ```python .env
-        AGENTOPS_API_KEY=<YOUR API KEY>
-        ```
-      </CodeGroup>
-      Read more about environment variables in [Advanced Configuration](/v2/usage/advanced-configuration)
+		<CodeGroup>
+			```python .env
+			AGENTOPS_API_KEY=<YOUR API KEY>
+			OPENAI_API_KEY=<YOUR OPENAI API KEY>
+			```
+		</CodeGroup>
+		Read more about environment variables in [Advanced Configuration](/v2/usage/advanced-configuration)
 	</Step>
 	<Step title="Run your crew">
 		Execute your program and visit [app.agentops.ai/traces](https://app.agentops.ai/traces) to observe your Crew! 🕵️
@@ -83,6 +93,12 @@ import EnvTooltip from '/snippets/add-env-tooltip.mdx'
 	</Step>
 </Steps>
 
+## Important Notes
+
+1. The `Task` class requires an `expected_output` field that describes what the task should produce
+2. Setting `verbose=True` on both the agent and crew provides better visibility into the execution process
+3. Tasks should have clear, detailed descriptions to guide the agent effectively
+
 ## Crew + AgentOps Examples
 
 <CardGroup cols={3}>
@@ -95,4 +111,3 @@ import EnvTooltip from '/snippets/add-env-tooltip.mdx'
 <script type="module" src="/scripts/scroll-img-fadein-animation.js"></script>
 <script type="module" src="/scripts/button_heartbeat_animation.js"></script>
 <script type="css" src="/styles/styles.css"></script>
-<script type="module" src="/scripts/adjust_api_dynamically.js"></script>
