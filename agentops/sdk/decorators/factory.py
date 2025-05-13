@@ -148,7 +148,6 @@ def create_entity_decorator(entity_kind: str):
                         
                         try:
                             result = await wrapped(*args, **kwargs)
-                            print(result,"result here in decorator factory is async")
                             try:
                                 _record_entity_output(span, result)
                             except Exception as e:
@@ -163,16 +162,15 @@ def create_entity_decorator(entity_kind: str):
             # Handle sync functions
             else:
                 with _create_as_current_span(operation_name, entity_kind, version) as span:
-                    print(operation_name,entity_kind,"operation name and entity kind here in decorator factory")
                     try:
                         _record_entity_input(span, args, kwargs)
-                        print(span,"span here in decorator factory is sync")
+                        
                     except Exception as e:
                         logger.warning(f"Failed to record entity input: {e}")
                     
                     try:
                         result = wrapped(*args, **kwargs)
-                        print(result,"result here in decorator factory is sync")
+                        
                         try:
                             _record_entity_output(span, result)
                         except Exception as e:
