@@ -1,5 +1,6 @@
 from typing import TYPE_CHECKING, cast, AsyncGenerator, Generator
 import asyncio
+import gc
 
 import pytest
 from opentelemetry import trace
@@ -10,6 +11,7 @@ from agentops.semconv import SpanKind
 from agentops.semconv.span_attributes import SpanAttributes
 from agentops.semconv import SpanAttributes
 from tests.unit.sdk.instrumentation_tester import InstrumentationTester
+from agentops.sdk.decorators.factory import create_entity_decorator
 
 
 class TestSpanNesting:
@@ -569,3 +571,29 @@ class TestSpanNesting:
         assert transform_task.parent is not None
         assert workflow_span.context is not None
         assert transform_task.parent.span_id == workflow_span.context.span_id
+
+@pytest.mark.asyncio
+async def test_async_context_manager_and_del_coverage():
+    """
+    Covers async context manager (__aenter__, __aexit__) and __del__ cleanup logic.
+    """
+    # Create a simple decorated class
+    @create_entity_decorator("test")
+    class TestClass:
+        def __init__(self):
+            self.value = 42
+
+    # Cover __aenter__ and __aexit__ (normal exit)
+    async with TestClass() as instance:
+        assert hasattr(instance, '_agentops_active_span')
+        assert instance._agentops_active_span is not None
+
+    # Cover __aenter__ and __aexit__ (exceptional exit)
+    with pytest.raises(ValueError):
+        async with TestClass() as instance:
+            raise ValueError("Trigger exception for __aexit__ coverage")
+
+    # Cover __del__ logic
+    obj = TestClass()
+    del obj
+    gc.collect()  # Force garbage collection to trigger __del__
