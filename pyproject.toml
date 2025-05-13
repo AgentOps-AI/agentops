@@ -54,8 +54,6 @@ dependencies = [
 test = [
     "openai>=1.60.0",
     "anthropic",
-    "numpy>=1.23.5,<2.0.0",  # Pin to a stable version
-    "pandas>=2.0.0,<2.2.0",  # Compatible with numpy <2.0.0
     # ;;
     # The below is a really hard dependency, that can be installed only between python >=3.10,<3.13.
     # CI will fail because all tests will automatically pull this dependency group;
@@ -113,8 +111,8 @@ asyncio_default_fixture_loop_scope = "module" # WARNING: Changing this may break
 testpaths = ["tests/unit"]  # Default to unit tests
 addopts = "--tb=short -p no:warnings --import-mode=importlib --ignore=tests/integration"  # Ignore integration by default
 pythonpath = ["."]
-faulthandler_timeout = 120  # Increased from 60 to handle tracing overhead
-timeout = 300
+faulthandler_timeout = 30  # Increased from 60 to handle tracing overhead
+timeout = 60
 disable_socket = true  # Add this to prevent hanging on socket cleanup
 log_cli = true  # Enable logging to console
 log_cli_level = "DEBUG"  # Set log level to INFO
