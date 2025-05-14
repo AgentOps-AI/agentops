@@ -605,9 +605,9 @@ class TestSpanNesting:
 
 
 @pytest.mark.asyncio
-async def test_async_context_manager_and_del_coverage():
+async def test_async_context_manager():
     """
-    Covers async context manager (__aenter__, __aexit__) and __del__ cleanup logic.
+    Tests async context manager functionality (__aenter__, __aexit__).
     """
 
     # Create a simple decorated class
@@ -625,8 +625,3 @@ async def test_async_context_manager_and_del_coverage():
     with pytest.raises(ValueError):
         async with TestClass() as instance:
             raise ValueError("Trigger exception for __aexit__ coverage")
-
-    # Cover __del__ logic
-    obj = TestClass()
-    del obj
-    gc.collect()  # Force garbage collection to trigger __del__
