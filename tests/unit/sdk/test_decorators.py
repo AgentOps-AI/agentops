@@ -1,6 +1,5 @@
 from typing import AsyncGenerator
 import asyncio
-import gc
 import pytest
 
 from agentops.sdk.decorators import agent, operation, session, workflow, task
