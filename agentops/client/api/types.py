@@ -5,7 +5,6 @@ This module contains type definitions used by multiple API client modules.
 """
 
 from typing import TypedDict
-from pydantic import BaseModel
 
 
 class AuthTokenResponse(TypedDict):
@@ -15,7 +14,7 @@ class AuthTokenResponse(TypedDict):
     project_id: str
 
 
-class UploadedObjectResponse(BaseModel):
+class UploadedObjectResponse(TypedDict):
     """Response from the v4/objects/upload endpoint"""
 
     url: str
