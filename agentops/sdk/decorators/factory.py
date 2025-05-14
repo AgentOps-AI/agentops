@@ -49,43 +49,45 @@ def create_entity_decorator(entity_kind: str):
 
                     # Call the original __init__
                     super().__init__(*args, **kwargs)
+
                 async def __aenter__(self):
                     # Added for async context manager support
                     # This allows using the class with 'async with' statement
-                    
+
                     # If span is already created in __init__, just return self
-                    if hasattr(self, '_agentops_active_span') and self._agentops_active_span is not None:
+                    if hasattr(self, "_agentops_active_span") and self._agentops_active_span is not None:
                         return self
-                    
+
                     # Otherwise create span (for backward compatibility)
                     operation_name = name or wrapped.__name__
                     self._agentops_span_context_manager = _create_as_current_span(operation_name, entity_kind, version)
                     self._agentops_active_span = self._agentops_span_context_manager.__enter__()
-                    return self      
+                    return self
 
                 async def __aexit__(self, exc_type, exc_val, exc_tb):
                     # Added for proper async cleanup
                     # This ensures spans are properly closed when using 'async with'
-                    
+
                     # Added proper async cleanup
-                    if hasattr(self, '_agentops_active_span') and hasattr(self, '_agentops_span_context_manager'):
+                    if hasattr(self, "_agentops_active_span") and hasattr(self, "_agentops_span_context_manager"):
                         try:
                             _record_entity_output(self._agentops_active_span, self)
                         except Exception as e:
                             logger.warning(f"Failed to record entity output: {e}")
-                            
+
                         self._agentops_span_context_manager.__exit__(exc_type, exc_val, exc_tb)
                         # Clear the span references after cleanup
                         self._agentops_span_context_manager = None
                         self._agentops_active_span = None
-                
 
                 def __del__(self):
                     # Only try to cleanup if we have valid span references
-                    if (hasattr(self, '_agentops_active_span') and 
-                        hasattr(self, '_agentops_span_context_manager') and 
-                        self._agentops_span_context_manager is not None and 
-                        self._agentops_active_span is not None):
+                    if (
+                        hasattr(self, "_agentops_active_span")
+                        and hasattr(self, "_agentops_span_context_manager")
+                        and self._agentops_span_context_manager is not None
+                        and self._agentops_active_span is not None
+                    ):
                         try:
                             _record_entity_output(self._agentops_active_span, self)
                         except Exception as e:
@@ -93,7 +95,7 @@ def create_entity_decorator(entity_kind: str):
                         self._agentops_span_context_manager.__exit__(None, None, None)
                         # Clear the span references after cleanup
                         self._agentops_span_context_manager = None
-                        self._agentops_active_span = None       
+                        self._agentops_active_span = None
 
             # Preserve metadata of the original class
             WrappedClass.__name__ = wrapped.__name__
@@ -170,13 +172,13 @@ def create_entity_decorator(entity_kind: str):
                 with _create_as_current_span(operation_name, entity_kind, version) as span:
                     try:
                         _record_entity_input(span, args, kwargs)
-                        
+
                     except Exception as e:
                         logger.warning(f"Failed to record entity input: {e}")
 
                     try:
                         result = wrapped(*args, **kwargs)
-                        
+
                         try:
                             _record_entity_output(span, result)
                         except Exception as e:

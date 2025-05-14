@@ -1,7 +1,7 @@
 from typing import AsyncGenerator
 import asyncio
 import gc
-
+import pytest
 
 from agentops.sdk.decorators import agent, operation, session, workflow, task
 from agentops.semconv import SpanKind
@@ -603,11 +603,13 @@ class TestSpanNesting:
         assert workflow_span.context is not None
         assert transform_task.parent.span_id == workflow_span.context.span_id
 
+
 @pytest.mark.asyncio
 async def test_async_context_manager_and_del_coverage():
     """
     Covers async context manager (__aenter__, __aexit__) and __del__ cleanup logic.
     """
+
     # Create a simple decorated class
     @create_entity_decorator("test")
     class TestClass:
@@ -616,7 +618,7 @@ async def test_async_context_manager_and_del_coverage():
 
     # Cover __aenter__ and __aexit__ (normal exit)
     async with TestClass() as instance:
-        assert hasattr(instance, '_agentops_active_span')
+        assert hasattr(instance, "_agentops_active_span")
         assert instance._agentops_active_span is not None
 
     # Cover __aenter__ and __aexit__ (exceptional exit)
