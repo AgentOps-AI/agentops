@@ -489,12 +489,13 @@ def wrap_llm_call(
 
                     span.set_status(Status(StatusCode.OK))
                     return result
-                except Exception as ex:
-                    span.set_status(Status(StatusCode.ERROR, str(ex)))
-                    logger.error("Error in trace creation: %s", ex)
-                    raise
+                except Exception as e:
+                    span.set_status(Status(StatusCode.ERROR, str(e)))
+                    logger.error("Error in trace creation: %s", e)
+                    raise e
     except Exception as e:
         logger.error(f"Error in provider detection: {e}")
+        raise e
 
 
 def wrap_tool_execution(tracer, duration_histogram, environment, application_name):
