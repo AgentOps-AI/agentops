@@ -129,9 +129,14 @@ client = anthropic.Anthropic(api_key="<YOUR_ANTHROPIC_API_KEY>")
 # Define tools
 tools = [
     {
+        "type": "custom",
         "name": "get_current_time",
         "description": "Get the current date and time",
-        "input_schema": {},
+        "input_schema": {
+            "type": "object",
+            "properties": {},
+            "required": []
+        }
     }
 ]
 
@@ -149,9 +154,9 @@ def get_current_time():
   )
 
 # Handle tool use
-if message.content[0].type == "tool_use":
-    tool_use = message.content[0].tool_use
-    tool_name = tool_use.name
+if message.content[0].type == "tool_calls":
+    tool_call = message.content[0].tool_calls[0]
+    tool_name = tool_call.name
     
     if tool_name == "get_current_time":
         tool_response = get_current_time()
@@ -162,18 +167,26 @@ if message.content[0].type == "tool_use":
             max_tokens=1000,
             messages=[
                 {"role": "user", "content": "What time is it now?"},
-                {"role": "assistant", "content": [
-                    {"type": "tool_use", "tool_use": {
-                        "name": "get_current_time",
-                        "input": {}
-                    }}
-                ]},
-                {"role": "user", "content": [
-                    {"type": "tool_result", "tool_result": {
-                        "tool_name": "get_current_time",
-                        "content": json.dumps(tool_response)
-                    }}
-                ]}
+                {
+                    "role": "assistant",
+                    "content": [
+                        {
+                            "type": "tool_calls",
+                            "tool_calls": [
+                                {
+                                    "type": "custom",
+                                    "name": "get_current_time",
+                                    "input": {}
+                                }
+                            ]
+                        }
+                    ]
+                },
+                {
+                    "role": "tool",
+                    "content": json.dumps(tool_response),
+                    "tool_call_id": tool_call.id
+                }
             ]
       )
 

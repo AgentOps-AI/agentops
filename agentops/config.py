@@ -2,8 +2,8 @@ import json
 import logging
 import os
 import sys
-from dataclasses import asdict, dataclass, field
-from typing import Any, List, Optional, Set, TypedDict, Union
+from dataclasses import dataclass, field
+from typing import List, Optional, Set, TypedDict, Union
 from uuid import UUID
 
 from opentelemetry.sdk.trace import SpanProcessor
@@ -12,8 +12,6 @@ from opentelemetry.sdk.trace.export import SpanExporter
 from agentops.exceptions import InvalidApiKeyException
 from agentops.helpers.env import get_env_bool, get_env_int, get_env_list
 from agentops.helpers.serialization import AgentOpsJSONEncoder
-
-from .logging.config import logger
 
 
 class ConfigDict(TypedDict):
@@ -55,7 +53,7 @@ class Config:
         default_factory=lambda: get_env_int("AGENTOPS_MAX_WAIT_TIME", 5000),
         metadata={"description": "Maximum time in milliseconds to wait for API responses"},
     )
-    
+
     export_flush_interval: int = field(
         default_factory=lambda: get_env_int("AGENTOPS_EXPORT_FLUSH_INTERVAL", 1000),
         metadata={"description": "Time interval in milliseconds between automatic exports of telemetry data"},
@@ -158,13 +156,13 @@ class Config:
 
         if endpoint is not None:
             self.endpoint = endpoint
-            
+
         if app_url is not None:
             self.app_url = app_url
 
         if max_wait_time is not None:
             self.max_wait_time = max_wait_time
-            
+
         if export_flush_interval is not None:
             self.export_flush_interval = export_flush_interval
 

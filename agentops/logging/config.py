@@ -1,7 +1,5 @@
 import logging
 import os
-import sys
-from typing import Dict, Optional, Union
 
 from .formatters import AgentOpsLogFileFormatter, AgentOpsLogFormatter
 

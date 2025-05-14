@@ -5,11 +5,10 @@ import unittest.mock as mock
 from opentelemetry import trace as trace_api
 from opentelemetry.sdk.trace import ReadableSpan, Span, TracerProvider
 from opentelemetry.sdk.trace.export import SimpleSpanProcessor
-from opentelemetry.sdk.trace.export.in_memory_span_exporter import \
-    InMemorySpanExporter
+from opentelemetry.sdk.trace.export.in_memory_span_exporter import InMemorySpanExporter
 from opentelemetry.util.types import Attributes
 
-from agentops.sdk.core import TracingCore, setup_telemetry
+from agentops.sdk.core import TracingCore
 
 
 def create_tracer_provider(
@@ -92,8 +91,7 @@ class InstrumentationTester:
 
         # Patch the setup_telemetry function to return our test providers
         self.setup_telemetry_patcher = mock.patch(
-            'agentops.sdk.core.setup_telemetry',
-            return_value=(self.tracer_provider, self.mock_meter_provider)
+            "agentops.sdk.core.setup_telemetry", return_value=(self.tracer_provider, self.mock_meter_provider)
         )
         self.mock_setup_telemetry = self.setup_telemetry_patcher.start()
 

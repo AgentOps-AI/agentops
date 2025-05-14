@@ -25,32 +25,18 @@ The simplest way to integrate AgentOps with LiteLLM is to set up the success_cal
 
 <CodeGroup>
 ```python Simple Integration
+import os
+from dotenv import load_dotenv
 import litellm
-
-# Configure LiteLLM to use AgentOps
-litellm.success_callback = ["agentops"]
-
-# Make completion requests with LiteLLM
-response = litellm.completion(
-    model="gpt-3.5-turbo",
-    messages=[{"role": "user", "content": "Hello, how are you?"}]
-)
-
-print(response.choices[0].message.content)
-
-# All LiteLLM API calls are automatically tracked by AgentOps
-```
-</CodeGroup>
-
-You can also initialize AgentOps separately for additional configuration:
-
-<CodeGroup>
-```python With AgentOps Init
-import agentops
 from litellm import completion
 
-# Initialize AgentOps
-agentops.init(<INSERT YOUR API KEY HERE>)
+# Load environment variables
+load_dotenv()
+
+# Set API keys for different providers
+os.environ["OPENAI_API_KEY"] = os.getenv("OPENAI_API_KEY")
+os.environ["ANTHROPIC_API_KEY"] = os.getenv("ANTHROPIC_API_KEY")
+os.environ["AGENTOPS_API_KEY"] = os.getenv("AGENTOPS_API_KEY")
 
 # Configure LiteLLM to use AgentOps
 litellm.success_callback = ["agentops"]
@@ -67,39 +53,21 @@ print(response.choices[0].message.content)
 ```
 </CodeGroup>
 
-## Using the LiteLLM Client
-
-<CodeGroup>
-```python Python
-import litellm
-from litellm import LiteLLM
-
-# Configure LiteLLM to use AgentOps
-litellm.success_callback = ["agentops"]
-
-# Create a LiteLLM client
-client = LiteLLM()
-
-# Make a completion request
-response = client.completion(
-    model="anthropic/claude-3-opus-20240229",
-    messages=[{"role": "user", "content": "What are the benefits of using LiteLLM?"}]
-)
-
-print(response.choices[0].message.content)
-
-# All client requests are automatically tracked by AgentOps
-```
-</CodeGroup>
-
 ## Streaming Example
 
 AgentOps also tracks streaming requests with LiteLLM:
 
 <CodeGroup>
-```python Python
+```python Streaming
+import os
+from dotenv import load_dotenv
 import litellm
 from litellm import completion
+
+# Load environment variables and set API keys
+load_dotenv()
+os.environ["OPENAI_API_KEY"] = os.getenv("OPENAI_API_KEY")
+os.environ["AGENTOPS_API_KEY"] = os.getenv("AGENTOPS_API_KEY")
 
 # Configure LiteLLM to use AgentOps
 litellm.success_callback = ["agentops"]
@@ -115,8 +83,7 @@ response = completion(
 for chunk in response:
     if chunk.choices[0].delta.content:
         print(chunk.choices[0].delta.content, end="", flush=True)
-
-# All streaming requests are automatically tracked by AgentOps
+print()  # Add a newline at the end
 ```
 </CodeGroup>
 
@@ -125,9 +92,17 @@ for chunk in response:
 One of LiteLLM's key features is the ability to switch between providers easily:
 
 <CodeGroup>
-```python Python
+```python Multi-Provider
+import os
+from dotenv import load_dotenv
 import litellm
 from litellm import completion
+
+# Load environment variables and set API keys
+load_dotenv()
+os.environ["OPENAI_API_KEY"] = os.getenv("OPENAI_API_KEY")
+os.environ["ANTHROPIC_API_KEY"] = os.getenv("ANTHROPIC_API_KEY")
+os.environ["AGENTOPS_API_KEY"] = os.getenv("AGENTOPS_API_KEY")
 
 # Configure LiteLLM to use AgentOps
 litellm.success_callback = ["agentops"]

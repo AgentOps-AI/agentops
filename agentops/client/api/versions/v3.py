@@ -4,14 +4,11 @@ V3 API client for the AgentOps API.
 This module provides the client for the V3 version of the AgentOps API.
 """
 
-from typing import Any, Dict, List, Optional
-
-import requests
-
 from agentops.client.api.base import BaseApiClient
 from agentops.client.api.types import AuthTokenResponse
 from agentops.exceptions import ApiServerException
 from agentops.logging import logger
+
 
 class V3Client(BaseApiClient):
     """Client for the AgentOps V3 API"""

@@ -4,6 +4,7 @@ This module contains shared constants, attribute mappings, and utility functions
 trace and span attributes in OpenAI Agents instrumentation. It provides the core functionality
 for extracting and formatting attributes according to OpenTelemetry semantic conventions.
 """
+
 from typing import Any
 from agentops.logging import logger
 from agentops.semconv import AgentAttributes, WorkflowAttributes, SpanAttributes, InstrumentationAttributes

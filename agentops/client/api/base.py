@@ -8,7 +8,6 @@ from typing import Any, Dict, Optional, Protocol
 
 import requests
 
-from agentops.client.api.types import AuthTokenResponse
 from agentops.client.http.http_client import HttpClient
 
 

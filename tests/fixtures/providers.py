@@ -1,6 +1,5 @@
 import os
 import pytest
-from typing import Any, List
 import litellm
 from openai import OpenAI
 from anthropic import Anthropic

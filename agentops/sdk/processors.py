@@ -17,6 +17,7 @@ from agentops.helpers.dashboard import log_trace_url
 from agentops.semconv.core import CoreAttributes
 from agentops.logging import upload_logfile
 
+
 class LiveSpanProcessor(SpanProcessor):
     def __init__(self, span_exporter: SpanExporter, **kwargs):
         self.span_exporter = span_exporter
@@ -83,7 +84,7 @@ class InternalSpanProcessor(SpanProcessor):
     This processor is particularly useful for debugging and monitoring
     as it prints information about spans as they are created and ended.
     For session spans, it prints a URL to the AgentOps dashboard.
-    
+
     Note about span kinds:
     - OpenTelemetry spans have a native 'kind' property (INTERNAL, CLIENT, CONSUMER, etc.)
     - AgentOps also uses a semantic convention attribute AGENTOPS_SPAN_KIND for domain-specific kinds

@@ -2,10 +2,10 @@
 import asyncio
 from dotenv import load_dotenv
 
-load_dotenv()
-
 from openai import OpenAI, AsyncOpenAI
 import agentops
+
+load_dotenv()
 
 
 def sync_responses_request():
@@ -22,18 +22,18 @@ async def async_responses_request():
     response = await client.responses.create(
         model="gpt-4o",
         input="Explain the concept of async/await in Python in one sentence.",
-        stream=False, 
+        stream=False,
     )
     return response
 
 
 async def main():
     agentops.init()
-    
+
     # Synchronous request
     sync_response = sync_responses_request()
     print(f"Synchronous Response:\n {sync_response.output_text}")
-    
+
     # Asynchronous request
     async_response = await async_responses_request()
     print(f"Asynchronous Response:\n {async_response.output_text}")

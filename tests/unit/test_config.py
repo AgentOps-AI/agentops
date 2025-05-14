@@ -4,10 +4,7 @@ from uuid import UUID
 
 import pytest
 
-import agentops.config
-from agentops.client import Client
 from agentops.config import Config
-from agentops.exceptions import InvalidApiKeyException
 
 
 @pytest.fixture(autouse=True)
@@ -57,7 +54,6 @@ def test_config_from_env(mock_env):
 def test_config_override_env(mock_env, valid_uuid):
     """Test that kwargs override environment variables"""
     config = Config()
-    client = Client()
 
     # Store the original value from environment
     original_max_queue_size = config.max_queue_size

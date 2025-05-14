@@ -22,6 +22,7 @@ All functions follow a consistent pattern:
 These utilities ensure consistent attribute handling across different
 LLM service instrumentors while maintaining separation of concerns.
 """
+
 from typing import runtime_checkable, Protocol, Any, Optional, Dict, TypedDict
 from agentops.logging import logger
 from agentops.helpers import safe_serialize, get_agentops_version
@@ -45,7 +46,7 @@ from agentops.semconv import (
 #
 # Create your mapping:
 #     attribute_mapping: AttributeMap = {
-#         CoreAttributes.TRACE_ID: "trace_id", 
+#         CoreAttributes.TRACE_ID: "trace_id",
 #         CoreAttributes.SPAN_ID: "span_id"
 #     }
 #
@@ -54,14 +55,14 @@ from agentops.semconv import (
 #         "trace_id": "12345",
 #         "span_id": "67890",
 #     }
-#     
+#
 #     attributes = _extract_attributes_from_mapping(span_data, attribute_mapping)
 #     # >> {"trace.id": "12345", "span.id": "67890"}
 AttributeMap = Dict[str, str]  # target_attribute_key: source_attribute
 
 
-# `IndexedAttributeMap` differs from `AttributeMap` in that it allows for dynamic formatting of 
-# target attribute keys using indices `i` and optionally `j`. This is particularly useful 
+# `IndexedAttributeMap` differs from `AttributeMap` in that it allows for dynamic formatting of
+# target attribute keys using indices `i` and optionally `j`. This is particularly useful
 # when dealing with collections of similar attributes that should be uniquely identified
 # in the output.
 #
@@ -74,7 +75,7 @@ AttributeMap = Dict[str, str]  # target_attribute_key: source_attribute
 #
 # Create your mapping:
 #     attribute_mapping: IndexedAttributeMap = {
-#         MessageAttributes.TOOL_CALL_ID: "id", 
+#         MessageAttributes.TOOL_CALL_ID: "id",
 #         MessageAttributes.TOOL_CALL_TYPE: "type"
 #     }
 #
@@ -83,10 +84,11 @@ AttributeMap = Dict[str, str]  # target_attribute_key: source_attribute
 #         "id": "tool_1",
 #         "type": "search",
 #     }
-#     
+#
 #     attributes = _extract_attributes_from_mapping_with_index(
 #         span_data, attribute_mapping, i=0)
 #     # >> {"gen_ai.request.tools.0.id": "tool_1", "gen_ai.request.tools.0.type": "search"}
+
 
 @runtime_checkable
 class IndexedAttribute(Protocol):
@@ -99,6 +101,7 @@ class IndexedAttribute(Protocol):
     def format(self, *, i: int, j: Optional[int] = None) -> str:
         ...
 
+
 IndexedAttributeMap = Dict[IndexedAttribute, str]  # target_attribute_key: source_attribute
 
 
@@ -108,8 +111,9 @@ class IndexedAttributeData(TypedDict, total=False):
 
     Attributes:
         i (int): The primary index value. This field is required.
-        j (Optional[int]): An optional secondary index value. 
+        j (Optional[int]): An optional secondary index value.
     """
+
     i: int
     j: Optional[int] = None
 
@@ -148,13 +152,15 @@ def _extract_attributes_from_mapping(span_data: Any, attribute_mapping: Attribut
     return attributes
 
 
-def _extract_attributes_from_mapping_with_index(span_data: Any, attribute_mapping: IndexedAttributeMap, i: int, j: Optional[int] = None) -> AttributeMap:
+def _extract_attributes_from_mapping_with_index(
+    span_data: Any, attribute_mapping: IndexedAttributeMap, i: int, j: Optional[int] = None
+) -> AttributeMap:
     """Helper function to extract attributes based on a mapping with index.
-    
+
     This function extends `_extract_attributes_from_mapping` by allowing for indexed keys in the attribute mapping.
-    
+
     Span data is expected to have keys which contain format strings for i/j, e.g. `my_attr_{i}` or `my_attr_{i}_{j}`.
-    
+
     Args:
         span_data: The span data object or dict to extract attributes from
         attribute_mapping: Dictionary mapping target attributes to source attributes, with format strings for i/j
@@ -163,17 +169,17 @@ def _extract_attributes_from_mapping_with_index(span_data: Any, attribute_mappin
     Returns:
         Dictionary of extracted attributes with formatted indexed keys.
     """
-    
+
     # `i` is required for formatting the attribute keys, `j` is optional
-    format_kwargs: IndexedAttributeData = {'i': i}
+    format_kwargs: IndexedAttributeData = {"i": i}
     if j is not None:
-        format_kwargs['j'] = j
-    
+        format_kwargs["j"] = j
+
     # Update the attribute mapping to include the index for the span
     attribute_mapping_with_index: AttributeMap = {}
     for target_attr, source_attr in attribute_mapping.items():
         attribute_mapping_with_index[target_attr.format(**format_kwargs)] = source_attr
-    
+
     return _extract_attributes_from_mapping(span_data, attribute_mapping_with_index)
 
 

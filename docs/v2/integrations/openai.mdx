@@ -91,15 +91,15 @@ AgentOps tracks function-calling conversations with OpenAI models:
 ```python Function Calling
 import agentops
 import json
-  from openai import OpenAI
+from openai import OpenAI
 
 # Initialize AgentOps
-  agentops.init(<INSERT YOUR API KEY HERE>)
+agentops.init(<INSERT YOUR API KEY HERE>)
 
 # Create OpenAI client
-  client = OpenAI()
+client = OpenAI()
 
-# Define functions
+# Define tools
 tools = [
     {
         "type": "function",
@@ -125,40 +125,36 @@ def get_weather(location):
     return json.dumps({"location": location, "temperature": "72", "unit": "fahrenheit", "forecast": ["sunny", "windy"]})
 
 # Make a function call API request
+messages = [
+    {"role": "system", "content": "You are a helpful weather assistant."},
+    {"role": "user", "content": "What's the weather like in Boston?"}
+]
+
 response = client.chat.completions.create(
     model="gpt-4",
-    messages=[
-        {"role": "system", "content": "You are a helpful weather assistant."},
-        {"role": "user", "content": "What's the weather like in Boston?"}
-    ],
+    messages=messages,
     tools=tools,
-    tool_choice="auto"
+    tool_choice="auto",
 )
 
 # Process response
 response_message = response.choices[0].message
-tool_calls = response_message.tool_calls
+messages.append({"role": "assistant", "content": response_message.content, "tool_calls": response_message.tool_calls})
 
-if tool_calls:
-    # Handle tool calls
-    messages = [
-        {"role": "system", "content": "You are a helpful weather assistant."},
-        {"role": "user", "content": "What's the weather like in Boston?"},
-        response_message
-    ]
-    
+if response_message.tool_calls:
     # Process each tool call
-    for tool_call in tool_calls:
+    for tool_call in response_message.tool_calls:
         function_name = tool_call.function.name
         function_args = json.loads(tool_call.function.arguments)
         
         if function_name == "get_weather":
             function_response = get_weather(function_args.get("location"))
             
+            # Add tool response to messages
             messages.append(
                 {
-                    "tool_call_id": tool_call.id,
                     "role": "tool",
+                    "tool_call_id": tool_call.id,
                     "name": function_name,
                     "content": function_response,
                 }

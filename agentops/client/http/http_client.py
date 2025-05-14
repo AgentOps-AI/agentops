@@ -1,11 +1,9 @@
-from typing import Callable, Dict, Optional
+from typing import Dict, Optional
 
 import requests
 
 from agentops.client.http.http_adapter import BaseHTTPAdapter
-from agentops.exceptions import AgentOpsApiJwtExpiredException, ApiServerException
 from agentops.logging import logger
-from agentops.semconv import ResourceAttributes
 
 
 class HttpClient:
