@@ -1,6 +1,5 @@
 import builtins
 import logging
-import os
 import atexit
 from typing import Any
 from io import StringIO
@@ -10,19 +9,20 @@ _original_print = builtins.print
 # Global buffer to store logs
 _log_buffer = StringIO()
 
+
 def setup_print_logger() -> None:
     """
     Instruments the built-in print function and configures logging to use a memory buffer.
     Preserves existing logging configuration and console output behavior.
     """
-    buffer_logger = logging.getLogger('agentops_buffer_logger')
+    buffer_logger = logging.getLogger("agentops_buffer_logger")
     buffer_logger.setLevel(logging.DEBUG)
 
     # Check if the logger already has handlers to prevent duplicates
     if not buffer_logger.handlers:
         # Create a StreamHandler that writes to our StringIO buffer
         buffer_handler = logging.StreamHandler(_log_buffer)
-        buffer_handler.setFormatter(logging.Formatter('%(asctime)s - %(levelname)s - %(message)s'))
+        buffer_handler.setFormatter(logging.Formatter("%(asctime)s - %(levelname)s - %(message)s"))
         buffer_handler.setLevel(logging.DEBUG)
         buffer_logger.addHandler(buffer_handler)
 

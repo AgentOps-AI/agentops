@@ -6,7 +6,7 @@ from agentops.instrumentation.anthropic.attributes.tools import (
     extract_tool_definitions,
     extract_tool_use_blocks,
     extract_tool_results,
-    get_tool_attributes
+    get_tool_attributes,
 )
 
 __all__ = [
@@ -17,4 +17,4 @@ __all__ = [
     "extract_tool_use_blocks",
     "extract_tool_results",
     "get_tool_attributes",
-] 
+]

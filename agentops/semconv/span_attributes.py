@@ -7,7 +7,7 @@ class SpanAttributes:
     #
     # TODO: There is an important deviation from the OpenTelemetry spec in our current implementation.
     # In our OpenAI instrumentation, we're mapping from source→target keys incorrectly in the _token_type function
-    # in shared/__init__.py. According to our established pattern, mapping dictionaries should consistently use 
+    # in shared/__init__.py. According to our established pattern, mapping dictionaries should consistently use
     # target→source format (where keys are target attributes and values are source fields).
     #
     # Current implementation (incorrect):
@@ -20,7 +20,7 @@ class SpanAttributes:
     #     "input": "prompt_tokens",  # target → source
     #     "output": "completion_tokens"
     # }
-    # 
+    #
     # Then we have to adapt code using the function to handle the inverted mapping.
 
     # System

@@ -1,16 +1,10 @@
 """Tests for the HTTP adapter classes."""
 
-from unittest import mock
-
-import pytest
-import requests
-from pytest_mock import MockerFixture
 from urllib3.util import Retry
 
 from agentops.client.http.http_adapter import BaseHTTPAdapter
 
 # from agentops.client.auth_manager import AuthManager
-from agentops.exceptions import AgentOpsApiJwtExpiredException
 
 
 class TestBaseHTTPAdapter:

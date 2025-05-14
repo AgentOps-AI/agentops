@@ -12,4 +12,4 @@ from agentops.integration.callbacks.langchain.callback import (
 __all__ = [
     "LangchainCallbackHandler",
     "AsyncLangchainCallbackHandler",
-] 
+]

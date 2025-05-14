@@ -1,9 +1,8 @@
-from typing import List, Optional, Union
 import atexit
 
 from agentops.client.api import ApiClient
 from agentops.config import Config
-from agentops.exceptions import AgentOpsClientNotInitializedException, NoApiKeyException, NoSessionException
+from agentops.exceptions import NoApiKeyException
 from agentops.instrumentation import instrument_all
 from agentops.logging import logger
 from agentops.logging.config import configure_logging, intercept_opentelemetry_logging
@@ -15,6 +14,7 @@ _active_session = None
 # Single atexit handler registered flag
 _atexit_registered = False
 
+
 def _end_active_session():
     """Global handler to end the active session during shutdown"""
     global _active_session
@@ -22,15 +22,17 @@ def _end_active_session():
         logger.debug("Auto-ending active session during shutdown")
         try:
             from agentops.legacy import end_session
+
             end_session(_active_session)
         except Exception as e:
             logger.warning(f"Error ending active session during shutdown: {e}")
             # Final fallback: try to end the span directly
             try:
-                if hasattr(_active_session, 'span') and hasattr(_active_session.span, 'end'):
+                if hasattr(_active_session, "span") and hasattr(_active_session.span, "end"):
                     _active_session.span.end()
             except:
                 pass
+
 
 class Client:
     """Singleton client for AgentOps service"""
@@ -70,7 +72,7 @@ class Client:
         response = self.api.v3.fetch_auth_token(self.config.api_key)
         if response is None:
             return
-        
+
         # Save the bearer for use with the v4 API
         self.api.v4.set_auth_token(response["token"])
 
@@ -102,11 +104,11 @@ class Client:
                 session = start_session(tags=list(self.config.default_tags))
             else:
                 session = start_session()
-            
+
             # Register this session globally
             global _active_session
             _active_session = session
-        
+
         return session
 
     def configure(self, **kwargs):

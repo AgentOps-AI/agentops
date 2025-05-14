@@ -1,8 +1,6 @@
 import agentops
-import asyncio
-from openai import OpenAI, AsyncOpenAI
+from openai import OpenAI
 from dotenv import load_dotenv
-from agentops import ActionEvent
 
 load_dotenv()
 agentops.init(default_tags=["openai-v1-provider-test"])

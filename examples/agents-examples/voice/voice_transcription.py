@@ -1,15 +1,11 @@
 from dotenv import load_dotenv
-load_dotenv()
-
 import asyncio
 import random
 import numpy as np
 from pathlib import Path
-
 from agents import (
     Agent,
     function_tool,
-    set_tracing_disabled,
 )
 from agents.voice import (
     AudioInput,
@@ -17,8 +13,11 @@ from agents.voice import (
     VoicePipeline,
 )
 from agents.extensions.handoff_prompt import prompt_with_handoff_instructions
-
 import agentops
+
+load_dotenv()
+
+
 agentops.init(tags=["openai-agents", "example", "voice"])
 
 BASE_PATH = Path(__file__).parent
@@ -43,7 +42,7 @@ agent = Agent(
 
 async def main():
     pipeline = VoicePipeline(workflow=SingleAgentVoiceWorkflow(agent))
-    
+
     buffer = np.fromfile(BASE_PATH / "voice-input.wav", dtype=np.int16)
     audio_input = AudioInput(buffer=buffer)
 

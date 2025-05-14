@@ -5,6 +5,7 @@ around functions and methods for OpenTelemetry instrumentation. It includes
 a configuration class for wrapping methods, helper functions for updating
 spans with attributes, and functions for creating and applying wrappers.
 """
+
 from typing import Any, Optional, Tuple, Dict, Callable
 from dataclasses import dataclass
 import logging
@@ -213,17 +214,18 @@ def unwrap(wrap_config: WrapConfig):
 
 def _with_tracer_wrapper(func):
     """Wrap a function with a tracer.
-    
+
     This decorator creates a higher-order function that takes a tracer as its first argument
     and returns a function suitable for use with wrapt's wrap_function_wrapper. It's used
     to consistently apply OpenTelemetry tracing to SDK functions.
-    
+
     Args:
         func: The instrumentation function to wrap
-        
+
     Returns:
         A decorator function that takes a tracer and returns a wrapt-compatible wrapper
     """
+
     def _with_tracer(tracer):
         def wrapper(wrapped, instance, args, kwargs):
             return func(tracer, wrapped, instance, args, kwargs)

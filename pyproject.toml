@@ -111,8 +111,8 @@ asyncio_default_fixture_loop_scope = "module" # WARNING: Changing this may break
 testpaths = ["tests/unit"]  # Default to unit tests
 addopts = "--tb=short -p no:warnings --import-mode=importlib --ignore=tests/integration"  # Ignore integration by default
 pythonpath = ["."]
-faulthandler_timeout = 30  # Reduced from 60
-timeout = 60  # Reduced from 300
+faulthandler_timeout = 30  # Increased from 60 to handle tracing overhead
+timeout = 60
 disable_socket = true  # Add this to prevent hanging on socket cleanup
 log_cli = true  # Enable logging to console
 log_cli_level = "DEBUG"  # Set log level to INFO

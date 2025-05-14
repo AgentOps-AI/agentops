@@ -22,6 +22,7 @@ When instrumenting, we need to:
 2. Extract data from both the request parameters and response object
 3. Create spans with appropriate attributes for observability
 """
+
 from typing import List
 from opentelemetry.trace import get_tracer
 from opentelemetry.instrumentation.openai.v1 import OpenAIV1Instrumentor as ThirdPartyOpenAIV1Instrumentor

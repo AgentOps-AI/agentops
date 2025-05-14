@@ -1,12 +1,9 @@
-from typing import Callable, Dict, Optional, Union
+from typing import Optional
 
 from requests.adapters import HTTPAdapter
 from urllib3.util import Retry
 
 # from agentops.client.auth_manager import AuthManager
-from agentops.exceptions import AgentOpsApiJwtExpiredException, ApiServerException
-from agentops.logging import logger
-from agentops.client.api.types import AuthTokenResponse
 
 
 class BaseHTTPAdapter(HTTPAdapter):

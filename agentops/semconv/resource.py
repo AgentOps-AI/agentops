@@ -37,16 +37,16 @@ class ResourceAttributes:
     HOST_PROCESSOR = "host.processor"
     HOST_SYSTEM = "host.system"
     HOST_VERSION = "host.version"
-    
+
     # CPU attributes
     CPU_COUNT = "cpu.count"
     CPU_PERCENT = "cpu.percent"
-    
+
     # Memory attributes
     MEMORY_TOTAL = "memory.total"
     MEMORY_AVAILABLE = "memory.available"
     MEMORY_USED = "memory.used"
     MEMORY_PERCENT = "memory.percent"
-    
+
     # Libraries
     IMPORTED_LIBRARIES = "imported_libraries"

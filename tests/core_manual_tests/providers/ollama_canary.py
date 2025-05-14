@@ -34,7 +34,7 @@ for chunk in stream_response:
 
 async def main():
     message = {"role": "user", "content": "say hello mr. async"}
-    async_response = await AsyncClient().chat(model="llama3.1", messages=[message])
+    await AsyncClient().chat(model="llama3.1", messages=[message])
 
 
 asyncio.run(main())

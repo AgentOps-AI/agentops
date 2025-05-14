@@ -24,7 +24,6 @@ from opentelemetry.instrumentation.instrumentor import BaseInstrumentor  # type:
 from agentops.logging import logger
 from agentops.instrumentation.openai_agents.processor import OpenAIAgentsProcessor
 from agentops.instrumentation.openai_agents.exporter import OpenAIAgentsExporter
-from agentops.instrumentation.openai_agents import LIBRARY_VERSION
 
 
 class OpenAIAgentsInstrumentor(BaseInstrumentor):
@@ -43,15 +42,6 @@ class OpenAIAgentsInstrumentor(BaseInstrumentor):
         tracer_provider = kwargs.get("tracer_provider")
 
         try:
-            # Check if Agents SDK is available
-            try:
-                import agents  # type: ignore
-
-                logger.debug(f"OpenAI Agents SDK detected with version: {LIBRARY_VERSION}")
-            except ImportError as e:
-                logger.debug(f"OpenAI Agents SDK import failed: {e}")
-                return
-
             self._exporter = OpenAIAgentsExporter(tracer_provider=tracer_provider)
             self._processor = OpenAIAgentsProcessor(
                 exporter=self._exporter,

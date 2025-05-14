@@ -6,17 +6,15 @@ import platform
 import sys
 import os
 import psutil
-from typing import List, Optional
+from typing import Optional
 
 from opentelemetry import metrics, trace
-from opentelemetry.exporter.otlp.proto.http.metric_exporter import \
-    OTLPMetricExporter
-from opentelemetry.exporter.otlp.proto.http.trace_exporter import \
-    OTLPSpanExporter
+from opentelemetry.exporter.otlp.proto.http.metric_exporter import OTLPMetricExporter
+from opentelemetry.exporter.otlp.proto.http.trace_exporter import OTLPSpanExporter
 from opentelemetry.sdk.metrics import MeterProvider
 from opentelemetry.sdk.metrics.export import PeriodicExportingMetricReader
 from opentelemetry.sdk.resources import Resource
-from opentelemetry.sdk.trace import SpanProcessor, TracerProvider
+from opentelemetry.sdk.trace import TracerProvider
 from opentelemetry.sdk.trace.export import BatchSpanProcessor
 from opentelemetry import context as context_api
 
@@ -32,37 +30,47 @@ from agentops.semconv import ResourceAttributes
 def get_imported_libraries():
     """
     Get the top-level imported libraries in the current script.
-    
+
     Returns:
         list: List of imported libraries
     """
     user_libs = []
-    
+
     builtin_modules = {
-        'builtins', 'sys', 'os', '_thread', 'abc', 'io', 're', 'types', 
-        'collections', 'enum', 'math', 'datetime', 'time', 'warnings'
+        "builtins",
+        "sys",
+        "os",
+        "_thread",
+        "abc",
+        "io",
+        "re",
+        "types",
+        "collections",
+        "enum",
+        "math",
+        "datetime",
+        "time",
+        "warnings",
     }
-    
+
     try:
-        main_module = sys.modules.get('__main__')
-        if main_module and hasattr(main_module, '__dict__'):
+        main_module = sys.modules.get("__main__")
+        if main_module and hasattr(main_module, "__dict__"):
             for name, obj in main_module.__dict__.items():
-                if isinstance(obj, type(sys)) and hasattr(obj, '__name__'):
-                    mod_name = obj.__name__.split('.')[0]
-                    if (mod_name and 
-                        not mod_name.startswith('_') and
-                        mod_name not in builtin_modules):
+                if isinstance(obj, type(sys)) and hasattr(obj, "__name__"):
+                    mod_name = obj.__name__.split(".")[0]
+                    if mod_name and not mod_name.startswith("_") and mod_name not in builtin_modules:
                         user_libs.append(mod_name)
     except Exception as e:
         logger.debug(f"Error getting imports: {e}")
-    
+
     return user_libs
 
 
 def get_system_stats():
     """
     Get basic system stats including CPU and memory information.
-    
+
     Returns:
         dict: Dictionary with system information
     """
@@ -75,14 +83,14 @@ def get_system_stats():
         ResourceAttributes.HOST_VERSION: platform.version(),
         ResourceAttributes.HOST_OS_RELEASE: platform.release(),
     }
-    
+
     # Add CPU stats
     try:
         system_info[ResourceAttributes.CPU_COUNT] = os.cpu_count() or 0
         system_info[ResourceAttributes.CPU_PERCENT] = psutil.cpu_percent(interval=0.1)
     except Exception as e:
         logger.debug(f"Error getting CPU stats: {e}")
-    
+
     # Add memory stats
     try:
         memory = psutil.virtual_memory()
@@ -92,7 +100,7 @@ def get_system_stats():
         system_info[ResourceAttributes.MEMORY_PERCENT] = memory.percent
     except Exception as e:
         logger.debug(f"Error getting memory stats: {e}")
-    
+
     return system_info
 
 
@@ -130,11 +138,11 @@ def setup_telemetry(
         # Add project_id as a custom resource attribute
         resource_attrs[ResourceAttributes.PROJECT_ID] = project_id
         logger.debug(f"Including project_id in resource attributes: {project_id}")
-    
+
     # Add system information
     system_stats = get_system_stats()
     resource_attrs.update(system_stats)
-    
+
     # Add imported libraries
     imported_libraries = get_imported_libraries()
     resource_attrs[ResourceAttributes.IMPORTED_LIBRARIES] = imported_libraries
@@ -146,10 +154,7 @@ def setup_telemetry(
     trace.set_tracer_provider(provider)
 
     # Create exporter with authentication
-    exporter = OTLPSpanExporter(
-        endpoint=exporter_endpoint,
-        headers={"Authorization": f"Bearer {jwt}"} if jwt else {}
-    )
+    exporter = OTLPSpanExporter(endpoint=exporter_endpoint, headers={"Authorization": f"Bearer {jwt}"} if jwt else {})
 
     # Regular processor for normal spans and immediate export
     processor = BatchSpanProcessor(
@@ -162,17 +167,14 @@ def setup_telemetry(
 
     # Setup metrics
     metric_reader = PeriodicExportingMetricReader(
-        OTLPMetricExporter(
-            endpoint=metrics_endpoint,
-            headers={"Authorization": f"Bearer {jwt}"} if jwt else {}
-        )
+        OTLPMetricExporter(endpoint=metrics_endpoint, headers={"Authorization": f"Bearer {jwt}"} if jwt else {})
     )
     meter_provider = MeterProvider(resource=resource, metric_readers=[metric_reader])
     metrics.set_meter_provider(meter_provider)
 
     ### Logging
     setup_print_logger()
-    
+
     # Initialize root context
     context_api.get_current()
 
@@ -287,7 +289,7 @@ class TracingCore:
             # Perform a single flush on the SynchronousSpanProcessor (which takes care of all processors' shutdown)
             if not self._initialized:
                 return
-            self._provider._active_span_processor.force_flush(self.config['max_wait_time'])  # type: ignore
+            self._provider._active_span_processor.force_flush(self.config["max_wait_time"])  # type: ignore
 
             # Shutdown provider
             if self._provider:

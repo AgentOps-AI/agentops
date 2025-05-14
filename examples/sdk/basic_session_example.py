@@ -12,7 +12,7 @@ def process_data(data):
     print(f"Processing data: {data}")
     import openai
 
-    response = openai.chat.completions.create(
+    openai.chat.completions.create(
         model="gpt-3.5-turbo", messages=[{"role": "user", "content": "Write a one-line joke"}]
     )
 

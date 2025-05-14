@@ -6,7 +6,6 @@ agentops.init()
 
 @agent
 class Agent:
-
     @operation
     def nested_operation(self):
         print("Hello, world!")

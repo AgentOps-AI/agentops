@@ -1,6 +1,5 @@
 from unittest.mock import patch
 
-import psutil
 
 # noinspection PyProtectedMember
 from psutil._common import sdiskpart, sdiskusage

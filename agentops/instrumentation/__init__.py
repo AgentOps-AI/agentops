@@ -1,4 +1,4 @@
-from typing import Any, Optional
+from typing import Optional
 from types import ModuleType
 from dataclasses import dataclass
 import importlib
@@ -86,7 +86,7 @@ available_instrumentors: list[InstrumentorLoader] = [
         module_name="agentops.instrumentation.ag2",
         class_name="AG2Instrumentor",
         provider_import_name="autogen",
-    )
+    ),
 ]
 
 

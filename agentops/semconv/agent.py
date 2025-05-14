@@ -16,14 +16,14 @@ class AgentAttributes:
 
     TOOLS = "tools"
     HANDOFFS = "handoffs"
-    
+
     # NOTE: This attribute deviates from the OpenTelemetry GenAI semantic conventions.
-    # According to OpenTelemetry GenAI conventions, this should be named "gen_ai.agent.source" 
+    # According to OpenTelemetry GenAI conventions, this should be named "gen_ai.agent.source"
     # or follow a similar pattern under the "gen_ai" namespace.
     FROM_AGENT = "from_agent"
-    
+
     # NOTE: This attribute deviates from the OpenTelemetry GenAI semantic conventions.
-    # According to OpenTelemetry GenAI conventions, this should be named "gen_ai.agent.destination" 
+    # According to OpenTelemetry GenAI conventions, this should be named "gen_ai.agent.destination"
     # or follow a similar pattern under the "gen_ai" namespace.
     TO_AGENT = "to_agent"
 

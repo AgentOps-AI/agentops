@@ -16,7 +16,7 @@ class SpanKind:
 
     # Workflow kinds
     WORKFLOW_STEP = "workflow.step"  # Step in a workflow
-    WORKFLOW = 'workflow'
+    WORKFLOW = "workflow"
     SESSION = "session"
     TASK = "task"
     OPERATION = "operation"
@@ -27,6 +27,7 @@ class SpanKind:
     UNKNOWN = "unknown"
     CHAIN = "chain"
     TEXT = "text"
+
 
 class AgentOpsSpanKindValues(Enum):
     WORKFLOW = "workflow"
