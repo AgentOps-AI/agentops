@@ -87,6 +87,11 @@ available_instrumentors: list[InstrumentorLoader] = [
         class_name="AG2Instrumentor",
         provider_import_name="autogen",
     ),
+    InstrumentorLoader(
+        module_name="agentops.instrumentation.smolagents",
+        class_name="SmoLAgentsInstrumentor",
+        provider_import_name="smolagents",
+    ),
 ]
 
 
