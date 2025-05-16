@@ -24,13 +24,134 @@ When instrumenting, we need to:
 """
 
 from typing import List
-from opentelemetry.trace import get_tracer
+from opentelemetry.trace import get_tracer, SpanKind, Status, StatusCode
 from opentelemetry.instrumentation.openai.v1 import OpenAIV1Instrumentor as ThirdPartyOpenAIV1Instrumentor
 
 from agentops.logging import logger
 from agentops.instrumentation.common.wrappers import WrapConfig, wrap, unwrap
 from agentops.instrumentation.openai import LIBRARY_NAME, LIBRARY_VERSION
 from agentops.instrumentation.openai.attributes.common import get_response_attributes
+
+
+# Context keys for OpenAI Agents SDK integration
+OPENAI_AGENTS_TRACE_ID_KEY = "openai_agents.trace_id"
+OPENAI_AGENTS_SPAN_ID_KEY = "openai_agents.span_id"
+OPENAI_AGENTS_PARENT_ID_KEY = "openai_agents.parent_id"
+OPENAI_AGENTS_WORKFLOW_INPUT_KEY = "openai_agents.workflow_input"
+
+
+def responses_wrapper(tracer, wrapped, instance, args, kwargs):
+    """Custom wrapper for OpenAI Responses API that checks for context from OpenAI Agents SDK"""
+    from opentelemetry import context as context_api
+
+    # Skip instrumentation if it's suppressed in the current context
+    if context_api.get_value("suppress_instrumentation"):
+        return wrapped(*args, **kwargs)
+
+    return_value = None
+
+    # Check if we have trace context from OpenAI Agents SDK
+    trace_id = context_api.get_value(OPENAI_AGENTS_TRACE_ID_KEY, None)
+    parent_id = context_api.get_value(OPENAI_AGENTS_PARENT_ID_KEY, None)
+    workflow_input = context_api.get_value(OPENAI_AGENTS_WORKFLOW_INPUT_KEY, None)
+
+    if trace_id:
+        logger.debug(
+            f"[OpenAI Instrumentor] Found OpenAI Agents trace context: trace_id={trace_id}, parent_id={parent_id}"
+        )
+
+    with tracer.start_as_current_span(
+        "openai.responses.create",
+        kind=SpanKind.CLIENT,
+    ) as span:
+        try:
+            attributes = get_response_attributes(args=args, kwargs=kwargs)
+            for key, value in attributes.items():
+                span.set_attribute(key, value)
+
+            # If we have trace context from OpenAI Agents SDK, add it as attributes
+            if trace_id:
+                span.set_attribute("openai_agents.trace_id", trace_id)
+                if parent_id:
+                    span.set_attribute("openai_agents.parent_id", parent_id)
+                if workflow_input:
+                    span.set_attribute("workflow.input", workflow_input)
+
+            return_value = wrapped(*args, **kwargs)
+
+            attributes = get_response_attributes(return_value=return_value)
+            for key, value in attributes.items():
+                span.set_attribute(key, value)
+
+            span.set_status(Status(StatusCode.OK))
+        except Exception as e:
+            attributes = get_response_attributes(args=args, kwargs=kwargs, return_value=return_value)
+            for key, value in attributes.items():
+                span.set_attribute(key, value)
+
+            span.record_exception(e)
+            span.set_status(Status(StatusCode.ERROR, str(e)))
+            raise
+
+    return return_value
+
+
+async def async_responses_wrapper(tracer, wrapped, instance, args, kwargs):
+    """Custom async wrapper for OpenAI Responses API that checks for context from OpenAI Agents SDK"""
+    from opentelemetry import context as context_api
+
+    # Skip instrumentation if it's suppressed in the current context
+    if context_api.get_value("suppress_instrumentation"):
+        return await wrapped(*args, **kwargs)
+
+    return_value = None
+
+    # Check if we have trace context from OpenAI Agents SDK
+    trace_id = context_api.get_value(OPENAI_AGENTS_TRACE_ID_KEY, None)
+    parent_id = context_api.get_value(OPENAI_AGENTS_PARENT_ID_KEY, None)
+    workflow_input = context_api.get_value(OPENAI_AGENTS_WORKFLOW_INPUT_KEY, None)
+
+    if trace_id:
+        logger.debug(
+            f"[OpenAI Instrumentor] Found OpenAI Agents trace context in async wrapper: trace_id={trace_id}, parent_id={parent_id}"
+        )
+
+    with tracer.start_as_current_span(
+        "openai.responses.create",
+        kind=SpanKind.CLIENT,
+    ) as span:
+        try:
+            # Add the input attributes to the span before execution
+            attributes = get_response_attributes(args=args, kwargs=kwargs)
+            for key, value in attributes.items():
+                span.set_attribute(key, value)
+
+            # If we have trace context from OpenAI Agents SDK, add it as attributes
+            if trace_id:
+                span.set_attribute("openai_agents.trace_id", trace_id)
+                if parent_id:
+                    span.set_attribute("openai_agents.parent_id", parent_id)
+                if workflow_input:
+                    span.set_attribute("workflow.input", workflow_input)
+
+            return_value = await wrapped(*args, **kwargs)
+
+            attributes = get_response_attributes(return_value=return_value)
+            for key, value in attributes.items():
+                span.set_attribute(key, value)
+
+            span.set_status(Status(StatusCode.OK))
+        except Exception as e:
+            # Add everything we have in the case of an error
+            attributes = get_response_attributes(args=args, kwargs=kwargs, return_value=return_value)
+            for key, value in attributes.items():
+                span.set_attribute(key, value)
+
+            span.record_exception(e)
+            span.set_status(Status(StatusCode.ERROR, str(e)))
+            raise
+
+    return return_value
 
 
 # Methods to wrap beyond what the third-party instrumentation handles
@@ -74,12 +195,34 @@ class OpenAIInstrumentor(ThirdPartyOpenAIV1Instrumentor):
         tracer_provider = kwargs.get("tracer_provider")
         tracer = get_tracer(LIBRARY_NAME, LIBRARY_VERSION, tracer_provider)
 
-        for wrap_config in WRAPPED_METHODS:
-            try:
-                wrap(wrap_config, tracer)
-                logger.debug(f"Successfully wrapped {wrap_config}")
-            except (AttributeError, ModuleNotFoundError) as e:
-                logger.debug(f"Failed to wrap {wrap_config}: {e}")
+        # Use our custom wrappers for the Responses API to handle context from OpenAI Agents SDK
+        from wrapt import wrap_function_wrapper
+
+        try:
+            wrap_function_wrapper(
+                "openai.resources.responses",
+                "Responses.create",
+                lambda wrapped, instance, args, kwargs: responses_wrapper(tracer, wrapped, instance, args, kwargs),
+            )
+            logger.debug("Successfully wrapped Responses.create with custom wrapper")
+
+            wrap_function_wrapper(
+                "openai.resources.responses",
+                "AsyncResponses.create",
+                lambda wrapped, instance, args, kwargs: async_responses_wrapper(
+                    tracer, wrapped, instance, args, kwargs
+                ),
+            )
+            logger.debug("Successfully wrapped AsyncResponses.create with custom wrapper")
+        except (AttributeError, ModuleNotFoundError) as e:
+            logger.debug(f"Failed to wrap Responses API with custom wrapper: {e}")
+
+            for wrap_config in WRAPPED_METHODS:
+                try:
+                    wrap(wrap_config, tracer)
+                    logger.debug(f"Successfully wrapped {wrap_config} with standard wrapper")
+                except (AttributeError, ModuleNotFoundError) as e:
+                    logger.debug(f"Failed to wrap {wrap_config}: {e}")
 
         logger.debug("Successfully instrumented OpenAI API with Response extensions")
 
@@ -87,11 +230,22 @@ class OpenAIInstrumentor(ThirdPartyOpenAIV1Instrumentor):
         """Remove instrumentation from OpenAI API."""
         super()._uninstrument(**kwargs)
 
-        for wrap_config in WRAPPED_METHODS:
-            try:
-                unwrap(wrap_config)
-                logger.debug(f"Successfully unwrapped {wrap_config}")
-            except Exception as e:
-                logger.debug(f"Failed to unwrap {wrap_config}: {e}")
+        from opentelemetry.instrumentation.utils import unwrap as _unwrap
+
+        try:
+            _unwrap("openai.resources.responses.Responses", "create")
+            logger.debug("Successfully unwrapped Responses.create custom wrapper")
+
+            _unwrap("openai.resources.responses.AsyncResponses", "create")
+            logger.debug("Successfully unwrapped AsyncResponses.create custom wrapper")
+        except Exception as e:
+            logger.debug(f"Failed to unwrap Responses API custom wrapper: {e}")
+
+            for wrap_config in WRAPPED_METHODS:
+                try:
+                    unwrap(wrap_config)
+                    logger.debug(f"Successfully unwrapped {wrap_config}")
+                except Exception as e:
+                    logger.debug(f"Failed to unwrap {wrap_config}: {e}")
 
         logger.debug("Successfully removed OpenAI API instrumentation with Response extensions")

@@ -303,6 +303,39 @@ class OpenAIAgentsExporter:
         trace_id = getattr(span, "trace_id", "unknown")
         parent_id = getattr(span, "parent_id", None)
 
+        # Special handling for ResponseSpanData to avoid duplicate spans
+        # and ensure proper trace hierarchy
+        if span_type == "ResponseSpanData":
+            logger.debug(
+                "[agentops.instrumentation.openai_agents] Processing ResponseSpanData for trace context propagation"
+            )
+
+            # Store the trace context information in a global context that can be accessed
+            # by the OpenAI instrumentation when it creates spans
+            from opentelemetry import context as context_api
+
+            # Define context keys - these should match the ones in the OpenAI instrumentor
+            OPENAI_AGENTS_TRACE_ID_KEY = "openai_agents.trace_id"
+            OPENAI_AGENTS_SPAN_ID_KEY = "openai_agents.span_id"
+            OPENAI_AGENTS_PARENT_ID_KEY = "openai_agents.parent_id"
+            OPENAI_AGENTS_WORKFLOW_INPUT_KEY = "openai_agents.workflow_input"
+
+            ctx = context_api.get_current()
+
+            # Store the OpenAI Agents trace context in the current context
+            ctx = context_api.set_value(OPENAI_AGENTS_TRACE_ID_KEY, trace_id, ctx)
+            ctx = context_api.set_value(OPENAI_AGENTS_SPAN_ID_KEY, span_id, ctx)
+            ctx = context_api.set_value(OPENAI_AGENTS_PARENT_ID_KEY, parent_id, ctx)
+
+            if hasattr(span_data, "input") and span_data.input:
+                ctx = context_api.set_value(OPENAI_AGENTS_WORKFLOW_INPUT_KEY, str(span_data.input), ctx)
+            context_api.attach(ctx)
+
+            logger.debug(
+                f"[agentops.instrumentation.openai_agents] Propagated trace context: trace_id={trace_id}, parent_id={parent_id}"
+            )
+            return
+
         # Check if this is a span end event
         is_end_event = hasattr(span, "status") and span.status == StatusCode.OK.name
 
