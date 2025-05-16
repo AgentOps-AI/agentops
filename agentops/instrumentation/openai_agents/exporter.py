@@ -312,23 +312,15 @@ class OpenAIAgentsExporter:
 
             # Store the trace context information in a global context that can be accessed
             # by the OpenAI instrumentation when it creates spans
-            from opentelemetry import context as context_api
-
-            # Define context keys - these should match the ones in the OpenAI instrumentor
-            OPENAI_AGENTS_TRACE_ID_KEY = "openai_agents.trace_id"
-            OPENAI_AGENTS_SPAN_ID_KEY = "openai_agents.span_id"
-            OPENAI_AGENTS_PARENT_ID_KEY = "openai_agents.parent_id"
-            OPENAI_AGENTS_WORKFLOW_INPUT_KEY = "openai_agents.workflow_input"
-
             ctx = context_api.get_current()
 
             # Store the OpenAI Agents trace context in the current context
-            ctx = context_api.set_value(OPENAI_AGENTS_TRACE_ID_KEY, trace_id, ctx)
-            ctx = context_api.set_value(OPENAI_AGENTS_SPAN_ID_KEY, span_id, ctx)
-            ctx = context_api.set_value(OPENAI_AGENTS_PARENT_ID_KEY, parent_id, ctx)
+            ctx = context_api.set_value("openai_agents.trace_id", trace_id, ctx)
+            ctx = context_api.set_value("openai_agents.span_id", span_id, ctx)
+            ctx = context_api.set_value("openai_agents.parent_id", parent_id, ctx)
 
             if hasattr(span_data, "input") and span_data.input:
-                ctx = context_api.set_value(OPENAI_AGENTS_WORKFLOW_INPUT_KEY, str(span_data.input), ctx)
+                ctx = context_api.set_value("openai_agents.workflow_input", str(span_data.input), ctx)
             context_api.attach(ctx)
 
             logger.debug(

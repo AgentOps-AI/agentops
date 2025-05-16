@@ -31,19 +31,11 @@ from agentops.logging import logger
 from agentops.instrumentation.common.wrappers import WrapConfig, wrap, unwrap
 from agentops.instrumentation.openai import LIBRARY_NAME, LIBRARY_VERSION
 from agentops.instrumentation.openai.attributes.common import get_response_attributes
-
-
-# Context keys for OpenAI Agents SDK integration
-OPENAI_AGENTS_TRACE_ID_KEY = "openai_agents.trace_id"
-OPENAI_AGENTS_SPAN_ID_KEY = "openai_agents.span_id"
-OPENAI_AGENTS_PARENT_ID_KEY = "openai_agents.parent_id"
-OPENAI_AGENTS_WORKFLOW_INPUT_KEY = "openai_agents.workflow_input"
+from opentelemetry import context as context_api
 
 
 def responses_wrapper(tracer, wrapped, instance, args, kwargs):
     """Custom wrapper for OpenAI Responses API that checks for context from OpenAI Agents SDK"""
-    from opentelemetry import context as context_api
-
     # Skip instrumentation if it's suppressed in the current context
     if context_api.get_value("suppress_instrumentation"):
         return wrapped(*args, **kwargs)
@@ -51,9 +43,9 @@ def responses_wrapper(tracer, wrapped, instance, args, kwargs):
     return_value = None
 
     # Check if we have trace context from OpenAI Agents SDK
-    trace_id = context_api.get_value(OPENAI_AGENTS_TRACE_ID_KEY, None)
-    parent_id = context_api.get_value(OPENAI_AGENTS_PARENT_ID_KEY, None)
-    workflow_input = context_api.get_value(OPENAI_AGENTS_WORKFLOW_INPUT_KEY, None)
+    trace_id = context_api.get_value("openai_agents.trace_id", None)
+    parent_id = context_api.get_value("openai_agents.parent_id", None)
+    workflow_input = context_api.get_value("openai_agents.workflow_input", None)
 
     if trace_id:
         logger.debug(
@@ -98,8 +90,6 @@ def responses_wrapper(tracer, wrapped, instance, args, kwargs):
 
 async def async_responses_wrapper(tracer, wrapped, instance, args, kwargs):
     """Custom async wrapper for OpenAI Responses API that checks for context from OpenAI Agents SDK"""
-    from opentelemetry import context as context_api
-
     # Skip instrumentation if it's suppressed in the current context
     if context_api.get_value("suppress_instrumentation"):
         return await wrapped(*args, **kwargs)
@@ -107,9 +97,9 @@ async def async_responses_wrapper(tracer, wrapped, instance, args, kwargs):
     return_value = None
 
     # Check if we have trace context from OpenAI Agents SDK
-    trace_id = context_api.get_value(OPENAI_AGENTS_TRACE_ID_KEY, None)
-    parent_id = context_api.get_value(OPENAI_AGENTS_PARENT_ID_KEY, None)
-    workflow_input = context_api.get_value(OPENAI_AGENTS_WORKFLOW_INPUT_KEY, None)
+    trace_id = context_api.get_value("openai_agents.trace_id", None)
+    parent_id = context_api.get_value("openai_agents.parent_id", None)
+    workflow_input = context_api.get_value("openai_agents.workflow_input", None)
 
     if trace_id:
         logger.debug(
