@@ -771,20 +771,6 @@ from swarmzero import Agent, Swarm
 ```
 </details>
 
-## Time travel debugging 🔮
-
-<div style="justify-content: center">
-  <img src="docs/images/external/app_screenshots/time_travel_banner.png" alt="Time Travel Banner">
-</div>
-
-<br />
-
-[Try it out!](https://app.agentops.ai/timetravel)
-
-## Agent Arena 🥊
-
-(coming soon!)
-
 ## Evaluations Roadmap 🧭
 
 | Platform                                                                     | Dashboard                                  | Evals                                  |
@@ -800,9 +786,9 @@ from swarmzero import Agent, Swarm
 | ✅ Event latency analysis                 | 🔜 Non-stationary environment testing                                               | 🔜 LLM non-deterministic function detection | 🚧 Infinite loops and recursive thought detection |
 | ✅ Agent workflow execution pricing       | 🔜 Multi-modal environments                                                         | 🚧 Token limit overflow flags               | 🔜 Faulty reasoning detection                     |
 | 🚧 Success validators (external)          | 🔜 Execution containers                                                             | 🔜 Context limit overflow flags             | 🔜 Generative code validators                     |
-| 🔜 Agent controllers/skill tests          | ✅ Honeypot and prompt injection detection ([PromptArmor](https://promptarmor.com)) | 🔜 API bill tracking                        | 🔜 Error breakpoint analysis                      |
+| 🔜 Agent controllers/skill tests          | ✅ Honeypot and prompt injection detection ([PromptArmor](https://promptarmor.com)) | ✅ API bill tracking                        | 🔜 Error breakpoint analysis                      |
 | 🔜 Information context constraint testing | 🔜 Anti-agent roadblocks (i.e. Captchas)                                            | 🔜 CI/CD integration checks                 |                                                   |
-| 🔜 Regression testing                     | 🔜 Multi-agent framework visualization                                              |                                             |                                                   |
+| 🔜 Regression testing                     | ✅ Multi-agent framework visualization                                              |                                             |                                                   |
 
 ### Why AgentOps? 🤔
 
