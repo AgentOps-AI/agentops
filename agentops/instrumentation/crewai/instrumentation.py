@@ -14,6 +14,7 @@ from opentelemetry.sdk.resources import SERVICE_NAME, TELEMETRY_SDK_NAME, DEPLOY
 from agentops.instrumentation.crewai.version import __version__
 from agentops.semconv import SpanAttributes, AgentOpsSpanKindValues, Meters, ToolAttributes, MessageAttributes
 from .crewai_span_attributes import CrewAISpanAttributes, set_span_attribute
+from agentops import get_client
 
 
 # Initialize logger
@@ -380,14 +381,21 @@ def wrap_agent_execute_task(
 def wrap_task_execute(
     tracer, duration_histogram, token_histogram, environment, application_name, wrapped, instance, args, kwargs
 ):
-    task_name = instance.description if hasattr(instance, "description") else "task"
+    # Get the span name from default tags if available
+    config = get_client().config
+    span_name = "crewai.task"
+    if config.default_tags and len(config.default_tags) > 0:
+        # Get the first tag from the set
+        first_tag = next(iter(config.default_tags))
+        span_name = f"{first_tag}.task"
 
     with tracer.start_as_current_span(
-        f"{task_name}.task",
         kind=SpanKind.CLIENT,
         attributes={
             SpanAttributes.AGENTOPS_SPAN_KIND: AgentOpsSpanKindValues.TASK.value,
+            SpanAttributes.OPERATION_NAME: span_name,
         },
+        name=span_name,
     ) as span:
         try:
             span.set_attribute(TELEMETRY_SDK_NAME, "agentops")
