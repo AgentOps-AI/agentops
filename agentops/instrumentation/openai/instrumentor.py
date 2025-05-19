@@ -185,13 +185,7 @@ class OpenAIInstrumentor(ThirdPartyOpenAIV1Instrumentor):
         tracer_provider = kwargs.get("tracer_provider")
         tracer = get_tracer(LIBRARY_NAME, LIBRARY_VERSION, tracer_provider)
 
-        for wrap_config in WRAPPED_METHODS:
-            try:
-                wrap(wrap_config, tracer)
-                logger.debug(f"Successfully wrapped {wrap_config} with standard wrapper")
-            except (AttributeError, ModuleNotFoundError) as e:
-                logger.debug(f"Failed to wrap {wrap_config}: {e}")
-
+        # Only use custom wrappers to avoid duplicate spans
         from wrapt import wrap_function_wrapper
 
         try:
@@ -213,19 +207,21 @@ class OpenAIInstrumentor(ThirdPartyOpenAIV1Instrumentor):
         except (AttributeError, ModuleNotFoundError) as e:
             logger.debug(f"Failed to wrap Responses API with custom wrapper: {e}")
 
+            # Fall back to standard wrappers only if custom wrappers fail
+            for wrap_config in WRAPPED_METHODS:
+                try:
+                    wrap(wrap_config, tracer)
+                    logger.debug(f"Falling back to standard wrapper for {wrap_config}")
+                except (AttributeError, ModuleNotFoundError) as e:
+                    logger.debug(f"Failed to wrap {wrap_config}: {e}")
+
         logger.debug("Successfully instrumented OpenAI API with Response extensions")
 
     def _uninstrument(self, **kwargs):
         """Remove instrumentation from OpenAI API."""
         super()._uninstrument(**kwargs)
 
-        for wrap_config in WRAPPED_METHODS:
-            try:
-                unwrap(wrap_config)
-                logger.debug(f"Successfully unwrapped {wrap_config}")
-            except Exception as e:
-                logger.debug(f"Failed to unwrap {wrap_config}: {e}")
-
+        # First try to unwrap custom wrappers
         from opentelemetry.instrumentation.utils import unwrap as _unwrap
 
         try:
@@ -236,5 +232,13 @@ class OpenAIInstrumentor(ThirdPartyOpenAIV1Instrumentor):
             logger.debug("Successfully unwrapped AsyncResponses.create custom wrapper")
         except Exception as e:
             logger.debug(f"Failed to unwrap Responses API custom wrapper: {e}")
+
+            # Fall back to standard unwrapping only if custom unwrapping fails
+            for wrap_config in WRAPPED_METHODS:
+                try:
+                    unwrap(wrap_config)
+                    logger.debug(f"Falling back to standard unwrapper for {wrap_config}")
+                except Exception as e:
+                    logger.debug(f"Failed to unwrap {wrap_config}: {e}")
 
         logger.debug("Successfully removed OpenAI API instrumentation with Response extensions")

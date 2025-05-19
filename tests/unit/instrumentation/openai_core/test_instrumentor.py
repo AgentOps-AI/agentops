@@ -16,7 +16,6 @@ from unittest.mock import MagicMock, patch
 
 
 from agentops.instrumentation.openai.instrumentor import OpenAIInstrumentor
-from agentops.instrumentation.common.wrappers import WrapConfig
 
 
 # Utility function to load fixtures
@@ -46,6 +45,8 @@ class TestOpenAIInstrumentor:
         # objects are created before being used in the test
         mock_wrap = patch("agentops.instrumentation.openai.instrumentor.wrap").start()
         mock_unwrap = patch("agentops.instrumentation.openai.instrumentor.unwrap").start()
+        mock_wrap_function_wrapper = patch("wrapt.wrap_function_wrapper").start()
+        mock_unwrap_function = patch("opentelemetry.instrumentation.utils.unwrap").start()
         mock_instrument = patch.object(instrumentor, "_instrument", wraps=instrumentor._instrument).start()
         mock_uninstrument = patch.object(instrumentor, "_uninstrument", wraps=instrumentor._uninstrument).start()
 
@@ -57,6 +58,8 @@ class TestOpenAIInstrumentor:
             "tracer_provider": mock_tracer_provider,
             "mock_wrap": mock_wrap,
             "mock_unwrap": mock_unwrap,
+            "mock_wrap_function_wrapper": mock_wrap_function_wrapper,
+            "mock_unwrap_function": mock_unwrap_function,
             "mock_instrument": mock_instrument,
             "mock_uninstrument": mock_uninstrument,
         }
@@ -79,43 +82,66 @@ class TestOpenAIInstrumentor:
 
     def test_instrument_method_wraps_response_api(self, instrumentor):
         """Test the _instrument method wraps the Response API methods"""
-        mock_wrap = instrumentor["mock_wrap"]
+        # We're now using wrap_function_wrapper instead of wrap, so we need to check that
+        mock_wrap_function_wrapper = instrumentor.get("mock_wrap_function_wrapper", None)
 
-        # Verify wrap was called for each method in WRAPPED_METHODS
-        assert mock_wrap.call_count == 2
+        # If mock_wrap_function_wrapper is not in the fixture, patch it now
+        if mock_wrap_function_wrapper is None:
+            with patch("wrapt.wrap_function_wrapper") as mock_wrap_function_wrapper:
+                # Re-instrument to trigger the wrap_function_wrapper calls
+                instrumentor_obj = instrumentor["instrumentor"]
+                instrumentor_obj._instrument(tracer_provider=instrumentor["tracer_provider"])
 
-        # Check the first call arguments for Responses.create
-        first_call_args = mock_wrap.call_args_list[0][0]
-        assert isinstance(first_call_args[0], WrapConfig)
-        assert first_call_args[0].trace_name == "openai.responses.create"
-        assert first_call_args[0].package == "openai.resources.responses"
-        assert first_call_args[0].class_name == "Responses"
-        assert first_call_args[0].method_name == "create"
+                # Verify wrap_function_wrapper was called twice
+                assert mock_wrap_function_wrapper.call_count == 2
 
-        # Check the second call arguments for AsyncResponses.create
-        second_call_args = mock_wrap.call_args_list[1][0]
-        assert isinstance(second_call_args[0], WrapConfig)
-        assert second_call_args[0].trace_name == "openai.responses.create"
-        assert second_call_args[0].package == "openai.resources.responses"
-        assert second_call_args[0].class_name == "AsyncResponses"
-        assert second_call_args[0].method_name == "create"
+                # Check the first call arguments for Responses.create
+                first_call_args = mock_wrap_function_wrapper.call_args_list[0][0]
+                assert first_call_args[0] == "openai.resources.responses"
+                assert first_call_args[1] == "Responses.create"
+
+                # Check the second call arguments for AsyncResponses.create
+                second_call_args = mock_wrap_function_wrapper.call_args_list[1][0]
+                assert second_call_args[0] == "openai.resources.responses"
+                assert second_call_args[1] == "AsyncResponses.create"
+        else:
+            # Verify wrap_function_wrapper was called twice
+            assert mock_wrap_function_wrapper.call_count == 2
+
+            # Check the first call arguments for Responses.create
+            first_call_args = mock_wrap_function_wrapper.call_args_list[0][0]
+            assert first_call_args[0] == "openai.resources.responses"
+            assert first_call_args[1] == "Responses.create"
+
+            # Check the second call arguments for AsyncResponses.create
+            second_call_args = mock_wrap_function_wrapper.call_args_list[1][0]
+            assert second_call_args[0] == "openai.resources.responses"
+            assert second_call_args[1] == "AsyncResponses.create"
 
     def test_uninstrument_method_unwraps_response_api(self, instrumentor):
         """Test the _uninstrument method unwraps the Response API methods"""
-        # For these tests, we'll manually call the unwrap method with the expected configs
-        # since the fixture setup has been changed
-
-        instrumentor_obj = instrumentor["instrumentor"]
+        # We're now using _unwrap instead of unwrap, so we need to check that
+        mock_unwrap_function = instrumentor["mock_unwrap_function"]
 
         # Reset the mock to clear any previous calls
-        mock_unwrap = instrumentor["mock_unwrap"]
-        mock_unwrap.reset_mock()
+        mock_unwrap_function.reset_mock()
 
         # Call the uninstrument method directly
+        instrumentor_obj = instrumentor["instrumentor"]
         instrumentor_obj._uninstrument()
 
         # Now verify the method was called
-        assert mock_unwrap.called, "unwrap was not called during _uninstrument"
+        assert mock_unwrap_function.call_count >= 2, "unwrap was not called during _uninstrument"
+
+        # Check the first call arguments for Responses.create
+        first_call_args = mock_unwrap_function.call_args_list[0][0]
+        assert first_call_args[0] == "openai.resources.responses.Responses"
+        assert first_call_args[1] == "create"
+
+        # Check the second call arguments for AsyncResponses.create
+        second_call_args = mock_unwrap_function.call_args_list[1][0]
+        assert second_call_args[0] == "openai.resources.responses.AsyncResponses"
+        assert second_call_args[1] == "create"
 
     def test_calls_parent_instrument(self, instrumentor):
         """Test that the instrumentor calls the parent class's _instrument method"""
