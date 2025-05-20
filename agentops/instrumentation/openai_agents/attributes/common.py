@@ -19,6 +19,7 @@ from agentops.instrumentation.openai_agents.attributes.model import (
     get_model_config_attributes,
 )
 from agentops.instrumentation.openai_agents.attributes.completion import get_generation_output_attributes
+from agentops.semconv import ToolAttributes
 
 
 # Attribute mapping for AgentSpanData
@@ -33,7 +34,7 @@ AGENT_SPAN_ATTRIBUTES: AttributeMap = {
 
 # Attribute mapping for FunctionSpanData
 FUNCTION_SPAN_ATTRIBUTES: AttributeMap = {
-    AgentAttributes.AGENT_NAME: "name",
+    ToolAttributes.TOOL_NAME: "name",
     WorkflowAttributes.WORKFLOW_INPUT: "input",
     WorkflowAttributes.FINAL_OUTPUT: "output",
     AgentAttributes.FROM_AGENT: "from_agent",

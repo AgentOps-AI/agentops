@@ -87,10 +87,13 @@ def get_span_name(span: Any) -> str:
     span_data = span.span_data
     span_type = span_data.__class__.__name__
 
+    span_name = ""
     if hasattr(span_data, "name") and span_data.name:
-        return span_data.name
+        span_name = span_data.name
     else:
-        return span_type.replace("SpanData", "").lower()  # fallback
+        span_name = span_type.replace("SpanData", "").lower()
+
+    return span_name
 
 
 def _get_span_lookup_key(trace_id: str, span_id: str) -> str:
