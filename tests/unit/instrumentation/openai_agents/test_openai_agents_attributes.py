@@ -43,6 +43,7 @@ from agentops.instrumentation.openai_agents.attributes.tokens import (
 )
 
 from agentops.semconv import (
+    ToolAttributes,
     SpanAttributes,
     MessageAttributes,
     AgentAttributes,
@@ -190,7 +191,7 @@ class TestOpenAIAgentsAttributes:
         attrs = get_function_span_attributes(mock_function_span)
 
         # Verify extracted attributes - note that complex objects should be serialized to strings
-        assert attrs[AgentAttributes.AGENT_NAME] == "test_function"
+        assert attrs[ToolAttributes.TOOL_NAME] == "test_function"
         assert attrs[WorkflowAttributes.WORKFLOW_INPUT] == '{"arg1": "value1"}'  # Serialized string
         assert attrs[WorkflowAttributes.FINAL_OUTPUT] == '{"result": "success"}'  # Serialized string
         assert attrs[AgentAttributes.FROM_AGENT] == "caller_agent"
@@ -456,7 +457,7 @@ class TestOpenAIAgentsAttributes:
             assert AgentAttributes.AGENT_NAME in agent_attrs
 
             function_attrs = get_span_attributes(function_span)
-            assert AgentAttributes.AGENT_NAME in function_attrs
+            assert ToolAttributes.TOOL_NAME in function_attrs
 
             # Unknown span type should return empty dict
             unknown_attrs = get_span_attributes(unknown_span)
