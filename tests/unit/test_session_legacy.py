@@ -154,7 +154,6 @@ def test_crewai_task_instrumentation(instrumentation):
     """
     import agentops
     from opentelemetry.trace import SpanKind
-    from agentops.sdk.core import TracingCore
     from agentops.semconv import SpanAttributes, AgentOpsSpanKindValues
     from opentelemetry import trace
 
@@ -181,19 +180,18 @@ def test_crewai_task_instrumentation(instrumentation):
         kind=SpanKind.CLIENT,
         attributes={
             SpanAttributes.AGENTOPS_SPAN_KIND: AgentOpsSpanKindValues.TASK.value,
-            SpanAttributes.AGENTOPS_SPAN_TAGS: ["crewai", "task-test"]
-        }
+            SpanAttributes.AGENTOPS_SPAN_TAGS: ["crewai", "task-test"],
+        },
     ) as span:
         # Verify span attributes
         assert span.attributes[SpanAttributes.AGENTOPS_SPAN_KIND] == AgentOpsSpanKindValues.TASK.value
         assert "crewai" in span.attributes[SpanAttributes.AGENTOPS_SPAN_TAGS]
         assert "task-test" in span.attributes[SpanAttributes.AGENTOPS_SPAN_TAGS]
-        
+
         # Verify span name
         assert span.name == f"{task.description}.task"
-        
+
         # Verify span kind
         assert span.kind == SpanKind.CLIENT
 
     agentops.end_session(end_state="Success", end_state_reason="Test Finished", is_auto_end=True)
-
