@@ -381,21 +381,21 @@ def wrap_agent_execute_task(
 def wrap_task_execute(
     tracer, duration_histogram, token_histogram, environment, application_name, wrapped, instance, args, kwargs
 ):
-    # Get the span name from default tags if available
+    task_name = instance.description if hasattr(instance, "description") else "task"
+
     config = get_client().config
-    span_name = "crewai.task"
+    attributes = {
+        SpanAttributes.AGENTOPS_SPAN_KIND: AgentOpsSpanKindValues.TASK.value,
+    }
+
     if config.default_tags and len(config.default_tags) > 0:
-        # Get the first tag from the set
-        first_tag = next(iter(config.default_tags))
-        span_name = f"{first_tag}.task"
+        tag_list = list(config.default_tags)
+        attributes[SpanAttributes.AGENTOPS_SPAN_TAGS] = tag_list
 
     with tracer.start_as_current_span(
+        f"{task_name}.task",
         kind=SpanKind.CLIENT,
-        attributes={
-            SpanAttributes.AGENTOPS_SPAN_KIND: AgentOpsSpanKindValues.TASK.value,
-            SpanAttributes.OPERATION_NAME: span_name,
-        },
-        name=span_name,
+        attributes=attributes,
     ) as span:
         try:
             span.set_attribute(TELEMETRY_SDK_NAME, "agentops")
