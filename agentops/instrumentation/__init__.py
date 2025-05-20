@@ -12,7 +12,7 @@ Key Features:
 - Non-intrusive monitoring using Python's import system
 """
 
-from typing import Optional, Set
+from typing import Optional, Set, TypedDict
 from types import ModuleType
 from dataclasses import dataclass
 import importlib
@@ -179,8 +179,15 @@ class InstrumentationManager:
         self._has_agentic_library = False
 
 
+# Define the structure for instrumentor configurations
+class InstrumentorConfig(TypedDict):
+    module_name: str
+    class_name: str
+    min_version: str
+
+
 # Configuration for supported LLM providers
-PROVIDERS = {
+PROVIDERS: dict[str, InstrumentorConfig] = {
     "openai": {
         "module_name": "agentops.instrumentation.openai",
         "class_name": "OpenAIInstrumentor",
@@ -204,7 +211,7 @@ PROVIDERS = {
 }
 
 # Configuration for supported agentic libraries
-AGENTIC_LIBRARIES = {
+AGENTIC_LIBRARIES: dict[str, InstrumentorConfig] = {
     "crewai": {
         "module_name": "agentops.instrumentation.crewai",
         "class_name": "CrewAIInstrumentor",
