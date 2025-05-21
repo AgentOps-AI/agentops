@@ -27,156 +27,148 @@ from agentops.logging import logger
 from agentops.sdk.core import TracingCore
 
 
-class InstrumentationManager:
+# Module-level state variables
+_active_instrumentors: list[BaseInstrumentor] = []
+_original_builtins_import = builtins.__import__  # Store original import
+_instrumenting_packages: Set[str] = set()
+_has_agentic_library: bool = False
+
+
+def _is_package_instrumented(package_name: str) -> bool:
+    """Check if a package is already instrumented by looking at active instrumentors."""
+    return any(
+        instrumentor.__class__.__name__.lower().startswith(package_name.lower())
+        for instrumentor in _active_instrumentors
+    )
+
+
+def _uninstrument_providers():
+    """Uninstrument all provider instrumentors while keeping agentic libraries active."""
+    global _active_instrumentors
+    providers_to_remove = []
+    for instrumentor in _active_instrumentors:
+        if any(instrumentor.__class__.__name__.lower().startswith(provider.lower()) for provider in PROVIDERS.keys()):
+            instrumentor.uninstrument()
+            logger.debug(f"Uninstrumented provider {instrumentor.__class__.__name__}")
+            providers_to_remove.append(instrumentor)
+
+    _active_instrumentors = [i for i in _active_instrumentors if i not in providers_to_remove]
+
+
+def _should_instrument_package(package_name: str) -> bool:
     """
-    Manages the instrumentation state and provides methods for monitoring and instrumenting packages.
-    This is implemented as a singleton to maintain consistent state across the application.
+    Determine if a package should be instrumented based on current state.
+    Handles special cases for agentic libraries and providers.
     """
-
-    def __init__(self):
-        # List of currently active instrumentors
-        self._active_instrumentors: list[BaseInstrumentor] = []
-        # Store the original import function to restore it later
-        self._original_import = builtins.__import__
-        # Track packages currently being instrumented to prevent recursion
-        self._instrumenting_packages: Set[str] = set()
-        # Flag to track if an agentic library is currently instrumented
-        self._has_agentic_library: bool = False
-
-    def is_package_instrumented(self, package_name: str) -> bool:
-        """Check if a package is already instrumented by looking at active instrumentors."""
-        return any(
-            instrumentor.__class__.__name__.lower().startswith(package_name.lower())
-            for instrumentor in self._active_instrumentors
-        )
-
-    def should_instrument_package(self, package_name: str) -> bool:
-        """
-        Determine if a package should be instrumented based on current state.
-        Handles special cases for agentic libraries and providers.
-        """
-        # If this is an agentic library, uninstrument all providers first
-        if package_name in AGENTIC_LIBRARIES:
-            self.uninstrument_providers()
-            self._has_agentic_library = True
-            logger.debug(f"Uninstrumented all providers due to agentic library {package_name} detection")
-            return True
-
-        # Skip providers if an agentic library is already instrumented
-        if package_name in PROVIDERS and self._has_agentic_library:
-            logger.debug(
-                f"Skipping provider {package_name} instrumentation as an agentic library is already instrumented"
-            )
-            return False
-
-        # Skip if already instrumented
-        if self.is_package_instrumented(package_name):
-            logger.debug(f"Package {package_name} is already instrumented")
-            return False
-
+    global _has_agentic_library
+    # If this is an agentic library, uninstrument all providers first
+    if package_name in AGENTIC_LIBRARIES:
+        _uninstrument_providers()
+        _has_agentic_library = True
+        logger.debug(f"Uninstrumented all providers due to agentic library {package_name} detection")
         return True
 
-    def uninstrument_providers(self):
-        """Uninstrument all provider instrumentors while keeping agentic libraries active."""
-        providers_to_remove = []
-        for instrumentor in self._active_instrumentors:
-            if any(
-                instrumentor.__class__.__name__.lower().startswith(provider.lower()) for provider in PROVIDERS.keys()
-            ):
-                instrumentor.uninstrument()
-                logger.debug(f"Uninstrumented provider {instrumentor.__class__.__name__}")
-                providers_to_remove.append(instrumentor)
+    # Skip providers if an agentic library is already instrumented
+    if package_name in PROVIDERS and _has_agentic_library:
+        logger.debug(f"Skipping provider {package_name} instrumentation as an agentic library is already instrumented")
+        return False
 
-        self._active_instrumentors = [i for i in self._active_instrumentors if i not in providers_to_remove]
+    # Skip if already instrumented
+    if _is_package_instrumented(package_name):
+        logger.debug(f"Package {package_name} is already instrumented")
+        return False
 
-    def _import_monitor(self, name: str, globals=None, locals=None, fromlist=(), level=0):
-        """
-        Monitor imports and instrument packages as they are imported.
-        This replaces the built-in import function to intercept package imports.
-        """
+    return True
+
+
+def _perform_instrumentation(package_name: str):
+    """Helper function to perform instrumentation for a given package."""
+    global _instrumenting_packages, _active_instrumentors
+    if not _should_instrument_package(package_name):
+        return
+
+    # Get the appropriate configuration for the package
+    config = PROVIDERS.get(package_name) or AGENTIC_LIBRARIES[package_name]
+    loader = InstrumentorLoader(**config)
+
+    if loader.should_activate:
+        instrumentor = instrument_one(loader)  # instrument_one is already a module function
+        if instrumentor is not None:
+            _active_instrumentors.append(instrumentor)
+
+
+def _import_monitor(name: str, globals_dict=None, locals_dict=None, fromlist=(), level=0):
+    """
+    Monitor imports and instrument packages as they are imported.
+    This replaces the built-in import function to intercept package imports.
+    """
+    global _instrumenting_packages
+    root = name.split(".", 1)[0]
+
+    # Skip providers if an agentic library is already instrumented
+    if _has_agentic_library and root in PROVIDERS:
+        return _original_builtins_import(name, globals_dict, locals_dict, fromlist, level)
+
+    # Check if this is a package we should instrument
+    if (
+        root in TARGET_PACKAGES
+        and root not in _instrumenting_packages
+        and not _is_package_instrumented(root)  # Check if already instrumented before adding
+    ):
+        logger.debug(f"Detected import of {root}")
+        _instrumenting_packages.add(root)
+        try:
+            _perform_instrumentation(root)
+        except Exception as e:
+            logger.error(f"Error instrumenting {root}: {str(e)}")
+        finally:
+            _instrumenting_packages.discard(root)
+
+    return _original_builtins_import(name, globals_dict, locals_dict, fromlist, level)
+
+
+def _check_existing_imports():
+    """Check and instrument packages that were already imported before monitoring started."""
+    global _instrumenting_packages
+    for name in list(sys.modules.keys()):
+        module = sys.modules.get(name)
+        if not isinstance(module, ModuleType):
+            continue
+
         root = name.split(".", 1)[0]
+        if _has_agentic_library and root in PROVIDERS:
+            continue
 
-        # Skip providers if an agentic library is already instrumented
-        if self._has_agentic_library and root in PROVIDERS:
-            return self._original_import(name, globals, locals, fromlist, level)
-
-        # Check if this is a package we should instrument
-        if (
-            root in TARGET_PACKAGES
-            and root not in self._instrumenting_packages
-            and not self.is_package_instrumented(root)
-        ):
-            logger.debug(f"Detected import of {root}")
-            self._instrumenting_packages.add(root)
+        if root in TARGET_PACKAGES and root not in _instrumenting_packages and not _is_package_instrumented(root):
+            _instrumenting_packages.add(root)
             try:
-                if not self.should_instrument_package(root):
-                    return self._original_import(name, globals, locals, fromlist, level)
-
-                # Get the appropriate configuration for the package
-                config = PROVIDERS.get(root) or AGENTIC_LIBRARIES[root]
-                loader = InstrumentorLoader(**config)
-
-                if loader.should_activate:
-                    instrumentor = instrument_one(loader)
-                    if instrumentor is not None:
-                        self._active_instrumentors.append(instrumentor)
+                _perform_instrumentation(root)
             except Exception as e:
                 logger.error(f"Error instrumenting {root}: {str(e)}")
             finally:
-                self._instrumenting_packages.discard(root)
+                _instrumenting_packages.discard(root)
 
-        return self._original_import(name, globals, locals, fromlist, level)
 
-    def start_monitoring(self):
-        """Start monitoring imports and check already imported packages."""
-        builtins.__import__ = self._import_monitor
-        self._check_existing_imports()
+def _start_monitoring_internal():
+    """Start monitoring imports and check already imported packages."""
+    builtins.__import__ = _import_monitor
+    _check_existing_imports()
 
-    def stop_monitoring(self):
-        """Stop monitoring imports and restore the original import function."""
-        builtins.__import__ = self._original_import
 
-    def _check_existing_imports(self):
-        """Check and instrument packages that were already imported before monitoring started."""
-        for name in list(sys.modules.keys()):
-            module = sys.modules.get(name)
-            if not isinstance(module, ModuleType):
-                continue
+def _stop_monitoring_internal():
+    """Stop monitoring imports and restore the original import function."""
+    builtins.__import__ = _original_builtins_import
 
-            root = name.split(".", 1)[0]
-            if self._has_agentic_library and root in PROVIDERS:
-                continue
 
-            if (
-                root in TARGET_PACKAGES
-                and root not in self._instrumenting_packages
-                and not self.is_package_instrumented(root)
-            ):
-                self._instrumenting_packages.add(root)
-                try:
-                    if not self.should_instrument_package(root):
-                        continue
-
-                    config = PROVIDERS.get(root) or AGENTIC_LIBRARIES[root]
-                    loader = InstrumentorLoader(**config)
-
-                    if loader.should_activate:
-                        instrumentor = instrument_one(loader)
-                        if instrumentor is not None:
-                            self._active_instrumentors.append(instrumentor)
-                except Exception as e:
-                    logger.error(f"Error instrumenting {root}: {str(e)}")
-                finally:
-                    self._instrumenting_packages.discard(root)
-
-    def uninstrument_all(self):
-        """Stop monitoring and uninstrument all packages."""
-        self.stop_monitoring()
-        for instrumentor in self._active_instrumentors:
-            instrumentor.uninstrument()
-            logger.debug(f"Uninstrumented {instrumentor.__class__.__name__}")
-        self._active_instrumentors = []
-        self._has_agentic_library = False
+def _uninstrument_all_internal():
+    """Stop monitoring and uninstrument all packages."""
+    global _active_instrumentors, _has_agentic_library
+    _stop_monitoring_internal()
+    for instrumentor in _active_instrumentors:
+        instrumentor.uninstrument()
+        logger.debug(f"Uninstrumented {instrumentor.__class__.__name__}")
+    _active_instrumentors = []
+    _has_agentic_library = False
 
 
 # Define the structure for instrumentor configurations
@@ -229,7 +221,7 @@ AGENTIC_LIBRARIES: dict[str, InstrumentorConfig] = {
 TARGET_PACKAGES = set(PROVIDERS.keys()) | set(AGENTIC_LIBRARIES.keys())
 
 # Create a single instance of the manager
-_manager = InstrumentationManager()
+# _manager = InstrumentationManager() # Removed
 
 
 @dataclass
@@ -282,13 +274,14 @@ def instrument_one(loader: InstrumentorLoader) -> Optional[BaseInstrumentor]:
 
 def instrument_all():
     """Start monitoring and instrumenting packages if not already started."""
-    if not _manager._active_instrumentors:
-        _manager.start_monitoring()
+    # Check if active_instrumentors is empty, as a proxy for not started.
+    if not _active_instrumentors:
+        _start_monitoring_internal()
 
 
 def uninstrument_all():
     """Stop monitoring and uninstrument all packages."""
-    _manager.uninstrument_all()
+    _uninstrument_all_internal()
 
 
 def get_active_libraries() -> set[str]:
