@@ -60,12 +60,16 @@ def get_message_attributes(
                 MessageStopEvent,
                 MessageStreamEvent,
             )
+            from anthropic import Stream
 
             if isinstance(return_value, Message):
                 attributes.update(get_message_response_attributes(return_value))
 
                 if hasattr(return_value, "content"):
                     attributes.update(get_tool_attributes(return_value.content))
+            elif isinstance(return_value, Stream):
+                for event in return_value:
+                    attributes.update(get_stream_event_attributes(event))
             elif isinstance(return_value, MessageStreamEvent):
                 attributes.update(get_stream_attributes(return_value))
             elif isinstance(
@@ -511,4 +515,27 @@ def get_stream_event_attributes(event: Any) -> AttributeMap:
                 attributes[SpanAttributes.LLM_RESPONSE_FINISH_REASON] = stop_reason
                 attributes[MessageAttributes.COMPLETION_FINISH_REASON.format(i=0)] = stop_reason
 
+    elif event_type == "RawMessageStartEvent":
+        if hasattr(event, "message"):
+            if hasattr(event.message, "usage"):
+                usage = event.message.usage
+                if hasattr(usage, "input_tokens"):
+                    input_tokens = usage.input_tokens
+                    attributes[SpanAttributes.LLM_USAGE_PROMPT_TOKENS] = input_tokens
+
+                if hasattr(usage, "output_tokens"):
+                    output_tokens = usage.output_tokens
+                    attributes[SpanAttributes.LLM_USAGE_COMPLETION_TOKENS] = output_tokens
+
+                if hasattr(usage, "input_tokens") and hasattr(usage, "output_tokens"):
+                    total_tokens = usage.input_tokens + usage.output_tokens
+                    attributes[SpanAttributes.LLM_USAGE_TOTAL_TOKENS] = total_tokens
+
+    elif event_type == "RawMessageDeltaEvent":
+        if hasattr(event, "delta"):
+            if hasattr(event.delta, "stop_reason"):
+                stop_reason = event.delta.stop_reason
+                attributes[SpanAttributes.LLM_RESPONSE_STOP_REASON] = stop_reason
+                attributes[SpanAttributes.LLM_RESPONSE_FINISH_REASON] = stop_reason
+                attributes[MessageAttributes.COMPLETION_FINISH_REASON.format(i=0)] = stop_reason
     return attributes
