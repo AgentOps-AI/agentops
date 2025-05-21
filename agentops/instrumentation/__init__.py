@@ -149,28 +149,6 @@ def _check_existing_imports():
                 _instrumenting_packages.discard(root)
 
 
-def _start_monitoring_internal():
-    """Start monitoring imports and check already imported packages."""
-    builtins.__import__ = _import_monitor
-    _check_existing_imports()
-
-
-def _stop_monitoring_internal():
-    """Stop monitoring imports and restore the original import function."""
-    builtins.__import__ = _original_builtins_import
-
-
-def _uninstrument_all_internal():
-    """Stop monitoring and uninstrument all packages."""
-    global _active_instrumentors, _has_agentic_library
-    _stop_monitoring_internal()
-    for instrumentor in _active_instrumentors:
-        instrumentor.uninstrument()
-        logger.debug(f"Uninstrumented {instrumentor.__class__.__name__}")
-    _active_instrumentors = []
-    _has_agentic_library = False
-
-
 # Define the structure for instrumentor configurations
 class InstrumentorConfig(TypedDict):
     module_name: str
@@ -276,12 +254,19 @@ def instrument_all():
     """Start monitoring and instrumenting packages if not already started."""
     # Check if active_instrumentors is empty, as a proxy for not started.
     if not _active_instrumentors:
-        _start_monitoring_internal()
+        builtins.__import__ = _import_monitor
+        _check_existing_imports()
 
 
 def uninstrument_all():
     """Stop monitoring and uninstrument all packages."""
-    _uninstrument_all_internal()
+    global _active_instrumentors, _has_agentic_library
+    builtins.__import__ = _original_builtins_import
+    for instrumentor in _active_instrumentors:
+        instrumentor.uninstrument()
+        logger.debug(f"Uninstrumented {instrumentor.__class__.__name__}")
+    _active_instrumentors = []
+    _has_agentic_library = False
 
 
 def get_active_libraries() -> set[str]:
