@@ -127,28 +127,6 @@ def _import_monitor(name: str, globals_dict=None, locals_dict=None, fromlist=(),
     return _original_builtins_import(name, globals_dict, locals_dict, fromlist, level)
 
 
-def _check_existing_imports():
-    """Check and instrument packages that were already imported before monitoring started."""
-    global _instrumenting_packages
-    for name in list(sys.modules.keys()):
-        module = sys.modules.get(name)
-        if not isinstance(module, ModuleType):
-            continue
-
-        root = name.split(".", 1)[0]
-        if _has_agentic_library and root in PROVIDERS:
-            continue
-
-        if root in TARGET_PACKAGES and root not in _instrumenting_packages and not _is_package_instrumented(root):
-            _instrumenting_packages.add(root)
-            try:
-                _perform_instrumentation(root)
-            except Exception as e:
-                logger.error(f"Error instrumenting {root}: {str(e)}")
-            finally:
-                _instrumenting_packages.discard(root)
-
-
 # Define the structure for instrumentor configurations
 class InstrumentorConfig(TypedDict):
     module_name: str
@@ -255,7 +233,24 @@ def instrument_all():
     # Check if active_instrumentors is empty, as a proxy for not started.
     if not _active_instrumentors:
         builtins.__import__ = _import_monitor
-        _check_existing_imports()
+        global _instrumenting_packages
+        for name in list(sys.modules.keys()):
+            module = sys.modules.get(name)
+            if not isinstance(module, ModuleType):
+                continue
+
+            root = name.split(".", 1)[0]
+            if _has_agentic_library and root in PROVIDERS:
+                continue
+
+            if root in TARGET_PACKAGES and root not in _instrumenting_packages and not _is_package_instrumented(root):
+                _instrumenting_packages.add(root)
+                try:
+                    _perform_instrumentation(root)
+                except Exception as e:
+                    logger.error(f"Error instrumenting {root}: {str(e)}")
+                finally:
+                    _instrumenting_packages.discard(root)
 
 
 def uninstrument_all():
