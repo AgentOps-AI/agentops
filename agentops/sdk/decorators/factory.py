@@ -1,11 +1,12 @@
 import inspect
 import functools
 import asyncio
+from typing import Any, Dict, Callable, Optional, Union
 
 import wrapt  # type: ignore
 
 from agentops.logging import logger
-from agentops.sdk.core import TracingCore
+from agentops.sdk.core import TracingCore, TraceContext
 from agentops.semconv.span_kinds import SpanKind
 
 from .utility import (
@@ -18,169 +19,130 @@ from .utility import (
 )
 
 
-def create_entity_decorator(entity_kind: str):
+def create_entity_decorator(entity_kind: str) -> Callable[..., Any]:
     """
-    Factory function that creates decorators for specific entity kinds.
-
-    Args:
-        entity_kind: The type of operation being performed (SpanKind.*)
-
-    Returns:
-        A decorator with optional arguments for name and version
+    Factory that creates decorators for instrumenting functions and classes.
+    Handles different entity kinds (e.g., SESSION, TASK) and function types (sync, async, generator).
     """
 
-    def decorator(wrapped=None, *, name=None, version=None, tags=None):
-        # Handle case where decorator is called with parameters
+    def decorator(
+        wrapped: Optional[Callable[..., Any]] = None,
+        *,
+        name: Optional[str] = None,
+        version: Optional[Any] = None,
+        tags: Optional[Union[list, dict]] = None,
+    ) -> Callable[..., Any]:
         if wrapped is None:
             return functools.partial(decorator, name=name, version=version, tags=tags)
 
-        # Handle class decoration
         if inspect.isclass(wrapped):
-            # Create a proxy class that wraps the original class
+            # Class decoration wraps __init__ and aenter/aexit for context management.
+            # For SpanKind.SESSION, this creates a span for __init__ or async context, not instance lifetime.
             class WrappedClass(wrapped):
-                def __init__(self, *args, **kwargs):
-                    operation_name = name or wrapped.__name__
-                    self._agentops_span_context_manager = _create_as_current_span(operation_name, entity_kind, version)
+                def __init__(self, *args: Any, **kwargs: Any):
+                    op_name = name or wrapped.__name__
+                    self._agentops_span_context_manager = _create_as_current_span(op_name, entity_kind, version)
                     self._agentops_active_span = self._agentops_span_context_manager.__enter__()
-
                     try:
                         _record_entity_input(self._agentops_active_span, args, kwargs)
                     except Exception as e:
-                        logger.warning(f"Failed to record entity input: {e}")
-
-                    # Call the original __init__
+                        logger.warning(f"Failed to record entity input for class {op_name}: {e}")
                     super().__init__(*args, **kwargs)
 
-                async def __aenter__(self):
-                    # Added for async context manager support
-                    # This allows using the class with 'async with' statement
-
-                    # If span is already created in __init__, just return self
+                async def __aenter__(self) -> "WrappedClass":
                     if hasattr(self, "_agentops_active_span") and self._agentops_active_span is not None:
                         return self
-
-                    # Otherwise create span (for backward compatibility)
-                    operation_name = name or wrapped.__name__
-                    self._agentops_span_context_manager = _create_as_current_span(operation_name, entity_kind, version)
+                    op_name = name or wrapped.__name__
+                    self._agentops_span_context_manager = _create_as_current_span(op_name, entity_kind, version)
                     self._agentops_active_span = self._agentops_span_context_manager.__enter__()
                     return self
 
-                async def __aexit__(self, exc_type, exc_val, exc_tb):
-                    # Added for proper async cleanup
-                    # This ensures spans are properly closed when using 'async with'
-
+                async def __aexit__(self, exc_type: Any, exc_val: Any, exc_tb: Any) -> None:
                     if hasattr(self, "_agentops_active_span") and hasattr(self, "_agentops_span_context_manager"):
                         try:
                             _record_entity_output(self._agentops_active_span, self)
                         except Exception as e:
-                            logger.warning(f"Failed to record entity output: {e}")
-
+                            logger.warning(f"Failed to record entity output for class instance: {e}")
                         self._agentops_span_context_manager.__exit__(exc_type, exc_val, exc_tb)
-                        # Clear the span references after cleanup
                         self._agentops_span_context_manager = None
                         self._agentops_active_span = None
 
-            # Preserve metadata of the original class
             WrappedClass.__name__ = wrapped.__name__
             WrappedClass.__qualname__ = wrapped.__qualname__
             WrappedClass.__module__ = wrapped.__module__
             WrappedClass.__doc__ = wrapped.__doc__
-
             return WrappedClass
 
-        # Create the actual decorator wrapper function for functions
         @wrapt.decorator
-        def wrapper(wrapped, instance, args, kwargs):
-            # Skip instrumentation if tracer not initialized
+        def wrapper(
+            wrapped_func: Callable[..., Any], instance: Optional[Any], args: tuple, kwargs: Dict[str, Any]
+        ) -> Any:
             if not TracingCore.get_instance().initialized:
-                return wrapped(*args, **kwargs)
+                return wrapped_func(*args, **kwargs)
 
-            # Use provided name or function name
-            operation_name = name or wrapped.__name__
+            operation_name = name or wrapped_func.__name__
+            is_async = asyncio.iscoroutinefunction(wrapped_func)
+            is_generator = inspect.isgeneratorfunction(wrapped_func)
+            is_async_generator = inspect.isasyncgenfunction(wrapped_func)
 
-            # Handle different types of functions (sync, async, generators)
-            is_async = asyncio.iscoroutinefunction(wrapped) or inspect.iscoroutinefunction(wrapped)
-            is_generator = inspect.isgeneratorfunction(wrapped)
-            is_async_generator = inspect.isasyncgenfunction(wrapped)
-
-            # If it's a SESSION kind, we use start_trace/end_trace
             if entity_kind == SpanKind.SESSION:
                 if is_generator or is_async_generator:
-                    # Using start_trace/end_trace for generators decorated with @session might be complex
-                    # due to the nature of yielding. For now, log a warning and fall back to existing generator handling OR disallow.
-                    # Let's keep existing generator handling for now, which creates a single span.
-                    # A true "session per generator invocation" would require more complex handling.
                     logger.warning(
-                        f"@agentops.session decorator used on a generator function '{operation_name}'. \
-This will create a single span for the generator's instantiation, not a long-running trace for its entire execution."
+                        f"@agentops.trace on generator '{operation_name}' creates a single span, not a full trace."
                     )
-                    # Fallthrough to existing generator logic below for non-session spans
-                    pass  # Explicitly fall through
-
+                    # Fallthrough to existing generator logic which creates a single span.
                 elif is_async:
 
-                    async def _wrapped_session_async():
-                        trace_context = None
+                    async def _wrapped_session_async() -> Any:
+                        trace_context: Optional[TraceContext] = None
                         try:
                             trace_context = TracingCore.get_instance().start_trace(trace_name=operation_name, tags=tags)
                             if not trace_context:
                                 logger.error(
-                                    f"Failed to start trace for @session '{operation_name}'. Executing function without AgentOps trace."
+                                    f"Failed to start trace for @trace '{operation_name}'. Executing without trace."
                                 )
-                                return await wrapped(*args, **kwargs)
-
-                            # Record input if possible (span is in trace_context.span)
+                                return await wrapped_func(*args, **kwargs)
                             try:
                                 _record_entity_input(trace_context.span, args, kwargs)
                             except Exception as e:
-                                logger.warning(f"Failed to record entity input for @session '{operation_name}': {e}")
-
-                            result = await wrapped(*args, **kwargs)
-
+                                logger.warning(f"Input recording failed for @trace '{operation_name}': {e}")
+                            result = await wrapped_func(*args, **kwargs)
                             try:
                                 _record_entity_output(trace_context.span, result)
                             except Exception as e:
-                                logger.warning(f"Failed to record entity output for @session '{operation_name}': {e}")
-
+                                logger.warning(f"Output recording failed for @trace '{operation_name}': {e}")
                             TracingCore.get_instance().end_trace(trace_context, "Success")
                             return result
                         except Exception:
                             if trace_context:
                                 TracingCore.get_instance().end_trace(trace_context, "Failure")
-                            # record_exception on trace_context.span might be an option too
-                            # trace_context.span.record_exception(e) # If we want it on the span directly
                             raise
                         finally:
-                            # Ensure trace is ended if not already (e.g. early exit without exception but before success end_trace)
                             if trace_context and trace_context.span.is_recording():
                                 logger.warning(
-                                    f"Trace for @session '{operation_name}' was not explicitly ended. Ending as 'Unknown'."
+                                    f"Trace for @trace '{operation_name}' not explicitly ended. Ending as 'Unknown'."
                                 )
                                 TracingCore.get_instance().end_trace(trace_context, "Unknown")
 
                     return _wrapped_session_async()
                 else:  # Sync function for SpanKind.SESSION
-                    trace_context = None
+                    trace_context: Optional[TraceContext] = None
                     try:
                         trace_context = TracingCore.get_instance().start_trace(trace_name=operation_name, tags=tags)
                         if not trace_context:
                             logger.error(
-                                f"Failed to start trace for @session '{operation_name}'. Executing function without AgentOps trace."
+                                f"Failed to start trace for @trace '{operation_name}'. Executing without trace."
                             )
-                            return wrapped(*args, **kwargs)
-
+                            return wrapped_func(*args, **kwargs)
                         try:
                             _record_entity_input(trace_context.span, args, kwargs)
                         except Exception as e:
-                            logger.warning(f"Failed to record entity input for @session '{operation_name}': {e}")
-
-                        result = wrapped(*args, **kwargs)
-
+                            logger.warning(f"Input recording failed for @trace '{operation_name}': {e}")
+                        result = wrapped_func(*args, **kwargs)
                         try:
                             _record_entity_output(trace_context.span, result)
                         except Exception as e:
-                            logger.warning(f"Failed to record entity output for @session '{operation_name}': {e}")
-
+                            logger.warning(f"Output recording failed for @trace '{operation_name}': {e}")
                         TracingCore.get_instance().end_trace(trace_context, "Success")
                         return result
                     except Exception:
@@ -190,80 +152,72 @@ This will create a single span for the generator's instantiation, not a long-run
                     finally:
                         if trace_context and trace_context.span.is_recording():
                             logger.warning(
-                                f"Trace for @session '{operation_name}' was not explicitly ended. Ending as 'Unknown'."
+                                f"Trace for @trace '{operation_name}' not explicitly ended. Ending as 'Unknown'."
                             )
                             TracingCore.get_instance().end_trace(trace_context, "Unknown")
 
-            # Existing logic for non-SESSION kinds or generators under @session (as per above warning)
-            # Handle generator functions
-            if is_generator:  # This 'if' will also catch generators decorated with @session due to fallthrough
-                # Use the old approach for generators
-                span, ctx, token = _make_span(operation_name, entity_kind, version)
+            # Logic for non-SESSION kinds or generators under @trace (as per fallthrough)
+            elif is_generator:
+                span, _, token = _make_span(
+                    operation_name, entity_kind, version=version, attributes={"tags": tags} if tags else None
+                )
                 try:
                     _record_entity_input(span, args, kwargs)
                 except Exception as e:
-                    logger.warning(f"Failed to record entity input: {e}")
-
-                result = wrapped(*args, **kwargs)
+                    logger.warning(f"Input recording failed for '{operation_name}': {e}")
+                result = wrapped_func(*args, **kwargs)
                 return _process_sync_generator(span, result)
-
-            # Handle async generator functions
-            elif is_async_generator:  # This 'elif' will also catch async generators decorated with @session
-                # Use the old approach for async generators
-                span, ctx, token = _make_span(operation_name, entity_kind, version)
+            elif is_async_generator:
+                span, _, token = _make_span(
+                    operation_name, entity_kind, version=version, attributes={"tags": tags} if tags else None
+                )
                 try:
                     _record_entity_input(span, args, kwargs)
                 except Exception as e:
-                    logger.warning(f"Failed to record entity input: {e}")
-
-                result = wrapped(*args, **kwargs)
+                    logger.warning(f"Input recording failed for '{operation_name}': {e}")
+                result = wrapped_func(*args, **kwargs)
                 return _process_async_generator(span, token, result)
+            elif is_async:
 
-            # Handle async functions (non-SESSION)
-            elif is_async:  # This is for entity_kind != SpanKind.SESSION
-
-                async def _wrapped_async():
-                    with _create_as_current_span(operation_name, entity_kind, version) as span:
+                async def _wrapped_async() -> Any:
+                    with _create_as_current_span(
+                        operation_name, entity_kind, version=version, attributes={"tags": tags} if tags else None
+                    ) as span:
                         try:
                             _record_entity_input(span, args, kwargs)
                         except Exception as e:
-                            logger.warning(f"Failed to record entity input: {e}")
-
+                            logger.warning(f"Input recording failed for '{operation_name}': {e}")
                         try:
-                            result = await wrapped(*args, **kwargs)
+                            result = await wrapped_func(*args, **kwargs)
                             try:
                                 _record_entity_output(span, result)
                             except Exception as e:
-                                logger.warning(f"Failed to record entity output: {e}")
+                                logger.warning(f"Output recording failed for '{operation_name}': {e}")
                             return result
                         except Exception as e:
                             span.record_exception(e)
                             raise
 
                 return _wrapped_async()
-
-            # Handle sync functions (non-SESSION)
-            else:  # This is for entity_kind != SpanKind.SESSION
-                with _create_as_current_span(operation_name, entity_kind, version) as span:
+            else:  # Sync function for non-SESSION kinds
+                with _create_as_current_span(
+                    operation_name, entity_kind, version=version, attributes={"tags": tags} if tags else None
+                ) as span:
                     try:
                         _record_entity_input(span, args, kwargs)
-
                     except Exception as e:
-                        logger.warning(f"Failed to record entity input: {e}")
-
+                        logger.warning(f"Input recording failed for '{operation_name}': {e}")
                     try:
-                        result = wrapped(*args, **kwargs)
-
+                        result = wrapped_func(*args, **kwargs)
                         try:
                             _record_entity_output(span, result)
                         except Exception as e:
-                            logger.warning(f"Failed to record entity output: {e}")
+                            logger.warning(f"Output recording failed for '{operation_name}': {e}")
                         return result
                     except Exception as e:
                         span.record_exception(e)
                         raise
 
-        # Return the wrapper for functions, we already returned WrappedClass for classes
-        return wrapper(wrapped)  # type: ignore
+        return wrapper(wrapped)
 
     return decorator

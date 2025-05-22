@@ -1,5 +1,5 @@
 import atexit
-from typing import Optional
+from typing import Optional, Any
 
 from agentops.client.api import ApiClient
 from agentops.config import Config
@@ -49,7 +49,7 @@ class Client:
 
     api: ApiClient
 
-    def __new__(cls, *args, **kwargs):
+    def __new__(cls, *args: Any, **kwargs: Any) -> "Client":
         if cls.__instance is None:
             cls.__instance = super(Client, cls).__new__(cls)
             # Initialize instance variables that should only be set once per instance
@@ -69,7 +69,7 @@ class Client:
             # self._init_trace_context = None # Already done in __new__
             # self._legacy_session_for_init_trace = None # Already done in __new__
 
-    def init(self, **kwargs) -> None:  # Return type updated to None
+    def init(self, **kwargs: Any) -> None:  # Return type updated to None
         # Recreate the Config object to parse environment variables at the time of initialization
         # This allows re-init with new env vars if needed, though true singletons usually init once.
         self.config = Config()
@@ -168,7 +168,7 @@ class Client:
             self._initialized = True  # Successfully initialized, just no auto-trace
             return None  # No auto-session, so return None
 
-    def configure(self, **kwargs):
+    def configure(self, **kwargs: Any) -> None:
         """Update client configuration"""
         self.config.configure(**kwargs)
 
@@ -177,7 +177,7 @@ class Client:
         return self._initialized
 
     @initialized.setter
-    def initialized(self, value: bool):
+    def initialized(self, value: bool) -> None:
         if self._initialized and self._initialized != value:
             # Allow re-setting to False if we are intentionally re-initializing
             # This logic is now partly in init() to handle re-init cases

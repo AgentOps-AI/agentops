@@ -6,7 +6,7 @@ import platform
 import sys
 import os
 import psutil
-from typing import Optional
+from typing import Optional, Any
 
 from opentelemetry import metrics, trace
 from opentelemetry.exporter.otlp.proto.http.metric_exporter import OTLPMetricExporter
@@ -14,7 +14,7 @@ from opentelemetry.exporter.otlp.proto.http.trace_exporter import OTLPSpanExport
 from opentelemetry.sdk.metrics import MeterProvider
 from opentelemetry.sdk.metrics.export import PeriodicExportingMetricReader
 from opentelemetry.sdk.resources import Resource
-from opentelemetry.sdk.trace import TracerProvider
+from opentelemetry.sdk.trace import TracerProvider, Span
 from opentelemetry.sdk.trace.export import BatchSpanProcessor
 from opentelemetry import context as context_api
 
@@ -30,7 +30,7 @@ from agentops.helpers.dashboard import log_trace_url
 
 # Define TraceContext to hold span and token
 class TraceContext:
-    def __init__(self, span: trace.Span, token: Optional[context_api.Token] = None, is_init_trace: bool = False):
+    def __init__(self, span: Span, token: Optional[context_api.Token] = None, is_init_trace: bool = False):
         self.span = span
         self.token = token
         self.is_init_trace = is_init_trace  # Flag to identify the auto-started trace
@@ -216,16 +216,16 @@ class TracingCore:
 
     def __init__(self):
         """Initialize the tracing core."""
-        self._provider = None
-        self._meter_provider = None
+        self._provider: Optional[TracerProvider] = None
+        self._meter_provider: Optional[MeterProvider] = None
         self._initialized = False
-        self._config = None
+        self._config: Optional[TracingConfig] = None
         self._span_processors: list = []
 
         # Register shutdown handler
         atexit.register(self.shutdown)
 
-    def initialize(self, jwt: Optional[str] = None, **kwargs) -> None:
+    def initialize(self, jwt: Optional[str] = None, **kwargs: Any) -> None:
         """
         Initialize the tracing core with the given configuration.
 
@@ -296,7 +296,10 @@ class TracingCore:
     @property
     def config(self) -> TracingConfig:
         """Get the tracing configuration."""
-        return self._config  # type: ignore
+        if self._config is None:
+            # This case should ideally not be reached if initialized properly
+            raise AgentOpsClientNotInitializedException("TracingCore config accessed before initialization.")
+        return self._config
 
     def shutdown(self) -> None:
         """Shutdown the tracing core."""
@@ -356,7 +359,7 @@ class TracingCore:
         return trace.get_tracer(name)
 
     @classmethod
-    def initialize_from_config(cls, config, **kwargs):
+    def initialize_from_config(cls, config_obj: Any, **kwargs: Any) -> None:
         """
         Initialize the tracing core from a configuration object.
 
@@ -368,9 +371,9 @@ class TracingCore:
 
         # Extract tracing-specific configuration
         # For TracingConfig, we can directly pass it to initialize
-        if isinstance(config, dict):
+        if isinstance(config_obj, dict):
             # If it's already a dict (TracingConfig), use it directly
-            tracing_kwargs = config.copy()
+            tracing_kwargs = config_obj.copy()
         else:
             # For backward compatibility with old Config object
             # Extract tracing-specific configuration from the Config object
@@ -378,15 +381,15 @@ class TracingCore:
             tracing_kwargs = {
                 k: v
                 for k, v in {
-                    "exporter": getattr(config, "exporter", None),
-                    "processor": getattr(config, "processor", None),
-                    "exporter_endpoint": getattr(config, "exporter_endpoint", None),
-                    "max_queue_size": getattr(config, "max_queue_size", 512),
-                    "max_wait_time": getattr(config, "max_wait_time", 5000),
-                    "export_flush_interval": getattr(config, "export_flush_interval", 1000),
-                    "api_key": getattr(config, "api_key", None),
-                    "project_id": getattr(config, "project_id", None),
-                    "endpoint": getattr(config, "endpoint", None),
+                    "exporter": getattr(config_obj, "exporter", None),
+                    "processor": getattr(config_obj, "processor", None),
+                    "exporter_endpoint": getattr(config_obj, "exporter_endpoint", None),
+                    "max_queue_size": getattr(config_obj, "max_queue_size", 512),
+                    "max_wait_time": getattr(config_obj, "max_wait_time", 5000),
+                    "export_flush_interval": getattr(config_obj, "export_flush_interval", 1000),
+                    "api_key": getattr(config_obj, "api_key", None),
+                    "project_id": getattr(config_obj, "project_id", None),
+                    "endpoint": getattr(config_obj, "endpoint", None),
                 }.items()
                 if v is not None
             }
@@ -419,7 +422,7 @@ class TracingCore:
 
         from agentops.sdk.decorators.utility import _make_span  # Local import
 
-        attributes = {}
+        attributes: dict = {}
         if tags:
             if isinstance(tags, list):
                 attributes["tags"] = tags

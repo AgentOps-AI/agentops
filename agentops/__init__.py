@@ -5,7 +5,7 @@ from agentops.legacy import (
     track_agent,
     track_tool,
     end_all_sessions,
-    Session,
+    Session as LegacySession,
     ToolEvent,
     ErrorEvent,
     ActionEvent,
@@ -104,7 +104,7 @@ def init(
     )
 
 
-def configure(**kwargs):
+def configure(**kwargs: Any) -> None:
     """Update client configuration
 
     Args:
@@ -219,7 +219,7 @@ __all__ = [
     "track_agent",
     "track_tool",
     "end_all_sessions",
-    "Session",
+    "LegacySession",
     "ToolEvent",
     "ErrorEvent",
     "ActionEvent",

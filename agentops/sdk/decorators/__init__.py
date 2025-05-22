@@ -1,8 +1,6 @@
 """
 Decorators for instrumenting code with AgentOps.
-
-This module provides a simplified set of decorators for instrumenting functions
-and methods with appropriate span kinds. Decorators can be used with or without parentheses.
+Provides @trace for creating trace-level spans (sessions) and other decorators for nested spans.
 """
 
 import functools
@@ -23,7 +21,7 @@ trace = create_entity_decorator(SpanKind.SESSION)
 # For backward compatibility: @session decorator calls @trace decorator
 @functools.wraps(trace)
 def session(*args, **kwargs):
-    # yellow color
+    """@deprecated Use @agentops.trace instead. Wraps the @trace decorator for backward compatibility."""
     logger.info(colored("@agentops.session decorator is deprecated. Please use @agentops.trace instead.", "yellow"))
     # If called as @session or @session(...)
     if not args or not callable(args[0]):  # called with kwargs like @session(name=...)
