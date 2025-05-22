@@ -169,7 +169,7 @@ AGENTIC_LIBRARIES: dict[str, InstrumentorConfig] = {
     "agents": {
         "module_name": "agentops.instrumentation.openai_agents",
         "class_name": "OpenAIAgentsInstrumentor",
-        "min_version": "0.1.0",
+        "min_version": "0.0.1",
     },
 }
 
