@@ -22,9 +22,17 @@ from agentops.exceptions import AgentOpsClientNotInitializedException
 from agentops.logging import logger, setup_print_logger
 from agentops.sdk.processors import InternalSpanProcessor
 from agentops.sdk.types import TracingConfig
-from agentops.semconv import ResourceAttributes
+from agentops.semconv import ResourceAttributes, SpanKind, SpanAttributes
 
 # No need to create shortcuts since we're using our own ResourceAttributes class now
+
+
+# Define TraceContext to hold span and token
+class TraceContext:
+    def __init__(self, span: trace.Span, token: Optional[context_api.Token] = None, is_init_trace: bool = False):
+        self.span = span
+        self.token = token
+        self.is_init_trace = is_init_trace  # Flag to identify the auto-started trace
 
 
 def get_imported_libraries():
@@ -163,12 +171,14 @@ def setup_telemetry(
         schedule_delay_millis=export_flush_interval,
     )
     provider.add_span_processor(processor)
-    provider.add_span_processor(InternalSpanProcessor())  # Catches spans for AgentOps on-terminal printing
+    internal_processor = InternalSpanProcessor()  # Catches spans for AgentOps on-terminal printing
+    provider.add_span_processor(internal_processor)
 
     # Setup metrics
-    metric_reader = PeriodicExportingMetricReader(
-        OTLPMetricExporter(endpoint=metrics_endpoint, headers={"Authorization": f"Bearer {jwt}"} if jwt else {})
+    metric_exporter = OTLPMetricExporter(
+        endpoint=metrics_endpoint, headers={"Authorization": f"Bearer {jwt}"} if jwt else {}
     )
+    metric_reader = PeriodicExportingMetricReader(metric_exporter)
     meter_provider = MeterProvider(resource=resource, metric_readers=[metric_reader])
     metrics.set_meter_provider(meter_provider)
 
@@ -176,7 +186,7 @@ def setup_telemetry(
     setup_print_logger()
 
     # Initialize root context
-    context_api.get_current()
+    # context_api.get_current() # It's better to manage context explicitly with traces
 
     logger.debug("Telemetry system initialized")
 
@@ -206,8 +216,10 @@ class TracingCore:
     def __init__(self):
         """Initialize the tracing core."""
         self._provider = None
+        self._meter_provider = None
         self._initialized = False
         self._config = None
+        self._span_processors: list = []
 
         # Register shutdown handler
         atexit.register(self.shutdown)
@@ -258,7 +270,7 @@ class TracingCore:
             self._config = config
 
             # Setup telemetry using the extracted configuration
-            self._provider, self._meter_provider = setup_telemetry(
+            provider, meter_provider = setup_telemetry(
                 service_name=config["service_name"] or "",
                 project_id=config.get("project_id"),
                 exporter_endpoint=config["exporter_endpoint"],
@@ -268,6 +280,9 @@ class TracingCore:
                 export_flush_interval=config["export_flush_interval"],
                 jwt=jwt,
             )
+
+            self._provider = provider
+            self._meter_provider = meter_provider
 
             self._initialized = True
             logger.debug("Tracing core initialized")
@@ -286,19 +301,43 @@ class TracingCore:
         """Shutdown the tracing core."""
 
         with self._lock:
-            # Perform a single flush on the SynchronousSpanProcessor (which takes care of all processors' shutdown)
-            if not self._initialized:
+            if not self._initialized or not self._provider:
                 return
-            self._provider._active_span_processor.force_flush(self.config["max_wait_time"])  # type: ignore
+
+            logger.debug("Attempting to flush span processors during shutdown...")
+            self._flush_span_processors()
 
             # Shutdown provider
-            if self._provider:
+            try:
+                self._provider.shutdown()
+            except Exception as e:
+                logger.warning(f"Error shutting down provider: {e}")
+
+            # Shutdown meter_provider
+            if hasattr(self, "_meter_provider") and self._meter_provider:
                 try:
-                    self._provider.shutdown()
+                    self._meter_provider.shutdown()
                 except Exception as e:
-                    logger.warning(f"Error shutting down provider: {e}")
+                    logger.warning(f"Error shutting down meter provider: {e}")
 
             self._initialized = False
+            logger.debug("Tracing core shut down")
+
+    def _flush_span_processors(self) -> None:
+        """Helper to force flush all span processors."""
+        if not self._provider or not hasattr(self._provider, "force_flush"):
+            logger.debug("No provider or provider cannot force_flush.")
+            return
+
+        try:
+            # OTEL SDK's TracerProvider has a force_flush method
+            # It expects timeout in seconds for force_flush
+            timeout_seconds = self.config.get("max_wait_time", 5000) / 1000
+            logger.debug(f"Forcing flush on provider with timeout: {timeout_seconds}s")
+            self._provider.force_flush(timeout_seconds)  # type: ignore
+            logger.debug("Provider force_flush completed.")
+        except Exception as e:
+            logger.warning(f"Failed to force flush provider's span processors: {e}", exc_info=True)
 
     def get_tracer(self, name: str = "agentops") -> trace.Tracer:
         """
@@ -358,3 +397,70 @@ class TracingCore:
 
         # Span types are registered in the constructor
         # No need to register them here anymore
+
+    def start_trace(
+        self, trace_name: str = "session", tags: Optional[dict | list] = None, is_init_trace: bool = False
+    ) -> Optional[TraceContext]:
+        """
+        Starts a new trace (root span) and returns its context.
+
+        Args:
+            trace_name: Name for the trace (e.g., "session", "my_custom_trace").
+            tags: Optional tags to attach to the trace span.
+            is_init_trace: Internal flag to mark if this is the automatically started init trace.
+
+        Returns:
+            A TraceContext object containing the span and context token, or None if not initialized.
+        """
+        if not self.initialized:
+            logger.warning("TracingCore not initialized. Cannot start trace.")
+            return None
+
+        from agentops.sdk.decorators.utility import _make_span  # Local import
+
+        attributes = {}
+        if tags:
+            if isinstance(tags, list):
+                attributes["tags"] = tags
+            elif isinstance(tags, dict):
+                attributes.update(tags)  # Add dict tags directly
+            else:
+                logger.warning(f"Invalid tags format: {tags}. Must be list or dict.")
+
+        # _make_span creates and starts the span, and activates it in the current context
+        # It returns: span, context_object, context_token
+        span, _, context_token = _make_span(trace_name, span_kind=SpanKind.SESSION, attributes=attributes)
+        logger.debug(f"Trace '{trace_name}' started with span ID: {span.get_span_context().span_id}")
+        return TraceContext(span, token=context_token, is_init_trace=is_init_trace)
+
+    def end_trace(self, trace_context: TraceContext, end_state: str = "Success") -> None:
+        """
+        Ends a trace (its root span) and finalizes it.
+
+        Args:
+            trace_context: The TraceContext object returned by start_trace.
+            end_state: The final state of the trace (e.g., "Success", "Failure", "Error").
+        """
+        if not self.initialized:
+            logger.warning("TracingCore not initialized. Cannot end trace.")
+            return
+
+        from agentops.sdk.decorators.utility import _finalize_span  # Local import
+
+        if not trace_context or not trace_context.span:
+            logger.warning("Invalid TraceContext or span provided to end_trace.")
+            return
+
+        span = trace_context.span
+        token = trace_context.token
+
+        logger.debug(f"Ending trace with span ID: {span.get_span_context().span_id}, end_state: {end_state}")
+
+        try:
+            span.set_attribute(SpanAttributes.AGENTOPS_SESSION_END_STATE, end_state)
+            # _finalize_span ends the span and detaches it from context if a token is provided
+            _finalize_span(span, token=token)
+            # For root spans (traces), we might want an immediate flush after they end.
+            self._flush_span_processors()
+        except Exception as e:
+            logger.error(f"Error ending trace: {e}", exc_info=True)

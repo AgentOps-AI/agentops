@@ -12,10 +12,10 @@ This module maintains backward compatibility with all these API patterns.
 from typing import Optional, Any, Dict, List, Union
 
 from agentops.logging import logger
-from agentops.sdk.core import TracingCore
-from agentops.semconv.span_kinds import SpanKind
+from agentops.sdk.core import TracingCore, TraceContext
 
 _current_session: Optional["Session"] = None
+_current_trace_context: Optional[TraceContext] = None
 
 
 class Session:
@@ -28,16 +28,29 @@ class Session:
     - end_session(): Called when a CrewAI run completes
     """
 
-    def __init__(self, span: Any, token: Any):
-        self.span = span
-        self.token = token
+    def __init__(self, trace_context: Optional[TraceContext]):
+        self.trace_context = trace_context
+
+    @property
+    def span(self) -> Optional[Any]:
+        return self.trace_context.span if self.trace_context else None
+
+    @property
+    def token(self) -> Optional[Any]:
+        return self.trace_context.token if self.trace_context else None
 
     def __del__(self):
-        try:
-            if self.span is not None:
-                self.span.end()
-        except:
-            pass
+        # __del__ is unreliable for resource cleanup.
+        # Primary cleanup should be via explicit end_session/end_trace calls.
+        # This method now only logs a warning if a legacy Session object related to an active trace
+        # is garbage collected without being explicitly ended through legacy end_session.
+        if self.trace_context and self.trace_context.span and self.trace_context.span.is_recording():
+            # Check if this trace is the client's auto-init trace using the flag on TraceContext itself.
+            if not self.trace_context.is_init_trace:
+                logger.warning(
+                    f"Legacy Session (trace ID: {self.trace_context.span.get_span_context().span_id}) \
+was garbage collected but its trace might still be recording. Ensure legacy sessions are ended with end_session()."
+                )
 
     def create_agent(self, name: Optional[str] = None, agent_id: Optional[str] = None, **kwargs):
         """
@@ -65,36 +78,9 @@ class Session:
         - end_state="Success"
         - end_state_reason="Finished Execution"
 
-        forces a flush to ensure the span is exported immediately.
+        Calls the global end_session with self and kwargs.
         """
-        if self.span is not None:
-            _set_span_attributes(self.span, kwargs)
-            self.span.end()
-            _flush_span_processors()
-
-
-def _create_session_span(tags: Union[Dict[str, Any], List[str], None] = None) -> tuple:
-    """
-    Helper function to create a session span with tags.
-
-    This is an internal function used by start_session() to create the
-    from the SDK to create a span with kind=SpanKind.SESSION.
-
-    Args:
-        tags: Optional tags to attach to the span. These tags will be
-             visible in the AgentOps dashboard and can be used for filtering.
-
-    Returns:
-        A tuple of (span, context, token) where:
-        - context is the span context
-        - token is the context token needed for detaching
-    """
-    from agentops.sdk.decorators.utility import _make_span
-
-    attributes = {}
-    if tags:
-        attributes["tags"] = tags
-    return _make_span("session", span_kind=SpanKind.SESSION, attributes=attributes)
+        end_session(session_or_status=self, **kwargs)
 
 
 def start_session(
@@ -102,7 +88,7 @@ def start_session(
 ) -> Session:
     """
     @deprecated
-    Start a new AgentOps session manually.
+    Start a new AgentOps session manually. Calls TracingCore.start_trace internally.
 
     This function creates and starts a new session span, which can be used to group
     related operations together. The session will remain active until end_session
@@ -127,44 +113,55 @@ def start_session(
     Raises:
         AgentOpsClientNotInitializedException: If the client is not initialized
     """
-    global _current_session
+    global _current_session, _current_trace_context
+    tracing_core = TracingCore.get_instance()
 
-    if not TracingCore.get_instance().initialized:
+    if not tracing_core.initialized:
         from agentops import Client
 
-        # Pass auto_start_session=False to prevent circular dependency
         try:
             Client().init(auto_start_session=False)
-            # If initialization failed (returned None), create a dummy session
-            if not TracingCore.get_instance().initialized:
+            if not tracing_core.initialized:
                 logger.warning(
-                    "AgentOps client initialization failed. Creating a dummy session that will not send data."
+                    "AgentOps client initialization failed during legacy start_session. Creating a dummy session."
                 )
-                # Create a dummy session that won't send data but won't throw exceptions
-                dummy_session = Session(None, None)
+                dummy_trace_context = None
+                dummy_session = Session(dummy_trace_context)
                 _current_session = dummy_session
+                _current_trace_context = dummy_trace_context
                 return dummy_session
         except Exception as e:
             logger.warning(
-                f"AgentOps client initialization failed: {str(e)}. Creating a dummy session that will not send data."
+                f"AgentOps client initialization failed during legacy start_session: {str(e)}. Creating a dummy session."
             )
-            # Create a dummy session that won't send data but won't throw exceptions
-            dummy_session = Session(None, None)
+            dummy_trace_context = None
+            dummy_session = Session(dummy_trace_context)
             _current_session = dummy_session
+            _current_trace_context = dummy_trace_context
             return dummy_session
 
-    span, ctx, token = _create_session_span(tags)
-    session = Session(span, token)
+    trace_context = tracing_core.start_trace(trace_name="session", tags=tags)
 
-    # Set the global session reference
+    if trace_context is None:
+        logger.error("Failed to start trace using TracingCore. Returning a dummy session.")
+        dummy_session = Session(None)
+        _current_session = dummy_session
+        _current_trace_context = None
+        return dummy_session
+
+    session = Session(trace_context)
+
     _current_session = session
+    _current_trace_context = trace_context
 
-    # Also register with the client's session registry for consistent behavior
     try:
         import agentops.client.client
 
         agentops.client.client._active_session = session
-    except Exception:
+        if hasattr(agentops.client.client, "_active_trace_context"):
+            agentops.client.client._active_trace_context = trace_context
+
+    except (ImportError, AttributeError):
         pass
 
     return session
@@ -172,36 +169,23 @@ def start_session(
 
 def _set_span_attributes(span: Any, attributes: Dict[str, Any]) -> None:
     """
-    Helper to set attributes on a span.
-
-    Args:
-        span: The span to set attributes on
-        attributes: The attributes to set as a dictionary
+    Helper to set attributes on a span. Primarily for end_state_reason or other legacy attributes.
+    The main end_state is handled by TracingCore.end_trace.
     """
-    if span is None:
+    if span is None or not attributes:
         return
 
     for key, value in attributes.items():
-        span.set_attribute(f"agentops.status.{key}", str(value))
-
-
-def _flush_span_processors() -> None:
-    """
-    Helper to force flush all span processors.
-    """
-    try:
-        from opentelemetry.trace import get_tracer_provider
-
-        tracer_provider = get_tracer_provider()
-        tracer_provider.force_flush()  # type: ignore
-    except Exception as e:
-        logger.warning(f"Failed to force flush span processor: {e}")
+        if key.lower() == "end_state" and "end_state" in attributes:
+            pass
+        else:
+            span.set_attribute(f"agentops.legacy.{key}", str(value))
 
 
 def end_session(session_or_status: Any = None, **kwargs) -> None:
     """
     @deprecated
-    End a previously started AgentOps session.
+    End a previously started AgentOps session. Calls TracingCore.end_trace internally.
 
     This function ends the session span and detaches the context token,
     completing the session lifecycle.
@@ -223,84 +207,67 @@ def end_session(session_or_status: Any = None, **kwargs) -> None:
                  When called this way, the function will use the most recently
                  created session via start_session().
     """
-    global _current_session
+    global _current_session, _current_trace_context
+    tracing_core = TracingCore.get_instance()
 
-    from agentops.sdk.decorators.utility import _finalize_span
-    from agentops.sdk.core import TracingCore
-
-    if not TracingCore.get_instance().initialized:
+    if not tracing_core.initialized:
         logger.debug("Ignoring end_session call - TracingCore not initialized")
         return
 
-    # Clear client active session reference
+    target_trace_context: Optional[TraceContext] = None
+    end_state_from_args = "Success"
+    extra_attributes = kwargs.copy()
+
+    if isinstance(session_or_status, Session):
+        target_trace_context = session_or_status.trace_context
+        if "end_state" in extra_attributes:
+            end_state_from_args = extra_attributes.pop("end_state")
+    elif isinstance(session_or_status, str):
+        end_state_from_args = session_or_status
+        target_trace_context = _current_trace_context
+        if "end_state" in extra_attributes:
+            end_state_from_args = extra_attributes.pop("end_state")
+    elif session_or_status is None and kwargs:
+        target_trace_context = _current_trace_context
+        if "end_state" in extra_attributes:
+            end_state_from_args = extra_attributes.pop("end_state")
+    else:
+        target_trace_context = _current_trace_context
+        if "end_state" in extra_attributes:
+            end_state_from_args = extra_attributes.pop("end_state")
+
+    if not target_trace_context:
+        logger.warning(
+            "end_session called but no active trace context found. Current global session might be None or dummy."
+        )
+        return
+
+    if target_trace_context.span and extra_attributes:
+        _set_span_attributes(target_trace_context.span, extra_attributes)
+
+    tracing_core.end_trace(target_trace_context, end_state=end_state_from_args)
+
+    if target_trace_context is _current_trace_context:
+        _current_session = None
+        _current_trace_context = None
+
     try:
         import agentops.client.client
 
-        if session_or_status is None and kwargs:
-            if _current_session is agentops.client.client._active_session:
-                agentops.client.client._active_session = None
-        elif hasattr(session_or_status, "span"):
-            if session_or_status is agentops.client.client._active_session:
-                agentops.client.client._active_session = None
-    except Exception:
+        if (
+            hasattr(agentops.client.client, "_active_trace_context")
+            and agentops.client.client._active_trace_context is target_trace_context
+        ):
+            agentops.client.client._active_trace_context = None
+            agentops.client.client._active_session = None
+        elif (
+            hasattr(agentops.client.client, "_init_trace_context")
+            and agentops.client.client._init_trace_context is target_trace_context
+        ):
+            logger.debug("Legacy end_session was called on the client's auto-initialized trace. This is unusual.")
+
+    except (ImportError, AttributeError):
         pass
-
-    # In some old implementations, and in crew < 0.10.5 `end_session` will be
-    # called with a single string as a positional argument like: "Success"
-
-    # Handle the CrewAI < 0.105.0 integration pattern where end_session is called
-    # with only named parameters. In this pattern, CrewAI does not keep a reference
-    # to the Session object, instead it calls:
-    #
-    # agentops.end_session(
-    #     end_state="Success",
-    #     end_state_reason="Finished Execution",
-    #     is_auto_end=True
-    # )
-    if session_or_status is None and kwargs:
-        if _current_session is not None:
-            try:
-                if _current_session.span is not None:
-                    _set_span_attributes(_current_session.span, kwargs)
-                    _finalize_span(_current_session.span, _current_session.token)
-                    _flush_span_processors()
-                _current_session = None
-            except Exception as e:
-                logger.warning(f"Error ending current session: {e}")
-                # Fallback: try direct span ending
-                try:
-                    if hasattr(_current_session.span, "end"):
-                        _current_session.span.end()
-                        _current_session = None
-                except:
-                    pass
-        return
-
-    # Handle the standard pattern and CrewAI >= 0.105.0 pattern where a Session object is passed.
-    # In both cases, we call _finalize_span with the span and token from the Session.
-    # This is the most direct and precise way to end a specific session.
-    if hasattr(session_or_status, "span") and hasattr(session_or_status, "token"):
-        try:
-            # Set attributes and finalize the span
-            if session_or_status.span is not None:
-                _set_span_attributes(session_or_status.span, kwargs)
-            if session_or_status.span is not None:
-                _finalize_span(session_or_status.span, session_or_status.token)
-                _flush_span_processors()
-
-            # Clear the global session reference if this is the current session
-            if _current_session is session_or_status:
-                _current_session = None
-        except Exception as e:
-            logger.warning(f"Error ending session object: {e}")
-            # Fallback: try direct span ending
-            try:
-                if hasattr(session_or_status.span, "end"):
-                    session_or_status.span.end()
-                    if _current_session is session_or_status:
-                        _current_session = None
-            except:
-                pass
 
 
 def end_all_sessions():
