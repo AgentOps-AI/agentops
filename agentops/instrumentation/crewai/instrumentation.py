@@ -14,6 +14,8 @@ from opentelemetry.sdk.resources import SERVICE_NAME, TELEMETRY_SDK_NAME, DEPLOY
 from agentops.instrumentation.crewai.version import __version__
 from agentops.semconv import SpanAttributes, AgentOpsSpanKindValues, Meters, ToolAttributes, MessageAttributes
 from .crewai_span_attributes import CrewAISpanAttributes, set_span_attribute
+from agentops import get_client
+
 
 # Initialize logger
 logger = logging.getLogger(__name__)
@@ -156,15 +158,27 @@ def wrap_kickoff(
     args,
     kwargs,
 ):
+    span_name = "crewai.workflow"
     logger.debug(
         f"CrewAI: Starting workflow instrumentation for Crew with {len(getattr(instance, 'agents', []))} agents"
     )
+    config = get_client().config
+    attributes = {
+        SpanAttributes.LLM_SYSTEM: "crewai",
+    }
+
+    if config.session_name:
+        span_name = f"{config.session_name}.workflow"
+
+    if config.default_tags and len(config.default_tags) > 0:
+        tag_list = list(config.default_tags)
+        attributes[SpanAttributes.AGENTOPS_SPAN_TAGS] = tag_list
+
+
     with tracer.start_as_current_span(
-        "crewai.workflow",
+        name=span_name,
         kind=SpanKind.INTERNAL,
-        attributes={
-            SpanAttributes.LLM_SYSTEM: "crewai",
-        },
+        attributes=attributes,
     ) as span:
         try:
             span.set_attribute(TELEMETRY_SDK_NAME, "agentops")
@@ -327,12 +341,19 @@ def wrap_agent_execute_task(
     tracer, duration_histogram, token_histogram, environment, application_name, wrapped, instance, args, kwargs
 ):
     agent_name = instance.role if hasattr(instance, "role") else "agent"
+    attributes = {
+        SpanAttributes.AGENTOPS_SPAN_KIND: AgentOpsSpanKindValues.AGENT.value,
+    }
+    
+    config = get_client().config
+    if config.default_tags and len(config.default_tags) > 0:
+        tag_list = list(config.default_tags)
+        attributes[SpanAttributes.AGENTOPS_SPAN_TAGS] = tag_list
+        
     with tracer.start_as_current_span(
         f"{agent_name}.agent",
         kind=SpanKind.CLIENT,
-        attributes={
-            SpanAttributes.AGENTOPS_SPAN_KIND: AgentOpsSpanKindValues.AGENT.value,
-        },
+        attributes=attributes,
     ) as span:
         try:
             span.set_attribute(TELEMETRY_SDK_NAME, "agentops")
@@ -381,12 +402,22 @@ def wrap_task_execute(
 ):
     task_name = instance.description if hasattr(instance, "description") else "task"
 
+    config = get_client().config
+    attributes = {
+        SpanAttributes.AGENTOPS_SPAN_KIND: AgentOpsSpanKindValues.TASK.value,
+    }
+
+    if config.default_tags and len(config.default_tags) > 0:
+        tag_list = list(config.default_tags)
+        attributes[SpanAttributes.AGENTOPS_SPAN_TAGS] = tag_list
+
+    if config.session_name:
+        task_name = config.session_name
+
     with tracer.start_as_current_span(
         f"{task_name}.task",
         kind=SpanKind.CLIENT,
-        attributes={
-            SpanAttributes.AGENTOPS_SPAN_KIND: AgentOpsSpanKindValues.TASK.value,
-        },
+        attributes=attributes,
     ) as span:
         try:
             span.set_attribute(TELEMETRY_SDK_NAME, "agentops")
@@ -411,7 +442,16 @@ def wrap_llm_call(
     tracer, duration_histogram, token_histogram, environment, application_name, wrapped, instance, args, kwargs
 ):
     llm = instance.model if hasattr(instance, "model") else "llm"
-    with tracer.start_as_current_span(f"{llm}.llm", kind=SpanKind.CLIENT, attributes={}) as span:
+    attributes = {
+        SpanAttributes.AGENTOPS_SPAN_KIND: AgentOpsSpanKindValues.LLM.value,
+    }
+
+    config = get_client().config
+    if config.default_tags and len(config.default_tags) > 0:
+        tag_list = list(config.default_tags)
+        attributes[SpanAttributes.AGENTOPS_SPAN_TAGS] = tag_list
+
+    with tracer.start_as_current_span(f"{llm}.llm", kind=SpanKind.CLIENT, attributes=attributes) as span:
         start_time = time.time()
         try:
             span.set_attribute(TELEMETRY_SDK_NAME, "agentops")

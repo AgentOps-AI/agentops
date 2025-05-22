@@ -73,7 +73,7 @@ class Session:
             _flush_span_processors()
 
 
-def _create_session_span(tags: Union[Dict[str, Any], List[str], None] = None) -> tuple:
+def _create_session_span(session_name: Optional[str] = None, tags: Union[Dict[str, Any], List[str], None] = None) -> tuple:
     """
     Helper function to create a session span with tags.
 
@@ -94,10 +94,13 @@ def _create_session_span(tags: Union[Dict[str, Any], List[str], None] = None) ->
     attributes = {}
     if tags:
         attributes["tags"] = tags
-    return _make_span("session", span_kind=SpanKind.SESSION, attributes=attributes)
+    
+    span_name = "session" if session_name is None else session_name
+    return _make_span(span_name, span_kind=SpanKind.SESSION, attributes=attributes)
 
 
 def start_session(
+    session_name: Optional[str] = None,
     tags: Union[Dict[str, Any], List[str], None] = None,
 ) -> Session:
     """
@@ -153,7 +156,7 @@ def start_session(
             _current_session = dummy_session
             return dummy_session
 
-    span, ctx, token = _create_session_span(tags)
+    span, ctx, token = _create_session_span(session_name, tags)
     session = Session(span, token)
 
     # Set the global session reference

@@ -101,9 +101,12 @@ class Client:
 
             # Pass default_tags if they exist
             if self.config.default_tags:
-                session = start_session(tags=list(self.config.default_tags))
+                logger.debug(f"Starting session with tags: {self.config.default_tags}")
+                logger.debug(f"Starting session with name: {self.config.session_name}")
+                session = start_session(session_name=self.config.session_name, tags=list(self.config.default_tags))
             else:
-                session = start_session()
+                logger.debug("Starting session without tags")
+                session = start_session(session_name=self.config.session_name)
 
             # Register this session globally
             global _active_session

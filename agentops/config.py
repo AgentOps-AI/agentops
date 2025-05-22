@@ -124,6 +124,11 @@ class Config:
         default_factory=lambda: None, metadata={"description": "Custom span processor for OpenTelemetry trace data"}
     )
 
+    session_name: Optional[str] = field(
+        default_factory=lambda: None,
+        metadata={"description": "Name of the session to be used in the span attributes"},
+    )
+
     def configure(
         self,
         api_key: Optional[str] = None,
@@ -144,6 +149,7 @@ class Config:
         exporter: Optional[SpanExporter] = None,
         processor: Optional[SpanProcessor] = None,
         exporter_endpoint: Optional[str] = None,
+        session_name: Optional[str] = None,
     ):
         """Configure settings from kwargs, validating where necessary"""
         if api_key is not None:
@@ -214,6 +220,9 @@ class Config:
         # else:
         #     self.exporter_endpoint = self.endpoint
 
+        if session_name is not None:
+            self.session_name = session_name
+            
     def dict(self):
         """Return a dictionary representation of the config"""
         return {
@@ -235,6 +244,7 @@ class Config:
             "exporter": self.exporter,
             "processor": self.processor,
             "exporter_endpoint": self.exporter_endpoint,
+            "session_name": self.session_name,
         }
 
     def json(self):

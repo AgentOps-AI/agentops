@@ -61,6 +61,7 @@ def init(
     log_level: Optional[Union[str, int]] = None,
     fail_safe: Optional[bool] = None,
     exporter_endpoint: Optional[str] = None,
+    session_name: Optional[str] = None,
     **kwargs,
 ):
     """
@@ -88,6 +89,7 @@ def init(
         fail_safe (bool): Whether to suppress errors and continue execution when possible.
         exporter_endpoint (str, optional): Endpoint for the exporter. If none is provided, key will
             be read from the AGENTOPS_EXPORTER_ENDPOINT environment variable.
+        session_name (str, optional): Name of the session to be used in the span attributes.
         **kwargs: Additional configuration parameters to be passed to the client.
     """
     global _client
@@ -116,6 +118,7 @@ def init(
         log_level=log_level,
         fail_safe=fail_safe,
         exporter_endpoint=exporter_endpoint,
+        session_name=session_name,
         **kwargs,
     )
 
