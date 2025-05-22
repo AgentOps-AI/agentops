@@ -13,6 +13,19 @@ import agentops
 agentops.init(api_key="YOUR_API_KEY", tags=["production"])
 ```
 
+You can also provide a custom name for your session during initialization:
+
+```python
+import agentops
+
+# Initialize with a custom session name
+agentops.init(
+    api_key="YOUR_API_KEY",
+    session_name="customer-support-bot",
+    tags=["production"]
+)
+```
+
 This approach:
 - Creates a session automatically when you initialize the SDK
 - Tracks all events in the context of this session

@@ -33,6 +33,7 @@ Initializes the AgentOps SDK and automatically starts tracking your application.
 - `fail_safe` (bool, optional): Whether to suppress errors and continue execution when possible. Defaults to False.
 - `exporter_endpoint` (str, optional): Endpoint for the exporter. If not provided, will be read from the `AGENTOPS_EXPORTER_ENDPOINT` environment variable. Defaults to 'https://otlp.agentops.ai/v1/traces'.
 - `export_flush_interval` (int, optional): Time interval in milliseconds between automatic exports of telemetry data. Defaults to 1000.
+- `session_name` (str, optional): Name of the session to be used in the span attributes. This helps identify and organize different types of sessions in the dashboard.
 
 **Returns**:
 

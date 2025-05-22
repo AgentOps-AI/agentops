@@ -73,7 +73,9 @@ class Session:
             _flush_span_processors()
 
 
-def _create_session_span(session_name: Optional[str] = None, tags: Union[Dict[str, Any], List[str], None] = None) -> tuple:
+def _create_session_span(
+    session_name: Optional[str] = None, tags: Union[Dict[str, Any], List[str], None] = None
+) -> tuple:
     """
     Helper function to create a session span with tags.
 
@@ -94,7 +96,7 @@ def _create_session_span(session_name: Optional[str] = None, tags: Union[Dict[st
     attributes = {}
     if tags:
         attributes["tags"] = tags
-    
+
     span_name = "session" if session_name is None else session_name
     return _make_span(span_name, span_kind=SpanKind.SESSION, attributes=attributes)
 

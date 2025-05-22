@@ -26,6 +26,7 @@ The first element of AgentOps is always calling .init()
 - `auto_start_session` (bool): Whether to start a session automatically when the client is created. You may wish to delay starting a session in order to do additional setup or starting a session on a child process.
 - `inherited_session_id` (str, optional): When creating the client, passing in this value will connect the client to an existing session. This is useful when having separate processes contribute to the same session.
 - `skip_auto_end_session` (bool, optional): If you are using a framework such as Crew, the framework can decide when to halt execution. Setting this parameter to true will not end your agentops session when this happens.
+- `session_name` (str, optional): Name of the session to be used in the span attributes. This helps identify and organize different types of sessions in the dashboard.
 
 **Returns**:
 

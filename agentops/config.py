@@ -222,7 +222,7 @@ class Config:
 
         if session_name is not None:
             self.session_name = session_name
-            
+
     def dict(self):
         """Return a dictionary representation of the config"""
         return {

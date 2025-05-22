@@ -174,7 +174,6 @@ def wrap_kickoff(
         tag_list = list(config.default_tags)
         attributes[SpanAttributes.AGENTOPS_SPAN_TAGS] = tag_list
 
-
     with tracer.start_as_current_span(
         name=span_name,
         kind=SpanKind.INTERNAL,
@@ -344,12 +343,12 @@ def wrap_agent_execute_task(
     attributes = {
         SpanAttributes.AGENTOPS_SPAN_KIND: AgentOpsSpanKindValues.AGENT.value,
     }
-    
+
     config = get_client().config
     if config.default_tags and len(config.default_tags) > 0:
         tag_list = list(config.default_tags)
         attributes[SpanAttributes.AGENTOPS_SPAN_TAGS] = tag_list
-        
+
     with tracer.start_as_current_span(
         f"{agent_name}.agent",
         kind=SpanKind.CLIENT,
