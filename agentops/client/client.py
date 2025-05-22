@@ -27,7 +27,7 @@ def _end_init_trace_atexit():
             # Use TracingCore to end the trace directly
             tracing_core = TracingCore.get_instance()
             if tracing_core.initialized and _client_init_trace_context.span.is_recording():
-                tracing_core.end_trace(_client_init_trace_context, end_state="Aborted_AtExit")
+                tracing_core.end_trace(_client_init_trace_context, end_state="Shutdown")
         except Exception as e:
             logger.warning(f"Error ending client's init trace during shutdown: {e}")
         finally:
@@ -129,7 +129,7 @@ class Client:
             if self._init_trace_context is None or not self._init_trace_context.span.is_recording():
                 logger.debug("Auto-starting init trace.")
                 self._init_trace_context = tracing_core.start_trace(
-                    trace_name="agentops_init_trace",
+                    trace_name="default",
                     tags=list(self.config.default_tags) if self.config.default_tags else None,
                     is_init_trace=True,
                 )

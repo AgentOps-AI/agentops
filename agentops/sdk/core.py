@@ -23,6 +23,7 @@ from agentops.logging import logger, setup_print_logger
 from agentops.sdk.processors import InternalSpanProcessor
 from agentops.sdk.types import TracingConfig
 from agentops.semconv import ResourceAttributes, SpanKind, SpanAttributes
+from agentops.helpers.dashboard import log_trace_url
 
 # No need to create shortcuts since we're using our own ResourceAttributes class now
 
@@ -431,6 +432,13 @@ class TracingCore:
         # It returns: span, context_object, context_token
         span, _, context_token = _make_span(trace_name, span_kind=SpanKind.SESSION, attributes=attributes)
         logger.debug(f"Trace '{trace_name}' started with span ID: {span.get_span_context().span_id}")
+
+        # Log the session replay URL for this new trace
+        try:
+            log_trace_url(span, title=trace_name)
+        except Exception as e:
+            logger.warning(f"Failed to log trace URL for '{trace_name}': {e}")
+
         return TraceContext(span, token=context_token, is_init_trace=is_init_trace)
 
     def end_trace(self, trace_context: TraceContext, end_state: str = "Success") -> None:
@@ -458,9 +466,17 @@ class TracingCore:
 
         try:
             span.set_attribute(SpanAttributes.AGENTOPS_SESSION_END_STATE, end_state)
-            # _finalize_span ends the span and detaches it from context if a token is provided
             _finalize_span(span, token=token)
             # For root spans (traces), we might want an immediate flush after they end.
             self._flush_span_processors()
+
+            # Log the session replay URL again after the trace has ended
+            # The span object should still contain the necessary context (trace_id)
+            try:
+                # Use span.name as the title, which should reflect the original trace_name
+                log_trace_url(span, title=span.name)
+            except Exception as e:
+                logger.warning(f"Failed to log trace URL after ending trace '{span.name}': {e}")
+
         except Exception as e:
             logger.error(f"Error ending trace: {e}", exc_info=True)

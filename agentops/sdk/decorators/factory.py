@@ -6,6 +6,7 @@ import wrapt  # type: ignore
 
 from agentops.logging import logger
 from agentops.sdk.core import TracingCore
+from agentops.semconv.span_kinds import SpanKind
 
 from .utility import (
     _create_as_current_span,
@@ -28,10 +29,10 @@ def create_entity_decorator(entity_kind: str):
         A decorator with optional arguments for name and version
     """
 
-    def decorator(wrapped=None, *, name=None, version=None):
+    def decorator(wrapped=None, *, name=None, version=None, tags=None):
         # Handle case where decorator is called with parameters
         if wrapped is None:
-            return functools.partial(decorator, name=name, version=version)
+            return functools.partial(decorator, name=name, version=version, tags=tags)
 
         # Handle class decoration
         if inspect.isclass(wrapped):
@@ -91,7 +92,7 @@ def create_entity_decorator(entity_kind: str):
         @wrapt.decorator
         def wrapper(wrapped, instance, args, kwargs):
             # Skip instrumentation if tracer not initialized
-            if not TracingCore.get_instance()._initialized:
+            if not TracingCore.get_instance().initialized:
                 return wrapped(*args, **kwargs)
 
             # Use provided name or function name
@@ -102,8 +103,100 @@ def create_entity_decorator(entity_kind: str):
             is_generator = inspect.isgeneratorfunction(wrapped)
             is_async_generator = inspect.isasyncgenfunction(wrapped)
 
+            # If it's a SESSION kind, we use start_trace/end_trace
+            if entity_kind == SpanKind.SESSION:
+                if is_generator or is_async_generator:
+                    # Using start_trace/end_trace for generators decorated with @session might be complex
+                    # due to the nature of yielding. For now, log a warning and fall back to existing generator handling OR disallow.
+                    # Let's keep existing generator handling for now, which creates a single span.
+                    # A true "session per generator invocation" would require more complex handling.
+                    logger.warning(
+                        f"@agentops.session decorator used on a generator function '{operation_name}'. \
+This will create a single span for the generator's instantiation, not a long-running trace for its entire execution."
+                    )
+                    # Fallthrough to existing generator logic below for non-session spans
+                    pass  # Explicitly fall through
+
+                elif is_async:
+
+                    async def _wrapped_session_async():
+                        trace_context = None
+                        try:
+                            trace_context = TracingCore.get_instance().start_trace(trace_name=operation_name, tags=tags)
+                            if not trace_context:
+                                logger.error(
+                                    f"Failed to start trace for @session '{operation_name}'. Executing function without AgentOps trace."
+                                )
+                                return await wrapped(*args, **kwargs)
+
+                            # Record input if possible (span is in trace_context.span)
+                            try:
+                                _record_entity_input(trace_context.span, args, kwargs)
+                            except Exception as e:
+                                logger.warning(f"Failed to record entity input for @session '{operation_name}': {e}")
+
+                            result = await wrapped(*args, **kwargs)
+
+                            try:
+                                _record_entity_output(trace_context.span, result)
+                            except Exception as e:
+                                logger.warning(f"Failed to record entity output for @session '{operation_name}': {e}")
+
+                            TracingCore.get_instance().end_trace(trace_context, "Success")
+                            return result
+                        except Exception:
+                            if trace_context:
+                                TracingCore.get_instance().end_trace(trace_context, "Failure")
+                            # record_exception on trace_context.span might be an option too
+                            # trace_context.span.record_exception(e) # If we want it on the span directly
+                            raise
+                        finally:
+                            # Ensure trace is ended if not already (e.g. early exit without exception but before success end_trace)
+                            if trace_context and trace_context.span.is_recording():
+                                logger.warning(
+                                    f"Trace for @session '{operation_name}' was not explicitly ended. Ending as 'Unknown'."
+                                )
+                                TracingCore.get_instance().end_trace(trace_context, "Unknown")
+
+                    return _wrapped_session_async()
+                else:  # Sync function for SpanKind.SESSION
+                    trace_context = None
+                    try:
+                        trace_context = TracingCore.get_instance().start_trace(trace_name=operation_name, tags=tags)
+                        if not trace_context:
+                            logger.error(
+                                f"Failed to start trace for @session '{operation_name}'. Executing function without AgentOps trace."
+                            )
+                            return wrapped(*args, **kwargs)
+
+                        try:
+                            _record_entity_input(trace_context.span, args, kwargs)
+                        except Exception as e:
+                            logger.warning(f"Failed to record entity input for @session '{operation_name}': {e}")
+
+                        result = wrapped(*args, **kwargs)
+
+                        try:
+                            _record_entity_output(trace_context.span, result)
+                        except Exception as e:
+                            logger.warning(f"Failed to record entity output for @session '{operation_name}': {e}")
+
+                        TracingCore.get_instance().end_trace(trace_context, "Success")
+                        return result
+                    except Exception:
+                        if trace_context:
+                            TracingCore.get_instance().end_trace(trace_context, "Failure")
+                        raise
+                    finally:
+                        if trace_context and trace_context.span.is_recording():
+                            logger.warning(
+                                f"Trace for @session '{operation_name}' was not explicitly ended. Ending as 'Unknown'."
+                            )
+                            TracingCore.get_instance().end_trace(trace_context, "Unknown")
+
+            # Existing logic for non-SESSION kinds or generators under @session (as per above warning)
             # Handle generator functions
-            if is_generator:
+            if is_generator:  # This 'if' will also catch generators decorated with @session due to fallthrough
                 # Use the old approach for generators
                 span, ctx, token = _make_span(operation_name, entity_kind, version)
                 try:
@@ -115,7 +208,7 @@ def create_entity_decorator(entity_kind: str):
                 return _process_sync_generator(span, result)
 
             # Handle async generator functions
-            elif is_async_generator:
+            elif is_async_generator:  # This 'elif' will also catch async generators decorated with @session
                 # Use the old approach for async generators
                 span, ctx, token = _make_span(operation_name, entity_kind, version)
                 try:
@@ -126,8 +219,8 @@ def create_entity_decorator(entity_kind: str):
                 result = wrapped(*args, **kwargs)
                 return _process_async_generator(span, token, result)
 
-            # Handle async functions
-            elif is_async:
+            # Handle async functions (non-SESSION)
+            elif is_async:  # This is for entity_kind != SpanKind.SESSION
 
                 async def _wrapped_async():
                     with _create_as_current_span(operation_name, entity_kind, version) as span:
@@ -149,8 +242,8 @@ def create_entity_decorator(entity_kind: str):
 
                 return _wrapped_async()
 
-            # Handle sync functions
-            else:
+            # Handle sync functions (non-SESSION)
+            else:  # This is for entity_kind != SpanKind.SESSION
                 with _create_as_current_span(operation_name, entity_kind, version) as span:
                     try:
                         _record_entity_input(span, args, kwargs)
