@@ -54,14 +54,18 @@ def init(
     app_url: Optional[str] = None,
     max_wait_time: Optional[int] = None,
     max_queue_size: Optional[int] = None,
+    tags: Optional[List[str]] = None,
     default_tags: Optional[List[str]] = None,
     instrument_llm_calls: Optional[bool] = None,
     auto_start_session: Optional[bool] = None,
+    auto_init: Optional[bool] = None,
+    skip_auto_end_session: Optional[bool] = None,
     env_data_opt_out: Optional[bool] = None,
     log_level: Optional[Union[str, int]] = None,
+    fail_safe: Optional[bool] = None,
     exporter_endpoint: Optional[str] = None,
     **kwargs,
-) -> None:
+):
     """
     Initializes the AgentOps SDK.
 
@@ -75,36 +79,51 @@ def init(
         max_wait_time (int, optional): The maximum time to wait in milliseconds before flushing the queue.
             Defaults to 5,000 (5 seconds)
         max_queue_size (int, optional): The maximum size of the event queue. Defaults to 512.
-        default_tags (List[str], optional): Default tags for the sessions that can be used for grouping or sorting later (e.g. [\"GPT-4\"]).
+        tags (List[str], optional): [Deprecated] Use `default_tags` instead.
+        default_tags (List[str], optional): Default tags for the sessions that can be used for grouping or sorting later (e.g. ["GPT-4"]).
         instrument_llm_calls (bool): Whether to instrument LLM calls and emit LLMEvents.
-        auto_start_session (bool): Whether to start an initial trace automatically when the client is initialized. Defaults to True via Config.
+        auto_start_session (bool): Whether to start a session automatically when the client is created.
+        auto_init (bool): Whether to automatically initialize the client on import. Defaults to True.
+        skip_auto_end_session (optional, bool): Don't automatically end session based on your framework's decision-making
+            (i.e. Crew determining when tasks are complete and ending the session)
         env_data_opt_out (bool): Whether to opt out of collecting environment data.
         log_level (str, int): The log level to use for the client. Defaults to 'CRITICAL'.
-        exporter_endpoint (str, optional): Endpoint for the OTLP exporter. Defaults to AgentOps collector.
-        **kwargs: Additional configuration parameters to be passed to the client's Config object.
+        fail_safe (bool): Whether to suppress errors and continue execution when possible.
+        exporter_endpoint (str, optional): Endpoint for the exporter. If none is provided, key will
+            be read from the AGENTOPS_EXPORTER_ENDPOINT environment variable.
+        **kwargs: Additional configuration parameters to be passed to the client.
     """
     global _client
 
-    # The client.init() method now handles its own configuration loading and defaults.
-    # We pass through the relevant parameters.
-    # client.init() returns None.
-    _client.init(
+    # Merge tags and default_tags if both are provided
+    merged_tags = None
+    if tags and default_tags:
+        merged_tags = list(set(tags + default_tags))
+    elif tags:
+        merged_tags = tags
+    elif default_tags:
+        merged_tags = default_tags
+
+    return _client.init(
         api_key=api_key,
         endpoint=endpoint,
         app_url=app_url,
         max_wait_time=max_wait_time,
         max_queue_size=max_queue_size,
-        default_tags=default_tags,
+        default_tags=merged_tags,
         instrument_llm_calls=instrument_llm_calls,
         auto_start_session=auto_start_session,
+        auto_init=auto_init,
+        skip_auto_end_session=skip_auto_end_session,
         env_data_opt_out=env_data_opt_out,
         log_level=log_level,
+        fail_safe=fail_safe,
         exporter_endpoint=exporter_endpoint,
         **kwargs,
     )
 
 
-def configure(**kwargs: Any) -> None:
+def configure(**kwargs):
     """Update client configuration
 
     Args:
@@ -208,20 +227,20 @@ __all__ = [
     "record",
     "start_trace",
     "end_trace",
+    "start_session",
+    "end_session",
+    "track_agent",
+    "track_tool",
+    "end_all_sessions",
+    "ToolEvent",
+    "ErrorEvent",
+    "ActionEvent",
+    "LLMEvent",
+    "LegacySession",
     "trace",
     "session",
     "agent",
     "task",
     "workflow",
     "operation",
-    "start_session",
-    "end_session",
-    "track_agent",
-    "track_tool",
-    "end_all_sessions",
-    "LegacySession",
-    "ToolEvent",
-    "ErrorEvent",
-    "ActionEvent",
-    "LLMEvent",
 ]
