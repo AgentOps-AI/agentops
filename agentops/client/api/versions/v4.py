@@ -9,6 +9,7 @@ from typing import Optional, Union, Dict
 from agentops.client.api.base import BaseApiClient
 from agentops.exceptions import ApiServerException
 from agentops.client.api.types import UploadedObjectResponse
+from agentops.helpers.version import get_agentops_version
 
 
 class V4Client(BaseApiClient):
@@ -36,6 +37,7 @@ class V4Client(BaseApiClient):
         """
         headers = {
             "Authorization": f"Bearer {self.auth_token}",
+            "User-Agent": f"agentops-python/{get_agentops_version() or 'unknown'}",
         }
         if custom_headers:
             headers.update(custom_headers)
