@@ -13,6 +13,7 @@ from opentelemetry.instrumentation.instrumentor import BaseInstrumentor
 from opentelemetry.sdk.resources import SERVICE_NAME, TELEMETRY_SDK_NAME, DEPLOYMENT_ENVIRONMENT
 from agentops.instrumentation.crewai.version import __version__
 from agentops.semconv import SpanAttributes, AgentOpsSpanKindValues, Meters, ToolAttributes, MessageAttributes
+from agentops.semconv.core import CoreAttributes
 from .crewai_span_attributes import CrewAISpanAttributes, set_span_attribute
 from agentops import get_client
 
@@ -160,12 +161,20 @@ def wrap_kickoff(
     logger.debug(
         f"CrewAI: Starting workflow instrumentation for Crew with {len(getattr(instance, 'agents', []))} agents"
     )
+
+    config = get_client().config
+    attributes = {
+        SpanAttributes.LLM_SYSTEM: "crewai",
+    }
+
+    if config.default_tags and len(config.default_tags) > 0:
+        tag_list = list(config.default_tags)
+        attributes[CoreAttributes.TAGS]=tag_list
+
     with tracer.start_as_current_span(
         "crewai.workflow",
         kind=SpanKind.INTERNAL,
-        attributes={
-            SpanAttributes.LLM_SYSTEM: "crewai",
-        },
+        attributes=attributes,
     ) as span:
         try:
             span.set_attribute(TELEMETRY_SDK_NAME, "agentops")
@@ -389,7 +398,8 @@ def wrap_task_execute(
 
     if config.default_tags and len(config.default_tags) > 0:
         tag_list = list(config.default_tags)
-        attributes[SpanAttributes.AGENTOPS_SPAN_TAGS] = tag_list
+        attributes[CoreAttributes.TAGS]=tag_list
+
 
     with tracer.start_as_current_span(
         f"{task_name}.task",

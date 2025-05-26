@@ -86,7 +86,7 @@ class SpanAttributes:
     AGENTOPS_ENTITY_INPUT = "agentops.entity.input"
     AGENTOPS_SPAN_KIND = "agentops.span.kind"
     AGENTOPS_ENTITY_NAME = "agentops.entity.name"
-    AGENTOPS_SPAN_TAGS = "tags"
+
 
     # Operation attributes
     OPERATION_NAME = "operation.name"

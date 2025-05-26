@@ -156,7 +156,7 @@ def test_crewai_task_instrumentation(instrumentation):
     from opentelemetry.trace import SpanKind
     from agentops.semconv import SpanAttributes, AgentOpsSpanKindValues
     from opentelemetry import trace
-
+    from agentops.semconv.core import CoreAttributes
     # Initialize AgentOps with API key and default tags
     agentops.init(
         api_key="test-api-key",
@@ -180,13 +180,13 @@ def test_crewai_task_instrumentation(instrumentation):
         kind=SpanKind.CLIENT,
         attributes={
             SpanAttributes.AGENTOPS_SPAN_KIND: AgentOpsSpanKindValues.TASK.value,
-            SpanAttributes.AGENTOPS_SPAN_TAGS: ["crewai", "task-test"],
+            CoreAttributes.TAGS: ["crewai", "task-test"],
         },
     ) as span:
         # Verify span attributes
         assert span.attributes[SpanAttributes.AGENTOPS_SPAN_KIND] == AgentOpsSpanKindValues.TASK.value
-        assert "crewai" in span.attributes[SpanAttributes.AGENTOPS_SPAN_TAGS]
-        assert "task-test" in span.attributes[SpanAttributes.AGENTOPS_SPAN_TAGS]
+        assert "crewai" in span.attributes[CoreAttributes.TAGS]
+        assert "task-test" in span.attributes[CoreAttributes.TAGS]
 
         # Verify span name
         assert span.name == f"{task.description}.task"
