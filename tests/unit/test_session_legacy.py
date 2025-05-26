@@ -157,6 +157,7 @@ def test_crewai_task_instrumentation(instrumentation):
     from agentops.semconv import SpanAttributes, AgentOpsSpanKindValues
     from opentelemetry import trace
     from agentops.semconv.core import CoreAttributes
+
     # Initialize AgentOps with API key and default tags
     agentops.init(
         api_key="test-api-key",

@@ -169,7 +169,7 @@ def wrap_kickoff(
 
     if config.default_tags and len(config.default_tags) > 0:
         tag_list = list(config.default_tags)
-        attributes[CoreAttributes.TAGS]=tag_list
+        attributes[CoreAttributes.TAGS] = tag_list
 
     with tracer.start_as_current_span(
         "crewai.workflow",
@@ -398,8 +398,7 @@ def wrap_task_execute(
 
     if config.default_tags and len(config.default_tags) > 0:
         tag_list = list(config.default_tags)
-        attributes[CoreAttributes.TAGS]=tag_list
-
+        attributes[CoreAttributes.TAGS] = tag_list
 
     with tracer.start_as_current_span(
         f"{task_name}.task",
