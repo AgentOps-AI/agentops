@@ -99,14 +99,19 @@ class Client:
         if self.config.auto_start_session:
             from agentops.legacy import start_session
 
-            # Pass default_tags if they exist
-            if self.config.default_tags:
+            if self.config.default_tags and self.config.session_name:
                 logger.debug(f"Starting session with tags: {self.config.default_tags}")
                 logger.debug(f"Starting session with name: {self.config.session_name}")
                 session = start_session(session_name=self.config.session_name, tags=list(self.config.default_tags))
-            else:
-                logger.debug("Starting session without tags")
+            elif self.config.default_tags:
+                logger.debug(f"Starting session with tags: {self.config.default_tags}")
+                session = start_session(tags=list(self.config.default_tags))
+            elif self.config.session_name:
+                logger.debug(f"Starting session with name: {self.config.session_name}")
                 session = start_session(session_name=self.config.session_name)
+            else:
+                logger.debug("Starting session without tags or name")
+                session = start_session()
 
             # Register this session globally
             global _active_session
