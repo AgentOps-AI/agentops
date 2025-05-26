@@ -389,7 +389,7 @@ agentops.end_session('Success')
 </details>
 
 
-### Anthropic ﹨
+### Anthropic
 
 Track agents built with the Anthropic Python SDK (>=0.32.0).
 
