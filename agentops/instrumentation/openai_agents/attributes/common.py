@@ -7,8 +7,8 @@ for extracting and formatting attributes according to OpenTelemetry semantic con
 
 from typing import Any
 from agentops.logging import logger
-from agentops.semconv import AgentAttributes, WorkflowAttributes, SpanAttributes, InstrumentationAttributes
-
+from agentops.semconv import AgentAttributes, WorkflowAttributes, SpanAttributes, InstrumentationAttributes, ToolAttributes, AgentOpsSpanKindValues, ToolStatus
+ 
 from agentops.instrumentation.common import AttributeMap, _extract_attributes_from_mapping
 from agentops.instrumentation.common.attributes import get_common_attributes
 from agentops.instrumentation.common.objects import get_uploaded_object_attributes
@@ -31,12 +31,15 @@ AGENT_SPAN_ATTRIBUTES: AttributeMap = {
 }
 
 
-# Attribute mapping for FunctionSpanData
-FUNCTION_SPAN_ATTRIBUTES: AttributeMap = {
-    AgentAttributes.AGENT_NAME: "name",
-    WorkflowAttributes.WORKFLOW_INPUT: "input",
-    WorkflowAttributes.FINAL_OUTPUT: "output",
-    AgentAttributes.FROM_AGENT: "from_agent",
+# Attribute mapping for FunctionSpanData - Corrected for Tool Semantics
+# FunctionSpanData has: name (str), input (Any), output (Any), from_agent (str, optional)
+CORRECTED_FUNCTION_TOOL_ATTRIBUTES: AttributeMap = {
+    ToolAttributes.TOOL_NAME: "name",
+    ToolAttributes.TOOL_PARAMETERS: "input", # Will be serialized
+    ToolAttributes.TOOL_RESULT: "output",   # Will be serialized
+    # 'from_agent' could be mapped to a custom attribute if needed, or ignored for pure tool spans
+    # For now, let's focus on standard tool attributes.
+    # AgentAttributes.FROM_AGENT: "from_agent", # Example if we wanted to keep it
 }
 
 
@@ -126,8 +129,33 @@ def get_function_span_attributes(span_data: Any) -> AttributeMap:
     Returns:
         Dictionary of attributes for function span
     """
-    attributes = _extract_attributes_from_mapping(span_data, FUNCTION_SPAN_ATTRIBUTES)
+    attributes = _extract_attributes_from_mapping(span_data, CORRECTED_FUNCTION_TOOL_ATTRIBUTES)
     attributes.update(get_common_attributes())
+    attributes[SpanAttributes.AGENTOPS_SPAN_KIND] = AgentOpsSpanKindValues.TOOL.value
+
+    # Determine tool status based on presence of error in span_data (if available) or assume success
+    # The main SDK's Span object has an 'error' field. If span_data itself doesn't,
+    # this status might be better set by the exporter which has access to the full SDK Span.
+    # For now, assuming success if no error attribute is directly on span_data.
+    # A more robust way would be to check the OTel span's status if this handler is called *after* error processing.
+    if hasattr(span_data, 'error') and span_data.error:
+        attributes[ToolAttributes.TOOL_STATUS] = ToolStatus.FAILED.value
+    else:
+        # This might be premature if output isn't available yet (on_span_start)
+        # but the exporter handles separate start/end, so this is for the full attribute set.
+        if hasattr(span_data, 'output') and span_data.output is not None:
+            attributes[ToolAttributes.TOOL_STATUS] = ToolStatus.SUCCEEDED.value
+        else:
+            # If called on start, or if output is None without error, it's executing or status unknown yet.
+            # The exporter should ideally set this based on the OTel span status later.
+            # For now, we won't set a default status here if output is not yet available.
+            pass
+
+
+    # If from_agent is available on span_data, add it.
+    if hasattr(span_data, 'from_agent') and span_data.from_agent:
+        attributes[f"{AgentAttributes.AGENT}.calling_tool.name"] = str(span_data.from_agent)
+
 
     return attributes
 

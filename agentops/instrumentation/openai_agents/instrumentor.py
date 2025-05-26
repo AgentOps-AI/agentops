@@ -21,10 +21,14 @@ that here as well.
 """
 
 from typing import Collection
+from opentelemetry import trace # Needed for tracer
 from opentelemetry.instrumentation.instrumentor import BaseInstrumentor  # type: ignore
 from agentops.logging import logger
 from agentops.instrumentation.openai_agents.processor import OpenAIAgentsProcessor
 from agentops.instrumentation.openai_agents.exporter import OpenAIAgentsExporter
+# For Runner wrappers
+from agentops.instrumentation.common.wrappers import wrap, unwrap
+from agentops.instrumentation.openai_agents.runner_wrappers import AGENT_RUNNER_WRAP_CONFIGS
 
 
 class OpenAIAgentsInstrumentor(BaseInstrumentor):
@@ -41,24 +45,37 @@ class OpenAIAgentsInstrumentor(BaseInstrumentor):
     def _instrument(self, **kwargs):
         """Instrument the OpenAI Agents SDK."""
         tracer_provider = kwargs.get("tracer_provider")
+        # Obtain a tracer instance. The instrumentor name can be more specific.
+        # The version should ideally come from the package version.
+        self._tracer = trace.get_tracer(
+            "agentops.instrumentation.openai_agents", # More specific tracer name
+            "0.1.0" # Placeholder version, ideally package version
+        )
+
 
         try:
-            self._exporter = OpenAIAgentsExporter(tracer_provider=tracer_provider)
+            # 1. Setup Processor for internal SDK traces
+            self._exporter = OpenAIAgentsExporter(tracer_provider=tracer_provider) # Exporter uses the tracer_provider
             self._processor = OpenAIAgentsProcessor(
                 exporter=self._exporter,
             )
-
-            # Replace the default processor with our processor
-            from agents import set_trace_processors  # type: ignore
-            from agents.tracing.processors import default_processor  # type: ignore
-
-            # Store reference to default processor for later restoration
+            from agents import set_trace_processors # type: ignore
+            from agents.tracing.processors import default_processor # type: ignore
             self._default_processor = default_processor()
             set_trace_processors([self._processor])
             logger.debug("Replaced default processor with OpenAIAgentsProcessor in OpenAI Agents SDK")
 
+            # 2. Apply Runner method wrappers for Agent Run/Turn parent spans
+            for config in AGENT_RUNNER_WRAP_CONFIGS:
+                try:
+                    logger.debug(f"Applying wrapper for {config.package}.{config.class_name}.{config.method_name}")
+                    wrap(config, self._tracer) # Use the instrumentor's tracer
+                except Exception as e_wrap:
+                    logger.error(f"Failed to apply wrapper for {config}: {e_wrap}", exc_info=True)
+            logger.info("Applied Runner method wrappers for AgentOps.")
+
         except Exception as e:
-            logger.warning(f"Failed to instrument OpenAI Agents SDK: {e}")
+            logger.warning(f"Failed to instrument OpenAI Agents SDK: {e}", exc_info=True)
 
     def _uninstrument(self, **kwargs):
         """Remove instrumentation from OpenAI Agents SDK."""
@@ -76,8 +93,17 @@ class OpenAIAgentsInstrumentor(BaseInstrumentor):
                 set_trace_processors([self._default_processor])
                 self._default_processor = None
             self._processor = None
-            self._exporter = None
+            self._exporter = None # type: ignore
+
+            # Remove Runner method wrappers
+            for config in AGENT_RUNNER_WRAP_CONFIGS:
+                try:
+                    logger.debug(f"Removing wrapper for {config.package}.{config.class_name}.{config.method_name}")
+                    unwrap(config)
+                except Exception as e_unwrap:
+                    logger.error(f"Failed to remove wrapper for {config}: {e_unwrap}", exc_info=True)
+            logger.info("Removed Runner method wrappers for AgentOps.")
 
             logger.info("Successfully removed OpenAI Agents SDK instrumentation")
         except Exception as e:
-            logger.warning(f"Failed to uninstrument OpenAI Agents SDK: {e}")
+            logger.warning(f"Failed to uninstrument OpenAI Agents SDK: {e}", exc_info=True)
