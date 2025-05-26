@@ -37,6 +37,8 @@ from agentops.instrumentation.openai_agents import LIBRARY_NAME, LIBRARY_VERSION
 from agentops.instrumentation.openai_agents.attributes.common import (
     get_span_attributes,
 )
+# Removed: from agentops.helpers import safe_serialize
+# full_prompt_contextvar will be imported and used by attributes.common, not directly here.
 
 
 def log_otel_trace_id(span_type):
@@ -303,84 +305,101 @@ class OpenAIAgentsExporter:
         trace_id = getattr(span, "trace_id", "unknown")
         parent_id = getattr(span, "parent_id", None)
 
+        # logger.debug(f"[Exporter] export_span called for SDK span_id: {span_id}, name: {getattr(span_data, 'name', span_type)}, type: {span_type}, trace_id: {trace_id}, parent_id: {parent_id}")
+
         # Check if this is a span end event
         is_end_event = hasattr(span, "status") and span.status == StatusCode.OK.name
 
         # Unique lookup key for this span
         span_lookup_key = _get_span_lookup_key(trace_id, span_id)
-        attributes = get_base_span_attributes(span)
-        span_attributes = get_span_attributes(span_data)
-        attributes.update(span_attributes)
+
+        # span_data augmentation with _full_prompt_from_wrapper_context is removed.
+        # attributes/common.py will now directly get the contextvar.
+
+        # Log content of span_data.response before getting attributes
+        # if hasattr(span_data, 'response') and span_data.response is not None:
+        # logger.debug(f"[Exporter] SDK span_id: {span_id} - span_data.response before get_span_attributes: {safe_serialize(vars(span_data.response)) if hasattr(span_data.response, '__dict__') else safe_serialize(span_data.response)}")
+        # elif span_type in ["ResponseSpanData", "GenerationSpanData"]: # Only log absence for relevant types
+        # logger.debug(f"[Exporter] SDK span_id: {span_id} - span_data.response is None or not present before get_span_attributes for {span_type}.")
+
+        attributes = get_base_span_attributes(span)  # Basic attributes from the SDK span object
+        span_specific_attributes = get_span_attributes(span_data)  # Type-specific attributes from SpanData
+        attributes.update(span_specific_attributes)
+
+        # logger.debug(f"[Exporter] SDK span_id: {span_id} - Combined attributes before OTel span creation/update: {safe_serialize(attributes)}")
 
         if is_end_event:
-            # Update all attributes for end events
-            attributes.update(span_attributes)
+            # For end events, ensure all attributes from span_data are captured
+            # get_span_attributes should ideally get everything needed based on the final state of span_data
+            pass  # Attributes are already updated above
 
         # Log the trace ID for debugging and correlation with AgentOps API
         log_otel_trace_id(span_type)
 
         # For start events, create a new span and store it (don't end it)
         if not is_end_event:
-            # Process the span based on its type
-            # TODO span_name should come from the attributes module
-            span_name = get_span_name(span)
-            span_kind = get_span_kind(span)
+            span_name = get_span_name(span)  # Get OTel span name
+            span_kind = get_span_kind(span)  # Get OTel span kind
 
-            # Get parent context for proper nesting
             parent_span_ctx = self._get_parent_context(trace_id, span_id, parent_id)
 
-            # Create the span with proper parent context
             otel_span = self._create_span_with_parent(
                 name=span_name, kind=span_kind, attributes=attributes, parent_ctx=parent_span_ctx
             )
+            # logger.debug(f"[Exporter] SDK span_id: {span_id} (START event) - CREATED OTel span with OTel_span_id: {otel_span.context.span_id if otel_span else 'None'}")
 
-            # Store the span for later reference
             if not isinstance(otel_span, NonRecordingSpan):
                 self._span_map[span_lookup_key] = otel_span
-                self._active_spans[span_id] = {
+                self._active_spans[span_id] = {  # Use SDK span_id as key for _active_spans
                     "span": otel_span,
                     "span_type": span_type,
-                    "trace_id": trace_id,
-                    "parent_id": parent_id,
+                    "trace_id": trace_id,  # SDK trace_id
+                    "parent_id": parent_id,  # SDK parent_id
                 }
+                # logger.debug(f"[Exporter] SDK span_id: {span_id} (START event) - Stored OTel span in _span_map and _active_spans.")
 
-            # Handle any error information
-            self._handle_span_error(span, otel_span)
-
-            # DO NOT end the span for start events - we want to keep it open for updates
+            self._handle_span_error(span, otel_span)  # Handle error for start event too
             return
 
         # For end events, check if we already have the span
         if span_lookup_key in self._span_map:
             existing_span = self._span_map[span_lookup_key]
+            # logger.debug(f"[Exporter] SDK span_id: {span_id} (END event) - Found existing OTel span in _span_map with OTel_span_id: {existing_span.context.span_id}")
 
-            # Check if span is already ended
             span_is_ended = False
             if isinstance(existing_span, Span) and hasattr(existing_span, "_end_time"):
                 span_is_ended = existing_span._end_time is not None
+            # logger.debug(f"[Exporter] SDK span_id: {span_id} (END event) - Existing OTel span was_ended: {span_is_ended}")
 
             if not span_is_ended:
-                # Update and end the existing span
-                for key, value in attributes.items():
+                for key, value in attributes.items():  # Update with final attributes
                     existing_span.set_attribute(key, value)
+                # logger.debug(f"[Exporter] SDK span_id: {span_id} (END event) - Updated attributes on existing OTel span.")
 
-                # Set status and handle any error information
-                existing_span.set_status(Status(StatusCode.OK if span.status == "OK" else StatusCode.ERROR))
+                existing_span.set_status(
+                    Status(StatusCode.OK if getattr(span, "status", "OK") == "OK" else StatusCode.ERROR)
+                )
                 self._handle_span_error(span, existing_span)
-
                 existing_span.end()
-            else:
-                # Create a new span with the complete data (already ended state)
-                self.create_span(span, span_type, attributes)
-        else:
-            # No existing span found, create a new one with all data
-            self.create_span(span, span_type, attributes)
+                # logger.debug(f"[Exporter] SDK span_id: {span_id} (END event) - ENDED existing OTel span.")
+            else:  # Span already ended, create a new one (should be rare if logic is correct)
+                logger.warning(
+                    f"[Exporter] SDK span_id: {span_id} (END event) - Attempting to end an ALREADY ENDED OTel span: {span_lookup_key}. Creating a new one instead."
+                )
+                self.create_span(span, span_type, attributes, is_already_ended=True)
+        else:  # No existing span found for end event, create a new one
+            logger.warning(
+                f"[Exporter] SDK span_id: {span_id} (END event) - No active OTel span found for end event: {span_lookup_key}. Creating a new one."
+            )
+            self.create_span(span, span_type, attributes, is_already_ended=True)
 
-        # Clean up our tracking resources
         self._active_spans.pop(span_id, None)
         self._span_map.pop(span_lookup_key, None)
+        # logger.debug(f"[Exporter] SDK span_id: {span_id} (END event) - Popped from _active_spans and _span_map.")
 
-    def create_span(self, span: Any, span_type: str, attributes: Dict[str, Any]) -> None:
+    def create_span(
+        self, span: Any, span_type: str, attributes: Dict[str, Any], is_already_ended: bool = False
+    ) -> None:
         """Create a new span with the provided data and end it immediately.
 
         This method creates a span using the appropriate parent context, applies
