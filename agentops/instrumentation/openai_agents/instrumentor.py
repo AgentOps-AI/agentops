@@ -122,6 +122,14 @@ class OpenAIAgentsInstrumentor(BaseInstrumentor):
         """
         attributes: AttributeMap = {}
         attributes[SpanAttributes.AGENTOPS_SPAN_KIND] = AgentOpsSpanKindValues.AGENT.value
+        otel_span_id_for_log = "unknown"
+        if otel_span and hasattr(otel_span, "get_span_context"):
+            span_ctx = otel_span.get_span_context()
+            if span_ctx and hasattr(span_ctx, "span_id"):
+                otel_span_id_for_log = f"{span_ctx.span_id:016x}"
+        logger.debug(
+            f"[_extract_agent_runner_attributes_and_set_contextvar] Set AGENTOPS_SPAN_KIND to '{AgentOpsSpanKindValues.AGENT.value}' for OTel span ID: {otel_span_id_for_log}"
+        )
 
         agent_obj: Any = None
         sdk_input: Any = None
@@ -193,8 +201,48 @@ class OpenAIAgentsInstrumentor(BaseInstrumentor):
             attributes[CoreAttributes.ERROR_TYPE] = type(exception).__name__
             # Contextvar is reset in the finally block of the main wrapper
 
-        # Set all extracted attributes on the span
+        # Log all collected attributes before filtering
+        logger.debug(
+            f"[_extract_agent_runner_attributes_and_set_contextvar] All collected attributes before filtering for OTel span ID {otel_span_id_for_log}: {safe_serialize(attributes)}"
+        )
+
+        # Define filter conditions and log them
+        # For gen_ai.prompt.* attributes (e.g., gen_ai.prompt.0.content, gen_ai.prompt.0.role)
+        prompt_attr_prefix_to_exclude = "gen_ai.prompt."
+
+        # For gen_ai.request.instructions
+        # SpanAttributes.LLM_REQUEST_INSTRUCTIONS should resolve to "gen_ai.request.instructions"
+        instructions_attr_key_to_exclude = SpanAttributes.LLM_REQUEST_INSTRUCTIONS
+
+        logger.debug(
+            f"[_extract_agent_runner_attributes_and_set_contextvar] Filter: Excluding keys starting with '{prompt_attr_prefix_to_exclude}' for OTel span ID {otel_span_id_for_log}"
+        )
+        logger.debug(
+            f"[_extract_agent_runner_attributes_and_set_contextvar] Filter: Excluding key equal to '{instructions_attr_key_to_exclude}' (actual value of SpanAttributes.LLM_REQUEST_INSTRUCTIONS) for OTel span ID {otel_span_id_for_log}"
+        )
+
+        attributes_for_agent_span = {}
         for key, value in attributes.items():
+            excluded_by_prompt_filter = key.startswith(prompt_attr_prefix_to_exclude)
+            excluded_by_instructions_filter = key == instructions_attr_key_to_exclude
+
+            if excluded_by_prompt_filter:
+                logger.debug(
+                    f"[_extract_agent_runner_attributes_and_set_contextvar] Filtering out key '{key}' for OTel span ID {otel_span_id_for_log} (matched prompt_prefix_to_exclude: '{prompt_attr_prefix_to_exclude}')"
+                )
+                continue
+            if excluded_by_instructions_filter:
+                logger.debug(
+                    f"[_extract_agent_runner_attributes_and_set_contextvar] Filtering out key '{key}' for OTel span ID {otel_span_id_for_log} (matched instructions_attr_key_to_exclude: '{instructions_attr_key_to_exclude}')"
+                )
+                continue
+
+            attributes_for_agent_span[key] = value
+
+        logger.debug(
+            f"[_extract_agent_runner_attributes_and_set_contextvar] Attributes for AGENT span (OTel span ID {otel_span_id_for_log}) after filtering: {safe_serialize(attributes_for_agent_span)}"
+        )
+        for key, value in attributes_for_agent_span.items():
             otel_span.set_attribute(key, value)
 
     def _create_agent_runner_wrapper(

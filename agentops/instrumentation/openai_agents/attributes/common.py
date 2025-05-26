@@ -342,6 +342,9 @@ def get_response_span_attributes(span_data: Any) -> AttributeMap:
 
     # Ensure LLM span kind is set
     attributes[SpanAttributes.AGENTOPS_SPAN_KIND] = AgentOpsSpanKindValues.LLM.value
+    logger.debug(
+        f"[get_response_span_attributes] Set AGENTOPS_SPAN_KIND to '{AgentOpsSpanKindValues.LLM.value}' for span_data.id: {getattr(span_data, 'id', 'N/A')}"
+    )
     return attributes
 
 
@@ -440,7 +443,7 @@ def get_generation_span_attributes(span_data: Any) -> AttributeMap:
     # Ensure LLM span kind is set
     attributes[SpanAttributes.AGENTOPS_SPAN_KIND] = AgentOpsSpanKindValues.LLM.value
     logger.debug(
-        f"[get_generation_span_attributes] Returning attributes for span_data.id: {getattr(span_data, 'id', 'N/A')}. agentops.span.kind: {attributes.get(SpanAttributes.AGENTOPS_SPAN_KIND)}"
+        f"[get_generation_span_attributes] Set AGENTOPS_SPAN_KIND to '{AgentOpsSpanKindValues.LLM.value}' for span_data.id: {getattr(span_data, 'id', 'N/A')}. Current attributes include agentops.span.kind: {attributes.get(SpanAttributes.AGENTOPS_SPAN_KIND)}"
     )
     return attributes
 
