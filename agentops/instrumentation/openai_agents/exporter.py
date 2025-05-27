@@ -141,6 +141,7 @@ class OpenAIAgentsExporter:
             return
 
         # Determine if this is a trace end event using status field
+        # We use the status field to determine if this is an end event
         is_end_event = hasattr(trace, "status") and trace.status == StatusCode.OK.name
         trace_lookup_key = _get_span_lookup_key(trace_id, trace_id)
         attributes = get_base_trace_attributes(trace)
@@ -239,6 +240,7 @@ class OpenAIAgentsExporter:
 
         # If we couldn't find the parent by ID, use the current span context as parent
         if not parent_span_ctx:
+            # Get the current span context from the context API
             ctx = context_api.get_current()
             parent_span_ctx = trace_api.get_current_span(ctx).get_span_context()
 
@@ -307,11 +309,12 @@ class OpenAIAgentsExporter:
         # Unique lookup key for this span
         span_lookup_key = _get_span_lookup_key(trace_id, span_id)
 
-        attributes = get_base_span_attributes(span)  # Basic attributes from the SDK span object
-        span_specific_attributes = get_span_attributes(span_data)  # Type-specific attributes from SpanData
+        attributes = get_base_span_attributes(span)
+        span_specific_attributes = get_span_attributes(span_data)
         attributes.update(span_specific_attributes)
 
         if is_end_event:
+            # Update all attributes for end events
             pass
 
         # Log the trace ID for debugging and correlation with AgentOps API
@@ -319,15 +322,20 @@ class OpenAIAgentsExporter:
 
         # For start events, create a new span and store it (don't end it)
         if not is_end_event:
+            # Process the span based on its type
+            # TODO span_name should come from the attributes module
             span_name = get_span_name(span)
             span_kind = get_span_kind(span)
 
+            # Get parent context for proper nesting
             parent_span_ctx = self._get_parent_context(trace_id, span_id, parent_id)
 
+            # Create the span with proper parent context
             otel_span = self._create_span_with_parent(
                 name=span_name, kind=span_kind, attributes=attributes, parent_ctx=parent_span_ctx
             )
 
+            # Store the span for later reference
             if not isinstance(otel_span, NonRecordingSpan):
                 self._span_map[span_lookup_key] = otel_span
                 self._active_spans[span_id] = {
@@ -337,7 +345,9 @@ class OpenAIAgentsExporter:
                     "parent_id": parent_id,
                 }
 
+            # Handle any error information
             self._handle_span_error(span, otel_span)
+            # DO NOT end the span for start events - we want to keep it open for updates
             return
 
         # For end events, check if we already have the span
@@ -361,13 +371,13 @@ class OpenAIAgentsExporter:
             # Span already ended, create a new one (should be rare if logic is correct)
             else:
                 logger.warning(
-                    f"[Exporter] SDK span_id: {span_id} (END event) - Attempting to end an ALREADY ENDED OTel span: {span_lookup_key}. Creating a new one instead."
+                    f"[Exporter] SDK span_id: {span_id} (END event) - Attempting to end an ALREADY ENDED span: {span_lookup_key}. Creating a new one instead."
                 )
                 self.create_span(span, span_type, attributes, is_already_ended=True)
         # No existing span found for end event, create a new one
         else:
             logger.warning(
-                f"[Exporter] SDK span_id: {span_id} (END event) - No active OTel span found for end event: {span_lookup_key}. Creating a new one."
+                f"[Exporter] SDK span_id: {span_id} (END event) - No active span found for end event: {span_lookup_key}. Creating a new one."
             )
             self.create_span(span, span_type, attributes, is_already_ended=True)
 

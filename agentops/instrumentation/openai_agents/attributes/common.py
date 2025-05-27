@@ -111,14 +111,14 @@ def _get_llm_messages_attributes(messages: Optional[List[Dict]], attribute_base:
         if isinstance(msg_dict, dict):
             role = msg_dict.get("role")
             content = msg_dict.get("content")
-            name = msg_dict.get("name")  # For named messages if ever used
-            tool_calls = msg_dict.get("tool_calls")  # For assistant messages with tool calls
-            tool_call_id = msg_dict.get("tool_call_id")  # For tool_call_output messages
+            name = msg_dict.get("name")
+            tool_calls = msg_dict.get("tool_calls")
+            tool_call_id = msg_dict.get("tool_call_id")
 
             # Common role and content
             if role:
                 attributes[f"{attribute_base}.{i}.role"] = str(role)
-            if content is not None:  # Ensure content can be an empty string but not None without being set
+            if content is not None:
                 attributes[f"{attribute_base}.{i}.content"] = safe_serialize(content)
 
             # Optional name for some roles
@@ -130,7 +130,7 @@ def _get_llm_messages_attributes(messages: Optional[List[Dict]], attribute_base:
                 for tc_idx, tc_dict in enumerate(tool_calls):
                     if isinstance(tc_dict, dict):
                         tc_id = tc_dict.get("id")
-                        tc_type = tc_dict.get("type")  # e.g., "function"
+                        tc_type = tc_dict.get("type")
                         tc_function_data = tc_dict.get("function")
 
                         if tc_function_data and isinstance(tc_function_data, dict):
@@ -144,13 +144,13 @@ def _get_llm_messages_attributes(messages: Optional[List[Dict]], attribute_base:
                                 attributes[f"{base_tool_call_key_formatted}.type"] = str(tc_type)
                             if tc_func_name:
                                 attributes[f"{base_tool_call_key_formatted}.function.name"] = str(tc_func_name)
-                            if tc_func_args is not None:  # Arguments can be an empty string
+                            if tc_func_args is not None:
                                 attributes[f"{base_tool_call_key_formatted}.function.arguments"] = safe_serialize(
                                     tc_func_args
                                 )
 
             # Tool call ID (specific to tool_call_output messages)
-            if tool_call_id:  # This is for the result of a tool call
+            if tool_call_id:
                 attributes[f"{attribute_base}.{i}.tool_call_id"] = str(tool_call_id)
         else:
             # If a message is not a dict, serialize its representation
@@ -188,8 +188,8 @@ def get_agent_span_attributes(span_data: Any) -> AttributeMap:
     Returns:
         Dictionary of attributes for agent span
     """
-    attributes = {}  # Start with an empty dict
-    attributes.update(get_common_attributes())  # Get common OTel/AgentOps attributes
+    attributes = {}
+    attributes.update(get_common_attributes())
 
     attributes[SpanAttributes.AGENTOPS_SPAN_KIND] = AgentOpsSpanKindValues.AGENT.value
 
@@ -232,7 +232,6 @@ def get_function_span_attributes(span_data: Any) -> AttributeMap:
             # Status will be set by exporter based on span lifecycle
             pass
 
-    # If from_agent is available on span_data, add it.
     if hasattr(span_data, "from_agent") and span_data.from_agent:
         attributes[f"{AgentAttributes.AGENT}.calling_tool.name"] = str(span_data.from_agent)
 
@@ -358,12 +357,9 @@ def get_generation_span_attributes(span_data: Any) -> AttributeMap:
     Returns:
         Dictionary of attributes for generation span
     """
-    attributes = _extract_attributes_from_mapping(
-        span_data, GENERATION_SPAN_ATTRIBUTES
-    )  # This might set gen_ai.prompt from span_data.input
+    attributes = _extract_attributes_from_mapping(span_data, GENERATION_SPAN_ATTRIBUTES)
     attributes.update(get_common_attributes())
 
-    # Process prompt from span_data.input
     if SpanAttributes.LLM_PROMPTS in attributes:
         raw_prompt_input = attributes.pop(SpanAttributes.LLM_PROMPTS)
         formatted_prompt_for_llm = []
@@ -393,11 +389,9 @@ def get_generation_span_attributes(span_data: Any) -> AttributeMap:
     if span_data.model:
         attributes.update(get_model_attributes(span_data.model))
 
-    # Process output for GenerationSpanData if available
     if span_data.output:
         attributes.update(get_generation_output_attributes(span_data.output))
 
-    # Add model config attributes if present
     if span_data.model_config:
         attributes.update(get_model_config_attributes(span_data.model_config))
 
