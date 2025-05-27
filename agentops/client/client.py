@@ -163,8 +163,8 @@ class Client:
                     return None  # Failed to start trace
 
             self._initialized = True  # Successfully initialized and auto-trace started (if configured)
-            # Do not return the init_trace_context or its session wrapper to the user from init()
-            return None  # As per requirements, init() doesn't return the auto-started trace object
+            # For backward compatibility, return the legacy session wrapper when auto_start_session=True
+            return self._legacy_session_for_init_trace
         else:
             logger.debug("Auto-start session is disabled. No init trace started by client.")
             self._initialized = True  # Successfully initialized, just no auto-trace
