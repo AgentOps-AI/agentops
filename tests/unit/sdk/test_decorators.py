@@ -713,7 +713,6 @@ class TestToolDecorator:
         assert tool_span[0].attributes.get(SpanAttributes.LLM_USAGE_TOOL_COST) == 0.02
         assert tool_span[3].attributes.get(SpanAttributes.LLM_USAGE_TOOL_COST) == 0.04
 
-
     def test_multiple_tool_calls(self, agent_class, instrumentation: InstrumentationTester):
         """Test multiple calls to the same tool."""
         for i in range(3):
