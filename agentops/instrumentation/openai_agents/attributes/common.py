@@ -24,7 +24,11 @@ from agentops.instrumentation.common.objects import get_uploaded_object_attribut
 from agentops.instrumentation.openai.attributes.response import get_response_response_attributes
 from agentops.instrumentation.openai_agents import LIBRARY_NAME, LIBRARY_VERSION
 
-from openai_agents.context import full_prompt_contextvar, agent_name_contextvar, agent_handoffs_contextvar
+from agentops.instrumentation.openai_agents.context import (
+    full_prompt_contextvar,
+    agent_name_contextvar,
+    agent_handoffs_contextvar,
+)
 from agentops.instrumentation.openai_agents.attributes.model import (
     get_model_attributes,
     get_model_config_attributes,
@@ -42,7 +46,7 @@ AGENT_SPAN_ATTRIBUTES: AttributeMap = {
 }
 
 
-CORRECTED_FUNCTION_TOOL_ATTRIBUTES: AttributeMap = {
+FUNCTION_TOOL_ATTRIBUTES: AttributeMap = {
     ToolAttributes.TOOL_NAME: "name",
     ToolAttributes.TOOL_PARAMETERS: "input",
     ToolAttributes.TOOL_RESULT: "output",
@@ -219,7 +223,7 @@ def get_function_span_attributes(span_data: Any) -> AttributeMap:
     Returns:
         Dictionary of attributes for function span
     """
-    attributes = _extract_attributes_from_mapping(span_data, CORRECTED_FUNCTION_TOOL_ATTRIBUTES)
+    attributes = _extract_attributes_from_mapping(span_data, FUNCTION_TOOL_ATTRIBUTES)
     attributes.update(get_common_attributes())
     attributes[SpanAttributes.AGENTOPS_SPAN_KIND] = AgentOpsSpanKindValues.TOOL.value
 
