@@ -25,7 +25,7 @@ from typing import Collection
 
 from opentelemetry import trace
 from opentelemetry.instrumentation.instrumentor import BaseInstrumentor  # type: ignore
-from openai_agents import LIBRARY_VERSION
+from agentops.instrumentation.openai_agents import LIBRARY_VERSION
 
 from agentops.logging import logger
 from agentops.instrumentation.openai_agents.processor import OpenAIAgentsProcessor
