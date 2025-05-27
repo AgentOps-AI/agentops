@@ -54,9 +54,6 @@ def create_entity_decorator(entity_kind: str):
                     super().__init__(*args, **kwargs)
 
                 async def __aenter__(self):
-                    # Added for async context manager support
-                    # This allows using the class with 'async with' statement
-
                     # If span is already created in __init__, just return self
                     if hasattr(self, "_agentops_active_span") and self._agentops_active_span is not None:
                         return self
@@ -69,9 +66,6 @@ def create_entity_decorator(entity_kind: str):
                     return self
 
                 async def __aexit__(self, exc_type, exc_val, exc_tb):
-                    # Added for proper async cleanup
-                    # This ensures spans are properly closed when using 'async with'
-
                     if hasattr(self, "_agentops_active_span") and hasattr(self, "_agentops_span_context_manager"):
                         try:
                             _record_entity_output(self._agentops_active_span, self)
