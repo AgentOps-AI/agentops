@@ -25,6 +25,7 @@ from typing import Collection
 
 from opentelemetry import trace
 from opentelemetry.instrumentation.instrumentor import BaseInstrumentor  # type: ignore
+from openai_agents import LIBRARY_VERSION
 
 from agentops.logging import logger
 from agentops.instrumentation.openai_agents.processor import OpenAIAgentsProcessor
@@ -56,7 +57,7 @@ class OpenAIAgentsInstrumentor(BaseInstrumentor):
         tracer_provider = kwargs.get("tracer_provider")
         if self._tracer is None:
             logger.debug("OpenAI Agents SDK tracer is None, creating new tracer.")
-            self._tracer = trace.get_tracer("agentops.instrumentation.openai_agents", "0.1.0")
+            self._tracer = trace.get_tracer("agentops.instrumentation.openai_agents", LIBRARY_VERSION)
 
         try:
             self._exporter = OpenAIAgentsExporter(tracer_provider=tracer_provider)
