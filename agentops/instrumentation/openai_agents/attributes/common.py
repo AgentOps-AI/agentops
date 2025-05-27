@@ -273,59 +273,30 @@ def get_response_span_attributes(span_data: Any) -> AttributeMap:
     Returns:
         Dictionary of attributes for response span
     """
-    # Debug logging
-    import json
-    print(f"\n[DEBUG] get_response_span_attributes called")
-    print(f"[DEBUG] span_data type: {type(span_data)}")
-    print(f"[DEBUG] span_data attributes: {[attr for attr in dir(span_data) if not attr.startswith('_')]}")
-    
-    # Check what's in span_data.input
-    if hasattr(span_data, "input"):
-        print(f"[DEBUG] span_data.input type: {type(span_data.input)}")
-        try:
-            print(f"[DEBUG] span_data.input content: {json.dumps(span_data.input, indent=2) if span_data.input else 'None'}")
-        except:
-            print(f"[DEBUG] span_data.input content (repr): {repr(span_data.input)}")
-    
-    # Check for response and instructions
-    if hasattr(span_data, "response") and span_data.response:
-        print(f"[DEBUG] span_data.response type: {type(span_data.response)}")
-        if hasattr(span_data.response, "instructions"):
-            print(f"[DEBUG] span_data.response.instructions: {span_data.response.instructions}")
-    
     # Get basic attributes from mapping
     attributes = _extract_attributes_from_mapping(span_data, RESPONSE_SPAN_ATTRIBUTES)
     attributes.update(get_common_attributes())
 
     # Build complete prompt list from system instructions and conversation history
     prompt_messages = []
-    
+
     # Add system instruction as first message if available
     if span_data.response and hasattr(span_data.response, "instructions") and span_data.response.instructions:
-        prompt_messages.append({
-            "role": "system",
-            "content": span_data.response.instructions
-        })
-        print(f"[DEBUG] Added system message from instructions")
-    
+        prompt_messages.append({"role": "system", "content": span_data.response.instructions})
+
     # Add conversation history from span_data.input
     if hasattr(span_data, "input") and span_data.input:
         if isinstance(span_data.input, list):
-            for i, msg in enumerate(span_data.input):
-                print(f"[DEBUG] Processing message {i}: type={type(msg)}")
+            for msg in span_data.input:
                 if isinstance(msg, dict):
                     role = msg.get("role")
                     content = msg.get("content")
-                    print(f"[DEBUG] Message {i}: role={role}, content type={type(content)}")
-                    
+
                     # Handle different content formats
                     if role and content is not None:
                         # If content is a string, use it directly
                         if isinstance(content, str):
-                            prompt_messages.append({
-                                "role": role,
-                                "content": content
-                            })
+                            prompt_messages.append({"role": role, "content": content})
                         # If content is a list (complex assistant message), extract text
                         elif isinstance(content, list):
                             text_parts = []
@@ -340,31 +311,17 @@ def get_response_span_attributes(span_data: Any) -> AttributeMap:
                                     # Handle annotations with text
                                     elif "annotations" in item and "text" in item:
                                         text_parts.append(item.get("text", ""))
-                            
+
                             if text_parts:
-                                prompt_messages.append({
-                                    "role": role,
-                                    "content": " ".join(text_parts)
-                                })
+                                prompt_messages.append({"role": role, "content": " ".join(text_parts)})
                         # If content is a dict, try to extract text
                         elif isinstance(content, dict):
                             if "text" in content:
-                                prompt_messages.append({
-                                    "role": role,
-                                    "content": content["text"]
-                                })
+                                prompt_messages.append({"role": role, "content": content["text"]})
         elif isinstance(span_data.input, str):
             # Single string input - assume it's a user message
-            prompt_messages.append({
-                "role": "user",
-                "content": span_data.input
-            })
-            print(f"[DEBUG] Added user message from string input")
-    
-    print(f"[DEBUG] Total prompt_messages: {len(prompt_messages)}")
-    for i, msg in enumerate(prompt_messages):
-        print(f"[DEBUG] prompt_messages[{i}]: role={msg.get('role')}, content_len={len(str(msg.get('content', '')))}")
-    
+            prompt_messages.append({"role": "user", "content": span_data.input})
+
     # Format prompts using existing function
     if prompt_messages:
         attributes.update(_get_llm_messages_attributes(prompt_messages, "gen_ai.prompt"))
@@ -386,11 +343,7 @@ def get_response_span_attributes(span_data: Any) -> AttributeMap:
         attributes.update(openai_style_response_attrs)
 
     attributes[SpanAttributes.AGENTOPS_SPAN_KIND] = AgentOpsSpanKindValues.LLM.value
-    
-    print(f"[DEBUG] Final attributes keys: {list(attributes.keys())}")
-    prompt_keys = [k for k in attributes.keys() if k.startswith("gen_ai.prompt")]
-    print(f"[DEBUG] Prompt attribute keys: {prompt_keys}")
-    
+
     return attributes
 
 
