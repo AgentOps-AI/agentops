@@ -65,6 +65,7 @@ class SpanAttributes:
     LLM_USAGE_CACHE_READ_INPUT_TOKENS = "gen_ai.usage.cache_read_input_tokens"
     LLM_USAGE_REASONING_TOKENS = "gen_ai.usage.reasoning_tokens"
     LLM_USAGE_STREAMING_TOKENS = "gen_ai.usage.streaming_tokens"
+    LLM_USAGE_TOOL_COST = "gen_ai.usage.total_cost"
 
     # Message attributes
     # see ./message.py for message-related attributes
@@ -77,6 +78,7 @@ class SpanAttributes:
 
     # OpenAI specific
     LLM_OPENAI_RESPONSE_SYSTEM_FINGERPRINT = "gen_ai.openai.system_fingerprint"
+    LLM_OPENAI_RESPONSE_INSTRUCTIONS = "gen_ai.openai.instructions"
     LLM_OPENAI_API_BASE = "gen_ai.openai.api_base"
     LLM_OPENAI_API_VERSION = "gen_ai.openai.api_version"
     LLM_OPENAI_API_TYPE = "gen_ai.openai.api_type"
