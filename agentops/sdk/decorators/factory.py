@@ -184,7 +184,6 @@ def create_entity_decorator(entity_kind: str) -> Callable[..., Any]:
                     version=version,
                     attributes={CoreAttributes.TAGS: tags} if tags else None,
                 )
-                span, ctx, token = _make_span(operation_name, entity_kind, version)
                 try:
                     _record_entity_input(span, args, kwargs)
                     # Set cost attribute if tool
