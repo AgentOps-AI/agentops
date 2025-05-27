@@ -189,8 +189,21 @@ def end_session(session_or_status: Any = None, **kwargs: Any) -> None:
 
 
 def end_all_sessions() -> None:
-    """@deprecated Calls end_session() on the current global session."""
-    end_session()
+    """@deprecated Ends all active sessions/traces."""
+    from agentops.sdk.core import TracingCore
+
+    tracing_core = TracingCore.get_instance()
+    if not tracing_core.initialized:
+        logger.debug("Ignoring end_all_sessions: TracingCore not initialized.")
+        return
+
+    # Use the new end_trace functionality to end all active traces
+    tracing_core.end_trace(trace_context=None, end_state="Success")
+
+    # Clear legacy global state
+    global _current_session, _current_trace_context
+    _current_session = None
+    _current_trace_context = None
 
 
 def ToolEvent(*args: Any, **kwargs: Any) -> None:

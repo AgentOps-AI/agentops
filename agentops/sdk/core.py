@@ -6,7 +6,7 @@ import platform
 import sys
 import os
 import psutil
-from typing import Optional, Any
+from typing import Optional, Any, Dict
 
 from opentelemetry import metrics, trace
 from opentelemetry.exporter.otlp.proto.http.metric_exporter import OTLPMetricExporter
@@ -221,6 +221,8 @@ class TracingCore:
         self._initialized = False
         self._config: Optional[TracingConfig] = None
         self._span_processors: list = []
+        self._active_traces: dict = {}
+        self._traces_lock = threading.Lock()
 
         # Register shutdown handler
         atexit.register(self.shutdown)
@@ -438,34 +440,72 @@ class TracingCore:
         except Exception as e:
             logger.warning(f"Failed to log trace URL for '{trace_name}': {e}")
 
-        return TraceContext(span, token=context_token, is_init_trace=is_init_trace)
+        trace_context = TraceContext(span, token=context_token, is_init_trace=is_init_trace)
 
-    def end_trace(self, trace_context: TraceContext, end_state: str = "Success") -> None:
+        # Track the active trace
+        with self._traces_lock:
+            trace_id = f"{span.get_span_context().trace_id:x}"
+            self._active_traces[trace_id] = trace_context
+            logger.debug(f"Added trace {trace_id} to active traces. Total active: {len(self._active_traces)}")
+
+        return trace_context
+
+    def end_trace(self, trace_context: Optional[TraceContext] = None, end_state: str = "Success") -> None:
         """
         Ends a trace (its root span) and finalizes it.
+        If no trace_context is provided, ends all active session spans.
 
         Args:
-            trace_context: The TraceContext object returned by start_trace.
+            trace_context: The TraceContext object returned by start_trace. If None, ends all active traces.
             end_state: The final state of the trace (e.g., "Success", "Failure", "Error").
         """
         if not self.initialized:
             logger.warning("TracingCore not initialized. Cannot end trace.")
             return
 
+        # If no specific trace_context provided, end all active traces
+        if trace_context is None:
+            with self._traces_lock:
+                active_traces = list(self._active_traces.values())
+                logger.debug(f"Ending all {len(active_traces)} active traces with state: {end_state}")
+
+            for active_trace in active_traces:
+                self._end_single_trace(active_trace, end_state)
+            return
+
+        # End specific trace
+        self._end_single_trace(trace_context, end_state)
+
+    def _end_single_trace(self, trace_context: TraceContext, end_state: str) -> None:
+        """
+        Internal method to end a single trace.
+
+        Args:
+            trace_context: The TraceContext object to end.
+            end_state: The final state of the trace.
+        """
         from agentops.sdk.decorators.utility import _finalize_span  # Local import
 
         if not trace_context or not trace_context.span:
-            logger.warning("Invalid TraceContext or span provided to end_trace.")
+            logger.warning("Invalid TraceContext or span provided to end trace.")
             return
 
         span = trace_context.span
         token = trace_context.token
+        trace_id = f"{span.get_span_context().trace_id:x}"
 
         logger.debug(f"Ending trace with span ID: {span.get_span_context().span_id}, end_state: {end_state}")
 
         try:
             span.set_attribute(SpanAttributes.AGENTOPS_SESSION_END_STATE, end_state)
             _finalize_span(span, token=token)
+
+            # Remove from active traces
+            with self._traces_lock:
+                if trace_id in self._active_traces:
+                    del self._active_traces[trace_id]
+                    logger.debug(f"Removed trace {trace_id} from active traces. Remaining: {len(self._active_traces)}")
+
             # For root spans (traces), we might want an immediate flush after they end.
             self._flush_span_processors()
 
@@ -479,3 +519,23 @@ class TracingCore:
 
         except Exception as e:
             logger.error(f"Error ending trace: {e}", exc_info=True)
+
+    def get_active_traces(self) -> Dict[str, TraceContext]:
+        """
+        Get a copy of currently active traces.
+
+        Returns:
+            Dictionary mapping trace IDs to TraceContext objects.
+        """
+        with self._traces_lock:
+            return self._active_traces.copy()
+
+    def get_active_trace_count(self) -> int:
+        """
+        Get the number of currently active traces.
+
+        Returns:
+            Number of active traces.
+        """
+        with self._traces_lock:
+            return len(self._active_traces)

@@ -205,12 +205,13 @@ def start_trace(
     return tracing_core.start_trace(trace_name=trace_name, tags=tags)
 
 
-def end_trace(trace_context: TraceContext, end_state: str = "Success") -> None:
+def end_trace(trace_context: Optional[TraceContext] = None, end_state: str = "Success") -> None:
     """
     Ends a trace (its root span) and finalizes it.
+    If no trace_context is provided, ends all active session spans.
 
     Args:
-        trace_context: The TraceContext object returned by start_trace.
+        trace_context: The TraceContext object returned by start_trace. If None, ends all active traces.
         end_state: The final state of the trace (e.g., "Success", "Failure", "Error").
     """
     tracing_core = TracingCore.get_instance()
