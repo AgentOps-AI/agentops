@@ -8,11 +8,11 @@ from agentops.instrumentation import instrument_all
 from agentops.logging import logger
 from agentops.logging.config import configure_logging, intercept_opentelemetry_logging
 from agentops.sdk.core import TracingCore, TraceContext
-from agentops.legacy import Session as LegacySession
+from agentops.legacy import Session
 
 # Global variables to hold the client's auto-started trace and its legacy session wrapper
 _client_init_trace_context: Optional[TraceContext] = None
-_client_legacy_session_for_init_trace: Optional[LegacySession] = None
+_client_legacy_session_for_init_trace: Optional[Session] = None
 
 # Single atexit handler registered flag
 _atexit_registered = False
@@ -42,7 +42,7 @@ class Client:
     _initialized: bool
     _init_trace_context: Optional[TraceContext] = None  # Stores the context of the auto-started trace
     _legacy_session_for_init_trace: Optional[
-        LegacySession
+        Session
     ] = None  # Stores the legacy Session wrapper for the auto-started trace
 
     __instance = None  # Class variable for singleton pattern
@@ -134,7 +134,7 @@ class Client:
                     is_init_trace=True,
                 )
                 if self._init_trace_context:
-                    self._legacy_session_for_init_trace = LegacySession(self._init_trace_context)
+                    self._legacy_session_for_init_trace = Session(self._init_trace_context)
 
                     # For backward compatibility, also update the global references in legacy and client modules
                     # These globals are what old code might have been using via agentops.legacy.get_session() or similar indirect access.
