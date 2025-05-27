@@ -24,11 +24,6 @@ from agentops.instrumentation.common.objects import get_uploaded_object_attribut
 from agentops.instrumentation.openai.attributes.response import get_response_response_attributes
 from agentops.instrumentation.openai_agents import LIBRARY_NAME, LIBRARY_VERSION
 
-from agentops.instrumentation.openai_agents.context import (
-    full_prompt_contextvar,
-    agent_name_contextvar,
-    agent_handoffs_contextvar,
-)
 from agentops.instrumentation.openai_agents.attributes.model import (
     get_model_attributes,
     get_model_config_attributes,
@@ -46,10 +41,13 @@ AGENT_SPAN_ATTRIBUTES: AttributeMap = {
 }
 
 
+# Attribute mapping for FunctionSpanData
 FUNCTION_TOOL_ATTRIBUTES: AttributeMap = {
     ToolAttributes.TOOL_NAME: "name",
     ToolAttributes.TOOL_PARAMETERS: "input",
     ToolAttributes.TOOL_RESULT: "output",
+    # AgentAttributes.AGENT_NAME: "name",
+    AgentAttributes.FROM_AGENT: "from_agent",
 }
 
 
@@ -68,7 +66,9 @@ GENERATION_SPAN_ATTRIBUTES: AttributeMap = {
 
 # Attribute mapping for ResponseSpanData
 RESPONSE_SPAN_ATTRIBUTES: AttributeMap = {
-    WorkflowAttributes.WORKFLOW_INPUT: "input",
+    # Don't map input here as it causes double serialization
+    # We handle prompts manually in get_response_span_attributes
+    SpanAttributes.LLM_RESPONSE_MODEL: "model",
 }
 
 
@@ -193,17 +193,12 @@ def get_agent_span_attributes(span_data: Any) -> AttributeMap:
 
     attributes[SpanAttributes.AGENTOPS_SPAN_KIND] = AgentOpsSpanKindValues.AGENT.value
 
-    # Get agent name from contextvar (set by instrumentor wrapper)
-    ctx_agent_name = agent_name_contextvar.get()
-    if ctx_agent_name:
-        attributes[AgentAttributes.AGENT_NAME] = ctx_agent_name
-    elif hasattr(span_data, "name") and span_data.name:
+    # Get agent name directly from span_data
+    if hasattr(span_data, "name") and span_data.name:
         attributes[AgentAttributes.AGENT_NAME] = str(span_data.name)
 
-    ctx_handoffs = agent_handoffs_contextvar.get()
-    if ctx_handoffs:
-        attributes[AgentAttributes.HANDOFFS] = safe_serialize(ctx_handoffs)
-    elif hasattr(span_data, "handoffs") and span_data.handoffs:
+    # Get handoffs directly from span_data
+    if hasattr(span_data, "handoffs") and span_data.handoffs:
         attributes[AgentAttributes.HANDOFFS] = safe_serialize(span_data.handoffs)
 
     if hasattr(span_data, "tools") and span_data.tools:
@@ -278,37 +273,111 @@ def get_response_span_attributes(span_data: Any) -> AttributeMap:
     Returns:
         Dictionary of attributes for response span
     """
+    # Debug logging
+    import json
+    print(f"\n[DEBUG] get_response_span_attributes called")
+    print(f"[DEBUG] span_data type: {type(span_data)}")
+    print(f"[DEBUG] span_data attributes: {[attr for attr in dir(span_data) if not attr.startswith('_')]}")
+    
+    # Check what's in span_data.input
+    if hasattr(span_data, "input"):
+        print(f"[DEBUG] span_data.input type: {type(span_data.input)}")
+        try:
+            print(f"[DEBUG] span_data.input content: {json.dumps(span_data.input, indent=2) if span_data.input else 'None'}")
+        except:
+            print(f"[DEBUG] span_data.input content (repr): {repr(span_data.input)}")
+    
+    # Check for response and instructions
+    if hasattr(span_data, "response") and span_data.response:
+        print(f"[DEBUG] span_data.response type: {type(span_data.response)}")
+        if hasattr(span_data.response, "instructions"):
+            print(f"[DEBUG] span_data.response.instructions: {span_data.response.instructions}")
+    
     # Get basic attributes from mapping
     attributes = _extract_attributes_from_mapping(span_data, RESPONSE_SPAN_ATTRIBUTES)
     attributes.update(get_common_attributes())
 
-    prompt_attributes_set = False
-
-    # Read full prompt from contextvar (set by instrumentor's wrapper)
-    full_prompt_from_context = full_prompt_contextvar.get()
-    if full_prompt_from_context:
-        attributes.update(_get_llm_messages_attributes(full_prompt_from_context, "gen_ai.prompt"))
-        prompt_attributes_set = True
-    else:
-        if (
-            span_data.response
-            and hasattr(span_data.response, "request_messages")
-            and span_data.response.request_messages
-        ):
-            prompt_messages_from_sdk = span_data.response.request_messages
-            attributes.update(_get_llm_messages_attributes(prompt_messages_from_sdk, "gen_ai.prompt"))
-            prompt_attributes_set = True
+    # Build complete prompt list from system instructions and conversation history
+    prompt_messages = []
+    
+    # Add system instruction as first message if available
+    if span_data.response and hasattr(span_data.response, "instructions") and span_data.response.instructions:
+        prompt_messages.append({
+            "role": "system",
+            "content": span_data.response.instructions
+        })
+        print(f"[DEBUG] Added system message from instructions")
+    
+    # Add conversation history from span_data.input
+    if hasattr(span_data, "input") and span_data.input:
+        if isinstance(span_data.input, list):
+            for i, msg in enumerate(span_data.input):
+                print(f"[DEBUG] Processing message {i}: type={type(msg)}")
+                if isinstance(msg, dict):
+                    role = msg.get("role")
+                    content = msg.get("content")
+                    print(f"[DEBUG] Message {i}: role={role}, content type={type(content)}")
+                    
+                    # Handle different content formats
+                    if role and content is not None:
+                        # If content is a string, use it directly
+                        if isinstance(content, str):
+                            prompt_messages.append({
+                                "role": role,
+                                "content": content
+                            })
+                        # If content is a list (complex assistant message), extract text
+                        elif isinstance(content, list):
+                            text_parts = []
+                            for item in content:
+                                if isinstance(item, dict):
+                                    # Handle output_text type
+                                    if item.get("type") == "output_text":
+                                        text_parts.append(item.get("text", ""))
+                                    # Handle other text content
+                                    elif "text" in item:
+                                        text_parts.append(item.get("text", ""))
+                                    # Handle annotations with text
+                                    elif "annotations" in item and "text" in item:
+                                        text_parts.append(item.get("text", ""))
+                            
+                            if text_parts:
+                                prompt_messages.append({
+                                    "role": role,
+                                    "content": " ".join(text_parts)
+                                })
+                        # If content is a dict, try to extract text
+                        elif isinstance(content, dict):
+                            if "text" in content:
+                                prompt_messages.append({
+                                    "role": role,
+                                    "content": content["text"]
+                                })
+        elif isinstance(span_data.input, str):
+            # Single string input - assume it's a user message
+            prompt_messages.append({
+                "role": "user",
+                "content": span_data.input
+            })
+            print(f"[DEBUG] Added user message from string input")
+    
+    print(f"[DEBUG] Total prompt_messages: {len(prompt_messages)}")
+    for i, msg in enumerate(prompt_messages):
+        print(f"[DEBUG] prompt_messages[{i}]: role={msg.get('role')}, content_len={len(str(msg.get('content', '')))}")
+    
+    # Format prompts using existing function
+    if prompt_messages:
+        attributes.update(_get_llm_messages_attributes(prompt_messages, "gen_ai.prompt"))
 
     # Process response attributes
     if span_data.response:
         openai_style_response_attrs = get_response_response_attributes(span_data.response)
 
-        # Remove prompt attributes if already set from context
-        if prompt_attributes_set:
-            keys_to_remove = [k for k in openai_style_response_attrs if k.startswith("gen_ai.prompt")]
-            for key in keys_to_remove:
-                if key in openai_style_response_attrs:
-                    del openai_style_response_attrs[key]
+        # Remove any prompt attributes from response processing since we handle them above
+        keys_to_remove = [k for k in openai_style_response_attrs if k.startswith("gen_ai.prompt")]
+        for key in keys_to_remove:
+            if key in openai_style_response_attrs:
+                del openai_style_response_attrs[key]
 
         # Remove tool definitions from response attributes
         if "gen_ai.request.tools" in openai_style_response_attrs:
@@ -317,6 +386,11 @@ def get_response_span_attributes(span_data: Any) -> AttributeMap:
         attributes.update(openai_style_response_attrs)
 
     attributes[SpanAttributes.AGENTOPS_SPAN_KIND] = AgentOpsSpanKindValues.LLM.value
+    
+    print(f"[DEBUG] Final attributes keys: {list(attributes.keys())}")
+    prompt_keys = [k for k in attributes.keys() if k.startswith("gen_ai.prompt")]
+    print(f"[DEBUG] Prompt attribute keys: {prompt_keys}")
+    
     return attributes
 
 
@@ -336,20 +410,8 @@ def get_generation_span_attributes(span_data: Any) -> AttributeMap:
     )  # This might set gen_ai.prompt from span_data.input
     attributes.update(get_common_attributes())
 
-    # Read full prompt from contextvar (set by instrumentor's wrapper)
-    full_prompt_from_context = full_prompt_contextvar.get()
-
-    if full_prompt_from_context:
-        # Clear any prompt set by _extract_attributes_from_mapping from span_data.input
-        prompt_keys_to_clear = [k for k in attributes if k.startswith("gen_ai.prompt")]
-        if SpanAttributes.LLM_PROMPTS in attributes:
-            prompt_keys_to_clear.append(SpanAttributes.LLM_PROMPTS)
-        for key in set(prompt_keys_to_clear):
-            if key in attributes:
-                del attributes[key]
-
-        attributes.update(_get_llm_messages_attributes(full_prompt_from_context, "gen_ai.prompt"))
-    elif SpanAttributes.LLM_PROMPTS in attributes:  # Fallback to span_data.input if contextvar is empty
+    # Process prompt from span_data.input
+    if SpanAttributes.LLM_PROMPTS in attributes:
         raw_prompt_input = attributes.pop(SpanAttributes.LLM_PROMPTS)
         formatted_prompt_for_llm = []
         if isinstance(raw_prompt_input, str):

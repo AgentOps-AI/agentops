@@ -83,7 +83,6 @@ RESPONSE_ATTRIBUTES: AttributeMap = {
     SpanAttributes.LLM_RESPONSE_ID: "id",
     SpanAttributes.LLM_REQUEST_MODEL: "model",
     SpanAttributes.LLM_RESPONSE_MODEL: "model",
-    SpanAttributes.LLM_PROMPTS: "instructions",
     SpanAttributes.LLM_REQUEST_MAX_TOKENS: "max_output_tokens",
     SpanAttributes.LLM_REQUEST_TEMPERATURE: "temperature",
     SpanAttributes.LLM_REQUEST_TOP_P: "top_p",

@@ -4,78 +4,26 @@ This module provides instrumentation for the OpenAI Agents SDK, leveraging its b
 tracing API for observability. It captures detailed information about agent execution,
 tool usage, LLM requests, and token metrics.
 
-The implementation uses a clean separation between exporters and processors. The exporter
-translates Agent spans into OpenTelemetry spans with appropriate semantic conventions.
-The processor implements the tracing interface, collects metrics, and manages timing data.
+The implementation uses the SDK's TracingProcessor interface as the integration point.
+The processor receives span data from the SDK's built-in tracing system, and the exporter
+translates these spans into OpenTelemetry spans with appropriate semantic conventions.
 
-We use the built-in add_trace_processor hook for all functionality. Streaming support
-would require monkey-patching the run method of `Runner`, but doesn't really get us
-more data than we already have, since the `Response` object is always passed to us
-from the `agents.tracing` module.
-
-TODO Calls to the OpenAI API are not available in this tracing context, so we may
-need to monkey-patch the `openai` from here to get that data. While we do have
-separate instrumentation for the OpenAI API, in order to get it to nest with the
-spans we create here, it's probably easier (or even required) that we incorporate
-that here as well.
+No method wrapping or context variables are needed - the SDK handles all span creation
+and data collection internally.
 """
 
-from typing import Collection, Tuple, Dict, Any, Optional
-import functools  # For functools.wraps
+from typing import Collection
 
-from opentelemetry import trace  # Needed for tracer
-from opentelemetry.trace import SpanKind as OtelSpanKind  # Renamed to avoid conflict
+from opentelemetry import trace
 from opentelemetry.instrumentation.instrumentor import BaseInstrumentor  # type: ignore
-import wrapt  # For wrapping
 
 from agentops.logging import logger
 from agentops.instrumentation.openai_agents.processor import OpenAIAgentsProcessor
 from agentops.instrumentation.openai_agents.exporter import OpenAIAgentsExporter
-from .context import full_prompt_contextvar, agent_name_contextvar, agent_handoffs_contextvar  # Import from .context
-from agentops.instrumentation.common.wrappers import WrapConfig  # Keep WrapConfig
-
-from agentops.helpers import safe_serialize
-
-from agentops.semconv import (
-    AgentOpsSpanKindValues,
-)
-
-_OPENAI_AGENTS_RUNNER_MODULE = "agents.run"
-_OPENAI_AGENTS_RUNNER_CLASS = "Runner"
-
-AGENT_RUNNER_WRAP_CONFIGS = [
-    WrapConfig(
-        trace_name=AgentOpsSpanKindValues.AGENT.value,  # This will be the OTel span name
-        package=_OPENAI_AGENTS_RUNNER_MODULE,
-        class_name=_OPENAI_AGENTS_RUNNER_CLASS,
-        method_name="run",
-        handler=None,
-        is_async=True,
-        span_kind=OtelSpanKind.INTERNAL,
-    ),
-    WrapConfig(
-        trace_name=AgentOpsSpanKindValues.AGENT.value,
-        package=_OPENAI_AGENTS_RUNNER_MODULE,
-        class_name=_OPENAI_AGENTS_RUNNER_CLASS,
-        method_name="run_sync",
-        handler=None,
-        is_async=False,
-        span_kind=OtelSpanKind.INTERNAL,
-    ),
-    WrapConfig(
-        trace_name=AgentOpsSpanKindValues.AGENT.value,
-        package=_OPENAI_AGENTS_RUNNER_MODULE,
-        class_name=_OPENAI_AGENTS_RUNNER_CLASS,
-        method_name="run_streamed",
-        handler=None,
-        is_async=True,
-        span_kind=OtelSpanKind.INTERNAL,
-    ),
-]
 
 
 class OpenAIAgentsInstrumentor(BaseInstrumentor):
-    """An instrumentor for OpenAI Agents SDK that primarily uses the built-in tracing API."""
+    """An instrumentor for OpenAI Agents SDK that uses the built-in tracing API."""
 
     _processor = None
     _exporter = None
@@ -88,143 +36,6 @@ class OpenAIAgentsInstrumentor(BaseInstrumentor):
         logger.debug(
             f"OpenAIAgentsInstrumentor (id: {id(self)}) created. Initial _is_instrumented_instance_flag: {self._is_instrumented_instance_flag}"
         )
-
-    def _prepare_and_set_agent_contextvars(
-        self,
-        args: Optional[Tuple] = None,
-        kwargs: Optional[Dict] = None,
-    ) -> None:
-        """
-        Helper to extract agent information and set context variables for later use by the exporter.
-        This method does NOT create or modify OTel spans directly.
-        """
-        agent_obj: Any = None
-        sdk_input: Any = None
-
-        if args:
-            if len(args) > 0:
-                agent_obj = args[0]
-            if len(args) > 1:
-                sdk_input = args[1]
-
-        # Allow kwargs to override or provide if not in args
-        if kwargs:
-            if "agent" in kwargs and kwargs["agent"] is not None:
-                agent_obj = kwargs["agent"]
-            if "input" in kwargs and kwargs["input"] is not None:
-                sdk_input = kwargs["input"]
-
-        current_full_prompt_for_llm = []
-        extracted_agent_name: Optional[str] = None
-        extracted_handoffs: Optional[list[str]] = None
-
-        if agent_obj:
-            if hasattr(agent_obj, "name") and agent_obj.name:
-                extracted_agent_name = str(agent_obj.name)
-            if hasattr(agent_obj, "instructions") and agent_obj.instructions:
-                instructions = str(agent_obj.instructions)
-                current_full_prompt_for_llm.append({"role": "system", "content": instructions})
-            if hasattr(agent_obj, "handoffs") and agent_obj.handoffs:
-                processed_handoffs = []
-                for h_item in agent_obj.handoffs:
-                    if isinstance(h_item, str):
-                        processed_handoffs.append(h_item)
-                    elif hasattr(h_item, "agent_name") and h_item.agent_name:
-                        processed_handoffs.append(str(h_item.agent_name))
-                    elif hasattr(h_item, "name") and h_item.name:
-                        processed_handoffs.append(str(h_item.name))
-                    else:
-                        processed_handoffs.append(str(h_item))
-                extracted_handoffs = processed_handoffs
-
-        if sdk_input:
-            if isinstance(sdk_input, str):
-                current_full_prompt_for_llm.append({"role": "user", "content": sdk_input})
-            elif isinstance(sdk_input, list):
-                for i, msg in enumerate(sdk_input):
-                    if isinstance(msg, dict):
-                        role = msg.get("role")
-                        content = msg.get("content")
-                        if role and content is not None:
-                            current_full_prompt_for_llm.append({"role": str(role), "content": safe_serialize(content)})
-
-        if extracted_agent_name:
-            agent_name_contextvar.set(extracted_agent_name)
-            logger.debug(f"[_prepare_and_set_agent_contextvars] Set agent_name_contextvar to: {extracted_agent_name}")
-        else:
-            agent_name_contextvar.set(None)
-
-        if extracted_handoffs:
-            agent_handoffs_contextvar.set(extracted_handoffs)
-            logger.debug(
-                f"[_prepare_and_set_agent_contextvars] Set agent_handoffs_contextvar to: {safe_serialize(extracted_handoffs)}"
-            )
-        else:
-            agent_handoffs_contextvar.set(None)
-
-        if current_full_prompt_for_llm:
-            full_prompt_contextvar.set(current_full_prompt_for_llm)
-            logger.debug(
-                f"[_prepare_and_set_agent_contextvars] Set full_prompt_contextvar to: {safe_serialize(current_full_prompt_for_llm)}"
-            )
-        else:
-            full_prompt_contextvar.set(None)
-
-    def _create_agent_runner_wrapper(self, wrapped_method_to_call, is_async: bool):
-        """
-        Creates a wrapper for an OpenAI Agents Runner method (run, run_sync, run_streamed).
-        This wrapper NO LONGER starts an OTel span. It only prepares and sets context variables.
-        """
-        if is_async:
-
-            @functools.wraps(wrapped_method_to_call)
-            async def wrapper_async(wrapped, instance, args, kwargs):
-                # Initialize context var tokens to their current values before setting new ones
-                token_full_prompt = full_prompt_contextvar.set(None)
-                token_agent_name = agent_name_contextvar.set(None)
-                token_agent_handoffs = agent_handoffs_contextvar.set(None)
-                res = None
-                try:
-                    self._prepare_and_set_agent_contextvars(args=args, kwargs=kwargs)
-                    res = await wrapped(*args, **kwargs)
-                except Exception as e:
-                    logger.error(f"Exception in wrapped async agent call: {e}", exc_info=True)
-                    raise
-                finally:
-                    # Reset context variables to their state before this wrapper ran
-                    if token_full_prompt is not None:
-                        full_prompt_contextvar.reset(token_full_prompt)
-                    if token_agent_name is not None:
-                        agent_name_contextvar.reset(token_agent_name)
-                    if token_agent_handoffs is not None:
-                        agent_handoffs_contextvar.reset(token_agent_handoffs)
-                return res
-
-            return wrapper_async
-        else:
-
-            @functools.wraps(wrapped_method_to_call)
-            def wrapper_sync(wrapped, instance, args, kwargs):
-                token_full_prompt = full_prompt_contextvar.set(None)
-                token_agent_name = agent_name_contextvar.set(None)
-                token_agent_handoffs = agent_handoffs_contextvar.set(None)
-                res = None
-                try:
-                    self._prepare_and_set_agent_contextvars(args=args, kwargs=kwargs)
-                    res = wrapped(*args, **kwargs)
-                except Exception as e:
-                    logger.error(f"Exception in wrapped sync agent call: {e}", exc_info=True)
-                    raise
-                finally:
-                    if token_full_prompt is not None:
-                        full_prompt_contextvar.reset(token_full_prompt)
-                    if token_agent_name is not None:
-                        agent_name_contextvar.reset(token_agent_name)
-                    if token_agent_handoffs is not None:
-                        agent_handoffs_contextvar.reset(token_agent_handoffs)
-                return res
-
-            return wrapper_sync
 
     def instrumentation_dependencies(self) -> Collection[str]:
         """Return packages required for instrumentation."""
@@ -267,43 +78,6 @@ class OpenAIAgentsInstrumentor(BaseInstrumentor):
                 f"OpenAIAgentsInstrumentor (id: {id(self)}) Replaced default processor with OpenAIAgentsProcessor."
             )
 
-            logger.debug(
-                f"OpenAIAgentsInstrumentor (id: {id(self)}) Applying Runner method wrappers using new custom wrapper..."
-            )
-            for config in AGENT_RUNNER_WRAP_CONFIGS:
-                try:
-                    module_path, class_name, method_name = config.package, config.class_name, config.method_name
-
-                    # Get the class from the module path
-                    parts = module_path.split(".")
-                    current_module = __import__(parts[0])
-                    for part in parts[1:]:
-                        current_module = getattr(current_module, part)
-
-                    cls_to_wrap = getattr(current_module, class_name)
-                    original_method = getattr(cls_to_wrap, method_name)
-
-                    # Create the specific wrapper for this method
-                    custom_wrapper = self._create_agent_runner_wrapper(
-                        original_method,
-                        is_async=config.is_async,
-                        # trace_name and span_kind are no longer passed
-                    )
-
-                    wrapt.wrap_function_wrapper(
-                        module_path,
-                        f"{class_name}.{method_name}",
-                        custom_wrapper,
-                    )
-                    logger.info(
-                        f"OpenAIAgentsInstrumentor (id: {id(self)}) Applied custom wrapper for {class_name}.{method_name}"
-                    )
-                except Exception as e_wrap:
-                    logger.error(
-                        f"OpenAIAgentsInstrumentor (id: {id(self)}) Failed to apply custom wrapper for {config.method_name}: {e_wrap}",
-                        exc_info=True,
-                    )
-
             self._is_instrumented_instance_flag = True
             logger.debug(f"OpenAIAgentsInstrumentor (id: {id(self)}) set _is_instrumented_instance_flag to True.")
 
@@ -341,44 +115,6 @@ class OpenAIAgentsInstrumentor(BaseInstrumentor):
                 logger.warning(f"OpenAIAgentsInstrumentor (id: {id(self)}) No default_processor to restore.")
             self._processor = None
             self._exporter = None
-
-            logger.debug(f"OpenAIAgentsInstrumentor (id: {id(self)}) Removing Runner method wrappers...")
-            for config in AGENT_RUNNER_WRAP_CONFIGS:
-                try:
-                    module_path, class_name, method_name = config.package, config.class_name, config.method_name
-
-                    parts = module_path.split(".")
-                    current_module = __import__(parts[0])
-                    for part in parts[1:]:
-                        current_module = getattr(current_module, part)
-
-                    cls_to_wrap = getattr(current_module, class_name)
-                    method_to_unwrap = getattr(cls_to_wrap, method_name, None)
-
-                    if hasattr(method_to_unwrap, "__wrapped__"):
-                        original = method_to_unwrap.__wrapped__
-                        setattr(cls_to_wrap, method_name, original)
-                        logger.info(
-                            f"OpenAIAgentsInstrumentor (id: {id(self)}) Removed custom wrapper for {class_name}.{method_name}"
-                        )
-                    elif isinstance(method_to_unwrap, functools.partial) and hasattr(
-                        method_to_unwrap.func, "__wrapped__"
-                    ):
-                        original = method_to_unwrap.func.__wrapped__
-                        setattr(cls_to_wrap, method_name, original)
-                        logger.info(
-                            f"OpenAIAgentsInstrumentor (id: {id(self)}) Removed custom wrapper (from partial) for {class_name}.{method_name}"
-                        )
-                    else:
-                        logger.warning(
-                            f"OpenAIAgentsInstrumentor (id: {id(self)}) Wrapper not found or not a recognized wrapt wrapper for {class_name}.{method_name}. Current type: {type(method_to_unwrap)}"
-                        )
-
-                except Exception as e_unwrap:
-                    logger.error(
-                        f"OpenAIAgentsInstrumentor (id: {id(self)}) Failed to remove custom wrapper for {config.method_name}: {e_unwrap}",
-                        exc_info=True,
-                    )
 
             self._is_instrumented_instance_flag = False
             logger.debug(f"OpenAIAgentsInstrumentor (id: {id(self)}) set _is_instrumented_instance_flag to False.")
