@@ -75,7 +75,9 @@ class Client:
         self.config = Config()
         self.configure(**kwargs)
 
-        if self.initialized and kwargs.get("api_key") != self.config.api_key:
+        # Only treat as re-initialization if a different non-None API key is explicitly provided
+        provided_api_key = kwargs.get("api_key")
+        if self.initialized and provided_api_key is not None and provided_api_key != self.config.api_key:
             logger.warning("AgentOps Client being re-initialized with a different API key. This is unusual.")
             # Reset initialization status to allow re-init with new key/config
             self._initialized = False
