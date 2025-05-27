@@ -340,8 +340,8 @@ class TestResponseAttributes:
                 assert attributes[SpanAttributes.LLM_RESPONSE_ID] == response_data["id"]
                 assert SpanAttributes.LLM_RESPONSE_MODEL in attributes
                 assert attributes[SpanAttributes.LLM_RESPONSE_MODEL] == response_data["model"]
-                assert SpanAttributes.LLM_PROMPTS in attributes
-                assert attributes[SpanAttributes.LLM_PROMPTS] == response_data["instructions"]
+                assert SpanAttributes.LLM_OPENAI_RESPONSE_INSTRUCTIONS in attributes
+                assert attributes[SpanAttributes.LLM_OPENAI_RESPONSE_INSTRUCTIONS] == response_data["instructions"]
 
         # Check usage attributes
         assert SpanAttributes.LLM_USAGE_PROMPT_TOKENS in attributes
