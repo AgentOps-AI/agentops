@@ -12,7 +12,12 @@ Key Features:
 - Non-intrusive monitoring using Python's import system
 """
 
-from typing import Optional, Set, TypedDict, NotRequired
+from typing import Optional, Set, TypedDict
+
+try:
+    from typing import NotRequired
+except ImportError:
+    from typing_extensions import NotRequired
 from types import ModuleType
 from dataclasses import dataclass
 import importlib
