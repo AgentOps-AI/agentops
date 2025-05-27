@@ -13,6 +13,11 @@ Key Features:
 """
 
 from typing import Optional, Set, TypedDict
+
+try:
+    from typing import NotRequired
+except ImportError:
+    from typing_extensions import NotRequired
 from types import ModuleType
 from dataclasses import dataclass
 import importlib
@@ -36,8 +41,11 @@ _has_agentic_library: bool = False
 
 def _is_package_instrumented(package_name: str) -> bool:
     """Check if a package is already instrumented by looking at active instrumentors."""
+    # Handle package.module names by converting dots to underscores for comparison
+    normalized_name = package_name.replace(".", "_").lower()
     return any(
-        instrumentor.__class__.__name__.lower().startswith(package_name.lower())
+        instrumentor.__class__.__name__.lower().startswith(normalized_name)
+        or instrumentor.__class__.__name__.lower().startswith(package_name.split(".")[-1].lower())
         for instrumentor in _active_instrumentors
     )
 
@@ -65,17 +73,14 @@ def _should_instrument_package(package_name: str) -> bool:
     if package_name in AGENTIC_LIBRARIES:
         _uninstrument_providers()
         _has_agentic_library = True
-        logger.debug(f"Uninstrumented all providers due to agentic library {package_name} detection")
         return True
 
     # Skip providers if an agentic library is already instrumented
     if package_name in PROVIDERS and _has_agentic_library:
-        logger.debug(f"Skipping provider {package_name} instrumentation as an agentic library is already instrumented")
         return False
 
     # Skip if already instrumented
     if _is_package_instrumented(package_name):
-        logger.debug(f"Package {package_name} is already instrumented")
         return False
 
     return True
@@ -102,29 +107,54 @@ def _import_monitor(name: str, globals_dict=None, locals_dict=None, fromlist=(),
     Monitor imports and instrument packages as they are imported.
     This replaces the built-in import function to intercept package imports.
     """
-    global _instrumenting_packages
-    root = name.split(".", 1)[0]
+    global _instrumenting_packages, _has_agentic_library
 
-    # Skip providers if an agentic library is already instrumented
-    if _has_agentic_library and root in PROVIDERS:
+    # If an agentic library is already instrumented, skip all further instrumentation
+    if _has_agentic_library:
         return _original_builtins_import(name, globals_dict, locals_dict, fromlist, level)
 
-    # Check if this is a package we should instrument
-    if (
-        root in TARGET_PACKAGES
-        and root not in _instrumenting_packages
-        and not _is_package_instrumented(root)  # Check if already instrumented before adding
-    ):
-        logger.debug(f"Detected import of {root}")
-        _instrumenting_packages.add(root)
-        try:
-            _perform_instrumentation(root)
-        except Exception as e:
-            logger.error(f"Error instrumenting {root}: {str(e)}")
-        finally:
-            _instrumenting_packages.discard(root)
+    # First, do the actual import
+    module = _original_builtins_import(name, globals_dict, locals_dict, fromlist, level)
 
-    return _original_builtins_import(name, globals_dict, locals_dict, fromlist, level)
+    # Check for exact matches first (handles package.module like google.adk)
+    packages_to_check = set()
+
+    # Check the imported module itself
+    if name in TARGET_PACKAGES:
+        packages_to_check.add(name)
+    else:
+        # Check if any target package is a prefix of the import name
+        for target in TARGET_PACKAGES:
+            if name.startswith(target + ".") or name == target:
+                packages_to_check.add(target)
+
+    # For "from X import Y" style imports, also check submodules
+    if fromlist:
+        for item in fromlist:
+            full_name = f"{name}.{item}"
+            if full_name in TARGET_PACKAGES:
+                packages_to_check.add(full_name)
+            else:
+                # Check if any target package matches this submodule
+                for target in TARGET_PACKAGES:
+                    if full_name == target or full_name.startswith(target + "."):
+                        packages_to_check.add(target)
+
+    # Instrument all matching packages
+    for package_to_check in packages_to_check:
+        if package_to_check not in _instrumenting_packages and not _is_package_instrumented(package_to_check):
+            _instrumenting_packages.add(package_to_check)
+            try:
+                _perform_instrumentation(package_to_check)
+                # If we just instrumented an agentic library, stop
+                if _has_agentic_library:
+                    break
+            except Exception as e:
+                logger.error(f"Error instrumenting {package_to_check}: {str(e)}")
+            finally:
+                _instrumenting_packages.discard(package_to_check)
+
+    return module
 
 
 # Define the structure for instrumentor configurations
@@ -132,6 +162,7 @@ class InstrumentorConfig(TypedDict):
     module_name: str
     class_name: str
     min_version: str
+    package_name: NotRequired[str]  # Optional: actual pip package name if different from module
 
 
 # Configuration for supported LLM providers
@@ -146,15 +177,16 @@ PROVIDERS: dict[str, InstrumentorConfig] = {
         "class_name": "AnthropicInstrumentor",
         "min_version": "0.32.0",
     },
-    "google.genai": {
-        "module_name": "agentops.instrumentation.google_generativeai",
-        "class_name": "GoogleGenerativeAIInstrumentor",
-        "min_version": "0.1.0",
-    },
     "ibm_watsonx_ai": {
         "module_name": "agentops.instrumentation.ibm_watsonx_ai",
         "class_name": "IBMWatsonXInstrumentor",
         "min_version": "0.1.0",
+    },
+    "google.genai": {
+        "module_name": "agentops.instrumentation.google_generativeai",
+        "class_name": "GoogleGenerativeAIInstrumentor",
+        "min_version": "0.1.0",
+        "package_name": "google-genai",  # Actual pip package name
     },
 }
 
@@ -170,6 +202,11 @@ AGENTIC_LIBRARIES: dict[str, InstrumentorConfig] = {
         "module_name": "agentops.instrumentation.openai_agents",
         "class_name": "OpenAIAgentsInstrumentor",
         "min_version": "0.0.1",
+    },
+    "google.adk": {
+        "module_name": "agentops.instrumentation.google_adk",
+        "class_name": "GoogleADKInstrumentor",
+        "min_version": "0.1.0",
     },
 }
 
@@ -190,6 +227,7 @@ class InstrumentorLoader:
     module_name: str
     class_name: str
     min_version: str
+    package_name: Optional[str] = None  # Optional: actual pip package name
 
     @property
     def module(self) -> ModuleType:
@@ -200,7 +238,11 @@ class InstrumentorLoader:
     def should_activate(self) -> bool:
         """Check if the package is available and meets version requirements."""
         try:
-            provider_name = self.module_name.split(".")[-1]
+            # Use explicit package_name if provided, otherwise derive from module_name
+            if self.package_name:
+                provider_name = self.package_name
+            else:
+                provider_name = self.module_name.split(".")[-1]
             module_version = version(provider_name)
             return module_version is not None and Version(module_version) >= parse(self.min_version)
         except ImportError:
@@ -233,24 +275,44 @@ def instrument_all():
     # Check if active_instrumentors is empty, as a proxy for not started.
     if not _active_instrumentors:
         builtins.__import__ = _import_monitor
-        global _instrumenting_packages
+        global _instrumenting_packages, _has_agentic_library
+
+        # If an agentic library is already instrumented, don't instrument anything else
+        if _has_agentic_library:
+            return
+
         for name in list(sys.modules.keys()):
+            # Stop if an agentic library gets instrumented during the loop
+            if _has_agentic_library:
+                break
+
             module = sys.modules.get(name)
             if not isinstance(module, ModuleType):
                 continue
 
-            root = name.split(".", 1)[0]
-            if _has_agentic_library and root in PROVIDERS:
-                continue
+            # Check for exact matches first (handles package.module like google.adk)
+            package_to_check = None
+            if name in TARGET_PACKAGES:
+                package_to_check = name
+            else:
+                # Check if any target package is a prefix of the module name
+                for target in TARGET_PACKAGES:
+                    if name.startswith(target + ".") or name == target:
+                        package_to_check = target
+                        break
 
-            if root in TARGET_PACKAGES and root not in _instrumenting_packages and not _is_package_instrumented(root):
-                _instrumenting_packages.add(root)
+            if (
+                package_to_check
+                and package_to_check not in _instrumenting_packages
+                and not _is_package_instrumented(package_to_check)
+            ):
+                _instrumenting_packages.add(package_to_check)
                 try:
-                    _perform_instrumentation(root)
+                    _perform_instrumentation(package_to_check)
                 except Exception as e:
-                    logger.error(f"Error instrumenting {root}: {str(e)}")
+                    logger.error(f"Error instrumenting {package_to_check}: {str(e)}")
                 finally:
-                    _instrumenting_packages.discard(root)
+                    _instrumenting_packages.discard(package_to_check)
 
 
 def uninstrument_all():
@@ -269,8 +331,19 @@ def get_active_libraries() -> set[str]:
     Get all actively used libraries in the current execution context.
     Returns a set of package names that are currently imported and being monitored.
     """
-    return {
-        name.split(".")[0]
-        for name, module in sys.modules.items()
-        if isinstance(module, ModuleType) and name.split(".")[0] in TARGET_PACKAGES
-    }
+    active_libs = set()
+    for name, module in sys.modules.items():
+        if not isinstance(module, ModuleType):
+            continue
+
+        # Check for exact matches first
+        if name in TARGET_PACKAGES:
+            active_libs.add(name)
+        else:
+            # Check if any target package is a prefix of the module name
+            for target in TARGET_PACKAGES:
+                if name.startswith(target + ".") or name == target:
+                    active_libs.add(target)
+                    break
+
+    return active_libs
