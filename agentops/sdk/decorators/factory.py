@@ -3,11 +3,13 @@ import functools
 import asyncio
 from typing import Any, Dict, Callable, Optional, Union
 
+
 import wrapt  # type: ignore
 
 from agentops.logging import logger
 from agentops.sdk.core import TracingCore, TraceContext
 from agentops.semconv.span_kinds import SpanKind
+from agentops.semconv.span_attributes import SpanAttributes
 
 from .utility import (
     _create_as_current_span,
@@ -31,9 +33,10 @@ def create_entity_decorator(entity_kind: str) -> Callable[..., Any]:
         name: Optional[str] = None,
         version: Optional[Any] = None,
         tags: Optional[Union[list, dict]] = None,
+        cost=None,
     ) -> Callable[..., Any]:
         if wrapped is None:
-            return functools.partial(decorator, name=name, version=version, tags=tags)
+            return functools.partial(decorator, name=name, version=version, tags=tags, cost=cost)
 
         if inspect.isclass(wrapped):
             # Class decoration wraps __init__ and aenter/aexit for context management.
@@ -42,6 +45,7 @@ def create_entity_decorator(entity_kind: str) -> Callable[..., Any]:
                 def __init__(self, *args: Any, **kwargs: Any):
                     op_name = name or wrapped.__name__
                     self._agentops_span_context_manager = _create_as_current_span(op_name, entity_kind, version)
+
                     self._agentops_active_span = self._agentops_span_context_manager.__enter__()
                     try:
                         _record_entity_input(self._agentops_active_span, args, kwargs)
@@ -163,6 +167,9 @@ def create_entity_decorator(entity_kind: str) -> Callable[..., Any]:
                 )
                 try:
                     _record_entity_input(span, args, kwargs)
+                    # Set cost attribute if tool
+                    if entity_kind == "tool" and cost is not None:
+                        span.set_attribute(SpanAttributes.LLM_USAGE_TOOL_COST, cost)
                 except Exception as e:
                     logger.warning(f"Input recording failed for '{operation_name}': {e}")
                 result = wrapped_func(*args, **kwargs)
@@ -171,8 +178,12 @@ def create_entity_decorator(entity_kind: str) -> Callable[..., Any]:
                 span, _, token = _make_span(
                     operation_name, entity_kind, version=version, attributes={"tags": tags} if tags else None
                 )
+                span, ctx, token = _make_span(operation_name, entity_kind, version)
                 try:
                     _record_entity_input(span, args, kwargs)
+                    # Set cost attribute if tool
+                    if entity_kind == "tool" and cost is not None:
+                        span.set_attribute(SpanAttributes.LLM_USAGE_TOOL_COST, cost)
                 except Exception as e:
                     logger.warning(f"Input recording failed for '{operation_name}': {e}")
                 result = wrapped_func(*args, **kwargs)
@@ -185,6 +196,9 @@ def create_entity_decorator(entity_kind: str) -> Callable[..., Any]:
                     ) as span:
                         try:
                             _record_entity_input(span, args, kwargs)
+                            # Set cost attribute if tool
+                            if entity_kind == "tool" and cost is not None:
+                                span.set_attribute(SpanAttributes.LLM_USAGE_TOOL_COST, cost)
                         except Exception as e:
                             logger.warning(f"Input recording failed for '{operation_name}': {e}")
                         try:
@@ -195,6 +209,7 @@ def create_entity_decorator(entity_kind: str) -> Callable[..., Any]:
                                 logger.warning(f"Output recording failed for '{operation_name}': {e}")
                             return result
                         except Exception as e:
+                            logger.error(f"Error in async function execution: {e}")
                             span.record_exception(e)
                             raise
 
@@ -205,6 +220,9 @@ def create_entity_decorator(entity_kind: str) -> Callable[..., Any]:
                 ) as span:
                     try:
                         _record_entity_input(span, args, kwargs)
+                        # Set cost attribute if tool
+                        if entity_kind == "tool" and cost is not None:
+                            span.set_attribute(SpanAttributes.LLM_USAGE_TOOL_COST, cost)
                     except Exception as e:
                         logger.warning(f"Input recording failed for '{operation_name}': {e}")
                     try:
@@ -215,6 +233,7 @@ def create_entity_decorator(entity_kind: str) -> Callable[..., Any]:
                             logger.warning(f"Output recording failed for '{operation_name}': {e}")
                         return result
                     except Exception as e:
+                        logger.error(f"Error in sync function execution: {e}")
                         span.record_exception(e)
                         raise
 

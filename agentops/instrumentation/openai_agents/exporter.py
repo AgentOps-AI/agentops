@@ -196,7 +196,7 @@ class OpenAIAgentsExporter:
                 "span": span,
                 "span_type": "TraceSpan",
                 "trace_id": trace_id,
-                "parent_id": None,  # Trace spans don't have parents
+                "parent_id": None,
             }
         else:
             span.end()
@@ -308,6 +308,7 @@ class OpenAIAgentsExporter:
 
         # Unique lookup key for this span
         span_lookup_key = _get_span_lookup_key(trace_id, span_id)
+
         attributes = get_base_span_attributes(span)
         span_attributes = get_span_attributes(span_data)
         attributes.update(span_attributes)
@@ -346,7 +347,6 @@ class OpenAIAgentsExporter:
 
             # Handle any error information
             self._handle_span_error(span, otel_span)
-
             # DO NOT end the span for start events - we want to keep it open for updates
             return
 
@@ -354,33 +354,39 @@ class OpenAIAgentsExporter:
         if span_lookup_key in self._span_map:
             existing_span = self._span_map[span_lookup_key]
 
-            # Check if span is already ended
             span_is_ended = False
             if isinstance(existing_span, Span) and hasattr(existing_span, "_end_time"):
                 span_is_ended = existing_span._end_time is not None
 
             if not span_is_ended:
-                # Update and end the existing span
+                # Update with final attributes
                 for key, value in attributes.items():
                     existing_span.set_attribute(key, value)
 
-                # Set status and handle any error information
-                existing_span.set_status(Status(StatusCode.OK if span.status == "OK" else StatusCode.ERROR))
+                existing_span.set_status(
+                    Status(StatusCode.OK if getattr(span, "status", "OK") == "OK" else StatusCode.ERROR)
+                )
                 self._handle_span_error(span, existing_span)
-
                 existing_span.end()
+            # Span already ended, create a new one (should be rare if logic is correct)
             else:
-                # Create a new span with the complete data (already ended state)
-                self.create_span(span, span_type, attributes)
+                logger.warning(
+                    f"[Exporter] SDK span_id: {span_id} (END event) - Attempting to end an ALREADY ENDED span: {span_lookup_key}. Creating a new one instead."
+                )
+                self.create_span(span, span_type, attributes, is_already_ended=True)
+        # No existing span found for end event, create a new one
         else:
-            # No existing span found, create a new one with all data
-            self.create_span(span, span_type, attributes)
+            logger.warning(
+                f"[Exporter] SDK span_id: {span_id} (END event) - No active span found for end event: {span_lookup_key}. Creating a new one."
+            )
+            self.create_span(span, span_type, attributes, is_already_ended=True)
 
-        # Clean up our tracking resources
         self._active_spans.pop(span_id, None)
         self._span_map.pop(span_lookup_key, None)
 
-    def create_span(self, span: Any, span_type: str, attributes: Dict[str, Any]) -> None:
+    def create_span(
+        self, span: Any, span_type: str, attributes: Dict[str, Any], is_already_ended: bool = False
+    ) -> None:
         """Create a new span with the provided data and end it immediately.
 
         This method creates a span using the appropriate parent context, applies
@@ -392,11 +398,8 @@ class OpenAIAgentsExporter:
             span_type: The type of span being created
             attributes: The attributes to set on the span
         """
-        # For simplicity and backward compatibility, use None as the parent context
-        # In a real implementation, you might want to look up the parent
         parent_ctx = None
         if hasattr(span, "parent_id") and span.parent_id:
-            # Get parent context from trace_id and parent_id if available
             parent_ctx = self._get_parent_context(
                 getattr(span, "trace_id", "unknown"), getattr(span, "id", "unknown"), span.parent_id
             )
@@ -404,7 +407,6 @@ class OpenAIAgentsExporter:
         name = get_span_name(span)
         kind = get_span_kind(span)
 
-        # Create the span with parent context and end it immediately
         self._create_span_with_parent(
             name=name, kind=kind, attributes=attributes, parent_ctx=parent_ctx, end_immediately=True
         )
