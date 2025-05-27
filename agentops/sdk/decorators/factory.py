@@ -2,10 +2,12 @@ import inspect
 import functools
 import asyncio
 
+
 import wrapt  # type: ignore
 
 from agentops.logging import logger
 from agentops.sdk.core import TracingCore
+from agentops.semconv.span_attributes import SpanAttributes
 
 from .utility import (
     _create_as_current_span,
@@ -28,10 +30,10 @@ def create_entity_decorator(entity_kind: str):
         A decorator with optional arguments for name and version
     """
 
-    def decorator(wrapped=None, *, name=None, version=None):
+    def decorator(wrapped=None, *, name=None, version=None, cost=None):
         # Handle case where decorator is called with parameters
         if wrapped is None:
-            return functools.partial(decorator, name=name, version=version)
+            return functools.partial(decorator, name=name, version=version, cost=cost)
 
         # Handle class decoration
         if inspect.isclass(wrapped):
@@ -39,6 +41,7 @@ def create_entity_decorator(entity_kind: str):
             class WrappedClass(wrapped):
                 def __init__(self, *args, **kwargs):
                     operation_name = name or wrapped.__name__
+
                     self._agentops_span_context_manager = _create_as_current_span(operation_name, entity_kind, version)
                     self._agentops_active_span = self._agentops_span_context_manager.__enter__()
 
@@ -51,23 +54,18 @@ def create_entity_decorator(entity_kind: str):
                     super().__init__(*args, **kwargs)
 
                 async def __aenter__(self):
-                    # Added for async context manager support
-                    # This allows using the class with 'async with' statement
-
                     # If span is already created in __init__, just return self
                     if hasattr(self, "_agentops_active_span") and self._agentops_active_span is not None:
                         return self
 
                     # Otherwise create span (for backward compatibility)
                     operation_name = name or wrapped.__name__
+
                     self._agentops_span_context_manager = _create_as_current_span(operation_name, entity_kind, version)
                     self._agentops_active_span = self._agentops_span_context_manager.__enter__()
                     return self
 
                 async def __aexit__(self, exc_type, exc_val, exc_tb):
-                    # Added for proper async cleanup
-                    # This ensures spans are properly closed when using 'async with'
-
                     if hasattr(self, "_agentops_active_span") and hasattr(self, "_agentops_span_context_manager"):
                         try:
                             _record_entity_output(self._agentops_active_span, self)
@@ -104,10 +102,12 @@ def create_entity_decorator(entity_kind: str):
 
             # Handle generator functions
             if is_generator:
-                # Use the old approach for generators
                 span, ctx, token = _make_span(operation_name, entity_kind, version)
                 try:
                     _record_entity_input(span, args, kwargs)
+                    # Set cost attribute if tool
+                    if entity_kind == "tool" and cost is not None:
+                        span.set_attribute(SpanAttributes.LLM_USAGE_TOOL_COST, cost)
                 except Exception as e:
                     logger.warning(f"Failed to record entity input: {e}")
 
@@ -116,10 +116,12 @@ def create_entity_decorator(entity_kind: str):
 
             # Handle async generator functions
             elif is_async_generator:
-                # Use the old approach for async generators
                 span, ctx, token = _make_span(operation_name, entity_kind, version)
                 try:
                     _record_entity_input(span, args, kwargs)
+                    # Set cost attribute if tool
+                    if entity_kind == "tool" and cost is not None:
+                        span.set_attribute(SpanAttributes.LLM_USAGE_TOOL_COST, cost)
                 except Exception as e:
                     logger.warning(f"Failed to record entity input: {e}")
 
@@ -133,6 +135,9 @@ def create_entity_decorator(entity_kind: str):
                     with _create_as_current_span(operation_name, entity_kind, version) as span:
                         try:
                             _record_entity_input(span, args, kwargs)
+                            # Set cost attribute if tool
+                            if entity_kind == "tool" and cost is not None:
+                                span.set_attribute(SpanAttributes.LLM_USAGE_TOOL_COST, cost)
                         except Exception as e:
                             logger.warning(f"Failed to record entity input: {e}")
 
@@ -144,6 +149,7 @@ def create_entity_decorator(entity_kind: str):
                                 logger.warning(f"Failed to record entity output: {e}")
                             return result
                         except Exception as e:
+                            logger.error(f"Error in async function execution: {e}")
                             span.record_exception(e)
                             raise
 
@@ -154,7 +160,9 @@ def create_entity_decorator(entity_kind: str):
                 with _create_as_current_span(operation_name, entity_kind, version) as span:
                     try:
                         _record_entity_input(span, args, kwargs)
-
+                        # Set cost attribute if tool
+                        if entity_kind == "tool" and cost is not None:
+                            span.set_attribute(SpanAttributes.LLM_USAGE_TOOL_COST, cost)
                     except Exception as e:
                         logger.warning(f"Failed to record entity input: {e}")
 
@@ -167,6 +175,7 @@ def create_entity_decorator(entity_kind: str):
                             logger.warning(f"Failed to record entity output: {e}")
                         return result
                     except Exception as e:
+                        logger.error(f"Error in sync function execution: {e}")
                         span.record_exception(e)
                         raise
 
