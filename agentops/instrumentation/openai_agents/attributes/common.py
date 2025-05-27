@@ -255,6 +255,66 @@ def get_handoff_span_attributes(span_data: Any) -> AttributeMap:
     return attributes
 
 
+def _extract_text_from_content(content: Any) -> Optional[str]:
+    """Extract text from various content formats used in the Responses API.
+
+    Args:
+        content: Content in various formats (str, dict, list)
+
+    Returns:
+        Extracted text or None if no text found
+    """
+    if isinstance(content, str):
+        return content
+
+    if isinstance(content, dict):
+        # Direct text field
+        if "text" in content:
+            return content["text"]
+        # Output text type
+        if content.get("type") == "output_text":
+            return content.get("text", "")
+
+    if isinstance(content, list):
+        text_parts = []
+        for item in content:
+            extracted = _extract_text_from_content(item)
+            if extracted:
+                text_parts.append(extracted)
+        return " ".join(text_parts) if text_parts else None
+
+    return None
+
+
+def _build_prompt_messages_from_input(input_data: Any) -> List[Dict[str, Any]]:
+    """Build prompt messages from various input formats.
+
+    Args:
+        input_data: Input data from span_data.input
+
+    Returns:
+        List of message dictionaries with role and content
+    """
+    messages = []
+
+    if isinstance(input_data, str):
+        # Single string input - assume it's a user message
+        messages.append({"role": "user", "content": input_data})
+
+    elif isinstance(input_data, list):
+        for msg in input_data:
+            if isinstance(msg, dict):
+                role = msg.get("role")
+                content = msg.get("content")
+
+                if role and content is not None:
+                    extracted_text = _extract_text_from_content(content)
+                    if extracted_text:
+                        messages.append({"role": role, "content": extracted_text})
+
+    return messages
+
+
 def get_response_span_attributes(span_data: Any) -> AttributeMap:
     """Extract attributes from a ResponseSpanData object with full LLM response processing.
 
@@ -276,70 +336,41 @@ def get_response_span_attributes(span_data: Any) -> AttributeMap:
     attributes = _extract_attributes_from_mapping(span_data, RESPONSE_SPAN_ATTRIBUTES)
     attributes.update(get_common_attributes())
 
-    # Build complete prompt list from system instructions and conversation history
-    prompt_messages = []
-
-    # Add system instruction as first message if available
-    if span_data.response and hasattr(span_data.response, "instructions") and span_data.response.instructions:
-        prompt_messages.append({"role": "system", "content": span_data.response.instructions})
-
-    # Add conversation history from span_data.input
-    if hasattr(span_data, "input") and span_data.input:
-        if isinstance(span_data.input, list):
-            for msg in span_data.input:
-                if isinstance(msg, dict):
-                    role = msg.get("role")
-                    content = msg.get("content")
-
-                    # Handle different content formats
-                    if role and content is not None:
-                        # If content is a string, use it directly
-                        if isinstance(content, str):
-                            prompt_messages.append({"role": role, "content": content})
-                        # If content is a list (complex assistant message), extract text
-                        elif isinstance(content, list):
-                            text_parts = []
-                            for item in content:
-                                if isinstance(item, dict):
-                                    # Handle output_text type
-                                    if item.get("type") == "output_text":
-                                        text_parts.append(item.get("text", ""))
-                                    # Handle other text content
-                                    elif "text" in item:
-                                        text_parts.append(item.get("text", ""))
-                                    # Handle annotations with text
-                                    elif "annotations" in item and "text" in item:
-                                        text_parts.append(item.get("text", ""))
-
-                            if text_parts:
-                                prompt_messages.append({"role": role, "content": " ".join(text_parts)})
-                        # If content is a dict, try to extract text
-                        elif isinstance(content, dict):
-                            if "text" in content:
-                                prompt_messages.append({"role": role, "content": content["text"]})
-        elif isinstance(span_data.input, str):
-            # Single string input - assume it's a user message
-            prompt_messages.append({"role": "user", "content": span_data.input})
-
-    # Format prompts using existing function
-    if prompt_messages:
-        attributes.update(_get_llm_messages_attributes(prompt_messages, "gen_ai.prompt"))
-
-    # Process response attributes
+    # Process response attributes first to get all response data including instructions
     if span_data.response:
-        openai_style_response_attrs = get_response_response_attributes(span_data.response)
+        response_attrs = get_response_response_attributes(span_data.response)
 
-        # Remove any prompt attributes from response processing since we handle them above
-        keys_to_remove = [k for k in openai_style_response_attrs if k.startswith("gen_ai.prompt")]
-        for key in keys_to_remove:
-            if key in openai_style_response_attrs:
-                del openai_style_response_attrs[key]
+        # Extract system prompt if present
+        system_prompt = response_attrs.get(SpanAttributes.LLM_OPENAI_RESPONSE_INSTRUCTIONS)
 
-        # Remove tool definitions from response attributes
-        if "gen_ai.request.tools" in openai_style_response_attrs:
-            del openai_style_response_attrs["gen_ai.request.tools"]
+        prompt_messages = []
+        # Add system prompt as first message if available
+        if system_prompt:
+            prompt_messages.append({"role": "system", "content": system_prompt})
+            # Remove from response attrs to avoid duplication
+            response_attrs.pop(SpanAttributes.LLM_OPENAI_RESPONSE_INSTRUCTIONS, None)
 
-        attributes.update(openai_style_response_attrs)
+        # Add conversation history from input
+        if hasattr(span_data, "input") and span_data.input:
+            prompt_messages.extend(_build_prompt_messages_from_input(span_data.input))
+
+        # Format prompts using existing function
+        if prompt_messages:
+            attributes.update(_get_llm_messages_attributes(prompt_messages, "gen_ai.prompt"))
+
+        # Remove any prompt-related attributes that might have been set by response processing
+        response_attrs = {
+            k: v for k, v in response_attrs.items() if not k.startswith("gen_ai.prompt") and k != "gen_ai.request.tools"
+        }
+
+        # Add remaining response attributes
+        attributes.update(response_attrs)
+    else:
+        # No response object, just process input as prompts
+        if hasattr(span_data, "input") and span_data.input:
+            prompt_messages = _build_prompt_messages_from_input(span_data.input)
+            if prompt_messages:
+                attributes.update(_get_llm_messages_attributes(prompt_messages, "gen_ai.prompt"))
 
     attributes[SpanAttributes.AGENTOPS_SPAN_KIND] = AgentOpsSpanKindValues.LLM.value
 
