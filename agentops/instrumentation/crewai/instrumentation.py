@@ -398,6 +398,8 @@ def wrap_task_execute(
 
     if config.default_tags and len(config.default_tags) > 0:
         tag_list = list(config.default_tags)
+        # TODO: This should be a set to prevent duplicates, but we need to ensure
+        # that the tags are not modified in place, so we convert to list first.
         attributes[CoreAttributes.TAGS] = tag_list
 
     with tracer.start_as_current_span(
