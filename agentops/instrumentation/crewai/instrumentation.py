@@ -13,7 +13,9 @@ from opentelemetry.instrumentation.instrumentor import BaseInstrumentor
 from opentelemetry.sdk.resources import SERVICE_NAME, TELEMETRY_SDK_NAME, DEPLOYMENT_ENVIRONMENT
 from agentops.instrumentation.crewai.version import __version__
 from agentops.semconv import SpanAttributes, AgentOpsSpanKindValues, Meters, ToolAttributes, MessageAttributes
+from agentops.semconv.core import CoreAttributes
 from .crewai_span_attributes import CrewAISpanAttributes, set_span_attribute
+from agentops import get_client
 
 # Initialize logger
 logger = logging.getLogger(__name__)
@@ -160,64 +162,173 @@ def wrap_kickoff(
         f"CrewAI: Starting workflow instrumentation for Crew with {len(getattr(instance, 'agents', []))} agents"
     )
 
-    # Create a CrewAI workflow span as a child of the current session span
-    crew_name = getattr(instance, "name", None) or "crew"
-    workflow_name = f"{crew_name}.workflow"
+    config = get_client().config
+    attributes = {
+        SpanAttributes.LLM_SYSTEM: "crewai",
+    }
+
+    if config.default_tags and len(config.default_tags) > 0:
+        tag_list = list(config.default_tags)
+        attributes[CoreAttributes.TAGS] = tag_list
 
     with tracer.start_as_current_span(
-        workflow_name,
+        "crewai.workflow",
         kind=SpanKind.INTERNAL,
-        attributes={
-            SpanAttributes.AGENTOPS_SPAN_KIND: "workflow",
-            SpanAttributes.LLM_SYSTEM: "crewai",
-            TELEMETRY_SDK_NAME: "agentops",
-            SERVICE_NAME: application_name,
-            DEPLOYMENT_ENVIRONMENT: environment,
-        },
-    ) as workflow_span:
-        start_time = time.time()
-
+        attributes=attributes,
+    ) as span:
         try:
-            workflow_span.set_attribute("crewai.workflow.active", True)
-            workflow_span.set_attribute("crewai.workflow.name", workflow_name)
-            workflow_span.set_attribute("crewai.workflow.type", "crew")
+            span.set_attribute(TELEMETRY_SDK_NAME, "agentops")
+            span.set_attribute(SERVICE_NAME, application_name)
+            span.set_attribute(DEPLOYMENT_ENVIRONMENT, environment)
 
-            logger.debug("CrewAI: Processing crew instance attributes on workflow span")
+            logger.debug("CrewAI: Processing crew instance attributes")
 
-            if hasattr(instance, "id"):
-                workflow_span.set_attribute("crewai.workflow.id", str(instance.id))
+            # First set general crew attributes but skip agent processing
+            crew_attrs = CrewAISpanAttributes(span=span, instance=instance, skip_agent_processing=True)
+
+            # Prioritize agent processing before task execution
             if hasattr(instance, "agents") and instance.agents:
-                workflow_span.set_attribute("crewai.workflow.agent_count", len(instance.agents))
-                logger.debug(f"CrewAI: Set workflow attributes for {len(instance.agents)} agents")
-            if hasattr(instance, "tasks") and instance.tasks:
-                workflow_span.set_attribute("crewai.workflow.task_count", len(instance.tasks))
-                logger.debug(f"CrewAI: Set workflow attributes for {len(instance.tasks)} tasks")
+                logger.debug(f"CrewAI: Explicitly processing {len(instance.agents)} agents before task execution")
+                crew_attrs._parse_agents(instance.agents)
 
             logger.debug("CrewAI: Executing wrapped crew kickoff function")
             result = wrapped(*args, **kwargs)
 
-            # Set result attributes on the workflow span
             if result:
                 class_name = instance.__class__.__name__
-                workflow_span.set_attribute(f"crewai.{class_name.lower()}.result", str(result))
-                workflow_span.set_status(Status(StatusCode.OK))
-                logger.debug("CrewAI: Successfully set result attributes on workflow span")
+                span.set_attribute(f"crewai.{class_name.lower()}.result", str(result))
+                span.set_status(Status(StatusCode.OK))
+                if class_name == "Crew":
+                    if hasattr(result, "usage_metrics"):
+                        span.set_attribute("crewai.crew.usage_metrics", str(getattr(result, "usage_metrics")))
 
-            if duration_histogram:
-                duration = time.time() - start_time
-                duration_histogram.record(
-                    duration,
-                    attributes={
-                        SpanAttributes.LLM_SYSTEM: "crewai",
-                    },
-                )
+                    if hasattr(result, "tasks_output") and result.tasks_output:
+                        span.set_attribute("crewai.crew.tasks_output", str(result.tasks_output))
 
-            logger.debug("CrewAI: Workflow instrumentation completed successfully")
+                        try:
+                            task_details_by_description = {}
+                            if hasattr(instance, "tasks"):
+                                for task in instance.tasks:
+                                    if task is not None:
+                                        agent_id = ""
+                                        agent_role = ""
+                                        if hasattr(task, "agent") and task.agent:
+                                            agent_id = str(getattr(task.agent, "id", ""))
+                                            agent_role = getattr(task.agent, "role", "")
+
+                                        tools = []
+                                        if hasattr(task, "tools") and task.tools:
+                                            for tool in task.tools:
+                                                tool_info = {}
+                                                if hasattr(tool, "name"):
+                                                    tool_info["name"] = tool.name
+                                                if hasattr(tool, "description"):
+                                                    tool_info["description"] = tool.description
+                                                if tool_info:
+                                                    tools.append(tool_info)
+
+                                        task_details_by_description[task.description] = {
+                                            "agent_id": agent_id,
+                                            "agent_role": agent_role,
+                                            "async_execution": getattr(task, "async_execution", False),
+                                            "human_input": getattr(task, "human_input", False),
+                                            "output_file": getattr(task, "output_file", ""),
+                                            "tools": tools,
+                                        }
+
+                            for idx, task_output in enumerate(result.tasks_output):
+                                task_prefix = f"crewai.crew.tasks.{idx}"
+
+                                task_attrs = {
+                                    "description": getattr(task_output, "description", ""),
+                                    "name": getattr(task_output, "name", ""),
+                                    "expected_output": getattr(task_output, "expected_output", ""),
+                                    "summary": getattr(task_output, "summary", ""),
+                                    "raw": getattr(task_output, "raw", ""),
+                                    "agent": getattr(task_output, "agent", ""),
+                                    "output_format": str(getattr(task_output, "output_format", "")),
+                                }
+
+                                for attr_name, attr_value in task_attrs.items():
+                                    if attr_value:
+                                        if attr_name == "raw" and len(str(attr_value)) > 1000:
+                                            attr_value = str(attr_value)[:997] + "..."
+                                        span.set_attribute(f"{task_prefix}.{attr_name}", str(attr_value))
+
+                                span.set_attribute(f"{task_prefix}.status", "completed")
+                                span.set_attribute(f"{task_prefix}.id", str(idx))
+
+                                description = task_attrs.get("description", "")
+                                if description and description in task_details_by_description:
+                                    details = task_details_by_description[description]
+
+                                    span.set_attribute(f"{task_prefix}.agent_id", details["agent_id"])
+                                    span.set_attribute(
+                                        f"{task_prefix}.async_execution", str(details["async_execution"])
+                                    )
+                                    span.set_attribute(f"{task_prefix}.human_input", str(details["human_input"]))
+
+                                    if details["output_file"]:
+                                        span.set_attribute(f"{task_prefix}.output_file", details["output_file"])
+
+                                    for tool_idx, tool in enumerate(details["tools"]):
+                                        for tool_key, tool_value in tool.items():
+                                            span.set_attribute(
+                                                f"{task_prefix}.tools.{tool_idx}.{tool_key}", str(tool_value)
+                                            )
+                        except Exception as ex:
+                            logger.warning(f"Failed to parse task outputs: {ex}")
+
+                    if hasattr(result, "token_usage"):
+                        token_usage = str(getattr(result, "token_usage"))
+                        span.set_attribute("crewai.crew.token_usage", token_usage)
+
+                        try:
+                            metrics = {}
+                            for item in token_usage.split():
+                                if "=" in item:
+                                    key, value = item.split("=")
+                                    try:
+                                        metrics[key] = int(value)
+                                    except ValueError:
+                                        metrics[key] = value
+
+                            if "total_tokens" in metrics:
+                                span.set_attribute(SpanAttributes.LLM_USAGE_TOTAL_TOKENS, metrics["total_tokens"])
+                            if "prompt_tokens" in metrics:
+                                span.set_attribute(SpanAttributes.LLM_USAGE_PROMPT_TOKENS, metrics["prompt_tokens"])
+                            if "completion_tokens" in metrics:
+                                span.set_attribute(
+                                    SpanAttributes.LLM_USAGE_COMPLETION_TOKENS, metrics["completion_tokens"]
+                                )
+                            if "cached_prompt_tokens" in metrics:
+                                span.set_attribute(
+                                    SpanAttributes.LLM_USAGE_CACHE_READ_INPUT_TOKENS, metrics["cached_prompt_tokens"]
+                                )
+                            if "successful_requests" in metrics:
+                                span.set_attribute("crewai.crew.successful_requests", metrics["successful_requests"])
+
+                            if (
+                                "prompt_tokens" in metrics
+                                and "completion_tokens" in metrics
+                                and metrics["prompt_tokens"] > 0
+                            ):
+                                efficiency = metrics["completion_tokens"] / metrics["prompt_tokens"]
+                                span.set_attribute("crewai.crew.token_efficiency", f"{efficiency:.4f}")
+
+                            if (
+                                "cached_prompt_tokens" in metrics
+                                and "prompt_tokens" in metrics
+                                and metrics["prompt_tokens"] > 0
+                            ):
+                                cache_ratio = metrics["cached_prompt_tokens"] / metrics["prompt_tokens"]
+                                span.set_attribute("crewai.crew.cache_efficiency", f"{cache_ratio:.4f}")
+                        except Exception as ex:
+                            logger.warning(f"Failed to parse token usage metrics: {ex}")
             return result
-
         except Exception as ex:
-            workflow_span.set_status(Status(StatusCode.ERROR, str(ex)))
-            logger.error("CrewAI: Error in workflow instrumentation: %s", ex)
+            span.set_status(Status(StatusCode.ERROR, str(ex)))
+            logger.error("Error in trace creation: %s", ex)
             raise
 
 
@@ -228,7 +339,7 @@ def wrap_agent_execute_task(
     agent_name = instance.role if hasattr(instance, "role") else "agent"
     with tracer.start_as_current_span(
         f"{agent_name}.agent",
-        kind=SpanKind.INTERNAL,
+        kind=SpanKind.CLIENT,
         attributes={
             SpanAttributes.AGENTOPS_SPAN_KIND: AgentOpsSpanKindValues.AGENT.value,
         },
@@ -280,12 +391,21 @@ def wrap_task_execute(
 ):
     task_name = instance.description if hasattr(instance, "description") else "task"
 
+    config = get_client().config
+    attributes = {
+        SpanAttributes.AGENTOPS_SPAN_KIND: AgentOpsSpanKindValues.TASK.value,
+    }
+
+    if config.default_tags and len(config.default_tags) > 0:
+        tag_list = list(config.default_tags)
+        # TODO: This should be a set to prevent duplicates, but we need to ensure
+        # that the tags are not modified in place, so we convert to list first.
+        attributes[CoreAttributes.TAGS] = tag_list
+
     with tracer.start_as_current_span(
         f"{task_name}.task",
-        kind=SpanKind.INTERNAL,
-        attributes={
-            SpanAttributes.AGENTOPS_SPAN_KIND: AgentOpsSpanKindValues.TASK.value,
-        },
+        kind=SpanKind.CLIENT,
+        attributes=attributes,
     ) as span:
         try:
             span.set_attribute(TELEMETRY_SDK_NAME, "agentops")
@@ -386,7 +506,7 @@ def wrap_tool_execution(tracer, duration_histogram, environment, application_nam
 
             with tracer.start_as_current_span(
                 f"{tool_name}.tool",
-                kind=SpanKind.INTERNAL,
+                kind=SpanKind.CLIENT,
                 attributes={
                     SpanAttributes.AGENTOPS_SPAN_KIND: "tool",
                     ToolAttributes.TOOL_NAME: tool_name,
