@@ -356,8 +356,9 @@ def _base_agent_run_async_wrapper(agentops_tracer):
             span_name = f"adk.agent.{agent_name}"
 
             with agentops_tracer.start_as_current_span(span_name, kind=SpanKind.CLIENT) as span:
-                span.set_attribute("agentops.span.kind", "agent")
-                span.set_attribute("gen_ai.system", "gcp.vertex.agent")
+                span.set_attribute(SpanAttributes.AGENTOPS_SPAN_KIND, "agent")
+                span.set_attribute(SpanAttributes.LLM_SYSTEM, "gcp.vertex.agent")
+                span.set_attribute(SpanAttributes.AGENTOPS_ENTITY_NAME, "agent")
 
                 # Use AgentAttributes from semconv
                 span.set_attribute(AgentAttributes.AGENT_NAME, agent_name)
@@ -395,8 +396,9 @@ def _base_llm_flow_call_llm_async_wrapper(agentops_tracer):
             span_name = f"adk.llm.{model_name}"
 
             with agentops_tracer.start_as_current_span(span_name, kind=SpanKind.CLIENT) as span:
-                span.set_attribute("agentops.span.kind", "llm")
-                span.set_attribute("gen_ai.system", "gcp.vertex.agent")
+                span.set_attribute(SpanAttributes.AGENTOPS_SPAN_KIND, "llm")
+                span.set_attribute(SpanAttributes.LLM_SYSTEM, "gcp.vertex.agent")
+                span.set_attribute(SpanAttributes.AGENTOPS_ENTITY_NAME, "request")
 
                 # Extract and set attributes from llm_request before the call
                 if llm_request:
@@ -428,7 +430,7 @@ def _adk_trace_tool_call_wrapper(agentops_tracer):
         tool_args = args[0] if args else kwargs.get("args")
         current_span = opentelemetry_api_trace.get_current_span()
         if current_span.is_recording() and tool_args is not None:
-            current_span.set_attribute("gen_ai.system", "gcp.vertex.agent")
+            current_span.set_attribute(SpanAttributes.LLM_SYSTEM, "gcp.vertex.agent")
             current_span.set_attribute("gcp.vertex.agent.tool_call_args", json.dumps(tool_args))
         return result
 
@@ -447,7 +449,7 @@ def _adk_trace_tool_response_wrapper(agentops_tracer):
 
         current_span = opentelemetry_api_trace.get_current_span()
         if current_span.is_recording():
-            current_span.set_attribute("gen_ai.system", "gcp.vertex.agent")
+            current_span.set_attribute(SpanAttributes.LLM_SYSTEM, "gcp.vertex.agent")
             if invocation_context:
                 current_span.set_attribute("gcp.vertex.agent.invocation_id", invocation_context.invocation_id)
             if event_id:
@@ -476,9 +478,9 @@ def _adk_trace_call_llm_wrapper(agentops_tracer):
 
         current_span = opentelemetry_api_trace.get_current_span()
         if current_span.is_recording():
-            current_span.set_attribute("gen_ai.system", "gcp.vertex.agent")
+            current_span.set_attribute(SpanAttributes.LLM_SYSTEM, "gcp.vertex.agent")
             if llm_request:
-                current_span.set_attribute("gen_ai.request.model", llm_request.model)
+                current_span.set_attribute(SpanAttributes.LLM_REQUEST_MODEL, llm_request.model)
             if invocation_context:
                 current_span.set_attribute("gcp.vertex.agent.invocation_id", invocation_context.invocation_id)
                 current_span.set_attribute("gcp.vertex.agent.session_id", invocation_context.session.id)
@@ -584,8 +586,9 @@ def _call_tool_async_wrapper(agentops_tracer):
             span_name = f"adk.tool.{tool_name}"
 
             with agentops_tracer.start_as_current_span(span_name, kind=SpanKind.CLIENT) as span:
-                span.set_attribute("agentops.span.kind", "tool")
-                span.set_attribute("gen_ai.system", "gcp.vertex.agent")
+                span.set_attribute(SpanAttributes.AGENTOPS_SPAN_KIND, "tool")
+                span.set_attribute(SpanAttributes.LLM_SYSTEM, "gcp.vertex.agent")
+                span.set_attribute(SpanAttributes.AGENTOPS_ENTITY_NAME, "tool")
 
                 # Set tool call attributes
                 span.set_attribute(ToolAttributes.TOOL_NAME, tool_name)
