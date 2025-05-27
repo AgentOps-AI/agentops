@@ -9,7 +9,7 @@ import wrapt  # type: ignore
 from agentops.logging import logger
 from agentops.sdk.core import TracingCore, TraceContext
 from agentops.semconv.span_kinds import SpanKind
-from agentops.semconv.span_attributes import SpanAttributes
+from agentops.semconv import SpanAttributes, CoreAttributes
 
 from .utility import (
     _create_as_current_span,
@@ -163,7 +163,10 @@ def create_entity_decorator(entity_kind: str) -> Callable[..., Any]:
             # Logic for non-SESSION kinds or generators under @trace (as per fallthrough)
             elif is_generator:
                 span, _, token = _make_span(
-                    operation_name, entity_kind, version=version, attributes={"tags": tags} if tags else None
+                    operation_name,
+                    entity_kind,
+                    version=version,
+                    attributes={CoreAttributes.TAGS: tags} if tags else None,
                 )
                 try:
                     _record_entity_input(span, args, kwargs)
@@ -176,7 +179,10 @@ def create_entity_decorator(entity_kind: str) -> Callable[..., Any]:
                 return _process_sync_generator(span, result)
             elif is_async_generator:
                 span, _, token = _make_span(
-                    operation_name, entity_kind, version=version, attributes={"tags": tags} if tags else None
+                    operation_name,
+                    entity_kind,
+                    version=version,
+                    attributes={CoreAttributes.TAGS: tags} if tags else None,
                 )
                 span, ctx, token = _make_span(operation_name, entity_kind, version)
                 try:
@@ -192,7 +198,10 @@ def create_entity_decorator(entity_kind: str) -> Callable[..., Any]:
 
                 async def _wrapped_async() -> Any:
                     with _create_as_current_span(
-                        operation_name, entity_kind, version=version, attributes={"tags": tags} if tags else None
+                        operation_name,
+                        entity_kind,
+                        version=version,
+                        attributes={CoreAttributes.TAGS: tags} if tags else None,
                     ) as span:
                         try:
                             _record_entity_input(span, args, kwargs)
@@ -216,7 +225,10 @@ def create_entity_decorator(entity_kind: str) -> Callable[..., Any]:
                 return _wrapped_async()
             else:  # Sync function for non-SESSION kinds
                 with _create_as_current_span(
-                    operation_name, entity_kind, version=version, attributes={"tags": tags} if tags else None
+                    operation_name,
+                    entity_kind,
+                    version=version,
+                    attributes={CoreAttributes.TAGS: tags} if tags else None,
                 ) as span:
                     try:
                         _record_entity_input(span, args, kwargs)

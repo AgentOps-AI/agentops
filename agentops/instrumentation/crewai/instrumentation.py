@@ -171,8 +171,11 @@ def wrap_kickoff(
         tag_list = list(config.default_tags)
         attributes[CoreAttributes.TAGS] = tag_list
 
+    # Use trace_name from config if available, otherwise default to "crewai.workflow"
+    span_name = config.trace_name if config.trace_name else "crewai.workflow"
+
     with tracer.start_as_current_span(
-        "crewai.workflow",
+        span_name,
         kind=SpanKind.INTERNAL,
         attributes=attributes,
     ) as span:

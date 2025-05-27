@@ -56,6 +56,7 @@ def init(
     max_queue_size: Optional[int] = None,
     tags: Optional[List[str]] = None,
     default_tags: Optional[List[str]] = None,
+    trace_name: Optional[str] = None,
     instrument_llm_calls: Optional[bool] = None,
     auto_start_session: Optional[bool] = None,
     auto_init: Optional[bool] = None,
@@ -81,6 +82,7 @@ def init(
         max_queue_size (int, optional): The maximum size of the event queue. Defaults to 512.
         tags (List[str], optional): [Deprecated] Use `default_tags` instead.
         default_tags (List[str], optional): Default tags for the sessions that can be used for grouping or sorting later (e.g. ["GPT-4"]).
+        trace_name (str, optional): Name for the default trace/session. If none is provided, defaults to "default".
         instrument_llm_calls (bool): Whether to instrument LLM calls and emit LLMEvents.
         auto_start_session (bool): Whether to start a session automatically when the client is created.
         auto_init (bool): Whether to automatically initialize the client on import. Defaults to True.
@@ -111,6 +113,7 @@ def init(
         max_wait_time=max_wait_time,
         max_queue_size=max_queue_size,
         default_tags=merged_tags,
+        trace_name=trace_name,
         instrument_llm_calls=instrument_llm_calls,
         auto_start_session=auto_start_session,
         auto_init=auto_init,

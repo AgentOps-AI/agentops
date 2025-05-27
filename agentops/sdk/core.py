@@ -22,7 +22,7 @@ from agentops.exceptions import AgentOpsClientNotInitializedException
 from agentops.logging import logger, setup_print_logger
 from agentops.sdk.processors import InternalSpanProcessor
 from agentops.sdk.types import TracingConfig
-from agentops.semconv import ResourceAttributes, SpanKind, SpanAttributes
+from agentops.semconv import ResourceAttributes, SpanKind, SpanAttributes, CoreAttributes
 from agentops.helpers.dashboard import log_trace_url
 
 # No need to create shortcuts since we're using our own ResourceAttributes class now
@@ -423,7 +423,7 @@ class TracingCore:
         attributes: dict = {}
         if tags:
             if isinstance(tags, list):
-                attributes["tags"] = tags
+                attributes[CoreAttributes.TAGS] = tags
             elif isinstance(tags, dict):
                 attributes.update(tags)  # Add dict tags directly
             else:

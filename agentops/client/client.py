@@ -135,8 +135,9 @@ class Client:
         if self.config.auto_start_session:
             if self._init_trace_context is None or not self._init_trace_context.span.is_recording():
                 logger.debug("Auto-starting init trace.")
+                trace_name = self.config.trace_name or "default"
                 self._init_trace_context = tracing_core.start_trace(
-                    trace_name="default",
+                    trace_name=trace_name,
                     tags=list(self.config.default_tags) if self.config.default_tags else None,
                     is_init_trace=True,
                 )
