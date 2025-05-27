@@ -334,11 +334,7 @@ class TracingCore:
             return
 
         try:
-            # OTEL SDK's TracerProvider has a force_flush method
-            # It expects timeout in seconds for force_flush
-            timeout_seconds = self.config.get("max_wait_time", 5000) / 1000
-            logger.debug(f"Forcing flush on provider with timeout: {timeout_seconds}s")
-            self._provider.force_flush(timeout_seconds)  # type: ignore
+            self._provider.force_flush()  # type: ignore
             logger.debug("Provider force_flush completed.")
         except Exception as e:
             logger.warning(f"Failed to force flush provider's span processors: {e}", exc_info=True)
