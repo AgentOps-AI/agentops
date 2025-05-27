@@ -310,12 +310,12 @@ class OpenAIAgentsExporter:
         span_lookup_key = _get_span_lookup_key(trace_id, span_id)
 
         attributes = get_base_span_attributes(span)
-        span_specific_attributes = get_span_attributes(span_data)
-        attributes.update(span_specific_attributes)
+        span_attributes = get_span_attributes(span_data)
+        attributes.update(span_attributes)
 
         if is_end_event:
             # Update all attributes for end events
-            pass
+            attributes.update(span_attributes)
 
         # Log the trace ID for debugging and correlation with AgentOps API
         log_otel_trace_id(span_type)
