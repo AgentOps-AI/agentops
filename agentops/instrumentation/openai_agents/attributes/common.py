@@ -42,7 +42,7 @@ AGENT_SPAN_ATTRIBUTES: AttributeMap = {
 
 
 # Attribute mapping for FunctionSpanData
-FUNCTION_TOOL_ATTRIBUTES: AttributeMap = {
+FUNCTION_SPAN_ATTRIBUTES: AttributeMap = {
     ToolAttributes.TOOL_NAME: "name",
     ToolAttributes.TOOL_PARAMETERS: "input",
     ToolAttributes.TOOL_RESULT: "output",
@@ -218,7 +218,7 @@ def get_function_span_attributes(span_data: Any) -> AttributeMap:
     Returns:
         Dictionary of attributes for function span
     """
-    attributes = _extract_attributes_from_mapping(span_data, FUNCTION_TOOL_ATTRIBUTES)
+    attributes = _extract_attributes_from_mapping(span_data, FUNCTION_SPAN_ATTRIBUTES)
     attributes.update(get_common_attributes())
     attributes[SpanAttributes.AGENTOPS_SPAN_KIND] = AgentOpsSpanKindValues.TOOL.value
 
