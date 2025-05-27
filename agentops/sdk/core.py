@@ -444,7 +444,11 @@ class TracingCore:
 
         # Track the active trace
         with self._traces_lock:
-            trace_id = f"{span.get_span_context().trace_id:x}"
+            try:
+                trace_id = f"{span.get_span_context().trace_id:x}"
+            except (TypeError, ValueError):
+                # Handle case where span is mocked or trace_id is not a valid integer
+                trace_id = str(span.get_span_context().trace_id)
             self._active_traces[trace_id] = trace_context
             logger.debug(f"Added trace {trace_id} to active traces. Total active: {len(self._active_traces)}")
 
@@ -492,7 +496,11 @@ class TracingCore:
 
         span = trace_context.span
         token = trace_context.token
-        trace_id = f"{span.get_span_context().trace_id:x}"
+        try:
+            trace_id = f"{span.get_span_context().trace_id:x}"
+        except (TypeError, ValueError):
+            # Handle case where span is mocked or trace_id is not a valid integer
+            trace_id = str(span.get_span_context().trace_id)
 
         logger.debug(f"Ending trace with span ID: {span.get_span_context().span_id}, end_state: {end_state}")
 
