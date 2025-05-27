@@ -708,10 +708,11 @@ class TestToolDecorator:
         assert results[2] == "Async processed item3"
 
         spans = instrumentation.get_finished_spans()
-        tool_span = next(
-            span for span in spans if span.attributes.get(SpanAttributes.AGENTOPS_SPAN_KIND) == SpanKind.TOOL
-        )
-        assert tool_span.attributes.get(SpanAttributes.LLM_USAGE_TOOL_COST) == 0.04
+        tool_span = [span for span in spans if span.attributes.get(SpanAttributes.AGENTOPS_SPAN_KIND) == SpanKind.TOOL]
+        assert len(tool_span) == 4  # Only one span for the generator
+        assert tool_span[0].attributes.get(SpanAttributes.LLM_USAGE_TOOL_COST) == 0.02
+        assert tool_span[3].attributes.get(SpanAttributes.LLM_USAGE_TOOL_COST) == 0.04
+
 
     def test_multiple_tool_calls(self, agent_class, instrumentation: InstrumentationTester):
         """Test multiple calls to the same tool."""
