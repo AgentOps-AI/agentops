@@ -151,9 +151,9 @@ def _extract_llm_attributes(llm_request_dict: dict, llm_response: Any) -> dict:
     if "config" in llm_request_dict:
         config = llm_request_dict["config"]
 
-        # System instruction
-        if "system_instruction" in config:
-            attributes[SpanAttributes.LLM_REQUEST_SYSTEM_INSTRUCTION] = config["system_instruction"]
+        # System instruction - commented out, now handled as a system role message
+        # if "system_instruction" in config:
+        #     attributes[SpanAttributes.LLM_REQUEST_SYSTEM_INSTRUCTION] = config["system_instruction"]
 
         # Temperature
         if "temperature" in config:
@@ -192,10 +192,68 @@ def _extract_llm_attributes(llm_request_dict: dict, llm_response: Any) -> dict:
                         attributes[f"gen_ai.request.tools.{j}.name"] = func.get("name", "")
                         attributes[f"gen_ai.request.tools.{j}.description"] = func.get("description", "")
 
-    # Messages
+    # Messages - handle system instruction and regular contents
+    message_index = 0
+
+    # First, add system instruction as a system role message if present
+    # TODO: This is not Chat Completions format but doing this for frontend rendering consistency
+    if "config" in llm_request_dict and "system_instruction" in llm_request_dict["config"]:
+        system_instruction = llm_request_dict["config"]["system_instruction"]
+        attributes[MessageAttributes.PROMPT_ROLE.format(i=message_index)] = "system"
+        attributes[MessageAttributes.PROMPT_CONTENT.format(i=message_index)] = system_instruction
+        message_index += 1
+
+    # Then add regular contents with proper indexing
     if "contents" in llm_request_dict:
-        msg_attrs = _extract_messages_from_contents(llm_request_dict["contents"])
-        attributes.update(msg_attrs)
+        for content in llm_request_dict["contents"]:
+            # Get role and normalize it
+            raw_role = content.get("role", "user")
+
+            # Hardcode role mapping for consistency
+            if raw_role == "model":
+                role = "assistant"
+            elif raw_role == "user":
+                role = "user"
+            elif raw_role == "system":
+                role = "system"
+            else:
+                role = raw_role  # Keep original if not recognized
+
+            parts = content.get("parts", [])
+
+            # Set role
+            attributes[MessageAttributes.PROMPT_ROLE.format(i=message_index)] = role
+
+            # Extract content from parts
+            text_parts = []
+            for part in parts:
+                if "text" in part:
+                    text_parts.append(part["text"])
+                elif "function_call" in part:
+                    # Function calls in prompts are typically from the model's previous responses
+                    func_call = part["function_call"]
+                    # Store as a generic attribute since MessageAttributes doesn't have prompt tool calls
+                    attributes[f"gen_ai.prompt.{message_index}.function_call.name"] = func_call.get("name", "")
+                    attributes[f"gen_ai.prompt.{message_index}.function_call.args"] = json.dumps(
+                        func_call.get("args", {})
+                    )
+                    if "id" in func_call:
+                        attributes[f"gen_ai.prompt.{message_index}.function_call.id"] = func_call["id"]
+                elif "function_response" in part:
+                    # Function responses are typically user messages with tool results
+                    func_resp = part["function_response"]
+                    attributes[f"gen_ai.prompt.{message_index}.function_response.name"] = func_resp.get("name", "")
+                    attributes[f"gen_ai.prompt.{message_index}.function_response.result"] = json.dumps(
+                        func_resp.get("response", {})
+                    )
+                    if "id" in func_resp:
+                        attributes[f"gen_ai.prompt.{message_index}.function_response.id"] = func_resp["id"]
+
+            # Combine text parts
+            if text_parts:
+                attributes[MessageAttributes.PROMPT_CONTENT.format(i=message_index)] = "\n".join(text_parts)
+
+            message_index += 1
 
     # Response
     if llm_response:
