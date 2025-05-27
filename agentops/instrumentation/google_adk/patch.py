@@ -10,7 +10,7 @@ import json
 import wrapt
 from typing import Any
 from opentelemetry import trace as opentelemetry_api_trace
-from opentelemetry.trace import SpanKind
+from opentelemetry.trace import SpanKind as SpanKind
 
 from agentops.logging import logger
 from agentops.semconv import SpanAttributes, ToolAttributes, MessageAttributes, AgentAttributes
@@ -355,7 +355,7 @@ def _base_agent_run_async_wrapper(agentops_tracer):
             agent_name = instance.name if hasattr(instance, "name") else "unknown"
             span_name = f"adk.agent.{agent_name}"
 
-            with agentops_tracer.start_as_current_span(span_name, kind=SpanKind.CLIENT, type="agent") as span:
+            with agentops_tracer.start_as_current_span(span_name, kind=SpanKind.CLIENT) as span:
                 span.set_attribute(SpanAttributes.AGENTOPS_SPAN_KIND, "agent")
                 span.set_attribute(SpanAttributes.LLM_SYSTEM, "gcp.vertex.agent")
                 span.set_attribute(SpanAttributes.AGENTOPS_ENTITY_NAME, "agent")
@@ -395,8 +395,8 @@ def _base_llm_flow_call_llm_async_wrapper(agentops_tracer):
 
             span_name = f"adk.llm.{model_name}"
 
-            with agentops_tracer.start_as_current_span(span_name, kind=SpanKind.CLIENT, type="llm") as span:
-                span.set_attribute(SpanAttributes.AGENTOPS_SPAN_KIND, "llm")
+            with agentops_tracer.start_as_current_span(span_name, kind=SpanKind.CLIENT) as span:
+                span.set_attribute(SpanAttributes.AGENTOPS_SPAN_KIND, "request")
                 span.set_attribute(SpanAttributes.LLM_SYSTEM, "gcp.vertex.agent")
                 span.set_attribute(SpanAttributes.AGENTOPS_ENTITY_NAME, "request")
 
@@ -585,7 +585,7 @@ def _call_tool_async_wrapper(agentops_tracer):
             tool_name = getattr(tool, "name", "unknown_tool")
             span_name = f"adk.tool.{tool_name}"
 
-            with agentops_tracer.start_as_current_span(span_name, kind=SpanKind.CLIENT, type="tool") as span:
+            with agentops_tracer.start_as_current_span(span_name, kind=SpanKind.CLIENT) as span:
                 span.set_attribute(SpanAttributes.AGENTOPS_SPAN_KIND, "tool")
                 span.set_attribute(SpanAttributes.LLM_SYSTEM, "gcp.vertex.agent")
                 span.set_attribute(SpanAttributes.AGENTOPS_ENTITY_NAME, "tool")
