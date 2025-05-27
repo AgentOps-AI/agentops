@@ -102,11 +102,16 @@ class Client:
 
         self.api = ApiClient(self.config.endpoint)
 
-        response = self.api.v3.fetch_auth_token(self.config.api_key)
-        if response is None:
-            # If auth fails, we cannot proceed with TracingCore initialization that depends on project_id
-            logger.error("Failed to fetch auth token. AgentOps SDK will not be initialized.")
-            return None  # Explicitly return None if auth fails
+        try:
+            response = self.api.v3.fetch_auth_token(self.config.api_key)
+            if response is None:
+                # If auth fails, we cannot proceed with TracingCore initialization that depends on project_id
+                logger.error("Failed to fetch auth token. AgentOps SDK will not be initialized.")
+                return None  # Explicitly return None if auth fails
+        except Exception as e:
+            # Re-raise authentication exceptions so they can be caught by tests and calling code
+            logger.error(f"Authentication failed: {e}")
+            raise
 
         self.api.v4.set_auth_token(response["token"])
 
