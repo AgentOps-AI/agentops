@@ -2,7 +2,7 @@ from typing import AsyncGenerator
 import asyncio
 import pytest
 
-from agentops.sdk.decorators import agent, operation, session, workflow, task
+from agentops.sdk.decorators import agent, operation, session, workflow, task, tool
 from agentops.semconv import SpanKind
 from agentops.semconv.span_attributes import SpanAttributes
 from tests.unit.sdk.instrumentation_tester import InstrumentationTester
@@ -624,3 +624,140 @@ async def test_async_context_manager():
     with pytest.raises(ValueError):
         async with TestClass() as instance:
             raise ValueError("Trigger exception for __aexit__ coverage")
+
+
+class TestToolDecorator:
+    """Tests for the tool decorator functionality."""
+
+    @pytest.fixture
+    def agent_class(self):
+        @agent
+        class TestAgent:
+            @tool(cost=0.01)
+            def process_item(self, item):
+                return f"Processed {item}"
+
+            @tool(cost=0.02)
+            async def async_process_item(self, item):
+                await asyncio.sleep(0.1)
+                return f"Async processed {item}"
+
+            @tool(cost=0.03)
+            def generator_process_items(self, items):
+                for item in items:
+                    yield self.process_item(item)
+
+            @tool(cost=0.04)
+            async def async_generator_process_items(self, items):
+                for item in items:
+                    await asyncio.sleep(0.1)
+                    yield await self.async_process_item(item)
+
+        return TestAgent()
+
+    def test_sync_tool_cost(self, agent_class, instrumentation: InstrumentationTester):
+        """Test synchronous tool with cost attribute."""
+        result = agent_class.process_item("test")
+
+        assert result == "Processed test"
+
+        spans = instrumentation.get_finished_spans()
+        tool_span = next(
+            span for span in spans if span.attributes.get(SpanAttributes.AGENTOPS_SPAN_KIND) == SpanKind.TOOL
+        )
+        assert tool_span.attributes.get(SpanAttributes.LLM_USAGE_TOOL_COST) == 0.01
+
+    @pytest.mark.asyncio
+    async def test_async_tool_cost(self, agent_class, instrumentation: InstrumentationTester):
+        """Test asynchronous tool with cost attribute."""
+        result = await agent_class.async_process_item("test")
+
+        assert result == "Async processed test"
+
+        spans = instrumentation.get_finished_spans()
+        tool_span = next(
+            span for span in spans if span.attributes.get(SpanAttributes.AGENTOPS_SPAN_KIND) == SpanKind.TOOL
+        )
+        assert tool_span.attributes.get(SpanAttributes.LLM_USAGE_TOOL_COST) == 0.02
+
+    def test_generator_tool_cost(self, agent_class, instrumentation: InstrumentationTester):
+        """Test generator tool with cost attribute."""
+        items = ["item1", "item2", "item3"]
+        results = list(agent_class.generator_process_items(items))
+
+        assert len(results) == 3
+        assert results[0] == "Processed item1"
+        assert results[1] == "Processed item2"
+        assert results[2] == "Processed item3"
+
+        spans = instrumentation.get_finished_spans()
+        tool_spans = [span for span in spans if span.attributes.get(SpanAttributes.AGENTOPS_SPAN_KIND) == SpanKind.TOOL]
+        assert len(tool_spans) == 4  # Only one span for the generator
+        assert tool_spans[0].attributes.get(SpanAttributes.LLM_USAGE_TOOL_COST) == 0.01
+        assert tool_spans[3].attributes.get(SpanAttributes.LLM_USAGE_TOOL_COST) == 0.03
+
+    @pytest.mark.asyncio
+    async def test_async_generator_tool_cost(self, agent_class, instrumentation: InstrumentationTester):
+        """Test async generator tool with cost attribute."""
+        items = ["item1", "item2", "item3"]
+        results = [result async for result in agent_class.async_generator_process_items(items)]
+
+        assert len(results) == 3
+        assert results[0] == "Async processed item1"
+        assert results[1] == "Async processed item2"
+        assert results[2] == "Async processed item3"
+
+        spans = instrumentation.get_finished_spans()
+        tool_span = [span for span in spans if span.attributes.get(SpanAttributes.AGENTOPS_SPAN_KIND) == SpanKind.TOOL]
+        assert len(tool_span) == 4  # Only one span for the generator
+        assert tool_span[0].attributes.get(SpanAttributes.LLM_USAGE_TOOL_COST) == 0.02
+        assert tool_span[3].attributes.get(SpanAttributes.LLM_USAGE_TOOL_COST) == 0.04
+
+    def test_multiple_tool_calls(self, agent_class, instrumentation: InstrumentationTester):
+        """Test multiple calls to the same tool."""
+        for i in range(3):
+            result = agent_class.process_item(f"item{i}")
+            assert result == f"Processed item{i}"
+
+        spans = instrumentation.get_finished_spans()
+        tool_spans = [span for span in spans if span.attributes.get(SpanAttributes.AGENTOPS_SPAN_KIND) == SpanKind.TOOL]
+        assert len(tool_spans) == 3
+        for span in tool_spans:
+            assert span.attributes.get(SpanAttributes.LLM_USAGE_TOOL_COST) == 0.01
+
+    @pytest.mark.asyncio
+    async def test_parallel_tool_calls(self, agent_class, instrumentation: InstrumentationTester):
+        """Test parallel execution of async tools."""
+        results = await asyncio.gather(
+            agent_class.async_process_item("item1"),
+            agent_class.async_process_item("item2"),
+            agent_class.async_process_item("item3"),
+        )
+
+        assert len(results) == 3
+        assert results[0] == "Async processed item1"
+        assert results[1] == "Async processed item2"
+        assert results[2] == "Async processed item3"
+
+        spans = instrumentation.get_finished_spans()
+        tool_spans = [span for span in spans if span.attributes.get(SpanAttributes.AGENTOPS_SPAN_KIND) == SpanKind.TOOL]
+        assert len(tool_spans) == 3
+        for span in tool_spans:
+            assert span.attributes.get(SpanAttributes.LLM_USAGE_TOOL_COST) == 0.02
+
+    def test_tool_without_cost(self, agent_class, instrumentation: InstrumentationTester):
+        """Test tool without cost parameter."""
+
+        @tool
+        def no_cost_tool(self):
+            return "No cost tool result"
+
+        result = no_cost_tool(agent_class)
+
+        assert result == "No cost tool result"
+
+        spans = instrumentation.get_finished_spans()
+        tool_span = next(
+            span for span in spans if span.attributes.get(SpanAttributes.AGENTOPS_SPAN_KIND) == SpanKind.TOOL
+        )
+        assert SpanAttributes.LLM_USAGE_TOOL_COST not in tool_span.attributes

@@ -46,7 +46,6 @@ from agentops.semconv import (
     SpanAttributes,
     MessageAttributes,
     AgentAttributes,
-    WorkflowAttributes,
     InstrumentationAttributes,
 )
 
@@ -171,10 +170,8 @@ class TestOpenAIAgentsAttributes:
 
         # Verify extracted attributes
         assert attrs[AgentAttributes.AGENT_NAME] == "test_agent"
-        assert attrs[WorkflowAttributes.WORKFLOW_INPUT] == "test input"
-        assert attrs[WorkflowAttributes.FINAL_OUTPUT] == "test output"
-        assert attrs[AgentAttributes.AGENT_TOOLS] == '["tool1", "tool2"]'  # JSON-serialized string is fine.
-        # LLM_PROMPTS is handled in common.py now so we don't test for it directly
+        assert "agentops.span.kind" in attrs
+        assert attrs["agentops.span.kind"] == "agent"
 
     def test_function_span_attributes(self):
         """Test extraction of attributes from a FunctionSpanData object"""
@@ -189,11 +186,17 @@ class TestOpenAIAgentsAttributes:
         # Extract attributes
         attrs = get_function_span_attributes(mock_function_span)
 
-        # Verify extracted attributes - note that complex objects should be serialized to strings
-        assert attrs[AgentAttributes.AGENT_NAME] == "test_function"
-        assert attrs[WorkflowAttributes.WORKFLOW_INPUT] == '{"arg1": "value1"}'  # Serialized string
-        assert attrs[WorkflowAttributes.FINAL_OUTPUT] == '{"result": "success"}'  # Serialized string
-        assert attrs[AgentAttributes.FROM_AGENT] == "caller_agent"
+        # Verify extracted attributes
+        assert "tool.name" in attrs
+        assert attrs["tool.name"] == "test_function"
+        assert "tool.parameters" in attrs
+        assert '{"arg1": "value1"}' in attrs["tool.parameters"]  # Serialized string
+        assert "tool.result" in attrs
+        assert '{"result": "success"}' in attrs["tool.result"]  # Serialized string
+        assert "agentops.span.kind" in attrs
+        assert attrs["agentops.span.kind"] == "tool"
+        assert "agent.calling_tool.name" in attrs
+        assert attrs["agent.calling_tool.name"] == "caller_agent"
 
     def test_generation_span_with_chat_completion(self):
         """Test extraction of attributes from a GenerationSpanData with Chat Completion API data"""
@@ -217,7 +220,10 @@ class TestOpenAIAgentsAttributes:
         # Verify model and input attributes
         assert attrs[SpanAttributes.LLM_REQUEST_MODEL] == "gpt-4o-2024-08-06"
         assert attrs[SpanAttributes.LLM_RESPONSE_MODEL] == "gpt-4o-2024-08-06"
-        assert attrs[SpanAttributes.LLM_PROMPTS] == "What is the capital of France?"
+        assert "gen_ai.prompt.0.role" in attrs
+        assert attrs["gen_ai.prompt.0.role"] == "user"
+        assert "gen_ai.prompt.0.content" in attrs
+        assert attrs["gen_ai.prompt.0.content"] == "What is the capital of France?"
 
         # Verify model config attributes
         assert attrs[SpanAttributes.LLM_REQUEST_TEMPERATURE] == 0.7
@@ -248,7 +254,10 @@ class TestOpenAIAgentsAttributes:
         # Verify model and input attributes
         assert attrs[SpanAttributes.LLM_REQUEST_MODEL] == "gpt-4o-2024-08-06"
         assert attrs[SpanAttributes.LLM_RESPONSE_MODEL] == "gpt-4o-2024-08-06"
-        assert attrs[SpanAttributes.LLM_PROMPTS] == "What is the capital of France?"
+        assert "gen_ai.prompt.0.role" in attrs
+        assert attrs["gen_ai.prompt.0.role"] == "user"
+        assert "gen_ai.prompt.0.content" in attrs
+        assert attrs["gen_ai.prompt.0.content"] == "What is the capital of France?"
 
         # Verify token usage - this is handled through model_to_dict now
         # Since we're using a direct fixture, the serialization might differ
@@ -421,8 +430,12 @@ class TestOpenAIAgentsAttributes:
         attrs = get_response_span_attributes(mock_response_span)
 
         # Verify extracted attributes
-        # SpanAttributes.LLM_PROMPTS is no longer explicitly set here
-        assert attrs[WorkflowAttributes.WORKFLOW_INPUT] == "user query"
+        assert "gen_ai.prompt.0.role" in attrs
+        assert attrs["gen_ai.prompt.0.role"] == "user"
+        assert "gen_ai.prompt.0.content" in attrs
+        assert attrs["gen_ai.prompt.0.content"] == "user query"
+        assert "agentops.span.kind" in attrs
+        assert attrs["agentops.span.kind"] == "llm"
 
     def test_span_attributes_dispatcher(self):
         """Test the dispatcher function that routes to type-specific extractors"""
@@ -456,7 +469,8 @@ class TestOpenAIAgentsAttributes:
             assert AgentAttributes.AGENT_NAME in agent_attrs
 
             function_attrs = get_span_attributes(function_span)
-            assert AgentAttributes.AGENT_NAME in function_attrs
+            assert "tool.name" in function_attrs
+            assert function_attrs["tool.name"] == "test_function"
 
             # Unknown span type should return empty dict
             unknown_attrs = get_span_attributes(unknown_span)

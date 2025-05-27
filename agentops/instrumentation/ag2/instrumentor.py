@@ -13,7 +13,7 @@ from opentelemetry.metrics import get_meter
 from wrapt import wrap_function_wrapper
 
 from agentops.logging import logger
-from agentops.instrumentation.ag2.version import LIBRARY_NAME, LIBRARY_VERSION
+from agentops.instrumentation.ag2 import LIBRARY_NAME, LIBRARY_VERSION
 from agentops.semconv import Meters
 from agentops.semconv.message import MessageAttributes
 from agentops.semconv.span_attributes import SpanAttributes
