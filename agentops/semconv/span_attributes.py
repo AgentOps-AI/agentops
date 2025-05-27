@@ -65,7 +65,7 @@ class SpanAttributes:
     LLM_USAGE_CACHE_READ_INPUT_TOKENS = "gen_ai.usage.cache_read_input_tokens"
     LLM_USAGE_REASONING_TOKENS = "gen_ai.usage.reasoning_tokens"
     LLM_USAGE_STREAMING_TOKENS = "gen_ai.usage.streaming_tokens"
-    LLM_USAGE_TOOL_COST = "gen_ai.usage.tool_cost" 
+    LLM_USAGE_TOOL_COST = "gen_ai.usage.tool_cost"
 
     # Message attributes
     # see ./message.py for message-related attributes
