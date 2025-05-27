@@ -13,6 +13,7 @@ AgentOps provides the following decorators:
 | `@operation` | Track discrete operations performed by agents | OPERATION span |
 | `@workflow` | Track a sequence of operations | WORKFLOW span |
 | `@task` | Track smaller units of work (similar to operations) | TASK span |
+| `@tool` | Track tool usage and cost in agent operations | TOOL span |
 
 ## Decorator Hierarchy
 
@@ -189,6 +190,50 @@ class DataProcessor:
 ```
 
 The `@task` and `@operation` decorators function identically (they are aliases in the codebase), and you can choose the one that best fits your semantic needs.
+
+### @tool
+
+The `@tool` decorator tracks tool usage within agent operations and supports cost tracking. It works with all function types: synchronous, asynchronous, generator, and async generator.
+
+```python
+from agentops.sdk.decorators import agent, tool
+import asyncio
+
+@agent
+class ProcessingAgent:
+    def __init__(self):
+        pass
+
+    @tool(cost=0.01)
+    def sync_tool(self, item):
+        """Synchronous tool with cost tracking."""
+        return f"Processed {item}"
+
+    @tool(cost=0.02)
+    async def async_tool(self, item):
+        """Asynchronous tool with cost tracking."""
+        await asyncio.sleep(0.1)
+        return f"Async processed {item}"
+
+    @tool(cost=0.03)
+    def generator_tool(self, items):
+        """Generator tool with cost tracking."""
+        for item in items:
+            yield self.sync_tool(item)
+
+    @tool(cost=0.04)
+    async def async_generator_tool(self, items):
+        """Async generator tool with cost tracking."""
+        for item in items:
+            await asyncio.sleep(0.1)
+            yield await self.async_tool(item)
+```
+
+The tool decorator provides:
+- Cost tracking for each tool call
+- Proper span creation and nesting
+- Support for all function types (sync, async, generator, async generator)
+- Cost accumulation in generator and async generator operations
 
 ## Decorator Attributes
 
