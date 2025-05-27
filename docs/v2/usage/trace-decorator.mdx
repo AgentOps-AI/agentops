@@ -1,0 +1,453 @@
+---
+title: "Trace Decorator"
+description: "Create custom traces with the @trace decorator"
+---
+
+AgentOps 0.4.13 introduces the `@trace` decorator, which provides a clean and intuitive way to create custom traces for grouping related operations. This decorator serves as a replacement for the legacy `@session` decorator and offers more flexibility for organizing your application's telemetry data.
+
+## Basic Usage
+
+### Simple Trace Creation
+
+The `@trace` decorator automatically creates a trace span that encompasses the entire function execution:
+
+```python
+from agentops.sdk.decorators import trace
+import agentops
+
+# Initialize AgentOps
+agentops.init("your-api-key", auto_start_session=False)
+
+@trace
+def my_workflow():
+    """A simple workflow wrapped in a trace"""
+    print("Executing workflow...")
+    # Your application logic here
+    return "Workflow completed"
+
+# Run the function - this creates and manages the trace automatically
+result = my_workflow()
+```
+
+### Custom Trace Names
+
+You can specify custom names for your traces:
+
+```python
+@trace(name="customer-onboarding-flow")
+def onboard_customer(customer_data):
+    """Customer onboarding process"""
+    # Process customer data
+    return f"Onboarded customer: {customer_data['name']}"
+
+@trace(name="data-processing-pipeline")
+def process_data(input_data):
+    """Data processing workflow"""
+    # Process the data
+    return f"Processed {len(input_data)} items"
+```
+
+### Adding Tags to Traces
+
+Tags help categorize and filter traces in your dashboard:
+
+```python
+@trace(tags=["production", "high-priority"])
+def critical_workflow():
+    """Critical production workflow"""
+    return "Critical task completed"
+
+@trace(name="user-analysis", tags=["analytics", "user-behavior"])
+def analyze_user_behavior(user_id):
+    """Analyze user behavior patterns"""
+    return f"Analysis for user {user_id}"
+```
+
+## Integration with Other Decorators
+
+### Combining with Agent and Operation Decorators
+
+The `@trace` decorator works seamlessly with other AgentOps decorators:
+
+```python
+from agentops.sdk.decorators import trace, agent, operation, tool
+
+@agent
+class DataAnalysisAgent:
+    @operation
+    def collect_data(self, source):
+        return f"Data collected from {source}"
+    
+    @tool(cost=0.05)
+    def analyze_data(self, data):
+        return f"Analysis of {data}"
+    
+    @operation
+    def generate_report(self, analysis):
+        return f"Report: {analysis}"
+
+@trace(name="complete-analysis-workflow")
+def run_analysis_workflow(data_source):
+    """Complete data analysis workflow"""
+    agent = DataAnalysisAgent()
+    
+    # Collect data
+    data = agent.collect_data(data_source)
+    
+    # Analyze data
+    analysis = agent.analyze_data(data)
+    
+    # Generate report
+    report = agent.generate_report(analysis)
+    
+    return {
+        "source": data_source,
+        "report": report
+    }
+
+# Usage
+result = run_analysis_workflow("customer_database")
+```
+
+## Async Function Support
+
+The `@trace` decorator fully supports async functions:
+
+```python
+import asyncio
+from agentops.sdk.decorators import trace, operation
+
+@operation
+async def fetch_user_data(user_id):
+    """Simulate async data fetching"""
+    await asyncio.sleep(1)  # Simulate API call
+    return f"User data for {user_id}"
+
+@operation
+async def process_user_data(user_data):
+    """Simulate async data processing"""
+    await asyncio.sleep(0.5)  # Simulate processing
+    return f"Processed: {user_data}"
+
+@trace(name="async-user-workflow")
+async def async_user_workflow(user_id):
+    """Async workflow for user processing"""
+    user_data = await fetch_user_data(user_id)
+    processed_data = await process_user_data(user_data)
+    return processed_data
+
+# Usage
+async def main():
+    result = await async_user_workflow("user_123")
+    print(result)
+
+# Run the async workflow
+asyncio.run(main())
+```
+
+## Error Handling and Trace States
+
+### Automatic Error Handling
+
+The `@trace` decorator automatically handles exceptions and sets appropriate trace states:
+
+```python
+@trace(name="error-prone-workflow")
+def risky_operation():
+    """Operation that might fail"""
+    import random
+    
+    if random.random() < 0.5:
+        raise ValueError("Random failure occurred")
+    
+    return "Operation succeeded"
+
+# The trace will automatically be marked with failure state if an exception occurs
+try:
+    result = risky_operation()
+    print(f"Success: {result}")
+except ValueError as e:
+    print(f"Operation failed: {e}")
+    # Trace is automatically ended with error state
+```
+
+### Custom Error Handling
+
+You can implement custom error handling within traced functions:
+
+```python
+@trace(name="robust-workflow")
+def robust_operation(data):
+    """Operation with custom error handling"""
+    try:
+        # Risky operation
+        if not data:
+            raise ValueError("No data provided")
+        
+        # Process data
+        result = f"Processed: {data}"
+        return {"success": True, "result": result}
+        
+    except ValueError as e:
+        # Handle specific errors
+        return {"success": False, "error": str(e)}
+    except Exception as e:
+        # Handle unexpected errors
+        return {"success": False, "error": f"Unexpected error: {str(e)}"}
+
+# Usage
+result1 = robust_operation("valid_data")  # Success trace
+result2 = robust_operation("")  # Failure trace with custom handling
+```
+
+## Real-World Examples
+
+### E-commerce Order Processing
+
+```python
+from agentops.sdk.decorators import trace, agent, operation, tool
+import agentops
+
+agentops.init("your-api-key", auto_start_session=False)
+
+@agent
+class OrderProcessor:
+    @tool(cost=0.01)
+    def validate_payment(self, payment_info):
+        """Payment validation service"""
+        return {"valid": True, "transaction_id": "txn_123"}
+    
+    @tool(cost=0.02)
+    def check_inventory(self, product_id, quantity):
+        """Inventory check service"""
+        return {"available": True, "reserved": quantity}
+    
+    @operation
+    def calculate_shipping(self, address, items):
+        """Calculate shipping costs"""
+        return {"cost": 9.99, "method": "standard"}
+    
+    @tool(cost=0.005)
+    def send_confirmation_email(self, email, order_details):
+        """Email service"""
+        return f"Confirmation sent to {email}"
+
+@trace(name="order-processing", tags=["ecommerce", "orders"])
+def process_order(order_data):
+    """Complete order processing workflow"""
+    processor = OrderProcessor()
+    
+    try:
+        # Validate payment
+        payment_result = processor.validate_payment(order_data["payment"])
+        if not payment_result["valid"]:
+            return {"success": False, "error": "Payment validation failed"}
+        
+        # Check inventory for all items
+        for item in order_data["items"]:
+            inventory_result = processor.check_inventory(
+                item["product_id"], 
+                item["quantity"]
+            )
+            if not inventory_result["available"]:
+                return {"success": False, "error": f"Item {item['product_id']} not available"}
+        
+        # Calculate shipping
+        shipping = processor.calculate_shipping(
+            order_data["shipping_address"], 
+            order_data["items"]
+        )
+        
+        # Send confirmation
+        confirmation = processor.send_confirmation_email(
+            order_data["customer_email"],
+            {
+                "items": order_data["items"],
+                "shipping": shipping,
+                "payment": payment_result
+            }
+        )
+        
+        return {
+            "success": True,
+            "order_id": "ORD_12345",
+            "payment": payment_result,
+            "shipping": shipping,
+            "confirmation": confirmation
+        }
+        
+    except Exception as e:
+        return {"success": False, "error": str(e)}
+
+# Usage
+order = {
+    "customer_email": "customer@example.com",
+    "payment": {"card": "****1234", "amount": 99.99},
+    "items": [{"product_id": "PROD_001", "quantity": 2}],
+    "shipping_address": {"city": "New York", "state": "NY"}
+}
+
+result = process_order(order)
+```
+
+### Machine Learning Pipeline
+
+```python
+from agentops.sdk.decorators import trace, operation, tool
+
+@tool(cost=0.10)
+def load_dataset(dataset_path):
+    """Data loading service"""
+    return f"Dataset loaded from {dataset_path}"
+
+@operation
+def preprocess_data(raw_data):
+    """Data preprocessing"""
+    return f"Preprocessed: {raw_data}"
+
+@tool(cost=0.50)
+def train_model(processed_data, model_config):
+    """Model training service"""
+    return {
+        "model_id": "model_v1.0",
+        "accuracy": 0.95,
+        "training_time": "2h 30m"
+    }
+
+@operation
+def evaluate_model(model, test_data):
+    """Model evaluation"""
+    return {
+        "accuracy": 0.94,
+        "precision": 0.93,
+        "recall": 0.95
+    }
+
+@tool(cost=0.05)
+def deploy_model(model, deployment_config):
+    """Model deployment service"""
+    return {
+        "endpoint": "https://api.example.com/model/v1",
+        "status": "deployed"
+    }
+
+@trace(name="ml-pipeline", tags=["machine-learning", "training"])
+def ml_training_pipeline(dataset_path, model_config, deployment_config):
+    """Complete ML training and deployment pipeline"""
+    
+    # Load and preprocess data
+    raw_data = load_dataset(dataset_path)
+    processed_data = preprocess_data(raw_data)
+    
+    # Train model
+    model = train_model(processed_data, model_config)
+    
+    # Evaluate model
+    evaluation = evaluate_model(model, processed_data)
+    
+    # Deploy if evaluation meets criteria
+    if evaluation["accuracy"] > 0.90:
+        deployment = deploy_model(model, deployment_config)
+        return {
+            "success": True,
+            "model": model,
+            "evaluation": evaluation,
+            "deployment": deployment
+        }
+    else:
+        return {
+            "success": False,
+            "reason": "Model accuracy below threshold",
+            "evaluation": evaluation
+        }
+
+# Usage
+pipeline_result = ml_training_pipeline(
+    dataset_path="/data/training_set.csv",
+    model_config={"algorithm": "random_forest", "max_depth": 10},
+    deployment_config={"environment": "production", "replicas": 3}
+)
+```
+
+## Best Practices
+
+### 1. Use Meaningful Names
+
+Choose descriptive names that clearly indicate what the trace represents:
+
+```python
+# Good
+@trace(name="user-authentication-flow")
+def authenticate_user(credentials):
+    pass
+
+@trace(name="payment-processing-pipeline")
+def process_payment(payment_data):
+    pass
+
+# Less descriptive
+@trace(name="trace1")
+def some_function():
+    pass
+```
+
+### 2. Add Relevant Tags
+
+Use tags to categorize traces for easier filtering and analysis:
+
+```python
+@trace(name="order-fulfillment", tags=["ecommerce", "fulfillment", "high-priority"])
+def fulfill_order(order_id):
+    pass
+
+@trace(name="data-sync", tags=["background-job", "data-processing"])
+def sync_data():
+    pass
+```
+
+### 3. Keep Traces Focused
+
+Each trace should represent a logical unit of work:
+
+```python
+# Good - focused on a single workflow
+@trace(name="customer-onboarding")
+def onboard_customer(customer_data):
+    validate_customer(customer_data)
+    create_account(customer_data)
+    send_welcome_email(customer_data)
+
+# Less focused - mixing different concerns
+@trace(name="mixed-operations")
+def do_everything():
+    onboard_customer(data1)
+    process_orders(data2)
+    generate_reports(data3)
+```
+
+### 4. Handle Errors Appropriately
+
+Implement proper error handling within traced functions:
+
+```python
+@trace(name="data-processing")
+def process_data(data):
+    try:
+        # Main processing logic
+        result = complex_processing(data)
+        return {"success": True, "result": result}
+    except ValidationError as e:
+        # Expected errors
+        return {"success": False, "error": "validation_failed", "details": str(e)}
+    except Exception as e:
+        # Unexpected errors
+        logger.error(f"Unexpected error in data processing: {e}")
+        return {"success": False, "error": "processing_failed"}
+```
+
+The `@trace` decorator provides a powerful and flexible way to organize your application's telemetry data. By creating logical groupings of operations, you can better understand your application's behavior and performance characteristics in the AgentOps dashboard.
+
+<script type="module" src="/scripts/github_stars.js"></script>
+<script type="module" src="/scripts/scroll-img-fadein-animation.js"></script>
+<script type="module" src="/scripts/button_heartbeat_animation.js"></script>
+<script type="module" src="/scripts/adjust_api_dynamically.js"></script> 
