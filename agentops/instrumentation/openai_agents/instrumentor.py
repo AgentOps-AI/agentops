@@ -24,7 +24,7 @@ from typing import Collection, Tuple, Dict, Any, Optional
 import functools  # For functools.wraps
 
 from opentelemetry import trace  # Needed for tracer
-from opentelemetry.trace import SpanKind as OtelSpanKind, Status, StatusCode  # Renamed to avoid conflict
+from opentelemetry.trace import SpanKind as OtelSpanKind  # Renamed to avoid conflict
 from opentelemetry.instrumentation.instrumentor import BaseInstrumentor  # type: ignore
 import wrapt  # For wrapping
 # Remove local contextvars import, will import from .context
@@ -33,22 +33,16 @@ import wrapt  # For wrapping
 from agentops.logging import logger
 from agentops.instrumentation.openai_agents.processor import OpenAIAgentsProcessor
 from agentops.instrumentation.openai_agents.exporter import OpenAIAgentsExporter
-from .context import full_prompt_contextvar  # Import from .context
+from .context import full_prompt_contextvar, agent_name_contextvar, agent_handoffs_contextvar  # Import from .context
 from agentops.instrumentation.common.wrappers import WrapConfig  # Keep WrapConfig
 
 # Remove wrap, unwrap from common.wrappers as we'll use wrapt directly for custom wrapper
 # from agentops.instrumentation.common.wrappers import wrap, unwrap
-from agentops.instrumentation.common.attributes import AttributeMap  # For type hinting
 from agentops.helpers import safe_serialize
 
 # Semantic conventions from AgentOps (Copied from runner_wrappers.py for use in new handler logic)
 from agentops.semconv import (
-    AgentAttributes,
-    MessageAttributes,
-    SpanAttributes,
-    CoreAttributes,
     AgentOpsSpanKindValues,
-    WorkflowAttributes,
 )
 
 # Removed local definition of full_prompt_contextvar
@@ -107,30 +101,15 @@ class OpenAIAgentsInstrumentor(BaseInstrumentor):
 
     # Removed property for _is_instrumented, will use direct instance member _is_instrumented_instance_flag
 
-    def _extract_agent_runner_attributes_and_set_contextvar(
+    def _prepare_and_set_agent_contextvars(
         self,
-        otel_span: trace.Span,
         args: Optional[Tuple] = None,
         kwargs: Optional[Dict] = None,
-        return_value: Optional[Any] = None,
-        exception: Optional[Exception] = None,
     ) -> None:
         """
-        Helper to extract attributes for an 'Agent Run/Turn' span and manage contextvar.
-        Logic is derived from the original agent_run_turn_attribute_handler.
-        Sets attributes directly on the provided otel_span.
+        Helper to extract agent information and set context variables for later use by the exporter.
+        This method does NOT create or modify OTel spans directly.
         """
-        attributes: AttributeMap = {}
-        attributes[SpanAttributes.AGENTOPS_SPAN_KIND] = AgentOpsSpanKindValues.AGENT.value
-        otel_span_id_for_log = "unknown"
-        if otel_span and hasattr(otel_span, "get_span_context"):
-            span_ctx = otel_span.get_span_context()
-            if span_ctx and hasattr(span_ctx, "span_id"):
-                otel_span_id_for_log = f"{span_ctx.span_id:016x}"
-        logger.debug(
-            f"[_extract_agent_runner_attributes_and_set_contextvar] Set AGENTOPS_SPAN_KIND to '{AgentOpsSpanKindValues.AGENT.value}' for OTel span ID: {otel_span_id_for_log}"
-        )
-
         agent_obj: Any = None
         sdk_input: Any = None
 
@@ -151,220 +130,119 @@ class OpenAIAgentsInstrumentor(BaseInstrumentor):
                 sdk_input = kwargs["input"]
 
         current_full_prompt_for_llm = []
+        extracted_agent_name: Optional[str] = None
+        extracted_handoffs: Optional[list[str]] = None
 
         if agent_obj:
             if hasattr(agent_obj, "name") and agent_obj.name:
-                attributes[AgentAttributes.AGENT_NAME] = str(agent_obj.name)
-            if hasattr(agent_obj, "model") and agent_obj.model:
-                attributes[SpanAttributes.LLM_REQUEST_MODEL] = str(agent_obj.model)
+                extracted_agent_name = str(agent_obj.name)
             if hasattr(agent_obj, "instructions") and agent_obj.instructions:
                 instructions = str(agent_obj.instructions)
-                attributes[SpanAttributes.LLM_REQUEST_INSTRUCTIONS] = instructions
                 current_full_prompt_for_llm.append({"role": "system", "content": instructions})
-            if hasattr(agent_obj, "tools") and agent_obj.tools:
-                attributes[AgentAttributes.AGENT_TOOLS] = [str(getattr(t, "name", t)) for t in agent_obj.tools]
             if hasattr(agent_obj, "handoffs") and agent_obj.handoffs:
-                attributes[AgentAttributes.HANDOFFS] = [str(getattr(h, "name", h)) for h in agent_obj.handoffs]
-            if hasattr(agent_obj, "output_type") and agent_obj.output_type:
-                attributes["gen_ai.output.type"] = str(agent_obj.output_type)
+                processed_handoffs = []
+                for h_item in agent_obj.handoffs:
+                    if isinstance(h_item, str):
+                        processed_handoffs.append(h_item)
+                    elif hasattr(h_item, "agent_name") and h_item.agent_name:  # For Handoff callable wrapper
+                        processed_handoffs.append(str(h_item.agent_name))
+                    elif hasattr(h_item, "name") and h_item.name:  # For Agent objects
+                        processed_handoffs.append(str(h_item.name))
+                    else:
+                        processed_handoffs.append(str(h_item))  # Fallback
+                extracted_handoffs = processed_handoffs
 
         if sdk_input:
             if isinstance(sdk_input, str):
-                attributes[MessageAttributes.PROMPT_CONTENT.format(i=0)] = sdk_input
-                attributes[MessageAttributes.PROMPT_ROLE.format(i=0)] = "user"
                 current_full_prompt_for_llm.append({"role": "user", "content": sdk_input})
             elif isinstance(sdk_input, list):
-                for i, msg in enumerate(sdk_input):
+                for i, msg in enumerate(sdk_input):  # msg is already a dict from sdk_input list
                     if isinstance(msg, dict):
                         role = msg.get("role")
                         content = msg.get("content")
-                        if role:
-                            attributes[MessageAttributes.PROMPT_ROLE.format(i=i)] = str(role)
-                        if content is not None:  # Allow empty string for content
-                            serialized_content = safe_serialize(content)
-                            attributes[MessageAttributes.PROMPT_CONTENT.format(i=i)] = serialized_content
-                            if role:  # Add to full_prompt only if role and content exist
-                                current_full_prompt_for_llm.append({"role": str(role), "content": serialized_content})
-            else:
-                attributes[WorkflowAttributes.WORKFLOW_INPUT] = safe_serialize(sdk_input)
+                        if role and content is not None:
+                            current_full_prompt_for_llm.append({"role": str(role), "content": safe_serialize(content)})
+
+        # Set context variables for the exporter to pick up
+        if extracted_agent_name:
+            agent_name_contextvar.set(extracted_agent_name)
+            logger.debug(f"[_prepare_and_set_agent_contextvars] Set agent_name_contextvar to: {extracted_agent_name}")
+        else:  # Ensure it's set to None if no agent_name
+            agent_name_contextvar.set(None)
+
+        if extracted_handoffs:
+            agent_handoffs_contextvar.set(extracted_handoffs)
+            logger.debug(
+                f"[_prepare_and_set_agent_contextvars] Set agent_handoffs_contextvar to: {safe_serialize(extracted_handoffs)}"
+            )
+        else:  # Ensure it's set to None if no handoffs
+            agent_handoffs_contextvar.set(None)
 
         if current_full_prompt_for_llm:
             full_prompt_contextvar.set(current_full_prompt_for_llm)
+            logger.debug(
+                f"[_prepare_and_set_agent_contextvars] Set full_prompt_contextvar to: {safe_serialize(current_full_prompt_for_llm)}"
+            )
         else:
-            full_prompt_contextvar.set(None)  # Ensure reset if no prompt
-
-        if return_value:
-            if type(return_value).__name__ == "RunResultStreaming":
-                attributes[SpanAttributes.LLM_REQUEST_STREAMING] = True
-
-        if exception:
-            attributes[CoreAttributes.ERROR_TYPE] = type(exception).__name__
-            # Contextvar is reset in the finally block of the main wrapper
-
-        # Log all collected attributes before filtering
-        logger.debug(
-            f"[_extract_agent_runner_attributes_and_set_contextvar] All collected attributes before filtering for OTel span ID {otel_span_id_for_log}: {safe_serialize(attributes)}"
-        )
-
-        # Define filter conditions and log them
-        # For gen_ai.prompt.* attributes (e.g., gen_ai.prompt.0.content, gen_ai.prompt.0.role)
-        prompt_attr_prefix_to_exclude = "gen_ai.prompt."
-
-        # For gen_ai.request.instructions
-        # SpanAttributes.LLM_REQUEST_INSTRUCTIONS should resolve to "gen_ai.request.instructions"
-        instructions_attr_key_to_exclude = SpanAttributes.LLM_REQUEST_INSTRUCTIONS
-
-        logger.debug(
-            f"[_extract_agent_runner_attributes_and_set_contextvar] Filter: Excluding keys starting with '{prompt_attr_prefix_to_exclude}' for OTel span ID {otel_span_id_for_log}"
-        )
-        logger.debug(
-            f"[_extract_agent_runner_attributes_and_set_contextvar] Filter: Excluding key equal to '{instructions_attr_key_to_exclude}' (actual value of SpanAttributes.LLM_REQUEST_INSTRUCTIONS) for OTel span ID {otel_span_id_for_log}"
-        )
-
-        attributes_for_agent_span = {}
-        for key, value in attributes.items():
-            excluded_by_prompt_filter = key.startswith(prompt_attr_prefix_to_exclude)
-            excluded_by_instructions_filter = key == instructions_attr_key_to_exclude
-
-            if excluded_by_prompt_filter:
-                logger.debug(
-                    f"[_extract_agent_runner_attributes_and_set_contextvar] Filtering out key '{key}' for OTel span ID {otel_span_id_for_log} (matched prompt_prefix_to_exclude: '{prompt_attr_prefix_to_exclude}')"
-                )
-                continue
-            if excluded_by_instructions_filter:
-                logger.debug(
-                    f"[_extract_agent_runner_attributes_and_set_contextvar] Filtering out key '{key}' for OTel span ID {otel_span_id_for_log} (matched instructions_attr_key_to_exclude: '{instructions_attr_key_to_exclude}')"
-                )
-                continue
-
-            attributes_for_agent_span[key] = value
-
-        logger.debug(
-            f"[_extract_agent_runner_attributes_and_set_contextvar] Attributes for AGENT span (OTel span ID {otel_span_id_for_log}) after filtering: {safe_serialize(attributes_for_agent_span)}"
-        )
-        for key, value in attributes_for_agent_span.items():
-            otel_span.set_attribute(key, value)
+            full_prompt_contextvar.set(None)
 
     def _create_agent_runner_wrapper(
-        self, wrapped_method_to_call, is_async: bool, trace_name: str, span_kind: OtelSpanKind
-    ):  # Renamed original_method for clarity
+        self, wrapped_method_to_call, is_async: bool
+    ):  # trace_name and span_kind no longer needed
         """
         Creates a wrapper for an OpenAI Agents Runner method (run, run_sync, run_streamed).
-        This wrapper starts an OTel span, extracts attributes, manages contextvar for full prompt,
-        calls the original method, and ensures the span is ended and contextvar is reset.
+        This wrapper NO LONGER starts an OTel span. It only prepares and sets context variables.
         """
-        otel_tracer = self._tracer  # Use the instrumentor's tracer
+        # otel_tracer = self._tracer # No longer creating spans here
 
         if is_async:
-            # Corrected wrapper signature for wrapt: (wrapped, instance, args, kwargs)
-            @functools.wraps(wrapped_method_to_call)  # Use the passed original method for functools.wraps
+
+            @functools.wraps(wrapped_method_to_call)
             async def wrapper_async(wrapped, instance, args, kwargs):
-                # 'wrapped' is the original unbound method (e.g., Runner.run)
-                # 'instance' is the Runner class (if called as Runner.run) or Runner instance
-                # 'args' and 'kwargs' are the arguments passed to Runner.run
-
-                span_attributes_args = args  # These are the direct args to Runner.run
-                span_attributes_kwargs = kwargs
-
-                otel_span = otel_tracer.start_span(name=trace_name, kind=span_kind)
-                with trace.use_span(otel_span, end_on_exit=False):
-                    exception_obj = None
-                    res = None
-                    try:
-                        # _extract_agent_runner_attributes_and_set_contextvar expects args and kwargs
-                        # as they are passed to the *original method call*.
-                        self._extract_agent_runner_attributes_and_set_contextvar(otel_span, args=args, kwargs=kwargs)
-                        logger.debug(
-                            f"wrapper_async: About to call wrapped method. instance type: {type(instance)}, args: {safe_serialize(args)}, kwargs: {safe_serialize(kwargs)}"
-                        )
-
-                        # How to call 'wrapped' depends on whether 'instance' is None (e.g. staticmethod called on class)
-                        # or if 'instance' is the class itself (e.g. classmethod or instance method called on class)
-                        # or if 'instance' is an actual object instance.
-                        # Given the example call `Runner.run(agent, input, ...)` and `Runner.run` being an instance method,
-                        # `instance` will be the `Runner` class. `wrapped` is the unbound method.
-                        # We need to call it as `wrapped(instance, *args, **kwargs)` if it's an instance method
-                        # and `instance` is the actual instance.
-                        # If `instance` is the class, and `wrapped` is an instance method, this is like `Runner.run(Runner, agent, input, ...)`
-                        # which was causing "5 arguments" error.
-                        # The example `Runner.run(agent, input, ...)` implies the SDK handles this.
-                        # So, the call should likely be `wrapped(*args, **kwargs)` if `instance` is the class and `wrapped` is a static/class method
-                        # or if the SDK's `run` method descriptor handles being called from the class.
-                        # If `wrapped` is an instance method, it needs an instance.
-                        # The `main.py` calls `Runner.run(current_agent, input_items, context=context)`
-                        # This means `args` = (current_agent, input_items), `kwargs` = {context: ...}
-                        # The `Runner.run` signature is `run(self, agent, input, ...)`
-                        # The most direct way to replicate the call from main.py is `wrapped(*args, **kwargs)`
-                        # assuming `wrapped` is what `Runner.run` resolves to.
-
-                        # If `wrapped` is the unbound instance method `run(self, agent, input, ...)`
-                        # and `instance` is the class `Runner`, then `wrapped(instance, *args, **kwargs)`
-                        # becomes `run(Runner, agent_arg, input_arg, ...)`. This is 3 positional.
-                        # The error "5 were given" for this call is the core puzzle.
-
-                        # The error "4 were given" for `wrapped(*args, **kwargs)` means `run(agent_arg, input_arg, ...)`
-                        # was missing `self`.
-
-                        # Let's stick to the wrapt convention: the `wrapped` callable should be invoked
-                        # appropriately based on `instance`.
-                        # If `instance` is not None, it's typically `wrapped(instance, *args, **kwargs)`.
-                        # If `instance` is None (e.g. for a static method called via class), it's `wrapped(*args, **kwargs)`.
-                        # Since `Runner.run` is an instance method, and `instance` is `Runner` (the class)
-                        # when called as `Runner.run()`, this is an unbound call.
-                        # The correct way to call an unbound instance method is `MethodType(wrapped, instance_obj)(*args, **kwargs)`
-                        # OR `wrapped(instance_obj, *args, **kwargs)`.
-                        # Here, `instance` is the class. The SDK must handle `Runner.run(agent, input)` by creating an instance.
-                        # So, we should call `wrapped` as it was called in the user's code.
-                        # The `args` and `kwargs` are what the user supplied to `Runner.run`.
-                        # `wrapped` is `Runner.run`. So, `wrapped(*args, **kwargs)` is `Runner.run(*args, **kwargs)`.
-
-                        res = await wrapped(*args, **kwargs)  # This replicates the original call structure
-
-                        self._extract_agent_runner_attributes_and_set_contextvar(otel_span, return_value=res)
-                        otel_span.set_status(Status(StatusCode.OK))
-                    except Exception as e:
-                        exception_obj = e
-                        self._extract_agent_runner_attributes_and_set_contextvar(otel_span, exception=e)
-                        otel_span.set_status(Status(StatusCode.ERROR, description=str(e)))
-                        otel_span.record_exception(e)
-                        raise  # Re-raise the exception
-                    finally:
-                        full_prompt_contextvar.set(None)  # Reset contextvar
-                        otel_span.end()
-                    return res
+                # Initialize context var tokens to their current values before setting new ones
+                token_full_prompt = full_prompt_contextvar.set(None)
+                token_agent_name = agent_name_contextvar.set(None)
+                token_agent_handoffs = agent_handoffs_contextvar.set(None)
+                res = None
+                try:
+                    self._prepare_and_set_agent_contextvars(args=args, kwargs=kwargs)
+                    res = await wrapped(*args, **kwargs)
+                except Exception as e:
+                    logger.error(f"Exception in wrapped async agent call: {e}", exc_info=True)
+                    raise
+                finally:
+                    # Reset context variables to their state before this wrapper ran
+                    if token_full_prompt is not None:
+                        full_prompt_contextvar.reset(token_full_prompt)
+                    if token_agent_name is not None:
+                        agent_name_contextvar.reset(token_agent_name)
+                    if token_agent_handoffs is not None:
+                        agent_handoffs_contextvar.reset(token_agent_handoffs)
+                return res
 
             return wrapper_async
         else:  # Synchronous wrapper
-            # Corrected wrapper signature for wrapt: (wrapped, instance, args, kwargs)
-            @functools.wraps(wrapped_method_to_call)  # Use the passed original method for functools.wraps
+
+            @functools.wraps(wrapped_method_to_call)
             def wrapper_sync(wrapped, instance, args, kwargs):
-                span_attributes_args = args
-                span_attributes_kwargs = kwargs
-
-                otel_span = otel_tracer.start_span(name=trace_name, kind=span_kind)
-                with trace.use_span(otel_span, end_on_exit=False):
-                    exception_obj = None
-                    res = None
-                    try:
-                        self._extract_agent_runner_attributes_and_set_contextvar(otel_span, args=args, kwargs=kwargs)
-                        logger.debug(
-                            f"wrapper_sync: About to call wrapped method. instance type: {type(instance)}, args: {safe_serialize(args)}, kwargs: {safe_serialize(kwargs)}"
-                        )
-
-                        res = wrapped(*args, **kwargs)  # Replicates original call structure
-
-                        self._extract_agent_runner_attributes_and_set_contextvar(otel_span, return_value=res)
-                        otel_span.set_status(Status(StatusCode.OK))
-                    except Exception as e:
-                        exception_obj = e
-                        self._extract_agent_runner_attributes_and_set_contextvar(otel_span, exception=e)
-                        otel_span.set_status(Status(StatusCode.ERROR, description=str(e)))
-                        otel_span.record_exception(e)
-                        raise
-                    finally:
-                        full_prompt_contextvar.set(None)
-                        otel_span.end()
-                    return res
+                token_full_prompt = full_prompt_contextvar.set(None)
+                token_agent_name = agent_name_contextvar.set(None)
+                token_agent_handoffs = agent_handoffs_contextvar.set(None)
+                res = None
+                try:
+                    self._prepare_and_set_agent_contextvars(args=args, kwargs=kwargs)
+                    res = wrapped(*args, **kwargs)
+                except Exception as e:
+                    logger.error(f"Exception in wrapped sync agent call: {e}", exc_info=True)
+                    raise
+                finally:
+                    if token_full_prompt is not None:
+                        full_prompt_contextvar.reset(token_full_prompt)
+                    if token_agent_name is not None:
+                        agent_name_contextvar.reset(token_agent_name)
+                    if token_agent_handoffs is not None:
+                        agent_handoffs_contextvar.reset(token_agent_handoffs)
+                return res
 
             return wrapper_sync
 
@@ -433,8 +311,7 @@ class OpenAIAgentsInstrumentor(BaseInstrumentor):
                     custom_wrapper = self._create_agent_runner_wrapper(
                         original_method,
                         is_async=config.is_async,
-                        trace_name=config.trace_name,
-                        span_kind=config.span_kind,
+                        # trace_name and span_kind are no longer passed
                     )
 
                     # Apply the wrapper using wrapt

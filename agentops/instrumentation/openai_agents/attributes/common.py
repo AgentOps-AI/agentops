@@ -25,7 +25,7 @@ from agentops.instrumentation.openai.attributes.response import get_response_res
 from agentops.instrumentation.openai_agents import LIBRARY_NAME, LIBRARY_VERSION
 
 # Import full_prompt_contextvar from the new context module
-from ..context import full_prompt_contextvar
+from ..context import full_prompt_contextvar, agent_name_contextvar, agent_handoffs_contextvar
 from agentops.instrumentation.openai_agents.attributes.model import (
     get_model_attributes,
     get_model_config_attributes,
@@ -197,9 +197,59 @@ def get_agent_span_attributes(span_data: Any) -> AttributeMap:
     Returns:
         Dictionary of attributes for agent span
     """
-    attributes = _extract_attributes_from_mapping(span_data, AGENT_SPAN_ATTRIBUTES)
-    attributes.update(get_common_attributes())
+    # attributes = _extract_attributes_from_mapping(span_data, AGENT_SPAN_ATTRIBUTES) # We will set attributes more selectively
+    attributes = {}  # Start with an empty dict
+    attributes.update(get_common_attributes())  # Get common OTel/AgentOps attributes
 
+    # Set AGENTOPS_SPAN_KIND to 'agent'
+    attributes[SpanAttributes.AGENTOPS_SPAN_KIND] = AgentOpsSpanKindValues.AGENT.value
+    logger.debug(
+        f"[get_agent_span_attributes] Set AGENTOPS_SPAN_KIND to '{AgentOpsSpanKindValues.AGENT.value}' for AgentSpanData id: {getattr(span_data, 'id', 'N/A')}"
+    )
+
+    # Get agent name from contextvar (set by instrumentor wrapper)
+    ctx_agent_name = agent_name_contextvar.get()
+    if ctx_agent_name:
+        attributes[AgentAttributes.AGENT_NAME] = ctx_agent_name
+        logger.debug(f"[get_agent_span_attributes] Set AGENT_NAME from contextvar: {ctx_agent_name}")
+    elif hasattr(span_data, "name") and span_data.name:  # Fallback to span_data.name if contextvar is not set
+        attributes[AgentAttributes.AGENT_NAME] = str(span_data.name)
+        logger.debug(f"[get_agent_span_attributes] Set AGENT_NAME from span_data.name: {str(span_data.name)}")
+
+    # Get simplified handoffs from contextvar (set by instrumentor wrapper)
+    ctx_handoffs = agent_handoffs_contextvar.get()
+    if ctx_handoffs:
+        attributes[AgentAttributes.HANDOFFS] = safe_serialize(ctx_handoffs)  # Ensure it's a JSON string array
+        logger.debug(f"[get_agent_span_attributes] Set HANDOFFS from contextvar: {safe_serialize(ctx_handoffs)}")
+    elif (
+        hasattr(span_data, "handoffs") and span_data.handoffs
+    ):  # Fallback for safety, though contextvar should be primary
+        # This fallback might re-introduce complex objects if not careful,
+        # but contextvar is the intended source for the simplified list.
+        attributes[AgentAttributes.HANDOFFS] = safe_serialize(span_data.handoffs)
+        logger.debug(
+            f"[get_agent_span_attributes] Set HANDOFFS from span_data.handoffs: {safe_serialize(span_data.handoffs)}"
+        )
+
+    # Selectively add other relevant attributes from AgentSpanData if needed, avoiding LLM details
+    if hasattr(span_data, "input") and span_data.input is not None:
+        # Avoid setting detailed prompt input here. If a general workflow input is desired, use a non-LLM semconv.
+        # For now, let's assume WORKFLOW_INPUT is too generic and might contain prompts.
+        # attributes[WorkflowAttributes.WORKFLOW_INPUT] = safe_serialize(span_data.input)
+        pass
+
+    if hasattr(span_data, "output") and span_data.output is not None:
+        # Similar to input, avoid detailed LLM output.
+        # attributes[WorkflowAttributes.FINAL_OUTPUT] = safe_serialize(span_data.output)
+        pass
+
+    if hasattr(span_data, "tools") and span_data.tools:
+        # Serialize tools if they are simple list of strings or basic structures
+        attributes[AgentAttributes.AGENT_TOOLS] = safe_serialize([str(getattr(t, "name", t)) for t in span_data.tools])
+
+    logger.debug(
+        f"[get_agent_span_attributes] Final attributes for AgentSpanData id {getattr(span_data, 'id', 'N/A')}: {safe_serialize(attributes)}"
+    )
     return attributes
 
 
