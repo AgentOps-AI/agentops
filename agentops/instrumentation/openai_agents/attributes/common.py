@@ -5,7 +5,7 @@ trace and span attributes in OpenAI Agents instrumentation. It provides the core
 for extracting and formatting attributes according to OpenTelemetry semantic conventions.
 """
 
-from typing import Any
+from typing import Any, List, Dict, Optional
 from agentops.logging import logger
 from agentops.semconv import (
     AgentAttributes,
@@ -24,8 +24,7 @@ from agentops.instrumentation.common.objects import get_uploaded_object_attribut
 from agentops.instrumentation.openai.attributes.response import get_response_response_attributes
 from agentops.instrumentation.openai_agents import LIBRARY_NAME, LIBRARY_VERSION
 
-# Import full_prompt_contextvar from the new context module
-from ..context import full_prompt_contextvar, agent_name_contextvar, agent_handoffs_contextvar
+from openai_agents.context import full_prompt_contextvar, agent_name_contextvar, agent_handoffs_contextvar
 from agentops.instrumentation.openai_agents.attributes.model import (
     get_model_attributes,
     get_model_config_attributes,
@@ -43,15 +42,10 @@ AGENT_SPAN_ATTRIBUTES: AttributeMap = {
 }
 
 
-# Attribute mapping for FunctionSpanData - Corrected for Tool Semantics
-# FunctionSpanData has: name (str), input (Any), output (Any), from_agent (str, optional)
 CORRECTED_FUNCTION_TOOL_ATTRIBUTES: AttributeMap = {
     ToolAttributes.TOOL_NAME: "name",
-    ToolAttributes.TOOL_PARAMETERS: "input",  # Will be serialized
-    ToolAttributes.TOOL_RESULT: "output",  # Will be serialized
-    # 'from_agent' could be mapped to a custom attribute if needed, or ignored for pure tool spans
-    # For now, let's focus on standard tool attributes.
-    # AgentAttributes.FROM_AGENT: "from_agent", # Example if we wanted to keep it
+    ToolAttributes.TOOL_PARAMETERS: "input",
+    ToolAttributes.TOOL_RESULT: "output",
 }
 
 
@@ -94,10 +88,6 @@ SPEECH_GROUP_SPAN_ATTRIBUTES: AttributeMap = {
     WorkflowAttributes.WORKFLOW_INPUT: "input",
 }
 
-from typing import List, Dict, Optional  # Ensure these are imported if not already at the top
-
-# (Make sure logger, safe_serialize, MessageAttributes are imported at the top of the file)
-
 
 def _get_llm_messages_attributes(messages: Optional[List[Dict]], attribute_base: str) -> AttributeMap:
     """
@@ -106,9 +96,6 @@ def _get_llm_messages_attributes(messages: Optional[List[Dict]], attribute_base:
     """
     attributes: AttributeMap = {}
     if not messages:
-        logger.debug(
-            f"[_get_llm_messages_attributes] No messages provided for base: {attribute_base}. Returning empty attributes."
-        )
         return attributes
     if not isinstance(messages, list):
         logger.warning(
@@ -197,59 +184,27 @@ def get_agent_span_attributes(span_data: Any) -> AttributeMap:
     Returns:
         Dictionary of attributes for agent span
     """
-    # attributes = _extract_attributes_from_mapping(span_data, AGENT_SPAN_ATTRIBUTES) # We will set attributes more selectively
     attributes = {}  # Start with an empty dict
     attributes.update(get_common_attributes())  # Get common OTel/AgentOps attributes
 
-    # Set AGENTOPS_SPAN_KIND to 'agent'
     attributes[SpanAttributes.AGENTOPS_SPAN_KIND] = AgentOpsSpanKindValues.AGENT.value
-    logger.debug(
-        f"[get_agent_span_attributes] Set AGENTOPS_SPAN_KIND to '{AgentOpsSpanKindValues.AGENT.value}' for AgentSpanData id: {getattr(span_data, 'id', 'N/A')}"
-    )
 
     # Get agent name from contextvar (set by instrumentor wrapper)
     ctx_agent_name = agent_name_contextvar.get()
     if ctx_agent_name:
         attributes[AgentAttributes.AGENT_NAME] = ctx_agent_name
-        logger.debug(f"[get_agent_span_attributes] Set AGENT_NAME from contextvar: {ctx_agent_name}")
-    elif hasattr(span_data, "name") and span_data.name:  # Fallback to span_data.name if contextvar is not set
+    elif hasattr(span_data, "name") and span_data.name:
         attributes[AgentAttributes.AGENT_NAME] = str(span_data.name)
-        logger.debug(f"[get_agent_span_attributes] Set AGENT_NAME from span_data.name: {str(span_data.name)}")
 
-    # Get simplified handoffs from contextvar (set by instrumentor wrapper)
     ctx_handoffs = agent_handoffs_contextvar.get()
     if ctx_handoffs:
-        attributes[AgentAttributes.HANDOFFS] = safe_serialize(ctx_handoffs)  # Ensure it's a JSON string array
-        logger.debug(f"[get_agent_span_attributes] Set HANDOFFS from contextvar: {safe_serialize(ctx_handoffs)}")
-    elif (
-        hasattr(span_data, "handoffs") and span_data.handoffs
-    ):  # Fallback for safety, though contextvar should be primary
-        # This fallback might re-introduce complex objects if not careful,
-        # but contextvar is the intended source for the simplified list.
+        attributes[AgentAttributes.HANDOFFS] = safe_serialize(ctx_handoffs)
+    elif hasattr(span_data, "handoffs") and span_data.handoffs:
         attributes[AgentAttributes.HANDOFFS] = safe_serialize(span_data.handoffs)
-        logger.debug(
-            f"[get_agent_span_attributes] Set HANDOFFS from span_data.handoffs: {safe_serialize(span_data.handoffs)}"
-        )
-
-    # Selectively add other relevant attributes from AgentSpanData if needed, avoiding LLM details
-    if hasattr(span_data, "input") and span_data.input is not None:
-        # Avoid setting detailed prompt input here. If a general workflow input is desired, use a non-LLM semconv.
-        # For now, let's assume WORKFLOW_INPUT is too generic and might contain prompts.
-        # attributes[WorkflowAttributes.WORKFLOW_INPUT] = safe_serialize(span_data.input)
-        pass
-
-    if hasattr(span_data, "output") and span_data.output is not None:
-        # Similar to input, avoid detailed LLM output.
-        # attributes[WorkflowAttributes.FINAL_OUTPUT] = safe_serialize(span_data.output)
-        pass
 
     if hasattr(span_data, "tools") and span_data.tools:
-        # Serialize tools if they are simple list of strings or basic structures
         attributes[AgentAttributes.AGENT_TOOLS] = safe_serialize([str(getattr(t, "name", t)) for t in span_data.tools])
 
-    logger.debug(
-        f"[get_agent_span_attributes] Final attributes for AgentSpanData id {getattr(span_data, 'id', 'N/A')}: {safe_serialize(attributes)}"
-    )
     return attributes
 
 
@@ -268,22 +223,14 @@ def get_function_span_attributes(span_data: Any) -> AttributeMap:
     attributes.update(get_common_attributes())
     attributes[SpanAttributes.AGENTOPS_SPAN_KIND] = AgentOpsSpanKindValues.TOOL.value
 
-    # Determine tool status based on presence of error in span_data (if available) or assume success
-    # The main SDK's Span object has an 'error' field. If span_data itself doesn't,
-    # this status might be better set by the exporter which has access to the full SDK Span.
-    # For now, assuming success if no error attribute is directly on span_data.
-    # A more robust way would be to check the OTel span's status if this handler is called *after* error processing.
+    # Determine tool status based on presence of error
     if hasattr(span_data, "error") and span_data.error:
         attributes[ToolAttributes.TOOL_STATUS] = ToolStatus.FAILED.value
     else:
-        # This might be premature if output isn't available yet (on_span_start)
-        # but the exporter handles separate start/end, so this is for the full attribute set.
         if hasattr(span_data, "output") and span_data.output is not None:
             attributes[ToolAttributes.TOOL_STATUS] = ToolStatus.SUCCEEDED.value
         else:
-            # If called on start, or if output is None without error, it's executing or status unknown yet.
-            # The exporter should ideally set this based on the OTel span status later.
-            # For now, we won't set a default status here if output is not yet available.
+            # Status will be set by exporter based on span lifecycle
             pass
 
     # If from_agent is available on span_data, add it.
@@ -336,65 +283,36 @@ def get_response_span_attributes(span_data: Any) -> AttributeMap:
     # Read full prompt from contextvar (set by instrumentor's wrapper)
     full_prompt_from_context = full_prompt_contextvar.get()
     if full_prompt_from_context:
-        logger.debug(
-            f"[get_response_span_attributes] Found full_prompt_from_context: {safe_serialize(full_prompt_from_context)}"
-        )
         attributes.update(_get_llm_messages_attributes(full_prompt_from_context, "gen_ai.prompt"))
         prompt_attributes_set = True
     else:
-        logger.debug("[get_response_span_attributes] full_prompt_contextvar is None.")
-        # Fallback to SDK's request_messages if contextvar wasn't available or didn't have prompt
         if (
             span_data.response
             and hasattr(span_data.response, "request_messages")
             and span_data.response.request_messages
         ):
             prompt_messages_from_sdk = span_data.response.request_messages
-            logger.debug(
-                f"[get_response_span_attributes] Using agents.Response.request_messages: {safe_serialize(prompt_messages_from_sdk)}"
-            )
             attributes.update(_get_llm_messages_attributes(prompt_messages_from_sdk, "gen_ai.prompt"))
             prompt_attributes_set = True
-        else:
-            logger.debug(
-                "[get_response_span_attributes] No prompt source: neither contextvar nor SDK request_messages available/sufficient."
-            )
 
-    # Process response (completion, usage, model etc.) using the existing get_response_response_attributes
-    # This function handles the `span_data.response` object which is an `agents.Response`
+    # Process response attributes
     if span_data.response:
-        # get_response_response_attributes from openai instrumentation expects an OpenAIObject-like response.
-        # We need to ensure it can handle agents.Response or adapt.
-        # For now, let's assume it primarily extracts completion and usage, and we've handled prompt.
-
-        # Call the original function to get completion, usage, model, etc.
-        # It might also try to set prompt attributes, which we might need to reconcile.
         openai_style_response_attrs = get_response_response_attributes(span_data.response)
 
-        # If we've already set prompt attributes from our preferred source (wrapper context),
-        # remove any prompt attributes that get_response_response_attributes might have set,
-        # to avoid conflicts or overwriting with potentially less complete data.
+        # Remove prompt attributes if already set from context
         if prompt_attributes_set:
-            keys_to_remove = [
-                k for k in openai_style_response_attrs if k.startswith("gen_ai.prompt")
-            ]  # e.g. "gen_ai.prompt"
-            if keys_to_remove:
-                for key in keys_to_remove:
-                    if key in openai_style_response_attrs:  # Check if key exists before deleting
-                        del openai_style_response_attrs[key]
+            keys_to_remove = [k for k in openai_style_response_attrs if k.startswith("gen_ai.prompt")]
+            for key in keys_to_remove:
+                if key in openai_style_response_attrs:
+                    del openai_style_response_attrs[key]
 
-        # Remove gen_ai.request.tools if present, as it's not appropriate for the LLM response span itself
-        # The LLM span should reflect the LLM's output (completion, tool_calls selected), not the definition of tools it was given.
+        # Remove tool definitions from response attributes
         if "gen_ai.request.tools" in openai_style_response_attrs:
             del openai_style_response_attrs["gen_ai.request.tools"]
 
         attributes.update(openai_style_response_attrs)
 
-    # Ensure LLM span kind is set
     attributes[SpanAttributes.AGENTOPS_SPAN_KIND] = AgentOpsSpanKindValues.LLM.value
-    logger.debug(
-        f"[get_response_span_attributes] Set AGENTOPS_SPAN_KIND to '{AgentOpsSpanKindValues.LLM.value}' for span_data.id: {getattr(span_data, 'id', 'N/A')}"
-    )
     return attributes
 
 
@@ -403,34 +321,21 @@ def get_generation_span_attributes(span_data: Any) -> AttributeMap:
 
     Generations are requests made to the `openai.completions` endpoint.
 
-    # TODO this has not been extensively tested yet as there is a flag that needs ot be set to use the
-    # completions API with the Agents SDK.
-    # We can enable chat.completions API by calling:
-    # `from agents import set_default_openai_api`
-    # `set_default_openai_api("chat_completions")`
-
     Args:
         span_data: The GenerationSpanData object
 
     Returns:
         Dictionary of attributes for generation span
     """
-    logger.debug(
-        f"[get_generation_span_attributes] Called for span_data.id: {getattr(span_data, 'id', 'N/A')}, name: {getattr(span_data, 'name', 'N/A')}, type: {span_data.__class__.__name__}"
-    )
     attributes = _extract_attributes_from_mapping(
         span_data, GENERATION_SPAN_ATTRIBUTES
     )  # This might set gen_ai.prompt from span_data.input
     attributes.update(get_common_attributes())
 
-    prompt_attributes_set = False
     # Read full prompt from contextvar (set by instrumentor's wrapper)
     full_prompt_from_context = full_prompt_contextvar.get()
 
     if full_prompt_from_context:
-        logger.debug(
-            f"[get_generation_span_attributes] Found full_prompt_from_context: {safe_serialize(full_prompt_from_context)}"
-        )
         # Clear any prompt set by _extract_attributes_from_mapping from span_data.input
         prompt_keys_to_clear = [k for k in attributes if k.startswith("gen_ai.prompt")]
         if SpanAttributes.LLM_PROMPTS in attributes:
@@ -440,11 +345,7 @@ def get_generation_span_attributes(span_data: Any) -> AttributeMap:
                 del attributes[key]
 
         attributes.update(_get_llm_messages_attributes(full_prompt_from_context, "gen_ai.prompt"))
-        prompt_attributes_set = True
     elif SpanAttributes.LLM_PROMPTS in attributes:  # Fallback to span_data.input if contextvar is empty
-        logger.debug(
-            "[get_generation_span_attributes] full_prompt_contextvar is None. Using LLM_PROMPTS from span_data.input."
-        )
         raw_prompt_input = attributes.pop(SpanAttributes.LLM_PROMPTS)
         formatted_prompt_for_llm = []
         if isinstance(raw_prompt_input, str):
@@ -469,15 +370,6 @@ def get_generation_span_attributes(span_data: Any) -> AttributeMap:
 
         if formatted_prompt_for_llm:
             attributes.update(_get_llm_messages_attributes(formatted_prompt_for_llm, "gen_ai.prompt"))
-            prompt_attributes_set = True
-        else:
-            logger.debug(
-                "[get_generation_span_attributes] No prompt data from span_data.input or it was not formattable."
-            )
-    else:
-        logger.debug(
-            "[get_generation_span_attributes] No prompt source: contextvar is None and no LLM_PROMPTS in attributes from span_data.input."
-        )
 
     if span_data.model:
         attributes.update(get_model_attributes(span_data.model))
@@ -490,11 +382,7 @@ def get_generation_span_attributes(span_data: Any) -> AttributeMap:
     if span_data.model_config:
         attributes.update(get_model_config_attributes(span_data.model_config))
 
-    # Ensure LLM span kind is set
     attributes[SpanAttributes.AGENTOPS_SPAN_KIND] = AgentOpsSpanKindValues.LLM.value
-    logger.debug(
-        f"[get_generation_span_attributes] Set AGENTOPS_SPAN_KIND to '{AgentOpsSpanKindValues.LLM.value}' for span_data.id: {getattr(span_data, 'id', 'N/A')}. Current attributes include agentops.span.kind: {attributes.get(SpanAttributes.AGENTOPS_SPAN_KIND)}"
-    )
     return attributes
 
 
