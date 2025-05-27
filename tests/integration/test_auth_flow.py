@@ -4,6 +4,16 @@ from agentops.client import Client
 from agentops.exceptions import InvalidApiKeyException, ApiServerException
 
 
+@pytest.fixture(autouse=True)
+def reset_client():
+    """Reset the client singleton between tests"""
+    # Reset the singleton instance
+    Client._Client__instance = None
+    yield
+    # Clean up after test
+    Client._Client__instance = None
+
+
 @pytest.mark.vcr()
 def test_auth_flow(mock_api_key):
     """Test the authentication flow using the AgentOps client."""

@@ -13,7 +13,6 @@ from opentelemetry.sdk.trace import ReadableSpan, Span, SpanProcessor
 from opentelemetry.sdk.trace.export import SpanExporter
 
 from agentops.logging import logger
-from agentops.helpers.dashboard import log_trace_url
 from agentops.semconv.core import CoreAttributes
 from agentops.logging import upload_logfile
 
@@ -108,7 +107,6 @@ class InternalSpanProcessor(SpanProcessor):
         if not self._root_span_id:
             self._root_span_id = span.context.span_id
             logger.debug(f"[agentops.InternalSpanProcessor] Found root span: {span.name}")
-            log_trace_url(span)
 
     def on_end(self, span: ReadableSpan) -> None:
         """
@@ -123,7 +121,6 @@ class InternalSpanProcessor(SpanProcessor):
 
         if self._root_span_id and (span.context.span_id is self._root_span_id):
             logger.debug(f"[agentops.InternalSpanProcessor] Ending root span: {span.name}")
-            log_trace_url(span)
             try:
                 upload_logfile(span.context.trace_id)
             except Exception as e:

@@ -30,28 +30,26 @@ class V3Client(BaseApiClient):
 
         r = self.post(path, data, headers)
 
-        try:
-            if r.status_code != 200:
-                error_msg = f"Authentication failed: {r.status_code}"
-                try:
-                    error_data = r.json()
-                    if "error" in error_data:
-                        error_msg = f"{error_data['error']}"
-                except Exception:
-                    pass
-                raise ApiServerException(error_msg)
-
+        if r.status_code != 200:
+            error_msg = f"Authentication failed: {r.status_code}"
             try:
-                jr = r.json()
-                token = jr.get("token")
-                if not token:
-                    raise ApiServerException("No token in authentication response")
+                error_data = r.json()
+                if "error" in error_data:
+                    error_msg = f"{error_data['error']}"
+            except Exception:
+                pass
+            logger.error(f"{error_msg} - Perhaps an invalid API key?")
+            raise ApiServerException(error_msg)
 
-                return jr
-            except Exception as e:
-                raise ApiServerException(f"Failed to process authentication response: {str(e)}")
+        try:
+            jr = r.json()
+            token = jr.get("token")
+            if not token:
+                raise ApiServerException("No token in authentication response")
+
+            return jr
         except Exception as e:
-            logger.error(f"{str(e)} - Perhaps an invalid API key?")
-            return None
+            logger.error(f"Failed to process authentication response: {str(e)}")
+            raise ApiServerException(f"Failed to process authentication response: {str(e)}")
 
     # Add V3-specific API methods here

@@ -22,6 +22,7 @@ class ConfigDict(TypedDict):
     export_flush_interval: Optional[int]
     max_queue_size: Optional[int]
     default_tags: Optional[List[str]]
+    trace_name: Optional[str]
     instrument_llm_calls: Optional[bool]
     auto_start_session: Optional[bool]
     auto_init: Optional[bool]
@@ -67,6 +68,11 @@ class Config:
     default_tags: Set[str] = field(
         default_factory=lambda: get_env_list("AGENTOPS_DEFAULT_TAGS"),
         metadata={"description": "Default tags to apply to all sessions"},
+    )
+
+    trace_name: Optional[str] = field(
+        default_factory=lambda: os.getenv("AGENTOPS_TRACE_NAME"),
+        metadata={"description": "Default name for the trace/session"},
     )
 
     instrument_llm_calls: bool = field(
@@ -133,6 +139,7 @@ class Config:
         export_flush_interval: Optional[int] = None,
         max_queue_size: Optional[int] = None,
         default_tags: Optional[List[str]] = None,
+        trace_name: Optional[str] = None,
         instrument_llm_calls: Optional[bool] = None,
         auto_start_session: Optional[bool] = None,
         auto_init: Optional[bool] = None,
@@ -171,6 +178,9 @@ class Config:
 
         if default_tags is not None:
             self.default_tags = set(default_tags)
+
+        if trace_name is not None:
+            self.trace_name = trace_name
 
         if instrument_llm_calls is not None:
             self.instrument_llm_calls = instrument_llm_calls
@@ -224,6 +234,7 @@ class Config:
             "export_flush_interval": self.export_flush_interval,
             "max_queue_size": self.max_queue_size,
             "default_tags": self.default_tags,
+            "trace_name": self.trace_name,
             "instrument_llm_calls": self.instrument_llm_calls,
             "auto_start_session": self.auto_start_session,
             "auto_init": self.auto_init,

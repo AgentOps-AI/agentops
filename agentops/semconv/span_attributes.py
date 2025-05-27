@@ -92,3 +92,6 @@ class SpanAttributes:
     # Operation attributes
     OPERATION_NAME = "operation.name"
     OPERATION_VERSION = "operation.version"
+
+    # Session/Trace attributes
+    AGENTOPS_SESSION_END_STATE = "agentops.session.end_state"
