@@ -13,7 +13,7 @@ from opentelemetry.instrumentation.instrumentor import BaseInstrumentor
 from opentelemetry.metrics import get_meter
 
 from agentops.logging import logger
-from agentops.instrumentation.google_adk.version import LIBRARY_NAME, LIBRARY_VERSION
+from agentops.instrumentation.google_adk import LIBRARY_NAME, LIBRARY_VERSION
 from agentops.instrumentation.google_adk.patch import patch_adk, unpatch_adk
 from agentops.semconv import Meters
 
