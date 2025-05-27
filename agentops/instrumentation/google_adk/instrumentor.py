@@ -29,7 +29,7 @@ class GoogleADKInstrumentor(BaseInstrumentor):
 
     def instrumentation_dependencies(self) -> Collection[str]:
         """Return packages required for instrumentation."""
-        return ["google-genai >= 0.1.0"]
+        return ["google-adk >= 0.1.0"]
 
     def _instrument(self, **kwargs):
         """Instrument the Google ADK.
