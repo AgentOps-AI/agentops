@@ -144,3 +144,55 @@ def test_crewai_kwargs_force_flush():
 
     # Explicitly ensure the core isn't already shut down for the test
     assert TracingCore.get_instance()._initialized, "TracingCore should still be initialized"
+
+
+def test_crewai_task_instrumentation(instrumentation):
+    """
+    Test the CrewAI task instrumentation focusing on span attributes and tags.
+    This test verifies that task spans are properly created with correct attributes
+    and tags without requiring a session.
+    """
+    import agentops
+    from opentelemetry.trace import SpanKind
+    from agentops.semconv import SpanAttributes, AgentOpsSpanKindValues
+    from opentelemetry import trace
+    from agentops.semconv.core import CoreAttributes
+
+    # Initialize AgentOps with API key and default tags
+    agentops.init(
+        api_key="test-api-key",
+    )
+    agentops.start_session(tags=["test", "crewai-integration"])
+    # Get the tracer
+    tracer = trace.get_tracer(__name__)
+
+    # Create a mock task instance
+    class MockTask:
+        def __init__(self):
+            self.description = "Test Task Description"
+            self.agent = "Test Agent"
+            self.tools = ["tool1", "tool2"]
+
+    task = MockTask()
+
+    # Start a span for the task
+    with tracer.start_as_current_span(
+        f"{task.description}.task",
+        kind=SpanKind.CLIENT,
+        attributes={
+            SpanAttributes.AGENTOPS_SPAN_KIND: AgentOpsSpanKindValues.TASK.value,
+            CoreAttributes.TAGS: ["crewai", "task-test"],
+        },
+    ) as span:
+        # Verify span attributes
+        assert span.attributes[SpanAttributes.AGENTOPS_SPAN_KIND] == AgentOpsSpanKindValues.TASK.value
+        assert "crewai" in span.attributes[CoreAttributes.TAGS]
+        assert "task-test" in span.attributes[CoreAttributes.TAGS]
+
+        # Verify span name
+        assert span.name == f"{task.description}.task"
+
+        # Verify span kind
+        assert span.kind == SpanKind.CLIENT
+
+    agentops.end_session(end_state="Success", end_state_reason="Test Finished", is_auto_end=True)
