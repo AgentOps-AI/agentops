@@ -124,3 +124,20 @@ def camel_to_snake(text: str) -> str:
 
     text = re.sub("(.)([A-Z][a-z]+)", r"\1_\2", text)
     return re.sub("([a-z0-9])([A-Z])", r"\1_\2", text).lower()
+
+
+def format_trace_id(trace_id: int) -> str:
+    """
+    Format trace ID consistently as hex string with error handling.
+
+    Args:
+        trace_id: The trace ID integer to format
+
+    Returns:
+        Formatted trace ID as hex string
+    """
+    try:
+        return f"{trace_id:x}"
+    except (TypeError, ValueError):
+        # Handle case where trace_id is not a valid integer
+        return str(trace_id)

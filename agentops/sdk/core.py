@@ -24,6 +24,7 @@ from agentops.sdk.processors import InternalSpanProcessor
 from agentops.sdk.types import TracingConfig
 from agentops.semconv import ResourceAttributes, SpanKind, SpanAttributes, CoreAttributes
 from agentops.helpers.dashboard import log_trace_url
+from agentops.sdk.converters import format_trace_id
 
 # No need to create shortcuts since we're using our own ResourceAttributes class now
 
@@ -444,11 +445,7 @@ class TracingCore:
 
         # Track the active trace
         with self._traces_lock:
-            try:
-                trace_id = f"{span.get_span_context().trace_id:x}"
-            except (TypeError, ValueError):
-                # Handle case where span is mocked or trace_id is not a valid integer
-                trace_id = str(span.get_span_context().trace_id)
+            trace_id = format_trace_id(span.get_span_context().trace_id)
             self._active_traces[trace_id] = trace_context
             logger.debug(f"Added trace {trace_id} to active traces. Total active: {len(self._active_traces)}")
 
@@ -496,11 +493,7 @@ class TracingCore:
 
         span = trace_context.span
         token = trace_context.token
-        try:
-            trace_id = f"{span.get_span_context().trace_id:x}"
-        except (TypeError, ValueError):
-            # Handle case where span is mocked or trace_id is not a valid integer
-            trace_id = str(span.get_span_context().trace_id)
+        trace_id = format_trace_id(span.get_span_context().trace_id)
 
         logger.debug(f"Ending trace with span ID: {span.get_span_context().span_id}, end_state: {end_state}")
 
