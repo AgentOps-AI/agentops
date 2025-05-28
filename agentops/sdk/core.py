@@ -331,16 +331,26 @@ class TracingCore:
             logger.debug("Tracing core shut down")
 
     def _flush_span_processors(self) -> None:
-        """Helper to force flush all span processors."""
-        if not self._provider or not hasattr(self._provider, "force_flush"):
-            logger.debug("No provider or provider cannot force_flush.")
+        """Helper to force flush all span processors with comprehensive error handling."""
+        if not self._provider:
+            logger.debug("No provider available for force_flush.")
+            return
+
+        if not hasattr(self._provider, "force_flush"):
+            logger.debug("Provider does not support force_flush.")
             return
 
         try:
+            logger.debug("Attempting to force flush span processors...")
             self._provider.force_flush()  # type: ignore
-            logger.debug("Provider force_flush completed.")
+            logger.debug("Provider force_flush completed successfully.")
+        except AttributeError as e:
+            logger.warning(f"Provider force_flush method not available: {e}")
+        except RuntimeError as e:
+            logger.warning(f"Runtime error during force_flush (provider may be shutting down): {e}")
         except Exception as e:
-            logger.warning(f"Failed to force flush provider's span processors: {e}", exc_info=True)
+            logger.error(f"Unexpected error during force_flush: {e}", exc_info=True)
+            # Continue execution - don't let flush failures break the application
 
     def get_tracer(self, name: str = "agentops") -> trace.Tracer:
         """
