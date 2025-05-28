@@ -106,7 +106,8 @@ def init(
     elif default_tags:
         merged_tags = default_tags
 
-    return _client.init(
+    # Initialize the client and handle return value consistency
+    _client.init(
         api_key=api_key,
         endpoint=endpoint,
         app_url=app_url,
@@ -124,6 +125,10 @@ def init(
         exporter_endpoint=exporter_endpoint,
         **kwargs,
     )
+
+    # For API consistency, always return the client instance
+    # Users can access sessions via start_trace() or legacy functions
+    return _client
 
 
 def configure(**kwargs):
