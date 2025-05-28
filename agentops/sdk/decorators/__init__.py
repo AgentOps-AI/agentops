@@ -3,7 +3,6 @@ Decorators for instrumenting code with AgentOps.
 Provides @trace for creating trace-level spans (sessions) and other decorators for nested spans.
 """
 
-import functools
 from termcolor import colored
 
 from agentops.logging import logger
@@ -16,15 +15,21 @@ task = create_entity_decorator(SpanKind.TASK)
 operation_decorator = create_entity_decorator(SpanKind.OPERATION)
 workflow = create_entity_decorator(SpanKind.WORKFLOW)
 trace = create_entity_decorator(SpanKind.SESSION)
-session = create_entity_decorator(SpanKind.SESSION)
 tool = create_entity_decorator(SpanKind.TOOL)
-operation = task
 
-# For backward compatibility: @session decorator calls @trace decorator
-@functools.wraps(trace)
+
+# For backward compatibility: @session decorator calls @trace decorator with deprecation warning
 def session(*args, **kwargs):
     """@deprecated Use @agentops.trace instead. Wraps the @trace decorator for backward compatibility."""
+    import warnings
+
+    warnings.warn(
+        "@agentops.session decorator is deprecated. Please use @agentops.trace instead.",
+        DeprecationWarning,
+        stacklevel=2,
+    )
     logger.info(colored("@agentops.session decorator is deprecated. Please use @agentops.trace instead.", "yellow"))
+
     # If called as @session or @session(...)
     if not args or not callable(args[0]):  # called with kwargs like @session(name=...)
         return trace(*args, **kwargs)
