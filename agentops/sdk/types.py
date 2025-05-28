@@ -1,4 +1,9 @@
-from typing import Annotated, Optional, Required, TypedDict
+from typing import Annotated, Optional, TypedDict
+
+try:
+    from typing import Required
+except ImportError:
+    from typing_extensions import Required
 
 from opentelemetry.sdk.trace import SpanProcessor
 from opentelemetry.sdk.trace.export import SpanExporter
