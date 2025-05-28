@@ -115,52 +115,33 @@ def calculator(expression):
 
 ### `@trace` Decorator
 
-Create custom traces to group related operations:
+Create custom traces to group related operations using the `@trace` decorator. This is the recommended approach for most applications:
 
 ```python
+import agentops
 from agentops.sdk.decorators import trace, agent, operation
 
-@trace
+# Initialize AgentOps without auto-starting session since we use @trace
+agentops.init("your-api-key", auto_start_session=False)
+
+@trace(name="customer-service-workflow", tags=["customer-support"])
 def customer_service_workflow(customer_id):
     agent = ResearchAgent()
     results = agent.search(f"customer {customer_id}")
     return results
 ```
 
-### Manual Trace Management
-
-For more control over trace lifecycle, you can manage traces manually:
-
-```python
-import agentops
-
-# Initialize without automatic session creation
-agentops.init("your-api-key", auto_start_session=False)
-
-# Start a trace manually
-trace = agentops.start_trace("my-custom-trace")
-
-# Your code here
-# ...
-
-# End the trace with a specific state
-agentops.end_trace(trace, "Success")
-
-# Or end all active traces
-agentops.end_trace(end_state="Emergency_Shutdown")
-```
 
 ## Best Practices
 
 1. **Keep it Simple**: For most applications, just initializing AgentOps with `agentops.init()` is sufficient.
 
-2. **Use Decorators Sparingly**: Only add decorators when you need more detailed tracking of specific operations.
+2. **Use @trace for Custom Workflows**: When you need to group operations, use the `@trace` decorator instead of manual trace management.
 
-3. **Meaningful Operation Names**: When using decorators, choose descriptive names to make them easier to identify in the dashboard.
+3. **Meaningful Names and Tags**: When using decorators, choose descriptive names and relevant tags to make them easier to identify in the dashboard.
 
 4. **Cost Tracking**: Use the `@tool` decorator with cost parameters to track tool usage costs in your dashboard.
 
-5. **Trace Management**: Use manual trace management when you need precise control over trace boundaries and states.
 
 <script type="module" src="/scripts/github_stars.js"></script>
 <script type="module" src="/scripts/scroll-img-fadein-animation.js"></script>

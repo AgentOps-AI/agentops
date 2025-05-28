@@ -3,42 +3,18 @@ title: "Tracking Agents"
 description: "Associate operations with specific named agents"
 ---
 
-AgentOps automatically tracks LLM interactions in your application. For more detailed tracking, especially in multi-agent systems, you can use additional features to associate operations with specific agents.
+AgentOps automatically tracks LLM interactions in your application. For more detailed tracking, especially in multi-agent systems, you can use the `@agent` decorator to associate operations with specific agents.
 
-## Basic Agent Tracking
+## Using the Agent Decorator
 
-For simple applications, AgentOps will automatically track your LLM calls without additional configuration:
-
-```python
-import agentops
-from openai import OpenAI
-
-# Initialize AgentOps
-agentops.init("your-api-key")
-
-# Create a simple agent function
-def research_agent(query):
-    client = OpenAI()
-    response = client.chat.completions.create(
-        model="gpt-4o",
-        messages=[{"role": "user", "content": f"Research about: {query}"}]
-    )
-    return response.choices[0].message.content
-
-# Use your agent - all LLM calls will be tracked automatically
-result = research_agent("quantum computing")
-```
-
-## Advanced: Using the Agent Decorator
-
-For more structured tracking in complex applications, you can use the `@agent` decorator to explicitly identify different agents in your system:
+For structured tracking in complex applications, you can use the `@agent` decorator to explicitly identify different agents in your system:
 
 ```python
 import agentops
 from agentops.sdk.decorators import agent, operation, trace
 from openai import OpenAI
 
-# Initialize AgentOps
+# Initialize AgentOps without auto-starting session since we use @trace
 agentops.init("your-api-key", auto_start_session=False)
 
 # Create a decorated agent class
@@ -75,12 +51,40 @@ class ResearchAgent:
     pass
 ```
 
+## Basic Agent Tracking (Simple Applications)
+
+For simple applications, AgentOps will automatically track your LLM calls without additional configuration:
+
+```python
+import agentops
+from openai import OpenAI
+
+# Initialize AgentOps
+agentops.init("your-api-key")
+
+# Create a simple agent function
+def research_agent(query):
+    client = OpenAI()
+    response = client.chat.completions.create(
+        model="gpt-4o",
+        messages=[{"role": "user", "content": f"Research about: {query}"}]
+    )
+    return response.choices[0].message.content
+
+# Use your agent - all LLM calls will be tracked automatically
+result = research_agent("quantum computing")
+```
+
 ## Multi-Agent Systems
 
 For complex multi-agent systems, you can organize multiple agents within a single trace:
 
 ```python
+import agentops
 from agentops.sdk.decorators import agent, operation, tool, trace
+
+# Initialize AgentOps without auto-starting session since we use @trace
+agentops.init("your-api-key", auto_start_session=False)
 
 @agent
 class DataCollectionAgent:
@@ -131,7 +135,11 @@ result = collaborative_workflow("customer_database")
 You can track complex agent interactions and communication patterns:
 
 ```python
+import agentops
 from agentops.sdk.decorators import agent, operation, tool, trace
+
+# Initialize AgentOps without auto-starting session since we use @trace
+agentops.init("your-api-key", auto_start_session=False)
 
 @agent
 class CoordinatorAgent:
@@ -217,18 +225,18 @@ All operations are automatically associated with the agent that originated them.
 If you're migrating from the legacy `@session` decorator, replace it with the `@trace` decorator:
 
 ```python
-# Old approach (deprecated)
-from agentops.sdk.decorators import session, agent
-
-@session
-def my_workflow():
-    # workflow code
-    pass
-
 # New approach (recommended)
 from agentops.sdk.decorators import trace, agent
 
 @trace(name="my-workflow")
+def my_workflow():
+    # workflow code
+    pass
+
+# Old approach (deprecated)
+from agentops.sdk.decorators import session, agent
+
+@session
 def my_workflow():
     # workflow code
     pass

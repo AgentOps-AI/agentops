@@ -3,8 +3,6 @@ title: "Manual Trace Control"
 description: "Advanced trace management with start_trace and end_trace methods"
 ---
 
-AgentOps 0.4.13 introduces powerful manual trace control capabilities, allowing you to precisely manage trace lifecycles and states. This is particularly useful for complex workflows, batch processing, and scenarios requiring fine-grained control over trace boundaries.
-
 ## Basic Manual Trace Control
 
 ### Starting and Ending Traces
@@ -50,67 +48,33 @@ For batch processing scenarios, you can selectively end traces based on processi
 ```python
 import agentops
 
+# Initialize AgentOps
 agentops.init("your-api-key", auto_start_session=False)
 
+# Sample batch items to process
+batch_items = [
+    {"id": 1, "data": "item_1_data", "valid": True},
+    {"id": 2, "data": "item_2_data", "valid": False},
+    {"id": 3, "data": "item_3_data", "valid": True},
+]
+@agentops.operation(name="process_item")
+def process_item(item):
+    """Simulate processing an item"""
+    if not item.get("valid", False):
+        raise ValueError(f"Invalid item: {item['id']}")
+    return {"processed": True, "result": f"Processed {item['data']}"}
+
 # Start traces for batch items
-batch_traces = []
 for i, item in enumerate(batch_items):
     trace = agentops.start_trace(f"batch_item_{i+1}")
-    batch_traces.append((trace, item))
-
-# Process each item and end traces individually
-for trace, item in batch_traces:
     try:
         result = process_item(item)
-        if result.success:
+        if result.get("processed"):
             agentops.end_trace(trace, "Success")
         else:
             agentops.end_trace(trace, "Failure")
     except Exception as e:
         agentops.end_trace(trace, "Error")
-```
-
-## Emergency Shutdown
-
-### Ending All Active Traces
-
-In emergency situations or when you need to quickly shut down all active traces, you can end all traces at once:
-
-```python
-# End all active traces with emergency state
-agentops.end_trace(end_state="Emergency_Shutdown")
-
-# Or with a different state
-agentops.end_trace(end_state="Timeout")
-```
-
-This is particularly useful for:
-- Timeout scenarios
-- Resource exhaustion
-- Critical errors requiring immediate shutdown
-- Graceful application termination
-
-## Common End States
-
-AgentOps supports various end states to categorize how traces completed:
-
-```python
-# Success states
-agentops.end_trace(trace, "Success")
-agentops.end_trace(trace, "Completed")
-
-# Failure states
-agentops.end_trace(trace, "Failure")
-agentops.end_trace(trace, "Error")
-agentops.end_trace(trace, "Timeout")
-
-# Business logic states
-agentops.end_trace(trace, "Invalid_Input")
-agentops.end_trace(trace, "Rate_Limited")
-agentops.end_trace(trace, "Unauthorized")
-
-# Custom states
-agentops.end_trace(trace, "Custom_Business_State")
 ```
 
 ## Integration with Decorators
@@ -146,58 +110,6 @@ except Exception as e:
     agentops.end_trace(trace, "Error")
 ```
 
-## Best Practices
-
-### 1. Always End Traces
-
-Ensure every started trace is properly ended to avoid resource leaks:
-
-```python
-trace = agentops.start_trace("my-workflow")
-try:
-    # Your code here
-    agentops.end_trace(trace, "Success")
-except Exception as e:
-    agentops.end_trace(trace, "Error")
-finally:
-    # Ensure trace is ended even if something unexpected happens
-    # (This is redundant if you properly handle exceptions above)
-    pass
-```
-
-### 2. Use Meaningful Names and States
-
-Choose descriptive names and appropriate end states:
-
-```python
-# Good
-trace = agentops.start_trace("user-authentication-flow")
-agentops.end_trace(trace, "Authentication_Failed")
-
-# Less descriptive
-trace = agentops.start_trace("trace1")
-agentops.end_trace(trace, "Failed")
-```
-
-### 3. Use Emergency Shutdown Sparingly
-
-Reserve emergency shutdown for truly exceptional circumstances:
-
-```python
-try:
-    # Normal processing
-    for item in large_batch:
-        trace = agentops.start_trace(f"item-{item.id}")
-        process_item(item)
-        agentops.end_trace(trace, "Success")
-except KeyboardInterrupt:
-    # User interrupted - emergency shutdown
-    agentops.end_trace(end_state="User_Interrupted")
-except MemoryError:
-    # System resource exhaustion - emergency shutdown
-    agentops.end_trace(end_state="Resource_Exhausted")
-```
-
 ## Real-World Example
 
 Here's a comprehensive example showing manual trace control in a customer service application:
@@ -207,50 +119,35 @@ import agentops
 from agentops.sdk.decorators import agent, operation, tool
 from openai import OpenAI
 
-agentops.init("your-api-key", auto_start_session=False)
+agentops.init(auto_start_session=False)
 client = OpenAI()
 
-@agent
-class CustomerServiceAgent:
-    @operation
-    def analyze_sentiment(self, text):
+@operation
+def analyze_sentiment(text):
         response = client.chat.completions.create(
             model="gpt-3.5-turbo",
             messages=[{"role": "user", "content": f"Analyze sentiment: {text}"}]
         )
         return response.choices[0].message.content.strip()
     
-    @tool(cost=0.01)
-    def lookup_order(self, order_id):
-        # Simulate order lookup
-        return f"Order {order_id} details"
+@tool(cost=0.01)
+def lookup_order(order_id):
+    return f"Order {order_id} details"
 
 def process_customer_requests(requests):
     """Process multiple customer requests with individual trace tracking"""
-    
-    # Start traces for each request
-    request_traces = []
+    results = []
     for i, request in enumerate(requests):
         trace = agentops.start_trace(
             f"customer_request_{i+1}",
             tags=["customer-service", request.get("priority", "normal")]
         )
-        request_traces.append((trace, request))
-    
-    agent = CustomerServiceAgent()
-    results = []
-    
-    # Process each request
-    for trace, request in request_traces:
         try:
-            # Analyze the request
-            sentiment = agent.analyze_sentiment(request["message"])
+            sentiment = analyze_sentiment(request["message"])
             
-            # Look up order if needed
             if "order" in request:
-                order_info = agent.lookup_order(request["order"])
+                order_info = lookup_order(request["order"])
             
-            # Determine success based on sentiment
             if "positive" in sentiment.lower() or "neutral" in sentiment.lower():
                 agentops.end_trace(trace, "Success")
                 results.append({"status": "resolved", "sentiment": sentiment})
@@ -264,7 +161,6 @@ def process_customer_requests(requests):
     
     return results
 
-# Example usage
 customer_requests = [
     {"message": "I love this product!", "priority": "low"},
     {"message": "My order is completely wrong!", "order": "12345", "priority": "high"},

@@ -134,7 +134,7 @@ Here is the complete code from the sections above
 import agentops
 from agentops.sdk.decorators import agent, operation, tool, trace
 
-# Initialize AgentOps
+# Initialize AgentOps without auto-starting session since we use @trace
 agentops.init(<INSERT YOUR API KEY HERE>, auto_start_session=False)
 
 # Create a tool with cost tracking
@@ -154,7 +154,7 @@ class MyAgent:
         search_results = web_search(f"research {task}")
         return f"Completed {task} with results: {search_results}"
 
-@trace
+@trace(name="research-workflow", tags=["research", "analysis"])
 def run_agent_task(task_name):
     agent = MyAgent("research-agent")
     result = agent.perform_task(task_name)

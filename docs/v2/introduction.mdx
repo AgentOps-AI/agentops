@@ -37,21 +37,20 @@ Observability and monitoring for your AI agents and LLM apps. And we do it all i
 
 That's it! AgentOps will automatically instrument your code and start tracking traces.
 
-Need more control? You can disable automatic session creation and manage traces manually:
+Need more control? You can create custom traces using the `@trace` decorator (recommended) or manage traces manually for advanced use cases:
 
 <CodeGroup>
 	```python python
 	import agentops
+	from agentops.sdk.decorators import trace
+	
 	agentops.init(<INSERT YOUR API KEY HERE>, auto_start_session=False)
 	
-	# Later, when you're ready to start a trace:
-	trace = agentops.start_trace("my-workflow-trace")
+	@trace(name="my-workflow", tags=["production"])
+	def my_workflow():
+		# Your code here
+		return "Workflow completed"
 	
-	# Your code here
-	# ...
-	
-	# End the trace when done
-	agentops.end_trace(trace, "Success")
 	```
 </CodeGroup>
 

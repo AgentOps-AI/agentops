@@ -137,7 +137,7 @@ Ends a specific trace or all active traces.
 **Parameters**:
 
 - `trace` (TraceContext, optional): The specific trace to end. If not provided, all active traces will be ended.
-- `end_state` (str, optional): The end state for the trace(s). Common values include "Success", "Failure", "Error", "Timeout", etc.
+- `end_state` (str, optional): The end state for the trace(s). You can use any descriptive string that makes sense for your application (e.g., "Success", "Failure", "Error", "Timeout", etc.).
 
 **Example**:
 
@@ -155,7 +155,7 @@ agentops.end_trace(end_state="Emergency_Shutdown")
 
 ## Decorators for Detailed Instrumentation
 
-For more granular control, AgentOps provides decorators that explicitly track different components of your application. These decorators are imported from `agentops.sdk.decorators`.
+For more granular control, AgentOps provides decorators that explicitly track different components of your application. **The `@trace` decorator is the recommended approach for creating custom traces**, especially in multi-threaded environments. These decorators are imported from `agentops.sdk.decorators`.
 
 ```python
 import agentops
@@ -204,7 +204,7 @@ See [Decorators](/v2/concepts/decorators) for more detailed documentation on usi
 
 The following functions are maintained for backward compatibility with older versions of the SDK and integrations. New code should use the functions and decorators described above instead.
 
-- `start_session()`: Legacy function for starting sessions. Use `start_trace()` instead.
+- `start_session()`: Legacy function for starting sessions. Use `@trace` decorator or `start_trace()` instead.
 - `record(event)`: Legacy function to record an event. Replaced by decorator-based tracing.
 - `track_agent()`: Legacy decorator for marking agents. Replaced by the `@agent` decorator.
 - `track_tool()`: Legacy decorator for marking tools. Replaced by the `@tool` decorator.
