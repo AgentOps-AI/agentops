@@ -1,4 +1,4 @@
-from typing import Annotated, Optional, TypedDict
+from typing import Annotated, Optional, Required, TypedDict
 
 from opentelemetry.sdk.trace import SpanProcessor
 from opentelemetry.sdk.trace.export import SpanExporter
@@ -16,6 +16,6 @@ class TracingConfig(TypedDict, total=False):
     metrics_endpoint: Optional[str]
     api_key: Optional[str]  # API key for authentication with AgentOps services
     project_id: Optional[str]  # Project ID to include in resource attributes
-    max_queue_size: int  # Required with a default value
-    max_wait_time: int  # Required with a default value
-    export_flush_interval: int  # Time interval between automatic exports
+    max_queue_size: Required[int]  # Required with a default value
+    max_wait_time: Required[int]  # Required with a default value
+    export_flush_interval: Required[int]  # Time interval between automatic exports
