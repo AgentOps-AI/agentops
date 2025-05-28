@@ -57,9 +57,27 @@ class LiveSpanProcessor(SpanProcessor):
             self.span_exporter.export((span,))
 
     def shutdown(self) -> None:
-        self._stop_event.set()
-        self._export_thread.join()
-        self.span_exporter.shutdown()
+        """Shutdown the processor with proper thread lifecycle management."""
+        try:
+            # Signal the export thread to stop
+            self._stop_event.set()
+
+            # Wait for the thread to finish with a timeout to prevent hanging
+            if self._export_thread.is_alive():
+                self._export_thread.join(timeout=5.0)
+
+                # If thread is still alive after timeout, log a warning
+                if self._export_thread.is_alive():
+                    logger.warning("Export thread did not shut down within timeout, continuing shutdown")
+
+        except Exception as e:
+            logger.error(f"Error during thread shutdown: {e}")
+
+        # Always attempt to shutdown the exporter
+        try:
+            self.span_exporter.shutdown()
+        except Exception as e:
+            logger.error(f"Error shutting down span exporter: {e}")
 
     def force_flush(self, timeout_millis: int = 30000) -> bool:
         return True
