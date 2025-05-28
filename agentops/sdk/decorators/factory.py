@@ -12,8 +12,8 @@ from agentops.semconv.span_kinds import SpanKind
 from agentops.semconv import SpanAttributes, CoreAttributes
 
 from .utility import (
+    create_span,
     _create_as_current_span,
-    _make_span,
     _process_async_generator,
     _process_sync_generator,
     _record_entity_input,
@@ -208,13 +208,15 @@ def create_entity_decorator(entity_kind: str) -> Callable[..., Any]:
                 else:  # Sync function for SpanKind.SESSION
                     return _handle_session_trace_sync(operation_name, tags, wrapped_func, args, kwargs)
 
-            # Logic for non-SESSION kinds or generators under @trace (as per fallthrough)
+            # Logic for non-SESSION kinds using standardized context management
             elif is_generator:
-                span, _, token = _make_span(
+                # Generators require manual lifecycle management
+                span, _, token = create_span(
                     operation_name,
                     entity_kind,
                     version=version,
                     attributes={CoreAttributes.TAGS: tags} if tags else None,
+                    manual_lifecycle=True,
                 )
                 try:
                     _record_entity_input(span, args, kwargs)
@@ -226,11 +228,13 @@ def create_entity_decorator(entity_kind: str) -> Callable[..., Any]:
                 result = wrapped_func(*args, **kwargs)
                 return _process_sync_generator(span, result)
             elif is_async_generator:
-                span, _, token = _make_span(
+                # Async generators require manual lifecycle management
+                span, _, token = create_span(
                     operation_name,
                     entity_kind,
                     version=version,
                     attributes={CoreAttributes.TAGS: tags} if tags else None,
+                    manual_lifecycle=True,
                 )
                 try:
                     _record_entity_input(span, args, kwargs)
@@ -242,13 +246,14 @@ def create_entity_decorator(entity_kind: str) -> Callable[..., Any]:
                 result = wrapped_func(*args, **kwargs)
                 return _process_async_generator(span, token, result)
             elif is_async:
-
+                # Async functions use context manager (OpenTelemetry best practice)
                 async def _wrapped_async() -> Any:
-                    with _create_as_current_span(
+                    with create_span(
                         operation_name,
                         entity_kind,
                         version=version,
                         attributes={CoreAttributes.TAGS: tags} if tags else None,
+                        manual_lifecycle=False,
                     ) as span:
                         try:
                             _record_entity_input(span, args, kwargs)
@@ -271,11 +276,13 @@ def create_entity_decorator(entity_kind: str) -> Callable[..., Any]:
 
                 return _wrapped_async()
             else:  # Sync function for non-SESSION kinds
-                with _create_as_current_span(
+                # Sync functions use context manager (OpenTelemetry best practice)
+                with create_span(
                     operation_name,
                     entity_kind,
                     version=version,
                     attributes={CoreAttributes.TAGS: tags} if tags else None,
+                    manual_lifecycle=False,
                 ) as span:
                     try:
                         _record_entity_input(span, args, kwargs)

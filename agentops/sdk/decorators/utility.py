@@ -61,6 +61,39 @@ async def _process_async_generator(span: trace.Span, context_token: Any, generat
         context_api.detach(context_token)
 
 
+def create_span(
+    operation_name: str,
+    span_kind: str,
+    version: Optional[int] = None,
+    attributes: Optional[Dict[str, Any]] = None,
+    manual_lifecycle: bool = False,
+):
+    """
+    Unified span creation interface that chooses the appropriate method based on requirements.
+
+    This function standardizes span creation across the SDK by choosing between:
+    - Context manager approach (preferred): For automatic lifecycle management
+    - Manual approach: For special cases like generators and SESSION spans
+
+    Args:
+        operation_name: Name of the operation being traced
+        span_kind: Type of operation (from SpanKind)
+        version: Optional version identifier for the operation
+        attributes: Optional dictionary of attributes to set on the span
+        manual_lifecycle: If True, returns span with manual lifecycle control
+
+    Returns:
+        - If manual_lifecycle=False: Context manager for automatic span lifecycle
+        - If manual_lifecycle=True: Tuple of (span, context, token) for manual control
+    """
+    if manual_lifecycle or span_kind == SpanKind.SESSION:
+        # Use manual lifecycle for SESSION spans and when explicitly requested
+        return _make_span(operation_name, span_kind, version, attributes)
+    else:
+        # Use context manager for regular operations (OpenTelemetry best practice)
+        return _create_as_current_span(operation_name, span_kind, version, attributes)
+
+
 def _get_current_span_info():
     """Helper to get information about the current span for debugging"""
     current_span = trace.get_current_span()
@@ -75,37 +108,21 @@ def _get_current_span_info():
     return {"name": "No current span"}
 
 
-@contextmanager
-def _create_as_current_span(
+def _prepare_span_attributes(
     operation_name: str, span_kind: str, version: Optional[int] = None, attributes: Optional[Dict[str, Any]] = None
-) -> Generator[Span, None, None]:
+) -> Dict[str, Any]:
     """
-    Create and yield an instrumentation span as the current span using proper context management.
-
-    This function creates a span that will automatically be nested properly
-    within any parent span based on the current execution context, using OpenTelemetry's
-    context management to properly handle span lifecycle.
+    Prepare standardized span attributes for AgentOps spans.
 
     Args:
         operation_name: Name of the operation being traced
         span_kind: Type of operation (from SpanKind)
         version: Optional version identifier for the operation
-        attributes: Optional dictionary of attributes to set on the span
+        attributes: Optional dictionary of additional attributes
 
-    Yields:
-        A span with proper context that will be automatically closed when exiting the context
+    Returns:
+        Dictionary of prepared span attributes
     """
-    # Log before we do anything
-    before_span = _get_current_span_info()
-    logger.debug(f"[DEBUG] BEFORE {operation_name}.{span_kind} - Current context: {before_span}")
-
-    # Create span with proper naming convention
-    span_name = f"{operation_name}.{span_kind}"
-
-    # Get tracer
-    tracer = TracingCore.get_instance().get_tracer()
-
-    # Prepare attributes
     if attributes is None:
         attributes = {}
 
@@ -117,33 +134,54 @@ def _create_as_current_span(
     if version is not None:
         attributes[SpanAttributes.OPERATION_VERSION] = version
 
-    # Get current context explicitly to debug it
-    current_context = context_api.get_current()
+    return attributes
 
-    # Use OpenTelemetry's context manager to properly handle span lifecycle
-    with tracer.start_as_current_span(span_name, attributes=attributes, context=current_context) as span:
-        # Log after span creation
-        if hasattr(span, "get_span_context"):
-            span_ctx = span.get_span_context()
-            logger.debug(
-                f"[DEBUG] CREATED {span_name} - span_id: {span_ctx.span_id:x}, parent: {before_span.get('span_id', 'None')}"
-            )
 
+@contextmanager
+def _create_as_current_span(
+    operation_name: str, span_kind: str, version: Optional[int] = None, attributes: Optional[Dict[str, Any]] = None
+) -> Generator[Span, None, None]:
+    """
+    Create and yield an instrumentation span as the current span using OpenTelemetry best practices.
+
+    This is the preferred method for creating spans as it uses OpenTelemetry's built-in
+    context management for automatic span lifecycle handling and proper nesting.
+
+    Args:
+        operation_name: Name of the operation being traced
+        span_kind: Type of operation (from SpanKind)
+        version: Optional version identifier for the operation
+        attributes: Optional dictionary of attributes to set on the span
+
+    Yields:
+        A span with proper context that will be automatically closed when exiting the context
+    """
+    # Create span with proper naming convention
+    span_name = f"{operation_name}.{span_kind}"
+
+    # Get tracer
+    tracer = TracingCore.get_instance().get_tracer()
+
+    # Prepare standardized attributes
+    prepared_attributes = _prepare_span_attributes(operation_name, span_kind, version, attributes)
+
+    # Use OpenTelemetry's context manager for automatic lifecycle management
+    with tracer.start_as_current_span(span_name, attributes=prepared_attributes) as span:
+        logger.debug(f"Created span: {span_name}")
         yield span
-
-    # Log after we're done
-    after_span = _get_current_span_info()
-    logger.debug(f"[DEBUG] AFTER {operation_name}.{span_kind} - Returned to context: {after_span}")
 
 
 def _make_span(
     operation_name: str, span_kind: str, version: Optional[int] = None, attributes: Optional[Dict[str, Any]] = None
 ) -> tuple:
     """
-    Create a span without context management for manual span lifecycle control.
+    Create a span with manual lifecycle control for special cases.
 
-    This function creates a span that will be properly nested within any parent span
-    based on the current execution context, but requires manual ending via _finalize_span.
+    This function is used for cases that require manual span management:
+    - Trace spans (root spans that need special lifecycle handling)
+    - Generator functions (where context managers don't work well)
+
+    For regular operations, prefer _create_as_current_span which uses OpenTelemetry best practices.
 
     Args:
         operation_name: Name of the operation being traced
@@ -163,27 +201,20 @@ def _make_span(
     # Get tracer
     tracer = TracingCore.get_instance().get_tracer()
 
-    # Prepare attributes
-    if attributes is None:
-        attributes = {}
-
-    # Add span kind to attributes
-    attributes[SpanAttributes.AGENTOPS_SPAN_KIND] = span_kind
-
-    # Add standard attributes
-    attributes[SpanAttributes.OPERATION_NAME] = operation_name
-    if version is not None:
-        attributes[SpanAttributes.OPERATION_VERSION] = version
+    # Prepare standardized attributes
+    prepared_attributes = _prepare_span_attributes(operation_name, span_kind, version, attributes)
 
     current_context = context_api.get_current()
 
-    # Create the span with proper context management
+    # Create the span with appropriate context handling
     if span_kind == SpanKind.SESSION:
         # For session spans, create as a root span
-        span = tracer.start_span(span_name, attributes=attributes)
+        span = tracer.start_span(span_name, attributes=prepared_attributes)
+        logger.debug(f"Created root trace span: {span_name}")
     else:
-        # For other spans, use the current context
-        span = tracer.start_span(span_name, context=current_context, attributes=attributes)
+        # For other spans, use the current context for proper nesting
+        span = tracer.start_span(span_name, context=current_context, attributes=prepared_attributes)
+        logger.debug(f"Created nested span: {span_name}")
 
     # Set as current context and get token for detachment
     ctx = trace.set_span_in_context(span)
