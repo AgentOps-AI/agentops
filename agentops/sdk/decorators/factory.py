@@ -21,6 +21,114 @@ from .utility import (
 )
 
 
+def _handle_session_trace_sync(
+    operation_name: str, tags: Optional[Union[list, dict]], wrapped_func: Callable, args: tuple, kwargs: Dict[str, Any]
+) -> Any:
+    """Helper function to handle SESSION trace lifecycle for sync functions with proper cleanup"""
+    trace_context: Optional[TraceContext] = None
+    trace_ended = False
+
+    try:
+        # Start trace
+        trace_context = TracingCore.get_instance().start_trace(trace_name=operation_name, tags=tags)
+        if not trace_context:
+            logger.error(f"Failed to start trace for @trace '{operation_name}'. Executing without trace.")
+            return wrapped_func(*args, **kwargs)
+
+        # Record input
+        try:
+            _record_entity_input(trace_context.span, args, kwargs)
+        except Exception as e:
+            logger.warning(f"Input recording failed for @trace '{operation_name}': {e}")
+
+        # Execute function
+        result = wrapped_func(*args, **kwargs)
+
+        # Record output
+        try:
+            _record_entity_output(trace_context.span, result)
+        except Exception as e:
+            logger.warning(f"Output recording failed for @trace '{operation_name}': {e}")
+
+        # End trace successfully
+        TracingCore.get_instance().end_trace(trace_context, "Success")
+        trace_ended = True
+        return result
+
+    except Exception:
+        # End trace with failure if not already ended
+        if trace_context and not trace_ended:
+            try:
+                TracingCore.get_instance().end_trace(trace_context, "Failure")
+                trace_ended = True
+            except Exception as cleanup_error:
+                logger.error(f"Failed to end trace during exception cleanup: {cleanup_error}")
+        raise
+
+    finally:
+        # Safety net - only end if not already ended and still recording
+        if trace_context and not trace_ended and trace_context.span.is_recording():
+            try:
+                TracingCore.get_instance().end_trace(trace_context, "Unknown")
+                logger.warning(f"Trace for @trace '{operation_name}' ended in finally block as 'Unknown'.")
+            except Exception as cleanup_error:
+                logger.error(f"Failed to end trace in finally block: {cleanup_error}")
+
+
+async def _handle_session_trace_async(
+    operation_name: str, tags: Optional[Union[list, dict]], wrapped_func: Callable, args: tuple, kwargs: Dict[str, Any]
+) -> Any:
+    """Helper function to handle SESSION trace lifecycle for async functions with proper cleanup"""
+    trace_context: Optional[TraceContext] = None
+    trace_ended = False
+
+    try:
+        # Start trace
+        trace_context = TracingCore.get_instance().start_trace(trace_name=operation_name, tags=tags)
+        if not trace_context:
+            logger.error(f"Failed to start trace for @trace '{operation_name}'. Executing without trace.")
+            return await wrapped_func(*args, **kwargs)
+
+        # Record input
+        try:
+            _record_entity_input(trace_context.span, args, kwargs)
+        except Exception as e:
+            logger.warning(f"Input recording failed for @trace '{operation_name}': {e}")
+
+        # Execute function
+        result = await wrapped_func(*args, **kwargs)
+
+        # Record output
+        try:
+            _record_entity_output(trace_context.span, result)
+        except Exception as e:
+            logger.warning(f"Output recording failed for @trace '{operation_name}': {e}")
+
+        # End trace successfully
+        TracingCore.get_instance().end_trace(trace_context, "Success")
+        trace_ended = True
+        return result
+
+    except Exception:
+        # End trace with failure if not already ended
+        if trace_context and not trace_ended:
+            try:
+                TracingCore.get_instance().end_trace(trace_context, "Failure")
+                trace_ended = True
+            except Exception as cleanup_error:
+                logger.error(f"Failed to end trace during exception cleanup: {cleanup_error}")
+        raise
+
+    finally:
+        # Safety net - only end if not already ended and still recording
+        if trace_context and not trace_ended and trace_context.span.is_recording():
+            try:
+                TracingCore.get_instance().end_trace(trace_context, "Unknown")
+                logger.warning(f"Trace for @trace '{operation_name}' ended in finally block as 'Unknown'.")
+            except Exception as cleanup_error:
+                logger.error(f"Failed to end trace in finally block: {cleanup_error}")
+
+
 def create_entity_decorator(entity_kind: str) -> Callable[..., Any]:
     """
     Factory that creates decorators for instrumenting functions and classes.
@@ -96,69 +204,9 @@ def create_entity_decorator(entity_kind: str) -> Callable[..., Any]:
                     )
                     # Fallthrough to existing generator logic which creates a single span.
                 elif is_async:
-
-                    async def _wrapped_session_async() -> Any:
-                        trace_context: Optional[TraceContext] = None
-                        try:
-                            trace_context = TracingCore.get_instance().start_trace(trace_name=operation_name, tags=tags)
-                            if not trace_context:
-                                logger.error(
-                                    f"Failed to start trace for @trace '{operation_name}'. Executing without trace."
-                                )
-                                return await wrapped_func(*args, **kwargs)
-                            try:
-                                _record_entity_input(trace_context.span, args, kwargs)
-                            except Exception as e:
-                                logger.warning(f"Input recording failed for @trace '{operation_name}': {e}")
-                            result = await wrapped_func(*args, **kwargs)
-                            try:
-                                _record_entity_output(trace_context.span, result)
-                            except Exception as e:
-                                logger.warning(f"Output recording failed for @trace '{operation_name}': {e}")
-                            TracingCore.get_instance().end_trace(trace_context, "Success")
-                            return result
-                        except Exception:
-                            if trace_context:
-                                TracingCore.get_instance().end_trace(trace_context, "Failure")
-                            raise
-                        finally:
-                            if trace_context and trace_context.span.is_recording():
-                                logger.warning(
-                                    f"Trace for @trace '{operation_name}' not explicitly ended. Ending as 'Unknown'."
-                                )
-                                TracingCore.get_instance().end_trace(trace_context, "Unknown")
-
-                    return _wrapped_session_async()
+                    return _handle_session_trace_async(operation_name, tags, wrapped_func, args, kwargs)
                 else:  # Sync function for SpanKind.SESSION
-                    trace_context: Optional[TraceContext] = None
-                    try:
-                        trace_context = TracingCore.get_instance().start_trace(trace_name=operation_name, tags=tags)
-                        if not trace_context:
-                            logger.error(
-                                f"Failed to start trace for @trace '{operation_name}'. Executing without trace."
-                            )
-                            return wrapped_func(*args, **kwargs)
-                        try:
-                            _record_entity_input(trace_context.span, args, kwargs)
-                        except Exception as e:
-                            logger.warning(f"Input recording failed for @trace '{operation_name}': {e}")
-                        result = wrapped_func(*args, **kwargs)
-                        try:
-                            _record_entity_output(trace_context.span, result)
-                        except Exception as e:
-                            logger.warning(f"Output recording failed for @trace '{operation_name}': {e}")
-                        TracingCore.get_instance().end_trace(trace_context, "Success")
-                        return result
-                    except Exception:
-                        if trace_context:
-                            TracingCore.get_instance().end_trace(trace_context, "Failure")
-                        raise
-                    finally:
-                        if trace_context and trace_context.span.is_recording():
-                            logger.warning(
-                                f"Trace for @trace '{operation_name}' not explicitly ended. Ending as 'Unknown'."
-                            )
-                            TracingCore.get_instance().end_trace(trace_context, "Unknown")
+                    return _handle_session_trace_sync(operation_name, tags, wrapped_func, args, kwargs)
 
             # Logic for non-SESSION kinds or generators under @trace (as per fallthrough)
             elif is_generator:
