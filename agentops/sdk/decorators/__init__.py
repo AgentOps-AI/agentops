@@ -21,14 +21,7 @@ tool = create_entity_decorator(SpanKind.TOOL)
 # For backward compatibility: @session decorator calls @trace decorator with deprecation warning
 def session(*args, **kwargs):
     """@deprecated Use @agentops.trace instead. Wraps the @trace decorator for backward compatibility."""
-    import warnings
-
-    warnings.warn(
-        "@agentops.session decorator is deprecated. Please use @agentops.trace instead.",
-        DeprecationWarning,
-        stacklevel=2,
-    )
-    logger.info(colored("@agentops.session decorator is deprecated. Please use @agentops.trace instead.", "yellow"))
+    logger.warning(colored("@agentops.session decorator is deprecated. Please use @agentops.trace instead.", "yellow"))
 
     # If called as @session or @session(...)
     if not args or not callable(args[0]):  # called with kwargs like @session(name=...)
