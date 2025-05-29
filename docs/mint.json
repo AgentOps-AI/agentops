@@ -167,8 +167,9 @@
     {
       "group": "Integrations",
       "pages": [
-        "v2/integrations/anthropic",
+        "v2/integrations/ag2",
         "v2/integrations/autogen",
+        "v2/integrations/anthropic",
         "v2/integrations/crewai",
         "v2/integrations/google_adk",
         "v2/integrations/gemini",
@@ -189,7 +190,9 @@
         "v2/usage/advanced-configuration",
         "v2/usage/tracking-llm-calls",
         "v2/usage/tracking-agents",
-        "v2/usage/recording-operations"
+        "v2/usage/recording-operations",
+        "v2/usage/trace-decorator",
+        "v2/usage/manual-trace-control"
       ],
       "version": "v2"
     },

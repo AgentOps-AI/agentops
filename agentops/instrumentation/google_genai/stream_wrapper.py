@@ -14,11 +14,11 @@ from opentelemetry.instrumentation.utils import _SUPPRESS_INSTRUMENTATION_KEY
 
 from agentops.semconv import SpanAttributes, LLMRequestTypeValues, CoreAttributes, MessageAttributes
 from agentops.instrumentation.common.wrappers import _with_tracer_wrapper
-from agentops.instrumentation.google_generativeai.attributes.model import (
+from agentops.instrumentation.google_genai.attributes.model import (
     get_generate_content_attributes,
     get_stream_attributes,
 )
-from agentops.instrumentation.google_generativeai.attributes.common import (
+from agentops.instrumentation.google_genai.attributes.common import (
     extract_request_attributes,
 )
 
