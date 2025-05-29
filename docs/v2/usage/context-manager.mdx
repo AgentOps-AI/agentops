@@ -1,0 +1,410 @@
+---
+title: "Context Manager"
+description: "Use AgentOps with Python's 'with' statement for automatic lifecycle management"
+---
+
+# Context Manager
+
+AgentOps v0.4+ supports Python's context manager protocol, allowing you to use the `with` statement for automatic initialization and cleanup of traces. This ensures that traces are properly ended even if exceptions occur.
+
+## Basic Usage
+
+<CodeGroup>
+
+```python Basic Context Manager
+import agentops
+from agentops import agent, task, tool
+
+@agent
+class MyAgent:
+    def __init__(self, name: str):
+        self.name = name
+    
+    @task
+    def process_data(self, data: str) -> str:
+        return f"Processed: {data}"
+
+# Context manager automatically handles trace lifecycle
+with agentops.init(
+    api_key="your-api-key",
+    trace_name="my_workflow",
+    auto_start_session=False  # Let context manager handle the session
+):
+    # Your agent code here
+    agent = MyAgent("ContextAgent")
+    result = agent.process_data("sample data")
+    print(f"Result: {result}")
+# Trace automatically ends here with "Success" status
+```
+
+```python Traditional Approach
+import agentops
+from agentops import agent, task, tool
+
+@agent
+class MyAgent:
+    def __init__(self, name: str):
+        self.name = name
+    
+    @task
+    def process_data(self, data: str) -> str:
+        return f"Processed: {data}"
+
+# Traditional initialization
+agentops.init(api_key="your-api-key", auto_start_session=True)
+
+# Your agent code here
+agent = MyAgent("TraditionalAgent")
+result = agent.process_data("sample data")
+print(f"Result: {result}")
+
+# Must remember to end session manually
+agentops.end_session()
+```
+
+</CodeGroup>
+
+## Exception Handling
+
+The context manager automatically handles exceptions and marks traces with the appropriate status:
+
+<CodeGroup>
+
+```python Exception Handling
+try:
+    with agentops.init(
+        api_key="your-api-key",
+        trace_name="error_handling_example"
+    ):
+        # Your agent code
+        agent = MyAgent("ErrorAgent")
+        
+        # Simulate an error
+        raise ValueError("Something went wrong")
+        
+except ValueError as e:
+    print(f"Caught exception: {e}")
+    # Trace was automatically ended with "Error" status
+```
+
+```python Nested Exception Handling
+try:
+    with agentops.init(
+        api_key="your-api-key",
+        trace_name="nested_error_test"
+    ):
+        agent = MyAgent("NestedAgent")
+        
+        # First level of operations
+        result1 = agent.process_data("level 1 data")
+        
+        # Nested operation that fails
+        try:
+            risky_operation()
+        except TimeoutError as nested_error:
+            print(f"Nested operation failed: {nested_error}")
+            # Continue with fallback
+            fallback_data = agent.process_data("fallback data")
+        
+        # Continue with main flow
+        final_result = agent.process_data("final data")
+        
+except Exception as e:
+    print(f"Unexpected error: {e}")
+    # Trace automatically marked as "Error"
+```
+
+</CodeGroup>
+
+## Configuration Options
+
+<CodeGroup>
+
+```python Full Configuration
+with agentops.init(
+    api_key="your-api-key",
+    endpoint="https://api.agentops.ai",
+    trace_name="configured_trace",
+    default_tags=["production", "v2.0"],
+    instrument_llm_calls=True,
+    auto_start_session=False,  # Recommended for context manager usage
+    max_wait_time=10000,
+    max_queue_size=1024
+):
+    # Your instrumented code here
+    agent = MyAgent("ConfiguredAgent")
+    result = agent.process_data("configured data")
+```
+
+```python Minimal Configuration
+with agentops.init(
+    api_key="your-api-key",
+    trace_name="simple_trace"
+):
+    # Minimal setup with defaults
+    agent = MyAgent("SimpleAgent")
+    result = agent.process_data("simple data")
+```
+
+</CodeGroup>
+
+## Advanced Patterns
+
+### Retry Logic with Individual Traces
+
+Each retry attempt gets its own trace for clear debugging:
+
+<CodeGroup>
+
+```python Simple Retry Logic
+# See examples/context_manager/04_retry_logic.py for complete example
+max_retries = 3
+
+for attempt in range(max_retries):
+    try:
+        with agentops.init(
+            api_key="your-api-key",
+            trace_name=f"retry_attempt_{attempt + 1}",
+            default_tags=["retry", f"attempt-{attempt + 1}"]
+        ):
+            agent = MyAgent(f"RetryAgent_Attempt{attempt + 1}")
+            
+            # Operation that might fail
+            if attempt < 2:  # Simulate failures
+                raise ConnectionError(f"Simulated failure on attempt {attempt + 1}")
+            
+            # Success on final attempt
+            result = agent.process_data("retry operation data")
+            print(f"✅ Success! Result: {result}")
+            break
+            
+    except ConnectionError as e:
+        print(f"❌ Attempt {attempt + 1} failed: {e}")
+        if attempt == max_retries - 1:
+            print("💥 All retry attempts exhausted")
+            raise
+        print("🔄 Retrying...")
+```
+
+```python Exponential Backoff Retry
+# See examples/context_manager/04_retry_logic.py for complete example
+import time
+
+max_retries = 4
+base_delay = 0.1
+
+for attempt in range(max_retries):
+    delay = base_delay * (2 ** attempt)  # Exponential backoff
+    
+    try:
+        with agentops.init(
+            api_key="your-api-key",
+            trace_name=f"backoff_retry_{attempt + 1}",
+            default_tags=["retry", "exponential-backoff", f"attempt-{attempt + 1}"]
+        ):
+            agent = MyAgent(f"BackoffAgent_Attempt{attempt + 1}")
+            
+            # Simulate random failure
+            if random.random() < 0.7:
+                raise TimeoutError(f"Random timeout on attempt {attempt + 1}")
+            
+            # Success
+            result = agent.process_data("backoff operation data")
+            print(f"✅ Success! Result: {result}")
+            break
+            
+    except TimeoutError as e:
+        print(f"❌ Attempt {attempt + 1} failed: {e}")
+        if attempt == max_retries - 1:
+            raise
+        print(f"⏳ Waiting {delay:.1f}s before retry...")
+        time.sleep(delay)
+```
+
+</CodeGroup>
+
+### Batch Processing
+
+Process multiple items with individual traces:
+
+<CodeGroup>
+
+```python Batch Processing
+# See examples/context_manager/04_retry_logic.py for complete example
+items = ["item1", "item2", "item3", "item4", "item5"]
+results = {}
+
+for item in items:
+    try:
+        with agentops.init(
+            api_key="your-api-key",
+            trace_name=f"process_{item}",
+            default_tags=["batch", item]
+        ):
+            agent = MyAgent(f"BatchAgent_{item}")
+            result = agent.process_data(f"data for {item}")
+            results[item] = result
+            print(f"✅ {item} processed successfully")
+            
+    except Exception as e:
+        print(f"❌ {item} failed: {e}")
+        results[item] = f"FAILED: {e}"
+
+print("📋 Batch Results:")
+for item, result in results.items():
+    status = "✅" if not result.startswith("FAILED") else "❌"
+    print(f"  {status} {item}: {result}")
+```
+
+```python Conditional Error Handling
+# See examples/context_manager/02_exception_handling.py for complete example
+try:
+    with agentops.init(
+        api_key="your-api-key",
+        trace_name="conditional_operation"
+    ):
+        agent = MyAgent("ConditionalAgent")
+        result = agent.process_data("sensitive data")
+        
+except ConnectionError as e:
+    print(f"Network error (retryable): {e}")
+    # Implement retry logic
+    
+except PermissionError as e:
+    print(f"Auth error (not retryable): {e}")
+    # Handle authentication failure
+    
+except Exception as e:
+    print(f"Unexpected error: {e}")
+    # Handle other errors
+```
+
+</CodeGroup>
+
+## Mixed Usage Patterns
+
+<CodeGroup>
+
+```python Pre-initialized Client
+# Initialize once at application startup
+agentops.init(api_key="your-api-key", auto_start_session=False)
+
+# Use context managers for specific workflows
+with agentops.init(trace_name="task_1"):
+    agent1 = MyAgent("Task1Agent")
+    agent1.process_data("task 1 data")
+
+with agentops.init(trace_name="task_2"):
+    agent2 = MyAgent("Task2Agent")
+    agent2.process_data("task 2 data")
+```
+
+```python Backward Compatibility
+# See examples/context_manager/03_backward_compatibility.py for complete example
+
+# Traditional initialization still works
+agentops.init(
+    api_key="your-api-key",
+    auto_start_session=True
+)
+
+# Your existing agent code
+agent = MyAgent("TraditionalAgent")
+result = agent.process_data("traditional data")
+
+# Manually end session (or let atexit handle it)
+agentops.end_session()
+```
+
+</CodeGroup>
+
+## Best Practices
+
+### 1. Use `auto_start_session=False` with Context Managers
+
+<CodeGroup>
+
+```python ✅ Recommended
+with agentops.init(api_key="key", auto_start_session=False):
+    # Your code
+    agent = MyAgent("RecommendedAgent")
+    result = agent.process_data("data")
+```
+
+```python ⚠️ Also Works
+with agentops.init(api_key="key", auto_start_session=True):
+    # Creates an additional auto-started session
+    agent = MyAgent("ExtraSessionAgent")
+    result = agent.process_data("data")
+```
+
+</CodeGroup>
+
+### 2. Use Descriptive Trace Names
+
+<CodeGroup>
+
+```python ✅ Good - Descriptive
+with agentops.init(
+    api_key="key",
+    trace_name="user_onboarding_workflow"
+):
+    # Onboarding logic
+    agent = MyAgent("OnboardingAgent")
+    agent.process_data("user data")
+```
+
+```python ❌ Bad - Generic
+with agentops.init(api_key="key", trace_name="operation"):
+    # What operation?
+    agent = MyAgent("GenericAgent")
+    agent.process_data("data")
+```
+
+</CodeGroup>
+
+### 3. Keep Context Scope Focused
+
+<CodeGroup>
+
+```python ✅ Good - Focused Scope
+# Separate contexts for different operations
+with agentops.init(trace_name="data_validation"):
+    validator = DataValidator()
+    validator.validate(data)
+
+with agentops.init(trace_name="data_processing"):
+    processor = DataProcessor()
+    processor.process(data)
+```
+
+```python ❌ Bad - Too Broad
+with agentops.init(trace_name="entire_application"):
+    # Everything happens here - hard to debug
+    validator = DataValidator()
+    validator.validate(data)
+    processor = DataProcessor()
+    processor.process(data)
+    # ... many more operations
+```
+
+</CodeGroup>
+
+## Example Files Reference
+
+The AgentOps repository includes comprehensive examples that demonstrate all these patterns:
+
+<CardGroup cols={2}>
+  <Card title="01_basic_usage.py" icon="play" href="https://github.com/AgentOps-AI/agentops/blob/main/examples/context_manager/01_basic_usage.py">
+    Basic context manager usage and comparison with traditional approach
+  </Card>
+  <Card title="02_exception_handling.py" icon="shield-halved" href="https://github.com/AgentOps-AI/agentops/blob/main/examples/context_manager/02_exception_handling.py">
+    Exception handling patterns and guaranteed cleanup
+  </Card>
+  <Card title="03_backward_compatibility.py" icon="arrow-rotate-left" href="https://github.com/AgentOps-AI/agentops/blob/main/examples/context_manager/03_backward_compatibility.py">
+    Backward compatibility and mixed usage patterns
+  </Card>
+  <Card title="04_retry_logic.py" icon="rotate" href="https://github.com/AgentOps-AI/agentops/blob/main/examples/context_manager/04_retry_logic.py">
+    Retry patterns with exponential backoff and batch processing
+  </Card>
+</CardGroup>
