@@ -31,10 +31,10 @@ LIBRARY_VERSION: str = get_version()
 logger = logging.getLogger(__name__)
 
 # Import after defining constants to avoid circular imports
-from agentops.instrumentation.google_generativeai.instrumentor import GoogleGenerativeAIInstrumentor  # noqa: E402
+from agentops.instrumentation.google_genai.instrumentor import GoogleGenAIInstrumentor  # noqa: E402
 
 __all__ = [
     "LIBRARY_NAME",
     "LIBRARY_VERSION",
-    "GoogleGenerativeAIInstrumentor",
+    "GoogleGenAIInstrumentor",
 ]

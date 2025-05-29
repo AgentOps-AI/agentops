@@ -1,159 +1,454 @@
 ---
-title: AutoGen
-description: "Track and analyze your AutoGen agents with AgentOps"
+title: "AutoGen"
+description: "Integrate AgentOps with Microsoft AutoGen for multi-agent workflow tracking"
 ---
 
-import CodeTooltip from '/snippets/add-code-tooltip.mdx'
-import EnvTooltip from '/snippets/add-env-tooltip.mdx'
+[AutoGen](https://microsoft.github.io/autogen/stable/) is Microsoft's framework for building multi-agent conversational AI systems. AgentOps provides seamless integration with AutoGen to track and monitor your multi-agent workflows.
 
-## Installation
-
-<CodeGroup>
-  ```bash pip
-  pip install agentops pyautogen
-  ```
-  ```bash poetry
-  poetry add agentops pyautogen
-  ```
-</CodeGroup>
-
-## Usage
-
-Initialize AgentOps at the beginning of your application to automatically track all AutoGen agent interactions:
+## Quick Start
 
 <CodeGroup>
-```python Python
-import agentops
-import autogen
-
-# Initialize AgentOps
-agentops.init(<INSERT YOUR API KEY HERE>)
-
-# Configure your AutoGen agents
-config_list = [
-    {
-        "model": "gpt-4",
-        "api_key": "<YOUR_OPENAI_API_KEY>"
-    }
-]
-
-llm_config = {
-    "config_list": config_list,
-    "timeout": 60,
-}
-
-# Create AutoGen agents
-assistant = autogen.AssistantAgent(
-    name="assistant",
-    llm_config=llm_config,
-    system_message="You are a helpful AI assistant."
-)
-
-user_proxy = autogen.UserProxyAgent(
-    name="user_proxy",
-    human_input_mode="TERMINATE",
-    max_consecutive_auto_reply=10,
-    is_termination_msg=lambda x: x.get("content", "").rstrip().endswith("TERMINATE"),
-    code_execution_config={"last_n_messages": 3, "work_dir": "coding"},
-)
-
-# Initiate a conversation
-user_proxy.initiate_chat(
-    assistant,
-    message="How can I implement a basic web scraper in Python?"
-)
-
-# All agent interactions are automatically tracked by AgentOps
+```bash pip
+pip install agentops autogen-core python-dotenv
+```
+```bash poetry  
+poetry add agentops autogen-core python-dotenv
 ```
 </CodeGroup>
 
-## Multi-Agent Conversation Example
+## Basic Integration
 
-AgentOps tracks interactions across multiple AutoGen agents:
+AgentOps automatically instruments AutoGen agents and tracks their interactions. Simply initialize AgentOps before creating your AutoGen agents:
 
-<CodeGroup>
-```python Python
+<Note>
+**🔄 Automatic Telemetry Integration**: AgentOps automatically picks up spans from AutoGen's built-in OpenTelemetry integration. No additional instrumentation is required - just initialize AgentOps and your AutoGen agents will be automatically tracked.
+</Note>
+
+```python
+import asyncio
+from dataclasses import dataclass
+from typing import Callable
+from dotenv import load_dotenv
 import agentops
-import autogen
+
+from autogen_core import (
+    DefaultTopicId, 
+    MessageContext, 
+    RoutedAgent, 
+    default_subscription, 
+    message_handler,
+    AgentId,
+    SingleThreadedAgentRuntime
+)
+
+# Load environment variables
+load_dotenv()
+
+# Initialize AgentOps - this will automatically track AutoGen agents
+agentops.init()
+
+@dataclass
+class CountdownMessage:
+    """Message containing a number for countdown operations"""
+    content: int
+
+@default_subscription
+class ModifierAgent(RoutedAgent):
+    """Agent that modifies numbers by applying a transformation function"""
+    
+    def __init__(self, modify_val: Callable[[int], int]) -> None:
+        super().__init__("A modifier agent that transforms numbers.")
+        self._modify_val = modify_val
+
+    @message_handler
+    async def handle_message(self, message: CountdownMessage, ctx: MessageContext) -> None:
+        """Handle incoming messages and apply modification"""
+        original_val = message.content
+        modified_val = self._modify_val(original_val)
+        
+        print(f"🔧 ModifierAgent: Transformed {original_val} → {modified_val}")
+        
+        # Publish the modified value to continue the workflow
+        await self.publish_message(
+            CountdownMessage(content=modified_val), 
+            DefaultTopicId()
+        )
+
+@default_subscription  
+class CheckerAgent(RoutedAgent):
+    """Agent that checks if a condition is met and decides whether to continue"""
+    
+    def __init__(self, stop_condition: Callable[[int], bool]) -> None:
+        super().__init__("A checker agent that validates conditions.")
+        self._stop_condition = stop_condition
+
+    @message_handler
+    async def handle_message(self, message: CountdownMessage, ctx: MessageContext) -> None:
+        """Handle incoming messages and check stopping condition"""
+        value = message.content
+        
+        if not self._stop_condition(value):
+            print(f"✅ CheckerAgent: {value} passed validation, continuing workflow")
+            # Continue the workflow by publishing the message
+            await self.publish_message(
+                CountdownMessage(content=value), 
+                DefaultTopicId()
+            )
+        else:
+            print(f"🛑 CheckerAgent: {value} failed validation, stopping workflow")
+            print("🎉 Countdown completed successfully!")
+
+async def run_countdown_workflow():
+    """Run a countdown workflow from 10 to 1 using AutoGen agents"""
+    
+    print("🚀 Starting AutoGen Countdown Workflow")
+    print("=" * 50)
+    
+    # Create the AutoGen runtime
+    runtime = SingleThreadedAgentRuntime()
+    
+    # Register the modifier agent (subtracts 1 from each number)
+    await ModifierAgent.register(
+        runtime,
+        "modifier",
+        lambda: ModifierAgent(modify_val=lambda x: x - 1),
+    )
+    
+    # Register the checker agent (stops when value <= 1)
+    await CheckerAgent.register(
+        runtime,
+        "checker", 
+        lambda: CheckerAgent(stop_condition=lambda x: x <= 1),
+    )
+    
+    # Start the runtime
+    runtime.start()
+    print("🤖 AutoGen runtime started")
+    print("📨 Sending initial message with value: 10")
+    
+    # Send initial message to start the countdown
+    await runtime.send_message(
+        CountdownMessage(10), 
+        AgentId("checker", "default")
+    )
+    
+    # Wait for the workflow to complete
+    await runtime.stop_when_idle()
+    
+    print("=" * 50)
+    print("✨ Workflow completed! Check your AgentOps dashboard for detailed traces.")
+
+# Run the workflow
+if __name__ == "__main__":
+    asyncio.run(run_countdown_workflow())
+```
+
+## Advanced Multi-Agent Example
+
+Here's a more complex example showing a data processing pipeline with multiple specialized agents:
+
+```python
+import asyncio
+from dataclasses import dataclass
+from typing import List, Dict, Any
+from dotenv import load_dotenv
+import agentops
+
+from autogen_core import (
+    DefaultTopicId,
+    MessageContext, 
+    RoutedAgent,
+    default_subscription,
+    message_handler,
+    AgentId,
+    SingleThreadedAgentRuntime
+)
+
+# Load environment variables  
+load_dotenv()
 
 # Initialize AgentOps
-agentops.init(<INSERT YOUR API KEY HERE>)
+agentops.init()
 
-# Configure LLM
-config_list = [
-    {
-        "model": "gpt-4",
-        "api_key": "<YOUR_OPENAI_API_KEY>"
-    }
-]
+@dataclass
+class DataMessage:
+    """Message containing data to be processed"""
+    data: List[Dict[str, Any]]
+    stage: str
+    metadata: Dict[str, Any]
 
-llm_config = {
-    "config_list": config_list,
-    "timeout": A 60,
-}
+@default_subscription
+class DataCollectorAgent(RoutedAgent):
+    """Agent responsible for collecting and preparing initial data"""
+    
+    def __init__(self) -> None:
+        super().__init__("Data collector agent that gathers initial dataset.")
 
-# Create a team of agents
-researcher = autogen.AssistantAgent(
-    name="researcher",
-    llm_config=llm_config,
-    system_message="You are a researcher who specializes in finding accurate information."
-)
+    @message_handler
+    async def handle_message(self, message: DataMessage, ctx: MessageContext) -> None:
+        print(f"📊 DataCollector: Collecting data for {message.metadata.get('source', 'unknown')}")
+        
+        # Simulate data collection
+        collected_data = [
+            {"id": 1, "value": 100, "category": "A"},
+            {"id": 2, "value": 200, "category": "B"}, 
+            {"id": 3, "value": 150, "category": "A"},
+            {"id": 4, "value": 300, "category": "C"},
+        ]
+        
+        print(f"✅ DataCollector: Collected {len(collected_data)} records")
+        
+        # Send to processor
+        await self.publish_message(
+            DataMessage(
+                data=collected_data,
+                stage="processing",
+                metadata={**message.metadata, "collected_count": len(collected_data)}
+            ),
+            DefaultTopicId()
+        )
 
-coder = autogen.AssistantAgent(
-    name="coder",
-    llm_config=llm_config,
-    system_message="You are an expert programmer who writes clean, efficient code."
-)
+@default_subscription
+class DataProcessorAgent(RoutedAgent):
+    """Agent that processes and transforms data"""
+    
+    def __init__(self) -> None:
+        super().__init__("Data processor agent that transforms collected data.")
 
-critic = autogen.AssistantAgent(
-    name="critic",
-    llm_config=llm_config,
-    system_message="You review solutions and provide constructive feedback."
-)
+    @message_handler  
+    async def handle_message(self, message: DataMessage, ctx: MessageContext) -> None:
+        if message.stage != "processing":
+            return
+            
+        print(f"⚙️ DataProcessor: Processing {len(message.data)} records")
+        
+        # Process data - add calculated fields
+        processed_data = []
+        for item in message.data:
+            processed_item = {
+                **item,
+                "processed_value": item["value"] * 1.1,  # 10% increase
+                "status": "processed"
+            }
+            processed_data.append(processed_item)
+        
+        print(f"✅ DataProcessor: Processed {len(processed_data)} records")
+        
+        # Send to analyzer
+        await self.publish_message(
+            DataMessage(
+                data=processed_data,
+                stage="analysis", 
+                metadata={**message.metadata, "processed_count": len(processed_data)}
+            ),
+            DefaultTopicId()
+        )
 
-user_proxy = autogen.UserProxyAgent(
-    name="user_proxy",
-    human_input_mode="TERMINATE",
-    max_consecutive_auto_reply=10,
-    is_termination_msg=lambda x: x.get("content", "").rstrip().endswith("TERMINATE"),
-    code_execution_config={"last_n_messages": 3, "work_dir": "coding"},
-)
+@default_subscription
+class DataAnalyzerAgent(RoutedAgent):
+    """Agent that analyzes processed data and generates insights"""
+    
+    def __init__(self) -> None:
+        super().__init__("Data analyzer agent that generates insights.")
 
-# Create a group chat
-groupchat = autogen.GroupChat(
-    agents=[user_proxy, researcher, coder, critic],
-    messages=[],
-    max_round=12
-)
+    @message_handler
+    async def handle_message(self, message: DataMessage, ctx: MessageContext) -> None:
+        if message.stage != "analysis":
+            return
+            
+        print(f"🧠 DataAnalyzer: Analyzing {len(message.data)} records")
+        
+        # Perform analysis
+        total_value = sum(item["processed_value"] for item in message.data)
+        avg_value = total_value / len(message.data)
+        categories = set(item["category"] for item in message.data)
+        
+        analysis_results = {
+            "total_records": len(message.data),
+            "total_value": total_value,
+            "average_value": avg_value,
+            "unique_categories": len(categories),
+            "categories": list(categories)
+        }
+        
+        print(f"📈 DataAnalyzer: Analysis complete")
+        print(f"   • Total records: {analysis_results['total_records']}")
+        print(f"   • Average value: {analysis_results['average_value']:.2f}")
+        print(f"   • Categories: {', '.join(analysis_results['categories'])}")
+        
+        # Send to reporter
+        await self.publish_message(
+            DataMessage(
+                data=message.data,
+                stage="reporting",
+                metadata={
+                    **message.metadata, 
+                    "analysis": analysis_results
+                }
+            ),
+            DefaultTopicId()
+        )
 
-manager = autogen.GroupChatManager(
-    groupchat=groupchat,
-    llm_config=llm_config
-)
+@default_subscription
+class ReportGeneratorAgent(RoutedAgent):
+    """Agent that generates final reports"""
+    
+    def __init__(self) -> None:
+        super().__init__("Report generator agent that creates final output.")
 
-# Initiate the group chat
-user_proxy.initiate_chat(
-    manager,
-    message="Create a Python program to analyze sentiment from Twitter data."
-)
+    @message_handler
+    async def handle_message(self, message: DataMessage, ctx: MessageContext) -> None:
+        if message.stage != "reporting":
+            return
+            
+        print(f"📝 ReportGenerator: Generating final report")
+        
+        analysis = message.metadata.get("analysis", {})
+        
+        report = f"""
+🎯 DATA PROCESSING REPORT
+========================
+Source: {message.metadata.get('source', 'Unknown')}
+Processing Date: {message.metadata.get('timestamp', 'Unknown')}
 
-# All agent interactions across the group chat are automatically tracked by AgentOps
+📊 SUMMARY STATISTICS:
+• Total Records Processed: {analysis.get('total_records', 0)}
+• Total Value: ${analysis.get('total_value', 0):,.2f}
+• Average Value: ${analysis.get('average_value', 0):,.2f}
+• Unique Categories: {analysis.get('unique_categories', 0)}
+• Categories Found: {', '.join(analysis.get('categories', []))}
+
+✅ Processing pipeline completed successfully!
+        """
+        
+        print(report)
+        print("🎉 Multi-agent data processing workflow completed!")
+
+async def run_data_processing_pipeline():
+    """Run a complete data processing pipeline using multiple AutoGen agents"""
+    
+    print("🚀 Starting AutoGen Data Processing Pipeline")
+    print("=" * 60)
+    
+    # Create runtime
+    runtime = SingleThreadedAgentRuntime()
+    
+    # Register all agents
+    await DataCollectorAgent.register(
+        runtime,
+        "collector",
+        lambda: DataCollectorAgent(),
+    )
+    
+    await DataProcessorAgent.register(
+        runtime,
+        "processor", 
+        lambda: DataProcessorAgent(),
+    )
+    
+    await DataAnalyzerAgent.register(
+        runtime,
+        "analyzer",
+        lambda: DataAnalyzerAgent(),
+    )
+    
+    await ReportGeneratorAgent.register(
+        runtime,
+        "reporter",
+        lambda: ReportGeneratorAgent(),
+    )
+    
+    # Start runtime
+    runtime.start()
+    print("🤖 AutoGen runtime with 4 agents started")
+    
+    # Trigger the pipeline
+    initial_message = DataMessage(
+        data=[],
+        stage="collection",
+        metadata={
+            "source": "customer_database",
+            "timestamp": "2024-01-15T10:30:00Z",
+            "pipeline_id": "data_proc_001"
+        }
+    )
+    
+    print("📨 Triggering data processing pipeline...")
+    await runtime.send_message(
+        initial_message,
+        AgentId("collector", "default")
+    )
+    
+    # Wait for completion
+    await runtime.stop_when_idle()
+    
+    print("=" * 60)
+    print("✨ Pipeline completed! Check AgentOps dashboard for detailed agent traces.")
+
+# Run the pipeline
+if __name__ == "__main__":
+    asyncio.run(run_data_processing_pipeline())
 ```
-</CodeGroup>
 
-## Environment Variables
+## What AgentOps Tracks
 
-<EnvTooltip />
-<CodeGroup>
-  ```python .env
-  AGENTOPS_API_KEY=<YOUR API KEY>
-  OPENAI_API_KEY=<YOUR OPENAI API KEY>
-  ```
-</CodeGroup>
+AgentOps leverages AutoGen's built-in OpenTelemetry integration to automatically capture comprehensive telemetry data:
 
-Read more about environment variables in [Advanced Configuration](/v2/usage/advanced-configuration)
+### Automatic Span Collection
+- **Agent Operations**: All agent message handling and processing operations
+- **Message Flow**: Complete trace of message routing between agents
+- **Runtime Events**: Agent registration, startup, and shutdown events
+- **Error Handling**: Automatic capture of exceptions and error states
+
+### Built-in Telemetry Integration
+AutoGen Core includes native OpenTelemetry support, and AgentOps seamlessly integrates with this telemetry system to provide:
+
+- **Zero-Configuration Tracking**: No manual instrumentation required
+- **Complete Workflow Visibility**: End-to-end trace of multi-agent interactions  
+- **Performance Metrics**: Timing data for each agent operation and message exchange
+- **Distributed Tracing**: Support for agents running across different processes or machines
+
+## Best Practices
+
+1. **Initialize Early**: Call `agentops.init()` before creating any AutoGen agents
+2. **Use Descriptive Names**: Give your agents meaningful names for better dashboard visibility
+3. **Structure Messages**: Use well-defined message classes for better tracking
+4. **Handle Errors**: Implement proper error handling in your message handlers
+5. **Monitor Performance**: Use the AgentOps dashboard to identify bottlenecks in your agent workflows
+
+## Dashboard Features
+
+The AgentOps dashboard provides:
+
+- **Agent Network Visualization**: See how your agents communicate
+- **Message Trace Timeline**: Follow the complete flow of messages
+- **Performance Analytics**: Identify slow agents or bottlenecks
+- **Error Tracking**: Monitor and debug agent failures
+- **Cost Analysis**: Track computational costs across your agent network
+
+## Example Output
+
+When you run the examples above, you'll see output like:
+
+```
+🚀 Starting AutoGen Countdown Workflow
+==================================================
+🤖 AutoGen runtime started
+📨 Sending initial message with value: 10
+✅ CheckerAgent: 10 passed validation, continuing workflow
+🔧 ModifierAgent: Transformed 10 → 9
+✅ CheckerAgent: 9 passed validation, continuing workflow
+🔧 ModifierAgent: Transformed 9 → 8
+...
+🛑 CheckerAgent: 1 failed validation, stopping workflow
+🎉 Countdown completed successfully!
+==================================================
+✨ Workflow completed! Check your AgentOps dashboard for detailed traces.
+```
+
+Visit your [AgentOps Dashboard](https://app.agentops.ai) to see detailed traces of your AutoGen agent interactions, performance metrics, and workflow analytics.
 
 <script type="module" src="/scripts/github_stars.js"></script>
 <script type="module" src="/scripts/scroll-img-fadein-animation.js"></script>
 <script type="module" src="/scripts/button_heartbeat_animation.js"></script>
-<script type="css" src="/styles/styles.css"></script>
+<script type="module" src="/scripts/adjust_api_dynamically.js"></script>

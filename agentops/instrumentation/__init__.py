@@ -183,8 +183,8 @@ PROVIDERS: dict[str, InstrumentorConfig] = {
         "min_version": "0.1.0",
     },
     "google.genai": {
-        "module_name": "agentops.instrumentation.google_generativeai",
-        "class_name": "GoogleGenerativeAIInstrumentor",
+        "module_name": "agentops.instrumentation.google_genai",
+        "class_name": "GoogleGenAIInstrumentor",
         "min_version": "0.1.0",
         "package_name": "google-genai",  # Actual pip package name
     },

@@ -1,0 +1,644 @@
+---
+title: "Trace Decorator"
+description: "Create custom traces with the @trace decorator"
+---
+
+## Basic Usage
+
+### Simple Trace Creation
+
+The `@trace` decorator automatically creates a trace span that encompasses the entire function execution. You can optionally specify custom names and tags to better organize and categorize your traces:
+
+```python
+from agentops.sdk.decorators import trace
+import agentops
+
+# Initialize AgentOps
+agentops.init("your-api-key", auto_start_session=False)
+
+@trace(name="customer-workflow", tags=["production", "customer-service"])
+def my_workflow():
+    """A simple workflow wrapped in a trace"""
+    print("🚀 Starting customer workflow...")
+    print("📋 Processing customer request...")
+    # Your application logic here
+    print("✅ Customer workflow completed successfully!")
+    return "Workflow completed"
+
+# Run the function - this creates and manages the trace automatically
+print("🎬 Running traced workflow...")
+result = my_workflow()
+print(f"📊 Result: {result}")
+```
+
+Both `name` and `tags` parameters are optional. If no name is provided, the function name will be used as the trace name.
+
+### Custom Trace Names
+
+You can specify custom names for your traces:
+
+```python
+@trace(name="customer-onboarding-flow")
+def onboard_customer(customer_data):
+    """Customer onboarding process"""
+    print(f"👋 Onboarding customer: {customer_data['name']}")
+    print("📝 Creating customer profile...")
+    print("📧 Sending welcome email...")
+    print("✅ Customer onboarding complete!")
+    return f"Onboarded customer: {customer_data['name']}"
+
+@trace(name="data-processing-pipeline")
+def process_data(input_data):
+    """Data processing workflow"""
+    print(f"📊 Processing {len(input_data)} data items...")
+    print("🔄 Applying transformations...")
+    print("✅ Data processing complete!")
+    return f"Processed {len(input_data)} items"
+
+# Usage examples
+customer = {"name": "Alice Johnson", "email": "alice@example.com"}
+result1 = onboard_customer(customer)
+print(f"📋 Onboarding result: {result1}")
+
+data_items = ["item1", "item2", "item3", "item4", "item5"]
+result2 = process_data(data_items)
+print(f"📋 Processing result: {result2}")
+```
+
+### Adding Tags to Traces
+
+Tags help categorize and filter traces in your dashboard:
+
+```python
+@trace(tags=["production", "high-priority"])
+def critical_workflow():
+    """Critical production workflow"""
+    print("🚨 Executing critical production workflow...")
+    print("⚡ High priority processing...")
+    print("✅ Critical task completed successfully!")
+    return "Critical task completed"
+
+@trace(name="user-analysis", tags=["analytics", "user-behavior"])
+def analyze_user_behavior(user_id):
+    """Analyze user behavior patterns"""
+    print(f"🔍 Analyzing behavior for user: {user_id}")
+    print("📈 Gathering user interaction data...")
+    print("🧠 Running behavior analysis algorithms...")
+    print("✅ User behavior analysis complete!")
+    return f"Analysis complete for user {user_id}"
+
+# Usage examples
+print("🎬 Running critical workflow...")
+result1 = critical_workflow()
+print(f"📊 Critical workflow result: {result1}")
+
+print("\n🎬 Running user analysis...")
+result2 = analyze_user_behavior("user_12345")
+print(f"📊 Analysis result: {result2}")
+```
+
+## Integration with Other Decorators
+
+### Combining with Agent and Operation Decorators
+
+The `@trace` decorator works seamlessly with other AgentOps decorators:
+
+```python
+import agentops
+from agentops.sdk.decorators import trace, agent, operation, tool
+
+# Initialize AgentOps without auto-starting session since we use @trace
+agentops.init("your-api-key", auto_start_session=False)
+
+@agent
+class DataAnalysisAgent:
+    def __init__(self):
+        print("🤖 DataAnalysisAgent initialized")
+    
+    @operation
+    def collect_data(self, source):
+        print(f"📊 Collecting data from {source}...")
+        data = f"Data collected from {source}"
+        print(f"✅ Data collection complete: {data}")
+        return data
+    
+    @tool(cost=0.05)
+    def analyze_data(self, data):
+        print(f"🧠 Analyzing data: {data}")
+        analysis = f"Analysis of {data}"
+        print(f"✅ Analysis complete: {analysis}")
+        return analysis
+    
+    @operation
+    def generate_report(self, analysis):
+        print(f"📝 Generating report from: {analysis}")
+        report = f"Report: {analysis}"
+        print(f"✅ Report generated: {report}")
+        return report
+
+@trace(name="complete-analysis-workflow")
+def run_analysis_workflow(data_source):
+    """Complete data analysis workflow"""
+    print(f"🚀 Starting analysis workflow for: {data_source}")
+    print("=" * 50)
+    
+    agent = DataAnalysisAgent()
+    
+    # Collect data
+    print("\n📋 Step 1: Data Collection")
+    data = agent.collect_data(data_source)
+    
+    # Analyze data
+    print("\n📋 Step 2: Data Analysis")
+    analysis = agent.analyze_data(data)
+    
+    # Generate report
+    print("\n📋 Step 3: Report Generation")
+    report = agent.generate_report(analysis)
+    
+    print("\n🎉 Workflow completed successfully!")
+    print("=" * 50)
+    
+    return {
+        "source": data_source,
+        "report": report
+    }
+
+# Usage
+print("🎬 Running complete analysis workflow...")
+result = run_analysis_workflow("customer_database")
+print(f"\n📊 Final Result:")
+print(f"   Source: {result['source']}")
+print(f"   Report: {result['report']}")
+```
+
+## Async Function Support
+
+The `@trace` decorator fully supports async functions:
+
+```python
+import asyncio
+import agentops
+from agentops.sdk.decorators import trace, operation
+
+# Initialize AgentOps without auto-starting session since we use @trace
+agentops.init("your-api-key", auto_start_session=False)
+
+@operation
+async def fetch_user_data(user_id):
+    """Simulate async data fetching"""
+    print(f"🌐 Fetching data for user: {user_id}")
+    await asyncio.sleep(1)  # Simulate API call
+    data = f"User data for {user_id}"
+    print(f"✅ Data fetched: {data}")
+    return data
+
+@operation
+async def process_user_data(user_data):
+    """Simulate async data processing"""
+    print(f"⚙️ Processing user data: {user_data}")
+    await asyncio.sleep(0.5)  # Simulate processing
+    processed = f"Processed: {user_data}"
+    print(f"✅ Processing complete: {processed}")
+    return processed
+
+@trace(name="async-user-workflow")
+async def async_user_workflow(user_id):
+    """Async workflow for user processing"""
+    print(f"🚀 Starting async workflow for user: {user_id}")
+    print("=" * 45)
+    
+    print("\n📋 Step 1: Fetching user data")
+    user_data = await fetch_user_data(user_id)
+    
+    print("\n📋 Step 2: Processing user data")
+    processed_data = await process_user_data(user_data)
+    
+    print("\n🎉 Async workflow completed!")
+    print("=" * 45)
+    
+    return processed_data
+
+# Usage
+async def main():
+    print("🎬 Running async user workflow...")
+    result = await async_user_workflow("user_123")
+    print(f"\n📊 Final Result: {result}")
+    print("✨ Check your AgentOps dashboard to see the traced async workflow!")
+
+# Run the async workflow
+print("🔄 Starting async demo...")
+asyncio.run(main())
+```
+
+## Error Handling and Trace States
+
+### Automatic Error Handling
+
+The `@trace` decorator automatically handles exceptions and sets appropriate trace states:
+
+```python
+import agentops
+from agentops.sdk.decorators import trace
+
+# Initialize AgentOps without auto-starting session since we use @trace
+agentops.init("your-api-key", auto_start_session=False)
+
+@trace(name="error-prone-workflow")
+def risky_operation():
+    """Operation that might fail"""
+    import random
+    
+    print("🎲 Running risky operation...")
+    print("⚠️ This operation has a 50% chance of failure")
+    
+    if random.random() < 0.5:
+        print("❌ Operation failed!")
+        raise ValueError("Random failure occurred")
+    
+    print("✅ Operation succeeded!")
+    return "Operation succeeded"
+
+# The trace will automatically be marked with failure state if an exception occurs
+print("🎬 Testing automatic error handling...")
+for i in range(3):
+    print(f"\n🔄 Attempt {i+1}:")
+    try:
+        result = risky_operation()
+        print(f"📊 Success: {result}")
+        break
+    except ValueError as e:
+        print(f"📊 Operation failed: {e}")
+        print("🔍 Trace automatically ended with error state")
+```
+
+### Custom Error Handling
+
+You can implement custom error handling within traced functions:
+
+```python
+@trace(name="robust-workflow")
+def robust_operation(data):
+    """Operation with custom error handling"""
+    print(f"🚀 Starting robust operation with data: {data}")
+    
+    try:
+        # Risky operation
+        if not data:
+            print("⚠️ No data provided!")
+            raise ValueError("No data provided")
+        
+        # Process data
+        print("⚙️ Processing data...")
+        result = f"Processed: {data}"
+        print(f"✅ Processing successful: {result}")
+        return {"success": True, "result": result}
+        
+    except ValueError as e:
+        # Handle specific errors
+        print(f"❌ Validation error: {e}")
+        return {"success": False, "error": str(e)}
+    except Exception as e:
+        # Handle unexpected errors
+        print(f"💥 Unexpected error: {e}")
+        return {"success": False, "error": f"Unexpected error: {str(e)}"}
+
+# Usage examples
+print("\n🎬 Testing custom error handling...")
+
+print("\n📋 Test 1: Valid data")
+result1 = robust_operation("valid_data")
+print(f"📊 Result: {result1}")
+
+print("\n📋 Test 2: Empty data")
+result2 = robust_operation("")
+print(f"📊 Result: {result2}")
+
+print("\n📋 Test 3: None data")
+result3 = robust_operation(None)
+print(f"📊 Result: {result3}")
+```
+
+## Real-World Examples
+
+### E-commerce Order Processing
+
+```python
+from agentops.sdk.decorators import trace, agent, operation, tool
+from openai import OpenAI
+import agentops
+
+agentops.init("your-api-key", auto_start_session=False)
+
+@agent
+class OrderProcessor:
+    def __init__(self):
+        print("🛒 OrderProcessor initialized")
+    
+    @tool(cost=0.01)
+    def validate_payment(self, payment_info):
+        """Payment validation service"""
+        print(f"💳 Validating payment: {payment_info['card']}")
+        result = {"valid": True, "transaction_id": "txn_123"}
+        print(f"✅ Payment validation successful: {result['transaction_id']}")
+        return result
+    
+    @tool(cost=0.02)
+    def check_inventory(self, product_id, quantity):
+        """Inventory check service"""
+        print(f"📦 Checking inventory for {product_id} (qty: {quantity})")
+        result = {"available": True, "reserved": quantity}
+        print(f"✅ Inventory check complete: {quantity} units available")
+        return result
+    
+    @operation
+    def calculate_shipping(self, address, items):
+        """Calculate shipping costs"""
+        print(f"🚚 Calculating shipping to {address['city']}, {address['state']}")
+        result = {"cost": 9.99, "method": "standard"}
+        print(f"✅ Shipping calculated: ${result['cost']} ({result['method']})")
+        return result
+    
+    @tool(cost=0.005)
+    def send_confirmation_email(self, email, order_details):
+        """Email service"""
+        print(f"📧 Sending confirmation email to {email}")
+        result = f"Confirmation sent to {email}"
+        print(f"✅ Email sent successfully")
+        return result
+
+@trace(name="order-processing", tags=["ecommerce", "orders"])
+def process_order(order_data):
+    """Complete order processing workflow"""
+    print(f"🚀 Starting order processing for {order_data['customer_email']}")
+    print("=" * 60)
+    
+    processor = OrderProcessor()
+    
+    try:
+        # Validate payment
+        print("\n📋 Step 1: Payment Validation")
+        payment_result = processor.validate_payment(order_data["payment"])
+        if not payment_result["valid"]:
+            print("❌ Payment validation failed!")
+            return {"success": False, "error": "Payment validation failed"}
+        
+        # Check inventory for all items
+        print("\n📋 Step 2: Inventory Check")
+        for item in order_data["items"]:
+            inventory_result = processor.check_inventory(
+                item["product_id"], 
+                item["quantity"]
+            )
+            if not inventory_result["available"]:
+                print(f"❌ Item {item['product_id']} not available!")
+                return {"success": False, "error": f"Item {item['product_id']} not available"}
+        
+        # Calculate shipping
+        print("\n📋 Step 3: Shipping Calculation")
+        shipping = processor.calculate_shipping(
+            order_data["shipping_address"], 
+            order_data["items"]
+        )
+        
+        # Send confirmation
+        print("\n📋 Step 4: Confirmation Email")
+        confirmation = processor.send_confirmation_email(
+            order_data["customer_email"],
+            {
+                "items": order_data["items"],
+                "shipping": shipping,
+                "payment": payment_result
+            }
+        )
+        
+        print("\n🎉 Order processing completed successfully!")
+        print("=" * 60)
+        
+        return {
+            "success": True,
+            "order_id": "ORD_12345",
+            "payment": payment_result,
+            "shipping": shipping,
+            "confirmation": confirmation
+        }
+        
+    except Exception as e:
+        print(f"💥 Order processing failed: {e}")
+        return {"success": False, "error": str(e)}
+
+# Usage
+print("🎬 Running e-commerce order processing demo...")
+
+order = {
+    "customer_email": "customer@example.com",
+    "payment": {"card": "****1234", "amount": 99.99},
+    "items": [{"product_id": "PROD_001", "quantity": 2}],
+    "shipping_address": {"city": "New York", "state": "NY"}
+}
+
+result = process_order(order)
+
+print(f"\n📊 ORDER PROCESSING RESULT:")
+print(f"   Success: {result['success']}")
+if result['success']:
+    print(f"   Order ID: {result['order_id']}")
+    print(f"   Transaction: {result['payment']['transaction_id']}")
+    print(f"   Shipping: ${result['shipping']['cost']}")
+else:
+    print(f"   Error: {result['error']}")
+```
+
+### Data Analysis Workflow
+
+```python
+from agentops.sdk.decorators import trace, agent, operation, tool
+from openai import OpenAI
+import agentops
+
+agentops.init("your-api-key", auto_start_session=False)
+
+@agent
+class DataAnalysisAgent:
+    def __init__(self):
+        self.client = OpenAI()
+        print("🤖 DataAnalysisAgent initialized")
+    
+    @operation
+    def collect_data(self, source):
+        """Simulate data collection"""
+        print(f"📊 Collecting data from {source}...")
+        data = f"Raw data collected from {source}: [sample_data_1, sample_data_2, sample_data_3]"
+        print(f"✅ Data collection complete: {len(data)} characters collected")
+        return data
+    
+    @operation
+    def analyze_data_with_llm(self, data):
+        """Use LLM to analyze the collected data"""
+        print("🧠 Analyzing data with LLM...")
+        response = self.client.chat.completions.create(
+            model="gpt-4o",
+            messages=[
+                {"role": "system", "content": "You are a data analyst. Analyze the provided data and give insights."},
+                {"role": "user", "content": f"Please analyze this data: {data}"}
+            ]
+        )
+        analysis = response.choices[0].message.content
+        print(f"✅ LLM analysis complete: {len(analysis)} characters generated")
+        return analysis
+    
+    @tool(cost=0.05)
+    def generate_visualization(self, analysis):
+        """Generate data visualization"""
+        print("📈 Generating visualization...")
+        visualization = f"Chart generated for: {analysis[:50]}..."
+        print(f"✅ Visualization generated: {visualization}")
+        return visualization
+    
+    @operation
+    def generate_report(self, analysis, visualization):
+        """Generate final report using LLM"""
+        print("📝 Generating final report with LLM...")
+        response = self.client.chat.completions.create(
+            model="gpt-4o",
+            messages=[
+                {"role": "system", "content": "You are a report writer. Create a professional data analysis report."},
+                {"role": "user", "content": f"Create a report based on this analysis: {analysis} and visualization: {visualization}"}
+            ]
+        )
+        report = response.choices[0].message.content
+        print(f"✅ Final report generated: {len(report)} characters")
+        return report
+
+@trace(name="data-analysis-workflow", tags=["analytics", "reporting"])
+def run_data_analysis(data_source):
+    """Complete data analysis workflow with LLM integration"""
+    print(f"🚀 Starting data analysis workflow for: {data_source}")
+    print("=" * 60)
+    
+    agent = DataAnalysisAgent()
+    
+    # Collect data
+    print("\n📋 Step 1: Data Collection")
+    raw_data = agent.collect_data(data_source)
+    
+    # Analyze data using LLM
+    print("\n📋 Step 2: LLM Analysis")
+    analysis = agent.analyze_data_with_llm(raw_data)
+    
+    # Generate visualization
+    print("\n📋 Step 3: Visualization Generation")
+    visualization = agent.generate_visualization(analysis)
+    
+    # Generate final report using LLM
+    print("\n📋 Step 4: Report Generation")
+    report = agent.generate_report(analysis, visualization)
+    
+    print("\n🎉 Workflow completed successfully!")
+    print("=" * 60)
+    
+    return {
+        "source": data_source,
+        "raw_data": raw_data,
+        "analysis": analysis,
+        "visualization": visualization,
+        "final_report": report
+    }
+
+# Usage
+print("🎬 Running data analysis workflow demo...")
+
+result = run_data_analysis("customer_database")
+
+print(f"\n📊 ANALYSIS RESULTS:")
+print(f"   Data Source: {result['source']}")
+print(f"   Raw Data: {result['raw_data'][:80]}...")
+print(f"   Analysis Preview: {result['analysis'][:100]}...")
+print(f"   Visualization: {result['visualization']}")
+print(f"   Final Report Preview: {result['final_report'][:150]}...")
+
+print(f"\n✨ Analysis complete! Check your AgentOps dashboard to see the traced workflow.")
+```
+
+## Best Practices
+
+### 1. Use Meaningful Names
+
+Choose descriptive names that clearly indicate what the trace represents:
+
+```python
+# Good
+@trace(name="user-authentication-flow")
+def authenticate_user(credentials):
+    pass
+
+@trace(name="payment-processing-pipeline")
+def process_payment(payment_data):
+    pass
+
+# Less descriptive
+@trace(name="trace1")
+def some_function():
+    pass
+```
+
+### 2. Add Relevant Tags
+
+Use tags to categorize traces for easier filtering and analysis:
+
+```python
+@trace(name="order-fulfillment", tags=["ecommerce", "fulfillment", "high-priority"])
+def fulfill_order(order_id):
+    pass
+
+@trace(name="data-sync", tags=["background-job", "data-processing"])
+def sync_data():
+    pass
+```
+
+### 3. Keep Traces Focused
+
+Each trace should represent a logical unit of work:
+
+```python
+# Good - focused on a single workflow
+@trace(name="customer-onboarding")
+def onboard_customer(customer_data):
+    validate_customer(customer_data)
+    create_account(customer_data)
+    send_welcome_email(customer_data)
+
+# Less focused - mixing different concerns
+@trace(name="mixed-operations")
+def do_everything():
+    onboard_customer(data1)
+    process_orders(data2)
+    generate_reports(data3)
+```
+
+### 4. Handle Errors Appropriately
+
+Implement proper error handling within traced functions:
+
+```python
+@trace(name="data-processing")
+def process_data(data):
+    try:
+        # Main processing logic
+        result = complex_processing(data)
+        return {"success": True, "result": result}
+    except ValidationError as e:
+        # Expected errors
+        return {"success": False, "error": "validation_failed", "details": str(e)}
+    except Exception as e:
+        # Unexpected errors
+        logger.error(f"Unexpected error in data processing: {e}")
+        return {"success": False, "error": "processing_failed"}
+```
+
+The `@trace` decorator provides a powerful and flexible way to organize your application's telemetry data. By creating logical groupings of operations, you can better understand your application's behavior and performance characteristics in the AgentOps dashboard.
+
+<script type="module" src="/scripts/github_stars.js"></script>
+<script type="module" src="/scripts/scroll-img-fadein-animation.js"></script>
+<script type="module" src="/scripts/button_heartbeat_animation.js"></script>
+<script type="module" src="/scripts/adjust_api_dynamically.js"></script> 
