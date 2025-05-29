@@ -90,6 +90,20 @@ dev = [
     "ipython>=8.18.1",
 ]
 
+dev-llm = [
+    # LLM Provider Packages
+    "openai>=1.82.1",
+    "anthropic>=0.52.1",
+    "ibm-watsonx-ai>=1.3.23",
+    "google-genai>=1.17.0",
+    # Agentic Framework Packages
+    "crewai>=0.121.1",
+    "autogen-agentchat>=0.5.7", # microsoft autogen, the one where it all began
+    "ag2>=0.9.1.post0", # same as autogen package, references ag2
+    "openai-agents>=0.0.16",
+    "google-adk>=1.1.1",
+]
+
 [project.urls]
 Homepage = "https://github.com/AgentOps-AI/agentops"
 Issues = "https://github.com/AgentOps-AI/agentops/issues"
@@ -190,4 +204,3 @@ exclude = [
 
 [tool.hatch.metadata]
 allow-direct-references = true
-
