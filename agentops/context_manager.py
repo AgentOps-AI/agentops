@@ -3,6 +3,8 @@ Context manager for AgentOps SDK initialization and lifecycle management.
 """
 
 from typing import Optional, Any, Dict
+from opentelemetry import context as context_api
+
 from agentops.logging import logger
 from agentops.sdk.core import TracingCore, TraceContext
 from agentops.legacy import Session
@@ -36,6 +38,7 @@ class AgentOpsContextManager:
         self.trace_context: Optional[TraceContext] = None
         self.managed_session: Optional[Session] = None
         self._created_trace = False
+        self._context_token: Optional[context_api.Token] = None
 
     def __enter__(self) -> Optional[Session]:
         """
@@ -165,17 +168,29 @@ class InitializationProxy:
     def _ensure_initialized(self):
         """Ensure the client is initialized for non-context usage."""
         if not self._initialized:
-            self._result = self.client.init(**self.init_kwargs)
-            self._initialized = True
+            try:
+                self._result = self.client.init(**self.init_kwargs)
+                self._initialized = True
+            except Exception as e:
+                self._initialized = True  # Mark as attempted
+                self._result = None
+                # Re-raise the exception so it propagates to the caller
+                raise e
 
     def __enter__(self):
-        """Delegate to AgentOpsContextManager for context manager usage."""
+        """
+        Delegate to AgentOpsContextManager for context manager usage.
+        """
         ctx_manager = AgentOpsContextManager(self.client, self.init_kwargs)
         self._ctx_manager = ctx_manager
         return ctx_manager.__enter__()
 
     def __exit__(self, exc_type, exc_val, exc_tb):
-        """Delegate to AgentOpsContextManager for context manager usage."""
+        """
+        Delegate to AgentOpsContextManager for context manager usage.
+
+        This ensures proper cleanup following OpenTelemetry patterns.
+        """
         if hasattr(self, "_ctx_manager"):
             return self._ctx_manager.__exit__(exc_type, exc_val, exc_tb)
         return False
@@ -188,6 +203,10 @@ class InitializationProxy:
         session = agentops.init(...)
         session.record(event)  # This triggers initialization
         """
+        # Special handling for certain attributes to avoid infinite recursion
+        if name.startswith("_"):
+            raise AttributeError(f"'{self.__class__.__name__}' object has no attribute '{name}'")
+
         self._ensure_initialized()
         if self._result is not None:
             return getattr(self._result, name)
@@ -201,13 +220,16 @@ class InitializationProxy:
         if agentops.init(...):
             # Initialization successful
         """
-        self._ensure_initialized()
-        return bool(self._result)
+        try:
+            self._ensure_initialized()
+            return bool(self._result)
+        except Exception:
+            return False
 
     def __repr__(self) -> str:
-        """String representation."""
+        """String representation that clearly identifies this as a proxy."""
         if self._initialized:
-            return repr(self._result) if self._result else "<InitializationProxy(result=None)>"
+            return f"<InitializationProxy(result={repr(self._result)})>"
         return "<InitializationProxy(pending)>"
 
     def __eq__(self, other) -> bool:
@@ -226,13 +248,95 @@ class InitializationProxy:
 
     def __str__(self) -> str:
         """String conversion."""
-        self._ensure_initialized()
-        return str(self._result) if self._result else "None"
+        try:
+            self._ensure_initialized()
+            if self._result is not None and hasattr(self._result, "__str__"):
+                return str(self._result)
+            return "None"
+        except Exception:
+            return "<InitializationProxy(failed)>"
 
-    @property
-    def __class__(self):
-        """Return the class of the wrapped result for isinstance checks."""
+    def get_wrapped_result(self):
+        """
+        Get the actual wrapped result object.
+
+        This method provides explicit access to the wrapped object
+        for cases where direct access is needed.
+
+        Returns:
+            The actual result object from client.init()
+        """
         self._ensure_initialized()
-        if self._result is not None:
-            return self._result.__class__
-        return InitializationProxy
+        return self._result
+
+    def get_proxy_type(self) -> str:
+        """
+        Get the type of this proxy for debugging purposes.
+
+        This method makes it clear that this is a proxy object,
+        which helps with debugging and introspection.
+
+        Returns:
+            String identifying this as an InitializationProxy
+        """
+        return "InitializationProxy"
+
+    def is_context_manager(self) -> bool:
+        """
+        Check if this proxy can be used as a context manager.
+
+        Returns:
+            True, since this proxy supports context manager protocol
+        """
+        return True
+
+    def __len__(self) -> int:
+        """Support len() function."""
+        self._ensure_initialized()
+        if self._result is not None and hasattr(self._result, "__len__"):
+            return len(self._result)
+        raise TypeError(f"object of type '{self.__class__.__name__}' has no len()")
+
+    def __iter__(self):
+        """Support iteration."""
+        self._ensure_initialized()
+        if self._result is not None and hasattr(self._result, "__iter__"):
+            return iter(self._result)
+        raise TypeError(f"'{self.__class__.__name__}' object is not iterable")
+
+    def __contains__(self, item) -> bool:
+        """Support 'in' operator."""
+        self._ensure_initialized()
+        if self._result is not None and hasattr(self._result, "__contains__"):
+            return item in self._result
+        return False
+
+    def __getitem__(self, key):
+        """Support indexing and slicing."""
+        self._ensure_initialized()
+        if self._result is not None and hasattr(self._result, "__getitem__"):
+            return self._result[key]
+        raise TypeError(f"'{self.__class__.__name__}' object is not subscriptable")
+
+    def __setitem__(self, key, value):
+        """Support item assignment."""
+        self._ensure_initialized()
+        if self._result is not None and hasattr(self._result, "__setitem__"):
+            self._result[key] = value
+        else:
+            raise TypeError(f"'{self.__class__.__name__}' object does not support item assignment")
+
+    def __delitem__(self, key):
+        """Support item deletion."""
+        self._ensure_initialized()
+        if self._result is not None and hasattr(self._result, "__delitem__"):
+            del self._result[key]
+        else:
+            raise TypeError(f"'{self.__class__.__name__}' object doesn't support item deletion")
+
+    def __call__(self, *args, **kwargs):
+        """Support calling the proxy as a function."""
+        self._ensure_initialized()
+        if self._result is not None and callable(self._result):
+            return self._result(*args, **kwargs)
+        raise TypeError(f"'{self.__class__.__name__}' object is not callable")
