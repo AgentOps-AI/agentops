@@ -16,6 +16,7 @@ from typing import List, Optional, Union, Dict, Any
 from agentops.client import Client
 from agentops.sdk.core import TracingCore, TraceContext
 from agentops.sdk.decorators import trace, session, agent, task, workflow, operation
+from agentops.context_manager import InitializationProxy
 
 from agentops.logging.config import logger
 
@@ -106,24 +107,28 @@ def init(
     elif default_tags:
         merged_tags = default_tags
 
-    return _client.init(
-        api_key=api_key,
-        endpoint=endpoint,
-        app_url=app_url,
-        max_wait_time=max_wait_time,
-        max_queue_size=max_queue_size,
-        default_tags=merged_tags,
-        trace_name=trace_name,
-        instrument_llm_calls=instrument_llm_calls,
-        auto_start_session=auto_start_session,
-        auto_init=auto_init,
-        skip_auto_end_session=skip_auto_end_session,
-        env_data_opt_out=env_data_opt_out,
-        log_level=log_level,
-        fail_safe=fail_safe,
-        exporter_endpoint=exporter_endpoint,
+    # Prepare initialization arguments
+    init_kwargs = {
+        "api_key": api_key,
+        "endpoint": endpoint,
+        "app_url": app_url,
+        "max_wait_time": max_wait_time,
+        "max_queue_size": max_queue_size,
+        "default_tags": merged_tags,
+        "trace_name": trace_name,
+        "instrument_llm_calls": instrument_llm_calls,
+        "auto_start_session": auto_start_session,
+        "auto_init": auto_init,
+        "skip_auto_end_session": skip_auto_end_session,
+        "env_data_opt_out": env_data_opt_out,
+        "log_level": log_level,
+        "fail_safe": fail_safe,
+        "exporter_endpoint": exporter_endpoint,
         **kwargs,
-    )
+    }
+
+    # Return a proxy that supports both regular and context manager usage
+    return InitializationProxy(_client, init_kwargs)
 
 
 def configure(**kwargs):
