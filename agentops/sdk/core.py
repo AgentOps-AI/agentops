@@ -46,6 +46,9 @@ class TraceContext:
             self._end_state = "Error"
             if exc_val:
                 logger.debug(f"Trace exiting with exception: {exc_val}")
+        else:
+            # No exception occurred, set to Success
+            self._end_state = "Success"
 
         try:
             TracingCore.get_instance().end_trace(self, self._end_state)
