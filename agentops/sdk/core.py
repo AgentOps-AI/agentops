@@ -42,7 +42,17 @@ class TraceContext:
         return self
 
     def __exit__(self, exc_type: Optional[type], exc_val: Optional[Exception], exc_tb: Optional[Any]) -> bool:
-        """Exit the trace context and end the trace."""
+        """Exit the trace context and end the trace.
+
+        Automatically sets the trace status based on whether an exception occurred:
+        - If an exception is present, sets status to ERROR
+        - If no exception occurred, sets status to OK
+
+        Returns:
+            False: Always returns False to propagate any exceptions that occurred
+                  within the context manager block, following Python's
+                  context manager protocol for proper exception handling.
+        """
         if exc_type is not None:
             self._end_state = StatusCode.ERROR
             if exc_val:
@@ -534,7 +544,9 @@ class TracingCore:
             trace_id = str(span.get_span_context().trace_id)
 
         # Convert TraceState enum to StatusCode if needed
-        if hasattr(end_state, "to_status_code"):
+        from agentops.enums import TraceState
+
+        if isinstance(end_state, TraceState):
             # It's a TraceState enum
             state_str = str(end_state)
         elif isinstance(end_state, StatusCode):
