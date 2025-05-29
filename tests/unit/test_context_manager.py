@@ -11,6 +11,8 @@ import time
 import asyncio
 from unittest.mock import Mock, patch, call
 from agentops.sdk.core import TraceContext
+from agentops.enums import TraceState
+from opentelemetry.trace.status import StatusCode
 from agentops import start_trace, end_trace
 
 
@@ -51,8 +53,8 @@ class TestContextManager:
         # Call __exit__ without exception
         result = trace_context.__exit__(None, None, None)
 
-        # Verify end_trace was called with Success state
-        mock_tracing_core.end_trace.assert_called_once_with(trace_context, "Success")
+        # Verify end_trace was called with SUCCESS state
+        mock_tracing_core.end_trace.assert_called_once_with(trace_context, StatusCode.OK)
         assert result is False  # Should not suppress exceptions
 
     @patch("agentops.sdk.core.TracingCore.get_instance")
@@ -71,8 +73,8 @@ class TestContextManager:
 
         result = trace_context.__exit__(exc_type, exc_val, exc_tb)
 
-        # Verify end_trace was called with Error state
-        mock_tracing_core.end_trace.assert_called_once_with(trace_context, "Error")
+        # Verify end_trace was called with ERROR state
+        mock_tracing_core.end_trace.assert_called_once_with(trace_context, StatusCode.ERROR)
         assert result is False  # Should not suppress exceptions
 
     @patch("agentops.sdk.core.TracingCore.get_instance")
@@ -98,7 +100,7 @@ class TestContextManager:
 
         # Verify start_trace and end_trace were called
         mock_tracing_core.start_trace.assert_called_once_with(trace_name="test_trace", tags=None)
-        mock_tracing_core.end_trace.assert_called_once_with(mock_trace_context, "Success")
+        mock_tracing_core.end_trace.assert_called_once_with(mock_trace_context, StatusCode.OK)
 
     @patch("agentops.sdk.core.TracingCore.get_instance")
     def test_context_manager_with_exception(self, mock_get_instance):
@@ -117,7 +119,7 @@ class TestContextManager:
                 raise ValueError("test error")
 
         # Verify end_trace was called with Error state
-        mock_tracing_core.end_trace.assert_called_once_with(mock_trace_context, "Error")
+        mock_tracing_core.end_trace.assert_called_once_with(mock_trace_context, StatusCode.ERROR)
 
     @patch("agentops.init")
     @patch("agentops.sdk.core.TracingCore.get_instance")
@@ -224,8 +226,8 @@ class TestContextManager:
         # Verify the order of end_trace calls (inner first, then outer)
         mock_tracing_core.end_trace.assert_has_calls(
             [
-                call(mock_trace2, "Success"),  # inner trace ends first
-                call(mock_trace1, "Success"),  # outer trace ends second
+                call(mock_trace2, StatusCode.OK),  # inner trace ends first
+                call(mock_trace1, StatusCode.OK),  # outer trace ends second
             ]
         )
 
@@ -252,8 +254,8 @@ class TestContextManager:
         # Verify both traces ended with appropriate states
         mock_tracing_core.end_trace.assert_has_calls(
             [
-                call(mock_trace2, "Error"),  # inner trace ends with Error
-                call(mock_trace1, "Error"),  # outer trace also ends with Error due to exception propagation
+                call(mock_trace2, StatusCode.ERROR),  # inner trace ends with Error
+                call(mock_trace1, StatusCode.ERROR),  # outer trace also ends with Error due to exception propagation
             ]
         )
 
@@ -271,7 +273,7 @@ class TestContextManager:
         assert trace_context.span is mock_span
         assert trace_context.token is mock_token
         assert trace_context.is_init_trace is True
-        assert trace_context._end_state == "Indeterminate"  # Default state before exit
+        assert trace_context._end_state == StatusCode.UNSET  # Default state before exit
 
     @patch("agentops.sdk.core.TracingCore.get_instance")
     def test_multiple_exceptions_in_sequence(self, mock_get_instance):
@@ -293,7 +295,7 @@ class TestContextManager:
         # Verify all traces ended with Error state
         assert mock_tracing_core.end_trace.call_count == 3
         for i, mock_trace in enumerate(mock_traces):
-            mock_tracing_core.end_trace.assert_any_call(mock_trace, "Error")
+            mock_tracing_core.end_trace.assert_any_call(mock_trace, StatusCode.ERROR)
 
     @patch("agentops.sdk.core.TracingCore.get_instance")
     def test_trace_with_tags_dict(self, mock_get_instance):
@@ -413,7 +415,7 @@ class TestContextManager:
 
         # Verify trace was still properly ended
         mock_tracing_core.start_trace.assert_called_once()
-        mock_tracing_core.end_trace.assert_called_once_with(mock_trace, "Success")
+        mock_tracing_core.end_trace.assert_called_once_with(mock_trace, StatusCode.OK)
 
     @patch("agentops.sdk.core.TracingCore.get_instance")
     def test_context_manager_with_finally_block(self, mock_get_instance):
@@ -441,7 +443,7 @@ class TestContextManager:
         assert finally_executed == ["finally_block"]
 
         # Verify trace was ended with Error state
-        mock_tracing_core.end_trace.assert_called_once_with(mock_trace, "Error")
+        mock_tracing_core.end_trace.assert_called_once_with(mock_trace, StatusCode.ERROR)
 
     @patch("agentops.sdk.core.TracingCore.get_instance")
     def test_backwards_compatibility_existing_patterns(self, mock_get_instance):
@@ -472,7 +474,7 @@ class TestContextManager:
 
         # Pattern 4: Manual end_trace (should still work)
         trace = start_trace("manual")
-        end_trace(trace, "Success")
+        end_trace(trace, StatusCode.OK)
 
         # Verify all calls were made correctly
         assert mock_tracing_core.start_trace.call_count == 4
@@ -574,11 +576,11 @@ class TestContextManager:
         trace_context = TraceContext(mock_span)
 
         # Test initial state
-        assert trace_context._end_state == "Indeterminate"
+        assert trace_context._end_state == StatusCode.UNSET
 
         # Test state change on exception
         trace_context.__exit__(ValueError, ValueError("test"), None)
-        assert trace_context._end_state == "Error"
+        assert trace_context._end_state == StatusCode.ERROR
 
     @patch("agentops.sdk.core.TracingCore.get_instance")
     def test_context_manager_with_async_context(self, mock_get_instance):
@@ -602,7 +604,7 @@ class TestContextManager:
         # Verify trace was handled correctly
         assert result is mock_trace
         mock_tracing_core.start_trace.assert_called_once()
-        mock_tracing_core.end_trace.assert_called_once_with(mock_trace, "Success")
+        mock_tracing_core.end_trace.assert_called_once_with(mock_trace, StatusCode.OK)
 
 
 class TestContextManagerBackwardCompatibility:
@@ -675,7 +677,7 @@ class TestContextManagerBackwardCompatibility:
             [call(trace_name="test", tags=["tag"]), call(trace_name="test2", tags=None)]
         )
         mock_tracing_core.end_trace.assert_has_calls(
-            [call(trace_context=trace1, end_state="Success"), call(trace_context=trace2, end_state="Success")]
+            [call(trace_context=trace1, end_state="Success"), call(trace_context=trace2, end_state=TraceState.SUCCESS)]
         )
 
     def test_return_type_compatibility(self):
@@ -713,7 +715,7 @@ class TestContextManagerBackwardCompatibility:
                 raise KeyboardInterrupt("User interrupted")
 
         # Verify trace was ended with Error state
-        mock_tracing_core.end_trace.assert_called_once_with(mock_trace, "Error")
+        mock_tracing_core.end_trace.assert_called_once_with(mock_trace, StatusCode.ERROR)
 
     @patch("agentops.sdk.core.TracingCore.get_instance")
     def test_context_manager_with_system_exit(self, mock_get_instance):
@@ -732,7 +734,7 @@ class TestContextManagerBackwardCompatibility:
                 raise SystemExit(1)
 
         # Verify trace was ended with Error state
-        mock_tracing_core.end_trace.assert_called_once_with(mock_trace, "Error")
+        mock_tracing_core.end_trace.assert_called_once_with(mock_trace, StatusCode.ERROR)
 
     @patch("agentops.sdk.core.TracingCore.get_instance")
     def test_context_manager_in_generator_function(self, mock_get_instance):
@@ -760,7 +762,7 @@ class TestContextManagerBackwardCompatibility:
 
         # Verify trace was properly managed
         mock_tracing_core.start_trace.assert_called_once()
-        mock_tracing_core.end_trace.assert_called_once_with(mock_trace, "Success")
+        mock_tracing_core.end_trace.assert_called_once_with(mock_trace, StatusCode.OK)
 
     def test_context_manager_exit_return_value(self):
         """Test that __exit__ always returns False (doesn't suppress exceptions)."""
@@ -800,7 +802,7 @@ class TestContextManagerBackwardCompatibility:
 
         # Verify the large data was passed correctly
         mock_tracing_core.start_trace.assert_called_once_with(trace_name=large_trace_name, tags=large_tags)
-        mock_tracing_core.end_trace.assert_called_once_with(mock_trace, "Success")
+        mock_tracing_core.end_trace.assert_called_once_with(mock_trace, StatusCode.OK)
 
     @patch("agentops.sdk.core.TracingCore.get_instance")
     def test_context_manager_with_asyncio_tasks(self, mock_get_instance):
@@ -862,7 +864,7 @@ class TestContextManagerBackwardCompatibility:
             # Normal execution
 
         # Verify end_trace was attempted despite the failure
-        mock_tracing_core.end_trace.assert_called_once_with(mock_trace, "Success")
+        mock_tracing_core.end_trace.assert_called_once_with(mock_trace, StatusCode.OK)
 
         # Verify the trace state was still updated
-        assert mock_trace._end_state == "Success"
+        assert mock_trace._end_state == StatusCode.OK
