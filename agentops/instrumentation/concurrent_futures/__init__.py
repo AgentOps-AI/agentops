@@ -7,4 +7,4 @@ proper OpenTelemetry context propagation across thread boundaries.
 
 from .instrumentation import ConcurrentFuturesInstrumentor
 
-__all__ = ["ConcurrentFuturesInstrumentor"] 
+__all__ = ["ConcurrentFuturesInstrumentor"]

@@ -69,7 +69,7 @@ def _should_instrument_package(package_name: str) -> bool:
     Handles special cases for agentic libraries, providers, and utility instrumentors.
     """
     global _has_agentic_library
-    
+
     # If this is an agentic library, uninstrument all providers first
     if package_name in AGENTIC_LIBRARIES:
         _uninstrument_providers()
@@ -79,7 +79,7 @@ def _should_instrument_package(package_name: str) -> bool:
     # Skip providers if an agentic library is already instrumented
     if package_name in PROVIDERS and _has_agentic_library:
         return False
-    
+
     # Utility instrumentors are always enabled regardless of agentic library state
     if package_name in UTILITY_INSTRUMENTORS:
         return not _is_package_instrumented(package_name)
@@ -98,10 +98,12 @@ def _perform_instrumentation(package_name: str):
         return
 
     # Get the appropriate configuration for the package
-    config = PROVIDERS.get(package_name) or AGENTIC_LIBRARIES.get(package_name) or UTILITY_INSTRUMENTORS.get(package_name)
+    config = (
+        PROVIDERS.get(package_name) or AGENTIC_LIBRARIES.get(package_name) or UTILITY_INSTRUMENTORS.get(package_name)
+    )
     if not config:
         return
-        
+
     loader = InstrumentorLoader(**config)
 
     if loader.should_activate:
@@ -151,7 +153,6 @@ def _import_monitor(name: str, globals_dict=None, locals_dict=None, fromlist=(),
     # Instrument all matching packages
     for package_to_check in packages_to_check:
         if package_to_check not in _instrumenting_packages and not _is_package_instrumented(package_to_check):
-            
             _instrumenting_packages.add(package_to_check)
             try:
                 _perform_instrumentation(package_to_check)
@@ -266,9 +267,10 @@ class InstrumentorLoader:
             # Special case for stdlib modules (like concurrent.futures)
             if self.package_name == "python":
                 import sys
+
                 python_version = f"{sys.version_info.major}.{sys.version_info.minor}.{sys.version_info.micro}"
                 return Version(python_version) >= parse(self.min_version)
-            
+
             # Use explicit package_name if provided, otherwise derive from module_name
             if self.package_name:
                 provider_name = self.package_name
