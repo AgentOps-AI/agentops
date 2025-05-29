@@ -1,16 +1,16 @@
 """Attribute extractors for Google Generative AI instrumentation."""
 
-from agentops.instrumentation.google_generativeai.attributes.common import (
+from agentops.instrumentation.google_genai.attributes.common import (
     get_common_instrumentation_attributes,
     extract_request_attributes,
 )
-from agentops.instrumentation.google_generativeai.attributes.model import (
+from agentops.instrumentation.google_genai.attributes.model import (
     get_model_attributes,
     get_generate_content_attributes,
     get_stream_attributes,
     get_token_counting_attributes,
 )
-from agentops.instrumentation.google_generativeai.attributes.chat import (
+from agentops.instrumentation.google_genai.attributes.chat import (
     get_chat_attributes,
 )
 

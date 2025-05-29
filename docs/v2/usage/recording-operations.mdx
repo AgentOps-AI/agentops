@@ -21,6 +21,15 @@ That's it! This single line of code will:
 - Intercept and track all LLM calls to supported providers (OpenAI, Anthropic, etc.)
 - Record relevant metrics such as token counts, costs, and response times
 
+You can also set a custom trace name during initialization:
+
+```python
+import agentops
+
+# Initialize with custom trace name
+agentops.init("your-api-key", trace_name="my-custom-workflow")
+```
+
 ## Automatic Instrumentation
 
 AgentOps automatically instruments calls to popular LLM providers without requiring any additional code:
@@ -86,33 +95,53 @@ def research_workflow(topic):
 results = research_workflow("quantum computing")
 ```
 
-### Advanced Session Management
+### `@tool` Decorator
 
-If you need more control over session lifecycle, you can disable automatic session creation:
+Track tool usage and costs with the `@tool` decorator. You can specify costs to get total cost tracking directly in your dashboard summary:
+
+```python
+from agentops.sdk.decorators import tool
+
+@tool(cost=0.05)
+def web_search(query):
+    # Tool implementation
+    return f"Search results for: {query}"
+
+@tool
+def calculator(expression):
+    # Tool without cost tracking
+    return eval(expression)
+```
+
+### `@trace` Decorator
+
+Create custom traces to group related operations using the `@trace` decorator. This is the recommended approach for most applications:
 
 ```python
 import agentops
-from agentops.sdk.decorators import session
+from agentops.sdk.decorators import trace, agent, operation
 
-# Disable automatic session creation
+# Initialize AgentOps without auto-starting session since we use @trace
 agentops.init("your-api-key", auto_start_session=False)
 
-@session
-def my_workflow():
-    # Your code here
-    pass
-    
-# Run the workflow to create a session
-my_workflow()
+@trace(name="customer-service-workflow", tags=["customer-support"])
+def customer_service_workflow(customer_id):
+    agent = ResearchAgent()
+    results = agent.search(f"customer {customer_id}")
+    return results
 ```
+
 
 ## Best Practices
 
 1. **Keep it Simple**: For most applications, just initializing AgentOps with `agentops.init()` is sufficient.
 
-2. **Use Decorators Sparingly**: Only add decorators when you need more detailed tracking of specific operations.
+2. **Use @trace for Custom Workflows**: When you need to group operations, use the `@trace` decorator instead of manual trace management.
 
-3. **Meaningful Operation Names**: When using decorators, choose descriptive names to make them easier to identify in the dashboard.
+3. **Meaningful Names and Tags**: When using decorators, choose descriptive names and relevant tags to make them easier to identify in the dashboard.
+
+4. **Cost Tracking**: Use the `@tool` decorator with cost parameters to track tool usage costs in your dashboard.
+
 
 <script type="module" src="/scripts/github_stars.js"></script>
 <script type="module" src="/scripts/scroll-img-fadein-animation.js"></script>

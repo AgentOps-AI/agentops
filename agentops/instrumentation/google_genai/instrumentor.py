@@ -16,12 +16,12 @@ from wrapt import wrap_function_wrapper
 
 from agentops.logging import logger
 from agentops.instrumentation.common.wrappers import WrapConfig, wrap, unwrap
-from agentops.instrumentation.google_generativeai import LIBRARY_NAME, LIBRARY_VERSION
-from agentops.instrumentation.google_generativeai.attributes.model import (
+from agentops.instrumentation.google_genai import LIBRARY_NAME, LIBRARY_VERSION
+from agentops.instrumentation.google_genai.attributes.model import (
     get_generate_content_attributes,
     get_token_counting_attributes,
 )
-from agentops.instrumentation.google_generativeai.stream_wrapper import (
+from agentops.instrumentation.google_genai.stream_wrapper import (
     generate_content_stream_wrapper,
     generate_content_stream_async_wrapper,
 )
@@ -96,7 +96,7 @@ STREAMING_METHODS = [
 ]
 
 
-class GoogleGenerativeAIInstrumentor(BaseInstrumentor):
+class GoogleGenAIInstrumentor(BaseInstrumentor):
     """An instrumentor for Google Generative AI (Gemini) API.
 
     This class provides instrumentation for Google's Generative AI API by wrapping key methods

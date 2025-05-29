@@ -25,7 +25,7 @@ import EnvTooltip from '/snippets/add-env-tooltip.mdx'
         agentops.init(<INSERT YOUR API KEY HERE>)
         ```
       </CodeGroup>
-      That's it! These two lines automatically instrument your code and start tracking sessions. Sessions automatically end when your program exits.
+      That's it! These two lines automatically instrument your code and start tracking traces. Traces automatically end when your program exits.
     <EnvTooltip />
   </Step>
   <Step title="Run your agent">
@@ -84,21 +84,43 @@ import EnvTooltip from '/snippets/add-env-tooltip.mdx'
   ```
 
 </Card>
-<Card icon="stop" title="Creating Sessions">
-  Create a session to group all your agent operations by using the `@session` decorator. Sessions serve as the root span for all operations.
+<Card icon="wrench" title="Track Tools">
+  Track tool usage and costs with the `@tool` decorator. You can specify costs to get total cost tracking directly in your dashboard summary.
   ```python python
-  # Create a session
-  from agentops.sdk.decorators import session
+  # Track tool usage with cost
+  from agentops.sdk.decorators import tool
   
-  @session
+  @tool(cost=0.05)
+  def web_search(query):
+      # Tool logic here
+      return f"Search results for: {query}"
+      
+  @tool
+  def calculate(expression):
+      # Tool without cost tracking
+      return eval(expression)
+  ```
+
+</Card>
+<Card icon="play" title="Creating Traces">
+  Create custom traces to group operations using the `@trace` decorator, or manage traces manually for more control.
+  ```python python
+  # Create a trace with decorator
+  from agentops.sdk.decorators import trace
+  
+  @trace
   def my_workflow():
-      # Your session code here
+      # Your workflow code here
       agent = MyAgent("research-agent")
       result = agent.perform_task("data analysis")
       return result
       
-  # Run the session
-  my_workflow()
+  # Or manage traces manually
+  import agentops
+  
+  trace = agentops.start_trace("custom-trace")
+  # Your code here
+  agentops.end_trace(trace, "Success")
   ```
 </Card>
 </CardGroup>
@@ -110,10 +132,15 @@ Here is the complete code from the sections above
 
 ```python python
 import agentops
-from agentops.sdk.decorators import agent, operation
+from agentops.sdk.decorators import agent, operation, tool, trace
 
-# Initialize AgentOps
-agentops.init(<INSERT YOUR API KEY HERE>)
+# Initialize AgentOps without auto-starting session since we use @trace
+agentops.init(<INSERT YOUR API KEY HERE>, auto_start_session=False)
+
+# Create a tool with cost tracking
+@tool(cost=0.05)
+def web_search(query):
+    return f"Search results for: {query}"
 
 # Create an agent class
 @agent
@@ -123,9 +150,11 @@ class MyAgent:
         
     @operation
     def perform_task(self, task):
-        # Agent task logic here
-        return f"Completed {task}"
+        # Use a tool within the agent
+        search_results = web_search(f"research {task}")
+        return f"Completed {task} with results: {search_results}"
 
+@trace(name="research-workflow", tags=["research", "analysis"])
 def run_agent_task(task_name):
     agent = MyAgent("research-agent")
     result = agent.perform_task(task_name)
