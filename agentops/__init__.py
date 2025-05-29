@@ -15,7 +15,7 @@ from agentops.legacy import (
 from typing import List, Optional, Union, Dict, Any
 from agentops.client import Client
 from agentops.sdk.core import TracingCore, TraceContext
-from agentops.sdk.decorators import trace, session, agent, task, workflow, operation
+from agentops.sdk.decorators import trace, session, agent, task, workflow, operation, tool
 from agentops.context_manager import InitializationProxy
 
 from agentops.logging.config import logger
@@ -252,4 +252,5 @@ __all__ = [
     "task",
     "workflow",
     "operation",
+    "tool",
 ]
