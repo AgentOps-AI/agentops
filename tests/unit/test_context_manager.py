@@ -260,7 +260,45 @@ class TestInitializationProxy:
 
         # Test representation after initialization
         repr_result = repr(proxy)
+        assert "InitializationProxy" in repr_result  # Should clearly identify as proxy
         assert "Mock" in repr_result  # Should show the mock result
+
+    def test_no_class_override(self):
+        """Test that __class__ is not overridden and isinstance works correctly."""
+        # Setup
+        mock_result = Mock()
+        self.mock_client.init.return_value = mock_result
+        proxy = InitializationProxy(self.mock_client, self.init_kwargs)
+
+        # Verify that isinstance works correctly
+        assert isinstance(proxy, InitializationProxy)
+        assert not isinstance(proxy, Session)  # Should not pretend to be a Session
+        assert type(proxy).__name__ == "InitializationProxy"
+        assert proxy.__class__ == InitializationProxy
+
+    def test_get_wrapped_result(self):
+        """Test the get_wrapped_result method for explicit access to wrapped object."""
+        # Setup
+        mock_result = Mock()
+        self.mock_client.init.return_value = mock_result
+        proxy = InitializationProxy(self.mock_client, self.init_kwargs)
+
+        # Execute
+        wrapped_result = proxy.get_wrapped_result()
+
+        # Verify
+        assert wrapped_result == mock_result
+        assert proxy._initialized is True
+
+    def test_get_proxy_type(self):
+        """Test the get_proxy_type method for debugging purposes."""
+        proxy = InitializationProxy(self.mock_client, self.init_kwargs)
+        assert proxy.get_proxy_type() == "InitializationProxy"
+
+    def test_is_context_manager(self):
+        """Test the is_context_manager method."""
+        proxy = InitializationProxy(self.mock_client, self.init_kwargs)
+        assert proxy.is_context_manager() is True
 
 
 class TestIntegration:

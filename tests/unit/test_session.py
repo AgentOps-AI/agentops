@@ -92,6 +92,7 @@ def test_auto_start_session_true(mock_tracing_core, mock_api_client, mock_trace_
     """Test initializing with auto_start_session=True"""
     import agentops
     from agentops.legacy import Session
+    from agentops.context_manager import InitializationProxy
 
     # Mock the start_trace method to return our mock trace context
     mock_tracing_core.start_trace.return_value = mock_trace_context
@@ -101,15 +102,19 @@ def test_auto_start_session_true(mock_tracing_core, mock_api_client, mock_trace_
 
     # Verify a trace was auto-started
     mock_tracing_core.start_trace.assert_called_once()
-    # init() should return a Session object when auto-starting a session
-    assert isinstance(result, Session)
-    assert result.trace_context == mock_trace_context
+    # init() now returns an InitializationProxy, not directly a Session
+    assert isinstance(result, InitializationProxy)
+    # But the wrapped result should be a Session when auto_start_session=True
+    wrapped_result = result.get_wrapped_result()
+    assert isinstance(wrapped_result, Session)
+    assert wrapped_result.trace_context == mock_trace_context
 
 
 def test_auto_start_session_default(mock_tracing_core, mock_api_client, mock_trace_context, reset_client):
     """Test initializing with default auto_start_session behavior"""
     import agentops
     from agentops.legacy import Session
+    from agentops.context_manager import InitializationProxy
 
     # Mock the start_trace method to return our mock trace context
     mock_tracing_core.start_trace.return_value = mock_trace_context
@@ -119,9 +124,12 @@ def test_auto_start_session_default(mock_tracing_core, mock_api_client, mock_tra
 
     # Verify that the client was initialized
     assert agentops._client.initialized
-    # Since auto_start_session defaults to True, init() should return a Session object
-    assert isinstance(result, Session)
-    assert result.trace_context == mock_trace_context
+    # init() now returns an InitializationProxy, not directly a Session
+    assert isinstance(result, InitializationProxy)
+    # But the wrapped result should be a Session when auto_start_session defaults to True
+    wrapped_result = result.get_wrapped_result()
+    assert isinstance(wrapped_result, Session)
+    assert wrapped_result.trace_context == mock_trace_context
 
 
 def test_start_trace_without_init():

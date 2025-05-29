@@ -1,11 +1,16 @@
 def test_session_auto_start(instrumentation):
     import agentops
     from agentops.legacy import Session
+    from agentops.context_manager import InitializationProxy
 
     # Pass a dummy API key for the test
     session = agentops.init(api_key="test-api-key", auto_start_session=True)
 
-    assert isinstance(session, Session)
+    # init() now returns an InitializationProxy, not directly a Session
+    assert isinstance(session, InitializationProxy)
+    # But the wrapped result should be a Session when auto_start_session=True
+    wrapped_result = session.get_wrapped_result()
+    assert isinstance(wrapped_result, Session)
 
 
 def test_crewai_backwards_compatibility(instrumentation):
