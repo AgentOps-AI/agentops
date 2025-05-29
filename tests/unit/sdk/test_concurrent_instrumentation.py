@@ -86,6 +86,9 @@ class TestConcurrentInstrumentation(unittest.TestCase):
 
     def test_sequential_spans_same_trace(self):
         """Test that sequential spans in the same thread share the same trace."""
+        self._create_simple_span("span1")
+        self._create_simple_span("span2")
+        
 
         # In sequential execution, spans should be independent (different traces)
         spans = self.tester.get_finished_spans()
