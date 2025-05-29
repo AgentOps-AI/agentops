@@ -16,31 +16,26 @@ from typing import List, Optional, Union, Dict, Any
 from agentops.client import Client
 from agentops.sdk.core import TracingCore, TraceContext
 from agentops.sdk.decorators import trace, session, agent, task, workflow, operation, tool
+from agentops.enums import TraceState, SUCCESS, ERROR, UNSET
+from opentelemetry.trace.status import StatusCode
 
 from agentops.logging.config import logger
+import threading
 
-# Client global instance; one per process runtime
-_client = Client()
+# Thread-safe client management
+_client_lock = threading.Lock()
+_client = None
 
 
 def get_client() -> Client:
-    """Get the singleton client instance"""
+    """Get the singleton client instance in a thread-safe manner"""
     global _client
 
-    # If _client is None create a new one
+    # Double-checked locking pattern for thread safety
     if _client is None:
-        _client = Client()
-
-    # Check if the current client instance is still valid
-    # This handles the case where test fixtures reset the Client singleton
-    # Only check if we have a real Client instance (not a mock)
-    if hasattr(_client, "__class__") and _client.__class__.__name__ == "Client":
-        # The Client class uses __instance as its singleton, so we check if it's changed
-        current_singleton = Client()
-
-        # If the singleton has changed (due to test resets), update our reference
-        if _client is not current_singleton:
-            _client = current_singleton
+        with _client_lock:
+            if _client is None:
+                _client = Client()
 
     return _client
 
@@ -232,7 +227,9 @@ def start_trace(
     return tracing_core.start_trace(trace_name=trace_name, tags=tags)
 
 
-def end_trace(trace_context: Optional[TraceContext] = None, end_state: str = "Success") -> None:
+def end_trace(
+    trace_context: Optional[TraceContext] = None, end_state: Union[TraceState, StatusCode, str] = TraceState.SUCCESS
+) -> None:
     """
     Ends a trace (its root span) and finalizes it.
     If no trace_context is provided, ends all active session spans.
@@ -272,4 +269,11 @@ __all__ = [
     "workflow",
     "operation",
     "tool",
+    # Trace state enums
+    "TraceState",
+    "SUCCESS",
+    "ERROR",
+    "UNSET",
+    # OpenTelemetry status codes (for advanced users)
+    "StatusCode",
 ]
