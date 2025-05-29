@@ -15,7 +15,7 @@ from agentops.legacy import (
 from typing import List, Optional, Union, Dict, Any
 from agentops.client import Client
 from agentops.sdk.core import TracingCore, TraceContext
-from agentops.sdk.decorators import trace, session, agent, task, workflow, operation
+from agentops.sdk.decorators import trace, session, agent, task, workflow, operation, tool
 
 from agentops.logging.config import logger
 
@@ -26,6 +26,21 @@ _client = Client()
 def get_client() -> Client:
     """Get the singleton client instance"""
     global _client
+
+    # If _client is None create a new one
+    if _client is None:
+        _client = Client()
+
+    # Check if the current client instance is still valid
+    # This handles the case where test fixtures reset the Client singleton
+    # Only check if we have a real Client instance (not a mock)
+    if hasattr(_client, "__class__") and _client.__class__.__name__ == "Client":
+        # The Client class uses __instance as its singleton, so we check if it's changed
+        current_singleton = Client()
+
+        # If the singleton has changed (due to test resets), update our reference
+        if _client is not current_singleton:
+            _client = current_singleton
 
     return _client
 
@@ -106,24 +121,31 @@ def init(
     elif default_tags:
         merged_tags = default_tags
 
-    return _client.init(
-        api_key=api_key,
-        endpoint=endpoint,
-        app_url=app_url,
-        max_wait_time=max_wait_time,
-        max_queue_size=max_queue_size,
-        default_tags=merged_tags,
-        trace_name=trace_name,
-        instrument_llm_calls=instrument_llm_calls,
-        auto_start_session=auto_start_session,
-        auto_init=auto_init,
-        skip_auto_end_session=skip_auto_end_session,
-        env_data_opt_out=env_data_opt_out,
-        log_level=log_level,
-        fail_safe=fail_safe,
-        exporter_endpoint=exporter_endpoint,
+    # Prepare initialization arguments
+    init_kwargs = {
+        "api_key": api_key,
+        "endpoint": endpoint,
+        "app_url": app_url,
+        "max_wait_time": max_wait_time,
+        "max_queue_size": max_queue_size,
+        "default_tags": merged_tags,
+        "trace_name": trace_name,
+        "instrument_llm_calls": instrument_llm_calls,
+        "auto_start_session": auto_start_session,
+        "auto_init": auto_init,
+        "skip_auto_end_session": skip_auto_end_session,
+        "env_data_opt_out": env_data_opt_out,
+        "log_level": log_level,
+        "fail_safe": fail_safe,
+        "exporter_endpoint": exporter_endpoint,
         **kwargs,
-    )
+    }
+
+    # Get the current client instance (creates new one if needed)
+    client = get_client()
+
+    # Initialize the client directly
+    return client.init(**init_kwargs)
 
 
 def configure(**kwargs):
@@ -173,7 +195,8 @@ def configure(**kwargs):
     if invalid_params:
         logger.warning(f"Invalid configuration parameters: {invalid_params}")
 
-    _client.configure(**kwargs)
+    client = get_client()
+    client.configure(**kwargs)
 
 
 def start_trace(
@@ -205,6 +228,7 @@ def start_trace(
             logger.error(f"SDK auto-initialization failed during start_trace: {e}. Cannot start trace.")
             return None
 
+    # Return the native TraceContext directly - it already has context manager support
     return tracing_core.start_trace(trace_name=trace_name, tags=tags)
 
 
@@ -247,4 +271,5 @@ __all__ = [
     "task",
     "workflow",
     "operation",
+    "tool",
 ]

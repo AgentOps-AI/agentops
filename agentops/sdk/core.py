@@ -34,6 +34,25 @@ class TraceContext:
         self.span = span
         self.token = token
         self.is_init_trace = is_init_trace  # Flag to identify the auto-started trace
+        self._end_state = "Indeterminate"  # Default end state because we don't know yet
+
+    def __enter__(self) -> "TraceContext":
+        """Enter the trace context."""
+        return self
+
+    def __exit__(self, exc_type: Optional[type], exc_val: Optional[Exception], exc_tb: Optional[Any]) -> bool:
+        """Exit the trace context and end the trace."""
+        if exc_type is not None:
+            self._end_state = "Error"
+            if exc_val:
+                logger.debug(f"Trace exiting with exception: {exc_val}")
+
+        try:
+            TracingCore.get_instance().end_trace(self, self._end_state)
+        except Exception as e:
+            logger.error(f"Error ending trace in context manager: {e}")
+
+        return False
 
 
 def get_imported_libraries():
