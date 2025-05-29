@@ -66,9 +66,10 @@ def _uninstrument_providers():
 def _should_instrument_package(package_name: str) -> bool:
     """
     Determine if a package should be instrumented based on current state.
-    Handles special cases for agentic libraries and providers.
+    Handles special cases for agentic libraries, providers, and utility instrumentors.
     """
     global _has_agentic_library
+    
     # If this is an agentic library, uninstrument all providers first
     if package_name in AGENTIC_LIBRARIES:
         _uninstrument_providers()
@@ -78,6 +79,10 @@ def _should_instrument_package(package_name: str) -> bool:
     # Skip providers if an agentic library is already instrumented
     if package_name in PROVIDERS and _has_agentic_library:
         return False
+    
+    # Utility instrumentors are always enabled regardless of agentic library state
+    if package_name in UTILITY_INSTRUMENTORS:
+        return not _is_package_instrumented(package_name)
 
     # Skip if already instrumented
     if _is_package_instrumented(package_name):
@@ -93,7 +98,10 @@ def _perform_instrumentation(package_name: str):
         return
 
     # Get the appropriate configuration for the package
-    config = PROVIDERS.get(package_name) or AGENTIC_LIBRARIES[package_name]
+    config = PROVIDERS.get(package_name) or AGENTIC_LIBRARIES.get(package_name) or UTILITY_INSTRUMENTORS.get(package_name)
+    if not config:
+        return
+        
     loader = InstrumentorLoader(**config)
 
     if loader.should_activate:
@@ -143,6 +151,7 @@ def _import_monitor(name: str, globals_dict=None, locals_dict=None, fromlist=(),
     # Instrument all matching packages
     for package_to_check in packages_to_check:
         if package_to_check not in _instrumenting_packages and not _is_package_instrumented(package_to_check):
+            
             _instrumenting_packages.add(package_to_check)
             try:
                 _perform_instrumentation(package_to_check)
@@ -188,6 +197,22 @@ PROVIDERS: dict[str, InstrumentorConfig] = {
         "min_version": "0.1.0",
         "package_name": "google-genai",  # Actual pip package name
     },
+    # "mem0": {
+    #     "module_name": "agentops.instrumentation.mem0",
+    #     "class_name": "Mem0Instrumentor",
+    #     "min_version": "0.1.10",
+    #     "package_name": "mem0ai",  # Actual pip package name
+    # },
+}
+
+# Configuration for utility instrumentors
+UTILITY_INSTRUMENTORS: dict[str, InstrumentorConfig] = {
+    "concurrent.futures": {
+        "module_name": "agentops.instrumentation.concurrent_futures",
+        "class_name": "ConcurrentFuturesInstrumentor",
+        "min_version": "3.7.0",  # Python 3.7+ (concurrent.futures is stdlib)
+        "package_name": "python",  # Special case for stdlib modules
+    },
 }
 
 # Configuration for supported agentic libraries
@@ -211,7 +236,7 @@ AGENTIC_LIBRARIES: dict[str, InstrumentorConfig] = {
 }
 
 # Combine all target packages for monitoring
-TARGET_PACKAGES = set(PROVIDERS.keys()) | set(AGENTIC_LIBRARIES.keys())
+TARGET_PACKAGES = set(PROVIDERS.keys()) | set(AGENTIC_LIBRARIES.keys()) | set(UTILITY_INSTRUMENTORS.keys())
 
 # Create a single instance of the manager
 # _manager = InstrumentationManager() # Removed
@@ -238,6 +263,12 @@ class InstrumentorLoader:
     def should_activate(self) -> bool:
         """Check if the package is available and meets version requirements."""
         try:
+            # Special case for stdlib modules (like concurrent.futures)
+            if self.package_name == "python":
+                import sys
+                python_version = f"{sys.version_info.major}.{sys.version_info.minor}.{sys.version_info.micro}"
+                return Version(python_version) >= parse(self.min_version)
+            
             # Use explicit package_name if provided, otherwise derive from module_name
             if self.package_name:
                 provider_name = self.package_name
