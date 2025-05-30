@@ -253,45 +253,6 @@ class InstrumentorLoader:
         return getattr(self.module, self.class_name)()
 
 
-available_instrumentors: list[InstrumentorLoader] = [
-    InstrumentorLoader(
-        module_name="agentops.instrumentation.openai",
-        class_name="OpenAIInstrumentor",
-        provider_import_name="openai",
-    ),
-    InstrumentorLoader(
-        module_name="agentops.instrumentation.anthropic",
-        class_name="AnthropicInstrumentor",
-        provider_import_name="anthropic",
-    ),
-    InstrumentorLoader(
-        module_name="agentops.instrumentation.crewai",
-        class_name="CrewAIInstrumentor",
-        provider_import_name="crewai",
-    ),
-    InstrumentorLoader(
-        module_name="agentops.instrumentation.openai_agents",
-        class_name="OpenAIAgentsInstrumentor",
-        provider_import_name="agents",
-    ),
-    InstrumentorLoader(
-        module_name="agentops.instrumentation.google_generativeai",
-        class_name="GoogleGenerativeAIInstrumentor",
-        provider_import_name="google.genai",
-    ),
-    InstrumentorLoader(
-        module_name="agentops.instrumentation.ibm_watsonx_ai",
-        class_name="IBMWatsonXInstrumentor",
-        provider_import_name="ibm_watsonx_ai",
-    ),
-    InstrumentorLoader(
-        module_name="agentops.instrumentation.ag2",
-        class_name="AG2Instrumentor",
-        provider_import_name="autogen",
-    ),
-]
-
-
 def instrument_one(loader: InstrumentorLoader) -> Optional[BaseInstrumentor]:
     """
     Instrument a single package using the provided loader.
