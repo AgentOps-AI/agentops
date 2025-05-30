@@ -13,7 +13,9 @@ from opentelemetry.instrumentation.instrumentor import BaseInstrumentor
 from opentelemetry.sdk.resources import SERVICE_NAME, TELEMETRY_SDK_NAME, DEPLOYMENT_ENVIRONMENT
 from agentops.instrumentation.crewai.version import __version__
 from agentops.semconv import SpanAttributes, AgentOpsSpanKindValues, Meters, ToolAttributes, MessageAttributes
+from agentops.semconv.core import CoreAttributes
 from .crewai_span_attributes import CrewAISpanAttributes, set_span_attribute
+from agentops import get_client
 
 # Initialize logger
 logger = logging.getLogger(__name__)
@@ -159,12 +161,23 @@ def wrap_kickoff(
     logger.debug(
         f"CrewAI: Starting workflow instrumentation for Crew with {len(getattr(instance, 'agents', []))} agents"
     )
+
+    config = get_client().config
+    attributes = {
+        SpanAttributes.LLM_SYSTEM: "crewai",
+    }
+
+    if config.default_tags and len(config.default_tags) > 0:
+        tag_list = list(config.default_tags)
+        attributes[CoreAttributes.TAGS] = tag_list
+
+    # Use trace_name from config if available, otherwise default to "crewai.workflow"
+    span_name = config.trace_name if config.trace_name else "crewai.workflow"
+
     with tracer.start_as_current_span(
-        "crewai.workflow",
+        span_name,
         kind=SpanKind.INTERNAL,
-        attributes={
-            SpanAttributes.LLM_SYSTEM: "crewai",
-        },
+        attributes=attributes,
     ) as span:
         try:
             span.set_attribute(TELEMETRY_SDK_NAME, "agentops")
@@ -381,12 +394,21 @@ def wrap_task_execute(
 ):
     task_name = instance.description if hasattr(instance, "description") else "task"
 
+    config = get_client().config
+    attributes = {
+        SpanAttributes.AGENTOPS_SPAN_KIND: AgentOpsSpanKindValues.TASK.value,
+    }
+
+    if config.default_tags and len(config.default_tags) > 0:
+        tag_list = list(config.default_tags)
+        # TODO: This should be a set to prevent duplicates, but we need to ensure
+        # that the tags are not modified in place, so we convert to list first.
+        attributes[CoreAttributes.TAGS] = tag_list
+
     with tracer.start_as_current_span(
         f"{task_name}.task",
         kind=SpanKind.CLIENT,
-        attributes={
-            SpanAttributes.AGENTOPS_SPAN_KIND: AgentOpsSpanKindValues.TASK.value,
-        },
+        attributes=attributes,
     ) as span:
         try:
             span.set_attribute(TELEMETRY_SDK_NAME, "agentops")

@@ -2,7 +2,7 @@
 Helpers for interacting with the AgentOps dashboard.
 """
 
-from typing import Union
+from typing import Union, Optional
 from termcolor import colored
 from opentelemetry.sdk.trace import Span, ReadableSpan
 from agentops.logging import logger
@@ -33,7 +33,7 @@ def get_trace_url(span: Union[Span, ReadableSpan]) -> str:
     return f"{app_url}/sessions?trace_id={trace_id}"
 
 
-def log_trace_url(span: Union[Span, ReadableSpan]) -> None:
+def log_trace_url(span: Union[Span, ReadableSpan], title: Optional[str] = None) -> None:
     """
     Log the trace URL for the AgentOps dashboard.
 
@@ -41,4 +41,4 @@ def log_trace_url(span: Union[Span, ReadableSpan]) -> None:
         span: The span to log the URL for.
     """
     session_url = get_trace_url(span)
-    logger.info(colored(f"\x1b[34mSession Replay: {session_url}\x1b[0m", "blue"))
+    logger.info(colored(f"\x1b[34mSession Replay for {title} trace: {session_url}\x1b[0m", "blue"))

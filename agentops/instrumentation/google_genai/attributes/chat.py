@@ -5,11 +5,11 @@ from typing import Dict, Any, Optional, Tuple
 from agentops.logging import logger
 from agentops.semconv import SpanAttributes, LLMRequestTypeValues, MessageAttributes
 from agentops.instrumentation.common.attributes import AttributeMap
-from agentops.instrumentation.google_generativeai.attributes.common import (
+from agentops.instrumentation.google_genai.attributes.common import (
     extract_request_attributes,
     get_common_instrumentation_attributes,
 )
-from agentops.instrumentation.google_generativeai.attributes.model import (
+from agentops.instrumentation.google_genai.attributes.model import (
     _extract_content_from_prompt,
     _set_response_attributes,
 )
