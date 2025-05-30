@@ -20,6 +20,7 @@ session = create_entity_decorator(SpanKind.SESSION)
 tool = create_entity_decorator(SpanKind.TOOL)
 operation = task
 
+
 # For backward compatibility: @session decorator calls @trace decorator
 @functools.wraps(trace)
 def session(*args, **kwargs):
