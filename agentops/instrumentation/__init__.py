@@ -208,6 +208,11 @@ AGENTIC_LIBRARIES: dict[str, InstrumentorConfig] = {
         "class_name": "GoogleADKInstrumentor",
         "min_version": "0.1.0",
     },
+    "smolagents": {
+        "module_name": "agentops.instrumentation.smolagents",
+        "class_name": "SmoLAgentsInstrumentor",
+        "min_version": "1.8.0",
+    },
 }
 
 # Combine all target packages for monitoring

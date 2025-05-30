@@ -2,13 +2,14 @@
 
 import time
 import uuid
-
-from opentelemetry.trace import Status, StatusCode
+from typing import Any, Generator, Optional
+from opentelemetry.trace import Status, StatusCode, Span
 
 from agentops.semconv.message import MessageAttributes
 from agentops.semconv.agent import AgentAttributes
 from agentops.semconv.tool import ToolAttributes
 from .attributes.model import get_stream_attributes
+from agentops.semconv.span_attributes import SpanAttributes
 
 
 def model_stream_wrapper(tracer):
@@ -123,3 +124,135 @@ def agent_stream_wrapper(tracer):
                 raise
 
     return wrapper
+
+
+class SmoLAgentsStreamWrapper:
+    """Wrapper for streaming responses from SmoLAgents models."""
+
+    def __init__(
+        self,
+        stream: Generator,
+        span: Span,
+        model_id: Optional[str] = None,
+    ):
+        """Initialize the stream wrapper.
+
+        Args:
+            stream: The original generator from the model
+            span: The OpenTelemetry span to track the stream
+            model_id: Optional model identifier
+        """
+        self._stream = stream
+        self._span = span
+        self._model_id = model_id
+        self._chunks_received = 0
+        self._full_content = []
+        self._tool_calls = []
+        self._current_tool_call = None
+        self._token_count = 0
+
+    def __iter__(self):
+        """Iterate over the stream."""
+        return self
+
+    def __next__(self):
+        """Get the next chunk from the stream."""
+        try:
+            chunk = next(self._stream)
+            self._process_chunk(chunk)
+            return chunk
+        except StopIteration:
+            self._finalize_stream()
+            raise
+
+    def _process_chunk(self, chunk: Any) -> None:
+        """Process a chunk from the stream.
+
+        Args:
+            chunk: The chunk to process
+        """
+        self._chunks_received += 1
+
+        # Handle ChatMessageStreamDelta objects
+        if hasattr(chunk, "content") and chunk.content:
+            self._full_content.append(chunk.content)
+
+        # Handle tool calls in chunks
+        if hasattr(chunk, "tool_calls") and chunk.tool_calls:
+            for tool_call in chunk.tool_calls:
+                if tool_call.id not in [tc["id"] for tc in self._tool_calls]:
+                    self._tool_calls.append(
+                        {
+                            "id": tool_call.id,
+                            "type": tool_call.type,
+                            "name": tool_call.function.name,
+                            "arguments": tool_call.function.arguments,
+                        }
+                    )
+
+        # Track token usage if available
+        if hasattr(chunk, "token_usage") and chunk.token_usage:
+            if hasattr(chunk.token_usage, "output_tokens"):
+                self._token_count += chunk.token_usage.output_tokens
+
+        # Update span with chunk information
+        self._span.add_event(
+            "stream_chunk_received",
+            {
+                "chunk_number": self._chunks_received,
+                "chunk_content_length": len(chunk.content) if hasattr(chunk, "content") and chunk.content else 0,
+            },
+        )
+
+    def _finalize_stream(self) -> None:
+        """Finalize the stream and update span attributes."""
+        # Combine all content chunks
+        full_content = "".join(self._full_content)
+
+        # Set final attributes on the span
+        attributes = {
+            MessageAttributes.COMPLETION_CONTENT.format(i=0): full_content,
+            "stream.chunks_received": self._chunks_received,
+            "stream.total_content_length": len(full_content),
+        }
+
+        # Add tool calls if any
+        if self._tool_calls:
+            for j, tool_call in enumerate(self._tool_calls):
+                attributes.update(
+                    {
+                        MessageAttributes.COMPLETION_TOOL_CALL_ID.format(i=0, j=j): tool_call["id"],
+                        MessageAttributes.COMPLETION_TOOL_CALL_TYPE.format(i=0, j=j): tool_call["type"],
+                        MessageAttributes.COMPLETION_TOOL_CALL_NAME.format(i=0, j=j): tool_call["name"],
+                        MessageAttributes.COMPLETION_TOOL_CALL_ARGUMENTS.format(i=0, j=j): str(tool_call["arguments"]),
+                    }
+                )
+
+        # Add token usage if tracked
+        if self._token_count > 0:
+            attributes[SpanAttributes.LLM_USAGE_STREAMING_TOKENS] = self._token_count
+
+        self._span.set_attributes(attributes)
+
+    def close(self) -> None:
+        """Close the stream wrapper."""
+        if hasattr(self._stream, "close"):
+            self._stream.close()
+
+
+def wrap_stream(
+    stream: Generator,
+    span: Span,
+    model_id: Optional[str] = None,
+) -> SmoLAgentsStreamWrapper:
+    """Wrap a streaming response from a SmoLAgents model.
+
+    Args:
+        stream: The original generator from the model
+        span: The OpenTelemetry span to track the stream
+        model_id: Optional model identifier
+
+    Returns:
+        SmoLAgentsStreamWrapper: The wrapped stream
+    """
+    return SmoLAgentsStreamWrapper(stream, span, model_id)
