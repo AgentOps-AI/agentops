@@ -6,7 +6,7 @@ a configuration class for wrapping methods, helper functions for updating
 spans with attributes, and functions for creating and applying wrappers.
 """
 
-from typing import Any, Optional, Tuple, Dict, Callable, Union
+from typing import Any, Optional, Tuple, Dict, Callable
 from dataclasses import dataclass
 import logging
 from wrapt import wrap_function_wrapper  # type: ignore
@@ -21,7 +21,6 @@ from agentops.instrumentation.common.attributes import AttributeMap
 logger = logging.getLogger(__name__)
 
 AttributeHandler = Callable[[Optional[Tuple], Optional[Dict], Optional[Any]], AttributeMap]
-DynamicTraceName = Callable[[Optional[Tuple], Optional[Dict], Optional[Any]], str]
 
 
 @dataclass
@@ -33,7 +32,7 @@ class WrapConfig:
     to set, and how to name the resulting trace spans.
 
     Attributes:
-        trace_name: The name to use for the trace span (can be string or callable)
+        trace_name: The name to use for the trace span
         package: The package containing the target class
         class_name: The name of the class containing the method
         method_name: The name of the method to wrap
@@ -44,7 +43,7 @@ class WrapConfig:
         span_kind: The kind of span to create (default: CLIENT)
     """
 
-    trace_name: Union[str, DynamicTraceName]
+    trace_name: str
     package: str
     class_name: str
     method_name: str
@@ -54,33 +53,6 @@ class WrapConfig:
 
     def __repr__(self):
         return f"{self.package}.{self.class_name}.{self.method_name}"
-
-
-def _get_span_name(
-    trace_name: Union[str, DynamicTraceName],
-    args: Optional[Tuple],
-    kwargs: Optional[Dict],
-    instance: Optional[Any] = None,
-) -> str:
-    """Get the span name, handling both static strings and dynamic functions.
-
-    Args:
-        trace_name: The trace name (string or callable)
-        args: Optional tuple of positional arguments
-        kwargs: Optional dict of keyword arguments
-        instance: Optional instance object
-
-    Returns:
-        The span name to use
-    """
-    if callable(trace_name):
-        try:
-            return trace_name(args, kwargs, instance)
-        except Exception as e:
-            logger.warning(f"Failed to generate dynamic span name: {e}")
-            return "unknown_operation"
-    else:
-        return trace_name
 
 
 def _update_span(span: Span, attributes: AttributeMap) -> None:
@@ -142,7 +114,7 @@ def _create_wrapper(wrap_config: WrapConfig, tracer: Tracer) -> Callable:
         return_value = None
 
         with tracer.start_as_current_span(
-            _get_span_name(wrap_config.trace_name, args, kwargs, instance),
+            wrap_config.trace_name,
             kind=wrap_config.span_kind,
         ) as span:
             try:
@@ -174,7 +146,7 @@ def _create_wrapper(wrap_config: WrapConfig, tracer: Tracer) -> Callable:
         return_value = None
 
         with tracer.start_as_current_span(
-            _get_span_name(wrap_config.trace_name, args, kwargs, instance),
+            wrap_config.trace_name,
             kind=wrap_config.span_kind,
         ) as span:
             try:

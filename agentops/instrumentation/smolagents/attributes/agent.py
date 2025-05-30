@@ -7,8 +7,6 @@ import json
 from agentops.instrumentation.common.attributes import get_common_attributes
 from agentops.semconv.agent import AgentAttributes
 from agentops.semconv.tool import ToolAttributes
-from agentops.semconv.message import MessageAttributes
-from agentops.semconv.span_attributes import SpanAttributes
 
 
 def get_agent_attributes(
@@ -16,91 +14,79 @@ def get_agent_attributes(
     kwargs: Optional[Dict] = None,
     return_value: Optional[Any] = None,
 ) -> Dict[str, Any]:
-    """Extract attributes from an agent execution.
+    """Extract attributes from an agent execution call.
 
     Args:
         args: Optional tuple of positional arguments
         kwargs: Optional dict of keyword arguments
-        return_value: Optional return value from the wrapped function
+        return_value: Optional return value from the function
 
     Returns:
-        Dict containing extracted attributes
+        Dictionary of extracted attributes
     """
     attributes = get_common_attributes()
 
-    # Extract agent info from instance
-    if args and len(args) > 0:
-        instance = args[0]
-        agent_type = instance.__class__.__name__
+    try:
+        # Extract agent instance information
+        agent_instance = None
+        if args and len(args) > 0:
+            agent_instance = args[0]
+        elif kwargs and "self" in kwargs:
+            agent_instance = kwargs["self"]
 
-        # Get tools and managed agents
-        tools = []
-        if hasattr(instance, "tools") and instance.tools:
-            tools = list(instance.tools.keys())
-        managed_agents = []
-        if hasattr(instance, "managed_agents") and instance.managed_agents:
-            managed_agents = list(instance.managed_agents.keys())
+        if agent_instance:
+            # Extract agent name
+            agent_name = getattr(agent_instance, "name", agent_instance.__class__.__name__)
+            attributes[AgentAttributes.AGENT_NAME] = agent_name
 
-        # Get model info
-        model_id = None
-        if hasattr(instance, "model") and hasattr(instance.model, "model_id"):
-            model_id = instance.model.model_id
+            # Generate agent ID if not present
+            agent_id = getattr(agent_instance, "id", str(uuid.uuid4()))
+            attributes[AgentAttributes.AGENT_ID] = agent_id
 
-        attributes.update(
-            {
-                AgentAttributes.AGENT_ID: str(uuid.uuid4()),
-                AgentAttributes.AGENT_NAME: agent_type,
-                AgentAttributes.AGENT_ROLE: "executor",
-                AgentAttributes.AGENT_TOOLS: tools,
-                "agent.managed_agents": managed_agents,
-            }
-        )
+            # Extract agent role/type
+            attributes[AgentAttributes.AGENT_ROLE] = "executor"
 
-        # Only add attributes if they have non-None values
-        max_steps = getattr(instance, "max_steps", None)
-        if max_steps is not None:
-            attributes["agent.max_steps"] = max_steps
+            # Extract tools information
+            tools = getattr(agent_instance, "tools", [])
+            if tools:
+                tool_names = []
+                for tool in tools:
+                    tool_name = getattr(tool, "name", str(tool))
+                    tool_names.append(tool_name)
+                attributes[AgentAttributes.AGENT_TOOLS] = json.dumps(tool_names)
+            else:
+                attributes[AgentAttributes.AGENT_TOOLS] = "[]"
 
-        planning_interval = getattr(instance, "planning_interval", None)
-        if planning_interval is not None:
-            attributes["agent.planning_interval"] = planning_interval
+            # Extract managed agents information
+            managed_agents = getattr(agent_instance, "managed_agents", [])
+            if managed_agents:
+                managed_agent_names = []
+                for managed_agent in managed_agents:
+                    agent_name = getattr(managed_agent, "name", managed_agent.__class__.__name__)
+                    managed_agent_names.append(agent_name)
+                attributes[AgentAttributes.AGENT_MANAGED_AGENTS] = json.dumps(managed_agent_names)
+            else:
+                attributes[AgentAttributes.AGENT_MANAGED_AGENTS] = "[]"
 
-        if model_id:
-            attributes[SpanAttributes.LLM_REQUEST_MODEL] = model_id
+        # Extract input/task from args or kwargs
+        task_input = None
+        if args and len(args) > 1:
+            task_input = args[1]
+        elif kwargs and "task" in kwargs:
+            task_input = kwargs["task"]
+        elif kwargs and "prompt" in kwargs:
+            task_input = kwargs["prompt"]
 
-    # Extract task from kwargs or args
-    if kwargs:
-        task = kwargs.get("task")
-        stream = kwargs.get("stream", False)
-        reset = kwargs.get("reset", True)
-        max_steps = kwargs.get("max_steps")
-        additional_args = kwargs.get("additional_args")
+        if task_input:
+            attributes["agent.task"] = str(task_input)
 
-        if task:
-            attributes[AgentAttributes.AGENT_REASONING] = task
-        attributes["agent.stream_mode"] = stream
-        attributes["agent.reset"] = reset
-        if max_steps is not None:
-            attributes["agent.max_steps_override"] = max_steps
-        if additional_args:
-            attributes["agent.additional_args"] = json.dumps(additional_args)
-    elif args and len(args) > 1:
-        attributes[AgentAttributes.AGENT_REASONING] = args[1]
+        # Extract return value/output
+        if return_value is not None:
+            attributes["agentops.entity.output"] = str(return_value)
 
-    # Handle return value for full result mode
-    if return_value is not None:
-        if hasattr(return_value, "output"):
-            # RunResult object
-            attributes[SpanAttributes.AGENTOPS_ENTITY_OUTPUT] = str(return_value.output)
-            attributes["agent.result_state"] = return_value.state
-            if return_value.token_usage:
-                attributes[SpanAttributes.LLM_USAGE_PROMPT_TOKENS] = return_value.token_usage.input_tokens
-                attributes[SpanAttributes.LLM_USAGE_COMPLETION_TOKENS] = return_value.token_usage.output_tokens
-                attributes[SpanAttributes.LLM_USAGE_TOTAL_TOKENS] = (
-                    return_value.token_usage.input_tokens + return_value.token_usage.output_tokens
-                )
-        else:
-            attributes[SpanAttributes.AGENTOPS_ENTITY_OUTPUT] = str(return_value)
+    except Exception:
+        # If extraction fails, continue with basic attributes
+        pass
 
     return attributes
 
@@ -110,40 +96,42 @@ def get_agent_stream_attributes(
     kwargs: Optional[Dict] = None,
     return_value: Optional[Any] = None,
 ) -> Dict[str, Any]:
-    """Extract attributes from agent streaming execution.
+    """Extract attributes from an agent streaming call.
 
     Args:
         args: Optional tuple of positional arguments
         kwargs: Optional dict of keyword arguments
-        return_value: Optional return value from the wrapped function
+        return_value: Optional return value from the function
 
     Returns:
-        Dict containing extracted attributes
+        Dictionary of extracted attributes
     """
     attributes = get_common_attributes()
 
-    # Extract agent info from instance
-    if args and len(args) > 0:
-        instance = args[0]
-        agent_type = instance.__class__.__name__
+    try:
+        # Extract reasoning/task information
+        if kwargs:
+            if "max_steps" in kwargs:
+                attributes["agent.max_steps"] = str(kwargs["max_steps"])
 
-        attributes.update(
-            {
-                AgentAttributes.AGENT_NAME: agent_type,
-                AgentAttributes.AGENT_ROLE: "executor",
-                "agent.stream_mode": True,
-            }
-        )
+            # Extract task/reasoning from various parameter names
+            task_info = None
+            for param_name in ["task", "prompt", "reasoning", "query"]:
+                if param_name in kwargs:
+                    task_info = kwargs[param_name]
+                    break
 
-    # Extract task and parameters
-    if kwargs:
-        task = kwargs.get("task")
-        max_steps = kwargs.get("max_steps")
+            if task_info:
+                attributes["agent.reasoning"] = str(task_info)
 
-        if task:
-            attributes[AgentAttributes.AGENT_REASONING] = task
-        if max_steps:
-            attributes["agent.max_steps"] = max_steps
+        # Extract from args
+        if args and len(args) > 1:
+            task_info = args[1]
+            attributes["agent.reasoning"] = str(task_info)
+
+    except Exception:
+        # If extraction fails, continue with basic attributes
+        pass
 
     return attributes
 
@@ -158,48 +146,30 @@ def get_agent_step_attributes(
     Args:
         args: Optional tuple of positional arguments
         kwargs: Optional dict of keyword arguments
-        return_value: Optional return value from the wrapped function
+        return_value: Optional return value from the function
 
     Returns:
-        Dict containing extracted attributes
+        Dictionary of extracted attributes
     """
     attributes = get_common_attributes()
 
-    # Extract agent info from instance
-    if args and len(args) > 0:
-        instance = args[0]
-        agent_type = instance.__class__.__name__
+    try:
+        # Try to extract step information
+        step_number = getattr(args[0] if args else None, "step_count", None)
+        if step_number is not None:
+            attributes["agent.step_number"] = str(step_number)
 
-        attributes.update(
-            {
-                AgentAttributes.AGENT_NAME: agent_type,
-                "agent.step_number": getattr(instance, "step_number", 0),
-            }
-        )
+        # Extract step name/type
+        step_name = "ActionStep"  # Default for smolagents
+        attributes["agent.name"] = step_name
 
-    # Extract memory step info
-    if args and len(args) > 1:
-        memory_step = args[1]
-        if hasattr(memory_step, "step_number"):
-            attributes["step.number"] = memory_step.step_number
-        if hasattr(memory_step, "tool_calls") and memory_step.tool_calls:
-            # Extract tool call info
-            for i, tool_call in enumerate(memory_step.tool_calls):
-                attributes.update(
-                    {
-                        MessageAttributes.TOOL_CALL_ID.format(i=i): tool_call.id,
-                        MessageAttributes.TOOL_CALL_NAME.format(i=i): tool_call.name,
-                        MessageAttributes.TOOL_CALL_ARGUMENTS.format(i=i): json.dumps(tool_call.arguments),
-                    }
-                )
-        if hasattr(memory_step, "error") and memory_step.error:
-            attributes["step.error"] = str(memory_step.error)
-        if hasattr(memory_step, "observations"):
-            attributes["step.observations"] = str(memory_step.observations)
+        # Extract return value
+        if return_value is not None:
+            attributes["agentops.entity.output"] = str(return_value)
 
-    # Handle return value
-    if return_value is not None:
-        attributes[SpanAttributes.AGENTOPS_ENTITY_OUTPUT] = str(return_value)
+    except Exception:
+        # If extraction fails, continue with basic attributes
+        pass
 
     return attributes
 
@@ -209,90 +179,77 @@ def get_tool_call_attributes(
     kwargs: Optional[Dict] = None,
     return_value: Optional[Any] = None,
 ) -> Dict[str, Any]:
-    """Extract attributes from a tool call.
+    """Extract attributes from a tool call execution.
 
     Args:
         args: Optional tuple of positional arguments
         kwargs: Optional dict of keyword arguments
-        return_value: Optional return value from the wrapped function
+        return_value: Optional return value from the function
 
     Returns:
-        Dict containing extracted attributes
+        Dictionary of extracted attributes
     """
     attributes = get_common_attributes()
 
-    # Extract tool call information
-    tool_call = None
-    if kwargs and "tool_call" in kwargs:
-        tool_call = kwargs["tool_call"]
-    elif args and len(args) > 1:
-        tool_call = args[1]
-
-    if tool_call:
-        # Extract tool call details
+    try:
+        # Generate tool execution ID
         tool_id = str(uuid.uuid4())
+        attributes[ToolAttributes.TOOL_ID] = tool_id
+
+        # Extract tool information from various sources
         tool_name = "unknown"
-        tool_arguments = {}
+        tool_description = "unknown"
+        tool_parameters = "{}"
 
-        if hasattr(tool_call, "id"):
-            tool_id = tool_call.id
-        if hasattr(tool_call, "name"):
-            tool_name = tool_call.name
-        elif hasattr(tool_call, "function") and hasattr(tool_call.function, "name"):
-            tool_name = tool_call.function.name
+        # Try to extract from instance (first arg)
+        if args and len(args) > 0:
+            instance = args[0]
+            if hasattr(instance, "name"):
+                tool_name = instance.name
+            if hasattr(instance, "description"):
+                tool_description = instance.description
 
-        if hasattr(tool_call, "arguments"):
-            tool_arguments = tool_call.arguments
-        elif hasattr(tool_call, "function") and hasattr(tool_call.function, "arguments"):
-            try:
-                tool_arguments = (
-                    json.loads(tool_call.function.arguments)
-                    if isinstance(tool_call.function.arguments, str)
-                    else tool_call.function.arguments
-                )
-            except (json.JSONDecodeError, TypeError):
-                tool_arguments = {"raw": str(tool_call.function.arguments)}
+        # Try to extract from kwargs
+        if kwargs:
+            if "tool_call" in kwargs:
+                tool_call = kwargs["tool_call"]
+                if hasattr(tool_call, "function"):
+                    tool_name = tool_call.function.name
+                    if hasattr(tool_call.function, "arguments"):
+                        tool_parameters = tool_call.function.arguments
+            elif "name" in kwargs:
+                tool_name = kwargs["name"]
+            elif "function_name" in kwargs:
+                tool_name = kwargs["function_name"]
 
-        attributes.update(
-            {
-                ToolAttributes.TOOL_ID: tool_id,
-                ToolAttributes.TOOL_NAME: tool_name,
-                ToolAttributes.TOOL_PARAMETERS: json.dumps(tool_arguments),
-                ToolAttributes.TOOL_STATUS: "pending",
-                ToolAttributes.TOOL_DESCRIPTION: "unknown",
-            }
-        )
+            # Extract parameters
+            if "parameters" in kwargs:
+                tool_parameters = json.dumps(kwargs["parameters"])
+            elif "arguments" in kwargs:
+                tool_parameters = json.dumps(kwargs["arguments"])
+            elif "args" in kwargs:
+                tool_parameters = json.dumps(kwargs["args"])
 
-    # Extract instance information for Tool.__call__ style calls
-    if args and len(args) > 0:
-        instance = args[0]
-        if hasattr(instance, "__class__") and instance.__class__.__name__ in ["Tool", "DuckDuckGoSearchTool"]:
-            tool_name = getattr(instance, "name", instance.__class__.__name__)
-            tool_description = getattr(instance, "description", "unknown")
+        # Set tool attributes
+        attributes[ToolAttributes.TOOL_NAME] = tool_name
+        attributes[ToolAttributes.TOOL_DESCRIPTION] = tool_description
+        attributes[ToolAttributes.TOOL_PARAMETERS] = tool_parameters
+        attributes[ToolAttributes.TOOL_STATUS] = "pending"
+        attributes[ToolAttributes.TOOL_OUTPUT_TYPE] = "unknown"
+        attributes[ToolAttributes.TOOL_INPUTS] = "{}"
 
-            # Update attributes with instance info
-            attributes.update(
-                {
-                    ToolAttributes.TOOL_NAME: tool_name,
-                    ToolAttributes.TOOL_DESCRIPTION: tool_description,
-                }
-            )
+        # Extract return value
+        if return_value is not None:
+            attributes["tool.result"] = str(return_value)
+            attributes[ToolAttributes.TOOL_STATUS] = "success"
 
-            # If there are additional args, they might be tool inputs
-            if len(args) > 1:
-                tool_inputs = {}
-                for i, arg in enumerate(args[1:], 1):
-                    tool_inputs[f"arg_{i}"] = str(arg)
-                attributes[ToolAttributes.TOOL_PARAMETERS] = json.dumps(tool_inputs)
-
-    # Handle return value
-    if return_value is not None:
-        attributes[ToolAttributes.TOOL_STATUS] = "success"
-        # Store the result if it's not too large
-        result_str = str(return_value)
-        if len(result_str) > 1000:
-            result_str = result_str[:1000] + "..."
-        attributes[ToolAttributes.TOOL_RESULT] = result_str
+    except Exception:
+        # If extraction fails, set basic attributes
+        attributes[ToolAttributes.TOOL_NAME] = "unknown"
+        attributes[ToolAttributes.TOOL_DESCRIPTION] = "unknown"
+        attributes[ToolAttributes.TOOL_ID] = str(uuid.uuid4())
+        attributes[ToolAttributes.TOOL_PARAMETERS] = "{}"
+        attributes[ToolAttributes.TOOL_STATUS] = "pending"
 
     return attributes
 
@@ -302,51 +259,34 @@ def get_planning_step_attributes(
     kwargs: Optional[Dict] = None,
     return_value: Optional[Any] = None,
 ) -> Dict[str, Any]:
-    """Extract attributes from a planning step.
+    """Extract attributes from a planning step execution.
 
     Args:
         args: Optional tuple of positional arguments
         kwargs: Optional dict of keyword arguments
-        return_value: Optional return value from the wrapped function
+        return_value: Optional return value from the function
 
     Returns:
-        Dict containing extracted attributes
+        Dictionary of extracted attributes
     """
     attributes = get_common_attributes()
 
-    # Extract agent info from instance
-    if args and len(args) > 0:
-        instance = args[0]
-        agent_type = instance.__class__.__name__
+    try:
+        # Extract planning information
+        if kwargs:
+            if "planning_step" in kwargs:
+                step = kwargs["planning_step"]
+                attributes["agent.planning.step"] = str(step)
+            if "reasoning" in kwargs:
+                attributes["agent.planning.reasoning"] = str(kwargs["reasoning"])
 
-        attributes.update(
-            {
-                AgentAttributes.AGENT_NAME: agent_type,
-                "planning.agent_type": agent_type,
-            }
-        )
+        # Extract return value
+        if return_value is not None:
+            attributes["agentops.entity.output"] = str(return_value)
 
-    # Extract planning step info from args
-    if args and len(args) > 1:
-        task = args[1]
-        attributes[AgentAttributes.AGENT_REASONING] = task
-
-    # Extract kwargs
-    if kwargs:
-        is_first_step = kwargs.get("is_first_step", False)
-        step = kwargs.get("step", 0)
-
-        attributes.update(
-            {
-                "planning.is_first_step": is_first_step,
-                "planning.step_number": step,
-            }
-        )
-
-    # Handle generator return value
-    if return_value is not None:
-        # The return value is typically a generator for planning steps
-        attributes["planning.status"] = "completed"
+    except Exception:
+        # If extraction fails, continue with basic attributes
+        pass
 
     return attributes
 
@@ -361,44 +301,54 @@ def get_managed_agent_attributes(
     Args:
         args: Optional tuple of positional arguments
         kwargs: Optional dict of keyword arguments
-        return_value: Optional return value from the wrapped function
+        return_value: Optional return value from the function
 
     Returns:
-        Dict containing extracted attributes
+        Dictionary of extracted attributes
     """
     attributes = get_common_attributes()
 
-    # Extract agent info from instance
-    if args and len(args) > 0:
-        instance = args[0]
-        agent_type = instance.__class__.__name__
-        agent_name = getattr(instance, "name", agent_type)
-        agent_description = getattr(instance, "description", "")
+    try:
+        # Extract managed agent information
+        agent_instance = None
+        if args and len(args) > 0:
+            agent_instance = args[0]
+        elif kwargs and "agent" in kwargs:
+            agent_instance = kwargs["agent"]
 
-        attributes.update(
-            {
-                AgentAttributes.AGENT_ID: str(uuid.uuid4()),
-                AgentAttributes.AGENT_NAME: agent_name,
-                AgentAttributes.AGENT_ROLE: "managed",
-                "agent.type": agent_type,
-                "agent.description": agent_description,
-                "agent.provide_run_summary": getattr(instance, "provide_run_summary", False),
-            }
-        )
+        if agent_instance:
+            # Extract agent details
+            agent_name = getattr(agent_instance, "name", agent_instance.__class__.__name__)
+            agent_id = getattr(agent_instance, "id", str(uuid.uuid4()))
+            agent_description = getattr(agent_instance, "description", "")
 
-    # Extract task
-    if args and len(args) > 1:
-        task = args[1]
-        attributes[AgentAttributes.AGENT_REASONING] = task
-    elif kwargs and "task" in kwargs:
-        attributes[AgentAttributes.AGENT_REASONING] = kwargs["task"]
+            attributes[AgentAttributes.AGENT_NAME] = agent_name
+            attributes[AgentAttributes.AGENT_ID] = agent_id
+            attributes[AgentAttributes.AGENT_ROLE] = "managed"
+            attributes[AgentAttributes.AGENT_TYPE] = agent_instance.__class__.__name__
 
-    # Handle return value
-    if return_value is not None:
-        if isinstance(return_value, dict):
-            # Managed agent typically returns a dict with task and output
-            attributes[SpanAttributes.AGENTOPS_ENTITY_OUTPUT] = json.dumps(return_value)
-        else:
-            attributes[SpanAttributes.AGENTOPS_ENTITY_OUTPUT] = str(return_value)
+            if agent_description:
+                attributes[AgentAttributes.AGENT_DESCRIPTION] = agent_description
+
+            # Check if this agent provides run summaries
+            attributes["agent.provide_run_summary"] = "false"  # Default for smolagents
+
+        # Extract task information
+        task = None
+        if args and len(args) > 1:
+            task = args[1]
+        elif kwargs and "task" in kwargs:
+            task = kwargs["task"]
+
+        if task:
+            attributes["agent.task"] = str(task)
+
+        # Extract return value
+        if return_value is not None:
+            attributes["agentops.entity.output"] = str(return_value)
+
+    except Exception:
+        # If extraction fails, continue with basic attributes
+        pass
 
     return attributes

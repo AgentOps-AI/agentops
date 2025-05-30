@@ -210,7 +210,7 @@ AGENTIC_LIBRARIES: dict[str, InstrumentorConfig] = {
     },
     "smolagents": {
         "module_name": "agentops.instrumentation.smolagents",
-        "class_name": "SmoLAgentsInstrumentor",
+        "class_name": "SmolAgentsInstrumentor",
         "min_version": "1.8.0",
     },
 }
