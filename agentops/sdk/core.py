@@ -6,7 +6,7 @@ import platform
 import sys
 import os
 import psutil
-from typing import Optional, Any, Dict
+from typing import Optional, Any, Dict, Union
 
 from opentelemetry import metrics, trace
 from opentelemetry.exporter.otlp.proto.http.metric_exporter import OTLPMetricExporter
@@ -24,6 +24,7 @@ from agentops.sdk.processors import InternalSpanProcessor
 from agentops.sdk.types import TracingConfig
 from agentops.semconv import ResourceAttributes, SpanKind, SpanAttributes, CoreAttributes
 from agentops.helpers.dashboard import log_trace_url
+from opentelemetry.trace.status import StatusCode
 
 # No need to create shortcuts since we're using our own ResourceAttributes class now
 
@@ -34,6 +35,38 @@ class TraceContext:
         self.span = span
         self.token = token
         self.is_init_trace = is_init_trace  # Flag to identify the auto-started trace
+        self._end_state = StatusCode.UNSET  # Default end state because we don't know yet
+
+    def __enter__(self) -> "TraceContext":
+        """Enter the trace context."""
+        return self
+
+    def __exit__(self, exc_type: Optional[type], exc_val: Optional[Exception], exc_tb: Optional[Any]) -> bool:
+        """Exit the trace context and end the trace.
+
+        Automatically sets the trace status based on whether an exception occurred:
+        - If an exception is present, sets status to ERROR
+        - If no exception occurred, sets status to OK
+
+        Returns:
+            False: Always returns False to propagate any exceptions that occurred
+                  within the context manager block, following Python's
+                  context manager protocol for proper exception handling.
+        """
+        if exc_type is not None:
+            self._end_state = StatusCode.ERROR
+            if exc_val:
+                logger.debug(f"Trace exiting with exception: {exc_val}")
+        else:
+            # No exception occurred, set to OK
+            self._end_state = StatusCode.OK
+
+        try:
+            TracingCore.get_instance().end_trace(self, self._end_state)
+        except Exception as e:
+            logger.error(f"Error ending trace in context manager: {e}")
+
+        return False
 
 
 def get_imported_libraries():
@@ -454,7 +487,9 @@ class TracingCore:
 
         return trace_context
 
-    def end_trace(self, trace_context: Optional[TraceContext] = None, end_state: str = "Success") -> None:
+    def end_trace(
+        self, trace_context: Optional[TraceContext] = None, end_state: Union[Any, StatusCode, str] = None
+    ) -> None:
         """
         Ends a trace (its root span) and finalizes it.
         If no trace_context is provided, ends all active session spans.
@@ -466,6 +501,12 @@ class TracingCore:
         if not self.initialized:
             logger.warning("TracingCore not initialized. Cannot end trace.")
             return
+
+        # Set default if not provided
+        if end_state is None:
+            from agentops.enums import TraceState
+
+            end_state = TraceState.SUCCESS
 
         # If no specific trace_context provided, end all active traces
         if trace_context is None:
@@ -480,7 +521,7 @@ class TracingCore:
         # End specific trace
         self._end_single_trace(trace_context, end_state)
 
-    def _end_single_trace(self, trace_context: TraceContext, end_state: str) -> None:
+    def _end_single_trace(self, trace_context: TraceContext, end_state: Union[Any, StatusCode, str]) -> None:
         """
         Internal method to end a single trace.
 
@@ -502,10 +543,23 @@ class TracingCore:
             # Handle case where span is mocked or trace_id is not a valid integer
             trace_id = str(span.get_span_context().trace_id)
 
-        logger.debug(f"Ending trace with span ID: {span.get_span_context().span_id}, end_state: {end_state}")
+        # Convert TraceState enum to StatusCode if needed
+        from agentops.enums import TraceState
+
+        if isinstance(end_state, TraceState):
+            # It's a TraceState enum
+            state_str = str(end_state)
+        elif isinstance(end_state, StatusCode):
+            # It's already a StatusCode
+            state_str = str(end_state)
+        else:
+            # It's a string (legacy)
+            state_str = str(end_state)
+
+        logger.debug(f"Ending trace with span ID: {span.get_span_context().span_id}, end_state: {state_str}")
 
         try:
-            span.set_attribute(SpanAttributes.AGENTOPS_SESSION_END_STATE, end_state)
+            span.set_attribute(SpanAttributes.AGENTOPS_SESSION_END_STATE, state_str)
             _finalize_span(span, token=token)
 
             # Remove from active traces
