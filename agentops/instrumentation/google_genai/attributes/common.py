@@ -9,7 +9,7 @@ from agentops.instrumentation.common.attributes import (
     get_common_attributes,
     _extract_attributes_from_mapping,
 )
-from agentops.instrumentation.google_generativeai import LIBRARY_NAME, LIBRARY_VERSION
+from agentops.instrumentation.google_genai import LIBRARY_NAME, LIBRARY_VERSION
 
 # Common mapping for config parameters
 REQUEST_CONFIG_ATTRIBUTES: AttributeMap = {

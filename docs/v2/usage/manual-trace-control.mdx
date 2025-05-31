@@ -1,0 +1,184 @@
+---
+title: "Manual Trace Control"
+description: "Advanced trace management with start_trace and end_trace methods"
+---
+
+## Basic Manual Trace Control
+
+### Starting and Ending Traces
+
+The most basic form of manual trace control involves starting a trace, executing your code, and then ending the trace with a specific state:
+
+```python
+import agentops
+
+# Initialize without automatic session creation
+agentops.init("your-api-key", auto_start_session=False)
+
+# Start a trace manually
+trace = agentops.start_trace("my-workflow")
+
+try:
+    # Your application logic here
+    result = perform_some_operation()
+    
+    # End the trace successfully
+    agentops.end_trace(trace, "Success")
+except Exception as e:
+    # End the trace with failure state
+    agentops.end_trace(trace, "Failure")
+```
+
+### Trace Names and Tags
+
+You can provide meaningful names and tags when starting traces:
+
+```python
+# Start a trace with custom name and tags
+trace = agentops.start_trace(
+    trace_name="customer-service-workflow",
+    tags=["customer-123", "priority-high", "support"]
+)
+```
+
+### Batch Processing with Selective Trace Ending
+
+For batch processing scenarios, you can selectively end traces based on processing results:
+
+```python
+import agentops
+
+# Initialize AgentOps
+agentops.init("your-api-key", auto_start_session=False)
+
+# Sample batch items to process
+batch_items = [
+    {"id": 1, "data": "item_1_data", "valid": True},
+    {"id": 2, "data": "item_2_data", "valid": False},
+    {"id": 3, "data": "item_3_data", "valid": True},
+]
+@agentops.operation(name="process_item")
+def process_item(item):
+    """Simulate processing an item"""
+    if not item.get("valid", False):
+        raise ValueError(f"Invalid item: {item['id']}")
+    return {"processed": True, "result": f"Processed {item['data']}"}
+
+# Start traces for batch items
+for i, item in enumerate(batch_items):
+    trace = agentops.start_trace(f"batch_item_{i+1}")
+    try:
+        result = process_item(item)
+        if result.get("processed"):
+            agentops.end_trace(trace, "Success")
+        else:
+            agentops.end_trace(trace, "Failure")
+    except Exception as e:
+        agentops.end_trace(trace, "Error")
+```
+
+## Integration with Decorators
+
+Manual trace control works seamlessly with AgentOps decorators:
+
+```python
+import agentops
+from agentops.sdk.decorators import agent, operation, tool
+
+agentops.init("your-api-key", auto_start_session=False)
+
+@agent
+class CustomerServiceAgent:
+    @operation
+    def analyze_request(self, request):
+        return f"Analyzed: {request}"
+    
+    @tool(cost=0.02)
+    def lookup_customer(self, customer_id):
+        return f"Customer data for {customer_id}"
+
+# Manual trace with decorated components
+trace = agentops.start_trace("customer-service")
+
+try:
+    agent = CustomerServiceAgent()
+    customer_data = agent.lookup_customer("CUST_123")
+    analysis = agent.analyze_request("billing issue")
+    
+    agentops.end_trace(trace, "Success")
+except Exception as e:
+    agentops.end_trace(trace, "Error")
+```
+
+## Real-World Example
+
+Here's a comprehensive example showing manual trace control in a customer service application:
+
+```python
+import agentops
+from agentops.sdk.decorators import agent, operation, tool
+from openai import OpenAI
+
+agentops.init(auto_start_session=False)
+client = OpenAI()
+
+@operation
+def analyze_sentiment(text):
+        response = client.chat.completions.create(
+            model="gpt-3.5-turbo",
+            messages=[{"role": "user", "content": f"Analyze sentiment: {text}"}]
+        )
+        return response.choices[0].message.content.strip()
+    
+@tool(cost=0.01)
+def lookup_order(order_id):
+    return f"Order {order_id} details"
+
+def process_customer_requests(requests):
+    """Process multiple customer requests with individual trace tracking"""
+    results = []
+    for i, request in enumerate(requests):
+        trace = agentops.start_trace(
+            f"customer_request_{i+1}",
+            tags=["customer-service", request.get("priority", "normal")]
+        )
+        try:
+            sentiment = analyze_sentiment(request["message"])
+            
+            if "order" in request:
+                order_info = lookup_order(request["order"])
+            
+            if "positive" in sentiment.lower() or "neutral" in sentiment.lower():
+                agentops.end_trace(trace, "Success")
+                results.append({"status": "resolved", "sentiment": sentiment})
+            else:
+                agentops.end_trace(trace, "Escalation_Required")
+                results.append({"status": "escalated", "sentiment": sentiment})
+                
+        except Exception as e:
+            agentops.end_trace(trace, "Error")
+            results.append({"status": "error", "error": str(e)})
+    
+    return results
+
+customer_requests = [
+    {"message": "I love this product!", "priority": "low"},
+    {"message": "My order is completely wrong!", "order": "12345", "priority": "high"},
+    {"message": "When will my package arrive?", "order": "67890", "priority": "normal"}
+]
+
+results = process_customer_requests(customer_requests)
+print(f"Processed {len(results)} customer requests")
+```
+
+This example demonstrates:
+- Individual trace management for each customer request
+- Integration with decorated agents and tools
+- Different end states based on business logic
+- Proper error handling with appropriate trace states
+- Use of tags for categorization
+
+<script type="module" src="/scripts/github_stars.js"></script>
+<script type="module" src="/scripts/scroll-img-fadein-animation.js"></script>
+<script type="module" src="/scripts/button_heartbeat_animation.js"></script>
+<script type="module" src="/scripts/adjust_api_dynamically.js"></script> 

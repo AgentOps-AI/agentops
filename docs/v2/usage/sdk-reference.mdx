@@ -33,6 +33,7 @@ Initializes the AgentOps SDK and automatically starts tracking your application.
 - `fail_safe` (bool, optional): Whether to suppress errors and continue execution when possible. Defaults to False.
 - `exporter_endpoint` (str, optional): Endpoint for the exporter. If not provided, will be read from the `AGENTOPS_EXPORTER_ENDPOINT` environment variable. Defaults to 'https://otlp.agentops.ai/v1/traces'.
 - `export_flush_interval` (int, optional): Time interval in milliseconds between automatic exports of telemetry data. Defaults to 1000.
+- `trace_name` (str, optional): Custom name for the automatically created trace. If not provided, a default name will be used.
 
 **Returns**:
 
@@ -45,6 +46,9 @@ import agentops
 
 # Basic initialization with automatic session creation
 agentops.init("your-api-key")
+
+# Initialize with custom trace name
+agentops.init("your-api-key", trace_name="my-workflow")
 ```
 
 ### `configure()`
@@ -70,6 +74,7 @@ Updates client configuration after initialization. Supports the same parameters 
 - `processor` (object, optional): Custom span processor for OpenTelemetry trace data.
 - `exporter_endpoint` (str, optional): Endpoint for the exporter.
 - `export_flush_interval` (int, optional): Time interval in milliseconds between automatic exports of telemetry data.
+- `trace_name` (str, optional): Custom name for traces.
 
 **Example**:
 
@@ -83,7 +88,8 @@ agentops.init()
 agentops.configure(
     max_wait_time=10000,
     max_queue_size=200,
-    default_tags=["production", "gpt-4"]
+    default_tags=["production", "gpt-4"],
+    trace_name="production-workflow"
 )
 ```
 
@@ -95,17 +101,22 @@ Gets the singleton client instance. Most users won't need to use this function d
 
 - The AgentOps client instance.
 
-## Session Management
+## Trace Management
 
-These functions help you manage the lifecycle of tracking sessions.
+These functions help you manage the lifecycle of tracking traces.
 
-### `start_session()`
+### `start_trace()`
 
-Starts a new AgentOps session manually. This is useful when you've disabled automatic session creation or need multiple separate sessions.
+Starts a new AgentOps trace manually. This is useful when you've disabled automatic session creation or need multiple separate traces.
 
 **Parameters**:
 
-- `tags` (Union[Dict[str, Any], List[str]], optional): Optional tags to attach to the session, useful for filtering in the dashboard. Can be a list of strings or a dict of key-value pairs.
+- `trace_name` (str, optional): Name for the trace. If not provided, a default name will be used.
+- `tags` (Union[Dict[str, Any], List[str]], optional): Optional tags to attach to the trace, useful for filtering in the dashboard. Can be a list of strings or a dict of key-value pairs.
+
+**Returns**:
+
+- TraceContext object representing the started trace.
 
 **Example**:
 
@@ -115,37 +126,77 @@ import agentops
 # Initialize without auto-starting a session
 agentops.init("your-api-key", auto_start_session=False)
 
-# Later, manually start a session
-session = agentops.start_session(tags=["customer-query"])
+# Start a trace manually
+trace = agentops.start_trace("customer-service-workflow", tags=["customer-query"])
 ```
-## Decorators for Detailed Instrumentation
 
-For more granular control, AgentOps provides decorators that explicitly track different components of your application. These decorators are imported from `agentops.sdk.decorators`.
+### `end_trace()`
+
+Ends a specific trace or all active traces.
+
+**Parameters**:
+
+- `trace` (TraceContext, optional): The specific trace to end. If not provided, all active traces will be ended.
+- `end_state` (str, optional): The end state for the trace(s). You can use any descriptive string that makes sense for your application (e.g., "Success", "Failure", "Error", "Timeout", etc.).
+
+**Example**:
 
 ```python
 import agentops
-from agentops.sdk.decorators import session, agent, operation, workflow, task
+
+# End a specific trace
+trace = agentops.start_trace("my-workflow")
+# ... your code ...
+agentops.end_trace(trace, "Success")
+
+# End all active traces
+agentops.end_trace(end_state="Emergency_Shutdown")
+```
+
+## Decorators for Detailed Instrumentation
+
+For more granular control, AgentOps provides decorators that explicitly track different components of your application. **The `@trace` decorator is the recommended approach for creating custom traces**, especially in multi-threaded environments. These decorators are imported from `agentops.sdk.decorators`.
+
+```python
+import agentops
+from agentops.sdk.decorators import trace, agent, operation, tool
 
 # Initialize without automatic session creation
 agentops.init("your-api-key", auto_start_session=False)
 
-# Create and run a session using the decorator
-@session
+# Create and run a trace using the decorator
+@trace
 def my_workflow():
     # Your workflow code here
     pass
 
-# Run the workflow, which creates and manages the session
+# Run the workflow, which creates and manages the trace
 my_workflow()
 ```
 
 ### Available Decorators
 
-- `@session`: Creates a session span, which serves as the root for all other spans
+- `@trace`: Creates a trace span for grouping related operations
 - `@agent`: Creates an agent span for tracking agent operations
 - `@operation` / `@task`: Creates operation/task spans for tracking specific operations (these are aliases)
 - `@workflow`: Creates workflow spans for organizing related operations
 - `@tool`: Creates tool spans for tracking tool usage and cost in agent operations. Supports cost parameter for tracking tool usage costs.
+
+**Tool Decorator Example**:
+
+```python
+from agentops.sdk.decorators import tool
+
+@tool(cost=0.05)
+def web_search(query):
+    # Tool implementation with cost tracking
+    return f"Search results for: {query}"
+
+@tool
+def calculator(expression):
+    # Tool without cost tracking
+    return eval(expression)
+```
 
 See [Decorators](/v2/concepts/decorators) for more detailed documentation on using these decorators.
 
@@ -153,6 +204,7 @@ See [Decorators](/v2/concepts/decorators) for more detailed documentation on usi
 
 The following functions are maintained for backward compatibility with older versions of the SDK and integrations. New code should use the functions and decorators described above instead.
 
+- `start_session()`: Legacy function for starting sessions. Use `@trace` decorator or `start_trace()` instead.
 - `record(event)`: Legacy function to record an event. Replaced by decorator-based tracing.
 - `track_agent()`: Legacy decorator for marking agents. Replaced by the `@agent` decorator.
 - `track_tool()`: Legacy decorator for marking tools. Replaced by the `@tool` decorator.
