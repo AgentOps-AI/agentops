@@ -13,13 +13,49 @@ AgentOps provides seamless integration with [Google Agent Development Kit (ADK)]
 <CodeTooltip />
 
     <CodeGroup>
-      ```bash pip 
-  pip install agentops google-adk
+      ```bash pip
+      pip install agentops google-adk
       ```
       ```bash poetry
-  poetry add agentops google-adk
+      poetry add agentops google-adk
+      ```
+      ```bash uv
+      uv add agentops google-adk
       ```
     </CodeGroup>
+
+## Setting Up API Keys
+
+Before using Google ADK with AgentOps, you need to set up your API keys. You can obtain:
+- **GOOGLE_API_KEY**: From the [Google AI Studio](https://aistudio.google.com/app/apikey)
+- **AGENTOPS_API_KEY**: From your [AgentOps Dashboard](https://app.agentops.ai/)
+
+Then to set them up, you can either export them as environment variables or set them in a `.env` file.
+
+<CodeGroup>
+    ```bash Export to CLI
+    export GOOGLE_API_KEY="your_google_api_key_here"
+    export AGENTOPS_API_KEY="your_agentops_api_key_here"
+    ```
+    ```txt Set in .env file
+    GOOGLE_API_KEY="your_google_api_key_here"
+    AGENTOPS_API_KEY="your_agentops_api_key_here"
+    ```
+</CodeGroup>
+
+Then load the environment variables in your Python code:
+
+```python
+from dotenv import load_dotenv
+import os
+
+# Load environment variables from .env file
+load_dotenv()
+
+# Set up environment variables with fallback values
+os.environ["GOOGLE_API_KEY"] = os.getenv("GOOGLE_API_KEY")
+os.environ["AGENTOPS_API_KEY"] = os.getenv("AGENTOPS_API_KEY")
+```
 
 ## Usage
 
@@ -201,4 +237,4 @@ Read more about environment variables in [Advanced Configuration](/v2/usage/adva
 <script type="module" src="/scripts/github_stars.js"></script>
 <script type="module" src="/scripts/scroll-img-fadein-animation.js"></script>
 <script type="module" src="/scripts/button_heartbeat_animation.js"></script>
-<script type="css" src="/styles/styles.css"></script> 
+<script type="css" src="/styles/styles.css"></script>

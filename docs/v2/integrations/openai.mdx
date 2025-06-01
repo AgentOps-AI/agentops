@@ -12,14 +12,50 @@ AgentOps seamlessly integrates with [OpenAI's Python SDK](https://github.com/ope
 
 <CodeTooltip />
 
-    <CodeGroup>
-      ```bash pip 
+<CodeGroup>
+  ```bash pip
   pip install agentops openai
-      ```
-      ```bash poetry
+  ```
+  ```bash poetry
   poetry add agentops openai
-      ```
-    </CodeGroup>
+  ```
+  ```bash uv
+  uv add agentops openai
+  ```
+</CodeGroup>
+
+## Setting Up API Keys
+
+Before using OpenAI with AgentOps, you need to set up your API keys. You can obtain:
+- **OPENAI_API_KEY**: From the [OpenAI Platform](https://platform.openai.com/api-keys)
+- **AGENTOPS_API_KEY**: From your [AgentOps Dashboard](https://app.agentops.ai/)
+
+Then to set them up, you can either export them as environment variables or set them in a `.env` file.
+
+<CodeGroup>
+    ```bash Export to CLI
+    export OPENAI_API_KEY="your_openai_api_key_here"
+    export AGENTOPS_API_KEY="your_agentops_api_key_here"
+    ```
+    ```txt Set in .env file
+    OPENAI_API_KEY="your_openai_api_key_here"
+    AGENTOPS_API_KEY="your_agentops_api_key_here"
+    ```
+</CodeGroup>
+
+Then load the environment variables in your Python code:
+
+```python
+from dotenv import load_dotenv
+import os
+
+# Load environment variables from .env file
+load_dotenv()
+
+# Set up environment variables with fallback values
+os.environ["OPENAI_API_KEY"] = os.getenv("OPENAI_API_KEY")
+os.environ["AGENTOPS_API_KEY"] = os.getenv("AGENTOPS_API_KEY")
+```
 
 ## Usage
 
@@ -48,6 +84,18 @@ response = client.chat.completions.create(
 print(response.choices[0].message.content)
       ```
     </CodeGroup>
+
+## Environment Variables
+
+<EnvTooltip />
+<CodeGroup>
+  ```python .env
+  AGENTOPS_API_KEY=<YOUR_AGENTOPS_API_KEY>
+  OPENAI_API_KEY=<YOUR_OPENAI_API_KEY>
+  ```
+</CodeGroup>
+
+Read more about environment variables in [Advanced Configuration](/v2/usage/advanced-configuration)
 
 ## Advanced Examples
 
@@ -172,17 +220,9 @@ else:
 ```
 </CodeGroup>
 
-## Environment Variables
+## Examples
 
-<EnvTooltip />
-<CodeGroup>
-  ```python .env
-  AGENTOPS_API_KEY=<YOUR API KEY>
-  OPENAI_API_KEY=<YOUR OPENAI API KEY>
-  ```
-</CodeGroup>
-
-Read more about environment variables in [Advanced Configuration](/v2/usage/advanced-configuration)
+Examples are available in the [AgentOps repository](https://github.com/AgentOps-AI/agentops/tree/main/examples/openai).
 
 <script type="module" src="/scripts/github_stars.js"></script>
 <script type="module" src="/scripts/scroll-img-fadein-animation.js"></script>

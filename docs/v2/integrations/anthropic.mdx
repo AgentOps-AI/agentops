@@ -12,14 +12,50 @@ AgentOps provides seamless integration with [Anthropic's Python SDK](https://git
 
 <CodeTooltip />
 
-    <CodeGroup>
-      ```bash pip 
+<CodeGroup>
+  ```bash pip
   pip install agentops anthropic
-      ```
-      ```bash poetry
+  ```
+  ```bash poetry
   poetry add agentops anthropic
-      ```
-    </CodeGroup>
+  ```
+  ```bash uv
+  uv add agentops anthropic
+  ```
+</CodeGroup>
+
+## Setting Up API Keys
+
+Before using Anthropic with AgentOps, you need to set up your API keys. You can obtain:
+- **ANTHROPIC_API_KEY**: From the [Anthropic Console](https://console.anthropic.com/)
+- **AGENTOPS_API_KEY**: From your [AgentOps Dashboard](https://app.agentops.ai/)
+
+Then to set them up, you can either export them as environment variables or set them in a `.env` file.
+
+<CodeGroup>
+    ```bash Export to CLI
+    export ANTHROPIC_API_KEY="your_anthropic_api_key_here"
+    export AGENTOPS_API_KEY="your_agentops_api_key_here"
+    ```
+    ```txt Set in .env file
+    ANTHROPIC_API_KEY="your_anthropic_api_key_here"
+    AGENTOPS_API_KEY="your_agentops_api_key_here"
+    ```
+</CodeGroup>
+
+Then load the environment variables in your Python code:
+
+```python
+from dotenv import load_dotenv
+import os
+
+# Load environment variables from .env file
+load_dotenv()
+
+# Set up environment variables with fallback values
+os.environ["ANTHROPIC_API_KEY"] = os.getenv("ANTHROPIC_API_KEY")
+os.environ["AGENTOPS_API_KEY"] = os.getenv("AGENTOPS_API_KEY")
+```
 
 ## Usage
 
@@ -48,6 +84,18 @@ message = client.messages.create(
 print(message.content[0].text)
       ```
     </CodeGroup>
+
+## Environment Variables
+
+<EnvTooltip />
+<CodeGroup>
+  ```python .env
+  AGENTOPS_API_KEY=<YOUR_AGENTOPS_API_KEY>
+  ANTHROPIC_API_KEY=<YOUR_ANTHROPIC_API_KEY>
+  ```
+</CodeGroup>
+
+Read more about environment variables in [Advanced Configuration](/v2/usage/advanced-configuration)
 
 ## Advanced Examples
 
@@ -196,17 +244,9 @@ else:
 ```
 </CodeGroup>
 
-## Environment Variables
+## Examples
 
-<EnvTooltip />
-<CodeGroup>
-  ```python .env
-  AGENTOPS_API_KEY=<YOUR API KEY>
-  ANTHROPIC_API_KEY=<YOUR ANTHROPIC API KEY>
-  ```
-</CodeGroup>
-
-Read more about environment variables in [Advanced Configuration](/v2/usage/advanced-configuration)
+Examples are available in the [AgentOps repository](https://github.com/AgentOps-AI/agentops/tree/main/examples/anthropic).
 
 <script type="module" src="/scripts/github_stars.js"></script>
 <script type="module" src="/scripts/scroll-img-fadein-animation.js"></script>

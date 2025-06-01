@@ -17,7 +17,46 @@ AgentOps provides seamless integration with [LiteLLM](https://github.com/BerriAI
   ```bash poetry
   poetry add agentops litellm
   ```
+  ```bash uv
+  uv add agentops litellm
+  ```
 </CodeGroup>
+
+## Setting Up API Keys
+
+Before using LiteLLM with AgentOps, you need to set up your API keys. You can obtain:
+- **Provider API Keys**: From your chosen LLM provider (OpenAI, Anthropic, Google, etc.)
+- **AGENTOPS_API_KEY**: From your [AgentOps Dashboard](https://app.agentops.ai/)
+
+Then to set them up, you can either export them as environment variables or set them in a `.env` file.
+
+<CodeGroup>
+    ```bash Export to CLI
+    export OPENAI_API_KEY="your_openai_api_key_here"
+    export ANTHROPIC_API_KEY="your_anthropic_api_key_here"
+    export AGENTOPS_API_KEY="your_agentops_api_key_here"
+    ```
+    ```txt Set in .env file
+    OPENAI_API_KEY="your_openai_api_key_here"
+    ANTHROPIC_API_KEY="your_anthropic_api_key_here"
+    AGENTOPS_API_KEY="your_agentops_api_key_here"
+    ```
+</CodeGroup>
+
+Then load the environment variables in your Python code:
+
+```python
+from dotenv import load_dotenv
+import os
+
+# Load environment variables from .env file
+load_dotenv()
+
+# Set up environment variables with fallback values
+os.environ["OPENAI_API_KEY"] = os.getenv("OPENAI_API_KEY")
+os.environ["ANTHROPIC_API_KEY"] = os.getenv("ANTHROPIC_API_KEY")
+os.environ["AGENTOPS_API_KEY"] = os.getenv("AGENTOPS_API_KEY")
+```
 
 ## Usage
 
@@ -140,6 +179,10 @@ print("Anthropic Response:", anthropic_response.choices[0].message.content)
 </CodeGroup>
 
 Read more about environment variables in [Advanced Configuration](/v2/usage/advanced-configuration)
+
+## Examples
+
+Examples are available in the [AgentOps repository](https://github.com/AgentOps-AI/agentops/tree/main/examples/litellm).
 
 ## Additional Resources
 
