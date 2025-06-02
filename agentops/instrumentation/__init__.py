@@ -32,6 +32,75 @@ from agentops.logging import logger
 from agentops.sdk.core import TracingCore
 
 
+# Define the structure for instrumentor configurations
+class InstrumentorConfig(TypedDict):
+    module_name: str
+    class_name: str
+    min_version: str
+    package_name: NotRequired[str]  # Optional: actual pip package name if different from module
+
+
+# Configuration for supported LLM providers
+PROVIDERS: dict[str, InstrumentorConfig] = {
+    "openai": {
+        "module_name": "agentops.instrumentation.openai",
+        "class_name": "OpenAIInstrumentor",
+        "min_version": "1.0.0",
+    },
+    "anthropic": {
+        "module_name": "agentops.instrumentation.anthropic",
+        "class_name": "AnthropicInstrumentor",
+        "min_version": "0.32.0",
+    },
+    "ibm_watsonx_ai": {
+        "module_name": "agentops.instrumentation.ibm_watsonx_ai",
+        "class_name": "IBMWatsonXInstrumentor",
+        "min_version": "0.1.0",
+    },
+    "google.genai": {
+        "module_name": "agentops.instrumentation.google_genai",
+        "class_name": "GoogleGenAIInstrumentor",
+        "min_version": "0.1.0",
+        "package_name": "google-genai",  # Actual pip package name
+    },
+}
+
+# Configuration for utility instrumentors
+UTILITY_INSTRUMENTORS: dict[str, InstrumentorConfig] = {
+    "concurrent.futures": {
+        "module_name": "agentops.instrumentation.concurrent_futures",
+        "class_name": "ConcurrentFuturesInstrumentor",
+        "min_version": "3.7.0",  # Python 3.7+ (concurrent.futures is stdlib)
+        "package_name": "python",  # Special case for stdlib modules
+    },
+}
+
+# Configuration for supported agentic libraries
+AGENTIC_LIBRARIES: dict[str, InstrumentorConfig] = {
+    "crewai": {
+        "module_name": "agentops.instrumentation.crewai",
+        "class_name": "CrewAIInstrumentor",
+        "min_version": "0.56.0",
+    },
+    "autogen": {"module_name": "agentops.instrumentation.ag2", "class_name": "AG2Instrumentor", "min_version": "0.1.0"},
+    "agents": {
+        "module_name": "agentops.instrumentation.openai_agents",
+        "class_name": "OpenAIAgentsInstrumentor",
+        "min_version": "0.0.1",
+    },
+    "google.adk": {
+        "module_name": "agentops.instrumentation.google_adk",
+        "class_name": "GoogleADKInstrumentor",
+        "min_version": "0.1.0",
+    },
+}
+
+# Combine all target packages for monitoring
+TARGET_PACKAGES = set(PROVIDERS.keys()) | set(AGENTIC_LIBRARIES.keys()) | set(UTILITY_INSTRUMENTORS.keys())
+
+# Create a single instance of the manager
+# _manager = InstrumentationManager() # Removed
+
 # Module-level state variables
 _active_instrumentors: list[BaseInstrumentor] = []
 _original_builtins_import = builtins.__import__  # Store original import
@@ -165,82 +234,6 @@ def _import_monitor(name: str, globals_dict=None, locals_dict=None, fromlist=(),
                 _instrumenting_packages.discard(package_to_check)
 
     return module
-
-
-# Define the structure for instrumentor configurations
-class InstrumentorConfig(TypedDict):
-    module_name: str
-    class_name: str
-    min_version: str
-    package_name: NotRequired[str]  # Optional: actual pip package name if different from module
-
-
-# Configuration for supported LLM providers
-PROVIDERS: dict[str, InstrumentorConfig] = {
-    "openai": {
-        "module_name": "agentops.instrumentation.openai",
-        "class_name": "OpenAIInstrumentor",
-        "min_version": "1.0.0",
-    },
-    "anthropic": {
-        "module_name": "agentops.instrumentation.anthropic",
-        "class_name": "AnthropicInstrumentor",
-        "min_version": "0.32.0",
-    },
-    "ibm_watsonx_ai": {
-        "module_name": "agentops.instrumentation.ibm_watsonx_ai",
-        "class_name": "IBMWatsonXInstrumentor",
-        "min_version": "0.1.0",
-    },
-    "google.genai": {
-        "module_name": "agentops.instrumentation.google_genai",
-        "class_name": "GoogleGenAIInstrumentor",
-        "min_version": "0.1.0",
-        "package_name": "google-genai",  # Actual pip package name
-    },
-    "mem0": {
-        "module_name": "agentops.instrumentation.mem0",
-        "class_name": "Mem0Instrumentor",
-        "min_version": "0.1.10",
-        "package_name": "mem0ai",  # Actual pip package name
-    },
-}
-
-# Configuration for utility instrumentors
-UTILITY_INSTRUMENTORS: dict[str, InstrumentorConfig] = {
-    "concurrent.futures": {
-        "module_name": "agentops.instrumentation.concurrent_futures",
-        "class_name": "ConcurrentFuturesInstrumentor",
-        "min_version": "3.7.0",  # Python 3.7+ (concurrent.futures is stdlib)
-        "package_name": "python",  # Special case for stdlib modules
-    },
-}
-
-# Configuration for supported agentic libraries
-AGENTIC_LIBRARIES: dict[str, InstrumentorConfig] = {
-    "crewai": {
-        "module_name": "agentops.instrumentation.crewai",
-        "class_name": "CrewAIInstrumentor",
-        "min_version": "0.56.0",
-    },
-    "autogen": {"module_name": "agentops.instrumentation.ag2", "class_name": "AG2Instrumentor", "min_version": "0.1.0"},
-    "agents": {
-        "module_name": "agentops.instrumentation.openai_agents",
-        "class_name": "OpenAIAgentsInstrumentor",
-        "min_version": "0.0.1",
-    },
-    "google.adk": {
-        "module_name": "agentops.instrumentation.google_adk",
-        "class_name": "GoogleADKInstrumentor",
-        "min_version": "0.1.0",
-    },
-}
-
-# Combine all target packages for monitoring
-TARGET_PACKAGES = set(PROVIDERS.keys()) | set(AGENTIC_LIBRARIES.keys()) | set(UTILITY_INSTRUMENTORS.keys())
-
-# Create a single instance of the manager
-# _manager = InstrumentationManager() # Removed
 
 
 @dataclass
