@@ -518,10 +518,8 @@ class TracingCore:
         # We use try/except to gracefully handle these cases while ensuring spans are
         # flushed when possible, which is especially critical for session spans.
         try:
-            from opentelemetry.trace import get_tracer_provider
-
-            tracer_provider = get_tracer_provider()
-            tracer_provider.force_flush()
+            if self.provider:
+                self.provider.force_flush()
         except (AttributeError, Exception):
             # Either force_flush doesn't exist or there was an error calling it
             pass
