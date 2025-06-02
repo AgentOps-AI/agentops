@@ -12,7 +12,7 @@ from opentelemetry.trace import SpanContext, set_span_in_context
 
 from agentops.helpers.serialization import safe_serialize
 from agentops.logging import logger
-from agentops.sdk.core import TracingCore
+from agentops.sdk.core import TracingCore, tracer
 from agentops.semconv import SpanKind, SpanAttributes, LangChainAttributes, LangChainAttributeValues, CoreAttributes
 from agentops.integration.callbacks.langchain.utils import get_model_info
 
@@ -57,7 +57,7 @@ class LangchainCallbackHandler(BaseCallbackHandler):
         """Initialize AgentOps"""
         import agentops
 
-        if not TracingCore.get_instance().initialized:
+        if not tracer.initialized:
             init_kwargs = {
                 "auto_start_session": False,
                 "instrument_llm_calls": True,
@@ -69,11 +69,11 @@ class LangchainCallbackHandler(BaseCallbackHandler):
             agentops.init(**init_kwargs)
             logger.debug("AgentOps initialized from LangChain callback handler")
 
-        if not TracingCore.get_instance().initialized:
+        if not tracer.initialized:
             logger.warning("AgentOps not initialized, session span will not be created")
             return
 
-        tracer = TracingCore.get_instance().get_tracer()
+        otel_tracer = tracer.get_tracer()
 
         span_name = f"session.{SpanKind.SESSION}"
 
@@ -85,7 +85,7 @@ class LangchainCallbackHandler(BaseCallbackHandler):
         }
 
         # Create a root session span
-        self.session_span = tracer.start_span(span_name, attributes=attributes)
+        self.session_span = otel_tracer.start_span(span_name, attributes=attributes)
 
         # Attach session span to the current context
         self.session_token = attach(set_span_in_context(self.session_span))
@@ -113,11 +113,11 @@ class LangchainCallbackHandler(BaseCallbackHandler):
         Returns:
             The created span
         """
-        if not TracingCore.get_instance().initialized:
+        if not tracer.initialized:
             logger.warning("AgentOps not initialized, spans will not be created")
             return trace.NonRecordingSpan(SpanContext.INVALID)
 
-        tracer = TracingCore.get_instance().get_tracer()
+        otel_tracer = tracer.get_tracer()
 
         span_name = f"{operation_name}.{span_kind}"
 
@@ -137,13 +137,13 @@ class LangchainCallbackHandler(BaseCallbackHandler):
             # Create context with parent span
             parent_ctx = set_span_in_context(parent_span)
             # Start span with parent context
-            span = tracer.start_span(span_name, context=parent_ctx, attributes=attributes)
+            span = otel_tracer.start_span(span_name, context=parent_ctx, attributes=attributes)
             logger.debug(f"Started span: {span_name} with parent: {parent_run_id}")
         else:
             # If no parent_run_id or parent not found, use session as parent
             parent_ctx = set_span_in_context(self.session_span)
             # Start span with session as parent context
-            span = tracer.start_span(span_name, context=parent_ctx, attributes=attributes)
+            span = otel_tracer.start_span(span_name, context=parent_ctx, attributes=attributes)
             logger.debug(f"Started span: {span_name} with session as parent")
 
         # Store span in active_spans

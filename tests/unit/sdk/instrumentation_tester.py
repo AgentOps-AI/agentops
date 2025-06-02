@@ -8,7 +8,7 @@ from opentelemetry.sdk.trace.export import SimpleSpanProcessor
 from opentelemetry.sdk.trace.export.in_memory_span_exporter import InMemorySpanExporter
 from opentelemetry.util.types import Attributes
 
-from agentops.sdk.core import TracingCore
+from agentops.sdk.core import TracingCore, tracer
 
 
 def create_tracer_provider(
@@ -96,7 +96,7 @@ class InstrumentationTester:
         self.mock_setup_telemetry = self.setup_telemetry_patcher.start()
 
         # Reset the tracing core to force reinitialization
-        core = TracingCore.get_instance()
+        core = tracer
         core._initialized = False
         core._provider = None
 
@@ -108,7 +108,7 @@ class InstrumentationTester:
     def _shutdown_core(self):
         """Safely shut down the tracing core."""
         try:
-            TracingCore.get_instance().shutdown()
+            tracer.shutdown()
         except Exception as e:
             print(f"Warning: Error shutting down tracing core: {e}")
 
@@ -142,7 +142,7 @@ class InstrumentationTester:
         self.mock_setup_telemetry.reset_mock()
 
         # Reset the tracing core to force reinitialization
-        core = TracingCore.get_instance()
+        core = tracer
         core._initialized = False
         core._provider = None
 

@@ -202,18 +202,6 @@ class TracingCore:
     It handles provider management, span creation, and context propagation.
     """
 
-    _instance: Optional[TracingCore] = None
-    _lock = threading.Lock()
-
-    @classmethod
-    def get_instance(cls) -> TracingCore:
-        """Get the singleton instance of TracingCore."""
-        if cls._instance is None:
-            with cls._lock:
-                if cls._instance is None:
-                    cls._instance = cls()
-        return cls._instance
-
     def __init__(self):
         """Initialize the tracing core."""
         self._provider: Optional[TracerProvider] = None
@@ -246,49 +234,45 @@ class TracingCore:
         if self._initialized:
             return
 
-        with self._lock:
-            if self._initialized:
-                return
+        # Set default values for required fields
+        kwargs.setdefault("service_name", "agentops")
+        kwargs.setdefault("exporter_endpoint", "https://otlp.agentops.ai/v1/traces")
+        kwargs.setdefault("metrics_endpoint", "https://otlp.agentops.ai/v1/metrics")
+        kwargs.setdefault("max_queue_size", 512)
+        kwargs.setdefault("max_wait_time", 5000)
+        kwargs.setdefault("export_flush_interval", 1000)
 
-            # Set default values for required fields
-            kwargs.setdefault("service_name", "agentops")
-            kwargs.setdefault("exporter_endpoint", "https://otlp.agentops.ai/v1/traces")
-            kwargs.setdefault("metrics_endpoint", "https://otlp.agentops.ai/v1/metrics")
-            kwargs.setdefault("max_queue_size", 512)
-            kwargs.setdefault("max_wait_time", 5000)
-            kwargs.setdefault("export_flush_interval", 1000)
+        # Create a TracingConfig from kwargs with proper defaults
+        config: TracingConfig = {
+            "service_name": kwargs["service_name"],
+            "exporter_endpoint": kwargs["exporter_endpoint"],
+            "metrics_endpoint": kwargs["metrics_endpoint"],
+            "max_queue_size": kwargs["max_queue_size"],
+            "max_wait_time": kwargs["max_wait_time"],
+            "export_flush_interval": kwargs["export_flush_interval"],
+            "api_key": kwargs.get("api_key"),
+            "project_id": kwargs.get("project_id"),
+        }
 
-            # Create a TracingConfig from kwargs with proper defaults
-            config: TracingConfig = {
-                "service_name": kwargs["service_name"],
-                "exporter_endpoint": kwargs["exporter_endpoint"],
-                "metrics_endpoint": kwargs["metrics_endpoint"],
-                "max_queue_size": kwargs["max_queue_size"],
-                "max_wait_time": kwargs["max_wait_time"],
-                "export_flush_interval": kwargs["export_flush_interval"],
-                "api_key": kwargs.get("api_key"),
-                "project_id": kwargs.get("project_id"),
-            }
+        self._config = config
 
-            self._config = config
+        # Setup telemetry using the extracted configuration
+        provider, meter_provider = setup_telemetry(
+            service_name=config["service_name"] or "",
+            project_id=config.get("project_id"),
+            exporter_endpoint=config["exporter_endpoint"],
+            metrics_endpoint=config["metrics_endpoint"],
+            max_queue_size=config["max_queue_size"],
+            max_wait_time=config["max_wait_time"],
+            export_flush_interval=config["export_flush_interval"],
+            jwt=jwt,
+        )
 
-            # Setup telemetry using the extracted configuration
-            provider, meter_provider = setup_telemetry(
-                service_name=config["service_name"] or "",
-                project_id=config.get("project_id"),
-                exporter_endpoint=config["exporter_endpoint"],
-                metrics_endpoint=config["metrics_endpoint"],
-                max_queue_size=config["max_queue_size"],
-                max_wait_time=config["max_wait_time"],
-                export_flush_interval=config["export_flush_interval"],
-                jwt=jwt,
-            )
+        self._provider = provider
+        self._meter_provider = meter_provider
 
-            self._provider = provider
-            self._meter_provider = meter_provider
-
-            self._initialized = True
-            logger.debug("Tracing core initialized")
+        self._initialized = True
+        logger.debug("Tracing core initialized")
 
     @property
     def initialized(self) -> bool:
@@ -306,28 +290,27 @@ class TracingCore:
     def shutdown(self) -> None:
         """Shutdown the tracing core."""
 
-        with self._lock:
-            if not self._initialized or not self._provider:
-                return
+        if not self._initialized or not self._provider:
+            return
 
-            logger.debug("Attempting to flush span processors during shutdown...")
-            self._flush_span_processors()
+        logger.debug("Attempting to flush span processors during shutdown...")
+        self._flush_span_processors()
 
-            # Shutdown provider
+        # Shutdown provider
+        try:
+            self._provider.shutdown()
+        except Exception as e:
+            logger.warning(f"Error shutting down provider: {e}")
+
+        # Shutdown meter_provider
+        if hasattr(self, "_meter_provider") and self._meter_provider:
             try:
-                self._provider.shutdown()
+                self._meter_provider.shutdown()
             except Exception as e:
-                logger.warning(f"Error shutting down provider: {e}")
+                logger.warning(f"Error shutting down meter provider: {e}")
 
-            # Shutdown meter_provider
-            if hasattr(self, "_meter_provider") and self._meter_provider:
-                try:
-                    self._meter_provider.shutdown()
-                except Exception as e:
-                    logger.warning(f"Error shutting down meter provider: {e}")
-
-            self._initialized = False
-            logger.debug("Tracing core shut down")
+        self._initialized = False
+        logger.debug("Tracing core shut down")
 
     def _flush_span_processors(self) -> None:
         """Helper to force flush all span processors."""
@@ -365,7 +348,8 @@ class TracingCore:
             config: Configuration object (dict or object with dict method)
             **kwargs: Additional keyword arguments to pass to initialize
         """
-        instance = cls.get_instance()
+        # Use the global tracer instance instead of getting singleton
+        instance = tracer
 
         # Extract tracing-specific configuration
         # For TracingConfig, we can directly pass it to initialize
@@ -418,8 +402,6 @@ class TracingCore:
             logger.warning("TracingCore not initialized. Cannot start trace.")
             return None
 
-        from agentops.sdk.decorators.utility import _make_span  # Local import
-
         attributes: dict = {}
         if tags:
             if isinstance(tags, list):
@@ -429,9 +411,9 @@ class TracingCore:
             else:
                 logger.warning(f"Invalid tags format: {tags}. Must be list or dict.")
 
-        # _make_span creates and starts the span, and activates it in the current context
+        # make_span creates and starts the span, and activates it in the current context
         # It returns: span, context_object, context_token
-        span, _, context_token = _make_span(trace_name, span_kind=SpanKind.SESSION, attributes=attributes)
+        span, _, context_token = self.make_span(trace_name, span_kind=SpanKind.SESSION, attributes=attributes)
         logger.debug(f"Trace '{trace_name}' started with span ID: {span.get_span_context().span_id}")
 
         # Log the session replay URL for this new trace
@@ -488,8 +470,6 @@ class TracingCore:
             trace_context: The TraceContext object to end.
             end_state: The final state of the trace.
         """
-        from agentops.sdk.decorators.utility import _finalize_span  # Local import
-
         if not trace_context or not trace_context.span:
             logger.warning("Invalid TraceContext or span provided to end trace.")
             return
@@ -506,7 +486,7 @@ class TracingCore:
 
         try:
             span.set_attribute(SpanAttributes.AGENTOPS_SESSION_END_STATE, end_state)
-            _finalize_span(span, token=token)
+            self.finalize_span(span, token=token)
 
             # Remove from active traces
             with self._traces_lock:
@@ -528,6 +508,114 @@ class TracingCore:
         except Exception as e:
             logger.error(f"Error ending trace: {e}", exc_info=True)
 
+    def make_span(
+        self,
+        operation_name: str,
+        span_kind: str,
+        version: Optional[int] = None,
+        attributes: Optional[Dict[str, Any]] = None,
+    ) -> tuple:
+        """
+        Create a span without context management for manual span lifecycle control.
+
+        This function creates a span that will be properly nested within any parent span
+        based on the current execution context, but requires manual ending via finalize_span.
+
+        Args:
+            operation_name: Name of the operation being traced
+            span_kind: Type of operation (from SpanKind)
+            version: Optional version identifier for the operation
+            attributes: Optional dictionary of attributes to set on the span
+
+        Returns:
+            A tuple of (span, context, token) where:
+            - span is the created span
+            - context is the span context
+            - token is the context token needed for detaching
+        """
+        # Create span with proper naming convention
+        span_name = f"{operation_name}.{span_kind}"
+
+        # Get tracer
+        tracer = self.get_tracer()
+
+        # Prepare attributes
+        if attributes is None:
+            attributes = {}
+
+        # Add span kind to attributes
+        attributes[SpanAttributes.AGENTOPS_SPAN_KIND] = span_kind
+
+        # Add standard attributes
+        attributes[SpanAttributes.OPERATION_NAME] = operation_name
+        if version is not None:
+            attributes[SpanAttributes.OPERATION_VERSION] = version
+
+        current_context = context_api.get_current()
+
+        # Create the span with proper context management
+        if span_kind == SpanKind.SESSION:
+            # For session spans, create as a root span
+            span = tracer.start_span(span_name, attributes=attributes)
+        else:
+            # For other spans, use the current context
+            span = tracer.start_span(span_name, context=current_context, attributes=attributes)
+
+        # Set as current context and get token for detachment
+        ctx = trace.set_span_in_context(span)
+        token = context_api.attach(ctx)
+
+        return span, ctx, token
+
+    def finalize_span(self, span: trace.Span, token: Any) -> None:
+        """
+        Finalizes a span and cleans up its context.
+
+        This function performs three critical tasks needed for proper span lifecycle management:
+        1. Ends the span to mark it complete and calculate its duration
+        2. Detaches the context token to prevent memory leaks and maintain proper context hierarchy
+        3. Forces immediate span export rather than waiting for batch processing
+
+        Use cases:
+        - Session span termination: Ensures root spans are properly ended and exported
+        - Shutdown handling: Ensures spans are flushed during application termination
+        - Async operations: Finalizes spans from asynchronous execution contexts
+
+        Without proper finalization, spans may not trigger on_end events in processors,
+        potentially resulting in missing or incomplete telemetry data.
+
+        Args:
+            span: The span to finalize
+            token: The context token to detach
+        """
+        # End the span
+        if span:
+            try:
+                span.end()
+            except Exception as e:
+                logger.warning(f"Error ending span: {e}")
+
+        # Detach context token if provided
+        if token:
+            try:
+                context_api.detach(token)
+            except Exception:
+                pass
+
+        # Try to flush span processors
+        # Note: force_flush() might not be available in certain scenarios:
+        # - During application shutdown when the provider may be partially destroyed
+        # We use try/except to gracefully handle these cases while ensuring spans are
+        # flushed when possible, which is especially critical for session spans.
+        try:
+            from opentelemetry.trace import get_tracer_provider
+
+            tracer_provider = get_tracer_provider()
+            tracer_provider.force_flush()
+        except (AttributeError, Exception):
+            # Either force_flush doesn't exist or there was an error calling it
+            pass
+
     def get_active_traces(self) -> Dict[str, TraceContext]:
         """
         Get a copy of currently active traces.
@@ -547,3 +635,7 @@ class TracingCore:
         """
         with self._traces_lock:
             return len(self._active_traces)
+
+
+# Global tracer instance; one per process runtime
+tracer = TracingCore()

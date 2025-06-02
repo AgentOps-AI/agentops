@@ -29,7 +29,7 @@ import builtins
 from opentelemetry.instrumentation.instrumentor import BaseInstrumentor  # type: ignore
 
 from agentops.logging import logger
-from agentops.sdk.core import TracingCore
+from agentops.sdk.core import TracingCore, tracer
 
 
 # Module-level state variables
@@ -265,7 +265,7 @@ def instrument_one(loader: InstrumentorLoader) -> Optional[BaseInstrumentor]:
         return None
 
     instrumentor = loader.get_instance()
-    instrumentor.instrument(tracer_provider=TracingCore.get_instance()._provider)
+    instrumentor.instrument(tracer_provider=tracer._provider)
     logger.debug(f"Instrumented {loader.class_name}")
     return instrumentor
 

@@ -8,20 +8,20 @@ from unittest.mock import patch, MagicMock
 from opentelemetry.sdk.trace import Span, ReadableSpan
 
 from agentops.sdk.processors import InternalSpanProcessor
-from agentops.sdk.core import TracingCore, TraceContext
+from agentops.sdk.core import TracingCore, TraceContext, tracer
 
 
 class TestURLLogging(unittest.TestCase):
     """Tests for URL logging functionality in TracingCore."""
 
     def setUp(self):
-        self.tracing_core = TracingCore.get_instance()
+        self.tracing_core = tracer
         # Mock the initialization to avoid actual setup
         self.tracing_core._initialized = True
         self.tracing_core._config = {"project_id": "test_project"}
 
     @patch("agentops.sdk.core.log_trace_url")
-    @patch("agentops.sdk.decorators.utility._make_span")
+    @patch("agentops.sdk.core.TracingCore.make_span")
     def test_start_trace_logs_url(self, mock_make_span, mock_log_trace_url):
         """Test that start_trace logs the trace URL."""
         # Create a mock span
@@ -40,7 +40,7 @@ class TestURLLogging(unittest.TestCase):
         self.assertEqual(trace_context.span, mock_span)
 
     @patch("agentops.sdk.core.log_trace_url")
-    @patch("agentops.sdk.decorators.utility._finalize_span")
+    @patch("agentops.sdk.core.tracer.finalize_span")
     def test_end_trace_logs_url(self, mock_finalize_span, mock_log_trace_url):
         """Test that end_trace logs the trace URL."""
         # Create a mock trace context
@@ -57,7 +57,7 @@ class TestURLLogging(unittest.TestCase):
         mock_log_trace_url.assert_called_once_with(mock_span, title="test_trace")
 
     @patch("agentops.sdk.core.log_trace_url")
-    @patch("agentops.sdk.decorators.utility._make_span")
+    @patch("agentops.sdk.core.TracingCore.make_span")
     def test_start_trace_url_logging_failure_does_not_break_trace(self, mock_make_span, mock_log_trace_url):
         """Test that URL logging failure doesn't break trace creation."""
         # Create a mock span
@@ -79,7 +79,7 @@ class TestURLLogging(unittest.TestCase):
         mock_log_trace_url.assert_called_once_with(mock_span, title="test_trace")
 
     @patch("agentops.sdk.core.log_trace_url")
-    @patch("agentops.sdk.decorators.utility._finalize_span")
+    @patch("agentops.sdk.core.tracer.finalize_span")
     def test_end_trace_url_logging_failure_does_not_break_trace(self, mock_finalize_span, mock_log_trace_url):
         """Test that URL logging failure doesn't break trace ending."""
         # Create a mock trace context
@@ -100,7 +100,7 @@ class TestURLLogging(unittest.TestCase):
         mock_log_trace_url.assert_called_once_with(mock_span, title="test_trace")
 
     @patch("agentops.sdk.core.log_trace_url")
-    @patch("agentops.sdk.decorators.utility._make_span")
+    @patch("agentops.sdk.core.TracingCore.make_span")
     def test_start_trace_with_tags_logs_url(self, mock_make_span, mock_log_trace_url):
         """Test that start_trace with tags logs the trace URL."""
         # Create a mock span
@@ -122,14 +122,14 @@ class TestSessionDecoratorURLLogging(unittest.TestCase):
     """Tests for URL logging functionality in session decorators."""
 
     def setUp(self):
-        self.tracing_core = TracingCore.get_instance()
+        self.tracing_core = tracer
         # Mock the initialization to avoid actual setup
         self.tracing_core._initialized = True
         self.tracing_core._config = {"project_id": "test_project"}
 
     @patch("agentops.sdk.core.log_trace_url")
-    @patch("agentops.sdk.decorators.utility._make_span")
-    @patch("agentops.sdk.decorators.utility._finalize_span")
+    @patch("agentops.sdk.core.TracingCore.make_span")
+    @patch("agentops.sdk.core.tracer.finalize_span")
     def test_session_decorator_logs_url_on_start_and_end(self, mock_finalize_span, mock_make_span, mock_log_trace_url):
         """Test that session decorator logs URLs on both start and end."""
         from agentops.sdk.decorators import session
@@ -160,8 +160,8 @@ class TestSessionDecoratorURLLogging(unittest.TestCase):
         self.assertEqual(result, "test_result")
 
     @patch("agentops.sdk.core.log_trace_url")
-    @patch("agentops.sdk.decorators.utility._make_span")
-    @patch("agentops.sdk.decorators.utility._finalize_span")
+    @patch("agentops.sdk.core.TracingCore.make_span")
+    @patch("agentops.sdk.core.tracer.finalize_span")
     def test_session_decorator_with_default_name_logs_url(self, mock_finalize_span, mock_make_span, mock_log_trace_url):
         """Test that session decorator with default name logs URLs."""
         from agentops.sdk.decorators import session
@@ -191,8 +191,8 @@ class TestSessionDecoratorURLLogging(unittest.TestCase):
         self.assertEqual(result, "result")
 
     @patch("agentops.sdk.core.log_trace_url")
-    @patch("agentops.sdk.decorators.utility._make_span")
-    @patch("agentops.sdk.decorators.utility._finalize_span")
+    @patch("agentops.sdk.core.TracingCore.make_span")
+    @patch("agentops.sdk.core.tracer.finalize_span")
     def test_session_decorator_handles_url_logging_failure(
         self, mock_finalize_span, mock_make_span, mock_log_trace_url
     ):

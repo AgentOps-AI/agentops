@@ -7,7 +7,7 @@ from agentops.exceptions import NoApiKeyException
 from agentops.instrumentation import instrument_all
 from agentops.logging import logger
 from agentops.logging.config import configure_logging, intercept_opentelemetry_logging
-from agentops.sdk.core import TracingCore, TraceContext
+from agentops.sdk.core import TracingCore, TraceContext, tracer
 from agentops.legacy import Session
 
 # Global variables to hold the client's auto-started trace and its legacy session wrapper
@@ -25,9 +25,8 @@ def _end_init_trace_atexit():
         logger.debug("Auto-ending client's init trace during shutdown.")
         try:
             # Use TracingCore to end the trace directly
-            tracing_core = TracingCore.get_instance()
-            if tracing_core.initialized and _client_init_trace_context.span.is_recording():
-                tracing_core.end_trace(_client_init_trace_context, end_state="Shutdown")
+            if tracer.initialized and _client_init_trace_context.span.is_recording():
+                tracer.end_trace(_client_init_trace_context, end_state="Shutdown")
         except Exception as e:
             logger.warning(f"Error ending client's init trace during shutdown: {e}")
         finally:
@@ -83,7 +82,7 @@ class Client:
             self._initialized = False
             if self._init_trace_context and self._init_trace_context.span.is_recording():
                 logger.warning("Ending previously auto-started trace due to re-initialization.")
-                TracingCore.get_instance().end_trace(self._init_trace_context, "Reinitialized")
+                tracer.end_trace(self._init_trace_context, "Reinitialized")
             self._init_trace_context = None
             self._legacy_session_for_init_trace = None
 
@@ -118,8 +117,7 @@ class Client:
         tracing_config = self.config.dict()
         tracing_config["project_id"] = response["project_id"]
 
-        tracing_core = TracingCore.get_instance()
-        tracing_core.initialize_from_config(tracing_config, jwt=response["token"])
+        tracer.initialize_from_config(tracing_config, jwt=response["token"])
 
         if self.config.instrument_llm_calls:
             instrument_all()
@@ -136,7 +134,7 @@ class Client:
             if self._init_trace_context is None or not self._init_trace_context.span.is_recording():
                 logger.debug("Auto-starting init trace.")
                 trace_name = self.config.trace_name or "default"
-                self._init_trace_context = tracing_core.start_trace(
+                self._init_trace_context = tracer.start_trace(
                     trace_name=trace_name,
                     tags=list(self.config.default_tags) if self.config.default_tags else None,
                     is_init_trace=True,
@@ -165,7 +163,7 @@ class Client:
                     logger.error("Failed to start the auto-init trace.")
                     # Even if auto-start fails, core services up to TracingCore might be initialized.
                     # Set self.initialized to True if TracingCore is up, but return None.
-                    self._initialized = tracing_core.initialized
+                    self._initialized = tracer.initialized
                     return None  # Failed to start trace
 
             self._initialized = True  # Successfully initialized and auto-trace started (if configured)

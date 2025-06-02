@@ -7,13 +7,12 @@ from typing import Any, Dict, Callable, Optional, Union
 import wrapt  # type: ignore
 
 from agentops.logging import logger
-from agentops.sdk.core import TracingCore, TraceContext
+from agentops.sdk.core import TracingCore, TraceContext, tracer
 from agentops.semconv.span_kinds import SpanKind
 from agentops.semconv import SpanAttributes, CoreAttributes
 
 from .utility import (
     _create_as_current_span,
-    _make_span,
     _process_async_generator,
     _process_sync_generator,
     _record_entity_input,
@@ -81,7 +80,7 @@ def create_entity_decorator(entity_kind: str) -> Callable[..., Any]:
         def wrapper(
             wrapped_func: Callable[..., Any], instance: Optional[Any], args: tuple, kwargs: Dict[str, Any]
         ) -> Any:
-            if not TracingCore.get_instance().initialized:
+            if not tracer.initialized:
                 return wrapped_func(*args, **kwargs)
 
             operation_name = name or wrapped_func.__name__
@@ -100,7 +99,7 @@ def create_entity_decorator(entity_kind: str) -> Callable[..., Any]:
                     async def _wrapped_session_async() -> Any:
                         trace_context: Optional[TraceContext] = None
                         try:
-                            trace_context = TracingCore.get_instance().start_trace(trace_name=operation_name, tags=tags)
+                            trace_context = tracer.start_trace(trace_name=operation_name, tags=tags)
                             if not trace_context:
                                 logger.error(
                                     f"Failed to start trace for @trace '{operation_name}'. Executing without trace."
@@ -115,24 +114,24 @@ def create_entity_decorator(entity_kind: str) -> Callable[..., Any]:
                                 _record_entity_output(trace_context.span, result)
                             except Exception as e:
                                 logger.warning(f"Output recording failed for @trace '{operation_name}': {e}")
-                            TracingCore.get_instance().end_trace(trace_context, "Success")
+                            tracer.end_trace(trace_context, "Success")
                             return result
                         except Exception:
                             if trace_context:
-                                TracingCore.get_instance().end_trace(trace_context, "Failure")
+                                tracer.end_trace(trace_context, "Failure")
                             raise
                         finally:
                             if trace_context and trace_context.span.is_recording():
                                 logger.warning(
                                     f"Trace for @trace '{operation_name}' not explicitly ended. Ending as 'Unknown'."
                                 )
-                                TracingCore.get_instance().end_trace(trace_context, "Unknown")
+                                tracer.end_trace(trace_context, "Unknown")
 
                     return _wrapped_session_async()
                 else:  # Sync function for SpanKind.SESSION
                     trace_context: Optional[TraceContext] = None
                     try:
-                        trace_context = TracingCore.get_instance().start_trace(trace_name=operation_name, tags=tags)
+                        trace_context = tracer.start_trace(trace_name=operation_name, tags=tags)
                         if not trace_context:
                             logger.error(
                                 f"Failed to start trace for @trace '{operation_name}'. Executing without trace."
@@ -147,22 +146,22 @@ def create_entity_decorator(entity_kind: str) -> Callable[..., Any]:
                             _record_entity_output(trace_context.span, result)
                         except Exception as e:
                             logger.warning(f"Output recording failed for @trace '{operation_name}': {e}")
-                        TracingCore.get_instance().end_trace(trace_context, "Success")
+                        tracer.end_trace(trace_context, "Success")
                         return result
                     except Exception:
                         if trace_context:
-                            TracingCore.get_instance().end_trace(trace_context, "Failure")
+                            tracer.end_trace(trace_context, "Failure")
                         raise
                     finally:
                         if trace_context and trace_context.span.is_recording():
                             logger.warning(
                                 f"Trace for @trace '{operation_name}' not explicitly ended. Ending as 'Unknown'."
                             )
-                            TracingCore.get_instance().end_trace(trace_context, "Unknown")
+                            tracer.end_trace(trace_context, "Unknown")
 
             # Logic for non-SESSION kinds or generators under @trace (as per fallthrough)
             elif is_generator:
-                span, _, token = _make_span(
+                span, _, token = tracer.make_span(
                     operation_name,
                     entity_kind,
                     version=version,
@@ -178,7 +177,7 @@ def create_entity_decorator(entity_kind: str) -> Callable[..., Any]:
                 result = wrapped_func(*args, **kwargs)
                 return _process_sync_generator(span, result)
             elif is_async_generator:
-                span, _, token = _make_span(
+                span, _, token = tracer.make_span(
                     operation_name,
                     entity_kind,
                     version=version,
