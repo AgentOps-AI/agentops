@@ -3,7 +3,6 @@ from opentelemetry.instrumentation.instrumentor import BaseInstrumentor
 from opentelemetry.trace import get_tracer
 from opentelemetry.metrics import get_meter
 from wrapt import wrap_function_wrapper
-import logging
 
 from agentops.instrumentation.mem0 import LIBRARY_NAME, LIBRARY_VERSION
 from agentops.logging import logger
@@ -21,10 +20,6 @@ from .memory import (
 )
 
 from agentops.semconv import Meters
-
-# Configure logging
-logging.basicConfig(level=logging.DEBUG)
-logger = logging.getLogger(__name__)
 
 # Methods to wrap for instrumentation using specialized wrappers
 WRAPPER_METHODS = [
