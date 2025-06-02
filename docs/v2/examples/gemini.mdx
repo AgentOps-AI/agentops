@@ -61,7 +61,7 @@ print(response.text)
 ## Streaming Generation
 ```python
 # Test streaming generation
-print("\\nTesting streaming generation:")
+print("\nTesting streaming generation:")
 model = genai.GenerativeModel('gemini-1.5-flash') # Create model instance
 response_stream = model.generate_content(
     "Explain the concept of machine learning in simple terms.",
@@ -76,7 +76,7 @@ print()  # Add newline after streaming output
 ## Another Synchronous Generation
 ```python
 # Test another synchronous generation
-print("\\nTesting another synchronous generation:")
+print("\nTesting another synchronous generation:")
 model = genai.GenerativeModel('gemini-1.5-flash') # Create model instance
 response = model.generate_content(
     "What is the difference between supervised and unsupervised learning?"
