@@ -9,8 +9,7 @@ from opentelemetry.trace import Span
 
 from agentops.helpers.serialization import safe_serialize
 from agentops.logging import logger
-from agentops.sdk.core import TracingCore, tracer
-from agentops.semconv import SpanKind
+from agentops.sdk.core import tracer
 from agentops.semconv.span_attributes import SpanAttributes
 
 """
@@ -136,8 +135,6 @@ def _create_as_current_span(
     logger.debug(f"[DEBUG] AFTER {operation_name}.{span_kind} - Returned to context: {after_span}")
 
 
-
-
 def _record_entity_input(span: trace.Span, args: tuple, kwargs: Dict[str, Any]) -> None:
     """Record operation input parameters to span if content tracing is enabled"""
     try:
@@ -163,5 +160,3 @@ def _record_entity_output(span: trace.Span, result: Any) -> None:
             logger.debug("Operation output exceeds size limit, not recording")
     except Exception as err:
         logger.warning(f"Failed to serialize operation output: {err}")
-
-

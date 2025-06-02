@@ -2,10 +2,6 @@ from __future__ import annotations
 
 import atexit
 import threading
-import platform
-import sys
-import os
-import psutil
 from typing import Optional, Any, Dict
 
 from opentelemetry import metrics, trace
@@ -22,7 +18,13 @@ from agentops.exceptions import AgentOpsClientNotInitializedException
 from agentops.logging import logger, setup_print_logger
 from agentops.sdk.processors import InternalSpanProcessor
 from agentops.sdk.types import TracingConfig
-from agentops.semconv import ResourceAttributes, SpanKind, SpanAttributes, CoreAttributes
+from agentops.sdk.attributes import (
+    get_global_resource_attributes,
+    get_trace_attributes,
+    get_span_attributes,
+    get_session_end_attributes,
+)
+from agentops.semconv import SpanKind
 from agentops.helpers.dashboard import log_trace_url
 
 # No need to create shortcuts since we're using our own ResourceAttributes class now
@@ -36,81 +38,7 @@ class TraceContext:
         self.is_init_trace = is_init_trace  # Flag to identify the auto-started trace
 
 
-def get_imported_libraries():
-    """
-    Get the top-level imported libraries in the current script.
-
-    Returns:
-        list: List of imported libraries
-    """
-    user_libs = []
-
-    builtin_modules = {
-        "builtins",
-        "sys",
-        "os",
-        "_thread",
-        "abc",
-        "io",
-        "re",
-        "types",
-        "collections",
-        "enum",
-        "math",
-        "datetime",
-        "time",
-        "warnings",
-    }
-
-    try:
-        main_module = sys.modules.get("__main__")
-        if main_module and hasattr(main_module, "__dict__"):
-            for name, obj in main_module.__dict__.items():
-                if isinstance(obj, type(sys)) and hasattr(obj, "__name__"):
-                    mod_name = obj.__name__.split(".")[0]
-                    if mod_name and not mod_name.startswith("_") and mod_name not in builtin_modules:
-                        user_libs.append(mod_name)
-    except Exception as e:
-        logger.debug(f"Error getting imports: {e}")
-
-    return user_libs
-
-
-def get_system_stats():
-    """
-    Get basic system stats including CPU and memory information.
-
-    Returns:
-        dict: Dictionary with system information
-    """
-    system_info = {
-        ResourceAttributes.HOST_MACHINE: platform.machine(),
-        ResourceAttributes.HOST_NAME: platform.node(),
-        ResourceAttributes.HOST_NODE: platform.node(),
-        ResourceAttributes.HOST_PROCESSOR: platform.processor(),
-        ResourceAttributes.HOST_SYSTEM: platform.system(),
-        ResourceAttributes.HOST_VERSION: platform.version(),
-        ResourceAttributes.HOST_OS_RELEASE: platform.release(),
-    }
-
-    # Add CPU stats
-    try:
-        system_info[ResourceAttributes.CPU_COUNT] = os.cpu_count() or 0
-        system_info[ResourceAttributes.CPU_PERCENT] = psutil.cpu_percent(interval=0.1)
-    except Exception as e:
-        logger.debug(f"Error getting CPU stats: {e}")
-
-    # Add memory stats
-    try:
-        memory = psutil.virtual_memory()
-        system_info[ResourceAttributes.MEMORY_TOTAL] = memory.total
-        system_info[ResourceAttributes.MEMORY_AVAILABLE] = memory.available
-        system_info[ResourceAttributes.MEMORY_USED] = memory.used
-        system_info[ResourceAttributes.MEMORY_PERCENT] = memory.percent
-    except Exception as e:
-        logger.debug(f"Error getting memory stats: {e}")
-
-    return system_info
+# get_imported_libraries moved to agentops.helpers.system
 
 
 def setup_telemetry(
@@ -139,22 +67,11 @@ def setup_telemetry(
     Returns:
         Tuple of (TracerProvider, MeterProvider)
     """
-    # Create resource attributes dictionary
-    resource_attrs = {ResourceAttributes.SERVICE_NAME: service_name}
-
-    # Add project_id to resource attributes if available
-    if project_id:
-        # Add project_id as a custom resource attribute
-        resource_attrs[ResourceAttributes.PROJECT_ID] = project_id
-        logger.debug(f"Including project_id in resource attributes: {project_id}")
-
-    # Add system information
-    system_stats = get_system_stats()
-    resource_attrs.update(system_stats)
-
-    # Add imported libraries
-    imported_libraries = get_imported_libraries()
-    resource_attrs[ResourceAttributes.IMPORTED_LIBRARIES] = imported_libraries
+    # Build resource attributes
+    resource_attrs = get_global_resource_attributes(
+        service_name=service_name,
+        project_id=project_id,
+    )
 
     resource = Resource(resource_attrs)
     provider = TracerProvider(resource=resource)
@@ -402,14 +319,8 @@ class TracingCore:
             logger.warning("TracingCore not initialized. Cannot start trace.")
             return None
 
-        attributes: dict = {}
-        if tags:
-            if isinstance(tags, list):
-                attributes[CoreAttributes.TAGS] = tags
-            elif isinstance(tags, dict):
-                attributes.update(tags)  # Add dict tags directly
-            else:
-                logger.warning(f"Invalid tags format: {tags}. Must be list or dict.")
+        # Build trace attributes
+        attributes = get_trace_attributes(tags=tags)
 
         # make_span creates and starts the span, and activates it in the current context
         # It returns: span, context_object, context_token
@@ -485,7 +396,10 @@ class TracingCore:
         logger.debug(f"Ending trace with span ID: {span.get_span_context().span_id}, end_state: {end_state}")
 
         try:
-            span.set_attribute(SpanAttributes.AGENTOPS_SESSION_END_STATE, end_state)
+            # Build and set session end attributes
+            end_attributes = get_session_end_attributes(end_state)
+            for key, value in end_attributes.items():
+                span.set_attribute(key, value)
             self.finalize_span(span, token=token)
 
             # Remove from active traces
@@ -539,17 +453,13 @@ class TracingCore:
         # Get tracer
         tracer = self.get_tracer()
 
-        # Prepare attributes
-        if attributes is None:
-            attributes = {}
-
-        # Add span kind to attributes
-        attributes[SpanAttributes.AGENTOPS_SPAN_KIND] = span_kind
-
-        # Add standard attributes
-        attributes[SpanAttributes.OPERATION_NAME] = operation_name
-        if version is not None:
-            attributes[SpanAttributes.OPERATION_VERSION] = version
+        # Build span attributes using the attribute helper
+        attributes = get_span_attributes(
+            operation_name=operation_name,
+            span_kind=span_kind,
+            version=version,
+            **(attributes or {}),
+        )
 
         current_context = context_api.get_current()
 
