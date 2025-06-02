@@ -19,7 +19,8 @@ tool = create_entity_decorator(SpanKind.TOOL)
 
 
 # For backward compatibility: @session decorator calls @trace decorator with deprecation warning
-def session(*args, **kwargs):
+@functools.wraps(trace)
+def session(*args, **kwargs):  # noqa: F811
     """@deprecated Use @agentops.trace instead. Wraps the @trace decorator for backward compatibility."""
     logger.warning(colored("@agentops.session decorator is deprecated. Please use @agentops.trace instead.", "yellow"))
 
