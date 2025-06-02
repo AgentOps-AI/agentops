@@ -204,7 +204,7 @@ class TracingCore:
 
     def __init__(self):
         """Initialize the tracing core."""
-        self._provider: Optional[TracerProvider] = None
+        self.provider: Optional[TracerProvider] = None
         self._meter_provider: Optional[MeterProvider] = None
         self._initialized = False
         self._config: Optional[TracingConfig] = None
@@ -268,7 +268,7 @@ class TracingCore:
             jwt=jwt,
         )
 
-        self._provider = provider
+        self.provider = provider
         self._meter_provider = meter_provider
 
         self._initialized = True
@@ -290,7 +290,7 @@ class TracingCore:
     def shutdown(self) -> None:
         """Shutdown the tracing core."""
 
-        if not self._initialized or not self._provider:
+        if not self._initialized or not self.provider:
             return
 
         logger.debug("Attempting to flush span processors during shutdown...")
@@ -298,7 +298,7 @@ class TracingCore:
 
         # Shutdown provider
         try:
-            self._provider.shutdown()
+            self.provider.shutdown()
         except Exception as e:
             logger.warning(f"Error shutting down provider: {e}")
 
@@ -314,12 +314,12 @@ class TracingCore:
 
     def _flush_span_processors(self) -> None:
         """Helper to force flush all span processors."""
-        if not self._provider or not hasattr(self._provider, "force_flush"):
+        if not self.provider or not hasattr(self.provider, "force_flush"):
             logger.debug("No provider or provider cannot force_flush.")
             return
 
         try:
-            self._provider.force_flush()  # type: ignore
+            self.provider.force_flush()  # type: ignore
             logger.debug("Provider force_flush completed.")
         except Exception as e:
             logger.warning(f"Failed to force flush provider's span processors: {e}", exc_info=True)

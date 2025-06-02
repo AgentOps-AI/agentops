@@ -265,7 +265,7 @@ def instrument_one(loader: InstrumentorLoader) -> Optional[BaseInstrumentor]:
         return None
 
     instrumentor = loader.get_instance()
-    instrumentor.instrument(tracer_provider=tracer._provider)
+    instrumentor.instrument(tracer_provider=tracer.provider)
     logger.debug(f"Instrumented {loader.class_name}")
     return instrumentor
 
