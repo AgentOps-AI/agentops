@@ -1,0 +1,175 @@
+---
+title: 'AG2 with Mem0 Example'
+description: 'Observe an AG2 Agent with memory powered by Mem0 using AgentOps'
+mode: "wide"
+---
+_View Notebook on <a href={'https://github.com/AgentOps-AI/agentops/blob/main/examples/ag2/agentchat_with_memory.ipynb'} target={'_blank'}>Github</a>_
+
+# Observe an Agent with memory powered by Mem0
+
+This notebook demonstrates an intelligent customer service chatbot system that combines:
+
+- AG2 for conversational agents
+- Mem0 for memory management
+
+[Mem0](https://www.mem0.ai/) provides a smart, self-improving memory layer for Large Language Models (LLMs), enabling developers to create personalized AI experiences that evolve with each user interaction. Refer [docs](https://docs.mem0.ai/overview) for more information.
+
+The implementation showcases how to initialize agents, manage conversation memory, and facilitate multi-agent conversations for enhanced problem-solving in customer support scenarios.
+
+With AgentOps, you can observe the agent's memory and interactions in real-time, providing insights into how the agent learns and adapts over time.
+
+## Pre-requisites
+- AgentOps API key from [AgentOps](https://app.agentops.ai/).
+- Mem0 API key from [Mem0 Platform](https://app.mem0.ai/).
+- OpenAI API key from [OpenAI](https://platform.openai.com/).
+
+## Installation
+
+Install required dependencies:
+<CodeGroup>
+  ```bash pip
+  pip install agentops "ag2[openai]" mem0ai python-dotenv
+  ```
+  ```bash poetry
+  poetry add agentops ag2 mem0ai python-dotenv
+  # Note: For ag2[openai] with poetry, you might need to specify openai as an extra or directly.
+  # poetry add ag2 -E openai
+  ```
+  ```bash uv
+  uv add agentops "ag2[openai]" mem0ai python-dotenv
+  ```
+</CodeGroup>
+
+## Setup
+
+```python
+import os
+from dotenv import load_dotenv
+import agentops
+from mem0 import MemoryClient
+from autogen import ConversableAgent
+
+load_dotenv()
+os.environ["AGENTOPS_API_KEY"] = os.getenv("AGENTOPS_API_KEY", "your_agentops_api_key_here")
+os.environ["OPENAI_API_KEY"] = os.getenv("OPENAI_API_KEY", "your_openai_api_key_here")
+os.environ["MEM0_API_KEY"] = os.getenv("MEM0_API_KEY", "your_mem0_api_key_here")
+```
+
+## Initialize Agent and Memory
+
+The conversational agent is set up using the 'gpt-4o' model and a mem0 client. We'll utilize the client's methods for storing and accessing memories.
+
+```python
+agentops.init(auto_start_session=False)
+tracer = agentops.start_trace(trace_name="AG2 Agent using Mem0", tags=["ag2-mem0-example", "agentops-example"])
+
+agent = ConversableAgent(
+    "chatbot",
+    llm_config={"config_list": [{"model": "gpt-4o", "api_key": os.environ.get("OPENAI_API_KEY")}]},
+    code_execution_config=False,
+    function_map=None,
+    human_input_mode="NEVER",
+)
+
+memory = MemoryClient()
+```
+
+Initialize a conversation history for a Best Buy customer service chatbot. It contains a list of message exchanges between the user and the assistant, structured as dictionaries with 'role' and 'content' keys. The entire conversation is then stored in memory using the `memory.add()` method, associated with the identifier "customer_service_bot".
+
+```python
+conversation = [
+    {
+        "role": "assistant",
+        "content": "Hi, I'm Best Buy's chatbot!\\n\\nThanks for being a My Best Buy TotalTM member.\\n\\nWhat can I help you with?",
+    },
+    {
+        "role": "user",
+        "content": 'Seeing horizontal lines on our tv. TV model: Sony - 77" Class BRAVIA XR A80K OLED 4K UHD Smart Google TV',
+    },
+    {
+        "role": "assistant",
+        "content": "Thanks for being a My Best Buy Total™ member. I can connect you to an expert immediately - just one perk of your membership!\\n\\nSelect the button below when you're ready to chat.",
+    },
+    {
+        "role": "assistant",
+        "content": "Good evening, thank you for choosing Best Buy, Fnu. My name is Lovely. I hope you are doing well. I'm sorry to hear that you're seeing horizontal lines on your TV.\\n\\nI'm absolutely committed to exploring all possible ways to assist you to fix this issue.\\n\\nTo ensure that we are on the right account, may I please have your email address registered with your Best Buy account?",
+    },
+    {"role": "user", "content": "dd@gmail.com"},
+    {
+        "role": "assistant",
+        "content": "Perfect! Thank you for providing all the details, surely you have made my job easier by doing this. I really appreciate it.\\n\\nI also want to take a moment to express our heartfelt appreciation for your trust and loyalty. Thank you for being an amazing customer of BestBuy Total.\\n\\nCould you please help me with the order number or product's details to check it quickly?\\n\\nSamsung - 49\\" Odyssey OLED G9 (G95SC) DQHD 240Hz 0.03ms G-Sync Compatible Curved Smart Gaming Monitor - Silver - just to confirm this is the item, right?",
+    },
+    {"role": "user", "content": "Order number: 112217629"},
+    {
+        "role": "assistant",
+        "content": "Superb! Thank you for confirmation.\\n\\nThank you for your patience. After exploring all possible solutions, I can help you to arrange a home repair appointment for your device. Our Geek Squad experts will visit your home to inspect and fix your device.\\n\\nIt's great that you have a protection plan - rest assured, we've got your back! As a valued Total member, you can avail this service at a minimal service fee. This fee, applicable to all repairs, covers the cost of diagnosing the issue and any small parts needed for the repair. It's part of our 24-month free protection plan.\\n\\nPlease click here to review the service fee and plan coverage details -\\n\\nhttps://www.bestbuy.com/site/best-buy-membership/best-buy-protection/pcmcat1608643232014.c?id=pcmcat1608643232014#jl-servicefees\\n\\nFnu - just to confirm shall I proceed to schedule the appointment?",
+    },
+    {"role": "user", "content": "Yes please"},
+    {"role": "assistant", "content": "When should I schedule the appointment?"},
+    {"role": "user", "content": "Schedule it for tomorrow please"},
+]
+
+memory.add(messages=conversation, user_id="customer_service_bot")
+```
+
+## Agent Inference
+
+We ask a question to the agent, utilizing mem0 to retrieve relevant memories. The agent then formulates a response based on both the question and the retrieved contextual information.
+
+```python
+data = "I forgot the order number, can you quickly tell me?"
+
+relevant_memories = memory.search(data, user_id="customer_service_bot")
+flatten_relevant_memories = "\\n".join([m["memory"] for m in relevant_memories])
+
+prompt = f\"\"\"Answer the user question considering the memories. Keep answers clear and concise.
+Memories:
+{flatten_relevant_memories}
+\\n\\n
+Question: {data}
+\"\"\"
+
+reply = agent.generate_reply(messages=[{"content": prompt, "role": "user"}])
+print(reply)
+```
+
+## Multi Agent Conversation
+
+Initialize two AI agents: a "manager" for resolving customer issues and a "customer_bot" for gathering information on customer problems, both using GPT-4. It then retrieves relevant memories for a given question, combining them with the question into a prompt. This prompt can be used by either the manager or customer_bot to generate a contextually informed response.
+
+```python
+manager = ConversableAgent(
+    "manager",
+    system_message="You are a manager who helps in resolving customer issues.",
+    llm_config={"config_list": [{"model": "gpt-4o-mini", "api_key": os.environ.get("OPENAI_API_KEY")}]},
+    human_input_mode="NEVER",
+)
+
+customer_bot = ConversableAgent(
+    "customer_bot",
+    system_message="You are a customer service bot who gathers information on issues customers are facing. Keep answers clear and concise.",
+    llm_config={"config_list": [{"model": "gpt-4", "api_key": os.environ.get("OPENAI_API_KEY")}]},
+    human_input_mode="NEVER",
+)
+
+data = "When is the appointment?"
+
+relevant_memories = memory.search(data, user_id="customer_service_bot")
+flatten_relevant_memories = "\\n".join([m["memory"] for m in relevant_memories])
+
+prompt = f\"\"\"
+Context:
+{flatten_relevant_memories}
+\\n\\n
+Question: {data}
+\"\"\"
+
+result = manager.send(prompt, customer_bot, request_reply=True)
+
+agentops.end_trace(tracer, end_state="Success")
+```
+
+<script type="module" src="/scripts/github_stars.js"></script>
+<script type="module" src="/scripts/scroll-img-fadein-animation.js"></script>
+<script type="module" src="/scripts/button_heartbeat_animation.js"></script>
+<script type="module" src="/scripts/adjust_api_dynamically.js"></script>

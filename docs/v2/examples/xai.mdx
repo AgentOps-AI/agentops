@@ -1,0 +1,124 @@
+---
+title: 'XAI Grok Example'
+description: 'Using XAI Grok via OpenAI client with AgentOps for a transliteration chatbot'
+mode: "wide"
+---
+_View Notebook on <a href={'https://github.com/AgentOps-AI/agentops/blob/main/examples/xai/grok_examples.ipynb'} target={'_blank'}>Github</a>_
+
+# XAI Grok Transliteration Chatbot Example
+
+This notebook demonstrates how to use XAI with AgentOps via the OpenAI python client.
+
+We are going to use a Grok model from XAI to create a transliteration chatbot that can understand the major languages of the world and translate them to a user's native language! We will use AgentOps to track the chatbot's performance.
+
+## Installation
+First let's install the required packages.
+<CodeGroup>
+  ```bash pip
+  pip install -U openai agentops python-dotenv
+  ```
+  ```bash poetry
+  poetry add openai agentops python-dotenv
+  ```
+  ```bash uv
+  uv add openai agentops python-dotenv
+  ```
+</CodeGroup>
+
+## Setup
+Then import them.
+```python
+from openai import OpenAI
+import agentops
+import os
+from dotenv import load_dotenv
+```
+
+Next, we'll grab our API keys. You can use dotenv like below or however else you like to load environment variables.
+```python
+load_dotenv()
+os.environ["AGENTOPS_API_KEY"] = os.getenv("AGENTOPS_API_KEY", "your_agentops_api_key_here")
+os.environ["XAI_API_KEY"] = os.getenv("XAI_API_KEY", "your_xai_api_key_here") # Ensure XAI_API_KEY is set
+```
+
+Next we initialize the AgentOps client.
+```python
+agentops.init(auto_start_session=False)
+tracer = agentops.start_trace(trace_name="XAI Example", tags=["xai-example", "grok", "agentops-example"])
+```
+
+And we are all set! Note the session URL that will be printed by AgentOps. We will use it to track the chatbot.
+
+Let's initialize the OpenAI client with the XAI API key and base URL.
+```python
+client = OpenAI(
+    base_url="https://api.x.ai/v1",
+    api_key=os.getenv("XAI_API_KEY", "your_xai_api_key_here"), # Added fallback as in notebook
+)
+```
+
+## Define Prompts
+Now we will set the system and instruction prompts for the chatbot. We will set the native language to Spanish and the user prompt to transliterate an excerpt from Haruki Murakami's "Kafka On The Shore".
+```python
+SYSTEM_PROMPT = """
+You are a highly intelligent, multilingual assistant designed to understand user prompts in English and respond in the user's specified native language. 
+Your key responsibilities include:
+1. Translating and generating meaningful, contextually appropriate responses in the user's native language.
+2. Ensuring the output is accurate, coherent, and in Unicode format for proper display in the specified language.
+3. Adhering to the nuances of the specified language's grammar, tone, and cultural context.
+
+When asked to respond in a language, generate the response entirely in that language without using English unless explicitly requested.
+
+If the specified language is unfamiliar or ambiguous, politely ask for clarification in English.
+"""
+```
+```python
+native_language = "Spanish"
+
+USER_PROMPT = """
+Sometimes fate is like a small sandstorm that keeps changing directions. You change direction but the sandstorm chases you. 
+You turn again, but the storm adjusts. Over and over you play this out, like some ominous dance with death just before dawn. Why? 
+Because this storm isn’t something that blew in from far away, something that has nothing to do with you. This storm is you. 
+Something inside of you. So all you can do is give in to it, step right inside the storm, closing your eyes and plugging up your ears so the sand doesn’t get in, and walk through it, step by step. 
+There’s no sun there, no moon, no direction, no sense of time. Just fine white sand swirling up into the sky like pulverized bones. 
+That’s the kind of sandstorm you need to imagine.
+
+And you really will have to make it through that violent, metaphysical, symbolic storm. 
+No matter how metaphysical or symbolic it might be, make no mistake about it: it will cut through flesh like a thousand razor blades. People will bleed there, and you will bleed too. 
+Hot, red blood. You’ll catch that blood in your hands, your own blood and the blood of others.
+
+And once the storm is over you won’t remember how you made it through, how you managed to survive. You won’t even be sure, in fact, whether the storm is really over. 
+But one thing is certain. When you come out of the storm you won’t be the same person who walked in. That’s what this storm’s all about.
+"""
+
+INSTRUCTION_PROMPT = f"""
+You are a multilingual chatbot. Take the user's prompt: "{USER_PROMPT}" and respond naturally in {native_language}. 
+Ensure that the response is in Unicode characters appropriate for {native_language}.
+"""
+```
+
+## Generate Response
+Now we will use the OpenAI client to generate the response by passing in the system and instruction prompts.
+```python
+response = client.chat.completions.create(
+    model="grok-1.5-flash", # Notebook used "grok-3-mini". Standardizing to a common one. "grok-1.5-flash" is often cited.
+    messages=[{"role": "system", "content": SYSTEM_PROMPT}, {"role": "user", "content": INSTRUCTION_PROMPT}],
+)
+```
+```python
+print(f"Original Prompt (for transliteration):\\n{USER_PROMPT}") 
+generated_response = response.choices[0].message.content
+print(f"Response in {native_language}:\\n{generated_response}")
+```
+
+Awesome! We can now transliterate from English to any language! And all of this can be tracked with AgentOps by going to the session url printed when `agentops.init()` was called.
+
+```python
+agentops.end_trace(tracer, end_state="Success")
+```
+We end the session with a success state. This is useful if you want to track the success or failure of the chatbot. By default, the session will have an indeterminate end state if not explicitly ended.
+
+<script type="module" src="/scripts/github_stars.js"></script>
+<script type="module" src="/scripts/scroll-img-fadein-animation.js"></script>
+<script type="module" src="/scripts/button_heartbeat_animation.js"></script>
+<script type="module" src="/scripts/adjust_api_dynamically.js"></script>

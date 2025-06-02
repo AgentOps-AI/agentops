@@ -1,0 +1,136 @@
+---
+title: 'IBM Watsonx.ai Example'
+description: 'Using IBM Watsonx.ai for text generation and chat with AgentOps'
+mode: "wide"
+---
+_View Notebook on <a href={'https://github.com/AgentOps-AI/agentops/blob/main/examples/watsonx/watsonx-text-chat.ipynb'} target={'_blank'}>Github</a>_
+
+# IBM Watsonx.ai Text Generation and Chat with AgentOps
+
+This notebook demonstrates how to use IBM Watsonx.ai for basic text generation and chat completion tasks with AgentOps instrumentation.
+
+## Installation
+Install the required packages:
+<CodeGroup>
+  ```bash pip
+  pip install agentops ibm-watsonx-ai python-dotenv
+  ```
+  ```bash poetry
+  poetry add agentops ibm-watsonx-ai python-dotenv
+  ```
+  ```bash uv
+  uv add agentops ibm-watsonx-ai python-dotenv
+  ```
+</CodeGroup>
+
+## Setup
+
+First, let's import the necessary libraries and initialize AgentOps:
+```python
+import agentops
+from ibm_watsonx_ai import Credentials
+from ibm_watsonx_ai.foundation_models import ModelInference
+from dotenv import load_dotenv
+import os
+
+# Load environment variables
+load_dotenv()
+os.environ["AGENTOPS_API_KEY"] = os.getenv("AGENTOPS_API_KEY", "your_agentops_api_key_here")
+
+# Initialize AgentOps
+agentops.init(tags=["watsonx-text-chat", "agentops-example"])
+```
+
+## Initialize IBM Watsonx.ai Credentials
+
+To use IBM Watsonx.ai, you need to set up your credentials and project ID.
+```python
+# Initialize credentials - replace with your own API key
+# Best practice: Store API keys in environment variables
+# Ensure WATSONX_API_KEY, WATSONX_URL, and WATSONX_PROJECT_ID are set in your .env file or environment
+os.environ["WATSONX_API_KEY"] = os.getenv("WATSONX_API_KEY", "your_watsonx_api_key_here")
+os.environ["WATSONX_URL"] = os.getenv("WATSONX_URL", "https://eu-de.ml.cloud.ibm.com") # Example URL, ensure it's correct for your region
+os.environ["WATSONX_PROJECT_ID"] = os.getenv("WATSONX_PROJECT_ID", "your-project-id-here")
+
+
+credentials = Credentials(
+    url=os.environ["WATSONX_URL"],
+    api_key=os.environ["WATSONX_API_KEY"],
+)
+
+# Project ID for your IBM Watsonx project
+project_id = os.environ["WATSONX_PROJECT_ID"]
+```
+
+## Text Generation
+
+Let's use IBM Watsonx.ai to generate text based on a prompt:
+```python
+# Initialize text generation model
+gen_model = ModelInference(model_id="google/flan-ul2", credentials=credentials, project_id=project_id)
+
+# Generate text with a prompt
+prompt = "Write a short poem about artificial intelligence:"
+response = gen_model.generate_text(prompt)
+print(f"Generated Text:\\n{response}")
+```
+
+## Chat Completion
+
+Now, let's use a different model for chat completion:
+```python
+# Initialize chat model
+chat_model = ModelInference(
+    model_id="meta-llama/llama-3-8b-instruct", # Using the model ID from the MDX as it might be more current/available
+    credentials=credentials, 
+    project_id=project_id
+)
+
+# Format messages for chat
+messages = [
+    {"role": "system", "content": "You are a helpful AI assistant."},
+    {"role": "user", "content": "What are the three laws of robotics?"},
+]
+
+# Get chat response
+chat_response = chat_model.chat(messages)
+# Accessing response based on typical ibm-watsonx-ai SDK structure
+print(f"Chat Response:\\n{chat_response['results'][0]['generated_text']}") 
+```
+
+## Another Chat Example
+
+Let's try a different type of query:
+```python
+# New chat messages
+messages = [
+    {"role": "system", "content": "You are an expert in machine learning."},
+    {"role": "user", "content": "Explain the difference between supervised and unsupervised learning in simple terms."},
+]
+
+# Get chat response
+chat_response = chat_model.chat(messages)
+print(f"Chat Response:\\n{chat_response['results'][0]['generated_text']}")
+```
+
+## Clean Up
+
+Finally, let's close the persistent connection with the models if they were established and end the AgentOps session.
+```python
+# Close connections if persistent connections were used.
+# This is good practice if the SDK version/usage implies persistent connections.
+try:
+    gen_model.close_persistent_connection()
+    chat_model.close_persistent_connection()
+except AttributeError:
+    # Handle cases where this method might not exist (e.g. newer SDK versions or stateless calls)
+    print("Note: close_persistent_connection not available or needed for one or more models.")
+    pass
+
+agentops.end_session("Success") # Manually end session
+```
+
+<script type="module" src="/scripts/github_stars.js"></script>
+<script type="module" src="/scripts/scroll-img-fadein-animation.js"></script>
+<script type="module" src="/scripts/button_heartbeat_animation.js"></script>
+<script type="module" src="/scripts/adjust_api_dynamically.js"></script>

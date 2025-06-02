@@ -1,92 +1,106 @@
 ---
 title: 'LangChain Example'
-description: 'Using the LangChain Callback Handler'
+description: 'Using the LangChain Callback Handler with AgentOps'
 mode: "wide"
 ---
-_View Notebook on <a href={'https://github.com/AgentOps-AI/agentops/blob/main/examples/langchain_examples.ipynb'} target={'_blank'}>Github</a>_
-
-
-{/*  SOURCE_FILE: examples/langchain_examples/langchain_examples.ipynb  */}
+_View Notebook on <a href={'https://github.com/AgentOps-AI/agentops/blob/main/examples/langchain/langchain_examples.ipynb'} target={'_blank'}>Github</a>_
 
 # AgentOps Langchain Agent Implementation
 
-Using AgentOps monitoring with Langchain is simple. We've created a LangchainCallbackHandler that will do all of the heavy lifting!
+Using AgentOps monitoring with Langchain is simple. We've created a `LangchainCallbackHandler` that will do all of the heavy lifting!
 
-First let's install the required packages
+## Installation
 
+First, let's install the required packages:
 
-```python
-%pip install langchain==0.2.9
-%pip install langchain_openai
-%pip install -U agentops
-%pip install -U python-dotenv
+<CodeGroup>
+```bash pip
+pip install agentops langchain langchain_openai python-dotenv
 ```
+```bash poetry
+poetry add agentops langchain langchain_openai python-dotenv
+```
+```bash uv
+uv add agentops langchain langchain_openai python-dotenv
+```
+</CodeGroup>
 
-Then import them
+## Setup
 
-
+### Import Dependencies
+Next, import the necessary libraries:
 ```python
 import os
 from langchain_openai import ChatOpenAI
 from langchain.agents import tool, AgentExecutor, create_openai_tools_agent
 from dotenv import load_dotenv
 from langchain_core.prompts import ChatPromptTemplate
+from agentops.integration.callbacks.langchain import (
+    LangchainCallbackHandler as AgentOpsLangchainCallbackHandler,
+)
 ```
 
-The only difference with using AgentOps is that we'll also import this special Callback Handler
+### Configure API Keys
+Set up your API keys. This example shows loading from environment variables, which is a common practice.
+[Get an AgentOps API key](https://agentops.ai/settings/projects) and ensure your OpenAI API key is also accessible.
 
-
-```python
-from agentops.integration.callbacks.langchain import LangchainCallbackHandler
-```
-
-Next, we'll set our API keys. There are several ways to do this, the code below is just the most foolproof way for the purposes of this notebook. It accounts for both users who use environment variables and those who just want to set the API Key here in this notebook.
-
-[Get an AgentOps API key](https://agentops.ai/settings/projects)
-
-1. Create an environment variable in a .env file or other method. By default, the AgentOps `init()` function will look for an environment variable named `AGENTOPS_API_KEY`. Or...
-
-2. Replace `<your_agentops_key>` below and pass in the optional `api_key` parameter to the AgentOps `init(api_key=...)` function. Remember not to commit your API key to a public repo!
-
+1. Create an environment variable in a `.env` file or other method. By default, the AgentOps SDK will look for an environment variable named `AGENTOPS_API_KEY`.
+2. Similarly, ensure `OPENAI_API_KEY` is set for LangChain's OpenAI integration.
 
 ```python
+from dotenv import load_dotenv # Typically at the start of your script
+import os # Typically at the start of your script
+
 load_dotenv()
-AGENTOPS_API_KEY = os.environ.get("AGENTOPS_API_KEY")
-OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY")
+
+# These lines ensure the environment variables are set for the script's context.
+# Replace "your_agentops_api_key_here" and "your_openai_api_key_here" 
+# if you are not using a .env file or pre-set environment variables.
+os.environ["AGENTOPS_API_KEY"] = os.getenv("AGENTOPS_API_KEY", "your_agentops_api_key_here")
+os.environ["OPENAI_API_KEY"] = os.getenv("OPENAI_API_KEY", "your_openai_api_key_here")
 ```
 
-This is where AgentOps comes into play. Before creating our LLM instance via Langchain, first we'll create an instance of the AO LangchainCallbackHandler. After the handler is initialized, a session will be recorded automatically.
+## Initialize AgentOps and LangChain Components
+<Tip>
+Note that you don't need to set up a separate `agentops.init()` call when using the `LangchainCallbackHandler`, as it will automatically initialize the AgentOps client for you if an API key is provided to it or found in the environment.
+</Tip>
 
-Pass in your API key, and optionally any tags to describe this session for easier lookup in the AO dashboard.
-
-
+This is where AgentOps comes into play. Before creating our LLM instance via Langchain, first we'll create an instance of the `AgentOpsLangchainCallbackHandler`. After the handler is initialized, a session will be recorded automatically. Pass in any tags to describe this session for easier lookup in the AgentOps dashboard.
 
 ```python
-agentops_handler = LangchainCallbackHandler(
-    api_key=AGENTOPS_API_KEY, tags=["Langchain Example"]
+agentops_handler = AgentOpsLangchainCallbackHandler(
+    tags=["Langchain Example", "agentops-example"]
+    # The AGENTOPS_API_KEY from the environment will be used automatically.
+    # Alternatively, you could pass api_key=os.getenv("AGENTOPS_API_KEY")
 )
 
 llm = ChatOpenAI(
-    openai_api_key=OPENAI_API_KEY, callbacks=[agentops_handler], model="gpt-3.5-turbo"
+    callbacks=[agentops_handler], 
+    model="gpt-3.5-turbo"
+    # The OPENAI_API_KEY from the environment will be used automatically.
+    # Alternatively, you could pass openai_api_key=os.getenv("OPENAI_API_KEY")
 )
 
-# You must pass in a callback handler to record your agent
+# This explicit assignment is redundant if callbacks are passed in the constructor,
+# but we include it here to match the source notebook.
 llm.callbacks = [agentops_handler]
+```
 
+### Define Prompt
+Set up the prompt template for your agent.
+```python
 prompt = ChatPromptTemplate.from_messages(
     [
         ("system", "You are a helpful assistant. Respond only in Spanish."),
         ("human", "{input}"),
         # Placeholders fill up a **list** of messages
         ("placeholder", "{agent_scratchpad}"),
-        # ("tool_names", "find_movie")
     ]
 )
 ```
 
-Agents generally use tools. Let's define a simple tool here. Tool usage is also recorded.
-
-
+### Define Tools
+Agents generally use tools. Let's define a simple tool here. Tool usage is also recorded by AgentOps.
 ```python
 @tool
 def find_movie(genre: str) -> str:
@@ -96,45 +110,39 @@ def find_movie(genre: str) -> str:
     else:
         return "Pineapple Express"
 
-
 tools = [find_movie]
 ```
-
-For each tool, you need to also add the callback handler
-
-
+For each tool, you need to also add the callback handler:
 ```python
 for t in tools:
     t.callbacks = [agentops_handler]
 ```
-
-Add the tools to our LLM
-
-
+Bind the tools to the LLM. Note: Depending on the agent creation method, this explicit binding step might sometimes be handled internally by the agent constructor. In this example, we follow the notebook's pattern.
 ```python
 llm_with_tools = llm.bind_tools([find_movie])
 ```
 
-Finally, let's create our agent! Pass in the callback handler to the agent, and all the actions will be recorded in the AO Dashboard
-
-
+## Create and Run Agent
+Finally, let's create our agent! Pass in the callback handler to the agent, and all the actions will be recorded in the AgentOps Dashboard.
 ```python
-agent = create_openai_tools_agent(llm, tools, prompt)
+# Note: The notebook uses 'llm' here, not 'llm_with_tools'.
+# create_openai_tools_agent is designed to work with the base llm and tools list.
+agent = create_openai_tools_agent(llm, tools, prompt) 
 agent_executor = AgentExecutor(agent=agent, tools=tools)
 ```
 
-
+Now, invoke the agent. Ensure the callback handler is included in the configuration for the invocation.
 ```python
 agent_executor.invoke(
-    {"input": "What comedies are playing?"}, config={"callback": [agentops_handler]}
+    {"input": "What comedies are playing?"}, 
+    config={"callback": [agentops_handler]} # Matches notebook's singular 'callback'
 )
 ```
 
 ## Check your session
-Finally, check your run on [AgentOps](https://app.agentops.ai)
+Finally, check your run on [AgentOps](https://app.agentops.ai). You will see a session recorded with the LLM calls and tool usage.
 
-Now if we look in the AgentOps dashboard, you will see a session recorded with the LLM calls and tool usage.
-
-## Langchain v0 Example
-
-This langchain version is out of date and support is being deprecated. You can find the example notebook [here](https://github.com/agentops-ai/agentops/blob/main/examples/langchain_examples/langchain_v0_example.ipynb).
+<script type="module" src="/scripts/github_stars.js"></script>
+<script type="module" src="/scripts/scroll-img-fadein-animation.js"></script>
+<script type="module" src="/scripts/button_heartbeat_animation.js"></script>
+<script type="module" src="/scripts/adjust_api_dynamically.js"></script>

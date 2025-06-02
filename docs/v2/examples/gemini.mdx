@@ -1,0 +1,101 @@
+---
+title: 'Gemini Example'
+description: 'Using Google Gemini API with AgentOps for synchronous and streaming text generation'
+mode: "wide"
+---
+_View Notebook on <a href={'https://github.com/AgentOps-AI/agentops/blob/main/examples/gemini/gemini_example.ipynb'} target={'_blank'}>Github</a>_
+
+# Gemini API Example with AgentOps
+
+This notebook demonstrates how to use AgentOps with Google's Gemini API for observing both synchronous and streaming text generation.
+
+## Installation
+Install necessary packages:
+<CodeGroup>
+  ```bash pip
+  pip install agentops google-generativeai python-dotenv
+  ```
+  ```bash poetry
+  poetry add agentops google-generativeai python-dotenv
+  ```
+  ```bash uv
+  uv add agentops google-generativeai python-dotenv
+  ```
+</CodeGroup>
+
+## Setup
+```python
+from google import generativeai as genai # Renamed for clarity as per official docs
+import agentops
+from dotenv import load_dotenv
+import os
+```
+
+Set API Keys:
+```python
+load_dotenv()
+
+os.environ["AGENTOPS_API_KEY"] = os.getenv("AGENTOPS_API_KEY", "your_agentops_api_key_here")
+os.environ["GEMINI_API_KEY"] = os.getenv("GEMINI_API_KEY", "your_gemini_api_key_here")
+
+# Configure the Gemini client with the API key
+genai.configure(api_key=os.environ["GEMINI_API_KEY"])
+```
+
+Initialize AgentOps:
+```python
+# Initialize AgentOps and Gemini client
+agentops.init(tags=["gemini-example", "agentops-example"])
+# The client is configured globally via genai.configure()
+```
+
+## Synchronous Generation
+```python
+# Test synchronous generation
+print("Testing synchronous generation:")
+model = genai.GenerativeModel('gemini-1.5-flash') # Create model instance
+response = model.generate_content("What are the three laws of robotics?")
+print(response.text)
+```
+
+## Streaming Generation
+```python
+# Test streaming generation
+print("\\nTesting streaming generation:")
+model = genai.GenerativeModel('gemini-1.5-flash') # Create model instance
+response_stream = model.generate_content(
+    "Explain the concept of machine learning in simple terms.",
+    stream=True
+)
+
+for chunk in response_stream:
+    print(chunk.text, end="")
+print()  # Add newline after streaming output
+```
+
+## Another Synchronous Generation
+```python
+# Test another synchronous generation
+print("\\nTesting another synchronous generation:")
+model = genai.GenerativeModel('gemini-1.5-flash') # Create model instance
+response = model.generate_content(
+    "What is the difference between supervised and unsupervised learning?"
+)
+print(response.text)
+```
+
+## Token Counting
+```python
+# Example of token counting
+print("\\nTesting token counting:")
+model = genai.GenerativeModel('gemini-1.5-flash') # Create model instance
+token_response = model.count_tokens("This is a test sentence to count tokens.")
+print(f"Token count: {token_response.total_tokens}")
+
+agentops.end_session("Success") # End the session
+```
+
+<script type="module" src="/scripts/github_stars.js"></script>
+<script type="module" src="/scripts/scroll-img-fadein-animation.js"></script>
+<script type="module" src="/scripts/button_heartbeat_animation.js"></script>
+<script type="module" src="/scripts/adjust_api_dynamically.js"></script>

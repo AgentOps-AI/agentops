@@ -1,0 +1,143 @@
+---
+title: 'Autogen Example'
+description: 'Using Autogen with AgentOps for agent chat monitoring'
+mode: "wide"
+---
+_View Notebook on <a href={'https://github.com/AgentOps-AI/agentops/blob/main/examples/autogen/AgentChat.ipynb'} target={'_blank'}>Github</a>_
+
+# Microsoft Autogen Chat Example
+
+AgentOps automatically configures itself when it's initialized meaning your agent run data will be tracked and logged to your AgentOps dashboard right away.
+
+First let's install the required packages.
+
+## Installation
+<CodeGroup>
+  ```bash pip
+  pip install -U autogen-agentchat "autogen-ext[openai]" agentops python-dotenv
+  ```
+  ```bash poetry
+  poetry add autogen-agentchat autogen-ext agentops python-dotenv
+  # For autogen-ext[openai] with poetry, you might need to specify openai as an extra:
+  # poetry add autogen-ext -E openai
+  ```
+  ```bash uv
+  uv add autogen-agentchat "autogen-ext[openai]" agentops python-dotenv
+  ```
+</CodeGroup>
+
+## Setup
+Then import them.
+```python
+import os
+from dotenv import load_dotenv
+from IPython.core.error import (
+    StdinNotImplementedError,
+)
+import asyncio
+
+import agentops
+
+from autogen_agentchat.agents import AssistantAgent, UserProxyAgent
+from autogen_ext.models.openai import OpenAIChatCompletionClient
+
+from autogen_agentchat.teams import RoundRobinGroupChat
+from autogen_agentchat.conditions import MaxMessageTermination
+from autogen_agentchat.ui import Console
+```
+
+Next, we'll set our API keys. There are several ways to do this, the code below is just the most foolproof way for the purposes of this notebook. It accounts for both users who use environment variables and those who just want to set the API Key here in this notebook.
+
+[Get an AgentOps API key](https://agentops.ai/settings/projects)
+
+1. Create an environment variable in a `.env` file or other method. By default, the AgentOps `init()` function will look for an environment variable named `AGENTOPS_API_KEY`. Or...
+
+2. Replace `<your_agentops_key>` below and pass in the optional `api_key` parameter to the AgentOps `init(api_key=...)` function. Remember not to commit your API key to a public repo!
+
+```python
+load_dotenv()
+os.environ["AGENTOPS_API_KEY"] = os.getenv("AGENTOPS_API_KEY", "your_agentops_api_key_here")
+os.environ["OPENAI_API_KEY"] = os.getenv("OPENAI_API_KEY", "your_openai_api_key_here")
+```
+
+```python
+# When initializing AgentOps, you can pass in optional tags to help filter sessions
+agentops.init(auto_start_session=False)
+tracer = agentops.start_trace(trace_name="Microsoft Agent Chat Example", tags=["autogen-chat", "microsoft-autogen", "agentops-example"])
+```
+
+AutoGen will now start automatically tracking:
+
+* LLM prompts and completions
+* Token usage and costs
+* Agent names and actions
+* Correspondence between agents
+* Tool usage
+* Errors
+
+# Simple Chat Example
+```python
+# Define model and API key
+model_name = "gpt-4-turbo" # Or "gpt-4o" / "gpt-4o-mini" as per migration guide examples
+api_key = os.getenv("OPENAI_API_KEY")
+
+# Create the model client
+model_client = OpenAIChatCompletionClient(model=model_name, api_key=api_key)
+
+# Create the agent that uses the LLM.
+assistant = AssistantAgent(
+    name="assistant",
+    system_message="You are a helpful assistant.", # Added system message for clarity
+    model_client=model_client
+)
+
+user_proxy_initiator = UserProxyAgent("user_initiator")
+
+async def main():
+    termination = MaxMessageTermination(max_messages=2) 
+
+    group_chat = RoundRobinGroupChat(
+        [user_proxy_initiator, assistant], # Corrected: agents as positional argument
+        termination_condition=termination
+    )
+    
+    chat_task = "How can I help you today?"
+    print(f"User Initiator: {chat_task}")
+
+    try:
+        stream = group_chat.run_stream(task=chat_task)
+        await Console().run(stream) 
+        agentops.end_trace(tracer, end_state="Success")
+
+    except StdinNotImplementedError:
+        print("StdinNotImplementedError: This typically happens in non-interactive environments.")
+        print("Skipping interactive part of chat for automation.")
+        agentops.end_trace(tracer, end_state="Indeterminate")
+    except Exception as e:
+        print(f"An error occurred: {e}")
+        agentops.end_trace(tracer, end_state="Error")
+    finally:
+        await model_client.close()
+
+if __name__ == '__main__':
+    try:
+        loop = asyncio.get_running_loop()
+    except RuntimeError:
+        loop = None
+
+    if loop and loop.is_running():
+        import nest_asyncio
+        nest_asyncio.apply()
+        asyncio.run(main())
+    else:
+        asyncio.run(main())
+```
+
+You can view data on this run at [app.agentops.ai](https://app.agentops.ai).
+
+The dashboard will display LLM events for each message sent by each agent, including those made by the human user.
+
+<script type="module" src="/scripts/github_stars.js"></script>
+<script type="module" src="/scripts/scroll-img-fadein-animation.js"></script>
+<script type="module" src="/scripts/button_heartbeat_animation.js"></script>
+<script type="module" src="/scripts/adjust_api_dynamically.js"></script>
