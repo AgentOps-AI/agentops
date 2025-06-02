@@ -3,6 +3,7 @@ Decorators for instrumenting code with AgentOps.
 Provides @trace for creating trace-level spans (sessions) and other decorators for nested spans.
 """
 
+import functools
 from termcolor import colored
 
 from agentops.logging import logger
