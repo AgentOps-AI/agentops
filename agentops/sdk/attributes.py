@@ -9,7 +9,7 @@ import platform
 import os
 from typing import Any, Optional, Union
 
-import psutil
+import psutil  #  type: ignore[import-untyped]
 
 from agentops.logging import logger
 from agentops.semconv import ResourceAttributes, SpanAttributes, CoreAttributes
@@ -23,7 +23,7 @@ def get_system_resource_attributes() -> dict[str, Any]:
     Returns:
         dictionary containing system information attributes
     """
-    attributes = {
+    attributes: dict[str, Any] = {
         ResourceAttributes.HOST_MACHINE: platform.machine(),
         ResourceAttributes.HOST_NAME: platform.node(),
         ResourceAttributes.HOST_NODE: platform.node(),
@@ -71,7 +71,7 @@ def get_global_resource_attributes(
         dictionary containing all resource attributes
     """
     # Start with service attributes
-    attributes = {
+    attributes: dict[str, Any] = {
         ResourceAttributes.SERVICE_NAME: service_name,
         **get_system_resource_attributes(),
     }
@@ -123,7 +123,7 @@ def get_span_attributes(
     Returns:
         dictionary containing span attributes
     """
-    attributes = {
+    attributes: dict[str, Any] = {
         SpanAttributes.AGENTOPS_SPAN_KIND: span_kind,
         SpanAttributes.OPERATION_NAME: operation_name,
     }

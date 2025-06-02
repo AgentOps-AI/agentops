@@ -16,9 +16,10 @@ task = create_entity_decorator(SpanKind.TASK)
 operation_decorator = create_entity_decorator(SpanKind.OPERATION)
 workflow = create_entity_decorator(SpanKind.WORKFLOW)
 trace = create_entity_decorator(SpanKind.SESSION)
-session = create_entity_decorator(SpanKind.SESSION)
+# session = create_entity_decorator(SpanKind.SESSION)
 tool = create_entity_decorator(SpanKind.TOOL)
 operation = task
+
 
 # For backward compatibility: @session decorator calls @trace decorator
 @functools.wraps(trace)

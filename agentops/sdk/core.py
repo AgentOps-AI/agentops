@@ -119,7 +119,7 @@ class TracingCore:
     It handles provider management, span creation, and context propagation.
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         """Initialize the tracing core."""
         self.provider: Optional[TracerProvider] = None
         self._meter_provider: Optional[MeterProvider] = None
