@@ -1,192 +1,252 @@
 ---
 title: "Quickstart"
-description: "Start using AgentOps with just 2 lines of code"
+description: "Get started with AgentOps in minutes with just 2 lines of code for basic monitoring, and explore powerful decorators for custom tracing."
 ---
-import CodeTooltip from '/snippets/add-code-tooltip.mdx'
-import EnvTooltip from '/snippets/add-env-tooltip.mdx'
 
-<Steps>
-  <Step title="Install the AgentOps SDK">
-    <CodeGroup>
-      ```bash pip 
-      pip install agentops
-      ```
-      ```bash poetry
-      poetry add agentops
-      ```
-    </CodeGroup>
-  </Step>
-  <Step title="Add 2 lines of code">
-    <CodeTooltip />
-    Get an AgentOps API key [here](https://app.agentops.ai/settings/projects)
-      <CodeGroup>
-        ```python python
-        import agentops
-        agentops.init(<INSERT YOUR API KEY HERE>)
-        ```
-      </CodeGroup>
-      That's it! These two lines automatically instrument your code and start tracking traces. Traces automatically end when your program exits.
-    <EnvTooltip />
-  </Step>
-  <Step title="Run your agent">
-    Execute your program and visit [app.agentops.ai/traces](https://app.agentops.ai/traces) to observe your Agent! 🕵️
+AgentOps is designed for easy integration into your AI agent projects, providing powerful observability with minimal setup. This guide will get you started quickly.
 
-    <Tip>After your run, AgentOps prints a clickable URL to console linking directly to your session in the Dashboard</Tip> 
-     <div/>{/* Intentionally blank div for newline */}
+<Check>[Give us a star on GitHub!](https://github.com/AgentOps-AI/agentops) Your support helps us grow. ⭐</Check>
 
-     <Frame type="glass" caption="Clickable link to session">
-        <img height="200" src="https://github.com/AgentOps-AI/agentops/blob/main/docs/images/link-to-session.gif?raw=true" />
-    </Frame>
-  </Step>
-</Steps>
-<Check>[Give us a star](https://github.com/AgentOps-AI/agentops) if you liked AgentOps! (you may be our <span id="stars-text">3,000th</span> 😊)</Check>
+## Installation
+First, install the AgentOps SDK. We recommend including `python-dotenv` for easy API key management.
+<CodeGroup>
+  ```bash pip 
+  pip install agentops python-dotenv
+  ```
+  ```bash poetry
+  poetry add agentops python-dotenv
+  ```
+  ```bash uv
+  uv add agentops python-dotenv
+  ```
+</CodeGroup>
 
-## More basic functionality
+## Initial Setup (2 Lines of Code)
 
-<CardGroup cols={1}>
+At its simplest, AgentOps can start monitoring your supported LLM and agent framework calls with just two lines of Python code.
 
-<Card icon="code" title="Decorate Operations">
-  You can instrument functions inside your code with the `@operation` decorator, which will create spans that track function execution, parameters, and return values. These operations will be displayed in your session visualization alongside LLM calls.
-  ```python python
-  # Instrument a function as an operation
-  from agentops.sdk.decorators import operation
-  
-  @operation
-  def process_data(data):
-      # Your function logic here
-      result = data.upper()
-      return result
+1.  **Import AgentOps**: Add `import agentops` to your script.
+2.  **Initialize AgentOps**: Call `agentops.init()` with your API key.
+
+<CodeGroup>
+```python Python
+import agentops
+import os
+from dotenv import load_dotenv
+
+# Load environment variables (recommended for API keys)
+load_dotenv()
+
+# Initialize AgentOps
+# The API key can be passed directly or set as an environment variable AGENTOPS_API_KEY
+AGENTOPS_API_KEY = os.getenv("AGENTOPS_API_KEY") 
+agentops.init(AGENTOPS_API_KEY) 
+
+# That's it for basic auto-instrumentation!
+# If you're using a supported library (like OpenAI, LangChain, CrewAI, etc.),
+# AgentOps will now automatically track LLM calls and agent actions.
+```
+</CodeGroup>
+
+### Setting Your AgentOps API Key
+You need an AgentOps API key to send data to your dashboard.
+- Get your API key from the [AgentOps Dashboard](https://app.agentops.ai/settings/projects).
+
+It's best practice to set your API key as an environment variable.
+<CodeGroup>
+  ```bash Export to CLI
+  export AGENTOPS_API_KEY="your_agentops_api_key_here"
+  ```
+  ```txt Set in .env file
+  AGENTOPS_API_KEY="your_agentops_api_key_here"
+  ```
+</CodeGroup>
+If you use a `.env` file, make sure `load_dotenv()` is called before `agentops.init()`.
+
+## Running Your Agent & Viewing Traces
+
+After adding the two lines and ensuring your API key is set up:
+1.  Run your agent application as you normally would.
+2.  AgentOps will automatically instrument supported libraries and send trace data.
+3.  Visit your [AgentOps Dashboard](https://app.agentops.ai/traces) to observe your agent's operations!
+
+
+## Beyond Automatic Instrumentation: Decorators
+
+While AgentOps automatically instruments many popular libraries, you can gain finer-grained control and track custom parts of your code using our powerful decorators. This allows you to define specific operations, group logic under named agents, track tool usage with costs, and create custom traces.
+
+### Tracking Custom Operations with `@operation`
+Instrument any function in your code to create spans that track its execution, parameters, and return values. These operations will appear in your session visualization alongside LLM calls.
+```python
+from agentops.sdk.decorators import operation
+
+@operation
+def process_data(data):
+    # Your function logic here
+    processed_result = data.upper()
+    # agentops.record(Events("Processed Data", result=processed_result)) # Optional: record specific events
+    return processed_result
+
+# Example usage:
+# my_data = "example input"
+# output = process_data(my_data)
 ```
 
-</Card>
-<Card icon="robot" title="Track Agents">
-  If you use specific named agents within your system, you can create agent spans that contain all downstream operations using the `@agent` decorator.
-  ```python python
-  # Create an agent class
-  from agentops.sdk.decorators import agent, operation
-  
-  @agent
-  class MyAgent:
-      def __init__(self, name):
-          self.name = name
-          
-      @operation
-      def perform_task(self, task):
-          # Agent task logic here
-          return f"Completed {task}"
+### Tracking Agent Logic with `@agent`
+If you structure your system with specific named agents (e.g., classes), use the `@agent` decorator on the class and `@operation` on its methods to group all downstream operations under that agent's context.
+```python
+from agentops.sdk.decorators import agent, operation
 
-  def run_agent_task(task_name):
-      agent = MyAgent("research-agent")
-      result = agent.perform_task(task_name)
-      return result
-
-  result = run_agent_task("data analysis")
-  ```
-
-</Card>
-<Card icon="wrench" title="Track Tools">
-  Track tool usage and costs with the `@tool` decorator. You can specify costs to get total cost tracking directly in your dashboard summary.
-  ```python python
-  # Track tool usage with cost
-  from agentops.sdk.decorators import tool
-  
-  @tool(cost=0.05)
-  def web_search(query):
-      # Tool logic here
-      return f"Search results for: {query}"
-      
-  @tool
-  def calculate(expression):
-      # Tool without cost tracking
-      return eval(expression)
-  ```
-
-</Card>
-<Card icon="play" title="Creating Traces">
-  Create custom traces to group operations using the `@trace` decorator, or manage traces manually for more control.
-  ```python python
-  # Create a trace with decorator
-  from agentops.sdk.decorators import trace
-  
-  @trace
-  def my_workflow():
-      # Your workflow code here
-      agent = MyAgent("research-agent")
-      result = agent.perform_task("data analysis")
-      return result
-      
-  # Or manage traces manually
-  import agentops
-  
-  trace = agentops.start_trace("custom-trace")
-  # Your code here
-  agentops.end_trace(trace, "Success")
-  ```
-</Card>
-</CardGroup>
-
-
-## Example Code
-
-Here is the complete code from the sections above
-
-```python python
-import agentops
-from agentops.sdk.decorators import agent, operation, tool, trace
-
-# Initialize AgentOps without auto-starting session since we use @trace
-agentops.init(<INSERT YOUR API KEY HERE>, auto_start_session=False)
-
-# Create a tool with cost tracking
-@tool(cost=0.05)
-def web_search(query):
-    return f"Search results for: {query}"
-
-# Create an agent class
-@agent
+@agent(name="MyCustomAgent") # You can provide a name for the agent
 class MyAgent:
-    def __init__(self, name):
-        self.name = name
+    def __init__(self, agent_id):
+        self.agent_id = agent_id # agent_id is a reserved parameter for AgentOps
         
     @operation
-    def perform_task(self, task):
-        # Use a tool within the agent
-        search_results = web_search(f"research {task}")
-        return f"Completed {task} with results: {search_results}"
+    def perform_task(self, task_description):
+        # Agent task logic here
+        # This could include LLM calls or calls to other @operation decorated functions
+        return f"Agent {self.agent_id} completed: {task_description}"
 
-@trace(name="research-workflow", tags=["research", "analysis"])
-def run_agent_task(task_name):
-    agent = MyAgent("research-agent")
-    result = agent.perform_task(task_name)
-    return result
-
-result = run_agent_task("data analysis")
+# Example usage:
+# research_agent = MyAgent(agent_id="researcher-001")
+# result = research_agent.perform_task("Analyze market trends")
 ```
 
-<Card
-  title="Simple Code Example"
-  icon="square-code"
-  href="https://github.com/AgentOps-AI/agentops-py/blob/main/examples/openai-gpt.ipynb"
->
-  Jupyter Notebook with sample code that you can run!
-</Card>
+### Tracking Tools with `@tool`
+Track the usage of specific tools or functions, and optionally associate costs with them. This data will be aggregated in your dashboard.
+```python
+from agentops.sdk.decorators import tool
 
-<Check>
-  That's all you need to get started! Check out the documentation below to see how you can record other operations. AgentOps is a lot more powerful this way!
-</Check>
+@tool(name="WebSearchTool", cost=0.05) # Cost is optional
+def web_search(query: str) -> str:
+    # Tool logic here
+    return f"Search results for: {query}"
+    
+@tool # No cost specified
+def calculator(expression: str) -> str:
+    try:
+        return str(eval(expression))
+    except Exception as e:
+        return f"Error: {e}"
 
-## Explore our more advanced functionality!
+# Example usage:
+# search_result = web_search("AgentOps features")
+# calculation = calculator("2 + 2")
+```
+
+### Grouping with Traces (`@trace` or manual)
+Create custom traces to group a sequence of operations or define logical units of work. You can use the `@trace` decorator or manage traces manually for more complex scenarios.
+<Note>If `auto_start_session=False` in `agentops.init()`, you must use `@trace` or `agentops.start_trace()` for any data to be recorded.</Note>
+
+```python
+from agentops.sdk.decorators import trace
+# Assuming MyAgent and web_search are defined as above
+
+# Option 1: Using the @trace decorator
+@trace(name="MyMainWorkflow", tags=["main-flow"])
+def my_workflow_decorated(task_to_perform):
+    # Your workflow code here
+    main_agent = MyAgent(agent_id="workflow-agent") # Assuming MyAgent is defined
+    result = main_agent.perform_task(task_to_perform)
+    # Example of using a tool within the trace
+    tool_result = web_search(f"details for {task_to_perform}") # Assuming web_search is defined
+    return result, tool_result
+    
+# result_decorated = my_workflow_decorated("complex data processing")
+
+# Option 2: Managing traces manually
+# import agentops # Already imported
+
+# custom_trace = agentops.start_trace(name="MyManualWorkflow", tags=["manual-flow"])
+# try:
+#     # Your code here
+#     main_agent = MyAgent(agent_id="manual-workflow-agent") # Assuming MyAgent is defined
+#     result = main_agent.perform_task("another complex task")
+#     tool_result = web_search(f"info for {result}") # Assuming web_search is defined
+#     agentops.end_trace(custom_trace, end_state="Success", end_prompt=f"Completed: {result}")
+# except Exception as e:
+#     if custom_trace: # Ensure trace was started before trying to end it
+#         agentops.end_trace(custom_trace, end_state="Fail", error_message=str(e))
+#     raise
+```
+
+## Complete Example with Decorators
+
+Here's a consolidated example showcasing how these decorators can work together:
+```python
+import agentops
+from agentops.sdk.decorators import agent, operation, tool, trace
+from dotenv import load_dotenv
+import os
+
+# Load environment variables
+load_dotenv()
+AGENTOPS_API_KEY = os.getenv("AGENTOPS_API_KEY")
+
+# Initialize AgentOps. 
+# Set auto_start_session=False because @trace will manage the session.
+agentops.init(AGENTOPS_API_KEY, auto_start_session=False, tags=["quickstart-complete-example"])
+
+# Define a tool
+@tool(name="AdvancedSearch", cost=0.02)
+def advanced_web_search(query: str) -> str:
+    # Simulate a more advanced search
+    return f"Advanced search results for '{query}': [Details...]"
+
+# Define an agent class
+@agent(name="ResearchSpecialistAgent")
+class ResearchAgent:
+    def __init__(self, agent_id: str):
+        self.agent_id = agent_id # This will be used as the agent_id in AgentOps
+        
+    @operation(name="ConductResearch")
+    def conduct_research(self, research_topic: str) -> str:
+        # Use the tool within the agent's operation
+        search_results = advanced_web_search(f"Deep dive into {research_topic}")
+        # Simulate further processing
+        analysis = f"Analysis of '{research_topic}': Based on '{search_results}', the key findings are..."
+        return analysis
+
+# Define a workflow using the @trace decorator
+@trace(name="FullResearchWorkflow", tags=["research", "analysis", "example"])
+def run_full_research_workflow(topic: str) -> str:
+    specialist_agent = ResearchAgent(agent_id="researcher-alpha-007")
+    research_findings = specialist_agent.conduct_research(topic)
+    
+    final_report = f"Research Report for '{topic}':\\n{research_findings}"
+    # agentops.record(Events("ReportGenerated", details=final_report)) # Optional: record a custom event
+    return final_report
+
+# Execute the workflow
+final_output = run_full_research_workflow("AI in healthcare")
+print(final_output)
+```
+
+## Next Steps
+
+You've seen how to get started with AgentOps! Explore further to leverage its full potential:
 
 <CardGroup cols={2}>
   <Card
-    title="Examples and Video Guides"
+    title="Integrations"
+    icon="plug"
+    href="/v2/integrations"
+  >
+    See how AgentOps automatically instruments popular LLM and agent frameworks.
+  </Card>
+  <Card
+    title="Examples"
     icon="square-code"
     href="/v2/examples"
   >
-    Record all of your operations the way AgentOps intends.
+    Explore detailed examples for various use cases and integrations.
   </Card>
-  <Card title="Tracking Agents" icon="robot" href="/v2/usage/tracking-agents">
-    Associate operations with specific named agents.
+  <Card title="SDK Reference" icon="book-open" href="/v2/sdk-reference">
+    Dive deeper into the AgentOps SDK capabilities and API.
+  </Card>
+  <Card title="Trace Decorator" icon="code" href="/v2/usage/trace-decorator">
+    Learn how to group operations and create custom traces using the @trace decorator.
   </Card>
 </CardGroup>
 
