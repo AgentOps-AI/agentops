@@ -176,8 +176,8 @@ matches = index.query(
     vector=query_embedding_for_rag, top_k=3, include_metadata=True # vector is embedding itself
 )["matches"]
 
-context = "\\n\\n".join(
-    f"Question: {m['metadata'].get('Question', '')}\\nAnswer: {m['metadata'].get('Answer', '')}" for m in matches
+context = "\n\n".join(
+    f"Question: {m['metadata'].get('Question', '')}\nAnswer: {m['metadata'].get('Answer', '')}" for m in matches
 )
 
 # Use the context to generate a final answer using Chat Completions.
@@ -190,7 +190,7 @@ response_payload = {
 }
 completion = client.chat.completions.create(**response_payload)
 final_answer_text = completion.choices[0].message.content
-print("\\nFinal Answer (using Chat Completions):")
+print("\nFinal Answer (using Chat Completions):")
 print(final_answer_text)
 ```
 
@@ -250,7 +250,7 @@ queries = [
 # Process each query dynamically using Chat Completions for tool routing.
 for item in queries:
     current_messages = [{"role": "user", "content": item["query"]}]
-    print("\\n🌟--- Processing Query ---🌟")
+    print("\n🌟--- Processing Query ---🌟")
     print(f"🔍 **User Query:** {item['query']}")
 
     # First call to LLM to decide on tool usage
@@ -272,7 +272,7 @@ for item in queries:
     
     current_messages.append(response_message) # Add assistant's decision to message history
 
-    print("\\n✨ **Initial LLM Response:**")
+    print("\n✨ **Initial LLM Response:**")
     if response_message.content:
         print(response_message.content)
     
@@ -297,7 +297,7 @@ for item in queries:
                 if pinecone_response_obj["matches"]:
                     for match in pinecone_response_obj["matches"][:top_k_results]:
                         matches_str_list.append(f"Score: {match['score']:.2f}, Q: {match['metadata'].get('Question', 'N/A')}, A: {match['metadata'].get('Answer', 'N/A')}")
-                function_response_content = "\\n".join(matches_str_list) if matches_str_list else "No matching documents found."
+                function_response_content = "\n".join(matches_str_list) if matches_str_list else "No matching documents found."
                 print("✅ **PineconeSearchDocuments tool invoked successfully.**")
                 
             elif function_name == "web_search_preview_tool": 
@@ -319,7 +319,7 @@ for item in queries:
             )
         
         # Second call to LLM with tool results
-        print("\\n🔄 **Getting final response from LLM...**")
+        print("\n🔄 **Getting final response from LLM...**")
         final_response = client.chat.completions.create(
             model="gpt-4o", 
             messages=current_messages
@@ -349,14 +349,14 @@ item_query_seq = "What is the most common cause of death in the United States"
 
 # Initialize input messages with the user's query.
 current_messages_seq = [{"role": "user", "content": item_query_seq}]
-print("\\n🌟--- Processing Query (Sequential Tool Call Example) ---🌟")
+print("\n🌟--- Processing Query (Sequential Tool Call Example) ---🌟")
 print(f"🔍 **User Query:** {item_query_seq}")
 
 # Call the Chat Completions API with tools enabled
-print("\\n🔧 **Calling Chat Completions API with Tools Enabled**")
-print("\\n🕵️‍♂️ **Step 1: Web Search Call (Implicit)**")
+print("\n🔧 **Calling Chat Completions API with Tools Enabled**")
+print("\n🕵️‍♂️ **Step 1: Web Search Call (Implicit)**")
 print("   - Initiating web search to gather initial information.")
-print("\\n📚 **Step 2: Pinecone Search Call (Implicit)**")
+print("\n📚 **Step 2: Pinecone Search Call (Implicit)**")
 print("   - Querying Pinecone to find relevant examples from the internal knowledge base.")
 
 # First LLM call to determine initial tool usage
@@ -373,7 +373,7 @@ response_seq_1 = client.chat.completions.create(
     tool_choice="auto", # Let model decide, or force a specific tool if needed for strict sequence
 )
 
-print("\\n✨ **Initial Response Output (after first LLM call):**")
+print("\n✨ **Initial Response Output (after first LLM call):**")
 response_message_seq_1 = response_seq_1.choices[0].message
 tool_calls_seq_1 = response_message_seq_1.tool_calls
 
@@ -399,7 +399,7 @@ if tool_calls_seq_1:
             if pinecone_res_obj["matches"]:
                 for match in pinecone_res_obj["matches"][:tool_function_args.get("top_k", 3)]:
                     matches_str_list_seq.append(f"Score: {match['score']:.2f}, Q: {match['metadata'].get('Question', 'N/A')}, A: {match['metadata'].get('Answer', 'N/A')}")
-            tool_response_content = "\\n".join(matches_str_list_seq) if matches_str_list_seq else "No matching documents found in Pinecone."
+            tool_response_content = "\n".join(matches_str_list_seq) if matches_str_list_seq else "No matching documents found in Pinecone."
             print(f"  ✔️ Output for {tc.function.name}: {tool_response_content[:100]}...")
         
         current_messages_seq.append({
@@ -410,14 +410,14 @@ if tool_calls_seq_1:
         })
 
     # Second call to LLM with tool results
-    print("\\n🔄 **Calling Chat Completions API again with tool results...**")
+    print("\n🔄 **Calling Chat Completions API again with tool results...**")
     response_seq_2 = client.chat.completions.create(
         model="gpt-4o",
         messages=current_messages_seq,
         tools=tools # Make tools available again if model decides to call another one
     )
     final_answer_seq = response_seq_2.choices[0].message.content
-    print("\\n💡 **Final Answer (after sequential tool calls):**")
+    print("\n💡 **Final Answer (after sequential tool calls):**")
     print(final_answer_seq)
 
 else:

@@ -214,7 +214,7 @@ def run_full_research_workflow(topic: str) -> str:
     specialist_agent = ResearchAgent(agent_id="researcher-alpha-007")
     research_findings = specialist_agent.conduct_research(topic)
     
-    final_report = f"Research Report for '{topic}':\\n{research_findings}"
+    final_report = f"Research Report for '{topic}':\n{research_findings}"
     # agentops.record(Events("ReportGenerated", details=final_report)) # Optional: record a custom event
     return final_report
 

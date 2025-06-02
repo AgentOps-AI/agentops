@@ -106,9 +106,9 @@ response = client.chat.completions.create(
 )
 ```
 ```python
-print(f"Original Prompt (for transliteration):\\n{USER_PROMPT}") 
+print(f"Original Prompt (for transliteration):\n{USER_PROMPT}") 
 generated_response = response.choices[0].message.content
-print(f"Response in {native_language}:\\n{generated_response}")
+print(f"Response in {native_language}:\n{generated_response}")
 ```
 
 Awesome! We can now transliterate from English to any language! And all of this can be tracked with AgentOps by going to the session url printed when `agentops.init()` was called.

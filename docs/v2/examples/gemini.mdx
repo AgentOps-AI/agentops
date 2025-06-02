@@ -87,7 +87,7 @@ print(response.text)
 ## Token Counting
 ```python
 # Example of token counting
-print("\\nTesting token counting:")
+print("\nTesting token counting:")
 model = genai.GenerativeModel('gemini-1.5-flash') # Create model instance
 token_response = model.count_tokens("This is a test sentence to count tokens.")
 print(f"Token count: {token_response.total_tokens}")

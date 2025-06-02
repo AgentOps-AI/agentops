@@ -117,9 +117,9 @@ def generate_missions():
         loop += 1
 
     # Combine all mission strings into a single string with a separator (e.g., newline or comma)
-    # Notebook had 'missions_string = "\\n".join(missions)', which is a bug. 
+    # Notebook had 'missions_string = "\n".join(missions)', which is a bug. 
     # Using 'selectedmissions' as it's the correct variable.
-    missions_string = "\\n".join(selectedmissions) 
+    missions_string = "\n".join(selectedmissions) 
     print(missions_string)
     return missions_string
 ```
@@ -294,7 +294,7 @@ def enemyscan(amount): # Matched notebook (no type hint)
         loop += 1
 
     # Combine all mission strings into a single string with a separator (e.g., newline or comma)
-    enemies_string = "\\n".join(enemiesonscene)
+    enemies_string = "\n".join(enemiesonscene)
     print(enemies_string)
     return enemies_string
 ```
@@ -316,7 +316,7 @@ def inventoryscan():
         loop += 1
 
     # Combine all mission strings into a single string with a separator (e.g., newline or comma)
-    weapons_string = "\\n".join(weapons_at_hand)
+    weapons_string = "\n".join(weapons_at_hand)
     print(weapons_string)
     return weapons_string
 ```
@@ -404,7 +404,7 @@ And now we are basically done! We can give this to the AI and see what we get.
 initial_messages.append(
     {
         "role": "assistant", # Notebook uses assistant role here for tool results
-        "content": f"Weapons Inventory Scan Result: {inv_scan_res}\\nEnemy Scans Result: {enemy_scan_res}",
+        "content": f"Weapons Inventory Scan Result: {inv_scan_res}\nEnemy Scans Result: {enemy_scan_res}",
     }
 )
 

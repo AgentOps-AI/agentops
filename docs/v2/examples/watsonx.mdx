@@ -72,7 +72,7 @@ gen_model = ModelInference(model_id="google/flan-ul2", credentials=credentials, 
 # Generate text with a prompt
 prompt = "Write a short poem about artificial intelligence:"
 response = gen_model.generate_text(prompt)
-print(f"Generated Text:\\n{response}")
+print(f"Generated Text:\n{response}")
 ```
 
 ## Chat Completion
@@ -95,7 +95,7 @@ messages = [
 # Get chat response
 chat_response = chat_model.chat(messages)
 # Accessing response based on typical ibm-watsonx-ai SDK structure
-print(f"Chat Response:\\n{chat_response['results'][0]['generated_text']}") 
+print(f"Chat Response:\n{chat_response['results'][0]['generated_text']}") 
 ```
 
 ## Another Chat Example
@@ -110,7 +110,7 @@ messages = [
 
 # Get chat response
 chat_response = chat_model.chat(messages)
-print(f"Chat Response:\\n{chat_response['results'][0]['generated_text']}")
+print(f"Chat Response:\n{chat_response['results'][0]['generated_text']}")
 ```
 
 ## Clean Up
