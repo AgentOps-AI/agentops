@@ -278,14 +278,14 @@ def _extract_llm_attributes(llm_request_dict: dict, llm_response: Any) -> dict:
                 if "prompt_tokens_details" in usage:
                     for detail in usage["prompt_tokens_details"]:
                         if "modality" in detail and "token_count" in detail:
-                            attributes[f'gen_ai.usage.prompt_tokens.{detail["modality"].lower()}'] = detail[
+                            attributes[f"gen_ai.usage.prompt_tokens.{detail['modality'].lower()}"] = detail[
                                 "token_count"
                             ]
 
                 if "candidates_tokens_details" in usage:
                     for detail in usage["candidates_tokens_details"]:
                         if "modality" in detail and "token_count" in detail:
-                            attributes[f'gen_ai.usage.completion_tokens.{detail["modality"].lower()}'] = detail[
+                            attributes[f"gen_ai.usage.completion_tokens.{detail['modality'].lower()}"] = detail[
                                 "token_count"
                             ]
 
