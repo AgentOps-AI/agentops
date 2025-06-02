@@ -1,10 +1,7 @@
 ---
-title: Google Generative AI (Gemini)
+title: Google Generative AI
 description: "Monitor and analyze your Google Gemini API calls with AgentOps"
 ---
-
-import CodeTooltip from '/snippets/add-code-tooltip.mdx'
-import EnvTooltip from '/snippets/add-env-tooltip.mdx'
 
 AgentOps provides seamless integration with [Google's Generative AI API](https://ai.google.dev/), allowing you to monitor and analyze all your Gemini model interactions automatically.
 
@@ -82,22 +79,6 @@ print(response.text)
 ```
 </CodeGroup>
 
-## Environment Variables
-
-<EnvTooltip />
-<CodeGroup>
-  ```python .env
-  AGENTOPS_API_KEY=<YOUR_AGENTOPS_API_KEY>
-  GOOGLE_API_KEY=<YOUR_GOOGLE_API_KEY>
-  
-  # For Vertex AI
-  # GOOGLE_GENAI_USE_VERTEXAI=true
-  # GOOGLE_CLOUD_PROJECT=your-project-id
-  # GOOGLE_CLOUD_LOCATION=us-central1
-  ```
-</CodeGroup>
-
-Read more about environment variables in [Advanced Configuration](/v2/usage/advanced-configuration)
 
 ## Alternative Client Setup
 
@@ -236,7 +217,11 @@ print(response.text)
 
 ## Examples
 
-Examples are available in the [AgentOps repository](https://github.com/AgentOps-AI/agentops/tree/main/examples/gemini).
+<CardGroup cols={2}>
+  <Card title="Gemini Quickstart Notebook" icon="notebook" href="/v2/examples/gemini">
+    Basic Gemini usage with AgentOps
+  </Card>
+</CardGroup>
 
 ## Additional Resources
 

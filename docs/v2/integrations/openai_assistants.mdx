@@ -3,14 +3,11 @@ title: OpenAI Assistants
 description: "Track and analyze your OpenAI Assistants API calls with AgentOps"
 ---
 
-import CodeTooltip from '/snippets/add-code-tooltip.mdx'
-import EnvTooltip from '/snippets/add-env-tooltip.mdx'
-
 AgentOps provides seamless integration with [OpenAI's Assistants API](https://platform.openai.com/docs/assistants/overview), allowing you to track and analyze all your Assistants interactions automatically.
 
 ## Installation
 
-<CodeTooltip />
+
 
 <CodeGroup>
   ```bash pip
@@ -191,18 +188,11 @@ for message in messages.data:
 ```
 </CodeGroup>
 
-## Environment Variables
 
-<EnvTooltip />
-<CodeGroup>
-  ```python .env
-  AGENTOPS_API_KEY=<YOUR API KEY>
-  OPENAI_API_KEY=<YOUR OPENAI API KEY>
-  ```
-</CodeGroup>
-
-Read more about environment variables in [Advanced Configuration](/v2/usage/advanced-configuration)
-
+## Examples
+<CardGroup cols={2}>
+  <Card title="OpenAI Assistants Notebook" icon="notebook" href="/v2/examples/openai_assistants" />
+</CardGroup>
 <script type="module" src="/scripts/github_stars.js"></script>
 <script type="module" src="/scripts/scroll-img-fadein-animation.js"></script>
 <script type="module" src="/scripts/button_heartbeat_animation.js"></script>

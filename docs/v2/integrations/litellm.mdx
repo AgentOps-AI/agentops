@@ -3,9 +3,6 @@ title: LiteLLM
 description: "Track and analyze your LiteLLM calls across multiple providers with AgentOps"
 ---
 
-import CodeTooltip from '/snippets/add-code-tooltip.mdx'
-import EnvTooltip from '/snippets/add-env-tooltip.mdx'
-
 AgentOps provides seamless integration with [LiteLLM](https://github.com/BerriAI/litellm), allowing you to automatically track all your LLM API calls across different providers through a unified interface.
 
 ## Installation
@@ -166,23 +163,12 @@ print("Anthropic Response:", anthropic_response.choices[0].message.content)
 ```
 </CodeGroup>
 
-## Environment Variables
-
-<EnvTooltip />
-<CodeGroup>
-  ```python .env
-  AGENTOPS_API_KEY=<YOUR API KEY>
-  OPENAI_API_KEY=<YOUR OPENAI API KEY>
-  ANTHROPIC_API_KEY=<YOUR ANTHROPIC API KEY>
-  # Add any other provider API keys you need
-  ```
-</CodeGroup>
-
-Read more about environment variables in [Advanced Configuration](/v2/usage/advanced-configuration)
 
 ## Examples
+<CardGroup cols={2}>
+  <Card title="LiteLLM Quickstart Notebook" icon="notebook" href="/v2/examples/litellm" />
+</CardGroup>
 
-Examples are available in the [AgentOps repository](https://github.com/AgentOps-AI/agentops/tree/main/examples/litellm).
 
 ## Additional Resources
 

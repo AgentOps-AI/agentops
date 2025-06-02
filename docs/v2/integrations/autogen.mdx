@@ -5,7 +5,7 @@ description: "Integrate AgentOps with Microsoft AutoGen for multi-agent workflow
 
 [AutoGen](https://microsoft.github.io/autogen/stable/) is Microsoft's framework for building multi-agent conversational AI systems. AgentOps provides seamless integration with AutoGen to track and monitor your multi-agent workflows.
 
-## Quick Start
+## Installation
 
 <CodeGroup>
 ```bash pip
@@ -426,74 +426,19 @@ if __name__ == "__main__":
     asyncio.run(run_data_processing_pipeline())
 ```
 
-## What AgentOps Tracks
+## Examples
 
-AgentOps leverages AutoGen's built-in OpenTelemetry integration to automatically capture comprehensive telemetry data:
-
-### Automatic Span Collection
-- **Agent Operations**: All agent message handling and processing operations
-- **Message Flow**: Complete trace of message routing between agents
-- **Runtime Events**: Agent registration, startup, and shutdown events
-- **Error Handling**: Automatic capture of exceptions and error states
-
-### Built-in Telemetry Integration
-AutoGen Core includes native OpenTelemetry support, and AgentOps seamlessly integrates with this telemetry system to provide:
-
-- **Zero-Configuration Tracking**: No manual instrumentation required
-- **Complete Workflow Visibility**: End-to-end trace of multi-agent interactions  
-- **Performance Metrics**: Timing data for each agent operation and message exchange
-- **Distributed Tracing**: Support for agents running across different processes or machines
-
-## Best Practices
-
-1. **Initialize Early**: Call `agentops.init()` before creating any AutoGen agents
-2. **Use Descriptive Names**: Give your agents meaningful names for better dashboard visibility
-3. **Structure Messages**: Use well-defined message classes for better tracking
-4. **Handle Errors**: Implement proper error handling in your message handlers
-5. **Monitor Performance**: Use the AgentOps dashboard to identify bottlenecks in your agent workflows
-
-## Dashboard Features
-
-The AgentOps dashboard provides:
-
-- **Agent Network Visualization**: See how your agents communicate
-- **Message Trace Timeline**: Follow the complete flow of messages
-- **Performance Analytics**: Identify slow agents or bottlenecks
-- **Error Tracking**: Monitor and debug agent failures
-- **Cost Analysis**: Track computational costs across your agent network
-
-## Example Output
-
-When you run the examples above, you'll see output like:
-
-```
-🚀 Starting AutoGen Countdown Workflow
-==================================================
-🤖 AutoGen runtime started
-📨 Sending initial message with value: 10
-✅ CheckerAgent: 10 passed validation, continuing workflow
-🔧 ModifierAgent: Transformed 10 → 9
-✅ CheckerAgent: 9 passed validation, continuing workflow
-🔧 ModifierAgent: Transformed 9 → 8
-...
-🛑 CheckerAgent: 1 failed validation, stopping workflow
-🎉 Countdown completed successfully!
-==================================================
-✨ Workflow completed! Check your AgentOps dashboard for detailed traces.
-```
+<CardGroup cols={2}>
+  <Card title="Agent Chat Example" icon="notebook" href="/v2/examples/autogen">
+    Basic multi-agent chat functionality
+  </Card>
+  <Card title="Math Agent Example" icon="notebook" href="https://github.com/AgentOps-AI/agentops/blob/main/examples/autogen/MathAgent.ipynb" newTab={true}>
+    Demonstrates an agent specialized for mathematical problem-solving.
+  </Card>
+</CardGroup>
 
 Visit your [AgentOps Dashboard](https://app.agentops.ai) to see detailed traces of your AutoGen agent interactions, performance metrics, and workflow analytics.
 
-## Environment Variables
-
-<EnvTooltip />
-<CodeGroup>
-  ```python .env
-  AGENTOPS_API_KEY=<YOUR API KEY>
-  ```
-</CodeGroup>
-
-Read more about environment variables in [Advanced Configuration](/v2/usage/advanced-configuration)
 
 <script type="module" src="/scripts/github_stars.js"></script>
 <script type="module" src="/scripts/scroll-img-fadein-animation.js"></script>

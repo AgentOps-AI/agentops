@@ -3,14 +3,11 @@ title: Anthropic
 description: "Track and analyze your Anthropic API calls with AgentOps"
 ---
 
-import CodeTooltip from '/snippets/add-code-tooltip.mdx'
-import EnvTooltip from '/snippets/add-env-tooltip.mdx'
-
 AgentOps provides seamless integration with [Anthropic's Python SDK](https://github.com/anthropics/anthropic-sdk-python), allowing you to track and analyze all your Claude model interactions automatically.
 
 ## Installation
 
-<CodeTooltip />
+
 
 <CodeGroup>
   ```bash pip
@@ -85,17 +82,6 @@ print(message.content[0].text)
       ```
     </CodeGroup>
 
-## Environment Variables
-
-<EnvTooltip />
-<CodeGroup>
-  ```python .env
-  AGENTOPS_API_KEY=<YOUR_AGENTOPS_API_KEY>
-  ANTHROPIC_API_KEY=<YOUR_ANTHROPIC_API_KEY>
-  ```
-</CodeGroup>
-
-Read more about environment variables in [Advanced Configuration](/v2/usage/advanced-configuration)
 
 ## Advanced Examples
 
@@ -246,7 +232,20 @@ else:
 
 ## Examples
 
-Examples are available in the [AgentOps repository](https://github.com/AgentOps-AI/agentops/tree/main/examples/anthropic).
+<CardGroup cols={2}>
+  <Card title="Understanding Tools" icon="notebook" href="/v2/examples/anthropic">
+    Claude integration with tool usage and advanced features
+  </Card>
+  <Card title="Async Example" icon="notebook" href="https://github.com/AgentOps-AI/agentops/blob/main/examples/anthropic/anthropic-example-async.ipynb" newTab={true}>
+    Demonstrates asynchronous calls with the Anthropic SDK.
+  </Card>
+  <Card title="Sync Example" icon="notebook" href="https://github.com/AgentOps-AI/agentops/blob/main/examples/anthropic/anthropic-example-sync.ipynb" newTab={true}>
+    Shows synchronous calls with the Anthropic SDK.
+  </Card>
+  <Card title="Tool Use (Alternative)" icon="notebook" href="https://github.com/AgentOps-AI/agentops/blob/main/examples/anthropic/antrophic-example-tool.ipynb" newTab={true}>
+    Another example of tool usage with Anthropic models.
+  </Card>
+</CardGroup>
 
 <script type="module" src="/scripts/github_stars.js"></script>
 <script type="module" src="/scripts/scroll-img-fadein-animation.js"></script>

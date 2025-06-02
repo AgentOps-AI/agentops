@@ -3,14 +3,11 @@ title: IBM Watsonx.ai
 description: "Track and analyze your IBM Watsonx.ai API calls with AgentOps"
 ---
 
-import CodeTooltip from '/snippets/add-code-tooltip.mdx'
-import EnvTooltip from '/snippets/add-env-tooltip.mdx'
-
 AgentOps provides seamless integration with [IBM Watsonx.ai Python SDK](https://ibm.github.io/watsonx-ai-python-sdk/), allowing you to track and analyze all your Watsonx.ai model interactions automatically.
 
 ## Installation
 
-<CodeTooltip />
+
 
     <CodeGroup>
       ```bash pip
@@ -326,24 +323,23 @@ model.close_persistent_connection()
       ```
     </CodeGroup>
 
-## Environment Variables
-
-<EnvTooltip />
-<CodeGroup>
-  ```python .env
-  AGENTOPS_API_KEY=<YOUR API KEY>
-  IBM_WATSONX_API_KEY=<YOUR IBM API KEY>
-  IBM_WATSONX_URL=<YOUR IBM URL>
-  IBM_WATSONX_PROJECT_ID=<YOUR PROJECT ID>
-  ```
-</CodeGroup>
-
-Read more about environment variables in [Advanced Configuration](/v2/usage/advanced-configuration)
 
 ## Additional Resources
 
 - [IBM Watsonx.ai Python SDK Documentation](https://ibm.github.io/watsonx-ai-python-sdk/)
 - [IBM Watsonx.ai Models](http://ibm.com/products/watsonx-ai/foundation-models)
+## Examples
+<CardGroup cols={2}>
+  <Card title="Watsonx Text Chat" icon="notebook" href="/v2/examples/watsonx">
+    Basic text generation and chat
+  </Card>
+  <Card title="Watsonx Streaming" icon="notebook" href="https://github.com/AgentOps-AI/agentops/blob/main/examples/watsonx/watsonx-streaming.ipynb" newTab={true}>
+    Demonstrates streaming responses with Watsonx.ai.
+  </Card>
+  <Card title="Watsonx Tokenization" icon="notebook" href="https://github.com/AgentOps-AI/agentops/blob/main/examples/watsonx/watsonx-tokeniation-model.ipynb" newTab={true}>
+    Example of text tokenization with Watsonx.ai models.
+  </Card>
+</CardGroup>
 
 <script type="module" src="/scripts/github_stars.js"></script>
 <script type="module" src="/scripts/scroll-img-fadein-animation.js"></script>

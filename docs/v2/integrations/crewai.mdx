@@ -3,112 +3,110 @@ title: 'CrewAI'
 description: 'AgentOps and CrewAI teamed up to make monitoring Crew agents dead simple.'
 ---
 
-import CodeTooltip from '/snippets/add-code-tooltip.mdx'
-import EnvTooltip from '/snippets/add-env-tooltip.mdx'
+[CrewAI](https://www.crewai.com/) is a framework for easily building multi-agent applications. AgentOps integrates with CrewAI to provide observability into your agent workflows. Crew has comprehensive [documentation](https://docs.crewai.com) available as well as a great [quickstart](https://docs.crewai.com/how-to/Creating-a-Crew-and-kick-it-off/) guide.
 
-[CrewAI](https://www.crewai.com/) is a framework for easily building multi-agent applications. Crew has comprehensive [documentation](https://docs.crewai.com) available as well as a great [quickstart](https://docs.crewai.com/how-to/Creating-a-Crew-and-kick-it-off/) guide.
+## Installation
+Install AgentOps and CrewAI, along with `python-dotenv` for managing API keys and `langchain-openai` for the LLM:
 
-<Steps>
-	<Step title="Install the AgentOps SDK">
-		<CodeGroup>
-			```bash pip
-			pip install agentops crewai
-			```
-			```bash poetry
-			poetry add agentops crewai
-			```
-			```bash uv
-			uv add agentops crewai
-			```
-		</CodeGroup>
-	</Step>
-	<Step title="Add AgentOps to your code">
-		<CodeTooltip/>
-		<CodeGroup>
-			```python python
-			import os
-			from dotenv import load_dotenv
-			import agentops
-			from crewai import Agent, Task, Crew
-			from langchain_openai import ChatOpenAI
+<CodeGroup>
+  ```bash pip
+  pip install agentops crewai python-dotenv langchain-openai
+  ```
+  ```bash poetry
+  poetry add agentops crewai python-dotenv langchain-openai
+  ```
+  ```bash uv
+  uv add agentops crewai python-dotenv langchain-openai
+  ```
+</CodeGroup>
 
-			# Load environment variables
-			load_dotenv()
+## Setting Up API Keys
 
-			# Initialize AgentOps
-			agentops.init(os.getenv("AGENTOPS_API_KEY"))
+You'll need API keys for AgentOps and OpenAI (since `ChatOpenAI` is commonly used with CrewAI):
+- **OPENAI_API_KEY**: From the [OpenAI Platform](https://platform.openai.com/api-keys)
+- **AGENTOPS_API_KEY**: From your [AgentOps Dashboard](https://app.agentops.ai/)
 
-			# Create LLM
-			llm = ChatOpenAI(
-				model="gpt-4",
-				temperature=0.7,
-				api_key=os.getenv("OPENAI_API_KEY")
-			)
+Set these as environment variables or in a `.env` file.
 
-			# Create an agent
-			researcher = Agent(
-				role='Researcher',
-				goal='Research and provide accurate information about cities and their history',
-				backstory='You are an expert researcher with vast knowledge of world geography and history.',
-				llm=llm,
-				verbose=True
-			)
+<CodeGroup>
+  ```bash Export to CLI
+  export OPENAI_API_KEY="your_openai_api_key_here"
+  export AGENTOPS_API_KEY="your_agentops_api_key_here"
+  ```
+  ```txt Set in .env file
+  OPENAI_API_KEY="your_openai_api_key_here"
+  AGENTOPS_API_KEY="your_agentops_api_key_here"
+  ```
+</CodeGroup>
 
-			# Create a task
-			research_task = Task(
-				description='What is the capital of France? Provide a detailed answer about its history, culture, and significance.',
-				expected_output='A comprehensive response about Paris, including its status as the capital of France, historical significance, cultural importance, and key landmarks.',
-				agent=researcher
-			)
+Then load them in your Python code:
+```python
+from dotenv import load_dotenv
+import os
 
-			# Create a crew with the researcher
-			crew = Crew(
-				agents=[researcher],
-				tasks=[research_task],
-				verbose=True
-			)
+load_dotenv()
 
-			# Execute the task - AgentOps will automatically track all LLM calls
-			result = crew.kickoff()
+AGENTOPS_API_KEY = os.getenv("AGENTOPS_API_KEY")
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
+```
 
-			print("\nCrew Research Results:")
-			print(result)
-			```
-		</CodeGroup>
-		<EnvTooltip />
-		<CodeGroup>
-			```python .env
-			AGENTOPS_API_KEY=<YOUR API KEY>
-			OPENAI_API_KEY=<YOUR OPENAI API KEY>
-			```
-		</CodeGroup>
-		Read more about environment variables in [Advanced Configuration](/v2/usage/advanced-configuration)
-	</Step>
-	<Step title="Run your crew">
-		Execute your program and visit [app.agentops.ai/traces](https://app.agentops.ai/traces) to observe your Crew! 🕵️
-		<Tip>
-			After your run, AgentOps prints a clickable url to console linking directly to your session in the Dashboard
-		</Tip> 
-		<div/>{/* Intentionally blank div for newline */}
-		<Frame type="glass" caption="Clickable link to session">
-			<img height="200" src="https://github.com/AgentOps-AI/agentops/blob/main/docs/images/link-to-session.gif?raw=true" />
-		</Frame>
-	</Step>
-</Steps>
+## Usage
 
-## Important Notes
+Simply initialize AgentOps at the beginning of your CrewAI application. AgentOps will automatically instrument CrewAI and LangChain components (like `ChatOpenAI`) to track your agent interactions.
 
-1. The `Task` class requires an `expected_output` field that describes what the task should produce
-2. Setting `verbose=True` on both the agent and crew provides better visibility into the execution process
-3. Tasks should have clear, detailed descriptions to guide the agent effectively
+Here's how to set up a basic CrewAI application with AgentOps:
+<CodeGroup>
+```python Basic CrewAI Integration
+import os
+from dotenv import load_dotenv 
+import agentops
+from crewai import Agent, Task, Crew
+from langchain_openai import ChatOpenAI 
 
-## Crew + AgentOps Examples
+# Load environment variables
+load_dotenv()
 
-<CardGroup cols={3}>
-    <Card title="Job Posting" icon="briefcase" href="https://github.com/Agentops-AI/crewAI-examples/tree/main/job-posting" />
-	<Card title="Instagram Post" icon="instagram" href="https://github.com/Agentops-AI/crewAI-examples/tree/main/instagram_post" />
-    <Card title="Markdown Validator" icon="markdown" href="https://github.com/Agentops-AI/crewAI-examples/tree/main/markdown_validator" />
-</CardGroup>
+# Initialize AgentOps - it will use AGENTOPS_API_KEY from environment
+# or you can pass it as agentops.init(os.getenv("AGENTOPS_API_KEY"))
+agentops.init() 
+
+# Create LLM - it will use OPENAI_API_KEY from environment
+# or you can pass api_key=os.getenv("OPENAI_API_KEY")
+llm = ChatOpenAI(
+    model="gpt-4", # Or your preferred model
+    temperature=0.7
+)
+
+# Create an agent
+researcher = Agent(
+    role='Researcher',
+    goal='Research and provide accurate information about cities and their history',
+    backstory='You are an expert researcher with vast knowledge of world geography and history.',
+    llm=llm,
+    verbose=True
+)
+
+# Create a task
+research_task = Task(
+    description='What is the capital of France? Provide a detailed answer about its history, culture, and significance.',
+    expected_output='A comprehensive response about Paris, including its status as the capital of France, historical significance, cultural importance, and key landmarks.',
+    agent=researcher
+)
+
+# Create a crew with the researcher
+crew = Crew(
+    agents=[researcher],
+    tasks=[research_task],
+    verbose=True
+)
+
+# Execute the task - AgentOps will automatically track all LLM calls and agent steps
+result = crew.kickoff()
+
+print("\\nCrew Research Results:")
+print(result)
+```
+</CodeGroup>
 
 <script type="module" src="/scripts/github_stars.js"></script>
 <script type="module" src="/scripts/scroll-img-fadein-animation.js"></script>

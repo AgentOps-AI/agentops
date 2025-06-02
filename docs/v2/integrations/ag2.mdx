@@ -3,9 +3,6 @@ title: AG2
 description: "Track and analyze your AG2 agents with AgentOps"
 ---
 
-import CodeTooltip from '/snippets/add-code-tooltip.mdx'
-import EnvTooltip from '/snippets/add-env-tooltip.mdx'
-
 ## Installation
 
 <CodeGroup>
@@ -177,17 +174,19 @@ user_proxy.initiate_chat(
 ```
 </CodeGroup>
 
-## Environment Variables
+## Examples
 
-<EnvTooltip />
-<CodeGroup>
-  ```python .env
-  AGENTOPS_API_KEY=<YOUR API KEY>
-  OPENAI_API_KEY=<YOUR OPENAI API KEY>
-  ```
-</CodeGroup>
-
-Read more about environment variables in [Advanced Configuration](/v2/usage/advanced-configuration)
+<CardGroup cols={2}>
+  <Card title="AG2 Memory Chat" icon="notebook" href="/v2/examples/ag2">
+    Multi-agent conversation with memory capabilities
+  </Card>
+  <Card title="Async Human Input" icon="notebook" href="https://github.com/AgentOps-AI/agentops/blob/main/examples/ag2/async_human_input.ipynb" newTab={true}>
+    Demonstrates asynchronous human input with AG2 agents.
+  </Card>
+  <Card title="Wikipedia Search Tool" icon="notebook" href="https://github.com/AgentOps-AI/agentops/blob/main/examples/ag2/tools_wikipedia_search.ipynb" newTab={true}>
+    Example of AG2 agents using a Wikipedia search tool.
+  </Card>
+</CardGroup>
 
 <script type="module" src="/scripts/github_stars.js"></script>
 <script type="module" src="/scripts/scroll-img-fadein-animation.js"></script>

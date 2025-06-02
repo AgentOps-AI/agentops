@@ -3,14 +3,11 @@ title: OpenAI
 description: "Track and analyze your OpenAI API calls with AgentOps"
 ---
 
-import CodeTooltip from '/snippets/add-code-tooltip.mdx'
-import EnvTooltip from '/snippets/add-env-tooltip.mdx'
-
 AgentOps seamlessly integrates with [OpenAI's Python SDK](https://github.com/openai/openai-python), allowing you to track and analyze all your OpenAI API calls automatically.
 
 ## Installation
 
-<CodeTooltip />
+
 
 <CodeGroup>
   ```bash pip
@@ -85,17 +82,6 @@ print(response.choices[0].message.content)
       ```
     </CodeGroup>
 
-## Environment Variables
-
-<EnvTooltip />
-<CodeGroup>
-  ```python .env
-  AGENTOPS_API_KEY=<YOUR_AGENTOPS_API_KEY>
-  OPENAI_API_KEY=<YOUR_OPENAI_API_KEY>
-  ```
-</CodeGroup>
-
-Read more about environment variables in [Advanced Configuration](/v2/usage/advanced-configuration)
 
 ## Advanced Examples
 
@@ -221,8 +207,21 @@ else:
 </CodeGroup>
 
 ## Examples
+<CardGroup cols={2}>
+  <Card title="Multi-Tool Orchestration" icon="notebook" href="/v2/examples/openai">
+    Advanced multi-tool RAG example
+  </Card>
+  <Card title="Async OpenAI Example" icon="notebook" href="https://github.com/AgentOps-AI/agentops/blob/main/examples/openai/openai_example_async.ipynb" newTab={true}>
+    Demonstrates asynchronous calls with the OpenAI SDK.
+  </Card>
+  <Card title="Sync OpenAI Example" icon="notebook" href="https://github.com/AgentOps-AI/agentops/blob/main/examples/openai/openai_example_sync.ipynb" newTab={true}>
+    Shows synchronous calls with the OpenAI SDK.
+  </Card>
+  <Card title="Web Search Example" icon="notebook" href="https://github.com/AgentOps-AI/agentops/blob/main/examples/openai/web_search.ipynb" newTab={true}>
+    Example of integrating web search capabilities.
+  </Card>
+</CardGroup>
 
-Examples are available in the [AgentOps repository](https://github.com/AgentOps-AI/agentops/tree/main/examples/openai).
 
 <script type="module" src="/scripts/github_stars.js"></script>
 <script type="module" src="/scripts/scroll-img-fadein-animation.js"></script>
