@@ -68,9 +68,7 @@ multion = MultiOn(
     agentops_api_key=AGENTOPS_API_KEY,
 )
 cmd = "what three things do i get with agentops"
-request_options = RequestOptions(
-    timeout_in_seconds=60, max_retries=4, additional_headers={"test": "ing"}
-)
+request_options = RequestOptions(timeout_in_seconds=60, max_retries=4, additional_headers={"test": "ing"})
 
 browse_response = multion.browse(
     cmd="what three things do i get with agentops",
@@ -91,9 +89,7 @@ When running `agentops.init()`, be sure to set `auto_start_session=False`. Multi
 
 
 ```python
-agentops.init(
-    AGENTOPS_API_KEY, auto_start_session=False, tags=["MultiOn browse example"]
-)
+agentops.init(AGENTOPS_API_KEY, auto_start_session=False, default_tags=["MultiOn browse example"])
 ```
 
 Now, we can launch a MultiOn browse event. This event will automatically get added to your AgentOps session.
@@ -105,9 +101,7 @@ multion = MultiOn(
     agentops_api_key=AGENTOPS_API_KEY,
 )
 cmd = "what three things do i get with agentops"
-request_options = RequestOptions(
-    timeout_in_seconds=60, max_retries=4, additional_headers={"test": "ing"}
-)
+request_options = RequestOptions(timeout_in_seconds=60, max_retries=4, additional_headers={"test": "ing"})
 
 browse_response = multion.browse(
     cmd="what three things do i get with agentops",
