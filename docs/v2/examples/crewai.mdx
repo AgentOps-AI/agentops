@@ -7,66 +7,67 @@ mode: "wide"
 
 _View Notebook on <a href={'https://github.com/AgentOps-AI/agentops/blob/main/examples/crewai/job_posting.ipynb'} target={'_blank'}>Github</a>_
 
-# CrewAI Job Posting Example
-
-This notebook demonstrates how to use CrewAI with AgentOps to automate the creation of a job posting.
-
-First let's install the required packages.
-
 ## Installation
 <CodeGroup>
   ```bash pip
-  pip install -U 'crewai[tools]' agentops python-dotenv
+  pip install -U 'crewai[tools]'
   ```
   ```bash poetry
-  poetry add crewai agentops python-dotenv
-  # For tools, you might need to add them or specific extras:
-  # poetry add crewai --extras tools 
-  # or poetry add crewai[tools] depending on your poetry version
+  poetry add -U 'crewai[tools]'
   ```
   ```bash uv
-  uv add 'crewai[tools]' agentops python-dotenv
+  uv add -U 'crewai[tools]'
   ```
 </CodeGroup>
 
-## Setup
-Then import them.
+First let's install the required packages
+
+# Crew Job Posting
+
+
+```python
+%pip install -U 'crewai[tools]'
+```
+
+Then import them
+
+
 ```python
 from crewai import Crew, Agent, Task
-from crewai_tools.tools import WebsiteSearchTool, SerperDevTool, FileReadTool # Corrected import in previous MDX version
+from crewai_tools.tools import WebsiteSearchTool, SerperDevTool, FileReadTool
 import agentops
 import os
 from dotenv import load_dotenv
-from textwrap import dedent # Added import
 ```
 
 Next, we'll set our API keys. There are several ways to do this, the code below is just the most foolproof way for the purposes of this notebook. It accounts for both users who use environment variables and those who just want to set the API Key here in this notebook.
 
 [Get an AgentOps API key](https://agentops.ai/settings/projects)
 
-1. Create an environment variable in a `.env` file or other method. By default, the AgentOps `init()` function will look for an environment variable named `AGENTOPS_API_KEY`. Or...
+1. Create an environment variable in a .env file or other method. By default, the AgentOps `init()` function will look for an environment variable named `AGENTOPS_API_KEY`. Or...
 
 2. Replace `<your_agentops_key>` below and pass in the optional `api_key` parameter to the AgentOps `init(api_key=...)` function. Remember not to commit your API key to a public repo!
 
+
 ```python
 load_dotenv()
-os.environ["AGENTOPS_API_KEY"] = os.getenv("AGENTOPS_API_KEY", "your_agentops_api_key_here")
+os.environ["AGENTOPS_API_KEY"] = os.getenv("AGENTOPS_API_KEY", "your_api_key_here")
 os.environ["OPENAI_API_KEY"] = os.getenv("OPENAI_API_KEY", "your_openai_api_key_here")
 os.environ["SERPER_API_KEY"] = os.getenv("SERPER_API_KEY", "your_serper_api_key_here")
 ```
+
 
 ```python
 # Initialize AgentOps client
 agentops.init(auto_start_session=False)
 ```
 
-## Define Agents and Tasks
 
 ```python
 web_search_tool = WebsiteSearchTool()
 serper_dev_tool = SerperDevTool()
 file_read_tool = FileReadTool(
-    file_path="job_description_example.md", # Ensure this file exists or handle appropriately
+    file_path="job_description_example.md",
     description="A tool to read the job description example file.",
 )
 
@@ -100,18 +101,22 @@ class Agents:
         )
 ```
 
+
 ```python
+from textwrap import dedent
+
+
 class Tasks:
     def research_company_culture_task(self, agent, company_description, company_domain):
         return Task(
             description=dedent(
-                f\"\"\"\\
+                f"""\
 								Analyze the provided company website and the hiring manager's company's domain {company_domain}, description: "{company_description}". Focus on understanding the company's culture, values, and mission. Identify unique selling points and specific projects or achievements highlighted on the site.
-								Compile a report summarizing these insights, specifically how they can be leveraged in a job posting to attract the right candidates.\"\"\"
+								Compile a report summarizing these insights, specifically how they can be leveraged in a job posting to attract the right candidates."""
             ),
             expected_output=dedent(
-                \"\"\"\\
-								A comprehensive report detailing the company's culture, values, and mission, along with specific selling points relevant to the job role. Suggestions on incorporating these insights into the job posting should be included.\"\"\"
+                """\
+								A comprehensive report detailing the company's culture, values, and mission, along with specific selling points relevant to the job role. Suggestions on incorporating these insights into the job posting should be included."""
             ),
             agent=agent,
         )
@@ -119,12 +124,12 @@ class Tasks:
     def research_role_requirements_task(self, agent, hiring_needs):
         return Task(
             description=dedent(
-                f\"\"\"\\
-								Based on the hiring manager's needs: "{hiring_needs}", identify the key skills, experiences, and qualities the ideal candidate should possess for the role. Consider the company's current projects, its competitive landscape, and industry trends. Prepare a list of recommended job requirements and qualifications that align with the company's needs and values.\"\"\"
+                f"""\
+								Based on the hiring manager's needs: "{hiring_needs}", identify the key skills, experiences, and qualities the ideal candidate should possess for the role. Consider the company's current projects, its competitive landscape, and industry trends. Prepare a list of recommended job requirements and qualifications that align with the company's needs and values."""
             ),
             expected_output=dedent(
-                \"\"\"\\
-								A list of recommended skills, experiences, and qualities for the ideal candidate, aligned with the company's culture, ongoing projects, and the specific role's requirements.\"\"\"
+                """\
+								A list of recommended skills, experiences, and qualities for the ideal candidate, aligned with the company's culture, ongoing projects, and the specific role's requirements."""
             ),
             agent=agent,
         )
@@ -132,13 +137,13 @@ class Tasks:
     def draft_job_posting_task(self, agent, company_description, hiring_needs, specific_benefits):
         return Task(
             description=dedent(
-                f\"\"\"\\
+                f"""\
 								Draft a job posting for the role described by the hiring manager: "{hiring_needs}". Use the insights on "{company_description}" to start with a compelling introduction, followed by a detailed role description, responsibilities, and required skills and qualifications. Ensure the tone aligns with the company's culture and incorporate any unique benefits or opportunities offered by the company.
-								Specific benefits: "{specific_benefits}"\"\"\"
+								Specfic benefits: "{specific_benefits}"""
             ),
             expected_output=dedent(
-                \"\"\"\\
-								A detailed, engaging job posting that includes an introduction, role description, responsibilities, requirements, and unique company benefits. The tone should resonate with the company's culture and values, aimed at attracting the right candidates.\"\"\"
+                """\
+								A detailed, engaging job posting that includes an introduction, role description, responsibilities, requirements, and unique company benefits. The tone should resonate with the company's culture and values, aimed at attracting the right candidates."""
             ),
             agent=agent,
         )
@@ -146,12 +151,12 @@ class Tasks:
     def review_and_edit_job_posting_task(self, agent, hiring_needs):
         return Task(
             description=dedent(
-                f\"\"\"\\
-								Review the draft job posting for the role: "{hiring_needs}". Check for clarity, engagement, grammatical accuracy, and alignment with the company's culture and values. Edit and refine the content, ensuring it speaks directly to the desired candidates and accurately reflects the role's unique benefits and opportunities. Provide feedback for any necessary revisions.\"\"\"
+                f"""\
+								Review the draft job posting for the role: "{hiring_needs}". Check for clarity, engagement, grammatical accuracy, and alignment with the company's culture and values. Edit and refine the content, ensuring it speaks directly to the desired candidates and accurately reflects the role's unique benefits and opportunities. Provide feedback for any necessary revisions."""
             ),
             expected_output=dedent(
-                \"\"\"\\
-								A polished, error-free job posting that is clear, engaging, and perfectly aligned with the company's culture and values. Feedback on potential improvements and final approval for publishing. Formated in markdown.\"\"\"
+                """\
+								A polished, error-free job posting that is clear, engaging, and perfectly aligned with the company's culture and values. Feedback on potential improvements and final approval for publishing. Formated in markdown."""
             ),
             agent=agent,
             output_file="job_posting.md",
@@ -160,19 +165,18 @@ class Tasks:
     def industry_analysis_task(self, agent, company_domain, company_description):
         return Task(
             description=dedent(
-                f\"\"\"\\
+                f"""\
 								Conduct an in-depth analysis of the industry related to the company's domain: "{company_domain}". Investigate current trends, challenges, and opportunities within the industry, utilizing market reports, recent developments, and expert opinions. Assess how these factors could impact the role being hired for and the overall attractiveness of the position to potential candidates.
-								Consider how the company's position within this industry and its response to these trends could be leveraged to attract top talent. Include in your report how the role contributes to addressing industry challenges or seizing opportunities.\"\"\"
+								Consider how the company's position within this industry and its response to these trends could be leveraged to attract top talent. Include in your report how the role contributes to addressing industry challenges or seizing opportunities."""
             ),
             expected_output=dedent(
-                \"\"\"\\
-								A detailed analysis report that identifies major industry trends, challenges, and opportunities relevant to the company's domain and the specific job role. This report should provide strategic insights on positioning the job role and the company as an attractive choice for potential candidates.\"\"\"
+                """\
+								A detailed analysis report that identifies major industry trends, challenges, and opportunities relevant to the company's domain and the specific job role. This report should provide strategic insights on positioning the job role and the company as an attractive choice for potential candidates."""
             ),
             agent=agent,
         )
 ```
 
-## Run the Crew
 
 ```python
 tracer = agentops.start_trace(trace_name="CrewAI Job Posting", tags=["crew-job-posting-example", "agentops-example"])
@@ -180,12 +184,10 @@ tracer = agentops.start_trace(trace_name="CrewAI Job Posting", tags=["crew-job-p
 tasks = Tasks()
 agents = Agents()
 
-# Note: In a real scenario, you'd get these inputs dynamically.
-# For this MDX example, we'll use placeholders.
-company_description = "A fast-paced tech startup focused on AI-driven solutions for e-commerce."
-company_domain = "agentops.ai" # Example domain
-hiring_needs = "Senior Software Engineer with experience in Python, AI, and cloud platforms."
-specific_benefits = "Competitive salary, stock options, remote work flexibility, and a great team culture."
+company_description = input("What is the company description?\n")
+company_domain = input("What is the company domain?\n")
+hiring_needs = input("What are the hiring needs?\n")
+specific_benefits = input("What are specific_benefits you offer?\n")
 
 # Create Agents
 researcher_agent = agents.research_agent()
@@ -219,13 +221,7 @@ crew = Crew(
 result = crew.kickoff()
 print("Job Posting Creation Process Completed.")
 print("Final Job Posting:")
-print(result) # This will print the path to the output file job_posting.md
+print(result)
 
 agentops.end_trace(tracer, end_state="Success")
 ```
-The `job_posting.md` file will be created in the same directory where this script/notebook is run.
-
-<script type="module" src="/scripts/github_stars.js"></script>
-<script type="module" src="/scripts/scroll-img-fadein-animation.js"></script>
-<script type="module" src="/scripts/button_heartbeat_animation.js"></script>
-<script type="module" src="/scripts/adjust_api_dynamically.js"></script>
