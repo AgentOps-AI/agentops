@@ -52,6 +52,28 @@ jobs:
               echo "Extracting pip install commands from markdown"
               pip_packages=$(sed -n 's/.*%pip install \(.*\)/\1/p' "$markdown_file" | head -1 || true)
               
+              # Replace %pip install lines with installation section if packages found
+              if [[ -n "$pip_packages" ]]; then
+                echo "Found pip packages: $pip_packages"
+                echo "Replacing %pip install line with installation section"
+                # Create installation section using echo commands
+                echo "## Installation" > /tmp/install_section
+                echo "<CodeGroup>" >> /tmp/install_section
+                echo "  \`\`\`bash pip" >> /tmp/install_section
+                echo "  pip install $pip_packages" >> /tmp/install_section
+                echo "  \`\`\`" >> /tmp/install_section
+                echo "  \`\`\`bash poetry" >> /tmp/install_section
+                echo "  poetry add $pip_packages" >> /tmp/install_section
+                echo "  \`\`\`" >> /tmp/install_section
+                echo "  \`\`\`bash uv" >> /tmp/install_section
+                echo "  uv add $pip_packages" >> /tmp/install_section
+                echo "  \`\`\`" >> /tmp/install_section
+                echo "</CodeGroup>" >> /tmp/install_section
+                # Replace the %pip install line with the installation section
+                sed "/.*%pip install.*/r /tmp/install_section" "$markdown_file" | sed "/.*%pip install.*/d" > /tmp/temp_md
+                mv /tmp/temp_md "$markdown_file"
+              fi
+              
               echo "Removing existing content after {/* SOURCE_FILE: ... */}"
               sed -i '\#{/\*  SOURCE_FILE:#,$d' "$file"
               echo "Appending markdown to $file"
@@ -59,30 +81,17 @@ jobs:
               echo "_View Notebook on <a href={'https://github.com/AgentOps-AI/agentops/blob/main/$source_file'} target={'_blank'}>Github</a>_" >> "$file"
               echo "" >> "$file"
               
-              # Add installation section if pip packages found
-              if [[ -n "$pip_packages" ]]; then
-                echo "Found pip packages: $pip_packages"
-                echo "## Installation" >> "$file"
-                echo "<CodeGroup>" >> "$file"
-                echo "  \`\`\`bash pip" >> "$file"
-                echo "  pip install $pip_packages" >> "$file"
-                echo "  \`\`\`" >> "$file"
-                echo "  \`\`\`bash poetry" >> "$file"
-                echo "  poetry add $pip_packages" >> "$file"
-                echo "  \`\`\`" >> "$file"
-                echo "  \`\`\`bash uv" >> "$file"
-                echo "  uv add $pip_packages" >> "$file"
-                echo "  \`\`\`" >> "$file"
-                echo "</CodeGroup>" >> "$file"
-                echo "" >> "$file"
-              fi
-              
               cat "$markdown_file" >> "$file" || { echo "Error: Failed to append markdown to $file" >&2; continue; }
               rm "$markdown_file" || { echo "Error: Failed to remove $markdown_file" >&2; continue; }
             else
               echo "Error: Source file not found: $source_file" >&2
             fi
           done
+
+      - name: Disable git hooks for automated commits
+        run: |
+          # Disable pre-commit hooks for this automated workflow
+          git config core.hooksPath /dev/null
 
       - name: Create Pull Request
         uses: peter-evans/create-pull-request@v7
