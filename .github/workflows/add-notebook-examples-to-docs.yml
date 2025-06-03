@@ -4,9 +4,11 @@ on:
   push:
     branches:
       - main
+      # TODO: Remove this branch once the workflow is stable
+      - fix/examples-cleanup
     paths:
       - 'examples/**'
-      - 'docs/v1/examples/**'
+      - 'docs/v2/examples/**'
       - '.github/workflows/add-notebook-examples-to-docs.yml'
 
   workflow_dispatch:
@@ -59,11 +61,11 @@ jobs:
       - name: Create Pull Request
         uses: peter-evans/create-pull-request@v7
         with:
-          committer: Howard Gil <howardbgil@gmail.com>
+          committer: github-actions[bot] <github-actions[bot]@users.noreply.github.com>
           commit-message: GitHub Action - Update examples in docs from notebooks
           title: GitHub Action - Update examples in docs from notebooks
           body: Changes detected in examples/** or docs/v1/examples/** triggered an update of the docs/v1/examples/**.mdx files to incorporate markdown from the corresponding notebook in examples/**.
           branch: update-examples-in-docs-from-notebooks
           delete-branch: true
-          assignees: HowieG,siyangqiu,bboynton97,areibman
-          reviewers: HowieG,siyangqiu,bboynton97,areibman
+          assignees: the-praxs,bboynton97,areibman
+          reviewers: the-praxs,bboynton97,areibman
