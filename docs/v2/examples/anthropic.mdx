@@ -3,6 +3,8 @@ title: 'Anthropic Tools Example'
 description: 'Understanding and using tools with the Anthropic SDK and AgentOps'
 mode: "wide"
 ---
+{/*  SOURCE_FILE: examples/anthropic/agentops-anthropic-understanding-tools.ipynb  */}
+
 _View Notebook on <a href={'https://github.com/AgentOps-AI/agentops/blob/main/examples/anthropic/agentops-anthropic-understanding-tools.ipynb'} target={'_blank'}>Github</a>_
 
 # Anthropic Example for understanding Tools
@@ -38,8 +40,8 @@ import random
 And set our API keys.
 ```python
 load_dotenv()
-os.environ["AGENTOPS_API_KEY"] = os.getenv("AGENTOPS_API_KEY", "your_agentops_api_key_here") # MDX uses "your_agentops_api_key_here", notebook "your_api_key_here" - keeping MDX for consistency
-os.environ["ANTHROPIC_API_KEY"] = os.getenv("ANTHROPIC_API_KEY", "your_anthropic_api_key_here") # MDX uses "your_anthropic_api_key_here", notebook "your_anthropic_api_key_here"
+os.environ["AGENTOPS_API_KEY"] = os.getenv("AGENTOPS_API_KEY", "your_agentops_api_key_here")
+os.environ["ANTHROPIC_API_KEY"] = os.getenv("ANTHROPIC_API_KEY", "your_anthropic_api_key_here")
 ```
 
 Now let's set the client as Anthropic and make an AgentOps trace.
