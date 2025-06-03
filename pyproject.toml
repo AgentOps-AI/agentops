@@ -30,7 +30,7 @@ classifiers = [
 ]
 dependencies = [
     "requests>=2.0.0,<3.0.0",
-    "psutil>=5.9.8,<6.1.0",
+    "psutil>=5.9.8,<7.0.1",
     "termcolor>=2.3.0,<2.5.0",
     "PyYAML>=5.3,<7.0",
     "packaging>=21.0,<25.0", # Lower bound of 21.0 ensures compatibility with Python 3.9+
