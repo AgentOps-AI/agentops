@@ -5,30 +5,22 @@ mode: "wide"
 ---
 {/*  SOURCE_FILE: examples/xai/grok_examples.ipynb  */}
 
-_View Notebook on <a href={'https://github.com/AgentOps-AI/agentops/blob/main/examples/xai/grok_examples.ipynb'} target={'_blank'}>Github</a>_
+# XAI Example
+This notebook demonstrates how to use XAI with AgentOps via the OpenAI python client. 
 
-# XAI Grok Transliteration Chatbot Example
+We are going to use the latest Grok model from XAI to create a transliteration chatbot that can understand the major languages of the world and translate them to a user's native language! We will use AgentOps to track the chatbot's performance.
 
-This notebook demonstrates how to use XAI with AgentOps via the OpenAI python client.
+First let's install the required packages
 
-We are going to use a Grok model from XAI to create a transliteration chatbot that can understand the major languages of the world and translate them to a user's native language! We will use AgentOps to track the chatbot's performance.
 
-## Installation
-First let's install the required packages.
-<CodeGroup>
-  ```bash pip
-  pip install -U openai agentops python-dotenv
-  ```
-  ```bash poetry
-  poetry add openai agentops python-dotenv
-  ```
-  ```bash uv
-  uv add openai agentops python-dotenv
-  ```
-</CodeGroup>
+```python
+%pip install -U openai
+%pip install -U agentops
+```
 
-## Setup
-Then import them.
+Then import them
+
+
 ```python
 from openai import OpenAI
 import agentops
@@ -36,31 +28,37 @@ import os
 from dotenv import load_dotenv
 ```
 
-Next, we'll grab our API keys. You can use dotenv like below or however else you like to load environment variables.
+Next, we'll grab our API keys. You can use dotenv like below or however else you like to load environment variables
+
+
 ```python
 load_dotenv()
-os.environ["AGENTOPS_API_KEY"] = os.getenv("AGENTOPS_API_KEY", "your_agentops_api_key_here")
-os.environ["XAI_API_KEY"] = os.getenv("XAI_API_KEY", "your_xai_api_key_here") # Ensure XAI_API_KEY is set
+os.environ["AGENTOPS_API_KEY"] = os.getenv("AGENTOPS_API_KEY", "your_api_key_here")
 ```
 
 Next we initialize the AgentOps client.
+
+
 ```python
 agentops.init(auto_start_session=False)
 tracer = agentops.start_trace(trace_name="XAI Example", tags=["xai-example", "grok", "agentops-example"])
 ```
 
-And we are all set! Note the session URL that will be printed by AgentOps. We will use it to track the chatbot.
+And we are all set! Note the seesion url above. We will use it to track the chatbot.
 
-Let's initialize the OpenAI client with the XAI API key and base URL.
+Let's initialize the OpenAI client with the XAI API key and base url.
+
+
 ```python
 client = OpenAI(
     base_url="https://api.x.ai/v1",
-    api_key=os.getenv("XAI_API_KEY", "your_xai_api_key_here"), # Added fallback as in notebook
+    api_key=os.getenv("XAI_API_KEY", "your_xai_api_key_here"),
 )
 ```
 
-## Define Prompts
 Now we will set the system and instruction prompts for the chatbot. We will set the native language to Spanish and the user prompt to transliterate an excerpt from Haruki Murakami's "Kafka On The Shore".
+
+
 ```python
 SYSTEM_PROMPT = """
 You are a highly intelligent, multilingual assistant designed to understand user prompts in English and respond in the user's specified native language. 
@@ -74,6 +72,8 @@ When asked to respond in a language, generate the response entirely in that lang
 If the specified language is unfamiliar or ambiguous, politely ask for clarification in English.
 """
 ```
+
+
 ```python
 native_language = "Spanish"
 
@@ -99,28 +99,28 @@ Ensure that the response is in Unicode characters appropriate for {native_langua
 """
 ```
 
-## Generate Response
 Now we will use the OpenAI client to generate the response by passing in the system and instruction prompts.
+
+
 ```python
 response = client.chat.completions.create(
-    model="grok-1.5-flash", # Notebook used "grok-3-mini". Standardizing to a common one. "grok-1.5-flash" is often cited.
+    model="grok-3-mini",
     messages=[{"role": "system", "content": SYSTEM_PROMPT}, {"role": "user", "content": INSTRUCTION_PROMPT}],
 )
 ```
+
+
 ```python
-print(f"Original Prompt (for transliteration):\n{USER_PROMPT}") 
+print(f"Original Response:\n{USER_PROMPT}")
 generated_response = response.choices[0].message.content
 print(f"Response in {native_language}:\n{generated_response}")
 ```
 
-Awesome! We can now transliterate from English to any language! And all of this can be tracked with AgentOps by going to the session url printed when `agentops.init()` was called.
+Awesome! We can now transliterate from English to any language! And all of this can be tracked with AgentOps by going to the session url above.
+
 
 ```python
 agentops.end_trace(tracer, end_state="Success")
 ```
-We end the session with a success state. This is useful if you want to track the success or failure of the chatbot. By default, the session will have an indeterminate end state if not explicitly ended.
 
-<script type="module" src="/scripts/github_stars.js"></script>
-<script type="module" src="/scripts/scroll-img-fadein-animation.js"></script>
-<script type="module" src="/scripts/button_heartbeat_animation.js"></script>
-<script type="module" src="/scripts/adjust_api_dynamically.js"></script>
+We end the session with a success state and a success reason. This is useful if you want to track the success or failure of the chatbot. In that case you can set the end state to failure and provide a reason. By default the session will have an indeterminate end state.
