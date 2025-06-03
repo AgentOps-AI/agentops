@@ -36,7 +36,7 @@ jobs:
       - name: Convert notebooks to markdown and add to docs
         run: |
           set -x  # Enable debug mode
-          for file in docs/v1/examples/*.mdx; do
+          for file in docs/v2/examples/*.mdx; do
             echo "Processing file: $file"
             source_file=$(grep -oP '(?<=\{/\*  SOURCE_FILE: ).*(?=  \*/\})' "$file" || true)
             if [[ -z "$source_file" ]]; then
@@ -64,7 +64,7 @@ jobs:
           committer: github-actions[bot] <github-actions[bot]@users.noreply.github.com>
           commit-message: GitHub Action - Update examples in docs from notebooks
           title: GitHub Action - Update examples in docs from notebooks
-          body: Changes detected in examples/** or docs/v1/examples/** triggered an update of the docs/v1/examples/**.mdx files to incorporate markdown from the corresponding notebook in examples/**.
+          body: Changes detected in examples/** or docs/v2/examples/** triggered an update of the docs/v2/examples/**.mdx files to incorporate markdown from the corresponding notebook in examples/**.
           branch: update-examples-in-docs-from-notebooks
           delete-branch: true
           assignees: the-praxs,bboynton97,areibman
