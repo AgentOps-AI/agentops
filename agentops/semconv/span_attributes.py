@@ -89,6 +89,10 @@ class SpanAttributes:
     AGENTOPS_SPAN_KIND = "agentops.span.kind"
     AGENTOPS_ENTITY_NAME = "agentops.entity.name"
 
+    # Decorator
+    AGENTOPS_DECORATOR_INPUT = "agentops.{entity_kind}.input"
+    AGENTOPS_DECORATOR_OUTPUT = "agentops.{entity_kind}.output"
+    
     # Operation attributes
     OPERATION_NAME = "operation.name"
     OPERATION_VERSION = "operation.version"

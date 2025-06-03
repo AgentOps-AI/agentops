@@ -19,6 +19,8 @@ trace = create_entity_decorator(SpanKind.SESSION)
 session = create_entity_decorator(SpanKind.SESSION)
 tool = create_entity_decorator(SpanKind.TOOL)
 operation = task
+in_guardrail = create_entity_decorator(SpanKind.INPUT_GUARDRAIL)
+out_guardrail = create_entity_decorator(SpanKind.OUTPUT_GUARDRAIL)
 
 # For backward compatibility: @session decorator calls @trace decorator
 @functools.wraps(trace)
@@ -37,4 +39,4 @@ def session(*args, **kwargs):
 # For now, keeping the alias as it was, assuming it was intentional for `operation` to be `task`.
 operation = task
 
-__all__ = ["agent", "task", "workflow", "trace", "session", "operation", "tool"]
+__all__ = ["agent", "task", "workflow", "trace", "session", "operation", "tool", "in_guardrail", "out_guardrail"]
