@@ -9,7 +9,6 @@ on:
     paths:
       - 'examples/**'
       - 'docs/v2/examples/**'
-
   workflow_dispatch:
 
 permissions:
@@ -31,130 +30,105 @@ jobs:
           python-version: '3.x'
 
       - name: Install dependencies
-        run: |
-          pip install jupyter nbconvert
+        run: pip install jupyter nbconvert
 
-      - name: Convert notebooks to markdown and add to docs
+      - name: Detect and process notebooks
+        id: process
         run: |
-          set -x  # Enable debug mode
+          # Determine comparison range
+          case "${{ github.event_name }}" in
+            "push")
+              BASE_SHA="${{ github.event.before }}"
+              [[ "$BASE_SHA" == "0000000000000000000000000000000000000000" ]] && BASE_SHA="$(git hash-object -t tree /dev/null)"
+              HEAD_SHA="${{ github.event.after }}"
+              ;;
+            "pull_request")
+              BASE_SHA="${{ github.event.pull_request.base.sha }}"
+              HEAD_SHA="${{ github.event.pull_request.head.sha }}"
+              ;;
+            "workflow_dispatch")
+              git fetch origin "${{ github.event.repository.default_branch }}" --depth=50
+              BASE_SHA="origin/${{ github.event.repository.default_branch }}"
+              HEAD_SHA="HEAD"
+              ;;
+            *)
+              exit 1
+              ;;
+          esac
           
-          # Smart change detection - handle both regular commits and merge commits
-          echo "Detecting changed files..."
+          # Get changed files and filter in one pass
+          CHANGED_FILES=$(git diff --name-only "$BASE_SHA" "$HEAD_SHA")
           
-          # Check if this is a merge commit
-          if git rev-parse HEAD^2 >/dev/null 2>&1; then
-            echo "Detected merge commit - finding all PR changes"
-            # Get the merge base between the two parent commits
-            BASE_SHA=$(git merge-base HEAD^1 HEAD^2)
-            echo "Merge base: $BASE_SHA"
-            # Get all files changed in the PR
-            CHANGED_FILES=$(git diff --name-only $BASE_SHA HEAD)
-          else
-            echo "Regular commit - checking against previous commit"
-            # For regular commits, just check against the parent
-            CHANGED_FILES=$(git diff --name-only HEAD^ HEAD 2>/dev/null)
-          fi
+          # Use arrays for better performance
+          declare -A notebooks_set
           
-          # Filter for relevant files and find related MDX files
-          FILES=$(echo "$CHANGED_FILES" | grep -E "(examples/.*\.ipynb|docs/v2/examples/.*\.mdx)" | \
-            xargs -I{} sh -c 'echo {} | grep -q "\.ipynb$" && grep -l "SOURCE_FILE: {}" docs/v2/examples/*.mdx 2>/dev/null || echo {}' | \
-            sort -u)
-          
-          echo "Total changed files: $(echo "$CHANGED_FILES" | wc -l)"
-          echo "Relevant files to process: $(echo "$FILES" | wc -l)"
-          
-          if [[ -z "$FILES" ]]; then
-            echo "No relevant changes detected - skipping processing"
-            exit 0
-          fi
-          
-          echo "Processing changed files: $FILES"
-          
-          for file in $FILES; do
-            echo "Processing file: $file"
-            source_file=$(grep -oP '(?<=\{/\*  SOURCE_FILE: ).*(?=  \*/\})' "$file" || true)
-            if [[ -z "$source_file" ]]; then
-              continue
+          # Process notebooks directly from changed files
+          while IFS= read -r file; do
+            if [[ "$file" =~ ^examples/.*\.ipynb$ ]]; then
+              notebooks_set["$file"]=1
+            elif [[ "$file" =~ ^docs/v2/examples/.*\.mdx$ ]] && [[ -f "$file" ]]; then
+              # Extract source notebook from MDX file
+              source_notebook=$(grep -oP '(?<=SOURCE_FILE: )[^ ]+' "$file" 2>/dev/null || true)
+              if [[ -n "$source_notebook" && -f "$source_notebook" ]]; then
+                notebooks_set["$source_notebook"]=1
+              fi
             fi
-            echo "Source file: $source_file"
-            if [[ -f "$source_file" ]]; then
-              echo "Converting notebook to markdown"
-              jupyter nbconvert --to markdown "$source_file" || { echo "Error: Failed to convert $source_file" >&2; continue; }
-              markdown_file="${source_file%.ipynb}.md"
-              
-              # Process pip install commands and create installation section using AWK
-              echo "Processing pip install commands"
-              
-              # Use AWK for efficient single-pass processing
-              awk '
-              # Collect pip packages
-              /^%pip install/ { 
-                  sub(/^%pip install /, "")
-                  sub(/#.*/, "")  # Remove comments
-                  gsub(/^[ \t]+|[ \t]+$/, "")  # Trim whitespace
-                  if ($0) packages = packages " " $0
-                  if (!first) first = NR
-                  next 
-              }
-              # Store other lines
-              { lines[NR] = $0 }
-              # Process at end
-              END {
-                  if (packages) {
-                      # Deduplicate packages
-                      split(packages, p)
-                      delete seen
-                      packages = ""
-                      for (i in p) if (p[i] && !seen[p[i]]++) packages = packages " " p[i]
-                      
-                      print "Found pip packages:" packages > "/dev/stderr"
-                      
-                      # Output with installation section
-                      for (i = 1; i <= NR; i++) {
-                          if (i == first) {
-                              print "## Installation"
-                              print "<CodeGroup>"
-                              print "  ```bash pip"
-                              print "  pip install" packages
-                              print "  ```"
-                              print "  ```bash poetry"
-                              print "  poetry add" packages
-                              print "  ```"
-                              print "  ```bash uv"
-                              print "  uv add" packages
-                              print "  ```"
-                              print "</CodeGroup>"
-                          }
-                          if (lines[i]) print lines[i]
-                      }
-                  } else {
-                      # No packages found, output as-is
-                      for (i = 1; i <= NR; i++) if (lines[i]) print lines[i]
-                  }
-              }' "$markdown_file" > "$markdown_file.tmp" && mv "$markdown_file.tmp" "$markdown_file"
-              
-              echo "Removing existing content after {/* SOURCE_FILE: ... */}"
-              sed -i '\#{/\*  SOURCE_FILE:#,$d' "$file"
-              echo "Appending markdown to $file"
-              echo -e "{/*  SOURCE_FILE: $source_file  */}\n" >> "$file"
-              echo "_View Notebook on <a href={'https://github.com/AgentOps-AI/agentops/blob/main/$source_file'} target={'_blank'}>Github</a>_" >> "$file"
-              echo "" >> "$file"
-              
-              cat "$markdown_file" >> "$file" || { echo "Error: Failed to append markdown to $file" >&2; continue; }
-              rm "$markdown_file" || { echo "Error: Failed to remove $markdown_file" >&2; continue; }
+          done <<< "$CHANGED_FILES"
+          
+          # Exit if no notebooks found
+          [[ ${#notebooks_set[@]} -eq 0 ]] && exit 0
+          
+          # Process each notebook and track results
+          failed_count=0
+          processed_notebooks=""
+          for notebook in "${!notebooks_set[@]}"; do
+            if python examples/generate_documentation.py "$notebook"; then
+              processed_notebooks="$processed_notebooks$notebook"$'\n'
             else
-              echo "Error: Source file not found: $source_file" >&2
+              ((failed_count++))
             fi
           done
+          
+          [[ $failed_count -gt 0 ]] && exit 1
+          
+          # Get modified files for PR description
+          modified_files=$(git status --porcelain | grep -E '^\s*[AM]' | awk '{print $2}' | sort)
+          
+          # Save outputs for PR
+          echo "processed_notebooks<<EOF" >> $GITHUB_OUTPUT
+          echo "$processed_notebooks" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+          
+          echo "modified_files<<EOF" >> $GITHUB_OUTPUT
+          echo "$modified_files" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
 
       - name: Create Pull Request
         uses: peter-evans/create-pull-request@v7
         with:
+          token: ${{ secrets.GITHUB_TOKEN }}
           committer: github-actions[bot] <github-actions[bot]@users.noreply.github.com>
-          commit-message: GitHub Action - Update examples in docs from notebooks
-          title: GitHub Action - Update examples in docs from notebooks
-          body: Changes detected in examples/** or docs/v2/examples/** triggered an update of the docs/v2/examples/**.mdx files to incorporate markdown from the corresponding notebook in examples/**.
-          branch: update-examples-in-docs-from-notebooks
+          author: github-actions[bot] <github-actions[bot]@users.noreply.github.com>
+          commit-message: "docs: update examples from notebooks"
+          title: "docs: update examples from notebooks"
+          body: |
+            Updates documentation examples from their source notebooks.
+            
+            **Triggered by:** @${{ github.actor }}
+            **Event:** ${{ github.event_name }}
+            ${{ steps.process.outputs.processed_notebooks && format('
+
+            ## Processed Notebooks
+            ```
+            {0}
+            ```', steps.process.outputs.processed_notebooks) || '' }}
+            ${{ steps.process.outputs.modified_files && format('
+
+            ## Modified Files
+            ```
+            {0}
+            ```', steps.process.outputs.modified_files) || '' }}
+          branch: update-examples-docs-${{ github.run_number }}
           delete-branch: true
           # TODO: Uncomment for production use
           # assignees: the-praxs,bboynton97,areibman
