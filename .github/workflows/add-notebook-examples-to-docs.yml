@@ -23,7 +23,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v3
         with:
-          fetch-depth: 2
+          fetch-depth: 0
 
       - name: Set up Python
         uses: actions/setup-python@v4
@@ -38,10 +38,30 @@ jobs:
         run: |
           set -x  # Enable debug mode
           
-          # Smart change detection - only process changed files
-          FILES=$(git diff --name-only HEAD^ HEAD 2>/dev/null | grep -E "(examples/.*\.ipynb|docs/v2/examples/.*\.mdx)" | \
+          # Smart change detection - handle both regular commits and merge commits
+          echo "Detecting changed files..."
+          
+          # Check if this is a merge commit
+          if git rev-parse HEAD^2 >/dev/null 2>&1; then
+            echo "Detected merge commit - finding all PR changes"
+            # Get the merge base between the two parent commits
+            BASE_SHA=$(git merge-base HEAD^1 HEAD^2)
+            echo "Merge base: $BASE_SHA"
+            # Get all files changed in the PR
+            CHANGED_FILES=$(git diff --name-only $BASE_SHA HEAD)
+          else
+            echo "Regular commit - checking against previous commit"
+            # For regular commits, just check against the parent
+            CHANGED_FILES=$(git diff --name-only HEAD^ HEAD 2>/dev/null)
+          fi
+          
+          # Filter for relevant files and find related MDX files
+          FILES=$(echo "$CHANGED_FILES" | grep -E "(examples/.*\.ipynb|docs/v2/examples/.*\.mdx)" | \
             xargs -I{} sh -c 'echo {} | grep -q "\.ipynb$" && grep -l "SOURCE_FILE: {}" docs/v2/examples/*.mdx 2>/dev/null || echo {}' | \
             sort -u)
+          
+          echo "Total changed files: $(echo "$CHANGED_FILES" | wc -l)"
+          echo "Relevant files to process: $(echo "$FILES" | wc -l)"
           
           if [[ -z "$FILES" ]]; then
             echo "No relevant changes detected - skipping processing"
