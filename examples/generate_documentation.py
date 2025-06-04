@@ -1,14 +1,13 @@
 #!/usr/bin/env python3
 """
-Script to generate integration MDX files from Jupyter notebooks.
+Script to generate example MDX files from Jupyter notebooks.
 
 This script converts a Jupyter notebook from the examples/ directory into a
-corresponding .mdx file in docs/v2/integrations/, including proper frontmatter,
-GitHub link, SOURCE_FILE comment, transformed %pip install commands, and
-boilerplate scripts.
+corresponding .mdx file in docs/v2/examples/, matching the exact format and
+structure used by the GitHub Actions workflow.
 
 Usage:
-    python examples/generate_integration_mdx.py examples/langchain_examples/langchain_examples.ipynb
+    python examples/generate_documentation.py examples/openai/openai_example_sync.ipynb
 """
 
 import argparse
@@ -18,14 +17,11 @@ import subprocess
 import sys
 from pathlib import Path
 
-
-def get_folder_and_title(notebook_path):
-    """Extract folder name and generate title from notebook path."""
-    folder_name = Path(notebook_path).parent.name
-    title = folder_name.replace("_", " ").title()
-    if not title.endswith(" Integration"):
-        title += " Integration"
-    return folder_name, title
+# Constants
+SCRIPT_TAGS = """<script type="module" src="/scripts/github_stars.js"></script>
+<script type="module" src="/scripts/scroll-img-fadein-animation.js"></script>
+<script type="module" src="/scripts/button_heartbeat_animation.js"></script>
+<script type="module" src="/scripts/adjust_api_dynamically.js"></script>"""
 
 
 def convert_notebook_to_markdown(notebook_path):
@@ -44,99 +40,101 @@ def convert_notebook_to_markdown(notebook_path):
         sys.exit("Error: jupyter nbconvert not found. Please install jupyter: pip install jupyter")
 
 
-def transform_pip_installs(markdown_content):
-    """Transform %pip install commands to a single CodeGroup format under Installation section."""
-    # Extract all %pip install dependencies using regex
-    pip_pattern = r"^%pip install (.+)$"
-    dependencies = []
+def process_pip_installations(markdown_content):
+    """Transform %pip install commands using regex for efficiency."""
+    # Extract all packages from pip install commands
+    packages = []
+    for match in re.finditer(r"%pip install\s+([^\n#]+)", markdown_content):
+        packages.extend(match.group(1).strip().split())
 
-    for match in re.finditer(pip_pattern, markdown_content, re.MULTILINE):
-        deps = match.group(1).strip()
-        dependencies.append(deps)
-
-    if not dependencies:
+    if not packages:
         return markdown_content
 
-    # Combine all dependencies and clean up flags
-    combined_deps = " ".join(dependencies)
-    combined_deps = re.sub(r"-U\s+", "", combined_deps).strip()
-    if not combined_deps.startswith("-U"):
-        combined_deps = "-U " + combined_deps
+    # Deduplicate packages while preserving order
+    unique_packages = " ".join(dict.fromkeys(packages))
 
-    # Remove all %pip install lines and their containing code blocks
-    # This regex removes code blocks that contain only %pip install commands
-    content = re.sub(r"```python\n(?:%pip install[^\n]*\n)+```\n?", "", markdown_content)
+    # Remove code blocks containing pip installs
+    content = re.sub(r"```python\n(?:[^`])*?%pip install[^\n]*\n(?:[^`])*?```\n?", "", markdown_content)
 
-    # Remove any remaining standalone %pip install lines
-    content = re.sub(r"^%pip install.*$\n?", "", content, flags=re.MULTILINE)
+    # Find insertion point for installation section
+    first_pip_pos = markdown_content.find("%pip install")
+    if first_pip_pos == -1:
+        return markdown_content
 
-    # Remove empty code blocks
-    content = re.sub(r"```python\n\s*```\n?", "", content)
+    # Calculate line position and insert installation section
+    line_pos = markdown_content[:first_pip_pos].count("\n")
+    lines = content.split("\n")
 
-    # Create installation section
     installation_section = f"""## Installation
 <CodeGroup>
-```bash pip
-pip install {combined_deps}
-```
-```bash poetry
-poetry add {combined_deps}
-```
-```bash uv
-uv add {combined_deps}
-```
+  ```bash pip
+  pip install {unique_packages}
+  ```
+  ```bash poetry
+  poetry add {unique_packages}
+  ```
+  ```bash uv
+  uv add {unique_packages}
+  ```
 </CodeGroup>
-
 """
 
-    # Find insertion point (after frontmatter links but before first content)
-    lines = content.split("\n")
-    insert_index = 0
-    for idx, line in enumerate(lines):
-        if line.strip() and not line.startswith("_View Notebook") and not line.startswith("{/*"):
-            insert_index = idx
-            break
-
-    # Insert installation section
-    lines.insert(insert_index, installation_section.rstrip())
-
+    lines.insert(min(line_pos, len(lines)), installation_section)
     return "\n".join(lines)
 
 
-# MDX template for consistent formatting
-MDX_TEMPLATE = """---
-title: {title}
-description: "Learn how to integrate {integration_name} with AgentOps."
+def get_existing_frontmatter(mdx_path):
+    """Extract existing frontmatter if it has special configurations."""
+    if not mdx_path.exists():
+        return None
+
+    content = mdx_path.read_text(encoding="utf-8")
+
+    # Check for special configurations and extract frontmatter
+    if any(config in content for config in ["mode:", "layout:"]):
+        if content.startswith("---\n"):
+            end_marker = content.find("\n---\n", 4)
+            if end_marker != -1:
+                return content[4:end_marker]
+
+    return None
+
+
+def generate_mdx_content(notebook_path, processed_content, frontmatter=None):
+    """Generate MDX content with either provided or generated frontmatter."""
+    if not frontmatter:
+        # Generate new frontmatter
+        folder_name = Path(notebook_path).parent.name
+        title = folder_name.replace("_", " ").title()
+
+        # Extract description from first heading or use default
+        description = f"{title} example using AgentOps"
+        for line in processed_content.split("\n"):
+            if line.startswith("# ") and len(line) > 2:
+                description = line[2:].strip()
+                break
+
+        frontmatter = f"title: '{title}'\ndescription: '{description}'"
+
+    return f"""---
+{frontmatter}
 ---
+{{/*  SOURCE_FILE: {notebook_path}  */}}
 
 _View Notebook on <a href={{'https://github.com/AgentOps-AI/agentops/blob/main/{notebook_path}'}} target={{'_blank'}}>Github</a>_
 
-{{/*  SOURCE_FILE: {notebook_path}  */}}
+{processed_content}
 
-{content}
-
-<script type="module" src="/scripts/github_stars.js"></script>
-<script type="module" src="/scripts/scroll-img-fadein-animation.js"></script>
-<script type="module" src="/scripts/button_heartbeat_animation.js"></script>
-<script type="css" src="/styles/styles.css"></script>"""
+{SCRIPT_TAGS}"""
 
 
-def construct_mdx_content(notebook_path, folder_name):
-    """Construct the complete .mdx file content using template."""
-    folder_name, title = get_folder_and_title(notebook_path)
-    integration_name = title.replace(" Integration", "")
+def main():
+    parser = argparse.ArgumentParser(description="Generate example MDX files from Jupyter notebooks")
+    parser.add_argument("notebook_path", help="Path to the Jupyter notebook")
 
-    # Convert notebook and transform pip installs
-    markdown_content = convert_notebook_to_markdown(notebook_path)
-    processed_content = transform_pip_installs(markdown_content)
+    notebook_path = parser.parse_args().notebook_path
 
-    return MDX_TEMPLATE.format(
-        title=title, integration_name=integration_name, notebook_path=notebook_path, content=processed_content
-    )
-
-
-def validate_notebook_path(notebook_path):
-    """Validate the notebook path and return clean folder name."""
+    # Validate notebook path
     if not os.path.exists(notebook_path):
         sys.exit(f"Error: Notebook file not found: {notebook_path}")
 
@@ -146,24 +144,29 @@ def validate_notebook_path(notebook_path):
     if not notebook_path.startswith("examples/"):
         sys.exit(f"Error: Notebook must be in the examples/ directory: {notebook_path}")
 
-    folder_name = Path(notebook_path).parent.name
-    return folder_name.replace("_examples", "")
-
-
-def main():
-    parser = argparse.ArgumentParser(description="Generate integration MDX files from Jupyter notebooks")
-    parser.add_argument("notebook_path", help="Path to the Jupyter notebook")
-
-    notebook_path = parser.parse_args().notebook_path
-    clean_folder_name = validate_notebook_path(notebook_path)
-    output_path = Path(f"docs/v2/integrations/{clean_folder_name}.mdx")
+    # Generate output path
+    folder_name = Path(notebook_path).parent.name.replace("_examples", "")
+    output_path = Path(f"docs/v2/examples/{folder_name}.mdx")
 
     print(f"Processing: {notebook_path} -> {output_path}")
 
-    # Generate and write MDX content
-    mdx_content = construct_mdx_content(notebook_path, clean_folder_name)
+    # Convert notebook to markdown and process
+    markdown_content = convert_notebook_to_markdown(notebook_path)
+    processed_content = process_pip_installations(markdown_content)
+
+    # Check for existing special frontmatter
+    existing_frontmatter = get_existing_frontmatter(output_path)
+
+    if existing_frontmatter:
+        print("Preserving existing frontmatter with special configurations")
+        final_content = generate_mdx_content(notebook_path, processed_content, existing_frontmatter)
+    else:
+        print("Generating new frontmatter and content")
+        final_content = generate_mdx_content(notebook_path, processed_content)
+
+    # Write the file
     output_path.parent.mkdir(parents=True, exist_ok=True)
-    output_path.write_text(mdx_content, encoding="utf-8")
+    output_path.write_text(final_content, encoding="utf-8")
 
     print(f"Successfully generated: {output_path}")
 
