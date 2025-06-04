@@ -44,7 +44,7 @@ _has_agentic_library: bool = False
 
 
 # New helper function to check module origin
-def _is_actually_installed_package(module_obj: ModuleType, package_name_key: str) -> bool:
+def _is_installed_package(module_obj: ModuleType, package_name_key: str) -> bool:
     """
     Determines if the given module object corresponds to an installed site-package
     rather than a local module, especially when names might collide.
@@ -52,7 +52,7 @@ def _is_actually_installed_package(module_obj: ModuleType, package_name_key: str
     """
     if not hasattr(module_obj, "__file__") or not module_obj.__file__:
         logger.debug(
-            f"_is_actually_installed_package: Module '{package_name_key}' has no __file__, assuming it might be an SDK namespace package. Returning True."
+            f"_is_installed_package: Module '{package_name_key}' has no __file__, assuming it might be an SDK namespace package. Returning True."
         )
         return True
 
@@ -73,14 +73,12 @@ def _is_actually_installed_package(module_obj: ModuleType, package_name_key: str
     for sp_dir in normalized_site_packages_dirs:
         if module_path.startswith(sp_dir):
             logger.debug(
-                f"_is_actually_installed_package: Module '{package_name_key}' is a library, instrumenting '{package_name_key}'."
+                f"_is_installed_package: Module '{package_name_key}' is a library, instrumenting '{package_name_key}'."
             )
             return True
 
     # Priority 2: If not in site-packages, it's highly likely a local module or not an SDK we target.
-    logger.debug(
-        f"_is_actually_installed_package: Module '{package_name_key}' is a local module, skipping instrumentation."
-    )
+    logger.debug(f"_is_installed_package: Module '{package_name_key}' is a local module, skipping instrumentation.")
     return False
 
 
@@ -305,7 +303,7 @@ def _import_monitor(name: str, globals_dict=None, locals_dict=None, fromlist=(),
             target_module_obj = sys.modules.get(package_to_check)
 
             if target_module_obj:
-                is_sdk = _is_actually_installed_package(target_module_obj, package_to_check)
+                is_sdk = _is_installed_package(target_module_obj, package_to_check)
                 if not is_sdk:
                     logger.info(
                         f"AgentOps: Target '{package_to_check}' appears to be a local module/directory. Skipping AgentOps SDK instrumentation for it."
@@ -497,7 +495,7 @@ def instrument_all():
                 target_module_obj = sys.modules.get(package_to_check)
 
                 if target_module_obj:
-                    is_sdk = _is_actually_installed_package(target_module_obj, package_to_check)
+                    is_sdk = _is_installed_package(target_module_obj, package_to_check)
                     if not is_sdk:
                         continue
                 else:
