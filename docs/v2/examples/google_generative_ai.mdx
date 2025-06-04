@@ -1,12 +1,12 @@
 ---
-title: 'Gemini Example'
-description: 'Using Google Gemini API with AgentOps for synchronous and streaming text generation'
+title: 'Google Generative AI Example'
+description: 'Using Google Generative AI API with AgentOps for synchronous and streaming text generation'
 ---
-{/*  SOURCE_FILE: examples/gemini/gemini_example.ipynb  */}
+{/*  SOURCE_FILE: examples/google_genai/gemini_example.ipynb  */}
 
 _View Notebook on <a href={'https://github.com/AgentOps-AI/agentops/blob/main/examples/gemini/gemini_example.ipynb'} target={'_blank'}>Github</a>_
 
-# Gemini API Example with AgentOps
+# Google Generative AI API Example with AgentOps
 
 This notebook demonstrates how to use AgentOps with Google's Gemini API for observing both synchronous and streaming text generation.
 
@@ -39,11 +39,11 @@ load_dotenv()
 os.environ["AGENTOPS_API_KEY"] = os.getenv("AGENTOPS_API_KEY", "your_agentops_api_key_here")
 os.environ["GEMINI_API_KEY"] = os.getenv("GEMINI_API_KEY", "your_gemini_api_key_here")
 
-# Configure the Gemini client with the API key
+# Configure the GenAI client with the API key
 genai.configure(api_key=os.environ["GEMINI_API_KEY"])
 ```
 
-Initialize AgentOps:
+    Initialize AgentOps:
 ```python
 # Initialize AgentOps and Gemini client
 agentops.init(tags=["gemini-example", "agentops-example"])
