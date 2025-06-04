@@ -22,6 +22,8 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
+        with:
+          fetch-depth: 2
 
       - name: Set up Python
         uses: actions/setup-python@v4
@@ -35,7 +37,20 @@ jobs:
       - name: Convert notebooks to markdown and add to docs
         run: |
           set -x  # Enable debug mode
-          for file in docs/v2/examples/*.mdx; do
+          
+          # Smart change detection - only process changed files
+          FILES=$(git diff --name-only HEAD^ HEAD 2>/dev/null | grep -E "(examples/.*\.ipynb|docs/v2/examples/.*\.mdx)" | \
+            xargs -I{} sh -c 'echo {} | grep -q "\.ipynb$" && grep -l "SOURCE_FILE: {}" docs/v2/examples/*.mdx 2>/dev/null || echo {}' | \
+            sort -u)
+          
+          if [[ -z "$FILES" ]]; then
+            echo "No relevant changes detected - skipping processing"
+            exit 0
+          fi
+          
+          echo "Processing changed files: $FILES"
+          
+          for file in $FILES; do
             echo "Processing file: $file"
             source_file=$(grep -oP '(?<=\{/\*  SOURCE_FILE: ).*(?=  \*/\})' "$file" || true)
             if [[ -z "$source_file" ]]; then
@@ -47,31 +62,56 @@ jobs:
               jupyter nbconvert --to markdown "$source_file" || { echo "Error: Failed to convert $source_file" >&2; continue; }
               markdown_file="${source_file%.ipynb}.md"
               
-              # Extract pip install commands from converted markdown
-              echo "Extracting pip install commands from markdown"
-              pip_packages=$(sed -n 's/.*%pip install \(.*\)/\1/p' "$markdown_file" | head -1 || true)
+              # Process pip install commands and create installation section using AWK
+              echo "Processing pip install commands"
               
-              # Replace %pip install lines with installation section if packages found
-              if [[ -n "$pip_packages" ]]; then
-                echo "Found pip packages: $pip_packages"
-                echo "Replacing %pip install line with installation section"
-                # Create installation section using echo commands
-                echo "## Installation" > /tmp/install_section
-                echo "<CodeGroup>" >> /tmp/install_section
-                echo "  \`\`\`bash pip" >> /tmp/install_section
-                echo "  pip install $pip_packages" >> /tmp/install_section
-                echo "  \`\`\`" >> /tmp/install_section
-                echo "  \`\`\`bash poetry" >> /tmp/install_section
-                echo "  poetry add $pip_packages" >> /tmp/install_section
-                echo "  \`\`\`" >> /tmp/install_section
-                echo "  \`\`\`bash uv" >> /tmp/install_section
-                echo "  uv add $pip_packages" >> /tmp/install_section
-                echo "  \`\`\`" >> /tmp/install_section
-                echo "</CodeGroup>" >> /tmp/install_section
-                # Replace the %pip install line with the installation section
-                sed "/.*%pip install.*/r /tmp/install_section" "$markdown_file" | sed "/.*%pip install.*/d" > /tmp/temp_md
-                mv /tmp/temp_md "$markdown_file"
-              fi
+              # Use AWK for efficient single-pass processing
+              awk '
+              # Collect pip packages
+              /^%pip install/ { 
+                  sub(/^%pip install /, "")
+                  sub(/#.*/, "")  # Remove comments
+                  gsub(/^[ \t]+|[ \t]+$/, "")  # Trim whitespace
+                  if ($0) packages = packages " " $0
+                  if (!first) first = NR
+                  next 
+              }
+              # Store other lines
+              { lines[NR] = $0 }
+              # Process at end
+              END {
+                  if (packages) {
+                      # Deduplicate packages
+                      split(packages, p)
+                      delete seen
+                      packages = ""
+                      for (i in p) if (p[i] && !seen[p[i]]++) packages = packages " " p[i]
+                      
+                      print "Found pip packages:" packages > "/dev/stderr"
+                      
+                      # Output with installation section
+                      for (i = 1; i <= NR; i++) {
+                          if (i == first) {
+                              print "## Installation"
+                              print "<CodeGroup>"
+                              print "  ```bash pip"
+                              print "  pip install" packages
+                              print "  ```"
+                              print "  ```bash poetry"
+                              print "  poetry add" packages
+                              print "  ```"
+                              print "  ```bash uv"
+                              print "  uv add" packages
+                              print "  ```"
+                              print "</CodeGroup>"
+                          }
+                          if (lines[i]) print lines[i]
+                      }
+                  } else {
+                      # No packages found, output as-is
+                      for (i = 1; i <= NR; i++) if (lines[i]) print lines[i]
+                  }
+              }' "$markdown_file" > "$markdown_file.tmp" && mv "$markdown_file.tmp" "$markdown_file"
               
               echo "Removing existing content after {/* SOURCE_FILE: ... */}"
               sed -i '\#{/\*  SOURCE_FILE:#,$d' "$file"
