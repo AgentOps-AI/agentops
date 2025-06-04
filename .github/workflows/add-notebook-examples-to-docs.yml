@@ -128,7 +128,7 @@ jobs:
             ```
             {0}
             ```', steps.process.outputs.modified_files) || '' }}
-          branch: update-examples-docs-${{ github.run_number }}
+          branch: update-examples-docs
           delete-branch: true
           # TODO: Uncomment for production use
           # assignees: the-praxs,bboynton97,areibman
