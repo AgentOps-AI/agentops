@@ -59,19 +59,13 @@ You don't need a separate `agentops.init()` call; the `LangchainCallbackHandler`
 </Tip>
 
 Here's a basic example:
-<CodeGroup>
-```python Basic LangChain Integration
-import os
-from dotenv import load_dotenv
+
+```python
 from langchain_community.chat_models import ChatOpenAI
 from langchain.agents import initialize_agent, AgentType, Tool # Corrected Tool import
 from langchain.tools import DuckDuckGoSearchRun # Example tool
 from agentops.integration.callbacks.langchain import LangchainCallbackHandler
 
-# Load environment variables
-load_dotenv() 
-AGENTOPS_API_KEY = os.getenv("AGENTOPS_API_KEY")
-OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 
 # 1. Initialize LangchainCallbackHandler
 # AGENTOPS_API_KEY can be passed here or loaded from environment
@@ -110,15 +104,13 @@ try:
     print(response)
 except Exception as e:
     print(f"An error occurred: {e}")
-
-# AgentOps will automatically track the interactions.
-# After running, visit app.agentops.ai to see your session.
 ```
-</CodeGroup>
+
+Visit the [AgentOps Dashboard](https://app.agentops.ai/) to see your session.
 
 ## Examples
 <CardGroup cols={1}>
-  <Card title="LangChain Callback Handler Notebook" icon="notebook" href="/v2/examples/langchain">
+  <Card title="LangChain Example" icon="notebook" href="/v2/examples/langchain">
     A detailed notebook demonstrating the LangChain callback handler integration.
   </Card>
 </CardGroup>

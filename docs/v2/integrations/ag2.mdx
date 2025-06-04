@@ -54,19 +54,20 @@ os.environ["AGENTOPS_API_KEY"] = os.getenv("AGENTOPS_API_KEY")
 
 Initialize AgentOps at the beginning of your application to automatically track all AG2 agent interactions:
 
-<CodeGroup>
-```python Python
+<CodeGroup> 
+```python Single Agent Conversation
 import agentops
 import autogen
+import os
 
 # Initialize AgentOps
-agentops.init(<INSERT YOUR API KEY HERE>)
+agentops.init()
 
 # Configure your AG2 agents
 config_list = [
     {
         "model": "gpt-4",
-        "api_key": "<YOUR_OPENAI_API_KEY>"
+        "api_key": os.getenv("OPENAI_API_KEY"),
     }
 ]
 
@@ -75,7 +76,7 @@ llm_config = {
     "timeout": 60,
 }
 
-# Create AG2 agents
+# Create a single agent
 assistant = autogen.AssistantAgent(
     name="assistant",
     llm_config=llm_config,
@@ -95,34 +96,27 @@ user_proxy.initiate_chat(
     assistant,
     message="How can I implement a basic web scraper in Python?"
 )
-
-# All agent interactions are automatically tracked by AgentOps
 ```
-</CodeGroup>
 
-## Multi-Agent Conversation Example
-
-AgentOps tracks interactions across multiple AG2 agents:
-
-<CodeGroup>
-```python Python
+```python Multi-Agent Conversation
+import os
 import agentops
 import autogen
 
 # Initialize AgentOps
-agentops.init(<INSERT YOUR API KEY HERE>)
+agentops.init()
 
-# Configure LLM
+# Configure your AG2 agents
 config_list = [
     {
         "model": "gpt-4",
-        "api_key": "<YOUR_OPENAI_API_KEY>"
+        "api_key": os.getenv("OPENAI_API_KEY"),
     }
 ]
 
 llm_config = {
     "config_list": config_list,
-    "timeout": A 60,
+    "timeout": 60,
 }
 
 # Create a team of agents
@@ -169,8 +163,6 @@ user_proxy.initiate_chat(
     manager,
     message="Create a Python program to analyze sentiment from Twitter data."
 )
-
-# All agent interactions across the group chat are automatically tracked by AgentOps
 ```
 </CodeGroup>
 

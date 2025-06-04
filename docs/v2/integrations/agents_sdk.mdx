@@ -59,44 +59,32 @@ OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 
 ## Usage
 
-Initialize AgentOps at the beginning of your application. It will automatically instrument the OpenAI Agents SDK. The "Hello World Example" below demonstrates basic usage.
+AgentOps will automatically instrument the OpenAI Agents SDK after being initialized. You can then create agents, run them, and track their interactions.
 
-<CodeGroup>
-```python Hello World Example
-from agents import Agent, Runner
+```python
 import agentops
-import os # Ensure os is imported if using os.getenv
+from agents import Agent, Runner
 
-# Initialize AgentOps. 
-# If AGENTOPS_API_KEY is in env, it's used. Otherwise, pass it directly.
-# Example: agentops.init(os.getenv("AGENTOPS_API_KEY")) or agentops.init("<YOUR_AGENTOPS_API_KEY>")
-agentops.init() # Assumes AGENTOPS_API_KEY is in environment
+# Initialize AgentOps
+agentops.init()
 
-# OpenAI client used by Agents SDK will pick up OPENAI_API_KEY from env.
-
+# Create an agent with instructions
 agent = Agent(name="Assistant", instructions="You are a helpful assistant")
 
 result = Runner.run_sync(agent, "Write a haiku about recursion in programming.")
 print(result.final_output)
-
-# Expected Output:
-# Code within the code,
-# Functions calling themselves,
-# Infinite loop's dance.
 ```
-</CodeGroup>
 
-## Advanced Examples
+## Examples
 
-### Handoffs Example
-
-```python
+<CodeGroup>
+```python Handoffs
 from agents import Agent, Runner
 import asyncio
 import agentops
 import os
 
-agentops.init() # Assumes AGENTOPS_API_KEY is in environment
+agentops.init()
 
 spanish_agent = Agent(
     name="Spanish agent",
@@ -125,15 +113,13 @@ if __name__ == "__main__":
     asyncio.run(main())
 ```
 
-### Functions Example
-
-```python
+```python Function Calling
 import asyncio
 from agents import Agent, Runner, function_tool
 import agentops
 import os
 
-agentops.init() # Assumes AGENTOPS_API_KEY is in environment
+agentops.init()
 
 @function_tool
 def get_weather(city: str) -> str:
@@ -156,27 +142,9 @@ async def main():
 if __name__ == "__main__":
     asyncio.run(main())
 ```
+</CodeGroup>
 
-## The Agent Loop
-
-When you call `Runner.run()`, the SDK runs a loop until it gets a final output:
-
-1. The LLM is called using the model and settings on the agent, along with the message history.
-2. The LLM returns a response, which may include tool calls.
-3. If the response has a final output, the loop ends and returns it.
-4. If the response has a handoff, the agent is set to the new agent and the loop continues from step 1.
-5. Tool calls are processed (if any) and tool response messages are appended. Then the loop continues from step 1.
-
-You can use the `max_turns` parameter to limit the number of loop executions.
-
-## Final Output
-
-Final output is the last thing the agent produces in the loop:
-
-- If you set an `output_type` on the agent, the final output is when the LLM returns something of that type using structured outputs.
-- If there's no `output_type` (i.e., plain text responses), then the first LLM response without any tool calls or handoffs is considered the final output.
-
-## Examples
+## More Examples
 <CardGroup cols={2}>
   <Card title="Customer Service Agent" icon="notebook" href="/v2/examples/openai_agents">
     Demonstrates a customer service workflow

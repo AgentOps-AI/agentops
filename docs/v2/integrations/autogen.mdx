@@ -52,19 +52,15 @@ os.environ["OPENAI_API_KEY"] = os.getenv("OPENAI_API_KEY")
 os.environ["AGENTOPS_API_KEY"] = os.getenv("AGENTOPS_API_KEY")
 ```
 
-## Basic Integration
+## Usage
 
-AgentOps automatically instruments AutoGen agents and tracks their interactions. Simply initialize AgentOps before creating your AutoGen agents:
+AgentOps automatically instruments AutoGen agents and tracks their interactions. Simply initialize AgentOps before creating your AutoGen agents!
 
-<Note>
-**🔄 Automatic Telemetry Integration**: AgentOps automatically picks up spans from AutoGen's built-in OpenTelemetry integration. No additional instrumentation is required - just initialize AgentOps and your AutoGen agents will be automatically tracked.
-</Note>
-
-```python
+<CodeGroup>
+```python Countdown
 import asyncio
 from dataclasses import dataclass
 from typing import Callable
-from dotenv import load_dotenv
 import agentops
 
 from autogen_core import (
@@ -77,10 +73,7 @@ from autogen_core import (
     SingleThreadedAgentRuntime
 )
 
-# Load environment variables
-load_dotenv()
-
-# Initialize AgentOps - this will automatically track AutoGen agents
+# Initialize AgentOps
 agentops.init()
 
 @dataclass
@@ -179,15 +172,10 @@ if __name__ == "__main__":
     asyncio.run(run_countdown_workflow())
 ```
 
-## Advanced Multi-Agent Example
-
-Here's a more complex example showing a data processing pipeline with multiple specialized agents:
-
-```python
+```python Multi-Agent
 import asyncio
 from dataclasses import dataclass
 from typing import List, Dict, Any
-from dotenv import load_dotenv
 import agentops
 
 from autogen_core import (
@@ -199,9 +187,6 @@ from autogen_core import (
     AgentId,
     SingleThreadedAgentRuntime
 )
-
-# Load environment variables  
-load_dotenv()
 
 # Initialize AgentOps
 agentops.init()
@@ -425,6 +410,7 @@ async def run_data_processing_pipeline():
 if __name__ == "__main__":
     asyncio.run(run_data_processing_pipeline())
 ```
+</CodeGroup>
 
 ## Examples
 

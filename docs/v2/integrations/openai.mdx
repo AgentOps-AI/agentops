@@ -7,18 +7,16 @@ AgentOps seamlessly integrates with [OpenAI's Python SDK](https://github.com/ope
 
 ## Installation
 
-
-
 <CodeGroup>
-  ```bash pip
-  pip install agentops openai
-  ```
-  ```bash poetry
-  poetry add agentops openai
-  ```
-  ```bash uv
-  uv add agentops openai
-  ```
+```bash pip
+pip install agentops openai
+```
+```bash poetry
+poetry add agentops openai
+```
+```bash uv
+uv add agentops openai
+```
 </CodeGroup>
 
 ## Setting Up API Keys
@@ -30,14 +28,14 @@ Before using OpenAI with AgentOps, you need to set up your API keys. You can obt
 Then to set them up, you can either export them as environment variables or set them in a `.env` file.
 
 <CodeGroup>
-    ```bash Export to CLI
-    export OPENAI_API_KEY="your_openai_api_key_here"
-    export AGENTOPS_API_KEY="your_agentops_api_key_here"
-    ```
-    ```txt Set in .env file
-    OPENAI_API_KEY="your_openai_api_key_here"
-    AGENTOPS_API_KEY="your_agentops_api_key_here"
-    ```
+```bash Export to CLI
+export OPENAI_API_KEY="your_openai_api_key_here"
+export AGENTOPS_API_KEY="your_agentops_api_key_here"
+```
+```txt Set in .env file
+OPENAI_API_KEY="your_openai_api_key_here"
+AGENTOPS_API_KEY="your_agentops_api_key_here"
+```
 </CodeGroup>
 
 Then load the environment variables in your Python code:
@@ -58,16 +56,15 @@ os.environ["AGENTOPS_API_KEY"] = os.getenv("AGENTOPS_API_KEY")
 
 Initialize AgentOps at the beginning of your application to automatically track all OpenAI API calls:
 
-    <CodeGroup>
-```python Basic Usage
-      import agentops
-      from openai import OpenAI
+```python
+import agentops
+from openai import OpenAI
       
 # Initialize AgentOps
-      agentops.init(<INSERT YOUR API KEY HERE>)
+agentops.init()
 
 # Create OpenAI client
-client = OpenAI(api_key="<YOUR_OPENAI_API_KEY>")
+client = OpenAI()
 
 # Make API calls as usual - AgentOps will track them automatically
 response = client.chat.completions.create(
@@ -79,30 +76,24 @@ response = client.chat.completions.create(
 )
 
 print(response.choices[0].message.content)
-      ```
-    </CodeGroup>
+```
 
-
-## Advanced Examples
-
-### Streaming Completions
-
-AgentOps automatically tracks streaming completions:
+## Examples
 
 <CodeGroup>
-```python Streaming Example
+```python Streaming
 import agentops
-  from openai import OpenAI
+from openai import OpenAI
 
 # Initialize AgentOps
-  agentops.init(<INSERT YOUR API KEY HERE>)
+agentops.init()
 
 # Create OpenAI client
-  client = OpenAI()
+client = OpenAI()
 
 # Make a streaming API call
 stream = client.chat.completions.create(
-    model="gpt-4",
+    model="gpt-4o-mini",
     messages=[
         {"role": "system", "content": "You are a helpful assistant."},
         {"role": "user", "content": "Write a short poem about AI."}
@@ -114,21 +105,15 @@ stream = client.chat.completions.create(
 for chunk in stream:
     if chunk.choices[0].delta.content is not None:
         print(chunk.choices[0].delta.content, end="")
-  ```
-</CodeGroup>
+```
 
-### Function Calling
-
-AgentOps tracks function-calling conversations with OpenAI models:
-
-<CodeGroup>
 ```python Function Calling
-import agentops
 import json
+import agentops
 from openai import OpenAI
 
 # Initialize AgentOps
-agentops.init(<INSERT YOUR API KEY HERE>)
+agentops.init()
 
 # Create OpenAI client
 client = OpenAI()
@@ -206,7 +191,7 @@ else:
 ```
 </CodeGroup>
 
-## Examples
+## More Examples
 <CardGroup cols={2}>
   <Card title="Multi-Tool Orchestration" icon="notebook" href="/v2/examples/openai">
     Advanced multi-tool RAG example
