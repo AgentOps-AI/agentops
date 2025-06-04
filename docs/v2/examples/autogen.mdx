@@ -11,25 +11,63 @@ _View Notebook on <a href={'https://github.com/AgentOps-AI/agentops/blob/main/ex
 
 AgentOps automatically configures itself when it's initialized meaning your agent run data will be tracked and logged to your AgentOps dashboard right away.
 
-First let's install the required packages.
+First let's install the required packages
 
+
+```python
 ## Installation
 <CodeGroup>
   ```bash pip
-  pip install -U autogen-agentchat "autogen-ext[openai]" agentops python-dotenv
+  pip install -U autogen-agentchat
   ```
   ```bash poetry
-  poetry add autogen-agentchat autogen-ext agentops python-dotenv
-  # For autogen-ext[openai] with poetry, you might need to specify openai as an extra:
-  # poetry add autogen-ext -E openai
+  poetry add -U autogen-agentchat
   ```
   ```bash uv
-  uv add autogen-agentchat "autogen-ext[openai]" agentops python-dotenv
+  uv add -U autogen-agentchat
   ```
 </CodeGroup>
+## Installation
+<CodeGroup>
+  ```bash pip
+  pip install -U autogen-agentchat
+  ```
+  ```bash poetry
+  poetry add -U autogen-agentchat
+  ```
+  ```bash uv
+  uv add -U autogen-agentchat
+  ```
+</CodeGroup>
+## Installation
+<CodeGroup>
+  ```bash pip
+  pip install -U autogen-agentchat
+  ```
+  ```bash poetry
+  poetry add -U autogen-agentchat
+  ```
+  ```bash uv
+  uv add -U autogen-agentchat
+  ```
+</CodeGroup>
+## Installation
+<CodeGroup>
+  ```bash pip
+  pip install -U autogen-agentchat
+  ```
+  ```bash poetry
+  poetry add -U autogen-agentchat
+  ```
+  ```bash uv
+  uv add -U autogen-agentchat
+  ```
+</CodeGroup>
+```
 
-## Setup
-Then import them.
+Then import them
+
+
 ```python
 import os
 from dotenv import load_dotenv
@@ -52,15 +90,17 @@ Next, we'll set our API keys. There are several ways to do this, the code below 
 
 [Get an AgentOps API key](https://agentops.ai/settings/projects)
 
-1. Create an environment variable in a `.env` file or other method. By default, the AgentOps `init()` function will look for an environment variable named `AGENTOPS_API_KEY`. Or...
+1. Create an environment variable in a .env file or other method. By default, the AgentOps `init()` function will look for an environment variable named `AGENTOPS_API_KEY`. Or...
 
 2. Replace `<your_agentops_key>` below and pass in the optional `api_key` parameter to the AgentOps `init(api_key=...)` function. Remember not to commit your API key to a public repo!
 
+
 ```python
 load_dotenv()
-os.environ["AGENTOPS_API_KEY"] = os.getenv("AGENTOPS_API_KEY", "your_agentops_api_key_here")
+os.environ["AGENTOPS_API_KEY"] = os.getenv("AGENTOPS_API_KEY", "your_api_key_here")
 os.environ["OPENAI_API_KEY"] = os.getenv("OPENAI_API_KEY", "your_openai_api_key_here")
 ```
+
 
 ```python
 # When initializing AgentOps, you can pass in optional tags to help filter sessions
@@ -68,7 +108,7 @@ agentops.init(auto_start_session=False)
 tracer = agentops.start_trace(trace_name="Microsoft Agent Chat Example", tags=["autogen-chat", "microsoft-autogen", "agentops-example"])
 ```
 
-AutoGen will now start automatically tracking:
+AutoGen will now start automatically tracking
 
 * LLM prompts and completions
 * Token usage and costs
@@ -78,6 +118,8 @@ AutoGen will now start automatically tracking:
 * Errors
 
 # Simple Chat Example
+
+
 ```python
 # Define model and API key
 model_name = "gpt-4-turbo" # Or "gpt-4o" / "gpt-4o-mini" as per migration guide examples
@@ -135,11 +177,6 @@ if __name__ == '__main__':
         asyncio.run(main())
 ```
 
-You can view data on this run at [app.agentops.ai](https://app.agentops.ai).
+You can view data on this run at [app.agentops.ai](app.agentops.ai).
 
 The dashboard will display LLM events for each message sent by each agent, including those made by the human user.
-
-<script type="module" src="/scripts/github_stars.js"></script>
-<script type="module" src="/scripts/scroll-img-fadein-animation.js"></script>
-<script type="module" src="/scripts/button_heartbeat_animation.js"></script>
-<script type="module" src="/scripts/adjust_api_dynamically.js"></script>
