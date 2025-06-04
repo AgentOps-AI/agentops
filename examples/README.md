@@ -27,8 +27,8 @@ This directory contains comprehensive examples demonstrating how to integrate Ag
 - **[`gemini/`](./gemini/)** - Google Gemini API integration
   - `gemini_example.ipynb` - Basic Gemini API usage with AgentOps
 
-- **[`google_adk_example/`](./google_adk_example/)** - Google AI Development Kit examples
-  - `adk_human_approval_example.ipynb` - Human-in-the-loop approval workflows
+- **[`google_adk/`](./google_adk/)** - Google AI Development Kit examples
+  - `human_approval.ipynb` - Human-in-the-loop approval workflows
 
 - **[`langchain/`](./langchain/)** - LangChain framework integration
   - `langchain_examples.ipynb` - Comprehensive LangChain usage examples
@@ -64,7 +64,7 @@ This directory contains comprehensive examples demonstrating how to integrate Ag
 ### Utility Scripts
 
 - **[`generate_documentation.py`](./generate_documentation.py)** - Script to convert Jupyter notebooks to MDX documentation files
-  - Converts notebooks from `examples/` to `docs/v2/integrations/`
+  - Converts notebooks from `examples/` to `docs/v2/examples/`
   - Handles frontmatter, GitHub links, and installation sections
   - Transforms `%pip install` commands to CodeGroup format
 
@@ -82,7 +82,7 @@ The `generate_documentation.py` script automatically converts these Jupyter note
 - Adds proper frontmatter and metadata
 - Transforms installation commands into user-friendly format
 - Generates GitHub links for source notebooks
-- Creates MDX files in `docs/v2/integrations/`
+- Creates MDX files in `docs/v2/examples/`
 
 ### Usage
 ```bash
@@ -100,7 +100,7 @@ When adding new examples:
 5. Follow the existing naming conventions
 6. Use the `generate_documentation.py` script to create documentation files
 7. Add the example notebook to the main `README.md` for visibility
-8. Add the generated documentation to the `docs/v2/integrations/examples.mdx` for website visibility
+8. Add the generated documentation to the `docs/v2/examples/` directory for website visibility
 9. Submit a pull request with a clear description of your changes
 
 ## 📚 Additional Resources
