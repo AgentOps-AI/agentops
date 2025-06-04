@@ -11,7 +11,6 @@ Usage:
 """
 
 import argparse
-import os
 import re
 import subprocess
 import sys
@@ -50,8 +49,8 @@ def process_pip_installations(markdown_content):
     if not packages:
         return markdown_content
 
-    # Deduplicate packages while preserving order
-    unique_packages = " ".join(dict.fromkeys(packages))
+    # Deduplicate packages
+    unique_packages = " ".join(sorted(set(packages)))
 
     # Remove code blocks containing pip installs
     content = re.sub(r"```python\n(?:[^`])*?%pip install[^\n]*\n(?:[^`])*?```\n?", "", markdown_content)
@@ -79,7 +78,7 @@ def process_pip_installations(markdown_content):
 </CodeGroup>
 """
 
-    lines.insert(min(line_pos, len(lines)), installation_section)
+    lines.insert(line_pos, installation_section)
     return "\n".join(lines)
 
 
@@ -135,17 +134,18 @@ def main():
     notebook_path = parser.parse_args().notebook_path
 
     # Validate notebook path
-    if not os.path.exists(notebook_path):
+    notebook_file = Path(notebook_path)
+    if not notebook_file.exists():
         sys.exit(f"Error: Notebook file not found: {notebook_path}")
 
-    if not notebook_path.endswith(".ipynb"):
+    if notebook_file.suffix != ".ipynb":
         sys.exit(f"Error: File must be a Jupyter notebook (.ipynb): {notebook_path}")
 
-    if not notebook_path.startswith("examples/"):
+    if not str(notebook_file).startswith("examples/"):
         sys.exit(f"Error: Notebook must be in the examples/ directory: {notebook_path}")
 
     # Generate output path
-    folder_name = Path(notebook_path).parent.name.replace("_examples", "")
+    folder_name = notebook_file.parent.name
     output_path = Path(f"docs/v2/examples/{folder_name}.mdx")
 
     print(f"Processing: {notebook_path} -> {output_path}")
@@ -158,7 +158,6 @@ def main():
     existing_frontmatter = get_existing_frontmatter(output_path)
 
     if existing_frontmatter:
-        print("Preserving existing frontmatter with special configurations")
         final_content = generate_mdx_content(notebook_path, processed_content, existing_frontmatter)
     else:
         print("Generating new frontmatter and content")
