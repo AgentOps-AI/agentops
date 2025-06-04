@@ -23,7 +23,7 @@ operation = task
 
 # For backward compatibility: @session decorator calls @trace decorator
 @functools.wraps(trace)
-def session(*args, **kwargs):
+def session(*args, **kwargs):  # noqa: F811
     """@deprecated Use @agentops.trace instead. Wraps the @trace decorator for backward compatibility."""
     logger.info(colored("@agentops.session decorator is deprecated. Please use @agentops.trace instead.", "yellow"))
     # If called as @session or @session(...)
