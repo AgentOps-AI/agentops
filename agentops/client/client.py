@@ -11,7 +11,7 @@ from agentops.sdk.core import TracingCore, TraceContext
 from agentops.legacy import Session
 
 # Global variables to hold the client's auto-started trace and its legacy session wrapper
-_client_init_trace_context: Optional[TraceContext] = None
+_client_init_tracer: Optional[TraceContext] = None
 _client_legacy_session_for_init_trace: Optional[Session] = None
 
 # Single atexit handler registered flag
@@ -20,18 +20,18 @@ _atexit_registered = False
 
 def _end_init_trace_atexit():
     """Global atexit handler to end the client's auto-initialized trace during shutdown."""
-    global _client_init_trace_context, _client_legacy_session_for_init_trace
-    if _client_init_trace_context is not None:
+    global _client_init_tracer, _client_legacy_session_for_init_trace
+    if _client_init_tracer is not None:
         logger.debug("Auto-ending client's init trace during shutdown.")
         try:
             # Use TracingCore to end the trace directly
             tracing_core = TracingCore.get_instance()
-            if tracing_core.initialized and _client_init_trace_context.span.is_recording():
-                tracing_core.end_trace(_client_init_trace_context, end_state="Shutdown")
+            if tracing_core.initialized and _client_init_tracer.span.is_recording():
+                tracing_core.end_trace(_client_init_tracer, end_state="Shutdown")
         except Exception as e:
             logger.warning(f"Error ending client's init trace during shutdown: {e}")
         finally:
-            _client_init_trace_context = None
+            _client_init_tracer = None
             _client_legacy_session_for_init_trace = None  # Clear its legacy wrapper too
 
 
@@ -40,7 +40,7 @@ class Client:
 
     config: Config
     _initialized: bool
-    _init_trace_context: Optional[TraceContext] = None  # Stores the context of the auto-started trace
+    _init_tracer: Optional[TraceContext] = None  # Stores the context of the auto-started trace
     _legacy_session_for_init_trace: Optional[
         Session
     ] = None  # Stores the legacy Session wrapper for the auto-started trace
@@ -53,7 +53,7 @@ class Client:
         if cls.__instance is None:
             cls.__instance = super(Client, cls).__new__(cls)
             # Initialize instance variables that should only be set once per instance
-            cls.__instance._init_trace_context = None
+            cls.__instance._init_tracer = None
             cls.__instance._legacy_session_for_init_trace = None
         return cls.__instance
 
@@ -66,7 +66,7 @@ class Client:
         ):  # Ensure init logic runs only once per actual initialization intent
             self.config = Config()  # Initialize config here for the instance
             self._initialized = False
-            # self._init_trace_context = None # Already done in __new__
+            # self._init_tracer = None # Already done in __new__
             # self._legacy_session_for_init_trace = None # Already done in __new__
 
     def init(self, **kwargs: Any) -> None:  # Return type updated to None
@@ -81,10 +81,10 @@ class Client:
             logger.warning("AgentOps Client being re-initialized with a different API key. This is unusual.")
             # Reset initialization status to allow re-init with new key/config
             self._initialized = False
-            if self._init_trace_context and self._init_trace_context.span.is_recording():
+            if self._init_tracer and self._init_tracer.span.is_recording():
                 logger.warning("Ending previously auto-started trace due to re-initialization.")
-                TracingCore.get_instance().end_trace(self._init_trace_context, "Reinitialized")
-            self._init_trace_context = None
+                TracingCore.get_instance().end_trace(self._init_tracer, "Reinitialized")
+            self._init_tracer = None
             self._legacy_session_for_init_trace = None
 
         if self.initialized:
@@ -133,31 +133,31 @@ class Client:
 
         # Auto-start trace if configured
         if self.config.auto_start_session:
-            if self._init_trace_context is None or not self._init_trace_context.span.is_recording():
+            if self._init_tracer is None or not self._init_tracer.span.is_recording():
                 logger.debug("Auto-starting init trace.")
                 trace_name = self.config.trace_name or "default"
-                self._init_trace_context = tracing_core.start_trace(
+                self._init_tracer = tracing_core.start_trace(
                     trace_name=trace_name,
                     tags=list(self.config.default_tags) if self.config.default_tags else None,
                     is_init_trace=True,
                 )
-                if self._init_trace_context:
-                    self._legacy_session_for_init_trace = Session(self._init_trace_context)
+                if self._init_tracer:
+                    self._legacy_session_for_init_trace = Session(self._init_tracer)
 
                     # For backward compatibility, also update the global references in legacy and client modules
                     # These globals are what old code might have been using via agentops.legacy.get_session() or similar indirect access.
-                    global _client_init_trace_context, _client_legacy_session_for_init_trace
-                    _client_init_trace_context = self._init_trace_context
+                    global _client_init_tracer, _client_legacy_session_for_init_trace
+                    _client_init_tracer = self._init_tracer
                     _client_legacy_session_for_init_trace = self._legacy_session_for_init_trace
 
-                    # Update legacy module's _current_session and _current_trace_context
+                    # Update legacy module's _current_session and _current_tracer
                     # This is tricky; direct access to another module's globals is not ideal.
                     # Prefer explicit calls if possible, but for maximum BC:
                     try:
                         import agentops.legacy
 
                         agentops.legacy._current_session = self._legacy_session_for_init_trace
-                        agentops.legacy._current_trace_context = self._init_trace_context
+                        agentops.legacy._current_tracer = self._init_tracer
                     except ImportError:
                         pass  # Should not happen
 
@@ -196,7 +196,7 @@ class Client:
     # Remove the old __instance = None at the end of the class definition if it's a repeat
     # __instance = None # This was a class variable, should be defined once
 
-    # Make _init_trace_context and _legacy_session_for_init_trace accessible
+    # Make _init_tracer and _legacy_session_for_init_trace accessible
     # to the atexit handler if it becomes a static/class method or needs access
     # For now, the atexit handler is global and uses global vars copied from these.
 
@@ -210,4 +210,4 @@ class Client:
 # For now, _client_legacy_session_for_init_trace is the primary global for the auto-init trace's legacy Session.
 
 # Remove the old global _active_session defined at the top of this file if it's no longer the primary mechanism.
-# The new globals _client_init_trace_context and _client_legacy_session_for_init_trace handle the auto-init trace.
+# The new globals _client_init_tracer and _client_legacy_session_for_init_trace handle the auto-init trace.

@@ -32,12 +32,12 @@ class TestURLLogging(unittest.TestCase):
         mock_make_span.return_value = (mock_span, mock_context, mock_token)
 
         # Call start_trace
-        trace_context = self.tracing_core.start_trace(trace_name="test_trace")
+        tracer = self.tracing_core.start_trace(trace_name="test_trace")
 
         # Assert that log_trace_url was called with the span and title
         mock_log_trace_url.assert_called_once_with(mock_span, title="test_trace")
-        self.assertIsInstance(trace_context, TraceContext)
-        self.assertEqual(trace_context.span, mock_span)
+        self.assertIsInstance(tracer, TraceContext)
+        self.assertEqual(tracer.span, mock_span)
 
     @patch("agentops.sdk.core.log_trace_url")
     @patch("agentops.sdk.decorators.utility._finalize_span")
@@ -48,10 +48,10 @@ class TestURLLogging(unittest.TestCase):
         mock_span.name = "test_trace"
         mock_span.get_span_context.return_value.span_id = 12345
         mock_token = MagicMock()
-        trace_context = TraceContext(mock_span, mock_token)
+        tracer = TraceContext(mock_span, mock_token)
 
         # Call end_trace
-        self.tracing_core.end_trace(trace_context, "Success")
+        self.tracing_core.end_trace(tracer, "Success")
 
         # Assert that log_trace_url was called with the span and title
         mock_log_trace_url.assert_called_once_with(mock_span, title="test_trace")
@@ -71,11 +71,11 @@ class TestURLLogging(unittest.TestCase):
         mock_log_trace_url.side_effect = Exception("URL logging failed")
 
         # Call start_trace - should not raise exception
-        trace_context = self.tracing_core.start_trace(trace_name="test_trace")
+        tracer = self.tracing_core.start_trace(trace_name="test_trace")
 
         # Assert that trace was still created successfully
-        self.assertIsInstance(trace_context, TraceContext)
-        self.assertEqual(trace_context.span, mock_span)
+        self.assertIsInstance(tracer, TraceContext)
+        self.assertEqual(tracer.span, mock_span)
         mock_log_trace_url.assert_called_once_with(mock_span, title="test_trace")
 
     @patch("agentops.sdk.core.log_trace_url")
@@ -87,13 +87,13 @@ class TestURLLogging(unittest.TestCase):
         mock_span.name = "test_trace"
         mock_span.get_span_context.return_value.span_id = 12345
         mock_token = MagicMock()
-        trace_context = TraceContext(mock_span, mock_token)
+        tracer = TraceContext(mock_span, mock_token)
 
         # Make log_trace_url raise an exception
         mock_log_trace_url.side_effect = Exception("URL logging failed")
 
         # Call end_trace - should not raise exception
-        self.tracing_core.end_trace(trace_context, "Success")
+        self.tracing_core.end_trace(tracer, "Success")
 
         # Assert that finalize_span was still called
         mock_finalize_span.assert_called_once()
@@ -111,11 +111,11 @@ class TestURLLogging(unittest.TestCase):
         mock_make_span.return_value = (mock_span, mock_context, mock_token)
 
         # Call start_trace with tags
-        trace_context = self.tracing_core.start_trace(trace_name="tagged_trace", tags=["test", "integration"])
+        tracer = self.tracing_core.start_trace(trace_name="tagged_trace", tags=["test", "integration"])
 
         # Assert that log_trace_url was called with the span and title
         mock_log_trace_url.assert_called_once_with(mock_span, title="tagged_trace")
-        self.assertIsInstance(trace_context, TraceContext)
+        self.assertIsInstance(tracer, TraceContext)
 
 
 class TestSessionDecoratorURLLogging(unittest.TestCase):

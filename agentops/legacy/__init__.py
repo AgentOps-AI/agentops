@@ -15,7 +15,7 @@ from agentops.logging import logger
 from agentops.sdk.core import TracingCore, TraceContext
 
 _current_session: Optional["Session"] = None
-_current_trace_context: Optional[TraceContext] = None
+_current_tracer: Optional[TraceContext] = None
 
 
 class Session:
@@ -28,22 +28,22 @@ class Session:
     - end_session(): Called when a CrewAI run completes
     """
 
-    def __init__(self, trace_context: Optional[TraceContext]):
-        self.trace_context = trace_context
+    def __init__(self, tracer: Optional[TraceContext]):
+        self.tracer = tracer
 
     @property
     def span(self) -> Optional[Any]:
-        return self.trace_context.span if self.trace_context else None
+        return self.tracer.span if self.tracer else None
 
     @property
     def token(self) -> Optional[Any]:
-        return self.trace_context.token if self.trace_context else None
+        return self.tracer.token if self.tracer else None
 
     def __del__(self):
-        if self.trace_context and self.trace_context.span and self.trace_context.span.is_recording():
-            if not self.trace_context.is_init_trace:
+        if self.tracer and self.tracer.span and self.tracer.span.is_recording():
+            if not self.tracer.is_init_trace:
                 logger.warning(
-                    f"Legacy Session (trace ID: {self.trace_context.span.get_span_context().span_id}) \
+                    f"Legacy Session (trace ID: {self.tracer.span.get_span_context().span_id}) \
 was garbage collected but its trace might still be recording. Ensure legacy sessions are ended with end_session()."
                 )
 
@@ -67,7 +67,7 @@ def start_session(
     @deprecated Use agentops.start_trace() instead.
     Starts a legacy AgentOps session. Calls TracingCore.start_trace internally.
     """
-    global _current_session, _current_trace_context
+    global _current_session, _current_tracer
     tracing_core = TracingCore.get_instance()
 
     if not tracing_core.initialized:
@@ -79,33 +79,33 @@ def start_session(
                 logger.warning("AgentOps client init failed during legacy start_session. Creating dummy session.")
                 dummy_session = Session(None)
                 _current_session = dummy_session
-                _current_trace_context = None
+                _current_tracer = None
                 return dummy_session
         except Exception as e:
             logger.warning(f"AgentOps client init failed: {str(e)}. Creating dummy session.")
             dummy_session = Session(None)
             _current_session = dummy_session
-            _current_trace_context = None
+            _current_tracer = None
             return dummy_session
 
-    trace_context = tracing_core.start_trace(trace_name="session", tags=tags)
-    if trace_context is None:
+    tracer = tracing_core.start_trace(trace_name="session", tags=tags)
+    if tracer is None:
         logger.error("Failed to start trace via TracingCore. Returning dummy session.")
         dummy_session = Session(None)
         _current_session = dummy_session
-        _current_trace_context = None
+        _current_tracer = None
         return dummy_session
 
-    session_obj = Session(trace_context)
+    session_obj = Session(tracer)
     _current_session = session_obj
-    _current_trace_context = trace_context
+    _current_tracer = tracer
 
     try:
         import agentops.client.client
 
         agentops.client.client._active_session = session_obj  # type: ignore
-        if hasattr(agentops.client.client, "_active_trace_context"):
-            agentops.client.client._active_trace_context = trace_context  # type: ignore
+        if hasattr(agentops.client.client, "_active_tracer"):
+            agentops.client.client._active_tracer = tracer  # type: ignore
     except (ImportError, AttributeError):
         pass
     return session_obj
@@ -128,61 +128,55 @@ def end_session(session_or_status: Any = None, **kwargs: Any) -> None:
     Ends a legacy AgentOps session. Calls TracingCore.end_trace internally.
     Supports multiple calling patterns for backward compatibility.
     """
-    global _current_session, _current_trace_context
+    global _current_session, _current_tracer
     tracing_core = TracingCore.get_instance()
 
     if not tracing_core.initialized:
         logger.debug("Ignoring end_session: TracingCore not initialized.")
         return
 
-    target_trace_context: Optional[TraceContext] = None
+    target_tracer: Optional[TraceContext] = None
     end_state_from_args = "Success"
     extra_attributes = kwargs.copy()
 
     if isinstance(session_or_status, Session):
-        target_trace_context = session_or_status.trace_context
+        target_tracer = session_or_status.tracer
         if "end_state" in extra_attributes:
             end_state_from_args = str(extra_attributes.pop("end_state"))
     elif isinstance(session_or_status, str):
         end_state_from_args = session_or_status
-        target_trace_context = _current_trace_context
+        target_tracer = _current_tracer
         if "end_state" in extra_attributes:
             end_state_from_args = str(extra_attributes.pop("end_state"))
     elif session_or_status is None and kwargs:
-        target_trace_context = _current_trace_context
+        target_tracer = _current_tracer
         if "end_state" in extra_attributes:
             end_state_from_args = str(extra_attributes.pop("end_state"))
     else:
-        target_trace_context = _current_trace_context
+        target_tracer = _current_tracer
         if "end_state" in extra_attributes:
             end_state_from_args = str(extra_attributes.pop("end_state"))
 
-    if not target_trace_context:
+    if not target_tracer:
         logger.warning("end_session called but no active trace context found.")
         return
 
-    if target_trace_context.span and extra_attributes:
-        _set_span_attributes(target_trace_context.span, extra_attributes)
+    if target_tracer.span and extra_attributes:
+        _set_span_attributes(target_tracer.span, extra_attributes)
 
-    tracing_core.end_trace(target_trace_context, end_state=end_state_from_args)
+    tracing_core.end_trace(target_tracer, end_state=end_state_from_args)
 
-    if target_trace_context is _current_trace_context:
+    if target_tracer is _current_tracer:
         _current_session = None
-        _current_trace_context = None
+        _current_tracer = None
 
     try:
         import agentops.client.client
 
-        if (
-            hasattr(agentops.client.client, "_active_trace_context")
-            and agentops.client.client._active_trace_context is target_trace_context
-        ):  # type: ignore
-            agentops.client.client._active_trace_context = None  # type: ignore
+        if hasattr(agentops.client.client, "_active_tracer") and agentops.client.client._active_tracer is target_tracer:  # type: ignore
+            agentops.client.client._active_tracer = None  # type: ignore
             agentops.client.client._active_session = None  # type: ignore
-        elif (
-            hasattr(agentops.client.client, "_init_trace_context")
-            and agentops.client.client._init_trace_context is target_trace_context
-        ):  # type: ignore
+        elif hasattr(agentops.client.client, "_init_tracer") and agentops.client.client._init_tracer is target_tracer:  # type: ignore
             logger.debug("Legacy end_session called on client's auto-init trace. This is unusual.")
     except (ImportError, AttributeError):
         pass
@@ -198,12 +192,12 @@ def end_all_sessions() -> None:
         return
 
     # Use the new end_trace functionality to end all active traces
-    tracing_core.end_trace(trace_context=None, end_state="Success")
+    tracing_core.end_trace(tracer=None, end_state="Success")
 
     # Clear legacy global state
-    global _current_session, _current_trace_context
+    global _current_session, _current_tracer
     _current_session = None
-    _current_trace_context = None
+    _current_tracer = None
 
 
 def ToolEvent(*args: Any, **kwargs: Any) -> None:

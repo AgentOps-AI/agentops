@@ -31,16 +31,16 @@ def mock_api_client():
 
 
 @pytest.fixture(scope="function")
-def mock_trace_context():
+def mock_tracer():
     """Mock the TraceContext creation"""
     mock_span = MagicMock()
     mock_token = MagicMock()
-    mock_trace_context_instance = MagicMock()
-    mock_trace_context_instance.span = mock_span
-    mock_trace_context_instance.token = mock_token
-    mock_trace_context_instance.is_init_trace = False
+    mock_tracer_instance = MagicMock()
+    mock_tracer_instance.span = mock_span
+    mock_tracer_instance.token = mock_token
+    mock_tracer_instance.is_init_trace = False
 
-    return mock_trace_context_instance
+    return mock_tracer_instance
 
 
 @pytest.fixture(scope="function")
@@ -52,22 +52,22 @@ def reset_client():
     agentops._client = agentops.Client()
     # Reset all client state
     agentops._client._initialized = False
-    agentops._client._init_trace_context = None
+    agentops._client._init_tracer = None
     agentops._client._legacy_session_for_init_trace = None
     yield
     # Clean up after test
     try:
         if hasattr(agentops._client, "_initialized"):
             agentops._client._initialized = False
-        if hasattr(agentops._client, "_init_trace_context"):
-            agentops._client._init_trace_context = None
+        if hasattr(agentops._client, "_init_tracer"):
+            agentops._client._init_tracer = None
         if hasattr(agentops._client, "_legacy_session_for_init_trace"):
             agentops._client._legacy_session_for_init_trace = None
     except:
         pass
 
 
-def test_explicit_init_then_explicit_start_trace(mock_tracing_core, mock_api_client, mock_trace_context, reset_client):
+def test_explicit_init_then_explicit_start_trace(mock_tracing_core, mock_api_client, mock_tracer, reset_client):
     """Test explicitly initializing followed by explicitly starting a trace"""
     import agentops
 
@@ -78,23 +78,23 @@ def test_explicit_init_then_explicit_start_trace(mock_tracing_core, mock_api_cli
     mock_tracing_core.start_trace.assert_not_called()
 
     # Mock the start_trace method to return our mock trace context
-    mock_tracing_core.start_trace.return_value = mock_trace_context
+    mock_tracing_core.start_trace.return_value = mock_tracer
 
     # Explicitly start a trace
-    trace_context = agentops.start_trace(trace_name="test_trace", tags=["test"])
+    tracer = agentops.start_trace(trace_name="test_trace", tags=["test"])
 
     # Verify the trace was created
     mock_tracing_core.start_trace.assert_called_once_with(trace_name="test_trace", tags=["test"])
-    assert trace_context == mock_trace_context
+    assert tracer == mock_tracer
 
 
-def test_auto_start_session_true(mock_tracing_core, mock_api_client, mock_trace_context, reset_client):
+def test_auto_start_session_true(mock_tracing_core, mock_api_client, mock_tracer, reset_client):
     """Test initializing with auto_start_session=True"""
     import agentops
     from agentops.legacy import Session
 
     # Mock the start_trace method to return our mock trace context
-    mock_tracing_core.start_trace.return_value = mock_trace_context
+    mock_tracing_core.start_trace.return_value = mock_tracer
 
     # Initialize with auto_start_session=True
     result = agentops.init(api_key="test-api-key", auto_start_session=True)
@@ -103,16 +103,16 @@ def test_auto_start_session_true(mock_tracing_core, mock_api_client, mock_trace_
     mock_tracing_core.start_trace.assert_called_once()
     # init() should return a Session object when auto-starting a session
     assert isinstance(result, Session)
-    assert result.trace_context == mock_trace_context
+    assert result.tracer == mock_tracer
 
 
-def test_auto_start_session_default(mock_tracing_core, mock_api_client, mock_trace_context, reset_client):
+def test_auto_start_session_default(mock_tracing_core, mock_api_client, mock_tracer, reset_client):
     """Test initializing with default auto_start_session behavior"""
     import agentops
     from agentops.legacy import Session
 
     # Mock the start_trace method to return our mock trace context
-    mock_tracing_core.start_trace.return_value = mock_trace_context
+    mock_tracing_core.start_trace.return_value = mock_tracer
 
     # Initialize without explicitly setting auto_start_session (defaults to True)
     result = agentops.init(api_key="test-api-key")
@@ -121,7 +121,7 @@ def test_auto_start_session_default(mock_tracing_core, mock_api_client, mock_tra
     assert agentops._client.initialized
     # Since auto_start_session defaults to True, init() should return a Session object
     assert isinstance(result, Session)
-    assert result.trace_context == mock_trace_context
+    assert result.tracer == mock_tracer
 
 
 def test_start_trace_without_init():
@@ -156,18 +156,18 @@ def test_start_trace_without_init():
             assert result is None
 
 
-def test_end_trace(mock_tracing_core, mock_trace_context):
+def test_end_trace(mock_tracing_core, mock_tracer):
     """Test ending a trace"""
     import agentops
 
     # End the trace
-    agentops.end_trace(mock_trace_context, end_state="Success")
+    agentops.end_trace(mock_tracer, end_state="Success")
 
     # Verify end_trace was called on TracingCore
-    mock_tracing_core.end_trace.assert_called_once_with(trace_context=mock_trace_context, end_state="Success")
+    mock_tracing_core.end_trace.assert_called_once_with(tracer=mock_tracer, end_state="Success")
 
 
-def test_session_decorator_creates_trace(mock_tracing_core, mock_api_client, mock_trace_context, reset_client):
+def test_session_decorator_creates_trace(mock_tracing_core, mock_api_client, mock_tracer, reset_client):
     """Test that the @session decorator creates a trace-level span"""
     import agentops
     from agentops.sdk.decorators import session
@@ -176,7 +176,7 @@ def test_session_decorator_creates_trace(mock_tracing_core, mock_api_client, moc
     agentops.init(api_key="test-api-key", auto_start_session=False)
 
     # Mock the start_trace and end_trace methods
-    mock_tracing_core.start_trace.return_value = mock_trace_context
+    mock_tracing_core.start_trace.return_value = mock_tracer
 
     @session(name="test_session", tags=["decorator_test"])
     def test_function():
@@ -194,7 +194,7 @@ def test_session_decorator_creates_trace(mock_tracing_core, mock_api_client, moc
     assert mock_tracing_core.end_trace.call_count >= 1
 
 
-def test_session_decorator_with_exception(mock_tracing_core, mock_api_client, mock_trace_context, reset_client):
+def test_session_decorator_with_exception(mock_tracing_core, mock_api_client, mock_tracer, reset_client):
     """Test that the @session decorator handles exceptions properly"""
     import agentops
     from agentops.sdk.decorators import session
@@ -203,7 +203,7 @@ def test_session_decorator_with_exception(mock_tracing_core, mock_api_client, mo
     agentops.init(api_key="test-api-key", auto_start_session=False)
 
     # Mock the start_trace method
-    mock_tracing_core.start_trace.return_value = mock_trace_context
+    mock_tracing_core.start_trace.return_value = mock_tracer
 
     @session(name="failing_session")
     def failing_function():
@@ -219,7 +219,7 @@ def test_session_decorator_with_exception(mock_tracing_core, mock_api_client, mo
     assert mock_tracing_core.end_trace.call_count >= 1
 
 
-def test_legacy_start_session_compatibility(mock_tracing_core, mock_api_client, mock_trace_context, reset_client):
+def test_legacy_start_session_compatibility(mock_tracing_core, mock_api_client, mock_tracer, reset_client):
     """Test that legacy start_session still works and calls TracingCore.start_trace"""
     import agentops
     from agentops.legacy import Session
@@ -228,21 +228,21 @@ def test_legacy_start_session_compatibility(mock_tracing_core, mock_api_client, 
     agentops.init(api_key="test-api-key", auto_start_session=False)
 
     # Mock the start_trace method
-    mock_tracing_core.start_trace.return_value = mock_trace_context
+    mock_tracing_core.start_trace.return_value = mock_tracer
 
     # Start a legacy session
     session = agentops.start_session(tags=["legacy_test"])
 
     # Verify the session was created
     assert isinstance(session, Session)
-    assert session.trace_context == mock_trace_context
+    assert session.tracer == mock_tracer
 
     # Verify that TracingCore.start_trace was called
     # Note: May be called multiple times due to initialization
     assert mock_tracing_core.start_trace.call_count >= 1
 
 
-def test_legacy_end_session_compatibility(mock_tracing_core, mock_api_client, mock_trace_context, reset_client):
+def test_legacy_end_session_compatibility(mock_tracing_core, mock_api_client, mock_tracer, reset_client):
     """Test that legacy end_session still works and calls TracingCore.end_trace"""
     import agentops
     from agentops.legacy import Session
@@ -251,13 +251,13 @@ def test_legacy_end_session_compatibility(mock_tracing_core, mock_api_client, mo
     agentops.init(api_key="test-api-key", auto_start_session=False)
 
     # Create a legacy session object
-    session = Session(mock_trace_context)
+    session = Session(mock_tracer)
 
     # End the session
     agentops.end_session(session)
 
     # Verify that TracingCore.end_trace was called
-    mock_tracing_core.end_trace.assert_called_once_with(mock_trace_context, end_state="Success")
+    mock_tracing_core.end_trace.assert_called_once_with(mock_tracer, end_state="Success")
 
 
 def test_no_double_init(mock_tracing_core, mock_api_client, reset_client):
@@ -277,12 +277,12 @@ def test_no_double_init(mock_tracing_core, mock_api_client, reset_client):
     assert mock_api_client.call_count == call_count
 
 
-def test_client_initialization_behavior(mock_tracing_core, mock_api_client, mock_trace_context, reset_client):
+def test_client_initialization_behavior(mock_tracing_core, mock_api_client, mock_tracer, reset_client):
     """Test basic client initialization behavior"""
     import agentops
 
     # Mock the start_trace method
-    mock_tracing_core.start_trace.return_value = mock_trace_context
+    mock_tracing_core.start_trace.return_value = mock_tracer
 
     # Test that initialization works
     agentops.init(api_key="test-api-key", auto_start_session=False)
@@ -308,13 +308,13 @@ def test_multiple_concurrent_traces(mock_tracing_core, mock_api_client, reset_cl
     agentops.init(api_key="test-api-key", auto_start_session=False)
 
     # Create mock trace contexts for different traces
-    mock_trace_context_1 = MagicMock()
-    mock_trace_context_2 = MagicMock()
+    mock_tracer_1 = MagicMock()
+    mock_tracer_2 = MagicMock()
 
     # Mock start_trace to return different contexts
     mock_tracing_core.start_trace.side_effect = [
-        mock_trace_context_1,
-        mock_trace_context_2,
+        mock_tracer_1,
+        mock_tracer_2,
     ]
 
     # Start multiple traces
@@ -322,27 +322,27 @@ def test_multiple_concurrent_traces(mock_tracing_core, mock_api_client, reset_cl
     trace2 = agentops.start_trace(trace_name="trace2", tags=["test2"])
 
     # Verify both traces were created
-    assert trace1 == mock_trace_context_1
-    assert trace2 == mock_trace_context_2
+    assert trace1 == mock_tracer_1
+    assert trace2 == mock_tracer_2
 
     # Verify start_trace was called twice
     assert mock_tracing_core.start_trace.call_count == 2
 
 
-def test_trace_context_properties(mock_trace_context):
+def test_tracer_properties(mock_tracer):
     """Test that TraceContext properties work correctly"""
     from agentops.legacy import Session
 
     # Create a legacy session with the mock trace context
-    session = Session(mock_trace_context)
+    session = Session(mock_tracer)
 
     # Test that properties are accessible
-    assert session.span == mock_trace_context.span
-    assert session.token == mock_trace_context.token
-    assert session.trace_context == mock_trace_context
+    assert session.span == mock_tracer.span
+    assert session.token == mock_tracer.token
+    assert session.tracer == mock_tracer
 
 
-def test_session_decorator_async_function(mock_tracing_core, mock_api_client, mock_trace_context, reset_client):
+def test_session_decorator_async_function(mock_tracing_core, mock_api_client, mock_tracer, reset_client):
     """Test that the @session decorator works with async functions"""
     import agentops
     import asyncio
@@ -352,7 +352,7 @@ def test_session_decorator_async_function(mock_tracing_core, mock_api_client, mo
     agentops.init(api_key="test-api-key", auto_start_session=False)
 
     # Mock the start_trace method
-    mock_tracing_core.start_trace.return_value = mock_trace_context
+    mock_tracing_core.start_trace.return_value = mock_tracer
 
     @session(name="async_test_session")
     async def async_test_function():
@@ -370,7 +370,7 @@ def test_session_decorator_async_function(mock_tracing_core, mock_api_client, mo
     assert mock_tracing_core.end_trace.call_count >= 1
 
 
-def test_trace_context_creation():
+def test_tracer_creation():
     """Test that TraceContext can be created with proper attributes"""
     from agentops.sdk.core import TraceContext
 
@@ -378,11 +378,11 @@ def test_trace_context_creation():
     mock_token = MagicMock()
 
     # Test creating a TraceContext
-    trace_context = TraceContext(span=mock_span, token=mock_token, is_init_trace=False)
+    tracer = TraceContext(span=mock_span, token=mock_token, is_init_trace=False)
 
-    assert trace_context.span == mock_span
-    assert trace_context.token == mock_token
-    assert trace_context.is_init_trace == False
+    assert tracer.span == mock_span
+    assert tracer.token == mock_token
+    assert tracer.is_init_trace == False
 
 
 def test_session_management_integration():
@@ -408,19 +408,19 @@ def test_session_management_integration():
             agentops.init(api_key="test-api-key", auto_start_session=False)
 
             # Create mock trace context
-            mock_trace_context = MagicMock()
-            mock_instance.start_trace.return_value = mock_trace_context
+            mock_tracer = MagicMock()
+            mock_instance.start_trace.return_value = mock_tracer
 
             # Test new API
-            trace_context = agentops.start_trace(trace_name="new_api_trace")
-            assert trace_context == mock_trace_context
+            tracer = agentops.start_trace(trace_name="new_api_trace")
+            assert tracer == mock_tracer
 
             # Test legacy API
             session = agentops.start_session(tags=["legacy"])
-            assert session.trace_context == mock_trace_context
+            assert session.tracer == mock_tracer
 
             # Test ending both
-            agentops.end_trace(trace_context)
+            agentops.end_trace(tracer)
             agentops.end_session(session)
 
             # Verify calls were made

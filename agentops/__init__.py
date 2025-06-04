@@ -208,20 +208,20 @@ def start_trace(
     return tracing_core.start_trace(trace_name=trace_name, tags=tags)
 
 
-def end_trace(trace_context: Optional[TraceContext] = None, end_state: str = "Success") -> None:
+def end_trace(tracer: Optional[TraceContext] = None, end_state: str = "Success") -> None:
     """
     Ends a trace (its root span) and finalizes it.
-    If no trace_context is provided, ends all active session spans.
+    If no tracer is provided, ends all active session spans.
 
     Args:
-        trace_context: The TraceContext object returned by start_trace. If None, ends all active traces.
+        tracer: The TraceContext object returned by start_trace. If None, ends all active traces.
         end_state: The final state of the trace (e.g., "Success", "Failure", "Error").
     """
     tracing_core = TracingCore.get_instance()
     if not tracing_core.initialized:
         logger.warning("AgentOps SDK not initialized. Cannot end trace.")
         return
-    tracing_core.end_trace(trace_context=trace_context, end_state=end_state)
+    tracing_core.end_trace(tracer=tracer, end_state=end_state)
 
 
 __all__ = [
