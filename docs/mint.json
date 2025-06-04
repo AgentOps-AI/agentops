@@ -95,7 +95,7 @@
     {
       "group": "Integrations",
       "pages": [
-        "v1/integrations/agentssdk",
+        "v1/integrations/agents_sdk",
         "v1/integrations/ai21",
         "v1/integrations/anthropic",
         "v1/integrations/autogen",
@@ -176,7 +176,7 @@
         "v2/integrations/langchain",
         "v2/integrations/litellm",
         "v2/integrations/openai",
-        "v2/integrations/agentssdk",
+        "v2/integrations/agents_sdk",
         "v2/integrations/ibm_watsonx_ai",
         "v2/integrations/xai"
       ],
