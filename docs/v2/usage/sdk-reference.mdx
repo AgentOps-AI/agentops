@@ -25,7 +25,7 @@ Initializes the AgentOps SDK and automatically starts tracking your application.
 - `default_tags` (List[str], optional): Default tags for the sessions that can be used for grouping or sorting later (e.g. ["GPT-4"]).
 - `tags` (List[str], optional): [Deprecated] Use `default_tags` instead.
 - `instrument_llm_calls` (bool, optional): Whether to instrument LLM calls automatically. Defaults to True.
-- `auto_start_session` (bool, optional): Whether to start a session automatically when the client is created. Defaults to True.
+- `auto_start_session` (bool, optional): Whether to start a session automatically when the client is created. Set to False if running in a Jupyter Notebook. Defaults to True.
 - `auto_init` (bool, optional): Whether to automatically initialize the client on import. Defaults to True.
 - `skip_auto_end_session` (bool, optional): Don't automatically end session based on your framework's decision-making. Defaults to False.
 - `env_data_opt_out` (bool, optional): Whether to opt out of collecting environment data. Defaults to False.
@@ -109,6 +109,8 @@ These functions help you manage the lifecycle of tracking traces.
 
 Starts a new AgentOps trace manually. This is useful when you've disabled automatic session creation or need multiple separate traces.
 
+Manually managing traces is required when running in a Jupyter Notebook as there is no end state.
+
 **Parameters**:
 
 - `trace_name` (str, optional): Name for the trace. If not provided, a default name will be used.
@@ -133,6 +135,8 @@ trace = agentops.start_trace("customer-service-workflow", tags=["customer-query"
 ### `end_trace()`
 
 Ends a specific trace or all active traces.
+
+Manually managing traces is required when running in a Jupyter Notebook as there is no end state.
 
 **Parameters**:
 
