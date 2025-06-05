@@ -12,7 +12,7 @@ from opentelemetry.trace import SpanContext, set_span_in_context
 
 from agentops.helpers.serialization import safe_serialize
 from agentops.logging import logger
-from agentops.sdk.core import TracingCore, tracer
+from agentops.sdk.core import tracer
 from agentops.semconv import SpanKind, SpanAttributes, LangChainAttributes, LangChainAttributeValues, CoreAttributes
 from agentops.integration.callbacks.langchain.utils import get_model_info
 

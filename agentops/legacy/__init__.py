@@ -12,7 +12,7 @@ This module maintains backward compatibility with all these API patterns.
 from typing import Optional, Any, Dict, List, Union
 
 from agentops.logging import logger
-from agentops.sdk.core import TracingCore, TraceContext, tracer
+from agentops.sdk.core import TraceContext, tracer
 
 _current_session: Optional["Session"] = None
 _current_trace_context: Optional[TraceContext] = None

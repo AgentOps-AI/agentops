@@ -7,7 +7,7 @@ from typing import Any, Dict, Callable, Optional, Union
 import wrapt  # type: ignore
 
 from agentops.logging import logger
-from agentops.sdk.core import TracingCore, TraceContext, tracer
+from agentops.sdk.core import TraceContext, tracer
 from agentops.semconv.span_kinds import SpanKind
 from agentops.semconv import SpanAttributes, CoreAttributes
 
