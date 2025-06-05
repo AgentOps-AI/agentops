@@ -8,7 +8,7 @@ from unittest.mock import patch, MagicMock
 from opentelemetry.sdk.trace import Span, ReadableSpan
 
 from agentops.sdk.processors import InternalSpanProcessor
-from agentops.sdk.core import TracingCore, TraceContext, tracer
+from agentops.sdk.core import TraceContext, tracer
 
 
 class TestURLLogging(unittest.TestCase):

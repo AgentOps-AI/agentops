@@ -40,9 +40,9 @@ class Client:
     config: Config
     _initialized: bool
     _init_trace_context: Optional[TraceContext] = None  # Stores the context of the auto-started trace
-    _legacy_session_for_init_trace: Optional[
-        Session
-    ] = None  # Stores the legacy Session wrapper for the auto-started trace
+    _legacy_session_for_init_trace: Optional[Session] = (
+        None  # Stores the legacy Session wrapper for the auto-started trace
+    )
 
     __instance = None  # Class variable for singleton pattern
 

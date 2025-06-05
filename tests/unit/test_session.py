@@ -10,11 +10,13 @@ from unittest.mock import patch, MagicMock
 def mock_tracing_core():
     """Mock the TracingCore to avoid actual initialization"""
     # Patch both the main location and where it's imported in client
-    with patch("agentops.tracer") as mock_tracer, \
-         patch("agentops.client.client.tracer", mock_tracer), \
-         patch("agentops.sdk.decorators.factory.tracer", mock_tracer), \
-         patch("agentops.legacy.tracer", mock_tracer):
-        # Create a mock instance 
+    with (
+        patch("agentops.tracer") as mock_tracer,
+        patch("agentops.client.client.tracer", mock_tracer),
+        patch("agentops.sdk.decorators.factory.tracer", mock_tracer),
+        patch("agentops.legacy.tracer", mock_tracer),
+    ):
+        # Create a mock instance
         mock_tracer.initialized = True
 
         yield mock_tracer
@@ -136,10 +138,12 @@ def test_start_trace_without_init():
     agentops._client = agentops.Client()
 
     # Mock TracingCore to be uninitialized initially, then initialized after init
-    with patch("agentops.tracer") as mock_tracer, \
-         patch("agentops.client.client.tracer", mock_tracer), \
-         patch("agentops.sdk.decorators.factory.tracer", mock_tracer), \
-         patch("agentops.legacy.tracer", mock_tracer):
+    with (
+        patch("agentops.tracer") as mock_tracer,
+        patch("agentops.client.client.tracer", mock_tracer),
+        patch("agentops.sdk.decorators.factory.tracer", mock_tracer),
+        patch("agentops.legacy.tracer", mock_tracer),
+    ):
         mock_tracer.initialized = False
 
         # Mock the init function to simulate successful initialization
@@ -410,10 +414,12 @@ def test_session_management_integration():
     agentops._client = agentops.Client()
 
     # Test that we can use both new and legacy APIs together
-    with patch("agentops.tracer") as mock_tracer, \
-         patch("agentops.client.client.tracer", mock_tracer), \
-         patch("agentops.sdk.decorators.factory.tracer", mock_tracer), \
-         patch("agentops.legacy.tracer", mock_tracer):
+    with (
+        patch("agentops.tracer") as mock_tracer,
+        patch("agentops.client.client.tracer", mock_tracer),
+        patch("agentops.sdk.decorators.factory.tracer", mock_tracer),
+        patch("agentops.legacy.tracer", mock_tracer),
+    ):
         mock_tracer.initialized = True
 
         # Mock API client

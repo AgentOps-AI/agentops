@@ -8,7 +8,7 @@ from opentelemetry.sdk.trace.export import SimpleSpanProcessor
 from opentelemetry.sdk.trace.export.in_memory_span_exporter import InMemorySpanExporter
 from opentelemetry.util.types import Attributes
 
-from agentops.sdk.core import TracingCore, tracer
+from agentops.sdk.core import tracer
 
 
 def create_tracer_provider(

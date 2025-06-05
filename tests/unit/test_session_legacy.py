@@ -127,7 +127,7 @@ def test_crewai_kwargs_force_flush():
     to the backend when using the CrewAI integration pattern.
     """
     import agentops
-    from agentops.sdk.core import TracingCore, tracer
+    from agentops.sdk.core import tracer
     import time
 
     # Initialize AgentOps with API key
