@@ -40,7 +40,7 @@ def setup_agentops(mock_api_key):
         mock_api.v3.fetch_auth_token.return_value = {"token": "mock_token", "project_id": "mock_project_id"}
         mock_api_client.return_value = mock_api
 
-        # Mock TracingCore to avoid actual initialization
+        # Mock global tracer to avoid actual initialization
         with patch("agentops.tracer") as mock_tracer:
             mock_tracer.initialized = True
 
