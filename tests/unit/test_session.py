@@ -8,7 +8,7 @@ from unittest.mock import patch, MagicMock
 
 @pytest.fixture(scope="function")
 def mock_tracing_core():
-    """Mock the TracingCore to avoid actual initialization"""
+    """Mock the global tracer to avoid actual initialization"""
     # Patch both the main location and where it's imported in client
     with (
         patch("agentops.tracer") as mock_tracer,
@@ -137,7 +137,7 @@ def test_start_trace_without_init():
     # Reset client for test
     agentops._client = agentops.Client()
 
-    # Mock TracingCore to be uninitialized initially, then initialized after init
+    # Mock global tracer to be uninitialized initially, then initialized after init
     with (
         patch("agentops.tracer") as mock_tracer,
         patch("agentops.client.client.tracer", mock_tracer),
@@ -150,7 +150,7 @@ def test_start_trace_without_init():
         with patch("agentops.init") as mock_init:
 
             def side_effect():
-                # After init is called, mark TracingCore as initialized
+                # After init is called, mark global tracer as initialized
                 mock_tracer.initialized = True
 
             mock_init.side_effect = side_effect
@@ -172,7 +172,7 @@ def test_end_trace(mock_tracing_core, mock_trace_context):
     # End the trace
     agentops.end_trace(mock_trace_context, end_state="Success")
 
-    # Verify end_trace was called on TracingCore
+    # Verify end_trace was called on global tracer
     mock_tracing_core.end_trace.assert_called_once_with(trace_context=mock_trace_context, end_state="Success")
 
 
@@ -233,7 +233,7 @@ def test_session_decorator_with_exception(mock_tracing_core, mock_api_client, mo
 
 
 def test_legacy_start_session_compatibility(mock_tracing_core, mock_api_client, mock_trace_context, reset_client):
-    """Test that legacy start_session still works and calls TracingCore.start_trace"""
+    """Test that legacy start_session still works and calls tracer.start_trace"""
     import agentops
     from agentops.legacy import Session
 
@@ -253,13 +253,13 @@ def test_legacy_start_session_compatibility(mock_tracing_core, mock_api_client, 
     # Check that the session's trace_context has the expected properties
     assert session.trace_context is not None
 
-    # Verify that TracingCore.start_trace was called
+    # Verify that tracer.start_trace was called
     # Note: May be called multiple times due to initialization
     assert mock_tracing_core.start_trace.call_count >= 1
 
 
 def test_legacy_end_session_compatibility(mock_tracing_core, mock_api_client, mock_trace_context, reset_client):
-    """Test that legacy end_session still works and calls TracingCore.end_trace"""
+    """Test that legacy end_session still works and calls tracer.end_trace"""
     import agentops
     from agentops.legacy import Session
 
@@ -275,7 +275,7 @@ def test_legacy_end_session_compatibility(mock_tracing_core, mock_api_client, mo
     # End the session
     agentops.end_session(session)
 
-    # Verify that TracingCore.end_trace was called
+    # Verify that tracer.end_trace was called
     mock_tracing_core.end_trace.assert_called_once_with(mock_trace_context, end_state="Success")
 
 

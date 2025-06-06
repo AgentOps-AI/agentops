@@ -176,11 +176,11 @@ flowchart TD
 ## Example Usage
 
 ```python
-from agentops import Session, agent, tool
-from agentops.sdk import TracingCore, TracingConfig
+from agentops import Session, agent, tool, tracer
+from agentops.sdk import TracingConfig
 
-# Initialize the tracing core with a dedicated configuration
-TracingCore.get_instance().initialize(
+# Initialize the global tracer with a dedicated configuration
+tracer.initialize(
     service_name="my-service",
     exporter_endpoint="https://my-exporter-endpoint.com",
     max_queue_size=1000,

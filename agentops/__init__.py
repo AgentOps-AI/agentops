@@ -15,17 +15,27 @@ from agentops.legacy import (
 from typing import List, Optional, Union, Dict, Any
 from agentops.client import Client
 from agentops.sdk.core import TraceContext, tracer
-from agentops.sdk.decorators import trace, session, agent, task, workflow, operation
+from agentops.sdk.decorators import trace, session, agent, task, workflow, operation, tool
+from agentops.enums import TraceState, SUCCESS, ERROR, UNSET
+from opentelemetry.trace.status import StatusCode
 
 from agentops.logging.config import logger
+import threading
 
-# Client global instance; one per process runtime
-_client = Client()
+# Thread-safe client management
+_client_lock = threading.Lock()
+_client = None
 
 
 def get_client() -> Client:
-    """Get the singleton client instance"""
+    """Get the singleton client instance in a thread-safe manner"""
     global _client
+
+    # Double-checked locking pattern for thread safety
+    if _client is None:
+        with _client_lock:
+            if _client is None:
+                _client = Client()
 
     return _client
 
@@ -106,24 +116,31 @@ def init(
     elif default_tags:
         merged_tags = default_tags
 
-    return _client.init(
-        api_key=api_key,
-        endpoint=endpoint,
-        app_url=app_url,
-        max_wait_time=max_wait_time,
-        max_queue_size=max_queue_size,
-        default_tags=merged_tags,
-        trace_name=trace_name,
-        instrument_llm_calls=instrument_llm_calls,
-        auto_start_session=auto_start_session,
-        auto_init=auto_init,
-        skip_auto_end_session=skip_auto_end_session,
-        env_data_opt_out=env_data_opt_out,
-        log_level=log_level,
-        fail_safe=fail_safe,
-        exporter_endpoint=exporter_endpoint,
+    # Prepare initialization arguments
+    init_kwargs = {
+        "api_key": api_key,
+        "endpoint": endpoint,
+        "app_url": app_url,
+        "max_wait_time": max_wait_time,
+        "max_queue_size": max_queue_size,
+        "default_tags": merged_tags,
+        "trace_name": trace_name,
+        "instrument_llm_calls": instrument_llm_calls,
+        "auto_start_session": auto_start_session,
+        "auto_init": auto_init,
+        "skip_auto_end_session": skip_auto_end_session,
+        "env_data_opt_out": env_data_opt_out,
+        "log_level": log_level,
+        "fail_safe": fail_safe,
+        "exporter_endpoint": exporter_endpoint,
         **kwargs,
-    )
+    }
+
+    # Get the current client instance (creates new one if needed)
+    client = get_client()
+
+    # Initialize the client directly
+    return client.init(**init_kwargs)
 
 
 def configure(**kwargs):
@@ -173,7 +190,8 @@ def configure(**kwargs):
     if invalid_params:
         logger.warning(f"Invalid configuration parameters: {invalid_params}")
 
-    _client.configure(**kwargs)
+    client = get_client()
+    client.configure(**kwargs)
 
 
 def start_trace(
@@ -207,7 +225,9 @@ def start_trace(
     return tracer.start_trace(trace_name=trace_name, tags=tags)
 
 
-def end_trace(trace_context: Optional[TraceContext] = None, end_state: str = "Success") -> None:
+def end_trace(
+    trace_context: Optional[TraceContext] = None, end_state: Union[TraceState, StatusCode, str] = TraceState.SUCCESS
+) -> None:
     """
     Ends a trace (its root span) and finalizes it.
     If no trace_context is provided, ends all active session spans.
@@ -246,4 +266,12 @@ __all__ = [
     "workflow",
     "operation",
     "tracer",
+    "tool",
+    # Trace state enums
+    "TraceState",
+    "SUCCESS",
+    "ERROR",
+    "UNSET",
+    # OpenTelemetry status codes (for advanced users)
+    "StatusCode",
 ]

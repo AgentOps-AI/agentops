@@ -65,7 +65,7 @@ def start_session(
 ) -> Session:
     """
     @deprecated Use agentops.start_trace() instead.
-    Starts a legacy AgentOps session. Calls TracingCore.start_trace internally.
+    Starts a legacy AgentOps session. Calls tracer.start_trace internally.
     """
     global _current_session, _current_trace_context
 
@@ -89,7 +89,7 @@ def start_session(
 
     trace_context = tracer.start_trace(trace_name="session", tags=tags)
     if trace_context is None:
-        logger.error("Failed to start trace via TracingCore. Returning dummy session.")
+        logger.error("Failed to start trace via global tracer. Returning dummy session.")
         dummy_session = Session(None)
         _current_session = dummy_session
         _current_trace_context = None
@@ -124,13 +124,13 @@ def _set_span_attributes(span: Any, attributes: Dict[str, Any]) -> None:
 def end_session(session_or_status: Any = None, **kwargs: Any) -> None:
     """
     @deprecated Use agentops.end_trace() instead.
-    Ends a legacy AgentOps session. Calls TracingCore.end_trace internally.
+    Ends a legacy AgentOps session. Calls tracer.end_trace internally.
     Supports multiple calling patterns for backward compatibility.
     """
     global _current_session, _current_trace_context
 
     if not tracer.initialized:
-        logger.debug("Ignoring end_session: TracingCore not initialized.")
+        logger.debug("Ignoring end_session: global tracer not initialized.")
         return
 
     target_trace_context: Optional[TraceContext] = None
@@ -189,7 +189,7 @@ def end_session(session_or_status: Any = None, **kwargs: Any) -> None:
 def end_all_sessions() -> None:
     """@deprecated Ends all active sessions/traces."""
     if not tracer.initialized:
-        logger.debug("Ignoring end_all_sessions: TracingCore not initialized.")
+        logger.debug("Ignoring end_all_sessions: global tracer not initialized.")
         return
 
     # Use the new end_trace functionality to end all active traces
