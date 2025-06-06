@@ -25,7 +25,6 @@ Next we import the necessary libraries
 ```python
 import agentops
 import os
-from getpass import getpass
 from dotenv import load_dotenv
 from typing import List
 from colorama import Fore
@@ -58,7 +57,7 @@ Now we will initialize our AgentOps client.
 
 
 ```python
-agentops.init(tags=["camel", "multi-agent", "example"])
+agentops.init(default_tags=["camel", "multi-agent", "example"])
 ```
 
 Let's start with setting our task prompt and setting our tools.
@@ -109,18 +108,11 @@ Let's print out the Assistant System Message and User Task Prompt.
 
 
 ```python
-print(
-    Fore.GREEN
-    + f"AI Assistant System Message:\n{search_session.assistant_sys_msg}\n"
-)
+print(Fore.GREEN + f"AI Assistant System Message:\n{search_session.assistant_sys_msg}\n")
 print(Fore.BLUE + f"AI User System Message:\n{search_session.user_sys_msg}\n")
 
 print(Fore.YELLOW + f"Original Task Prompt:\n{task_prompt}\n")
-print(
-    Fore.CYAN
-    + "Specified Task Prompt:"
-    + f"\n{search_session.specified_task_prompt}\n"
-)
+print(Fore.CYAN + "Specified Task Prompt:" + f"\n{search_session.specified_task_prompt}\n")
 print(Fore.RED + f"Final Task Prompt:\n{search_session.task_prompt}\n")
 ```
 
@@ -135,34 +127,18 @@ while n < 50:
     assistant_response, user_response = search_session.step(input_msg)
 
     if assistant_response.terminated:
-        print(
-            Fore.GREEN
-            + (
-                "AI Assistant terminated. Reason: "
-                f"{assistant_response.info['termination_reasons']}."
-            )
-        )
+        print(Fore.GREEN + (f"AI Assistant terminated. Reason: {assistant_response.info['termination_reasons']}."))
         break
     if user_response.terminated:
-        print(
-            Fore.GREEN
-            + (
-                "AI User terminated. "
-                f"Reason: {user_response.info['termination_reasons']}."
-            )
-        )
+        print(Fore.GREEN + (f"AI User terminated. Reason: {user_response.info['termination_reasons']}."))
         break
 
     # Print output from the user
-    print_text_animated(
-        Fore.BLUE + f"AI User:\n\n{user_response.msg.content}\n"
-    )
+    print_text_animated(Fore.BLUE + f"AI User:\n\n{user_response.msg.content}\n")
 
     # Print output from the assistant, including any function execution information
     print_text_animated(Fore.GREEN + "AI Assistant:")
-    tool_calls: List[FunctionCallingRecord] = assistant_response.info[
-        'tool_calls'
-    ]
+    tool_calls: List[FunctionCallingRecord] = assistant_response.info["tool_calls"]
     for func_record in tool_calls:
         print_text_animated(f"{func_record}")
     print_text_animated(f"{assistant_response.msg.content}\n")
