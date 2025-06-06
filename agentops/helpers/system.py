@@ -10,6 +10,46 @@ from agentops.logging import logger
 from agentops.helpers.version import get_agentops_version
 
 
+def get_imported_libraries():
+    """
+    Get the top-level imported libraries in the current script.
+
+    Returns:
+        list: List of imported libraries
+    """
+    user_libs = []
+
+    builtin_modules = {
+        "builtins",
+        "sys",
+        "os",
+        "_thread",
+        "abc",
+        "io",
+        "re",
+        "types",
+        "collections",
+        "enum",
+        "math",
+        "datetime",
+        "time",
+        "warnings",
+    }
+
+    try:
+        main_module = sys.modules.get("__main__")
+        if main_module and hasattr(main_module, "__dict__"):
+            for name, obj in main_module.__dict__.items():
+                if isinstance(obj, type(sys)) and hasattr(obj, "__name__"):
+                    mod_name = obj.__name__.split(".")[0]
+                    if mod_name and not mod_name.startswith("_") and mod_name not in builtin_modules:
+                        user_libs.append(mod_name)
+    except Exception as e:
+        logger.debug(f"Error getting imports: {e}")
+
+    return user_libs
+
+
 def get_sdk_details():
     try:
         return {
