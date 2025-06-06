@@ -252,3 +252,27 @@ def get_base_span_attributes(span: Any) -> AttributeMap:
         attributes[CoreAttributes.PARENT_ID] = parent_id
 
     return attributes
+
+
+def extract_token_usage(response: Any) -> Dict[str, int]:
+    """Extract token usage information from a response.
+
+    Args:
+        response: The response object to extract token usage from
+
+    Returns:
+        Dictionary containing token usage information
+    """
+    usage = {}
+
+    # Try to extract token counts from response
+    if hasattr(response, "usage"):
+        usage_data = response.usage
+        if hasattr(usage_data, "prompt_tokens"):
+            usage["prompt_tokens"] = usage_data.prompt_tokens
+        if hasattr(usage_data, "completion_tokens"):
+            usage["completion_tokens"] = usage_data.completion_tokens
+        if hasattr(usage_data, "total_tokens"):
+            usage["total_tokens"] = usage_data.total_tokens
+
+    return usage

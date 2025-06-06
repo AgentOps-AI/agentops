@@ -385,6 +385,11 @@ AGENTIC_LIBRARIES: dict[str, InstrumentorConfig] = {
         "min_version": "0.1.0",
         "package_name": "google-adk",  # Actual pip package name
     },
+    "smolagents": {
+        "module_name": "agentops.instrumentation.smolagents",
+        "class_name": "SmolAgentsInstrumentor",
+        "min_version": "1.8.0",
+    },
 }
 
 # Combine all target packages for monitoring
