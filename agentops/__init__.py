@@ -116,6 +116,13 @@ def init(
     elif default_tags:
         merged_tags = default_tags
 
+    # Check if in a Jupyter Notebook (manual start/end_trace())
+    try:
+        get_ipython().__class__.__name__ == "ZMQInteractiveShell"  # type: ignore
+        auto_start_session = False
+    except NameError:
+        pass
+
     # Prepare initialization arguments
     init_kwargs = {
         "api_key": api_key,
