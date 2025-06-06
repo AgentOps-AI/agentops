@@ -435,7 +435,7 @@ class TestContextManager(unittest.TestCase):
     @patch("agentops.sdk.core.tracer")
     @patch("agentops.tracer")
     def test_edge_case_tracing_core_not_initialized(self, mock_agentops_tracer, mock_core_tracer):
-        """Test behavior when TracingCore is not initialized"""
+        """Test behavior when global tracer is not initialized"""
         mock_agentops_tracer.initialized = False
 
         # Mock init to succeed but tracer still not initialized

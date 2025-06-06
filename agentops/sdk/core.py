@@ -234,7 +234,7 @@ class TracingCore:
         """Get the tracing configuration."""
         if self._config is None:
             # This case should ideally not be reached if initialized properly
-            raise AgentOpsClientNotInitializedException("TracingCore config accessed before initialization.")
+            raise AgentOpsClientNotInitializedException("Tracer config accessed before initialization.")
         return self._config
 
     def shutdown(self) -> None:
@@ -349,7 +349,7 @@ class TracingCore:
             A TraceContext object containing the span and context token, or None if not initialized.
         """
         if not self.initialized:
-            logger.warning("TracingCore not initialized. Cannot start trace.")
+            logger.warning("Global tracer not initialized. Cannot start trace.")
             return None
 
         # Build trace attributes
@@ -392,7 +392,7 @@ class TracingCore:
             end_state: The final state of the trace (e.g., "Success", "Failure", "Error").
         """
         if not self.initialized:
-            logger.warning("TracingCore not initialized. Cannot end trace.")
+            logger.warning("Global tracer not initialized. Cannot end trace.")
             return
 
         # Set default if not provided

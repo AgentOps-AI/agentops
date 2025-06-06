@@ -143,7 +143,7 @@ def test_crewai_kwargs_force_flush():
     agentops.end_session(end_state="Success", end_state_reason="Test Finished", is_auto_end=True)
 
     # Explicitly ensure the core isn't already shut down for the test
-    assert tracer._initialized, "TracingCore should still be initialized"
+    assert tracer._initialized, "Global tracer should still be initialized"
 
 
 def test_crewai_task_instrumentation(instrumentation):
