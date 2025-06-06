@@ -2,13 +2,13 @@ import time
 
 
 """
-Benchmark script for measuring TracingCore initialization time.
+Benchmark script for measuring global tracer initialization time.
 """
 
 
 def run_benchmark():
     """
-    Run a benchmark of TracingCore initialization.
+    Run a benchmark of global tracer initialization.
 
     Returns:
         Dictionary with timing results
@@ -41,6 +41,6 @@ def print_results(results):
 
 
 if __name__ == "__main__":
-    print("Running TracingCore benchmark...")
+    print("Running global tracer benchmark...")
     results = run_benchmark()
     print_results(results)
