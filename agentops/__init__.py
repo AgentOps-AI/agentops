@@ -111,7 +111,7 @@ def init(
         __IPYTHON__ # type: ignore
         auto_start_session = False
     except NameError:
-        auto_start_session = True
+        pass
 
     return _client.init(
         api_key=api_key,
