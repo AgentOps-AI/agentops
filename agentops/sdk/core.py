@@ -434,19 +434,8 @@ class TracingCore:
             # Handle case where span is mocked or trace_id is not a valid integer
             trace_id = str(span.get_span_context().trace_id)
 
-        # Convert TraceState enum to StatusCode if needed
-        from agentops.enums import TraceState
-
-        if isinstance(end_state, TraceState):
-            # It's a TraceState enum
-            state_str = str(end_state)
-        elif isinstance(end_state, StatusCode):
-            # It's already a StatusCode
-            state_str = str(end_state)
-        else:
-            # It's a string (legacy)
-            state_str = str(end_state)
-
+        # Convert end_state to string using helper function
+        state_str = self._convert_end_state_to_string(end_state)
         logger.debug(f"Ending trace with span ID: {span.get_span_context().span_id}, end_state: {state_str}")
 
         try:
