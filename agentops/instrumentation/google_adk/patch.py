@@ -348,6 +348,32 @@ def _runner_run_async_wrapper(agentops_tracer):
     return actual_decorator
 
 
+def extract_agent_attributes(instance):
+    attributes = {}
+    # Use AgentAttributes from semconv
+    attributes[AgentAttributes.AGENT_NAME] = instance.name
+    if hasattr(instance, "description"):
+        attributes["agent.description"] = instance.description
+    if hasattr(instance, "model"):
+        attributes["agent.model"] = instance.model
+    if hasattr(instance, "instruction"):
+        attributes["agent.instruction"] = instance.instruction
+    if hasattr(instance, "tools"):
+        for tool in instance.tools:
+            attributes[ToolAttributes.TOOL_NAME] = tool.name
+            attributes[ToolAttributes.TOOL_DESCRIPTION] = tool.description
+    if hasattr(instance, "output_key"):
+        attributes["agent.output_key"] = instance.output_key
+    # Subagents
+    if hasattr(instance, "sub_agents"):
+        # recursively extract attributes from subagents but add a prefix to the keys, also with indexing, because we can have multiple subagents, also subagent can have subagents, So have to index them even if they are not in the same level
+        for i, sub_agent in enumerate(instance.sub_agents):
+            sub_agent_attributes = extract_agent_attributes(sub_agent)
+            for key, value in sub_agent_attributes.items():
+                attributes[f"agent.sub_agents.{i}.{key}"] = value
+    return attributes
+
+
 # Wrapper for BaseAgent.run_async
 def _base_agent_run_async_wrapper(agentops_tracer):
     def actual_decorator(wrapped, instance, args, kwargs):
@@ -360,14 +386,8 @@ def _base_agent_run_async_wrapper(agentops_tracer):
                 span.set_attribute(SpanAttributes.LLM_SYSTEM, "gcp.vertex.agent")
                 span.set_attribute(SpanAttributes.AGENTOPS_ENTITY_NAME, "agent")
 
-                # Use AgentAttributes from semconv
-                span.set_attribute(AgentAttributes.AGENT_NAME, agent_name)
-                if hasattr(instance, "description"):
-                    span.set_attribute("agent.description", instance.description)
-                if hasattr(instance, "model"):
-                    span.set_attribute("agent.model", instance.model)
-
-                # Extract invocation context if available
+                span.set_attributes(extract_agent_attributes(instance))
+                # # Extract invocation context if available
                 if len(args) > 0 and hasattr(args[0], "invocation_id"):
                     span.set_attribute("adk.invocation_id", args[0].invocation_id)
 
@@ -592,6 +612,10 @@ def _call_tool_async_wrapper(agentops_tracer):
 
                 # Set tool call attributes
                 span.set_attribute(ToolAttributes.TOOL_NAME, tool_name)
+                if hasattr(tool, "description"):
+                    span.set_attribute(ToolAttributes.TOOL_DESCRIPTION, tool.description)
+                if hasattr(tool, "is_long_running"):
+                    span.set_attribute("tool.is_long_running", tool.is_long_running)
                 span.set_attribute(ToolAttributes.TOOL_PARAMETERS, json.dumps(tool_args))
 
                 if tool_context and hasattr(tool_context, "function_call_id"):
