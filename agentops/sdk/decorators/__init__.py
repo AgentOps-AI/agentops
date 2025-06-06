@@ -22,6 +22,7 @@ operation = task
 in_guardrail = create_entity_decorator(SpanKind.INPUT_GUARDRAIL)
 out_guardrail = create_entity_decorator(SpanKind.OUTPUT_GUARDRAIL)
 
+
 # For backward compatibility: @session decorator calls @trace decorator
 @functools.wraps(trace)
 def session(*args, **kwargs):
