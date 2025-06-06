@@ -5,18 +5,16 @@ This module provides a high-level API for creating and managing spans
 for different types of operations in AI agent workflows.
 """
 
-# Import core components
-from agentops.sdk.core import TracingCore
-
 # Import decorators
 from agentops.sdk.decorators import agent, operation, session, task, workflow
 
 # from agentops.sdk.traced import TracedObject  # Merged into TracedObject
 from agentops.sdk.types import TracingConfig
 
+from opentelemetry.trace.status import StatusCode
+
 __all__ = [
     # Core components
-    "TracingCore",
     "TracingConfig",
     # Decorators
     "session",
@@ -24,4 +22,6 @@ __all__ = [
     "agent",
     "task",
     "workflow",
+    # OpenTelemetry status codes
+    "StatusCode",
 ]

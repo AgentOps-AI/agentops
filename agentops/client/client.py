@@ -24,7 +24,7 @@ def _end_init_trace_atexit():
     if _client_init_trace_context is not None:
         logger.debug("Auto-ending client's init trace during shutdown.")
         try:
-            # Use TracingCore to end the trace directly
+            # Use global tracer to end the trace directly
             if tracer.initialized and _client_init_trace_context.span.is_recording():
                 tracer.end_trace(_client_init_trace_context, end_state="Shutdown")
         except Exception as e:
@@ -104,7 +104,7 @@ class Client:
         try:
             response = self.api.v3.fetch_auth_token(self.config.api_key)
             if response is None:
-                # If auth fails, we cannot proceed with TracingCore initialization that depends on project_id
+                # If auth fails, we cannot proceed with tracer initialization that depends on project_id
                 logger.error("Failed to fetch auth token. AgentOps SDK will not be initialized.")
                 return None  # Explicitly return None if auth fails
         except Exception as e:
@@ -161,8 +161,8 @@ class Client:
 
                 else:
                     logger.error("Failed to start the auto-init trace.")
-                    # Even if auto-start fails, core services up to TracingCore might be initialized.
-                    # Set self.initialized to True if TracingCore is up, but return None.
+                    # Even if auto-start fails, core services up to the tracer might be initialized.
+                    # Set self.initialized to True if tracer is up, but return None.
                     self._initialized = tracer.initialized
                     return None  # Failed to start trace
 

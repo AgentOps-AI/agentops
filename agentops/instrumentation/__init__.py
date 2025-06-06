@@ -444,7 +444,7 @@ def instrument_one(loader: InstrumentorLoader) -> Optional[BaseInstrumentor]:
 
     instrumentor = loader.get_instance()
     try:
-        instrumentor.instrument(tracer_provider=TracingCore.get_instance()._provider)
+        instrumentor.instrument(tracer_provider=tracer._provider)
         logger.info(
             f"AgentOps: Successfully instrumented '{loader.class_name}' for package '{loader.package_name or loader.module_name}'."
         )

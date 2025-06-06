@@ -187,6 +187,7 @@
         "v2/usage/dashboard-info",
         "v2/usage/sdk-reference",
         "v2/usage/advanced-configuration",
+        "v2/usage/context-managers",
         "v2/usage/tracking-llm-calls",
         "v2/usage/tracking-agents",
         "v2/usage/recording-operations",
