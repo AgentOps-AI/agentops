@@ -33,7 +33,7 @@ import site
 from opentelemetry.instrumentation.instrumentor import BaseInstrumentor  # type: ignore
 
 from agentops.logging import logger
-
+from agentops.sdk.core import tracer
 
 # Module-level state variables
 _active_instrumentors: list[BaseInstrumentor] = []
