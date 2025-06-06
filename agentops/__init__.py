@@ -105,10 +105,10 @@ def init(
         merged_tags = tags
     elif default_tags:
         merged_tags = default_tags
-    
+
     # Check if in a Jupyter Notebook (manual start/end_trace())
     try:
-        __IPYTHON__ # type: ignore
+        __IPYTHON__  # type: ignore
         auto_start_session = False
     except NameError:
         pass
