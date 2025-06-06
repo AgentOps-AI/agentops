@@ -4,7 +4,6 @@ from typing import Optional, Tuple, Dict, Any
 
 from agentops.instrumentation.common.attributes import AttributeMap
 from agentops.semconv import SpanAttributes
-from agentops.semconv.span_kinds import SpanKind as AgentOpsSpanKind
 
 
 def get_metrics_attributes(
@@ -29,17 +28,8 @@ def get_metrics_attributes(
     attributes[SpanAttributes.LLM_SYSTEM] = "agno"
     attributes[SpanAttributes.AGENTOPS_ENTITY_NAME] = "LLM"
 
-    # Initialize default gen_ai.usage attributes to ensure they're always present
-    usage_attrs = {
-        "prompt_tokens": 0,
-        "completion_tokens": 0,
-        "total_tokens": 0,
-        "cache_read_input_tokens": 0,
-        "reasoning_tokens": 0,
-        "success_tokens": 0,
-        "fail_tokens": 0,
-        "indeterminate_tokens": 0
-    }
+    # Initialize usage tracking variables (but don't set attributes yet)
+    usage_data = {}
 
     # Initialize counters for indexed messages
     prompt_count = 0
@@ -49,28 +39,32 @@ def get_metrics_attributes(
     if args and len(args) >= 2:
         agent = args[0]  # self (Agent instance)
         run_messages = args[1]  # RunMessages object
-        
+
+        # Add agent display name for LLM calls
+        if hasattr(agent, "name") and agent.name:
+            attributes["agno.llm.display_name"] = f"{agent.name} → LLM"
+
         # Model information - get additional request parameters if available
-        if hasattr(agent, 'model') and agent.model:
+        if hasattr(agent, "model") and agent.model:
             model = agent.model
             # Set model ID first
-            if hasattr(model, 'id'):
+            if hasattr(model, "id"):
                 attributes[SpanAttributes.LLM_REQUEST_MODEL] = str(model.id)
                 attributes[SpanAttributes.LLM_RESPONSE_MODEL] = str(model.id)
             # Additional model parameters
-            if hasattr(model, 'temperature') and model.temperature is not None:
+            if hasattr(model, "temperature") and model.temperature is not None:
                 attributes[SpanAttributes.LLM_REQUEST_TEMPERATURE] = str(model.temperature)
-            if hasattr(model, 'max_tokens') and model.max_tokens is not None:
+            if hasattr(model, "max_tokens") and model.max_tokens is not None:
                 attributes[SpanAttributes.LLM_REQUEST_MAX_TOKENS] = str(model.max_tokens)
-            if hasattr(model, 'top_p') and model.top_p is not None:
+            if hasattr(model, "top_p") and model.top_p is not None:
                 attributes[SpanAttributes.LLM_REQUEST_TOP_P] = str(model.top_p)
-            if hasattr(model, 'provider'):
-                attributes['agno.model.provider'] = str(model.provider)
-        
+            if hasattr(model, "provider"):
+                attributes["agno.model.provider"] = str(model.provider)
+
         # === EXTRACT CONVERSATION STRUCTURE ===
-        if hasattr(run_messages, 'messages') and run_messages.messages:
+        if hasattr(run_messages, "messages") and run_messages.messages:
             messages = run_messages.messages
-            
+
             # Initialize token tracking
             total_prompt_tokens = 0
             total_completion_tokens = 0
@@ -78,159 +72,167 @@ def get_metrics_attributes(
             total_input_tokens = 0
             total_tokens = 0
             total_time = 0.0
-            
+
             # Process messages to create individual indexed gen_ai.prompt.{i} and gen_ai.completion.{i} attributes
             for i, msg in enumerate(messages):
                 # Extract message content for prompts/completions
-                if hasattr(msg, 'role') and hasattr(msg, 'content'):
+                if hasattr(msg, "role") and hasattr(msg, "content"):
                     # Only set content if it's not None/empty
                     if msg.content is not None and str(msg.content).strip() != "" and str(msg.content) != "None":
                         content = str(msg.content)
                         # Truncate very long content to avoid oversized attributes
                         if len(content) > 1000:
                             content = content[:997] + "..."
-                        
-                        if msg.role == 'user':
-                            attributes[f'gen_ai.prompt.{prompt_count}.role'] = 'user'
-                            attributes[f'gen_ai.prompt.{prompt_count}.content'] = content
+
+                        if msg.role == "user":
+                            attributes[f"{SpanAttributes.LLM_PROMPTS}.{prompt_count}.role"] = "user"
+                            attributes[f"{SpanAttributes.LLM_PROMPTS}.{prompt_count}.content"] = content
                             prompt_count += 1
-                        elif msg.role == 'assistant':
-                            attributes[f'gen_ai.completion.{completion_count}.role'] = 'assistant'
-                            attributes[f'gen_ai.completion.{completion_count}.content'] = content
+                        elif msg.role == "assistant":
+                            attributes[f"{SpanAttributes.LLM_COMPLETIONS}.{completion_count}.role"] = "assistant"
+                            attributes[f"{SpanAttributes.LLM_COMPLETIONS}.{completion_count}.content"] = content
                             completion_count += 1
-                        elif msg.role == 'system':
-                            attributes[f'gen_ai.prompt.{prompt_count}.role'] = 'system'
-                            attributes[f'gen_ai.prompt.{prompt_count}.content'] = content
+                        elif msg.role == "system":
+                            attributes[f"{SpanAttributes.LLM_PROMPTS}.{prompt_count}.role"] = "system"
+                            attributes[f"{SpanAttributes.LLM_PROMPTS}.{prompt_count}.content"] = content
                             prompt_count += 1
                     else:
                         # For messages with None content, still set the role but skip content
-                        if msg.role == 'user':
-                            attributes[f'gen_ai.prompt.{prompt_count}.role'] = 'user'
+                        if msg.role == "user":
+                            attributes[f"{SpanAttributes.LLM_PROMPTS}.{prompt_count}.role"] = "user"
                             prompt_count += 1
-                        elif msg.role == 'assistant':
-                            attributes[f'gen_ai.completion.{completion_count}.role'] = 'assistant'
+                        elif msg.role == "assistant":
+                            attributes[f"{SpanAttributes.LLM_COMPLETIONS}.{completion_count}.role"] = "assistant"
                             completion_count += 1
-                        elif msg.role == 'system':
-                            attributes[f'gen_ai.prompt.{prompt_count}.role'] = 'system'
+                        elif msg.role == "system":
+                            attributes[f"{SpanAttributes.LLM_PROMPTS}.{prompt_count}.role"] = "system"
                             prompt_count += 1
-                
+
                 # Extract token metrics from message
-                if hasattr(msg, 'metrics') and msg.metrics:
+                if hasattr(msg, "metrics") and msg.metrics:
                     metrics = msg.metrics
-                    
+
                     # Handle different token metric patterns
-                    if hasattr(metrics, 'prompt_tokens') and metrics.prompt_tokens > 0:
+                    if hasattr(metrics, "prompt_tokens") and metrics.prompt_tokens > 0:
                         total_prompt_tokens += metrics.prompt_tokens
-                    if hasattr(metrics, 'completion_tokens') and metrics.completion_tokens > 0:
+                    if hasattr(metrics, "completion_tokens") and metrics.completion_tokens > 0:
                         total_completion_tokens += metrics.completion_tokens
-                    if hasattr(metrics, 'total_tokens') and metrics.total_tokens > 0:
+                    if hasattr(metrics, "total_tokens") and metrics.total_tokens > 0:
                         total_tokens += metrics.total_tokens
                     # For messages that only have output_tokens (like Anthropic)
-                    if hasattr(metrics, 'output_tokens') and metrics.output_tokens > 0:
+                    if hasattr(metrics, "output_tokens") and metrics.output_tokens > 0:
                         total_output_tokens += metrics.output_tokens
-                    if hasattr(metrics, 'input_tokens') and metrics.input_tokens > 0:
+                    if hasattr(metrics, "input_tokens") and metrics.input_tokens > 0:
                         total_input_tokens += metrics.input_tokens
-                    if hasattr(metrics, 'time') and metrics.time:
+                    if hasattr(metrics, "time") and metrics.time:
                         total_time += metrics.time
 
         # === TOKEN METRICS FROM AGENT SESSION METRICS ===
-        if hasattr(agent, 'session_metrics') and agent.session_metrics:
+        if hasattr(agent, "session_metrics") and agent.session_metrics:
             session_metrics = agent.session_metrics
-            
+
             # Try to get model name from session metrics if not already set
             if SpanAttributes.LLM_REQUEST_MODEL not in attributes:
-                if hasattr(session_metrics, 'model') and session_metrics.model:
+                if hasattr(session_metrics, "model") and session_metrics.model:
                     model_id = str(session_metrics.model)
                     attributes[SpanAttributes.LLM_REQUEST_MODEL] = model_id
                     attributes[SpanAttributes.LLM_RESPONSE_MODEL] = model_id
-            
+
             # Use session metrics for more accurate token counts
-            session_prompt_tokens = getattr(session_metrics, 'prompt_tokens', 0)
-            session_completion_tokens = getattr(session_metrics, 'completion_tokens', 0)
-            session_output_tokens = getattr(session_metrics, 'output_tokens', 0)
-            session_input_tokens = getattr(session_metrics, 'input_tokens', 0)
-            session_total_tokens = getattr(session_metrics, 'total_tokens', 0)
-            
+            session_prompt_tokens = getattr(session_metrics, "prompt_tokens", 0)
+            session_completion_tokens = getattr(session_metrics, "completion_tokens", 0)
+            session_output_tokens = getattr(session_metrics, "output_tokens", 0)
+            session_input_tokens = getattr(session_metrics, "input_tokens", 0)
+            session_total_tokens = getattr(session_metrics, "total_tokens", 0)
+
             # For Anthropic, output_tokens represents completion tokens
             if session_output_tokens > 0 and session_completion_tokens == 0:
                 session_completion_tokens = session_output_tokens
-            
+
             # For some providers, input_tokens represents prompt tokens
             if session_input_tokens > 0 and session_prompt_tokens == 0:
                 session_prompt_tokens = session_input_tokens
-                
-            # Only override if session metrics provide better data
+
+            # Only set token attributes if we have actual values
             if session_total_tokens > 0:
-                usage_attrs["total_tokens"] = session_total_tokens
-                
+                usage_data["total_tokens"] = session_total_tokens
+
                 # Set breakdown if available
                 if session_prompt_tokens > 0:
-                    usage_attrs["prompt_tokens"] = session_prompt_tokens
+                    usage_data["prompt_tokens"] = session_prompt_tokens
                 if session_completion_tokens > 0:
-                    usage_attrs["completion_tokens"] = session_completion_tokens
-                    
-            # Additional token types from session metrics
-            if hasattr(session_metrics, 'cached_tokens') and session_metrics.cached_tokens > 0:
-                usage_attrs["cache_read_input_tokens"] = session_metrics.cached_tokens
-            if hasattr(session_metrics, 'reasoning_tokens') and session_metrics.reasoning_tokens > 0:
-                usage_attrs["reasoning_tokens"] = session_metrics.reasoning_tokens
-                
-            # Success/fail token metrics
+                    usage_data["completion_tokens"] = session_completion_tokens
+
+            # Additional token types from session metrics - only set if present
+            if hasattr(session_metrics, "cached_tokens") and session_metrics.cached_tokens > 0:
+                usage_data["cache_read_input_tokens"] = session_metrics.cached_tokens
+            if hasattr(session_metrics, "reasoning_tokens") and session_metrics.reasoning_tokens > 0:
+                usage_data["reasoning_tokens"] = session_metrics.reasoning_tokens
+
+            # Success/fail token metrics - only set if we have tokens
             if session_total_tokens > 0:
-                usage_attrs["success_tokens"] = session_total_tokens
-                usage_attrs["fail_tokens"] = 0
-                usage_attrs["indeterminate_tokens"] = 0
+                usage_data["success_tokens"] = session_total_tokens
+                # Only set fail/indeterminate as 0 when we have success tokens
+                usage_data["fail_tokens"] = 0
+                usage_data["indeterminate_tokens"] = 0
 
         # === FALLBACK TO MESSAGE AGGREGATION IF SESSION METRICS ARE EMPTY ===
-        # If session metrics don't have token info, use message aggregation
-        if usage_attrs["total_tokens"] == 0:
+        # If we don't have token data from session metrics, try message aggregation
+        if "total_tokens" not in usage_data:
             # Set aggregated token usage from messages
             if total_prompt_tokens > 0 or total_input_tokens > 0:
-                usage_attrs["prompt_tokens"] = total_prompt_tokens or total_input_tokens
+                usage_data["prompt_tokens"] = total_prompt_tokens or total_input_tokens
             if total_completion_tokens > 0 or total_output_tokens > 0:
-                usage_attrs["completion_tokens"] = total_completion_tokens or total_output_tokens
+                usage_data["completion_tokens"] = total_completion_tokens or total_output_tokens
             if total_tokens > 0:
-                usage_attrs["total_tokens"] = total_tokens
-                
+                usage_data["total_tokens"] = total_tokens
+
                 # Handle case where we have total but no breakdown (common with Anthropic)
-                if usage_attrs["prompt_tokens"] == 0 and usage_attrs["completion_tokens"] == 0:
+                if usage_data.get("prompt_tokens", 0) == 0 and usage_data.get("completion_tokens", 0) == 0:
                     # If we only have completion tokens from output_tokens, assume all are completion
                     if total_output_tokens > 0:
-                        usage_attrs["completion_tokens"] = total_output_tokens
-                        usage_attrs["prompt_tokens"] = max(0, total_tokens - total_output_tokens)
+                        usage_data["completion_tokens"] = total_output_tokens
+                        usage_data["prompt_tokens"] = max(0, total_tokens - total_output_tokens)
                     # Otherwise try to split reasonably
                     elif total_tokens > 0:
                         # For pure generation, most tokens are usually completion
                         estimated_completion = int(total_tokens * 0.7)  # Rough estimate
                         estimated_prompt = total_tokens - estimated_completion
-                        usage_attrs["completion_tokens"] = estimated_completion
-                        usage_attrs["prompt_tokens"] = estimated_prompt
-                        
-            # Success/fail tokens from message aggregation
+                        usage_data["completion_tokens"] = estimated_completion
+                        usage_data["prompt_tokens"] = estimated_prompt
+
+            # Success/fail tokens from message aggregation - only set if we have tokens
             if total_tokens > 0:
-                usage_attrs["success_tokens"] = total_tokens
-                usage_attrs["fail_tokens"] = 0
-                usage_attrs["indeterminate_tokens"] = 0
+                usage_data["success_tokens"] = total_tokens
+                usage_data["fail_tokens"] = 0
+                usage_data["indeterminate_tokens"] = 0
 
         # Extract user message info if available
-        if hasattr(run_messages, 'user_message') and run_messages.user_message:
+        if hasattr(run_messages, "user_message") and run_messages.user_message:
             user_msg = run_messages.user_message
-            if hasattr(user_msg, 'content'):
+            if hasattr(user_msg, "content"):
                 content = str(user_msg.content)
                 if len(content) > 1000:
                     content = content[:997] + "..."
-                attributes['agno.metrics.user_input'] = content
+                attributes["agno.metrics.user_input"] = content
 
-    # Set individual LLM usage attributes that AgentOps expects
-    attributes[SpanAttributes.LLM_USAGE_PROMPT_TOKENS] = usage_attrs["prompt_tokens"]
-    attributes[SpanAttributes.LLM_USAGE_COMPLETION_TOKENS] = usage_attrs["completion_tokens"] 
-    attributes[SpanAttributes.LLM_USAGE_TOTAL_TOKENS] = usage_attrs["total_tokens"]
-    attributes[SpanAttributes.LLM_USAGE_CACHE_READ_INPUT_TOKENS] = usage_attrs["cache_read_input_tokens"]
-    attributes[SpanAttributes.LLM_USAGE_REASONING_TOKENS] = usage_attrs["reasoning_tokens"]
-    
+    # Set individual LLM usage attributes only for values we actually have
+    if "prompt_tokens" in usage_data:
+        attributes[SpanAttributes.LLM_USAGE_PROMPT_TOKENS] = usage_data["prompt_tokens"]
+    if "completion_tokens" in usage_data:
+        attributes[SpanAttributes.LLM_USAGE_COMPLETION_TOKENS] = usage_data["completion_tokens"]
+    if "total_tokens" in usage_data:
+        attributes[SpanAttributes.LLM_USAGE_TOTAL_TOKENS] = usage_data["total_tokens"]
+    if "cache_read_input_tokens" in usage_data:
+        attributes[SpanAttributes.LLM_USAGE_CACHE_READ_INPUT_TOKENS] = usage_data["cache_read_input_tokens"]
+    if "reasoning_tokens" in usage_data:
+        attributes[SpanAttributes.LLM_USAGE_REASONING_TOKENS] = usage_data["reasoning_tokens"]
+
     # Also keep the nested format and individual gen_ai.usage.* attributes for compatibility
-    attributes["gen_ai.usage"] = usage_attrs
-    for key, value in usage_attrs.items():
-        attributes[f"gen_ai.usage.{key}"] = value
+    # But only if we have any usage data
+    if usage_data:
+        attributes["gen_ai.usage"] = usage_data
+        for key, value in usage_data.items():
+            attributes[f"gen_ai.usage.{key}"] = value
 
-    return attributes 
+    return attributes
