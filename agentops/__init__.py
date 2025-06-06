@@ -108,7 +108,7 @@ def init(
 
     # Check if in a Jupyter Notebook (manual start/end_trace())
     try:
-        __IPYTHON__  # type: ignore
+        get_ipython().__class__.__name__ == "ZMQInteractiveShell"  # type: ignore
         auto_start_session = False
     except NameError:
         pass
