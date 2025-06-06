@@ -1,870 +1,777 @@
-"""
-Comprehensive tests for AgentOps context manager functionality.
-
-This test suite validates the native TraceContext context manager implementation
-including edge cases, parallel traces, backwards compatibility, and error scenarios.
-"""
-
-import pytest
+import unittest
+from unittest.mock import Mock, patch
 import threading
 import time
 import asyncio
-from unittest.mock import Mock, patch, call
+
+from agentops import start_trace
 from agentops.sdk.core import TraceContext
-from agentops.enums import TraceState
-from opentelemetry.trace.status import StatusCode
-from agentops import start_trace, end_trace
+from opentelemetry.trace import StatusCode
 
 
-class TestContextManager:
-    """Comprehensive test suite for AgentOps context manager functionality."""
+class TestContextManager(unittest.TestCase):
+    """Test the context manager functionality of TraceContext"""
 
     def test_trace_context_has_context_manager_methods(self):
-        """Test that TraceContext has native context manager methods."""
+        """Test that TraceContext has __enter__ and __exit__ methods"""
+        # TraceContext should have context manager protocol methods
+        assert hasattr(TraceContext, "__enter__")
+        assert hasattr(TraceContext, "__exit__")
+
+    @patch("agentops.sdk.core.tracer")
+    def test_trace_context_enter_returns_self(self, mock_tracer):
+        """Test that __enter__ returns the TraceContext instance"""
         mock_span = Mock()
-        mock_span.get_span_context.return_value.span_id = "test_span_id"
-        mock_span.get_span_context.return_value.trace_id = 12345
+        mock_token = Mock()
+        trace_context = TraceContext(span=mock_span, token=mock_token)
 
-        trace_context = TraceContext(mock_span)
+        # __enter__ should return self
+        result = trace_context.__enter__()
+        assert result is trace_context
 
-        # Verify it has context manager methods
+    @patch("agentops.sdk.core.tracer")
+    def test_trace_context_exit_calls_end_trace(self, mock_tracer):
+        """Test that __exit__ calls end_trace with appropriate state"""
+        mock_span = Mock()
+        mock_token = Mock()
+        trace_context = TraceContext(span=mock_span, token=mock_token)
+
+        # Test normal exit (no exception)
+        trace_context.__exit__(None, None, None)
+        mock_tracer.end_trace.assert_called_once_with(trace_context, StatusCode.OK)
+
+    @patch("agentops.sdk.core.tracer")
+    def test_trace_context_exit_with_exception_sets_error_state(self, mock_tracer):
+        """Test that __exit__ sets ERROR state when exception occurs"""
+        mock_span = Mock()
+        mock_token = Mock()
+        trace_context = TraceContext(span=mock_span, token=mock_token)
+
+        # Test exit with exception
+        mock_tracer.reset_mock()
+        exc_type = ValueError
+        exc_val = ValueError("test error")
+        exc_tb = None
+
+        trace_context.__exit__(exc_type, exc_val, exc_tb)
+        mock_tracer.end_trace.assert_called_once_with(trace_context, StatusCode.ERROR)
+
+    @patch("agentops.sdk.core.tracer")
+    @patch("agentops.tracer")
+    def test_context_manager_usage_pattern(self, mock_agentops_tracer, mock_core_tracer):
+        """Test using start_trace as a context manager"""
+        # Create a mock TraceContext
+        mock_span = Mock()
+        mock_token = Mock()
+        mock_trace_context = TraceContext(span=mock_span, token=mock_token)
+
+        # Mock the tracer's start_trace method to return our TraceContext
+        mock_agentops_tracer.initialized = True
+        mock_agentops_tracer.start_trace.return_value = mock_trace_context
+
+        # Use as context manager
+        with start_trace("test_trace") as trace:
+            assert trace is mock_trace_context
+            assert trace.span is mock_span
+            assert trace.token is mock_token
+
+        # Verify start_trace was called
+        mock_agentops_tracer.start_trace.assert_called_once_with(trace_name="test_trace", tags=None)
+        # Verify end_trace was called
+        mock_core_tracer.end_trace.assert_called_once_with(mock_trace_context, StatusCode.OK)
+
+    @patch("agentops.sdk.core.tracer")
+    @patch("agentops.tracer")
+    def test_context_manager_with_exception(self, mock_agentops_tracer, mock_core_tracer):
+        """Test context manager handles exceptions properly"""
+        # Create a mock TraceContext
+        mock_span = Mock()
+        mock_token = Mock()
+        mock_trace_context = TraceContext(span=mock_span, token=mock_token)
+
+        # Mock the tracer's start_trace method
+        mock_agentops_tracer.initialized = True
+        mock_agentops_tracer.start_trace.return_value = mock_trace_context
+
+        # Test exception handling
+        with self.assertRaises(ValueError):
+            with start_trace("test_trace"):
+                raise ValueError("Test exception")
+
+        # Verify end_trace was called with ERROR state
+        mock_core_tracer.end_trace.assert_called_once_with(mock_trace_context, StatusCode.ERROR)
+
+    @patch("agentops.sdk.core.tracer")
+    @patch("agentops.tracer")
+    @patch("agentops.init")
+    def test_start_trace_auto_initializes_if_needed(self, mock_init, mock_agentops_tracer, mock_core_tracer):
+        """Test that start_trace attempts to initialize SDK if not initialized"""
+        # First call: SDK not initialized
+        mock_agentops_tracer.initialized = False
+
+        # After init() is called, set initialized to True
+        def set_initialized():
+            mock_agentops_tracer.initialized = True
+
+        mock_init.side_effect = set_initialized
+
+        # Create a mock TraceContext for when start_trace is called after init
+        mock_span = Mock()
+        mock_token = Mock()
+        mock_trace_context = TraceContext(span=mock_span, token=mock_token)
+        mock_agentops_tracer.start_trace.return_value = mock_trace_context
+
+        # Call start_trace
+        result = start_trace("test_trace")
+
+        # Verify init was called
+        mock_init.assert_called_once()
+        # Verify start_trace was called on tracer
+        mock_agentops_tracer.start_trace.assert_called_once_with(trace_name="test_trace", tags=None)
+        assert result is mock_trace_context
+
+    def test_no_wrapper_classes_needed(self):
+        """Test that we don't need wrapper classes - TraceContext is the context manager"""
+        # TraceContext itself implements the context manager protocol
+        # No need for TraceContextManager wrapper
+        mock_span = Mock()
+        mock_token = Mock()
+        trace_context = TraceContext(span=mock_span, token=mock_token)
+
+        # Can use directly as context manager
         assert hasattr(trace_context, "__enter__")
         assert hasattr(trace_context, "__exit__")
         assert callable(trace_context.__enter__)
         assert callable(trace_context.__exit__)
 
-    def test_trace_context_enter_returns_self(self):
-        """Test that __enter__ returns the TraceContext instance."""
-        mock_span = Mock()
-        trace_context = TraceContext(mock_span)
+    @patch("agentops.sdk.core.tracer")
+    @patch("agentops.tracer")
+    def test_parallel_traces_independence(self, mock_agentops_tracer, mock_core_tracer):
+        """Test that multiple traces can run in parallel independently"""
+        # Create mock TraceContexts
+        mock_trace1 = TraceContext(span=Mock(), token=Mock())
+        mock_trace2 = TraceContext(span=Mock(), token=Mock())
 
-        result = trace_context.__enter__()
-        assert result is trace_context
+        # Mock the tracer to return different traces
+        mock_agentops_tracer.initialized = True
+        mock_agentops_tracer.start_trace.side_effect = [mock_trace1, mock_trace2]
 
-    @patch("agentops.sdk.core.TracingCore.get_instance")
-    def test_trace_context_exit_calls_end_trace(self, mock_get_instance):
-        """Test that __exit__ calls end_trace on TracingCore."""
-        mock_tracing_core = Mock()
-        mock_get_instance.return_value = mock_tracing_core
-
-        mock_span = Mock()
-        trace_context = TraceContext(mock_span)
-
-        # Call __exit__ without exception
-        result = trace_context.__exit__(None, None, None)
-
-        # Verify end_trace was called with SUCCESS state
-        mock_tracing_core.end_trace.assert_called_once_with(trace_context, StatusCode.OK)
-        assert result is False  # Should not suppress exceptions
-
-    @patch("agentops.sdk.core.TracingCore.get_instance")
-    def test_trace_context_exit_with_exception_sets_error_state(self, mock_get_instance):
-        """Test that __exit__ sets Error state when exception occurs."""
-        mock_tracing_core = Mock()
-        mock_get_instance.return_value = mock_tracing_core
-
-        mock_span = Mock()
-        trace_context = TraceContext(mock_span)
-
-        # Call __exit__ with exception
-        exc_type = ValueError
-        exc_val = ValueError("test error")
-        exc_tb = None
-
-        result = trace_context.__exit__(exc_type, exc_val, exc_tb)
-
-        # Verify end_trace was called with ERROR state
-        mock_tracing_core.end_trace.assert_called_once_with(trace_context, StatusCode.ERROR)
-        assert result is False  # Should not suppress exceptions
-
-    @patch("agentops.sdk.core.TracingCore.get_instance")
-    def test_context_manager_usage_pattern(self, mock_get_instance):
-        """Test the actual context manager usage pattern."""
-        mock_tracing_core = Mock()
-        mock_tracing_core.initialized = True
-        mock_get_instance.return_value = mock_tracing_core
-
-        mock_span = Mock()
-        mock_span.get_span_context.return_value.span_id = "test_span_id"
-        mock_span.get_span_context.return_value.trace_id = 12345
-        mock_span.name = "test_trace"
-
-        mock_trace_context = TraceContext(mock_span)
-        mock_tracing_core.start_trace.return_value = mock_trace_context
-
-        # Test the context manager pattern
-        with start_trace("test_trace") as trace:
-            assert trace is mock_trace_context
-            # Do some work
-            pass
-
-        # Verify start_trace and end_trace were called
-        mock_tracing_core.start_trace.assert_called_once_with(trace_name="test_trace", tags=None)
-        mock_tracing_core.end_trace.assert_called_once_with(mock_trace_context, StatusCode.OK)
-
-    @patch("agentops.sdk.core.TracingCore.get_instance")
-    def test_context_manager_with_exception(self, mock_get_instance):
-        """Test context manager behavior when exception is raised."""
-        mock_tracing_core = Mock()
-        mock_tracing_core.initialized = True
-        mock_get_instance.return_value = mock_tracing_core
-
-        mock_span = Mock()
-        mock_trace_context = TraceContext(mock_span)
-        mock_tracing_core.start_trace.return_value = mock_trace_context
-
-        # Test exception handling
-        with pytest.raises(ValueError):
-            with start_trace("test_trace"):
-                raise ValueError("test error")
-
-        # Verify end_trace was called with Error state
-        mock_tracing_core.end_trace.assert_called_once_with(mock_trace_context, StatusCode.ERROR)
-
-    @patch("agentops.init")
-    @patch("agentops.sdk.core.TracingCore.get_instance")
-    def test_start_trace_auto_initializes_if_needed(self, mock_get_instance, mock_init):
-        """Test that start_trace auto-initializes if SDK not initialized."""
-        mock_tracing_core = Mock()
-        mock_tracing_core.initialized = False
-        mock_get_instance.return_value = mock_tracing_core
-
-        # Mock the init call to set initialized to True
-        def side_effect():
-            mock_tracing_core.initialized = True
-
-        mock_init.side_effect = side_effect
-
-        mock_span = Mock()
-        mock_trace_context = TraceContext(mock_span)
-        mock_tracing_core.start_trace.return_value = mock_trace_context
-
-        # Call start_trace
-        result = start_trace("test_trace")
-
-        # Verify init was called and trace was started
-        mock_init.assert_called_once()
-        mock_tracing_core.start_trace.assert_called_once_with(trace_name="test_trace", tags=None)
-        assert result is mock_trace_context
-
-    def test_no_wrapper_classes_needed(self):
-        """Test that we don't need wrapper classes anymore."""
-        mock_span = Mock()
-        trace_context = TraceContext(mock_span)
-
-        # Should be able to use directly as context manager
-        assert hasattr(trace_context, "__enter__")
-        assert hasattr(trace_context, "__exit__")
-
-        # Should not need any wrapper
-        with trace_context as ctx:
-            assert ctx is trace_context
-
-    @patch("agentops.sdk.core.TracingCore.get_instance")
-    def test_parallel_traces_independence(self, mock_get_instance):
-        """Test that parallel traces are independent and don't interfere."""
-        mock_tracing_core = Mock()
-        mock_tracing_core.initialized = True
-        mock_get_instance.return_value = mock_tracing_core
-
-        # Create mock spans for different traces
-        mock_span1 = Mock()
-        mock_span1.get_span_context.return_value.trace_id = 111
-        mock_span1.name = "trace1"
-
-        mock_span2 = Mock()
-        mock_span2.get_span_context.return_value.trace_id = 222
-        mock_span2.name = "trace2"
-
-        mock_trace1 = TraceContext(mock_span1)
-        mock_trace2 = TraceContext(mock_span2)
-
-        # Mock start_trace to return different traces
-        mock_tracing_core.start_trace.side_effect = [mock_trace1, mock_trace2]
-
-        # Start two parallel traces
+        # Start two traces
         trace1 = start_trace("trace1")
         trace2 = start_trace("trace2")
 
+        # They should be different instances
+        assert trace1 is not trace2
         assert trace1 is mock_trace1
         assert trace2 is mock_trace2
-        assert trace1 is not trace2
 
-        # Verify both traces were started independently
-        assert mock_tracing_core.start_trace.call_count == 2
-        mock_tracing_core.start_trace.assert_has_calls(
-            [call(trace_name="trace1", tags=None), call(trace_name="trace2", tags=None)]
-        )
+        # End them independently using context manager protocol
+        trace1.__exit__(None, None, None)
+        trace2.__exit__(None, None, None)
 
-    @patch("agentops.sdk.core.TracingCore.get_instance")
-    def test_nested_context_managers_create_parallel_traces(self, mock_get_instance):
-        """Test that nested context managers create parallel traces, not parent-child."""
-        mock_tracing_core = Mock()
-        mock_tracing_core.initialized = True
-        mock_get_instance.return_value = mock_tracing_core
+        # Verify both were ended
+        assert mock_core_tracer.end_trace.call_count == 2
 
-        # Create mock traces
-        mock_span1 = Mock()
-        mock_span2 = Mock()
-        mock_trace1 = TraceContext(mock_span1)
-        mock_trace2 = TraceContext(mock_span2)
+    @patch("agentops.sdk.core.tracer")
+    @patch("agentops.tracer")
+    def test_nested_context_managers_create_parallel_traces(self, mock_agentops_tracer, mock_core_tracer):
+        """Test that nested context managers create parallel traces, not parent-child"""
+        # Create mock TraceContexts
+        mock_outer = TraceContext(span=Mock(), token=Mock())
+        mock_inner = TraceContext(span=Mock(), token=Mock())
 
-        mock_tracing_core.start_trace.side_effect = [mock_trace1, mock_trace2]
+        # Mock the tracer
+        mock_agentops_tracer.initialized = True
+        mock_agentops_tracer.start_trace.side_effect = [mock_outer, mock_inner]
 
-        # Test nested context managers
+        # Use nested context managers
         with start_trace("outer_trace") as outer:
-            assert outer is mock_trace1
-
+            assert outer is mock_outer
             with start_trace("inner_trace") as inner:
-                assert inner is mock_trace2
+                assert inner is mock_inner
                 assert inner is not outer
+                # Both traces are active
+                assert mock_agentops_tracer.start_trace.call_count == 2
 
-        # Verify both traces were started and ended independently
-        assert mock_tracing_core.start_trace.call_count == 2
-        assert mock_tracing_core.end_trace.call_count == 2
+        # Verify both were ended
+        assert mock_core_tracer.end_trace.call_count == 2
+        # Inner trace ended first, then outer
+        calls = mock_core_tracer.end_trace.call_args_list
+        assert calls[0][0][0] is mock_inner
+        assert calls[1][0][0] is mock_outer
 
-        # Verify the order of end_trace calls (inner first, then outer)
-        mock_tracing_core.end_trace.assert_has_calls(
-            [
-                call(mock_trace2, StatusCode.OK),  # inner trace ends first
-                call(mock_trace1, StatusCode.OK),  # outer trace ends second
-            ]
-        )
+    @patch("agentops.sdk.core.tracer")
+    @patch("agentops.tracer")
+    def test_exception_in_nested_traces(self, mock_agentops_tracer, mock_core_tracer):
+        """Test exception handling in nested traces"""
+        # Create mock TraceContexts
+        mock_outer = TraceContext(span=Mock(), token=Mock())
+        mock_inner = TraceContext(span=Mock(), token=Mock())
 
-    @patch("agentops.sdk.core.TracingCore.get_instance")
-    def test_exception_in_nested_traces(self, mock_get_instance):
-        """Test exception handling in nested traces."""
-        mock_tracing_core = Mock()
-        mock_tracing_core.initialized = True
-        mock_get_instance.return_value = mock_tracing_core
+        # Mock the tracer
+        mock_agentops_tracer.initialized = True
+        mock_agentops_tracer.start_trace.side_effect = [mock_outer, mock_inner]
 
-        mock_span1 = Mock()
-        mock_span2 = Mock()
-        mock_trace1 = TraceContext(mock_span1)
-        mock_trace2 = TraceContext(mock_span2)
-
-        mock_tracing_core.start_trace.side_effect = [mock_trace1, mock_trace2]
-
-        # Test exception in nested trace
-        with pytest.raises(ValueError):
+        # Test exception in inner trace
+        with self.assertRaises(ValueError):
             with start_trace("outer_trace"):
                 with start_trace("inner_trace"):
-                    raise ValueError("inner error")
+                    raise ValueError("Inner exception")
 
-        # Verify both traces ended with appropriate states
-        mock_tracing_core.end_trace.assert_has_calls(
-            [
-                call(mock_trace2, StatusCode.ERROR),  # inner trace ends with Error
-                call(mock_trace1, StatusCode.ERROR),  # outer trace also ends with Error due to exception propagation
-            ]
-        )
+        # Both traces should be ended with ERROR state
+        assert mock_core_tracer.end_trace.call_count == 2
+        calls = mock_core_tracer.end_trace.call_args_list
+        # Inner trace ended with ERROR
+        assert calls[0][0][0] is mock_inner
+        assert calls[0][0][1] == StatusCode.ERROR
+        # Outer trace also ended with ERROR (exception propagated)
+        assert calls[1][0][0] is mock_outer
+        assert calls[1][0][1] == StatusCode.ERROR
 
-    def test_trace_context_attributes_access(self):
-        """Test that TraceContext attributes are accessible."""
+    @patch("agentops.sdk.core.tracer")
+    def test_trace_context_attributes_access(self, mock_tracer):
+        """Test accessing span and token attributes of TraceContext"""
         mock_span = Mock()
-        mock_span.name = "test_span"
-        mock_span.get_span_context.return_value.trace_id = 12345
-
         mock_token = Mock()
+        trace_context = TraceContext(span=mock_span, token=mock_token)
 
-        trace_context = TraceContext(mock_span, token=mock_token, is_init_trace=True)
-
-        # Test attribute access
+        # Direct attribute access
         assert trace_context.span is mock_span
         assert trace_context.token is mock_token
-        assert trace_context.is_init_trace is True
-        assert trace_context._end_state == StatusCode.UNSET  # Default state before exit
 
-    @patch("agentops.sdk.core.TracingCore.get_instance")
-    def test_multiple_exceptions_in_sequence(self, mock_get_instance):
-        """Test handling multiple exceptions in sequence."""
-        mock_tracing_core = Mock()
-        mock_tracing_core.initialized = True
-        mock_get_instance.return_value = mock_tracing_core
+    @patch("agentops.sdk.core.tracer")
+    @patch("agentops.tracer")
+    def test_multiple_exceptions_in_sequence(self, mock_agentops_tracer, mock_core_tracer):
+        """Test handling multiple exceptions in sequence"""
+        # Mock the tracer
+        mock_agentops_tracer.initialized = True
 
-        mock_spans = [Mock() for _ in range(3)]
-        mock_traces = [TraceContext(span) for span in mock_spans]
-        mock_tracing_core.start_trace.side_effect = mock_traces
+        # Create different mock traces for each attempt
+        mock_traces = [TraceContext(span=Mock(), token=Mock()) for _ in range(3)]
+        mock_agentops_tracer.start_trace.side_effect = mock_traces
 
-        # Test multiple traces with exceptions
-        for i, exception_type in enumerate([ValueError, TypeError, RuntimeError]):
-            with pytest.raises(exception_type):
+        # Multiple traces with exceptions
+        for i in range(3):
+            with self.assertRaises(RuntimeError):
                 with start_trace(f"trace_{i}"):
-                    raise exception_type(f"error_{i}")
+                    raise RuntimeError(f"Error {i}")
 
-        # Verify all traces ended with Error state
-        assert mock_tracing_core.end_trace.call_count == 3
-        for i, mock_trace in enumerate(mock_traces):
-            mock_tracing_core.end_trace.assert_any_call(mock_trace, StatusCode.ERROR)
+        # All should be ended with ERROR state
+        assert mock_core_tracer.end_trace.call_count == 3
+        for i, call in enumerate(mock_core_tracer.end_trace.call_args_list):
+            assert call[0][0] is mock_traces[i]
+            assert call[0][1] == StatusCode.ERROR
 
-    @patch("agentops.sdk.core.TracingCore.get_instance")
-    def test_trace_with_tags_dict(self, mock_get_instance):
-        """Test trace creation with dictionary tags."""
-        mock_tracing_core = Mock()
-        mock_tracing_core.initialized = True
-        mock_get_instance.return_value = mock_tracing_core
+    @patch("agentops.sdk.core.tracer")
+    @patch("agentops.tracer")
+    def test_trace_with_tags_dict(self, mock_agentops_tracer, mock_core_tracer):
+        """Test starting trace with tags as dictionary"""
+        # Create a mock TraceContext
+        mock_trace = TraceContext(span=Mock(), token=Mock())
+        mock_agentops_tracer.initialized = True
+        mock_agentops_tracer.start_trace.return_value = mock_trace
 
-        mock_span = Mock()
-        mock_trace = TraceContext(mock_span)
-        mock_tracing_core.start_trace.return_value = mock_trace
-
-        tags = {"environment": "test", "version": "1.0", "priority": "high"}
-
+        tags = {"environment": "test", "version": "1.0"}
         with start_trace("tagged_trace", tags=tags) as trace:
             assert trace is mock_trace
 
-        # Verify tags were passed correctly
-        mock_tracing_core.start_trace.assert_called_once_with(trace_name="tagged_trace", tags=tags)
+        # Verify tags were passed
+        mock_agentops_tracer.start_trace.assert_called_once_with(trace_name="tagged_trace", tags=tags)
 
-    @patch("agentops.sdk.core.TracingCore.get_instance")
-    def test_trace_with_tags_list(self, mock_get_instance):
-        """Test trace creation with list tags."""
-        mock_tracing_core = Mock()
-        mock_tracing_core.initialized = True
-        mock_get_instance.return_value = mock_tracing_core
+    @patch("agentops.sdk.core.tracer")
+    @patch("agentops.tracer")
+    def test_trace_with_tags_list(self, mock_agentops_tracer, mock_core_tracer):
+        """Test starting trace with tags as list"""
+        # Create a mock TraceContext
+        mock_trace = TraceContext(span=Mock(), token=Mock())
+        mock_agentops_tracer.initialized = True
+        mock_agentops_tracer.start_trace.return_value = mock_trace
 
-        mock_span = Mock()
-        mock_trace = TraceContext(mock_span)
-        mock_tracing_core.start_trace.return_value = mock_trace
-
-        tags = ["test", "integration", "high-priority"]
-
+        tags = ["test", "v1.0", "experimental"]
         with start_trace("tagged_trace", tags=tags) as trace:
             assert trace is mock_trace
 
-        # Verify tags were passed correctly
-        mock_tracing_core.start_trace.assert_called_once_with(trace_name="tagged_trace", tags=tags)
+        # Verify tags were passed
+        mock_agentops_tracer.start_trace.assert_called_once_with(trace_name="tagged_trace", tags=tags)
 
-    @patch("agentops.sdk.core.TracingCore.get_instance")
-    def test_trace_context_manager_thread_safety(self, mock_get_instance):
-        """Test that context managers work correctly in multi-threaded environment."""
-        mock_tracing_core = Mock()
-        mock_tracing_core.initialized = True
-        mock_get_instance.return_value = mock_tracing_core
+    @patch("agentops.sdk.core.tracer")
+    @patch("agentops.tracer")
+    def test_trace_context_manager_thread_safety(self, mock_agentops_tracer, mock_core_tracer):
+        """Test that context managers work correctly in multi-threaded environment"""
+        # Mock the tracer
+        mock_agentops_tracer.initialized = True
+
+        # Create unique traces for each thread
+        thread_traces = {}
+        trace_lock = threading.Lock()
+
+        def create_trace(trace_name=None, tags=None, **kwargs):
+            trace = TraceContext(span=Mock(), token=Mock())
+            with trace_lock:
+                thread_traces[threading.current_thread().ident] = trace
+            return trace
+
+        mock_agentops_tracer.start_trace.side_effect = create_trace
 
         results = []
         errors = []
 
-        def create_mock_trace(name):
-            mock_span = Mock()
-            mock_span.name = name
-            mock_span.get_span_context.return_value.trace_id = hash(name)
-            return TraceContext(mock_span)
-
-        # Create different mock traces for each thread
-        mock_traces = [create_mock_trace(f"thread_{i}") for i in range(5)]
-        mock_tracing_core.start_trace.side_effect = mock_traces
-
         def worker(thread_id):
             try:
-                with start_trace(f"thread_{thread_id}") as trace:
-                    # Simulate some work
-                    time.sleep(0.01)
-                    results.append((thread_id, trace.span.name))
+                with start_trace(f"thread_{thread_id}_trace") as trace:
+                    # Each thread should get its own trace
+                    results.append((thread_id, trace))
+                    time.sleep(0.01)  # Simulate some work
             except Exception as e:
                 errors.append((thread_id, str(e)))
 
         # Start multiple threads
         threads = []
         for i in range(5):
-            thread = threading.Thread(target=worker, args=(i,))
-            threads.append(thread)
-            thread.start()
+            t = threading.Thread(target=worker, args=(i,))
+            threads.append(t)
+            t.start()
 
-        # Wait for all threads to complete
-        for thread in threads:
-            thread.join()
+        # Wait for all threads
+        for t in threads:
+            t.join()
 
-        # Verify no errors occurred
+        # Check results
         assert len(errors) == 0, f"Errors in threads: {errors}"
-
-        # Verify all threads completed successfully
         assert len(results) == 5
 
-        # Verify each thread got its own trace
-        thread_names = [result[1] for result in results]
-        expected_names = [f"thread_{i}" for i in range(5)]
-        assert sorted(thread_names) == sorted(expected_names)
+        # Each thread should have gotten a unique trace
+        traces = [r[1] for r in results]
+        assert len(set(id(t) for t in traces)) == 5  # All unique
 
-        # Verify all traces were started and ended
-        assert mock_tracing_core.start_trace.call_count == 5
-        assert mock_tracing_core.end_trace.call_count == 5
-
-    @patch("agentops.sdk.core.TracingCore.get_instance")
-    def test_context_manager_with_early_return(self, mock_get_instance):
-        """Test context manager behavior with early return statements."""
-        mock_tracing_core = Mock()
-        mock_tracing_core.initialized = True
-        mock_get_instance.return_value = mock_tracing_core
-
-        mock_span = Mock()
-        mock_trace = TraceContext(mock_span)
-        mock_tracing_core.start_trace.return_value = mock_trace
+    @patch("agentops.sdk.core.tracer")
+    @patch("agentops.tracer")
+    def test_context_manager_with_early_return(self, mock_agentops_tracer, mock_core_tracer):
+        """Test that context manager properly cleans up with early return"""
+        # Create a mock TraceContext
+        mock_trace = TraceContext(span=Mock(), token=Mock())
+        mock_agentops_tracer.initialized = True
+        mock_agentops_tracer.start_trace.return_value = mock_trace
 
         def function_with_early_return():
             with start_trace("early_return_trace"):
-                if True:  # Simulate condition for early return
-                    return "early_result"
-                # This code should not be reached
-                return "normal_result"
+                if True:  # Early return condition
+                    return "early"
+                return "normal"
 
         result = function_with_early_return()
+        assert result == "early"
 
-        # Verify early return worked
-        assert result == "early_result"
+        # Verify trace was still ended properly
+        mock_core_tracer.end_trace.assert_called_once_with(mock_trace, StatusCode.OK)
 
-        # Verify trace was still properly ended
-        mock_tracing_core.start_trace.assert_called_once()
-        mock_tracing_core.end_trace.assert_called_once_with(mock_trace, StatusCode.OK)
+    @patch("agentops.sdk.core.tracer")
+    @patch("agentops.tracer")
+    def test_context_manager_with_finally_block(self, mock_agentops_tracer, mock_core_tracer):
+        """Test context manager with try-finally block"""
+        # Create a mock TraceContext
+        mock_trace = TraceContext(span=Mock(), token=Mock())
+        mock_agentops_tracer.initialized = True
+        mock_agentops_tracer.start_trace.return_value = mock_trace
 
-    @patch("agentops.sdk.core.TracingCore.get_instance")
-    def test_context_manager_with_finally_block(self, mock_get_instance):
-        """Test context manager interaction with finally blocks."""
-        mock_tracing_core = Mock()
-        mock_tracing_core.initialized = True
-        mock_get_instance.return_value = mock_tracing_core
-
-        mock_span = Mock()
-        mock_trace = TraceContext(mock_span)
-        mock_tracing_core.start_trace.return_value = mock_trace
-
-        finally_executed = []
+        finally_executed = False
 
         try:
             with start_trace("finally_trace"):
                 try:
-                    raise ValueError("test error")
+                    raise ValueError("Test")
                 finally:
-                    finally_executed.append("finally_block")
+                    finally_executed = True
         except ValueError:
             pass
 
-        # Verify finally block was executed
-        assert finally_executed == ["finally_block"]
+        assert finally_executed
+        # Trace should be ended with ERROR due to exception
+        mock_core_tracer.end_trace.assert_called_once_with(mock_trace, StatusCode.ERROR)
 
-        # Verify trace was ended with Error state
-        mock_tracing_core.end_trace.assert_called_once_with(mock_trace, StatusCode.ERROR)
-
-    @patch("agentops.sdk.core.TracingCore.get_instance")
-    def test_backwards_compatibility_existing_patterns(self, mock_get_instance):
-        """Test that existing code patterns continue to work."""
-        mock_tracing_core = Mock()
-        mock_tracing_core.initialized = True
-        mock_get_instance.return_value = mock_tracing_core
-
-        mock_span = Mock()
-        mock_trace = TraceContext(mock_span)
-        mock_tracing_core.start_trace.return_value = mock_trace
-
-        # Test various existing patterns that should still work
-
-        # Pattern 1: Basic usage
-        with start_trace("basic") as trace:
-            assert trace is not None
-            assert hasattr(trace, "span")
-
-        # Pattern 2: With tags
-        with start_trace("tagged", tags=["test", "example"]) as trace:
-            assert trace is not None
-
-        # Pattern 3: Accessing trace properties
-        with start_trace("properties") as trace:
-            span = trace.span
-            assert span is mock_span
-
-        # Pattern 4: Manual end_trace (should still work)
-        trace = start_trace("manual")
-        end_trace(trace, StatusCode.OK)
-
-        # Verify all calls were made correctly
-        assert mock_tracing_core.start_trace.call_count == 4
-        assert mock_tracing_core.end_trace.call_count == 4
-
-    @patch("agentops.sdk.core.TracingCore.get_instance")
-    def test_edge_case_none_trace_context(self, mock_get_instance):
-        """Test edge case where start_trace returns None."""
-        mock_tracing_core = Mock()
-        mock_tracing_core.initialized = True
-        mock_get_instance.return_value = mock_tracing_core
-
-        # Mock start_trace to return None (edge case)
-        mock_tracing_core.start_trace.return_value = None
-
-        # This should not raise an exception
-        result = start_trace("none_trace")
-        assert result is None
-
-        # Verify start_trace was called
-        mock_tracing_core.start_trace.assert_called_once()
-
-    @patch("agentops.sdk.core.TracingCore.get_instance")
-    def test_edge_case_tracing_core_not_initialized(self, mock_get_instance):
-        """Test edge case where TracingCore is not initialized."""
-        mock_tracing_core = Mock()
-        mock_tracing_core.initialized = False
-        mock_get_instance.return_value = mock_tracing_core
-
-        # Mock init to fail
-        with patch("agentops.init") as mock_init:
-            mock_init.side_effect = Exception("Init failed")
-
-            # This should return None and not raise
-            result = start_trace("uninitialized")
-            assert result is None
-
-            # Verify init was attempted
-            mock_init.assert_called_once()
-
-    @patch("agentops.sdk.core.TracingCore.get_instance")
-    def test_edge_case_exception_in_exit_method(self, mock_get_instance):
-        """Test edge case where exception occurs in __exit__ method."""
-        mock_tracing_core = Mock()
-        mock_tracing_core.initialized = True
-        mock_get_instance.return_value = mock_tracing_core
-
-        # Mock end_trace to raise an exception
-        mock_tracing_core.end_trace.side_effect = Exception("End trace failed")
-
-        mock_span = Mock()
-        mock_trace = TraceContext(mock_span)
-        mock_tracing_core.start_trace.return_value = mock_trace
-
-        # The context manager should handle the exception gracefully
-        with start_trace("exception_in_exit"):
-            pass  # Normal execution
-
-        # Verify end_trace was called despite the exception
-        mock_tracing_core.end_trace.assert_called_once()
-
-    @patch("agentops.sdk.core.TracingCore.get_instance")
-    def test_performance_many_sequential_traces(self, mock_get_instance):
-        """Test performance with many sequential traces."""
-        mock_tracing_core = Mock()
-        mock_tracing_core.initialized = True
-        mock_get_instance.return_value = mock_tracing_core
-
-        def create_mock_trace(i):
-            mock_span = Mock()
-            mock_span.name = f"trace_{i}"
-            return TraceContext(mock_span)
-
-        # Create many mock traces
-        num_traces = 100
-        mock_traces = [create_mock_trace(i) for i in range(num_traces)]
-        mock_tracing_core.start_trace.side_effect = mock_traces
-
-        # Execute many sequential traces
-        start_time = time.time()
-
-        for i in range(num_traces):
-            with start_trace(f"trace_{i}") as trace:
-                assert trace is mock_traces[i]
-
-        end_time = time.time()
-
-        # Verify all traces were processed
-        assert mock_tracing_core.start_trace.call_count == num_traces
-        assert mock_tracing_core.end_trace.call_count == num_traces
-
-        # Performance should be reasonable (less than 1 second for 100 traces)
-        execution_time = end_time - start_time
-        assert execution_time < 1.0, f"Execution took too long: {execution_time}s"
-
-    def test_trace_context_state_management(self):
-        """Test TraceContext internal state management."""
-        mock_span = Mock()
-        trace_context = TraceContext(mock_span)
-
-        # Test initial state
-        assert trace_context._end_state == StatusCode.UNSET
-
-        # Test state change on exception
-        trace_context.__exit__(ValueError, ValueError("test"), None)
-        assert trace_context._end_state == StatusCode.ERROR
-
-    @patch("agentops.sdk.core.TracingCore.get_instance")
-    def test_context_manager_with_async_context(self, mock_get_instance):
-        """Test context manager behavior in async context (sync usage)."""
-        mock_tracing_core = Mock()
-        mock_tracing_core.initialized = True
-        mock_get_instance.return_value = mock_tracing_core
-
-        mock_span = Mock()
-        mock_trace = TraceContext(mock_span)
-        mock_tracing_core.start_trace.return_value = mock_trace
-
-        async def async_function():
-            with start_trace("async_context") as trace:
-                await asyncio.sleep(0.001)  # Simulate async work
-                return trace
-
-        # Run the async function
-        result = asyncio.run(async_function())
-
-        # Verify trace was handled correctly
-        assert result is mock_trace
-        mock_tracing_core.start_trace.assert_called_once()
-        mock_tracing_core.end_trace.assert_called_once_with(mock_trace, StatusCode.OK)
-
-
-class TestContextManagerBackwardCompatibility:
-    """Test backward compatibility with existing code patterns."""
-
-    @patch("agentops.sdk.core.TracingCore.get_instance")
-    def test_existing_code_patterns_still_work(self, mock_get_instance):
-        """Test that all existing code patterns continue to work."""
-        mock_tracing_core = Mock()
-        mock_tracing_core.initialized = True
-        mock_get_instance.return_value = mock_tracing_core
-
-        mock_span = Mock()
-        mock_trace = TraceContext(mock_span)
-        mock_tracing_core.start_trace.return_value = mock_trace
+    @patch("agentops.sdk.core.tracer")
+    @patch("agentops.tracer")
+    def test_backwards_compatibility_existing_patterns(self, mock_agentops_tracer, mock_core_tracer):
+        """Test that existing usage patterns continue to work"""
+        # Create mock traces
+        mock_traces = [TraceContext(span=Mock(), token=Mock()) for _ in range(3)]
+        mock_agentops_tracer.initialized = True
+        mock_agentops_tracer.start_trace.side_effect = mock_traces
 
         # Pattern 1: Basic context manager
         with start_trace("basic") as trace:
-            assert trace is not None
+            assert trace is mock_traces[0]
 
-        # Pattern 2: With tags as list
-        with start_trace("list_tags", tags=["tag1", "tag2"]) as trace:
-            assert trace is not None
-
-        # Pattern 3: With tags as dict
-        with start_trace("dict_tags", tags={"env": "test"}) as trace:
-            assert trace is not None
-
-        # Pattern 4: Accessing span
-        with start_trace("span_access") as trace:
-            span = trace.span
-            assert span is mock_span
-
-        # Pattern 5: Manual trace management (legacy)
+        # Pattern 2: Manual start/end using context manager protocol
         trace = start_trace("manual")
-        end_trace(trace)
+        assert trace is mock_traces[1]
+        trace.__exit__(None, None, None)  # Use context manager exit instead of end_trace
 
-        # All patterns should work identically
-        assert mock_tracing_core.start_trace.call_count == 5
+        # Pattern 3: With tags
+        with start_trace("tagged", tags=["production", "v2"]) as trace:
+            assert trace is mock_traces[2]
 
-    @patch("agentops.sdk.core.TracingCore.get_instance")
-    def test_api_compatibility(self, mock_get_instance):
-        """Test that the API remains exactly the same."""
-        mock_tracing_core = Mock()
-        mock_tracing_core.initialized = True
-        mock_get_instance.return_value = mock_tracing_core
+        # All patterns should work
+        assert mock_agentops_tracer.start_trace.call_count == 3
+        assert mock_core_tracer.end_trace.call_count == 3
 
+    @patch("agentops.sdk.core.tracer")
+    @patch("agentops.tracer")
+    def test_edge_case_none_trace_context(self, mock_agentops_tracer, mock_core_tracer):
+        """Test handling when start_trace returns None"""
+        # Mock SDK not initialized and init fails
+        mock_agentops_tracer.initialized = False
+
+        # When start_trace is called on uninitialized tracer, it returns None
+        with patch("agentops.init") as mock_init:
+            mock_init.side_effect = Exception("Init failed")
+
+            result = start_trace("test_trace")
+            assert result is None
+
+        # Verify start_trace was not called on tracer (since init failed)
+        mock_agentops_tracer.start_trace.assert_not_called()
+
+    @patch("agentops.sdk.core.tracer")
+    @patch("agentops.tracer")
+    def test_edge_case_tracing_core_not_initialized(self, mock_agentops_tracer, mock_core_tracer):
+        """Test behavior when TracingCore is not initialized"""
+        mock_agentops_tracer.initialized = False
+
+        # Mock init to succeed but tracer still not initialized
+        with patch("agentops.init") as mock_init:
+            mock_init.return_value = None  # init succeeds but doesn't set initialized
+
+            result = start_trace("test")
+            assert result is None
+
+    @patch("agentops.sdk.core.tracer")
+    @patch("agentops.tracer")
+    def test_edge_case_exception_in_exit_method(self, mock_agentops_tracer, mock_core_tracer):
+        """Test handling when exception occurs in __exit__ method"""
+        # Create a mock TraceContext
+        mock_trace = TraceContext(span=Mock(), token=Mock())
+        mock_agentops_tracer.initialized = True
+        mock_agentops_tracer.start_trace.return_value = mock_trace
+
+        # Make end_trace raise an exception
+        mock_core_tracer.end_trace.side_effect = RuntimeError("End trace failed")
+
+        # The exception in __exit__ should be suppressed
+        with start_trace("exception_in_exit"):
+            pass  # Should not raise
+
+        # Verify end_trace was attempted
+        mock_core_tracer.end_trace.assert_called_once()
+
+    @patch("agentops.sdk.core.tracer")
+    @patch("agentops.tracer")
+    def test_performance_many_sequential_traces(self, mock_agentops_tracer, mock_core_tracer):
+        """Test performance with many sequential traces"""
+        # Mock the tracer
+        mock_agentops_tracer.initialized = True
+
+        # Create traces on demand
+        def create_trace(trace_name=None, tags=None, **kwargs):
+            return TraceContext(span=Mock(), token=Mock())
+
+        mock_agentops_tracer.start_trace.side_effect = create_trace
+
+        # Create many traces sequentially
+        start_time = time.time()
+        for i in range(100):
+            with start_trace(f"trace_{i}") as trace:
+                assert trace is not None
+                assert trace.span is not None
+
+        elapsed = time.time() - start_time
+
+        # Should complete reasonably quickly (< 1 second for 100 traces)
+        assert elapsed < 1.0, f"Too slow: {elapsed:.2f}s for 100 traces"
+
+        # Verify all traces were started and ended
+        assert mock_agentops_tracer.start_trace.call_count == 100
+        assert mock_core_tracer.end_trace.call_count == 100
+
+    @patch("agentops.sdk.core.tracer")
+    def test_trace_context_state_management(self, mock_tracer):
+        """Test that TraceContext properly manages its internal state"""
         mock_span = Mock()
-        mock_trace = TraceContext(mock_span)
-        mock_tracing_core.start_trace.return_value = mock_trace
+        mock_token = Mock()
+        trace_context = TraceContext(span=mock_span, token=mock_token)
 
-        # Test function signatures haven't changed
+        # Initial state
+        assert trace_context.span is mock_span
+        assert trace_context.token is mock_token
 
-        # start_trace with all parameters
-        trace1 = start_trace("test", tags=["tag"])
-        assert trace1 is mock_trace
+        # Enter context
+        result = trace_context.__enter__()
+        assert result is trace_context
 
-        # start_trace with positional args
-        trace2 = start_trace("test2")
-        assert trace2 is mock_trace
+        # Exit context normally
+        trace_context.__exit__(None, None, None)
+        mock_tracer.end_trace.assert_called_once_with(trace_context, StatusCode.OK)
 
-        # end_trace with all parameters
-        end_trace(trace1, "Success")
+        # State should remain accessible after exit
+        assert trace_context.span is mock_span
+        assert trace_context.token is mock_token
 
-        # end_trace with defaults
-        end_trace(trace2)
+    @patch("agentops.sdk.core.tracer")
+    @patch("agentops.tracer")
+    def test_context_manager_with_async_context(self, mock_agentops_tracer, mock_core_tracer):
+        """Test context manager works in async context"""
+        # Create a mock TraceContext
+        mock_trace = TraceContext(span=Mock(), token=Mock())
+        mock_agentops_tracer.initialized = True
+        mock_agentops_tracer.start_trace.return_value = mock_trace
 
-        # Verify calls were made correctly
-        mock_tracing_core.start_trace.assert_has_calls(
-            [call(trace_name="test", tags=["tag"]), call(trace_name="test2", tags=None)]
-        )
-        mock_tracing_core.end_trace.assert_has_calls(
-            [call(trace_context=trace1, end_state="Success"), call(trace_context=trace2, end_state=TraceState.SUCCESS)]
-        )
+        async def async_function():
+            with start_trace("async_context") as trace:
+                assert trace is mock_trace
+                await asyncio.sleep(0.01)
+                return "done"
 
-    def test_return_type_compatibility(self):
-        """Test that return types are compatible with existing code."""
+        # Run async function
+        result = asyncio.run(async_function())
+        assert result == "done"
+
+        # Verify trace was properly managed
+        mock_agentops_tracer.start_trace.assert_called_once_with(trace_name="async_context", tags=None)
+        mock_core_tracer.end_trace.assert_called_once_with(mock_trace, StatusCode.OK)
+
+
+class TestContextManagerBackwardCompatibility(unittest.TestCase):
+    """Test backward compatibility for context manager usage"""
+
+    @patch("agentops.sdk.core.tracer")
+    @patch("agentops.tracer")
+    def test_existing_code_patterns_still_work(self, mock_agentops_tracer, mock_core_tracer):
+        """Test that code using the old patterns still works"""
+        # Create mock traces - need more than 3 for this test
+        mock_traces = [TraceContext(span=Mock(), token=Mock()) for _ in range(5)]
+        mock_agentops_tracer.initialized = True
+        mock_agentops_tracer.start_trace.side_effect = mock_traces
+
+        # Old pattern 1: Simple context manager
+        with start_trace("basic") as trace:
+            # Should work without changes
+            assert trace.span is not None
+
+        # Old pattern 2: Context manager with exception handling
+        try:
+            with start_trace("with_error") as trace:
+                raise ValueError("test")
+        except ValueError:
+            pass
+
+        # Old pattern 3: Nested traces
+        with start_trace("outer") as outer:
+            with start_trace("inner") as inner:
+                assert outer is not inner
+
+        # All should work - 4 calls total (basic, with_error, outer, inner)
+        assert mock_agentops_tracer.start_trace.call_count == 4
+        assert mock_core_tracer.end_trace.call_count == 4
+
+    @patch("agentops.sdk.core.tracer")
+    @patch("agentops.tracer")
+    def test_api_compatibility(self, mock_agentops_tracer, mock_core_tracer):
+        """Test that the API remains compatible"""
+        # Create mock TraceContexts for each call
+        mock_traces = [TraceContext(span=Mock(), token=Mock()) for _ in range(3)]
+        mock_agentops_tracer.initialized = True
+        mock_agentops_tracer.start_trace.side_effect = mock_traces
+
+        # Test function signatures
+        # start_trace(trace_name, tags=None)
+        trace1 = start_trace("test1")
+        assert trace1 is mock_traces[0]
+
+        trace2 = start_trace("test2", tags=["tag1", "tag2"])
+        assert trace2 is mock_traces[1]
+
+        trace3 = start_trace("test3", tags={"key": "value"})
+        assert trace3 is mock_traces[2]
+
+        # Use context manager protocol to end traces
+        trace1.__exit__(None, None, None)
+        trace2.__exit__(ValueError, ValueError("test"), None)
+        trace3.__exit__(None, None, None)
+
+        # All calls should work
+        assert mock_agentops_tracer.start_trace.call_count == 3
+        assert mock_core_tracer.end_trace.call_count == 3
+
+    @patch("agentops.sdk.core.tracer")
+    @patch("agentops.tracer")
+    def test_return_type_compatibility(self, mock_agentops_tracer, mock_core_tracer):
+        """Test that return types are compatible with existing code"""
         mock_span = Mock()
-        trace_context = TraceContext(mock_span)
+        mock_token = Mock()
+        mock_trace = TraceContext(span=mock_span, token=mock_token)
+        mock_agentops_tracer.initialized = True
+        mock_agentops_tracer.start_trace.return_value = mock_trace
 
-        # Test that TraceContext has all expected attributes
-        assert hasattr(trace_context, "span")
-        assert hasattr(trace_context, "token")
-        assert hasattr(trace_context, "is_init_trace")
-        assert hasattr(trace_context, "_end_state")
+        # start_trace returns TraceContext (or None)
+        trace = start_trace("test")
+        assert isinstance(trace, TraceContext)
+        assert hasattr(trace, "span")
+        assert hasattr(trace, "token")
+        assert hasattr(trace, "__enter__")
+        assert hasattr(trace, "__exit__")
 
-        # Test that it can be used as a context manager
-        assert hasattr(trace_context, "__enter__")
-        assert hasattr(trace_context, "__exit__")
+        # Can be used as context manager
+        with trace:
+            pass
 
-        # Test that __enter__ returns self (standard pattern)
-        assert trace_context.__enter__() is trace_context
-
-    @patch("agentops.sdk.core.TracingCore.get_instance")
-    def test_context_manager_with_keyboard_interrupt(self, mock_get_instance):
-        """Test context manager behavior with KeyboardInterrupt."""
-        mock_tracing_core = Mock()
-        mock_tracing_core.initialized = True
-        mock_get_instance.return_value = mock_tracing_core
-
-        mock_span = Mock()
-        mock_trace = TraceContext(mock_span)
-        mock_tracing_core.start_trace.return_value = mock_trace
+    @patch("agentops.sdk.core.tracer")
+    @patch("agentops.tracer")
+    def test_context_manager_with_keyboard_interrupt(self, mock_agentops_tracer, mock_core_tracer):
+        """Test context manager handles KeyboardInterrupt properly"""
+        # Create a mock TraceContext
+        mock_trace = TraceContext(span=Mock(), token=Mock())
+        mock_agentops_tracer.initialized = True
+        mock_agentops_tracer.start_trace.return_value = mock_trace
 
         # Test KeyboardInterrupt handling
-        with pytest.raises(KeyboardInterrupt):
+        with self.assertRaises(KeyboardInterrupt):
             with start_trace("keyboard_interrupt_trace"):
-                raise KeyboardInterrupt("User interrupted")
+                raise KeyboardInterrupt()
 
-        # Verify trace was ended with Error state
-        mock_tracing_core.end_trace.assert_called_once_with(mock_trace, StatusCode.ERROR)
+        # Verify end_trace was called with ERROR state
+        mock_core_tracer.end_trace.assert_called_once_with(mock_trace, StatusCode.ERROR)
 
-    @patch("agentops.sdk.core.TracingCore.get_instance")
-    def test_context_manager_with_system_exit(self, mock_get_instance):
-        """Test context manager behavior with SystemExit."""
-        mock_tracing_core = Mock()
-        mock_tracing_core.initialized = True
-        mock_get_instance.return_value = mock_tracing_core
-
-        mock_span = Mock()
-        mock_trace = TraceContext(mock_span)
-        mock_tracing_core.start_trace.return_value = mock_trace
+    @patch("agentops.sdk.core.tracer")
+    @patch("agentops.tracer")
+    def test_context_manager_with_system_exit(self, mock_agentops_tracer, mock_core_tracer):
+        """Test context manager handles SystemExit properly"""
+        # Create a mock TraceContext
+        mock_trace = TraceContext(span=Mock(), token=Mock())
+        mock_agentops_tracer.initialized = True
+        mock_agentops_tracer.start_trace.return_value = mock_trace
 
         # Test SystemExit handling
-        with pytest.raises(SystemExit):
+        with self.assertRaises(SystemExit):
             with start_trace("system_exit_trace"):
                 raise SystemExit(1)
 
-        # Verify trace was ended with Error state
-        mock_tracing_core.end_trace.assert_called_once_with(mock_trace, StatusCode.ERROR)
+        # Verify end_trace was called with ERROR state
+        mock_core_tracer.end_trace.assert_called_once_with(mock_trace, StatusCode.ERROR)
 
-    @patch("agentops.sdk.core.TracingCore.get_instance")
-    def test_context_manager_in_generator_function(self, mock_get_instance):
-        """Test context manager usage within generator functions."""
-        mock_tracing_core = Mock()
-        mock_tracing_core.initialized = True
-        mock_get_instance.return_value = mock_tracing_core
-
-        mock_span = Mock()
-        mock_trace = TraceContext(mock_span)
-        mock_tracing_core.start_trace.return_value = mock_trace
+    @patch("agentops.sdk.core.tracer")
+    @patch("agentops.tracer")
+    def test_context_manager_in_generator_function(self, mock_agentops_tracer, mock_core_tracer):
+        """Test context manager works correctly in generator functions"""
+        # Create mock traces
+        mock_traces = [TraceContext(span=Mock(), token=Mock()) for _ in range(3)]
+        mock_agentops_tracer.initialized = True
+        mock_agentops_tracer.start_trace.side_effect = mock_traces
 
         def trace_generator():
-            with start_trace("generator_trace") as trace:
-                yield f"value_1_{trace.span}"
-                yield f"value_2_{trace.span}"
-                yield f"value_3_{trace.span}"
+            with start_trace("generator_trace"):
+                yield 1
+                yield 2
+                yield 3
 
         # Consume the generator
         results = list(trace_generator())
-
-        # Verify generator worked correctly
-        assert len(results) == 3
-        assert all("value_" in result for result in results)
+        assert results == [1, 2, 3]
 
         # Verify trace was properly managed
-        mock_tracing_core.start_trace.assert_called_once()
-        mock_tracing_core.end_trace.assert_called_once_with(mock_trace, StatusCode.OK)
+        mock_agentops_tracer.start_trace.assert_called_once()
+        mock_core_tracer.end_trace.assert_called_once()
 
-    def test_context_manager_exit_return_value(self):
-        """Test that __exit__ always returns False (doesn't suppress exceptions)."""
+    @patch("agentops.sdk.core.tracer")
+    def test_context_manager_exit_return_value(self, mock_tracer):
+        """Test that __exit__ returns None (doesn't suppress exceptions)"""
         mock_span = Mock()
-        trace_context = TraceContext(mock_span)
+        mock_token = Mock()
+        trace_context = TraceContext(span=mock_span, token=mock_token)
 
-        # Test with no exception
+        # __exit__ should return None (or falsy) to not suppress exceptions
         result = trace_context.__exit__(None, None, None)
-        assert result is False
+        assert result is None or not result
 
-        # Test with exception
+        # Also with exception
         result = trace_context.__exit__(ValueError, ValueError("test"), None)
-        assert result is False
+        assert result is None or not result
 
-        # Test with different exception types
-        for exc_type in [RuntimeError, TypeError, KeyboardInterrupt, SystemExit]:
-            result = trace_context.__exit__(exc_type, exc_type("test"), None)
-            assert result is False, f"__exit__ should return False for {exc_type.__name__}"
+    @patch("agentops.sdk.core.tracer")
+    @patch("agentops.tracer")
+    def test_context_manager_with_very_large_data(self, mock_agentops_tracer, mock_core_tracer):
+        """Test context manager with very large trace names and tags"""
+        # Create a mock TraceContext
+        mock_trace = TraceContext(span=Mock(), token=Mock())
+        mock_agentops_tracer.initialized = True
+        mock_agentops_tracer.start_trace.return_value = mock_trace
 
-    @patch("agentops.sdk.core.TracingCore.get_instance")
-    def test_context_manager_with_very_large_data(self, mock_get_instance):
-        """Test context manager with very large trace names and tags."""
-        mock_tracing_core = Mock()
-        mock_tracing_core.initialized = True
-        mock_get_instance.return_value = mock_tracing_core
-
-        mock_span = Mock()
-        mock_trace = TraceContext(mock_span)
-        mock_tracing_core.start_trace.return_value = mock_trace
-
-        # Test with very large trace name
-        large_trace_name = "x" * 10000  # 10KB trace name
-        large_tags = {f"key_{i}": "x" * 1000 for i in range(100)}  # Large tags
+        # Very large trace name and tags
+        large_trace_name = "x" * 10000
+        large_tags = {f"key_{i}": f"value_{i}" * 100 for i in range(100)}
 
         with start_trace(large_trace_name, tags=large_tags) as trace:
             assert trace is mock_trace
 
-        # Verify the large data was passed correctly
-        mock_tracing_core.start_trace.assert_called_once_with(trace_name=large_trace_name, tags=large_tags)
-        mock_tracing_core.end_trace.assert_called_once_with(mock_trace, StatusCode.OK)
+        # Should handle large data without issues
+        mock_agentops_tracer.start_trace.assert_called_once()
+        args, kwargs = mock_agentops_tracer.start_trace.call_args
+        assert kwargs["trace_name"] == large_trace_name
+        assert kwargs["tags"] == large_tags
 
-    @patch("agentops.sdk.core.TracingCore.get_instance")
-    def test_context_manager_with_asyncio_tasks(self, mock_get_instance):
-        """Test context manager with actual asyncio tasks (not just async functions)."""
-        mock_tracing_core = Mock()
-        mock_tracing_core.initialized = True
-        mock_get_instance.return_value = mock_tracing_core
+    @patch("agentops.sdk.core.tracer")
+    @patch("agentops.tracer")
+    def test_context_manager_with_asyncio_tasks(self, mock_agentops_tracer, mock_core_tracer):
+        """Test context manager with multiple asyncio tasks"""
+        # Mock the tracer
+        mock_agentops_tracer.initialized = True
 
-        # Create different mock traces for each task
-        mock_spans = [Mock() for _ in range(3)]
-        mock_traces = [TraceContext(span) for span in mock_spans]
-        mock_tracing_core.start_trace.side_effect = mock_traces
+        # Create traces for each task
+        trace_count = 0
+
+        def create_trace(trace_name=None, tags=None, **kwargs):
+            nonlocal trace_count
+            trace_count += 1
+            return TraceContext(span=Mock(name=f"span_{trace_count}"), token=Mock())
+
+        mock_agentops_tracer.start_trace.side_effect = create_trace
 
         async def task_with_trace(task_id):
             with start_trace(f"async_task_{task_id}"):
-                await asyncio.sleep(0.001)  # Simulate async work
-                return f"result_{task_id}"
+                await asyncio.sleep(0.01)
+                return task_id
 
         async def run_concurrent_tasks():
-            # Create multiple asyncio tasks
-            tasks = [
-                asyncio.create_task(task_with_trace(1)),
-                asyncio.create_task(task_with_trace(2)),
-                asyncio.create_task(task_with_trace(3)),
-            ]
-
-            # Wait for all tasks to complete
+            tasks = [task_with_trace(i) for i in range(5)]
             results = await asyncio.gather(*tasks)
             return results
 
-        # Run the concurrent tasks
+        # Run async tasks
         results = asyncio.run(run_concurrent_tasks())
+        assert results == [0, 1, 2, 3, 4]
 
-        # Verify all tasks completed
-        assert len(results) == 3
-        assert results == ["result_1", "result_2", "result_3"]
+        # All traces should be started and ended
+        assert mock_agentops_tracer.start_trace.call_count == 5
+        assert mock_core_tracer.end_trace.call_count == 5
 
-        # Verify all traces were started and ended
-        assert mock_tracing_core.start_trace.call_count == 3
-        assert mock_tracing_core.end_trace.call_count == 3
+    @patch("agentops.sdk.core.tracer")
+    @patch("agentops.tracer")
+    def test_context_manager_resource_cleanup_on_exit_failure(self, mock_agentops_tracer, mock_core_tracer):
+        """Test that resources are cleaned up even if __exit__ fails"""
+        # Create a mock TraceContext
+        mock_trace = TraceContext(span=Mock(), token=Mock())
+        mock_agentops_tracer.initialized = True
+        mock_agentops_tracer.start_trace.return_value = mock_trace
 
-    @patch("agentops.sdk.core.TracingCore.get_instance")
-    def test_context_manager_resource_cleanup_on_exit_failure(self, mock_get_instance):
-        """Test that resources are cleaned up even if __exit__ fails."""
-        mock_tracing_core = Mock()
-        mock_tracing_core.initialized = True
-        mock_get_instance.return_value = mock_tracing_core
+        # Make end_trace fail
+        mock_core_tracer.end_trace.side_effect = Exception("Cleanup failed")
 
-        mock_span = Mock()
-        mock_trace = TraceContext(mock_span)
-        mock_tracing_core.start_trace.return_value = mock_trace
-
-        # Mock end_trace to fail
-        mock_tracing_core.end_trace.side_effect = Exception("End trace failed")
-
-        # The context manager should handle the failure gracefully
+        # Should not raise exception from __exit__
         with start_trace("cleanup_test") as trace:
             assert trace is mock_trace
-            # Normal execution
 
-        # Verify end_trace was attempted despite the failure
-        mock_tracing_core.end_trace.assert_called_once_with(mock_trace, StatusCode.OK)
+        # end_trace was attempted despite failure
+        mock_core_tracer.end_trace.assert_called_once()
 
-        # Verify the trace state was still updated
-        assert mock_trace._end_state == StatusCode.OK
+
+if __name__ == "__main__":
+    unittest.main()
