@@ -474,6 +474,7 @@ def instrument_one(loader: InstrumentorLoader) -> Optional[BaseInstrumentor]:
 
     instrumentor = loader.get_instance()
     try:
+        # Use the provider directly from the global tracer instance
         instrumentor.instrument(tracer_provider=tracer.provider)
         logger.info(
             f"AgentOps: Successfully instrumented '{loader.class_name}' for package '{loader.package_name or loader.module_name}'."
