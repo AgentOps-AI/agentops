@@ -16,16 +16,16 @@ task = create_entity_decorator(SpanKind.TASK)
 operation_decorator = create_entity_decorator(SpanKind.OPERATION)
 workflow = create_entity_decorator(SpanKind.WORKFLOW)
 trace = create_entity_decorator(SpanKind.SESSION)
-session = create_entity_decorator(SpanKind.SESSION)
 tool = create_entity_decorator(SpanKind.TOOL)
 operation = task
 in_guardrail = create_entity_decorator(SpanKind.INPUT_GUARDRAIL)
 out_guardrail = create_entity_decorator(SpanKind.OUTPUT_GUARDRAIL)
 
 
+
 # For backward compatibility: @session decorator calls @trace decorator
 @functools.wraps(trace)
-def session(*args, **kwargs):
+def session(*args, **kwargs):  # noqa: F811
     """@deprecated Use @agentops.trace instead. Wraps the @trace decorator for backward compatibility."""
     logger.info(colored("@agentops.session decorator is deprecated. Please use @agentops.trace instead.", "yellow"))
     # If called as @session or @session(...)

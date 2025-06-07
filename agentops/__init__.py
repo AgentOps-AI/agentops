@@ -14,18 +14,28 @@ from agentops.legacy import (
 
 from typing import List, Optional, Union, Dict, Any
 from agentops.client import Client
-from agentops.sdk.core import TracingCore, TraceContext
-from agentops.sdk.decorators import trace, session, agent, task, workflow, operation, in_guardrail, out_guardrail
+from agentops.sdk.core import TraceContext, tracer
+from agentops.sdk.decorators import trace, session, agent, task, workflow, operation, tool
+from agentops.enums import TraceState, SUCCESS, ERROR, UNSET
+from opentelemetry.trace.status import StatusCode
 
 from agentops.logging.config import logger
+import threading
 
-# Client global instance; one per process runtime
-_client = Client()
+# Thread-safe client management
+_client_lock = threading.Lock()
+_client = None
 
 
 def get_client() -> Client:
-    """Get the singleton client instance"""
+    """Get the singleton client instance in a thread-safe manner"""
     global _client
+
+    # Double-checked locking pattern for thread safety
+    if _client is None:
+        with _client_lock:
+            if _client is None:
+                _client = Client()
 
     return _client
 
@@ -106,24 +116,31 @@ def init(
     elif default_tags:
         merged_tags = default_tags
 
-    return _client.init(
-        api_key=api_key,
-        endpoint=endpoint,
-        app_url=app_url,
-        max_wait_time=max_wait_time,
-        max_queue_size=max_queue_size,
-        default_tags=merged_tags,
-        trace_name=trace_name,
-        instrument_llm_calls=instrument_llm_calls,
-        auto_start_session=auto_start_session,
-        auto_init=auto_init,
-        skip_auto_end_session=skip_auto_end_session,
-        env_data_opt_out=env_data_opt_out,
-        log_level=log_level,
-        fail_safe=fail_safe,
-        exporter_endpoint=exporter_endpoint,
+    # Prepare initialization arguments
+    init_kwargs = {
+        "api_key": api_key,
+        "endpoint": endpoint,
+        "app_url": app_url,
+        "max_wait_time": max_wait_time,
+        "max_queue_size": max_queue_size,
+        "default_tags": merged_tags,
+        "trace_name": trace_name,
+        "instrument_llm_calls": instrument_llm_calls,
+        "auto_start_session": auto_start_session,
+        "auto_init": auto_init,
+        "skip_auto_end_session": skip_auto_end_session,
+        "env_data_opt_out": env_data_opt_out,
+        "log_level": log_level,
+        "fail_safe": fail_safe,
+        "exporter_endpoint": exporter_endpoint,
         **kwargs,
-    )
+    }
+
+    # Get the current client instance (creates new one if needed)
+    client = get_client()
+
+    # Initialize the client directly
+    return client.init(**init_kwargs)
 
 
 def configure(**kwargs):
@@ -173,7 +190,8 @@ def configure(**kwargs):
     if invalid_params:
         logger.warning(f"Invalid configuration parameters: {invalid_params}")
 
-    _client.configure(**kwargs)
+    client = get_client()
+    client.configure(**kwargs)
 
 
 def start_trace(
@@ -190,25 +208,26 @@ def start_trace(
     Returns:
         A TraceContext object containing the span and context token, or None if SDK not initialized.
     """
-    tracing_core = TracingCore.get_instance()
-    if not tracing_core.initialized:
+    if not tracer.initialized:
         # Optionally, attempt to initialize the client if not already, or log a more severe warning.
         # For now, align with legacy start_session that would try to init.
         # However, explicit init is preferred before starting traces.
         logger.warning("AgentOps SDK not initialized. Attempting to initialize with defaults before starting trace.")
         try:
             init()  # Attempt to initialize with environment variables / defaults
-            if not tracing_core.initialized:
+            if not tracer.initialized:
                 logger.error("SDK initialization failed. Cannot start trace.")
                 return None
         except Exception as e:
             logger.error(f"SDK auto-initialization failed during start_trace: {e}. Cannot start trace.")
             return None
 
-    return tracing_core.start_trace(trace_name=trace_name, tags=tags)
+    return tracer.start_trace(trace_name=trace_name, tags=tags)
 
 
-def end_trace(trace_context: Optional[TraceContext] = None, end_state: str = "Success") -> None:
+def end_trace(
+    trace_context: Optional[TraceContext] = None, end_state: Union[TraceState, StatusCode, str] = TraceState.SUCCESS
+) -> None:
     """
     Ends a trace (its root span) and finalizes it.
     If no trace_context is provided, ends all active session spans.
@@ -217,11 +236,10 @@ def end_trace(trace_context: Optional[TraceContext] = None, end_state: str = "Su
         trace_context: The TraceContext object returned by start_trace. If None, ends all active traces.
         end_state: The final state of the trace (e.g., "Success", "Failure", "Error").
     """
-    tracing_core = TracingCore.get_instance()
-    if not tracing_core.initialized:
+    if not tracer.initialized:
         logger.warning("AgentOps SDK not initialized. Cannot end trace.")
         return
-    tracing_core.end_trace(trace_context=trace_context, end_state=end_state)
+    tracer.end_trace(trace_context=trace_context, end_state=end_state)
 
 
 __all__ = [
@@ -249,4 +267,13 @@ __all__ = [
     "operation",
     "in_guardrail",
     "out_guardrail",
+    "tracer",
+    "tool",
+    # Trace state enums
+    "TraceState",
+    "SUCCESS",
+    "ERROR",
+    "UNSET",
+    # OpenTelemetry status codes (for advanced users)
+    "StatusCode",
 ]
