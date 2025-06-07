@@ -44,8 +44,8 @@ class TestOpenAIInstrumentor:
 
         # To avoid timing issues with the fixture, we need to ensure patch
         # objects are created before being used in the test
-        mock_wrap = patch("agentops.instrumentation.openai.instrumentor.wrap").start()
-        mock_unwrap = patch("agentops.instrumentation.openai.instrumentor.unwrap").start()
+        mock_wrap = patch("agentops.instrumentation.common.wrappers.wrap").start()
+        mock_unwrap = patch("agentops.instrumentation.common.wrappers.unwrap").start()
         mock_instrument = patch.object(instrumentor, "_instrument", wraps=instrumentor._instrument).start()
         mock_uninstrument = patch.object(instrumentor, "_uninstrument", wraps=instrumentor._uninstrument).start()
 
@@ -72,33 +72,39 @@ class TestOpenAIInstrumentor:
         instrumentor = OpenAIInstrumentor()
         assert instrumentor.__class__.__name__ == "OpenAIInstrumentor"
 
-        # Verify it inherits from the third-party OpenAIV1Instrumentor
-        from opentelemetry.instrumentation.openai.v1 import OpenAIV1Instrumentor
+        # Verify it inherits from BaseInstrumentor
+        from opentelemetry.instrumentation.instrumentor import BaseInstrumentor
 
-        assert isinstance(instrumentor, OpenAIV1Instrumentor)
+        assert isinstance(instrumentor, BaseInstrumentor)
 
     def test_instrument_method_wraps_response_api(self, instrumentor):
         """Test the _instrument method wraps the Response API methods"""
         mock_wrap = instrumentor["mock_wrap"]
 
-        # Verify wrap was called for each method in WRAPPED_METHODS
-        assert mock_wrap.call_count == 2
+        # Verify wrap was called multiple times (we wrap many methods)
+        assert mock_wrap.call_count > 0
 
-        # Check the first call arguments for Responses.create
-        first_call_args = mock_wrap.call_args_list[0][0]
-        assert isinstance(first_call_args[0], WrapConfig)
-        assert first_call_args[0].trace_name == "openai.responses.create"
-        assert first_call_args[0].package == "openai.resources.responses"
-        assert first_call_args[0].class_name == "Responses"
-        assert first_call_args[0].method_name == "create"
+        # Find Response API calls in the wrapped methods
+        response_api_calls = []
+        for call in mock_wrap.call_args_list:
+            wrap_config = call[0][0]
+            if isinstance(wrap_config, WrapConfig) and wrap_config.package == "openai.resources.responses":
+                response_api_calls.append(wrap_config)
 
-        # Check the second call arguments for AsyncResponses.create
-        second_call_args = mock_wrap.call_args_list[1][0]
-        assert isinstance(second_call_args[0], WrapConfig)
-        assert second_call_args[0].trace_name == "openai.responses.create"
-        assert second_call_args[0].package == "openai.resources.responses"
-        assert second_call_args[0].class_name == "AsyncResponses"
-        assert second_call_args[0].method_name == "create"
+        # Verify we have both sync and async Response API methods
+        assert len(response_api_calls) == 2
+
+        # Check sync Responses.create
+        sync_response = next((cfg for cfg in response_api_calls if cfg.class_name == "Responses"), None)
+        assert sync_response is not None
+        assert sync_response.trace_name == "openai.responses.create"
+        assert sync_response.method_name == "create"
+
+        # Check async AsyncResponses.create
+        async_response = next((cfg for cfg in response_api_calls if cfg.class_name == "AsyncResponses"), None)
+        assert async_response is not None
+        assert async_response.trace_name == "openai.responses.create"
+        assert async_response.method_name == "create"
 
     def test_uninstrument_method_unwraps_response_api(self, instrumentor):
         """Test the _uninstrument method unwraps the Response API methods"""
@@ -118,19 +124,19 @@ class TestOpenAIInstrumentor:
         assert mock_unwrap.called, "unwrap was not called during _uninstrument"
 
     def test_calls_parent_instrument(self, instrumentor):
-        """Test that the instrumentor calls the parent class's _instrument method"""
+        """Test that the instrumentor properly instruments methods"""
         mock_instrument = instrumentor["mock_instrument"]
 
-        # Verify super()._instrument was called
+        # Verify _instrument was called
         assert mock_instrument.called
 
-        # Verify the tracer provider was passed to the parent method
+        # Verify the tracer provider was passed
         call_kwargs = mock_instrument.call_args[1]
         assert "tracer_provider" in call_kwargs
         assert call_kwargs["tracer_provider"] == instrumentor["tracer_provider"]
 
     def test_calls_parent_uninstrument(self, instrumentor):
-        """Test that the instrumentor calls the parent class's _uninstrument method"""
+        """Test that the instrumentor properly uninstruments methods"""
         instrumentor_obj = instrumentor["instrumentor"]
         mock_uninstrument = instrumentor["mock_uninstrument"]
 
@@ -140,8 +146,8 @@ class TestOpenAIInstrumentor:
         # Directly call uninstrument
         instrumentor_obj._uninstrument()
 
-        # Now verify the method was called at least once
-        assert mock_uninstrument.called, "Parent _uninstrument was not called"
+        # Now verify the method was called
+        assert mock_uninstrument.called, "_uninstrument was not called"
 
     def test_wrapper_error_handling(self):
         """Test that the instrumentor handles errors when wrapping methods"""
@@ -149,16 +155,15 @@ class TestOpenAIInstrumentor:
         instrumentor = OpenAIInstrumentor()
 
         # Mock wrap to raise an exception
-        with patch("agentops.instrumentation.openai.instrumentor.wrap") as mock_wrap:
+        with patch("agentops.instrumentation.common.wrappers.wrap") as mock_wrap:
             mock_wrap.side_effect = AttributeError("Module not found")
 
-            # Mock the parent class's _instrument method
-            with patch.object(instrumentor, "_instrument") as mock_instrument:
-                # Instrument should not raise exceptions even if wrapping fails
+            # Instrument should not raise exceptions even if wrapping fails
+            # The instrumentor should handle errors gracefully
+            try:
                 instrumentor._instrument(tracer_provider=MagicMock())
-
-                # Verify the parent method was still called
-                assert mock_instrument.called
+            except Exception:
+                pytest.fail("Instrumentor should handle wrapping errors gracefully")
 
     def test_unwrapper_error_handling(self):
         """Test that the instrumentor handles errors when unwrapping methods"""
@@ -166,16 +171,15 @@ class TestOpenAIInstrumentor:
         instrumentor = OpenAIInstrumentor()
 
         # Mock unwrap to raise an exception
-        with patch("agentops.instrumentation.openai.instrumentor.unwrap") as mock_unwrap:
+        with patch("agentops.instrumentation.common.wrappers.unwrap") as mock_unwrap:
             mock_unwrap.side_effect = Exception("Failed to unwrap")
 
-            # Mock the parent class's _uninstrument method
-            with patch.object(instrumentor, "_uninstrument") as mock_uninstrument:
-                # Uninstrument should not raise exceptions even if unwrapping fails
+            # Uninstrument should not raise exceptions even if unwrapping fails
+            # The instrumentor should handle errors gracefully
+            try:
                 instrumentor._uninstrument()
-
-                # Verify the parent method was still called
-                assert mock_uninstrument.called
+            except Exception:
+                pytest.fail("Instrumentor should handle unwrapping errors gracefully")
 
     def test_instrumentation_with_tracer(self):
         """Test that the instrumentor gets a tracer with the correct name and version"""

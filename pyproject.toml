@@ -165,12 +165,6 @@ exclude = [
 [tool.hatch.build.targets.wheel]
 packages = ["agentops"]
 
-[tool.hatch.build.targets.wheel.force-include]
-"third_party" = "."
-
-[tool.hatch.build.targets.wheel.sources]
-"third_party" = "third_party"
-
 [tool.hatch.build]
 exclude = [
   "docs/*",
