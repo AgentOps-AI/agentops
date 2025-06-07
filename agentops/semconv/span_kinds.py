@@ -27,6 +27,8 @@ class SpanKind:
     UNKNOWN = "unknown"
     CHAIN = "chain"
     TEXT = "text"
+    INPUT_GUARDRAIL = "guardrail_input"
+    OUTPUT_GUARDRAIL = "guardrail_output"
 
 
 class AgentOpsSpanKindValues(Enum):

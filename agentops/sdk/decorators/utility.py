@@ -135,27 +135,27 @@ def _create_as_current_span(
     logger.debug(f"[DEBUG] AFTER {operation_name}.{span_kind} - Returned to context: {after_span}")
 
 
-def _record_entity_input(span: trace.Span, args: tuple, kwargs: Dict[str, Any]) -> None:
+def _record_entity_input(span: trace.Span, args: tuple, kwargs: Dict[str, Any], entity_kind: str = "entity") -> None:
     """Record operation input parameters to span if content tracing is enabled"""
     try:
         input_data = {"args": args, "kwargs": kwargs}
         json_data = safe_serialize(input_data)
 
         if _check_content_size(json_data):
-            span.set_attribute(SpanAttributes.AGENTOPS_ENTITY_INPUT, json_data)
+            span.set_attribute(SpanAttributes.AGENTOPS_DECORATOR_INPUT.format(entity_kind=entity_kind), json_data)
         else:
             logger.debug("Operation input exceeds size limit, not recording")
     except Exception as err:
         logger.warning(f"Failed to serialize operation input: {err}")
 
 
-def _record_entity_output(span: trace.Span, result: Any) -> None:
+def _record_entity_output(span: trace.Span, result: Any, entity_kind: str = "entity") -> None:
     """Record operation output value to span if content tracing is enabled"""
     try:
         json_data = safe_serialize(result)
 
         if _check_content_size(json_data):
-            span.set_attribute(SpanAttributes.AGENTOPS_ENTITY_OUTPUT, json_data)
+            span.set_attribute(SpanAttributes.AGENTOPS_DECORATOR_OUTPUT.format(entity_kind=entity_kind), json_data)
         else:
             logger.debug("Operation output exceeds size limit, not recording")
     except Exception as err:
