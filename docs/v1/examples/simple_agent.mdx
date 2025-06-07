@@ -50,7 +50,7 @@ The AgentOps library is designed to be a plug-and-play replacement for the OpenA
 
 ```python
 openai = OpenAI(api_key=OPENAI_API_KEY)
-agentops.init(AGENTOPS_API_KEY, tags=["openai-gpt-notebook"])
+agentops.init(AGENTOPS_API_KEY, default_tags=["openai-gpt-notebook"])
 ```
 
 Now just use OpenAI as you would normally!
@@ -60,9 +60,7 @@ Now just use OpenAI as you would normally!
 
 ```python
 message = [{"role": "user", "content": "Write a 12 word poem about secret agents."}]
-response = openai.chat.completions.create(
-    model="gpt-3.5-turbo", messages=message, temperature=0.5, stream=False
-)
+response = openai.chat.completions.create(model="gpt-3.5-turbo", messages=message, temperature=0.5, stream=False)
 print(response.choices[0].message.content)
 ```
 
@@ -107,9 +105,7 @@ We can also manually craft an event exactly the way we want
 from agentops import ActionEvent
 
 message = ({"role": "user", "content": "Hello"},)
-response = openai.chat.completions.create(
-    model="gpt-3.5-turbo", messages=message, temperature=0.5
-)
+response = openai.chat.completions.create(model="gpt-3.5-turbo", messages=message, temperature=0.5)
 
 if "hello" in str(response.choices[0].message.content).lower():
     agentops.record(

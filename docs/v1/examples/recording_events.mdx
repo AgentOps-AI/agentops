@@ -11,7 +11,7 @@ _View Notebook on <a href={'https://github.com/AgentOps-AI/agentops/blob/main/ex
 # Recording Operations with Spans
 AgentOps v0.4 uses spans to track different types of operations in your agent workflows.
 
-We automatically instrument your LLM Calls from OpenAI, LiteLLM, Cohere, and more. Just make sure their SDKs are imported before initializing AgentOps like we see below.
+We automatically instrument your LLM Calls from OpenAI, Anthropic, OpenAi Agents, and more. Just make sure their SDKs are imported before initializing AgentOps like we see below.
 
 First let's install the required packages
 
@@ -58,49 +58,45 @@ agentops.init()
 
 openai_client = OpenAI()
 
+
 # Create a session to track all operations
 @session
 def my_session():
     messages = [{"role": "user", "content": "Hello"}]
-    response = openai_client.chat.completions.create(
-        model="gpt-3.5-turbo", messages=messages, temperature=0.5
-    )
+    response = openai_client.chat.completions.create(model="gpt-3.5-turbo", messages=messages, temperature=0.5)
     print(response.choices[0].message.content)
-    
+
     # Call our operation
     result = add(2, 4)
     print(f"Addition result: {result}")
-    
+
     # Call our agent
     agent = MyAgent()
     agent.process_data("test data")
-    
+
+
 # Run the session
 my_session()
 ```
 
 Click the AgentOps link above to see your session!
-
 ## Operations
-
 AgentOps allows you to record operations using the `@operation` decorator:
 
 
 ```python
-from agentops.sdk.decorators import operation
-
 @operation
 def add(x, y):
     return x + y
 ```
 
 ## Agents
-
 You can create agent spans that contain operations using the `@agent` decorator:
 
 
 ```python
-from agentops.sdk.decorators import agent, operation
+from agentops.sdk.decorators import operation
+
 
 @agent
 class MyAgent:
@@ -111,12 +107,12 @@ class MyAgent:
 ```
 
 ## Error Handling
-
 Errors are automatically captured by the spans. When an exception occurs within a decorated function, it's recorded in the span:
 
 
 ```python
 from agentops.sdk.decorators import operation
+
 
 @operation
 def risky_operation():
@@ -127,6 +123,7 @@ def risky_operation():
         print(f"Error occurred: {e}")
         raise
 
+
 # Create a session that includes the error
 @session
 def error_session():
@@ -135,28 +132,31 @@ def error_session():
     except Exception:
         print("Caught the error, but it's still recorded in the span")
 
+
 # Run the error session
 error_session()
 ```
 
 ## Custom Span Attributes
-
 You can add custom attributes to spans for additional context:
 
 
 ```python
 from agentops.sdk.decorators import operation
 
+
 @operation(name="custom-operation")
 def custom_operation(data):
     # Your operation logic here
     return f"Custom: {data}"
+
 
 # Create a session with custom operation
 @session(name="custom-session")
 def custom_session():
     result = custom_operation("test")
     print(result)
+
 
 # Run the custom session
 custom_session()

@@ -64,13 +64,9 @@ Pass in your API key, and optionally any tags to describe this session for easie
 
 
 ```python
-agentops_handler = AgentOpsLangchainCallbackHandler(
-    api_key=AGENTOPS_API_KEY, tags=["Langchain Example"]
-)
+agentops_handler = AgentOpsLangchainCallbackHandler(api_key=AGENTOPS_API_KEY, default_tags=["Langchain Example"])
 
-llm = ChatOpenAI(
-    openai_api_key=OPENAI_API_KEY, callbacks=[agentops_handler], model="gpt-3.5-turbo"
-)
+llm = ChatOpenAI(openai_api_key=OPENAI_API_KEY, callbacks=[agentops_handler], model="gpt-3.5-turbo")
 
 # You must pass in a callback handler to record your agent
 llm.callbacks = [agentops_handler]
@@ -134,9 +130,7 @@ agent_executor = AgentExecutor(agent=agent, tools=tools)
 
 
 ```python
-agent_executor.invoke(
-    {"input": "What comedies are playing?"}, config={"callback": [agentops_handler]}
-)
+agent_executor.invoke({"input": "What comedies are playing?"}, config={"callback": [agentops_handler]})
 ```
 
 ## Check your session
