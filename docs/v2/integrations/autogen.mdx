@@ -5,30 +5,62 @@ description: "Integrate AgentOps with Microsoft AutoGen for multi-agent workflow
 
 [AutoGen](https://microsoft.github.io/autogen/stable/) is Microsoft's framework for building multi-agent conversational AI systems. AgentOps provides seamless integration with AutoGen to track and monitor your multi-agent workflows.
 
-## Quick Start
+## Installation
 
 <CodeGroup>
 ```bash pip
 pip install agentops autogen-core python-dotenv
 ```
-```bash poetry  
+```bash poetry
 poetry add agentops autogen-core python-dotenv
+```
+```bash uv
+uv add agentops autogen-core python-dotenv
 ```
 </CodeGroup>
 
-## Basic Integration
+## Setting Up API Keys
 
-AgentOps automatically instruments AutoGen agents and tracks their interactions. Simply initialize AgentOps before creating your AutoGen agents:
+Before using AutoGen with AgentOps, you need to set up your API keys. You can obtain:
+- **OPENAI_API_KEY**: From the [OpenAI Platform](https://platform.openai.com/api-keys)
+- **AGENTOPS_API_KEY**: From your [AgentOps Dashboard](https://app.agentops.ai/)
 
-<Note>
-**🔄 Automatic Telemetry Integration**: AgentOps automatically picks up spans from AutoGen's built-in OpenTelemetry integration. No additional instrumentation is required - just initialize AgentOps and your AutoGen agents will be automatically tracked.
-</Note>
+Then to set them up, you can either export them as environment variables or set them in a `.env` file.
+
+<CodeGroup>
+    ```bash Export to CLI
+    export OPENAI_API_KEY="your_openai_api_key_here"
+    export AGENTOPS_API_KEY="your_agentops_api_key_here"
+    ```
+    ```txt Set in .env file
+    OPENAI_API_KEY="your_openai_api_key_here"
+    AGENTOPS_API_KEY="your_agentops_api_key_here"
+    ```
+</CodeGroup>
+
+Then load the environment variables in your Python code:
 
 ```python
+from dotenv import load_dotenv
+import os
+
+# Load environment variables from .env file
+load_dotenv()
+
+# Set up environment variables with fallback values
+os.environ["OPENAI_API_KEY"] = os.getenv("OPENAI_API_KEY")
+os.environ["AGENTOPS_API_KEY"] = os.getenv("AGENTOPS_API_KEY")
+```
+
+## Usage
+
+AgentOps automatically instruments AutoGen agents and tracks their interactions. Simply initialize AgentOps before creating your AutoGen agents!
+
+<CodeGroup>
+```python Countdown
 import asyncio
 from dataclasses import dataclass
 from typing import Callable
-from dotenv import load_dotenv
 import agentops
 
 from autogen_core import (
@@ -41,10 +73,7 @@ from autogen_core import (
     SingleThreadedAgentRuntime
 )
 
-# Load environment variables
-load_dotenv()
-
-# Initialize AgentOps - this will automatically track AutoGen agents
+# Initialize AgentOps
 agentops.init()
 
 @dataclass
@@ -143,15 +172,10 @@ if __name__ == "__main__":
     asyncio.run(run_countdown_workflow())
 ```
 
-## Advanced Multi-Agent Example
-
-Here's a more complex example showing a data processing pipeline with multiple specialized agents:
-
-```python
+```python Multi-Agent
 import asyncio
 from dataclasses import dataclass
 from typing import List, Dict, Any
-from dotenv import load_dotenv
 import agentops
 
 from autogen_core import (
@@ -163,9 +187,6 @@ from autogen_core import (
     AgentId,
     SingleThreadedAgentRuntime
 )
-
-# Load environment variables  
-load_dotenv()
 
 # Initialize AgentOps
 agentops.init()
@@ -389,64 +410,21 @@ async def run_data_processing_pipeline():
 if __name__ == "__main__":
     asyncio.run(run_data_processing_pipeline())
 ```
+</CodeGroup>
 
-## What AgentOps Tracks
+## Examples
 
-AgentOps leverages AutoGen's built-in OpenTelemetry integration to automatically capture comprehensive telemetry data:
-
-### Automatic Span Collection
-- **Agent Operations**: All agent message handling and processing operations
-- **Message Flow**: Complete trace of message routing between agents
-- **Runtime Events**: Agent registration, startup, and shutdown events
-- **Error Handling**: Automatic capture of exceptions and error states
-
-### Built-in Telemetry Integration
-AutoGen Core includes native OpenTelemetry support, and AgentOps seamlessly integrates with this telemetry system to provide:
-
-- **Zero-Configuration Tracking**: No manual instrumentation required
-- **Complete Workflow Visibility**: End-to-end trace of multi-agent interactions  
-- **Performance Metrics**: Timing data for each agent operation and message exchange
-- **Distributed Tracing**: Support for agents running across different processes or machines
-
-## Best Practices
-
-1. **Initialize Early**: Call `agentops.init()` before creating any AutoGen agents
-2. **Use Descriptive Names**: Give your agents meaningful names for better dashboard visibility
-3. **Structure Messages**: Use well-defined message classes for better tracking
-4. **Handle Errors**: Implement proper error handling in your message handlers
-5. **Monitor Performance**: Use the AgentOps dashboard to identify bottlenecks in your agent workflows
-
-## Dashboard Features
-
-The AgentOps dashboard provides:
-
-- **Agent Network Visualization**: See how your agents communicate
-- **Message Trace Timeline**: Follow the complete flow of messages
-- **Performance Analytics**: Identify slow agents or bottlenecks
-- **Error Tracking**: Monitor and debug agent failures
-- **Cost Analysis**: Track computational costs across your agent network
-
-## Example Output
-
-When you run the examples above, you'll see output like:
-
-```
-🚀 Starting AutoGen Countdown Workflow
-==================================================
-🤖 AutoGen runtime started
-📨 Sending initial message with value: 10
-✅ CheckerAgent: 10 passed validation, continuing workflow
-🔧 ModifierAgent: Transformed 10 → 9
-✅ CheckerAgent: 9 passed validation, continuing workflow
-🔧 ModifierAgent: Transformed 9 → 8
-...
-🛑 CheckerAgent: 1 failed validation, stopping workflow
-🎉 Countdown completed successfully!
-==================================================
-✨ Workflow completed! Check your AgentOps dashboard for detailed traces.
-```
+<CardGroup cols={2}>
+  <Card title="Agent Chat Example" icon="notebook" href="/v2/examples/autogen">
+    Basic multi-agent chat functionality
+  </Card>
+  <Card title="Math Agent Example" icon="notebook" href="https://github.com/AgentOps-AI/agentops/blob/main/examples/autogen/MathAgent.ipynb" newTab={true}>
+    Demonstrates an agent specialized for mathematical problem-solving.
+  </Card>
+</CardGroup>
 
 Visit your [AgentOps Dashboard](https://app.agentops.ai) to see detailed traces of your AutoGen agent interactions, performance metrics, and workflow analytics.
+
 
 <script type="module" src="/scripts/github_stars.js"></script>
 <script type="module" src="/scripts/scroll-img-fadein-animation.js"></script>
