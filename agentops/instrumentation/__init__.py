@@ -119,6 +119,16 @@ def _is_installed_package(module_obj: ModuleType, package_name_key: str) -> bool
     rather than a local module, especially when names might collide.
     `package_name_key` is the key from TARGET_PACKAGES (e.g., 'agents', 'google.adk').
     """
+    # Special case for stdlib modules (marked with package_name="python" in UTILITY_INSTRUMENTORS)
+    if (
+        package_name_key in UTILITY_INSTRUMENTORS
+        and UTILITY_INSTRUMENTORS[package_name_key].get("package_name") == "python"
+    ):
+        logger.debug(
+            f"_is_installed_package: Module '{package_name_key}' is a Python standard library module. Considering it an installed package."
+        )
+        return True
+
     if not hasattr(module_obj, "__file__") or not module_obj.__file__:
         logger.debug(
             f"_is_installed_package: Module '{package_name_key}' has no __file__, assuming it might be an SDK namespace package. Returning True."
@@ -220,6 +230,12 @@ def _should_instrument_package(package_name: str) -> bool:
         logger.debug(f"_should_instrument_package: '{package_name}' already instrumented by AgentOps. Skipping.")
         return False
 
+    # Utility instrumentors should always be instrumented regardless of agentic library state
+    if package_name in UTILITY_INSTRUMENTORS:
+        logger.debug(f"_should_instrument_package: '{package_name}' is a utility instrumentor. Always allowing.")
+        return True
+
+    # Only apply agentic/provider logic if it's NOT a utility instrumentor
     is_target_agentic = package_name in AGENTIC_LIBRARIES
     is_target_provider = package_name in PROVIDERS
 
@@ -268,14 +284,18 @@ def _perform_instrumentation(package_name: str):
         return
 
     # Get the appropriate configuration for the package
-    # Ensure package_name is a key in either PROVIDERS or AGENTIC_LIBRARIES
-    if package_name not in PROVIDERS and package_name not in AGENTIC_LIBRARIES:
+    # Ensure package_name is a key in either PROVIDERS, AGENTIC_LIBRARIES, or UTILITY_INSTRUMENTORS
+    if (
+        package_name not in PROVIDERS
+        and package_name not in AGENTIC_LIBRARIES
+        and package_name not in UTILITY_INSTRUMENTORS
+    ):
         logger.debug(
-            f"_perform_instrumentation: Package '{package_name}' not found in PROVIDERS or AGENTIC_LIBRARIES. Skipping."
+            f"_perform_instrumentation: Package '{package_name}' not found in PROVIDERS, AGENTIC_LIBRARIES, or UTILITY_INSTRUMENTORS. Skipping."
         )
         return
 
-    config = PROVIDERS.get(package_name) or AGENTIC_LIBRARIES[package_name]
+    config = PROVIDERS.get(package_name) or AGENTIC_LIBRARIES.get(package_name) or UTILITY_INSTRUMENTORS[package_name]
     loader = InstrumentorLoader(**config)
 
     # instrument_one already checks loader.should_activate
