@@ -7,8 +7,9 @@ context propagation across thread boundaries, preventing "NEW TRACE DETECTED" is
 
 import contextvars
 import functools
-from typing import Collection
-from concurrent.futures import ThreadPoolExecutor
+from typing import Any, Callable, Collection, Optional, Tuple, TypeVar
+
+from concurrent.futures import ThreadPoolExecutor, Future
 
 from opentelemetry.instrumentation.instrumentor import BaseInstrumentor
 
@@ -18,16 +19,26 @@ from agentops.logging import logger
 _original_init = None
 _original_submit = None
 
+# Type variables for better typing
+T = TypeVar("T")
+R = TypeVar("R")
 
-def _context_propagating_init(original_init):
+
+def _context_propagating_init(original_init: Callable) -> Callable:
     """Wrap ThreadPoolExecutor.__init__ to set up context-aware initializer."""
 
     @functools.wraps(original_init)
-    def wrapped_init(self, max_workers=None, thread_name_prefix="", initializer=None, initargs=()):
+    def wrapped_init(
+        self: ThreadPoolExecutor,
+        max_workers: Optional[int] = None,
+        thread_name_prefix: str = "",
+        initializer: Optional[Callable] = None,
+        initargs: Tuple = (),
+    ) -> None:
         # Capture the current context when the executor is created
         main_context = contextvars.copy_context()
 
-        def context_aware_initializer():
+        def context_aware_initializer() -> None:
             """Initializer that sets up the captured context in each worker thread."""
             logger.debug("[ConcurrentFuturesInstrumentor] Setting up context in worker thread")
 
@@ -68,11 +79,11 @@ def _context_propagating_init(original_init):
     return wrapped_init
 
 
-def _context_propagating_submit(original_submit):
+def _context_propagating_submit(original_submit: Callable) -> Callable:
     """Wrap ThreadPoolExecutor.submit to ensure context propagation."""
 
     @functools.wraps(original_submit)
-    def wrapped_submit(self, func, *args, **kwargs):
+    def wrapped_submit(self: ThreadPoolExecutor, func: Callable[..., R], *args: Any, **kwargs: Any) -> Future[R]:
         # Log the submission
         func_name = getattr(func, "__name__", str(func))
         logger.debug(f"[ConcurrentFuturesInstrumentor] Submitting function: {func_name}")
@@ -97,7 +108,7 @@ class ConcurrentFuturesInstrumentor(BaseInstrumentor):
         """Return a list of instrumentation dependencies."""
         return []
 
-    def _instrument(self, **kwargs):
+    def _instrument(self, **kwargs: Any) -> None:
         """Instrument the concurrent.futures module."""
         global _original_init, _original_submit
 
@@ -113,7 +124,7 @@ class ConcurrentFuturesInstrumentor(BaseInstrumentor):
 
         logger.info("[ConcurrentFuturesInstrumentor] Successfully instrumented concurrent.futures.ThreadPoolExecutor")
 
-    def _uninstrument(self, **kwargs):
+    def _uninstrument(self, **kwargs: Any) -> None:
         """Uninstrument the concurrent.futures module."""
         global _original_init, _original_submit
 
@@ -131,11 +142,14 @@ class ConcurrentFuturesInstrumentor(BaseInstrumentor):
         logger.info("[ConcurrentFuturesInstrumentor] Successfully uninstrumented concurrent.futures.ThreadPoolExecutor")
 
     @staticmethod
-    def instrument_module_directly():
+    def instrument_module_directly() -> bool:
         """
         Directly instrument the module without using the standard instrumentor interface.
 
         This can be called manually if automatic instrumentation is not desired.
+
+        Returns:
+            bool: True if instrumentation was applied, False if already instrumented
         """
         instrumentor = ConcurrentFuturesInstrumentor()
         if not instrumentor.is_instrumented_by_opentelemetry:
@@ -144,11 +158,14 @@ class ConcurrentFuturesInstrumentor(BaseInstrumentor):
         return False
 
     @staticmethod
-    def uninstrument_module_directly():
+    def uninstrument_module_directly() -> bool:
         """
         Directly uninstrument the module.
 
         This can be called manually to remove instrumentation.
+
+        Returns:
+            bool: True if uninstrumentation was applied, False if already uninstrumented
         """
         instrumentor = ConcurrentFuturesInstrumentor()
         if instrumentor.is_instrumented_by_opentelemetry:

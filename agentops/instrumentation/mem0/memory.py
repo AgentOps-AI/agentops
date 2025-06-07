@@ -5,7 +5,7 @@ from typing import Optional, Tuple, Dict, Any
 from agentops.instrumentation.common.attributes import AttributeMap
 from agentops.semconv import SpanAttributes, LLMRequestTypeValues, MessageAttributes
 from .common import (
-    get_common_mem0_attributes,
+    get_common_attributes,
     _extract_common_kwargs_attributes,
     _extract_memory_response_attributes,
     create_universal_mem0_wrapper,
@@ -28,7 +28,7 @@ def get_add_attributes(
     print(f"args: {args}")
     print(f"kwargs: {kwargs}")
     print(f"return_value: {return_value}")
-    attributes = get_common_mem0_attributes()
+    attributes = get_common_attributes()
     attributes[SpanAttributes.OPERATION_NAME] = "add"
     attributes[SpanAttributes.LLM_REQUEST_TYPE] = LLMRequestTypeValues.CHAT.value
 
@@ -99,7 +99,7 @@ def get_search_attributes(
     print(f"get_search_attributes args: {args}")
     print(f"get_search_attributes kwargs: {kwargs}")
     print(f"get_search_attributes return_value: {return_value}")
-    attributes = get_common_mem0_attributes()
+    attributes = get_common_attributes()
     attributes[SpanAttributes.OPERATION_NAME] = "search"
     attributes[SpanAttributes.LLM_REQUEST_TYPE] = LLMRequestTypeValues.CHAT.value
 
@@ -147,7 +147,7 @@ def get_get_all_attributes(
     Returns:
         Dictionary of extracted attributes
     """
-    attributes = get_common_mem0_attributes()
+    attributes = get_common_attributes()
     attributes[SpanAttributes.OPERATION_NAME] = "get_all"
 
     # Extract kwargs attributes
@@ -178,7 +178,7 @@ def get_get_attributes(
     Returns:
         Dictionary of extracted attributes
     """
-    attributes = get_common_mem0_attributes()
+    attributes = get_common_attributes()
     attributes[SpanAttributes.OPERATION_NAME] = "get"
 
     # Extract memory ID from args
@@ -207,7 +207,7 @@ def get_delete_attributes(
     Returns:
         Dictionary of extracted attributes
     """
-    attributes = get_common_mem0_attributes()
+    attributes = get_common_attributes()
     attributes[SpanAttributes.OPERATION_NAME] = "delete"
 
     # Extract memory ID from args if available
@@ -244,7 +244,7 @@ def get_update_attributes(
     Returns:
         Dictionary of extracted attributes
     """
-    attributes = get_common_mem0_attributes()
+    attributes = get_common_attributes()
     attributes[SpanAttributes.OPERATION_NAME] = "update"
 
     # Extract memory ID from args (if available)
@@ -301,7 +301,7 @@ def get_delete_all_attributes(
     Returns:
         Dictionary of extracted attributes
     """
-    attributes = get_common_mem0_attributes()
+    attributes = get_common_attributes()
     attributes[SpanAttributes.OPERATION_NAME] = "delete_all"
 
     # Extract kwargs attributes if available
@@ -344,7 +344,7 @@ def get_history_attributes(
     Returns:
         Dictionary of extracted attributes
     """
-    attributes = get_common_mem0_attributes()
+    attributes = get_common_attributes()
     attributes[SpanAttributes.OPERATION_NAME] = "history"
 
     # Extract memory ID from args

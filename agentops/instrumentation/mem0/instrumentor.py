@@ -246,10 +246,7 @@ class Mem0Instrumentor(BaseInstrumentor):
                 package = method_config["package"]
                 class_method = method_config["class_method"]
                 wrapper_func = method_config["wrapper"]
-
-                logger.debug(f"Attempting to wrap {package}.{class_method} with {wrapper_func}")
                 wrap_function_wrapper(package, class_method, wrapper_func(tracer))
-                logger.debug(f"Successfully wrapped {package}.{class_method}")
             except (AttributeError, ModuleNotFoundError) as e:
                 # Use debug level for missing optional packages instead of error
                 # since LLM providers are optional dependencies
@@ -257,6 +254,7 @@ class Mem0Instrumentor(BaseInstrumentor):
             except Exception as e:
                 # Log unexpected errors as warnings
                 logger.warning(f"Unexpected error wrapping {package}.{class_method}: {e}")
+        logger.debug("Mem0 instrumentation completed")
 
     def _uninstrument(self, **kwargs):
         """Remove instrumentation from Mem0 Memory API.

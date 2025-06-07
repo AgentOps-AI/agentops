@@ -8,7 +8,7 @@ from agentops.instrumentation.common.attributes import AttributeMap
 from agentops.semconv import SpanAttributes, LLMRequestTypeValues
 
 
-def get_common_mem0_attributes() -> AttributeMap:
+def get_common_attributes() -> AttributeMap:
     """Get common instrumentation attributes for Mem0 operations.
 
     Returns:
