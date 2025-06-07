@@ -1,0 +1,144 @@
+---
+title: "TypeScript SDK"
+description: "Get started with the AgentOps TypeScript SDK for Node.js applications"
+---
+
+# TypeScript SDK
+
+AgentOps provides TypeScript/JavaScript support through two SDK options:
+
+## Modern TypeScript SDK (Recommended)
+
+The modern TypeScript SDK is built on OpenTelemetry standards and provides comprehensive instrumentation for AI agents.
+
+### Installation
+
+```bash
+npm install agentops
+```
+
+### Quick Start
+
+```typescript
+import { agentops } from 'agentops';
+
+// Initialize with environment variable AGENTOPS_API_KEY
+await agentops.init();
+
+// Or pass API key explicitly
+await agentops.init({
+  apiKey: 'your-api-key'
+});
+
+// Your AI agent code here - instrumentation happens automatically!
+```
+
+### Features
+
+- 🔌 **Plugin Architecture**: Dynamic loading and configuration of instrumentors
+- 🤖 **GenAI Support**: Built-in support for OpenTelemetry GenAI semantic conventions
+- 📊 **Standards Compliant**: Exports to any OpenTelemetry-compatible collector
+- 🛠️ **Framework Agnostic**: Instrument multiple agent frameworks simultaneously
+- 🔧 **TypeScript First**: Full TypeScript support with comprehensive type definitions
+
+### OpenAI Agents Integration
+
+The SDK provides first-class support for the [OpenAI Agents SDK](https://github.com/openai/openai-agents-js/):
+
+```typescript
+import { agentops } from 'agentops';
+import { Agent, run } from '@openai/agents';
+
+// Initialize AgentOps first
+await agentops.init();
+
+// Create your agent with tools and instructions
+const agent = new Agent({
+  name: 'My Assistant',
+  instructions: 'You are a helpful assistant.',
+  tools: [/* your tools */],
+});
+
+// Run the agent - instrumentation happens automatically
+const result = await run(agent, "Hello, how can you help me?");
+console.log(result.finalOutput);
+```
+
+Automatically captures:
+- **Agent Lifecycle**: Track agent creation, execution, and completion
+- **LLM Generation**: Capture model requests, responses, and token usage
+- **Function Calls**: Monitor tool usage and function execution
+- **Audio Processing**: Observe speech-to-text and text-to-speech operations
+- **Handoffs**: Track agent-to-agent communication and workflow transitions
+
+### Debug Logging
+
+Enable detailed instrumentation logs:
+
+```bash
+DEBUG=agentops:* node your-app.js
+```
+
+## Legacy TypeScript SDK (Alpha)
+
+<Warning>
+The legacy TypeScript SDK has limited functionality compared to the Python SDK. The modern TypeScript SDK above is recommended for new projects.
+</Warning>
+
+### Installation
+
+```bash
+npm install agentops
+```
+
+### Usage
+
+```typescript
+import OpenAI from "openai";
+import { Client } from 'agentops';
+
+const openai = new OpenAI();
+
+const agentops = new Client({
+    apiKey: "your-agentops-api-key",
+    tags: ["typescript", "example"],
+    patchApi: [openai]  // Automatically record OpenAI calls
+});
+
+// Sample OpenAI call (automatically recorded)
+async function chat() {
+    const completion = await openai.chat.completions.create({
+        messages: [
+            { "role": "system", "content": "You are a helpful assistant." },
+            { "role": "user", "content": "Hello!" }
+        ],
+        model: "gpt-3.5-turbo",
+    });
+    return completion;
+}
+
+// Track custom functions
+function customFunction(x: string) {
+    console.log(x);
+    return 5;
+}
+
+const wrappedFunction = agentops.wrap(customFunction);
+wrappedFunction("hello");
+
+// Run your agent
+chat().then(() => {
+    agentops.endSession("Success");
+});
+```
+
+## Repository Links
+
+- **Modern SDK**: [agentops-ts](https://github.com/AgentOps-AI/agentops-ts)
+- **Legacy SDK**: [agentops-node](https://github.com/AgentOps-AI/agentops-node)
+
+## Getting Help
+
+- [Discord Community](https://discord.gg/FagdcwwXRR)
+- [GitHub Issues](https://github.com/AgentOps-AI/agentops-ts/issues)
+- [Documentation](https://docs.agentops.ai)
