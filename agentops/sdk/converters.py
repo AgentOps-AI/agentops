@@ -3,20 +3,9 @@ Legacy helpers that were being used throughout the SDK
 """
 
 import uuid
-from datetime import datetime, timezone
-from typing import Optional
 from uuid import UUID
 
 from opentelemetry.util.types import Attributes, AttributeValue
-
-
-def ns_to_iso(ns_time: Optional[int]) -> Optional[str]:
-    """Convert nanosecond timestamp to ISO format."""
-    if ns_time is None:
-        return None
-    seconds = ns_time / 1e9
-    dt = datetime.fromtimestamp(seconds, tz=timezone.utc)
-    return dt.isoformat().replace("+00:00", "Z")
 
 
 def trace_id_to_uuid(trace_id: int) -> UUID:
