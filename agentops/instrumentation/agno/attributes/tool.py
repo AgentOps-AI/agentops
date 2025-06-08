@@ -6,6 +6,7 @@ from typing import Optional, Tuple, Dict, Any
 from agentops.instrumentation.common.attributes import AttributeMap
 from agentops.semconv import SpanAttributes
 from agentops.semconv.span_kinds import SpanKind as AgentOpsSpanKind
+from agentops.semconv.tool import ToolAttributes
 
 
 def get_tool_execution_attributes(
@@ -50,17 +51,14 @@ def get_tool_execution_attributes(
             tool_name = getattr(function, "name", "unknown_tool")
 
             # Set span attributes for the tool execution span
-            attributes["tool.name"] = tool_name
+            attributes[ToolAttributes.TOOL_NAME] = tool_name
             attributes["agno.tool.function_name"] = tool_name
 
             # Function details and context
             if hasattr(function, "description"):
                 description = getattr(function, "description", "")
                 if description:
-                    # Truncate long descriptions but keep them readable
-                    if len(description) > 300:
-                        description = description[:297] + "..."
-                    attributes["tool.description"] = description
+                    attributes[ToolAttributes.TOOL_DESCRIPTION] = description
                     attributes["agno.tool.function_description"] = description
 
             # Function source information
@@ -93,15 +91,13 @@ def get_tool_execution_attributes(
                     formatted_args = []
                     for key, value in args_dict.items():
                         value_str = str(value)
-                        if len(value_str) > 100:
-                            value_str = value_str[:97] + "..."
                         formatted_args.append(f"{key}={value_str}")
 
-                    attributes["tool.parameters"] = json.dumps(args_dict)
+                    attributes[ToolAttributes.TOOL_PARAMETERS] = json.dumps(args_dict)
                     attributes["agno.tool.formatted_args"] = ", ".join(formatted_args)
                     attributes["agno.tool.args_count"] = str(len(args_dict))
                 except Exception as e:
-                    attributes["tool.parameters"] = str(function_call.arguments)
+                    attributes[ToolAttributes.TOOL_PARAMETERS] = str(function_call.arguments)
                     attributes["agno.tool.args_parse_error"] = str(e)
 
         # Extract call ID and metadata
@@ -146,7 +142,7 @@ def get_tool_execution_attributes(
                 error = getattr(result_value, "error", None)
 
                 attributes["agno.tool.execution_result_status"] = str(status)
-                attributes["tool.status"] = str(status)
+                attributes[ToolAttributes.TOOL_STATUS] = str(status)
 
                 if error:
                     attributes["agno.tool.execution_error"] = str(error)
@@ -185,8 +181,6 @@ def get_tool_execution_attributes(
                                 for var_name in context_vars:
                                     if var_name in locals_dict:
                                         value = str(locals_dict[var_name])
-                                        if len(value) > 100:
-                                            value = value[:97] + "..."
                                         generator_info.append(f"{var_name}={value}")
                                         attributes[f"agno.tool.generator_{var_name}"] = value
 
@@ -207,12 +201,10 @@ def get_tool_execution_attributes(
                         else:
                             result_str = f"Generator<{actual_result_type}> - {str(actual_result)}"
                     else:
-                        # Regular result - safe to convert to string
+                        # Regular result
                         result_str = str(actual_result)
-                        if len(result_str) > 500:
-                            result_str = result_str[:497] + "..."
                 else:
-                    result_str = f"FunctionExecutionResult(status={status}, result=None)"
+                    result_str = str(status)
             else:
                 # Not a FunctionExecutionResult, handle as direct result
                 if hasattr(result_value, "__iter__") and hasattr(result_value, "__next__"):
@@ -228,30 +220,21 @@ def get_tool_execution_attributes(
                 else:
                     # Regular result
                     result_str = str(result_value)
-                    if len(result_str) > 500:
-                        result_str = result_str[:497] + "..."
         else:
             result_str = "None"
 
         # Set the main result attribute
-        attributes["tool.result"] = result_str
+        attributes[ToolAttributes.TOOL_RESULT] = result_str
 
         # Add additional analysis attributes
         attributes["agno.tool.result_length"] = str(len(result_str))
 
-        # Provide a preview for long results
-        if len(result_str) > 100:
-            preview = result_str[:97] + "..."
-            attributes["agno.tool.result_preview"] = preview
-        else:
-            attributes["agno.tool.result_preview"] = result_str
-
     # Set final execution status
-    if not attributes.get("tool.status"):
-        attributes["tool.status"] = "success"
+    if not attributes.get(ToolAttributes.TOOL_STATUS):
+        attributes[ToolAttributes.TOOL_STATUS] = "success"
 
     # Add execution summary for debugging
-    tool_name = attributes.get("tool.name", "unknown")
+    tool_name = attributes.get(ToolAttributes.TOOL_NAME, "unknown")
     call_type = attributes.get("agno.tool.transfer_type", "unknown")
     attributes["agno.tool.execution_summary"] = f"Tool '{tool_name}' executed with type '{call_type}'"
 

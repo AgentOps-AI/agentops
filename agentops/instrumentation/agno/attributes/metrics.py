@@ -61,6 +61,11 @@ def get_metrics_attributes(
             if hasattr(model, "provider"):
                 attributes["agno.model.provider"] = str(model.provider)
 
+            # Add model class name for better identification (with null check)
+            if hasattr(model, "__class__") and hasattr(model.__class__, "__name__"):
+                model_class = model.__class__.__name__
+                attributes["agno.model.class"] = model_class
+
         # === EXTRACT CONVERSATION STRUCTURE ===
         if hasattr(run_messages, "messages") and run_messages.messages:
             messages = run_messages.messages
@@ -138,29 +143,46 @@ def get_metrics_attributes(
                     attributes[SpanAttributes.LLM_REQUEST_MODEL] = model_id
                     attributes[SpanAttributes.LLM_RESPONSE_MODEL] = model_id
 
-            # Use session metrics for more accurate token counts
-            session_prompt_tokens = getattr(session_metrics, "prompt_tokens", 0)
-            session_completion_tokens = getattr(session_metrics, "completion_tokens", 0)
-            session_output_tokens = getattr(session_metrics, "output_tokens", 0)
-            session_input_tokens = getattr(session_metrics, "input_tokens", 0)
-            session_total_tokens = getattr(session_metrics, "total_tokens", 0)
+            # Only set token variables if the attributes actually exist
+            session_prompt_tokens = None
+            session_completion_tokens = None
+            session_output_tokens = None
+            session_input_tokens = None
+            session_total_tokens = None
+
+            if hasattr(session_metrics, "prompt_tokens"):
+                session_prompt_tokens = session_metrics.prompt_tokens
+
+            if hasattr(session_metrics, "completion_tokens"):
+                session_completion_tokens = session_metrics.completion_tokens
+
+            if hasattr(session_metrics, "output_tokens"):
+                session_output_tokens = session_metrics.output_tokens
+
+            if hasattr(session_metrics, "input_tokens"):
+                session_input_tokens = session_metrics.input_tokens
+
+            if hasattr(session_metrics, "total_tokens"):
+                session_total_tokens = session_metrics.total_tokens
 
             # For Anthropic, output_tokens represents completion tokens
-            if session_output_tokens > 0 and session_completion_tokens == 0:
-                session_completion_tokens = session_output_tokens
+            if session_output_tokens is not None and session_output_tokens > 0:
+                if session_completion_tokens is None or session_completion_tokens == 0:
+                    session_completion_tokens = session_output_tokens
 
             # For some providers, input_tokens represents prompt tokens
-            if session_input_tokens > 0 and session_prompt_tokens == 0:
-                session_prompt_tokens = session_input_tokens
+            if session_input_tokens is not None and session_input_tokens > 0:
+                if session_prompt_tokens is None or session_prompt_tokens == 0:
+                    session_prompt_tokens = session_input_tokens
 
             # Only set token attributes if we have actual values
-            if session_total_tokens > 0:
+            if session_total_tokens is not None and session_total_tokens > 0:
                 usage_data["total_tokens"] = session_total_tokens
 
                 # Set breakdown if available
-                if session_prompt_tokens > 0:
+                if session_prompt_tokens is not None and session_prompt_tokens > 0:
                     usage_data["prompt_tokens"] = session_prompt_tokens
-                if session_completion_tokens > 0:
+                if session_completion_tokens is not None and session_completion_tokens > 0:
                     usage_data["completion_tokens"] = session_completion_tokens
 
             # Additional token types from session metrics - only set if present
@@ -168,13 +190,6 @@ def get_metrics_attributes(
                 usage_data["cache_read_input_tokens"] = session_metrics.cached_tokens
             if hasattr(session_metrics, "reasoning_tokens") and session_metrics.reasoning_tokens > 0:
                 usage_data["reasoning_tokens"] = session_metrics.reasoning_tokens
-
-            # Success/fail token metrics - only set if we have tokens
-            if session_total_tokens > 0:
-                usage_data["success_tokens"] = session_total_tokens
-                # Only set fail/indeterminate as 0 when we have success tokens
-                usage_data["fail_tokens"] = 0
-                usage_data["indeterminate_tokens"] = 0
 
         # === FALLBACK TO MESSAGE AGGREGATION IF SESSION METRICS ARE EMPTY ===
         # If we don't have token data from session metrics, try message aggregation
@@ -186,26 +201,6 @@ def get_metrics_attributes(
                 usage_data["completion_tokens"] = total_completion_tokens or total_output_tokens
             if total_tokens > 0:
                 usage_data["total_tokens"] = total_tokens
-
-                # Handle case where we have total but no breakdown (common with Anthropic)
-                if usage_data.get("prompt_tokens", 0) == 0 and usage_data.get("completion_tokens", 0) == 0:
-                    # If we only have completion tokens from output_tokens, assume all are completion
-                    if total_output_tokens > 0:
-                        usage_data["completion_tokens"] = total_output_tokens
-                        usage_data["prompt_tokens"] = max(0, total_tokens - total_output_tokens)
-                    # Otherwise try to split reasonably
-                    elif total_tokens > 0:
-                        # For pure generation, most tokens are usually completion
-                        estimated_completion = int(total_tokens * 0.7)  # Rough estimate
-                        estimated_prompt = total_tokens - estimated_completion
-                        usage_data["completion_tokens"] = estimated_completion
-                        usage_data["prompt_tokens"] = estimated_prompt
-
-            # Success/fail tokens from message aggregation - only set if we have tokens
-            if total_tokens > 0:
-                usage_data["success_tokens"] = total_tokens
-                usage_data["fail_tokens"] = 0
-                usage_data["indeterminate_tokens"] = 0
 
         # Extract user message info if available
         if hasattr(run_messages, "user_message") and run_messages.user_message:

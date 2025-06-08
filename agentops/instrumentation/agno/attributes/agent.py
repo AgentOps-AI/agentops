@@ -3,7 +3,7 @@
 from typing import Optional, Tuple, Dict, Any
 
 from agentops.instrumentation.common.attributes import AttributeMap
-from agentops.semconv import SpanAttributes, WorkflowAttributes, AgentAttributes
+from agentops.semconv import SpanAttributes, WorkflowAttributes, AgentAttributes, ToolAttributes
 from agentops.semconv.span_kinds import SpanKind as AgentOpsSpanKind
 
 
@@ -109,7 +109,7 @@ def get_agent_run_attributes(
             agent_config["max_retry_limit"] = str(agent.retries)
 
         if hasattr(agent, "response_model") and agent.response_model:
-            agent_config["response_model"] = str(agent.response_model.__name__)
+            agent_config[SpanAttributes.LLM_RESPONSE_MODEL] = str(agent.response_model.__name__)
 
         if hasattr(agent, "show_tool_calls"):
             agent_config["show_tool_calls"] = str(agent.show_tool_calls)
@@ -153,20 +153,16 @@ def get_agent_run_attributes(
 
             # Set tool attributes
             if tool_names:
-                attributes["agent.tools_names"] = ",".join(tool_names[:5])  # Limit to first 5
                 attributes["agno.agent.tools_count"] = str(len(tool_names))
 
             if tools_info:
-                import json
-
-                try:
-                    # Limit to first 3 tools to avoid overly long attributes
-                    limited_tools = tools_info[:3]
-                    tools_json = json.dumps(limited_tools)
-                    attributes[AgentAttributes.AGENT_TOOLS] = tools_json
-                except:
-                    # Fallback if JSON serialization fails
-                    attributes[AgentAttributes.AGENT_TOOLS] = str(tools_info)
+                # Instead of storing as JSON blob, set individual tool attributes
+                for i, tool in enumerate(tools_info):
+                    prefix = f"agent.tool.{i}"
+                    if "name" in tool:
+                        attributes[f"{prefix}.{ToolAttributes.TOOL_NAME}"] = tool["name"]
+                    if "description" in tool:
+                        attributes[f"{prefix}.{ToolAttributes.TOOL_DESCRIPTION}"] = tool["description"]
 
         # Memory and knowledge information
         if hasattr(agent, "memory") and agent.memory:
