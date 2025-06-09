@@ -118,7 +118,7 @@ def create_entity_decorator(entity_kind: str) -> Callable[..., Any]:
                             return result
                         except Exception:
                             if trace_context:
-                                tracer.end_trace(trace_context, "Failure")
+                                tracer.end_trace(trace_context, "Indeterminate")
                             raise
                         finally:
                             if trace_context and trace_context.span.is_recording():
@@ -150,7 +150,7 @@ def create_entity_decorator(entity_kind: str) -> Callable[..., Any]:
                         return result
                     except Exception:
                         if trace_context:
-                            tracer.end_trace(trace_context, "Failure")
+                            tracer.end_trace(trace_context, "Indeterminate")
                         raise
                     finally:
                         if trace_context and trace_context.span.is_recording():
