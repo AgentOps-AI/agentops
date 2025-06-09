@@ -424,7 +424,7 @@ class AG2Instrumentor(BaseInstrumentor):
 
                     if tool_type == "function" and isinstance(result, tuple) and len(result) > 0:
                         success = result[0] if isinstance(result[0], bool) else False
-                        span.set_attribute(ToolAttributes.TOOL_STATUS, "success" if success else "indeterminate")
+                        span.set_attribute(ToolAttributes.TOOL_STATUS, "success" if success else "error")
 
                         if len(result) > 1 and isinstance(result[1], dict):
                             try:
@@ -435,7 +435,7 @@ class AG2Instrumentor(BaseInstrumentor):
                     if tool_type == "code" and isinstance(result, tuple) and len(result) >= 3:
                         exit_code = result[0]
                         span.set_attribute("exit_code", exit_code)
-                        span.set_attribute(ToolAttributes.TOOL_STATUS, "success" if exit_code == 0 else "indeterminate")
+                        span.set_attribute(ToolAttributes.TOOL_STATUS, "success" if exit_code == 0 else "error")
 
                         if len(result) > 1 and result[1]:
                             stdout = result[1]
