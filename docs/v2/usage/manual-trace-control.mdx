@@ -26,7 +26,7 @@ try:
     agentops.end_trace(trace, "Success")
 except Exception as e:
     # End the trace with failure state
-    agentops.end_trace(trace, "Failure")
+    agentops.end_trace(trace, "Indeterminate")
 ```
 
 ### Trace Names and Tags
@@ -72,7 +72,7 @@ for i, item in enumerate(batch_items):
         if result.get("processed"):
             agentops.end_trace(trace, "Success")
         else:
-            agentops.end_trace(trace, "Failure")
+            agentops.end_trace(trace, "Indeterminate")
     except Exception as e:
         agentops.end_trace(trace, "Error")
 ```
