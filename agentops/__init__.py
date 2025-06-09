@@ -265,8 +265,7 @@ __all__ = [
     "task",
     "workflow",
     "operation",
-    "in_guardrail",
-    "out_guardrail",
+    "guardrail",
     "tracer",
     "tool",
     # Trace state enums
