@@ -1,65 +1,65 @@
 # AgentOps Examples
 
-This directory contains comprehensive examples demonstrating how to integrate AgentOps with various AI/ML frameworks, libraries, and providers. Each example is provided as a Jupyter notebook with detailed explanations and code samples.
+This directory contains comprehensive examples demonstrating how to integrate AgentOps with various AI/ML frameworks, libraries, and providers. Each example is provided as a Jupyter notebook and a Python script with detailed explanations and code samples.
 
 ## 📁 Directory Structure
 
 - **[`ag2/`](./ag2/)** - Examples for AG2 (AutoGen 2.0) multi-agent conversations
-  - `agentchat_with_memory.ipynb` - Agent chat with persistent memory
-  - `async_human_input.ipynb` - Asynchronous human input handling
-  - `tools_wikipedia_search.ipynb` - Wikipedia search tool integration
+  - `agentchat_with_memory` - Agent chat with persistent memory
+  - `async_human_input` - Asynchronous human input handling
+  - `tools_wikipedia_search` - Wikipedia search tool integration
 
 - **[`anthropic/`](./anthropic/)** - Anthropic Claude API integration examples
-  - `agentops-anthropic-understanding-tools.ipynb` - Deep dive into tool usage
-  - `anthropic-example-async.ipynb` - Asynchronous API calls
-  - `anthropic-example-sync.ipynb` - Synchronous API calls
-  - `antrophic-example-tool.ipynb` - Tool calling examples
+  - `agentops-anthropic-understanding-tools` - Deep dive into tool usage
+  - `anthropic-example-async` - Asynchronous API calls
+  - `anthropic-example-sync` - Synchronous API calls
+  - `antrophic-example-tool` - Tool calling examples
   - `README.md` - Detailed Anthropic integration guide
 
 - **[`autogen/`](./autogen/)** - Microsoft AutoGen framework examples
-  - `AgentChat.ipynb` - Basic agent chat functionality
-  - `MathAgent.ipynb` - Mathematical problem-solving agent
+  - `AgentChat` - Basic agent chat functionality
+  - `MathAgent` - Mathematical problem-solving agent
 
 - **[`crewai/`](./crewai/)** - CrewAI multi-agent framework examples
-  - `job_posting.ipynb` - Job posting automation workflow
-  - `markdown_validator.ipynb` - Markdown validation agent
+  - `job_posting` - Job posting automation workflow
+  - `markdown_validator` - Markdown validation agent
 
 - **[`gemini/`](./gemini/)** - Google Gemini API integration
-  - `gemini_example.ipynb` - Basic Gemini API usage with AgentOps
+  - `gemini_example` - Basic Gemini API usage with AgentOps
 
 - **[`google_adk/`](./google_adk/)** - Google AI Development Kit examples
-  - `human_approval.ipynb` - Human-in-the-loop approval workflows
+  - `human_approval` - Human-in-the-loop approval workflows
 
 - **[`langchain/`](./langchain/)** - LangChain framework integration
-  - `langchain_examples.ipynb` - Comprehensive LangChain usage examples
+  - `langchain_examples` - Comprehensive LangChain usage examples
 
 - **[`litellm/`](./litellm/)** - LiteLLM proxy integration
-  - `litellm_example.ipynb` - Multi-provider LLM access through LiteLLM
+  - `litellm_example` - Multi-provider LLM access through LiteLLM
 
 - **[`openai/`](./openai/)** - OpenAI API integration examples
-  - `multi_tool_orchestration.ipynb` - Complex tool orchestration
-  - `openai_example_async.ipynb` - Asynchronous OpenAI API calls
-  - `openai_example_sync.ipynb` - Synchronous OpenAI API calls
-  - `web_search.ipynb` - Web search functionality
+  - `multi_tool_orchestration` - Complex tool orchestration
+  - `openai_example_async` - Asynchronous OpenAI API calls
+  - `openai_example_sync` - Synchronous OpenAI API calls
+  - `web_search` - Web search functionality
 
 - **[`openai_agents/`](./openai_agents/)** - OpenAI Agents SDK examples
-  - `agent_patterns.ipynb` - Common agent design patterns
-  - `agents_tools.ipynb` - Agent tool integration
-  - `customer_service_agent.ipynb` - Customer service automation
+  - `agent_patterns` - Common agent design patterns
+  - `agents_tools` - Agent tool integration
+  - `customer_service_agent` - Customer service automation
 
 - **[`smolagents/`](./smolagents/)** - SmolAgents framework examples
-  - `multi_smolagents_system.ipynb` - Multi-agent system coordination
-  - `text_to_sql.ipynb` - Natural language to SQL conversion
+  - `multi_smolagents_system` - Multi-agent system coordination
+  - `text_to_sql` - Natural language to SQL conversion
 
 - **[`watsonx/`](./watsonx/)** - IBM Watsonx AI integration
-  - `watsonx-streaming.ipynb` - Streaming text generation
-  - `watsonx-text-chat.ipynb` - Text generation and chat completion
-  - `watsonx-tokeniation-model.ipynb` - Tokenization and model details
+  - `watsonx-streaming` - Streaming text generation
+  - `watsonx-text-chat` - Text generation and chat completion
+  - `watsonx-tokeniation-model` - Tokenization and model details
   - `README.md` - Detailed Watsonx integration guide
 
 - **[`xai/`](./xai/)** - xAI (Grok) API integration
-  - `grok_examples.ipynb` - Basic Grok API usage
-  - `grok_vision_examples.ipynb` - Vision capabilities with Grok
+  - `grok_examples` - Basic Grok API usage
+  - `grok_vision_examples` - Vision capabilities with Grok
 
 ### Utility Scripts
 
