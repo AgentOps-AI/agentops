@@ -187,6 +187,7 @@
       "pages": [
         "v2/usage/dashboard-info",
         "v2/usage/sdk-reference",
+        "v2/usage/typescript-sdk",
         "v2/usage/advanced-configuration",
         "v2/usage/context-managers",
         "v2/usage/tracking-llm-calls",
