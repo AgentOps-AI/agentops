@@ -5,7 +5,7 @@ This directory contains examples of using IBM Watsonx AI with AgentOps instrumen
 ## Prerequisites
 
 - IBM Watsonx AI account with API key
-- Python >=3.10 <3.13
+- Python >= 3.10 < 3.13
 - Install required dependencies:
   ```
   pip install agentops ibm-watsonx-ai python-dotenv
@@ -25,26 +25,26 @@ WATSONX_PROJECT_ID=your-project-id-here
 
 ### 1. Basic Text Generation and Chat Completion
 
-File: [watsonx-text-chat.ipynb](https://github.com/AgentOps-AI/agentops/blob/0.4.9/examples/watsonx_examples/watsonx-text-chat.ipynb)
-This notebook demonstrates:
+Example: `watsonx-text-chat`
+This example demonstrates:
 - Basic text generation with IBM Watsonx AI
 - Chat completion with system and user messages
 - Multiple examples of chat interactions
 
 ### 2. Streaming Generation
 
-File: [watsonx-streaming.ipynb](https://github.com/AgentOps-AI/agentops/blob/0.4.9/examples/watsonx_examples/watsonx-streaming.ipynb)
+Example: `watsonx-streaming`
 
-This notebook demonstrates:
+This example demonstrates:
 - Streaming text generation
 - Streaming chat completion
 - Processing streaming responses
 
 ### 3. Tokenization and Model Details
 
-File: [watsonx-tokenization-model.ipynb](https://github.com/AgentOps-AI/agentops/blob/0.4.9/examples/watsonx_examples/watsonx-tokeniation-model.ipynb)
+Example: `watsonx-tokenization-model`
 
-This notebook demonstrates:
+This example demonstrates:
 - Tokenizing text with IBM Watsonx AI models
 - Retrieving model details
 - Comparing tokenization between different models
@@ -61,4 +61,4 @@ You can explore other available models through the IBM Watsonx platform.
 
 These examples show how to use AgentOps to monitor and analyze your AI applications. AgentOps automatically instruments your IBM Watsonx AI calls to provide insights into performance, usage patterns, and model behavior.
 
-To learn more about AgentOps, visit [https://www.agentops.ai](https://www.agentops.ai) 
+To learn more about AgentOps, visit [https://www.agentops.ai](https://www.agentops.ai)
