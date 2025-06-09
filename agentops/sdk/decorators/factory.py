@@ -11,7 +11,7 @@ from agentops.sdk.core import TraceContext, tracer
 from agentops.semconv.span_kinds import SpanKind
 from agentops.semconv import SpanAttributes, CoreAttributes
 
-from .utility import (
+from agentops.sdk.decorators.utility import (
     _create_as_current_span,
     _process_async_generator,
     _process_sync_generator,

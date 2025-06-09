@@ -31,7 +31,7 @@ LIBRARY_NAME = "openai-agents"
 LIBRARY_VERSION: str = get_version()
 
 # Import after defining constants to avoid circular imports
-from .instrumentor import OpenAIAgentsInstrumentor  # noqa: E402
+from agentops.instrumentation.openai_agents.instrumentor import OpenAIAgentsInstrumentor  # noqa: E402
 
 __all__ = [
     "LIBRARY_NAME",
