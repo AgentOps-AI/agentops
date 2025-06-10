@@ -9,8 +9,6 @@ In most development and scripting use cases, having only one session active at a
 
 By default, AgentOps operates in single-session mode. All of the [base SDK functions](/v1/usage/sdk-reference) work as expected.
 
-<Note>Under the hood, when you only have one session at a time, AgentOps can use functions like `agentops.add_tags(...)` and know that you want to perform the function on the one and only active session.</Note>
-
 As soon as you create a second session, AgentOps enters **Multi-Session Mode**. As long as more than one session is active, the [base SDK functions](/v1/usage/sdk-reference) will no longer work.
 
 If multiple sessions exist, you are expected to call the function on the relevant session. Ex:
@@ -63,14 +61,10 @@ Functions on `agentops` will no longer work in multi-session mode
 <CodeGroup>
 ```python works ✅
 session.end_session(...)
-session.add_tags(...)
-session.set_tags(...)
 ```
 
 ```python does not work ❌
 agentops.end_session(...)
-agentops.add_tags(...)
-agentops.set_tags(...)
 ```
 </CodeGroup>
 
@@ -185,44 +179,14 @@ obs_response = observed_create(
 )
 ```
 
-[//]: # (Alternatively, you can include the session object as a keyword parameter in the completion call.)
-
-[//]: # ()
-[//]: # (```python)
-
-[//]: # (import agentops)
-
-[//]: # (import openai)
-
-[//]: # ()
-[//]: # (session = agentops.start_session&#40;&#41;)
-
-[//]: # (messages = [{"role": "user", "content": "Hello"}])
-
-[//]: # (response = openai.chat.completions.create&#40;)
-
-[//]: # (    model="gpt-3.5-turbo",)
-
-[//]: # (    messages=messages,)
-
-[//]: # (    temperature=0.5,)
-
-[//]: # (    session=session)
-
-[//]: # (&#41;)
-
-[//]: # (```)
-
-[//]: # ()
-[//]: # (<Warning>Passing `session` as a keyword parameter is functional, but will likely show an Unexpected Argument warning.</Warning>)
 
 If you make an LLM completion call without one of these methods while you currently have more than one active session, a `MultiSessionException` will be raised.
 
 
 # Exceptions
 
+
 ### `MultiSessionException`
-_"If multiple sessions exist, you must use session.function(). Example: session.add_tags(...) instead of agentops.add_tags(...)."_
 
 Receiving this exception means that you tried to perform a function on the SDK base, but at runtime had more than one active session.
 
