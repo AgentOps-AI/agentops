@@ -3,42 +3,71 @@ title: Google ADK
 description: "Track and analyze your Google Agent Development Kit (ADK) AI agents with AgentOps"
 ---
 
-import CodeTooltip from '/snippets/add-code-tooltip.mdx'
-import EnvTooltip from '/snippets/add-env-tooltip.mdx'
-
 AgentOps provides seamless integration with [Google Agent Development Kit (ADK)](https://google.github.io/adk-docs/), allowing you to track and analyze all your ADK agent interactions automatically.
 
 ## Installation
 
-<CodeTooltip />
+<CodeGroup>
+```bash pip
+pip install agentops google-adk
+```
+```bash poetry
+poetry add agentops google-adk
+```
+```bash uv
+uv add agentops google-adk
+```
+</CodeGroup>
 
-    <CodeGroup>
-      ```bash pip 
-  pip install agentops google-adk
-      ```
-      ```bash poetry
-  poetry add agentops google-adk
-      ```
-    </CodeGroup>
+## Setting Up API Keys
+
+Before using Google ADK with AgentOps, you need to set up your API keys. You can obtain:
+- **GOOGLE_API_KEY**: From the [Google AI Studio](https://aistudio.google.com/app/apikey)
+- **AGENTOPS_API_KEY**: From your [AgentOps Dashboard](https://app.agentops.ai/)
+
+Then to set them up, you can either export them as environment variables or set them in a `.env` file.
+
+<CodeGroup>
+```bash Export to CLI
+export GOOGLE_API_KEY="your_google_api_key_here"
+export AGENTOPS_API_KEY="your_agentops_api_key_here"
+```
+```txt Set in .env file
+GOOGLE_API_KEY="your_google_api_key_here"
+AGENTOPS_API_KEY="your_agentops_api_key_here"
+```
+</CodeGroup>
+
+Then load the environment variables in your Python code:
+
+```python
+from dotenv import load_dotenv
+import os
+
+# Load environment variables from .env file
+load_dotenv()
+
+# Set up environment variables with fallback values
+os.environ["GOOGLE_API_KEY"] = os.getenv("GOOGLE_API_KEY")
+os.environ["AGENTOPS_API_KEY"] = os.getenv("AGENTOPS_API_KEY")
+```
 
 ## Usage
 
 Initialize AgentOps at the beginning of your application to automatically track all Google ADK agent interactions:
 
-    <CodeGroup>
-```python Usage
-# --- Full example code demonstrating LlmAgent with Tools vs. Output Schema ---
-import json # Needed for pretty printing dicts
+```python
+import asyncio
+import json
+from pydantic import BaseModel, Field
 
+import agentops
 from google.adk.agents import LlmAgent
 from google.adk.runners import Runner
 from google.adk.sessions import InMemorySessionService
 from google.genai import types
-from pydantic import BaseModel, Field
-import asyncio
-import agentops
 
-agentops.init("your-api-key")
+agentops.init()
 
 # --- 1. Define Constants ---
 APP_NAME = "agent_comparison_app"
@@ -164,41 +193,30 @@ async def call_agent_and_print(
 
 # --- 7. Run Interactions ---
 async def main():
-    # Create sessions
+# Create sessions
     await session_service.create_session(app_name=APP_NAME, user_id=USER_ID, session_id=SESSION_ID_TOOL_AGENT)
     await session_service.create_session(app_name=APP_NAME, user_id=USER_ID, session_id=SESSION_ID_SCHEMA_AGENT)
     
     print("--- Testing Agent with Tool ---")
     await call_agent_and_print(capital_runner, capital_agent_with_tool, SESSION_ID_TOOL_AGENT, '{"country": "France"}')
-    await call_agent_and_print(capital_runner, capital_agent_with_tool, SESSION_ID_TOOL_AGENT, '{"country": "Canada"}')
 
     print("\n\n--- Testing Agent with Output Schema (No Tool Use) ---")
-    await call_agent_and_print(structured_runner, structured_info_agent_schema, SESSION_ID_SCHEMA_AGENT, '{"country": "France"}')
     await call_agent_and_print(structured_runner, structured_info_agent_schema, SESSION_ID_SCHEMA_AGENT, '{"country": "Japan"}')
 
 asyncio.run(main())
-      ```
-    </CodeGroup>
+```
 
-## Environment Variables
+## Examples
 
-<EnvTooltip />
-<CodeGroup>
-  ```python .env
-  AGENTOPS_API_KEY=<YOUR API KEY>
-  GOOGLE_API_KEY=<YOUR GOOGLE API KEY>
-  ```
-</CodeGroup>
+<CardGroup cols={2}>
+  <Card title="Human Approval Example" icon="notebook" href="/v2/examples/google_adk" newTab={true}>
+    Implement human-in-the-loop approval workflows with Google ADK agents
+  </Card>
+</CardGroup>
 
-Read more about environment variables in [Advanced Configuration](/v2/usage/advanced-configuration)
-
-## Additional Resources
-
-- [Google ADK Documentation](https://google.github.io/adk-docs/)
-- [Google ADK GitHub Repository](https://github.com/google/adk-docs)
-- [Google ADK Quickstart Guide](https://google.github.io/adk-docs/get-started/quickstart/)
+Visit your [AgentOps Dashboard](https://app.agentops.ai) to see detailed traces of your Google ADK agent interactions, tool usage, and session management.
 
 <script type="module" src="/scripts/github_stars.js"></script>
 <script type="module" src="/scripts/scroll-img-fadein-animation.js"></script>
 <script type="module" src="/scripts/button_heartbeat_animation.js"></script>
-<script type="css" src="/styles/styles.css"></script> 
+<script type="css" src="/styles/styles.css"></script>
