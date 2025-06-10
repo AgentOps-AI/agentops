@@ -222,7 +222,7 @@ Build multi-agent systems with tools, handoffs, and guardrails. AgentOps nativel
 pip install openai-agents
 ```
 
-- [AgentOps integration example](https://docs.agentops.ai/v1/integrations/agentssdk)
+- [AgentOps integration example](https://docs.agentops.ai/v1/integrations/agents_sdk)
 - [Official OpenAI Agents SDK documentation](https://openai.github.io/openai-agents-python/)
 
 ### CrewAI 🛶

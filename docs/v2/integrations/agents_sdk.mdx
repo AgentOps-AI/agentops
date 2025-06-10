@@ -1,0 +1,164 @@
+---
+title: OpenAI Agents SDK
+description: 'AgentOps and OpenAI Agents SDK integration for powerful multi-agent workflow monitoring.'
+---
+
+[OpenAI Agents SDK](https://github.com/openai/agentsdk_prototype) is a lightweight yet powerful framework for building multi-agent workflows. The SDK provides a comprehensive set of tools for creating, managing, and monitoring agent-based applications. AgentOps seamlessly integrates to provide observability into these workflows.
+
+## Core Concepts
+
+- **Agents**: LLMs configured with instructions, tools, guardrails, and handoffs
+- **Handoffs**: Allow agents to transfer control to other agents for specific tasks
+- **Guardrails**: Configurable safety checks for input and output validation
+- **Tracing**: Built-in tracking of agent runs, allowing you to view, debug and optimize your workflows
+
+## Installation
+
+Install AgentOps, the OpenAI Agents SDK, and `python-dotenv` for managing API keys:
+<CodeGroup>
+  ```bash pip 
+  pip install agentops openai-agents python-dotenv
+  ```
+  ```bash poetry
+  poetry add agentops openai-agents python-dotenv
+  ```
+  ```bash uv
+  uv add agentops openai-agents python-dotenv
+  ```
+</CodeGroup>
+
+## Setting Up API Keys
+
+Before using the OpenAI Agents SDK with AgentOps, you need to set up your API keys:
+- **OPENAI_API_KEY**: From the [OpenAI Platform](https://platform.openai.com/api-keys)
+- **AGENTOPS_API_KEY**: From your [AgentOps Dashboard](https://app.agentops.ai/)
+
+You can set these as environment variables or in a `.env` file.
+
+<CodeGroup>
+  ```bash Export to CLI
+  export OPENAI_API_KEY="your_openai_api_key_here"
+  export AGENTOPS_API_KEY="your_agentops_api_key_here"
+  ```
+  ```txt Set in .env file
+  OPENAI_API_KEY="your_openai_api_key_here"
+  AGENTOPS_API_KEY="your_agentops_api_key_here"
+  ```
+</CodeGroup>
+
+Then load them in your Python code:
+```python
+from dotenv import load_dotenv
+import os
+
+load_dotenv()
+
+AGENTOPS_API_KEY = os.getenv("AGENTOPS_API_KEY")
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
+```
+
+## Usage
+
+AgentOps will automatically instrument the OpenAI Agents SDK after being initialized. You can then create agents, run them, and track their interactions.
+
+```python
+import agentops
+from agents import Agent, Runner
+
+# Initialize AgentOps
+agentops.init()
+
+# Create an agent with instructions
+agent = Agent(name="Assistant", instructions="You are a helpful assistant")
+
+result = Runner.run_sync(agent, "Write a haiku about recursion in programming.")
+print(result.final_output)
+```
+
+## Examples
+
+<CodeGroup>
+```python Handoffs
+from agents import Agent, Runner
+import asyncio
+import agentops
+import os
+
+agentops.init()
+
+spanish_agent = Agent(
+    name="Spanish agent",
+    instructions="You only speak Spanish.",
+)
+
+english_agent = Agent(
+    name="English agent",
+    instructions="You only speak English",
+)
+
+triage_agent = Agent(
+    name="Triage agent",
+    instructions="Handoff to the appropriate agent based on the language of the request.",
+    handoffs=[spanish_agent, english_agent],
+)
+
+
+async def main():
+    result = await Runner.run(triage_agent, input="Hola, ¿cómo estás?")
+    print(result.final_output)
+    # Expected Output: ¡Hola! Estoy bien, gracias por preguntar. ¿Y tú, cómo estás?
+
+
+if __name__ == "__main__":
+    asyncio.run(main())
+```
+
+```python Function Calling
+import asyncio
+from agents import Agent, Runner, function_tool
+import agentops
+import os
+
+agentops.init()
+
+@function_tool
+def get_weather(city: str) -> str:
+    return f"The weather in {city} is sunny."
+
+
+agent = Agent(
+    name="Weather Agent", 
+    instructions="You are a helpful agent that can get weather information.",
+    tools=[get_weather],
+)
+
+
+async def main():
+    result = await Runner.run(agent, input="What's the weather in Tokyo?")
+    print(result.final_output)
+    # Expected Output: The weather in Tokyo is sunny.
+
+
+if __name__ == "__main__":
+    asyncio.run(main())
+```
+</CodeGroup>
+
+## More Examples
+<CardGroup cols={2}>
+  <Card title="Customer Service Agent" icon="notebook" href="/v2/examples/openai_agents">
+    Demonstrates a customer service workflow
+  </Card>
+  <Card title="Agent Patterns" icon="notebook" href="https://github.com/AgentOps-AI/agentops/blob/main/examples/openai_agents/agent_patterns.ipynb" newTab={true}>
+    Illustrates various agent interaction patterns.
+  </Card>
+  <Card title="Agents with Tools" icon="notebook" href="https://github.com/AgentOps-AI/agentops/blob/main/examples/openai_agents/agents_tools.ipynb" newTab={true}>
+    Showcases agents utilizing different tools.
+  </Card>
+</CardGroup>
+
+<script type="module" src="/scripts/github_stars.js"></script>
+<script type="module" src="/scripts/scroll-img-fadein-animation.js"></script>
+<script type="module" src="/scripts/button_heartbeat_animation.js"></script>
+<script type="css" src="/styles/styles.css"></script>
+<script type="module" src="/scripts/adjust_api_dynamically.js"></script>
