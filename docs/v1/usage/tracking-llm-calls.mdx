@@ -28,14 +28,6 @@ To get started, just follow the quick start guide.
   </Card>
 </CardGroup>
 
-### Stop Tracking LLM Calls
-
-To stop tracking LLM calls after running `agentops.init()`, you can call `agentops.stop_instrumenting()`.
-
-This function reverts the changes made to your LLM provider's module, removing AgentOps instrumentation.
-
-_Special consideration for Cohere: Calling `stop_instrumenting()` has no effect on previously instantiated Cohere clients. You must create a new Cohere client after calling this function._
-
 <script type="module" src="/scripts/github_stars.js"></script>
 <script type="module" src="/scripts/scroll-img-fadein-animation.js"></script>
 <script type="module" src="/scripts/button_heartbeat_animation.js"></script>

@@ -16,7 +16,6 @@ The first element of AgentOps is always calling .init()
 **Parameters**:
 
 - `api_key` (str, optional): API Key for AgentOps services. If not provided, the key will be read from the `AGENTOPS_API_KEY` environment variable.
-- `parent_key` (str, optional): Organization key to give visibility of all user sessions within the user's organization. If not provided, the key will be read from the `AGENTOPS_PARENT_KEY` environment variable.
 - `endpoint` (str, optional): The endpoint for the AgentOps service. Defaults to 'https://api.agentops.ai'.
 - `max_wait_time` (int, optional): The maximum time to wait in milliseconds before flushing the queue. Defaults to 30,000 (30 seconds).
 - `max_queue_size` (int, optional): The maximum size of the event queue. Defaults to 100.
@@ -40,7 +39,7 @@ Start a new [Session](/v1/concepts/sessions) for recording events.
 **Parameters**:
 
 - `tags` (List[str], optional): Tags for the session.
-- `config` ([Configuration](#configuration), optional): Client configuration object.
+- `config` ([Config](#config), optional): Client configuration object.
 - `inherited_session_id` (str, optional): Session ID to continue from an existing session.
 
 **Returns**:
@@ -71,25 +70,6 @@ Record an event with the AgentOps service.
 
 ---
 
-### `add_tags()`
-
-Append to session tags at runtime.
-
-**Parameters**:
-
-- `tags` (List[str]): The list of tags to append.
-
----
-
-### `set_tags()`
-
-Replace session tags at runtime.
-
-**Parameters**:
-
-- `tags` (List[str]): The list of tags to set.
-
----
 
 ### `get_api_key()`
 
@@ -101,37 +81,17 @@ Retrieve the API key used by the client.
 
 ---
 
-### `set_parent_key()`
-
-Set the parent API key which has visibility over projects it is a parent of.
-
-**Parameters**:
-
-- `parent_key` (str): The API key of the parent organization to set.
-
----
-
-### `stop_instrumenting()`
-
-Stops instrumenting LLM calls. This is typically used by agent frameworks (i.e., [CrewAI](/v1/integrations/crewai) and
-[AG2](/v1/integrations/autogen)) to stop using AgentOps' auto-instrumentation of LLM libraries such as OpenAI. This
-allows these frameworks to use their own instrumenting or callback handler.
-
-
-
-
 
 ## Types
 ---
 
-### `Configuration`
+### `Config`
 
 Stores the configuration settings for AgentOps clients.
 
 **Parameters**:
 
 - `api_key` (str, optional): API Key for AgentOps services. If not provided, the key will be read from the `AGENTOPS_API_KEY` environment variable. If no key is found, a `ConfigurationError` is raised.
-- `parent_key` (str, optional): Organization key to give visibility of all user sessions within the user's organization. If not provided, the key will be read from the `AGENTOPS_PARENT_KEY` environment variable.
 - `endpoint` (str, optional): The endpoint for the AgentOps service. If not provided, the endpoint will be read from the `AGENTOPS_API_ENDPOINT` environment variable. Defaults to 'https://api.agentops.ai'.
 - `max_wait_time` (int, optional): The maximum time to wait in milliseconds before flushing the queue. Defaults to 30000.
 - `max_queue_size` (int, optional): The maximum size of the event queue. Defaults to 100.
@@ -142,7 +102,6 @@ Stores the configuration settings for AgentOps clients.
 - **endpoint** (str): Get or set the endpoint for the AgentOps service.
 - **max_wait_time** (int): Get or set the maximum wait time in milliseconds before flushing the queue.
 - **max_queue_size** (int): Get or set the maximum size of the event queue.
-- **parent_key** (str, optional): Get or set the organization key for session visibility.
 
 ---
 
