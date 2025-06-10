@@ -58,10 +58,10 @@ def sequential_parallel_traces():
 
     for i, task_name in enumerate(tasks):
         # Each trace is completely independent
-        with agentops.start_trace(f"sequential_{task_name}", tags=["sequential", f"step-{i+1}"]):
+        with agentops.start_trace(f"sequential_{task_name}", tags=["sequential", f"step-{i + 1}"]):
             print(f"Started trace for {task_name}")
 
-            worker = WorkerAgent(f"Worker{i+1}")
+            worker = WorkerAgent(f"Worker{i + 1}")
             result = worker.process_task(f"data_for_{task_name}")
             results.append(result)
 
