@@ -47,8 +47,6 @@ AgentOps can exist in one of two states:
 
 By default, AgentOps operates in single-session mode. All of the [base SDK functions](/v1/usage/sdk-reference) work as expected.
 
-<Note>Under the hood, when you only have one session at a time, AgentOps can use functions like `agentops.add_tags(...)` and know that you want to perform the function on the one and only active session.</Note>
-
 As soon as you create a second session, AgentOps enters **Multi-Session Mode**. As long as more than one session is active, the [base SDK functions](/v1/usage/sdk-reference) will no longer work.
 
 If multiple sessions exist, you are expected to call the function on the relevant session. Ex
