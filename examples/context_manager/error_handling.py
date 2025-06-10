@@ -51,8 +51,8 @@ class ErrorProneAgent:
         results = []
         for i, step in enumerate(steps):
             if step == "fail":
-                raise RuntimeError(f"Step {i+1} failed")
-            results.append(f"Step{i+1}:{step}")
+                raise RuntimeError(f"Step {i + 1} failed")
+            results.append(f"Step{i + 1}:{step}")
         return " -> ".join(results)
 
 
@@ -129,10 +129,10 @@ def retry_pattern():
     max_retries = 3
     for attempt in range(max_retries):
         try:
-            with agentops.start_trace(f"retry_attempt_{attempt+1}", tags=["retry", f"attempt-{attempt+1}"]):
-                print(f"Retry attempt {attempt+1} started")
+            with agentops.start_trace(f"retry_attempt_{attempt + 1}", tags=["retry", f"attempt-{attempt + 1}"]):
+                print(f"Retry attempt {attempt + 1} started")
 
-                agent = ErrorProneAgent(f"RetryAgent_Attempt{attempt+1}")
+                agent = ErrorProneAgent(f"RetryAgent_Attempt{attempt + 1}")
 
                 # Simulate success on the last attempt
                 if attempt < max_retries - 1:
@@ -140,11 +140,11 @@ def retry_pattern():
                 else:
                     result = agent.risky_operation("success")
 
-                print(f"Retry attempt {attempt+1} succeeded: {result}")
+                print(f"Retry attempt {attempt + 1} succeeded: {result}")
                 break
 
         except RuntimeError as e:
-            print(f"Retry attempt {attempt+1} failed: {e}")
+            print(f"Retry attempt {attempt + 1} failed: {e}")
             if attempt < max_retries - 1:
                 wait_time = 2**attempt  # Exponential backoff
                 print(f"Waiting {wait_time}s before retry...")

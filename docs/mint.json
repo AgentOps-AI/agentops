@@ -95,7 +95,7 @@
     {
       "group": "Integrations",
       "pages": [
-        "v1/integrations/agentssdk",
+        "v1/integrations/agents_sdk",
         "v1/integrations/ai21",
         "v1/integrations/anthropic",
         "v1/integrations/autogen",
@@ -168,16 +168,17 @@
       "group": "Integrations",
       "pages": [
         "v2/integrations/ag2",
-        "v2/integrations/autogen",
         "v2/integrations/anthropic",
+        "v2/integrations/autogen",
         "v2/integrations/crewai",
         "v2/integrations/google_adk",
-        "v2/integrations/gemini",
+        "v2/integrations/google_generative_ai",
         "v2/integrations/langchain",
         "v2/integrations/litellm",
         "v2/integrations/openai",
-        "v2/integrations/agentssdk",
-        "v2/integrations/ibm_watsonx_ai"
+        "v2/integrations/agents_sdk",
+        "v2/integrations/ibm_watsonx_ai",
+        "v2/integrations/xai"
       ],
       "version": "v2"
     },
