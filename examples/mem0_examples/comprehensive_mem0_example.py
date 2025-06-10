@@ -21,12 +21,12 @@ load_dotenv()
 # CRITICAL: Initialize AgentOps BEFORE importing mem0 classes
 # This ensures proper instrumentation and context propagation
 import agentops  # noqa: E402
+from mem0 import Memory, AsyncMemory, MemoryClient, AsyncMemoryClient  # noqa: E402
 
-# Initialize AgentOps FIRST
+
+# Initialize AgentOps
 agentops.init(os.getenv("AGENTOPS_API_KEY"))
 
-# Now import mem0 classes AFTER agentops initialization
-from mem0 import Memory, AsyncMemory, MemoryClient, AsyncMemoryClient  # noqa: E402
 
 # Set up logging
 logging.basicConfig(level=logging.INFO)

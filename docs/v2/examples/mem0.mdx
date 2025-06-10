@@ -1,0 +1,474 @@
+---
+title: 'Mem0 Example'
+description: 'Comprehensive Mem0 memory operations with AgentOps tracking'
+---
+
+_View Example on <a href={'https://github.com/AgentOps-AI/agentops/blob/main/examples/mem0_examples/comprehensive_mem0_example.py'} target={'_blank'}>Github</a>_
+
+# AgentOps Mem0 Integration
+
+This comprehensive example demonstrates all four Mem0 memory classes with complete AgentOps instrumentation:
+- **Memory** (Sync Local Memory)
+- **AsyncMemory** (Async Local Memory)  
+- **MemoryClient** (Sync Cloud Client)
+- **AsyncMemoryClient** (Async Cloud Client)
+
+## Installation
+
+Install the required packages:
+
+<CodeGroup>
+```bash pip
+pip install agentops mem0ai python-dotenv
+```
+```bash poetry
+poetry add agentops mem0ai python-dotenv
+```
+```bash uv
+uv add agentops mem0ai python-dotenv
+```
+</CodeGroup>
+
+## Setup
+
+### Import Dependencies
+Import the necessary libraries:
+
+```python
+import os
+import asyncio
+import logging
+from dotenv import load_dotenv
+
+# Load environment variables
+load_dotenv()
+
+# This ensures proper instrumentation 
+import agentops
+
+# Initialize AgentOps 
+agentops.init(os.getenv("AGENTOPS_API_KEY"))
+
+# Now import mem0
+from mem0 import Memory, AsyncMemory, MemoryClient, AsyncMemoryClient
+```
+
+### Configure API Keys
+Set up your environment variables in a `.env` file:
+
+```env
+# Required
+AGENTOPS_API_KEY=your_agentops_api_key
+OPENAI_API_KEY=your_openai_api_key
+
+# Optional (for cloud operations)
+MEM0_API_KEY=your_mem0_cloud_api_key
+```
+
+### Configuration
+Set up configurations for local and cloud memory operations:
+
+```python
+# Configuration for local memory (Memory and AsyncMemory)
+local_config = {
+    "llm": {
+        "provider": "openai",
+        "config": {
+            "model": "gpt-4o-mini",
+            "temperature": 0.1,
+            "max_tokens": 2000,
+            "api_key": os.getenv("OPENAI_API_KEY"),
+        },
+    }
+}
+
+# API key for cloud clients
+mem0_api_key = os.getenv("MEM0_API_KEY")
+
+# Sample data
+user_id = "alice_demo"
+sample_messages = [
+    {"role": "user", "content": "I'm planning to watch a movie tonight. Any recommendations?"},
+    {"role": "assistant", "content": "How about a thriller? They can be quite engaging."},
+    {"role": "user", "content": "I'm not a big fan of thriller movies but I love sci-fi movies."},
+    {
+        "role": "assistant",
+        "content": "Got it! I'll avoid thriller recommendations and suggest sci-fi movies in the future.",
+    },
+]
+
+sample_preferences = [
+    "I prefer dark roast coffee over light roast",
+    "I exercise every morning at 6 AM",
+    "I'm vegetarian and avoid all meat products",
+    "I love reading science fiction novels",
+    "I work in software engineering",
+]
+```
+
+## Sync Memory Operations (Local)
+
+Demonstrate synchronous local memory operations:
+
+```python
+def demonstrate_sync_memory():
+    """Demonstrate sync Memory class operations."""
+    print("\n" + "=" * 60)
+    print("SYNC MEMORY (Local) OPERATIONS")
+    print("=" * 60)
+
+    try:
+        # Initialize sync Memory
+        memory = Memory.from_config(local_config)
+        print("Sync Memory initialized successfully")
+
+        # 1. ADD operations
+        print("\nAdding memories...")
+
+        # Add conversation messages
+        result = memory.add(
+            sample_messages, 
+            user_id=user_id, 
+            metadata={"category": "movie_preferences", "session": "demo"}
+        )
+        print("Added conversation successfully")
+
+        # Add individual preferences
+        for i, preference in enumerate(sample_preferences):
+            result = memory.add(
+                preference, 
+                user_id=user_id, 
+                metadata={"type": "preference", "index": i}
+            )
+        print(f"Added {len(sample_preferences)} preferences")
+
+        # 2. SEARCH operations
+        print("\nSearching memories...")
+        search_queries = [
+            "What movies does the user like?",
+            "What are the user's food preferences?",
+            "When does the user exercise?",
+        ]
+
+        for query in search_queries:
+            results = memory.search(query, user_id=user_id)
+            result_count = len(results.get("results", [])) if results else 0
+            print(f"Query: '{query}' - Found {result_count} results")
+
+        # 3. GET_ALL operations
+        print("\nGetting all memories...")
+        all_memories = memory.get_all(user_id=user_id)
+        if all_memories and "results" in all_memories:
+            print(f"Total memories: {len(all_memories['results'])}")
+
+        # Cleanup
+        print("\nCleaning up all memories...")
+        delete_all_result = memory.delete_all(user_id=user_id)
+        print("Memories cleaned up successfully")
+
+    except Exception as e:
+        print(f"Sync Memory error: {e}")
+
+# Run sync memory demonstration
+demonstrate_sync_memory()
+```
+
+## Async Memory Operations (Local)
+
+Demonstrate asynchronous local memory operations with concurrency:
+
+```python
+async def demonstrate_async_memory():
+    """Demonstrate async Memory class operations."""
+    print("\n" + "=" * 60)
+    print("ASYNC MEMORY (Local) OPERATIONS")
+    print("=" * 60)
+
+    try:
+        # Initialize async Memory
+        async_memory = AsyncMemory.from_config(local_config)
+        print("Async Memory initialized successfully")
+
+        # 1. ADD operations
+        print("\nAdding memories asynchronously...")
+
+        # Add conversation messages
+        result = await async_memory.add(
+            sample_messages, 
+            user_id=user_id, 
+            metadata={"category": "async_movie_preferences", "session": "async_demo"}
+        )
+        print("Added conversation successfully")
+
+        # Add preferences concurrently
+        async def add_preference(preference, index):
+            return await async_memory.add(
+                preference, 
+                user_id=user_id, 
+                metadata={"type": "async_preference", "index": index}
+            )
+
+        tasks = [add_preference(pref, i) for i, pref in enumerate(sample_preferences)]
+        results = await asyncio.gather(*tasks)
+        print(f"Added {len(results)} preferences concurrently")
+
+        # 2. SEARCH operations
+        print("\nSearching memories asynchronously...")
+        search_queries = [
+            "What movies does the user like?",
+            "What are the user's dietary restrictions?",
+            "What does the user do for work?",
+        ]
+
+        async def search_memory(query):
+            return await async_memory.search(query, user_id=user_id), query
+
+        search_tasks = [search_memory(query) for query in search_queries]
+        search_results = await asyncio.gather(*search_tasks)
+
+        for result, query in search_results:
+            result_count = len(result.get("results", [])) if result else 0
+            print(f"Query: '{query}' - Found {result_count} results")
+
+        # 3. CONCURRENT operations
+        print("\nPerforming concurrent operations...")
+        
+        # Get specific memory, update it, and check history concurrently
+        first_memory_id = (await async_memory.get_all(user_id=user_id))["results"][0]["id"]
+        
+        get_task = async_memory.get(first_memory_id, user_id=user_id)
+        update_task = async_memory.update(
+            memory_id=first_memory_id,
+            text="Updated: User loves sci-fi and fantasy movies",
+            user_id=user_id
+        )
+        history_task = async_memory.history(first_memory_id, user_id=user_id)
+        
+        get_result, update_result, history_result = await asyncio.gather(
+            get_task, update_task, history_task
+        )
+        
+        print(f"Concurrent operations completed - History entries: {len(history_result.get('results', []))}")
+
+        # Cleanup
+        print("\nCleaning up all async memories...")
+        delete_all_result = await async_memory.delete_all(user_id=user_id)
+        print("Async memories cleaned up successfully")
+
+    except Exception as e:
+        print(f"Async Memory error: {e}")
+
+# Run async memory demonstration
+asyncio.run(demonstrate_async_memory())
+```
+
+## Sync Memory Client (Cloud)
+
+Demonstrate cloud-based memory operations:
+
+```python
+def demonstrate_sync_memory_client():
+    """Demonstrate sync MemoryClient operations."""
+    print("\n" + "=" * 60)
+    print("SYNC MEMORY CLIENT (Cloud) OPERATIONS")
+    print("=" * 60)
+
+    if not mem0_api_key:
+        print("MEM0_API_KEY not found. Skipping cloud operations.")
+        return
+
+    try:
+        # Initialize sync MemoryClient
+        client = MemoryClient(api_key=mem0_api_key)
+        print("Sync MemoryClient initialized successfully")
+
+        # Add memories to cloud
+        print("\nAdding memories to cloud...")
+        
+        cloud_result = client.add(
+            sample_messages, 
+            user_id=user_id,
+            metadata={"source": "cloud_demo", "type": "conversation"}
+        )
+        print("Added conversation to cloud")
+
+        # Add preferences
+        for i, preference in enumerate(sample_preferences[:3]):  # Limited for demo
+            result = client.add(
+                preference, 
+                user_id=user_id,
+                metadata={"type": "cloud_preference", "index": i}
+            )
+        print(f"Added {len(sample_preferences[:3])} preferences to cloud")
+
+        # Search cloud memories
+        print("\nSearching cloud memories...")
+        search_result = client.search(
+            "What are the user's entertainment preferences?", 
+            user_id=user_id
+        )
+        result_count = len(search_result.get("results", [])) if search_result else 0
+        print(f"Cloud search completed - Found {result_count} results")
+
+        # Get all cloud memories
+        print("\nGetting all cloud memories...")
+        all_cloud_memories = client.get_all(user_id=user_id)
+        if all_cloud_memories and "results" in all_cloud_memories:
+            print(f"Total cloud memories: {len(all_cloud_memories['results'])}")
+
+        # Cleanup cloud memories
+        print("\nCleaning up cloud memories...")
+        delete_all_result = client.delete_all(user_id=user_id)
+        print("Cloud memories cleaned up successfully")
+
+    except Exception as e:
+        print(f"Sync MemoryClient error: {e}")
+
+# Run sync memory client demonstration
+demonstrate_sync_memory_client()
+```
+
+## Async Memory Client (Cloud)
+
+Demonstrate asynchronous cloud operations:
+
+```python
+async def demonstrate_async_memory_client():
+    """Demonstrate async MemoryClient operations."""
+    print("\n" + "=" * 60)
+    print("ASYNC MEMORY CLIENT (Cloud) OPERATIONS")
+    print("=" * 60)
+
+    if not mem0_api_key:
+        print("MEM0_API_KEY not found. Skipping async cloud operations.")
+        return
+
+    try:
+        # Initialize async MemoryClient
+        async_client = AsyncMemoryClient(api_key=mem0_api_key)
+        print("Async MemoryClient initialized successfully")
+
+        # Add memories to cloud asynchronously
+        print("\nAdding memories to cloud asynchronously...")
+        
+        # Concurrent add operations
+        add_conversation_task = async_client.add(
+            sample_messages, 
+            user_id=user_id,
+            metadata={"source": "async_cloud_demo", "type": "conversation"}
+        )
+        
+        add_preference_tasks = [
+            async_client.add(
+                pref, 
+                user_id=user_id,
+                metadata={"type": "async_cloud_preference", "index": i}
+            )
+            for i, pref in enumerate(sample_preferences[:3])
+        ]
+
+        # Execute all add operations concurrently
+        results = await asyncio.gather(add_conversation_task, *add_preference_tasks)
+        print(f"Added conversation and preferences: {len(results)} items")
+
+        # Concurrent search operations
+        print("\nPerforming concurrent searches...")
+        search_queries = [
+            "What movies does the user prefer?",
+            "What are the user's work habits?",
+            "What are the user's dietary preferences?",
+        ]
+        
+        search_tasks = [
+            async_client.search(query, user_id=user_id) 
+            for query in search_queries
+        ]
+        search_results = await asyncio.gather(*search_tasks)
+        
+        for i, result in enumerate(search_results):
+            print(f"Search {i+1} result: {len(result.get('results', []))} memories found")
+
+        # Get all memories and perform operations
+        print("\nGetting all async cloud memories...")
+        all_memories = await async_client.get_all(user_id=user_id)
+        if all_memories and "results" in all_memories:
+            print(f"Total async cloud memories: {len(all_memories['results'])}")
+
+        # Cleanup
+        print("\nCleaning up async cloud memories...")
+        delete_all_result = await async_client.delete_all(user_id=user_id)
+        print("Async cloud memories cleaned up successfully")
+
+    except Exception as e:
+        print(f"Async MemoryClient error: {e}")
+
+# Run async memory client demonstration
+asyncio.run(demonstrate_async_memory_client())
+```
+
+## Complete Example
+
+Run all demonstrations in sequence:
+
+```python
+async def main():
+    """Main function to run all Mem0 demonstrations."""
+    print("Starting Comprehensive Mem0 Example with AgentOps")
+    print("=" * 80)
+    
+    # Check environment
+    required_vars = ["AGENTOPS_API_KEY", "OPENAI_API_KEY"]
+    missing_vars = [var for var in required_vars if not os.getenv(var)]
+    
+    if missing_vars:
+        print(f"Missing required environment variables: {missing_vars}")
+        return
+    
+    print("Environment variables checked")
+    
+    # Run all demonstrations
+    print("\nRunning all memory demonstrations...")
+    
+    # Sync operations
+    demonstrate_sync_memory()
+    
+    # Async operations  
+    await demonstrate_async_memory()
+    
+    # Cloud operations (if API key available)
+    demonstrate_sync_memory_client()
+    await demonstrate_async_memory_client()
+    
+    print("\nAll Mem0 demonstrations completed!")
+    print("Check your AgentOps dashboard for detailed traces and metrics.")
+
+# Run the complete example
+if __name__ == "__main__":
+    asyncio.run(main())
+```
+
+## What You'll See in AgentOps Dashboard
+
+After running this example, visit your [AgentOps Dashboard](https://app.agentops.ai/) to see:
+
+- **Memory Operations**: Detailed traces of all add, search, update, and delete operations
+- **Performance Metrics**: Latency and success rates for each memory operation
+- **User Tracking**: All operations organized by user_id for easy filtering
+- **Metadata Analysis**: Custom metadata and tags for memory categorization
+- **Error Monitoring**: Any failed operations with full stack traces and context
+- **Search Analytics**: Query patterns and retrieval effectiveness metrics
+- **Async Operations**: Concurrent operation tracking with timing details
+
+## Best Practices Demonstrated
+
+1. **Proper Initialization**: Initialize AgentOps and Mem0
+2. **Comprehensive Metadata**: All operations include meaningful metadata
+3. **Async Patterns**: Demonstrates concurrent operations for better performance
+4. **Error Handling**: Robust try-catch blocks for all operations
+5. **Resource Cleanup**: Proper cleanup of memories after demonstrations
+6. **User Isolation**: Consistent user_id usage for proper memory segmentation
+
+<script type="module" src="/scripts/github_stars.js"></script>
+<script type="module" src="/scripts/scroll-img-fadein-animation.js"></script>
+<script type="module" src="/scripts/button_heartbeat_animation.js"></script>
+<script type="module" src="/scripts/adjust_api_dynamically.js"></script> 
