@@ -4,8 +4,6 @@ on:
   push:
     branches:
       - main
-      # TODO: Remove this branch once the workflow is stable
-      - fix/examples-cleanup
     paths:
       - 'examples/**'
       - 'docs/v2/examples/**'
@@ -130,9 +128,5 @@ jobs:
             ```', steps.process.outputs.modified_files) || '' }}
           branch: update-examples-docs
           delete-branch: true
-          # TODO: Uncomment for production use
-          # assignees: the-praxs,bboynton97,areibman
-          # reviewers: the-praxs,bboynton97,areibman
-          # TODO: Remove this once the workflow is stable
-          assignees: the-praxs
-          reviewers: the-praxs
+          assignees: the-praxs,bboynton97,areibman
+          reviewers: the-praxs,bboynton97,areibman
