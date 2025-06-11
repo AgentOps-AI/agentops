@@ -15,7 +15,7 @@ from agentops.legacy import (
 from typing import List, Optional, Union, Dict, Any
 from agentops.client import Client
 from agentops.sdk.core import TraceContext, tracer
-from agentops.sdk.decorators import trace, session, agent, task, workflow, operation, tool
+from agentops.sdk.decorators import trace, session, agent, task, workflow, operation, tool, guardrail
 from agentops.enums import TraceState, SUCCESS, ERROR, UNSET
 from opentelemetry.trace.status import StatusCode
 
@@ -272,6 +272,7 @@ __all__ = [
     "task",
     "workflow",
     "operation",
+    "guardrail",
     "tracer",
     "tool",
     # Trace state enums
