@@ -15,7 +15,7 @@ from agentops.legacy import (
 from typing import List, Optional, Union, Dict, Any
 from agentops.client import Client
 from agentops.sdk.core import TraceContext, tracer
-from agentops.sdk.decorators import trace, session, agent, task, workflow, operation, tool
+from agentops.sdk.decorators import trace, session, agent, task, workflow, operation, tool, guardrail
 from agentops.enums import TraceState, SUCCESS, ERROR, UNSET
 from opentelemetry.trace.status import StatusCode
 
@@ -121,6 +121,13 @@ def init(
         merged_tags = tags
     elif default_tags:
         merged_tags = default_tags
+
+    # Check if in a Jupyter Notebook (manual start/end_trace())
+    try:
+        get_ipython().__class__.__name__ == "ZMQInteractiveShell"  # type: ignore
+        auto_start_session = False
+    except NameError:
+        pass
 
     # Prepare initialization arguments
     init_kwargs = {
@@ -271,6 +278,7 @@ __all__ = [
     "task",
     "workflow",
     "operation",
+    "guardrail",
     "tracer",
     "tool",
     # Trace state enums

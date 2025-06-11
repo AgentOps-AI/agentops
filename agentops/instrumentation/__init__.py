@@ -35,7 +35,6 @@ from opentelemetry.instrumentation.instrumentor import BaseInstrumentor  # type:
 from agentops.logging import logger
 from agentops.sdk.core import tracer
 
-
 # Module-level state variables
 _active_instrumentors: list[BaseInstrumentor] = []
 _original_builtins_import = builtins.__import__  # Store original import
