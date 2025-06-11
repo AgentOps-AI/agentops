@@ -14,6 +14,7 @@ AgentOps provides the following decorators:
 | `@workflow` | Track a sequence of operations | WORKFLOW span |
 | `@task` | Track smaller units of work (similar to operations) | TASK span |
 | `@tool` | Track tool usage and cost in agent operations | TOOL span |
+| `@guardrail` | Track guardrail input and output | GUARDRAIL span |
 
 ## Decorator Hierarchy
 
@@ -234,6 +235,27 @@ The tool decorator provides:
 - Proper span creation and nesting
 - Support for all function types (sync, async, generator, async generator)
 - Cost accumulation in generator and async generator operations
+
+### @guardrail
+
+The `@guardrail` decorator tracks guardrail input and output. You can specify the guardrail type (`"input"` or `"output"`) with the `spec` parameter.
+
+```python
+from agentops.sdk.decorators import guardrail
+import agentops
+import re
+
+# Initialize AgentOps
+agentops.init(api_key="YOUR_API_KEY")
+
+@guardrail(spec="input")
+def secret_key_guardrail(input):
+    pattern = r'\bsk-[a-zA-Z0-9]{10,}\b'
+    result = True if re.search(pattern, input) else False
+    return {
+        "tripwire_triggered" : result
+    }
+```
 
 ## Decorator Attributes
 
