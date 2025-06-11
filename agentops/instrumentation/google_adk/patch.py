@@ -304,16 +304,16 @@ def _extract_llm_attributes(llm_request_dict: dict, llm_response: Any) -> dict:
                     elif "function_call" in part:
                         # This is a function call in the response
                         func_call = part["function_call"]
-                        attributes[
-                            MessageAttributes.COMPLETION_TOOL_CALL_NAME.format(i=0, j=tool_call_index)
-                        ] = func_call.get("name", "")
-                        attributes[
-                            MessageAttributes.COMPLETION_TOOL_CALL_ARGUMENTS.format(i=0, j=tool_call_index)
-                        ] = json.dumps(func_call.get("args", {}))
+                        attributes[MessageAttributes.COMPLETION_TOOL_CALL_NAME.format(i=0, j=tool_call_index)] = (
+                            func_call.get("name", "")
+                        )
+                        attributes[MessageAttributes.COMPLETION_TOOL_CALL_ARGUMENTS.format(i=0, j=tool_call_index)] = (
+                            json.dumps(func_call.get("args", {}))
+                        )
                         if "id" in func_call:
-                            attributes[
-                                MessageAttributes.COMPLETION_TOOL_CALL_ID.format(i=0, j=tool_call_index)
-                            ] = func_call["id"]
+                            attributes[MessageAttributes.COMPLETION_TOOL_CALL_ID.format(i=0, j=tool_call_index)] = (
+                                func_call["id"]
+                            )
                         tool_call_index += 1
 
                 if text_parts:
