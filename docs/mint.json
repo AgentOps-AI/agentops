@@ -168,6 +168,7 @@
       "group": "Integrations",
       "pages": [
         "v2/integrations/ag2",
+        "v2/integrations/agno",
         "v2/integrations/anthropic",
         "v2/integrations/autogen",
         "v2/integrations/crewai",

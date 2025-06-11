@@ -223,10 +223,8 @@ def get_metrics_attributes(
     if "reasoning_tokens" in usage_data:
         attributes[SpanAttributes.LLM_USAGE_REASONING_TOKENS] = usage_data["reasoning_tokens"]
 
-    # Also keep the nested format and individual gen_ai.usage.* attributes for compatibility
     # But only if we have any usage data
     if usage_data:
-        attributes["gen_ai.usage"] = usage_data
         for key, value in usage_data.items():
             attributes[f"gen_ai.usage.{key}"] = value
 

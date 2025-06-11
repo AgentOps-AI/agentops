@@ -1,0 +1,374 @@
+"""
+Comprehensive Agno Example with AgentOps Instrumentation
+
+This example demonstrates key Agno features:
+1. Basic Agents and Teams
+2. Tool Integration and RAG
+3. Workflows with Caching
+4. Collaborative Research Teams
+5. Async Operations
+
+Each section shows different Agno capabilities with AgentOps tracking.
+"""
+
+import os
+import asyncio
+from typing import Iterator
+from textwrap import dedent
+from dotenv import load_dotenv
+
+# Load environment variables
+load_dotenv()
+
+# Now import agno to trigger instrumentation, then import specific classes
+import agno  # This triggers AgentOps instrumentation
+from agno.agent import Agent, RunResponse
+from agno.team import Team
+from agno.models.openai import OpenAIChat
+from agno.workflow import Workflow
+from agno.tools import tool
+from agno.tools.duckduckgo import DuckDuckGoTools
+from agno.tools.hackernews import HackerNewsTools
+from agno.tools.reasoning import ReasoningTools
+from agno.tools.arxiv import ArxivTools
+from agno.tools.googlesearch import GoogleSearchTools
+from agno.knowledge.url import UrlKnowledge
+from agno.utils.pprint import pprint_run_response
+from agno.utils.log import logger
+    
+import agentops
+agentops.init(api_key=os.getenv("AGENTOPS_API_KEY"))
+# Sample configuration
+MODEL_ID = "gpt-4o-mini"
+
+
+def check_environment():
+    """Check if required environment variables are set."""
+    required_vars = ["AGENTOPS_API_KEY", "OPENAI_API_KEY"]
+    missing_vars = [var for var in required_vars if not os.getenv(var)]
+    
+    if missing_vars:
+        print(f"Missing required environment variables: {missing_vars}")
+        print("Please set these in your .env file or environment")
+        return False
+    
+    print("Environment variables checked successfully")
+    return True
+
+
+def demonstrate_basic_agents():
+    """Demonstrate basic agent creation and team coordination."""
+    print("\n" + "=" * 60)
+    print("BASIC AGENTS AND TEAMS")
+    print("=" * 60)
+
+    try:
+        # Create individual agents
+        news_agent = Agent(
+            name="News Agent", 
+            role="Get the latest news",
+            model=OpenAIChat(id=MODEL_ID)
+        )
+
+        weather_agent = Agent(
+            name="Weather Agent", 
+            role="Get the weather for the next 7 days",
+            model=OpenAIChat(id=MODEL_ID)
+        )
+
+        # Create a team with coordination mode
+        team = Team(
+            name="News and Weather Team", 
+            mode="coordinate", 
+            members=[news_agent, weather_agent]
+        )
+
+        # Run team task
+        response = team.run("What is the weather in Tokyo?")
+        print(f"Team Response: {response.content}")
+        
+    except Exception as e:
+        print(f"Basic agents error: {e}")
+
+
+def demonstrate_tool_integration():
+    """Demonstrate tool integration with RAG and knowledge base."""
+    print("\n" + "=" * 60)
+    print("TOOL INTEGRATION WITH RAG")
+    print("=" * 60)
+
+    try:
+        # Create knowledge base with vector database
+        knowledge_base = UrlKnowledge(
+            urls=["https://docs.agno.com/introduction/agents.md"],
+            # Use LanceDB as the vector database, store embeddings in the `agno_docs` table
+            vector_db=LanceDb(
+                uri="tmp/lancedb",
+                table_name="agno_docs",
+                search_type=SearchType.hybrid,
+                embedder=CohereEmbedder(id="embed-v4.0"),
+                reranker=CohereReranker(model="rerank-v3.5"),
+            ),
+        )
+
+        # Create agent with knowledge and reasoning tools
+        agent = Agent(
+            model=OpenAIChat(id=MODEL_ID),
+            # Agentic RAG is enabled by default when `knowledge` is provided to the Agent.
+            knowledge=knowledge_base,
+            # search_knowledge=True gives the Agent the ability to search on demand
+            search_knowledge=True,
+            tools=[ReasoningTools(add_instructions=True)],
+            instructions=[
+                "Include sources in your response.",
+                "Always search your knowledge before answering the question.",
+                "Only include the output in your response. No other text.",
+            ],
+            markdown=True,
+        )
+        
+        print("Running RAG agent with knowledge base...")
+        agent.print_response(
+            "What are Agents?",
+            show_full_reasoning=True,
+        )
+        
+    except Exception as e:
+        print(f"Tool integration error: {e}")
+
+
+class CacheWorkflow(Workflow):
+    """A workflow that demonstrates caching capabilities."""
+    
+    # Purely descriptive, not used by the workflow
+    description: str = "A workflow that caches previous outputs"
+
+    # Add agents or teams as attributes on the workflow
+    agent = Agent(model=OpenAIChat(id=MODEL_ID))
+
+    # Write the logic in the `run()` method
+    def run(self, message: str) -> Iterator[RunResponse]:
+        logger.info(f"Checking cache for '{message}'")
+        # Check if the output is already cached
+        if self.session_state.get(message):
+            logger.info(f"Cache hit for '{message}'")
+            yield RunResponse(run_id=self.run_id, content=self.session_state.get(message))
+            return
+
+        logger.info(f"Cache miss for '{message}'")
+        # Run the agent and yield the response
+        yield from self.agent.run(message, stream=True)
+
+        # Cache the output after response is yielded
+        self.session_state[message] = self.agent.run_response.content
+
+
+def demonstrate_workflows():
+    """Demonstrate workflow capabilities with caching."""
+    print("\n" + "=" * 60)
+    print("WORKFLOWS WITH CACHING")
+    print("=" * 60)
+
+    try:
+        workflow = CacheWorkflow()
+
+        print("First run (cache miss):")
+        # Run workflow (this takes ~1s)
+        response: Iterator[RunResponse] = workflow.run(message="Tell me a joke.")
+        # Print the response
+        pprint_run_response(response, markdown=True, show_time=True)
+        
+        print("\nSecond run (cache hit):")
+        # Run workflow again (this is immediate because of caching)
+        response: Iterator[RunResponse] = workflow.run(message="Tell me a joke.")
+        # Print the response
+        pprint_run_response(response, markdown=True, show_time=True)
+        
+    except Exception as e:
+        print(f"Workflow error: {e}")
+
+
+def demonstrate_research_team():
+    """Demonstrate collaborative research team with multiple specialized agents."""
+    print("\n" + "=" * 60)
+    print("COLLABORATIVE RESEARCH TEAM")
+    print("=" * 60)
+
+    try:
+        # Create specialized research agents
+        reddit_researcher = Agent(
+            name="Reddit Researcher",
+            role="Research a topic on Reddit",
+            model=OpenAIChat(id="gpt-4o"),
+            tools=[GoogleSearchTools()],
+            add_name_to_instructions=True,
+            instructions=dedent("""
+                You are a Reddit researcher.
+                You will be given a topic to research on Reddit.
+                You will need to find the most relevant posts on Reddit.
+            """),
+        )
+
+        hackernews_researcher = Agent(
+            name="HackerNews Researcher",
+            model=OpenAIChat("gpt-4o"),
+            role="Research a topic on HackerNews.",
+            tools=[HackerNewsTools()],
+            add_name_to_instructions=True,
+            instructions=dedent("""
+                You are a HackerNews researcher.
+                You will be given a topic to research on HackerNews.
+                You will need to find the most relevant posts on HackerNews.
+            """),
+        )
+
+        academic_paper_researcher = Agent(
+            name="Academic Paper Researcher",
+            model=OpenAIChat("gpt-4o"),
+            role="Research academic papers and scholarly content",
+            tools=[GoogleSearchTools(), ArxivTools()],
+            add_name_to_instructions=True,
+            instructions=dedent("""
+                You are an academic paper researcher.
+                You will be given a topic to research in academic literature.
+                You will need to find relevant scholarly articles, papers, and academic discussions.
+                Focus on peer-reviewed content and citations from reputable sources.
+                Provide brief summaries of key findings and methodologies.
+            """),
+        )
+
+        twitter_researcher = Agent(
+            name="Twitter Researcher",
+            model=OpenAIChat("gpt-4o"),
+            role="Research trending discussions and real-time updates",
+            tools=[DuckDuckGoTools()],
+            add_name_to_instructions=True,
+            instructions=dedent("""
+                You are a Twitter/X researcher.
+                You will be given a topic to research on Twitter/X.
+                You will need to find trending discussions, influential voices, and real-time updates.
+                Focus on verified accounts and credible sources when possible.
+                Track relevant hashtags and ongoing conversations.
+            """),
+        )
+
+        # Create collaborative team
+        agent_team = Team(
+            name="Discussion Team",
+            mode="collaborate",
+            model=OpenAIChat("gpt-4o"),
+            members=[
+                reddit_researcher,
+                hackernews_researcher,
+                academic_paper_researcher,
+                twitter_researcher,
+            ],
+            instructions=[
+                "You are a discussion master.",
+                "You have to stop the discussion when you think the team has reached a consensus.",
+            ],
+            success_criteria="The team has reached a consensus.",
+            enable_agentic_context=True,
+            add_context=True,
+            show_tool_calls=True,
+            markdown=True,
+            debug_mode=True,
+            show_members_responses=True,
+        )
+
+        print("Running collaborative research team...")
+        agent_team.print_response(
+            message="Start the discussion on the topic: 'What is the best way to learn to code?'",
+            stream=True,
+            stream_intermediate_steps=True,
+        )
+        
+    except Exception as e:
+        print(f"Research team error: {e}")
+
+
+async def demonstrate_async_operations():
+    """Demonstrate async operations with Agno agents."""
+    print("\n" + "=" * 60)
+    print("ASYNC OPERATIONS")
+    print("=" * 60)
+
+    try:
+        # Create async tasks with different agents
+        agent = Agent(model=OpenAIChat(id=MODEL_ID))
+        
+        # Define async tasks
+        async def task1():
+            response = await agent.arun("Explain Python in one paragraph")
+            return f"Task 1: {response.content}"
+        
+        async def task2():
+            response = await agent.arun("Explain JavaScript in one paragraph")
+            return f"Task 2: {response.content}"
+        
+        async def task3():
+            response = await agent.arun("Compare them briefly")
+            return f"Task 3: {response.content}"
+        
+        # Run tasks concurrently
+        print("Running async tasks concurrently...")
+        results = await asyncio.gather(task1(), task2(), task3())
+        
+        for result in results:
+            print(result)
+            print()
+            
+    except Exception as e:
+        print(f"Async operations error: {e}")
+
+
+async def main():
+    """Main function to run all Agno demonstrations."""
+    print("Starting Comprehensive Agno Example with AgentOps")
+    print("=" * 80)
+    
+    # Check environment
+    if not check_environment():
+        return
+    
+
+    
+    # Run all demonstrations
+    print("\nRunning all Agno demonstrations...")
+    
+
+    # Research teams
+    try:
+        demonstrate_research_team()
+    except Exception as e:
+        print(f"Skipping research team demo due to: {e}")
+        
+    # Basic functionality
+    demonstrate_basic_agents()
+    
+    # Tool integration
+    try:
+        demonstrate_tool_integration()
+    except Exception as e:
+        print(f"Skipping tool integration demo due to: {e}")
+    
+    # Workflows
+    try:
+        demonstrate_workflows()
+    except Exception as e:
+        print(f"Skipping workflow demo due to: {e}")
+    
+
+    
+    # Async operations
+    try:
+        await demonstrate_async_operations()
+    except Exception as e:
+        print(f"Skipping async demo due to: {e}")
+    
+    print("\nAll Agno demonstrations completed!")
+    print("Check your AgentOps dashboard for detailed traces and metrics.")
+
+
+if __name__ == "__main__":
+    asyncio.run(main()) 
