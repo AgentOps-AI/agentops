@@ -11,7 +11,7 @@ from agentops.sdk.core import TraceContext, tracer
 from agentops.semconv.span_kinds import SpanKind
 from agentops.semconv import SpanAttributes, CoreAttributes
 
-from .utility import (
+from agentops.sdk.decorators.utility import (
     _create_as_current_span,
     _process_async_generator,
     _process_sync_generator,
@@ -119,7 +119,7 @@ def create_entity_decorator(entity_kind: str) -> Callable[..., Any]:
                             return result
                         except Exception:
                             if trace_context:
-                                tracer.end_trace(trace_context, "Failure")
+                                tracer.end_trace(trace_context, "Indeterminate")
                             raise
                         finally:
                             if trace_context and trace_context.span.is_recording():
@@ -151,7 +151,7 @@ def create_entity_decorator(entity_kind: str) -> Callable[..., Any]:
                         return result
                     except Exception:
                         if trace_context:
-                            tracer.end_trace(trace_context, "Failure")
+                            tracer.end_trace(trace_context, "Indeterminate")
                         raise
                     finally:
                         if trace_context and trace_context.span.is_recording():

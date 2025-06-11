@@ -1,7 +1,7 @@
 import logging
 import os
 
-from .formatters import AgentOpsLogFileFormatter, AgentOpsLogFormatter
+from agentops.logging.formatters import AgentOpsLogFileFormatter, AgentOpsLogFormatter
 
 # Create the logger at module level
 logger = logging.getLogger("agentops")

@@ -389,7 +389,7 @@ class TracingCore:
 
         Args:
             trace_context: The TraceContext object returned by start_trace. If None, ends all active traces.
-            end_state: The final state of the trace (e.g., "Success", "Failure", "Error").
+            end_state: The final state of the trace (e.g., "Success", "Indeterminate", "Error").
         """
         if not self.initialized:
             logger.warning("Global tracer not initialized. Cannot end trace.")
