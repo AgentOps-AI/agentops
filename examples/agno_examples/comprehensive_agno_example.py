@@ -21,22 +21,25 @@ from dotenv import load_dotenv
 load_dotenv()
 
 # Now import agno to trigger instrumentation, then import specific classes
-import agno  # This triggers AgentOps instrumentation
-from agno.agent import Agent, RunResponse
-from agno.team import Team
-from agno.models.openai import OpenAIChat
-from agno.workflow import Workflow
-from agno.tools import tool
-from agno.tools.duckduckgo import DuckDuckGoTools
-from agno.tools.hackernews import HackerNewsTools
-from agno.tools.reasoning import ReasoningTools
-from agno.tools.arxiv import ArxivTools
-from agno.tools.googlesearch import GoogleSearchTools
-from agno.knowledge.url import UrlKnowledge
-from agno.utils.pprint import pprint_run_response
-from agno.utils.log import logger
-    
-import agentops
+from agno.agent import Agent, RunResponse  # noqa: E402
+from agno.team import Team  # noqa: E402
+from agno.models.openai import OpenAIChat  # noqa: E402
+from agno.workflow import Workflow  # noqa: E402
+from agno.tools.duckduckgo import DuckDuckGoTools  # noqa: E402
+from agno.tools.hackernews import HackerNewsTools  # noqa: E402
+from agno.tools.reasoning import ReasoningTools  # noqa: E402
+from agno.tools.arxiv import ArxivTools  # noqa: E402
+from agno.tools.googlesearch import GoogleSearchTools  # noqa: E402
+from agno.knowledge.url import UrlKnowledge  # noqa: E402
+from agno.utils.pprint import pprint_run_response  # noqa: E402
+from agno.utils.log import logger  # noqa: E402
+from agno.vectordb.lancedb import LanceDb  # noqa: E402
+from agno.vectordb.search import SearchType  # noqa: E402
+from agno.embedder.cohere import CohereEmbedder  # noqa: E402
+from agno.reranker.cohere import CohereReranker  # noqa: E402
+
+import agentops  # noqa: E402
+
 agentops.init(api_key=os.getenv("AGENTOPS_API_KEY"))
 # Sample configuration
 MODEL_ID = "gpt-4o-mini"
@@ -46,12 +49,12 @@ def check_environment():
     """Check if required environment variables are set."""
     required_vars = ["AGENTOPS_API_KEY", "OPENAI_API_KEY"]
     missing_vars = [var for var in required_vars if not os.getenv(var)]
-    
+
     if missing_vars:
         print(f"Missing required environment variables: {missing_vars}")
         print("Please set these in your .env file or environment")
         return False
-    
+
     print("Environment variables checked successfully")
     return True
 
@@ -64,29 +67,19 @@ def demonstrate_basic_agents():
 
     try:
         # Create individual agents
-        news_agent = Agent(
-            name="News Agent", 
-            role="Get the latest news",
-            model=OpenAIChat(id=MODEL_ID)
-        )
+        news_agent = Agent(name="News Agent", role="Get the latest news", model=OpenAIChat(id=MODEL_ID))
 
         weather_agent = Agent(
-            name="Weather Agent", 
-            role="Get the weather for the next 7 days",
-            model=OpenAIChat(id=MODEL_ID)
+            name="Weather Agent", role="Get the weather for the next 7 days", model=OpenAIChat(id=MODEL_ID)
         )
 
         # Create a team with coordination mode
-        team = Team(
-            name="News and Weather Team", 
-            mode="coordinate", 
-            members=[news_agent, weather_agent]
-        )
+        team = Team(name="News and Weather Team", mode="coordinate", members=[news_agent, weather_agent])
 
         # Run team task
         response = team.run("What is the weather in Tokyo?")
         print(f"Team Response: {response.content}")
-        
+
     except Exception as e:
         print(f"Basic agents error: {e}")
 
@@ -106,9 +99,9 @@ def demonstrate_tool_integration():
                 uri="tmp/lancedb",
                 table_name="agno_docs",
                 search_type=SearchType.hybrid,
-                embedder=CohereEmbedder(id="embed-v4.0"),
-                reranker=CohereReranker(model="rerank-v3.5"),
-            ),
+                embedder=CohereEmbedder(id="embed-v4.0"),  # noqa: E821
+                reranker=CohereReranker(model="rerank-v3.5"),  # noqa: E821
+            ),  # noqa: E821
         )
 
         # Create agent with knowledge and reasoning tools
@@ -126,20 +119,20 @@ def demonstrate_tool_integration():
             ],
             markdown=True,
         )
-        
+
         print("Running RAG agent with knowledge base...")
         agent.print_response(
             "What are Agents?",
             show_full_reasoning=True,
         )
-        
+
     except Exception as e:
         print(f"Tool integration error: {e}")
 
 
 class CacheWorkflow(Workflow):
     """A workflow that demonstrates caching capabilities."""
-    
+
     # Purely descriptive, not used by the workflow
     description: str = "A workflow that caches previous outputs"
 
@@ -177,13 +170,13 @@ def demonstrate_workflows():
         response: Iterator[RunResponse] = workflow.run(message="Tell me a joke.")
         # Print the response
         pprint_run_response(response, markdown=True, show_time=True)
-        
+
         print("\nSecond run (cache hit):")
         # Run workflow again (this is immediate because of caching)
         response: Iterator[RunResponse] = workflow.run(message="Tell me a joke.")
         # Print the response
         pprint_run_response(response, markdown=True, show_time=True)
-        
+
     except Exception as e:
         print(f"Workflow error: {e}")
 
@@ -202,11 +195,13 @@ def demonstrate_research_team():
             model=OpenAIChat(id="gpt-4o"),
             tools=[GoogleSearchTools()],
             add_name_to_instructions=True,
-            instructions=dedent("""
+            instructions=dedent(
+                """
                 You are a Reddit researcher.
                 You will be given a topic to research on Reddit.
                 You will need to find the most relevant posts on Reddit.
-            """),
+            """
+            ),
         )
 
         hackernews_researcher = Agent(
@@ -215,11 +210,13 @@ def demonstrate_research_team():
             role="Research a topic on HackerNews.",
             tools=[HackerNewsTools()],
             add_name_to_instructions=True,
-            instructions=dedent("""
+            instructions=dedent(
+                """
                 You are a HackerNews researcher.
                 You will be given a topic to research on HackerNews.
                 You will need to find the most relevant posts on HackerNews.
-            """),
+            """
+            ),
         )
 
         academic_paper_researcher = Agent(
@@ -228,13 +225,15 @@ def demonstrate_research_team():
             role="Research academic papers and scholarly content",
             tools=[GoogleSearchTools(), ArxivTools()],
             add_name_to_instructions=True,
-            instructions=dedent("""
+            instructions=dedent(
+                """
                 You are an academic paper researcher.
                 You will be given a topic to research in academic literature.
                 You will need to find relevant scholarly articles, papers, and academic discussions.
                 Focus on peer-reviewed content and citations from reputable sources.
                 Provide brief summaries of key findings and methodologies.
-            """),
+            """
+            ),
         )
 
         twitter_researcher = Agent(
@@ -243,13 +242,15 @@ def demonstrate_research_team():
             role="Research trending discussions and real-time updates",
             tools=[DuckDuckGoTools()],
             add_name_to_instructions=True,
-            instructions=dedent("""
+            instructions=dedent(
+                """
                 You are a Twitter/X researcher.
                 You will be given a topic to research on Twitter/X.
                 You will need to find trending discussions, influential voices, and real-time updates.
                 Focus on verified accounts and credible sources when possible.
                 Track relevant hashtags and ongoing conversations.
-            """),
+            """
+            ),
         )
 
         # Create collaborative team
@@ -282,7 +283,7 @@ def demonstrate_research_team():
             stream=True,
             stream_intermediate_steps=True,
         )
-        
+
     except Exception as e:
         print(f"Research team error: {e}")
 
@@ -296,28 +297,28 @@ async def demonstrate_async_operations():
     try:
         # Create async tasks with different agents
         agent = Agent(model=OpenAIChat(id=MODEL_ID))
-        
+
         # Define async tasks
         async def task1():
             response = await agent.arun("Explain Python in one paragraph")
             return f"Task 1: {response.content}"
-        
+
         async def task2():
             response = await agent.arun("Explain JavaScript in one paragraph")
             return f"Task 2: {response.content}"
-        
+
         async def task3():
             response = await agent.arun("Compare them briefly")
             return f"Task 3: {response.content}"
-        
+
         # Run tasks concurrently
         print("Running async tasks concurrently...")
         results = await asyncio.gather(task1(), task2(), task3())
-        
+
         for result in results:
             print(result)
             print()
-            
+
     except Exception as e:
         print(f"Async operations error: {e}")
 
@@ -326,49 +327,44 @@ async def main():
     """Main function to run all Agno demonstrations."""
     print("Starting Comprehensive Agno Example with AgentOps")
     print("=" * 80)
-    
+
     # Check environment
     if not check_environment():
         return
-    
 
-    
     # Run all demonstrations
     print("\nRunning all Agno demonstrations...")
-    
 
     # Research teams
     try:
         demonstrate_research_team()
     except Exception as e:
         print(f"Skipping research team demo due to: {e}")
-        
+
     # Basic functionality
     demonstrate_basic_agents()
-    
+
     # Tool integration
     try:
         demonstrate_tool_integration()
     except Exception as e:
         print(f"Skipping tool integration demo due to: {e}")
-    
+
     # Workflows
     try:
         demonstrate_workflows()
     except Exception as e:
         print(f"Skipping workflow demo due to: {e}")
-    
 
-    
     # Async operations
     try:
         await demonstrate_async_operations()
     except Exception as e:
         print(f"Skipping async demo due to: {e}")
-    
+
     print("\nAll Agno demonstrations completed!")
     print("Check your AgentOps dashboard for detailed traces and metrics.")
 
 
 if __name__ == "__main__":
-    asyncio.run(main()) 
+    asyncio.run(main())
