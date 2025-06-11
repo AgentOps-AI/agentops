@@ -3,10 +3,7 @@ Decorators for instrumenting code with AgentOps.
 Provides @trace for creating trace-level spans (sessions) and other decorators for nested spans.
 """
 
-import functools
-from termcolor import colored
-
-from agentops.logging import logger
+from agentops.helpers.deprecation import deprecated
 from agentops.sdk.decorators.factory import create_entity_decorator
 from agentops.semconv.span_kinds import SpanKind
 
@@ -22,15 +19,17 @@ guardrail = create_entity_decorator(SpanKind.GUARDRAIL)
 
 
 # For backward compatibility: @session decorator calls @trace decorator
-@functools.wraps(trace)
 def session(*args, **kwargs):  # noqa: F811
     """@deprecated Use @agentops.trace instead. Wraps the @trace decorator for backward compatibility."""
-    logger.info(colored("@agentops.session decorator is deprecated. Please use @agentops.trace instead.", "yellow"))
     # If called as @session or @session(...)
     if not args or not callable(args[0]):  # called with kwargs like @session(name=...)
         return trace(*args, **kwargs)
     else:  # called as @session directly on a function
         return trace(args[0], **kwargs)  # args[0] is the wrapped function
+
+
+# Apply deprecation decorator to session function
+session = deprecated("Use @trace decorator instead.")(session)
 
 
 # Note: The original `operation = task` was potentially problematic if `operation` was meant to be distinct.
