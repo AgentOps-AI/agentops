@@ -13,50 +13,48 @@ from agentops.instrumentation.openai.wrappers.shared import (
     model_as_dict,
     should_send_prompts,
 )
-from agentops.instrumentation.common.attributes import AttributeMap
+from agentops.instrumentation.common import (
+    AttributeMap,
+    LLMAttributeHandler,
+    MessageAttributeHandler,
+    create_composite_handler,
+)
 from agentops.semconv import SpanAttributes, LLMRequestTypeValues
 
 logger = logging.getLogger(__name__)
 
 LLM_REQUEST_TYPE = LLMRequestTypeValues.CHAT
 
+# OpenAI-specific request attribute mappings
+OPENAI_REQUEST_ATTRIBUTES: AttributeMap = {
+    SpanAttributes.LLM_USER: "user",
+    SpanAttributes.LLM_REQUEST_FUNCTIONS: "functions",
+}
 
-def handle_chat_attributes(
+# OpenAI-specific response attribute mappings
+OPENAI_RESPONSE_ATTRIBUTES: AttributeMap = {
+    SpanAttributes.LLM_OPENAI_RESPONSE_SYSTEM_FINGERPRINT: "system_fingerprint",
+}
+
+# OpenAI-specific usage attribute mappings
+OPENAI_USAGE_ATTRIBUTES: AttributeMap = {
+    SpanAttributes.LLM_USAGE_REASONING_TOKENS: "output_tokens_details.reasoning_tokens",
+}
+
+
+def _extract_base_attributes(
     args: Optional[Tuple] = None,
     kwargs: Optional[Dict] = None,
     return_value: Optional[Any] = None,
 ) -> AttributeMap:
-    """Extract attributes from chat completion calls.
-
-    This function is designed to work with the common wrapper pattern,
-    extracting attributes from the method arguments and return value.
-    """
+    """Extract base OpenAI chat attributes."""
     attributes = {
         SpanAttributes.LLM_REQUEST_TYPE: LLM_REQUEST_TYPE.value,
         SpanAttributes.LLM_SYSTEM: "OpenAI",
     }
 
-    # Extract request attributes from kwargs
+    # Add streaming attribute
     if kwargs:
-        # Model
-        if "model" in kwargs:
-            attributes[SpanAttributes.LLM_REQUEST_MODEL] = kwargs["model"]
-
-        # Request parameters
-        if "max_tokens" in kwargs:
-            attributes[SpanAttributes.LLM_REQUEST_MAX_TOKENS] = kwargs["max_tokens"]
-        if "temperature" in kwargs:
-            attributes[SpanAttributes.LLM_REQUEST_TEMPERATURE] = kwargs["temperature"]
-        if "top_p" in kwargs:
-            attributes[SpanAttributes.LLM_REQUEST_TOP_P] = kwargs["top_p"]
-        if "frequency_penalty" in kwargs:
-            attributes[SpanAttributes.LLM_REQUEST_FREQUENCY_PENALTY] = kwargs["frequency_penalty"]
-        if "presence_penalty" in kwargs:
-            attributes[SpanAttributes.LLM_REQUEST_PRESENCE_PENALTY] = kwargs["presence_penalty"]
-        if "user" in kwargs:
-            attributes[SpanAttributes.LLM_USER] = kwargs["user"]
-
-        # Streaming
         attributes[SpanAttributes.LLM_REQUEST_STREAMING] = kwargs.get("stream", False)
 
         # Headers
@@ -64,127 +62,141 @@ def handle_chat_attributes(
         if headers:
             attributes[SpanAttributes.LLM_REQUEST_HEADERS] = str(headers)
 
-        # Messages
-        if should_send_prompts() and "messages" in kwargs:
-            messages = kwargs["messages"]
-            for i, msg in enumerate(messages):
-                prefix = f"{SpanAttributes.LLM_PROMPTS}.{i}"
-                if "role" in msg:
-                    attributes[f"{prefix}.role"] = msg["role"]
-                if "content" in msg:
-                    content = msg["content"]
-                    if isinstance(content, list):
-                        # Handle multi-modal content
-                        content = json.dumps(content)
-                    attributes[f"{prefix}.content"] = content
-                if "tool_call_id" in msg:
-                    attributes[f"{prefix}.tool_call_id"] = msg["tool_call_id"]
+    return attributes
 
-                # Tool calls
-                if "tool_calls" in msg:
-                    tool_calls = msg["tool_calls"]
-                    for j, tool_call in enumerate(tool_calls):
-                        if is_openai_v1() and hasattr(tool_call, "__dict__"):
-                            tool_call = model_as_dict(tool_call)
-                        function = tool_call.get("function", {})
-                        attributes[f"{prefix}.tool_calls.{j}.id"] = tool_call.get("id")
-                        attributes[f"{prefix}.tool_calls.{j}.name"] = function.get("name")
-                        attributes[f"{prefix}.tool_calls.{j}.arguments"] = function.get("arguments")
 
-        # Functions
-        if "functions" in kwargs:
-            functions = kwargs["functions"]
-            for i, function in enumerate(functions):
-                prefix = f"{SpanAttributes.LLM_REQUEST_FUNCTIONS}.{i}"
-                attributes[f"{prefix}.name"] = function.get("name")
-                attributes[f"{prefix}.description"] = function.get("description")
-                attributes[f"{prefix}.parameters"] = json.dumps(function.get("parameters"))
+def _extract_request_attributes(
+    args: Optional[Tuple] = None,
+    kwargs: Optional[Dict] = None,
+    return_value: Optional[Any] = None,
+) -> AttributeMap:
+    """Extract request attributes using common LLM handler."""
+    if not kwargs:
+        return {}
 
-        # Tools
-        if "tools" in kwargs:
-            tools = kwargs["tools"]
-            for i, tool in enumerate(tools):
-                function = tool.get("function", {})
-                prefix = f"{SpanAttributes.LLM_REQUEST_FUNCTIONS}.{i}"
-                attributes[f"{prefix}.name"] = function.get("name")
-                attributes[f"{prefix}.description"] = function.get("description")
-                attributes[f"{prefix}.parameters"] = json.dumps(function.get("parameters"))
+    # Use the common LLM handler with OpenAI-specific mappings
+    return LLMAttributeHandler.extract_request_attributes(kwargs, additional_mappings=OPENAI_REQUEST_ATTRIBUTES)
 
-    # Extract response attributes from return value
-    if return_value:
-        # Note: For streaming responses, return_value might be a generator/stream
-        # In that case, we won't have the full response data here
 
-        # Convert to dict if needed
-        response_dict = {}
-        if hasattr(return_value, "__dict__") and not hasattr(return_value, "__iter__"):
-            response_dict = model_as_dict(return_value)
-        elif isinstance(return_value, dict):
-            response_dict = return_value
+def _extract_messages(
+    args: Optional[Tuple] = None,
+    kwargs: Optional[Dict] = None,
+    return_value: Optional[Any] = None,
+) -> AttributeMap:
+    """Extract message attributes from request and response."""
+    attributes = {}
 
-        # Basic response attributes
-        if "id" in response_dict:
-            attributes[SpanAttributes.LLM_RESPONSE_ID] = response_dict["id"]
-        if "model" in response_dict:
-            attributes[SpanAttributes.LLM_RESPONSE_MODEL] = response_dict["model"]
-        if "system_fingerprint" in response_dict:
-            attributes[SpanAttributes.LLM_OPENAI_RESPONSE_SYSTEM_FINGERPRINT] = response_dict["system_fingerprint"]
+    # Extract request messages
+    if kwargs and should_send_prompts() and "messages" in kwargs:
+        messages = kwargs["messages"]
 
-        # Usage
-        usage = response_dict.get("usage", {})
-        if usage:
-            if is_openai_v1() and hasattr(usage, "__dict__"):
-                usage = usage.__dict__
-            if "total_tokens" in usage:
-                attributes[SpanAttributes.LLM_USAGE_TOTAL_TOKENS] = usage["total_tokens"]
-            if "prompt_tokens" in usage:
-                attributes[SpanAttributes.LLM_USAGE_PROMPT_TOKENS] = usage["prompt_tokens"]
-            if "completion_tokens" in usage:
-                attributes[SpanAttributes.LLM_USAGE_COMPLETION_TOKENS] = usage["completion_tokens"]
+        # Convert messages to standard format
+        formatted_messages = []
+        for msg in messages:
+            formatted_msg = {
+                "role": msg.get("role"),
+                "content": msg.get("content"),
+            }
 
-            # Reasoning tokens
-            output_details = usage.get("output_tokens_details", {})
-            if isinstance(output_details, dict) and "reasoning_tokens" in output_details:
-                attributes[SpanAttributes.LLM_USAGE_REASONING_TOKENS] = output_details["reasoning_tokens"]
+            # Handle multi-modal content
+            if isinstance(formatted_msg["content"], list):
+                formatted_msg["content"] = json.dumps(formatted_msg["content"])
 
-        # Choices
-        if should_send_prompts() and "choices" in response_dict:
+            # Handle tool call ID
+            if "tool_call_id" in msg:
+                formatted_msg["tool_call_id"] = msg["tool_call_id"]
+
+            # Handle tool calls
+            if "tool_calls" in msg:
+                tool_calls = []
+                for tool_call in msg["tool_calls"]:
+                    if is_openai_v1() and hasattr(tool_call, "__dict__"):
+                        tool_call = model_as_dict(tool_call)
+
+                    function = tool_call.get("function", {})
+                    tool_calls.append(
+                        {
+                            "id": tool_call.get("id"),
+                            "name": function.get("name"),
+                            "arguments": function.get("arguments"),
+                        }
+                    )
+                formatted_msg["tool_calls"] = tool_calls
+
+            formatted_messages.append(formatted_msg)
+
+        # Use MessageAttributeHandler to extract attributes
+        message_attrs = MessageAttributeHandler.extract_messages(formatted_messages, attribute_type="prompt")
+        attributes.update(message_attrs)
+
+    # Extract response messages (choices)
+    if return_value and should_send_prompts():
+        response_dict = _get_response_dict(return_value)
+
+        if "choices" in response_dict:
             choices = response_dict["choices"]
+
+            # Convert choices to message format
+            formatted_messages = []
             for choice in choices:
-                index = choice.get("index", 0)
-                prefix = f"{SpanAttributes.LLM_COMPLETIONS}.{index}"
-
-                if "finish_reason" in choice:
-                    attributes[f"{prefix}.finish_reason"] = choice["finish_reason"]
-
-                # Content filter
-                if "content_filter_results" in choice:
-                    attributes[f"{prefix}.content_filter_results"] = json.dumps(choice["content_filter_results"])
-
-                # Message
                 message = choice.get("message", {})
                 if message:
-                    if "role" in message:
-                        attributes[f"{prefix}.role"] = message["role"]
-                    if "content" in message:
-                        attributes[f"{prefix}.content"] = message["content"]
-                    if "refusal" in message:
-                        attributes[f"{prefix}.refusal"] = message["refusal"]
+                    formatted_msg = {
+                        "role": message.get("role"),
+                        "content": message.get("content"),
+                    }
 
-                    # Function call
+                    # Add finish reason
+                    if "finish_reason" in choice:
+                        formatted_msg["finish_reason"] = choice["finish_reason"]
+
+                    # Add refusal if present
+                    if "refusal" in message:
+                        formatted_msg["refusal"] = message["refusal"]
+
+                    # Handle function call (legacy format)
                     if "function_call" in message:
                         function_call = message["function_call"]
-                        attributes[f"{prefix}.tool_calls.0.name"] = function_call.get("name")
-                        attributes[f"{prefix}.tool_calls.0.arguments"] = function_call.get("arguments")
+                        formatted_msg["tool_calls"] = [
+                            {
+                                "name": function_call.get("name"),
+                                "arguments": function_call.get("arguments"),
+                            }
+                        ]
 
-                    # Tool calls
-                    if "tool_calls" in message:
-                        tool_calls = message["tool_calls"]
-                        for i, tool_call in enumerate(tool_calls):
+                    # Handle tool calls
+                    elif "tool_calls" in message:
+                        tool_calls = []
+                        for tool_call in message["tool_calls"]:
                             function = tool_call.get("function", {})
-                            attributes[f"{prefix}.tool_calls.{i}.id"] = tool_call.get("id")
-                            attributes[f"{prefix}.tool_calls.{i}.name"] = function.get("name")
-                            attributes[f"{prefix}.tool_calls.{i}.arguments"] = function.get("arguments")
+                            tool_calls.append(
+                                {
+                                    "id": tool_call.get("id"),
+                                    "name": function.get("name"),
+                                    "arguments": function.get("arguments"),
+                                }
+                            )
+                        formatted_msg["tool_calls"] = tool_calls
+
+                    formatted_messages.append(formatted_msg)
+
+            # Extract completion attributes
+            completion_attrs = MessageAttributeHandler.extract_messages(formatted_messages, attribute_type="completion")
+
+            # Add any extra OpenAI-specific choice attributes
+            for i, choice in enumerate(choices):
+                # Content filter results
+                if "content_filter_results" in choice:
+                    attributes[f"{SpanAttributes.LLM_COMPLETIONS}.{i}.content_filter_results"] = json.dumps(
+                        choice["content_filter_results"]
+                    )
+
+                # Refusal
+                message = choice.get("message", {})
+                if "refusal" in message:
+                    attributes[f"{SpanAttributes.LLM_COMPLETIONS}.{i}.refusal"] = message["refusal"]
+
+            attributes.update(completion_attrs)
 
         # Prompt filter results
         if "prompt_filter_results" in response_dict:
@@ -193,3 +205,84 @@ def handle_chat_attributes(
             )
 
     return attributes
+
+
+def _extract_tools_and_functions(
+    args: Optional[Tuple] = None,
+    kwargs: Optional[Dict] = None,
+    return_value: Optional[Any] = None,
+) -> AttributeMap:
+    """Extract tools and functions from request."""
+    attributes = {}
+
+    if not kwargs:
+        return attributes
+
+    # Extract functions
+    if "functions" in kwargs:
+        functions = kwargs["functions"]
+        for i, function in enumerate(functions):
+            prefix = f"{SpanAttributes.LLM_REQUEST_FUNCTIONS}.{i}"
+            attributes[f"{prefix}.name"] = function.get("name")
+            attributes[f"{prefix}.description"] = function.get("description")
+            attributes[f"{prefix}.parameters"] = json.dumps(function.get("parameters"))
+
+    # Extract tools (newer format)
+    if "tools" in kwargs:
+        tools = kwargs["tools"]
+        for i, tool in enumerate(tools):
+            function = tool.get("function", {})
+            prefix = f"{SpanAttributes.LLM_REQUEST_FUNCTIONS}.{i}"
+            attributes[f"{prefix}.name"] = function.get("name")
+            attributes[f"{prefix}.description"] = function.get("description")
+            attributes[f"{prefix}.parameters"] = json.dumps(function.get("parameters"))
+
+    return attributes
+
+
+def _extract_response_attributes(
+    args: Optional[Tuple] = None,
+    kwargs: Optional[Dict] = None,
+    return_value: Optional[Any] = None,
+) -> AttributeMap:
+    """Extract response attributes using common LLM handler."""
+    if not return_value:
+        return {}
+
+    response_dict = _get_response_dict(return_value)
+    if not response_dict:
+        return {}
+
+    # Use the common LLM handler with OpenAI-specific mappings
+    attributes = LLMAttributeHandler.extract_response_attributes(
+        response_dict, additional_mappings=OPENAI_RESPONSE_ATTRIBUTES
+    )
+
+    # Handle OpenAI-specific usage attributes
+    usage = response_dict.get("usage", {})
+    if usage:
+        # Extract reasoning tokens from output details
+        output_details = usage.get("output_tokens_details", {})
+        if isinstance(output_details, dict) and "reasoning_tokens" in output_details:
+            attributes[SpanAttributes.LLM_USAGE_REASONING_TOKENS] = output_details["reasoning_tokens"]
+
+    return attributes
+
+
+def _get_response_dict(return_value: Any) -> Dict[str, Any]:
+    """Convert response to dictionary format."""
+    if hasattr(return_value, "__dict__") and not hasattr(return_value, "__iter__"):
+        return model_as_dict(return_value)
+    elif isinstance(return_value, dict):
+        return return_value
+    return {}
+
+
+# Create the main handler by composing individual handlers
+handle_chat_attributes = create_composite_handler(
+    _extract_base_attributes,
+    _extract_request_attributes,
+    _extract_messages,
+    _extract_tools_and_functions,
+    _extract_response_attributes,
+)
