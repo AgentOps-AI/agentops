@@ -1,12 +1,12 @@
 ---
-title: 'OpenAI Agents SDK Example'
-description: 'Using OpenAI Agents SDK with AgentOps for a customer service chatbot'
+title: 'Openai Agents'
+description: 'Airline Customer Service Agent'
 ---
 {/*  SOURCE_FILE: examples/openai_agents/customer_service_agent.ipynb  */}
 
 _View Notebook on <a href={'https://github.com/AgentOps-AI/agentops/blob/main/examples/openai_agents/customer_service_agent.ipynb'} target={'_blank'}>Github</a>_
 
-# Airline Customer Service Agent with OpenAI Agents SDK
+# Airline Customer Service Agent
 
 This is a simple chatbot designed to assist airline customers with common queries. Here the agents are also used as tools to help the bot answer questions more effectively.
 
@@ -27,50 +27,44 @@ AGENTOPS_API_KEY=your_agentops_api_key_here
 OPENAI_API_KEY=your_openai_api_key_here
 ```
 
+
+
+
 ## Installation
-Install required packages:
 <CodeGroup>
   ```bash pip
-  pip install agentops openai-agents python-dotenv
+  pip install agentops openai-agents pydotenv
   ```
   ```bash poetry
-  poetry add agentops openai-agents python-dotenv
+  poetry add agentops openai-agents pydotenv
   ```
   ```bash uv
-  uv add agentops openai-agents python-dotenv
+  uv add agentops openai-agents pydotenv
   ```
 </CodeGroup>
 
-## Setup
-Set the API keys for your AgentOps and OpenAI accounts.
 ```python
+# Set the API keys for your AgentOps and OpenAI accounts.
 import os
 from dotenv import load_dotenv
+
 load_dotenv()
 
-os.environ["AGENTOPS_API_KEY"] = os.getenv("AGENTOPS_API_KEY", "your_agentops_api_key_here")
+os.environ["AGENTOPS_API_KEY"] = os.getenv("AGENTOPS_API_KEY", "your_api_key_here")
 os.environ["OPENAI_API_KEY"] = os.getenv("OPENAI_API_KEY", "your_openai_api_key_here")
 ```
 
-Initialize AgentOps:
-```python
-import agentops
-# auto_start_session is False, so we'll start a trace manually later
-agentops.init(tags=["customer-service-agent", "openai-agents", "agentops-example"], auto_start_session=False) 
-```
 
-Import necessary components from `openai-agents`:
 ```python
-from __future__ import annotations as _annotations
+from __future__ import annotations as _annotations  # noqa: F404
 
-import asyncio
 import random
 import uuid
-import sys # sys import was in notebook, keeping for consistency
 
 from pydantic import BaseModel
+import agentops
 
-from agents import (
+from agents import (  # noqa: E402
     Agent,
     HandoffOutputItem,
     ItemHelpers,
@@ -84,14 +78,18 @@ from agents import (
     handoff,
     trace,
 )
-from agents.extensions.handoff_prompt import RECOMMENDED_PROMPT_PREFIX
-
-# Start AgentOps trace for this specific workflow
-tracer = agentops.start_trace(trace_name="Customer Service Agent") # Matched notebook
+from agents.extensions.handoff_prompt import RECOMMENDED_PROMPT_PREFIX  # noqa: E402
 ```
 
-### CONTEXT
+
 ```python
+agentops.init(tags=["customer-service-agent", "openai-agents", "agentops-example"])
+tracer = agentops.start_trace(trace_name="Customer Service Agent")
+```
+
+
+```python
+# Context model for the airline agent
 class AirlineAgentContext(BaseModel):
     passenger_name: str | None = None
     confirmation_number: str | None = None
@@ -99,11 +97,10 @@ class AirlineAgentContext(BaseModel):
     flight_number: str | None = None
 ```
 
-### TOOLS
+
 ```python
-@function_tool(
-    name_override="faq_lookup_tool", description_override="Lookup frequently asked questions."
-)
+# Tools for the airline agent
+@function_tool(name_override="faq_lookup_tool", description_override="Lookup frequently asked questions.")
 async def faq_lookup_tool(question: str) -> str:
     if "bag" in question or "baggage" in question:
         return (
@@ -123,9 +120,7 @@ async def faq_lookup_tool(question: str) -> str:
 
 
 @function_tool
-async def update_seat(
-    context: RunContextWrapper[AirlineAgentContext], confirmation_number: str, new_seat: str
-) -> str:
+async def update_seat(context: RunContextWrapper[AirlineAgentContext], confirmation_number: str, new_seat: str) -> str:
     """
     Update the seat for a given confirmation number.
 
@@ -139,41 +134,42 @@ async def update_seat(
     # Ensure that the flight number has been set by the incoming handoff
     assert context.context.flight_number is not None, "Flight number is required"
     return f"Updated seat to {new_seat} for confirmation number {confirmation_number}"
-```
+
 
 ### HOOKS
-```python
+
+
 async def on_seat_booking_handoff(context: RunContextWrapper[AirlineAgentContext]) -> None:
     flight_number = f"FLT-{random.randint(100, 999)}"
     context.context.flight_number = flight_number
-```
+
 
 ### AGENTS
-```python
+
 faq_agent = Agent[AirlineAgentContext](
     name="FAQ Agent",
     handoff_description="A helpful agent that can answer questions about the airline.",
-    instructions=f\"\"\"{RECOMMENDED_PROMPT_PREFIX}
+    instructions=f"""{RECOMMENDED_PROMPT_PREFIX}
     You are an FAQ agent. If you are speaking to a customer, you probably were transferred to from the triage agent.
     Use the following routine to support the customer.
     # Routine
     1. Identify the last question asked by the customer.
     2. Use the faq lookup tool to answer the question. Do not rely on your own knowledge.
-    3. If you cannot answer the question, transfer back to the triage agent.\"\"\",
+    3. If you cannot answer the question, transfer back to the triage agent.""",
     tools=[faq_lookup_tool],
 )
 
 seat_booking_agent = Agent[AirlineAgentContext](
     name="Seat Booking Agent",
     handoff_description="A helpful agent that can update a seat on a flight.",
-    instructions=f\"\"\"{RECOMMENDED_PROMPT_PREFIX}
+    instructions=f"""{RECOMMENDED_PROMPT_PREFIX}
     You are a seat booking agent. If you are speaking to a customer, you probably were transferred to from the triage agent.
     Use the following routine to support the customer.
     # Routine
     1. Ask for their confirmation number.
     2. Ask the customer what their desired seat number is.
     3. Use the update seat tool to update the seat on the flight.
-    If the customer asks a question that is not related to the routine, transfer back to the triage agent. \"\"\",
+    If the customer asks a question that is not related to the routine, transfer back to the triage agent. """,
     tools=[update_seat],
 )
 
@@ -189,12 +185,15 @@ triage_agent = Agent[AirlineAgentContext](
         handoff(agent=seat_booking_agent, on_handoff=on_seat_booking_handoff),
     ],
 )
+```
 
+
+```python
 faq_agent.handoffs.append(triage_agent)
 seat_booking_agent.handoffs.append(triage_agent)
 ```
 
-### RUN
+
 ```python
 async def main():
     current_agent: Agent[AirlineAgentContext] = triage_agent
@@ -205,19 +204,9 @@ async def main():
     # Here, we'll just use a random UUID for the conversation ID
     conversation_id = uuid.uuid4().hex[:16]
 
-    # Simulate a few turns for the MDX example
-    simulated_inputs = [
-        "What are the baggage rules?",
-        "I want to change my seat.",
-        "My confirmation is 123XYZ",
-        "I want seat 10A",
-        "Thanks!"
-    ]
-    
-    for user_input in simulated_inputs:
-        print(f"User: {user_input}") 
-        # In a real app, you'd get input: user_input = input("Enter your message: ")
-        with trace("Customer service", group_id=conversation_id): # Notebook uses "Customer service"
+    while True:
+        user_input = input("Enter your message: ")
+        with trace("Customer service", group_id=conversation_id):
             input_items.append({"content": user_input, "role": "user"})
             result = await Runner.run(current_agent, input_items, context=context)
 
@@ -226,30 +215,22 @@ async def main():
                 if isinstance(new_item, MessageOutputItem):
                     print(f"{agent_name}: {ItemHelpers.text_message_output(new_item)}")
                 elif isinstance(new_item, HandoffOutputItem):
-                    print(
-                        f"Handed off from {new_item.source_agent.name} to {new_item.target_agent.name}" # Matched notebook
-                    )
+                    print(f"Handed off from {new_item.source_agent.name} to {new_item.target_agent.name}")
                 elif isinstance(new_item, ToolCallItem):
-                    print(f"{agent_name}: Calling a tool") # Matched notebook
+                    print(f"{agent_name}: Calling a tool")
                 elif isinstance(new_item, ToolCallOutputItem):
                     print(f"{agent_name}: Tool call output: {new_item.output}")
                 else:
-                    print(f"{agent_name}: Skipping item: {new_item.__class__.__name__}") # Matched notebook
+                    print(f"{agent_name}: Skipping item: {new_item.__class__.__name__}")
             input_items = result.to_input_list()
             current_agent = result.last_agent
-        if user_input.lower() == "thanks!": # End simulation
-            break
-    
-    agentops.end_trace(tracer, end_state="Success") # MDX was correct with end_state
-
-
-# To run in a Jupyter notebook or a script that can handle asyncio:
-# await main() 
-# For MDX, we'll just define it. To run, you'd typically use:
-# if __name__ == "__main__":
-#     asyncio.run(main())
 ```
-To run this example, save it as a Python file and execute it. You will be prompted for user input in the console.
+
+
+```python
+await main()
+agentops.end_trace(tracer, status="Success")
+```
 
 ## Conclusion
 
@@ -261,6 +242,7 @@ To run this example, save it as a Python file and execute it. You will be prompt
 - Scale your AI applications with confidence in tool reliability
 
 Visit [app.agentops.ai](https://app.agentops.ai) to explore your tool usage sessions and gain deeper insights into your AI application's tool interactions.
+
 
 <script type="module" src="/scripts/github_stars.js"></script>
 <script type="module" src="/scripts/scroll-img-fadein-animation.js"></script>
