@@ -20,6 +20,7 @@ from agentops.enums import TraceState, SUCCESS, ERROR, UNSET
 from opentelemetry.trace.status import StatusCode
 
 from agentops.logging.config import logger
+from agentops.helpers.deprecation import deprecated, warn_deprecated_param
 import threading
 
 # Thread-safe client management
@@ -40,6 +41,7 @@ def get_client() -> Client:
     return _client
 
 
+@deprecated("Automatically tracked in v4.")
 def record(event):
     """
     Legacy function to record an event. This is kept for backward compatibility.
@@ -106,6 +108,10 @@ def init(
         **kwargs: Additional configuration parameters to be passed to the client.
     """
     global _client
+
+    # Check for deprecated parameters and emit warnings
+    if tags is not None:
+        warn_deprecated_param("tags", "default_tags")
 
     # Merge tags and default_tags if both are provided
     merged_tags = None
@@ -241,7 +247,7 @@ def end_trace(
 
     Args:
         trace_context: The TraceContext object returned by start_trace. If None, ends all active traces.
-        end_state: The final state of the trace (e.g., "Success", "Failure", "Error").
+        end_state: The final state of the trace (e.g., "Success", "Indeterminate", "Error").
     """
     if not tracer.initialized:
         logger.warning("AgentOps SDK not initialized. Cannot end trace.")
