@@ -1,55 +1,40 @@
 ---
-title: Agno
-description: "Comprehensive examples of using Agno with AgentOps instrumentation"
+title: 'Agno'
+description: 'Comprehensive Agno Tutorial with AgentOps'
 ---
+{/*  SOURCE_FILE: examples/agno/agno_comprehensive_tutorial.ipynb  */}
 
-This guide provides complete examples of using [Agno](https://docs.agno.com) with AgentOps instrumentation. You'll learn how to create agents, coordinate teams, build workflows, and leverage advanced features like RAG and async operations.
+_View Notebook on <a href={'https://github.com/AgentOps-AI/agentops/blob/main/examples/agno/agno_comprehensive_tutorial.ipynb'} target={'_blank'}>Github</a>_
 
-## Prerequisites
+# Comprehensive Agno Tutorial with AgentOps
 
-Before running these examples, ensure you have:
+This tutorial demonstrates key Agno features with AgentOps instrumentation:
 
-1. **API Keys**: AgentOps and OpenAI API keys
-2. **Environment Setup**: Python environment with required packages
-3. **Dependencies**: Install Agno and AgentOps
+1. **Basic Agents and Teams** - Creating individual agents and coordinating them
+2. **Tool Integration and RAG** - Integrating tools with knowledge bases  
+3. **Workflows with Caching** - Building workflows that cache results
+4. **Collaborative Research Teams** - Multi-agent research coordination
+5. **Async Operations** - Concurrent agent operations
 
+Each section shows different Agno capabilities with comprehensive AgentOps tracking.
+
+
+
+## Installation
 <CodeGroup>
   ```bash pip
-  pip install agentops agno 
+  pip install agentops agno cohere openai python-dotenv
   ```
   ```bash poetry
-  poetry add agentops agno 
+  poetry add agentops agno cohere openai python-dotenv
   ```
   ```bash uv
-  uv add agentops agno 
+  uv add agentops agno cohere openai python-dotenv
   ```
 </CodeGroup>
 
-## Environment Configuration
-
-Create a `.env` file with your API keys:
-
-```env
-AGENTOPS_API_KEY="your_agentops_api_key_here"
-OPENAI_API_KEY="your_openai_api_key_here"
-```
-
-## Complete Example Structure
-
-Here's the foundation for all our examples:
 
 ```python
-"""
-Comprehensive Agno Example with AgentOps Instrumentation
-
-This example demonstrates key Agno features:
-1. Basic Agents and Teams
-2. Tool Integration with RAG
-3. Workflows with Caching
-4. Collaborative Research Teams
-5. Async Operations
-"""
-
 import os
 import asyncio
 from typing import Iterator
@@ -59,44 +44,57 @@ from dotenv import load_dotenv
 # Load environment variables
 load_dotenv()
 
-# Import Agno components
+# Import agno components
 from agno.agent import Agent, RunResponse
 from agno.team import Team
 from agno.models.openai import OpenAIChat
 from agno.workflow import Workflow
-from agno.tools.reasoning import ReasoningTools
-from agno.tools.googlesearch import GoogleSearchTools
-from agno.tools.hackernews import HackerNewsTools
-from agno.tools.arxiv import ArxivTools
 from agno.tools.duckduckgo import DuckDuckGoTools
+from agno.tools.hackernews import HackerNewsTools
+from agno.tools.reasoning import ReasoningTools
+from agno.tools.arxiv import ArxivTools
+from agno.tools.googlesearch import GoogleSearchTools
 from agno.knowledge.url import UrlKnowledge
 from agno.utils.pprint import pprint_run_response
 from agno.utils.log import logger
+from agno.vectordb.lancedb import LanceDb
+from agno.vectordb.search import SearchType
+from agno.embedder.cohere import CohereEmbedder
+from agno.reranker.cohere import CohereReranker
+
+import agentops
 
 # Initialize AgentOps
-import agentops
 agentops.init(api_key=os.getenv("AGENTOPS_API_KEY"))
 
 # Configuration
-MODEL_NAME = "gpt-4o-mini"
+MODEL_ID = "gpt-4o-mini"
 
+```
+
+
+```python
 def check_environment():
     """Check if required environment variables are set."""
     required_vars = ["AGENTOPS_API_KEY", "OPENAI_API_KEY"]
     missing_vars = [var for var in required_vars if not os.getenv(var)]
-    
+
     if missing_vars:
         print(f"Missing required environment variables: {missing_vars}")
         print("Please set these in your .env file or environment")
         return False
-    
+
     print("Environment variables checked successfully")
     return True
-```
 
+# Check environment
+check_environment()
+
+```
 ## 1. Basic Agents and Teams
 
-### Creating and Running Individual Agents
+Let's start with creating individual agents and organizing them into teams.
+
 
 ```python
 def demonstrate_basic_agents():
@@ -106,41 +104,31 @@ def demonstrate_basic_agents():
     print("=" * 60)
 
     try:
-        # Create individual agents with specific roles
-        news_agent = Agent(
-            name="News Agent", 
-            role="Get the latest news",
-            model=OpenAIChat(id=MODEL_NAME)
-        )
+        # Create individual agents
+        news_agent = Agent(name="News Agent", role="Get the latest news", model=OpenAIChat(id=MODEL_ID))
 
         weather_agent = Agent(
-            name="Weather Agent", 
-            role="Get the weather for the next 7 days",
-            model=OpenAIChat(id=MODEL_NAME)
+            name="Weather Agent", role="Get the weather for the next 7 days", model=OpenAIChat(id=MODEL_ID)
         )
 
         # Create a team with coordination mode
-        team = Team(
-            name="News and Weather Team", 
-            mode="coordinate",  # Agents work in sequence
-            members=[news_agent, weather_agent]
-        )
+        team = Team(name="News and Weather Team", mode="coordinate", members=[news_agent, weather_agent])
 
-        # Run team task - AgentOps will track all interactions
+        # Run team task
         response = team.run("What is the weather in Tokyo?")
         print(f"Team Response: {response.content}")
-        
+
     except Exception as e:
         print(f"Basic agents error: {e}")
 
-# Run the example
+# Run the demonstration
 demonstrate_basic_agents()
-```
 
-/v2/introduction
+```
 ## 2. Tool Integration with RAG
 
-### Knowledge Base and Advanced Tools
+This section demonstrates how to integrate tools with knowledge bases for Retrieval-Augmented Generation (RAG).
+
 
 ```python
 def demonstrate_tool_integration():
@@ -153,7 +141,7 @@ def demonstrate_tool_integration():
         # Create knowledge base with vector database
         knowledge_base = UrlKnowledge(
             urls=["https://docs.agno.com/introduction/agents.md"],
-            # Use LanceDB for vector storage
+            # Use LanceDB as the vector database, store embeddings in the `agno_docs` table
             vector_db=LanceDb(
                 uri="tmp/lancedb",
                 table_name="agno_docs",
@@ -165,10 +153,11 @@ def demonstrate_tool_integration():
 
         # Create agent with knowledge and reasoning tools
         agent = Agent(
-            model=OpenAIChat(id=MODEL_NAME),
-            # Agentic RAG is enabled with knowledge
+            model=OpenAIChat(id=MODEL_ID),
+            # Agentic RAG is enabled by default when `knowledge` is provided to the Agent.
             knowledge=knowledge_base,
-            search_knowledge=True,  # Enable on-demand search
+            # search_knowledge=True gives the Agent the ability to search on demand
+            search_knowledge=True,
             tools=[ReasoningTools(add_instructions=True)],
             instructions=[
                 "Include sources in your response.",
@@ -177,50 +166,51 @@ def demonstrate_tool_integration():
             ],
             markdown=True,
         )
-        
+
         print("Running RAG agent with knowledge base...")
         agent.print_response(
             "What are Agents?",
             show_full_reasoning=True,
         )
-        
+
     except Exception as e:
         print(f"Tool integration error: {e}")
 
-# Run the example
+# Run the demonstration
 demonstrate_tool_integration()
-```
 
+```
 ## 3. Workflows with Caching
 
-### State Management and Optimization
+This section demonstrates how to create workflows that cache previous outputs for improved performance.
+
 
 ```python
 class CacheWorkflow(Workflow):
     """A workflow that demonstrates caching capabilities."""
-    
-    description: str = "A workflow that caches previous outputs"
-    agent = Agent(model=OpenAIChat(id=MODEL_NAME))
 
+    # Purely descriptive, not used by the workflow
+    description: str = "A workflow that caches previous outputs"
+
+    # Add agents or teams as attributes on the workflow
+    agent = Agent(model=OpenAIChat(id=MODEL_ID))
+
+    # Write the logic in the `run()` method
     def run(self, message: str) -> Iterator[RunResponse]:
         logger.info(f"Checking cache for '{message}'")
-        
         # Check if the output is already cached
         if self.session_state.get(message):
             logger.info(f"Cache hit for '{message}'")
-            yield RunResponse(
-                run_id=self.run_id, 
-                content=self.session_state.get(message)
-            )
+            yield RunResponse(run_id=self.run_id, content=self.session_state.get(message))
             return
 
         logger.info(f"Cache miss for '{message}'")
-        
         # Run the agent and yield the response
         yield from self.agent.run(message, stream=True)
-        
+
         # Cache the output after response is yielded
         self.session_state[message] = self.agent.run_response.content
+
 
 def demonstrate_workflows():
     """Demonstrate workflow capabilities with caching."""
@@ -232,26 +222,28 @@ def demonstrate_workflows():
         workflow = CacheWorkflow()
 
         print("First run (cache miss):")
-        # This takes ~1s as it generates new content
-        response = workflow.run(message="Tell me a joke.")
+        # Run workflow (this takes ~1s)
+        response: Iterator[RunResponse] = workflow.run(message="Tell me a joke.")
+        # Print the response
         pprint_run_response(response, markdown=True, show_time=True)
-        
+
         print("\nSecond run (cache hit):")
-        # This is immediate due to caching
-        response = workflow.run(message="Tell me a joke.")
+        # Run workflow again (this is immediate because of caching)
+        response: Iterator[RunResponse] = workflow.run(message="Tell me a joke.")
+        # Print the response
         pprint_run_response(response, markdown=True, show_time=True)
-        
+
     except Exception as e:
         print(f"Workflow error: {e}")
 
-# Run the example
+# Run the demonstration
 demonstrate_workflows()
+
 ```
-
-
 ## 4. Collaborative Research Teams
 
-### Multi-Agent Coordination
+This section demonstrates how to create teams of specialized research agents that collaborate on complex research tasks.
+
 
 ```python
 def demonstrate_research_team():
@@ -268,11 +260,13 @@ def demonstrate_research_team():
             model=OpenAIChat(id="gpt-4o"),
             tools=[GoogleSearchTools()],
             add_name_to_instructions=True,
-            instructions=dedent("""
+            instructions=dedent(
+                """
                 You are a Reddit researcher.
                 You will be given a topic to research on Reddit.
                 You will need to find the most relevant posts on Reddit.
-            """),
+            """
+            ),
         )
 
         hackernews_researcher = Agent(
@@ -281,11 +275,13 @@ def demonstrate_research_team():
             role="Research a topic on HackerNews.",
             tools=[HackerNewsTools()],
             add_name_to_instructions=True,
-            instructions=dedent("""
+            instructions=dedent(
+                """
                 You are a HackerNews researcher.
                 You will be given a topic to research on HackerNews.
                 You will need to find the most relevant posts on HackerNews.
-            """),
+            """
+            ),
         )
 
         academic_paper_researcher = Agent(
@@ -294,13 +290,15 @@ def demonstrate_research_team():
             role="Research academic papers and scholarly content",
             tools=[GoogleSearchTools(), ArxivTools()],
             add_name_to_instructions=True,
-            instructions=dedent("""
+            instructions=dedent(
+                """
                 You are an academic paper researcher.
                 You will be given a topic to research in academic literature.
                 You will need to find relevant scholarly articles, papers, and academic discussions.
                 Focus on peer-reviewed content and citations from reputable sources.
                 Provide brief summaries of key findings and methodologies.
-            """),
+            """
+            ),
         )
 
         twitter_researcher = Agent(
@@ -309,19 +307,21 @@ def demonstrate_research_team():
             role="Research trending discussions and real-time updates",
             tools=[DuckDuckGoTools()],
             add_name_to_instructions=True,
-            instructions=dedent("""
+            instructions=dedent(
+                """
                 You are a Twitter/X researcher.
                 You will be given a topic to research on Twitter/X.
                 You will need to find trending discussions, influential voices, and real-time updates.
                 Focus on verified accounts and credible sources when possible.
                 Track relevant hashtags and ongoing conversations.
-            """),
+            """
+            ),
         )
 
         # Create collaborative team
         agent_team = Team(
             name="Discussion Team",
-            mode="collaborate",  # Agents work together
+            mode="collaborate",
             model=OpenAIChat("gpt-4o"),
             members=[
                 reddit_researcher,
@@ -348,17 +348,18 @@ def demonstrate_research_team():
             stream=True,
             stream_intermediate_steps=True,
         )
-        
+
     except Exception as e:
         print(f"Research team error: {e}")
 
-# Run the example
+# Run the demonstration
 demonstrate_research_team()
-```
 
+```
 ## 5. Async Operations
 
-### Concurrent Agent Execution
+This section demonstrates how to run multiple agent operations concurrently using async/await patterns.
+
 
 ```python
 async def demonstrate_async_operations():
@@ -368,123 +369,92 @@ async def demonstrate_async_operations():
     print("=" * 60)
 
     try:
-        # Create agent for async operations
-        agent = Agent(model=OpenAIChat(id=MODEL_NAME))
-        
+        # Create async tasks with different agents
+        agent = Agent(model=OpenAIChat(id=MODEL_ID))
+
         # Define async tasks
         async def task1():
             response = await agent.arun("Explain Python in one paragraph")
             return f"Task 1: {response.content}"
-        
+
         async def task2():
             response = await agent.arun("Explain JavaScript in one paragraph")
             return f"Task 2: {response.content}"
-        
+
         async def task3():
             response = await agent.arun("Compare them briefly")
             return f"Task 3: {response.content}"
-        
-        # Run tasks concurrently for better performance
+
+        # Run tasks concurrently
         print("Running async tasks concurrently...")
         results = await asyncio.gather(task1(), task2(), task3())
-        
+
         for result in results:
             print(result)
             print()
-            
+
     except Exception as e:
         print(f"Async operations error: {e}")
 
-# Run async example
-asyncio.run(demonstrate_async_operations())
+# Run the async demonstration
+await demonstrate_async_operations()
+
 ```
+## Complete Tutorial
 
-## Complete Running Example
+Run all demonstrations in sequence to see the full capabilities of Agno with AgentOps tracking.
 
-Here's how to run all examples together:
 
 ```python
 async def main():
     """Main function to run all Agno demonstrations."""
-    print("Starting Comprehensive Agno Example with AgentOps")
+    print("Starting Comprehensive Agno Tutorial with AgentOps")
     print("=" * 80)
-    
-    # Check environment first
+
+    # Check environment
     if not check_environment():
         return
-    
+
+    # Run all demonstrations
     print("\nRunning all Agno demonstrations...")
-    
-    # Run all demonstrations with error handling
-    demos = [
-        ("Basic Agents", demonstrate_basic_agents),
-        ("Tool Integration", demonstrate_tool_integration),
-        ("Workflows", demonstrate_workflows),
-        ("Research Team", demonstrate_research_team),
-    ]
-    
-    for name, demo_func in demos:
-        try:
-            demo_func()
-        except Exception as e:
-            print(f"Skipping {name} demo due to: {e}")
-    
-    # Run async demo
+
+    # Research teams
+    try:
+        demonstrate_research_team()
+    except Exception as e:
+        print(f"Skipping research team demo due to: {e}")
+
+    # Basic functionality
+    demonstrate_basic_agents()
+
+    # Tool integration
+    try:
+        demonstrate_tool_integration()
+    except Exception as e:
+        print(f"Skipping tool integration demo due to: {e}")
+
+    # Workflows
+    try:
+        demonstrate_workflows()
+    except Exception as e:
+        print(f"Skipping workflow demo due to: {e}")
+
+    # Async operations
     try:
         await demonstrate_async_operations()
     except Exception as e:
         print(f"Skipping async demo due to: {e}")
-    
+
     print("\nAll Agno demonstrations completed!")
     print("Check your AgentOps dashboard for detailed traces and metrics.")
 
-if __name__ == "__main__":
-    asyncio.run(main())
+# Uncomment the line below to run the complete tutorial
+# await main()
+
 ```
 
-## Monitoring and Analytics
 
-### AgentOps Dashboard Features
-
-After running these examples, visit your [AgentOps Dashboard](https://app.agentops.ai/) to see:
-
-**Agent Analytics:**
-- Individual agent performance metrics
-- Token usage and costs per agent
-- Response times and success rates
-- Agent interaction patterns
-
-**Team Coordination:**
-- Multi-agent collaboration flows
-- Team decision-making processes
-- Communication patterns between agents
-- Task distribution and load balancing
-
-**Workflow Optimization:**
-- Cache efficiency metrics
-- Workflow state transitions
-- Performance bottlenecks
-- Resource utilization
-
-**Tool Usage:**
-- Tool execution frequency and success rates
-- RAG query performance
-- Knowledge base retrieval accuracy
-- Custom tool effectiveness
-
-## Best Practices from Examples
-
-1. **Environment Management**: Always validate API keys before running agents
-2. **Error Handling**: Wrap each demo in try-catch for robust execution
-3. **Resource Optimization**: Use caching workflows for repeated operations
-4. **Team Design**: Create specialized agents with clear, distinct roles
-5. **Async Operations**: Leverage concurrent execution for improved performance
-6. **Monitoring**: Use AgentOps dashboard to optimize agent performance
-
-
-## Next Steps
-
-- Explore the [Agno Integration Guide](/v2/integrations/agno) for more advanced configurations
-- Check out additional [AgentOps Examples](/examples) for other frameworks
-- Visit the [AgentOps Dashboard](https://app.agentops.ai/) to monitor your agents
-- Join the [AgentOps Community](https://discord.gg/agentops) for support and discussions 
+<script type="module" src="/scripts/github_stars.js"></script>
+<script type="module" src="/scripts/scroll-img-fadein-animation.js"></script>
+<script type="module" src="/scripts/button_heartbeat_animation.js"></script>
+<script type="module" src="/scripts/adjust_api_dynamically.js"></script>

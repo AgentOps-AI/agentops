@@ -1,7 +1,7 @@
 """
-Comprehensive Agno Example with AgentOps Instrumentation
+Comprehensive Agno Tutorial with AgentOps Instrumentation
 
-This example demonstrates key Agno features:
+This tutorial demonstrates key Agno features:
 1. Basic Agents and Teams
 2. Tool Integration and RAG
 3. Workflows with Caching
@@ -9,6 +9,7 @@ This example demonstrates key Agno features:
 5. Async Operations
 
 Each section shows different Agno capabilities with AgentOps tracking.
+Run this script to see all examples in action.
 """
 
 import os
