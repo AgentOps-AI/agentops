@@ -1,0 +1,155 @@
+---
+title: Agno
+description: "Track your Agno agents, teams, and workflows with AgentOps"
+---
+
+[Agno](https://docs.agno.com) is a modern AI agent framework for building intelligent agents, teams, and workflows. AgentOps provides automatic instrumentation to track all Agno operations including agent interactions, team coordination, tool usage, and workflow execution.
+
+## Installation
+
+Install AgentOps and Agno:
+
+<CodeGroup>
+  ```bash pip
+  pip install agentops agno 
+  ```
+  ```bash poetry
+  poetry add agentops agno 
+  ```
+  ```bash uv
+  uv add agentops agno 
+  ```
+</CodeGroup>
+
+## Setting Up API Keys
+
+You'll need API keys for AgentOps and your chosen LLM provider:
+- **AGENTOPS_API_KEY**: From your [AgentOps Dashboard](https://app.agentops.ai/)
+- **OPENAI_API_KEY**: From the [OpenAI Platform](https://platform.openai.com/api-keys) (if using OpenAI)
+- **ANTHROPIC_API_KEY**: From [Anthropic Console](https://console.anthropic.com/) (if using Claude)
+
+Set these as environment variables or in a `.env` file.
+
+<CodeGroup>
+  ```bash Export to CLI
+  export AGENTOPS_API_KEY="your_agentops_api_key_here"
+  export OPENAI_API_KEY="your_openai_api_key_here"
+  export ANTHROPIC_API_KEY="your_anthropic_api_key_here"  # Optional
+  ```
+  ```txt Set in .env file
+  AGENTOPS_API_KEY="your_agentops_api_key_here"
+  OPENAI_API_KEY="your_openai_api_key_here"
+  ANTHROPIC_API_KEY="your_anthropic_api_key_here"  # Optional
+  ```
+</CodeGroup>
+
+## Quick Start
+
+```python
+import os
+from dotenv import load_dotenv
+
+# Load environment variables
+load_dotenv()
+
+
+from agno.agent import Agent
+from agno.team import Team
+from agno.models.openai import OpenAIChat
+
+# Initialize AgentOps
+import agentops
+agentops.init(api_key=os.getenv("AGENTOPS_API_KEY"))
+
+# Create and run an agent
+agent = Agent(
+    name="Assistant",
+    role="Helpful AI assistant",
+    model=OpenAIChat(id="gpt-4o-mini")
+)
+
+response = agent.run("What are the key benefits of AI agents?")
+print(response.content)
+```
+
+## AgentOps Integration
+
+### Basic Agent Tracking
+
+AgentOps automatically instruments Agno agents and teams:
+
+```python
+import agentops
+from agno.agent import Agent
+from agno.team import Team
+from agno.models.openai import OpenAIChat
+
+# Initialize AgentOps - this enables automatic tracking
+agentops.init(api_key=os.getenv("AGENTOPS_API_KEY"))
+
+# Create agents - automatically tracked by AgentOps
+agent = Agent(
+    name="Assistant",
+    role="Helpful AI assistant",
+    model=OpenAIChat(id="gpt-4o-mini")
+)
+
+# Create teams - coordination automatically tracked
+team = Team(
+    name="Research Team", 
+    mode="coordinate", 
+    members=[agent]
+)
+
+# All operations are automatically logged to AgentOps
+response = team.run("Analyze the current AI market trends")
+print(response.content)
+```
+
+## What Gets Tracked
+
+AgentOps automatically captures:
+
+- **Agent Interactions**: All agent inputs, outputs, and configurations
+- **Team Coordination**: Multi-agent collaboration patterns and results  
+- **Tool Executions**: Function calls, parameters, and return values
+- **Workflow Steps**: Session states, caching, and performance metrics
+- **Token Usage**: Costs and resource consumption across all operations
+- **Timing Metrics**: Response times and concurrent operation performance
+- **Error Tracking**: Failures and debugging information
+
+
+## Dashboard and Monitoring
+
+Once your Agno agents are running with AgentOps, you can monitor them in the [AgentOps Dashboard](https://app.agentops.ai/):
+
+- **Real-time Monitoring**: Live agent status and performance
+- **Execution Traces**: Detailed logs of agent interactions
+- **Performance Analytics**: Token usage, costs, and timing metrics
+- **Team Collaboration**: Visual representation of multi-agent workflows
+- **Error Tracking**: Comprehensive error logs and debugging information
+
+## Examples
+
+<CardGroup cols={2}>
+  <Card title="Basic Agents and Teams" icon="users" href="/v2/examples/agno">
+    Learn the fundamentals of creating AI agents and organizing them into collaborative teams
+  </Card>
+  
+  <Card title="Async Operations" icon="bolt" href="https://github.com/AgentOps-AI/agentops/blob/main/examples/agno/agno_async_operations.ipynb">
+    Execute multiple AI tasks concurrently for improved performance using asyncio
+  </Card>
+  
+  <Card title="Research Team Collaboration" icon="magnifying-glass" href="https://github.com/AgentOps-AI/agentops/blob/main/examples/agno/agno_research_team.ipynb">
+    Build sophisticated multi-agent teams with specialized tools for comprehensive research
+  </Card>
+  
+  <Card title="RAG Tool Integration" icon="database" href="https://github.com/AgentOps-AI/agentops/blob/main/examples/agno/agno_tool_integrations.ipynb">
+    Implement Retrieval-Augmented Generation with vector databases and knowledge bases
+  </Card>
+  
+  <Card title="Workflow Setup with Caching" icon="diagram-project" href="https://github.com/AgentOps-AI/agentops/blob/main/examples/agno_workflow_setup.ipynb">
+    Create custom workflows with intelligent caching for optimized agent performance
+  </Card>
+</CardGroup>
+
