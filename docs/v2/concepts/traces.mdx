@@ -1,0 +1,275 @@
+---
+title: 'Traces'
+description: 'Effectively manage traces in your agent workflow'
+---
+## Automatic Trace Management
+
+The simplest way to create and manage traces is to use the `init` function with automatic trace creation:
+
+```python
+import agentops
+
+# Initialize with automatic trace creation (default)
+agentops.init(api_key="YOUR_API_KEY", default_tags=["production"])
+```
+
+This approach:
+- Creates a trace automatically when you initialize the SDK
+- Tracks all events in the context of this trace
+- Manages the trace throughout the lifecycle of your application
+
+## Manual Trace Creation
+For more control, you can disable automatic trace creation and start traces manually:
+
+```python
+import agentops
+
+# Initialize without auto-starting a trace
+agentops.init(api_key="YOUR_API_KEY", auto_start_session=False)
+
+# Later, manually start a trace when needed
+trace_context = agentops.start_trace(
+    trace_name="Customer Workflow", 
+    tags=["customer-query", "high-priority"]
+)
+
+# End the trace when done
+agentops.end_trace(trace_context, end_state="Success")
+```
+
+Manual trace management is useful when:
+- You want to control exactly when trace tracking begins
+- You need to associate different traces with different sets of tags
+- Your application has distinct workflows that should be tracked separately
+
+## Using the Trace Decorator
+
+You can use the `@trace` decorator to create a trace for a specific function:
+
+```python
+import agentops
+
+@agentops.trace
+def process_customer_data(customer_id):
+    # This entire function execution will be tracked as a trace
+    return analyze_data(customer_id)
+
+# Or with custom parameters
+@agentops.trace(name="data_processing", tags=["analytics"])
+def analyze_user_behavior(user_data):
+    return perform_analysis(user_data)
+```
+
+## Trace Context Manager
+
+TraceContext objects support Python's context manager protocol, making it easy to manage trace lifecycles:
+
+```python
+import agentops
+
+# Using trace context as a context manager
+with agentops.start_trace("user_session", tags=["web"]) as trace:
+    # All operations here are tracked within this trace
+    process_user_request()
+    # Trace automatically ends when exiting the context
+    # Success/Error state is set based on whether exceptions occurred
+```
+
+## Trace States
+
+Every trace has an associated state that indicates its completion status. AgentOps provides multiple ways to specify trace end states for flexibility and backward compatibility.
+
+### AgentOps TraceState Enum (Recommended)
+
+The recommended approach is to use the `TraceState` enum from AgentOps:
+
+```python
+from agentops import TraceState
+
+# Available states
+agentops.end_trace(trace_context, end_state=TraceState.SUCCESS)  # Trace completed successfully
+agentops.end_trace(trace_context, end_state=TraceState.ERROR)    # Trace encountered an error
+agentops.end_trace(trace_context, end_state=TraceState.UNSET)    # Trace state is not determined
+```
+
+### OpenTelemetry StatusCode
+
+For advanced users familiar with OpenTelemetry, you can use StatusCode directly:
+
+```python
+from opentelemetry.trace.status import StatusCode
+
+agentops.end_trace(trace_context, end_state=StatusCode.OK)     # Same as TraceState.SUCCESS
+agentops.end_trace(trace_context, end_state=StatusCode.ERROR)  # Same as TraceState.ERROR
+agentops.end_trace(trace_context, end_state=StatusCode.UNSET)  # Same as TraceState.UNSET
+```
+
+### String Values
+
+String values are also supported for convenience:
+
+```python
+# String representations
+agentops.end_trace(trace_context, end_state="Success")        # Maps to SUCCESS
+agentops.end_trace(trace_context, end_state="Error")          # Maps to ERROR  
+agentops.end_trace(trace_context, end_state="Indeterminate")  # Maps to UNSET
+```
+
+### State Mapping
+
+All state representations map to the same underlying OpenTelemetry StatusCode:
+
+| AgentOps TraceState | OpenTelemetry StatusCode | String Values | Description |
+|-------------------|-------------------------|---------------|-------------|
+| `TraceState.SUCCESS` | `StatusCode.OK` | "Success" | Trace completed successfully |
+| `TraceState.ERROR` | `StatusCode.ERROR` | "Error" | Trace encountered an error |
+| `TraceState.UNSET` | `StatusCode.UNSET` | "Indeterminate" | Trace state is not determined |
+
+### Default Behavior
+
+If no end state is provided, the default is `TraceState.SUCCESS`:
+
+```python
+# These are equivalent
+agentops.end_trace(trace_context)
+agentops.end_trace(trace_context, end_state=TraceState.SUCCESS)
+```
+
+## Trace Attributes
+
+Every trace collects comprehensive metadata to provide rich context for analysis. Trace attributes are automatically captured by AgentOps and fall into several categories:
+
+### Core Trace Attributes
+
+**Identity and Timing:**
+- **Trace ID**: A unique identifier for the trace
+- **Span ID**: Identifier for the root span of the trace
+- **Start Time**: When the trace began
+- **End Time**: When the trace completed (set automatically)
+- **Duration**: Total execution time (calculated automatically)
+
+**User-Defined Attributes:**
+- **Trace Name**: Custom name provided when starting the trace
+- **Tags**: Labels for filtering and grouping (list of strings or dictionary)
+- **End State**: Success, error, or unset status
+
+```python
+# Tags can be provided as a list of strings or a dictionary
+agentops.start_trace("my_trace", tags=["production", "experiment-a"])
+agentops.start_trace("my_trace", tags={"environment": "prod", "version": "1.2.3"})
+```
+
+### Resource Attributes
+
+AgentOps automatically captures system and environment information:
+
+**Project and Service:**
+- **Project ID**: AgentOps project identifier
+- **Service Name**: Service name (defaults to "agentops")
+- **Service Version**: Version of your service
+- **Environment**: Deployment environment (dev, staging, prod)
+- **SDK Version**: AgentOps SDK version being used
+
+**Host System Information:**
+- **Host Name**: Machine hostname
+- **Host System**: Operating system (Windows, macOS, Linux)
+- **Host Version**: OS version details
+- **Host Processor**: CPU architecture information
+- **Host Machine**: Machine type identifier
+
+**Performance Metrics:**
+- **CPU Count**: Number of available CPU cores
+- **CPU Percent**: CPU utilization at trace start
+- **Memory Total**: Total system memory
+- **Memory Available**: Available system memory
+- **Memory Used**: Currently used memory
+- **Memory Percent**: Memory utilization percentage
+
+**Dependencies:**
+- **Imported Libraries**: List of Python packages imported in your environment
+
+### Span Hierarchy
+
+**Nested Operations:**
+- **Spans**: All spans (operations, agents, tools, workflows) recorded during the trace
+- **Parent-Child Relationships**: Hierarchical structure of operations
+- **Span Kinds**: Types of operations (agents, tools, workflows, tasks)
+
+### Accessing Trace Attributes
+
+While most attributes are automatically captured, you can access trace information programmatically:
+
+```python
+import agentops
+
+# Start a trace and get the context
+trace_context = agentops.start_trace("my_workflow", tags={"version": "1.0"})
+
+# Access trace information
+trace_id = trace_context.span.get_span_context().trace_id
+span_id = trace_context.span.get_span_context().span_id
+
+print(f"Trace ID: {trace_id}")
+print(f"Span ID: {span_id}")
+
+# End the trace
+agentops.end_trace(trace_context)
+```
+
+### Custom Attributes
+
+You can add custom attributes to spans within your trace:
+
+```python
+import agentops
+
+with agentops.start_trace("custom_workflow") as trace:
+    # Add custom attributes to the current span
+    trace.span.set_attribute("custom.workflow.step", "data_processing")
+    trace.span.set_attribute("custom.batch.size", 100)
+    trace.span.set_attribute("custom.user.id", "user_123")
+    
+    # Your workflow logic here
+    process_data()
+```
+
+### Attribute Naming Conventions
+
+AgentOps follows OpenTelemetry semantic conventions for attribute naming:
+
+- **AgentOps Specific**: `agentops.*` (e.g., `agentops.span.kind`)
+- **GenAI Operations**: `gen_ai.*` (e.g., `gen_ai.request.model`)
+- **System Resources**: Standard names (e.g., `host.name`, `service.name`)
+- **Custom Attributes**: Use your own namespace (e.g., `myapp.user.id`)
+
+## Trace Context
+
+Traces create a context for all span recording. When a span is recorded:
+
+1. It's associated with the current active trace
+2. It's automatically included in the trace's timeline
+3. It inherits the trace's tags for filtering and analysis
+
+## Viewing Traces in the Dashboard
+
+The AgentOps dashboard provides several views for analyzing your traces:
+
+1. **Trace List**: Overview of all traces with filtering options
+2. **Trace Details**: In-depth view of a single trace
+3. **Timeline View**: Chronological display of all spans in a trace
+4. **Tree View**: Hierarchical representation of agents, operations, and events
+5. **Analytics**: Aggregated metrics across traces
+
+## Best Practices
+
+- **Start traces at logical boundaries** in your application workflow
+- **Use descriptive trace names** to easily identify them in the dashboard
+- **Apply consistent tags** to group related traces
+- **Use fewer, longer traces** rather than many short ones for better analysis
+- **Use automatic trace management** unless you have specific needs for manual control
+- **Leverage context managers** for automatic trace lifecycle management
+- **Set appropriate end states** to track success/failure rates
+
+<script type="module" src="/scripts/github_stars.js"></script>
+<script type="module" src="/scripts/scroll-img-fadein-animation.js"></script>
+<script type="module" src="/scripts/button_heartbeat_animation.js"></script>

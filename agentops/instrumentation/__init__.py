@@ -35,7 +35,6 @@ from opentelemetry.instrumentation.instrumentor import BaseInstrumentor  # type:
 from agentops.logging import logger
 from agentops.sdk.core import tracer
 
-
 # Module-level state variables
 _active_instrumentors: list[BaseInstrumentor] = []
 _original_builtins_import = builtins.__import__  # Store original import
@@ -395,9 +394,6 @@ AGENTIC_LIBRARIES: dict[str, InstrumentorConfig] = {
 # Combine all target packages for monitoring
 TARGET_PACKAGES = set(PROVIDERS.keys()) | set(AGENTIC_LIBRARIES.keys())
 
-# Create a single instance of the manager
-# _manager = InstrumentationManager() # Removed
-
 
 @dataclass
 class InstrumentorLoader:
@@ -449,7 +445,8 @@ def instrument_one(loader: InstrumentorLoader) -> Optional[BaseInstrumentor]:
 
     instrumentor = loader.get_instance()
     try:
-        instrumentor.instrument(tracer_provider=tracer._provider)
+        # Use the provider directly from the global tracer instance
+        instrumentor.instrument(tracer_provider=tracer.provider)
         logger.info(
             f"AgentOps: Successfully instrumented '{loader.class_name}' for package '{loader.package_name or loader.module_name}'."
         )

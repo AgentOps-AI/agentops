@@ -13,6 +13,7 @@ from typing import Optional, Any, Dict, List, Union
 
 from agentops.logging import logger
 from agentops.sdk.core import TraceContext, tracer
+from agentops.helpers.deprecation import deprecated
 
 _current_session: Optional["Session"] = None
 _current_trace_context: Optional[TraceContext] = None
@@ -60,6 +61,7 @@ was garbage collected but its trace might still be recording. Ensure legacy sess
         end_session(session_or_status=self, **kwargs)
 
 
+@deprecated("Use agentops.start_trace() instead.")
 def start_session(
     tags: Union[Dict[str, Any], List[str], None] = None,
 ) -> Session:
@@ -121,6 +123,7 @@ def _set_span_attributes(span: Any, attributes: Dict[str, Any]) -> None:
             span.set_attribute(f"agentops.legacy.{key}", str(value))
 
 
+@deprecated("Use agentops.end_trace() instead.")
 def end_session(session_or_status: Any = None, **kwargs: Any) -> None:
     """
     @deprecated Use agentops.end_trace() instead.
@@ -186,6 +189,7 @@ def end_session(session_or_status: Any = None, **kwargs: Any) -> None:
         pass
 
 
+@deprecated("Use agentops.end_trace() instead.")
 def end_all_sessions() -> None:
     """@deprecated Ends all active sessions/traces."""
     if not tracer.initialized:
@@ -201,13 +205,15 @@ def end_all_sessions() -> None:
     _current_trace_context = None
 
 
+@deprecated("Automatically tracked in v4.")
 def ToolEvent(*args: Any, **kwargs: Any) -> None:
-    """@deprecated Use tracing instead."""
+    """@deprecated Automatically tracked in v4."""
     return None
 
 
+@deprecated("Automatically tracked in v4.")
 def ErrorEvent(*args: Any, **kwargs: Any) -> Any:
-    """@deprecated Use tracing instead. Returns minimal object for test compatibility."""
+    """@deprecated Automatically tracked in v4. Returns minimal object for test compatibility."""
     from agentops.helpers.time import get_ISO_time
 
     class LegacyErrorEvent:
@@ -218,8 +224,9 @@ def ErrorEvent(*args: Any, **kwargs: Any) -> Any:
     return LegacyErrorEvent()
 
 
+@deprecated("Automatically tracked in v4.")
 def ActionEvent(*args: Any, **kwargs: Any) -> Any:
-    """@deprecated Use tracing instead. Returns minimal object for test compatibility."""
+    """@deprecated Automatically tracked in v4. Returns minimal object for test compatibility."""
     from agentops.helpers.time import get_ISO_time
 
     class LegacyActionEvent:
@@ -230,11 +237,13 @@ def ActionEvent(*args: Any, **kwargs: Any) -> Any:
     return LegacyActionEvent()
 
 
+@deprecated("Automatically tracked in v4.")
 def LLMEvent(*args: Any, **kwargs: Any) -> None:
-    """@deprecated Use tracing instead."""
+    """@deprecated Automatically tracked in v4."""
     return None
 
 
+@deprecated("Use @agent decorator instead.")
 def track_agent(*args: Any, **kwargs: Any) -> Any:
     """@deprecated No-op decorator."""
 
@@ -244,6 +253,7 @@ def track_agent(*args: Any, **kwargs: Any) -> Any:
     return noop
 
 
+@deprecated("Use @tool decorator instead.")
 def track_tool(*args: Any, **kwargs: Any) -> Any:
     """@deprecated No-op decorator."""
 
@@ -262,6 +272,6 @@ __all__ = [
     "track_agent",
     "track_tool",
     "end_all_sessions",
-    "Session",  # Exposing the legacy Session class itself
+    "Session",
     "LLMEvent",
 ]

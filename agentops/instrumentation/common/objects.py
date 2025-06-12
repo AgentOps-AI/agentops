@@ -1,5 +1,5 @@
 from agentops.client.api.types import UploadedObjectResponse
-from . import AttributeMap, _extract_attributes_from_mapping
+from agentops.instrumentation.common import AttributeMap, _extract_attributes_from_mapping
 
 
 UPLOADED_OBJECT_ATTRIBUTES: AttributeMap = {
