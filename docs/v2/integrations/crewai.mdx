@@ -22,7 +22,7 @@ Install AgentOps and CrewAI, along with `python-dotenv` for managing API keys:
 
 ## Setting Up API Keys
 
-You'll need API keys for AgentOps and OpenAI (since `ChatOpenAI` is commonly used with CrewAI):
+You'll need API keys for AgentOps and OpenAI (since CrewAI's built-in `LLM` uses OpenAI models by default):
 - **OPENAI_API_KEY**: From the [OpenAI Platform](https://platform.openai.com/api-keys)
 - **AGENTOPS_API_KEY**: From your [AgentOps Dashboard](https://app.agentops.ai/)
 
@@ -52,22 +52,21 @@ OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 
 ## Usage
 
-Simply initialize AgentOps at the beginning of your CrewAI application. AgentOps will automatically instrument CrewAI and LangChain components (like `ChatOpenAI`) to track your agent interactions.
+Simply initialize AgentOps at the beginning of your CrewAI application. AgentOps automatically instruments CrewAI components—including its `LLM`—to track your agent interactions.
 
 Here's how to set up a basic CrewAI application with AgentOps:
 
 ```python
 import agentops
-from crewai import Agent, Task, Crew
-from langchain_openai import ChatOpenAI
+from crewai import Agent, Task, Crew, LLM
 
 # Initialize AgentOps client
 agentops.init()
 
 # Define the LLM to use with CrewAI
-llm = ChatOpenAI(
-    model="gpt-4", # Or your preferred model
-    temperature=0.7
+llm = LLM(
+    model="openai/gpt-4o",  # Or your preferred model
+    temperature=0.7,
 )
 
 # Create an agent
