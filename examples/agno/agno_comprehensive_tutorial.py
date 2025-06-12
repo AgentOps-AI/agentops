@@ -337,25 +337,25 @@ async def main():
     print("\nRunning all Agno demonstrations...")
 
     # Research teams
-    try:
-        demonstrate_research_team()
-    except Exception as e:
-        print(f"Skipping research team demo due to: {e}")
+    # try:
+    #     demonstrate_research_team()
+    # except Exception as e:
+    #     print(f"Skipping research team demo due to: {e}")
 
-    # Basic functionality
-    demonstrate_basic_agents()
+    # # Basic functionality
+    # demonstrate_basic_agents()
 
-    # Tool integration
-    try:
-        demonstrate_tool_integration()
-    except Exception as e:
-        print(f"Skipping tool integration demo due to: {e}")
+    # # Tool integration
+    # try:
+    #     demonstrate_tool_integration()
+    # except Exception as e:
+    #     print(f"Skipping tool integration demo due to: {e}")
 
-    # Workflows
-    try:
-        demonstrate_workflows()
-    except Exception as e:
-        print(f"Skipping workflow demo due to: {e}")
+    # # Workflows
+    # try:
+    #     demonstrate_workflows()
+    # except Exception as e:
+    #     print(f"Skipping workflow demo due to: {e}")
 
     # Async operations
     try:

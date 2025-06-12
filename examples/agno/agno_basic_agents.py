@@ -1,51 +1,13 @@
----
-title: 'Agno'
-description: 'Basic Agents and Teams with Agno'
----
-{/*  SOURCE_FILE: examples/agno/agno_basic_agents.ipynb  */}
+"""
+Basic Agents and Teams with Agno
 
-_View Notebook on <a href={'https://github.com/AgentOps-AI/agentops/blob/main/examples/agno/agno_basic_agents.ipynb'} target={'_blank'}>Github</a>_
+This example demonstrates the fundamentals of creating AI agents and organizing them into teams
+using the Agno framework. You'll learn how to:
+- Create individual agents with specific roles
+- Combine agents into teams for collaborative problem-solving
+- Use coordination modes for effective agent communication
+"""
 
-# Basic Agents and Teams with Agno
-
-This notebook demonstrates the fundamentals of creating AI agents and organizing them into collaborative teams using the Agno framework.
-
-## Overview
-
-In this example, you'll learn how to:
-- **Create specialized AI agents** with specific roles and expertise
-- **Organize agents into teams** for collaborative problem-solving
-- **Use coordination modes** for effective agent communication
-- **Monitor agent interactions** with AgentOps integration
-
-## Key Concepts
-
-### Agents
-Individual AI entities with specific roles and capabilities. Each agent can be assigned a particular area of expertise, making them specialists in their domain.
-
-### Teams
-Collections of agents that work together to solve complex tasks. Teams can coordinate their responses, share information, and delegate tasks based on each agent's expertise.
-
-### Coordination Modes
-Different strategies for how agents within a team interact and collaborate. The "coordinate" mode enables intelligent task routing and information sharing.
-
-## Pre-requisites
-
-Before running this notebook, ensure you have:
-- **AgentOps API key** from [AgentOps](https://agentops.ai)
-- **OpenAI API key** from [OpenAI](https://openai.com)
-
-Create a `.env` file in your project root with:
-```
-AGENTOPS_API_KEY=your_agentops_key_here
-OPENAI_API_KEY=your_openai_key_here
-```
-## Implementation
-
-Let's start by importing the necessary libraries and setting up our environment.
-
-
-```python
 import os
 from agno.agent import Agent
 from agno.team import Team
@@ -61,14 +23,8 @@ load_dotenv()
 agentops.init(api_key=os.getenv("AGENTOPS_API_KEY"))
 
 # Configuration
-MODEL_ID = "gpt-4o-mini"  
-```
-## Environment Validation
+MODEL_ID = "gpt-4o-mini"  # Using OpenAI's cost-effective model
 
-Before we create our agents, let's ensure all required API keys are properly configured:
-
-
-```python
 def check_environment():
     """
     Verify that all required API keys are properly configured.
@@ -86,27 +42,8 @@ def check_environment():
 
     print("✓ Environment variables checked successfully")
     return True
-```
-## Creating Agents and Teams
-
-Now let's create our specialized agents and organize them into a collaborative team:
-
-### Step 1: Create Individual Agents
-We'll create two agents with different specializations:
-- **News Agent**: Specializes in gathering and analyzing news
-- **Weather Agent**: Specializes in weather forecasting and analysis
-
-### Step 2: Form a Team
-We'll combine these agents into a team using the "coordinate" mode, which enables:
-- Intelligent task routing based on agent expertise
-- Information sharing between agents
-- Collaborative problem-solving
-
-### Step 3: Execute Tasks
-The team will automatically delegate tasks to the most appropriate agent(s) based on the query.
 
 
-```python
 def demonstrate_basic_agents():
     """
     Demonstrate basic agent creation and team coordination.
@@ -163,18 +100,15 @@ def demonstrate_basic_agents():
         print("-" * 60)
         print(f"{response.content}")
         print("-" * 60)
-
+        
+        # The team intelligently routes the query to the Weather Agent
+        # since it's weather-related, demonstrating smart task delegation
 
     except Exception as e:
         print(f"Error during basic agents demonstration: {e}")
         print("This might be due to API issues or configuration problems")
-```
-## Running the Demo
-
-Let's execute our main function to see the agents and teams in action:
 
 
-```python
 async def main():
     """
     Main function that orchestrates the demonstration.
@@ -209,13 +143,8 @@ async def main():
     except Exception as e:
         print(f"Demo failed: {e}")
         print("Please check your API keys and network connection")
-```
-## Execute the Demo
-
-Run the cell below to see how agents collaborate within a team:
 
 
-```python
 if __name__ == "__main__":
     """
     Entry point for the script.
@@ -224,11 +153,3 @@ if __name__ == "__main__":
     async operations and maintaining consistency with other examples.
     """
     asyncio.run(main())
-```
-
-
-
-<script type="module" src="/scripts/github_stars.js"></script>
-<script type="module" src="/scripts/scroll-img-fadein-animation.js"></script>
-<script type="module" src="/scripts/button_heartbeat_animation.js"></script>
-<script type="module" src="/scripts/adjust_api_dynamically.js"></script>
