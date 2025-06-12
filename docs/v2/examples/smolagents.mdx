@@ -9,6 +9,28 @@ _View Notebook on <a href={'https://github.com/AgentOps-AI/agentops/blob/main/ex
 # Orchestrate a Multi-Agent System
 
 In this notebook, we will make a multi-agent web browser: an agentic system with several agents collaborating to solve problems using the web!
+
+It will be a simple hierarchy, using a `ManagedAgent` object to wrap the managed web search agent:
+
+```
++----------------+
+| Manager agent  |
++----------------+
+         |
+_________|______________
+|                        |
+Code interpreter   +--------------------------------+
+       tool        |         Managed agent          |
+                   |      +------------------+      |
+                   |      | Web Search agent |      |
+                   |      +------------------+      |
+                   |         |            |         |
+                   |  Web Search tool     |         |
+                   |             Visit webpage tool |
+                   +--------------------------------+
+```
+Let’s set up this system.
+
 Run the line below to install the required dependencies:
 
 
