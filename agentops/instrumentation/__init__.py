@@ -384,6 +384,11 @@ AGENTIC_LIBRARIES: dict[str, InstrumentorConfig] = {
         "min_version": "0.1.0",
         "package_name": "google-adk",  # Actual pip package name
     },
+    "agno": {
+        "module_name": "agentops.instrumentation.agno",
+        "class_name": "AgnoInstrumentor",
+        "min_version": "0.1.0",
+    },
 }
 
 # Combine all target packages for monitoring
