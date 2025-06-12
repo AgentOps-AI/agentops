@@ -13,7 +13,6 @@ providing accurate, source-backed responses instead of relying solely on trainin
 
 import os
 from agno.agent import Agent
-from agno.team import Team
 from agno.models.openai import OpenAIChat
 import asyncio
 import agentops
@@ -37,15 +36,16 @@ agentops.init(api_key=os.getenv("AGENTOPS_API_KEY"))
 cohere_api_key = os.getenv("COHERE_API_KEY")  # Required for embeddings and reranking
 MODEL_ID = "gpt-4o-mini"  # Default model for agents
 
+
 def check_environment():
     """
     Verify that all required API keys are properly configured.
-    
+
     This demo requires:
     - AGENTOPS_API_KEY: For monitoring agent behavior
     - OPENAI_API_KEY: For the AI model
     - COHERE_API_KEY: For embeddings and reranking
-    
+
     Returns:
         bool: True if all required environment variables are set
     """
@@ -68,7 +68,7 @@ def check_environment():
 def demonstrate_tool_integration():
     """
     Demonstrate advanced tool integration with RAG and knowledge bases.
-    
+
     This function shows how to:
     1. Create a knowledge base from external sources
     2. Set up a vector database with embeddings
@@ -81,7 +81,7 @@ def demonstrate_tool_integration():
 
     try:
         print("\n1. Setting up knowledge base and vector database...")
-        
+
         # Create knowledge base from documentation URLs
         # This loads content from the specified URLs and prepares it for RAG
         knowledge_base = UrlKnowledge(
@@ -94,12 +94,12 @@ def demonstrate_tool_integration():
                 # Embedder converts text to numerical vectors for similarity search
                 embedder=CohereEmbedder(
                     id="embed-v4.0",  # Cohere's embedding model
-                    api_key=cohere_api_key
+                    api_key=cohere_api_key,
                 ),
                 # Reranker improves search results by re-scoring them
                 reranker=CohereReranker(
                     model="rerank-v3.5",  # Cohere's reranking model
-                    api_key=cohere_api_key
+                    api_key=cohere_api_key,
                 ),
             ),
         )
@@ -134,13 +134,13 @@ def demonstrate_tool_integration():
         print("\n3. Testing RAG agent with knowledge query...")
         print("   Question: 'What are Agents?'")
         print("\n" + "-" * 60)
-        
+
         # Print response with full reasoning process visible
         agent.print_response(
             "What are Agents?",
             show_full_reasoning=True,  # Shows how the agent searches and reasons
         )
-        
+
         print("\n" + "-" * 60)
         print("✓ RAG demonstration completed")
         print("\nNotice how the agent:")
@@ -155,10 +155,11 @@ def demonstrate_tool_integration():
         print("- Network issues accessing documentation URLs")
         print("- Vector database initialization problems")
 
+
 async def main():
     """
     Main function that orchestrates the tool integration demonstration.
-    
+
     This async function handles:
     - Environment validation
     - Running the RAG and tool integration demo
@@ -168,7 +169,7 @@ async def main():
     print("This demo showcases RAG (Retrieval-Augmented Generation)")
     print("and advanced tool integration capabilities.")
     print()
-    
+
     # Validate environment setup
     if not check_environment():
         print("\nCannot proceed without proper API configuration")
@@ -187,7 +188,7 @@ async def main():
         print("- Embeddings and reranking improve information retrieval")
         print("- Reasoning tools enhance problem-solving capabilities")
         print("- AgentOps tracks all tool usage and knowledge searches")
-        
+
     except Exception as e:
         print(f"Demo failed: {e}")
         print("Please check your API keys and network connection")

@@ -35,10 +35,11 @@ agentops.init(api_key=os.getenv("AGENTOPS_API_KEY"))
 # Configuration
 MODEL_ID = "gpt-4o-mini"  # Default model for agents
 
+
 def check_environment():
     """
     Verify that all required API keys are properly configured.
-    
+
     Returns:
         bool: True if all required environment variables are set
     """
@@ -53,15 +54,16 @@ def check_environment():
     print("✓ Environment variables checked successfully")
     return True
 
+
 def demonstrate_research_team():
     """
     Demonstrate a collaborative research team with multiple specialized agents.
-    
+
     This function creates a team of researchers, each with:
     - Specific expertise and research focus
     - Specialized tools for their domain
     - Custom instructions for their research approach
-    
+
     The team collaborates to provide comprehensive research insights.
     """
     print("\n" + "=" * 60)
@@ -70,7 +72,7 @@ def demonstrate_research_team():
 
     try:
         print("\n1. Creating specialized research agents...")
-        
+
         # Reddit Researcher: Focuses on community discussions and user experiences
         reddit_researcher = Agent(
             name="Reddit Researcher",
@@ -189,7 +191,7 @@ def demonstrate_research_team():
         print("\n3. Starting collaborative research discussion...")
         print("   Topic: 'What is the best way to learn to code?'")
         print("\n" + "-" * 60)
-        
+
         # Stream the team discussion in real-time
         agent_team.print_response(
             message="Start the discussion on the topic: 'What is the best way to learn to code?'",
@@ -205,7 +207,7 @@ def demonstrate_research_team():
 async def main():
     """
     Main function that orchestrates the research team demonstration.
-    
+
     This async function handles:
     - Environment validation
     - Running the collaborative research team demo
@@ -215,7 +217,7 @@ async def main():
     print("This demo shows how multiple specialized agents can work together")
     print("to provide comprehensive research insights from different perspectives.")
     print()
-    
+
     # Validate environment setup
     if not check_environment():
         print("Cannot proceed without proper API configuration")
@@ -233,7 +235,7 @@ async def main():
         print("- Each agent uses appropriate tools for their research domain")
         print("- Teams can reach consensus through structured discussion")
         print("- AgentOps tracks all interactions for analysis")
-        
+
     except Exception as e:
         print(f"Demo failed: {e}")
         print("Please check your API keys and network connection")

@@ -25,10 +25,11 @@ agentops.init(api_key=os.getenv("AGENTOPS_API_KEY"))
 # Configuration
 MODEL_ID = "gpt-4o-mini"  # Using OpenAI's cost-effective model
 
+
 def check_environment():
     """
     Verify that all required API keys are properly configured.
-    
+
     Returns:
         bool: True if all required environment variables are set
     """
@@ -47,7 +48,7 @@ def check_environment():
 def demonstrate_basic_agents():
     """
     Demonstrate basic agent creation and team coordination.
-    
+
     This function shows how to:
     1. Create specialized agents with specific roles
     2. Organize agents into a team
@@ -60,22 +61,20 @@ def demonstrate_basic_agents():
     try:
         # Create individual agents with specific roles
         # Each agent has a name and a role that defines its expertise
-        
+
         print("\n1. Creating specialized agents...")
-        
+
         # News Agent: Specializes in gathering and analyzing news information
         news_agent = Agent(
-            name="News Agent", 
-            role="Get the latest news and provide news analysis", 
-            model=OpenAIChat(id=MODEL_ID)
+            name="News Agent", role="Get the latest news and provide news analysis", model=OpenAIChat(id=MODEL_ID)
         )
         print("   ✓ News Agent created")
 
         # Weather Agent: Specializes in weather forecasting and analysis
         weather_agent = Agent(
-            name="Weather Agent", 
-            role="Get weather forecasts and provide weather analysis", 
-            model=OpenAIChat(id=MODEL_ID)
+            name="Weather Agent",
+            role="Get weather forecasts and provide weather analysis",
+            model=OpenAIChat(id=MODEL_ID),
         )
         print("   ✓ Weather Agent created")
 
@@ -83,9 +82,9 @@ def demonstrate_basic_agents():
         # The "coordinate" mode allows agents to work together and share information
         print("\n2. Creating a team with coordination capabilities...")
         team = Team(
-            name="News and Weather Team", 
+            name="News and Weather Team",
             mode="coordinate",  # Agents will coordinate their responses
-            members=[news_agent, weather_agent]
+            members=[news_agent, weather_agent],
         )
         print("   ✓ Team created with 2 agents")
 
@@ -93,14 +92,14 @@ def demonstrate_basic_agents():
         # The team will automatically determine which agent(s) should respond
         print("\n3. Running team task...")
         print("   Query: 'What is the weather in Tokyo?'")
-        
+
         response = team.run("What is the weather in Tokyo?")
-        
+
         print("\n4. Team Response:")
         print("-" * 60)
         print(f"{response.content}")
         print("-" * 60)
-        
+
         # The team intelligently routes the query to the Weather Agent
         # since it's weather-related, demonstrating smart task delegation
 
@@ -112,7 +111,7 @@ def demonstrate_basic_agents():
 async def main():
     """
     Main function that orchestrates the demonstration.
-    
+
     This async function handles:
     - Environment validation
     - Running the basic agents demonstration
@@ -121,7 +120,7 @@ async def main():
     print("Welcome to Agno Basic Agents Demo")
     print("This demo shows how to create and coordinate AI agents")
     print()
-    
+
     # Validate environment setup
     if not check_environment():
         print("Cannot proceed without proper API configuration")
@@ -139,7 +138,7 @@ async def main():
         print("- Teams enable multiple agents to collaborate on tasks")
         print("- Coordination mode allows intelligent task delegation")
         print("- AgentOps tracks all agent interactions for monitoring")
-        
+
     except Exception as e:
         print(f"Demo failed: {e}")
         print("Please check your API keys and network connection")

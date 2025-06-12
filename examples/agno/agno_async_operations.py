@@ -9,7 +9,6 @@ when dealing with I/O-bound operations like API calls to AI models.
 
 import os
 from agno.agent import Agent
-from agno.team import Team
 from agno.models.openai import OpenAIChat
 import asyncio  # For concurrent task execution
 import agentops  # For tracking AI operations and analytics
@@ -24,10 +23,11 @@ agentops.init(api_key=os.getenv("AGENTOPS_API_KEY"))
 # Configuration
 MODEL_ID = "gpt-4o-mini"  # Cost-effective OpenAI model suitable for most tasks
 
+
 def check_environment():
     """
     Validate that required API keys are properly configured.
-    
+
     Returns:
         bool: True if all required environment variables are set
     """
@@ -48,11 +48,11 @@ def check_environment():
 async def demonstrate_async_operations():
     """
     Demonstrate concurrent execution of multiple AI agent tasks.
-    
+
     This function creates multiple async tasks that execute concurrently rather than sequentially.
-    Each task makes an independent API call to the AI model, and asyncio.gather() 
+    Each task makes an independent API call to the AI model, and asyncio.gather()
     waits for all tasks to complete before returning results.
-    
+
     Performance benefit: Instead of 3 sequential calls taking ~90 seconds total,
     concurrent execution typically completes in ~30 seconds.
     """
@@ -68,7 +68,7 @@ async def demonstrate_async_operations():
 
         # Define async task functions
         # Each function is a coroutine that can be executed concurrently
-        
+
         async def task1():
             """Query AI about Python programming language."""
             print("→ Starting Python explanation task...")
@@ -96,7 +96,7 @@ async def demonstrate_async_operations():
         print("\n" + "=" * 60)
         print("RESULTS")
         print("=" * 60)
-        
+
         for i, result in enumerate(results, 1):
             print(f"\nTask {i} Result:")
             print(result)
@@ -110,14 +110,14 @@ async def demonstrate_async_operations():
 async def main():
     """
     Main async function that orchestrates the demonstration.
-    
+
     Handles environment validation and executes the async operations demo
     with proper error handling and user feedback.
     """
     print("Agno Async Operations Demonstration")
     print("Showcasing concurrent AI task execution for improved performance")
     print()
-    
+
     # Validate environment setup
     if not check_environment():
         print("Cannot proceed without proper API configuration")
@@ -130,7 +130,7 @@ async def main():
         await demonstrate_async_operations()
         print("\n✓ Demo completed successfully")
         print("Note: Observe the performance improvement compared to sequential execution")
-        
+
     except Exception as e:
         print(f"Demo execution failed: {e}")
         print("Check your API keys, rate limits, and network connectivity")
