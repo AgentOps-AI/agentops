@@ -35,82 +35,6 @@ from opentelemetry.instrumentation.instrumentor import BaseInstrumentor  # type:
 from agentops.logging import logger
 from agentops.sdk.core import tracer
 
-
-# Define the structure for instrumentor configurations
-class InstrumentorConfig(TypedDict):
-    module_name: str
-    class_name: str
-    min_version: str
-    package_name: NotRequired[str]  # Optional: actual pip package name if different from module
-
-
-# Configuration for supported LLM providers
-PROVIDERS: dict[str, InstrumentorConfig] = {
-    "openai": {
-        "module_name": "agentops.instrumentation.openai",
-        "class_name": "OpenAIInstrumentor",
-        "min_version": "1.0.0",
-    },
-    "anthropic": {
-        "module_name": "agentops.instrumentation.anthropic",
-        "class_name": "AnthropicInstrumentor",
-        "min_version": "0.32.0",
-    },
-    "ibm_watsonx_ai": {
-        "module_name": "agentops.instrumentation.ibm_watsonx_ai",
-        "class_name": "IBMWatsonXInstrumentor",
-        "min_version": "0.1.0",
-    },
-    "google.genai": {
-        "module_name": "agentops.instrumentation.google_genai",
-        "class_name": "GoogleGenAIInstrumentor",
-        "min_version": "0.1.0",
-        "package_name": "google-genai",  # Actual pip package name
-    },
-    "mem0": {
-        "module_name": "agentops.instrumentation.mem0",
-        "class_name": "Mem0Instrumentor",
-        "min_version": "0.1.0",
-        "package_name": "mem0ai",  # Actual pip package name
-    },
-}
-
-# Configuration for utility instrumentors
-UTILITY_INSTRUMENTORS: dict[str, InstrumentorConfig] = {
-    "concurrent.futures": {
-        "module_name": "agentops.instrumentation.concurrent_futures",
-        "class_name": "ConcurrentFuturesInstrumentor",
-        "min_version": "3.7.0",  # Python 3.7+ (concurrent.futures is stdlib)
-        "package_name": "python",  # Special case for stdlib modules
-    },
-}
-
-# Configuration for supported agentic libraries
-AGENTIC_LIBRARIES: dict[str, InstrumentorConfig] = {
-    "crewai": {
-        "module_name": "agentops.instrumentation.crewai",
-        "class_name": "CrewAIInstrumentor",
-        "min_version": "0.56.0",
-    },
-    "autogen": {"module_name": "agentops.instrumentation.ag2", "class_name": "AG2Instrumentor", "min_version": "0.1.0"},
-    "agents": {
-        "module_name": "agentops.instrumentation.openai_agents",
-        "class_name": "OpenAIAgentsInstrumentor",
-        "min_version": "0.0.1",
-    },
-    "google.adk": {
-        "module_name": "agentops.instrumentation.google_adk",
-        "class_name": "GoogleADKInstrumentor",
-        "min_version": "0.1.0",
-    },
-}
-
-# Combine all target packages for monitoring
-TARGET_PACKAGES = set(PROVIDERS.keys()) | set(AGENTIC_LIBRARIES.keys()) | set(UTILITY_INSTRUMENTORS.keys())
-
-# Create a single instance of the manager
-# _manager = InstrumentationManager() # Removed
-
 # Module-level state variables
 _active_instrumentors: list[BaseInstrumentor] = []
 _original_builtins_import = builtins.__import__  # Store original import
@@ -125,16 +49,6 @@ def _is_installed_package(module_obj: ModuleType, package_name_key: str) -> bool
     rather than a local module, especially when names might collide.
     `package_name_key` is the key from TARGET_PACKAGES (e.g., 'agents', 'google.adk').
     """
-    # Special case for stdlib modules (marked with package_name="python" in UTILITY_INSTRUMENTORS)
-    if (
-        package_name_key in UTILITY_INSTRUMENTORS
-        and UTILITY_INSTRUMENTORS[package_name_key].get("package_name") == "python"
-    ):
-        logger.debug(
-            f"_is_installed_package: Module '{package_name_key}' is a Python standard library module. Considering it an installed package."
-        )
-        return True
-
     if not hasattr(module_obj, "__file__") or not module_obj.__file__:
         logger.debug(
             f"_is_installed_package: Module '{package_name_key}' has no __file__, assuming it might be an SDK namespace package. Returning True."
@@ -227,7 +141,7 @@ def _uninstrument_providers():
 def _should_instrument_package(package_name: str) -> bool:
     """
     Determine if a package should be instrumented based on current state.
-    Handles special cases for agentic libraries, providers, and utility instrumentors.
+    Handles special cases for agentic libraries and providers.
     """
     global _has_agentic_library
 
@@ -236,12 +150,6 @@ def _should_instrument_package(package_name: str) -> bool:
         logger.debug(f"_should_instrument_package: '{package_name}' already instrumented by AgentOps. Skipping.")
         return False
 
-    # Utility instrumentors should always be instrumented regardless of agentic library state
-    if package_name in UTILITY_INSTRUMENTORS:
-        logger.debug(f"_should_instrument_package: '{package_name}' is a utility instrumentor. Always allowing.")
-        return True
-
-    # Only apply agentic/provider logic if it's NOT a utility instrumentor
     is_target_agentic = package_name in AGENTIC_LIBRARIES
     is_target_provider = package_name in PROVIDERS
 
@@ -290,18 +198,14 @@ def _perform_instrumentation(package_name: str):
         return
 
     # Get the appropriate configuration for the package
-    # Ensure package_name is a key in either PROVIDERS, AGENTIC_LIBRARIES, or UTILITY_INSTRUMENTORS
-    if (
-        package_name not in PROVIDERS
-        and package_name not in AGENTIC_LIBRARIES
-        and package_name not in UTILITY_INSTRUMENTORS
-    ):
+    # Ensure package_name is a key in either PROVIDERS or AGENTIC_LIBRARIES
+    if package_name not in PROVIDERS and package_name not in AGENTIC_LIBRARIES:
         logger.debug(
-            f"_perform_instrumentation: Package '{package_name}' not found in PROVIDERS, AGENTIC_LIBRARIES, or UTILITY_INSTRUMENTORS. Skipping."
+            f"_perform_instrumentation: Package '{package_name}' not found in PROVIDERS or AGENTIC_LIBRARIES. Skipping."
         )
         return
 
-    config = PROVIDERS.get(package_name) or AGENTIC_LIBRARIES.get(package_name) or UTILITY_INSTRUMENTORS[package_name]
+    config = PROVIDERS.get(package_name) or AGENTIC_LIBRARIES[package_name]
     loader = InstrumentorLoader(**config)
 
     # instrument_one already checks loader.should_activate
@@ -423,6 +327,69 @@ def _import_monitor(name: str, globals_dict=None, locals_dict=None, fromlist=(),
     return module
 
 
+# Define the structure for instrumentor configurations
+class InstrumentorConfig(TypedDict):
+    module_name: str
+    class_name: str
+    min_version: str
+    package_name: NotRequired[str]  # Optional: actual pip package name if different from module
+
+
+# Configuration for supported LLM providers
+PROVIDERS: dict[str, InstrumentorConfig] = {
+    "openai": {
+        "module_name": "agentops.instrumentation.openai",
+        "class_name": "OpenAIInstrumentor",
+        "min_version": "1.0.0",
+        "package_name": "openai",  # Actual pip package name
+    },
+    "anthropic": {
+        "module_name": "agentops.instrumentation.anthropic",
+        "class_name": "AnthropicInstrumentor",
+        "min_version": "0.32.0",
+        "package_name": "anthropic",  # Actual pip package name
+    },
+    "ibm_watsonx_ai": {
+        "module_name": "agentops.instrumentation.ibm_watsonx_ai",
+        "class_name": "IBMWatsonXInstrumentor",
+        "min_version": "0.1.0",
+        "package_name": "ibm-watsonx-ai",  # Actual pip package name
+    },
+    "google.genai": {
+        "module_name": "agentops.instrumentation.google_genai",
+        "class_name": "GoogleGenAIInstrumentor",
+        "min_version": "0.1.0",
+        "package_name": "google-genai",  # Actual pip package name
+    },
+}
+
+# Configuration for supported agentic libraries
+AGENTIC_LIBRARIES: dict[str, InstrumentorConfig] = {
+    "crewai": {
+        "module_name": "agentops.instrumentation.crewai",
+        "class_name": "CrewAIInstrumentor",
+        "min_version": "0.56.0",
+        "package_name": "crewai",  # Actual pip package name
+    },
+    "autogen": {"module_name": "agentops.instrumentation.ag2", "class_name": "AG2Instrumentor", "min_version": "0.1.0"},
+    "agents": {
+        "module_name": "agentops.instrumentation.openai_agents",
+        "class_name": "OpenAIAgentsInstrumentor",
+        "min_version": "0.0.1",
+        "package_name": "openai-agents",
+    },
+    "google.adk": {
+        "module_name": "agentops.instrumentation.google_adk",
+        "class_name": "GoogleADKInstrumentor",
+        "min_version": "0.1.0",
+        "package_name": "google-adk",  # Actual pip package name
+    },
+}
+
+# Combine all target packages for monitoring
+TARGET_PACKAGES = set(PROVIDERS.keys()) | set(AGENTIC_LIBRARIES.keys())
+
+
 @dataclass
 class InstrumentorLoader:
     """
@@ -444,13 +411,6 @@ class InstrumentorLoader:
     def should_activate(self) -> bool:
         """Check if the package is available and meets version requirements."""
         try:
-            # Special case for stdlib modules (like concurrent.futures)
-            if self.package_name == "python":
-                import sys
-
-                python_version = f"{sys.version_info.major}.{sys.version_info.minor}.{sys.version_info.micro}"
-                return Version(python_version) >= parse(self.min_version)
-
             # Use explicit package_name if provided, otherwise derive from module_name
             if self.package_name:
                 provider_name = self.package_name
