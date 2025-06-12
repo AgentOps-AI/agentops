@@ -1,37 +1,27 @@
 ---
 title: 'Agno'
-description: 'Comprehensive Agno Tutorial with AgentOps'
+description: 'Agno Framework Comprehensive Tutorial with AgentOps'
 ---
 {/*  SOURCE_FILE: examples/agno/agno_comprehensive_tutorial.ipynb  */}
 
 _View Notebook on <a href={'https://github.com/AgentOps-AI/agentops/blob/main/examples/agno/agno_comprehensive_tutorial.ipynb'} target={'_blank'}>Github</a>_
 
-# Comprehensive Agno Tutorial with AgentOps
+# Agno Framework Comprehensive Tutorial with AgentOps
 
-This tutorial demonstrates key Agno features with AgentOps instrumentation:
+This tutorial demonstrates the powerful capabilities of the Agno framework for building AI agents and teams. Agno provides a flexible and intuitive way to create intelligent agents that can collaborate, use tools, and perform complex tasks.
 
-1. **Basic Agents and Teams** - Creating individual agents and coordinating them
-2. **Tool Integration and RAG** - Integrating tools with knowledge bases  
-3. **Workflows with Caching** - Building workflows that cache results
-4. **Collaborative Research Teams** - Multi-agent research coordination
-5. **Async Operations** - Concurrent agent operations
+## What You'll Learn
 
-Each section shows different Agno capabilities with comprehensive AgentOps tracking.
+1. **Basic Agents and Teams** - Creating individual agents and coordinating them in teams
+2. **Tool Integration with RAG** - Integrating tools and knowledge bases for enhanced capabilities
+3. **Workflows with Caching** - Building efficient workflows with state management
+4. **Collaborative Research Teams** - Creating specialized agents that work together
+5. **Async Operations** - Running agents asynchronously for better performance
 
+Throughout this tutorial, AgentOps will track all agent activities, providing detailed insights into your AI system's behavior.
+## Getting Started
 
-
-## Installation
-<CodeGroup>
-  ```bash pip
-  pip install agentops agno cohere openai python-dotenv
-  ```
-  ```bash poetry
-  poetry add agentops agno cohere openai python-dotenv
-  ```
-  ```bash uv
-  uv add agentops agno cohere openai python-dotenv
-  ```
-</CodeGroup>
+First, let's import the necessary libraries and set up our environment. We'll need Agno for building agents and AgentOps for monitoring and tracking.
 
 
 ```python
@@ -40,36 +30,48 @@ import asyncio
 from typing import Iterator
 from textwrap import dedent
 from dotenv import load_dotenv
+```
 
+
+```python
 # Load environment variables
 load_dotenv()
+```
+## Environment Setup
 
-# Import agno components
-from agno.agent import Agent, RunResponse
-from agno.team import Team
-from agno.models.openai import OpenAIChat
-from agno.workflow import Workflow
-from agno.tools.duckduckgo import DuckDuckGoTools
-from agno.tools.hackernews import HackerNewsTools
-from agno.tools.reasoning import ReasoningTools
-from agno.tools.arxiv import ArxivTools
-from agno.tools.googlesearch import GoogleSearchTools
-from agno.knowledge.url import UrlKnowledge
-from agno.utils.pprint import pprint_run_response
-from agno.utils.log import logger
-from agno.vectordb.lancedb import LanceDb
-from agno.vectordb.search import SearchType
-from agno.embedder.cohere import CohereEmbedder
+Now we'll load environment variables and import the Agno framework components. The order of imports is important - we import agno first to ensure proper instrumentation, then import specific classes we'll use.
+
+
+```python
+# Now import agno to trigger instrumentation, then import specific classes
+from agno.agent import Agent, RunResponse 
+from agno.team import Team  
+from agno.models.openai import OpenAIChat  
+from agno.workflow import Workflow  
+from agno.tools.duckduckgo import DuckDuckGoTools 
+from agno.tools.hackernews import HackerNewsTools 
+from agno.tools.reasoning import ReasoningTools  
+from agno.tools.arxiv import ArxivTools  
+from agno.tools.googlesearch import GoogleSearchTools  
+from agno.knowledge.url import UrlKnowledge  
+from agno.utils.pprint import pprint_run_response 
+from agno.utils.log import logger  
+from agno.vectordb.lancedb import LanceDb  
+from agno.vectordb.search import SearchType  
+from agno.embedder.cohere import CohereEmbedder 
 from agno.reranker.cohere import CohereReranker
+import agentops  
+  
+```
+## Initialize AgentOps
 
-import agentops
+Let's initialize AgentOps to start tracking our agent activities. Make sure you have your AGENTOPS_API_KEY set in your environment variables.
 
-# Initialize AgentOps
+
+```python
 agentops.init(api_key=os.getenv("AGENTOPS_API_KEY"))
-
-# Configuration
+# Sample configuration
 MODEL_ID = "gpt-4o-mini"
-
 ```
 
 
@@ -86,14 +88,15 @@ def check_environment():
 
     print("Environment variables checked successfully")
     return True
-
-# Check environment
-check_environment()
-
 ```
 ## 1. Basic Agents and Teams
 
-Let's start with creating individual agents and organizing them into teams.
+Let's start with the fundamentals - creating individual agents and organizing them into teams. In Agno, agents are AI-powered entities with specific roles, and teams coordinate multiple agents to accomplish complex tasks.
+
+### Key Concepts:
+- **Agent**: An individual AI entity with a specific role and model
+- **Team**: A group of agents that can work together in different modes
+- **Coordination Mode**: How agents interact (e.g., 'coordinate' mode)
 
 
 ```python
@@ -120,14 +123,17 @@ def demonstrate_basic_agents():
 
     except Exception as e:
         print(f"Basic agents error: {e}")
-
-# Run the demonstration
-demonstrate_basic_agents()
-
 ```
-## 2. Tool Integration with RAG
+## 2. Tool Integration with RAG (Retrieval-Augmented Generation)
 
-This section demonstrates how to integrate tools with knowledge bases for Retrieval-Augmented Generation (RAG).
+One of Agno's most powerful features is the ability to integrate tools and knowledge bases. This example shows how to create an agent with:
+- **Knowledge Base**: Using URLs as sources of information
+- **Vector Database**: LanceDB for efficient similarity search
+- **Embeddings**: Cohere embeddings for semantic understanding
+- **Reranking**: Improving search results with Cohere reranker
+- **Reasoning Tools**: Adding logical reasoning capabilities
+
+This creates an agent that can search through documentation and provide informed answers with sources.
 
 
 ```python
@@ -146,9 +152,9 @@ def demonstrate_tool_integration():
                 uri="tmp/lancedb",
                 table_name="agno_docs",
                 search_type=SearchType.hybrid,
-                embedder=CohereEmbedder(id="embed-v4.0"),
-                reranker=CohereReranker(model="rerank-v3.5"),
-            ),
+                embedder=CohereEmbedder(id="embed-v4.0"),  # noqa: E821
+                reranker=CohereReranker(model="rerank-v3.5"),  # noqa: E821
+            ),  # noqa: E821
         )
 
         # Create agent with knowledge and reasoning tools
@@ -175,14 +181,16 @@ def demonstrate_tool_integration():
 
     except Exception as e:
         print(f"Tool integration error: {e}")
-
-# Run the demonstration
-demonstrate_tool_integration()
-
 ```
 ## 3. Workflows with Caching
 
-This section demonstrates how to create workflows that cache previous outputs for improved performance.
+Workflows in Agno allow you to create reusable, stateful processes. This example demonstrates a caching workflow that:
+- Stores previous responses in session state
+- Checks cache before running expensive operations
+- Yields responses in a streaming fashion
+- Improves performance by avoiding redundant computations
+
+This is particularly useful for applications where users might ask similar questions repeatedly.
 
 
 ```python
@@ -210,8 +218,10 @@ class CacheWorkflow(Workflow):
 
         # Cache the output after response is yielded
         self.session_state[message] = self.agent.run_response.content
+```
 
 
+```python
 def demonstrate_workflows():
     """Demonstrate workflow capabilities with caching."""
     print("\n" + "=" * 60)
@@ -235,14 +245,24 @@ def demonstrate_workflows():
 
     except Exception as e:
         print(f"Workflow error: {e}")
-
-# Run the demonstration
-demonstrate_workflows()
-
 ```
 ## 4. Collaborative Research Teams
 
-This section demonstrates how to create teams of specialized research agents that collaborate on complex research tasks.
+This is where Agno truly shines - creating teams of specialized agents that collaborate to solve complex problems. In this example, we create:
+
+### Specialized Agents:
+- **Reddit Researcher**: Searches Reddit for community discussions
+- **HackerNews Researcher**: Finds technical discussions on HackerNews
+- **Academic Paper Researcher**: Searches scholarly articles and papers
+- **Twitter Researcher**: Tracks real-time discussions and trends
+
+### Team Configuration:
+- **Collaborate Mode**: Agents work together and discuss findings
+- **Discussion Master**: The team lead that manages the conversation
+- **Success Criteria**: Defines when the team has reached consensus
+- **Agentic Context**: Agents maintain context throughout the discussion
+
+This demonstrates how multiple AI agents can work together like a human research team!
 
 
 ```python
@@ -351,14 +371,16 @@ def demonstrate_research_team():
 
     except Exception as e:
         print(f"Research team error: {e}")
-
-# Run the demonstration
-demonstrate_research_team()
-
 ```
 ## 5. Async Operations
 
-This section demonstrates how to run multiple agent operations concurrently using async/await patterns.
+Modern applications often need to run multiple AI tasks concurrently. Agno supports async operations out of the box, allowing you to:
+- Run multiple agent tasks in parallel
+- Improve response times for complex queries
+- Handle multiple user requests simultaneously
+- Build scalable AI applications
+
+This example shows how to run three different agent tasks concurrently using Python's asyncio.
 
 
 ```python
@@ -395,20 +417,31 @@ async def demonstrate_async_operations():
 
     except Exception as e:
         print(f"Async operations error: {e}")
-
-# Run the async demonstration
-await demonstrate_async_operations()
-
 ```
-## Complete Tutorial
+## Running the Complete Tutorial
 
-Run all demonstrations in sequence to see the full capabilities of Agno with AgentOps tracking.
+The main function orchestrates all the demonstrations, showing how different Agno features work together. Each section is wrapped in error handling to ensure the tutorial continues even if one section encounters issues.
+
+### What Happens When You Run This:
+1. Environment variables are checked
+2. AgentOps begins tracking all agent activities
+3. Each demonstration runs in sequence
+4. Results are displayed in the console
+5. All activities are logged to your AgentOps dashboard
+
+### Viewing Results in AgentOps:
+After running this tutorial, visit your AgentOps dashboard to see:
+- Agent conversation traces
+- Tool usage analytics
+- Performance metrics
+- Error tracking
+- Team collaboration patterns
 
 
 ```python
 async def main():
     """Main function to run all Agno demonstrations."""
-    print("Starting Comprehensive Agno Tutorial with AgentOps")
+    print("Starting Comprehensive Agno Example with AgentOps")
     print("=" * 80)
 
     # Check environment
@@ -447,11 +480,36 @@ async def main():
 
     print("\nAll Agno demonstrations completed!")
     print("Check your AgentOps dashboard for detailed traces and metrics.")
-
-# Uncomment the line below to run the complete tutorial
-# await main()
-
 ```
+
+
+```python
+if __name__ == "__main__":
+    asyncio.run(main())
+```
+## Summary and Next Steps
+
+Congratulations! You've explored the key features of the Agno framework:
+
+### What We Covered:
+- ✅ Creating and coordinating basic agents and teams
+- ✅ Integrating tools and knowledge bases with RAG
+- ✅ Building efficient workflows with caching
+- ✅ Creating collaborative research teams with specialized agents
+- ✅ Running agents asynchronously for better performance
+
+### Next Steps:
+1. **Experiment with Different Models**: Try using different LLMs (GPT-4, Claude, etc.)
+2. **Add More Tools**: Explore Agno's extensive tool library
+3. **Build Custom Workflows**: Create workflows for your specific use cases
+4. **Scale Your Teams**: Add more agents with specialized roles
+5. **Monitor with AgentOps**: Use the dashboard to optimize your agents
+
+### Resources:
+- [Agno Documentation](https://docs.agno.com)
+- [AgentOps Dashboard](https://app.agentops.ai)
+
+Happy building with Agno! 🚀
 
 
 <script type="module" src="/scripts/github_stars.js"></script>
