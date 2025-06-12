@@ -1,0 +1,79 @@
+---
+title: 'LlamaIndex'
+description: 'AgentOps works seamlessly with LlamaIndex, a framework for building context-augmented generative AI applications with LLMs.'
+---
+
+[LlamaIndex](https://www.llamaindex.ai/) is a framework for building context-augmented generative AI applications with LLMs. AgentOps provides comprehensive observability into your LlamaIndex applications through automatic instrumentation, allowing you to monitor LLM calls, track performance, and analyze your application's behavior.
+
+## Installation
+
+Install AgentOps and the LlamaIndex AgentOps instrumentation package:
+
+<CodeGroup>
+  ```bash pip
+  pip install agentops llama-index-instrumentation-agentops
+  ```
+  ```bash poetry
+  poetry add agentops llama-index-instrumentation-agentops
+  ```
+  ```bash uv
+  uv add agentops llama-index-instrumentation-agentops
+  ```
+</CodeGroup>
+
+## Setting Up API Keys
+
+You'll need an AgentOps API key from your [AgentOps Dashboard](https://app.agentops.ai/):
+
+<CodeGroup>
+  ```bash Export to CLI
+  export AGENTOPS_API_KEY="your_agentops_api_key_here"
+  ```
+  ```txt Set in .env file
+  AGENTOPS_API_KEY="your_agentops_api_key_here"
+  ```
+</CodeGroup>
+
+## Usage
+
+Simply set the global handler to "agentops" at the beginning of your LlamaIndex application. AgentOps will automatically instrument LlamaIndex to track your LLM interactions and application performance.
+
+```python
+from llama_index.core import set_global_handler
+from llama_index.core import VectorStoreIndex, SimpleDirectoryReader
+
+# Set the global handler to AgentOps
+# NOTE: Feel free to set your AgentOps environment variables (e.g., 'AGENTOPS_API_KEY')
+# as outlined in the AgentOps documentation, or pass the equivalent keyword arguments
+# anticipated by AgentOps' AOClient as **eval_params in set_global_handler.
+set_global_handler("agentops")
+
+# Your LlamaIndex application code here
+documents = SimpleDirectoryReader("data").load_data()
+index = VectorStoreIndex.from_documents(documents)
+
+# Create a query engine
+query_engine = index.as_query_engine()
+
+# Query your data - AgentOps will automatically track this
+response = query_engine.query("What is the main topic of these documents?")
+print(response)
+```
+
+## What Gets Tracked
+
+When you use AgentOps with LlamaIndex, the following operations are automatically tracked:
+
+- **LLM Calls**: All interactions with language models including prompts, completions, and token usage
+- **Embeddings**: Vector embedding generation and retrieval operations
+- **Query Operations**: Search and retrieval operations on your indexes
+- **Performance Metrics**: Response times, token costs, and success/failure rates
+
+## Additional Resources
+
+For more detailed information about LlamaIndex's observability features and AgentOps integration, check out the [LlamaIndex documentation](https://docs.llamaindex.ai/en/stable/module_guides/observability/#agentops).
+
+<script type="module" src="/scripts/github_stars.js"></script>
+<script type="module" src="/scripts/scroll-img-fadein-animation.js"></script>
+<script type="module" src="/scripts/button_heartbeat_animation.js"></script>
+<script type="css" src="/styles/styles.css"></script>
