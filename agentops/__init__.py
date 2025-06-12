@@ -15,11 +15,12 @@ from agentops.legacy import (
 from typing import List, Optional, Union, Dict, Any
 from agentops.client import Client
 from agentops.sdk.core import TraceContext, tracer
-from agentops.sdk.decorators import trace, session, agent, task, workflow, operation, tool
+from agentops.sdk.decorators import trace, session, agent, task, workflow, operation, tool, guardrail
 from agentops.enums import TraceState, SUCCESS, ERROR, UNSET
 from opentelemetry.trace.status import StatusCode
 
 from agentops.logging.config import logger
+from agentops.helpers.deprecation import deprecated, warn_deprecated_param
 import threading
 
 # Thread-safe client management
@@ -40,6 +41,7 @@ def get_client() -> Client:
     return _client
 
 
+@deprecated("Automatically tracked in v4.")
 def record(event):
     """
     Legacy function to record an event. This is kept for backward compatibility.
@@ -107,6 +109,10 @@ def init(
     """
     global _client
 
+    # Check for deprecated parameters and emit warnings
+    if tags is not None:
+        warn_deprecated_param("tags", "default_tags")
+
     # Merge tags and default_tags if both are provided
     merged_tags = None
     if tags and default_tags:
@@ -115,6 +121,13 @@ def init(
         merged_tags = tags
     elif default_tags:
         merged_tags = default_tags
+
+    # Check if in a Jupyter Notebook (manual start/end_trace())
+    try:
+        get_ipython().__class__.__name__ == "ZMQInteractiveShell"  # type: ignore
+        auto_start_session = False
+    except NameError:
+        pass
 
     # Prepare initialization arguments
     init_kwargs = {
@@ -234,7 +247,7 @@ def end_trace(
 
     Args:
         trace_context: The TraceContext object returned by start_trace. If None, ends all active traces.
-        end_state: The final state of the trace (e.g., "Success", "Failure", "Error").
+        end_state: The final state of the trace (e.g., "Success", "Indeterminate", "Error").
     """
     if not tracer.initialized:
         logger.warning("AgentOps SDK not initialized. Cannot end trace.")
@@ -265,6 +278,7 @@ __all__ = [
     "task",
     "workflow",
     "operation",
+    "guardrail",
     "tracer",
     "tool",
     # Trace state enums

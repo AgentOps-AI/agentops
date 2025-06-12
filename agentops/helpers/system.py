@@ -61,20 +61,6 @@ def get_sdk_details():
         return {}
 
 
-def get_python_details():
-    try:
-        return {"Python Version": platform.python_version()}
-    except:
-        return {}
-
-
-def get_agentops_details():
-    try:
-        return {"AgentOps SDK Version": get_agentops_version()}
-    except:
-        return {}
-
-
 def get_sys_packages():
     sys_packages = {}
     for module in sys.modules:

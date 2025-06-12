@@ -11,7 +11,7 @@ from agentops.sdk.core import TraceContext, tracer
 from agentops.semconv.span_kinds import SpanKind
 from agentops.semconv import SpanAttributes, CoreAttributes
 
-from .utility import (
+from agentops.sdk.decorators.utility import (
     _create_as_current_span,
     _process_async_generator,
     _process_sync_generator,
@@ -33,9 +33,10 @@ def create_entity_decorator(entity_kind: str) -> Callable[..., Any]:
         version: Optional[Any] = None,
         tags: Optional[Union[list, dict]] = None,
         cost=None,
+        spec=None,
     ) -> Callable[..., Any]:
         if wrapped is None:
-            return functools.partial(decorator, name=name, version=version, tags=tags, cost=cost)
+            return functools.partial(decorator, name=name, version=version, tags=tags, cost=cost, spec=spec)
 
         if inspect.isclass(wrapped):
             # Class decoration wraps __init__ and aenter/aexit for context management.
@@ -118,7 +119,7 @@ def create_entity_decorator(entity_kind: str) -> Callable[..., Any]:
                             return result
                         except Exception:
                             if trace_context:
-                                tracer.end_trace(trace_context, "Failure")
+                                tracer.end_trace(trace_context, "Indeterminate")
                             raise
                         finally:
                             if trace_context and trace_context.span.is_recording():
@@ -150,7 +151,7 @@ def create_entity_decorator(entity_kind: str) -> Callable[..., Any]:
                         return result
                     except Exception:
                         if trace_context:
-                            tracer.end_trace(trace_context, "Failure")
+                            tracer.end_trace(trace_context, "Indeterminate")
                         raise
                     finally:
                         if trace_context and trace_context.span.is_recording():
@@ -168,10 +169,13 @@ def create_entity_decorator(entity_kind: str) -> Callable[..., Any]:
                     attributes={CoreAttributes.TAGS: tags} if tags else None,
                 )
                 try:
-                    _record_entity_input(span, args, kwargs)
+                    _record_entity_input(span, args, kwargs, entity_kind=entity_kind)
                     # Set cost attribute if tool
                     if entity_kind == "tool" and cost is not None:
                         span.set_attribute(SpanAttributes.LLM_USAGE_TOOL_COST, cost)
+                    # Set spec attribute if guardrail
+                    if entity_kind == "guardrail" and (spec == "input" or spec == "output"):
+                        span.set_attribute(SpanAttributes.AGENTOPS_DECORATOR_SPEC.format(entity_kind=entity_kind), spec)
                 except Exception as e:
                     logger.warning(f"Input recording failed for '{operation_name}': {e}")
                 result = wrapped_func(*args, **kwargs)
@@ -184,10 +188,13 @@ def create_entity_decorator(entity_kind: str) -> Callable[..., Any]:
                     attributes={CoreAttributes.TAGS: tags} if tags else None,
                 )
                 try:
-                    _record_entity_input(span, args, kwargs)
+                    _record_entity_input(span, args, kwargs, entity_kind=entity_kind)
                     # Set cost attribute if tool
                     if entity_kind == "tool" and cost is not None:
                         span.set_attribute(SpanAttributes.LLM_USAGE_TOOL_COST, cost)
+                    # Set spec attribute if guardrail
+                    if entity_kind == "guardrail" and (spec == "input" or spec == "output"):
+                        span.set_attribute(SpanAttributes.AGENTOPS_DECORATOR_SPEC.format(entity_kind=entity_kind), spec)
                 except Exception as e:
                     logger.warning(f"Input recording failed for '{operation_name}': {e}")
                 result = wrapped_func(*args, **kwargs)
@@ -202,16 +209,21 @@ def create_entity_decorator(entity_kind: str) -> Callable[..., Any]:
                         attributes={CoreAttributes.TAGS: tags} if tags else None,
                     ) as span:
                         try:
-                            _record_entity_input(span, args, kwargs)
+                            _record_entity_input(span, args, kwargs, entity_kind=entity_kind)
                             # Set cost attribute if tool
                             if entity_kind == "tool" and cost is not None:
                                 span.set_attribute(SpanAttributes.LLM_USAGE_TOOL_COST, cost)
+                            # Set spec attribute if guardrail
+                            if entity_kind == "guardrail" and (spec == "input" or spec == "output"):
+                                span.set_attribute(
+                                    SpanAttributes.AGENTOPS_DECORATOR_SPEC.format(entity_kind=entity_kind), spec
+                                )
                         except Exception as e:
                             logger.warning(f"Input recording failed for '{operation_name}': {e}")
                         try:
                             result = await wrapped_func(*args, **kwargs)
                             try:
-                                _record_entity_output(span, result)
+                                _record_entity_output(span, result, entity_kind=entity_kind)
                             except Exception as e:
                                 logger.warning(f"Output recording failed for '{operation_name}': {e}")
                             return result
@@ -229,16 +241,21 @@ def create_entity_decorator(entity_kind: str) -> Callable[..., Any]:
                     attributes={CoreAttributes.TAGS: tags} if tags else None,
                 ) as span:
                     try:
-                        _record_entity_input(span, args, kwargs)
+                        _record_entity_input(span, args, kwargs, entity_kind=entity_kind)
                         # Set cost attribute if tool
                         if entity_kind == "tool" and cost is not None:
                             span.set_attribute(SpanAttributes.LLM_USAGE_TOOL_COST, cost)
+                        # Set spec attribute if guardrail
+                        if entity_kind == "guardrail" and (spec == "input" or spec == "output"):
+                            span.set_attribute(
+                                SpanAttributes.AGENTOPS_DECORATOR_SPEC.format(entity_kind=entity_kind), spec
+                            )
                     except Exception as e:
                         logger.warning(f"Input recording failed for '{operation_name}': {e}")
                     try:
                         result = wrapped_func(*args, **kwargs)
                         try:
-                            _record_entity_output(span, result)
+                            _record_entity_output(span, result, entity_kind=entity_kind)
                         except Exception as e:
                             logger.warning(f"Output recording failed for '{operation_name}': {e}")
                         return result

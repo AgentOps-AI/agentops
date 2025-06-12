@@ -14,7 +14,7 @@ from opentelemetry.sdk.resources import SERVICE_NAME, TELEMETRY_SDK_NAME, DEPLOY
 from agentops.instrumentation.crewai.version import __version__
 from agentops.semconv import SpanAttributes, AgentOpsSpanKindValues, Meters, ToolAttributes, MessageAttributes
 from agentops.semconv.core import CoreAttributes
-from .crewai_span_attributes import CrewAISpanAttributes, set_span_attribute
+from agentops.instrumentation.crewai.crewai_span_attributes import CrewAISpanAttributes, set_span_attribute
 from agentops import get_client
 
 # Initialize logger
