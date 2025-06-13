@@ -132,3 +132,4 @@ try:
 except Exception:
     # Log any errors that occur during execution
     agentops.end_trace(end_state="error")
+
