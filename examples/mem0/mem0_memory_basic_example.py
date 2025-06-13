@@ -20,9 +20,8 @@ This example runs both approaches sequentially to showcase the similarities and 
 """
 
 import os
-import asyncio
 from dotenv import load_dotenv
-from mem0 import Memory,MemoryClient
+from mem0 import Memory, MemoryClient
 import agentops
 
 # Load environment variables from .env file
@@ -31,7 +30,7 @@ load_dotenv()
 # Set up API keys for AgentOps tracing
 os.environ["AGENTOPS_API_KEY"] = os.getenv("AGENTOPS_API_KEY")
 os.environ["OPENAI_API_KEY"] = os.getenv("OPENAI_API_KEY")
-api_key= os.getenv("MEM0_API_KEY")
+api_key = os.getenv("MEM0_API_KEY")
 
 # Configuration for Memory with OpenAI as the LLM provider
 # This configuration specifies which model to use and its parameters
@@ -43,7 +42,7 @@ openai_config = {
             "temperature": 0.1,  # Low temperature for consistent outputs
             "max_tokens": 2000,
             "api_key": os.getenv("OPENAI_API_KEY"),
-        }
+        },
     }
 }
 
@@ -64,34 +63,29 @@ try:
 
     # This demonstrates storing individual facts with metadata
     result = m_sync.add(
-        [{"role": "user", "content": "I like to drink coffee in the morning and go for a walk."}], 
-        user_id="alice_sync", 
-        metadata={"category": "preferences", "type": "sync"}
+        [{"role": "user", "content": "I like to drink coffee in the morning and go for a walk."}],
+        user_id="alice_sync",
+        metadata={"category": "preferences", "type": "sync"},
     )
 
     # This shows how to store entire conversations that Mem0 will analyze for memorable information
-    result = m_sync.add(
-        test_messages,
-        user_id="alice_sync",
-        metadata={"category": "conversation", "type": "sync"}
-    )
+    result = m_sync.add(test_messages, user_id="alice_sync", metadata={"category": "conversation", "type": "sync"})
 
     # Demonstrates how to query stored memories with questions
-    search_result = m_sync.search("What does the user like to drink?",user_id="alice_sync")
+    search_result = m_sync.search("What does the user like to drink?", user_id="alice_sync")
 
     # Shows how to get a complete view of what Mem0 remembers about a user
     all_memories = m_sync.get_all(user_id="alice_sync")
 
-    
     # Display all memories for inspection
-    if all_memories.get('results'):
-        for i, memory in enumerate(all_memories['results'], 1):
+    if all_memories.get("results"):
+        for i, memory in enumerate(all_memories["results"], 1):
             print(f"{i}. {memory.get('memory', 'N/A')}")
-    
+
     # Successfully completed all operations
     agentops.end_trace(end_state="success")
 
-except Exception as e:
+except Exception:
     # Log any errors that occur during execution
     agentops.end_trace(end_state="error")
 
@@ -105,9 +99,9 @@ try:
 
     # This demonstrates storing individual facts with metadata
     result = m_sync.add(
-        [{"role": "user", "content": "I like to drink coffee in the morning and go for a walk."}], 
-        user_id="alice_sync", 
-        metadata={"category": "preferences", "type": "sync"}
+        [{"role": "user", "content": "I like to drink coffee in the morning and go for a walk."}],
+        user_id="alice_sync",
+        metadata={"category": "preferences", "type": "sync"},
     )
 
     # This shows how to store entire conversations that Mem0 will analyze for memorable information
@@ -117,26 +111,24 @@ try:
     )
     filters = {
         "AND": [
-            {
-                "user_id": user_id
-            },
-        ]    
+            {"user_id": user_id},
+        ]
     }
     # Demonstrates how to query stored memories with questions
-    search_result = m_sync.search(version="v2",query="What does the user like to drink?",filters=filters)
+    search_result = m_sync.search(version="v2", query="What does the user like to drink?", filters=filters)
     print(f"Cloud search results: {search_result}")
 
     # Shows how to get all memories stored in Mem0's cloud for a user
-    all_memories = m_sync.get_all(version="v2",filters=filters,page_size=1)
+    all_memories = m_sync.get_all(version="v2", filters=filters, page_size=1)
     print(f"Total cloud memories: {len(all_memories.get('results', []))}")
-    
+
     # Display all memories for inspection
-    if all_memories.get('results'):
-        for i, memory in enumerate(all_memories['results'], 1):
+    if all_memories.get("results"):
+        for i, memory in enumerate(all_memories["results"], 1):
             print(f"{i}. {memory.get('memory', 'N/A')}")
-    
+
     # Successfully completed all operations
     agentops.end_trace(end_state="success")
-except Exception as e:
+except Exception:
     # Log any errors that occur during execution
     agentops.end_trace(end_state="error")
