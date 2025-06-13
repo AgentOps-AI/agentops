@@ -16,7 +16,6 @@ By using async operations, you can perform multiple memory operations simultaneo
 """
 import os
 import asyncio
-import logging
 from dotenv import load_dotenv
 
 # Load environment variables first
@@ -30,48 +29,47 @@ os.environ["AGENTOPS_API_KEY"] = os.getenv("AGENTOPS_API_KEY")
 os.environ["OPENAI_API_KEY"] = os.getenv("OPENAI_API_KEY")
 
 # Now import mem0 - it will be instrumented by agentops
-from mem0 import Memory, AsyncMemory
+from mem0 import Memory, AsyncMemory  # noqa  E402
 
 # Import agentops BEFORE mem0 to ensure proper instrumentation
-import agentops
+import agentops  # noqa  E402
 
 
 def demonstrate_sync_memory(local_config, sample_messages, sample_preferences, user_id):
     """
     Demonstrate synchronous Memory class operations.
-    
+
     This function performs sequential memory operations including:
     - Adding conversation messages with metadata
     - Storing individual user preferences
     - Searching memories using natural language queries
     - Retrieving all memories for a user
     - Cleaning up memories after demonstration
-    
+
     Args:
         local_config: Configuration dict for Memory initialization
         sample_messages: List of conversation messages to store
         sample_preferences: List of user preferences to store
         user_id: Unique identifier for the user
-    
+
     Performance note: Sequential operations take longer as each operation
     must complete before the next one begins.
     """
 
     agentops.start_trace("mem0_memory_example", tags=["mem0_memory_example"])
     try:
-        
         # Initialize sync Memory with local configuration
-        memory =  Memory.from_config(local_config)
+        memory = Memory.from_config(local_config)
 
         # Add conversation messages with metadata for categorization
-        result =  memory.add(
+        result = memory.add(
             sample_messages, user_id=user_id, metadata={"category": "movie_preferences", "session": "demo"}
         )
-    
+
         # Add individual preferences sequentially
         for i, preference in enumerate(sample_preferences):
             result = memory.add(preference, user_id=user_id, metadata={"type": "preference", "index": i})
-       
+
         # 2. SEARCH operations - demonstrate natural language search capabilities
         search_queries = [
             "What movies does the user like?",
@@ -80,8 +78,8 @@ def demonstrate_sync_memory(local_config, sample_messages, sample_preferences, u
         ]
 
         for query in search_queries:
-            results =  memory.search(query, user_id=user_id)
-        
+            results = memory.search(query, user_id=user_id)
+
             if results and "results" in results:
                 for j, result in enumerate(results["results"][:2]):  # Show top 2
                     print(f"Result {j+1}: {result.get('memory', 'N/A')}")
@@ -89,36 +87,36 @@ def demonstrate_sync_memory(local_config, sample_messages, sample_preferences, u
                 print("No results found")
 
         # 3. GET_ALL operations - retrieve all memories for the user
-        all_memories =  memory.get_all(user_id=user_id)
+        all_memories = memory.get_all(user_id=user_id)
         if all_memories and "results" in all_memories:
             print(f"Total memories: {len(all_memories['results'])}")
 
         # Cleanup - remove all memories for the user
-        delete_all_result =  memory.delete_all(user_id=user_id)
+        delete_all_result = memory.delete_all(user_id=user_id)
         print(f"Delete all result: {delete_all_result}")
 
         agentops.end_trace(end_state="success")
-    except Exception as e:
+    except Exception:
         agentops.end_trace(end_state="error")
 
 
 async def demonstrate_async_memory(local_config, sample_messages, sample_preferences, user_id):
     """
     Demonstrate asynchronous Memory class operations with concurrent execution.
-    
+
     This function performs concurrent memory operations including:
     - Adding conversation messages asynchronously
     - Storing multiple preferences concurrently using asyncio.gather()
     - Performing parallel search operations
     - Retrieving all memories asynchronously
     - Cleaning up memories after demonstration
-    
+
     Args:
         local_config: Configuration dict for AsyncMemory initialization
         sample_messages: List of conversation messages to store
         sample_preferences: List of user preferences to store
         user_id: Unique identifier for the user
-    
+
     Performance benefit: Concurrent operations significantly reduce total execution time
     by running multiple memory operations in parallel.
     """
@@ -133,7 +131,6 @@ async def demonstrate_async_memory(local_config, sample_messages, sample_prefere
         result = await async_memory.add(
             sample_messages, user_id=user_id, metadata={"category": "async_movie_preferences", "session": "async_demo"}
         )
-
 
         # Add preferences concurrently using asyncio.gather()
         async def add_preference(preference, index):
@@ -181,8 +178,9 @@ async def demonstrate_async_memory(local_config, sample_messages, sample_prefere
 
         agentops.end_trace(end_state="success")
 
-    except Exception as e:
+    except Exception:
         agentops.end_trace(end_state="error")
+
 
 # Configuration for local memory (Memory)
 # This configuration specifies the LLM provider and model settings
