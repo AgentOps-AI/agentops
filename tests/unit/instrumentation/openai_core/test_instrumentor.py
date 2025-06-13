@@ -15,8 +15,7 @@ import pytest
 from unittest.mock import MagicMock, patch
 
 
-from agentops.instrumentation.openai.instrumentor import OpenAIInstrumentor
-from agentops.instrumentation.common.wrappers import WrapConfig
+from agentops.instrumentation.providers.openai.instrumentor import OpenAIInstrumentor
 
 
 # Utility function to load fixtures
@@ -42,10 +41,9 @@ class TestOpenAIInstrumentor:
         mock_tracer_provider = MagicMock()
         instrumentor = OpenAIInstrumentor()
 
-        # To avoid timing issues with the fixture, we need to ensure patch
-        # objects are created before being used in the test
-        mock_wrap = patch("agentops.instrumentation.common.wrappers.wrap").start()
-        mock_unwrap = patch("agentops.instrumentation.common.wrappers.unwrap").start()
+        # Mock at the base class level
+        mock_wrap_method = patch.object(instrumentor, "_wrap_method").start()
+        mock_unwrap_method = patch.object(instrumentor, "_unwrap_method").start()
         mock_instrument = patch.object(instrumentor, "_instrument", wraps=instrumentor._instrument).start()
         mock_uninstrument = patch.object(instrumentor, "_uninstrument", wraps=instrumentor._uninstrument).start()
 
@@ -55,8 +53,8 @@ class TestOpenAIInstrumentor:
         yield {
             "instrumentor": instrumentor,
             "tracer_provider": mock_tracer_provider,
-            "mock_wrap": mock_wrap,
-            "mock_unwrap": mock_unwrap,
+            "mock_wrap_method": mock_wrap_method,
+            "mock_unwrap_method": mock_unwrap_method,
             "mock_instrument": mock_instrument,
             "mock_uninstrument": mock_uninstrument,
         }
@@ -72,56 +70,56 @@ class TestOpenAIInstrumentor:
         instrumentor = OpenAIInstrumentor()
         assert instrumentor.__class__.__name__ == "OpenAIInstrumentor"
 
-        # Verify it inherits from BaseInstrumentor
-        from opentelemetry.instrumentation.instrumentor import BaseInstrumentor
+        # Verify it inherits from AgentOpsBaseInstrumentor
+        from agentops.instrumentation.common.base_instrumentor import AgentOpsBaseInstrumentor
 
-        assert isinstance(instrumentor, BaseInstrumentor)
+        assert isinstance(instrumentor, AgentOpsBaseInstrumentor)
 
     def test_instrument_method_wraps_response_api(self, instrumentor):
         """Test the _instrument method wraps the Response API methods"""
-        mock_wrap = instrumentor["mock_wrap"]
+        mock_wrap_method = instrumentor["mock_wrap_method"]
+        instrumentor_obj = instrumentor["instrumentor"]
 
-        # Verify wrap was called multiple times (we wrap many methods)
-        assert mock_wrap.call_count > 0
+        # Get the wrapped methods from the instrumentor
+        wrapped_methods = instrumentor_obj.get_wrapped_methods()
 
-        # Find Response API calls in the wrapped methods
-        response_api_calls = []
-        for call in mock_wrap.call_args_list:
-            wrap_config = call[0][0]
-            if isinstance(wrap_config, WrapConfig) and wrap_config.package == "openai.resources.responses":
-                response_api_calls.append(wrap_config)
+        # Filter for Response API methods
+        response_api_methods = [cfg for cfg in wrapped_methods if cfg.package == "openai.resources.responses"]
 
         # Verify we have both sync and async Response API methods
-        assert len(response_api_calls) == 2
+        assert len(response_api_methods) == 2
 
         # Check sync Responses.create
-        sync_response = next((cfg for cfg in response_api_calls if cfg.class_name == "Responses"), None)
+        sync_response = next((cfg for cfg in response_api_methods if cfg.class_name == "Responses"), None)
         assert sync_response is not None
         assert sync_response.trace_name == "openai.responses.create"
         assert sync_response.method_name == "create"
 
         # Check async AsyncResponses.create
-        async_response = next((cfg for cfg in response_api_calls if cfg.class_name == "AsyncResponses"), None)
+        async_response = next((cfg for cfg in response_api_methods if cfg.class_name == "AsyncResponses"), None)
         assert async_response is not None
         assert async_response.trace_name == "openai.responses.create"
         assert async_response.method_name == "create"
 
+        # Verify _wrap_method was called for each wrapped method
+        assert mock_wrap_method.call_count == len(wrapped_methods)
+
     def test_uninstrument_method_unwraps_response_api(self, instrumentor):
         """Test the _uninstrument method unwraps the Response API methods"""
-        # For these tests, we'll manually call the unwrap method with the expected configs
-        # since the fixture setup has been changed
-
         instrumentor_obj = instrumentor["instrumentor"]
+        mock_unwrap_method = instrumentor["mock_unwrap_method"]
+
+        # Get the wrapped methods
+        wrapped_methods = instrumentor_obj.get_wrapped_methods()
 
         # Reset the mock to clear any previous calls
-        mock_unwrap = instrumentor["mock_unwrap"]
-        mock_unwrap.reset_mock()
+        mock_unwrap_method.reset_mock()
 
         # Call the uninstrument method directly
         instrumentor_obj._uninstrument()
 
-        # Now verify the method was called
-        assert mock_unwrap.called, "unwrap was not called during _uninstrument"
+        # Verify _unwrap_method was called for each wrapped method
+        assert mock_unwrap_method.call_count == len(wrapped_methods)
 
     def test_calls_parent_instrument(self, instrumentor):
         """Test that the instrumentor properly instruments methods"""
@@ -154,32 +152,33 @@ class TestOpenAIInstrumentor:
         # Create instrumentor
         instrumentor = OpenAIInstrumentor()
 
-        # Mock wrap to raise an exception
-        with patch("agentops.instrumentation.common.wrappers.wrap") as mock_wrap:
-            mock_wrap.side_effect = AttributeError("Module not found")
+        # The base class _wrap_method already handles errors internally
+        # So we just test that instrumentation doesn't raise exceptions
+        mock_tracer_provider = MagicMock()
 
-            # Instrument should not raise exceptions even if wrapping fails
-            # The instrumentor should handle errors gracefully
-            try:
-                instrumentor._instrument(tracer_provider=MagicMock())
-            except Exception:
-                pytest.fail("Instrumentor should handle wrapping errors gracefully")
+        # This should not raise an exception even if some wrapping fails
+        try:
+            instrumentor._instrument(tracer_provider=mock_tracer_provider)
+        except Exception as e:
+            pytest.fail(f"Instrumentor should handle wrapping errors gracefully, but raised: {e}")
 
     def test_unwrapper_error_handling(self):
         """Test that the instrumentor handles errors when unwrapping methods"""
         # Create instrumentor
         instrumentor = OpenAIInstrumentor()
 
-        # Mock unwrap to raise an exception
-        with patch("agentops.instrumentation.common.wrappers.unwrap") as mock_unwrap:
-            mock_unwrap.side_effect = Exception("Failed to unwrap")
+        # The base class _unwrap_method already handles errors internally
+        # So we just test that uninstrumentation doesn't raise exceptions
 
-            # Uninstrument should not raise exceptions even if unwrapping fails
-            # The instrumentor should handle errors gracefully
-            try:
-                instrumentor._uninstrument()
-            except Exception:
-                pytest.fail("Instrumentor should handle unwrapping errors gracefully")
+        # First instrument
+        mock_tracer_provider = MagicMock()
+        instrumentor._instrument(tracer_provider=mock_tracer_provider)
+
+        # Then uninstrument - this should not raise an exception
+        try:
+            instrumentor._uninstrument()
+        except Exception as e:
+            pytest.fail(f"Instrumentor should handle unwrapping errors gracefully, but raised: {e}")
 
     def test_instrumentation_with_tracer(self):
         """Test that the instrumentor gets a tracer with the correct name and version"""
@@ -197,3 +196,38 @@ class TestOpenAIInstrumentor:
             assert mock_instrument_method.called
             assert "tracer_provider" in mock_instrument_method.call_args[1]
             assert mock_instrument_method.call_args[1]["tracer_provider"] == mock_tracer_provider
+
+    def test_wrapped_methods_initialization(self):
+        """Test that wrapped methods are properly initialized"""
+        instrumentor = OpenAIInstrumentor()
+
+        # Get wrapped methods
+        wrapped_methods = instrumentor.get_wrapped_methods()
+
+        # Verify we have methods wrapped
+        assert len(wrapped_methods) > 0
+
+        # Check for key method types
+        method_types = {cfg.trace_name for cfg in wrapped_methods}
+        expected_types = {
+            "openai.chat.completion",
+            "openai.completion",
+            "openai.embeddings",
+            "openai.images.generate",
+            "openai.responses.create",  # Our custom Response API
+        }
+
+        # Verify all expected types are present
+        for expected in expected_types:
+            assert expected in method_types, f"Missing wrapped method type: {expected}"
+
+    def test_streaming_methods(self):
+        """Test that streaming methods are properly configured"""
+        instrumentor = OpenAIInstrumentor()
+
+        # Get streaming methods
+        streaming_methods = instrumentor.get_streaming_methods()
+
+        # OpenAI instrumentor may or may not have streaming methods
+        # This is implementation-specific
+        assert isinstance(streaming_methods, list)

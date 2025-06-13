@@ -10,7 +10,7 @@ import json
 import os
 from unittest.mock import MagicMock, patch
 
-from agentops.instrumentation.openai.attributes.response import (
+from agentops.instrumentation.providers.openai.attributes.response import (
     get_response_kwarg_attributes,
     get_response_response_attributes,
     get_response_output_attributes,
@@ -284,7 +284,7 @@ class TestResponseAttributes:
         }
 
         # Should not raise an exception but log a debug message
-        with patch("agentops.instrumentation.openai.attributes.response.logger.debug") as mock_logger:
+        with patch("agentops.instrumentation.providers.openai.attributes.response.logger.debug") as mock_logger:
             attributes = get_response_kwarg_attributes(kwargs)
 
             # Verify the debug message was logged
@@ -330,8 +330,12 @@ class TestResponseAttributes:
         )
 
         # Patch the Response and other type checks for simpler testing
-        with patch("agentops.instrumentation.openai.attributes.response.ResponseOutputMessage", MockOutputMessage):
-            with patch("agentops.instrumentation.openai.attributes.response.ResponseOutputText", MockOutputText):
+        with patch(
+            "agentops.instrumentation.providers.openai.attributes.response.ResponseOutputMessage", MockOutputMessage
+        ):
+            with patch(
+                "agentops.instrumentation.providers.openai.attributes.response.ResponseOutputText", MockOutputText
+            ):
                 # Extract attributes
                 attributes = get_response_response_attributes(mock_response)
 
@@ -357,10 +361,15 @@ class TestResponseAttributes:
         output = []  # Empty list is fine for this test
 
         # Patch all the type checks to make testing simpler
-        with patch("agentops.instrumentation.openai.attributes.response.ResponseOutputMessage", MockOutputMessage):
-            with patch("agentops.instrumentation.openai.attributes.response.ResponseOutputText", MockOutputText):
+        with patch(
+            "agentops.instrumentation.providers.openai.attributes.response.ResponseOutputMessage", MockOutputMessage
+        ):
+            with patch(
+                "agentops.instrumentation.providers.openai.attributes.response.ResponseOutputText", MockOutputText
+            ):
                 with patch(
-                    "agentops.instrumentation.openai.attributes.response.ResponseFunctionToolCall", MockFunctionToolCall
+                    "agentops.instrumentation.providers.openai.attributes.response.ResponseFunctionToolCall",
+                    MockFunctionToolCall,
                 ):
                     result = get_response_output_attributes(output)
 
@@ -373,7 +382,7 @@ class TestResponseAttributes:
         # and can be called without exception
 
         # Patch the ResponseOutputText class to make testing simpler
-        with patch("agentops.instrumentation.openai.attributes.response.ResponseOutputText", MockOutputText):
+        with patch("agentops.instrumentation.providers.openai.attributes.response.ResponseOutputText", MockOutputText):
             # Create a minimal mock with required attributes
             message = MockOutputMessage(
                 {
@@ -415,7 +424,7 @@ class TestResponseAttributes:
         # We'll test by using patch to simulate the extraction
 
         with patch(
-            "agentops.instrumentation.openai.attributes.response._extract_attributes_from_mapping_with_index"
+            "agentops.instrumentation.providers.openai.attributes.response._extract_attributes_from_mapping_with_index"
         ) as mock_extract:
             # Set up the mock to return expected attributes
             expected_attributes = {
@@ -489,18 +498,30 @@ class TestResponseAttributes:
 
         # Patch all the necessary type checks and logger
         with (
-            patch("agentops.instrumentation.openai.attributes.response.ResponseOutputMessage", MockOutputMessage),
-            patch("agentops.instrumentation.openai.attributes.response.ResponseOutputText", MockOutputText),
-            patch("agentops.instrumentation.openai.attributes.response.ResponseFunctionToolCall", MockFunctionToolCall),
             patch(
-                "agentops.instrumentation.openai.attributes.response.ResponseFunctionWebSearch", MockFunctionWebSearch
+                "agentops.instrumentation.providers.openai.attributes.response.ResponseOutputMessage", MockOutputMessage
+            ),
+            patch("agentops.instrumentation.providers.openai.attributes.response.ResponseOutputText", MockOutputText),
+            patch(
+                "agentops.instrumentation.providers.openai.attributes.response.ResponseFunctionToolCall",
+                MockFunctionToolCall,
             ),
             patch(
-                "agentops.instrumentation.openai.attributes.response.ResponseFileSearchToolCall", MockFileSearchToolCall
+                "agentops.instrumentation.providers.openai.attributes.response.ResponseFunctionWebSearch",
+                MockFunctionWebSearch,
             ),
-            patch("agentops.instrumentation.openai.attributes.response.ResponseComputerToolCall", MockComputerToolCall),
-            patch("agentops.instrumentation.openai.attributes.response.ResponseReasoningItem", MockReasoningItem),
-            patch("agentops.instrumentation.openai.attributes.response.logger.debug") as mock_logger,
+            patch(
+                "agentops.instrumentation.providers.openai.attributes.response.ResponseFileSearchToolCall",
+                MockFileSearchToolCall,
+            ),
+            patch(
+                "agentops.instrumentation.providers.openai.attributes.response.ResponseComputerToolCall",
+                MockComputerToolCall,
+            ),
+            patch(
+                "agentops.instrumentation.providers.openai.attributes.response.ResponseReasoningItem", MockReasoningItem
+            ),
+            patch("agentops.instrumentation.providers.openai.attributes.response.logger.debug") as mock_logger,
         ):
             # Test with an output list containing all different types of output items
             output = [message, tool_call, web_search, file_search, computer_call, reasoning_item, unrecognized_item]
@@ -528,10 +549,7 @@ class TestResponseAttributes:
             assert attributes[web_attr_key] == "ws_12345"
 
             # Verify that logger was called for unrecognized item
-            assert any(
-                call.args[0].startswith("[agentops.instrumentation.openai.response]")
-                for call in mock_logger.call_args_list
-            )
+            assert any("is not a recognized output type" in str(call.args[0]) for call in mock_logger.call_args_list)
 
     def test_get_response_tools_attributes(self):
         """Test extraction of attributes from tools list"""
@@ -547,10 +565,10 @@ class TestResponseAttributes:
         )
 
         # Patch all tool types to make testing simpler
-        with patch("agentops.instrumentation.openai.attributes.response.FunctionTool", MockFunctionTool):
-            with patch("agentops.instrumentation.openai.attributes.response.WebSearchTool", MagicMock):
-                with patch("agentops.instrumentation.openai.attributes.response.FileSearchTool", MagicMock):
-                    with patch("agentops.instrumentation.openai.attributes.response.ComputerTool", MagicMock):
+        with patch("agentops.instrumentation.providers.openai.attributes.response.FunctionTool", MockFunctionTool):
+            with patch("agentops.instrumentation.providers.openai.attributes.response.WebSearchTool", MagicMock):
+                with patch("agentops.instrumentation.providers.openai.attributes.response.FileSearchTool", MagicMock):
+                    with patch("agentops.instrumentation.providers.openai.attributes.response.ComputerTool", MagicMock):
                         # Test with a function tool
                         tools = [function_tool]
 
@@ -579,7 +597,7 @@ class TestResponseAttributes:
         )
 
         # Call the function directly
-        with patch("agentops.instrumentation.openai.attributes.response.WebSearchTool", MockWebSearchTool):
+        with patch("agentops.instrumentation.providers.openai.attributes.response.WebSearchTool", MockWebSearchTool):
             result = get_response_tool_web_search_attributes(web_search_tool, 0)
 
             # Verify attributes
@@ -609,7 +627,7 @@ class TestResponseAttributes:
         )
 
         # Call the function directly
-        with patch("agentops.instrumentation.openai.attributes.response.FileSearchTool", MockFileSearchTool):
+        with patch("agentops.instrumentation.providers.openai.attributes.response.FileSearchTool", MockFileSearchTool):
             result = get_response_tool_file_search_attributes(file_search_tool, 0)
 
             # Verify attributes
@@ -631,7 +649,7 @@ class TestResponseAttributes:
         )
 
         # Call the function directly
-        with patch("agentops.instrumentation.openai.attributes.response.ComputerTool", MockComputerTool):
+        with patch("agentops.instrumentation.providers.openai.attributes.response.ComputerTool", MockComputerTool):
             result = get_response_tool_computer_attributes(computer_tool, 0)
 
             # Verify attributes
@@ -649,8 +667,10 @@ class TestResponseAttributes:
         # Create a more comprehensive test for usage attributes
 
         # Patch the OutputTokensDetails class to make testing simpler
-        with patch("agentops.instrumentation.openai.attributes.response.OutputTokensDetails", MockOutputTokensDetails):
-            with patch("agentops.instrumentation.openai.attributes.response.InputTokensDetails", MagicMock):
+        with patch(
+            "agentops.instrumentation.providers.openai.attributes.response.OutputTokensDetails", MockOutputTokensDetails
+        ):
+            with patch("agentops.instrumentation.providers.openai.attributes.response.InputTokensDetails", MagicMock):
                 # Test with all fields
                 usage = MockResponseUsage(
                     {

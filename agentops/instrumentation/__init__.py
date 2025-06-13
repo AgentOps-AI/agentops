@@ -47,22 +47,22 @@ class InstrumentorConfig(TypedDict):
 # Configuration for supported LLM providers
 PROVIDERS: dict[str, InstrumentorConfig] = {
     "openai": {
-        "module_name": "agentops.instrumentation.openai",
+        "module_name": "agentops.instrumentation.providers.openai",
         "class_name": "OpenAIInstrumentor",
         "min_version": "1.0.0",
     },
     "anthropic": {
-        "module_name": "agentops.instrumentation.anthropic",
+        "module_name": "agentops.instrumentation.providers.anthropic",
         "class_name": "AnthropicInstrumentor",
         "min_version": "0.32.0",
     },
     "ibm_watsonx_ai": {
-        "module_name": "agentops.instrumentation.ibm_watsonx_ai",
+        "module_name": "agentops.instrumentation.providers.ibm_watsonx_ai",
         "class_name": "IBMWatsonXInstrumentor",
         "min_version": "0.1.0",
     },
     "google.genai": {
-        "module_name": "agentops.instrumentation.google_genai",
+        "module_name": "agentops.instrumentation.providers.google_genai",
         "class_name": "GoogleGenAIInstrumentor",
         "min_version": "0.1.0",
         "package_name": "google-genai",  # Actual pip package name
@@ -72,7 +72,7 @@ PROVIDERS: dict[str, InstrumentorConfig] = {
 # Configuration for utility instrumentors
 UTILITY_INSTRUMENTORS: dict[str, InstrumentorConfig] = {
     "concurrent.futures": {
-        "module_name": "agentops.instrumentation.concurrent_futures",
+        "module_name": "agentops.instrumentation.utilities.concurrent_futures",
         "class_name": "ConcurrentFuturesInstrumentor",
         "min_version": "3.7.0",  # Python 3.7+ (concurrent.futures is stdlib)
         "package_name": "python",  # Special case for stdlib modules
@@ -82,13 +82,17 @@ UTILITY_INSTRUMENTORS: dict[str, InstrumentorConfig] = {
 # Configuration for supported agentic libraries
 AGENTIC_LIBRARIES: dict[str, InstrumentorConfig] = {
     "crewai": {
-        "module_name": "agentops.instrumentation.crewai",
+        "module_name": "agentops.instrumentation.frameworks.crewai",
         "class_name": "CrewAIInstrumentor",
         "min_version": "0.56.0",
     },
-    "autogen": {"module_name": "agentops.instrumentation.ag2", "class_name": "AG2Instrumentor", "min_version": "0.1.0"},
+    "autogen": {
+        "module_name": "agentops.instrumentation.frameworks.ag2",
+        "class_name": "AG2Instrumentor",
+        "min_version": "0.1.0",
+    },
     "agents": {
-        "module_name": "agentops.instrumentation.openai_agents",
+        "module_name": "agentops.instrumentation.frameworks.openai_agents",
         "class_name": "OpenAIAgentsInstrumentor",
         "min_version": "0.0.1",
     },
