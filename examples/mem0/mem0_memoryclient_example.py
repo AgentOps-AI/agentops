@@ -27,16 +27,16 @@ os.environ["OPENAI_API_KEY"] = os.getenv("OPENAI_API_KEY")
 mem0_api_key = os.getenv("MEM0_API_KEY")
 
 # Import agentops BEFORE mem0 to ensure proper instrumentation
-import agentops
+import agentops  # noqa  E402
 
 # Now import mem0 - it will be instrumented by agentops
-from mem0 import MemoryClient, AsyncMemoryClient
+from mem0 import MemoryClient, AsyncMemoryClient  # noqa  E402
 
 
 def demonstrate_sync_memory_client(sample_messages, sample_preferences, user_id):
     """
     Demonstrate synchronous MemoryClient operations with cloud storage.
-    
+
     This function performs sequential cloud memory operations including:
     - Initializing cloud-based memory client with API authentication
     - Adding conversation messages to cloud storage
@@ -44,20 +44,19 @@ def demonstrate_sync_memory_client(sample_messages, sample_preferences, user_id)
     - Searching memories using natural language
     - Retrieving memories with filters
     - Cleaning up cloud memories
-    
+
     Args:
         sample_messages: List of conversation messages to store
         sample_preferences: List of user preferences to store
         user_id: Unique identifier for the user
-    
+
     Cloud benefit: All memory operations are handled by Mem0's infrastructure,
     providing scalability and persistence without local storage management.
     """
-    agentops.start_trace("mem0_memoryclient_example",tags=["mem0_memoryclient_example"])
+    agentops.start_trace("mem0_memoryclient_example", tags=["mem0_memoryclient_example"])
     try:
         # Initialize sync MemoryClient with API key for cloud access
         client = MemoryClient(api_key=mem0_api_key)
-
 
         # Add conversation to cloud storage with metadata
         result = client.add(
@@ -68,7 +67,6 @@ def demonstrate_sync_memory_client(sample_messages, sample_preferences, user_id)
         # Add preferences sequentially to cloud
         for i, preference in enumerate(sample_preferences[:3]):  # Limit for demo
             result = client.add(preference, user_id=user_id, metadata={"type": "cloud_preference", "index": i})
-        
 
         # 2. SEARCH operations - leverage cloud search capabilities
         search_result = client.search("What are the user's movie preferences?", user_id=user_id)
@@ -83,35 +81,35 @@ def demonstrate_sync_memory_client(sample_messages, sample_preferences, user_id)
         delete_all_result = client.delete_all(user_id=user_id)
         print(f"Delete all result: {delete_all_result}")
         agentops.end_trace(end_state="success")
-    except Exception as e:
+    except Exception:
         agentops.end_trace(end_state="error")
 
 
 async def demonstrate_async_memory_client(sample_messages, sample_preferences, user_id):
     """
     Demonstrate asynchronous MemoryClient operations with concurrent cloud access.
-    
+
     This function performs concurrent cloud memory operations including:
     - Initializing async cloud-based memory client
     - Adding multiple memories concurrently using asyncio.gather()
     - Performing parallel search operations across cloud storage
     - Retrieving filtered memories asynchronously
     - Cleaning up cloud memories efficiently
-    
+
     Args:
         sample_messages: List of conversation messages to store
         sample_preferences: List of user preferences to store
         user_id: Unique identifier for the user
-    
+
     Performance benefit: Async operations allow multiple cloud API calls to execute
     concurrently, significantly reducing total execution time compared to sequential calls.
     This is especially beneficial when dealing with network I/O to cloud services.
     """
-    agentops.start_trace("mem0_memoryclient_example",tags=["mem0_memoryclient_example"])
+    agentops.start_trace("mem0_memoryclient_example", tags=["mem0_memoryclient_example"])
     try:
         # Initialize async MemoryClient for concurrent cloud operations
         async_client = AsyncMemoryClient(api_key=mem0_api_key)
-    
+
         # Add conversation and preferences concurrently to cloud
         add_conversation_task = async_client.add(
             sample_messages, user_id=user_id, metadata={"category": "async_cloud_movies", "session": "async_cloud_demo"}
@@ -151,7 +149,7 @@ async def demonstrate_async_memory_client(sample_messages, sample_preferences, u
 
         agentops.end_trace(end_state="success")
 
-    except Exception as e:
+    except Exception:
         agentops.end_trace(end_state="error")
 
 
