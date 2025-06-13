@@ -67,6 +67,12 @@ PROVIDERS: dict[str, InstrumentorConfig] = {
         "min_version": "0.1.0",
         "package_name": "google-genai",  # Actual pip package name
     },
+    "mem0": {
+        "module_name": "agentops.instrumentation.mem0",
+        "class_name": "Mem0Instrumentor",
+        "min_version": "0.1.0",
+        "package_name": "mem0ai",
+    },
 }
 
 # Configuration for utility instrumentors

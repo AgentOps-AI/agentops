@@ -1,256 +1,155 @@
 ---
-title: Mem0
-description: "Track your Mem0 memory operations with AgentOps"
+title: 'Mem0'
+description: 'Track and monitor Mem0 memory operations with AgentOps'
 ---
 
-[Mem0](https://mem0.ai) is a framework for enabling long-term memory for AI agents. It provides personalized AI experiences by remembering user preferences, behaviors, and conversation context across sessions. AgentOps automatically tracks all Mem0 memory operations including storage, retrieval, updates, and deletions.
+[Mem0](https://mem0.ai/) provides a smart memory layer for AI applications, enabling personalized interactions by remembering user preferences, conversation history, and context across sessions.
+
+## Why Track Mem0 with AgentOps?
+
+When building memory-powered AI applications, you need visibility into:
+- **Memory Operations**: Track when memories are created, updated, or retrieved
+- **Search Performance**: Monitor how effectively your AI finds relevant memories
+- **Memory Usage Patterns**: Understand what information is being stored and accessed
+- **Error Tracking**: Identify issues with memory storage or retrieval
+- **Cost Analysis**: Track API calls to both Mem0 and your LLM provider
+
+AgentOps automatically instruments Mem0 to provide complete observability of your memory operations.
 
 ## Installation
 
-Install AgentOps and Mem0:
-
 <CodeGroup>
-  ```bash pip
-  pip install agentops mem0ai 
-  ```
-  ```bash poetry
-  poetry add agentops mem0ai 
-  ```
-  ```bash uv
-  uv add agentops mem0ai 
-  ```
+```bash pip
+pip install agentops mem0ai python-dotenv
+```
+
+```bash poetry
+poetry add agentops mem0ai python-dotenv
+```
+
+```bash uv
+uv add agentops mem0ai python-dotenv
+```
 </CodeGroup>
 
-## Setting Up API Keys
+## Environment Configuration
 
-You'll need API keys for AgentOps and your chosen LLM provider:
-- **AGENTOPS_API_KEY**: From your [AgentOps Dashboard](https://app.agentops.ai/)
-- **OPENAI_API_KEY**: From the [OpenAI Platform](https://platform.openai.com/api-keys) (if using OpenAI)
-- **MEM0_API_KEY**: From [Mem0 Platform](https://mem0.ai) (optional, for cloud operations)
-
-Set these as environment variables or in a `.env` file.
-
+Load environment variables and set up API keys. The MEM0_API_KEY is only required if you're using the cloud-based MemoryClient.
 <CodeGroup>
   ```bash Export to CLI
   export AGENTOPS_API_KEY="your_agentops_api_key_here"
   export OPENAI_API_KEY="your_openai_api_key_here"
-  export MEM0_API_KEY="your_mem0_api_key_here"  # Optional
   ```
   ```txt Set in .env file
   AGENTOPS_API_KEY="your_agentops_api_key_here"
   OPENAI_API_KEY="your_openai_api_key_here"
-  MEM0_API_KEY="your_mem0_api_key_here"  # Optional
   ```
 </CodeGroup>
 
-Then load them in your Python code:
-```python
-from dotenv import load_dotenv
-import os
+## Tracking Memory Operations
+#### Local Memory with AgentOps
 
-load_dotenv()
-
-AGENTOPS_API_KEY = os.getenv("AGENTOPS_API_KEY")
-OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
-MEM0_API_KEY = os.getenv("MEM0_API_KEY")  # Optional
-```
-
-### Local Memory Operations
-
-Use Mem0's local memory classes for on-device storage and retrieval:
-
-```python
-import agentops
-from mem0 import Memory, AsyncMemory
-
-# Initialize AgentOps 
-agentops.init(api_key=AGENTOPS_API_KEY)
-
-# Configure local memory
-config = {
-    "llm": {
-        "provider": "openai",
-        "config": {
-            "model": "gpt-4o-mini",
-            "temperature": 0.1,
-            "max_tokens": 2000,
-            "api_key": OPENAI_API_KEY,
-        },
-    }
-}
-
-# Initialize memory
-memory = Memory.from_config(config)
-
-# Add memories
-user_id = "user_123"
-messages = [
-    {"role": "user", "content": "I love science fiction movies"},
-    {"role": "assistant", "content": "I'll remember that you enjoy sci-fi films!"}
-]
-
-result = memory.add(messages, user_id=user_id)
-print(f"Memory added: {result}")
-
-# Search memories  
-search_results = memory.search("What movies does the user like?", user_id=user_id)
-print(f"Search results: {search_results}")
-
-# Get all memories
-all_memories = memory.get_all(user_id=user_id)
-print(f"All memories: {all_memories}")
-```
-
-### Async Memory Operations
-
-For asynchronous operations with better performance:
-
-```python
-import asyncio
-import agentops
-from mem0 import AsyncMemory
-
-agentops.init(api_key=AGENTOPS_API_KEY)
-
-async def async_memory_example():
-    # Initialize async memory
-    async_memory = AsyncMemory.from_config(config)
-    
-    # Add memories asynchronously
-    result = await async_memory.add(
-        "I prefer dark roast coffee", 
-        user_id=user_id,
-        metadata={"category": "preferences"}
-    )
-    
-    # Search memories
-    results = await async_memory.search(
-        "What are the user's drink preferences?", 
-        user_id=user_id
-    )
-    
-    # Concurrent operations
-    tasks = [
-        async_memory.add(f"Preference {i}", user_id=user_id)
-        for i in range(3)
-    ]
-    await asyncio.gather(*tasks)
-    
-    return results
-
-# Run async function
-results = asyncio.run(async_memory_example())
-```
-
-### Cloud Memory Operations
-
-Use Mem0's cloud service for managed memory operations:
-
-```python
-import agentops
-from mem0 import MemoryClient, AsyncMemoryClient
-
-agentops.init(api_key=AGENTOPS_API_KEY)
-
-# Sync cloud client
-client = MemoryClient(api_key=MEM0_API_KEY)
-
-# Add to cloud
-result = client.add(
-    "User prefers morning meetings", 
-    user_id=user_id,
-    metadata={"type": "work_preference"}
-)
-
-# Search cloud memories
-search_results = client.search(
-    "When does the user prefer meetings?", 
-    user_id=user_id
-)
-
-# Async cloud client
-async def async_cloud_example():
-    async_client = AsyncMemoryClient(api_key=MEM0_API_KEY)
-    
-    # Concurrent cloud operations
-    add_task = async_client.add("Async cloud memory", user_id=user_id)
-    search_task = async_client.search("user preferences", user_id=user_id)
-    
-    add_result, search_result = await asyncio.gather(add_task, search_task)
-    return add_result, search_result
-
-# Run async cloud operations
-asyncio.run(async_cloud_example())
-```
-
-## Complete CRUD Operations
-
-Mem0 with AgentOps supports full CRUD (Create, Read, Update, Delete) operations:
-
+AgentOps automatically instruments Local Memory Mem0 methods:
 ```python
 import agentops
 from mem0 import Memory
 
-agentops.init(api_key=AGENTOPS_API_KEY)
-memory = Memory.from_config(config)
+# Start a trace to group related operations
+agentops.start_trace("user_preference_learning",tags=["mem0_memory_example"])
 
-# CREATE - Add new memory
-add_result = memory.add(
-    "User is learning Python programming", 
-    user_id=user_id,
-    metadata={"skill": "programming", "level": "beginner"}
-)
-memory_id = add_result.get("memory_id")
+try:
+    # Initialize Memory - AgentOps tracks the configuration
+    memory = Memory.from_config({
+        "llm": {
+            "provider": "openai",
+            "config": {
+                "model": "gpt-4o-mini",
+                "temperature": 0.1
+            }
+        }
+    })
 
-# READ - Get specific memory
-memory_details = memory.get(memory_id, user_id=user_id)
+    # Add memories - AgentOps tracks each operation
+    memory.add(
+        "I prefer morning meetings and dark roast coffee",
+        user_id="user_123",
+        metadata={"category": "preferences"}
+    )
 
-# UPDATE - Modify existing memory  
-update_result = memory.update(
-    memory_id=memory_id,
-    text="User is now intermediate at Python programming",
-    user_id=user_id
-)
+    # Search memories - AgentOps tracks search queries and results
+    results = memory.search(
+        "What are the user's meeting preferences?",
+        user_id="user_123"
+    )
 
-# DELETE - Remove specific memory
-delete_result = memory.delete(memory_id=memory_id, user_id=user_id)
-
-# DELETE ALL - Clear all memories for user
-delete_all_result = memory.delete_all(user_id=user_id)
-
+    # End trace - AgentOps aggregates all operations
+    agentops.end_trace(end_state="success")
+    
+except Exception as e:
+    agentops.end_trace(end_state="error")
 ```
 
+#### Cloud Memory with agentops
+AgentOps automatically instruments Cloud Memory Mem0 methods:
 
-## AgentOps Dashboard Features
+```python
+import agentops
+from mem0 import MemoryClient
 
-After running your Mem0 operations, visit the [AgentOps Dashboard](https://app.agentops.ai/) to see:
+# Start trace for cloud operations
+agentops.start_trace("cloud_memory_sync",tags=["mem0_memoryclient_example"])
 
-- **Memory Operations**: Detailed traces of add, search, update, and delete operations
-- **Performance Metrics**: Latency and success rates for memory operations
-- **User Tracking**: Memory operations organized by user_id and agent_id
-- **Metadata Analysis**: Custom metadata and tags for memory categorization
-- **Error Monitoring**: Failed operations with full stack traces
-- **Search Analytics**: Query patterns and retrieval effectiveness
+try:
+    # Initialize MemoryClient - AgentOps tracks API authentication
+    client = MemoryClient(api_key="your_mem0_api_key")
+
+    # Batch add memories - AgentOps tracks bulk operations
+    messages = [
+        {"role": "user", "content": "I work in software engineering"},
+        {"role": "user", "content": "I prefer Python over Java"},
+    ]
+
+    client.add(messages, user_id="user_123")
+
+    # Search with filters - AgentOps tracks complex queries
+    filters = {"AND": [{"user_id": "user_123"}]}
+    results = client.search(
+        query="What programming languages does the user know?",
+        filters=filters,
+        version="v2"
+    )
+
+    # End trace - AgentOps aggregates all operations
+    agentops.end_trace(end_state="success")
+
+except Exception as e:
+    agentops.end_trace(end_state="error")
+```
+## What You'll See in AgentOps
+
+When using Mem0 with AgentOps, your dashboard will show:
+
+1. **Memory Operation Timeline**: Visual flow of all memory operations
+2. **Search Analytics**: Query patterns and retrieval effectiveness  
+3. **Memory Growth**: Track how user memories accumulate over time
+4. **Performance Metrics**: Latency for adds, searches, and retrievals
+5. **Error Tracking**: Failed operations with full error context
+6. **Cost Attribution**: Token usage for memory extraction and searches
 
 ## Examples
 
-<CardGroup cols={1}>
-  <Card title="Comprehensive Mem0 Example" icon="notebook" href="/v2/examples/mem0">
-    Complete example demonstrating all four Mem0 memory classes with AgentOps instrumentation.
+<CardGroup cols={2}>
+  <Card title="Sync and Async Memory Operations" icon="book" href="/v2/examples/mem0">
+    Simple example showing memory storage and retrieval with AgentOps tracking
   </Card>
+  
+  <Card title="Sync and Async MemoryClient Operations" icon="cloud" href="https://github.com/AgentOps-AI/agentops/blob/main/examples/mem0/mem0_memoryclient_example.ipynb">
+    Track concurrent memory operations with async/await patterns
+  </Card>
+
 </CardGroup>
-
-## Best Practices
-
-1. **Initialize AgentOps**: Always call `agentops.init()`.
-2. **Use Metadata**: Add meaningful metadata to memories for better organization and filtering
-3. **Handle Errors**: Wrap memory operations in try-catch blocks for robust error handling
-4. **User Segmentation**: Use consistent user_id patterns for proper memory isolation
-5. **Async Operations**: Use async classes for better performance in concurrent scenarios
-6. **Memory Cleanup**: Regularly clean up old or irrelevant memories to maintain performance
 
 <script type="module" src="/scripts/github_stars.js"></script>
 <script type="module" src="/scripts/scroll-img-fadein-animation.js"></script>
 <script type="module" src="/scripts/button_heartbeat_animation.js"></script>
-<script type="css" src="/styles/styles.css"></script>
-<script type="module" src="/scripts/adjust_api_dynamically.js"></script> 
+<script type="module" src="/scripts/adjust_api_dynamically.js"></script>
