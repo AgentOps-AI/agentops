@@ -104,7 +104,7 @@ def generate_mdx_content(notebook_path, processed_content, frontmatter=None):
     if not frontmatter:
         # Generate new frontmatter
         folder_name = Path(notebook_path).parent.name
-        title = folder_name.replace("_", " ").title()
+        title = f"{folder_name.replace('_', ' ').title()} Example"
 
         # Extract description from first heading or use default
         description = f"{title} example using AgentOps"

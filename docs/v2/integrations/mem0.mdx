@@ -1,0 +1,153 @@
+---
+title: 'Mem0'
+description: 'Track and monitor Mem0 memory operations with AgentOps'
+---
+
+[Mem0](https://mem0.ai/) provides a smart memory layer for AI applications, enabling personalized interactions by remembering user preferences, conversation history, and context across sessions.
+
+## Why Track Mem0 with AgentOps?
+
+When building memory-powered AI applications, you need visibility into:
+- **Memory Operations**: Track when memories are created, updated, or retrieved
+- **Search Performance**: Monitor how effectively your AI finds relevant memories
+- **Memory Usage Patterns**: Understand what information is being stored and accessed
+- **Error Tracking**: Identify issues with memory storage or retrieval
+- **Cost Analysis**: Track API calls to both Mem0 and your LLM provider
+
+AgentOps automatically instruments Mem0 to provide complete observability of your memory operations.
+
+## Installation
+
+<CodeGroup>
+```bash pip
+pip install agentops mem0ai python-dotenv
+```
+
+```bash poetry
+poetry add agentops mem0ai python-dotenv
+```
+
+```bash uv
+uv add agentops mem0ai python-dotenv
+```
+</CodeGroup>
+
+## Environment Configuration
+
+Load environment variables and set up API keys. The MEM0_API_KEY is only required if you're using the cloud-based MemoryClient.
+<CodeGroup>
+  ```bash Export to CLI
+  export AGENTOPS_API_KEY="your_agentops_api_key_here"
+  export OPENAI_API_KEY="your_openai_api_key_here"
+  ```
+  ```txt Set in .env file
+  AGENTOPS_API_KEY="your_agentops_api_key_here"
+  OPENAI_API_KEY="your_openai_api_key_here"
+  ```
+</CodeGroup>
+
+## Tracking Memory Operations
+
+<CodeGroup>
+```python Local Memory
+import agentops
+from mem0 import Memory
+
+# Start a trace to group related operations
+agentops.start_trace("user_preference_learning",tags=["mem0_memory_example"])
+
+try:
+    # Initialize Memory - AgentOps tracks the configuration
+    memory = Memory.from_config({
+        "llm": {
+            "provider": "openai",
+            "config": {
+                "model": "gpt-4o-mini",
+                "temperature": 0.1
+            }
+        }
+    })
+
+    # Add memories - AgentOps tracks each operation
+    memory.add(
+        "I prefer morning meetings and dark roast coffee",
+        user_id="user_123",
+        metadata={"category": "preferences"}
+    )
+
+    # Search memories - AgentOps tracks search queries and results
+    results = memory.search(
+        "What are the user's meeting preferences?",
+        user_id="user_123"
+    )
+
+    # End trace - AgentOps aggregates all operations
+    agentops.end_trace(end_state="success")
+    
+except Exception as e:
+    agentops.end_trace(end_state="error")
+```
+
+```python Cloud Memory
+import agentops
+from mem0 import MemoryClient
+
+# Start trace for cloud operations
+agentops.start_trace("cloud_memory_sync",tags=["mem0_memoryclient_example"])
+
+try:
+    # Initialize MemoryClient - AgentOps tracks API authentication
+    client = MemoryClient(api_key="your_mem0_api_key")
+
+    # Batch add memories - AgentOps tracks bulk operations
+    messages = [
+        {"role": "user", "content": "I work in software engineering"},
+        {"role": "user", "content": "I prefer Python over Java"},
+    ]
+
+    client.add(messages, user_id="user_123")
+
+    # Search with filters - AgentOps tracks complex queries
+    filters = {"AND": [{"user_id": "user_123"}]}
+    results = client.search(
+        query="What programming languages does the user know?",
+        filters=filters,
+        version="v2"
+    )
+
+    # End trace - AgentOps aggregates all operations
+    agentops.end_trace(end_state="success")
+
+except Exception as e:
+    agentops.end_trace(end_state="error")
+```
+</CodeGroup>
+
+## What You'll See in AgentOps
+
+When using Mem0 with AgentOps, your dashboard will show:
+
+1. **Memory Operation Timeline**: Visual flow of all memory operations
+2. **Search Analytics**: Query patterns and retrieval effectiveness  
+3. **Memory Growth**: Track how user memories accumulate over time
+4. **Performance Metrics**: Latency for adds, searches, and retrievals
+5. **Error Tracking**: Failed operations with full error context
+6. **Cost Attribution**: Token usage for memory extraction and searches
+
+## Examples
+
+<CardGroup cols={2}>
+  <Card title="Memory Operations" icon="book" href="/v2/examples/mem0">
+    Simple example showing memory storage and retrieval with AgentOps tracking
+  </Card>
+  
+  <Card title="MemoryClient Operations" icon="cloud" href="https://github.com/AgentOps-AI/agentops/blob/main/examples/mem0/mem0_memoryclient_example.ipynb">
+    Track concurrent memory operations with async/await patterns
+  </Card>
+
+</CardGroup>
+
+<script type="module" src="/scripts/github_stars.js"></script>
+<script type="module" src="/scripts/scroll-img-fadein-animation.js"></script>
+<script type="module" src="/scripts/button_heartbeat_animation.js"></script>
+<script type="module" src="/scripts/adjust_api_dynamically.js"></script>
