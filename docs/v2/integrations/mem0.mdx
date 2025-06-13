@@ -47,10 +47,9 @@ Load environment variables and set up API keys. The MEM0_API_KEY is only require
 </CodeGroup>
 
 ## Tracking Memory Operations
-#### Local Memory with AgentOps
 
-AgentOps automatically instruments Local Memory Mem0 methods:
-```python
+<CodeGroup>
+```python Local Memory
 import agentops
 from mem0 import Memory
 
@@ -89,10 +88,7 @@ except Exception as e:
     agentops.end_trace(end_state="error")
 ```
 
-#### Cloud Memory with agentops
-AgentOps automatically instruments Cloud Memory Mem0 methods:
-
-```python
+```python Cloud Memory
 import agentops
 from mem0 import MemoryClient
 
@@ -125,6 +121,8 @@ try:
 except Exception as e:
     agentops.end_trace(end_state="error")
 ```
+</CodeGroup>
+
 ## What You'll See in AgentOps
 
 When using Mem0 with AgentOps, your dashboard will show:
@@ -139,11 +137,11 @@ When using Mem0 with AgentOps, your dashboard will show:
 ## Examples
 
 <CardGroup cols={2}>
-  <Card title="Sync and Async Memory Operations" icon="book" href="/v2/examples/mem0">
+  <Card title="Memory Operations" icon="book" href="/v2/examples/mem0">
     Simple example showing memory storage and retrieval with AgentOps tracking
   </Card>
   
-  <Card title="Sync and Async MemoryClient Operations" icon="cloud" href="https://github.com/AgentOps-AI/agentops/blob/main/examples/mem0/mem0_memoryclient_example.ipynb">
+  <Card title="MemoryClient Operations" icon="cloud" href="https://github.com/AgentOps-AI/agentops/blob/main/examples/mem0/mem0_memoryclient_example.ipynb">
     Track concurrent memory operations with async/await patterns
   </Card>
 
