@@ -40,7 +40,6 @@ from smolagents import LiteLLMModel
 from smolagents import (
     CodeAgent,
     ToolCallingAgent,
-    ManagedAgent,
     DuckDuckGoSearchTool,
 )
 
@@ -96,19 +95,12 @@ print(visit_webpage("https://en.wikipedia.org/wiki/Hugging_Face")[:500])
 web_agent = ToolCallingAgent(
     tools=[DuckDuckGoSearchTool(), visit_webpage],
     model=model,
-    max_iterations=10,
-)
-
-managed_web_agent = ManagedAgent(
-    agent=web_agent,
-    name="search",
-    description="Runs web searches for you. Give it your query as an argument.",
 )
 
 manager_agent = CodeAgent(
     tools=[],
     model=model,
-    managed_agents=[managed_web_agent],
+    managed_agents=[web_agent],
     additional_authorized_imports=["time", "numpy", "pandas"],
 )
 # Let’s run our system with the following query:

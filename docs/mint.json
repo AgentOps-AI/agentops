@@ -179,6 +179,7 @@
         "v2/integrations/mem0",
         "v2/integrations/openai",
         "v2/integrations/agents_sdk",
+        "v2/integrations/smolagents",
         "v2/integrations/ibm_watsonx_ai",
         "v2/integrations/xai"
       ],
