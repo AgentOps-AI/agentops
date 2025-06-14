@@ -67,12 +67,6 @@ PROVIDERS: dict[str, InstrumentorConfig] = {
         "min_version": "0.1.0",
         "package_name": "google-genai",  # Actual pip package name
     },
-    "mem0": {
-        "module_name": "agentops.instrumentation.mem0",
-        "class_name": "Mem0Instrumentor",
-        "min_version": "0.1.0",
-        "package_name": "mem0ai",
-    },
 }
 
 # Configuration for utility instrumentors
@@ -103,9 +97,15 @@ AGENTIC_LIBRARIES: dict[str, InstrumentorConfig] = {
         "min_version": "0.0.1",
     },
     "google.adk": {
-        "module_name": "agentops.instrumentation.google_adk",
+        "module_name": "agentops.instrumentation.frameworks.google_adk",
         "class_name": "GoogleADKInstrumentor",
         "min_version": "0.1.0",
+    },
+    "mem0": {
+        "module_name": "agentops.instrumentation.frameworks.mem0",
+        "class_name": "Mem0Instrumentor",
+        "min_version": "0.1.0",
+        "package_name": "mem0ai",
     },
 }
 
