@@ -1,0 +1,88 @@
+---
+title: 'LlamaIndex'
+description: 'AgentOps works seamlessly with LlamaIndex, a framework for building context-augmented generative AI applications with LLMs.'
+---
+
+import CodeTooltip from '/snippets/add-code-tooltip.mdx'
+import EnvTooltip from '/snippets/add-env-tooltip.mdx'
+
+[LlamaIndex](https://www.llamaindex.ai/) is a framework for building context-augmented generative AI applications with LLMs. AgentOps provides observability into your LlamaIndex applications through automatic instrumentation.
+
+<Steps>
+	<Step title="Install the AgentOps SDK">
+		<CodeGroup>
+			```bash pip 
+			pip install agentops
+			```
+			```bash poetry
+			poetry add agentops
+			```
+		</CodeGroup>
+	</Step>
+	<Step title="Install LlamaIndex AgentOps Instrumentation">
+		<CodeGroup>
+			```bash pip 
+			pip install llama-index-instrumentation-agentops
+			```
+			```bash poetry
+			poetry add llama-index-instrumentation-agentops
+			```
+		</CodeGroup>
+	</Step>
+	<Step title="Add 2 lines of code">
+		<CodeTooltip/>
+			<CodeGroup>
+				```python python
+				from llama_index.core import set_global_handler
+
+				# NOTE: Feel free to set your AgentOps environment variables (e.g., 'AGENTOPS_API_KEY')
+				# as outlined in the AgentOps documentation, or pass the equivalent keyword arguments
+				# anticipated by AgentOps' AOClient as **eval_params in set_global_handler.
+
+				set_global_handler("agentops")
+				```
+			</CodeGroup>
+		<EnvTooltip />
+      <CodeGroup>
+        ```python .env
+        AGENTOPS_API_KEY=<YOUR API KEY>
+        ```
+      </CodeGroup>
+      Read more about environment variables in [Advanced Configuration](/v1/usage/advanced-configuration)
+	</Step>
+	<Step title="Run your LlamaIndex application">
+		Execute your program and visit [app.agentops.ai/drilldown](https://app.agentops.ai/drilldown) to observe your LlamaIndex application! 🕵️
+		<Tip>
+			After your run, AgentOps prints a clickable url to console linking directly to your session in the Dashboard
+		</Tip> 
+		<div/>{/* Intentionally blank div for newline */}
+		<Frame type="glass" caption="Clickable link to session">
+			<img height="200" src="https://github.com/AgentOps-AI/agentops/blob/main/docs/images/link-to-session.gif?raw=true" />
+		</Frame>
+	</Step>
+</Steps>
+
+## Usage Pattern
+
+Here's a simple example of how to use AgentOps with LlamaIndex:
+
+```python
+from llama_index.core import set_global_handler
+import llama_index.core
+
+# Set the global handler to AgentOps
+set_global_handler("agentops")
+
+# Your LlamaIndex application code here
+# AgentOps will automatically track LLM calls and other operations
+```
+
+## Additional Resources
+
+For more detailed information about LlamaIndex's observability features and AgentOps integration, check out the [LlamaIndex documentation](https://docs.llamaindex.ai/en/stable/module_guides/observability/#agentops).
+
+<script type="module" src="/scripts/github_stars.js"></script>
+<script type="module" src="/scripts/scroll-img-fadein-animation.js"></script>
+<script type="module" src="/scripts/button_heartbeat_animation.js"></script>
+<script type="css" src="/styles/styles.css"></script>
+<script type="module" src="/scripts/adjust_api_dynamically.js"></script>
