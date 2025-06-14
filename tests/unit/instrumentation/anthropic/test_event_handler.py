@@ -1,7 +1,7 @@
 from unittest.mock import MagicMock
 from opentelemetry.trace import Span
 
-from agentops.instrumentation.anthropic.event_handler_wrapper import EventHandleWrapper
+from agentops.instrumentation.providers.anthropic.event_handler_wrapper import EventHandleWrapper
 from agentops.semconv import CoreAttributes
 
 

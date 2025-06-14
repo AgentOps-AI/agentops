@@ -7,16 +7,16 @@ from agentops.semconv import (
     ToolAttributes,
     ToolStatus,
 )
-from agentops.instrumentation.anthropic.attributes.common import (
+from agentops.instrumentation.providers.anthropic.attributes.common import (
     get_common_instrumentation_attributes,
     extract_request_attributes,
 )
-from agentops.instrumentation.anthropic.attributes.message import (
+from agentops.instrumentation.providers.anthropic.attributes.message import (
     get_message_request_attributes,
     get_stream_attributes,
     get_stream_event_attributes,
 )
-from agentops.instrumentation.anthropic.attributes.tools import (
+from agentops.instrumentation.providers.anthropic.attributes.tools import (
     extract_tool_definitions,
     extract_tool_use_blocks,
     get_tool_attributes,
