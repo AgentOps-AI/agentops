@@ -1,4 +1,4 @@
-"""Memory operation attribute extractors and wrappers for Mem0 instrumentation."""
+"""Memory operation attribute extractors for Mem0 instrumentation."""
 
 from typing import Optional, Tuple, Dict, Any
 
@@ -8,7 +8,6 @@ from .common import (
     get_common_attributes,
     _extract_common_kwargs_attributes,
     _extract_memory_response_attributes,
-    create_universal_mem0_wrapper,
 )
 
 
@@ -25,9 +24,6 @@ def get_add_attributes(
     Returns:
         Dictionary of extracted attributes
     """
-    print(f"args: {args}")
-    print(f"kwargs: {kwargs}")
-    print(f"return_value: {return_value}")
     attributes = get_common_attributes()
     attributes[SpanAttributes.OPERATION_NAME] = "add"
     attributes[SpanAttributes.LLM_REQUEST_TYPE] = LLMRequestTypeValues.CHAT.value
@@ -96,9 +92,6 @@ def get_search_attributes(
     Returns:
         Dictionary of extracted attributes
     """
-    print(f"get_search_attributes args: {args}")
-    print(f"get_search_attributes kwargs: {kwargs}")
-    print(f"get_search_attributes return_value: {return_value}")
     attributes = get_common_attributes()
     attributes[SpanAttributes.OPERATION_NAME] = "search"
     attributes[SpanAttributes.LLM_REQUEST_TYPE] = LLMRequestTypeValues.CHAT.value
@@ -417,14 +410,3 @@ def get_history_attributes(
             attributes["mem0.history.roles"] = ",".join(roles)
 
     return attributes
-
-
-# Create universal Mem0 wrappers that work for both sync and async operations
-mem0_add_wrapper = create_universal_mem0_wrapper("add", get_add_attributes)
-mem0_search_wrapper = create_universal_mem0_wrapper("search", get_search_attributes)
-mem0_get_all_wrapper = create_universal_mem0_wrapper("get_all", get_get_all_attributes)
-mem0_get_wrapper = create_universal_mem0_wrapper("get", get_get_attributes)
-mem0_delete_wrapper = create_universal_mem0_wrapper("delete", get_delete_attributes)
-mem0_update_wrapper = create_universal_mem0_wrapper("update", get_update_attributes)
-mem0_delete_all_wrapper = create_universal_mem0_wrapper("delete_all", get_delete_all_attributes)
-mem0_history_wrapper = create_universal_mem0_wrapper("history", get_history_attributes)

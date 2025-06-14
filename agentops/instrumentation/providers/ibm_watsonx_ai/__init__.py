@@ -4,25 +4,18 @@ This package provides instrumentation for IBM's WatsonX AI foundation models,
 capturing telemetry for model interactions including completions, chat, and streaming responses.
 """
 
-import logging
+from agentops.instrumentation.common.constants import setup_instrumentation_module
 
-logger = logging.getLogger(__name__)
+# Setup standard instrumentation components
+LIBRARY_NAME, LIBRARY_VERSION, PACKAGE_VERSION, logger = setup_instrumentation_module(
+    library_name="ibm_watsonx_ai",
+    library_version="1.0.0",
+    package_name="ibm-watsonx-ai",
+    display_name="IBM WatsonX AI SDK",
+)
 
-
-def get_version() -> str:
-    """Get the version of the IBM watsonx.ai SDK, or 'unknown' if not found."""
-    try:
-        from importlib.metadata import version
-
-        return version("ibm-watsonx-ai")
-    except ImportError:
-        logger.debug("Could not find IBM WatsonX AI SDK version")
-        return "1.3.11"  # Default to known supported version if not found
-
-
-# Library identification for instrumentation
-LIBRARY_NAME = "ibm_watsonx_ai"
-LIBRARY_VERSION = get_version()
+# Note: The original implementation defaulted to "1.3.11" if package not found
+# This is now handled by the common module which returns "unknown"
 
 # Import after defining constants to avoid circular imports
 from agentops.instrumentation.providers.ibm_watsonx_ai.instrumentor import IBMWatsonXInstrumentor  # noqa: E402
@@ -30,5 +23,6 @@ from agentops.instrumentation.providers.ibm_watsonx_ai.instrumentor import IBMWa
 __all__ = [
     "LIBRARY_NAME",
     "LIBRARY_VERSION",
+    "PACKAGE_VERSION",
     "IBMWatsonXInstrumentor",
 ]

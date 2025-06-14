@@ -13,22 +13,15 @@ The Agents SDK uses the Response API format, which we handle using shared utilit
 agentops.instrumentation.providers.openai.
 """
 
-from agentops.logging import logger
+from agentops.instrumentation.common.constants import setup_instrumentation_module
 
-
-def get_version() -> str:
-    """Get the version of the agents SDK, or 'unknown' if not found"""
-    try:
-        from importlib.metadata import version
-
-        return version("openai-agents")
-    except ImportError:
-        logger.debug("Could not find OpenAI Agents SDK version")
-        return "unknown"
-
-
-LIBRARY_NAME = "openai-agents"
-LIBRARY_VERSION: str = get_version()
+# Setup standard instrumentation components
+LIBRARY_NAME, LIBRARY_VERSION, PACKAGE_VERSION, logger = setup_instrumentation_module(
+    library_name="openai-agents",
+    library_version="1.0.0",
+    package_name="openai-agents",
+    display_name="OpenAI Agents SDK",
+)
 
 # Import after defining constants to avoid circular imports
 from agentops.instrumentation.frameworks.openai_agents.instrumentor import OpenAIAgentsInstrumentor  # noqa: E402
@@ -36,5 +29,6 @@ from agentops.instrumentation.frameworks.openai_agents.instrumentor import OpenA
 __all__ = [
     "LIBRARY_NAME",
     "LIBRARY_VERSION",
+    "PACKAGE_VERSION",
     "OpenAIAgentsInstrumentor",
 ]

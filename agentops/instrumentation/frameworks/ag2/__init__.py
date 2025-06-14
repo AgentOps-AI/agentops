@@ -5,24 +5,19 @@ interactions, conversation flows, and tool usage while focusing on summary-level
 than individual message exchanges.
 """
 
-from agentops.logging import logger
+from agentops.instrumentation.common.constants import setup_instrumentation_module
 
-
-def get_version() -> str:
-    """Get the version of the AG2 package, or 'unknown' if not found"""
-    try:
-        from importlib.metadata import version
-
-        return version("ag2")
-    except ImportError:
-        logger.debug("Could not find AG2 version")
-        return "unknown"
-
-
-LIBRARY_NAME = "ag2"
-LIBRARY_VERSION: str = get_version()
+# Setup standard instrumentation components
+LIBRARY_NAME, LIBRARY_VERSION, PACKAGE_VERSION, logger = setup_instrumentation_module(
+    library_name="ag2", library_version="1.0.0", package_name="ag2", display_name="AG2"
+)
 
 # Import after defining constants to avoid circular imports
 from agentops.instrumentation.frameworks.ag2.instrumentor import AG2Instrumentor  # noqa: E402
 
-__all__ = ["AG2Instrumentor", "LIBRARY_NAME", "LIBRARY_VERSION"]
+__all__ = [
+    "LIBRARY_NAME",
+    "LIBRARY_VERSION",
+    "PACKAGE_VERSION",
+    "AG2Instrumentor",
+]

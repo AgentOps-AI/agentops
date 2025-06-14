@@ -4,31 +4,15 @@ This module provides instrumentation for the Google Generative AI (Gemini) API,
 including content generation, streaming, and chat functionality.
 """
 
-import logging
+from agentops.instrumentation.common.constants import setup_instrumentation_module
 
-
-def get_version() -> str:
-    """Get the version of the Google Generative AI SDK, or 'unknown' if not found
-
-    Attempts to retrieve the installed version of the Google Generative AI SDK using importlib.metadata.
-    Falls back to 'unknown' if the version cannot be determined.
-
-    Returns:
-        The version string of the Google Generative AI SDK or 'unknown'
-    """
-    try:
-        from importlib.metadata import version
-
-        return version("google-genai")
-    except ImportError:
-        logger.debug("Could not find Google Generative AI SDK version")
-        return "unknown"
-
-
-LIBRARY_NAME = "google-genai"
-LIBRARY_VERSION: str = get_version()
-
-logger = logging.getLogger(__name__)
+# Setup standard instrumentation components
+LIBRARY_NAME, LIBRARY_VERSION, PACKAGE_VERSION, logger = setup_instrumentation_module(
+    library_name="google-genai",
+    library_version="1.0.0",
+    package_name="google-genai",
+    display_name="Google Generative AI SDK",
+)
 
 # Import after defining constants to avoid circular imports
 from agentops.instrumentation.providers.google_genai.instrumentor import GoogleGenAIInstrumentor  # noqa: E402
@@ -36,5 +20,6 @@ from agentops.instrumentation.providers.google_genai.instrumentor import GoogleG
 __all__ = [
     "LIBRARY_NAME",
     "LIBRARY_VERSION",
+    "PACKAGE_VERSION",
     "GoogleGenAIInstrumentor",
 ]
