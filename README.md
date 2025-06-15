@@ -56,7 +56,7 @@ AgentOps helps developers build, evaluate, and monitor AI agents. From prototype
 
 <div align="center" style="background-color: white; padding: 20px; border-radius: 10px; margin: 0 auto; max-width: 800px;">
   <div style="display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 30px; margin-bottom: 20px;">
-    <a href="https://docs.agentops.ai/v1/integrations/openai-agents"><img src="docs/images/external/openai/agents-sdk.svg" height="45" alt="OpenAI Agents SDK"></a>
+    <a href="https://docs.agentops.ai/v2/integrations/openai_agents_python"><img src="docs/images/external/openai/agents-sdk.svg" height="45" alt="OpenAI Agents SDK"></a>
     <a href="https://docs.agentops.ai/v1/integrations/crewai"><img src="docs/v1/img/docs-icons/crew-banner.png" height="45" alt="CrewAI"></a>
     <a href="https://docs.ag2.ai/docs/ecosystem/agentops"><img src="docs/images/external/autogen/ag2.svg" height="45" alt="AG2 (AutoGen)"></a>
     <a href="https://docs.agentops.ai/v1/integrations/microsoft"><img src="docs/images/external/microsoft/microsoft_logo.svg" height="45" alt="Microsoft"></a>
@@ -216,14 +216,25 @@ All decorators support:
 
 ### OpenAI Agents SDK 🖇️
 
-Build multi-agent systems with tools, handoffs, and guardrails. AgentOps natively integrates with OpenAI Agents.
+Build multi-agent systems with tools, handoffs, and guardrails. AgentOps natively integrates with the OpenAI Agents SDKs for both Python and TypeScript.
+
+#### Python
 
 ```bash
 pip install openai-agents
 ```
 
-- [AgentOps integration example](https://docs.agentops.ai/v1/integrations/agents_sdk)
-- [Official OpenAI Agents SDK documentation](https://openai.github.io/openai-agents-python/)
+- [Python integration guide](https://docs.agentops.ai/v2/integrations/openai_agents_python)
+- [OpenAI Agents Python documentation](https://openai.github.io/openai-agents-python/)
+
+#### TypeScript
+
+```bash
+npm install agentops @openai/agents
+```
+
+- [TypeScript integration guide](https://docs.agentops.ai/v2/integrations/openai_agents_js)
+- [OpenAI Agents JS documentation](https://openai.github.io/openai-agents-js)
 
 ### CrewAI 🛶
 

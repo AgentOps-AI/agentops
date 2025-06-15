@@ -176,7 +176,8 @@
         "v2/integrations/langchain",
         "v2/integrations/litellm",
         "v2/integrations/openai",
-        "v2/integrations/agents_sdk",
+        "v2/integrations/openai_agents_python",
+        "v2/integrations/openai_agents_js",
         "v2/integrations/ibm_watsonx_ai",
         "v2/integrations/xai"
       ],
