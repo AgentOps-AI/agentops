@@ -81,7 +81,6 @@ class SpanAttributes:
     LLM_OPENAI_RESPONSE_INSTRUCTIONS = "gen_ai.openai.instructions"
     LLM_OPENAI_API_BASE = "gen_ai.openai.api_base"
     LLM_OPENAI_API_VERSION = "gen_ai.openai.api_version"
-    LLM_OPENAI_API_TYPE = "gen_ai.openai.api_type"
 
     # AgentOps specific attributes
     AGENTOPS_ENTITY_OUTPUT = "agentops.entity.output"
