@@ -263,6 +263,17 @@ def track_tool(*args: Any, **kwargs: Any) -> Any:
     return noop
 
 
+@deprecated("Use @tool decorator instead.")
+def record_function(*args: Any, **kwargs: Any) -> Any:
+    """@deprecated Use @tool decorator instead. Wraps the @tool decorator for backward compatibility."""
+    from agentops.sdk.decorators import tool
+    
+    if not args or not callable(args[0]):
+        return tool(*args, **kwargs)
+    else:
+        return tool(args[0], **kwargs)
+
+
 __all__ = [
     "start_session",
     "end_session",
@@ -271,6 +282,7 @@ __all__ = [
     "ActionEvent",
     "track_agent",
     "track_tool",
+    "record_function",
     "end_all_sessions",
     "Session",
     "LLMEvent",

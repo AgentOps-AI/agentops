@@ -21,7 +21,13 @@ import os
 from dotenv import load_dotenv
 import agentops
 from mem0 import MemoryClient
-from autogen import ConversableAgent
+try:
+    from autogen import ConversableAgent
+except ImportError:
+    try:
+        from ag2 import ConversableAgent
+    except ImportError:
+        raise ImportError("Neither 'autogen' nor 'ag2' package found. Please install one of them.")
 
 load_dotenv()
 os.environ["AGENTOPS_API_KEY"] = os.getenv("AGENTOPS_API_KEY", "your_api_key_here")
