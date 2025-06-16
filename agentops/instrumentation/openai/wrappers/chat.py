@@ -83,13 +83,14 @@ def handle_chat_attributes(
                 # Tool calls
                 if "tool_calls" in msg:
                     tool_calls = msg["tool_calls"]
-                    for j, tool_call in enumerate(tool_calls):
-                        if is_openai_v1() and hasattr(tool_call, "__dict__"):
-                            tool_call = model_as_dict(tool_call)
-                        function = tool_call.get("function", {})
-                        attributes[f"{prefix}.tool_calls.{j}.id"] = tool_call.get("id")
-                        attributes[f"{prefix}.tool_calls.{j}.name"] = function.get("name")
-                        attributes[f"{prefix}.tool_calls.{j}.arguments"] = function.get("arguments")
+                    if tool_calls:  # Check if tool_calls is not None
+                        for j, tool_call in enumerate(tool_calls):
+                            if is_openai_v1() and hasattr(tool_call, "__dict__"):
+                                tool_call = model_as_dict(tool_call)
+                            function = tool_call.get("function", {})
+                            attributes[f"{prefix}.tool_calls.{j}.id"] = tool_call.get("id")
+                            attributes[f"{prefix}.tool_calls.{j}.name"] = function.get("name")
+                            attributes[f"{prefix}.tool_calls.{j}.arguments"] = function.get("arguments")
 
         # Functions
         if "functions" in kwargs:
@@ -121,6 +122,14 @@ def handle_chat_attributes(
             response_dict = model_as_dict(return_value)
         elif isinstance(return_value, dict):
             response_dict = return_value
+        elif hasattr(return_value, "model_dump"):
+            # Handle Pydantic models directly
+            response_dict = return_value.model_dump()
+        elif hasattr(return_value, "__dict__"):
+            # Try to use model_as_dict even if it has __iter__(fallback)
+            response_dict = model_as_dict(return_value)
+
+        logger.debug(f"[OPENAI DEBUG] response_dict keys: {list(response_dict.keys()) if response_dict else 'empty'}")
 
         # Basic response attributes
         if "id" in response_dict:
@@ -174,17 +183,19 @@ def handle_chat_attributes(
                     # Function call
                     if "function_call" in message:
                         function_call = message["function_call"]
-                        attributes[f"{prefix}.tool_calls.0.name"] = function_call.get("name")
-                        attributes[f"{prefix}.tool_calls.0.arguments"] = function_call.get("arguments")
+                        if function_call:  # Check if function_call is not None
+                            attributes[f"{prefix}.tool_calls.0.name"] = function_call.get("name")
+                            attributes[f"{prefix}.tool_calls.0.arguments"] = function_call.get("arguments")
 
                     # Tool calls
                     if "tool_calls" in message:
                         tool_calls = message["tool_calls"]
-                        for i, tool_call in enumerate(tool_calls):
-                            function = tool_call.get("function", {})
-                            attributes[f"{prefix}.tool_calls.{i}.id"] = tool_call.get("id")
-                            attributes[f"{prefix}.tool_calls.{i}.name"] = function.get("name")
-                            attributes[f"{prefix}.tool_calls.{i}.arguments"] = function.get("arguments")
+                        if tool_calls:  # Check if tool_calls is not None
+                            for i, tool_call in enumerate(tool_calls):
+                                function = tool_call.get("function", {})
+                                attributes[f"{prefix}.tool_calls.{i}.id"] = tool_call.get("id")
+                                attributes[f"{prefix}.tool_calls.{i}.name"] = function.get("name")
+                                attributes[f"{prefix}.tool_calls.{i}.arguments"] = function.get("arguments")
 
         # Prompt filter results
         if "prompt_filter_results" in response_dict:
