@@ -32,7 +32,7 @@ class AG2Instrumentor(BaseInstrumentor):
 
     def instrumentation_dependencies(self) -> Collection[str]:
         """Return packages required for instrumentation."""
-        return ["autogen >= 0.3.2"]
+        return ["ag2 >= 0.3.2"]
 
     def _instrument(self, **kwargs):
         """Instrument AG2 components."""
