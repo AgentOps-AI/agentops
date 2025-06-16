@@ -12,20 +12,14 @@ This directory contains examples of using AG2 (AutoGen 2.0) with AgentOps instru
 
 ## Examples
 
-### 1. Agent Chat with Memory
-
-Example: `agentchat_with_memory`
-This example demonstrates:
-- Agent chat with persistent memory
-
-### 2. Asynchronous Human Input
+### 1. Asynchronous Human Input
 
 Example: `async_human_input`
 
 This example demonstrates:
 - Asynchronous human input handling
 
-### 3. Wikipedia Search Tool
+### 2. Wikipedia Search Tool
 
 Example: `tools_wikipedia_search`
 
