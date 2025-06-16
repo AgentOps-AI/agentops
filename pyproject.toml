@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "agentops"
-version = "0.4.14"
+version = "0.4.15"
 authors = [
   { name="Alex Reibman", email="areibman@gmail.com" },
   { name="Shawn Qiu", email="siyangqiu@gmail.com" },
@@ -14,6 +14,7 @@ authors = [
   { name="Pratyush Shukla", email="ps4534@nyu.edu" },
   { name="Travis Dent", email="tcdent@gmail.com" },
   { name="Dwij Patel", email="dwijpatel1704@gmail.com" }
+  { name="Fenil Faldu, email="fenilfaldu143@gmail.com"}
 ]
 description = "Observability and DevTool Platform for AI Agents"
 # readme = "README.md"
