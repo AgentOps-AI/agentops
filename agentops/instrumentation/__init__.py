@@ -92,7 +92,7 @@ AGENTIC_LIBRARIES: dict[str, InstrumentorConfig] = {
         "class_name": "CrewAIInstrumentor",
         "min_version": "0.56.0",
     },
-    "autogen": {"module_name": "agentops.instrumentation.ag2", "class_name": "AG2Instrumentor", "min_version": "0.1.0"},
+    "autogen": {"module_name": "agentops.instrumentation.ag2", "class_name": "AG2Instrumentor", "min_version": "0.3.2"},
     "agents": {
         "module_name": "agentops.instrumentation.openai_agents",
         "class_name": "OpenAIAgentsInstrumentor",
