@@ -267,7 +267,7 @@ def track_tool(*args: Any, **kwargs: Any) -> Any:
 def record_function(*args: Any, **kwargs: Any) -> Any:
     """@deprecated Use @tool decorator instead. Wraps the @tool decorator for backward compatibility."""
     from agentops.sdk.decorators import tool
-    
+
     if not args or not callable(args[0]):
         return tool(*args, **kwargs)
     else:
