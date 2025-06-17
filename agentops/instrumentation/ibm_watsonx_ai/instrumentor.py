@@ -13,14 +13,11 @@ Key endpoints instrumented:
 """
 
 from typing import List, Collection
-from opentelemetry.trace import get_tracer
-from opentelemetry.instrumentation.instrumentor import BaseInstrumentor
-from opentelemetry.metrics import get_meter
 from wrapt import wrap_function_wrapper
 
 from agentops.logging import logger
-from agentops.instrumentation.common.wrappers import WrapConfig, wrap, unwrap
-from agentops.instrumentation.ibm_watsonx_ai import LIBRARY_NAME, LIBRARY_VERSION
+from agentops.instrumentation.common import BaseAgentOpsInstrumentor, StandardMetrics
+from agentops.instrumentation.common.wrappers import WrapConfig
 from agentops.instrumentation.ibm_watsonx_ai.attributes.attributes import (
     get_generate_attributes,
     get_tokenize_attributes,
@@ -28,7 +25,10 @@ from agentops.instrumentation.ibm_watsonx_ai.attributes.attributes import (
     get_chat_attributes,
 )
 from agentops.instrumentation.ibm_watsonx_ai.stream_wrapper import generate_text_stream_wrapper, chat_stream_wrapper
-from agentops.semconv import Meters
+
+# Library info for tracer/meter
+LIBRARY_NAME = "agentops.instrumentation.ibm_watsonx_ai"
+LIBRARY_VERSION = "0.1.0"
 
 # Methods to wrap for instrumentation
 WRAPPED_METHODS: List[WrapConfig] = [
@@ -44,7 +44,7 @@ WRAPPED_METHODS: List[WrapConfig] = [
         package="ibm_watsonx_ai.foundation_models.inference",
         class_name="ModelInference",
         method_name="generate_text_stream",
-        handler=None,
+        handler=None,  # Handled by dedicated wrapper
     ),
     WrapConfig(
         trace_name="watsonx.chat",
@@ -58,7 +58,7 @@ WRAPPED_METHODS: List[WrapConfig] = [
         package="ibm_watsonx_ai.foundation_models.inference",
         class_name="ModelInference",
         method_name="chat_stream",
-        handler=None,
+        handler=None,  # Handled by dedicated wrapper
     ),
     WrapConfig(
         trace_name="watsonx.tokenize",
@@ -77,51 +77,36 @@ WRAPPED_METHODS: List[WrapConfig] = [
 ]
 
 
-class IBMWatsonXInstrumentor(BaseInstrumentor):
+class IBMWatsonXInstrumentor(BaseAgentOpsInstrumentor):
     """An instrumentor for IBM watsonx.ai API."""
+
+    def __init__(self):
+        """Initialize the IBM watsonx.ai instrumentor."""
+        super().__init__(
+            name="ibm_watsonx_ai",
+            version=LIBRARY_VERSION,
+            library_name=LIBRARY_NAME,
+        )
 
     def instrumentation_dependencies(self) -> Collection[str]:
         """Return packages required for instrumentation."""
         return ["ibm-watsonx-ai >= 1.3.11"]
 
+    def _get_wrapped_methods(self) -> List[WrapConfig]:
+        """Return list of methods to be wrapped.
+
+        Note: We filter out stream methods here as they need dedicated wrappers.
+        """
+        return [wc for wc in WRAPPED_METHODS if wc.method_name not in ["generate_text_stream", "chat_stream"]]
+
     def _instrument(self, **kwargs):
         """Instrument the IBM watsonx.ai API."""
-        tracer_provider = kwargs.get("tracer_provider")
-        tracer = get_tracer(LIBRARY_NAME, LIBRARY_VERSION, tracer_provider)
+        # Call parent implementation to handle standard method wrapping
+        super()._instrument(**kwargs)
 
-        meter_provider = kwargs.get("meter_provider")
-        meter = get_meter(LIBRARY_NAME, LIBRARY_VERSION, meter_provider)
-
-        meter.create_histogram(
-            name=Meters.LLM_TOKEN_USAGE,
-            unit="token",
-            description="Measures number of input and output tokens used with IBM watsonx.ai models",
-        )
-
-        meter.create_histogram(
-            name=Meters.LLM_OPERATION_DURATION,
-            unit="s",
-            description="IBM watsonx.ai operation duration",
-        )
-
-        meter.create_counter(
-            name=Meters.LLM_COMPLETIONS_EXCEPTIONS,
-            unit="time",
-            description="Number of exceptions occurred during IBM watsonx.ai completions",
-        )
-
-        # Standard method wrapping approach for regular methods
-        for wrap_config in WRAPPED_METHODS:
-            try:
-                # Skip stream methods handled by dedicated wrappers
-                if wrap_config.method_name in ["generate_text_stream", "chat_stream"]:
-                    continue
-                wrap(wrap_config, tracer)
-                logger.debug(f"Wrapped {wrap_config.package}.{wrap_config.class_name}.{wrap_config.method_name}")
-            except (AttributeError, ModuleNotFoundError) as e:
-                logger.debug(
-                    f"Could not wrap {wrap_config.package}.{wrap_config.class_name}.{wrap_config.method_name}: {e}"
-                )
+        # Create standard metrics for LLM operations
+        self._metrics = StandardMetrics(self._meter)
+        self._metrics.create_llm_metrics(system_name="IBM watsonx.ai", operation_description="IBM watsonx.ai operation")
 
         # Dedicated wrappers for stream methods
         try:
@@ -150,14 +135,26 @@ class IBMWatsonXInstrumentor(BaseInstrumentor):
         except (StopIteration, AttributeError, ModuleNotFoundError) as e:
             logger.debug(f"Could not wrap chat_stream with dedicated wrapper: {e}")
 
+        logger.info("IBM watsonx.ai instrumentation enabled")
+
     def _uninstrument(self, **kwargs):
         """Remove instrumentation from IBM watsonx.ai API."""
-        # Unwrap standard methods
+        # Call parent implementation to handle standard method unwrapping
+        super()._uninstrument(**kwargs)
+
+        # Unwrap streaming methods manually
+        from opentelemetry.instrumentation.utils import unwrap as otel_unwrap
+
         for wrap_config in WRAPPED_METHODS:
-            try:
-                unwrap(wrap_config)
-                logger.debug(f"Unwrapped {wrap_config.package}.{wrap_config.class_name}.{wrap_config.method_name}")
-            except Exception as e:
-                logger.debug(
-                    f"Failed to unwrap {wrap_config.package}.{wrap_config.class_name}.{wrap_config.method_name}: {e}"
-                )
+            if wrap_config.method_name in ["generate_text_stream", "chat_stream"]:
+                try:
+                    otel_unwrap(wrap_config.package, f"{wrap_config.class_name}.{wrap_config.method_name}")
+                    logger.debug(
+                        f"Unwrapped streaming method {wrap_config.package}.{wrap_config.class_name}.{wrap_config.method_name}"
+                    )
+                except Exception as e:
+                    logger.debug(
+                        f"Failed to unwrap streaming method {wrap_config.package}.{wrap_config.class_name}.{wrap_config.method_name}: {e}"
+                    )
+
+        logger.info("IBM watsonx.ai instrumentation disabled")

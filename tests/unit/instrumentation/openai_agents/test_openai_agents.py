@@ -293,13 +293,13 @@ class TestAgentsSdkInstrumentation:
         # Verify parent span attributes
         assert parent_captured_attributes[AgentAttributes.AGENT_NAME] == "parent_agent"
         assert parent_captured_attributes[WorkflowAttributes.WORKFLOW_INPUT] == "parent input"
-        assert parent_captured_attributes[WorkflowAttributes.FINAL_OUTPUT] == "parent output"
+        assert parent_captured_attributes[WorkflowAttributes.WORKFLOW_FINAL_OUTPUT] == "parent output"
         assert parent_captured_attributes[AgentAttributes.AGENT_TOOLS] == '["tool1", "tool2"]'  # JSON encoded is fine.
 
         # Verify child span attributes
         assert child_captured_attributes[AgentAttributes.AGENT_NAME] == "child_agent"
         assert child_captured_attributes[WorkflowAttributes.WORKFLOW_INPUT] == "child input"
-        assert child_captured_attributes[WorkflowAttributes.FINAL_OUTPUT] == "child output"
+        assert child_captured_attributes[WorkflowAttributes.WORKFLOW_FINAL_OUTPUT] == "child output"
         assert child_captured_attributes[AgentAttributes.FROM_AGENT] == "parent_agent"
 
         # Verify parent-child relationship
@@ -346,7 +346,7 @@ class TestAgentsSdkInstrumentation:
         assert captured_attributes[AgentAttributes.AGENT_NAME] == "test_agent"
         assert captured_attributes[WorkflowAttributes.WORKFLOW_INPUT] == "What can you help me with?"
         assert (
-            captured_attributes[WorkflowAttributes.FINAL_OUTPUT]
+            captured_attributes[WorkflowAttributes.WORKFLOW_FINAL_OUTPUT]
             == "I can help you with finding information, answering questions, and more."
         )
         assert "search" in captured_attributes[AgentAttributes.AGENT_TOOLS]
@@ -398,9 +398,9 @@ class TestAgentsSdkInstrumentation:
         assert captured_attributes[WorkflowAttributes.WORKFLOW_INPUT] is not None
         assert "New York" in captured_attributes[WorkflowAttributes.WORKFLOW_INPUT]
         assert "Boston" in captured_attributes[WorkflowAttributes.WORKFLOW_INPUT]
-        assert captured_attributes[WorkflowAttributes.FINAL_OUTPUT] is not None
-        assert "215" in captured_attributes[WorkflowAttributes.FINAL_OUTPUT]
-        assert "miles" in captured_attributes[WorkflowAttributes.FINAL_OUTPUT]
+        assert captured_attributes[WorkflowAttributes.WORKFLOW_FINAL_OUTPUT] is not None
+        assert "215" in captured_attributes[WorkflowAttributes.WORKFLOW_FINAL_OUTPUT]
+        assert "miles" in captured_attributes[WorkflowAttributes.WORKFLOW_FINAL_OUTPUT]
         assert captured_attributes[AgentAttributes.FROM_AGENT] == "navigator"
 
         # Verify function attributes - don't test for a specific type field

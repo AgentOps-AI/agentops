@@ -9,14 +9,11 @@ We focus on instrumenting the following key endpoints:
 """
 
 from typing import List, Collection
-from opentelemetry.trace import get_tracer
-from opentelemetry.instrumentation.instrumentor import BaseInstrumentor
-from opentelemetry.metrics import get_meter
 from wrapt import wrap_function_wrapper
 
 from agentops.logging import logger
-from agentops.instrumentation.common.wrappers import WrapConfig, wrap, unwrap
-from agentops.instrumentation.google_genai import LIBRARY_NAME, LIBRARY_VERSION
+from agentops.instrumentation.common import BaseAgentOpsInstrumentor, StandardMetrics
+from agentops.instrumentation.common.wrappers import WrapConfig
 from agentops.instrumentation.google_genai.attributes.model import (
     get_generate_content_attributes,
     get_token_counting_attributes,
@@ -25,7 +22,10 @@ from agentops.instrumentation.google_genai.stream_wrapper import (
     generate_content_stream_wrapper,
     generate_content_stream_async_wrapper,
 )
-from agentops.semconv import Meters
+
+# Library info for tracer/meter
+LIBRARY_NAME = "agentops.instrumentation.google_genai"
+LIBRARY_VERSION = "0.1.0"
 
 # Methods to wrap for instrumentation
 WRAPPED_METHODS: List[WrapConfig] = [
@@ -96,7 +96,7 @@ STREAMING_METHODS = [
 ]
 
 
-class GoogleGenAIInstrumentor(BaseInstrumentor):
+class GoogleGenAIInstrumentor(BaseAgentOpsInstrumentor):
     """An instrumentor for Google Generative AI (Gemini) API.
 
     This class provides instrumentation for Google's Generative AI API by wrapping key methods
@@ -106,6 +106,14 @@ class GoogleGenAIInstrumentor(BaseInstrumentor):
     It captures metrics including token usage, operation duration, and exceptions.
     """
 
+    def __init__(self):
+        """Initialize the Google GenAI instrumentor."""
+        super().__init__(
+            name="google_genai",
+            version=LIBRARY_VERSION,
+            library_name=LIBRARY_NAME,
+        )
+
     def instrumentation_dependencies(self) -> Collection[str]:
         """Return packages required for instrumentation.
 
@@ -113,6 +121,10 @@ class GoogleGenAIInstrumentor(BaseInstrumentor):
             A collection of package specifications required for this instrumentation.
         """
         return ["google-genai >= 0.1.0"]
+
+    def _get_wrapped_methods(self) -> List[WrapConfig]:
+        """Return list of methods to be wrapped."""
+        return WRAPPED_METHODS
 
     def _instrument(self, **kwargs):
         """Instrument the Google Generative AI API.
@@ -124,38 +136,14 @@ class GoogleGenAIInstrumentor(BaseInstrumentor):
         Args:
             **kwargs: Configuration options for instrumentation.
         """
-        tracer_provider = kwargs.get("tracer_provider")
-        tracer = get_tracer(LIBRARY_NAME, LIBRARY_VERSION, tracer_provider)
+        # Call parent implementation to handle standard method wrapping
+        super()._instrument(**kwargs)
 
-        meter_provider = kwargs.get("meter_provider")
-        meter = get_meter(LIBRARY_NAME, LIBRARY_VERSION, meter_provider)
-
-        meter.create_histogram(
-            name=Meters.LLM_TOKEN_USAGE,
-            unit="token",
-            description="Measures number of input and output tokens used with Google Generative AI models",
+        # Create standard metrics for LLM operations
+        self._metrics = StandardMetrics(self._meter)
+        self._metrics.create_llm_metrics(
+            system_name="Google Generative AI", operation_description="Google Generative AI operation"
         )
-
-        meter.create_histogram(
-            name=Meters.LLM_OPERATION_DURATION,
-            unit="s",
-            description="Google Generative AI operation duration",
-        )
-
-        meter.create_counter(
-            name=Meters.LLM_COMPLETIONS_EXCEPTIONS,
-            unit="time",
-            description="Number of exceptions occurred during Google Generative AI completions",
-        )
-
-        # Standard method wrapping approach for regular methods
-        for wrap_config in WRAPPED_METHODS:
-            try:
-                wrap(wrap_config, tracer)
-            except (AttributeError, ModuleNotFoundError) as e:
-                logger.debug(
-                    f"Could not wrap {wrap_config.package}.{wrap_config.class_name}.{wrap_config.method_name}: {e}"
-                )
 
         # Special handling for streaming responses
         for stream_method in STREAMING_METHODS:
@@ -163,10 +151,15 @@ class GoogleGenAIInstrumentor(BaseInstrumentor):
                 wrap_function_wrapper(
                     stream_method["module"],
                     stream_method["class_method"],
-                    stream_method["wrapper"](tracer),
+                    stream_method["wrapper"](self._tracer),
+                )
+                logger.debug(
+                    f"Successfully wrapped streaming method {stream_method['module']}.{stream_method['class_method']}"
                 )
             except (AttributeError, ModuleNotFoundError) as e:
                 logger.debug(f"Failed to wrap {stream_method['module']}.{stream_method['class_method']}: {e}")
+
+        logger.info("Google Generative AI instrumentation enabled")
 
     def _uninstrument(self, **kwargs):
         """Remove instrumentation from Google Generative AI API.
@@ -177,14 +170,8 @@ class GoogleGenAIInstrumentor(BaseInstrumentor):
         Args:
             **kwargs: Configuration options for uninstrumentation.
         """
-        # Unwrap standard methods
-        for wrap_config in WRAPPED_METHODS:
-            try:
-                unwrap(wrap_config)
-            except Exception as e:
-                logger.debug(
-                    f"Failed to unwrap {wrap_config.package}.{wrap_config.class_name}.{wrap_config.method_name}: {e}"
-                )
+        # Call parent implementation to handle standard method unwrapping
+        super()._uninstrument(**kwargs)
 
         # Unwrap streaming methods
         from opentelemetry.instrumentation.utils import unwrap as otel_unwrap
@@ -195,3 +182,5 @@ class GoogleGenAIInstrumentor(BaseInstrumentor):
                 logger.debug(f"Unwrapped streaming method {stream_method['module']}.{stream_method['class_method']}")
             except (AttributeError, ModuleNotFoundError) as e:
                 logger.debug(f"Failed to unwrap {stream_method['module']}.{stream_method['class_method']}: {e}")
+
+        logger.info("Google Generative AI instrumentation disabled")

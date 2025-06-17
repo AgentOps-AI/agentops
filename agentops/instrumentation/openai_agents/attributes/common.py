@@ -37,7 +37,7 @@ AGENT_SPAN_ATTRIBUTES: AttributeMap = {
     AgentAttributes.AGENT_TOOLS: "tools",
     AgentAttributes.HANDOFFS: "handoffs",
     WorkflowAttributes.WORKFLOW_INPUT: "input",
-    WorkflowAttributes.FINAL_OUTPUT: "output",
+    WorkflowAttributes.WORKFLOW_FINAL_OUTPUT: "output",
 }
 
 

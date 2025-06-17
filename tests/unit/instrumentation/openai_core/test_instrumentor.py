@@ -38,34 +38,47 @@ class TestOpenAIInstrumentor:
     @pytest.fixture
     def instrumentor(self):
         """Set up OpenAI instrumentor for tests"""
-        # Create a real instrumentation setup for testing
-        mock_tracer_provider = MagicMock()
-        instrumentor = OpenAIInstrumentor()
+        # Create patches for tracer and meter
+        with patch("agentops.instrumentation.common.instrumentor.get_tracer") as mock_get_tracer:
+            with patch("agentops.instrumentation.common.instrumentor.get_meter") as mock_get_meter:
+                # Set up mock tracer and meter
+                mock_tracer = MagicMock()
+                mock_meter = MagicMock()
+                mock_get_tracer.return_value = mock_tracer
+                mock_get_meter.return_value = mock_meter
 
-        # To avoid timing issues with the fixture, we need to ensure patch
-        # objects are created before being used in the test
-        mock_wrap = patch("agentops.instrumentation.common.wrappers.wrap").start()
-        mock_unwrap = patch("agentops.instrumentation.common.wrappers.unwrap").start()
-        mock_instrument = patch.object(instrumentor, "_instrument", wraps=instrumentor._instrument).start()
-        mock_uninstrument = patch.object(instrumentor, "_uninstrument", wraps=instrumentor._uninstrument).start()
+                # Create a real instrumentation setup for testing
+                mock_tracer_provider = MagicMock()
+                instrumentor = OpenAIInstrumentor()
 
-        # Instrument
-        instrumentor._instrument(tracer_provider=mock_tracer_provider)
+                # To avoid timing issues with the fixture, we need to ensure patch
+                # objects are created before being used in the test
+                mock_wrap = patch("agentops.instrumentation.common.instrumentor.wrap").start()
+                mock_unwrap = patch("agentops.instrumentation.common.instrumentor.unwrap").start()
+                mock_instrument = patch.object(instrumentor, "_instrument", wraps=instrumentor._instrument).start()
+                mock_uninstrument = patch.object(
+                    instrumentor, "_uninstrument", wraps=instrumentor._uninstrument
+                ).start()
 
-        yield {
-            "instrumentor": instrumentor,
-            "tracer_provider": mock_tracer_provider,
-            "mock_wrap": mock_wrap,
-            "mock_unwrap": mock_unwrap,
-            "mock_instrument": mock_instrument,
-            "mock_uninstrument": mock_uninstrument,
-        }
+                # Instrument
+                instrumentor._instrument(tracer_provider=mock_tracer_provider)
 
-        # Uninstrument - must happen before stopping patches
-        instrumentor._uninstrument()
+                yield {
+                    "instrumentor": instrumentor,
+                    "tracer_provider": mock_tracer_provider,
+                    "mock_wrap": mock_wrap,
+                    "mock_unwrap": mock_unwrap,
+                    "mock_instrument": mock_instrument,
+                    "mock_uninstrument": mock_uninstrument,
+                    "mock_tracer": mock_tracer,
+                    "mock_meter": mock_meter,
+                }
 
-        # Stop patches
-        patch.stopall()
+                # Uninstrument - must happen before stopping patches
+                instrumentor._uninstrument()
+
+                # Stop patches
+                patch.stopall()
 
     def test_instrumentor_initialization(self):
         """Test instrumentor is initialized with correct configuration"""

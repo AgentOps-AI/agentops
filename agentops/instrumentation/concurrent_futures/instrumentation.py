@@ -7,12 +7,12 @@ context propagation across thread boundaries, preventing "NEW TRACE DETECTED" is
 
 import contextvars
 import functools
-from typing import Any, Callable, Collection, Optional, Tuple, TypeVar
+from typing import Any, Callable, Collection, Optional, Tuple, TypeVar, List, Dict
 
 from concurrent.futures import ThreadPoolExecutor, Future
 
-from opentelemetry.instrumentation.instrumentor import BaseInstrumentor
-
+from agentops.instrumentation.common import BaseAgentOpsInstrumentor, InstrumentorConfig
+from agentops.instrumentation.common.wrappers import WrapConfig
 from agentops.logging import logger
 
 # Store original methods to restore during uninstrumentation
@@ -95,7 +95,7 @@ def _context_propagating_submit(original_submit: Callable) -> Callable:
     return wrapped_submit
 
 
-class ConcurrentFuturesInstrumentor(BaseInstrumentor):
+class ConcurrentFuturesInstrumentor(BaseAgentOpsInstrumentor):
     """
     Instrumentor for concurrent.futures module.
 
@@ -104,40 +104,78 @@ class ConcurrentFuturesInstrumentor(BaseInstrumentor):
     instrumented operations maintain proper trace context.
     """
 
+    def __init__(self):
+        """Initialize the concurrent.futures instrumentor."""
+        config = InstrumentorConfig(
+            library_name="agentops.instrumentation.concurrent_futures",
+            library_version="0.1.0",
+            wrapped_methods=[],  # We handle wrapping manually
+            metrics_enabled=False,  # No metrics needed for context propagation
+            dependencies=[],
+        )
+        super().__init__(config)
+        self._original_init = None
+        self._original_submit = None
+
     def instrumentation_dependencies(self) -> Collection[str]:
         """Return a list of instrumentation dependencies."""
         return []
 
+    def _get_wrapped_methods(self) -> List[WrapConfig]:
+        """
+        Return list of methods to be wrapped.
+
+        For concurrent_futures, we don't use the standard wrapping mechanism
+        since we're patching methods directly for context propagation.
+        """
+        return []
+
+    def _create_metrics(self, meter) -> Dict[str, Any]:
+        """
+        Create metrics for this instrumentor.
+
+        This instrumentor doesn't need metrics as it's purely for context propagation.
+
+        Args:
+            meter: The meter instance (unused)
+
+        Returns:
+            Empty dict since no metrics are needed
+        """
+        return {}
+
     def _instrument(self, **kwargs: Any) -> None:
         """Instrument the concurrent.futures module."""
-        global _original_init, _original_submit
+        # Note: We don't call super()._instrument() here because we're not using
+        # the standard wrapping mechanism for this special instrumentor
 
         logger.debug("[ConcurrentFuturesInstrumentor] Starting instrumentation")
 
         # Store original methods
-        _original_init = ThreadPoolExecutor.__init__
-        _original_submit = ThreadPoolExecutor.submit
+        self._original_init = ThreadPoolExecutor.__init__
+        self._original_submit = ThreadPoolExecutor.submit
 
         # Patch ThreadPoolExecutor methods
-        ThreadPoolExecutor.__init__ = _context_propagating_init(_original_init)
-        ThreadPoolExecutor.submit = _context_propagating_submit(_original_submit)
+        ThreadPoolExecutor.__init__ = _context_propagating_init(self._original_init)
+        ThreadPoolExecutor.submit = _context_propagating_submit(self._original_submit)
 
         logger.info("[ConcurrentFuturesInstrumentor] Successfully instrumented concurrent.futures.ThreadPoolExecutor")
 
     def _uninstrument(self, **kwargs: Any) -> None:
         """Uninstrument the concurrent.futures module."""
-        global _original_init, _original_submit
+        # Note: We don't call super()._uninstrument() here because we're not using
+        # the standard wrapping mechanism for this special instrumentor
 
         logger.debug("[ConcurrentFuturesInstrumentor] Starting uninstrumentation")
 
         # Restore original methods
-        if _original_init:
-            ThreadPoolExecutor.__init__ = _original_init
-            _original_init = None
+        if self._original_init:
+            ThreadPoolExecutor.__init__ = self._original_init
+            self._original_init = None
 
-        if _original_submit:
-            ThreadPoolExecutor.submit = _original_submit
-            _original_submit = None
+        if self._original_submit:
+            ThreadPoolExecutor.submit = self._original_submit
+            self._original_submit = None
 
         logger.info("[ConcurrentFuturesInstrumentor] Successfully uninstrumented concurrent.futures.ThreadPoolExecutor")
 

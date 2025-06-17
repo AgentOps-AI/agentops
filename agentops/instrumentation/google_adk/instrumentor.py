@@ -7,18 +7,19 @@ It uses a patching approach to:
 3. Extract and properly index LLM messages and tool calls
 """
 
-from typing import Collection
-from opentelemetry.trace import get_tracer
-from opentelemetry.instrumentation.instrumentor import BaseInstrumentor
-from opentelemetry.metrics import get_meter
+from typing import Collection, List
 
 from agentops.logging import logger
-from agentops.instrumentation.google_adk import LIBRARY_NAME, LIBRARY_VERSION
+from agentops.instrumentation.common import BaseAgentOpsInstrumentor, StandardMetrics
+from agentops.instrumentation.common.wrappers import WrapConfig
 from agentops.instrumentation.google_adk.patch import patch_adk, unpatch_adk
-from agentops.semconv import Meters
+
+# Library info for tracer/meter
+LIBRARY_NAME = "agentops.instrumentation.google_adk"
+LIBRARY_VERSION = "0.1.0"
 
 
-class GoogleADKInstrumentor(BaseInstrumentor):
+class GoogleADKInstrumentor(BaseAgentOpsInstrumentor):
     """An instrumentor for Google Agent Development Kit (ADK).
 
     This instrumentor patches Google ADK to:
@@ -27,9 +28,26 @@ class GoogleADKInstrumentor(BaseInstrumentor):
     - Properly extract and index message content and tool interactions
     """
 
+    def __init__(self):
+        """Initialize the Google ADK instrumentor."""
+        super().__init__(
+            name="google_adk",
+            version=LIBRARY_VERSION,
+            library_name=LIBRARY_NAME,
+        )
+
     def instrumentation_dependencies(self) -> Collection[str]:
         """Return packages required for instrumentation."""
         return ["google-adk >= 0.1.0"]
+
+    def _get_wrapped_methods(self) -> List[WrapConfig]:
+        """
+        Return list of methods to be wrapped.
+
+        For Google ADK, we don't use the standard wrapping mechanism
+        since we're using a patching approach instead.
+        """
+        return []
 
     def _instrument(self, **kwargs):
         """Instrument the Google ADK.
@@ -39,34 +57,23 @@ class GoogleADKInstrumentor(BaseInstrumentor):
         2. Patches key ADK methods to create AgentOps spans
         3. Sets up metrics for tracking token usage and operation duration
         """
-        # Set up tracer and meter
-        tracer_provider = kwargs.get("tracer_provider")
-        tracer = get_tracer(LIBRARY_NAME, LIBRARY_VERSION, tracer_provider)
+        # Note: We don't call super()._instrument() here because we're not using
+        # the standard wrapping mechanism for this special instrumentor
 
-        meter_provider = kwargs.get("meter_provider")
-        meter = get_meter(LIBRARY_NAME, LIBRARY_VERSION, meter_provider)
+        # Get tracer and meter from base class
+        self._tracer_provider = kwargs.get("tracer_provider")
+        self._meter_provider = kwargs.get("meter_provider")
 
-        # Create metrics
-        meter.create_histogram(
-            name=Meters.LLM_TOKEN_USAGE,
-            unit="token",
-            description="Measures number of input and output tokens used with Google ADK",
-        )
+        # Initialize tracer and meter (these are set by base class properties)
+        _ = self._tracer
+        _ = self._meter
 
-        meter.create_histogram(
-            name=Meters.LLM_OPERATION_DURATION,
-            unit="s",
-            description="Google ADK operation duration",
-        )
+        # Create standard metrics for LLM operations
+        self._metrics = StandardMetrics(self._meter)
+        self._metrics.create_llm_metrics(system_name="Google ADK", operation_description="Google ADK operation")
 
-        meter.create_counter(
-            name=Meters.LLM_COMPLETIONS_EXCEPTIONS,
-            unit="time",
-            description="Number of exceptions occurred during Google ADK operations",
-        )
-
-        # Apply patches
-        patch_adk(tracer)
+        # Apply patches with our tracer
+        patch_adk(self._tracer)
         logger.info("Google ADK instrumentation enabled")
 
     def _uninstrument(self, **kwargs):
@@ -74,5 +81,8 @@ class GoogleADKInstrumentor(BaseInstrumentor):
 
         This method removes all patches and restores ADK's original behavior.
         """
+        # Note: We don't call super()._uninstrument() here because we're not using
+        # the standard wrapping mechanism for this special instrumentor
+
         unpatch_adk()
         logger.info("Google ADK instrumentation disabled")

@@ -12,11 +12,15 @@ The instrumentation supports both sync and async methods, metrics collection,
 and distributed tracing.
 """
 
-from typing import List, Collection
-from opentelemetry.trace import get_tracer
-from opentelemetry.instrumentation.instrumentor import BaseInstrumentor
+from typing import Dict, Any
 
-from agentops.instrumentation.common.wrappers import WrapConfig
+from agentops.instrumentation.common import (
+    BaseAgentOpsInstrumentor,
+    InstrumentorConfig,
+    WrapConfig,
+    StandardMetrics,
+    MetricsRecorder,
+)
 from agentops.instrumentation.openai import LIBRARY_NAME, LIBRARY_VERSION
 from agentops.instrumentation.openai.attributes.common import get_response_attributes
 from agentops.instrumentation.openai.config import Config
@@ -34,11 +38,12 @@ from agentops.instrumentation.openai.wrappers import (
 )
 from agentops.instrumentation.openai.v0 import OpenAIV0Instrumentor
 from agentops.semconv import Meters
+from opentelemetry.metrics import Meter
 
 _instruments = ("openai >= 0.27.0",)
 
 
-class OpenAIInstrumentor(BaseInstrumentor):
+class OpenAIInstrumentor(BaseAgentOpsInstrumentor):
     """An instrumentor for OpenAI's client library with comprehensive coverage."""
 
     def __init__(
@@ -50,7 +55,6 @@ class OpenAIInstrumentor(BaseInstrumentor):
         upload_base64_image=None,
         enable_trace_context_propagation: bool = True,
     ):
-        super().__init__()
         # Configure the global config with provided options
         Config.enrich_assistant = enrich_assistant
         Config.enrich_token_usage = enrich_token_usage
@@ -59,103 +63,73 @@ class OpenAIInstrumentor(BaseInstrumentor):
         Config.upload_base64_image = upload_base64_image
         Config.enable_trace_context_propagation = enable_trace_context_propagation
 
-    def instrumentation_dependencies(self) -> Collection[str]:
-        return _instruments
+        # Create instrumentor config
+        config = InstrumentorConfig(
+            library_name=LIBRARY_NAME,
+            library_version=LIBRARY_VERSION,
+            wrapped_methods=self._get_wrapped_methods(),
+            metrics_enabled=True,
+            dependencies=_instruments,
+        )
 
-    def _instrument(self, **kwargs):
-        """Instrument the OpenAI API."""
+        super().__init__(config)
+
+    def _initialize(self, **kwargs):
+        """Handle version-specific initialization."""
         if not is_openai_v1():
             # For v0, use the legacy instrumentor
             OpenAIV0Instrumentor().instrument(**kwargs)
-            return
+            # Skip normal instrumentation
+            self.config.wrapped_methods = []
 
-        # Get tracer and meter
-        tracer_provider = kwargs.get("tracer_provider")
-        tracer = get_tracer(LIBRARY_NAME, LIBRARY_VERSION, tracer_provider)
+    def _create_metrics(self, meter: Meter) -> Dict[str, Any]:
+        """Create metrics for OpenAI instrumentation."""
+        metrics = StandardMetrics.create_standard_metrics(meter)
 
-        # Define all wrapped methods
-        wrapped_methods = self._get_wrapped_methods()
+        # Add OpenAI-specific metrics
+        metrics.update(
+            {
+                "chat_choice_counter": meter.create_counter(
+                    name=Meters.LLM_GENERATION_CHOICES,
+                    unit="choice",
+                    description="Number of choices returned by chat completions call",
+                ),
+                "streaming_time_to_first_token": meter.create_histogram(
+                    name=Meters.LLM_STREAMING_TIME_TO_FIRST_TOKEN,
+                    unit="s",
+                    description="Time to first token in streaming chat completions",
+                ),
+                "streaming_time_to_generate": meter.create_histogram(
+                    name=Meters.LLM_STREAMING_TIME_TO_GENERATE,
+                    unit="s",
+                    description="Time between first token and completion in streaming chat completions",
+                ),
+                "embeddings_vector_size_counter": meter.create_counter(
+                    name=Meters.LLM_EMBEDDINGS_VECTOR_SIZE,
+                    unit="element",
+                    description="The size of returned vector",
+                ),
+                "embeddings_exception_counter": meter.create_counter(
+                    name=Meters.LLM_EMBEDDINGS_EXCEPTIONS,
+                    unit="time",
+                    description="Number of exceptions occurred during embeddings operation",
+                ),
+                "image_gen_exception_counter": meter.create_counter(
+                    name=Meters.LLM_IMAGE_GENERATIONS_EXCEPTIONS,
+                    unit="time",
+                    description="Number of exceptions occurred during image generations operation",
+                ),
+            }
+        )
 
-        # Apply all wrappers using the common wrapper infrastructure
-        from agentops.instrumentation.common.wrappers import wrap
+        return metrics
 
-        for wrap_config in wrapped_methods:
-            try:
-                wrap(wrap_config, tracer)
-            except (AttributeError, ModuleNotFoundError):
-                # Some methods may not be available in all versions
-                pass
-
-    def _uninstrument(self, **kwargs):
-        """Remove instrumentation from OpenAI API."""
+    def _custom_unwrap(self, **kwargs):
+        """Handle version-specific uninstrumentation."""
         if not is_openai_v1():
             OpenAIV0Instrumentor().uninstrument(**kwargs)
-            return
 
-        # Get all wrapped methods
-        wrapped_methods = self._get_wrapped_methods()
-
-        # Remove all wrappers using the common wrapper infrastructure
-        from agentops.instrumentation.common.wrappers import unwrap
-
-        for wrap_config in wrapped_methods:
-            try:
-                unwrap(wrap_config)
-            except Exception:
-                # Some methods may not be wrapped
-                pass
-
-    def _init_metrics(self, meter):
-        """Initialize metrics for instrumentation."""
-        return {
-            "tokens_histogram": meter.create_histogram(
-                name=Meters.LLM_TOKEN_USAGE,
-                unit="token",
-                description="Measures number of input and output tokens used",
-            ),
-            "chat_choice_counter": meter.create_counter(
-                name=Meters.LLM_GENERATION_CHOICES,
-                unit="choice",
-                description="Number of choices returned by chat completions call",
-            ),
-            "duration_histogram": meter.create_histogram(
-                name=Meters.LLM_OPERATION_DURATION,
-                unit="s",
-                description="GenAI operation duration",
-            ),
-            "chat_exception_counter": meter.create_counter(
-                name=Meters.LLM_COMPLETIONS_EXCEPTIONS,
-                unit="time",
-                description="Number of exceptions occurred during chat completions",
-            ),
-            "streaming_time_to_first_token": meter.create_histogram(
-                name=Meters.LLM_STREAMING_TIME_TO_FIRST_TOKEN,
-                unit="s",
-                description="Time to first token in streaming chat completions",
-            ),
-            "streaming_time_to_generate": meter.create_histogram(
-                name=Meters.LLM_STREAMING_TIME_TO_GENERATE,
-                unit="s",
-                description="Time between first token and completion in streaming chat completions",
-            ),
-            "embeddings_vector_size_counter": meter.create_counter(
-                name=Meters.LLM_EMBEDDINGS_VECTOR_SIZE,
-                unit="element",
-                description="The size of returned vector",
-            ),
-            "embeddings_exception_counter": meter.create_counter(
-                name=Meters.LLM_EMBEDDINGS_EXCEPTIONS,
-                unit="time",
-                description="Number of exceptions occurred during embeddings operation",
-            ),
-            "image_gen_exception_counter": meter.create_counter(
-                name=Meters.LLM_IMAGE_GENERATIONS_EXCEPTIONS,
-                unit="time",
-                description="Number of exceptions occurred during image generations operation",
-            ),
-        }
-
-    def _get_wrapped_methods(self) -> List[WrapConfig]:
+    def _get_wrapped_methods(self) -> list[WrapConfig]:
         """Get all methods that should be wrapped."""
         wrapped_methods = []
 
@@ -331,3 +305,7 @@ class OpenAIInstrumentor(BaseInstrumentor):
         )
 
         return wrapped_methods
+
+    def get_metrics_recorder(self) -> MetricsRecorder:
+        """Get a metrics recorder for use in wrappers."""
+        return MetricsRecorder(self._metrics)

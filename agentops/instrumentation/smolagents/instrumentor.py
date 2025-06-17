@@ -1,14 +1,16 @@
 """SmoLAgents instrumentation for AgentOps."""
 
-from typing import Collection
-from opentelemetry.instrumentation.instrumentor import BaseInstrumentor
-from opentelemetry.trace import get_tracer, SpanKind
+from typing import Collection, List
+from opentelemetry.trace import SpanKind
 from wrapt import wrap_function_wrapper
 
-from agentops.instrumentation.common.wrappers import unwrap
+from agentops.instrumentation.common import BaseAgentOpsInstrumentor, StandardMetrics
+from agentops.instrumentation.common.wrappers import WrapConfig
+from agentops.logging import logger
 
-# Define LIBRARY_VERSION directly to avoid circular import
-LIBRARY_VERSION = "1.16.0"
+# Library info for tracer/meter
+LIBRARY_NAME = "agentops.instrumentation.smolagents"
+LIBRARY_VERSION = "0.1.0"
 
 # Import attribute handlers
 try:
@@ -51,8 +53,16 @@ except ImportError:
         return {}
 
 
-class SmolAgentsInstrumentor(BaseInstrumentor):
+class SmolAgentsInstrumentor(BaseAgentOpsInstrumentor):
     """Instrumentor for SmoLAgents library."""
+
+    def __init__(self):
+        """Initialize the SmoLAgents instrumentor."""
+        super().__init__(
+            name="smolagents",
+            version=LIBRARY_VERSION,
+            library_name=LIBRARY_NAME,
+        )
 
     def instrumentation_dependencies(self) -> Collection[str]:
         return (
@@ -60,14 +70,32 @@ class SmolAgentsInstrumentor(BaseInstrumentor):
             "litellm",
         )
 
+    def _get_wrapped_methods(self) -> List[WrapConfig]:
+        """Return list of methods to be wrapped.
+
+        For SmoLAgents, we don't use the standard wrapping mechanism
+        since we need custom wrappers with special logic.
+        """
+        return []
+
     def _instrument(self, **kwargs):
         """Instrument SmoLAgents with AgentOps telemetry."""
-        tracer_provider = kwargs.get("tracer_provider")
-        tracer = get_tracer(__name__, LIBRARY_VERSION, tracer_provider)
+        # Note: We don't call super()._instrument() here because we're not using
+        # the standard wrapping mechanism for this special instrumentor
+
+        # Get tracer from base class
+        self._tracer_provider = kwargs.get("tracer_provider")
+        self._meter_provider = kwargs.get("meter_provider")
+
+        # Initialize tracer and meter (these are set by base class properties)
+        tracer = self._tracer
+
+        # Create standard metrics
+        self._metrics = StandardMetrics(self._meter)
+        self._metrics.create_llm_metrics(system_name="SmoLAgents", operation_description="SmoLAgents operation")
 
         # Core agent operations
         wrap_function_wrapper("smolagents.agents", "CodeAgent.run", self._agent_run_wrapper(tracer))
-
         wrap_function_wrapper("smolagents.agents", "ToolCallingAgent.run", self._agent_run_wrapper(tracer))
 
         # Tool calling operations
@@ -77,8 +105,9 @@ class SmolAgentsInstrumentor(BaseInstrumentor):
 
         # Model operations with proper model name extraction
         wrap_function_wrapper("smolagents.models", "LiteLLMModel.generate", self._llm_wrapper(tracer))
-
         wrap_function_wrapper("smolagents.models", "LiteLLMModel.generate_stream", self._llm_wrapper(tracer))
+
+        logger.info("SmoLAgents instrumentation enabled")
 
     def _agent_run_wrapper(self, tracer):
         """Wrapper for agent run methods."""
@@ -234,9 +263,35 @@ class SmolAgentsInstrumentor(BaseInstrumentor):
 
     def _uninstrument(self, **kwargs):
         """Remove instrumentation."""
+        # Note: We don't call super()._uninstrument() here because we're not using
+        # the standard wrapping mechanism for this special instrumentor
+
         # Unwrap all instrumented methods
-        unwrap("smolagents.agents", "CodeAgent.run")
-        unwrap("smolagents.agents", "ToolCallingAgent.run")
-        unwrap("smolagents.agents", "ToolCallingAgent.execute_tool_call")
-        unwrap("smolagents.models", "LiteLLMModel.generate")
-        unwrap("smolagents.models", "LiteLLMModel.generate_stream")
+        from opentelemetry.instrumentation.utils import unwrap
+
+        try:
+            unwrap("smolagents.agents", "CodeAgent.run")
+        except Exception as e:
+            logger.debug(f"Failed to unwrap CodeAgent.run: {e}")
+
+        try:
+            unwrap("smolagents.agents", "ToolCallingAgent.run")
+        except Exception as e:
+            logger.debug(f"Failed to unwrap ToolCallingAgent.run: {e}")
+
+        try:
+            unwrap("smolagents.agents", "ToolCallingAgent.execute_tool_call")
+        except Exception as e:
+            logger.debug(f"Failed to unwrap ToolCallingAgent.execute_tool_call: {e}")
+
+        try:
+            unwrap("smolagents.models", "LiteLLMModel.generate")
+        except Exception as e:
+            logger.debug(f"Failed to unwrap LiteLLMModel.generate: {e}")
+
+        try:
+            unwrap("smolagents.models", "LiteLLMModel.generate_stream")
+        except Exception as e:
+            logger.debug(f"Failed to unwrap LiteLLMModel.generate_stream: {e}")
+
+        logger.info("SmoLAgents instrumentation disabled")

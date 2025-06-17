@@ -1,10 +1,8 @@
-from typing import Collection
-from opentelemetry.instrumentation.instrumentor import BaseInstrumentor
-from opentelemetry.trace import get_tracer
-from opentelemetry.metrics import get_meter
+from typing import Collection, List
 from wrapt import wrap_function_wrapper
 
-from agentops.instrumentation.mem0 import LIBRARY_NAME, LIBRARY_VERSION
+from agentops.instrumentation.common import BaseAgentOpsInstrumentor, StandardMetrics
+from agentops.instrumentation.common.wrappers import WrapConfig
 from agentops.logging import logger
 
 # Import from refactored structure
@@ -19,7 +17,9 @@ from .memory import (
     mem0_history_wrapper,
 )
 
-from agentops.semconv import Meters
+# Library info for tracer/meter
+LIBRARY_NAME = "agentops.instrumentation.mem0"
+LIBRARY_VERSION = "0.1.0"
 
 # Methods to wrap for instrumentation using specialized wrappers
 WRAPPER_METHODS = [
@@ -180,7 +180,7 @@ WRAPPER_METHODS = [
 ]
 
 
-class Mem0Instrumentor(BaseInstrumentor):
+class Mem0Instrumentor(BaseAgentOpsInstrumentor):
     """An instrumentor for Mem0's client library.
 
     This class provides instrumentation for Mem0's memory operations by wrapping key methods
@@ -194,6 +194,14 @@ class Mem0Instrumentor(BaseInstrumentor):
     It captures metrics including operation duration, memory counts, and exceptions.
     """
 
+    def __init__(self):
+        """Initialize the Mem0 instrumentor."""
+        super().__init__(
+            name="mem0",
+            version=LIBRARY_VERSION,
+            library_name=LIBRARY_NAME,
+        )
+
     def instrumentation_dependencies(self) -> Collection[str]:
         """Return packages required for instrumentation.
 
@@ -201,6 +209,14 @@ class Mem0Instrumentor(BaseInstrumentor):
             A collection of package specifications required for this instrumentation.
         """
         return ["mem0ai >= 0.1.10"]
+
+    def _get_wrapped_methods(self) -> List[WrapConfig]:
+        """Return list of methods to be wrapped.
+
+        For Mem0, we don't use the standard wrapping mechanism
+        since we're using specialized wrappers instead.
+        """
+        return []
 
     def _instrument(self, **kwargs):
         """Instrument the Mem0 Memory API.
@@ -212,28 +228,24 @@ class Mem0Instrumentor(BaseInstrumentor):
         Args:
             **kwargs: Configuration options for instrumentation.
         """
-        super()._instrument(**kwargs)
+        # Note: We don't call super()._instrument() here because we're not using
+        # the standard wrapping mechanism for this special instrumentor
+
         logger.debug("Starting Mem0 instrumentation...")
 
-        tracer_provider = kwargs.get("tracer_provider")
-        tracer = get_tracer(LIBRARY_NAME, LIBRARY_VERSION, tracer_provider)
+        # Get tracer and meter from base class properties
+        self._tracer_provider = kwargs.get("tracer_provider")
+        self._meter_provider = kwargs.get("meter_provider")
 
-        meter_provider = kwargs.get("meter_provider")
-        meter = get_meter(LIBRARY_NAME, LIBRARY_VERSION, meter_provider)
+        # Initialize tracer and meter (these are set by base class properties)
+        tracer = self._tracer
+        meter = self._meter
 
-        # Create metrics for memory operations
-        meter.create_histogram(
-            name=Meters.LLM_OPERATION_DURATION,
-            unit="s",
-            description="Mem0 memory operation duration",
-        )
+        # Create standard metrics for memory operations
+        self._metrics = StandardMetrics(meter)
+        self._metrics.create_llm_metrics(system_name="Mem0", operation_description="Mem0 memory operation")
 
-        meter.create_counter(
-            name=Meters.LLM_COMPLETIONS_EXCEPTIONS,
-            unit="time",
-            description="Number of exceptions occurred during Mem0 operations",
-        )
-
+        # Create additional metrics specific to memory operations
         meter.create_histogram(
             name="mem0.memory.count",
             unit="memory",
@@ -254,7 +266,8 @@ class Mem0Instrumentor(BaseInstrumentor):
             except Exception as e:
                 # Log unexpected errors as warnings
                 logger.warning(f"Unexpected error wrapping {package}.{class_method}: {e}")
-        logger.debug("Mem0 instrumentation completed")
+
+        logger.info("Mem0 instrumentation enabled")
 
     def _uninstrument(self, **kwargs):
         """Remove instrumentation from Mem0 Memory API.
@@ -265,6 +278,9 @@ class Mem0Instrumentor(BaseInstrumentor):
         Args:
             **kwargs: Configuration options for uninstrumentation.
         """
+        # Note: We don't call super()._uninstrument() here because we're not using
+        # the standard wrapping mechanism for this special instrumentor
+
         # Unwrap specialized methods
         from opentelemetry.instrumentation.utils import unwrap
 
@@ -275,3 +291,5 @@ class Mem0Instrumentor(BaseInstrumentor):
                 unwrap(package, class_method)
             except Exception as e:
                 logger.debug(f"Failed to unwrap {package}.{class_method}: {e}")
+
+        logger.info("Mem0 instrumentation disabled")

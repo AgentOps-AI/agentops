@@ -5,7 +5,7 @@ instrumentation for agent workflows and LLM model calls.
 
 We focus on instrumenting the following key endpoints:
 - Agent.run/arun - Main agent workflow execution (sync/async)
-- Team._run/_arun - Team workflow execution (sync/async) 
+- Team._run/_arun - Team workflow execution (sync/async)
 - Team._run_stream/_arun_stream - Team streaming workflow execution (sync/async)
 - FunctionCall.execute/aexecute - Tool execution when agents call tools (sync/async)
 - Agent._run_tool/_arun_tool - Agent internal tool execution (sync/async)
@@ -13,22 +13,21 @@ We focus on instrumenting the following key endpoints:
 - Workflow.run_workflow/arun_workflow - Workflow execution (sync/async)
 - Workflow session management methods - Session lifecycle operations
 
-This provides clean visibility into agent workflows and actual tool usage with proper 
+This provides clean visibility into agent workflows and actual tool usage with proper
 parent-child span relationships.
 """
 
 from typing import List, Collection, Any, Optional
-from opentelemetry.trace import get_tracer
-from opentelemetry.instrumentation.instrumentor import BaseInstrumentor
-from opentelemetry.metrics import get_meter
 from opentelemetry import trace, context as otel_context
 from opentelemetry.trace import Status, StatusCode
-from wrapt import wrap_function_wrapper
 import threading
 
 from agentops.logging import logger
-from agentops.semconv import Meters
-from agentops.instrumentation.common.wrappers import WrapConfig, wrap, unwrap
+from agentops.instrumentation.common import (
+    BaseAgentOpsInstrumentor,
+    StandardMetrics,
+)
+from agentops.instrumentation.common.wrappers import WrapConfig
 
 # Import attribute handlers
 from agentops.instrumentation.agno.attributes.agent import get_agent_run_attributes
@@ -39,10 +38,6 @@ from agentops.instrumentation.agno.attributes.workflow import (
     get_workflow_run_attributes,
     get_workflow_session_attributes,
 )
-
-# Library info for tracer/meter
-LIBRARY_NAME = "agentops.instrumentation.agno"
-LIBRARY_VERSION = "0.1.0"
 
 
 class StreamingContextManager:
@@ -88,10 +83,6 @@ class StreamingContextManager:
             self._agent_sessions.clear()
 
 
-# Global context manager instance
-_streaming_context_manager = StreamingContextManager()
-
-
 # Methods to wrap for instrumentation
 WRAPPED_METHODS: List[WrapConfig] = [
     # Workflow session methods
@@ -129,11 +120,12 @@ WRAPPED_METHODS: List[WrapConfig] = [
 class StreamingResultWrapper:
     """Wrapper for streaming results that maintains agent span as active throughout iteration."""
 
-    def __init__(self, original_result, span, agent_id, agent_context):
+    def __init__(self, original_result, span, agent_id, agent_context, streaming_context_manager):
         self.original_result = original_result
         self.span = span
         self.agent_id = agent_id
         self.agent_context = agent_context
+        self.streaming_context_manager = streaming_context_manager
         self._consumed = False
 
     def __iter__(self):
@@ -150,14 +142,14 @@ class StreamingResultWrapper:
             if not self._consumed:
                 self._consumed = True
                 self.span.end()
-                _streaming_context_manager.remove_context(self.agent_id)
+                self.streaming_context_manager.remove_context(self.agent_id)
 
     def __getattr__(self, name):
         """Delegate attribute access to the original result."""
         return getattr(self.original_result, name)
 
 
-def create_streaming_workflow_wrapper(tracer):
+def create_streaming_workflow_wrapper(tracer, streaming_context_manager):
     """Create a streaming-aware wrapper for workflow run methods."""
 
     def wrapper(wrapped, instance, args, kwargs):
@@ -180,7 +172,7 @@ def create_streaming_workflow_wrapper(tracer):
 
                 # Store context for streaming - capture current context with active span
                 current_context = trace.set_span_in_context(span, otel_context.get_current())
-                _streaming_context_manager.store_context(workflow_id, current_context, span)
+                streaming_context_manager.store_context(workflow_id, current_context, span)
 
                 # Execute the original function within workflow context
                 context_token = otel_context.attach(current_context)
@@ -207,7 +199,7 @@ def create_streaming_workflow_wrapper(tracer):
                 span.set_status(Status(StatusCode.ERROR, str(e)))
                 span.record_exception(e)
                 span.end()
-                _streaming_context_manager.remove_context(workflow_id)
+                streaming_context_manager.remove_context(workflow_id)
                 raise
         else:
             # For non-streaming, use normal context manager
@@ -240,7 +232,7 @@ def create_streaming_workflow_wrapper(tracer):
     return wrapper
 
 
-def create_streaming_workflow_async_wrapper(tracer):
+def create_streaming_workflow_async_wrapper(tracer, streaming_context_manager):
     """Create a streaming-aware async wrapper for workflow run methods."""
 
     async def wrapper(wrapped, instance, args, kwargs):
@@ -263,7 +255,7 @@ def create_streaming_workflow_async_wrapper(tracer):
 
                 # Store context for streaming - capture current context with active span
                 current_context = trace.set_span_in_context(span, otel_context.get_current())
-                _streaming_context_manager.store_context(workflow_id, current_context, span)
+                streaming_context_manager.store_context(workflow_id, current_context, span)
 
                 # Execute the original function within workflow context
                 context_token = otel_context.attach(current_context)
@@ -290,7 +282,7 @@ def create_streaming_workflow_async_wrapper(tracer):
                 span.set_status(Status(StatusCode.ERROR, str(e)))
                 span.record_exception(e)
                 span.end()
-                _streaming_context_manager.remove_context(workflow_id)
+                streaming_context_manager.remove_context(workflow_id)
                 raise
         else:
             # For non-streaming, use normal context manager
@@ -323,7 +315,7 @@ def create_streaming_workflow_async_wrapper(tracer):
     return wrapper
 
 
-def create_streaming_agent_wrapper(tracer):
+def create_streaming_agent_wrapper(tracer, streaming_context_manager):
     """Create a streaming-aware wrapper for agent run methods."""
 
     def wrapper(wrapped, instance, args, kwargs):
@@ -349,11 +341,11 @@ def create_streaming_agent_wrapper(tracer):
 
                 # Store context for streaming - capture current context with active span
                 current_context = trace.set_span_in_context(span, otel_context.get_current())
-                _streaming_context_manager.store_context(agent_id, current_context, span)
+                streaming_context_manager.store_context(agent_id, current_context, span)
 
                 # Store session-to-agent mapping for LLM context lookup
                 if session_id:
-                    _streaming_context_manager.store_agent_session_mapping(session_id, agent_id)
+                    streaming_context_manager.store_agent_session_mapping(session_id, agent_id)
 
                 # Execute the original function within agent context
                 context_token = otel_context.attach(current_context)
@@ -374,18 +366,18 @@ def create_streaming_agent_wrapper(tracer):
 
                 # Wrap the result to maintain context and end span when complete
                 if hasattr(result, "__iter__"):
-                    return StreamingResultWrapper(result, span, agent_id, current_context)
+                    return StreamingResultWrapper(result, span, agent_id, current_context, streaming_context_manager)
                 else:
                     # Not actually streaming, clean up immediately
                     span.end()
-                    _streaming_context_manager.remove_context(agent_id)
+                    streaming_context_manager.remove_context(agent_id)
                     return result
 
             except Exception as e:
                 span.set_status(Status(StatusCode.ERROR, str(e)))
                 span.record_exception(e)
                 span.end()
-                _streaming_context_manager.remove_context(agent_id)
+                streaming_context_manager.remove_context(agent_id)
                 raise
         else:
             # For non-streaming, use normal context manager
@@ -418,7 +410,7 @@ def create_streaming_agent_wrapper(tracer):
     return wrapper
 
 
-def create_streaming_agent_async_wrapper(tracer):
+def create_streaming_agent_async_wrapper(tracer, streaming_context_manager):
     """Create a streaming-aware async wrapper for agent run methods."""
 
     async def wrapper(wrapped, instance, args, kwargs):
@@ -444,11 +436,11 @@ def create_streaming_agent_async_wrapper(tracer):
 
                 # Store context for streaming - capture current context with active span
                 current_context = trace.set_span_in_context(span, otel_context.get_current())
-                _streaming_context_manager.store_context(agent_id, current_context, span)
+                streaming_context_manager.store_context(agent_id, current_context, span)
 
                 # Store session-to-agent mapping for LLM context lookup
                 if session_id:
-                    _streaming_context_manager.store_agent_session_mapping(session_id, agent_id)
+                    streaming_context_manager.store_agent_session_mapping(session_id, agent_id)
 
                 # Execute the original function within agent context
                 context_token = otel_context.attach(current_context)
@@ -469,18 +461,18 @@ def create_streaming_agent_async_wrapper(tracer):
 
                 # Wrap the result to maintain context and end span when complete
                 if hasattr(result, "__iter__"):
-                    return StreamingResultWrapper(result, span, agent_id, current_context)
+                    return StreamingResultWrapper(result, span, agent_id, current_context, streaming_context_manager)
                 else:
                     # Not actually streaming, clean up immediately
                     span.end()
-                    _streaming_context_manager.remove_context(agent_id)
+                    streaming_context_manager.remove_context(agent_id)
                     return result
 
             except Exception as e:
                 span.set_status(Status(StatusCode.ERROR, str(e)))
                 span.record_exception(e)
                 span.end()
-                _streaming_context_manager.remove_context(agent_id)
+                streaming_context_manager.remove_context(agent_id)
                 raise
         else:
             # For non-streaming, use normal context manager
@@ -513,7 +505,7 @@ def create_streaming_agent_async_wrapper(tracer):
     return wrapper
 
 
-def create_streaming_tool_wrapper(tracer):
+def create_streaming_tool_wrapper(tracer, streaming_context_manager):
     """Create a streaming-aware wrapper for tool execution methods."""
 
     def wrapper(wrapped, instance, args, kwargs):
@@ -527,7 +519,7 @@ def create_streaming_tool_wrapper(tracer):
                 agent = instance._agent
                 agent_id = getattr(agent, "agent_id", None) or getattr(agent, "id", None) or id(agent)
                 agent_id = str(agent_id)
-                context_info = _streaming_context_manager.get_context(agent_id)
+                context_info = streaming_context_manager.get_context(agent_id)
                 if context_info:
                     parent_context, parent_span = context_info
         except Exception:
@@ -542,7 +534,7 @@ def create_streaming_tool_wrapper(tracer):
                         getattr(workflow, "workflow_id", None) or getattr(workflow, "id", None) or id(workflow)
                     )
                     workflow_id = str(workflow_id)
-                    context_info = _streaming_context_manager.get_context(workflow_id)
+                    context_info = streaming_context_manager.get_context(workflow_id)
                     if context_info:
                         parent_context, parent_span = context_info
             except Exception:
@@ -610,7 +602,7 @@ def create_streaming_tool_wrapper(tracer):
     return wrapper
 
 
-def create_metrics_wrapper(tracer):
+def create_metrics_wrapper(tracer, streaming_context_manager):
     """Create a wrapper for metrics methods with dynamic span naming."""
 
     def wrapper(wrapped, instance, args, kwargs):
@@ -647,7 +639,7 @@ def create_metrics_wrapper(tracer):
     return wrapper
 
 
-def create_team_internal_wrapper(tracer):
+def create_team_internal_wrapper(tracer, streaming_context_manager):
     """Create a wrapper for Team internal methods (_run/_arun) that manages team span lifecycle."""
 
     def wrapper(wrapped, instance, args, kwargs):
@@ -656,7 +648,7 @@ def create_team_internal_wrapper(tracer):
         team_id = str(team_id)
 
         # Check if we already have a team context (from print_response)
-        existing_context = _streaming_context_manager.get_context(team_id)
+        existing_context = streaming_context_manager.get_context(team_id)
 
         if existing_context:
             # We're being called from print_response, use existing context
@@ -686,7 +678,7 @@ def create_team_internal_wrapper(tracer):
                         # Close the parent team span when workflow completes
                         if parent_span:
                             parent_span.end()
-                            _streaming_context_manager.remove_context(team_id)
+                            streaming_context_manager.remove_context(team_id)
             finally:
                 otel_context.detach(context_token)
         else:
@@ -712,7 +704,7 @@ def create_team_internal_wrapper(tracer):
     return wrapper
 
 
-def create_team_internal_async_wrapper(tracer):
+def create_team_internal_async_wrapper(tracer, streaming_context_manager):
     """Create an async wrapper for Team internal methods (_arun) that manages team span lifecycle."""
 
     async def wrapper(wrapped, instance, args, kwargs):
@@ -721,7 +713,7 @@ def create_team_internal_async_wrapper(tracer):
         team_id = str(team_id)
 
         # Check if we already have a team context (from print_response)
-        existing_context = _streaming_context_manager.get_context(team_id)
+        existing_context = streaming_context_manager.get_context(team_id)
 
         if existing_context:
             # We're being called from print_response, use existing context
@@ -751,7 +743,7 @@ def create_team_internal_async_wrapper(tracer):
                         # Close the parent team span when workflow completes
                         if parent_span:
                             parent_span.end()
-                            _streaming_context_manager.remove_context(team_id)
+                            streaming_context_manager.remove_context(team_id)
             finally:
                 otel_context.detach(context_token)
         else:
@@ -777,7 +769,7 @@ def create_team_internal_async_wrapper(tracer):
     return wrapper
 
 
-def create_team_wrapper(tracer):
+def create_team_wrapper(tracer, streaming_context_manager):
     """Create a wrapper for Team methods that establishes the team context."""
 
     def wrapper(wrapped, instance, args, kwargs):
@@ -802,7 +794,7 @@ def create_team_wrapper(tracer):
 
                 # Store context for child spans
                 current_context = trace.set_span_in_context(span, otel_context.get_current())
-                _streaming_context_manager.store_context(team_id, current_context, span)
+                streaming_context_manager.store_context(team_id, current_context, span)
 
                 # The span will be closed by the internal _run method
                 # Just execute print_response normally
@@ -813,7 +805,7 @@ def create_team_wrapper(tracer):
                 span.set_status(Status(StatusCode.ERROR, str(e)))
                 span.record_exception(e)
                 span.end()
-                _streaming_context_manager.remove_context(team_id)
+                streaming_context_manager.remove_context(team_id)
                 raise
         else:
             # For run/arun methods, use standard span management
@@ -827,7 +819,7 @@ def create_team_wrapper(tracer):
 
                 # Store context for child spans
                 current_context = trace.set_span_in_context(span, otel_context.get_current())
-                _streaming_context_manager.store_context(team_id, current_context, span)
+                streaming_context_manager.store_context(team_id, current_context, span)
 
                 # Execute the original function within team context
                 context_token = otel_context.attach(current_context)
@@ -836,11 +828,11 @@ def create_team_wrapper(tracer):
 
                     # For streaming results, wrap them to keep span alive
                     if is_streaming and hasattr(result, "__iter__"):
-                        return StreamingResultWrapper(result, span, team_id, current_context)
+                        return StreamingResultWrapper(result, span, team_id, current_context, streaming_context_manager)
                     else:
                         # Non-streaming, close span
                         span.end()
-                        _streaming_context_manager.remove_context(team_id)
+                        streaming_context_manager.remove_context(team_id)
                         return result
 
                 finally:
@@ -850,13 +842,13 @@ def create_team_wrapper(tracer):
                 span.set_status(Status(StatusCode.ERROR, str(e)))
                 span.record_exception(e)
                 span.end()
-                _streaming_context_manager.remove_context(team_id)
+                streaming_context_manager.remove_context(team_id)
                 raise
 
     return wrapper
 
 
-def create_team_async_wrapper(tracer):
+def create_team_async_wrapper(tracer, streaming_context_manager):
     """Create an async wrapper for Team methods that establishes the team context."""
 
     async def wrapper(wrapped, instance, args, kwargs):
@@ -878,7 +870,7 @@ def create_team_async_wrapper(tracer):
 
             # Store context for child spans - capture current context with active span
             current_context = trace.set_span_in_context(span, otel_context.get_current())
-            _streaming_context_manager.store_context(team_id, current_context, span)
+            streaming_context_manager.store_context(team_id, current_context, span)
 
             # Execute the original function within team context
             context_token = otel_context.attach(current_context)
@@ -888,7 +880,7 @@ def create_team_async_wrapper(tracer):
                 # For non-streaming, close the span
                 if not is_streaming:
                     span.end()
-                    _streaming_context_manager.remove_context(team_id)
+                    streaming_context_manager.remove_context(team_id)
 
                 return result
             finally:
@@ -898,7 +890,7 @@ def create_team_async_wrapper(tracer):
             span.set_status(Status(StatusCode.ERROR, str(e)))
             span.record_exception(e)
             span.end()
-            _streaming_context_manager.remove_context(team_id)
+            streaming_context_manager.remove_context(team_id)
             raise
 
     return wrapper
@@ -918,161 +910,176 @@ def get_agent_context_for_llm():
     return None, None
 
 
-class AgnoInstrumentor(BaseInstrumentor):
+class AgnoInstrumentor(BaseAgentOpsInstrumentor):
     """Agno instrumentation class."""
+
+    def __init__(self):
+        """Initialize the Agno instrumentor."""
+        super().__init__(
+            name="agno",
+            version="0.1.0",
+            library_name="agentops.instrumentation.agno",
+        )
+        self._streaming_context_manager = StreamingContextManager()
 
     def instrumentation_dependencies(self) -> Collection[str]:
         """Returns list of packages required for instrumentation."""
         return ["agno >= 0.1.0"]
 
+    def _get_wrapped_methods(self) -> List[WrapConfig]:
+        """Return list of methods to be wrapped."""
+        # Combine standard wrapped methods with custom streaming wraps
+        wrapped_methods = WRAPPED_METHODS.copy()
+
+        # Add streaming method configurations
+        wrapped_methods.extend(
+            [
+                # Streaming agent methods
+                WrapConfig(
+                    trace_name="agno.agent.run.agent",
+                    package="agno.agent",
+                    class_name="Agent",
+                    method_name="run",
+                    handler=self._create_streaming_agent_wrapper,
+                ),
+                WrapConfig(
+                    trace_name="agno.agent.run.agent",
+                    package="agno.agent",
+                    class_name="Agent",
+                    method_name="arun",
+                    handler=self._create_streaming_agent_async_wrapper,
+                ),
+                # Streaming workflow methods
+                WrapConfig(
+                    trace_name="agno.workflow.run.workflow",
+                    package="agno.workflow.workflow",
+                    class_name="Workflow",
+                    method_name="run_workflow",
+                    handler=self._create_streaming_workflow_wrapper,
+                ),
+                WrapConfig(
+                    trace_name="agno.workflow.run.workflow",
+                    package="agno.workflow.workflow",
+                    class_name="Workflow",
+                    method_name="arun_workflow",
+                    handler=self._create_streaming_workflow_async_wrapper,
+                ),
+                # Streaming tool execution
+                WrapConfig(
+                    trace_name="agno.tool.execute.tool_usage",
+                    package="agno.tools.function",
+                    class_name="FunctionCall",
+                    method_name="execute",
+                    handler=self._create_streaming_tool_wrapper,
+                ),
+                # Metrics wrapper
+                WrapConfig(
+                    trace_name="agno.agent.metrics",
+                    package="agno.agent",
+                    class_name="Agent",
+                    method_name="_set_session_metrics",
+                    handler=self._create_metrics_wrapper,
+                ),
+                # Team methods
+                WrapConfig(
+                    trace_name="agno.team.run.agent",
+                    package="agno.team.team",
+                    class_name="Team",
+                    method_name="run",
+                    handler=self._create_team_wrapper,
+                ),
+                WrapConfig(
+                    trace_name="agno.team.run.agent",
+                    package="agno.team.team",
+                    class_name="Team",
+                    method_name="arun",
+                    handler=self._create_team_async_wrapper,
+                ),
+                WrapConfig(
+                    trace_name="agno.team.run.agent",
+                    package="agno.team.team",
+                    class_name="Team",
+                    method_name="print_response",
+                    handler=self._create_team_wrapper,
+                ),
+                # Team internal methods with special handling
+                WrapConfig(
+                    trace_name="agno.team.run.workflow",
+                    package="agno.team.team",
+                    class_name="Team",
+                    method_name="_run",
+                    handler=self._create_team_internal_wrapper,
+                ),
+                WrapConfig(
+                    trace_name="agno.team.run.workflow",
+                    package="agno.team.team",
+                    class_name="Team",
+                    method_name="_arun",
+                    handler=self._create_team_internal_async_wrapper,
+                ),
+            ]
+        )
+
+        return wrapped_methods
+
     def _instrument(self, **kwargs):
         """Install instrumentation for Agno."""
-        tracer_provider = kwargs.get("tracer_provider")
-        tracer = get_tracer(LIBRARY_NAME, LIBRARY_VERSION, tracer_provider)
+        # Call parent implementation
+        super()._instrument(**kwargs)
 
-        meter_provider = kwargs.get("meter_provider")
-        meter = get_meter(LIBRARY_NAME, LIBRARY_VERSION, meter_provider)
-
-        # Create metrics
-        meter.create_histogram(
-            name=Meters.LLM_TOKEN_USAGE,
-            unit="token",
-            description="Measures number of input and output tokens used with Agno agents",
-        )
-
-        meter.create_histogram(
-            name=Meters.LLM_OPERATION_DURATION,
-            unit="s",
-            description="Agno agent operation duration",
-        )
-
-        meter.create_counter(
-            name=Meters.LLM_COMPLETIONS_EXCEPTIONS,
-            unit="time",
-            description="Number of exceptions occurred during Agno agent operations",
-        )
-
-        # Standard method wrapping using WrapConfig
-        for wrap_config in WRAPPED_METHODS:
-            try:
-                wrap(wrap_config, tracer)
-            except (AttributeError, ModuleNotFoundError):
-                logger.debug(f"Could not wrap {wrap_config}")
-
-        # Special handling for streaming methods
-        # These require custom wrappers due to their streaming nature
-        try:
-            # Streaming agent methods
-            wrap_function_wrapper(
-                "agno.agent",
-                "Agent.run",
-                create_streaming_agent_wrapper(tracer),
-            )
-            wrap_function_wrapper(
-                "agno.agent",
-                "Agent.arun",
-                create_streaming_agent_async_wrapper(tracer),
-            )
-
-            # Streaming workflow methods
-            wrap_function_wrapper(
-                "agno.workflow.workflow",
-                "Workflow.run_workflow",
-                create_streaming_workflow_wrapper(tracer),
-            )
-            wrap_function_wrapper(
-                "agno.workflow.workflow",
-                "Workflow.arun_workflow",
-                create_streaming_workflow_async_wrapper(tracer),
-            )
-
-            # Streaming tool execution
-            wrap_function_wrapper(
-                "agno.tools.function",
-                "FunctionCall.execute",
-                create_streaming_tool_wrapper(tracer),
-            )
-
-            # Metrics wrapper
-            wrap_function_wrapper(
-                "agno.agent",
-                "Agent._set_session_metrics",
-                create_metrics_wrapper(tracer),
-            )
-
-            # Team methods
-            wrap_function_wrapper(
-                "agno.team.team",
-                "Team.run",
-                create_team_wrapper(tracer),
-            )
-            wrap_function_wrapper(
-                "agno.team.team",
-                "Team.arun",
-                create_team_async_wrapper(tracer),
-            )
-            wrap_function_wrapper(
-                "agno.team.team",
-                "Team.print_response",
-                create_team_wrapper(tracer),
-            )
-
-            # Team internal methods with special handling
-            wrap_function_wrapper(
-                "agno.team.team",
-                "Team._run",
-                create_team_internal_wrapper(tracer),
-            )
-            wrap_function_wrapper(
-                "agno.team.team",
-                "Team._arun",
-                create_team_internal_async_wrapper(tracer),
-            )
-
-            logger.debug("Successfully wrapped Agno streaming methods")
-        except (AttributeError, ModuleNotFoundError) as e:
-            logger.debug(f"Failed to wrap Agno streaming methods: {e}")
+        # Create standard metrics for LLM operations
+        self._metrics = StandardMetrics(self._meter)
+        self._metrics.create_llm_metrics(system_name="agno", operation_description="Agno agent operation")
 
         logger.info("Agno instrumentation installed successfully")
 
     def _uninstrument(self, **kwargs):
         """Remove instrumentation for Agno."""
         # Clear streaming contexts
-        _streaming_context_manager.clear_all()
+        self._streaming_context_manager.clear_all()
 
-        # Unwrap standard methods
-        for wrap_config in WRAPPED_METHODS:
-            try:
-                unwrap(wrap_config)
-            except Exception:
-                logger.debug(f"Failed to unwrap {wrap_config}")
-
-        # Unwrap streaming methods
-        try:
-            from opentelemetry.instrumentation.utils import unwrap as otel_unwrap
-
-            # Agent methods
-            otel_unwrap("agno.agent", "Agent.run")
-            otel_unwrap("agno.agent", "Agent.arun")
-
-            # Workflow methods
-            otel_unwrap("agno.workflow.workflow", "Workflow.run_workflow")
-            otel_unwrap("agno.workflow.workflow", "Workflow.arun_workflow")
-
-            # Tool methods
-            otel_unwrap("agno.tools.function", "FunctionCall.execute")
-
-            # Metrics methods
-            otel_unwrap("agno.agent", "Agent._set_session_metrics")
-
-            # Team methods
-            otel_unwrap("agno.team.team", "Team.run")
-            otel_unwrap("agno.team.team", "Team.arun")
-            otel_unwrap("agno.team.team", "Team.print_response")
-            otel_unwrap("agno.team.team", "Team._run")
-            otel_unwrap("agno.team.team", "Team._arun")
-
-        except (AttributeError, ModuleNotFoundError):
-            logger.debug("Failed to unwrap Agno streaming methods")
+        # Call parent implementation
+        super()._uninstrument(**kwargs)
 
         logger.info("Agno instrumentation removed successfully")
+
+    # Method wrappers converted to instance methods
+    def _create_streaming_agent_wrapper(self, args=None, kwargs=None, return_value=None):
+        """Wrapper function for streaming agent methods."""
+        return create_streaming_agent_wrapper(self._tracer, self._streaming_context_manager)
+
+    def _create_streaming_agent_async_wrapper(self, args=None, kwargs=None, return_value=None):
+        """Wrapper function for async streaming agent methods."""
+        return create_streaming_agent_async_wrapper(self._tracer, self._streaming_context_manager)
+
+    def _create_streaming_workflow_wrapper(self, args=None, kwargs=None, return_value=None):
+        """Wrapper function for streaming workflow methods."""
+        return create_streaming_workflow_wrapper(self._tracer, self._streaming_context_manager)
+
+    def _create_streaming_workflow_async_wrapper(self, args=None, kwargs=None, return_value=None):
+        """Wrapper function for async streaming workflow methods."""
+        return create_streaming_workflow_async_wrapper(self._tracer, self._streaming_context_manager)
+
+    def _create_streaming_tool_wrapper(self, args=None, kwargs=None, return_value=None):
+        """Wrapper function for streaming tool methods."""
+        return create_streaming_tool_wrapper(self._tracer, self._streaming_context_manager)
+
+    def _create_metrics_wrapper(self, args=None, kwargs=None, return_value=None):
+        """Wrapper function for metrics methods."""
+        return create_metrics_wrapper(self._tracer, self._streaming_context_manager)
+
+    def _create_team_wrapper(self, args=None, kwargs=None, return_value=None):
+        """Wrapper function for team methods."""
+        return create_team_wrapper(self._tracer, self._streaming_context_manager)
+
+    def _create_team_async_wrapper(self, args=None, kwargs=None, return_value=None):
+        """Wrapper function for async team methods."""
+        return create_team_async_wrapper(self._tracer, self._streaming_context_manager)
+
+    def _create_team_internal_wrapper(self, args=None, kwargs=None, return_value=None):
+        """Wrapper function for team internal methods."""
+        return create_team_internal_wrapper(self._tracer, self._streaming_context_manager)
+
+    def _create_team_internal_async_wrapper(self, args=None, kwargs=None, return_value=None):
+        """Wrapper function for async team internal methods."""
+        return create_team_internal_async_wrapper(self._tracer, self._streaming_context_manager)
