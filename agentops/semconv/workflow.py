@@ -18,14 +18,9 @@ class WorkflowAttributes:
     WORKFLOW_OUTPUT_TYPE = "workflow.output.type"  # Type of output from the workflow
     WORKFLOW_FINAL_OUTPUT = "workflow.final_output"  # Final output of the workflow
 
-    # Workflow step attributes
-    WORKFLOW_STEP = "workflow.step"
+    # Workflow step attributes (only keep used ones)
     WORKFLOW_STEP_TYPE = "workflow.step.type"  # Type of workflow step
-    WORKFLOW_STEP_NAME = "workflow.step.name"  # Name of the workflow step
-    WORKFLOW_STEP_INPUT = "workflow.step.input"  # Input to the workflow step
-    WORKFLOW_STEP_OUTPUT = "workflow.step.output"  # Output from the workflow step
     WORKFLOW_STEP_STATUS = "workflow.step.status"  # Status of the workflow step
-    WORKFLOW_STEP_ERROR = "workflow.step.error"  # Error from the workflow step
 
     # Configuration
     WORKFLOW_MAX_TURNS = "workflow.max_turns"  # Maximum number of turns in a workflow

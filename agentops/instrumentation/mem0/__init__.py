@@ -5,6 +5,7 @@ capturing telemetry data for memory operations.
 """
 
 import logging
+from agentops.instrumentation.common import LibraryInfo
 
 # Import memory operation wrappers
 from .memory import (
@@ -18,21 +19,12 @@ from .memory import (
     mem0_history_wrapper,
 )
 
-
-def get_version() -> str:
-    try:
-        from importlib.metadata import version
-
-        return version("mem0ai")
-    except ImportError:
-        logger.debug("Could not find Mem0 SDK version")
-        return "unknown"
-
-
-LIBRARY_NAME = "agentops.instrumentation.mem0"
-LIBRARY_VERSION = "1.0.0"
-
 logger = logging.getLogger(__name__)
+
+# Library information
+_library_info = LibraryInfo(name="agentops.instrumentation.mem0", package_name="mem0ai")
+LIBRARY_NAME = _library_info.name
+LIBRARY_VERSION = "1.0.0"  # Internal version for instrumentation
 
 # Import after defining constants to avoid circular imports
 from agentops.instrumentation.mem0.instrumentor import Mem0Instrumentor  # noqa: E402

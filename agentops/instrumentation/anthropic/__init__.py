@@ -5,30 +5,14 @@ including chat completions, streaming, and event handling.
 """
 
 import logging
-
-
-def get_version() -> str:
-    """Get the version of the Anthropic SDK, or 'unknown' if not found
-
-    Attempts to retrieve the installed version of the Anthropic SDK using importlib.metadata.
-    Falls back to 'unknown' if the version cannot be determined.
-
-    Returns:
-        The version string of the Anthropic SDK or 'unknown'
-    """
-    try:
-        from importlib.metadata import version
-
-        return version("anthropic")
-    except ImportError:
-        logger.debug("Could not find Anthropic SDK version")
-        return "unknown"
-
-
-LIBRARY_NAME = "anthropic"
-LIBRARY_VERSION: str = get_version()
+from agentops.instrumentation.common import LibraryInfo
 
 logger = logging.getLogger(__name__)
+
+# Library information
+_library_info = LibraryInfo(name="anthropic")
+LIBRARY_NAME = _library_info.name
+LIBRARY_VERSION = _library_info.version
 
 # Import after defining constants to avoid circular imports
 from agentops.instrumentation.anthropic.instrumentor import AnthropicInstrumentor  # noqa: E402

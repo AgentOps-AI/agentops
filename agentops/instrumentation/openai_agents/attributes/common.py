@@ -233,7 +233,7 @@ def get_function_span_attributes(span_data: Any) -> AttributeMap:
             pass
 
     if hasattr(span_data, "from_agent") and span_data.from_agent:
-        attributes[f"{AgentAttributes.AGENT}.calling_tool.name"] = str(span_data.from_agent)
+        attributes["agent.calling_tool.name"] = str(span_data.from_agent)
 
     return attributes
 

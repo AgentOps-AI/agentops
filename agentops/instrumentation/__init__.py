@@ -22,7 +22,6 @@ from types import ModuleType
 from dataclasses import dataclass
 import importlib
 import sys
-from importlib.metadata import version
 from packaging.version import Version, parse
 import builtins
 
@@ -34,6 +33,7 @@ from opentelemetry.instrumentation.instrumentor import BaseInstrumentor  # type:
 
 from agentops.logging import logger
 from agentops.sdk.core import tracer
+from agentops.instrumentation.common import get_library_version
 
 
 # Define the structure for instrumentor configurations
@@ -456,9 +456,11 @@ class InstrumentorLoader:
                 provider_name = self.package_name
             else:
                 provider_name = self.module_name.split(".")[-1]
-            module_version = version(provider_name)
-            return module_version is not None and Version(module_version) >= parse(self.min_version)
-        except ImportError:
+
+            # Use common version utility
+            module_version = get_library_version(provider_name)
+            return module_version != "unknown" and Version(module_version) >= parse(self.min_version)
+        except Exception:
             return False
 
     def get_instance(self) -> BaseInstrumentor:

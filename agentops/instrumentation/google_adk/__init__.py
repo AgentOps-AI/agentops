@@ -4,15 +4,14 @@ This module provides instrumentation for Google's Agent Development Kit (ADK),
 capturing agent execution, LLM calls, tool calls, and other ADK-specific events.
 """
 
-from importlib.metadata import version, PackageNotFoundError
+from agentops.instrumentation.common import LibraryInfo
 
-try:
-    __version__ = version("google-adk")
-except PackageNotFoundError:
-    __version__ = "0.0.0"
-
-LIBRARY_NAME = "agentops.instrumentation.google_adk"
-LIBRARY_VERSION = __version__
+# Library information
+_library_info = LibraryInfo(
+    name="agentops.instrumentation.google_adk", package_name="google-adk", default_version="0.0.0"
+)
+LIBRARY_NAME = _library_info.name
+LIBRARY_VERSION = _library_info.version
 
 from agentops.instrumentation.google_adk.instrumentor import GoogleADKInstrumentor  # noqa: E402
 from agentops.instrumentation.google_adk import patch  # noqa: E402

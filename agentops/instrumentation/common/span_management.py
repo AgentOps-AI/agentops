@@ -15,7 +15,6 @@ from opentelemetry import context as context_api
 
 from agentops.logging import logger
 from agentops.semconv import CoreAttributes
-from agentops import get_client
 
 
 class SpanAttributeManager:
@@ -33,9 +32,12 @@ class SpanAttributeManager:
 
     def set_config_tags(self, span: Span):
         """Set tags from AgentOps config on a span."""
-        config = get_client().config
-        if config.default_tags and len(config.default_tags) > 0:
-            tag_list = list(config.default_tags)
+        # Import locally to avoid circular dependency
+        from agentops import get_client
+
+        client = get_client()
+        if client and client.config.default_tags and len(client.config.default_tags) > 0:
+            tag_list = list(client.config.default_tags)
             span.set_attribute(CoreAttributes.TAGS, tag_list)
 
 

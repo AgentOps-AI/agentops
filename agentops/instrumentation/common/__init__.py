@@ -35,6 +35,10 @@ from agentops.instrumentation.common.streaming import (
     create_stream_wrapper_factory,
     StreamingResponseHandler,
 )
+from agentops.instrumentation.common.version import (
+    get_library_version,
+    LibraryInfo,
+)
 
 __all__ = [
     # Attributes
@@ -72,4 +76,7 @@ __all__ = [
     "AsyncStreamWrapper",
     "create_stream_wrapper_factory",
     "StreamingResponseHandler",
+    # Version
+    "get_library_version",
+    "LibraryInfo",
 ]
