@@ -1,7 +1,7 @@
 from unittest.mock import patch, MagicMock, ANY
 
-from agentops.instrumentation.anthropic.instrumentor import AnthropicInstrumentor
-from agentops.instrumentation.anthropic import LIBRARY_NAME, LIBRARY_VERSION
+from agentops.instrumentation.providers.anthropic.instrumentor import AnthropicInstrumentor
+from agentops.instrumentation.providers.anthropic import LIBRARY_NAME, LIBRARY_VERSION
 
 
 def test_instrumentor_initialization():
@@ -62,7 +62,7 @@ def test_instrumentor_wraps_methods(mock_tracer, mock_meter):
         patch("agentops.instrumentation.common.instrumentor.get_tracer", return_value=mock_tracer),
         patch("agentops.instrumentation.common.instrumentor.get_meter", return_value=mock_meter),
         patch("agentops.instrumentation.common.wrappers.wrap_function_wrapper") as mock_wrap_function,
-        patch("agentops.instrumentation.anthropic.instrumentor.wrap_function_wrapper") as mock_stream_wrap,
+        patch("agentops.instrumentation.providers.anthropic.instrumentor.wrap_function_wrapper") as mock_stream_wrap,
     ):
         instrumentor._instrument()
 
@@ -106,10 +106,10 @@ def test_instrumentor_uninstrument(mock_tracer, mock_meter):
         patch("agentops.instrumentation.common.instrumentor.get_meter", return_value=mock_meter),
         patch("agentops.instrumentation.common.instrumentor.unwrap", mock_unwrap),  # Patch where it's imported
         patch(
-            "agentops.instrumentation.anthropic.instrumentor.otel_unwrap"
+            "agentops.instrumentation.providers.anthropic.instrumentor.otel_unwrap"
         ) as mock_otel_unwrap,  # Patch in anthropic module
         patch("agentops.instrumentation.common.wrappers.wrap_function_wrapper"),
-        patch("agentops.instrumentation.anthropic.instrumentor.wrap_function_wrapper"),
+        patch("agentops.instrumentation.providers.anthropic.instrumentor.wrap_function_wrapper"),
     ):
         # Instrument first
         instrumentor._instrument()
@@ -136,7 +136,7 @@ def test_instrumentor_handles_missing_methods(mock_tracer, mock_meter):
         patch("agentops.instrumentation.common.instrumentor.get_tracer", return_value=mock_tracer),
         patch("agentops.instrumentation.common.instrumentor.get_meter", return_value=mock_meter),
         patch("agentops.instrumentation.common.wrappers.wrap", mock_wrap),
-        patch("agentops.instrumentation.anthropic.instrumentor.wrap_function_wrapper", mock_wrap_function),
+        patch("agentops.instrumentation.providers.anthropic.instrumentor.wrap_function_wrapper", mock_wrap_function),
     ):
         # Should not raise exceptions even when wrapping fails
         instrumentor._instrument()

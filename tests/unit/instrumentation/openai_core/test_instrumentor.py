@@ -15,7 +15,7 @@ import pytest
 from unittest.mock import MagicMock, patch
 
 
-from agentops.instrumentation.openai.instrumentor import OpenAIInstrumentor
+from agentops.instrumentation.providers.openai.instrumentor import OpenAIInstrumentor
 from agentops.instrumentation.common.wrappers import WrapConfig
 
 

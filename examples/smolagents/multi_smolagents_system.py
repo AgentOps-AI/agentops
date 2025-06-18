@@ -96,8 +96,10 @@ web_agent = ToolCallingAgent(
     tools=[DuckDuckGoSearchTool(), visit_webpage],
     model=model,
 )
-
+abc = "Manager Agent"
 manager_agent = CodeAgent(
+    name=abc,
+    description="This agent manages the web search agent and coordinates its tasks.",
     tools=[],
     model=model,
     managed_agents=[web_agent],
