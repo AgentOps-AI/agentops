@@ -1,5 +1,5 @@
 ---
-title: 'Google Adk'
+title: 'Google ADK'
 description: 'Google ADK Example: Human Approval Workflow with AgentOps'
 ---
 {/*  SOURCE_FILE: examples/google_adk/human_approval.ipynb  */}
@@ -74,7 +74,7 @@ APP_NAME = "human_approval_app_notebook"
 USER_ID = "test_user_notebook_123"
 SESSION_ID = "approval_session_notebook_456"
 MODEL_NAME = "gemini-1.5-flash"
-agentops.start_trace(trace_name=APP_NAME, tags=["google_adk","notebook"])
+agentops.start_trace(trace_name=APP_NAME, tags=["google_adk", "notebook"])
 ```
 
 ## 3. Define Schemas
@@ -86,6 +86,8 @@ Pydantic models are used to define the structure of data for approval requests a
 class ApprovalRequest(BaseModel):
     amount: float = Field(description="The amount requiring approval")
     reason: str = Field(description="The reason for the request")
+
+
 class ApprovalDecision(BaseModel):
     decision: str = Field(description="The approval decision: 'approved' or 'rejected'")
     comments: str = Field(description="Additional comments from the approver")
@@ -98,10 +100,10 @@ This tool now directly prompts the user for an approval decision. In a real-worl
 
 ```python
 async def external_approval_tool(amount: float, reason: str) -> str:
-    """ 
+    """
     Prompts for human approval and returns the decision as a JSON string.
     """
-    print(f"🔔 HUMAN APPROVAL REQUIRED:")
+    print("🔔 HUMAN APPROVAL REQUIRED:")
     print(f"   Amount: ${amount:,.2f}")
     print(f"   Reason: {reason}")
     decision = ""
@@ -112,12 +114,8 @@ async def external_approval_tool(amount: float, reason: str) -> str:
     comments = input("   Enter comments (optional): ").strip()
     print(f"   Decision: {decision.upper()}")
     print(f"   Comments: {comments if comments else 'N/A'}")
-    return json.dumps({
-        "decision": decision,
-        "comments": comments,
-        "amount": amount,
-        "reason": reason
-    })
+    return json.dumps({"decision": decision, "comments": comments, "amount": amount, "reason": reason})
+
 
 # Create the approval tool instance
 approval_tool = FunctionTool(func=external_approval_tool)
@@ -145,13 +143,13 @@ prepare_request = LlmAgent(
         4. Respond with a summary of what will be submitted for approval
     If the user input is missing amount or reason, ask for clarification.
     """,
-    output_key="request_prepared"
+    output_key="request_prepared",
 )
 
 # Agent 2: Request human approval using the tool
 request_approval = LlmAgent(
     model=MODEL_NAME,
-    name="RequestHumanApprovalAgent", 
+    name="RequestHumanApprovalAgent",
     description="Calls the external approval system with prepared request details",
     instruction="""You are a human approval request agent.
         Your task:
@@ -162,7 +160,7 @@ request_approval = LlmAgent(
     Always use the exact values from the session state for the tool call.
     """,
     tools=[approval_tool],
-    output_key="approval_requested"
+    output_key="approval_requested",
 )
 
 # Agent 3: Process the approval decision
@@ -180,7 +178,7 @@ process_decision = LlmAgent(
 
     Be professional and helpful in your response.
     """,
-    output_key="final_decision"
+    output_key="final_decision",
 )
 ```
 
@@ -193,7 +191,7 @@ Combine the agents into a sequential workflow. The `SequentialAgent` ensures tha
 approval_workflow = SequentialAgent(
     name="HumanApprovalWorkflowNotebook",
     description="Complete workflow for processing approval requests with human oversight",
-    sub_agents=[prepare_request, request_approval, process_decision]
+    sub_agents=[prepare_request, request_approval, process_decision],
 )
 ```
 
@@ -205,11 +203,7 @@ Set up an in-memory session service and the workflow runner.
 ```python
 session_service = InMemorySessionService()
 # Create runner
-workflow_runner = Runner(
-    agent=approval_workflow,
-    app_name=APP_NAME,
-    session_service=session_service
-)
+workflow_runner = Runner(agent=approval_workflow, app_name=APP_NAME, session_service=session_service)
 ```
 
 ## 8. Helper Function to Run Workflow
@@ -220,15 +214,12 @@ This function encapsulates the logic to run the workflow for a given user reques
 ```python
 async def run_approval_workflow_notebook(user_request: str, session_id: str):
     """Run the complete approval workflow with a user request in the notebook environment"""
-    print(f"{'='*60}")
+    print(f"{'=' * 60}")
     print(f" Starting Approval Workflow for Session: {session_id}")
-    print(f"{'='*60}")
+    print(f"{'=' * 60}")
     print(f"User Request: {user_request}")
     # Create user message
-    user_content = types.Content(
-        role='user', 
-        parts=[types.Part(text=user_request)]
-    )
+    user_content = types.Content(role="user", parts=[types.Part(text=user_request)])
     step_count = 0
     final_response = "No response received"
     # Run the workflow
@@ -247,12 +238,12 @@ async def run_approval_workflow_notebook(user_request: str, session_id: str):
                     final_response = response_text
     session = await session_service.get_session(
         app_name=APP_NAME,
-        user_id=USER_ID, 
+        user_id=USER_ID,
         session_id=session_id,
     )
-    print(f"{'='*60}")
+    print(f"{'=' * 60}")
     print(f"📊 Workflow Complete - Session State ({session_id}):")
-    print(f"{'='*60}")
+    print(f"{'=' * 60}")
     for key, value in session.state.items():
         print(f"   {key}: {value}")
     print(f"🎯 Final Response: {final_response}")
@@ -269,18 +260,16 @@ async def main_notebook():
     test_requests = [
         "I need approval for $750 for team lunch and celebrations",
         "Please approve $3,000 for a conference ticket and travel expenses",
-        "I need $12,000 approved for critical software licenses renewal"
+        "I need $12,000 approved for critical software licenses renewal",
     ]
     for i, request in enumerate(test_requests, 1):
-        current_session_id = f"approval_session_notebook_{456 + i -1}"
+        current_session_id = f"approval_session_notebook_{456 + i - 1}"
         # Create the session before running the workflow
-        await session_service.create_session(
-            app_name=APP_NAME,
-            user_id=USER_ID,
-            session_id=current_session_id
-        )
+        await session_service.create_session(app_name=APP_NAME, user_id=USER_ID, session_id=current_session_id)
         print(f"Created session: {current_session_id}")
         await run_approval_workflow_notebook(request, current_session_id)
+
+
 try:
     asyncio.run(main_notebook())
     agentops.end_trace(end_state="Success")
