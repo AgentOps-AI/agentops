@@ -19,10 +19,10 @@ LIBRARY_NAME = _library_info.name
 LIBRARY_VERSION = _library_info.version
 
 # Import after defining constants to avoid circular imports
-from agentops.instrumentation.providers.ibm_watsonx_ai.instrumentor import IBMWatsonXInstrumentor  # noqa: E402
+from agentops.instrumentation.providers.ibm_watsonx_ai.instrumentor import WatsonxInstrumentor  # noqa: E402
 
 __all__ = [
     "LIBRARY_NAME",
     "LIBRARY_VERSION",
-    "IBMWatsonXInstrumentor",
+    "WatsonxInstrumentor",
 ]

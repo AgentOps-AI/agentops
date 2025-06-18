@@ -12,10 +12,10 @@ LIBRARY_NAME = _library_info.name
 LIBRARY_VERSION = _library_info.version
 
 # Import after defining constants to avoid circular imports
-from agentops.instrumentation.providers.openai.instrumentor import OpenAIInstrumentor  # noqa: E402
+from agentops.instrumentation.providers.openai.instrumentor import OpenaiInstrumentor  # noqa: E402
 
 __all__ = [
     "LIBRARY_NAME",
     "LIBRARY_VERSION",
-    "OpenAIInstrumentor",
+    "OpenaiInstrumentor",
 ]

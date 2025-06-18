@@ -15,7 +15,7 @@ import pytest
 from unittest.mock import MagicMock, patch
 
 
-from agentops.instrumentation.providers.openai.instrumentor import OpenAIInstrumentor
+from agentops.instrumentation.providers.openai.instrumentor import OpenaiInstrumentor
 from agentops.instrumentation.common.wrappers import WrapConfig
 
 
@@ -32,7 +32,7 @@ OPENAI_RESPONSE = load_fixture("openai_response.json")  # Response API format (n
 OPENAI_RESPONSE_TOOL_CALLS = load_fixture("openai_response_tool_calls.json")  # Response API with tool calls
 
 
-class TestOpenAIInstrumentor:
+class TestOpenaiInstrumentor:
     """Tests for OpenAI API instrumentation, focusing on Response API support"""
 
     @pytest.fixture
@@ -49,7 +49,7 @@ class TestOpenAIInstrumentor:
 
                 # Create a real instrumentation setup for testing
                 mock_tracer_provider = MagicMock()
-                instrumentor = OpenAIInstrumentor()
+                instrumentor = OpenaiInstrumentor()
 
                 # To avoid timing issues with the fixture, we need to ensure patch
                 # objects are created before being used in the test
@@ -82,8 +82,8 @@ class TestOpenAIInstrumentor:
 
     def test_instrumentor_initialization(self):
         """Test instrumentor is initialized with correct configuration"""
-        instrumentor = OpenAIInstrumentor()
-        assert instrumentor.__class__.__name__ == "OpenAIInstrumentor"
+        instrumentor = OpenaiInstrumentor()
+        assert instrumentor.__class__.__name__ == "OpenaiInstrumentor"
 
         # Verify it inherits from BaseInstrumentor
         from opentelemetry.instrumentation.instrumentor import BaseInstrumentor
@@ -165,7 +165,7 @@ class TestOpenAIInstrumentor:
     def test_wrapper_error_handling(self):
         """Test that the instrumentor handles errors when wrapping methods"""
         # Create instrumentor
-        instrumentor = OpenAIInstrumentor()
+        instrumentor = OpenaiInstrumentor()
 
         # Mock wrap to raise an exception
         with patch("agentops.instrumentation.common.wrappers.wrap") as mock_wrap:
@@ -181,7 +181,7 @@ class TestOpenAIInstrumentor:
     def test_unwrapper_error_handling(self):
         """Test that the instrumentor handles errors when unwrapping methods"""
         # Create instrumentor
-        instrumentor = OpenAIInstrumentor()
+        instrumentor = OpenaiInstrumentor()
 
         # Mock unwrap to raise an exception
         with patch("agentops.instrumentation.common.wrappers.unwrap") as mock_unwrap:
@@ -197,7 +197,7 @@ class TestOpenAIInstrumentor:
     def test_instrumentation_with_tracer(self):
         """Test that the instrumentor gets a tracer with the correct name and version"""
         # Create instrumentor
-        instrumentor = OpenAIInstrumentor()
+        instrumentor = OpenaiInstrumentor()
 
         # Since get_tracer is now imported at module level in openai/instrumentor.py,
         # we can test this through spying on the _instrument method instead

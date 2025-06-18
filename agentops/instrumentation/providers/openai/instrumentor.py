@@ -15,7 +15,7 @@ and distributed tracing.
 from typing import Dict, Any
 
 from agentops.instrumentation.common import (
-    BaseAgentOpsInstrumentor,
+    CommonInstrumentor,
     InstrumentorConfig,
     WrapConfig,
     StandardMetrics,
@@ -43,7 +43,7 @@ from opentelemetry.metrics import Meter
 _instruments = ("openai >= 0.27.0",)
 
 
-class OpenAIInstrumentor(BaseAgentOpsInstrumentor):
+class OpenaiInstrumentor(CommonInstrumentor):
     """An instrumentor for OpenAI's client library with comprehensive coverage."""
 
     def __init__(

@@ -13,7 +13,7 @@ This package provides OpenTelemetry instrumentation for various LLM providers an
 - **Google ADK** (`v0.1.0+`)
 - **Agno** (`v0.0.1+`)
 - **Mem0** (`v0.1.0+`)
-- **SmolAgents** (`v0.1.0+`)
+- **smolagents** (`v0.1.0+`)
 
 ## Common Module Usage
 
@@ -21,12 +21,12 @@ The `agentops.instrumentation.common` module provides shared utilities for creat
 
 ### Base Instrumentor
 
-Use `BaseAgentOpsInstrumentor` for creating new instrumentations:
+Use `CommonInstrumentor` for creating new instrumentations:
 
 ```python
-from agentops.instrumentation.common import BaseAgentOpsInstrumentor, InstrumentorConfig, WrapConfig
+from agentops.instrumentation.common import CommonInstrumentor, InstrumentorConfig, WrapConfig
 
-class MyInstrumentor(BaseAgentOpsInstrumentor):
+class MyInstrumentor(CommonInstrumentor):
     def __init__(self):
         config = InstrumentorConfig(
             library_name="my-library",
@@ -138,7 +138,7 @@ recorder.record_duration(1.5)
 
 1. Create a new directory under `agentops/instrumentation/` for your provider
 2. Create an `__init__.py` file with version information
-3. Create an `instrumentor.py` file extending `BaseAgentOpsInstrumentor`
+3. Create an `instrumentor.py` file extending `CommonInstrumentor`
 4. Create attribute handlers in an `attributes/` subdirectory
 5. Add your instrumentor to the main `__init__.py` configuration
 

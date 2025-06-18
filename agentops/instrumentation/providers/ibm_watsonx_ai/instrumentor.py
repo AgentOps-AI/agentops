@@ -17,7 +17,7 @@ from wrapt import wrap_function_wrapper
 from opentelemetry.metrics import Meter
 
 from agentops.logging import logger
-from agentops.instrumentation.common import BaseAgentOpsInstrumentor, StandardMetrics, InstrumentorConfig
+from agentops.instrumentation.common import CommonInstrumentor, StandardMetrics, InstrumentorConfig
 from agentops.instrumentation.common.wrappers import WrapConfig
 from agentops.instrumentation.providers.ibm_watsonx_ai.attributes.attributes import (
     get_generate_attributes,
@@ -81,7 +81,7 @@ WRAPPED_METHODS: List[WrapConfig] = [
 ]
 
 
-class IBMWatsonXInstrumentor(BaseAgentOpsInstrumentor):
+class WatsonxInstrumentor(CommonInstrumentor):
     """An instrumentor for IBM watsonx.ai API."""
 
     def __init__(self):

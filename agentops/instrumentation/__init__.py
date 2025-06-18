@@ -48,7 +48,7 @@ class InstrumentorConfig(TypedDict):
 PROVIDERS: dict[str, InstrumentorConfig] = {
     "openai": {
         "module_name": "agentops.instrumentation.providers.openai",
-        "class_name": "OpenAIInstrumentor",
+        "class_name": "OpenaiInstrumentor",
         "min_version": "1.0.0",
     },
     "anthropic": {
@@ -58,12 +58,12 @@ PROVIDERS: dict[str, InstrumentorConfig] = {
     },
     "ibm_watsonx_ai": {
         "module_name": "agentops.instrumentation.providers.ibm_watsonx_ai",
-        "class_name": "IBMWatsonXInstrumentor",
+        "class_name": "WatsonxInstrumentor",
         "min_version": "0.1.0",
     },
     "google.genai": {
         "module_name": "agentops.instrumentation.providers.google_genai",
-        "class_name": "GoogleGenAIInstrumentor",
+        "class_name": "GoogleGenaiInstrumentor",
         "min_version": "0.1.0",
         "package_name": "google-genai",  # Actual pip package name
     },
@@ -89,7 +89,7 @@ UTILITY_INSTRUMENTORS: dict[str, InstrumentorConfig] = {
 AGENTIC_LIBRARIES: dict[str, InstrumentorConfig] = {
     "crewai": {
         "module_name": "agentops.instrumentation.agentic.crewai",
-        "class_name": "CrewAIInstrumentor",
+        "class_name": "CrewaiInstrumentor",
         "min_version": "0.56.0",
     },
     "autogen": {
@@ -104,7 +104,7 @@ AGENTIC_LIBRARIES: dict[str, InstrumentorConfig] = {
     },
     "google.adk": {
         "module_name": "agentops.instrumentation.agentic.google_adk",
-        "class_name": "GoogleADKInstrumentor",
+        "class_name": "GooogleAdkInstrumentor",
         "min_version": "0.1.0",
     },
     "agno": {
@@ -114,7 +114,7 @@ AGENTIC_LIBRARIES: dict[str, InstrumentorConfig] = {
     },
     "smolagents": {
         "module_name": "agentops.instrumentation.agentic.smolagents",
-        "class_name": "SmolAgentsInstrumentor",
+        "class_name": "SmolagentsInstrumentor",
         "min_version": "1.0.0",
     },
 }

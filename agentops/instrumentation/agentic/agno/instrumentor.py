@@ -25,7 +25,7 @@ import threading
 
 from agentops.logging import logger
 from agentops.instrumentation.common import (
-    BaseAgentOpsInstrumentor,
+    CommonInstrumentor,
     StandardMetrics,
     InstrumentorConfig,
 )
@@ -912,7 +912,7 @@ def get_agent_context_for_llm():
     return None, None
 
 
-class AgnoInstrumentor(BaseAgentOpsInstrumentor):
+class AgnoInstrumentor(CommonInstrumentor):
     """Agno instrumentation class."""
 
     def __init__(self):

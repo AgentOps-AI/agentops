@@ -13,7 +13,7 @@ _library_info = LibraryInfo(
 LIBRARY_NAME = _library_info.name
 LIBRARY_VERSION = _library_info.version
 
-from agentops.instrumentation.agentic.google_adk.instrumentor import GoogleADKInstrumentor  # noqa: E402
+from agentops.instrumentation.agentic.google_adk.instrumentor import GooogleAdkInstrumentor  # noqa: E402
 from agentops.instrumentation.agentic.google_adk import patch  # noqa: E402
 
-__all__ = ["LIBRARY_NAME", "LIBRARY_VERSION", "GoogleADKInstrumentor", "patch"]
+__all__ = ["LIBRARY_NAME", "LIBRARY_VERSION", "GooogleAdkInstrumentor", "patch"]

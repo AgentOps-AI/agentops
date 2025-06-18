@@ -11,7 +11,7 @@ from typing import Any, Callable, Collection, Optional, Tuple, TypeVar, List, Di
 
 from concurrent.futures import ThreadPoolExecutor, Future
 
-from agentops.instrumentation.common import BaseAgentOpsInstrumentor, InstrumentorConfig
+from agentops.instrumentation.common import CommonInstrumentor, InstrumentorConfig
 from agentops.instrumentation.common.wrappers import WrapConfig
 from agentops.logging import logger
 
@@ -95,7 +95,7 @@ def _context_propagating_submit(original_submit: Callable) -> Callable:
     return wrapped_submit
 
 
-class ConcurrentFuturesInstrumentor(BaseAgentOpsInstrumentor):
+class ConcurrentFuturesInstrumentor(CommonInstrumentor):
     """
     Instrumentor for concurrent.futures module.
 
