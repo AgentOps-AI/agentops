@@ -14,6 +14,7 @@ from opentelemetry.instrumentation.utils import _SUPPRESS_INSTRUMENTATION_KEY
 
 from agentops.logging import logger
 from agentops.instrumentation.common.wrappers import _with_tracer_wrapper
+from agentops.instrumentation.openai.utils import is_metrics_enabled
 from agentops.instrumentation.openai.wrappers.chat import handle_chat_attributes
 from agentops.semconv import SpanAttributes, LLMRequestTypeValues, MessageAttributes
 
@@ -195,22 +196,22 @@ class OpenAIStreamWrapper:
         if len(self._tool_calls) > 0:
             for idx, tool_call in self._tool_calls.items():
                 # Only set attributes if values are not None
-                if tool_call["id"]:
+                if tool_call["id"] is not None:
                     self._span.set_attribute(
                         MessageAttributes.COMPLETION_TOOL_CALL_ID.format(i=0, j=idx), tool_call["id"]
                     )
 
-                if tool_call["type"]:
+                if tool_call["type"] is not None:
                     self._span.set_attribute(
                         MessageAttributes.COMPLETION_TOOL_CALL_TYPE.format(i=0, j=idx), tool_call["type"]
                     )
 
-                if tool_call["function"]["name"]:
+                if tool_call["function"]["name"] is not None:
                     self._span.set_attribute(
                         MessageAttributes.COMPLETION_TOOL_CALL_NAME.format(i=0, j=idx), tool_call["function"]["name"]
                     )
 
-                if tool_call["function"]["arguments"]:
+                if tool_call["function"]["arguments"] is not None:
                     self._span.set_attribute(
                         MessageAttributes.COMPLETION_TOOL_CALL_ARGUMENTS.format(i=0, j=idx),
                         tool_call["function"]["arguments"],
@@ -339,6 +340,19 @@ def chat_completion_stream_wrapper(tracer, wrapped, instance, args, kwargs):
         for key, value in request_attributes.items():
             span.set_attribute(key, value)
 
+        # Add include_usage to get token counts for streaming responses
+        if is_streaming and is_metrics_enabled():
+            # Add stream_options if it doesn't exist
+            if "stream_options" not in kwargs:
+                kwargs["stream_options"] = {"include_usage": True}
+                logger.debug("[OPENAI WRAPPER] Adding stream_options.include_usage=True to get token counts")
+            # If stream_options exists but doesn't have include_usage, add it
+            elif isinstance(kwargs["stream_options"], dict) and "include_usage" not in kwargs["stream_options"]:
+                kwargs["stream_options"]["include_usage"] = True
+                logger.debug(
+                    "[OPENAI WRAPPER] Adding include_usage=True to existing stream_options to get token counts"
+                )
+
         # Call the original method
         response = wrapped(*args, **kwargs)
 
@@ -394,6 +408,15 @@ async def async_chat_completion_stream_wrapper(tracer, wrapped, instance, args, 
 
         for key, value in request_attributes.items():
             span.set_attribute(key, value)
+
+        # Add include_usage to get token counts for streaming responses
+        if is_streaming and is_metrics_enabled():
+            # Add stream_options if it doesn't exist
+            if "stream_options" not in kwargs:
+                kwargs["stream_options"] = {"include_usage": True}
+            # If stream_options exists but doesn't have include_usage, add it
+            elif isinstance(kwargs["stream_options"], dict) and "include_usage" not in kwargs["stream_options"]:
+                kwargs["stream_options"]["include_usage"] = True
 
         # Call the original method
         response = await wrapped(*args, **kwargs)
