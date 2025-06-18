@@ -15,7 +15,7 @@ import pytest
 from unittest.mock import MagicMock, patch
 
 
-from agentops.instrumentation.openai.instrumentor import OpenAIInstrumentor
+from agentops.instrumentation.providers.openai.instrumentor import OpenaiInstrumentor
 from agentops.instrumentation.common.wrappers import WrapConfig
 
 
@@ -32,45 +32,58 @@ OPENAI_RESPONSE = load_fixture("openai_response.json")  # Response API format (n
 OPENAI_RESPONSE_TOOL_CALLS = load_fixture("openai_response_tool_calls.json")  # Response API with tool calls
 
 
-class TestOpenAIInstrumentor:
+class TestOpenaiInstrumentor:
     """Tests for OpenAI API instrumentation, focusing on Response API support"""
 
     @pytest.fixture
     def instrumentor(self):
         """Set up OpenAI instrumentor for tests"""
-        # Create a real instrumentation setup for testing
-        mock_tracer_provider = MagicMock()
-        instrumentor = OpenAIInstrumentor()
+        # Create patches for tracer and meter
+        with patch("agentops.instrumentation.common.instrumentor.get_tracer") as mock_get_tracer:
+            with patch("agentops.instrumentation.common.instrumentor.get_meter") as mock_get_meter:
+                # Set up mock tracer and meter
+                mock_tracer = MagicMock()
+                mock_meter = MagicMock()
+                mock_get_tracer.return_value = mock_tracer
+                mock_get_meter.return_value = mock_meter
 
-        # To avoid timing issues with the fixture, we need to ensure patch
-        # objects are created before being used in the test
-        mock_wrap = patch("agentops.instrumentation.common.wrappers.wrap").start()
-        mock_unwrap = patch("agentops.instrumentation.common.wrappers.unwrap").start()
-        mock_instrument = patch.object(instrumentor, "_instrument", wraps=instrumentor._instrument).start()
-        mock_uninstrument = patch.object(instrumentor, "_uninstrument", wraps=instrumentor._uninstrument).start()
+                # Create a real instrumentation setup for testing
+                mock_tracer_provider = MagicMock()
+                instrumentor = OpenaiInstrumentor()
 
-        # Instrument
-        instrumentor._instrument(tracer_provider=mock_tracer_provider)
+                # To avoid timing issues with the fixture, we need to ensure patch
+                # objects are created before being used in the test
+                mock_wrap = patch("agentops.instrumentation.common.instrumentor.wrap").start()
+                mock_unwrap = patch("agentops.instrumentation.common.instrumentor.unwrap").start()
+                mock_instrument = patch.object(instrumentor, "_instrument", wraps=instrumentor._instrument).start()
+                mock_uninstrument = patch.object(
+                    instrumentor, "_uninstrument", wraps=instrumentor._uninstrument
+                ).start()
 
-        yield {
-            "instrumentor": instrumentor,
-            "tracer_provider": mock_tracer_provider,
-            "mock_wrap": mock_wrap,
-            "mock_unwrap": mock_unwrap,
-            "mock_instrument": mock_instrument,
-            "mock_uninstrument": mock_uninstrument,
-        }
+                # Instrument
+                instrumentor._instrument(tracer_provider=mock_tracer_provider)
 
-        # Uninstrument - must happen before stopping patches
-        instrumentor._uninstrument()
+                yield {
+                    "instrumentor": instrumentor,
+                    "tracer_provider": mock_tracer_provider,
+                    "mock_wrap": mock_wrap,
+                    "mock_unwrap": mock_unwrap,
+                    "mock_instrument": mock_instrument,
+                    "mock_uninstrument": mock_uninstrument,
+                    "mock_tracer": mock_tracer,
+                    "mock_meter": mock_meter,
+                }
 
-        # Stop patches
-        patch.stopall()
+                # Uninstrument - must happen before stopping patches
+                instrumentor._uninstrument()
+
+                # Stop patches
+                patch.stopall()
 
     def test_instrumentor_initialization(self):
         """Test instrumentor is initialized with correct configuration"""
-        instrumentor = OpenAIInstrumentor()
-        assert instrumentor.__class__.__name__ == "OpenAIInstrumentor"
+        instrumentor = OpenaiInstrumentor()
+        assert instrumentor.__class__.__name__ == "OpenaiInstrumentor"
 
         # Verify it inherits from BaseInstrumentor
         from opentelemetry.instrumentation.instrumentor import BaseInstrumentor
@@ -152,7 +165,7 @@ class TestOpenAIInstrumentor:
     def test_wrapper_error_handling(self):
         """Test that the instrumentor handles errors when wrapping methods"""
         # Create instrumentor
-        instrumentor = OpenAIInstrumentor()
+        instrumentor = OpenaiInstrumentor()
 
         # Mock wrap to raise an exception
         with patch("agentops.instrumentation.common.wrappers.wrap") as mock_wrap:
@@ -168,7 +181,7 @@ class TestOpenAIInstrumentor:
     def test_unwrapper_error_handling(self):
         """Test that the instrumentor handles errors when unwrapping methods"""
         # Create instrumentor
-        instrumentor = OpenAIInstrumentor()
+        instrumentor = OpenaiInstrumentor()
 
         # Mock unwrap to raise an exception
         with patch("agentops.instrumentation.common.wrappers.unwrap") as mock_unwrap:
@@ -184,7 +197,7 @@ class TestOpenAIInstrumentor:
     def test_instrumentation_with_tracer(self):
         """Test that the instrumentor gets a tracer with the correct name and version"""
         # Create instrumentor
-        instrumentor = OpenAIInstrumentor()
+        instrumentor = OpenaiInstrumentor()
 
         # Since get_tracer is now imported at module level in openai/instrumentor.py,
         # we can test this through spying on the _instrument method instead

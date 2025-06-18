@@ -11,10 +11,10 @@ import os
 import pytest
 from unittest.mock import MagicMock, patch
 
-from agentops.instrumentation.openai_agents import LIBRARY_NAME
+from agentops.instrumentation.agentic.openai_agents import LIBRARY_NAME
 
 # Import common attribute functions
-from agentops.instrumentation.openai_agents.attributes.common import (
+from agentops.instrumentation.agentic.openai_agents.attributes.common import (
     get_agent_span_attributes,
     get_function_span_attributes,
     get_generation_span_attributes,
@@ -25,18 +25,18 @@ from agentops.instrumentation.openai_agents.attributes.common import (
 )
 
 # Import model-related functions
-from agentops.instrumentation.openai_agents.attributes.model import (
+from agentops.instrumentation.agentic.openai_agents.attributes.model import (
     get_model_attributes,
 )
 
 # Import completion processing functions
-from agentops.instrumentation.openai_agents.attributes.completion import (
+from agentops.instrumentation.agentic.openai_agents.attributes.completion import (
     get_chat_completions_attributes,
     get_raw_response_attributes,
 )
 
 # Import token processing functions
-from agentops.instrumentation.openai_agents.attributes.tokens import (
+from agentops.instrumentation.agentic.openai_agents.attributes.tokens import (
     process_token_usage,
     extract_nested_usage,
     get_token_metric_attributes,
@@ -131,8 +131,8 @@ def mock_external_dependencies():
 
     with patch("json.dumps", side_effect=json_dumps_wrapper):
         with patch("importlib.metadata.version", return_value="1.0.0"):
-            with patch("agentops.instrumentation.openai_agents.LIBRARY_NAME", "openai"):
-                with patch("agentops.instrumentation.openai_agents.LIBRARY_VERSION", "1.0.0"):
+            with patch("agentops.instrumentation.agentic.openai_agents.LIBRARY_NAME", "openai"):
+                with patch("agentops.instrumentation.agentic.openai_agents.LIBRARY_VERSION", "1.0.0"):
                     yield
 
 
@@ -303,7 +303,7 @@ class TestOpenAIAgentsAttributes:
 
         # Patch the model_to_dict function to avoid circular references
         with patch(
-            "agentops.instrumentation.openai_agents.attributes.completion.model_to_dict",
+            "agentops.instrumentation.agentic.openai_agents.attributes.completion.model_to_dict",
             side_effect=lambda x: x if isinstance(x, dict) else {},
         ):
             # Extract attributes
