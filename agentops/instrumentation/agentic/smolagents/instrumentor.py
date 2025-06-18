@@ -83,18 +83,49 @@ class SmolAgentsInstrumentor(BaseAgentOpsInstrumentor):
         This is called after normal wrapping, but we use it for all wrapping
         since we don't have normal wrapped methods.
         """
-        # Core agent operations
-        wrap_function_wrapper("smolagents.agents", "CodeAgent.run", self._agent_run_wrapper(self._tracer))
-        wrap_function_wrapper("smolagents.agents", "ToolCallingAgent.run", self._agent_run_wrapper(self._tracer))
+        # Core agent operations - wrap with error handling
+        try:
+            # Import the module first to ensure it's loaded
+            import smolagents.agents
 
-        # Tool calling operations
-        wrap_function_wrapper(
-            "smolagents.agents", "ToolCallingAgent.execute_tool_call", self._tool_execution_wrapper(self._tracer)
-        )
+            # Check if classes exist before wrapping
+            if hasattr(smolagents.agents, "CodeAgent"):
+                wrap_function_wrapper("smolagents.agents", "CodeAgent.run", self._agent_run_wrapper(self._tracer))
+                logger.debug("Successfully wrapped CodeAgent.run")
+            else:
+                logger.debug("CodeAgent not found in smolagents.agents")
+
+            if hasattr(smolagents.agents, "ToolCallingAgent"):
+                wrap_function_wrapper(
+                    "smolagents.agents", "ToolCallingAgent.run", self._agent_run_wrapper(self._tracer)
+                )
+                wrap_function_wrapper(
+                    "smolagents.agents",
+                    "ToolCallingAgent.execute_tool_call",
+                    self._tool_execution_wrapper(self._tracer),
+                )
+                logger.debug("Successfully wrapped ToolCallingAgent methods")
+            else:
+                logger.debug("ToolCallingAgent not found in smolagents.agents")
+        except (ImportError, AttributeError) as e:
+            logger.debug(f"Failed to wrap agent operations: {e}")
 
         # Model operations with proper model name extraction
-        wrap_function_wrapper("smolagents.models", "LiteLLMModel.generate", self._llm_wrapper(self._tracer))
-        wrap_function_wrapper("smolagents.models", "LiteLLMModel.generate_stream", self._llm_wrapper(self._tracer))
+        try:
+            # Import the module first to ensure it's loaded
+            import smolagents.models
+
+            # Check if class exists before wrapping
+            if hasattr(smolagents.models, "LiteLLMModel"):
+                wrap_function_wrapper("smolagents.models", "LiteLLMModel.generate", self._llm_wrapper(self._tracer))
+                wrap_function_wrapper(
+                    "smolagents.models", "LiteLLMModel.generate_stream", self._llm_wrapper(self._tracer)
+                )
+                logger.debug("Successfully wrapped LiteLLMModel methods")
+            else:
+                logger.debug("LiteLLMModel not found in smolagents.models")
+        except (ImportError, AttributeError) as e:
+            logger.debug(f"Failed to wrap model operations: {e}")
 
         logger.info("SmoLAgents instrumentation enabled")
 
@@ -258,29 +289,48 @@ class SmolAgentsInstrumentor(BaseAgentOpsInstrumentor):
         # Unwrap all instrumented methods
         from opentelemetry.instrumentation.utils import unwrap
 
+        # Try to import modules before attempting unwrap
         try:
-            unwrap("smolagents.agents", "CodeAgent.run")
-        except Exception as e:
-            logger.debug(f"Failed to unwrap CodeAgent.run: {e}")
+            import smolagents.agents
+
+            if hasattr(smolagents.agents, "CodeAgent"):
+                try:
+                    unwrap("smolagents.agents", "CodeAgent.run")
+                    logger.debug("Successfully unwrapped CodeAgent.run")
+                except Exception as e:
+                    logger.debug(f"Failed to unwrap CodeAgent.run: {e}")
+
+            if hasattr(smolagents.agents, "ToolCallingAgent"):
+                try:
+                    unwrap("smolagents.agents", "ToolCallingAgent.run")
+                    logger.debug("Successfully unwrapped ToolCallingAgent.run")
+                except Exception as e:
+                    logger.debug(f"Failed to unwrap ToolCallingAgent.run: {e}")
+
+                try:
+                    unwrap("smolagents.agents", "ToolCallingAgent.execute_tool_call")
+                    logger.debug("Successfully unwrapped ToolCallingAgent.execute_tool_call")
+                except Exception as e:
+                    logger.debug(f"Failed to unwrap ToolCallingAgent.execute_tool_call: {e}")
+        except ImportError as e:
+            logger.debug(f"smolagents.agents module not available for unwrapping: {e}")
 
         try:
-            unwrap("smolagents.agents", "ToolCallingAgent.run")
-        except Exception as e:
-            logger.debug(f"Failed to unwrap ToolCallingAgent.run: {e}")
+            import smolagents.models
 
-        try:
-            unwrap("smolagents.agents", "ToolCallingAgent.execute_tool_call")
-        except Exception as e:
-            logger.debug(f"Failed to unwrap ToolCallingAgent.execute_tool_call: {e}")
+            if hasattr(smolagents.models, "LiteLLMModel"):
+                try:
+                    unwrap("smolagents.models", "LiteLLMModel.generate")
+                    logger.debug("Successfully unwrapped LiteLLMModel.generate")
+                except Exception as e:
+                    logger.debug(f"Failed to unwrap LiteLLMModel.generate: {e}")
 
-        try:
-            unwrap("smolagents.models", "LiteLLMModel.generate")
-        except Exception as e:
-            logger.debug(f"Failed to unwrap LiteLLMModel.generate: {e}")
-
-        try:
-            unwrap("smolagents.models", "LiteLLMModel.generate_stream")
-        except Exception as e:
-            logger.debug(f"Failed to unwrap LiteLLMModel.generate_stream: {e}")
+                try:
+                    unwrap("smolagents.models", "LiteLLMModel.generate_stream")
+                    logger.debug("Successfully unwrapped LiteLLMModel.generate_stream")
+                except Exception as e:
+                    logger.debug(f"Failed to unwrap LiteLLMModel.generate_stream: {e}")
+        except ImportError as e:
+            logger.debug(f"smolagents.models module not available for unwrapping: {e}")
 
         logger.info("SmoLAgents instrumentation disabled")
