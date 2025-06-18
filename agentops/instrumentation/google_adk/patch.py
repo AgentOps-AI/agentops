@@ -647,7 +647,7 @@ def _patch(module_name: str, object_name: str, method_name: str, wrapper_functio
         obj = getattr(module, object_name)
         wrapt.wrap_function_wrapper(obj, method_name, wrapper_function(agentops_tracer))
         _wrapped_methods.append((obj, method_name))
-        logger.debug(f"Successfully wrapped {module_name}.{object_name}.{method_name}")
+
     except Exception as e:
         logger.warning(f"Could not wrap {module_name}.{object_name}.{method_name}: {e}")
 
@@ -658,14 +658,14 @@ def _patch_module_function(module_name: str, function_name: str, wrapper_functio
         module = __import__(module_name, fromlist=[function_name])
         wrapt.wrap_function_wrapper(module, function_name, wrapper_function(agentops_tracer))
         _wrapped_methods.append((module, function_name))
-        logger.debug(f"Successfully wrapped {module_name}.{function_name}")
+
     except Exception as e:
         logger.warning(f"Could not wrap {module_name}.{function_name}: {e}")
 
 
 def patch_adk(agentops_tracer):
     """Apply all patches to Google ADK modules."""
-    logger.debug("Applying Google ADK patches for AgentOps instrumentation")
+    logger.info("Applying Google ADK patches for AgentOps instrumentation")
 
     # First, disable ADK's own tracer by replacing it with our NoOpTracer
     noop_tracer = NoOpTracer()
@@ -674,7 +674,7 @@ def patch_adk(agentops_tracer):
 
         # Replace the tracer with our no-op version
         adk_telemetry.tracer = noop_tracer
-        logger.debug("Replaced ADK's tracer with NoOpTracer")
+
     except Exception as e:
         logger.warning(f"Failed to replace ADK tracer: {e}")
 
@@ -694,7 +694,7 @@ def patch_adk(agentops_tracer):
                 module = sys.modules[module_name]
                 if hasattr(module, "tracer"):
                     module.tracer = noop_tracer
-                    logger.debug(f"Replaced tracer in {module_name}")
+
             except Exception as e:
                 logger.warning(f"Failed to replace tracer in {module_name}: {e}")
 
@@ -739,7 +739,7 @@ def patch_adk(agentops_tracer):
 
 def unpatch_adk():
     """Remove all patches from Google ADK modules."""
-    logger.debug("Removing Google ADK patches")
+    logger.info("Removing Google ADK patches")
 
     # Restore ADK's tracer
     try:
@@ -747,7 +747,7 @@ def unpatch_adk():
         from opentelemetry import trace
 
         adk_telemetry.tracer = trace.get_tracer("gcp.vertex.agent")
-        logger.debug("Restored ADK's built-in tracer")
+
     except Exception as e:
         logger.warning(f"Failed to restore ADK tracer: {e}")
 
@@ -757,7 +757,7 @@ def unpatch_adk():
             if hasattr(getattr(obj, method_name), "__wrapped__"):
                 original = getattr(obj, method_name).__wrapped__
                 setattr(obj, method_name, original)
-                logger.debug(f"Successfully unwrapped {obj}.{method_name}")
+
         except Exception as e:
             logger.warning(f"Failed to unwrap {obj}.{method_name}: {e}")
 
