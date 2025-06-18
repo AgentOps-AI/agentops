@@ -23,7 +23,7 @@
 # %pip install pydotenv
 # Set the API keys for your AgentOps and OpenAI accounts.
 from __future__ import annotations as _annotations
-
+import asyncio
 import os
 from dotenv import load_dotenv
 import random
@@ -184,8 +184,9 @@ async def main():
             current_agent = result.last_agent
 
 
-# await main()
-agentops.end_trace(tracer, status="Success")
+# Run the main function with asyncio
+asyncio.run(main())
+agentops.end_trace(tracer, end_state="Success")  # This will now be called after main() finishes
 
 # ## Conclusion
 #

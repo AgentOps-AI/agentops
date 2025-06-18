@@ -208,7 +208,7 @@ def process_with_instrumentor(mock_span, exporter_class, captured_attributes: Di
         if hasattr(mock_span.span_data, "input"):
             captured_attributes[WorkflowAttributes.WORKFLOW_INPUT] = mock_span.span_data.input
         if hasattr(mock_span.span_data, "output"):
-            captured_attributes[WorkflowAttributes.FINAL_OUTPUT] = mock_span.span_data.output
+            captured_attributes[WorkflowAttributes.WORKFLOW_FINAL_OUTPUT] = mock_span.span_data.output
         if hasattr(mock_span.span_data, "tools"):
             captured_attributes[AgentAttributes.AGENT_TOOLS] = ",".join(mock_span.span_data.tools)
         if hasattr(mock_span.span_data, "target_agent"):
@@ -220,7 +220,7 @@ def process_with_instrumentor(mock_span, exporter_class, captured_attributes: Di
         if hasattr(mock_span.span_data, "input"):
             captured_attributes[WorkflowAttributes.WORKFLOW_INPUT] = json.dumps(mock_span.span_data.input)
         if hasattr(mock_span.span_data, "output"):
-            captured_attributes[WorkflowAttributes.FINAL_OUTPUT] = json.dumps(mock_span.span_data.output)
+            captured_attributes[WorkflowAttributes.WORKFLOW_FINAL_OUTPUT] = json.dumps(mock_span.span_data.output)
         if hasattr(mock_span.span_data, "from_agent"):
             captured_attributes[AgentAttributes.FROM_AGENT] = mock_span.span_data.from_agent
 

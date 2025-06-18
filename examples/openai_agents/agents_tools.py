@@ -32,6 +32,7 @@ import base64
 import subprocess
 import sys
 import tempfile
+import asyncio
 
 from agents import (
     Agent,
@@ -59,44 +60,47 @@ agentops.init(auto_start_session=False, tags=["agentops-example"])
 # - Perform complex mathematical calculations
 # - Generate plots and visualizations
 # - Handle data processing tasks
-# Start the AgentOps trace session
-tracer = agentops.start_trace(
-    trace_name="Code Interpreter Tool Example", tags=["tools-demo", "openai-agents", "agentops-example"]
-)
 
 
 async def run_code_interpreter_demo():
-    agent = Agent(
-        name="Code interpreter",
-        instructions="You love doing math.",
-        tools=[
-            CodeInterpreterTool(
-                tool_config={"type": "code_interpreter", "container": {"type": "auto"}},
-            )
-        ],
+    # Start the AgentOps trace session
+    tracer = agentops.start_trace(
+        trace_name="Code Interpreter Tool Example", tags=["tools-demo", "openai-agents", "agentops-example"]
     )
 
-    with trace("Code interpreter example"):
-        print("Solving math problem...")
-        result = Runner.run_streamed(agent, "What is the square root of 273 * 312821 plus 1782?")
-        async for event in result.stream_events():
-            if (
-                event.type == "run_item_stream_event"
-                and event.item.type == "tool_call_item"
-                and event.item.raw_item.type == "code_interpreter_call"
-            ):
-                print(f"Code interpreter code:\n```\n{event.item.raw_item.code}\n```\n")
-            elif event.type == "run_item_stream_event":
-                print(f"Other event: {event.item.type}")
+    try:
+        agent = Agent(
+            name="Code interpreter",
+            instructions="You love doing math.",
+            tools=[
+                CodeInterpreterTool(
+                    tool_config={"type": "code_interpreter", "container": {"type": "auto"}},
+                )
+            ],
+        )
 
-        print(f"Final output: {result.final_output}")
+        with trace("Code interpreter example"):
+            print("Solving math problem...")
+            result = Runner.run_streamed(agent, "What is the square root of 273 * 312821 plus 1782?")
+            final_output = None
+            async for event in result.stream_events():
+                if (
+                    event.type == "run_item_stream_event"
+                    and event.item.type == "tool_call_item"
+                    and event.item.raw_item.type == "code_interpreter_call"
+                ):
+                    print(f"Code interpreter code:\n```\n{event.item.raw_item.code}\n```\n")
+                elif event.type == "run_item_stream_event":
+                    print(f"Other event: {event.item.type}")
 
+            # Access final_output after streaming is complete
+            final_output = result.final_output
+            print(f"Final output: {final_output}")
 
-# Run the demo
-# await run_code_interpreter_demo()
+    finally:
+        # End the AgentOps trace session
+        agentops.end_trace(tracer, end_state="Success")
 
-# End the AgentOps trace session
-agentops.end_trace(tracer, end_state="Success")
 
 # ## 2. File Search Tool
 #
@@ -109,42 +113,42 @@ agentops.end_trace(tracer, end_state="Success")
 # - Configurable result limits
 #
 # **Note:** This example requires a pre-configured vector store ID.
-# Start the AgentOps trace session
-tracer = agentops.start_trace(
-    trace_name="File Search Tool Example", tags=["tools-demo", "openai-agents", "agentops-example"]
-)
 
 
 async def run_file_search_demo():
-    # Note: You'll need to replace this with your actual vector store ID
-    vector_store_id = "vs_67bf88953f748191be42b462090e53e7"
-
-    agent = Agent(
-        name="File searcher",
-        instructions="You are a helpful agent.",
-        tools=[
-            FileSearchTool(
-                max_num_results=3,
-                vector_store_ids=[vector_store_id],
-                include_search_results=True,
-            )
-        ],
+    # Start the AgentOps trace session
+    tracer = agentops.start_trace(
+        trace_name="File Search Tool Example", tags=["tools-demo", "openai-agents", "agentops-example"]
     )
 
-    with trace("File search example"):
-        try:
-            result = await Runner.run(agent, "Be concise, and tell me 1 sentence about Arrakis I might not know.")
-            print(result.final_output)
-            print("\n".join([str(out) for out in result.new_items]))
-        except Exception as e:
-            print(f"File search demo requires a valid vector store ID. Error: {e}")
+    try:
+        # Note: You'll need to replace this with your actual vector store ID
+        vector_store_id = "vs_67bf88953f748191be42b462090e53e7"
 
+        agent = Agent(
+            name="File searcher",
+            instructions="You are a helpful agent.",
+            tools=[
+                FileSearchTool(
+                    max_num_results=3,
+                    vector_store_ids=[vector_store_id],
+                    include_search_results=True,
+                )
+            ],
+        )
 
-# Run the demo
-# await run_file_search_demo()
+        with trace("File search example"):
+            try:
+                result = await Runner.run(agent, "Be concise, and tell me 1 sentence about Arrakis I might not know.")
+                print(result.final_output)
+                print("\n".join([str(out) for out in result.new_items]))
+            except Exception as e:
+                print(f"File search demo requires a valid vector store ID. Error: {e}")
 
-# End the AgentOps trace session
-agentops.end_trace(tracer, end_state="Success")
+    finally:
+        # End the AgentOps trace session
+        agentops.end_trace(tracer, end_state="Success")
+
 
 # ## 3. Image Generation Tool
 #
@@ -155,10 +159,6 @@ agentops.end_trace(tracer, end_state="Success")
 # - Configurable quality settings
 # - Support for various image styles
 # - Automatic image saving and display
-# Start the AgentOps trace session
-tracer = agentops.start_trace(
-    trace_name="Image Generation Tool Example", tags=["tools-demo", "openai-agents", "agentops-example"]
-)
 
 
 def open_file(path: str) -> None:
@@ -173,43 +173,47 @@ def open_file(path: str) -> None:
 
 
 async def run_image_generation_demo():
-    agent = Agent(
-        name="Image generator",
-        instructions="You are a helpful agent.",
-        tools=[
-            ImageGenerationTool(
-                tool_config={"type": "image_generation", "quality": "low"},
-            )
-        ],
+    # Start the AgentOps trace session
+    tracer = agentops.start_trace(
+        trace_name="Image Generation Tool Example", tags=["tools-demo", "openai-agents", "agentops-example"]
     )
 
-    with trace("Image generation example"):
-        print("Generating image, this may take a while...")
-        result = await Runner.run(agent, "Create an image of a frog eating a pizza, comic book style.")
-        print(result.final_output)
-        for item in result.new_items:
-            if (
-                item.type == "tool_call_item"
-                and item.raw_item.type == "image_generation_call"
-                and (img_result := item.raw_item.result)
-            ):
-                with tempfile.NamedTemporaryFile(suffix=".png", delete=False) as tmp:
-                    tmp.write(base64.b64decode(img_result))
-                    temp_path = tmp.name
+    try:
+        agent = Agent(
+            name="Image generator",
+            instructions="You are a helpful agent.",
+            tools=[
+                ImageGenerationTool(
+                    tool_config={"type": "image_generation", "quality": "low"},
+                )
+            ],
+        )
 
-                # Open the image
-                print(f"Image saved to: {temp_path}")
-                try:
-                    open_file(temp_path)
-                except Exception as e:
-                    print(f"Could not open image automatically: {e}")
+        with trace("Image generation example"):
+            print("Generating image, this may take a while...")
+            result = await Runner.run(agent, "Create an image of a frog eating a pizza, comic book style.")
+            print(result.final_output)
+            for item in result.new_items:
+                if (
+                    item.type == "tool_call_item"
+                    and item.raw_item.type == "image_generation_call"
+                    and (img_result := item.raw_item.result)
+                ):
+                    with tempfile.NamedTemporaryFile(suffix=".png", delete=False) as tmp:
+                        tmp.write(base64.b64decode(img_result))
+                        temp_path = tmp.name
 
+                    # Open the image
+                    print(f"Image saved to: {temp_path}")
+                    try:
+                        open_file(temp_path)
+                    except Exception as e:
+                        print(f"Could not open image automatically: {e}")
 
-# Run the demo
-# await run_image_generation_demo()
+    finally:
+        # End the AgentOps trace session
+        agentops.end_trace(tracer, end_state="Success")
 
-# End the AgentOps trace session
-agentops.end_trace(tracer, end_state="Success")
 
 # ## 4. Web Search Tool
 #
@@ -220,33 +224,86 @@ agentops.end_trace(tracer, end_state="Success")
 # - Location-aware search results
 # - Real-time data access
 # - Configurable search parameters
-# Start the AgentOps trace session
-tracer = agentops.start_trace(
-    trace_name="Web Search Tool Example", tags=["tools-demo", "openai-agents", "agentops-example"]
-)
 
 
 async def run_web_search_demo():
-    agent = Agent(
-        name="Web searcher",
-        instructions="You are a helpful agent.",
-        tools=[WebSearchTool(user_location={"type": "approximate", "city": "New York"})],
+    # Start the AgentOps trace session
+    tracer = agentops.start_trace(
+        trace_name="Web Search Tool Example", tags=["tools-demo", "openai-agents", "agentops-example"]
     )
 
-    with trace("Web search example"):
-        result = await Runner.run(
-            agent,
-            "search the web for 'local sports news' and give me 1 interesting update in a sentence.",
+    try:
+        agent = Agent(
+            name="Web searcher",
+            instructions="You are a helpful agent.",
+            tools=[WebSearchTool(user_location={"type": "approximate", "city": "New York"})],
         )
-        print(result.final_output)
-        # Example output: The New York Giants are reportedly pursuing quarterback Aaron Rodgers after his ...
+
+        with trace("Web search example"):
+            result = await Runner.run(
+                agent,
+                "search the web for 'local sports news' and give me 1 interesting update in a sentence.",
+            )
+            print(result.final_output)
+            # Example output: The New York Giants are reportedly pursuing quarterback Aaron Rodgers after his ...
+
+    finally:
+        # End the AgentOps trace session
+        agentops.end_trace(tracer, end_state="Success")
 
 
-# Run the demo
-# await run_web_search_demo()
+# Main function to run all demos
+async def main():
+    """Run all tool demonstrations"""
+    print("=== OpenAI Agents Tools Demonstration ===\n")
 
-# End the AgentOps trace session
-agentops.end_trace(tracer, end_state="Success")
+    # Check for API keys
+    if os.environ.get("AGENTOPS_API_KEY") == "your_api_key_here":
+        print("Warning: Please set your AGENTOPS_API_KEY in the environment or .env file")
+
+    if os.environ.get("OPENAI_API_KEY") == "your_openai_api_key_here":
+        print("Warning: Please set your OPENAI_API_KEY in the environment or .env file")
+        return
+
+    # Run demos based on user choice
+    print("Which demo would you like to run?")
+    print("1. Code Interpreter Tool")
+    print("2. File Search Tool")
+    print("3. Image Generation Tool")
+    print("4. Web Search Tool")
+    print("5. Run all demos")
+
+    choice = input("\nEnter your choice (1-5): ").strip()
+
+    if choice == "1":
+        print("\n--- Running Code Interpreter Demo ---")
+        await run_code_interpreter_demo()
+    elif choice == "2":
+        print("\n--- Running File Search Demo ---")
+        await run_file_search_demo()
+    elif choice == "3":
+        print("\n--- Running Image Generation Demo ---")
+        await run_image_generation_demo()
+    elif choice == "4":
+        print("\n--- Running Web Search Demo ---")
+        await run_web_search_demo()
+    elif choice == "5":
+        print("\n--- Running All Demos ---")
+
+        print("\n1. Code Interpreter Demo:")
+        await run_code_interpreter_demo()
+
+        print("\n2. File Search Demo:")
+        await run_file_search_demo()
+
+        print("\n3. Image Generation Demo:")
+        await run_image_generation_demo()
+
+        print("\n4. Web Search Demo:")
+        await run_web_search_demo()
+    else:
+        print("Invalid choice. Please run the script again and select 1-5.")
+
 
 # ## Conclusion
 #
@@ -258,3 +315,7 @@ agentops.end_trace(tracer, end_state="Success")
 # - Scale your AI applications with confidence in tool reliability
 #
 # Visit [app.agentops.ai](https://app.agentops.ai) to explore your tool usage sessions and gain deeper insights into your AI application's tool interactions.
+
+# Run the main function when the script is executed
+if __name__ == "__main__":
+    asyncio.run(main())

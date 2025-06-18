@@ -20,9 +20,9 @@ import pytest
 from unittest.mock import MagicMock, patch
 from opentelemetry.trace import StatusCode
 
-from agentops.instrumentation.openai_agents.instrumentor import OpenAIAgentsInstrumentor
-from agentops.instrumentation.openai_agents.exporter import OpenAIAgentsExporter
-from agentops.instrumentation.openai_agents.processor import OpenAIAgentsProcessor
+from agentops.instrumentation.agentic.openai_agents.instrumentor import OpenAIAgentsInstrumentor
+from agentops.instrumentation.agentic.openai_agents.exporter import OpenAIAgentsExporter
+from agentops.instrumentation.agentic.openai_agents.processor import OpenAIAgentsProcessor
 from agentops.semconv import (
     SpanAttributes,
     MessageAttributes,
@@ -106,7 +106,7 @@ class TestAgentsSdkInstrumentation:
 
         # Mock the attribute extraction functions to return the expected message attributes
         with patch(
-            "agentops.instrumentation.openai_agents.attributes.completion.get_raw_response_attributes"
+            "agentops.instrumentation.agentic.openai_agents.attributes.completion.get_raw_response_attributes"
         ) as mock_response_attrs:
             # Set up the mock to return attributes we want to verify
             mock_response_attrs.return_value = {
@@ -138,7 +138,7 @@ class TestAgentsSdkInstrumentation:
 
             # Process the mock span with the exporter
             with patch(
-                "agentops.instrumentation.openai_agents.attributes.completion.get_generation_output_attributes"
+                "agentops.instrumentation.agentic.openai_agents.attributes.completion.get_generation_output_attributes"
             ) as mock_gen_output:
                 mock_gen_output.return_value = mock_response_attrs.return_value
                 process_with_instrumentor(mock_span, OpenAIAgentsExporter, captured_attributes)
@@ -176,7 +176,7 @@ class TestAgentsSdkInstrumentation:
         """
         # Mock the attribute extraction functions to return the expected message attributes
         with patch(
-            "agentops.instrumentation.openai_agents.attributes.completion.get_raw_response_attributes"
+            "agentops.instrumentation.agentic.openai_agents.attributes.completion.get_raw_response_attributes"
         ) as mock_response_attrs:
             # Set up the mock to return attributes we want to verify
             mock_response_attrs.return_value = {
@@ -215,7 +215,7 @@ class TestAgentsSdkInstrumentation:
 
             # Process the mock span with the exporter
             with patch(
-                "agentops.instrumentation.openai_agents.attributes.completion.get_generation_output_attributes"
+                "agentops.instrumentation.agentic.openai_agents.attributes.completion.get_generation_output_attributes"
             ) as mock_gen_output:
                 mock_gen_output.return_value = mock_response_attrs.return_value
                 process_with_instrumentor(mock_span, OpenAIAgentsExporter, captured_attributes)
@@ -293,13 +293,13 @@ class TestAgentsSdkInstrumentation:
         # Verify parent span attributes
         assert parent_captured_attributes[AgentAttributes.AGENT_NAME] == "parent_agent"
         assert parent_captured_attributes[WorkflowAttributes.WORKFLOW_INPUT] == "parent input"
-        assert parent_captured_attributes[WorkflowAttributes.FINAL_OUTPUT] == "parent output"
+        assert parent_captured_attributes[WorkflowAttributes.WORKFLOW_FINAL_OUTPUT] == "parent output"
         assert parent_captured_attributes[AgentAttributes.AGENT_TOOLS] == '["tool1", "tool2"]'  # JSON encoded is fine.
 
         # Verify child span attributes
         assert child_captured_attributes[AgentAttributes.AGENT_NAME] == "child_agent"
         assert child_captured_attributes[WorkflowAttributes.WORKFLOW_INPUT] == "child input"
-        assert child_captured_attributes[WorkflowAttributes.FINAL_OUTPUT] == "child output"
+        assert child_captured_attributes[WorkflowAttributes.WORKFLOW_FINAL_OUTPUT] == "child output"
         assert child_captured_attributes[AgentAttributes.FROM_AGENT] == "parent_agent"
 
         # Verify parent-child relationship
@@ -346,7 +346,7 @@ class TestAgentsSdkInstrumentation:
         assert captured_attributes[AgentAttributes.AGENT_NAME] == "test_agent"
         assert captured_attributes[WorkflowAttributes.WORKFLOW_INPUT] == "What can you help me with?"
         assert (
-            captured_attributes[WorkflowAttributes.FINAL_OUTPUT]
+            captured_attributes[WorkflowAttributes.WORKFLOW_FINAL_OUTPUT]
             == "I can help you with finding information, answering questions, and more."
         )
         assert "search" in captured_attributes[AgentAttributes.AGENT_TOOLS]
@@ -398,9 +398,9 @@ class TestAgentsSdkInstrumentation:
         assert captured_attributes[WorkflowAttributes.WORKFLOW_INPUT] is not None
         assert "New York" in captured_attributes[WorkflowAttributes.WORKFLOW_INPUT]
         assert "Boston" in captured_attributes[WorkflowAttributes.WORKFLOW_INPUT]
-        assert captured_attributes[WorkflowAttributes.FINAL_OUTPUT] is not None
-        assert "215" in captured_attributes[WorkflowAttributes.FINAL_OUTPUT]
-        assert "miles" in captured_attributes[WorkflowAttributes.FINAL_OUTPUT]
+        assert captured_attributes[WorkflowAttributes.WORKFLOW_FINAL_OUTPUT] is not None
+        assert "215" in captured_attributes[WorkflowAttributes.WORKFLOW_FINAL_OUTPUT]
+        assert "miles" in captured_attributes[WorkflowAttributes.WORKFLOW_FINAL_OUTPUT]
         assert captured_attributes[AgentAttributes.FROM_AGENT] == "navigator"
 
         # Verify function attributes - don't test for a specific type field

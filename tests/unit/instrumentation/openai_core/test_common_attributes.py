@@ -8,11 +8,11 @@ extraction functions.
 
 from unittest.mock import patch
 
-from agentops.instrumentation.openai.attributes.common import (
+from agentops.instrumentation.providers.openai.attributes.common import (
     get_common_instrumentation_attributes,
     get_response_attributes,
 )
-from agentops.instrumentation.openai import LIBRARY_NAME, LIBRARY_VERSION
+from agentops.instrumentation.providers.openai import LIBRARY_NAME, LIBRARY_VERSION
 from agentops.semconv import SpanAttributes, MessageAttributes, InstrumentationAttributes
 
 
@@ -54,7 +54,7 @@ class TestCommonAttributes:
 
         # Mock the kwarg extraction function
         with patch(
-            "agentops.instrumentation.openai.attributes.common.get_response_kwarg_attributes"
+            "agentops.instrumentation.providers.openai.attributes.common.get_response_kwarg_attributes"
         ) as mock_kwarg_attributes:
             mock_kwarg_attributes.return_value = {
                 MessageAttributes.PROMPT_ROLE.format(i=0): "user",
@@ -101,7 +101,7 @@ class TestCommonAttributes:
         )
 
         # Use direct patching of Response class check instead
-        with patch("agentops.instrumentation.openai.attributes.common.Response", MockResponse):
+        with patch("agentops.instrumentation.providers.openai.attributes.common.Response", MockResponse):
             # Call the function
             attributes = get_response_attributes(return_value=response)
 
@@ -145,7 +145,7 @@ class TestCommonAttributes:
         )
 
         # Instead of mocking the internal functions, test the integration directly
-        with patch("agentops.instrumentation.openai.attributes.common.Response", MockResponse):
+        with patch("agentops.instrumentation.providers.openai.attributes.common.Response", MockResponse):
             # Call the function
             attributes = get_response_attributes(kwargs=kwargs, return_value=response)
 
@@ -159,7 +159,7 @@ class TestCommonAttributes:
         not_a_response = "not a response"
 
         # Should log a debug message but not raise an exception
-        with patch("agentops.instrumentation.openai.attributes.common.logger.debug") as mock_logger:
+        with patch("agentops.instrumentation.providers.openai.attributes.common.logger.debug") as mock_logger:
             # Call the function
             attributes = get_response_attributes(return_value=not_a_response)
 

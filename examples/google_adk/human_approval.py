@@ -21,6 +21,7 @@ from pydantic import BaseModel, Field
 import nest_asyncio
 import agentops
 from dotenv import load_dotenv
+import asyncio
 
 # ## 2. Configuration and Initialization
 # Load environment variables (especially `AGENTOPS_API_KEY` and your Google API key for Gemini) and initialize AgentOps.
@@ -203,7 +204,7 @@ async def main_notebook():
 
 
 try:
-    # asyncio.run(main_notebook())
+    asyncio.run(main_notebook())
     agentops.end_trace(end_state="Success")
 except Exception as e:
     print(f"Error: {e}")
