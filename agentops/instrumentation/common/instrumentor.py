@@ -27,7 +27,7 @@ class InstrumentorConfig:
     dependencies: Collection[str] = field(default_factory=list)
 
 
-class BaseAgentOpsInstrumentor(BaseInstrumentor, ABC):
+class CommonInstrumentor(BaseInstrumentor, ABC):
     """Base class for AgentOps instrumentors with common functionality."""
 
     def __init__(self, config: InstrumentorConfig):

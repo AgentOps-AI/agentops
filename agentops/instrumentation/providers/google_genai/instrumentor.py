@@ -13,7 +13,7 @@ from wrapt import wrap_function_wrapper
 from opentelemetry.metrics import Meter
 
 from agentops.logging import logger
-from agentops.instrumentation.common import BaseAgentOpsInstrumentor, StandardMetrics, InstrumentorConfig
+from agentops.instrumentation.common import CommonInstrumentor, StandardMetrics, InstrumentorConfig
 from agentops.instrumentation.common.wrappers import WrapConfig
 from agentops.instrumentation.providers.google_genai.attributes.model import (
     get_generate_content_attributes,
@@ -97,7 +97,7 @@ STREAMING_METHODS = [
 ]
 
 
-class GoogleGenAIInstrumentor(BaseAgentOpsInstrumentor):
+class GoogleGenaiInstrumentor(CommonInstrumentor):
     """An instrumentor for Google Generative AI (Gemini) API.
 
     This class provides instrumentation for Google's Generative AI API by wrapping key methods

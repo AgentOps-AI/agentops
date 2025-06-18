@@ -2,7 +2,7 @@ from typing import Dict, Any
 from wrapt import wrap_function_wrapper
 from opentelemetry.metrics import Meter
 
-from agentops.instrumentation.common import BaseAgentOpsInstrumentor, StandardMetrics, InstrumentorConfig
+from agentops.instrumentation.common import CommonInstrumentor, StandardMetrics, InstrumentorConfig
 from agentops.logging import logger
 
 # Import from refactored structure
@@ -180,7 +180,7 @@ WRAPPER_METHODS = [
 ]
 
 
-class Mem0Instrumentor(BaseAgentOpsInstrumentor):
+class Mem0Instrumentor(CommonInstrumentor):
     """An instrumentor for Mem0's client library.
 
     This class provides instrumentation for Mem0's memory operations by wrapping key methods

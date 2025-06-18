@@ -8,7 +8,7 @@ from agentops.instrumentation.common.attributes import AttributeMap, _extract_at
 from agentops.instrumentation.common.wrappers import _with_tracer_wrapper, WrapConfig, wrap, unwrap
 from agentops.instrumentation.common.instrumentor import (
     InstrumentorConfig,
-    BaseAgentOpsInstrumentor,
+    CommonInstrumentor,
     create_wrapper_factory,
 )
 from agentops.instrumentation.common.metrics import StandardMetrics, MetricsRecorder
@@ -51,7 +51,7 @@ __all__ = [
     "unwrap",
     # Instrumentor
     "InstrumentorConfig",
-    "BaseAgentOpsInstrumentor",
+    "CommonInstrumentor",
     "create_wrapper_factory",
     # Metrics
     "StandardMetrics",

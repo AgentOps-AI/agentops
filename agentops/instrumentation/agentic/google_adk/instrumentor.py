@@ -11,7 +11,7 @@ from typing import Dict, Any
 
 from agentops.logging import logger
 from opentelemetry.metrics import Meter
-from agentops.instrumentation.common import BaseAgentOpsInstrumentor, StandardMetrics, InstrumentorConfig
+from agentops.instrumentation.common import CommonInstrumentor, StandardMetrics, InstrumentorConfig
 from agentops.instrumentation.agentic.google_adk.patch import patch_adk, unpatch_adk
 
 # Library info for tracer/meter
@@ -19,7 +19,7 @@ LIBRARY_NAME = "agentops.instrumentation.google_adk"
 LIBRARY_VERSION = "0.1.0"
 
 
-class GoogleADKInstrumentor(BaseAgentOpsInstrumentor):
+class GooogleAdkInstrumentor(CommonInstrumentor):
     """An instrumentor for Google Agent Development Kit (ADK).
 
     This instrumentor patches Google ADK to:

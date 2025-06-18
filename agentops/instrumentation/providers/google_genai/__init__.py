@@ -15,10 +15,10 @@ LIBRARY_NAME = _library_info.name
 LIBRARY_VERSION = _library_info.version
 
 # Import after defining constants to avoid circular imports
-from agentops.instrumentation.providers.google_genai.instrumentor import GoogleGenAIInstrumentor  # noqa: E402
+from agentops.instrumentation.providers.google_genai.instrumentor import GoogleGenaiInstrumentor  # noqa: E402
 
 __all__ = [
     "LIBRARY_NAME",
     "LIBRARY_VERSION",
-    "GoogleGenAIInstrumentor",
+    "GoogleGenaiInstrumentor",
 ]

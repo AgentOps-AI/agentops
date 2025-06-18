@@ -9,7 +9,7 @@ from opentelemetry.metrics import Meter
 from opentelemetry.instrumentation.utils import unwrap
 
 from agentops.instrumentation.common import (
-    BaseAgentOpsInstrumentor,
+    CommonInstrumentor,
     InstrumentorConfig,
     StandardMetrics,
     create_wrapper_factory,
@@ -68,7 +68,7 @@ def attach_tool_executions_to_agent_span(span):
         del _tool_executions_by_agent[span_id]
 
 
-class CrewAIInstrumentor(BaseAgentOpsInstrumentor):
+class CrewaiInstrumentor(CommonInstrumentor):
     """Instrumentor for CrewAI framework."""
 
     def __init__(self):

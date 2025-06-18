@@ -14,7 +14,7 @@ from opentelemetry.instrumentation.utils import unwrap as otel_unwrap
 
 from agentops.logging import logger
 from agentops.instrumentation.common import (
-    BaseAgentOpsInstrumentor,
+    CommonInstrumentor,
     InstrumentorConfig,
     StandardMetrics,
     create_span,
@@ -28,7 +28,7 @@ from agentops.semconv.workflow import WorkflowAttributes
 from agentops.semconv.tool import ToolAttributes
 
 
-class AG2Instrumentor(BaseAgentOpsInstrumentor):
+class AG2Instrumentor(CommonInstrumentor):
     """Instrumentor for AG2 (AutoGen)
 
     This instrumentor captures high-level events from AG2's agent interactions,

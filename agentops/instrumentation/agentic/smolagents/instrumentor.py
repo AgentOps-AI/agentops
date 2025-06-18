@@ -5,7 +5,7 @@ from opentelemetry.trace import SpanKind
 from opentelemetry.metrics import Meter
 from wrapt import wrap_function_wrapper
 
-from agentops.instrumentation.common import BaseAgentOpsInstrumentor, StandardMetrics, InstrumentorConfig
+from agentops.instrumentation.common import CommonInstrumentor, StandardMetrics, InstrumentorConfig
 from agentops.logging import logger
 
 # Library info for tracer/meter
@@ -53,7 +53,7 @@ except ImportError:
         return {}
 
 
-class SmolAgentsInstrumentor(BaseAgentOpsInstrumentor):
+class SmolagentsInstrumentor(CommonInstrumentor):
     """Instrumentor for SmoLAgents library."""
 
     def __init__(self):

@@ -26,7 +26,7 @@ This module provides OpenTelemetry instrumentation for the SmoLAgents framework.
 
 ```python
 from agentops import init
-from agentops.instrumentation.smolagents import SmoLAgentsInstrumentor
+from agentops.instrumentation.smolagents import SmolagentsInstrumentor
 
 # Initialize AgentOps with your API key
 init(api_key="your-api-key")

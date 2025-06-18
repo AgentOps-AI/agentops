@@ -32,7 +32,7 @@ from typing import Dict, Any
 from wrapt import wrap_function_wrapper
 
 from agentops.logging import logger
-from agentops.instrumentation.common import BaseAgentOpsInstrumentor, InstrumentorConfig, WrapConfig, StandardMetrics
+from agentops.instrumentation.common import CommonInstrumentor, InstrumentorConfig, WrapConfig, StandardMetrics
 from agentops.instrumentation.providers.anthropic import LIBRARY_NAME, LIBRARY_VERSION
 from agentops.instrumentation.providers.anthropic.attributes.message import (
     get_message_attributes,
@@ -46,7 +46,7 @@ from opentelemetry.metrics import Meter
 from opentelemetry.instrumentation.utils import unwrap as otel_unwrap
 
 
-class AnthropicInstrumentor(BaseAgentOpsInstrumentor):
+class AnthropicInstrumentor(CommonInstrumentor):
     """An instrumentor for Anthropic's Claude API.
 
     This class provides instrumentation for Anthropic's Claude API by wrapping key methods

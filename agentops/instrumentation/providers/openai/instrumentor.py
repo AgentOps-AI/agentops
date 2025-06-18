@@ -19,7 +19,7 @@ from opentelemetry.metrics import Meter
 
 from agentops.logging import logger
 from agentops.instrumentation.common import (
-    BaseAgentOpsInstrumentor,
+    CommonInstrumentor,
     InstrumentorConfig,
     WrapConfig,
     StandardMetrics,
@@ -50,7 +50,7 @@ from agentops.semconv import Meters
 _instruments = ("openai >= 0.27.0",)
 
 
-class OpenAIInstrumentor(BaseAgentOpsInstrumentor):
+class OpenaiInstrumentor(CommonInstrumentor):
     """An instrumentor for OpenAI's client library with comprehensive coverage."""
 
     def __init__(
