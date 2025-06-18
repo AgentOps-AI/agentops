@@ -137,7 +137,7 @@ def handle_chat_attributes(
             attributes[SpanAttributes.LLM_RESPONSE_ID] = response_dict["id"]
         if "model" in response_dict:
             attributes[SpanAttributes.LLM_RESPONSE_MODEL] = response_dict["model"]
-        if "system_fingerprint" in response_dict:
+        if "system_fingerprint" in response_dict and response_dict["system_fingerprint"] is not None:
             attributes[SpanAttributes.LLM_OPENAI_RESPONSE_SYSTEM_FINGERPRINT] = response_dict["system_fingerprint"]
 
         # Usage
@@ -176,9 +176,9 @@ def handle_chat_attributes(
                 if message:
                     if "role" in message:
                         attributes[f"{prefix}.role"] = message["role"]
-                    if "content" in message:
+                    if "content" in message and message["content"] is not None:
                         attributes[f"{prefix}.content"] = message["content"]
-                    if "refusal" in message:
+                    if "refusal" in message and message["refusal"] is not None:
                         attributes[f"{prefix}.refusal"] = message["refusal"]
 
                     # Function call

@@ -12,8 +12,8 @@
 from openai import AsyncOpenAI
 import agentops
 import os
-from dotenv import load_dotenv
 import asyncio
+from dotenv import load_dotenv
 
 # Next, we'll grab our API keys. You can use dotenv like below or however else you like to load environment variables
 load_dotenv()
@@ -71,7 +71,8 @@ async def main_stream():
         stream=True,
     )
     async for chunk in stream:
-        print(chunk.choices[0].delta.content or "", end="")
+        if chunk.choices and len(chunk.choices) > 0:
+            print(chunk.choices[0].delta.content or "", end="")
 
 
 asyncio.run(main_stream())
