@@ -3,9 +3,9 @@
 This module provides attribute extraction for OpenAI text completions API.
 """
 
-import logging
 from typing import Any, Dict, Optional, Tuple
 
+from agentops.logging import logger
 from agentops.instrumentation.openai.utils import is_openai_v1
 from agentops.instrumentation.openai.wrappers.shared import (
     model_as_dict,
@@ -13,8 +13,6 @@ from agentops.instrumentation.openai.wrappers.shared import (
 )
 from agentops.instrumentation.common.attributes import AttributeMap
 from agentops.semconv import SpanAttributes, LLMRequestTypeValues
-
-logger = logging.getLogger(__name__)
 
 LLM_REQUEST_TYPE = LLMRequestTypeValues.COMPLETION
 
@@ -83,16 +81,27 @@ def handle_completion_attributes(
             attributes[SpanAttributes.LLM_RESPONSE_MODEL] = response_dict["model"]
 
         # Usage
-        usage = response_dict.get("usage", {})
-        if usage:
+        usage = None
+        if "usage" in response_dict:
+            usage = response_dict["usage"]
             if is_openai_v1() and hasattr(usage, "__dict__"):
                 usage = usage.__dict__
-            if "total_tokens" in usage:
+
+            # Only set token count attributes if values are present and valid
+            if "total_tokens" in usage and usage["total_tokens"] is not None:
                 attributes[SpanAttributes.LLM_USAGE_TOTAL_TOKENS] = usage["total_tokens"]
-            if "prompt_tokens" in usage:
+                logger.debug(f"[COMPLETION] Setting total_tokens: {usage['total_tokens']}")
+
+            if "prompt_tokens" in usage and usage["prompt_tokens"] is not None:
                 attributes[SpanAttributes.LLM_USAGE_PROMPT_TOKENS] = usage["prompt_tokens"]
-            if "completion_tokens" in usage:
+                logger.debug(f"[COMPLETION] Setting prompt_tokens: {usage['prompt_tokens']}")
+
+            if "completion_tokens" in usage and usage["completion_tokens"] is not None:
                 attributes[SpanAttributes.LLM_USAGE_COMPLETION_TOKENS] = usage["completion_tokens"]
+                logger.debug(f"[COMPLETION] Setting completion_tokens: {usage['completion_tokens']}")
+
+        else:
+            logger.debug("[COMPLETION] No usage object in response")
 
         # Choices
         if should_send_prompts() and "choices" in response_dict:

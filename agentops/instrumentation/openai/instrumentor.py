@@ -15,10 +15,11 @@ and distributed tracing.
 from typing import List, Collection
 from opentelemetry.trace import get_tracer
 from opentelemetry.instrumentation.instrumentor import BaseInstrumentor
-
+from wrapt import wrap_function_wrapper
+from opentelemetry.instrumentation.utils import unwrap as otel_unwrap
+from agentops.logging import logger
 from agentops.instrumentation.common.wrappers import WrapConfig
 from agentops.instrumentation.openai import LIBRARY_NAME, LIBRARY_VERSION
-from agentops.instrumentation.openai.attributes.common import get_response_attributes
 from agentops.instrumentation.openai.config import Config
 from agentops.instrumentation.openai.utils import is_openai_v1
 from agentops.instrumentation.openai.wrappers import (
@@ -31,6 +32,12 @@ from agentops.instrumentation.openai.wrappers import (
     handle_run_retrieve_attributes,
     handle_run_stream_attributes,
     handle_messages_attributes,
+)
+from agentops.instrumentation.openai.stream_wrapper import (
+    chat_completion_stream_wrapper,
+    async_chat_completion_stream_wrapper,
+    responses_stream_wrapper,
+    async_responses_stream_wrapper,
 )
 from agentops.instrumentation.openai.v0 import OpenAIV0Instrumentor
 from agentops.semconv import Meters
@@ -79,18 +86,62 @@ class OpenAIInstrumentor(BaseInstrumentor):
         # Apply all wrappers using the common wrapper infrastructure
         from agentops.instrumentation.common.wrappers import wrap
 
+        # Group methods by type for easier processing
         for wrap_config in wrapped_methods:
+            # Standard wrapping for other methods
             try:
                 wrap(wrap_config, tracer)
-            except (AttributeError, ModuleNotFoundError):
+            except (AttributeError, ModuleNotFoundError) as e:
+                logger.debug(
+                    f"[OPENAI INSTRUMENTOR] Skipped wrapping {wrap_config.package}.{wrap_config.class_name}.{wrap_config.method_name}: {e}"
+                )
                 # Some methods may not be available in all versions
                 pass
+
+        # Special handling for streaming methods
+        # These require direct wrapt.wrap_function_wrapper to intercept the stream immediately
+        try:
+            # Chat completions (both streaming and non-streaming)
+            wrap_function_wrapper(
+                "openai.resources.chat.completions",
+                "Completions.create",
+                chat_completion_stream_wrapper(tracer),
+            )
+
+            wrap_function_wrapper(
+                "openai.resources.chat.completions",
+                "AsyncCompletions.create",
+                async_chat_completion_stream_wrapper(tracer),
+            )
+            logger.debug("[OPENAI INSTRUMENTOR] Successfully wrapped chat completion methods")
+
+            # Responses API (both streaming and non-streaming)
+            # Always wrap these methods directly to handle streaming properly
+            wrap_function_wrapper(
+                "openai.resources.responses",
+                "Responses.create",
+                responses_stream_wrapper(tracer),
+            )
+
+            wrap_function_wrapper(
+                "openai.resources.responses",
+                "AsyncResponses.create",
+                async_responses_stream_wrapper(tracer),
+            )
+            logger.debug("[OPENAI INSTRUMENTOR] Successfully wrapped Responses API methods")
+        except (AttributeError, ModuleNotFoundError) as e:
+            # Some methods may not be available in all versions
+            logger.warning(f"[OPENAI INSTRUMENTOR] Failed to wrap streaming methods: {e}")
+
+        logger.info("[OPENAI INSTRUMENTOR] Instrumentation completed")
 
     def _uninstrument(self, **kwargs):
         """Remove instrumentation from OpenAI API."""
         if not is_openai_v1():
             OpenAIV0Instrumentor().uninstrument(**kwargs)
             return
+
+        logger.debug("[OPENAI INSTRUMENTOR] Starting uninstrumentation")
 
         # Get all wrapped methods
         wrapped_methods = self._get_wrapped_methods()
@@ -100,10 +151,37 @@ class OpenAIInstrumentor(BaseInstrumentor):
 
         for wrap_config in wrapped_methods:
             try:
+                # Skip chat completions and responses - they'll be handled specially
+                if (
+                    wrap_config.package == "openai.resources.chat.completions" and wrap_config.method_name == "create"
+                ) or wrap_config.package == "openai.resources.responses":
+                    continue
+
                 unwrap(wrap_config)
-            except Exception:
+
+            except Exception as e:
+                logger.debug(
+                    f"[OPENAI INSTRUMENTOR] Skipped unwrapping {wrap_config.package}.{wrap_config.class_name}.{wrap_config.method_name}: {e}"
+                )
                 # Some methods may not be wrapped
                 pass
+
+        # Unwrap streaming methods
+        try:
+            # Unwrap chat completions
+            otel_unwrap("openai.resources.chat.completions", "Completions.create")
+            otel_unwrap("openai.resources.chat.completions", "AsyncCompletions.create")
+            logger.debug("[OPENAI INSTRUMENTOR] Successfully unwrapped chat completion methods")
+
+            # Unwrap responses API
+            otel_unwrap("openai.resources.responses", "Responses.create")
+            otel_unwrap("openai.resources.responses", "AsyncResponses.create")
+            logger.debug("[OPENAI INSTRUMENTOR] Successfully unwrapped Responses API methods")
+        except (AttributeError, ModuleNotFoundError) as e:
+            # Some methods may not be available
+            logger.warning(f"[OPENAI INSTRUMENTOR] Failed to unwrap streaming methods: {e}")
+
+        logger.debug("[OPENAI INSTRUMENTOR] Uninstrumentation completed")
 
     def _init_metrics(self, meter):
         """Initialize metrics for instrumentation."""
@@ -159,26 +237,7 @@ class OpenAIInstrumentor(BaseInstrumentor):
         """Get all methods that should be wrapped."""
         wrapped_methods = []
 
-        # Chat completions
-        wrapped_methods.extend(
-            [
-                WrapConfig(
-                    trace_name="openai.chat.completion",
-                    package="openai.resources.chat.completions",
-                    class_name="Completions",
-                    method_name="create",
-                    handler=handle_chat_attributes,
-                ),
-                WrapConfig(
-                    trace_name="openai.chat.completion",
-                    package="openai.resources.chat.completions",
-                    class_name="AsyncCompletions",
-                    method_name="create",
-                    handler=handle_chat_attributes,
-                    is_async=True,
-                ),
-            ]
-        )
+        # Group methods by API category for better organization
 
         # Regular completions
         wrapped_methods.extend(
@@ -201,7 +260,7 @@ class OpenAIInstrumentor(BaseInstrumentor):
             ]
         )
 
-        # Embeddings
+        #  Embeddings
         wrapped_methods.extend(
             [
                 WrapConfig(
@@ -222,7 +281,7 @@ class OpenAIInstrumentor(BaseInstrumentor):
             ]
         )
 
-        # Image generation
+        #  Image generation
         wrapped_methods.append(
             WrapConfig(
                 trace_name="openai.images.generate",
@@ -234,10 +293,8 @@ class OpenAIInstrumentor(BaseInstrumentor):
         )
 
         # Beta APIs - these may not be available in all versions
-        beta_methods = []
-
         # Assistants
-        beta_methods.append(
+        wrapped_methods.append(
             WrapConfig(
                 trace_name="openai.assistants.create",
                 package="openai.resources.beta.assistants",
@@ -247,8 +304,8 @@ class OpenAIInstrumentor(BaseInstrumentor):
             )
         )
 
-        # Chat parse methods
-        beta_methods.extend(
+        # Beta chat parse methods
+        wrapped_methods.extend(
             [
                 WrapConfig(
                     trace_name="openai.chat.completion",
@@ -268,8 +325,8 @@ class OpenAIInstrumentor(BaseInstrumentor):
             ]
         )
 
-        # Runs
-        beta_methods.extend(
+        # Runs API
+        wrapped_methods.extend(
             [
                 WrapConfig(
                     trace_name="openai.runs.create",
@@ -295,8 +352,8 @@ class OpenAIInstrumentor(BaseInstrumentor):
             ]
         )
 
-        # Messages
-        beta_methods.append(
+        # Messages API
+        wrapped_methods.append(
             WrapConfig(
                 trace_name="openai.messages.list",
                 package="openai.resources.beta.threads.messages",
@@ -304,30 +361,6 @@ class OpenAIInstrumentor(BaseInstrumentor):
                 method_name="list",
                 handler=handle_messages_attributes,
             )
-        )
-
-        # Add beta methods to wrapped methods (they might fail)
-        wrapped_methods.extend(beta_methods)
-
-        # Responses API (Agents SDK) - our custom addition
-        wrapped_methods.extend(
-            [
-                WrapConfig(
-                    trace_name="openai.responses.create",
-                    package="openai.resources.responses",
-                    class_name="Responses",
-                    method_name="create",
-                    handler=get_response_attributes,
-                ),
-                WrapConfig(
-                    trace_name="openai.responses.create",
-                    package="openai.resources.responses",
-                    class_name="AsyncResponses",
-                    method_name="create",
-                    handler=get_response_attributes,
-                    is_async=True,
-                ),
-            ]
         )
 
         return wrapped_methods

@@ -6,16 +6,14 @@ OpenAI API endpoint wrappers.
 
 import os
 import types
-import logging
 from typing import Any, Dict, Optional
 from importlib.metadata import version
 
 import openai
 from opentelemetry import context as context_api
 
+from agentops.logging import logger
 from agentops.instrumentation.openai.utils import is_openai_v1
-
-logger = logging.getLogger(__name__)
 
 # Pydantic version for model serialization
 _PYDANTIC_VERSION = version("pydantic")
@@ -52,6 +50,25 @@ def model_as_dict(model: Any) -> Dict[str, Any]:
         return model_as_dict(model.parse())
     else:
         return model if isinstance(model, dict) else {}
+
+
+def safe_get_attribute(obj: Any, attr_name: str) -> Optional[Any]:
+    """Safely get an attribute from an object.
+
+    This function handles the case where the attribute doesn't exist
+    or accessing it might raise an exception.
+
+    """
+    if obj is None:
+        return None
+
+    try:
+        if hasattr(obj, attr_name):
+            return getattr(obj, attr_name)
+    except Exception:
+        pass
+
+    return None
 
 
 def get_token_count_from_string(string: str, model_name: str) -> Optional[int]:

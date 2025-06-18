@@ -4,9 +4,9 @@ This module provides attribute extraction for OpenAI Assistant API endpoints.
 """
 
 import json
-import logging
 from typing import Any, Dict, Optional, Tuple
 
+from agentops.logging import logger
 from agentops.instrumentation.openai.utils import is_openai_v1
 from agentops.instrumentation.openai.wrappers.shared import (
     model_as_dict,
@@ -15,8 +15,6 @@ from agentops.instrumentation.openai.wrappers.shared import (
 from agentops.instrumentation.openai.config import Config
 from agentops.instrumentation.common.attributes import AttributeMap
 from agentops.semconv import SpanAttributes
-
-logger = logging.getLogger(__name__)
 
 
 def handle_assistant_attributes(
@@ -239,7 +237,8 @@ def handle_messages_attributes(
 
         # For list responses, note the count
         data = response_dict.get("data", [])
-        attributes["gen_ai.messages.count"] = len(data)
+        msg_count = len(data)
+        attributes["gen_ai.messages.count"] = msg_count
 
         if Config.enrich_assistant and should_send_prompts():
             # Include details of first few messages
@@ -270,7 +269,8 @@ def handle_messages_attributes(
                             elif hasattr(content_item, "text") and hasattr(content_item.text, "value"):
                                 # Handle object-style content
                                 attributes[f"{prefix}.content.{j}"] = content_item.text.value
-                        except Exception:
+                        except Exception as e:
+                            logger.debug(f"[ASSISTANT API] Error processing message content at {i}.{j}: {e}")
                             # Continue processing other content items
                             continue
 
