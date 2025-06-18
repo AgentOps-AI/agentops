@@ -22,7 +22,6 @@ from types import ModuleType
 from dataclasses import dataclass
 import importlib
 import sys
-from importlib.metadata import version
 from packaging.version import Version, parse
 import builtins
 
@@ -34,6 +33,7 @@ from opentelemetry.instrumentation.instrumentor import BaseInstrumentor  # type:
 
 from agentops.logging import logger
 from agentops.sdk.core import tracer
+from agentops.instrumentation.common import get_library_version
 
 
 # Define the structure for instrumentor configurations
@@ -47,28 +47,28 @@ class InstrumentorConfig(TypedDict):
 # Configuration for supported LLM providers
 PROVIDERS: dict[str, InstrumentorConfig] = {
     "openai": {
-        "module_name": "agentops.instrumentation.openai",
-        "class_name": "OpenAIInstrumentor",
+        "module_name": "agentops.instrumentation.providers.openai",
+        "class_name": "OpenaiInstrumentor",
         "min_version": "1.0.0",
     },
     "anthropic": {
-        "module_name": "agentops.instrumentation.anthropic",
+        "module_name": "agentops.instrumentation.providers.anthropic",
         "class_name": "AnthropicInstrumentor",
         "min_version": "0.32.0",
     },
     "ibm_watsonx_ai": {
-        "module_name": "agentops.instrumentation.ibm_watsonx_ai",
-        "class_name": "IBMWatsonXInstrumentor",
+        "module_name": "agentops.instrumentation.providers.ibm_watsonx_ai",
+        "class_name": "WatsonxInstrumentor",
         "min_version": "0.1.0",
     },
     "google.genai": {
-        "module_name": "agentops.instrumentation.google_genai",
-        "class_name": "GoogleGenAIInstrumentor",
+        "module_name": "agentops.instrumentation.providers.google_genai",
+        "class_name": "GoogleGenaiInstrumentor",
         "min_version": "0.1.0",
         "package_name": "google-genai",  # Actual pip package name
     },
     "mem0": {
-        "module_name": "agentops.instrumentation.mem0",
+        "module_name": "agentops.instrumentation.providers.mem0",
         "class_name": "Mem0Instrumentor",
         "min_version": "0.1.0",
         "package_name": "mem0ai",
@@ -78,7 +78,7 @@ PROVIDERS: dict[str, InstrumentorConfig] = {
 # Configuration for utility instrumentors
 UTILITY_INSTRUMENTORS: dict[str, InstrumentorConfig] = {
     "concurrent.futures": {
-        "module_name": "agentops.instrumentation.concurrent_futures",
+        "module_name": "agentops.instrumentation.utilities.concurrent_futures",
         "class_name": "ConcurrentFuturesInstrumentor",
         "min_version": "3.7.0",  # Python 3.7+ (concurrent.futures is stdlib)
         "package_name": "python",  # Special case for stdlib modules
@@ -88,20 +88,34 @@ UTILITY_INSTRUMENTORS: dict[str, InstrumentorConfig] = {
 # Configuration for supported agentic libraries
 AGENTIC_LIBRARIES: dict[str, InstrumentorConfig] = {
     "crewai": {
-        "module_name": "agentops.instrumentation.crewai",
-        "class_name": "CrewAIInstrumentor",
+        "module_name": "agentops.instrumentation.agentic.crewai",
+        "class_name": "CrewaiInstrumentor",
         "min_version": "0.56.0",
     },
-    "autogen": {"module_name": "agentops.instrumentation.ag2", "class_name": "AG2Instrumentor", "min_version": "0.3.2"},
+    "autogen": {
+        "module_name": "agentops.instrumentation.agentic.ag2",
+        "class_name": "AG2Instrumentor",
+        "min_version": "0.3.2",
+    },
     "agents": {
-        "module_name": "agentops.instrumentation.openai_agents",
+        "module_name": "agentops.instrumentation.agentic.openai_agents",
         "class_name": "OpenAIAgentsInstrumentor",
         "min_version": "0.0.1",
     },
     "google.adk": {
-        "module_name": "agentops.instrumentation.google_adk",
-        "class_name": "GoogleADKInstrumentor",
+        "module_name": "agentops.instrumentation.agentic.google_adk",
+        "class_name": "GooogleAdkInstrumentor",
         "min_version": "0.1.0",
+    },
+    "agno": {
+        "module_name": "agentops.instrumentation.agentic.agno",
+        "class_name": "AgnoInstrumentor",
+        "min_version": "0.1.0",
+    },
+    "smolagents": {
+        "module_name": "agentops.instrumentation.agentic.smolagents",
+        "class_name": "SmolagentsInstrumentor",
+        "min_version": "1.0.0",
     },
 }
 
@@ -456,9 +470,11 @@ class InstrumentorLoader:
                 provider_name = self.package_name
             else:
                 provider_name = self.module_name.split(".")[-1]
-            module_version = version(provider_name)
-            return module_version is not None and Version(module_version) >= parse(self.min_version)
-        except ImportError:
+
+            # Use common version utility
+            module_version = get_library_version(provider_name)
+            return module_version != "unknown" and Version(module_version) >= parse(self.min_version)
+        except Exception:
             return False
 
     def get_instance(self) -> BaseInstrumentor:

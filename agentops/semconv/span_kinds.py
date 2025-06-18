@@ -3,8 +3,26 @@
 from enum import Enum
 
 
+class AgentOpsSpanKindValues(Enum):
+    """Standard span kind values for AgentOps."""
+
+    WORKFLOW = "workflow"
+    SESSION = "session"
+    TASK = "task"
+    OPERATION = "operation"
+    AGENT = "agent"
+    TOOL = "tool"
+    LLM = "llm"
+    TEAM = "team"
+    CHAIN = "chain"
+    TEXT = "text"
+    GUARDRAIL = "guardrail"
+    UNKNOWN = "unknown"
+
+
+# Legacy SpanKind class for backward compatibility
 class SpanKind:
-    """Defines the kinds of spans in AgentOps."""
+    """Legacy span kind definitions - use AgentOpsSpanKindValues instead."""
 
     # Agent action kinds
     AGENT_ACTION = "agent.action"  # Agent performing an action
@@ -16,25 +34,15 @@ class SpanKind:
 
     # Workflow kinds
     WORKFLOW_STEP = "workflow.step"  # Step in a workflow
-    WORKFLOW = "workflow"
-    SESSION = "session"
-    TASK = "task"
-    OPERATION = "operation"
-    AGENT = "agent"
-    TOOL = "tool"
-    LLM = "llm"
-    TEAM = "team"
-    UNKNOWN = "unknown"
-    CHAIN = "chain"
-    TEXT = "text"
-    GUARDRAIL = "guardrail"
-
-
-class AgentOpsSpanKindValues(Enum):
-    WORKFLOW = "workflow"
-    TASK = "task"
-    AGENT = "agent"
-    TOOL = "tool"
-    LLM = "llm"
-    TEAM = "team"
-    UNKNOWN = "unknown"
+    WORKFLOW = AgentOpsSpanKindValues.WORKFLOW.value
+    SESSION = AgentOpsSpanKindValues.SESSION.value
+    TASK = AgentOpsSpanKindValues.TASK.value
+    OPERATION = AgentOpsSpanKindValues.OPERATION.value
+    AGENT = AgentOpsSpanKindValues.AGENT.value
+    TOOL = AgentOpsSpanKindValues.TOOL.value
+    LLM = AgentOpsSpanKindValues.LLM.value
+    TEAM = AgentOpsSpanKindValues.TEAM.value
+    UNKNOWN = AgentOpsSpanKindValues.UNKNOWN.value
+    CHAIN = AgentOpsSpanKindValues.CHAIN.value
+    TEXT = AgentOpsSpanKindValues.TEXT.value
+    GUARDRAIL = AgentOpsSpanKindValues.GUARDRAIL.value

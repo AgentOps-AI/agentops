@@ -2,7 +2,7 @@ import pytest
 from unittest.mock import MagicMock
 from opentelemetry.trace import SpanKind
 
-from agentops.instrumentation.anthropic.stream_wrapper import (
+from agentops.instrumentation.providers.anthropic.stream_wrapper import (
     messages_stream_wrapper,
     messages_stream_async_wrapper,
     AsyncStreamContextManagerWrapper,

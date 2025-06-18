@@ -13,6 +13,7 @@ from openai import AsyncOpenAI
 import agentops
 import os
 from dotenv import load_dotenv
+import asyncio
 
 # Next, we'll grab our API keys. You can use dotenv like below or however else you like to load environment variables
 load_dotenv()
@@ -73,7 +74,7 @@ async def main_stream():
         print(chunk.choices[0].delta.content or "", end="")
 
 
-# await main_stream()
+asyncio.run(main_stream())
 agentops.end_trace(tracer, end_state="Success")
 
 # Note that the response is a generator that yields chunks of the story. We can track this with AgentOps by navigating to the trace url and viewing the run.
