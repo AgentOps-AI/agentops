@@ -98,3 +98,9 @@ class SpanAttributes:
 
     # Session/Trace attributes
     AGENTOPS_SESSION_END_STATE = "agentops.session.end_state"
+
+    # Streaming-specific attributes
+    LLM_STREAMING_TIME_TO_FIRST_TOKEN = "gen_ai.streaming.time_to_first_token"
+    LLM_STREAMING_TIME_TO_GENERATE = "gen_ai.streaming.time_to_generate"
+    LLM_STREAMING_DURATION = "gen_ai.streaming_duration"
+    LLM_STREAMING_CHUNK_COUNT = "gen_ai.streaming.chunk_count"

@@ -16,7 +16,6 @@ from unittest.mock import MagicMock, patch
 
 
 from agentops.instrumentation.providers.openai.instrumentor import OpenaiInstrumentor
-from agentops.instrumentation.common.wrappers import WrapConfig
 
 
 # Utility function to load fixtures
@@ -41,44 +40,52 @@ class TestOpenaiInstrumentor:
         # Create patches for tracer and meter
         with patch("agentops.instrumentation.common.instrumentor.get_tracer") as mock_get_tracer:
             with patch("agentops.instrumentation.common.instrumentor.get_meter") as mock_get_meter:
-                # Set up mock tracer and meter
-                mock_tracer = MagicMock()
-                mock_meter = MagicMock()
-                mock_get_tracer.return_value = mock_tracer
-                mock_get_meter.return_value = mock_meter
+                with patch("agentops.instrumentation.providers.openai.utils.is_openai_v1", return_value=True):
+                    with patch(
+                        "agentops.instrumentation.providers.openai.instrumentor.is_openai_v1", return_value=True
+                    ):
+                        # Set up mock tracer and meter
+                        mock_tracer = MagicMock()
+                        mock_meter = MagicMock()
+                        mock_get_tracer.return_value = mock_tracer
+                        mock_get_meter.return_value = mock_meter
 
-                # Create a real instrumentation setup for testing
-                mock_tracer_provider = MagicMock()
-                instrumentor = OpenaiInstrumentor()
+                        # Create a real instrumentation setup for testing
+                        mock_tracer_provider = MagicMock()
+                        instrumentor = OpenaiInstrumentor()
 
-                # To avoid timing issues with the fixture, we need to ensure patch
-                # objects are created before being used in the test
-                mock_wrap = patch("agentops.instrumentation.common.instrumentor.wrap").start()
-                mock_unwrap = patch("agentops.instrumentation.common.instrumentor.unwrap").start()
-                mock_instrument = patch.object(instrumentor, "_instrument", wraps=instrumentor._instrument).start()
-                mock_uninstrument = patch.object(
-                    instrumentor, "_uninstrument", wraps=instrumentor._uninstrument
-                ).start()
+                        # To avoid timing issues with the fixture, we need to ensure patch
+                        # objects are created before being used in the test
+                        mock_wrap = patch("agentops.instrumentation.common.instrumentor.wrap").start()
+                        mock_unwrap = patch("agentops.instrumentation.common.instrumentor.unwrap").start()
+                        mock_wrap_function_wrapper = patch("wrapt.wrap_function_wrapper").start()
+                        mock_instrument = patch.object(
+                            instrumentor, "_instrument", wraps=instrumentor._instrument
+                        ).start()
+                        mock_uninstrument = patch.object(
+                            instrumentor, "_uninstrument", wraps=instrumentor._uninstrument
+                        ).start()
 
-                # Instrument
-                instrumentor._instrument(tracer_provider=mock_tracer_provider)
+                        # Instrument
+                        instrumentor._instrument(tracer_provider=mock_tracer_provider)
 
-                yield {
-                    "instrumentor": instrumentor,
-                    "tracer_provider": mock_tracer_provider,
-                    "mock_wrap": mock_wrap,
-                    "mock_unwrap": mock_unwrap,
-                    "mock_instrument": mock_instrument,
-                    "mock_uninstrument": mock_uninstrument,
-                    "mock_tracer": mock_tracer,
-                    "mock_meter": mock_meter,
-                }
+                        yield {
+                            "instrumentor": instrumentor,
+                            "tracer_provider": mock_tracer_provider,
+                            "mock_wrap": mock_wrap,
+                            "mock_unwrap": mock_unwrap,
+                            "mock_wrap_function_wrapper": mock_wrap_function_wrapper,
+                            "mock_instrument": mock_instrument,
+                            "mock_uninstrument": mock_uninstrument,
+                            "mock_tracer": mock_tracer,
+                            "mock_meter": mock_meter,
+                        }
 
-                # Uninstrument - must happen before stopping patches
-                instrumentor._uninstrument()
+                        # Uninstrument - must happen before stopping patches
+                        instrumentor._uninstrument()
 
-                # Stop patches
-                patch.stopall()
+                        # Stop patches
+                        patch.stopall()
 
     def test_instrumentor_initialization(self):
         """Test instrumentor is initialized with correct configuration"""
@@ -92,32 +99,36 @@ class TestOpenaiInstrumentor:
 
     def test_instrument_method_wraps_response_api(self, instrumentor):
         """Test the _instrument method wraps the Response API methods"""
-        mock_wrap = instrumentor["mock_wrap"]
+        instrumentor_obj = instrumentor["instrumentor"]
 
-        # Verify wrap was called multiple times (we wrap many methods)
-        assert mock_wrap.call_count > 0
+        # Create a new mock for wrap_function_wrapper that we control
+        with patch("agentops.instrumentation.providers.openai.instrumentor.wrap_function_wrapper") as mock_wfw:
+            # Call _custom_wrap directly to test Response API wrapping
+            instrumentor_obj._custom_wrap()
 
-        # Find Response API calls in the wrapped methods
-        response_api_calls = []
-        for call in mock_wrap.call_args_list:
-            wrap_config = call[0][0]
-            if isinstance(wrap_config, WrapConfig) and wrap_config.package == "openai.resources.responses":
-                response_api_calls.append(wrap_config)
+            # Verify wrap_function_wrapper was called for Response API methods
+            assert (
+                mock_wfw.call_count >= 2
+            ), f"Expected at least 2 calls to wrap_function_wrapper, got {mock_wfw.call_count}"
 
-        # Verify we have both sync and async Response API methods
-        assert len(response_api_calls) == 2
+            # Find Response API calls
+            response_api_calls = []
+            for call in mock_wfw.call_args_list:
+                if len(call[0]) >= 2 and "openai.resources.responses" in call[0][0]:
+                    response_api_calls.append(
+                        {
+                            "module": call[0][0],
+                            "method": call[0][1],
+                        }
+                    )
 
-        # Check sync Responses.create
-        sync_response = next((cfg for cfg in response_api_calls if cfg.class_name == "Responses"), None)
-        assert sync_response is not None
-        assert sync_response.trace_name == "openai.responses.create"
-        assert sync_response.method_name == "create"
+            # Verify we have both sync and async Response API methods
+            assert len(response_api_calls) == 2, f"Expected 2 Response API calls, got {len(response_api_calls)}"
 
-        # Check async AsyncResponses.create
-        async_response = next((cfg for cfg in response_api_calls if cfg.class_name == "AsyncResponses"), None)
-        assert async_response is not None
-        assert async_response.trace_name == "openai.responses.create"
-        assert async_response.method_name == "create"
+            # Check that we have both Responses.create and AsyncResponses.create
+            methods = [call["method"] for call in response_api_calls]
+            assert "Responses.create" in methods
+            assert "AsyncResponses.create" in methods
 
     def test_uninstrument_method_unwraps_response_api(self, instrumentor):
         """Test the _uninstrument method unwraps the Response API methods"""

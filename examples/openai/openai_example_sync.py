@@ -59,7 +59,8 @@ stream = client.chat.completions.create(
 )
 
 for chunk in stream:
-    print(chunk.choices[0].delta.content or "", end="")
+    if chunk.choices and len(chunk.choices) > 0:
+        print(chunk.choices[0].delta.content or "", end="")
 
 agentops.end_trace(tracer, end_state="Success")
 
