@@ -59,6 +59,7 @@ import re
 import requests
 from markdownify import markdownify
 from requests.exceptions import RequestException
+from smolagents import LiteLLMModel, tool, CodeAgent, ToolCallingAgent, DuckDuckGoSearchTool
 
 load_dotenv()
 os.environ["AGENTOPS_API_KEY"] = os.getenv("AGENTOPS_API_KEY", "your_api_key_here")
