@@ -104,12 +104,13 @@ def handle_chat_attributes(
         # Tools
         if "tools" in kwargs:
             tools = kwargs["tools"]
-            for i, tool in enumerate(tools):
-                function = tool.get("function", {})
-                prefix = f"{SpanAttributes.LLM_REQUEST_FUNCTIONS}.{i}"
-                attributes[f"{prefix}.name"] = function.get("name")
-                attributes[f"{prefix}.description"] = function.get("description")
-                attributes[f"{prefix}.parameters"] = json.dumps(function.get("parameters"))
+            if tools:  # Check if tools is not None
+                for i, tool in enumerate(tools):
+                    function = tool.get("function", {})
+                    prefix = f"{SpanAttributes.LLM_REQUEST_FUNCTIONS}.{i}"
+                    attributes[f"{prefix}.name"] = function.get("name")
+                    attributes[f"{prefix}.description"] = function.get("description")
+                    attributes[f"{prefix}.parameters"] = json.dumps(function.get("parameters"))
 
     # Extract response attributes from return value
     if return_value:
