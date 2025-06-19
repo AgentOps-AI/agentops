@@ -71,7 +71,7 @@ def convert_params_to_dict(params: Any) -> Dict[str, Any]:
         try:
             return params.to_dict()
         except Exception as e:
-            logger.debug(f"Could not convert params object to dict: {e}")
+            logger.warning(f"Could not convert params object to dict: {e}")
             return {}
 
     return params if isinstance(params, dict) else {}

@@ -138,9 +138,9 @@ class OpenaiInstrumentor(CommonInstrumentor):
                 logger.warning(f"[OPENAI INSTRUMENTOR] Error setting up OpenAI streaming wrappers: {e}")
         else:
             if not is_openai_v1():
-                logger.debug("[OPENAI INSTRUMENTOR] Skipping custom wrapping - not using OpenAI v1")
+                pass
             if not self._tracer:
-                logger.debug("[OPENAI INSTRUMENTOR] Skipping custom wrapping - no tracer available")
+                pass
 
     def _create_metrics(self, meter: Meter) -> Dict[str, Any]:
         """Create metrics for OpenAI instrumentation."""

@@ -78,9 +78,8 @@ class AG2Instrumentor(CommonInstrumentor):
         for module, method, wrapper_factory in methods_to_wrap:
             try:
                 wrap_function_wrapper(module, method, wrapper_factory(self._tracer))
-                logger.debug(f"Successfully wrapped {method}")
             except (AttributeError, ModuleNotFoundError) as e:
-                logger.debug(f"Failed to wrap {method}: {e}")
+                logger.warning(f"Failed to wrap {method}: {e}")
 
     def _custom_unwrap(self, **kwargs):
         """Remove instrumentation from AG2."""
@@ -98,9 +97,8 @@ class AG2Instrumentor(CommonInstrumentor):
         try:
             for module, method in methods_to_unwrap:
                 otel_unwrap(module, method)
-            logger.debug("Successfully uninstrumented AG2")
         except Exception as e:
-            logger.debug(f"Failed to unwrap AG2 methods: {e}")
+            logger.warning(f"Failed to unwrap AG2 methods: {e}")
 
     def _set_llm_config_attributes(self, span, llm_config):
         if not isinstance(llm_config, dict):
@@ -411,7 +409,7 @@ class AG2Instrumentor(CommonInstrumentor):
                         if "model" in meta:
                             span.set_attribute(SpanAttributes.LLM_RESPONSE_MODEL, meta["model"])
         except Exception as e:
-            logger.debug(f"Could not extract chat history: {e}")
+            logger.warning(f"Could not extract chat history: {e}")
 
     def _set_message_attributes(self, span, message, index, prefix):
         """Set message attributes on span."""

@@ -147,7 +147,7 @@ class GoogleGenaiInstrumentor(CommonInstrumentor):
                     f"Successfully wrapped streaming method {stream_method['module']}.{stream_method['class_method']}"
                 )
             except (AttributeError, ModuleNotFoundError) as e:
-                logger.debug(f"Failed to wrap {stream_method['module']}.{stream_method['class_method']}: {e}")
+                logger.warning(f"Failed to wrap {stream_method['module']}.{stream_method['class_method']}: {e}")
 
         logger.info("Google Generative AI instrumentation enabled")
 
@@ -165,6 +165,6 @@ class GoogleGenaiInstrumentor(CommonInstrumentor):
                 otel_unwrap(stream_method["module"], stream_method["class_method"])
                 logger.debug(f"Unwrapped streaming method {stream_method['module']}.{stream_method['class_method']}")
             except (AttributeError, ModuleNotFoundError) as e:
-                logger.debug(f"Failed to unwrap {stream_method['module']}.{stream_method['class_method']}: {e}")
+                logger.warning(f"Failed to unwrap {stream_method['module']}.{stream_method['class_method']}: {e}")
 
         logger.info("Google Generative AI instrumentation disabled")

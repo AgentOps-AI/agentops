@@ -77,7 +77,7 @@ def _set_chat_history_attributes(attributes: AttributeMap, args: Tuple, kwargs: 
                 attributes[MessageAttributes.PROMPT_CONTENT.format(i=i)] = content
                 attributes[MessageAttributes.PROMPT_ROLE.format(i=i)] = role
         except Exception as e:
-            logger.debug(f"Error extracting chat message at index {i}: {e}")
+            logger.warning(f"Error extracting chat message at index {i}: {e}")
 
 
 def get_chat_attributes(

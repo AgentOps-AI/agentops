@@ -134,7 +134,7 @@ class AnthropicInstrumentor(CommonInstrumentor):
                 messages_stream_async_wrapper(self._tracer),
             )
         except (AttributeError, ModuleNotFoundError):
-            logger.debug("Failed to wrap Anthropic streaming methods")
+            logger.warning("Failed to wrap Anthropic streaming methods")
 
     def _custom_unwrap(self, **kwargs):
         """Perform custom unwrapping for streaming methods."""
@@ -143,4 +143,4 @@ class AnthropicInstrumentor(CommonInstrumentor):
             otel_unwrap("anthropic.resources.messages.messages", "Messages.stream")
             otel_unwrap("anthropic.resources.messages.messages", "AsyncMessages.stream")
         except (AttributeError, ModuleNotFoundError):
-            logger.debug("Failed to unwrap Anthropic streaming methods")
+            logger.warning("Failed to unwrap Anthropic streaming methods")

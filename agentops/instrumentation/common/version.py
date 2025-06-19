@@ -37,8 +37,7 @@ def get_library_version(package_name: str, default_version: str = "unknown") -> 
         from importlib.metadata import version
 
         return version(package_name)
-    except (ImportError, Exception) as e:
-        logger.debug(f"Could not find {package_name} version: {e}")
+    except (ImportError, Exception):
         return default_version
 
 

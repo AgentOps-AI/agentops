@@ -123,7 +123,7 @@ class TracedStream:
                                                 )
 
                         except json.JSONDecodeError as json_err:
-                            logger.debug(f"Failed to parse JSON from internal chunk data: {json_err}")
+                            logger.warning(f"Failed to parse JSON from internal chunk data: {json_err}")
                             # Fallback to using the yielded chunk directly
                             if isinstance(yielded_chunk, dict):  # chat_stream yields dicts
                                 if "choices" in yielded_chunk and yielded_chunk["choices"]:
@@ -132,7 +132,7 @@ class TracedStream:
                             elif isinstance(yielded_chunk, str):  # generate_text_stream yields strings
                                 generated_text_chunk = yielded_chunk
                         except Exception as parse_err:
-                            logger.debug(f"Error processing internal chunk data: {parse_err}")
+                            logger.warning(f"Error processing internal chunk data: {parse_err}")
                             if isinstance(yielded_chunk, dict):  # Fallback for chat
                                 if "choices" in yielded_chunk and yielded_chunk["choices"]:
                                     delta = yielded_chunk["choices"][0].get("delta", {})
@@ -149,7 +149,7 @@ class TracedStream:
                             generated_text_chunk = yielded_chunk
 
                 except AttributeError as attr_err:
-                    logger.debug(f"Could not access internal generator state (gi_frame.f_locals): {attr_err}")
+                    logger.warning(f"Could not access internal generator state (gi_frame.f_locals): {attr_err}")
                     if isinstance(yielded_chunk, dict):  # Fallback for chat
                         if "choices" in yielded_chunk and yielded_chunk["choices"]:
                             delta = yielded_chunk["choices"][0].get("delta", {})
@@ -157,7 +157,7 @@ class TracedStream:
                     elif isinstance(yielded_chunk, str):  # Fallback for generate
                         generated_text_chunk = yielded_chunk
                 except Exception as e:
-                    logger.debug(f"Error accessing or processing internal generator state: {e}")
+                    logger.warning(f"Error accessing or processing internal generator state: {e}")
                     if isinstance(yielded_chunk, dict):  # Fallback for chat
                         if "choices" in yielded_chunk and yielded_chunk["choices"]:
                             delta = yielded_chunk["choices"][0].get("delta", {})
@@ -230,7 +230,7 @@ def generate_text_stream_wrapper(wrapped, instance, args, kwargs):
                 for key, value in span_attributes.items():
                     span.set_attribute(key, value)
             except Exception as e:
-                logger.debug(f"Error extracting attributes from params dict: {e}")
+                logger.warning(f"Error extracting attributes from params dict: {e}")
 
     span.set_attribute(SpanAttributes.LLM_REQUEST_STREAMING, True)
 
@@ -287,7 +287,7 @@ def chat_stream_wrapper(wrapped, instance, args, kwargs):
                 for key, value in span_attributes.items():
                     span.set_attribute(key, value)
             except Exception as e:
-                logger.debug(f"Error extracting attributes from params dict: {e}")
+                logger.warning(f"Error extracting attributes from params dict: {e}")
 
     span.set_attribute(SpanAttributes.LLM_REQUEST_STREAMING, True)
 

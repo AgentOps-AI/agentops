@@ -8,7 +8,6 @@ from typing import Any, Dict
 
 from agentops.instrumentation.common.attributes import AttributeMap
 
-from agentops.logging import logger
 from agentops.helpers.serialization import model_to_dict
 from agentops.semconv import (
     SpanAttributes,
@@ -88,7 +87,6 @@ def get_raw_response_attributes(response: Dict[str, Any]) -> Dict[str, Any]:
                 usage_attrs: AttributeMap = {}
                 process_token_usage(raw_response["usage"], usage_attrs)
                 result.update(usage_attrs)
-                logger.debug(f"Extracted token usage from raw_responses[{i}]: {usage_attrs}")
 
             # Extract output content
             if "output" in raw_response and isinstance(raw_response["output"], list):

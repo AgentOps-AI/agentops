@@ -51,12 +51,10 @@ class OpenAIAgentsInstrumentor(BaseInstrumentor):
     def _instrument(self, **kwargs):
         """Instrument the OpenAI Agents SDK."""
         if self._is_instrumented_instance_flag:
-            logger.debug("OpenAI Agents SDK already instrumented. Skipping.")
             return
 
         tracer_provider = kwargs.get("tracer_provider")
         if self._tracer is None:
-            logger.debug("OpenAI Agents SDK tracer is None, creating new tracer.")
             self._tracer = trace.get_tracer("agentops.instrumentation.openai_agents", LIBRARY_VERSION)
 
         try:
@@ -82,7 +80,6 @@ class OpenAIAgentsInstrumentor(BaseInstrumentor):
     def _uninstrument(self, **kwargs):
         """Remove instrumentation from OpenAI Agents SDK."""
         if not self._is_instrumented_instance_flag:
-            logger.debug("OpenAI Agents SDK not currently instrumented. Skipping uninstrument.")
             return
         try:
             # Clean up any active spans in the exporter

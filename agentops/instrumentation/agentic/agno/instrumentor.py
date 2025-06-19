@@ -936,7 +936,6 @@ class AgnoInstrumentor(CommonInstrumentor):
     def _perform_wrapping(self):
         """Actually perform the wrapping - called after imports are complete."""
         if not self._tracer:
-            logger.debug("No tracer available for Agno wrapping")
             return
 
         from agentops.instrumentation.common.wrappers import wrap_function_wrapper, WrapConfig, wrap
@@ -989,7 +988,7 @@ class AgnoInstrumentor(CommonInstrumentor):
                 wrap(wrap_config, self._tracer)
                 wrapped_count += 1
             except Exception as e:
-                logger.debug(f"Failed to wrap {wrap_config}: {e}")
+                logger.warning(f"Failed to wrap {wrap_config}: {e}")
 
         # Now wrap the streaming methods that need custom wrappers
         streaming_methods = [
@@ -1017,7 +1016,7 @@ class AgnoInstrumentor(CommonInstrumentor):
                 wrap_function_wrapper(package, method, wrapper)
                 wrapped_count += 1
             except Exception as e:
-                logger.debug(f"Failed to wrap {package}.{method}: {e}")
+                logger.warning(f"Failed to wrap {package}.{method}: {e}")
 
         if wrapped_count > 0:
             logger.info(f"Agno instrumentation: Successfully wrapped {wrapped_count} methods")
