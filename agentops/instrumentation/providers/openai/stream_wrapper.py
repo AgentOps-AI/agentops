@@ -357,7 +357,6 @@ def chat_completion_stream_wrapper(tracer, wrapped, instance, args, kwargs):
             # Add stream_options if it doesn't exist
             if "stream_options" not in kwargs:
                 kwargs["stream_options"] = {"include_usage": True}
-                logger.debug("[OPENAI WRAPPER] Adding stream_options.include_usage=True to get token counts")
             # If stream_options exists but doesn't have include_usage, add it
             elif isinstance(kwargs["stream_options"], dict) and "include_usage" not in kwargs["stream_options"]:
                 kwargs["stream_options"]["include_usage"] = True
@@ -623,7 +622,6 @@ def responses_stream_wrapper(tracer, wrapped, instance, args, kwargs):
     # If not streaming, just call the wrapped method directly
     # The normal instrumentation will handle it
     if not is_streaming:
-        logger.debug("[RESPONSES API WRAPPER] Non-streaming call, delegating to normal instrumentation")
         return wrapped(*args, **kwargs)
 
     # Only create span for streaming responses
@@ -699,7 +697,6 @@ async def async_responses_stream_wrapper(tracer, wrapped, instance, args, kwargs
     # If not streaming, just call the wrapped method directly
     # The normal instrumentation will handle it
     if not is_streaming:
-        logger.debug("[RESPONSES API WRAPPER] Non-streaming call, delegating to normal instrumentation")
         return await wrapped(*args, **kwargs)
 
     # Only create span for streaming responses
@@ -755,7 +752,6 @@ async def async_responses_stream_wrapper(tracer, wrapped, instance, args, kwargs
         response = await wrapped(*args, **kwargs)
 
         # For streaming, wrap the stream
-        logger.debug("[RESPONSES API WRAPPER] Wrapping streaming response with ResponsesAPIStreamWrapper")
         wrapped_stream = ResponsesAPIStreamWrapper(response, span, kwargs)
         return wrapped_stream
 

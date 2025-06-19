@@ -265,6 +265,6 @@ class Mem0Instrumentor(CommonInstrumentor):
                 class_method = method_config["class_method"]
                 unwrap(package, class_method)
             except Exception as e:
-                logger.debug(f"Failed to unwrap {package}.{class_method}: {e}")
+                logger.warning(f"Failed to unwrap {package}.{class_method}: {e}")
 
         logger.info("Mem0 instrumentation disabled")

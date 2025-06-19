@@ -62,10 +62,9 @@ def log_otel_trace_id(span_type):
         if hasattr(ctx, "trace_id") and ctx.trace_id:
             # Convert trace_id to 32-character hex string as shown in the API
             otel_trace_id = f"{ctx.trace_id:032x}" if isinstance(ctx.trace_id, int) else str(ctx.trace_id)
-            logger.debug(f"[SPAN] Export | Type: {span_type} | TRACE ID: {otel_trace_id}")
+
             return otel_trace_id
 
-    logger.debug(f"[SPAN] Export | Type: {span_type} | NO TRACE ID AVAILABLE")
     return None
 
 
@@ -137,7 +136,7 @@ class OpenAIAgentsExporter:
         trace_id = getattr(trace, "trace_id", "unknown")
 
         if not hasattr(trace, "trace_id"):
-            logger.debug("Cannot export trace: missing trace_id")
+            logger.warning("Cannot export trace: missing trace_id")
             return
 
         # Determine if this is a trace end event using status field

@@ -43,7 +43,7 @@ class EventHandleWrapper:
                 method = getattr(self._original_handler, method_name)
                 method(*args, **kwargs)
         except Exception as e:
-            logger.debug(f"Error in event handler {method_name}: {e}")
+            logger.warning(f"Error in event handler {method_name}: {e}")
 
     def on_event(self, event: Dict[str, Any]) -> None:
         """Handle any event by forwarding it to the original handler."""
@@ -87,4 +87,4 @@ class EventHandleWrapper:
             if self._original_handler is not None and hasattr(self._original_handler, "on_error"):
                 self._original_handler.on_error(error)
         except Exception as e:
-            logger.debug(f"Error in event handler on_error: {e}")
+            logger.warning(f"Error in event handler on_error: {e}")

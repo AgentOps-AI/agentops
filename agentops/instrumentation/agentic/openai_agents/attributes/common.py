@@ -543,7 +543,6 @@ def get_span_attributes(span_data: Any) -> AttributeMap:
     elif span_type == "SpeechGroupSpanData":
         attributes = get_speech_group_span_attributes(span_data)
     else:
-        logger.debug(f"[agentops.instrumentation.openai_agents.attributes] Unknown span type: {span_type}")
         attributes = {}
 
     return attributes

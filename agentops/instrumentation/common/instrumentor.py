@@ -69,7 +69,7 @@ class CommonInstrumentor(BaseInstrumentor, ABC):
             try:
                 unwrap(wrap_config)
             except Exception as e:
-                logger.debug(
+                logger.warning(
                     f"Failed to unwrap {wrap_config.package}."
                     f"{wrap_config.class_name}.{wrap_config.method_name}: {e}"
                 )
@@ -88,7 +88,7 @@ class CommonInstrumentor(BaseInstrumentor, ABC):
             try:
                 wrap(wrap_config, self._tracer)
             except (AttributeError, ModuleNotFoundError) as e:
-                logger.debug(
+                logger.warning(
                     f"Could not wrap {wrap_config.package}." f"{wrap_config.class_name}.{wrap_config.method_name}: {e}"
                 )
 

@@ -80,7 +80,7 @@ def extract_request_attributes(kwargs: Dict[str, Any]) -> AttributeMap:
                 )
             )
         except Exception as e:
-            logger.debug(f"Error extracting config parameters: {e}")
+            logger.warning(f"Error extracting config parameters: {e}")
 
     if "stream" in kwargs:
         attributes[SpanAttributes.LLM_REQUEST_STREAMING] = kwargs["stream"]

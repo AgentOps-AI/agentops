@@ -94,7 +94,7 @@ def messages_stream_wrapper(tracer, wrapped, instance, args, kwargs):
                     for key, value in stream_attributes.items():
                         span.set_attribute(key, value)
                 except Exception as e:
-                    logger.debug(f"Error getting stream attributes: {e}")
+                    logger.warning(f"Error getting stream attributes: {e}")
 
                 # Set the event handler on the stream if provided
                 if original_event_handler is not None:
@@ -121,7 +121,7 @@ def messages_stream_wrapper(tracer, wrapped, instance, args, kwargs):
 
                         self.stream.text_stream = InstrumentedTextStream()
                     except Exception as e:
-                        logger.debug(f"Error patching text_stream: {e}")
+                        logger.warning(f"Error patching text_stream: {e}")
 
                 return self.stream
 
@@ -176,7 +176,7 @@ def messages_stream_wrapper(tracer, wrapped, instance, args, kwargs):
                                     total_tokens = usage.input_tokens + usage.output_tokens
                                     span.set_attribute(SpanAttributes.LLM_USAGE_TOTAL_TOKENS, total_tokens)
                     except Exception as e:
-                        logger.debug(f"Failed to extract final message data: {e}")
+                        logger.warning(f"Failed to extract final message data: {e}")
                 finally:
                     if span.is_recording():
                         span.end()
@@ -334,7 +334,7 @@ def messages_stream_async_wrapper(tracer, wrapped, instance, args, kwargs):
                         for key, value in stream_attributes.items():
                             span.set_attribute(key, value)
                     except Exception as e:
-                        logger.debug(f"Error getting async stream attributes: {e}")
+                        logger.warning(f"Error getting async stream attributes: {e}")
 
                     if original_event_handler is None:
                         try:
@@ -358,7 +358,7 @@ def messages_stream_async_wrapper(tracer, wrapped, instance, args, kwargs):
 
                             self.stream.text_stream = InstrumentedAsyncTextStream()
                         except Exception as e:
-                            logger.debug(f"Error patching async text_stream: {e}")
+                            logger.warning(f"Error patching async text_stream: {e}")
 
                     return self.stream
 
@@ -417,7 +417,7 @@ def messages_stream_async_wrapper(tracer, wrapped, instance, args, kwargs):
                                         total_tokens = usage.input_tokens + usage.output_tokens
                                         span.set_attribute(SpanAttributes.LLM_USAGE_TOTAL_TOKENS, total_tokens)
                         except Exception as e:
-                            logger.debug(f"Failed to extract final async message data: {e}")
+                            logger.warning(f"Failed to extract final async message data: {e}")
                     finally:
                         if span.is_recording():
                             span.end()

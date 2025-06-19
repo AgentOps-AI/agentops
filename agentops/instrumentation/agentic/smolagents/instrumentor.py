@@ -261,26 +261,26 @@ class SmolagentsInstrumentor(CommonInstrumentor):
         try:
             unwrap("smolagents.agents", "CodeAgent.run")
         except Exception as e:
-            logger.debug(f"Failed to unwrap CodeAgent.run: {e}")
+            logger.warning(f"Failed to unwrap CodeAgent.run: {e}")
 
         try:
             unwrap("smolagents.agents", "ToolCallingAgent.run")
         except Exception as e:
-            logger.debug(f"Failed to unwrap ToolCallingAgent.run: {e}")
+            logger.warning(f"Failed to unwrap ToolCallingAgent.run: {e}")
 
         try:
             unwrap("smolagents.agents", "ToolCallingAgent.execute_tool_call")
         except Exception as e:
-            logger.debug(f"Failed to unwrap ToolCallingAgent.execute_tool_call: {e}")
+            logger.warning(f"Failed to unwrap ToolCallingAgent.execute_tool_call: {e}")
 
         try:
             unwrap("smolagents.models", "LiteLLMModel.generate")
         except Exception as e:
-            logger.debug(f"Failed to unwrap LiteLLMModel.generate: {e}")
+            logger.warning(f"Failed to unwrap LiteLLMModel.generate: {e}")
 
         try:
             unwrap("smolagents.models", "LiteLLMModel.generate_stream")
         except Exception as e:
-            logger.debug(f"Failed to unwrap LiteLLMModel.generate_stream: {e}")
+            logger.warning(f"Failed to unwrap LiteLLMModel.generate_stream: {e}")
 
         logger.info("SmoLAgents instrumentation disabled")

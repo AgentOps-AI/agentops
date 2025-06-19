@@ -144,15 +144,9 @@ def _is_installed_package(module_obj: ModuleType, package_name_key: str) -> bool
         package_name_key in UTILITY_INSTRUMENTORS
         and UTILITY_INSTRUMENTORS[package_name_key].get("package_name") == "python"
     ):
-        logger.debug(
-            f"_is_installed_package: Module '{package_name_key}' is a Python standard library module. Considering it an installed package."
-        )
         return True
 
     if not hasattr(module_obj, "__file__") or not module_obj.__file__:
-        logger.debug(
-            f"_is_installed_package: Module '{package_name_key}' has no __file__, assuming it might be an SDK namespace package. Returning True."
-        )
         return True
 
     module_path = os.path.normcase(os.path.realpath(os.path.abspath(module_obj.__file__)))
@@ -171,13 +165,9 @@ def _is_installed_package(module_obj: ModuleType, package_name_key: str) -> bool
 
     for sp_dir in normalized_site_packages_dirs:
         if module_path.startswith(sp_dir):
-            logger.debug(
-                f"_is_installed_package: Module '{package_name_key}' is a library, instrumenting '{package_name_key}'."
-            )
             return True
 
     # Priority 2: If not in site-packages, it's highly likely a local module or not an SDK we target.
-    logger.debug(f"_is_installed_package: Module '{package_name_key}' is a local module, skipping instrumentation.")
     return False
 
 
@@ -232,9 +222,7 @@ def _uninstrument_providers():
             new_active_instrumentors.append(instrumentor)
 
     if uninstrumented_any or not new_active_instrumentors and _active_instrumentors:
-        logger.debug(
-            f"_uninstrument_providers: Processed. Previous active: {len(_active_instrumentors)}, New active after filtering providers: {len(new_active_instrumentors)}"
-        )
+        pass
     _active_instrumentors = new_active_instrumentors
 
 
@@ -247,12 +235,10 @@ def _should_instrument_package(package_name: str) -> bool:
 
     # If already instrumented by AgentOps (using our refined check), skip.
     if _is_package_instrumented(package_name):
-        logger.debug(f"_should_instrument_package: '{package_name}' already instrumented by AgentOps. Skipping.")
         return False
 
     # Utility instrumentors should always be instrumented regardless of agentic library state
     if package_name in UTILITY_INSTRUMENTORS:
-        logger.debug(f"_should_instrument_package: '{package_name}' is a utility instrumentor. Always allowing.")
         return True
 
     # Only apply agentic/provider logic if it's NOT a utility instrumentor
@@ -260,9 +246,6 @@ def _should_instrument_package(package_name: str) -> bool:
     is_target_provider = package_name in PROVIDERS
 
     if not is_target_agentic and not is_target_provider:
-        logger.debug(
-            f"_should_instrument_package: '{package_name}' is not a targeted provider or agentic library. Skipping."
-        )
         return False
 
     if _has_agentic_library:
@@ -286,14 +269,8 @@ def _should_instrument_package(package_name: str) -> bool:
             _uninstrument_providers()
             return True
         if is_target_provider:
-            logger.debug(
-                f"_should_instrument_package: '{package_name}' is a provider, no agentic library active. Allowing."
-            )
             return True
 
-    logger.debug(
-        f"_should_instrument_package: Defaulting to False for '{package_name}' (state: _has_agentic_library={_has_agentic_library})"
-    )
     return False
 
 
@@ -310,9 +287,6 @@ def _perform_instrumentation(package_name: str):
         and package_name not in AGENTIC_LIBRARIES
         and package_name not in UTILITY_INSTRUMENTORS
     ):
-        logger.debug(
-            f"_perform_instrumentation: Package '{package_name}' not found in PROVIDERS, AGENTIC_LIBRARIES, or UTILITY_INSTRUMENTORS. Skipping."
-        )
         return
 
     config = PROVIDERS.get(package_name) or AGENTIC_LIBRARIES.get(package_name) or UTILITY_INSTRUMENTORS[package_name]
@@ -342,9 +316,7 @@ def _perform_instrumentation(package_name: str):
                 and existing_inst._agentops_instrumented_package_key == package_name
             ):
                 is_newly_added = False
-                logger.debug(
-                    f"_perform_instrumentation: Instrumentor for '{package_name}' already in _active_instrumentors. Not adding again."
-                )
+
                 break
         if is_newly_added:
             _active_instrumentors.append(instrumentor_instance)
@@ -356,9 +328,7 @@ def _perform_instrumentation(package_name: str):
             # _uninstrument_providers() was already called in _should_instrument_package for the first agentic library.
             _has_agentic_library = True
     else:
-        logger.debug(
-            f"_perform_instrumentation: instrument_one for '{package_name}' returned None. Not added to active instrumentors."
-        )
+        pass
 
 
 def _import_monitor(name: str, globals_dict=None, locals_dict=None, fromlist=(), level=0):
@@ -419,9 +389,7 @@ def _import_monitor(name: str, globals_dict=None, locals_dict=None, fromlist=(),
                     )
                     continue
             else:
-                logger.debug(
-                    f"_import_monitor: No module object found in sys.modules for '{package_to_check}', proceeding with SDK instrumentation attempt."
-                )
+                pass
 
             _instrumenting_packages.add(package_to_check)
             try:
@@ -552,9 +520,7 @@ def instrument_all():
                     if not is_sdk:
                         continue
                 else:
-                    logger.debug(
-                        f"instrument_all: No module object found for '{package_to_check}' in sys.modules during startup scan. Proceeding cautiously."
-                    )
+                    pass
 
                 _instrumenting_packages.add(package_to_check)
                 try:
@@ -571,7 +537,6 @@ def uninstrument_all():
     builtins.__import__ = _original_builtins_import
     for instrumentor in _active_instrumentors:
         instrumentor.uninstrument()
-        logger.debug(f"Uninstrumented {instrumentor.__class__.__name__}")
     _active_instrumentors = []
     _has_agentic_library = False
 

@@ -121,11 +121,9 @@ class WatsonxInstrumentor(CommonInstrumentor):
                 f"{generate_text_stream_config.class_name}.{generate_text_stream_config.method_name}",
                 generate_text_stream_wrapper,
             )
-            logger.debug(
-                f"Wrapped {generate_text_stream_config.package}.{generate_text_stream_config.class_name}.{generate_text_stream_config.method_name} with dedicated wrapper"
-            )
+
         except (StopIteration, AttributeError, ModuleNotFoundError) as e:
-            logger.debug(f"Could not wrap generate_text_stream with dedicated wrapper: {e}")
+            logger.warning(f"Could not wrap generate_text_stream with dedicated wrapper: {e}")
 
         try:
             chat_stream_config = next(wc for wc in WRAPPED_METHODS if wc.method_name == "chat_stream")
@@ -134,11 +132,9 @@ class WatsonxInstrumentor(CommonInstrumentor):
                 f"{chat_stream_config.class_name}.{chat_stream_config.method_name}",
                 chat_stream_wrapper,
             )
-            logger.debug(
-                f"Wrapped {chat_stream_config.package}.{chat_stream_config.class_name}.{chat_stream_config.method_name} with dedicated wrapper"
-            )
+
         except (StopIteration, AttributeError, ModuleNotFoundError) as e:
-            logger.debug(f"Could not wrap chat_stream with dedicated wrapper: {e}")
+            logger.warning(f"Could not wrap chat_stream with dedicated wrapper: {e}")
 
         logger.info("IBM watsonx.ai instrumentation enabled")
 
