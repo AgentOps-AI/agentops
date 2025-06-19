@@ -328,7 +328,7 @@ def _extract_llm_attributes(llm_request_dict: dict, llm_response: Any) -> dict:
                 attributes[SpanAttributes.LLM_RESPONSE_ID] = response_dict["id"]
 
         except Exception as e:
-            logger.debug(f"Failed to extract response attributes: {e}")
+            logger.warning(f"Failed to extract response attributes: {e}")
 
     return attributes
 
