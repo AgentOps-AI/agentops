@@ -18,6 +18,7 @@ from agentops.instrumentation.agentic.openai_agents.attributes.common import (
     get_agent_span_attributes,
     get_function_span_attributes,
     get_generation_span_attributes,
+    get_guardrail_span_attributes,
     get_handoff_span_attributes,
     get_response_span_attributes,
     get_span_attributes,
@@ -408,6 +409,48 @@ class TestOpenAIAgentsAttributes:
         assert attrs[AgentAttributes.FROM_AGENT] == "source_agent"
         assert attrs[AgentAttributes.TO_AGENT] == "target_agent"
 
+    def test_guardrail_span_attributes(self):
+        """Test extraction of attributes from a GuardrailSpanData object"""
+        # Create a mock GuardrailSpanData
+        mock_guardrail_span = MagicMock()
+        mock_guardrail_span.__class__.__name__ = "GuardrailSpanData"
+        mock_guardrail_span.name = "math_homework_check"
+        mock_guardrail_span.input = "Can you help me with my math homework?"
+        mock_guardrail_span.output = "Guardrail triggered: No homework assistance allowed"
+        mock_guardrail_span.triggered = True
+
+        # Extract attributes
+        attrs = get_guardrail_span_attributes(mock_guardrail_span)
+
+        # Verify extracted attributes
+        assert "agentops.span.kind" in attrs
+        assert attrs["agentops.span.kind"] == "guardrail"
+        assert "guardrail.name" in attrs
+        assert attrs["guardrail.name"] == "math_homework_check"
+        assert "guardrail.triggered" in attrs
+        assert attrs["guardrail.triggered"] is True
+
+    def test_guardrail_span_attributes_without_optional_fields(self):
+        """Test extraction of attributes from a GuardrailSpanData object without optional fields"""
+        # Create a simple class instead of MagicMock to avoid automatic attribute creation
+        class GuardrailSpanData:
+            def __init__(self):
+                self.__class__.__name__ = "GuardrailSpanData"
+                self.input = "Test input"
+                self.output = "Test output"
+                # Explicitly no name or triggered attributes
+
+        mock_guardrail_span = GuardrailSpanData()
+
+        # Extract attributes
+        attrs = get_guardrail_span_attributes(mock_guardrail_span)
+
+        # Verify core attributes are present
+        assert "agentops.span.kind" in attrs
+        assert attrs["agentops.span.kind"] == "guardrail"
+        assert "guardrail.name" not in attrs
+        assert "guardrail.triggered" not in attrs
+
     def test_response_span_attributes(self):
         """Test extraction of attributes from a ResponseSpanData object"""
 
@@ -453,6 +496,13 @@ class TestOpenAIAgentsAttributes:
                 self.name = "test_function"
                 self.input = "test input"
 
+        class GuardrailSpanData:
+            def __init__(self):
+                self.__class__.__name__ = "GuardrailSpanData"
+                self.name = "test_guardrail"
+                self.input = "test input"
+                self.output = "test output"
+
         class UnknownSpanData:
             def __init__(self):
                 self.__class__.__name__ = "UnknownSpanData"
@@ -460,6 +510,7 @@ class TestOpenAIAgentsAttributes:
         # Use our simple classes
         agent_span = AgentSpanData()
         function_span = FunctionSpanData()
+        guardrail_span = GuardrailSpanData()
         unknown_span = UnknownSpanData()
 
         # Patch the serialization function to avoid infinite recursion
@@ -471,6 +522,10 @@ class TestOpenAIAgentsAttributes:
             function_attrs = get_span_attributes(function_span)
             assert "tool.name" in function_attrs
             assert function_attrs["tool.name"] == "test_function"
+
+            guardrail_attrs = get_span_attributes(guardrail_span)
+            assert "agentops.span.kind" in guardrail_attrs
+            assert guardrail_attrs["agentops.span.kind"] == "guardrail"
 
             # Unknown span type should return empty dict
             unknown_attrs = get_span_attributes(unknown_span)
