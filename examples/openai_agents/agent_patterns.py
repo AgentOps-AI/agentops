@@ -717,7 +717,9 @@ async def run_streaming_guardrails_demo():
 
 
 # Run the demo
-# await run_streaming_guardrails_demo()
+if __name__ == "__main__":
+    # Run the streaming guardrails demo
+    asyncio.run(run_streaming_guardrails_demo())
 
 # End the AgentOps trace session
 agentops.end_trace(tracer, end_state="Success")

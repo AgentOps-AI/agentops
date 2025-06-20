@@ -106,5 +106,5 @@ async def main():
 
 
 # Run the main function
-# await main()
+asyncio.run(main())
 # We can observe the trace in the AgentOps dashboard by going to the trace URL provided above.

@@ -1,0 +1,238 @@
+---
+title: Smolagents
+description: "Track and analyze your Smolagents AI agents with AgentOps"
+---
+
+AgentOps provides seamless integration with [Smolagents](https://github.com/huggingface/smolagents), HuggingFace's lightweight framework for building AI agents. Monitor your agent workflows, tool usage, and execution traces automatically.
+
+## Core Concepts
+
+Smolagents is designed around several key concepts:
+
+- **Agents**: AI assistants that can use tools and reason through problems
+- **Tools**: Functions that agents can call to interact with external systems
+- **Models**: LLM backends that power agent reasoning (supports various providers via LiteLLM)
+- **Code Execution**: Agents can write and execute Python code in sandboxed environments
+- **Multi-Agent Systems**: Orchestrate multiple specialized agents working together
+
+## Installation
+
+Install AgentOps and Smolagents, along with any additional dependencies:
+
+<CodeGroup>
+  ```bash pip
+  pip install agentops smolagents python-dotenv
+  ```
+  ```bash poetry
+  poetry add agentops smolagents python-dotenv
+  ```
+  ```bash uv
+  uv add agentops smolagents python-dotenv
+  ```
+</CodeGroup>
+
+## Setting Up API Keys
+
+Before using Smolagents with AgentOps, you need to set up your API keys:
+- **AGENTOPS_API_KEY**: From your [AgentOps Dashboard](https://app.agentops.ai/)
+- **LLM API Keys**: Depending on your chosen model provider (e.g., OPENAI_API_KEY, ANTHROPIC_API_KEY)
+
+Set these as environment variables or in a `.env` file.
+
+<CodeGroup>
+  ```bash Export to CLI
+  export AGENTOPS_API_KEY="your_agentops_api_key_here"
+  export OPENAI_API_KEY="your_openai_api_key_here"
+  ```
+  ```txt Set in .env file
+  AGENTOPS_API_KEY="your_agentops_api_key_here"
+  OPENAI_API_KEY="your_openai_api_key_here"
+  ```
+</CodeGroup>
+
+Then load them in your Python code:
+```python
+from dotenv import load_dotenv
+import os
+
+load_dotenv()
+
+AGENTOPS_API_KEY = os.getenv("AGENTOPS_API_KEY")
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
+```
+
+## Usage
+
+Initialize AgentOps before creating your Smolagents to automatically track all agent interactions:
+
+```python
+import agentops
+from smolagents import LiteLLMModel, ToolCallingAgent, DuckDuckGoSearchTool
+
+# Initialize AgentOps
+agentops.init()
+
+# Create a model (supports various providers via LiteLLM)
+model = LiteLLMModel("openai/gpt-4o-mini")
+
+# Create an agent with tools
+agent = ToolCallingAgent(
+    tools=[DuckDuckGoSearchTool()],
+    model=model,
+)
+
+# Run the agent
+result = agent.run("What are the latest developments in AI safety research?")
+print(result)
+```
+
+## Examples
+
+<CodeGroup>
+```python Simple Math Agent
+import agentops
+from smolagents import LiteLLMModel, CodeAgent
+
+# Initialize AgentOps
+agentops.init()
+
+# Create a model
+model = LiteLLMModel("openai/gpt-4o-mini")
+
+# Create a code agent that can perform calculations
+agent = CodeAgent(
+    tools=[],  # No external tools needed for math
+    model=model,
+    additional_authorized_imports=["math", "numpy"],
+)
+
+# Ask the agent to solve a math problem
+result = agent.run(
+    "Calculate the compound interest on $10,000 invested at 5% annual rate "
+    "for 10 years, compounded monthly. Show your work."
+)
+
+print(result)
+```
+
+```python Research Agent with Tools
+import agentops
+from smolagents import (
+    LiteLLMModel,
+    ToolCallingAgent,
+    DuckDuckGoSearchTool,
+    tool
+)
+
+# Initialize AgentOps
+agentops.init()
+
+# Create a custom tool
+@tool
+def word_counter(text: str) -> str:
+    """
+    Counts the number of words in a given text.
+    
+    Args:
+        text: The text to count words in.
+        
+    Returns:
+        A string with the word count.
+    """
+    word_count = len(text.split())
+    return f"The text contains {word_count} words."
+
+# Create model and agent
+model = LiteLLMModel("openai/gpt-4o-mini")
+
+agent = ToolCallingAgent(
+    tools=[DuckDuckGoSearchTool(), word_counter],
+    model=model,
+)
+
+# Run a research task
+result = agent.run(
+    "Search for information about the James Webb Space Telescope's latest discoveries. "
+    "Then count how many words are in your summary."
+)
+
+print(result)
+```
+
+```python Multi-Step Task Agent
+import agentops
+from smolagents import LiteLLMModel, CodeAgent, tool
+import json
+
+# Initialize AgentOps
+agentops.init()
+
+# Create tools for data processing
+@tool
+def save_json(data: dict, filename: str) -> str:
+    """
+    Saves data to a JSON file.
+    
+    Args:
+        data: Dictionary to save
+        filename: Name of the file to save to
+        
+    Returns:
+        Success message
+    """
+    with open(filename, 'w') as f:
+        json.dump(data, f, indent=2)
+    return f"Data saved to {filename}"
+
+@tool
+def load_json(filename: str) -> dict:
+    """
+    Loads data from a JSON file.
+    
+    Args:
+        filename: Name of the file to load from
+        
+    Returns:
+        The loaded data as a dictionary
+    """
+    with open(filename, 'r') as f:
+        return json.load(f)
+
+# Create agent
+model = LiteLLMModel("openai/gpt-4o-mini")
+
+agent = CodeAgent(
+    tools=[save_json, load_json],
+    model=model,
+    additional_authorized_imports=["pandas", "datetime"],
+)
+
+# Run a multi-step data processing task
+result = agent.run("""
+1. Create a dataset of 5 fictional employees with names, departments, and salaries
+2. Save this data to 'employees.json'
+3. Load the data back and calculate the average salary
+4. Find the highest paid employee
+5. Return a summary of your findings
+""")
+
+print(result)
+```
+</CodeGroup>
+## More Examples
+
+<CardGroup cols={2}>
+  <Card title="Multi-Agent System" icon="notebook" href="/v2/examples/smolagents" newTab={true}>
+    Complex multi-agent web browsing system
+  </Card>
+  <Card title="Text to SQL Agent" icon="notebook" href="https://github.com/AgentOps-AI/agentops/blob/main/examples/smolagents/text_to_sql.ipynb" newTab={true}>
+    Convert natural language queries to SQL
+  </Card>
+</CardGroup>
+
+Visit your [AgentOps Dashboard](https://app.agentops.ai) to see detailed traces of your Smolagents executions, tool usage, and agent reasoning steps.
+
+<script type="module" src="/scripts/github_stars.js"></script>
+<script type="module" src="/scripts/scroll-img-fadein-animation.js"></script>
+<script type="module" src="/scripts/button_heartbeat_animation.js"></script>
+<script type="css" src="/styles/styles.css"></script>

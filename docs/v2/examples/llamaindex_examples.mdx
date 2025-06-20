@@ -1,0 +1,136 @@
+---
+title: 'Llamaindex Examples Example'
+description: 'LlamaIndex AgentOps Integration Example'
+---
+{/*  SOURCE_FILE: examples/llamaindex_examples/llamaindex_example.ipynb  */}
+
+_View Notebook on <a href={'https://github.com/AgentOps-AI/agentops/blob/main/examples/llamaindex_examples/llamaindex_example.ipynb'} target={'_blank'}>Github</a>_
+
+# LlamaIndex AgentOps Integration Example
+
+This notebook demonstrates how to use AgentOps with LlamaIndex for observability and monitoring of your context-augmented generative AI applications.
+
+## Setup
+
+First, install the required packages:
+
+
+```
+# Install required packages
+!pip install agentops llama-index-instrumentation-agentops llama-index-embeddings-huggingface llama-index-llms-huggingface python-dotenv
+```
+
+## Initialize AgentOps Handler
+
+Set up the AgentOps handler for LlamaIndex instrumentation:
+
+
+```
+import os
+from dotenv import load_dotenv
+from llama_index.core import VectorStoreIndex, Document, Settings
+from llama_index.instrumentation.agentops import AgentOpsHandler
+
+# Initialize AgentOps handler
+handler = AgentOpsHandler()
+handler.init()
+
+# Load environment variables
+load_dotenv()
+
+# Set API keys (replace with your actual keys)
+os.environ["AGENTOPS_API_KEY"] = os.getenv("AGENTOPS_API_KEY", "your_agentops_api_key_here")
+os.environ["OPENAI_API_KEY"] = os.getenv("OPENAI_API_KEY", "your_openai_api_key_here")
+```
+
+## Configure Local Models (Optional)
+
+For this example, we'll use local HuggingFace models to avoid requiring external API keys:
+
+
+```
+from llama_index.embeddings.huggingface import HuggingFaceEmbedding
+from llama_index.llms.huggingface import HuggingFaceLLM
+
+# Configure local embeddings and LLM
+Settings.embed_model = HuggingFaceEmbedding(model_name="BAAI/bge-small-en-v1.5")
+Settings.llm = HuggingFaceLLM(model_name="microsoft/DialoGPT-medium")
+print("Using local HuggingFace embeddings and LLM")
+```
+
+## Create Sample Documents and Index
+
+Create some sample documents and build a vector index:
+
+
+```
+print("🚀 Starting LlamaIndex AgentOps Integration Example")
+print("=" * 50)
+
+# Create sample documents
+documents = [
+    Document(text="LlamaIndex is a framework for building context-augmented generative AI applications with LLMs."),
+    Document(text="AgentOps provides observability into your AI applications, tracking LLM calls, performance metrics, and more."),
+    Document(text="The integration between LlamaIndex and AgentOps allows you to monitor your RAG applications seamlessly."),
+    Document(text="Vector databases are used to store and retrieve embeddings for similarity search in RAG applications."),
+    Document(text="Context-augmented generation combines retrieval and generation to provide more accurate and relevant responses.")
+]
+
+print("📚 Creating vector index from sample documents...")
+index = VectorStoreIndex.from_documents(documents)
+print("✅ Vector index created successfully")
+```
+
+## Perform Queries
+
+Now let's perform some queries to demonstrate the AgentOps integration:
+
+
+```
+# Create query engine
+query_engine = index.as_query_engine()
+
+print("🔍 Performing queries...")
+
+# Sample queries
+queries = [
+    "What is LlamaIndex?",
+    "How does AgentOps help with AI applications?",
+    "What are the benefits of using vector databases in RAG?"
+]
+
+for i, query in enumerate(queries, 1):
+    print(f"\n📝 Query {i}: {query}")
+    response = query_engine.query(query)
+    print(f"💬 Response: {response}")
+```
+
+## Results
+
+After running this notebook, you should see:
+
+1. **AgentOps Session Link**: A URL to view the session in your AgentOps dashboard
+2. **Cost Tracking**: Information about the cost of LLM calls (if using paid APIs)
+3. **Operation Tracking**: All LlamaIndex operations are automatically tracked
+
+Check your AgentOps dashboard to see detailed information about:
+- LLM calls and responses
+- Performance metrics
+- Cost analysis
+- Session replay
+
+The session link will be printed in the output above by AgentOps.
+
+
+```
+print("\n" + "=" * 50)
+print("🎉 Example completed successfully!")
+print("📊 Check your AgentOps dashboard to see the recorded session with LLM calls and operations.")
+print("🔗 The session link should be printed above by AgentOps.")
+```
+
+
+<script type="module" src="/scripts/github_stars.js"></script>
+<script type="module" src="/scripts/scroll-img-fadein-animation.js"></script>
+<script type="module" src="/scripts/button_heartbeat_animation.js"></script>
+<script type="module" src="/scripts/adjust_api_dynamically.js"></script>
