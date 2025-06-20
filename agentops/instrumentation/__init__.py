@@ -73,6 +73,11 @@ PROVIDERS: dict[str, InstrumentorConfig] = {
         "min_version": "0.1.0",
         "package_name": "mem0ai",
     },
+    "litellm": {
+        "module_name": "agentops.instrumentation.providers.litellm",
+        "class_name": "LiteLLMInstrumentor",
+        "min_version": "1.68.0",
+    },
 }
 
 # Configuration for utility instrumentors
