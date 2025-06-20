@@ -39,52 +39,49 @@ AgentOps can exist in one of two states:
 		- • Only one session exists at a time. All agent usage is synchronous.
 		- • Use cases: Scripting, development, local machine use (browser extensions, web client, etc)
 	</Card>
-	<Card title="Multi-Session" icon="hand-peace" iconType="solid" color="#2bd600">
+	<Card title="Concurrent Traces" icon="hand-peace" iconType="solid" color="#2bd600">
 		- • REST server
 		- • Asynchronous agents
+		- • Multiple concurrent workflows
 	</Card>
 </CardGroup>
 
-By default, AgentOps operates in single-session mode. All of the [base SDK functions](/v1/usage/sdk-reference) work as expected.
+AgentOps supports both single and multiple concurrent traces (sessions) seamlessly. You can use either the modern trace-based API or the legacy session functions for backwards compatibility.
 
-As soon as you create a second session, AgentOps enters **Multi-Session Mode**. As long as more than one session is active, the [base SDK functions](/v1/usage/sdk-reference) will no longer work.
-
-If multiple sessions exist, you are expected to call the function on the relevant session. Ex
+The modern approach uses `start_trace()` and `end_trace()` with automatic instrumentation, while legacy session functions remain available. Multiple concurrent traces work without any special mode switching or restrictions.
 <CodeGroup>
-```python single session
+```python single trace
 import agentops
-from agentops.sdk.decorators import session
-
-@session
-def my_session():
-    # Your session code here
-    pass
-
-# Run the session
-my_session()
+agentops.init()
+trace_context = agentops.start_trace("my_workflow")
+# Your agent logic here
+agentops.end_trace(trace_context, "Success")
 ```
 
-```python multi-session
+```python concurrent traces
 import agentops
-from agentops.sdk.decorators import session
+agentops.init(auto_start_session=False)
+trace_1 = agentops.start_trace("workflow_1")
+trace_2 = agentops.start_trace("workflow_2")
 
-@session
-def session_1():
-    # Session 1 code
+# Work with both traces concurrently
+agentops.end_trace(trace_1, "Success")
+agentops.end_trace(trace_2, "Success")
+```
+
+```python using decorators
+import agentops
+
+@agentops.trace
+def my_workflow():
+    # Your agent logic here
     pass
 
-@session
-def session_2():
-    # Session 2 code
-    pass
-
-# Run both sessions
-session_1()
-session_2()
+my_workflow()
 ```
 </CodeGroup>
 
-For more documentation on using multiple concurrent sessions, please see [Multiple Sessions](v1/usage/multiple-sessions) and [FastAPI Example](/v1/examples/fastapi).
+For more documentation on using multiple concurrent traces, please see [Concurrent Traces](/v1/usage/multiple-sessions) and [FastAPI Example](/v1/examples/fastapi).
 
 ### LLMs, Tools, and Operations (Spans)
 
