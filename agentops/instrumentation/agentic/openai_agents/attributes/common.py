@@ -93,6 +93,13 @@ SPEECH_GROUP_SPAN_ATTRIBUTES: AttributeMap = {
 }
 
 
+# Attribute mapping for GuardrailSpanData
+GUARDRAIL_SPAN_ATTRIBUTES: AttributeMap = {
+    WorkflowAttributes.WORKFLOW_INPUT: "input",
+    WorkflowAttributes.WORKFLOW_OUTPUT: "output",
+}
+
+
 def _get_llm_messages_attributes(messages: Optional[List[Dict]], attribute_base: str) -> AttributeMap:
     """
     Extracts attributes from a list of message dictionaries (e.g., prompts or completions).
@@ -512,6 +519,30 @@ def get_speech_group_span_attributes(span_data: Any) -> AttributeMap:
     return attributes
 
 
+def get_guardrail_span_attributes(span_data: Any) -> AttributeMap:
+    """Extract attributes from a GuardrailSpanData object.
+
+    Guardrails are validation checks on agent inputs or outputs.
+
+    Args:
+        span_data: The GuardrailSpanData object
+
+    Returns:
+        Dictionary of attributes for guardrail span
+    """
+    attributes = _extract_attributes_from_mapping(span_data, GUARDRAIL_SPAN_ATTRIBUTES)
+    attributes.update(get_common_attributes())
+    attributes[SpanAttributes.AGENTOPS_SPAN_KIND] = AgentOpsSpanKindValues.GUARDRAIL.value
+
+    if hasattr(span_data, "name") and span_data.name:
+        attributes["guardrail.name"] = str(span_data.name)
+
+    if hasattr(span_data, "triggered") and span_data.triggered is not None:
+        attributes["guardrail.triggered"] = bool(span_data.triggered)
+
+    return attributes
+
+
 def get_span_attributes(span_data: Any) -> AttributeMap:
     """Get attributes for a span based on its type.
 
@@ -542,6 +573,8 @@ def get_span_attributes(span_data: Any) -> AttributeMap:
         attributes = get_speech_span_attributes(span_data)
     elif span_type == "SpeechGroupSpanData":
         attributes = get_speech_group_span_attributes(span_data)
+    elif span_type == "GuardrailSpanData":
+        attributes = get_guardrail_span_attributes(span_data)
     else:
         logger.debug(f"[agentops.instrumentation.openai_agents.attributes] Unknown span type: {span_type}")
         attributes = {}
