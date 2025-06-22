@@ -247,11 +247,11 @@ The v4 API provides advanced trace querying and analytics capabilities with JWT 
 
 ### List Traces
 
-Retrieve traces with filtering and pagination:
+Retrieve traces for a specific project with filtering and pagination:
 
 <CodeGroup>
 ```bash curl
-curl -X GET "https://api.agentops.ai/v4/traces?limit=10&offset=0" \
+curl -X GET "https://api.agentops.ai/v4/traces/list/your_project_id?limit=10&offset=0" \
   -H "Authorization: Bearer your_jwt_token"
 ```
 
@@ -280,7 +280,7 @@ Retrieve detailed information about a specific trace:
 
 <CodeGroup>
 ```bash curl
-curl -X GET https://api.agentops.ai/v4/traces/trace-123 \
+curl -X GET https://api.agentops.ai/v4/traces/detail/trace-123 \
   -H "Authorization: Bearer your_jwt_token"
 ```
 
@@ -314,7 +314,7 @@ Retrieve spans for a specific trace:
 
 <CodeGroup>
 ```bash curl
-curl -X GET https://api.agentops.ai/v4/traces/trace-123/spans \
+curl -X GET https://api.agentops.ai/v4/traces/spans/trace-123 \
   -H "Authorization: Bearer your_jwt_token"
 ```
 
@@ -342,11 +342,11 @@ curl -X GET https://api.agentops.ai/v4/traces/trace-123/spans \
 
 ### Search Traces
 
-Advanced trace search with complex filtering:
+Advanced trace search with complex filtering for a specific project:
 
 <CodeGroup>
 ```bash curl
-curl -X GET "https://api.agentops.ai/v4/traces/search?query=model:gpt-4&start_time=2024-03-14T00:00:00Z&end_time=2024-03-14T23:59:59Z" \
+curl -X GET "https://api.agentops.ai/v4/traces/search/your_project_id?query=model:gpt-4&start_time=2024-03-14T00:00:00Z&end_time=2024-03-14T23:59:59Z" \
   -H "Authorization: Bearer your_jwt_token"
 ```
 
@@ -757,9 +757,10 @@ requests.post(
     }
 )
 
-# Step 4: Query traces using v4
+# Step 4: Query traces using v4 (requires project_id from auth response)
+project_id = auth_response.json()["project_id"]
 traces_response = requests.get(
-    f"{BASE_URL}/v4/traces",
+    f"{BASE_URL}/v4/traces/list/{project_id}",
     headers={"Authorization": f"Bearer {jwt_token}"},
     params={"limit": 10}
 )
