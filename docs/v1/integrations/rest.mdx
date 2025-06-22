@@ -205,8 +205,8 @@ Obtain a JWT token for use with other API versions:
 ```bash curl
 curl -X POST https://api.agentops.ai/v3/auth/token \
   -H "Content-Type: application/json" \
-  -H "X-Agentops-Api-Key: your_api_key" \
   -d '{
+    "api_key": "your_api_key",
     "session_id": "550e8400-e29b-41d4-a716-446655440000"
   }'
 ```
@@ -225,8 +225,11 @@ Verify the validity of a JWT token:
 
 <CodeGroup>
 ```bash curl
-curl -X GET https://api.agentops.ai/v3/auth/verify \
-  -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIs..."
+curl -X POST https://api.agentops.ai/v3/auth/verify \
+  -H "Content-Type: application/json" \
+  -d '{
+    "token": "eyJhbGciOiJIUzI1NiIs..."
+  }'
 ```
 
 ```json Success Response
@@ -716,8 +719,11 @@ BASE_URL = "https://api.agentops.ai"
 session_id = str(uuid.uuid4())
 auth_response = requests.post(
     f"{BASE_URL}/v3/auth/token",
-    headers={"X-Agentops-Api-Key": API_KEY},
-    json={"session_id": session_id}
+    headers={"Content-Type": "application/json"},
+    json={
+        "api_key": API_KEY,
+        "session_id": session_id
+    }
 )
 jwt_token = auth_response.json()["token"]
 
