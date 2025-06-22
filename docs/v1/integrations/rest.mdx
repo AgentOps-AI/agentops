@@ -8,777 +8,235 @@ The AgentOps REST API allows you to integrate agent monitoring directly into you
 - Custom integrations
 - Direct API access
 
-For a complete API reference, you can view our [OpenAPI specification](https://api.agentops.ai/v2/openapi.yaml) or the [comprehensive v4 specification](https://api.agentops.ai/v4/openapi.yaml).
+## Authentication API (v3)
 
-## API Versions Overview
-
-The AgentOps API has multiple versions, each serving different use cases:
-
-- **v1**: Basic endpoints with API key authentication for sessions, agents, threads, events, and traces
-- **v2**: Enhanced endpoints with JWT-based authentication (documented below)
-- **v3**: Authentication-focused endpoints for token management
-- **v4**: Advanced traces and metrics endpoints with sophisticated querying capabilities
-
-Choose the version that best fits your integration needs. Most applications should use v2 for general purpose integration or v4 for advanced trace analytics.
-
-## Authentication
-
-The AgentOps API uses a two-step authentication process:
-1. API Key: Used to create sessions and get JWT tokens
-2. JWT: Used for all operations within a session
-
-### Initial Authentication
-
-When you create a session, you'll use your API key and receive a JWT token in response:
-
-<CodeGroup>
-```bash curl
-curl -X POST https://api.agentops.ai/create_session \
-  -H "Content-Type: application/json" \
-  -H "X-Agentops-Api-Key: your_api_key" \
-  -d '{
-    "id": "550e8400-e29b-41d4-a716-446655440000",
-    "init_timestamp": "2024-03-14T12:00:00Z"
-  }'
-```
-
-```json Success Response
-{
-  "status": "success",
-  "jwt": "eyJhbGciOiJIUzI1NiIs...",
-  "session_id": "550e8400-e29b-41d4-a716-446655440000"
-}
-```
-
-```bash Error Response
-HTTP/1.1 401 Unauthorized
-{
-  "error": "Invalid API key",
-  "message": "Please check your API key and try again"
-}
-```
-</CodeGroup>
-
-### Using JWT Tokens
-
-Use the JWT token in the Authorization header for all subsequent requests:
-
-<CodeGroup>
-```bash Example Request
-curl -X POST https://api.agentops.ai/create_events \
-  -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIs..." \
-  -H "Content-Type: application/json" \
-  -d '{
-    "events": [{
-      "type": "llm",
-      "init_timestamp": "2024-03-14T12:01:00Z"
-    }]
-  }'
-```
-
-```bash Error Response
-HTTP/1.1 401 Unauthorized
-{
-  "error": "Invalid or expired JWT",
-  "message": "Please reauthorize using /reauthorize_jwt"
-}
-```
-</CodeGroup>
-
-### Refreshing Tokens
-
-JWTs expire after 24 hours. When a token expires, use your API key to get a new one:
-
-<CodeGroup>
-```bash curl
-curl -X POST https://api.agentops.ai/v2/reauthorize_jwt \
-  -H "Content-Type: application/json" \
-  -H "X-Agentops-Api-Key: your_api_key" \
-  -d '{
-    "session_id": "550e8400-e29b-41d4-a716-446655440000"
-  }'
-```
-
-```json Success Response
-{
-  "status": "success",
-  "jwt": "eyJhbGciOiJIUzI1NiIs..."
-}
-```
-</CodeGroup>
-
-## v1 API Endpoints
-
-The v1 API uses simple API key authentication and provides basic functionality for session and event tracking.
-
-### v1 Authentication
-
-v1 endpoints use API key authentication via the `X-Agentops-Api-Key` header:
-
-<CodeGroup>
-```bash Example Request
-curl -X POST https://api.agentops.ai/v1/create_session \
-  -H "Content-Type: application/json" \
-  -H "X-Agentops-Api-Key: your_api_key" \
-  -d '{
-    "session": {
-      "session_id": "550e8400-e29b-41d4-a716-446655440000",
-      "init_timestamp": "2024-03-14T12:00:00Z"
-    }
-  }'
-```
-</CodeGroup>
-
-### v1 Create Session
-
-<CodeGroup>
-```bash curl
-curl -X POST https://api.agentops.ai/v1/create_session \
-  -H "Content-Type: application/json" \
-  -H "X-Agentops-Api-Key: your_api_key" \
-  -d '{
-    "session": {
-      "session_id": "550e8400-e29b-41d4-a716-446655440000",
-      "init_timestamp": "2024-03-14T12:00:00Z",
-      "tags": ["v1-integration"]
-    }
-  }'
-```
-</CodeGroup>
-
-### v1 Create Events
-
-<CodeGroup>
-```bash curl
-curl -X POST https://api.agentops.ai/v1/create_events \
-  -H "Content-Type: application/json" \
-  -H "X-Agentops-Api-Key: your_api_key" \
-  -d '{
-    "events": [{
-      "event_type": "llms",
-      "init_timestamp": "2024-03-14T12:01:00Z",
-      "model": "gpt-4",
-      "prompt": "Hello, world!",
-      "completion": "Hi there!"
-    }]
-  }'
-```
-</CodeGroup>
-
-### v1 Create Agent
-
-<CodeGroup>
-```bash curl
-curl -X POST https://api.agentops.ai/v1/create_agent \
-  -H "Content-Type: application/json" \
-  -H "X-Agentops-Api-Key: your_api_key" \
-  -d '{
-    "id": "agent-123",
-    "name": "Research Assistant"
-  }'
-```
-</CodeGroup>
-
-### v1 Create Thread
-
-<CodeGroup>
-```bash curl
-curl -X POST https://api.agentops.ai/v1/create_thread \
-  -H "Content-Type: application/json" \
-  -H "X-Agentops-Api-Key: your_api_key" \
-  -d '{
-    "thread_id": "thread-456",
-    "name": "Main Thread"
-  }'
-```
-</CodeGroup>
-
-## v3 Authentication API
-
-The v3 API focuses on authentication and token management.
+The v3 authentication API is the primary working endpoint for REST API access. It allows you to exchange your API key for a JWT token that can be used for authenticated requests.
 
 ### Get JWT Token
 
-Obtain a JWT token for use with other API versions:
+Exchange your API key for a JWT token to authenticate API requests.
 
 <CodeGroup>
+
 ```bash curl
-curl -X POST https://api.agentops.ai/v3/auth/token \
+curl -X POST "https://api.agentops.ai/v3/auth/token" \
   -H "Content-Type: application/json" \
   -d '{
     "api_key": "your_api_key",
-    "session_id": "550e8400-e29b-41d4-a716-446655440000"
+    "session_id": "your_session_id"
   }'
 ```
 
 ```json Success Response
 {
-  "token": "eyJhbGciOiJIUzI1NiIs...",
-  "expires_in": 86400
+  "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+  "project_id": "890e4ebb-88f1-46cd-844c-c5a995b3eab7"
 }
 ```
+
 </CodeGroup>
 
-### Verify JWT Token
+### Authentication Parameters
 
-Verify the validity of a JWT token:
+- **api_key** (required): Your AgentOps API key
+- **session_id** (required): A unique identifier for your session
 
-<CodeGroup>
-```bash curl
-curl -X POST https://api.agentops.ai/v3/auth/verify \
-  -H "Content-Type: application/json" \
-  -d '{
-    "token": "eyJhbGciOiJIUzI1NiIs..."
-  }'
-```
+### Response Fields
 
-```json Success Response
-{
-  "valid": true,
-  "session_id": "550e8400-e29b-41d4-a716-446655440000",
-  "expires_at": "2024-03-15T12:00:00Z"
-}
-```
-</CodeGroup>
+- **token**: JWT token for authenticated requests (expires after a set time)
+- **project_id**: Your project identifier for use with other API endpoints
 
-## v4 Traces & Analytics API
+## Working Integration Example
 
-The v4 API provides advanced trace querying and analytics capabilities with JWT authentication.
-
-### List Traces
-
-Retrieve traces for a specific project with filtering and pagination:
+Here's a complete example showing how to authenticate and use the JWT token:
 
 <CodeGroup>
-```bash curl
-curl -X GET "https://api.agentops.ai/v4/traces/list/your_project_id?limit=10&offset=0" \
-  -H "Authorization: Bearer your_jwt_token"
-```
 
-```json Success Response
-{
-  "traces": [
-    {
-      "trace_id": "trace-123",
-      "session_id": "550e8400-e29b-41d4-a716-446655440000",
-      "start_time": "2024-03-14T12:00:00Z",
-      "end_time": "2024-03-14T12:05:00Z",
-      "duration_ms": 300000,
-      "status": "completed"
-    }
-  ],
-  "total": 1,
-  "limit": 10,
-  "offset": 0
-}
-```
-</CodeGroup>
-
-### Get Trace Details
-
-Retrieve detailed information about a specific trace:
-
-<CodeGroup>
-```bash curl
-curl -X GET https://api.agentops.ai/v4/traces/detail/trace-123 \
-  -H "Authorization: Bearer your_jwt_token"
-```
-
-```json Success Response
-{
-  "trace_id": "trace-123",
-  "session_id": "550e8400-e29b-41d4-a716-446655440000",
-  "start_time": "2024-03-14T12:00:00Z",
-  "end_time": "2024-03-14T12:05:00Z",
-  "duration_ms": 300000,
-  "status": "completed",
-  "spans": [
-    {
-      "span_id": "span-456",
-      "name": "llm_call",
-      "start_time": "2024-03-14T12:01:00Z",
-      "end_time": "2024-03-14T12:01:02Z",
-      "attributes": {
-        "model": "gpt-4",
-        "tokens": 150
-      }
-    }
-  ]
-}
-```
-</CodeGroup>
-
-### Get Trace Spans
-
-Retrieve spans for a specific trace:
-
-<CodeGroup>
-```bash curl
-curl -X GET https://api.agentops.ai/v4/traces/spans/trace-123 \
-  -H "Authorization: Bearer your_jwt_token"
-```
-
-```json Success Response
-{
-  "spans": [
-    {
-      "span_id": "span-456",
-      "trace_id": "trace-123",
-      "name": "llm_call",
-      "start_time": "2024-03-14T12:01:00Z",
-      "end_time": "2024-03-14T12:01:02Z",
-      "duration_ms": 2000,
-      "attributes": {
-        "model": "gpt-4",
-        "prompt_tokens": 150,
-        "completion_tokens": 80
-      }
-    }
-  ],
-  "total": 1
-}
-```
-</CodeGroup>
-
-### Search Traces
-
-Advanced trace search with complex filtering for a specific project:
-
-<CodeGroup>
-```bash curl
-curl -X GET "https://api.agentops.ai/v4/traces/search/your_project_id?query=model:gpt-4&start_time=2024-03-14T00:00:00Z&end_time=2024-03-14T23:59:59Z" \
-  -H "Authorization: Bearer your_jwt_token"
-```
-
-```json Success Response
-{
-  "traces": [
-    {
-      "trace_id": "trace-123",
-      "session_id": "550e8400-e29b-41d4-a716-446655440000",
-      "start_time": "2024-03-14T12:00:00Z",
-      "end_time": "2024-03-14T12:05:00Z",
-      "duration_ms": 300000,
-      "status": "completed",
-      "match_score": 0.95
-    }
-  ],
-  "total": 1,
-  "query": "model:gpt-4"
-}
-```
-</CodeGroup>
-
-## Session Management
-
-Sessions require a unique identifier that you generate client-side. While any unique string will work, we recommend using UUIDs for consistency. Here's how to generate one in Python:
-
-<CodeGroup>
-```python Python
-import uuid
-session_id = str(uuid.uuid4())
-# "550e8400-e29b-41d4-a716-446655440000"
-```
-</CodeGroup>
-
-### Create Session
-
-Start a new monitoring session using your generated session ID:
-
-<CodeGroup>
-```bash curl
-curl -X POST https://api.agentops.ai/v2/create_session \
-  -H "Content-Type: application/json" \
-  -H "X-Agentops-Api-Key: your_api_key" \
-  -d '{
-    "session": {
-      "id": "550e8400-e29b-41d4-a716-446655440000",
-      "init_timestamp": "2024-03-14T12:00:00Z",
-      "tags": ["production", "customer-service"],
-      "host_env": {
-        "OS": {
-          "OS": "Windows",
-          "OS Release": "11",
-          "OS Version": "10.0.22631"
-        },
-        "CPU": {
-          "CPU Usage": "5.9%",
-          "Total cores": 12
-        },
-        "RAM": {
-          "Used": "14.49 GB",
-          "Total": "31.75 GB"
-        },
-        "SDK": {
-          "Python Version": "3.12.0",
-          "System Packages": {
-            "agentops": "0.3.17",
-            "openai": "1.2.3"
-          }
-        }
-      }
-    }
-  }'
-```
-
-```bash Request
-POST https://api.agentops.ai/v2/create_session
-Content-Type: application/json
-X-Agentops-Api-Key: your_api_key
-
-{
-  "session": {
-    "id": "550e8400-e29b-41d4-a716-446655440000",
-    "init_timestamp": "2024-03-14T12:00:00Z",
-    "tags": ["production", "customer-service"],
-    "host_env": {
-      "OS": {
-        "OS": "Windows",
-        "OS Release": "11",
-        "OS Version": "10.0.22631"
-      },
-      "CPU": {
-        "CPU Usage": "5.9%",
-        "Total cores": 12
-      },
-      "RAM": {
-        "Used": "14.49 GB",
-        "Total": "31.75 GB"
-      },
-      "SDK": {
-        "Python Version": "3.12.0",
-        "System Packages": {
-          "agentops": "0.3.17",
-          "openai": "1.2.3"
-        }
-      }
-    }
-  }
-}
-```
-</CodeGroup>
-
-### Update Session
-
-Update an existing session (e.g., when it ends):
-
-<CodeGroup>
-```bash curl
-curl -X POST https://api.agentops.ai/v2/update_session \
-  -H "Content-Type: application/json" \
-  -H "Authorization: Bearer your_jwt_token" \
-  -d '{
-    "session": {
-      "id": "550e8400-e29b-41d4-a716-446655440000",
-      "end_timestamp": "2024-03-14T12:05:00Z",
-      "end_state": "Success",
-      "end_state_reason": "Task successfully completed",
-      "tags": ["production", "updated-tag"]
-    }
-  }'
-```
-
-```bash Request
-POST https://api.agentops.ai/v2/update_session
-Content-Type: application/json
-Authorization: Bearer your_jwt_token
-
-{
-  "session": {
-    "id": "550e8400-e29b-41d4-a716-446655440000",
-    "end_timestamp": "2024-03-14T12:05:00Z",
-    "end_state": "Success",
-    "end_state_reason": "Task successfully completed",
-    "tags": ["production", "updated-tag"]
-  }
-}
-```
-</CodeGroup>
-
-## Event Tracking
-
-### Create Events
-
-Track LLM calls, tool usage, or other events:
-
-<CodeGroup>
-```bash curl
-curl -X POST https://api.agentops.ai/v2/create_events \
-  -H "Content-Type: application/json" \
-  -H "Authorization: Bearer your_jwt_token" \
-  -d '{
-    "events": [
-      {
-        "type": "llm",
-        "init_timestamp": "2024-03-14T12:01:00Z",
-        "end_timestamp": "2024-03-14T12:01:02Z",
-        "model": "gpt-4",
-        "prompt": [
-          {"role": "system", "content": "You are a helpful assistant"},
-          {"role": "user", "content": "Analyze this data..."}
-        ],
-        "completion": {
-          "role": "assistant",
-          "content": "Based on the data..."
-        },
-        "prompt_tokens": 150,
-        "completion_tokens": 80
-      },
-      {
-        "type": "tool",
-        "name": "database_query",
-        "init_timestamp": "2024-03-14T12:01:03Z",
-        "end_timestamp": "2024-03-14T12:01:04Z",
-        "input": "SELECT * FROM users",
-        "output": "Retrieved 5 users"
-      }
-    ]
-  }'
-```
-
-```bash Request
-POST https://api.agentops.ai/v2/create_events
-Content-Type: application/json
-Authorization: Bearer your_jwt_token
-
-{
-  "events": [
-    {
-      "type": "llm",
-      "init_timestamp": "2024-03-14T12:01:00Z",
-      "end_timestamp": "2024-03-14T12:01:02Z",
-      "model": "gpt-4",
-      "prompt": [
-        {"role": "system", "content": "You are a helpful assistant"},
-        {"role": "user", "content": "Analyze this data..."}
-      ],
-      "completion": {
-        "role": "assistant",
-        "content": "Based on the data..."
-      },
-      "prompt_tokens": 150,
-      "completion_tokens": 80
-    },
-    {
-      "type": "tool",
-      "name": "database_query",
-      "init_timestamp": "2024-03-14T12:01:03Z",
-      "end_timestamp": "2024-03-14T12:01:04Z",
-      "input": "SELECT * FROM users",
-      "output": "Retrieved 5 users"
-    }
-  ]
-}
-```
-</CodeGroup>
-
-### Update Events
-
-Update existing events (e.g., adding completion information):
-
-<CodeGroup>
-```bash curl
-curl -X POST https://api.agentops.ai/v2/update_events \
-  -H "Content-Type: application/json" \
-  -H "Authorization: Bearer your_jwt_token" \
-  -d '{
-    "events": [
-      {
-        "event_id": "event-id-123",
-        "end_timestamp": "2024-03-14T12:01:02Z",
-        "completion": "Updated completion text",
-        "completion_tokens": 100
-      }
-    ]
-  }'
-```
-
-```bash Request
-POST https://api.agentops.ai/v2/update_events
-Content-Type: application/json
-Authorization: Bearer your_jwt_token
-
-{
-  "events": [
-    {
-      "event_id": "event-id-123",
-      "end_timestamp": "2024-03-14T12:01:02Z",
-      "completion": "Updated completion text",
-      "completion_tokens": 100
-    }
-  ]
-}
-```
-</CodeGroup>
-
-## Agent Management
-
-### Create Agent
-
-Register a new agent in a session:
-
-<CodeGroup>
-```bash curl
-curl -X POST https://api.agentops.ai/v2/create_agent \
-  -H "Content-Type: application/json" \
-  -H "Authorization: Bearer your_jwt_token" \
-  -d '{
-    "id": "agent-123",
-    "name": "Research Assistant"
-  }'
-```
-
-```bash Request
-POST https://api.agentops.ai/v2/create_agent
-Content-Type: application/json
-Authorization: Bearer your_jwt_token
-
-{
-  "id": "agent-123",
-  "name": "Research Assistant"
-}
-```
-</CodeGroup>
-
-## Example Integration
-
-Here's a complete example using Python's requests library:
-
-<CodeGroup>
 ```python Complete Example
 import requests
-import uuid
+import json
 from datetime import datetime, timezone
 
-# Configuration
 API_KEY = "your_api_key"
 BASE_URL = "https://api.agentops.ai"
 
-# Create session
-session_id = str(uuid.uuid4())
-response = requests.post(
-    f"{BASE_URL}/v2/create_session",
-    headers={"X-Agentops-Api-Key": API_KEY},
-    json={
-        "session": {
-            "id": session_id,
-            "init_timestamp": datetime.now(timezone.utc).isoformat(),
-            "tags": ["example"]
+def authenticate_with_agentops(api_key, session_id):
+    """Get JWT token using v3 authentication"""
+    response = requests.post(
+        f"{BASE_URL}/v3/auth/token",
+        headers={"Content-Type": "application/json"},
+        json={
+            "api_key": api_key,
+            "session_id": session_id
         }
-    }
-)
-jwt_token = response.json()["jwt"]
+    )
+    
+    if response.status_code == 200:
+        data = response.json()
+        return data["token"], data["project_id"]
+    else:
+        raise Exception(f"Authentication failed: {response.text}")
 
-# Track LLM call
-requests.post(
-    f"{BASE_URL}/v2/create_events",
-    headers={"Authorization": f"Bearer {jwt_token}"},
-    json={
-        "events": [{
-            "type": "llm",
-            "init_timestamp": datetime.now(timezone.utc).isoformat(),
-            "model": "gpt-4",
-            "prompt": "Hello, world!",
-            "completion": "Hi there!",
-            "prompt_tokens": 3,
-            "completion_tokens": 2
-        }]
-    }
-)
-
-# End session
-requests.post(
-    f"{BASE_URL}/v2/update_session",
-    headers={"Authorization": f"Bearer {jwt_token}"},
-    json={
-        "session": {
-            "id": session_id,
-            "end_timestamp": datetime.now(timezone.utc).isoformat(),
-            "end_state": "completed"
-        }
-    }
-)
+# Usage example
+try:
+    jwt_token, project_id = authenticate_with_agentops(
+        API_KEY, 
+        "example-session-123"
+    )
+    
+    print(f"✅ Authentication successful!")
+    print(f"Project ID: {project_id}")
+    print(f"JWT Token: {jwt_token[:50]}...")
+    
+    # Use the JWT token for authenticated requests to other services
+    # Note: Other API endpoints are currently under development
+    
+except Exception as e:
+    print(f"❌ Authentication failed: {e}")
 ```
+
+```javascript JavaScript Example
+const API_KEY = "your_api_key";
+const BASE_URL = "https://api.agentops.ai";
+
+async function authenticateWithAgentOps(apiKey, sessionId) {
+    const response = await fetch(`${BASE_URL}/v3/auth/token`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            api_key: apiKey,
+            session_id: sessionId
+        })
+    });
+    
+    if (response.ok) {
+        const data = await response.json();
+        return {
+            token: data.token,
+            projectId: data.project_id
+        };
+    } else {
+        throw new Error(`Authentication failed: ${await response.text()}`);
+    }
+}
+
+// Usage example
+authenticateWithAgentOps(API_KEY, "example-session-123")
+    .then(({ token, projectId }) => {
+        console.log("✅ Authentication successful!");
+        console.log(`Project ID: ${projectId}`);
+        console.log(`JWT Token: ${token.substring(0, 50)}...`);
+        
+        // Use the JWT token for authenticated requests
+    })
+    .catch(error => {
+        console.error("❌ Authentication failed:", error);
+    });
+```
+
 </CodeGroup>
 
-## Multi-Version Integration Example
+## JWT Token Usage
 
-Here's an example showing how to use different API versions together:
+The JWT token returned by the authentication endpoint contains:
+
+- **Expiration time**: Tokens have a limited lifespan
+- **Project information**: Associated with your AgentOps project
+- **API key reference**: Linked to your original API key
+
+You can decode the JWT token (without verification) to inspect its contents:
 
 <CodeGroup>
-```python Multi-Version Example
-import requests
-import uuid
-from datetime import datetime, timezone
 
-# Configuration
-API_KEY = "your_api_key"
-BASE_URL = "https://api.agentops.ai"
+```python Decode JWT
+import jwt
+import json
 
-# Step 1: Get JWT token using v3
-session_id = str(uuid.uuid4())
-auth_response = requests.post(
-    f"{BASE_URL}/v3/auth/token",
-    headers={"Content-Type": "application/json"},
-    json={
-        "api_key": API_KEY,
-        "session_id": session_id
-    }
-)
-jwt_token = auth_response.json()["token"]
+def decode_jwt_token(token):
+    """Decode JWT token without verification (for inspection only)"""
+    try:
+        payload = jwt.decode(token, options={'verify_signature': False})
+        return payload
+    except Exception as e:
+        print(f"Error decoding JWT: {e}")
+        return None
 
-# Step 2: Create session using v2 (recommended)
-session_response = requests.post(
-    f"{BASE_URL}/v2/create_session",
-    headers={"X-Agentops-Api-Key": API_KEY},
-    json={
-        "session": {
-            "id": session_id,
-            "init_timestamp": datetime.now(timezone.utc).isoformat(),
-            "tags": ["multi-version-example"]
-        }
-    }
-)
-
-# Step 3: Track events using v2
-requests.post(
-    f"{BASE_URL}/v2/create_events",
-    headers={"Authorization": f"Bearer {jwt_token}"},
-    json={
-        "events": [{
-            "type": "llm",
-            "init_timestamp": datetime.now(timezone.utc).isoformat(),
-            "model": "gpt-4",
-            "prompt": "Multi-version integration test",
-            "completion": "Success!",
-            "prompt_tokens": 5,
-            "completion_tokens": 2
-        }]
-    }
-)
-
-# Step 4: Query traces using v4 (requires project_id from auth response)
-project_id = auth_response.json()["project_id"]
-traces_response = requests.get(
-    f"{BASE_URL}/v4/traces/list/{project_id}",
-    headers={"Authorization": f"Bearer {jwt_token}"},
-    params={"limit": 10}
-)
-traces = traces_response.json()["traces"]
-
-# Step 5: End session using v2
-requests.post(
-    f"{BASE_URL}/v2/update_session",
-    headers={"Authorization": f"Bearer {jwt_token}"},
-    json={
-        "session": {
-            "id": session_id,
-            "end_timestamp": datetime.now(timezone.utc).isoformat(),
-            "end_state": "completed"
-        }
-    }
-)
-
-print(f"Session completed with {len(traces)} traces")
+# Example usage
+token_payload = decode_jwt_token(jwt_token)
+if token_payload:
+    print("JWT Payload:")
+    print(json.dumps(token_payload, indent=2))
 ```
+
 </CodeGroup>
+
+## Error Handling
+
+The authentication endpoint may return the following errors:
+
+- **400 Bad Request**: Invalid request format or missing required fields
+- **401 Unauthorized**: Invalid API key
+- **429 Too Many Requests**: Rate limit exceeded
+- **500 Internal Server Error**: Server-side error
+
+Always implement proper error handling in your integration:
+
+<CodeGroup>
+
+```python Error Handling
+def safe_authenticate(api_key, session_id, max_retries=3):
+    """Authenticate with retry logic and error handling"""
+    for attempt in range(max_retries):
+        try:
+            response = requests.post(
+                f"{BASE_URL}/v3/auth/token",
+                headers={"Content-Type": "application/json"},
+                json={
+                    "api_key": api_key,
+                    "session_id": session_id
+                },
+                timeout=10
+            )
+            
+            if response.status_code == 200:
+                data = response.json()
+                return data["token"], data["project_id"]
+            elif response.status_code == 429:
+                # Rate limited, wait and retry
+                time.sleep(2 ** attempt)
+                continue
+            else:
+                print(f"Authentication failed: {response.status_code} - {response.text}")
+                return None, None
+                
+        except requests.exceptions.RequestException as e:
+            print(f"Request failed (attempt {attempt + 1}): {e}")
+            if attempt == max_retries - 1:
+                return None, None
+            time.sleep(1)
+    
+    return None, None
+```
+
+</CodeGroup>
+
+## API Development Status
+
+The AgentOps REST API is actively under development. Currently available:
+
+- ✅ **v3 Authentication**: Fully functional JWT token generation
+- 🚧 **Session Management**: Under development
+- 🚧 **Event Tracking**: Under development  
+- 🚧 **Trace Analytics**: Under development
+
+For the most up-to-date information on available endpoints, check the [AgentOps documentation](https://docs.agentops.ai) or contact support.
+
+## OpenAPI Specification
+
+For detailed API schemas and additional endpoints as they become available, refer to the OpenAPI specification:
+
+- [API Specification](https://api.agentops.ai/openapi.json)
+
+The specification includes complete request/response schemas, authentication requirements, and will be updated as new endpoints are released.
