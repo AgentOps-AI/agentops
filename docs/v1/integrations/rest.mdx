@@ -251,7 +251,7 @@ Retrieve traces with filtering and pagination:
 
 <CodeGroup>
 ```bash curl
-curl -X GET "https://api.agentops.ai/v4/traces?limit=10&offset=0&session_id=550e8400-e29b-41d4-a716-446655440000" \
+curl -X GET "https://api.agentops.ai/v4/traces?limit=10&offset=0" \
   -H "Authorization: Bearer your_jwt_token"
 ```
 
@@ -761,7 +761,7 @@ requests.post(
 traces_response = requests.get(
     f"{BASE_URL}/v4/traces",
     headers={"Authorization": f"Bearer {jwt_token}"},
-    params={"session_id": session_id, "limit": 10}
+    params={"limit": 10}
 )
 traces = traces_response.json()["traces"]
 
