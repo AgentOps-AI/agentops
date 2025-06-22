@@ -8,7 +8,18 @@ The AgentOps REST API allows you to integrate agent monitoring directly into you
 - Custom integrations
 - Direct API access
 
-For a complete API reference, you can view our [OpenAPI specification](https://api.agentops.ai/v2/openapi.yaml).
+For a complete API reference, you can view our [OpenAPI specification](https://api.agentops.ai/v2/openapi.yaml) or the [comprehensive v4 specification](https://api.agentops.ai/v4/openapi.yaml).
+
+## API Versions Overview
+
+The AgentOps API has multiple versions, each serving different use cases:
+
+- **v1**: Basic endpoints with API key authentication for sessions, agents, threads, events, and traces
+- **v2**: Enhanced endpoints with JWT-based authentication (documented below)
+- **v3**: Authentication-focused endpoints for token management
+- **v4**: Advanced traces and metrics endpoints with sophisticated querying capabilities
+
+Choose the version that best fits your integration needs. Most applications should use v2 for general purpose integration or v4 for advanced trace analytics.
 
 ## Authentication
 
@@ -92,6 +103,265 @@ curl -X POST https://api.agentops.ai/v2/reauthorize_jwt \
 {
   "status": "success",
   "jwt": "eyJhbGciOiJIUzI1NiIs..."
+}
+```
+</CodeGroup>
+
+## v1 API Endpoints
+
+The v1 API uses simple API key authentication and provides basic functionality for session and event tracking.
+
+### v1 Authentication
+
+v1 endpoints use API key authentication via the `X-Agentops-Api-Key` header:
+
+<CodeGroup>
+```bash Example Request
+curl -X POST https://api.agentops.ai/v1/create_session \
+  -H "Content-Type: application/json" \
+  -H "X-Agentops-Api-Key: your_api_key" \
+  -d '{
+    "session": {
+      "session_id": "550e8400-e29b-41d4-a716-446655440000",
+      "init_timestamp": "2024-03-14T12:00:00Z"
+    }
+  }'
+```
+</CodeGroup>
+
+### v1 Create Session
+
+<CodeGroup>
+```bash curl
+curl -X POST https://api.agentops.ai/v1/create_session \
+  -H "Content-Type: application/json" \
+  -H "X-Agentops-Api-Key: your_api_key" \
+  -d '{
+    "session": {
+      "session_id": "550e8400-e29b-41d4-a716-446655440000",
+      "init_timestamp": "2024-03-14T12:00:00Z",
+      "tags": ["v1-integration"]
+    }
+  }'
+```
+</CodeGroup>
+
+### v1 Create Events
+
+<CodeGroup>
+```bash curl
+curl -X POST https://api.agentops.ai/v1/create_events \
+  -H "Content-Type: application/json" \
+  -H "X-Agentops-Api-Key: your_api_key" \
+  -d '{
+    "events": [{
+      "event_type": "llms",
+      "init_timestamp": "2024-03-14T12:01:00Z",
+      "model": "gpt-4",
+      "prompt": "Hello, world!",
+      "completion": "Hi there!"
+    }]
+  }'
+```
+</CodeGroup>
+
+### v1 Create Agent
+
+<CodeGroup>
+```bash curl
+curl -X POST https://api.agentops.ai/v1/create_agent \
+  -H "Content-Type: application/json" \
+  -H "X-Agentops-Api-Key: your_api_key" \
+  -d '{
+    "id": "agent-123",
+    "name": "Research Assistant"
+  }'
+```
+</CodeGroup>
+
+### v1 Create Thread
+
+<CodeGroup>
+```bash curl
+curl -X POST https://api.agentops.ai/v1/create_thread \
+  -H "Content-Type: application/json" \
+  -H "X-Agentops-Api-Key: your_api_key" \
+  -d '{
+    "thread_id": "thread-456",
+    "name": "Main Thread"
+  }'
+```
+</CodeGroup>
+
+## v3 Authentication API
+
+The v3 API focuses on authentication and token management.
+
+### Get JWT Token
+
+Obtain a JWT token for use with other API versions:
+
+<CodeGroup>
+```bash curl
+curl -X POST https://api.agentops.ai/v3/auth/token \
+  -H "Content-Type: application/json" \
+  -H "X-Agentops-Api-Key: your_api_key" \
+  -d '{
+    "session_id": "550e8400-e29b-41d4-a716-446655440000"
+  }'
+```
+
+```json Success Response
+{
+  "token": "eyJhbGciOiJIUzI1NiIs...",
+  "expires_in": 86400
+}
+```
+</CodeGroup>
+
+### Verify JWT Token
+
+Verify the validity of a JWT token:
+
+<CodeGroup>
+```bash curl
+curl -X GET https://api.agentops.ai/v3/auth/verify \
+  -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIs..."
+```
+
+```json Success Response
+{
+  "valid": true,
+  "session_id": "550e8400-e29b-41d4-a716-446655440000",
+  "expires_at": "2024-03-15T12:00:00Z"
+}
+```
+</CodeGroup>
+
+## v4 Traces & Analytics API
+
+The v4 API provides advanced trace querying and analytics capabilities with JWT authentication.
+
+### List Traces
+
+Retrieve traces with filtering and pagination:
+
+<CodeGroup>
+```bash curl
+curl -X GET "https://api.agentops.ai/v4/traces?limit=10&offset=0&session_id=550e8400-e29b-41d4-a716-446655440000" \
+  -H "Authorization: Bearer your_jwt_token"
+```
+
+```json Success Response
+{
+  "traces": [
+    {
+      "trace_id": "trace-123",
+      "session_id": "550e8400-e29b-41d4-a716-446655440000",
+      "start_time": "2024-03-14T12:00:00Z",
+      "end_time": "2024-03-14T12:05:00Z",
+      "duration_ms": 300000,
+      "status": "completed"
+    }
+  ],
+  "total": 1,
+  "limit": 10,
+  "offset": 0
+}
+```
+</CodeGroup>
+
+### Get Trace Details
+
+Retrieve detailed information about a specific trace:
+
+<CodeGroup>
+```bash curl
+curl -X GET https://api.agentops.ai/v4/traces/trace-123 \
+  -H "Authorization: Bearer your_jwt_token"
+```
+
+```json Success Response
+{
+  "trace_id": "trace-123",
+  "session_id": "550e8400-e29b-41d4-a716-446655440000",
+  "start_time": "2024-03-14T12:00:00Z",
+  "end_time": "2024-03-14T12:05:00Z",
+  "duration_ms": 300000,
+  "status": "completed",
+  "spans": [
+    {
+      "span_id": "span-456",
+      "name": "llm_call",
+      "start_time": "2024-03-14T12:01:00Z",
+      "end_time": "2024-03-14T12:01:02Z",
+      "attributes": {
+        "model": "gpt-4",
+        "tokens": 150
+      }
+    }
+  ]
+}
+```
+</CodeGroup>
+
+### Get Trace Spans
+
+Retrieve spans for a specific trace:
+
+<CodeGroup>
+```bash curl
+curl -X GET https://api.agentops.ai/v4/traces/trace-123/spans \
+  -H "Authorization: Bearer your_jwt_token"
+```
+
+```json Success Response
+{
+  "spans": [
+    {
+      "span_id": "span-456",
+      "trace_id": "trace-123",
+      "name": "llm_call",
+      "start_time": "2024-03-14T12:01:00Z",
+      "end_time": "2024-03-14T12:01:02Z",
+      "duration_ms": 2000,
+      "attributes": {
+        "model": "gpt-4",
+        "prompt_tokens": 150,
+        "completion_tokens": 80
+      }
+    }
+  ],
+  "total": 1
+}
+```
+</CodeGroup>
+
+### Search Traces
+
+Advanced trace search with complex filtering:
+
+<CodeGroup>
+```bash curl
+curl -X GET "https://api.agentops.ai/v4/traces/search?query=model:gpt-4&start_time=2024-03-14T00:00:00Z&end_time=2024-03-14T23:59:59Z" \
+  -H "Authorization: Bearer your_jwt_token"
+```
+
+```json Success Response
+{
+  "traces": [
+    {
+      "trace_id": "trace-123",
+      "session_id": "550e8400-e29b-41d4-a716-446655440000",
+      "start_time": "2024-03-14T12:00:00Z",
+      "end_time": "2024-03-14T12:05:00Z",
+      "duration_ms": 300000,
+      "status": "completed",
+      "match_score": 0.95
+    }
+  ],
+  "total": 1,
+  "query": "model:gpt-4"
 }
 ```
 </CodeGroup>
@@ -425,5 +695,83 @@ requests.post(
         }
     }
 )
+```
+</CodeGroup>
+
+## Multi-Version Integration Example
+
+Here's an example showing how to use different API versions together:
+
+<CodeGroup>
+```python Multi-Version Example
+import requests
+import uuid
+from datetime import datetime, timezone
+
+# Configuration
+API_KEY = "your_api_key"
+BASE_URL = "https://api.agentops.ai"
+
+# Step 1: Get JWT token using v3
+session_id = str(uuid.uuid4())
+auth_response = requests.post(
+    f"{BASE_URL}/v3/auth/token",
+    headers={"X-Agentops-Api-Key": API_KEY},
+    json={"session_id": session_id}
+)
+jwt_token = auth_response.json()["token"]
+
+# Step 2: Create session using v2 (recommended)
+session_response = requests.post(
+    f"{BASE_URL}/v2/create_session",
+    headers={"X-Agentops-Api-Key": API_KEY},
+    json={
+        "session": {
+            "id": session_id,
+            "init_timestamp": datetime.now(timezone.utc).isoformat(),
+            "tags": ["multi-version-example"]
+        }
+    }
+)
+
+# Step 3: Track events using v2
+requests.post(
+    f"{BASE_URL}/v2/create_events",
+    headers={"Authorization": f"Bearer {jwt_token}"},
+    json={
+        "events": [{
+            "type": "llm",
+            "init_timestamp": datetime.now(timezone.utc).isoformat(),
+            "model": "gpt-4",
+            "prompt": "Multi-version integration test",
+            "completion": "Success!",
+            "prompt_tokens": 5,
+            "completion_tokens": 2
+        }]
+    }
+)
+
+# Step 4: Query traces using v4
+traces_response = requests.get(
+    f"{BASE_URL}/v4/traces",
+    headers={"Authorization": f"Bearer {jwt_token}"},
+    params={"session_id": session_id, "limit": 10}
+)
+traces = traces_response.json()["traces"]
+
+# Step 5: End session using v2
+requests.post(
+    f"{BASE_URL}/v2/update_session",
+    headers={"Authorization": f"Bearer {jwt_token}"},
+    json={
+        "session": {
+            "id": session_id,
+            "end_timestamp": datetime.now(timezone.utc).isoformat(),
+            "end_state": "completed"
+        }
+    }
+)
+
+print(f"Session completed with {len(traces)} traces")
 ```
 </CodeGroup>
