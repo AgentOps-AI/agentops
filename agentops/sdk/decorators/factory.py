@@ -82,7 +82,16 @@ def create_entity_decorator(entity_kind: str) -> Callable[..., Any]:
             wrapped_func: Callable[..., Any], instance: Optional[Any], args: tuple, kwargs: Dict[str, Any]
         ) -> Any:
             if not tracer.initialized:
-                return wrapped_func(*args, **kwargs)
+                logger.warning("AgentOps SDK not initialized. Attempting to initialize with defaults before applying decorator.")
+                try:
+                    from agentops import init
+                    init()
+                    if not tracer.initialized:
+                        logger.error("SDK initialization failed. Decorator will not instrument function.")
+                        return wrapped_func(*args, **kwargs)
+                except Exception as e:
+                    logger.error(f"SDK auto-initialization failed during decorator application: {e}. Decorator will not instrument function.")
+                    return wrapped_func(*args, **kwargs)
 
             operation_name = name or wrapped_func.__name__
             is_async = asyncio.iscoroutinefunction(wrapped_func)
