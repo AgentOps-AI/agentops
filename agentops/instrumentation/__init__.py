@@ -268,7 +268,7 @@ def _should_instrument_package(package_name: str) -> bool:
                     f"_should_instrument_package: '{package_name}' is a utility instrumentor needed by '{dependent_package}'. Allowing."
                 )
                 return True
-        
+
         logger.debug(
             f"_should_instrument_package: '{package_name}' is a utility instrumentor but no dependent packages are active. Skipping."
         )
@@ -319,34 +319,40 @@ def _should_instrument_package(package_name: str) -> bool:
 def _instrument_utility_dependencies(package_name: str):
     """
     Instrument any utility dependencies required by the given package.
-    
+
     Args:
         package_name: The package that was just instrumented
     """
     if package_name in UTILITY_DEPENDENCIES:
         utilities_needed = UTILITY_DEPENDENCIES[package_name]
-        logger.debug(f"_instrument_utility_dependencies: Package '{package_name}' requires utilities: {utilities_needed}")
-        
+        logger.debug(
+            f"_instrument_utility_dependencies: Package '{package_name}' requires utilities: {utilities_needed}"
+        )
+
         for utility_name in utilities_needed:
             if utility_name in UTILITY_INSTRUMENTORS and not _is_package_instrumented(utility_name):
                 logger.info(f"AgentOps: Instrumenting utility '{utility_name}' required by '{package_name}'")
-                
+
                 # Check if the utility module is available
                 if utility_name in sys.modules:
                     _perform_instrumentation(utility_name)
                 else:
-                    logger.debug(f"_instrument_utility_dependencies: Utility '{utility_name}' not yet imported, will instrument when imported")
+                    logger.debug(
+                        f"_instrument_utility_dependencies: Utility '{utility_name}' not yet imported, will instrument when imported"
+                    )
 
 
 def _perform_instrumentation(package_name: str):
     """Helper function to perform instrumentation for a given package."""
     global _instrumenting_packages, _active_instrumentors, _has_agentic_library
-    
+
     # Check if we're already instrumenting this package (prevent circular instrumentation)
     if package_name in _instrumenting_packages:
-        logger.debug(f"_perform_instrumentation: Already instrumenting '{package_name}', skipping to prevent circular instrumentation")
+        logger.debug(
+            f"_perform_instrumentation: Already instrumenting '{package_name}', skipping to prevent circular instrumentation"
+        )
         return
-        
+
     if not _should_instrument_package(package_name):
         return
 
@@ -367,7 +373,7 @@ def _perform_instrumentation(package_name: str):
 
     # Add to _instrumenting_packages to prevent circular instrumentation
     _instrumenting_packages.add(package_name)
-    
+
     try:
         # instrument_one already checks loader.should_activate
         instrumentor_instance = instrument_one(loader)
@@ -406,13 +412,15 @@ def _perform_instrumentation(package_name: str):
             ):  # Check _has_agentic_library to ensure this is the *first* one.
                 # _uninstrument_providers() was already called in _should_instrument_package for the first agentic library.
                 _has_agentic_library = True
-                
+
             # Mark package for utility dependency instrumentation
             # We defer this to avoid circular imports during package initialization
             if package_name not in UTILITY_INSTRUMENTORS and is_newly_added:  # Don't recursively instrument utilities
                 if package_name in UTILITY_DEPENDENCIES:
                     _pending_utility_instrumentation.add(package_name)
-                    logger.debug(f"_perform_instrumentation: Marked '{package_name}' for deferred utility instrumentation")
+                    logger.debug(
+                        f"_perform_instrumentation: Marked '{package_name}' for deferred utility instrumentation"
+                    )
         else:
             logger.debug(
                 f"_perform_instrumentation: instrument_one for '{package_name}' returned None. Not added to active instrumentors."
@@ -425,14 +433,14 @@ def _perform_instrumentation(package_name: str):
 def _process_pending_utility_instrumentation():
     """Process any pending utility instrumentations."""
     global _pending_utility_instrumentation
-    
+
     if not _pending_utility_instrumentation:
         return
-        
+
     # Copy and clear to avoid modifying during iteration
     pending = _pending_utility_instrumentation.copy()
     _pending_utility_instrumentation.clear()
-    
+
     for package_name in pending:
         try:
             _instrument_utility_dependencies(package_name)
@@ -619,10 +627,7 @@ def instrument_all():
                         package_to_check = target
                         break
 
-            if (
-                package_to_check
-                and not _is_package_instrumented(package_to_check)
-            ):
+            if package_to_check and not _is_package_instrumented(package_to_check):
                 target_module_obj = sys.modules.get(package_to_check)
 
                 if target_module_obj:
