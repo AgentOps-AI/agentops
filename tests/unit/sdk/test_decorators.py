@@ -772,11 +772,11 @@ class TestDecoratorAutoInitialization:
         from agentops.sdk.decorators.factory import create_entity_decorator
         from agentops.sdk.core import tracer
 
-        with patch.object(tracer, "initialized", False):
+        with patch.object(tracer, "_initialized", False):
             with patch("agentops.init") as mock_init:
 
                 def mock_init_side_effect():
-                    tracer.initialized = True
+                    tracer._initialized = True
 
                 mock_init.side_effect = mock_init_side_effect
 
@@ -795,7 +795,7 @@ class TestDecoratorAutoInitialization:
         from agentops.sdk.decorators.factory import create_entity_decorator
         from agentops.sdk.core import tracer
 
-        with patch.object(tracer, "initialized", False):
+        with patch.object(tracer, "_initialized", False):
             with patch("agentops.init") as mock_init:
                 mock_init.side_effect = Exception("Init failed")
 
@@ -814,7 +814,7 @@ class TestDecoratorAutoInitialization:
         from agentops.sdk.decorators.factory import create_entity_decorator
         from agentops.sdk.core import tracer
 
-        with patch.object(tracer, "initialized", False):
+        with patch.object(tracer, "_initialized", False):
             with patch("agentops.init") as mock_init:
                 mock_init.return_value = None
 
