@@ -129,8 +129,7 @@
         "v1/usage/advanced-configuration",
         "v1/usage/tracking-llm-calls",
         "v1/usage/tracking-agents",
-        "v1/usage/recording-operations",
-        "v1/usage/multiple-sessions"
+        "v1/usage/recording-operations"
       ],
       "version": "v1"
     },
