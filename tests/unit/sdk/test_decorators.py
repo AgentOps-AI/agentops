@@ -768,59 +768,61 @@ class TestDecoratorAutoInitialization:
 
     def test_decorator_auto_initialization_success(self, instrumentation: InstrumentationTester):
         """Test that decorators auto-initialize when tracer is not initialized."""
-        from unittest.mock import patch, MagicMock
+        from unittest.mock import patch
         from agentops.sdk.decorators.factory import create_entity_decorator
         from agentops.sdk.core import tracer
-        
-        with patch.object(tracer, 'initialized', False):
-            with patch('agentops.init') as mock_init:
+
+        with patch.object(tracer, "initialized", False):
+            with patch("agentops.init") as mock_init:
+
                 def mock_init_side_effect():
                     tracer.initialized = True
+
                 mock_init.side_effect = mock_init_side_effect
-                
+
                 @create_entity_decorator("TASK")
                 def test_function():
                     return "test_result"
-                
+
                 result = test_function()
-                
+
                 mock_init.assert_called_once()
                 assert result == "test_result"
 
     def test_decorator_auto_initialization_failure(self, instrumentation: InstrumentationTester):
         """Test that decorators handle auto-initialization failure gracefully."""
-        from unittest.mock import patch, MagicMock
+        from unittest.mock import patch
         from agentops.sdk.decorators.factory import create_entity_decorator
         from agentops.sdk.core import tracer
-        
-        with patch.object(tracer, 'initialized', False):
-            with patch('agentops.init') as mock_init:
+
+        with patch.object(tracer, "initialized", False):
+            with patch("agentops.init") as mock_init:
                 mock_init.side_effect = Exception("Init failed")
-                
+
                 @create_entity_decorator("TASK")
                 def test_function():
                     return "test_result"
-                
+
                 result = test_function()
-                
+
                 mock_init.assert_called_once()
                 assert result == "test_result"
 
     def test_decorator_auto_initialization_partial_failure(self, instrumentation: InstrumentationTester):
         """Test that decorators handle partial initialization failure gracefully."""
-        from unittest.mock import patch, MagicMock
+        from unittest.mock import patch
         from agentops.sdk.decorators.factory import create_entity_decorator
         from agentops.sdk.core import tracer
-        
-        with patch.object(tracer, 'initialized', False):
-            with patch('agentops.init') as mock_init:
+
+        with patch.object(tracer, "initialized", False):
+            with patch("agentops.init") as mock_init:
                 mock_init.return_value = None
-                
+
                 @create_entity_decorator("TASK")
                 def test_function():
                     return "test_result"
-                
+
                 result = test_function()
-                
+
                 mock_init.assert_called_once()
                 assert result == "test_result"
