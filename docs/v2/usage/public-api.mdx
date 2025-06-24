@@ -20,13 +20,7 @@ https://api.agentops.ai
 
 ## Authentication
 
-The API uses bearer token authentication. You'll need to exchange your API key for a bearer token first.
-
-### Getting Your API Key
-
-1. Sign up at [app.agentops.ai](https://app.agentops.ai)
-2. Navigate to your project settings
-3. Copy your API key from the dashboard
+The API uses JWT token authentication. You'll need to exchange your API key for a JWT token first.
 
 ### Get Access Token
 
@@ -261,327 +255,15 @@ curl -X GET https://api.agentops.ai/public/v1/spans/span_456/metrics \
 ```
 </CodeGroup>
 
-## Common Use Cases
-
-### Analytics Dashboard
-
-Build custom analytics dashboards by fetching trace and span data:
-
-<CodeGroup>
-```python Python
-import requests
-import json
-
-class AgentOpsAnalytics:
-    def __init__(self, api_key):
-        self.base_url = "https://api.agentops.ai"
-        self.bearer_token = self._get_bearer_token(api_key)
-
-    def _get_bearer_token(self, api_key):
-        response = requests.post(
-            f"{self.base_url}/public/v1/auth/access_token",
-            json={"api_key": api_key}
-        )
-        return response.json()["bearer"]
-
-    def get_project_info(self):
-        response = requests.get(
-            f"{self.base_url}/public/v1/project",
-            headers={"Authorization": f"Bearer {self.bearer_token}"}
-        )
-        return response.json()
-
-    def get_trace_summary(self, trace_id):
-        response = requests.get(
-            f"{self.base_url}/public/v1/traces/{trace_id}",
-            headers={"Authorization": f"Bearer {self.bearer_token}"}
-        )
-        return response.json()
-
-    def get_trace_costs(self, trace_id):
-        response = requests.get(
-            f"{self.base_url}/public/v1/traces/{trace_id}/metrics",
-            headers={"Authorization": f"Bearer {self.bearer_token}"}
-        )
-        metrics = response.json()
-        return {
-            "total_cost": float(metrics["total_cost"]),
-            "total_tokens": metrics["total_tokens"],
-            "success_rate": metrics["success_count"] / metrics["span_count"]
-        }
-
-# Usage
-analytics = AgentOpsAnalytics("your-api-key")
-project = analytics.get_project_info()
-trace_costs = analytics.get_trace_costs("trace_123")
-
-print(f"Project: {project['name']}")
-print(f"Trace cost: ${trace_costs['total_cost']:.4f}")
-print(f"Success rate: {trace_costs['success_rate']:.2%}")
-```
-
-```javascript JavaScript
-class AgentOpsAnalytics {
-    constructor(apiKey) {
-        this.baseURL = 'https://api.agentops.ai';
-        this.bearerToken = null;
-        this.init(apiKey);
-    }
-
-    async init(apiKey) {
-        const response = await fetch(`${this.baseURL}/public/v1/auth/access_token`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ api_key: apiKey })
-        });
-        const data = await response.json();
-        this.bearerToken = data.bearer;
-    }
-
-    async getProjectInfo() {
-        const response = await fetch(`${this.baseURL}/public/v1/project`, {
-            headers: { 'Authorization': `Bearer ${this.bearerToken}` }
-        });
-        return response.json();
-    }
-
-    async getTraceMetrics(traceId) {
-        const response = await fetch(`${this.baseURL}/public/v1/traces/${traceId}/metrics`, {
-            headers: { 'Authorization': `Bearer ${this.bearerToken}` }
-        });
-        return response.json();
-    }
-
-    async analyzeSpanPerformance(spanId) {
-        const [span, metrics] = await Promise.all([
-            fetch(`${this.baseURL}/public/v1/spans/${spanId}`, {
-                headers: { 'Authorization': `Bearer ${this.bearerToken}` }
-            }).then(r => r.json()),
-            fetch(`${this.baseURL}/public/v1/spans/${spanId}/metrics`, {
-                headers: { 'Authorization': `Bearer ${this.bearerToken}` }
-            }).then(r => r.json())
-        ]);
-
-        return {
-            name: span.span_name,
-            duration: span.duration,
-            cost: parseFloat(metrics.total_cost),
-            efficiency: metrics.total_tokens / span.duration // tokens per ms
-        };
-    }
-}
-
-// Usage
-const analytics = new AgentOpsAnalytics('your-api-key');
-```
-</CodeGroup>
-
-### Cost Monitoring
-
-Track and analyze LLM costs across your application:
-
-<CodeGroup>
-```python Cost Analysis
-def analyze_daily_costs(analytics, trace_ids):
-    total_cost = 0
-    total_tokens = 0
-
-    for trace_id in trace_ids:
-        metrics = analytics.get_trace_costs(trace_id)
-        total_cost += metrics['total_cost']
-        total_tokens += metrics['total_tokens']
-
-    return {
-        'total_cost': total_cost,
-        'total_tokens': total_tokens,
-        'cost_per_token': total_cost / total_tokens if total_tokens > 0 else 0
-    }
-
-# Get cost breakdown by model
-def get_model_costs(analytics, span_ids):
-    model_costs = {}
-
-    for span_id in span_ids:
-        span = analytics.get_span_details(span_id)
-        metrics = analytics.get_span_metrics(span_id)
-
-        model = span.get('attributes', {}).get('llm.model')
-        if model:
-            if model not in model_costs:
-                model_costs[model] = {'cost': 0, 'tokens': 0}
-
-            model_costs[model]['cost'] += float(metrics['total_cost'])
-            model_costs[model]['tokens'] += metrics['total_tokens']
-
-    return model_costs
-```
-</CodeGroup>
-
-### Performance Analysis
-
-Analyze span performance and identify bottlenecks:
-
-<CodeGroup>
-```python Performance Analysis
-def analyze_performance(analytics, trace_id):
-    trace = analytics.get_trace_summary(trace_id)
-    spans = trace['spans']
-
-    # Find slowest spans
-    sorted_spans = sorted(spans, key=lambda x: x['duration'], reverse=True)
-    slowest_spans = sorted_spans[:5]
-
-    # Calculate average duration by span kind
-    kind_durations = {}
-    for span in spans:
-        kind = span['span_kind']
-        if kind not in kind_durations:
-            kind_durations[kind] = []
-        kind_durations[kind].append(span['duration'])
-
-    averages = {
-        kind: sum(durations) / len(durations)
-        for kind, durations in kind_durations.items()
-    }
-
-    return {
-        'slowest_spans': slowest_spans,
-        'average_duration_by_kind': averages,
-        'total_spans': len(spans)
-    }
-```
-</CodeGroup>
-
-## Error Handling
-
-The API uses standard HTTP status codes and returns detailed error information:
-
-### Common Status Codes
-
-- `200`: Success
-- `401`: Unauthorized (invalid or expired bearer token)
-- `403`: Forbidden (insufficient permissions)
-- `404`: Not Found (trace/span doesn't exist)
-- `422`: Validation Error (invalid parameters)
-- `429`: Rate Limit Exceeded
-- `500`: Internal Server Error
-
-### Error Response Format
-
-```json
-{
-  "detail": [
-    {
-      "loc": ["path", "trace_id"],
-      "msg": "trace not found",
-      "type": "value_error.not_found"
-    }
-  ]
-}
-```
-
-### Error Handling Best Practices
-
-<CodeGroup>
-```python Python Error Handling
-import requests
-from requests.exceptions import RequestException
-
-def safe_api_call(url, headers):
-    try:
-        response = requests.get(url, headers=headers, timeout=30)
-        response.raise_for_status()
-        return response.json()
-    except requests.exceptions.HTTPError as e:
-        if e.response.status_code == 401:
-            print("Authentication failed - refresh your bearer token")
-        elif e.response.status_code == 404:
-            print("Resource not found")
-        elif e.response.status_code == 422:
-            print(f"Validation error: {e.response.json()}")
-        raise
-    except RequestException as e:
-        print(f"Network error: {e}")
-        raise
-```
-
-```javascript JavaScript Error Handling
-async function safeApiCall(url, options) {
-    try {
-        const response = await fetch(url, {
-            ...options,
-            timeout: 30000
-        });
-
-        if (!response.ok) {
-            const errorData = await response.json();
-
-            switch (response.status) {
-                case 401:
-                    throw new Error('Authentication failed - refresh your bearer token');
-                case 404:
-                    throw new Error('Resource not found');
-                case 422:
-                    throw new Error(`Validation error: ${JSON.stringify(errorData)}`);
-                default:
-                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-            }
-        }
-
-        return response.json();
-    } catch (error) {
-        console.error('API call failed:', error);
-        throw error;
-    }
-}
-```
-</CodeGroup>
-
-## Rate Limits
-
-The API implements rate limiting to ensure fair usage:
-
-- **Authentication**: 100 requests per hour
-- **Data Retrieval**: 1,000 requests per hour per project
-
-Rate limit information is included in response headers:
-- `X-RateLimit-Limit`: Maximum requests per hour
-- `X-RateLimit-Remaining`: Remaining requests in current window
-- `X-RateLimit-Reset`: Unix timestamp when limit resets
-
-## Best Practices
-
-1. **Token Management**: Store bearer tokens securely and refresh them before the 30-day expiration
-2. **Caching**: Cache frequently accessed data to reduce API calls
-3. **Batch Processing**: When analyzing multiple traces/spans, implement proper rate limiting
-4. **Error Handling**: Always handle network errors and API failures gracefully
-5. **Monitoring**: Track your API usage to stay within rate limits
-
 ## MCP Server
 
 AgentOps provides a [Model Context Protocol (MCP)](https://modelcontextprotocol.io/) server that exposes the Public API as tools for AI assistants. This allows AI models to directly query your AgentOps data during conversations.
-
-### What is MCP?
-
-The Model Context Protocol is an open standard that enables AI assistants to securely connect to external data sources and tools. The AgentOps MCP server provides AI models with the ability to:
-
-- Query trace and span information
-- Analyze performance metrics
-- Retrieve cost data
-- Access project details
-
-### Installation
-
-The MCP server is included with the AgentOps Python package:
-
-```bash
-pip install agentops
-```
 
 ### Configuration
 
 Create an MCP server configuration file (typically `mcp_config.json`):
 
+**Python-based configuration:**
 ```json
 {
   "mcpServers": {
@@ -590,6 +272,28 @@ Create an MCP server configuration file (typically `mcp_config.json`):
       "args": ["-m", "agentops.mcp.server"],
       "env": {
         "AGENTOPS_API_KEY": "your-api-key-here"
+      }
+    }
+  }
+}
+```
+
+**Docker-based configuration:**
+```json
+{
+  "mcpServers": {
+    "agentops": {
+      "command": "docker",
+      "args": [
+        "run",
+        "-i",
+        "--rm",
+        "-e",
+        "AGENTOPS_API_KEY",
+        "agentops/agentops-mcp:latest"
+      ],
+      "env": {
+        "AGENTOPS_API_KEY": "your-agentops-api-key-here"
       }
     }
   }
@@ -629,26 +333,6 @@ Get detailed span information by ID.
 Get metrics for a specific span.
 - **Parameters**: `span_id` (string) - The span identifier
 - **Returns**: Span-specific cost and token metrics
-
-### Usage with AI Assistants
-
-Once configured, AI assistants can automatically use these tools to answer questions about your AgentOps data:
-
-**Example conversations:**
-
-```
-User: "What was the cost of trace abc123?"
-Assistant: Let me check the metrics for that trace.
-[Uses get_trace_metrics tool]
-The trace abc123 had a total cost of $0.0045, using 250 tokens across 5 spans.
-
-User: "Which spans in that trace took the longest?"
-Assistant: [Uses get_trace tool to analyze span durations]
-The slowest spans were:
-1. "Database Query" - 3.2 seconds
-2. "LLM Processing" - 2.1 seconds
-3. "Data Validation" - 0.8 seconds
-```
 
 ### Environment Variables
 
