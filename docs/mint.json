@@ -129,8 +129,7 @@
         "v1/usage/advanced-configuration",
         "v1/usage/tracking-llm-calls",
         "v1/usage/tracking-agents",
-        "v1/usage/recording-operations",
-        "v1/usage/multiple-sessions"
+        "v1/usage/recording-operations"
       ],
       "version": "v1"
     },
@@ -181,7 +180,8 @@
         "v2/integrations/litellm",
         "v2/integrations/mem0",
         "v2/integrations/openai",
-        "v2/integrations/agents_sdk",
+        "v2/integrations/openai_agents_python",
+        "v2/integrations/openai_agents_js",
         "v2/integrations/smolagents",
         "v2/integrations/ibm_watsonx_ai",
         "v2/integrations/xai"

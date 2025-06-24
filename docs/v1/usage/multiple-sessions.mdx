@@ -1,194 +1,154 @@
 ---
-title: "Multiple Sessions"
-description: "Managing multiple concurrent sessions"
+title: "Concurrent Traces"
+description: "Managing multiple concurrent traces and sessions"
 ---
 
-# Single vs Multi-Session Modes
+# Session Management in AgentOps
 
-In most development and scripting use cases, having only one session active at a time is sufficient. The challenge comes when productionizing agents.
+AgentOps supports running multiple concurrent traces (sessions) without any special mode switching or restrictions. The modern approach uses the trace-based API with `start_trace()` and `end_trace()`, while legacy session functions remain available for backwards compatibility.
 
-By default, AgentOps operates in single-session mode. All of the [base SDK functions](/v1/usage/sdk-reference) work as expected.
+## Modern Trace-Based Approach
 
-As soon as you create a second session, AgentOps enters **Multi-Session Mode**. As long as more than one session is active, the [base SDK functions](/v1/usage/sdk-reference) will no longer work.
+The recommended way to manage sessions is using the trace-based API:
 
-If multiple sessions exist, you are expected to call the function on the relevant session. Ex:
 <CodeGroup>
-```python single session
+```python single trace
 import agentops
-agentops.start_session()
+
+agentops.init()
+trace_context = agentops.start_trace("my_workflow")
+# Your agent logic here
+agentops.end_trace(trace_context, "Success")
+```
+
+```python multiple concurrent traces
+import agentops
+
+agentops.init(auto_start_session=False)
+trace_1 = agentops.start_trace("workflow_1", tags=["experiment_a"])
+trace_2 = agentops.start_trace("workflow_2", tags=["experiment_b"])
+
+# Work with both traces concurrently
+agentops.end_trace(trace_1, "Success")
+agentops.end_trace(trace_2, "Success")
+```
+
+```python context manager
+import agentops
+
+agentops.init(auto_start_session=False)
+with agentops.start_trace("my_workflow") as trace:
+    # Your agent logic here
+    # Trace automatically ends when exiting the context
+    pass
+```
+</CodeGroup>
+
+## Legacy Session API
+
+For backwards compatibility, the legacy session functions are still available:
+
+<CodeGroup>
+```python legacy single session
+import agentops
+agentops.init()
 agentops.end_session(end_state='Success')
 ```
 
-```python multi-session script
+```python legacy multiple sessions
 import agentops
-session_1 = agentops.start_session()
-session_2 = agentops.start_session()
+agentops.init(auto_start_session=False)
+session_1 = agentops.start_session(tags=["session_1"])
+session_2 = agentops.start_session(tags=["session_2"])
 
 session_1.end_session(end_state='Success')
-session_2.end_session(end_state='Failure')
-```
-
-```python multi-session endpoint
-@app.get("/completion")
-def completion():
-
-    session = agentops.start_session()
-
-    messages = [{"role": "user", "content": "Hello"}]
-    response = session.patch(openai.chat.completions.create)(
-        model="gpt-3.5-turbo",
-        messages=messages,
-        temperature=0.5,
-    )
-
-    session.record(
-        ActionEvent(
-            action_type="Agent says hello",
-            params=messages,
-            returns=str(response.choices[0].message.content),
-        ),
-    )
-
-    session.end_session(end_state="Success")
-
-    return {"response": response}
+session_2.end_session(end_state='Success')
 ```
 </CodeGroup>
 
-Functions on `agentops` will no longer work in multi-session mode
+## Managing Multiple Traces
 
-**When in multi-session mode:**
-<CodeGroup>
-```python works ✅
-session.end_session(...)
-```
-
-```python does not work ❌
-agentops.end_session(...)
-```
-</CodeGroup>
-
-# Entering Multi-Session Mode
-Creating more than one session puts the AgentOps Client into multi-session mode.
-
-### Single Session Examples
-All of these examples show using AgentOps in single session mode
-
-```python
-agentops.init()
-agentops.end_session(end_state="Success")
-```
-```python
-agentops.init(auto_start_session=False)
-session = agentops.start_session()
-session.end_session(end_state="Success")
-```
-
-### Multi Session Examples
-
-As soon as you create a second session, the SDK operates in multi-session mode.
-
-```python
-session_1 = agentops.init()
-session_2 = agentops.start_session()
-```
+### Starting Traces
+You can start multiple traces concurrently without any restrictions:
 
 ```python
 agentops.init(auto_start_session=False)
-session_1 = agentops.start_session()
-session_2 = agentops.start_session()
+trace_1 = agentops.start_trace("user_query_1")
+trace_2 = agentops.start_trace("user_query_2")
+trace_3 = agentops.start_trace("background_task")
 ```
 
-# Managing Multiple Sessions
-After creating a session, be sure to have the session reference available anywhere where data related to that session is collected.
-
-The [Session](/v1/concepts/sessions) object has methods as described in the [docs page](/v1/concepts/sessions).
-
-### Start Sessions
-Start a new session with `init()` or `start_session()` depending on whether or not AgentOps has already been initialized.
+### Ending Traces
+End traces individually or all at once:
 
 ```python
-session_1 = agentops.init()
-session_2 = agentops.start_session()
+# End specific trace
+agentops.end_trace(trace_1, "Success")
+
+# End all active traces
+agentops.end_trace(end_state="Success")
 ```
-or
+
+### Using Decorators
+The modern approach also supports decorators for automatic trace management:
 
 ```python
-agentops.init(auto_start_session=False)
-session_1 = agentops.start_session()
-session_2 = agentops.start_session()
+import agentops
+
+@agentops.trace
+def my_workflow():
+    # Your agent logic here
+    return "result"
+
+@agentops.agent
+class MyAgent:
+    def run(self):
+        # Agent logic here
+        pass
 ```
 
-### Stop Sessions
-To stop a currently active session, call `end_session()` on the session object.
+## LLM Call Tracking
 
-```python
-session = agentops.start_session()
-session.end_session()
-```
-
-If you lose access to the session object before calling `end_session()`, the session will be marked as `Indeterminate`.
-
-### Functions on Sessions
-
-All methods are described in the [docs page](/v1/concepts/sessions).
-
-These methods must be called on the session object:
-
-```python
-session = agentops.start_session()
-session.record(Event(...))
-```
-
-### Examples
-<CardGroup cols={2}>
-	<Card title="Two Session Script" icon="scroll" iconType="solid" color="green" href="https://github.com/AgentOps-AI/agentops/blob/main/examples/multi_session_llm.py">
-        Create two sessions and perform functions on each
-	</Card>
-	<Card title="REST API" icon="computer" iconType="regular" color="purple" href="/v1/examples/fastapi">
-        Create a REST server with fast-api and manage sessions
-	</Card>
-</CardGroup>
-
-# Assigning LLM Calls
-When we have multiple active sessions, it's impossible for AgentOps to know which session a particular LLM call belongs to without a little help.
-
-To track an LLM call, use [`session.patch()`](/v1/concepts/sessions#patch)
+LLM calls are automatically tracked when using the modern instrumentation. No special handling is needed for multiple concurrent traces:
 
 ```python
 import agentops
 import openai
 
-session = agentops.start_session()
-messages = [{"role": "user", "content": "Hello"}]
-response = session.patch(openai.chat.completions.create)(
+agentops.init()
+client = openai.OpenAI()
+
+trace_1 = agentops.start_trace("query_1")
+response_1 = client.chat.completions.create(
     model="gpt-3.5-turbo",
-    messages=messages,
-    temperature=0.5,
+    messages=[{"role": "user", "content": "Hello from trace 1"}]
 )
+
+trace_2 = agentops.start_trace("query_2")
+response_2 = client.chat.completions.create(
+    model="gpt-3.5-turbo",
+    messages=[{"role": "user", "content": "Hello from trace 2"}]
+)
+
+agentops.end_trace(trace_1, "Success")
+agentops.end_trace(trace_2, "Success")
 ```
 
-If you're using the create function multiple times, you can create a new function with the same method.
+## Migration from Legacy Multi-Session Mode
 
-```python
-observed_create = session.patch(openai.chat.completions.create)
-obs_response = observed_create(
-    model="gpt-3.5-turbo",
-    messages=messages,
-    temperature=0.5,
-)
-```
+If you're migrating from older AgentOps versions that had multi-session mode restrictions:
 
+1. **Remove multi-session mode checks** - These are no longer needed
+2. **Update to trace-based API** - Use `start_trace()` and `end_trace()` for new code
+3. **Simplify LLM tracking** - Automatic instrumentation handles LLM calls without special session assignment
+4. **Use decorators** - Consider using `@trace`, `@agent`, and `@tool` decorators for cleaner code
 
-If you make an LLM completion call without one of these methods while you currently have more than one active session, a `MultiSessionException` will be raised.
-
-
-# Exceptions
-
-
-### `MultiSessionException`
-
-Receiving this exception means that you tried to perform a function on the SDK base, but at runtime had more than one active session.
-
-### `NoSessionException`
-A [session](/v1/concepts/session) action was attempted while no session existed on the client.
+### Examples
+<CardGroup cols={2}>
+	<Card title="Concurrent Traces Example" icon="scroll" iconType="solid" color="green" href="/v1/examples/multi_session">
+        Create multiple concurrent traces and manage them independently
+	</Card>
+	<Card title="REST API" icon="computer" iconType="regular" color="purple" href="/v1/examples/fastapi">
+        Create a REST server with FastAPI and manage traces per request
+	</Card>
+</CardGroup>
