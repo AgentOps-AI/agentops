@@ -28,12 +28,12 @@ def get_agent_run_attributes(
     agent_name = None
 
     # Base attributes
-    attributes[SpanAttributes.AGENTOPS_SPAN_KIND] = AgentOpsSpanKind.WORKFLOW
+    attributes[SpanAttributes.AGENTOPS_SPAN_KIND] = AgentOpsSpanKind.AGENT
     attributes[SpanAttributes.LLM_SYSTEM] = "agno"
     attributes[SpanAttributes.LLM_REQUEST_STREAMING] = "False"
 
-    # AgentOps entity attributes (matching CrewAI pattern)
-    attributes[SpanAttributes.AGENTOPS_ENTITY_NAME] = "Agent"
+    # AgentOps entity attributes
+    attributes[SpanAttributes.AGENTOPS_ENTITY_NAME] = "agent"
 
     # Extract agent information from args[0] (self)
     if args and len(args) >= 1:
