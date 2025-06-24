@@ -18,7 +18,6 @@ from .attributes import (
     ensure_no_none_values,
     set_graph_attributes,
     extract_messages_from_input,
-    extract_messages_from_output,
     get_message_content,
     get_message_role,
 )
@@ -44,7 +43,10 @@ class LanggraphInstrumentor(BaseInstrumentor):
         tracer_provider = kwargs.get("tracer_provider")
         self._tracer = get_tracer("agentops.instrumentation.agentic.langgraph", "0.1.0", tracer_provider)
 
-        self._active_graph_spans = {}
+        # Initialize context variable for tracking graph executions
+        import contextvars
+
+        self._current_graph_execution = contextvars.ContextVar("current_graph_execution", default=None)
 
         wrap_function_wrapper("langgraph.graph.state", "StateGraph.__init__", self._wrap_state_graph_init)
 
@@ -67,13 +69,13 @@ class LanggraphInstrumentor(BaseInstrumentor):
         if not self._tracer:
             return wrapped(*args, **kwargs)
 
-        with self._tracer.start_as_current_span("langgraph.StateGraph.__init__", kind=SpanKind.INTERNAL) as span:
+        with self._tracer.start_as_current_span("langgraph.graph.initialize", kind=SpanKind.INTERNAL) as span:
             span.set_attributes(
                 ensure_no_none_values(
                     {
                         SpanAttributes.AGENTOPS_SPAN_KIND: "workflow",
                         WorkflowAttributes.WORKFLOW_TYPE: "graph_initialization",
-                        SpanAttributes.AGENTOPS_ENTITY_NAME: "StateGraph.__init__",
+                        SpanAttributes.AGENTOPS_ENTITY_NAME: "Graph Initialization",
                     }
                 )
             )
@@ -95,13 +97,13 @@ class LanggraphInstrumentor(BaseInstrumentor):
         if not self._tracer:
             return wrapped(*args, **kwargs)
 
-        with self._tracer.start_as_current_span("langgraph.StateGraph.compile", kind=SpanKind.INTERNAL) as span:
+        with self._tracer.start_as_current_span("langgraph.graph.compile", kind=SpanKind.INTERNAL) as span:
             span.set_attributes(
                 ensure_no_none_values(
                     {
                         SpanAttributes.AGENTOPS_SPAN_KIND: "workflow",
                         WorkflowAttributes.WORKFLOW_TYPE: "graph_compilation",
-                        SpanAttributes.AGENTOPS_ENTITY_NAME: "StateGraph.compile",
+                        SpanAttributes.AGENTOPS_ENTITY_NAME: "Graph Compilation",
                         SpanAttributes.LLM_SYSTEM: "langgraph",
                     }
                 )
@@ -138,105 +140,105 @@ class LanggraphInstrumentor(BaseInstrumentor):
             return wrapped(*args, **kwargs)
 
         current_span = trace.get_current_span()
-        if current_span and current_span.name == "langgraph.graph.execution":
+        if current_span and current_span.name == "langgraph.workflow.execute":
             return wrapped(*args, **kwargs)
 
-        with self._tracer.start_as_current_span("langgraph.graph.execution", kind=SpanKind.INTERNAL) as graph_span:
-            graph_span.set_attributes(
+        with self._tracer.start_as_current_span("langgraph.workflow.execute", kind=SpanKind.INTERNAL) as span:
+            span.set_attributes(
                 ensure_no_none_values(
                     {
                         SpanAttributes.AGENTOPS_SPAN_KIND: "workflow",
-                        WorkflowAttributes.WORKFLOW_TYPE: "langgraph_graph",
-                        SpanAttributes.AGENTOPS_ENTITY_NAME: "LangGraph",
+                        WorkflowAttributes.WORKFLOW_TYPE: "langgraph_invoke",
+                        SpanAttributes.AGENTOPS_ENTITY_NAME: "Workflow Execution",
+                        SpanAttributes.LLM_REQUEST_STREAMING: False,
+                        "langgraph.execution.mode": "invoke",
                     }
                 )
             )
 
             execution_state = {"executed_nodes": [], "message_count": 0, "final_response": None}
 
-            with self._tracer.start_as_current_span("langgraph.Pregel.invoke", kind=SpanKind.INTERNAL) as span:
+            # Set the current execution state in context
+            token = self._current_graph_execution.set(execution_state)
+
+            try:
+                input_data = args[0] if args else kwargs.get("input", {})
+                messages = extract_messages_from_input(input_data)
+                if messages:
+                    execution_state["message_count"] = len(messages)
+                    for i, msg in enumerate(messages[:3]):
+                        content = get_message_content(msg)
+                        role = get_message_role(msg)
+                        if content:
+                            span.set_attribute(f"gen_ai.prompt.{i}.content", content[:500])
+                            span.set_attribute(f"gen_ai.prompt.{i}.role", role)
+
+                result = wrapped(*args, **kwargs)
+
+                # Extract execution information from result
+                if isinstance(result, dict):
+                    # Check for messages in result
+                    if "messages" in result:
+                        output_messages = result["messages"]
+                        if isinstance(output_messages, list):
+                            # Count all messages in the result
+                            total_messages = len([msg for msg in output_messages if hasattr(msg, "content")])
+                            execution_state["message_count"] = total_messages
+
+                            if output_messages:
+                                # Find the last non-tool message
+                                for msg in reversed(output_messages):
+                                    if hasattr(msg, "content") and not hasattr(msg, "tool_call_id"):
+                                        content = get_message_content(msg)
+                                        if content:
+                                            execution_state["final_response"] = content
+                                            span.set_attribute("gen_ai.response.0.content", content[:500])
+                                            break
+
+                # Capture final execution state before returning
+                final_executed_nodes = list(execution_state["executed_nodes"])  # Copy the list
+                final_node_count = len(final_executed_nodes)
+                final_message_count = execution_state["message_count"]
+                final_response = execution_state["final_response"]
+
+                span.set_status(Status(StatusCode.OK))
+
                 span.set_attributes(
                     ensure_no_none_values(
                         {
-                            SpanAttributes.AGENTOPS_SPAN_KIND: "operation",
-                            SpanAttributes.AGENTOPS_ENTITY_NAME: "Pregel.invoke",
-                            SpanAttributes.LLM_REQUEST_STREAMING: False,
-                            "langgraph.execution.mode": "invoke",
+                            "langgraph.graph.executed_nodes": json.dumps(final_executed_nodes),
+                            "langgraph.graph.node_execution_count": final_node_count,
+                            "langgraph.graph.message_count": final_message_count,
+                            "langgraph.graph.final_response": final_response,
+                            "langgraph.graph.status": "success",
                         }
                     )
                 )
 
-                try:
-                    input_data = args[0] if args else kwargs.get("input", {})
-                    messages = extract_messages_from_input(input_data)
-                    if messages:
-                        for i, msg in enumerate(messages[:3]):
-                            content = get_message_content(msg)
-                            role = get_message_role(msg)
-                            if content:
-                                span.set_attribute(f"gen_ai.prompt.{i}.content", content[:500])
-                                span.set_attribute(f"gen_ai.prompt.{i}.role", role)
-
-                    result = wrapped(*args, **kwargs)
-
-                    output_messages = extract_messages_from_output(result)
-                    if output_messages:
-                        last_msg = output_messages[-1]
-                        content = get_message_content(last_msg)
-                        if content:
-                            execution_state["final_response"] = content
-                            span.set_attribute("gen_ai.response.0.content", content[:500])
-
-                    span.set_status(Status(StatusCode.OK))
-                    graph_span.set_status(Status(StatusCode.OK))
-
-                    graph_span.set_attributes(
-                        ensure_no_none_values(
-                            {
-                                "langgraph.graph.executed_nodes": json.dumps(execution_state["executed_nodes"]),
-                                "langgraph.graph.node_execution_count": len(execution_state["executed_nodes"]),
-                                "langgraph.graph.message_count": execution_state["message_count"],
-                                "langgraph.graph.final_response": execution_state["final_response"],
-                                "langgraph.graph.status": "success",
-                            }
-                        )
-                    )
-
-                    return result
-                except Exception as e:
-                    span.record_exception(e)
-                    span.set_status(Status(StatusCode.ERROR, str(e)))
-                    graph_span.record_exception(e)
-                    graph_span.set_status(Status(StatusCode.ERROR, str(e)))
-                    raise
+                return result
+            except Exception as e:
+                span.record_exception(e)
+                span.set_status(Status(StatusCode.ERROR, str(e)))
+                raise
+            finally:
+                # Reset the context
+                self._current_graph_execution.reset(token)
 
     def _wrap_stream(self, wrapped: Callable, instance: Any, args: Tuple, kwargs: Dict) -> Any:
         if not self._tracer:
             return wrapped(*args, **kwargs)
 
         current_span = trace.get_current_span()
-        if current_span and current_span.name == "langgraph.graph.execution":
+        if current_span and current_span.name == "langgraph.workflow.execute":
             return wrapped(*args, **kwargs)
 
-        graph_span = self._tracer.start_span("langgraph.graph.execution", kind=SpanKind.INTERNAL)
-        graph_span.set_attributes(
+        span = self._tracer.start_span("langgraph.workflow.execute", kind=SpanKind.INTERNAL)
+        span.set_attributes(
             ensure_no_none_values(
                 {
                     SpanAttributes.AGENTOPS_SPAN_KIND: "workflow",
-                    WorkflowAttributes.WORKFLOW_TYPE: "langgraph_streaming",
-                    SpanAttributes.AGENTOPS_ENTITY_NAME: "LangGraph",
-                }
-            )
-        )
-
-        stream_span = self._tracer.start_span(
-            "langgraph.Pregel.stream", kind=SpanKind.INTERNAL, context=trace.set_span_in_context(graph_span)
-        )
-        stream_span.set_attributes(
-            ensure_no_none_values(
-                {
-                    SpanAttributes.AGENTOPS_SPAN_KIND: "operation",
-                    SpanAttributes.AGENTOPS_ENTITY_NAME: "Pregel.stream",
+                    WorkflowAttributes.WORKFLOW_TYPE: "langgraph_stream",
+                    SpanAttributes.AGENTOPS_ENTITY_NAME: "Workflow Stream",
                     SpanAttributes.LLM_REQUEST_STREAMING: True,
                     "langgraph.execution.mode": "stream",
                 }
@@ -245,7 +247,22 @@ class LanggraphInstrumentor(BaseInstrumentor):
 
         execution_state = {"executed_nodes": [], "message_count": 0, "chunk_count": 0, "final_response": None}
 
+        # Set the current execution state in context
+        token = self._current_graph_execution.set(execution_state)
+
         try:
+            # Extract input messages
+            input_data = args[0] if args else kwargs.get("input", {})
+            messages = extract_messages_from_input(input_data)
+            if messages:
+                execution_state["message_count"] = len(messages)
+                for i, msg in enumerate(messages[:3]):
+                    content = get_message_content(msg)
+                    role = get_message_role(msg)
+                    if content:
+                        span.set_attribute(f"gen_ai.prompt.{i}.content", content[:500])
+                        span.set_attribute(f"gen_ai.prompt.{i}.role", role)
+
             stream_gen = wrapped(*args, **kwargs)
 
             def stream_wrapper():
@@ -254,56 +271,78 @@ class LanggraphInstrumentor(BaseInstrumentor):
                         execution_state["chunk_count"] += 1
 
                         if isinstance(chunk, dict):
+                            # Debug: print chunk structure
+                            # print(f"DEBUG: Chunk keys: {list(chunk.keys())}")
+
                             for key in chunk:
-                                if key not in execution_state["executed_nodes"]:
+                                # Track node executions (excluding special keys)
+                                if (
+                                    key not in ["__start__", "__end__", "__interrupt__"]
+                                    and key not in execution_state["executed_nodes"]
+                                ):
                                     execution_state["executed_nodes"].append(key)
 
-                                if key == "messages" and isinstance(chunk[key], list):
-                                    execution_state["message_count"] += len(chunk[key])
-                                    if chunk[key]:
-                                        last_msg = chunk[key][-1]
-                                        content = get_message_content(last_msg)
+                                # Track messages in the chunk value
+                                chunk_value = chunk[key]
+                                if isinstance(chunk_value, dict):
+                                    # Check for messages in the chunk value
+                                    if "messages" in chunk_value:
+                                        msg_list = chunk_value["messages"]
+                                        if isinstance(msg_list, list):
+                                            execution_state["message_count"] += len(msg_list)
+                                            for msg in msg_list:
+                                                content = get_message_content(msg)
+                                                if content:
+                                                    execution_state["final_response"] = content
+                                elif key == "messages" and isinstance(chunk_value, list):
+                                    # Sometimes messages might be directly in the chunk
+                                    execution_state["message_count"] += len(chunk_value)
+                                    for msg in chunk_value:
+                                        content = get_message_content(msg)
                                         if content:
                                             execution_state["final_response"] = content
 
                         yield chunk
 
-                    stream_span.set_status(Status(StatusCode.OK))
-                    graph_span.set_status(Status(StatusCode.OK))
+                    # Capture final execution state before ending
+                    final_executed_nodes = list(execution_state["executed_nodes"])
+                    final_node_count = len(final_executed_nodes)
+                    final_message_count = execution_state["message_count"]
+                    final_chunk_count = execution_state["chunk_count"]
+                    final_response = execution_state["final_response"]
 
-                    graph_span.set_attributes(
+                    span.set_status(Status(StatusCode.OK))
+
+                    span.set_attributes(
                         ensure_no_none_values(
                             {
-                                "langgraph.graph.executed_nodes": json.dumps(execution_state["executed_nodes"]),
-                                "langgraph.graph.node_execution_count": len(execution_state["executed_nodes"]),
-                                "langgraph.graph.message_count": execution_state["message_count"],
-                                "langgraph.graph.total_chunks": execution_state["chunk_count"],
-                                "langgraph.graph.final_response": execution_state["final_response"],
+                                "langgraph.graph.executed_nodes": json.dumps(final_executed_nodes),
+                                "langgraph.graph.node_execution_count": final_node_count,
+                                "langgraph.graph.message_count": final_message_count,
+                                "langgraph.graph.total_chunks": final_chunk_count,
+                                "langgraph.graph.final_response": final_response,
                                 "langgraph.graph.status": "success",
                             }
                         )
                     )
 
                 except Exception as e:
-                    stream_span.record_exception(e)
-                    stream_span.set_status(Status(StatusCode.ERROR, str(e)))
-                    graph_span.record_exception(e)
-                    graph_span.set_status(Status(StatusCode.ERROR, str(e)))
+                    span.record_exception(e)
+                    span.set_status(Status(StatusCode.ERROR, str(e)))
                     raise
                 finally:
-                    stream_span.end()
-                    graph_span.end()
+                    span.end()
 
             return stream_wrapper()
 
         except Exception as e:
-            stream_span.record_exception(e)
-            stream_span.set_status(Status(StatusCode.ERROR, str(e)))
-            stream_span.end()
-            graph_span.record_exception(e)
-            graph_span.set_status(Status(StatusCode.ERROR, str(e)))
-            graph_span.end()
+            span.record_exception(e)
+            span.set_status(Status(StatusCode.ERROR, str(e)))
+            span.end()
             raise
+        finally:
+            # Reset the context
+            self._current_graph_execution.reset(token)
 
     def _wrap_add_node(self, wrapped: Callable, instance: Any, args: Tuple, kwargs: Dict) -> Any:
         if not self._tracer:
@@ -326,17 +365,21 @@ class LanggraphInstrumentor(BaseInstrumentor):
 
                 @wraps(original_func)
                 async def wrapped_node_async(state):
+                    # Track node execution in parent graph span
+                    self._track_node_execution(key)
+
                     # Check if this node contains an LLM call
                     is_llm_node = self._detect_llm_node(original_func)
 
                     if is_llm_node:
-                        with self._tracer.start_as_current_span(f"langgraph.llm.{key}", kind=SpanKind.CLIENT) as span:
+                        with self._tracer.start_as_current_span("langgraph.node.execute", kind=SpanKind.CLIENT) as span:
                             span.set_attributes(
                                 ensure_no_none_values(
                                     {
                                         SpanAttributes.AGENTOPS_SPAN_KIND: "llm",
-                                        SpanAttributes.AGENTOPS_ENTITY_NAME: key,
+                                        SpanAttributes.AGENTOPS_ENTITY_NAME: f"Node: {key}",
                                         SpanAttributes.LLM_SYSTEM: "langgraph",
+                                        "langgraph.node.name": key,
                                     }
                                 )
                             )
@@ -361,16 +404,19 @@ class LanggraphInstrumentor(BaseInstrumentor):
 
                 @wraps(original_func)
                 def wrapped_node_sync(state):
+                    # Track node execution in parent graph span
+                    self._track_node_execution(key)
+
                     # Check if this node contains an LLM call
                     is_llm_node = self._detect_llm_node(original_func)
 
                     if is_llm_node:
-                        with self._tracer.start_as_current_span(f"langgraph.llm.{key}", kind=SpanKind.CLIENT) as span:
+                        with self._tracer.start_as_current_span("langgraph.node.execute", kind=SpanKind.CLIENT) as span:
                             span.set_attributes(
                                 ensure_no_none_values(
                                     {
                                         SpanAttributes.AGENTOPS_SPAN_KIND: "llm",
-                                        SpanAttributes.AGENTOPS_ENTITY_NAME: key,
+                                        SpanAttributes.AGENTOPS_ENTITY_NAME: f"Node: {key}",
                                         SpanAttributes.LLM_SYSTEM: "langgraph",
                                     }
                                 )
@@ -407,6 +453,14 @@ class LanggraphInstrumentor(BaseInstrumentor):
         else:
             kwargs["action"] = wrapped_action
             return wrapped(*args, **kwargs)
+
+    def _track_node_execution(self, node_name: str) -> None:
+        """Track node execution in the active graph span."""
+        # Use context variable to track the current execution
+        if hasattr(self, "_current_graph_execution"):
+            execution_state = self._current_graph_execution.get()
+            if execution_state and node_name not in execution_state["executed_nodes"]:
+                execution_state["executed_nodes"].append(node_name)
 
     def _detect_llm_node(self, func: Callable) -> bool:
         """Detect if a node function contains LLM calls."""
@@ -464,6 +518,44 @@ class LanggraphInstrumentor(BaseInstrumentor):
                 output_messages = result["messages"]
                 if output_messages:
                     last_msg = output_messages[-1] if isinstance(output_messages, list) else output_messages
+
+                    # Extract model information from message if available
+                    if hasattr(last_msg, "response_metadata"):
+                        metadata = last_msg.response_metadata
+                        if isinstance(metadata, dict):
+                            if "model_name" in metadata:
+                                span.set_attribute(SpanAttributes.LLM_REQUEST_MODEL, metadata["model_name"])
+                                span.set_attribute(SpanAttributes.LLM_RESPONSE_MODEL, metadata["model_name"])
+                            elif "model" in metadata:
+                                span.set_attribute(SpanAttributes.LLM_REQUEST_MODEL, metadata["model"])
+                                span.set_attribute(SpanAttributes.LLM_RESPONSE_MODEL, metadata["model"])
+
+                            # Token usage
+                            if "token_usage" in metadata:
+                                usage = metadata["token_usage"]
+                                if isinstance(usage, dict):
+                                    if "prompt_tokens" in usage:
+                                        span.set_attribute(
+                                            SpanAttributes.LLM_USAGE_PROMPT_TOKENS, usage["prompt_tokens"]
+                                        )
+                                    if "completion_tokens" in usage:
+                                        span.set_attribute(
+                                            SpanAttributes.LLM_USAGE_COMPLETION_TOKENS, usage["completion_tokens"]
+                                        )
+                                    if "total_tokens" in usage:
+                                        span.set_attribute(SpanAttributes.LLM_USAGE_TOTAL_TOKENS, usage["total_tokens"])
+
+                            # Response ID
+                            if "id" in metadata and metadata["id"] is not None:
+                                span.set_attribute(SpanAttributes.LLM_RESPONSE_ID, metadata["id"])
+
+                            # Finish reason
+                            if "finish_reason" in metadata:
+                                span.set_attribute(
+                                    MessageAttributes.COMPLETION_FINISH_REASON.format(i=0), metadata["finish_reason"]
+                                )
+
+                    # Content
                     if hasattr(last_msg, "content"):
                         span.set_attribute(
                             MessageAttributes.COMPLETION_CONTENT.format(i=0), str(last_msg.content)[:1000]
@@ -483,6 +575,24 @@ class LanggraphInstrumentor(BaseInstrumentor):
                                     MessageAttributes.COMPLETION_TOOL_CALL_ARGUMENTS.format(i=0, j=j),
                                     json.dumps(tool_call.args)[:500],
                                 )
+                            if hasattr(tool_call, "id"):
+                                span.set_attribute(
+                                    MessageAttributes.COMPLETION_TOOL_CALL_ID.format(i=0, j=j), tool_call.id
+                                )
+
+                    # Additional attributes from message
+                    if hasattr(last_msg, "id") and last_msg.id is not None:
+                        span.set_attribute(SpanAttributes.LLM_RESPONSE_ID, last_msg.id)
+
+                    # Usage information might be on the message itself
+                    if hasattr(last_msg, "usage_metadata"):
+                        usage = last_msg.usage_metadata
+                        if hasattr(usage, "input_tokens"):
+                            span.set_attribute(SpanAttributes.LLM_USAGE_PROMPT_TOKENS, usage.input_tokens)
+                        if hasattr(usage, "output_tokens"):
+                            span.set_attribute(SpanAttributes.LLM_USAGE_COMPLETION_TOKENS, usage.output_tokens)
+                        if hasattr(usage, "total_tokens"):
+                            span.set_attribute(SpanAttributes.LLM_USAGE_TOTAL_TOKENS, usage.total_tokens)
         except Exception:
             # Don't fail the span if we can't extract info
             pass
