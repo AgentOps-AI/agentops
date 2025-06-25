@@ -916,21 +916,16 @@ class AgnoInstrumentor(CommonInstrumentor):
 
     def _initialize(self, **kwargs):
         """Perform custom initialization."""
-        logger.info("Agno instrumentation installed successfully")
-        # Schedule wrapping to happen after imports are complete
-        import threading
-
-        threading.Timer(0.1, self._delayed_wrap).start()
-
-    def _delayed_wrap(self):
-        """Perform wrapping after a delay to avoid circular imports."""
+        logger.info("Agno instrumentation: Beginning immediate instrumentation")
+        # Perform wrapping immediately instead of with a delay
         try:
             self._perform_wrapping()
+            logger.info("Agno instrumentation: Immediate instrumentation completed successfully")
         except Exception as e:
-            logger.error(f"Failed to perform delayed wrapping: {e}")
+            logger.error(f"Failed to perform immediate wrapping: {e}")
 
     def _custom_wrap(self, **kwargs):
-        """Skip custom wrapping during initialization - it will be done in _delayed_wrap."""
+        """Skip custom wrapping during initialization - it's done in _initialize."""
         pass
 
     def _perform_wrapping(self):
