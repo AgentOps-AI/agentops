@@ -1,0 +1,237 @@
+---
+title: LangGraph
+description: "Track and analyze your LangGraph workflows with AgentOps"
+---
+
+[LangGraph](https://github.com/langchain-ai/langgraph) is a framework for building stateful, multi-step applications with LLMs as graphs. AgentOps automatically instruments LangGraph to provide comprehensive observability into your graph-based agent workflows.
+
+## Core Concepts
+
+LangGraph enables you to build complex agentic workflows as graphs with:
+- **Nodes**: Individual steps in your workflow (agents, tools, functions)
+- **Edges**: Connections between nodes that define flow
+- **State**: Shared data that flows through the graph
+- **Conditional Edges**: Dynamic routing based on state or outputs
+- **Cycles**: Support for iterative workflows and feedback loops
+
+## Installation
+
+Install AgentOps and LangGraph along with LangChain dependencies:
+
+<CodeGroup>
+  ```bash pip
+  pip install agentops langgraph langchain-openai python-dotenv
+  ```
+  ```bash poetry
+  poetry add agentops langgraph langchain-openai python-dotenv
+  ```
+  ```bash uv
+  uv add agentops langgraph langchain-openai python-dotenv
+  ```
+</CodeGroup>
+
+## Setting Up API Keys
+
+You'll need API keys for AgentOps and your LLM provider:
+- **OPENAI_API_KEY**: From the [OpenAI Platform](https://platform.openai.com/api-keys)
+- **AGENTOPS_API_KEY**: From your [AgentOps Dashboard](https://app.agentops.ai/)
+
+Set these as environment variables or in a `.env` file.
+
+<CodeGroup>
+  ```bash Export to CLI
+  export OPENAI_API_KEY="your_openai_api_key_here"
+  export AGENTOPS_API_KEY="your_agentops_api_key_here"
+  ```
+  ```txt Set in .env file
+  OPENAI_API_KEY="your_openai_api_key_here"
+  AGENTOPS_API_KEY="your_agentops_api_key_here"
+  ```
+</CodeGroup>
+
+Then load them in your Python code:
+```python
+from dotenv import load_dotenv
+import os
+
+load_dotenv()
+
+AGENTOPS_API_KEY = os.getenv("AGENTOPS_API_KEY")
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
+```
+
+## Usage
+
+Initialize AgentOps at the beginning of your application to automatically track all LangGraph operations:
+
+```python
+import agentops
+from typing import Annotated, Literal, TypedDict
+from langgraph.graph import StateGraph, END
+from langgraph.graph.message import add_messages
+from langchain_openai import ChatOpenAI
+
+# Initialize AgentOps
+agentops.init()
+
+# Define your graph state
+class AgentState(TypedDict):
+    messages: Annotated[list, add_messages]
+
+# Create your LLM
+model = ChatOpenAI(temperature=0)
+
+# Define nodes
+def agent_node(state: AgentState):
+    messages = state["messages"]
+    response = model.invoke(messages)
+    return {"messages": [response]}
+
+# Build the graph
+workflow = StateGraph(AgentState)
+workflow.add_node("agent", agent_node)
+workflow.set_entry_point("agent")
+workflow.add_edge("agent", END)
+
+# Compile and run
+app = workflow.compile()
+result = app.invoke({"messages": [{"role": "user", "content": "Hello!"}]})
+```
+
+## What Gets Tracked
+
+AgentOps automatically captures:
+
+- **Graph Structure**: Nodes, edges, and entry points during compilation
+- **Execution Flow**: The path taken through your graph
+- **Node Executions**: Each node execution with inputs and outputs
+- **LLM Calls**: All language model interactions within nodes
+- **Tool Usage**: Any tools called within your graph
+- **State Changes**: How state evolves through the workflow
+- **Timing Information**: Duration of each node and total execution time
+
+## Advanced Example
+
+Here's a more complex example with conditional routing and tools:
+
+```python
+import agentops
+from typing import Annotated, Literal, TypedDict
+from langgraph.graph import StateGraph, END
+from langgraph.graph.message import add_messages
+from langchain_openai import ChatOpenAI
+from langchain_core.tools import tool
+
+# Initialize AgentOps
+agentops.init()
+
+# Define tools
+@tool
+def search(query: str) -> str:
+    """Search for information."""
+    return f"Search results for: {query}"
+
+@tool
+def calculate(expression: str) -> str:
+    """Evaluate a mathematical expression."""
+    try:
+        return str(eval(expression))
+    except:
+        return "Error in calculation"
+
+# Configure model with tools
+tools = [search, calculate]
+model = ChatOpenAI(temperature=0).bind_tools(tools)
+
+# Define state
+class AgentState(TypedDict):
+    messages: Annotated[list, add_messages]
+
+# Define conditional logic
+def should_continue(state: AgentState) -> Literal["tools", "end"]:
+    messages = state["messages"]
+    last_message = messages[-1]
+    
+    if hasattr(last_message, "tool_calls") and last_message.tool_calls:
+        return "tools"
+    return "end"
+
+# Define nodes
+def call_model(state: AgentState):
+    messages = state["messages"]
+    response = model.invoke(messages)
+    return {"messages": [response]}
+
+def call_tools(state: AgentState):
+    messages = state["messages"]
+    last_message = messages[-1]
+    
+    tool_responses = []
+    for tool_call in last_message.tool_calls:
+        # Execute the appropriate tool
+        if tool_call["name"] == "search":
+            result = search.invoke(tool_call["args"])
+        elif tool_call["name"] == "calculate":
+            result = calculate.invoke(tool_call["args"])
+        
+        tool_responses.append({
+            "role": "tool",
+            "content": result,
+            "tool_call_id": tool_call["id"]
+        })
+    
+    return {"messages": tool_responses}
+
+# Build the graph
+workflow = StateGraph(AgentState)
+workflow.add_node("agent", call_model)
+workflow.add_node("tools", call_tools)
+workflow.set_entry_point("agent")
+workflow.add_conditional_edges(
+    "agent",
+    should_continue,
+    {
+        "tools": "tools",
+        "end": END
+    }
+)
+workflow.add_edge("tools", "agent")
+
+# Compile and run
+app = workflow.compile()
+result = app.invoke({
+    "messages": [{"role": "user", "content": "Search for AI news and calculate 25*4"}]
+})
+```
+
+## Dashboard Insights
+
+In your AgentOps dashboard, you'll see:
+
+1. **Graph Visualization**: Visual representation of your compiled graph
+2. **Execution Trace**: Step-by-step flow through nodes
+3. **Node Metrics**: Performance data for each node
+4. **LLM Analytics**: Token usage and costs across all model calls
+5. **Tool Usage**: Which tools were called and their results
+6. **Error Tracking**: Any failures in node execution
+
+## Examples
+
+<CardGroup cols={2}>
+  <Card title="LangGraph Example" icon="notebook" href="/v2/examples/langgraph">
+    Complete example showing agent workflows with tools
+  </Card>
+</CardGroup>
+
+## Best Practices
+
+1. **Initialize Early**: Call `agentops.init()` before creating your graph
+2. **Use Descriptive Names**: Name your nodes clearly for better traces
+3. **Handle Errors**: Implement error handling in your nodes
+4. **Monitor State Size**: Large states can impact performance
+5. **Leverage Conditional Edges**: Use them for dynamic workflows
+
+<script type="module" src="/scripts/github_stars.js"></script>
+<script type="module" src="/scripts/scroll-img-fadein-animation.js"></script>
+<script type="module" src="/scripts/button_heartbeat_animation.js"></script>
+<script type="css" src="/styles/styles.css"></script>
