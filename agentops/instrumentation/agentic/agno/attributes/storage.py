@@ -6,7 +6,6 @@ from opentelemetry.util.types import AttributeValue
 
 from agentops.semconv.span_attributes import SpanAttributes
 from agentops.semconv.span_kinds import SpanKind as AgentOpsSpanKind
-from agentops.semconv.workflow import WorkflowAttributes
 from agentops.instrumentation.common.attributes import get_common_attributes
 
 
@@ -34,13 +33,13 @@ def get_storage_read_attributes(
 
     if args and len(args) > 0:
         workflow = args[0]
-        
+
         # Get workflow information
         if hasattr(workflow, "workflow_id") and workflow.workflow_id:
             attributes["storage.workflow_id"] = str(workflow.workflow_id)
         if hasattr(workflow, "session_id") and workflow.session_id:
             attributes["storage.session_id"] = str(workflow.session_id)
-        
+
         # Get storage type
         if hasattr(workflow, "storage") and workflow.storage:
             storage_type = type(workflow.storage).__name__
@@ -59,11 +58,11 @@ def get_storage_read_attributes(
         # Cache hit
         attributes["storage.cache_hit"] = True
         attributes["storage.result"] = "hit"
-        
+
         # Get data type and size
         data_type = type(return_value).__name__
         attributes["storage.data_type"] = data_type
-        
+
         # For dict/list, show structure
         if isinstance(return_value, dict):
             attributes["storage.data_keys"] = json.dumps(list(return_value.keys()))
@@ -106,13 +105,13 @@ def get_storage_write_attributes(
 
     if args and len(args) > 0:
         workflow = args[0]
-        
+
         # Get workflow information
         if hasattr(workflow, "workflow_id") and workflow.workflow_id:
             attributes["storage.workflow_id"] = str(workflow.workflow_id)
         if hasattr(workflow, "session_id") and workflow.session_id:
             attributes["storage.session_id"] = str(workflow.session_id)
-        
+
         # Get storage type
         if hasattr(workflow, "storage") and workflow.storage:
             storage_type = type(workflow.storage).__name__
@@ -125,20 +124,20 @@ def get_storage_write_attributes(
             attributes["storage.cache_size"] = len(cache_keys)
             if cache_keys:
                 attributes["storage.cache_keys"] = json.dumps(cache_keys)
-                
+
             # Try to identify what was written (the newest/changed data)
             # This is a heuristic - in practice you might need to track state changes
             if cache_keys:
                 # Show the last key as likely the one just written
                 last_key = cache_keys[-1]
                 attributes["storage.written_key"] = last_key
-                
+
                 # Get value preview
                 value = workflow.session_state.get(last_key)
                 if value is not None:
                     value_type = type(value).__name__
                     attributes["storage.written_value_type"] = value_type
-                    
+
                     if isinstance(value, str):
                         if len(value) > 100:
                             attributes["storage.written_value_preview"] = value[:100] + "..."
@@ -156,4 +155,4 @@ def get_storage_write_attributes(
         # Most storage writes return None on success, so this is normal
         attributes["storage.write_success"] = True
 
-    return attributes 
+    return attributes
