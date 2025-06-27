@@ -1,0 +1,13 @@
+[project]
+name = "agentops-mcp"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "dotenv>=0.9.9",
+    "fastmcp>=2.8.1",
+    "mcp>=1.9.4",
+    "requests>=2.32.4",
+    "ruff>=0.11.13",
+]

@@ -1,0 +1,57 @@
+# Version control
+.git
+.gitignore
+
+# Documentation (but keep README.md for build)
+*.md
+!README.md
+docs/
+LICENSE
+
+# Development files
+.env
+.env.*
+*.log
+*.pyc
+__pycache__/
+.pytest_cache/
+.coverage
+.mypy_cache/
+.ruff_cache/
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Build artifacts
+build/
+dist/
+*.egg-info/
+.eggs/
+
+# Testing
+tests/
+test_*.py
+*_test.py
+
+# CI/CD
+.github/
+Dockerfile
+docker-compose*.yml
+
+# Example configurations
+*example*
+*sample*
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+*.bak
