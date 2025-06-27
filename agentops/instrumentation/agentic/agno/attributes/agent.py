@@ -1,10 +1,10 @@
 """Agno Agent run attributes handler."""
 
 from typing import Optional, Tuple, Dict, Any
-
 from agentops.instrumentation.common.attributes import AttributeMap
-from agentops.semconv import SpanAttributes, WorkflowAttributes, AgentAttributes, ToolAttributes
+from agentops.semconv import SpanAttributes, AgentAttributes, ToolAttributes
 from agentops.semconv.span_kinds import SpanKind as AgentOpsSpanKind
+import json
 
 
 def get_agent_run_attributes(
@@ -30,16 +30,15 @@ def get_agent_run_attributes(
     # Base attributes
     attributes[SpanAttributes.AGENTOPS_SPAN_KIND] = AgentOpsSpanKind.AGENT
     attributes[SpanAttributes.LLM_SYSTEM] = "agno"
-    attributes[SpanAttributes.LLM_REQUEST_STREAMING] = "False"
 
-    # AgentOps entity attributes (matching CrewAI pattern)
+    # AgentOps entity attributes
     attributes[SpanAttributes.AGENTOPS_ENTITY_NAME] = "agent"
 
     # Extract agent information from args[0] (self)
     if args and len(args) >= 1:
         agent = args[0]
 
-        # Core agent identification - set directly at root level like Google ADK
+        # Core agent identification - set directly at root level
         if hasattr(agent, "agent_id") and agent.agent_id:
             agent_id = str(agent.agent_id)
             attributes[AgentAttributes.AGENT_ID] = agent_id
@@ -66,9 +65,6 @@ def get_agent_run_attributes(
             model = agent.model
             if hasattr(model, "id"):
                 model_id = str(model.id)
-                # attributes[AgentAttributes.AGENT_MODELS] = model_id
-                # attributes["agent.model"] = model_id  
-                # Set both request and response model to the same model ID
                 attributes[SpanAttributes.LLM_REQUEST_MODEL] = model_id
                 attributes[SpanAttributes.LLM_RESPONSE_MODEL] = model_id
 
@@ -78,32 +74,26 @@ def get_agent_run_attributes(
 
         # Agent configuration details - set directly at root level
         if hasattr(agent, "description") and agent.description:
-            attributes["agent.description"] = str(agent.description)  # No limit
-
+            attributes["agent.description"] = str(agent.description)
         if hasattr(agent, "goal") and agent.goal:
-            attributes["agent.goal"] = str(agent.goal)  # No limit
+            attributes["agent.goal"] = str(agent.goal)
 
         if hasattr(agent, "instructions") and agent.instructions:
             if isinstance(agent.instructions, list):
-                attributes["agent.instruction"] = " | ".join(str(i) for i in agent.instructions)  # All instructions
+                attributes["agent.instruction"] = " | ".join(str(i) for i in agent.instructions)
             else:
-                attributes["agent.instruction"] = str(agent.instructions)  # No limit
-
+                attributes["agent.instruction"] = str(agent.instructions)
         if hasattr(agent, "expected_output") and agent.expected_output:
-            attributes["agent.expected_output"] = str(agent.expected_output)  # No limit
+            attributes["agent.expected_output"] = str(agent.expected_output)
 
         if hasattr(agent, "markdown"):
             attributes["agent.markdown"] = str(agent.markdown)
 
         if hasattr(agent, "reasoning"):
-            attributes["agent.reasoning"] = str(agent.reasoning)
+            attributes[AgentAttributes.AGENT_REASONING] = str(agent.reasoning)
 
         if hasattr(agent, "stream"):
             attributes["agent.stream"] = str(agent.stream)
-
-        # if hasattr(agent, "retries"):
-        #     attributes["agent.max_retry_limit"] = str(agent.retries)
-
 
         if hasattr(agent, "show_tool_calls"):
             attributes["agent.show_tool_calls"] = str(agent.show_tool_calls)
@@ -111,31 +101,62 @@ def get_agent_run_attributes(
         if hasattr(agent, "tool_call_limit") and agent.tool_call_limit:
             attributes["agent.tool_call_limit"] = str(agent.tool_call_limit)
 
-        # Tools information - match Google ADK pattern
+        # Tools information
         if hasattr(agent, "tools") and agent.tools:
             # Set tool count based on actual number of tools
             attributes["agent.tools_count"] = str(len(agent.tools))
-            
-            for i, tool in enumerate(agent.tools):
+
+            # Collect all tool names for the AGENT_TOOLS attribute
+            tool_names = []
+
+            if len(agent.tools) == 1:
+                # Single tool - set directly at root level
+                tool = agent.tools[0]
+                tool_name = None
                 if hasattr(tool, "name"):
                     tool_name = str(tool.name)
-                    # Set individual tool attributes like Google ADK
-                    attributes[f"agent.tool.{i}.{ToolAttributes.TOOL_NAME}"] = tool_name
+                    attributes[ToolAttributes.TOOL_NAME] = tool_name
                 elif hasattr(tool, "__name__"):
                     tool_name = str(tool.__name__)
-                    attributes[f"agent.tool.{i}.{ToolAttributes.TOOL_NAME}"] = tool_name
+                    attributes[ToolAttributes.TOOL_NAME] = tool_name
                 elif callable(tool):
                     tool_name = getattr(tool, "__name__", "unknown_tool")
-                    attributes[f"agent.tool.{i}.{ToolAttributes.TOOL_NAME}"] = tool_name
+                    attributes[ToolAttributes.TOOL_NAME] = tool_name
 
-                if hasattr(tool, "description"):
-                    description = str(tool.description)
-                    attributes[f"agent.tool.{i}.{ToolAttributes.TOOL_DESCRIPTION}"] = description
+                if tool_name:
+                    tool_names.append(tool_name)
 
-        # Memory and knowledge information
-        # if hasattr(agent, "memory") and agent.memory:
-        #     memory_type = type(agent.memory).__name__
-        #     attributes["agent.memory_type"] = memory_type
+                if hasattr(tool, "description") and tool.description:
+                    attributes[ToolAttributes.TOOL_DESCRIPTION] = str(tool.description)
+                elif hasattr(tool, "__doc__") and tool.__doc__:
+                    # Fallback to docstring if no description attribute
+                    attributes[ToolAttributes.TOOL_DESCRIPTION] = str(tool.__doc__).strip()
+            else:
+                # Multiple tools - use indexed format
+                for i, tool in enumerate(agent.tools):
+                    tool_name = None
+                    if hasattr(tool, "name"):
+                        tool_name = str(tool.name)
+                        attributes[f"tool.{i}.name"] = tool_name
+                    elif hasattr(tool, "__name__"):
+                        tool_name = str(tool.__name__)
+                        attributes[f"tool.{i}.name"] = tool_name
+                    elif callable(tool):
+                        tool_name = getattr(tool, "__name__", "unknown_tool")
+                        attributes[f"tool.{i}.name"] = tool_name
+
+                    if tool_name:
+                        tool_names.append(tool_name)
+
+                    if hasattr(tool, "description") and tool.description:
+                        attributes[f"tool.{i}.description"] = str(tool.description)
+                    elif hasattr(tool, "__doc__") and tool.__doc__:
+                        # Fallback to docstring if no description attribute
+                        attributes[f"tool.{i}.description"] = str(tool.__doc__).strip()
+
+            # Set the AGENT_TOOLS attribute with all tool names
+            if tool_names:
+                attributes[AgentAttributes.AGENT_TOOLS] = json.dumps(tool_names)
 
         if hasattr(agent, "knowledge") and agent.knowledge:
             knowledge_type = type(agent.knowledge).__name__
@@ -154,7 +175,7 @@ def get_agent_run_attributes(
             user_id = str(agent.user_id)
             attributes["agent.user_id"] = user_id
 
-        # Output key if present (like Google ADK)
+        # Output key if present
         if hasattr(agent, "output_key") and agent.output_key:
             attributes["agent.output_key"] = str(agent.output_key)
 
@@ -163,9 +184,8 @@ def get_agent_run_attributes(
         message = args[1]  # The message argument
         if message:
             message_str = str(message)
-            attributes[WorkflowAttributes.WORKFLOW_INPUT] = message_str
             attributes["agent.input"] = message_str
-            # AgentOps entity input (matching CrewAI pattern)
+            # AgentOps entity input
             attributes[SpanAttributes.AGENTOPS_ENTITY_INPUT] = message_str
 
     # Extract kwargs information
@@ -187,7 +207,6 @@ def get_agent_run_attributes(
 
         if hasattr(return_value, "content") and return_value.content:
             content = str(return_value.content)
-            attributes[WorkflowAttributes.WORKFLOW_OUTPUT] = content
             attributes["agent.output"] = content
 
         if hasattr(return_value, "event") and return_value.event:
@@ -198,30 +217,26 @@ def get_agent_run_attributes(
         if hasattr(return_value, "tools") and return_value.tools:
             # Track the number of tool executions
             attributes["agent.tool_executions_count"] = str(len(return_value.tools))
-            
+
             for i, tool_exec in enumerate(return_value.tools):  # No limit - show all tools
                 if hasattr(tool_exec, "tool_name") and tool_exec.tool_name:
-                    attributes[f"agent.tool_execution.{i}.name"] = str(tool_exec.tool_name)
+                    attributes[f"tool.{i}.name"] = str(tool_exec.tool_name)
 
                 if hasattr(tool_exec, "tool_args") and tool_exec.tool_args:
                     try:
-                        import json
                         args_str = json.dumps(tool_exec.tool_args)
-                        attributes[f"agent.tool_execution.{i}.parameters"] = args_str
+                        attributes[f"tool.{i}.parameters"] = args_str
                     except:
-                        attributes[f"agent.tool_execution.{i}.parameters"] = str(tool_exec.tool_args)
+                        attributes[f"tool.{i}.parameters"] = str(tool_exec.tool_args)
 
                 if hasattr(tool_exec, "result") and tool_exec.result:
                     result_str = str(tool_exec.result)
-                    attributes[f"agent.tool_execution.{i}.result"] = result_str
+                    attributes[f"tool.{i}.result"] = result_str
 
                 if hasattr(tool_exec, "tool_call_error") and tool_exec.tool_call_error:
-                    attributes[f"agent.tool_execution.{i}.error"] = str(tool_exec.tool_call_error)
+                    attributes[f"tool.{i}.error"] = str(tool_exec.tool_call_error)
 
-                attributes[f"agent.tool_execution.{i}.status"] = "success"  # Default to success
-
-        # Workflow type
-        attributes[WorkflowAttributes.WORKFLOW_TYPE] = "agent_run"
+                attributes[f"tool.{i}.status"] = "success"  # Default to success
 
     # Add display name for better UI visualization
     if agent_name:
@@ -230,6 +245,6 @@ def get_agent_run_attributes(
         if parent_team:
             attributes["agent.display_name"] = f"{agent_name} (Agent under {parent_team})"
         else:
-            attributes["agent.display_name"] = f"{agent_name} (Agent)"
+            attributes["agent.display_name"] = f"{agent_name}"
 
     return attributes

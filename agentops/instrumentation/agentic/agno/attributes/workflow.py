@@ -2,6 +2,7 @@
 
 from typing import Any, Dict, Optional, Tuple
 from opentelemetry.util.types import AttributeValue
+import json
 
 from agentops.semconv.instrumentation import InstrumentationAttributes
 from agentops.semconv.span_kinds import SpanKind as AgentOpsSpanKind
@@ -194,5 +195,60 @@ def get_workflow_session_attributes(
 
     # Set span kind - AgentOpsSpanKind.WORKFLOW is already a string
     attributes[InstrumentationAttributes.INSTRUMENTATION_TYPE] = AgentOpsSpanKind.WORKFLOW
+
+    return attributes
+
+
+def get_workflow_cache_attributes(
+    args: Tuple[Any, ...] = (),
+    kwargs: Optional[Dict[str, Any]] = None,
+    return_value: Optional[Any] = None,
+) -> Dict[str, AttributeValue]:
+    """Extract attributes from workflow cache operations.
+
+    Args:
+        args: Positional arguments passed to the cache method
+        kwargs: Keyword arguments passed to the cache method
+        return_value: Return value from the cache method
+
+    Returns:
+        Dictionary of OpenTelemetry attributes for cache operations
+    """
+    attributes = get_common_attributes()
+    kwargs = kwargs or {}
+
+    if args and len(args) > 0:
+        workflow = args[0]
+
+        # Get workflow information
+        if hasattr(workflow, "workflow_id") and workflow.workflow_id:
+            attributes["cache.workflow_id"] = str(workflow.workflow_id)
+        if hasattr(workflow, "session_id") and workflow.session_id:
+            attributes["cache.session_id"] = str(workflow.session_id)
+
+        # Get cache state
+        if hasattr(workflow, "session_state") and isinstance(workflow.session_state, dict):
+            attributes["cache.size"] = len(workflow.session_state)
+            attributes["cache.keys"] = json.dumps(list(workflow.session_state.keys()))
+
+    # Determine cache operation type and result
+    if len(args) > 1:
+        cache_key = str(args[1])
+        attributes["cache.key"] = cache_key
+
+    if return_value is not None:
+        attributes["cache.hit"] = True
+        attributes["cache.result"] = "hit"
+
+        # Add value info
+        if isinstance(return_value, str):
+            attributes["cache.value_size"] = len(return_value)
+            if len(return_value) <= 100:
+                attributes["cache.value"] = return_value
+            else:
+                attributes["cache.value_preview"] = return_value[:100] + "..."
+    else:
+        attributes["cache.hit"] = False
+        attributes["cache.result"] = "miss"
 
     return attributes
