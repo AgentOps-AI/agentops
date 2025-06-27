@@ -3,16 +3,6 @@
 This module provides instrumentation for the Agno Agent library, implementing OpenTelemetry
 instrumentation for agent workflows and LLM model calls.
 
-We focus on instrumenting the following key endpoints:
-- Agent.run/arun - Main agent workflow execution (sync/async)
-- Team._run/_arun - Team workflow execution (sync/async)
-- Team._run_stream/_arun_stream - Team streaming workflow execution (sync/async)
-- FunctionCall.execute/aexecute - Tool execution when agents call tools (sync/async)
-- Agent._run_tool/_arun_tool - Agent internal tool execution (sync/async)
-- Agent._set_session_metrics - Session metrics capture for token usage and timing
-- Workflow.run_workflow/arun_workflow - Workflow execution (sync/async)
-- Workflow session management methods - Session lifecycle operations
-
 This provides clean visibility into agent workflows and actual tool usage with proper
 parent-child span relationships.
 """
@@ -22,6 +12,7 @@ from opentelemetry import trace, context as otel_context
 from opentelemetry.trace import Status, StatusCode
 from opentelemetry.metrics import Meter
 import threading
+import json
 
 from agentops.logging import logger
 from agentops.instrumentation.common import (
@@ -32,13 +23,15 @@ from agentops.instrumentation.common import (
 from agentops.instrumentation.common.wrappers import WrapConfig
 
 # Import attribute handlers
-from agentops.instrumentation.agentic.agno.attributes.agent import get_agent_run_attributes
-from agentops.instrumentation.agentic.agno.attributes.team import get_team_run_attributes
-from agentops.instrumentation.agentic.agno.attributes.tool import get_tool_execution_attributes
-from agentops.instrumentation.agentic.agno.attributes.metrics import get_metrics_attributes
-from agentops.instrumentation.agentic.agno.attributes.workflow import (
+from agentops.instrumentation.agentic.agno.attributes import (
+    get_agent_run_attributes,
+    get_metrics_attributes,
+    get_team_run_attributes,
+    get_tool_execution_attributes,
     get_workflow_run_attributes,
     get_workflow_session_attributes,
+    get_storage_read_attributes,
+    get_storage_write_attributes,
 )
 
 
@@ -130,12 +123,16 @@ def create_streaming_workflow_wrapper(tracer, streaming_context_manager):
         workflow_id = getattr(instance, "workflow_id", None) or getattr(instance, "id", None) or id(instance)
         workflow_id = str(workflow_id)
 
+        # Get workflow name for span naming
+        workflow_name = getattr(instance, "name", None) or type(instance).__name__
+        span_name = f"{workflow_name}.agno.workflow.run.workflow" if workflow_name else "agno.workflow.run.workflow"
+
         # Check if streaming is enabled
         is_streaming = kwargs.get("stream", getattr(instance, "stream", False))
 
         # For streaming, manually manage span lifecycle
         if is_streaming:
-            span = tracer.start_span("agno.workflow.run.workflow")
+            span = tracer.start_span(span_name)
 
             try:
                 # Set workflow attributes
@@ -176,7 +173,7 @@ def create_streaming_workflow_wrapper(tracer, streaming_context_manager):
                 raise
         else:
             # For non-streaming, use normal context manager
-            with tracer.start_as_current_span("agno.workflow.run.workflow") as span:
+            with tracer.start_as_current_span(span_name) as span:
                 try:
                     # Set workflow attributes
                     attributes = get_workflow_run_attributes(args=(instance,) + args, kwargs=kwargs)
@@ -213,12 +210,16 @@ def create_streaming_workflow_async_wrapper(tracer, streaming_context_manager):
         workflow_id = getattr(instance, "workflow_id", None) or getattr(instance, "id", None) or id(instance)
         workflow_id = str(workflow_id)
 
+        # Get workflow name for span naming
+        workflow_name = getattr(instance, "name", None) or type(instance).__name__
+        span_name = f"{workflow_name}.agno.workflow.run.workflow" if workflow_name else "agno.workflow.run.workflow"
+
         # Check if streaming is enabled
         is_streaming = kwargs.get("stream", getattr(instance, "stream", False))
 
         # For streaming, manually manage span lifecycle
         if is_streaming:
-            span = tracer.start_span("agno.workflow.run.workflow")
+            span = tracer.start_span(span_name)
 
             try:
                 # Set workflow attributes
@@ -259,7 +260,7 @@ def create_streaming_workflow_async_wrapper(tracer, streaming_context_manager):
                 raise
         else:
             # For non-streaming, use normal context manager
-            with tracer.start_as_current_span("agno.workflow.run.workflow") as span:
+            with tracer.start_as_current_span(span_name) as span:
                 try:
                     # Set workflow attributes
                     attributes = get_workflow_run_attributes(args=(instance,) + args, kwargs=kwargs)
@@ -299,12 +300,16 @@ def create_streaming_agent_wrapper(tracer, streaming_context_manager):
         # Get session ID for context mapping
         session_id = getattr(instance, "session_id", None)
 
+        # Get agent name for span naming
+        agent_name = getattr(instance, "name", None)
+        span_name = f"{agent_name}.agno.agent.run.agent" if agent_name else "agno.agent.run.agent"
+
         # Check if streaming is enabled
         is_streaming = kwargs.get("stream", getattr(instance, "stream", False))
 
         # For streaming, manually manage span lifecycle
         if is_streaming:
-            span = tracer.start_span("agno.agent.run.agent")
+            span = tracer.start_span(span_name)
 
             try:
                 # Set agent attributes
@@ -354,7 +359,7 @@ def create_streaming_agent_wrapper(tracer, streaming_context_manager):
                 raise
         else:
             # For non-streaming, use normal context manager
-            with tracer.start_as_current_span("agno.agent.run.agent") as span:
+            with tracer.start_as_current_span(span_name) as span:
                 try:
                     # Set agent attributes
                     attributes = get_agent_run_attributes(args=(instance,) + args, kwargs=kwargs)
@@ -394,12 +399,16 @@ def create_streaming_agent_async_wrapper(tracer, streaming_context_manager):
         # Get session ID for context mapping
         session_id = getattr(instance, "session_id", None)
 
+        # Get agent name for span naming
+        agent_name = getattr(instance, "name", None)
+        span_name = f"{agent_name}.agno.agent.run.agent" if agent_name else "agno.agent.run.agent"
+
         # Check if streaming is enabled
         is_streaming = kwargs.get("stream", getattr(instance, "stream", False))
 
         # For streaming, manually manage span lifecycle
         if is_streaming:
-            span = tracer.start_span("agno.agent.run.agent")
+            span = tracer.start_span(span_name)
 
             try:
                 # Set agent attributes
@@ -449,7 +458,7 @@ def create_streaming_agent_async_wrapper(tracer, streaming_context_manager):
                 raise
         else:
             # For non-streaming, use normal context manager
-            with tracer.start_as_current_span("agno.agent.run.agent") as span:
+            with tracer.start_as_current_span(span_name) as span:
                 try:
                     # Set agent attributes
                     attributes = get_agent_run_attributes(args=(instance,) + args, kwargs=kwargs)
@@ -620,6 +629,10 @@ def create_team_internal_wrapper(tracer, streaming_context_manager):
         team_id = getattr(instance, "team_id", None) or getattr(instance, "id", None) or id(instance)
         team_id = str(team_id)
 
+        # Get team name for span naming
+        team_name = getattr(instance, "name", None)
+        span_name = f"{team_name}.agno.team.run.workflow" if team_name else "agno.team.run.workflow"
+
         # Check if we already have a team context (from print_response)
         existing_context = streaming_context_manager.get_context(team_id)
 
@@ -630,7 +643,7 @@ def create_team_internal_wrapper(tracer, streaming_context_manager):
             # Execute within the existing team context
             context_token = otel_context.attach(parent_context)
             try:
-                with tracer.start_as_current_span("agno.team.run.workflow") as span:
+                with tracer.start_as_current_span(span_name) as span:
                     try:
                         # Set workflow attributes
                         attributes = get_team_run_attributes(args=(instance,) + args, kwargs=kwargs)
@@ -656,7 +669,7 @@ def create_team_internal_wrapper(tracer, streaming_context_manager):
                 otel_context.detach(context_token)
         else:
             # Direct call to _run, create new team span
-            with tracer.start_as_current_span("agno.team.run.workflow") as span:
+            with tracer.start_as_current_span(span_name) as span:
                 try:
                     # Set workflow attributes
                     attributes = get_team_run_attributes(args=(instance,) + args, kwargs=kwargs)
@@ -685,6 +698,10 @@ def create_team_internal_async_wrapper(tracer, streaming_context_manager):
         team_id = getattr(instance, "team_id", None) or getattr(instance, "id", None) or id(instance)
         team_id = str(team_id)
 
+        # Get team name for span naming
+        team_name = getattr(instance, "name", None)
+        span_name = f"{team_name}.agno.team.run.workflow" if team_name else "agno.team.run.workflow"
+
         # Check if we already have a team context (from print_response)
         existing_context = streaming_context_manager.get_context(team_id)
 
@@ -695,7 +712,7 @@ def create_team_internal_async_wrapper(tracer, streaming_context_manager):
             # Execute within the existing team context
             context_token = otel_context.attach(parent_context)
             try:
-                with tracer.start_as_current_span("agno.team.run.workflow") as span:
+                with tracer.start_as_current_span(span_name) as span:
                     try:
                         # Set workflow attributes
                         attributes = get_team_run_attributes(args=(instance,) + args, kwargs=kwargs)
@@ -721,7 +738,7 @@ def create_team_internal_async_wrapper(tracer, streaming_context_manager):
                 otel_context.detach(context_token)
         else:
             # Direct call to _arun, create new team span
-            with tracer.start_as_current_span("agno.team.run.workflow") as span:
+            with tracer.start_as_current_span(span_name) as span:
                 try:
                     # Set workflow attributes
                     attributes = get_team_run_attributes(args=(instance,) + args, kwargs=kwargs)
@@ -753,11 +770,15 @@ def create_team_wrapper(tracer, streaming_context_manager):
         # Check if streaming is enabled
         is_streaming = kwargs.get("stream", getattr(instance, "stream", False))
 
+        # Get team name for span naming
+        team_name = getattr(instance, "name", None)
+        base_span_name = f"{team_name}.agno.team.run.workflow" if team_name else "agno.team.run.workflow"
+
         # For print_response, we need to wrap the internal _run method instead
         # because print_response returns immediately
         if wrapped.__name__ == "print_response":
             # Create team span but don't manage it here
-            span = tracer.start_span("agno.team.run.agent")
+            span = tracer.start_span(base_span_name)
 
             try:
                 # Set team attributes
@@ -782,7 +803,7 @@ def create_team_wrapper(tracer, streaming_context_manager):
                 raise
         else:
             # For run/arun methods, use standard span management
-            span = tracer.start_span("agno.team.run.agent")
+            span = tracer.start_span(base_span_name)
 
             try:
                 # Set team attributes
@@ -832,8 +853,12 @@ def create_team_async_wrapper(tracer, streaming_context_manager):
         # Check if streaming is enabled
         is_streaming = kwargs.get("stream", getattr(instance, "stream", False))
 
+        # Get team name for span naming
+        team_name = getattr(instance, "name", None)
+        span_name = f"{team_name}.agno.team.run.workflow" if team_name else "agno.team.run.workflow"
+
         # Create team span
-        span = tracer.start_span("agno.team.run.agent")
+        span = tracer.start_span(span_name)
 
         try:
             # Set team attributes
@@ -865,6 +890,233 @@ def create_team_async_wrapper(tracer, streaming_context_manager):
             span.end()
             streaming_context_manager.remove_context(team_id)
             raise
+
+    return wrapper
+
+
+def create_storage_read_wrapper(tracer, streaming_context_manager):
+    """Create a wrapper for storage read operations with cache-aware span naming."""
+
+    def wrapper(wrapped, instance, args, kwargs):
+        # Start with a basic span name
+        span_name = "agno.workflow.storage.read"
+
+        with tracer.start_as_current_span(span_name) as span:
+            try:
+                # Set flag to indicate we're in a storage operation
+                SessionStateProxy._set_storage_operation(True)
+
+                # Set initial attributes
+                attributes = get_storage_read_attributes(args=(instance,) + args, kwargs=kwargs)
+                for key, value in attributes.items():
+                    span.set_attribute(key, value)
+
+                # Execute the original function
+                result = wrapped(*args, **kwargs)
+
+                # Set result attributes including cache hit/miss
+                result_attributes = get_storage_read_attributes(
+                    args=(instance,) + args, kwargs=kwargs, return_value=result
+                )
+                for key, value in result_attributes.items():
+                    if key not in attributes:  # Avoid duplicates
+                        span.set_attribute(key, value)
+
+                # Update span name based on result and cache state
+                if hasattr(instance, "session_state") and isinstance(instance.session_state, dict):
+                    cache_size = len(instance.session_state)
+                    if result is not None:
+                        span.update_name(f"Storage.Read.Hit[cache:{cache_size}]")
+                    else:
+                        span.update_name(f"Storage.Read.Miss[cache:{cache_size}]")
+                else:
+                    # No cache info available
+                    if result is not None:
+                        span.update_name("Storage.Read.Hit")
+                    else:
+                        span.update_name("Storage.Read.Miss")
+
+                span.set_status(Status(StatusCode.OK))
+                return result
+
+            except Exception as e:
+                span.set_status(Status(StatusCode.ERROR, str(e)))
+                span.record_exception(e)
+                raise
+            finally:
+                # Clear the flag when done
+                SessionStateProxy._set_storage_operation(False)
+
+    return wrapper
+
+
+def create_storage_write_wrapper(tracer, streaming_context_manager):
+    """Create a wrapper for storage write operations with descriptive span naming."""
+
+    def wrapper(wrapped, instance, args, kwargs):
+        # Start with a basic span name
+        span_name = "agno.workflow.storage.write"
+
+        with tracer.start_as_current_span(span_name) as span:
+            try:
+                # Set flag to indicate we're in a storage operation
+                SessionStateProxy._set_storage_operation(True)
+
+                # Set initial attributes
+                attributes = get_storage_write_attributes(args=(instance,) + args, kwargs=kwargs)
+                for key, value in attributes.items():
+                    span.set_attribute(key, value)
+
+                # Execute the original function
+                result = wrapped(*args, **kwargs)
+
+                # Set result attributes
+                result_attributes = get_storage_write_attributes(
+                    args=(instance,) + args, kwargs=kwargs, return_value=result
+                )
+                for key, value in result_attributes.items():
+                    if key not in attributes:  # Avoid duplicates
+                        span.set_attribute(key, value)
+
+                # Update span name to show cache state after write
+                if hasattr(instance, "session_state") and isinstance(instance.session_state, dict):
+                    cache_size = len(instance.session_state)
+                    span.update_name(f"Storage.Write[cache:{cache_size}]")
+                else:
+                    span.update_name("Storage.Write")
+
+                span.set_status(Status(StatusCode.OK))
+                return result
+
+            except Exception as e:
+                span.set_status(Status(StatusCode.ERROR, str(e)))
+                span.record_exception(e)
+                raise
+            finally:
+                # Clear the flag when done
+                SessionStateProxy._set_storage_operation(False)
+
+    return wrapper
+
+
+class SessionStateProxy(dict):
+    """Proxy class for session_state that instruments cache operations."""
+
+    # Thread-local storage to track if we're in a storage operation
+    _thread_local = threading.local()
+
+    def __init__(self, original_dict, workflow, tracer):
+        super().__init__(original_dict)
+        self._workflow = workflow
+        self._tracer = tracer
+
+    @classmethod
+    def _in_storage_operation(cls):
+        """Check if we're currently in a storage operation."""
+        return getattr(cls._thread_local, "in_storage_operation", False)
+
+    @classmethod
+    def _set_storage_operation(cls, value):
+        """Set whether we're in a storage operation."""
+        cls._thread_local.in_storage_operation = value
+
+    def get(self, key, default=None):
+        """Instrumented get method for cache checking."""
+        # Check if we're already in a storage operation to avoid nested spans
+        if self._in_storage_operation():
+            # We're inside a storage operation, skip instrumentation
+            return super().get(key, default)
+
+        span_name = "Cache.Check"
+
+        with self._tracer.start_as_current_span(span_name) as span:
+            # Set cache attributes
+            span.set_attribute("cache.key", str(key))
+            span.set_attribute("cache.size", len(self))
+            span.set_attribute("cache.keys", json.dumps(list(self.keys())))
+
+            # Get workflow info
+            if hasattr(self._workflow, "workflow_id") and self._workflow.workflow_id:
+                span.set_attribute("cache.workflow_id", str(self._workflow.workflow_id))
+            if hasattr(self._workflow, "session_id") and self._workflow.session_id:
+                span.set_attribute("cache.session_id", str(self._workflow.session_id))
+
+            # Call the original method
+            result = super().get(key, default)
+
+            # Update span based on result
+            if result is not None and result != default:
+                span.set_attribute("cache.hit", True)
+                span.set_attribute("cache.result", "hit")
+                span.update_name(f"Cache.Hit[{len(self)} entries]")
+
+                # Add value info
+                if isinstance(result, str):
+                    span.set_attribute("cache.value_size", len(result))
+                    if len(result) <= 100:
+                        span.set_attribute("cache.value", result)
+                    else:
+                        span.set_attribute("cache.value_preview", result[:100] + "...")
+            else:
+                span.set_attribute("cache.hit", False)
+                span.set_attribute("cache.result", "miss")
+                span.update_name(f"Cache.Miss[{len(self)} entries]")
+
+            span.set_status(Status(StatusCode.OK))
+            return result
+
+    def __setitem__(self, key, value):
+        """Instrumented setitem method for cache storing."""
+        # Check if we're already in a storage operation to avoid nested spans
+        if self._in_storage_operation():
+            # We're inside a storage operation, skip instrumentation
+            return super().__setitem__(key, value)
+
+        span_name = "Cache.Store"
+
+        with self._tracer.start_as_current_span(span_name) as span:
+            # Set cache attributes
+            span.set_attribute("cache.key", str(key))
+
+            # Get workflow info
+            if hasattr(self._workflow, "workflow_id") and self._workflow.workflow_id:
+                span.set_attribute("cache.workflow_id", str(self._workflow.workflow_id))
+            if hasattr(self._workflow, "session_id") and self._workflow.session_id:
+                span.set_attribute("cache.session_id", str(self._workflow.session_id))
+
+            # Call the original method
+            super().__setitem__(key, value)
+
+            # Set post-store attributes
+            span.set_attribute("cache.size", len(self))
+            span.set_attribute("cache.keys", json.dumps(list(self.keys())))
+
+            # Add value info
+            if isinstance(value, str):
+                span.set_attribute("cache.value_size", len(value))
+                if len(value) <= 100:
+                    span.set_attribute("cache.value", value)
+                else:
+                    span.set_attribute("cache.value_preview", value[:100] + "...")
+
+            span.update_name(f"Cache.Store[{len(self)} entries]")
+            span.set_status(Status(StatusCode.OK))
+
+
+def create_workflow_init_wrapper(tracer):
+    """Wrapper to instrument workflow initialization and wrap session_state."""
+
+    def wrapper(wrapped, instance, args, kwargs):
+        # Call the original __init__
+        result = wrapped(*args, **kwargs)
+
+        # Wrap session_state if it exists
+        if hasattr(instance, "session_state") and isinstance(instance.session_state, dict):
+            # Replace session_state with our proxy
+            original_state = instance.session_state
+            instance.session_state = SessionStateProxy(original_state, instance, tracer)
+
+        return result
 
     return wrapper
 
@@ -916,21 +1168,16 @@ class AgnoInstrumentor(CommonInstrumentor):
 
     def _initialize(self, **kwargs):
         """Perform custom initialization."""
-        logger.info("Agno instrumentation installed successfully")
-        # Schedule wrapping to happen after imports are complete
-        import threading
-
-        threading.Timer(0.1, self._delayed_wrap).start()
-
-    def _delayed_wrap(self):
-        """Perform wrapping after a delay to avoid circular imports."""
+        logger.info("Agno instrumentation: Beginning immediate instrumentation")
+        # Perform wrapping immediately instead of with a delay
         try:
             self._perform_wrapping()
+            logger.info("Agno instrumentation: Immediate instrumentation completed successfully")
         except Exception as e:
-            logger.error(f"Failed to perform delayed wrapping: {e}")
+            logger.error(f"Failed to perform immediate wrapping: {e}")
 
     def _custom_wrap(self, **kwargs):
-        """Skip custom wrapping during initialization - it will be done in _delayed_wrap."""
+        """Skip custom wrapping during initialization - it's done in _initialize."""
         pass
 
     def _perform_wrapping(self):
@@ -967,20 +1214,7 @@ class AgnoInstrumentor(CommonInstrumentor):
                 method_name="new_session",
                 handler=get_workflow_session_attributes,
             ),
-            WrapConfig(
-                trace_name="agno.workflow.session.read_from_storage",
-                package="agno.workflow.workflow",
-                class_name="Workflow",
-                method_name="read_from_storage",
-                handler=get_workflow_session_attributes,
-            ),
-            WrapConfig(
-                trace_name="agno.workflow.session.write_to_storage",
-                package="agno.workflow.workflow",
-                class_name="Workflow",
-                method_name="write_to_storage",
-                handler=get_workflow_session_attributes,
-            ),
+            # Note: read_from_storage and write_to_storage use custom wrappers below
         ]
 
         wrapped_count = 0
@@ -1003,13 +1237,18 @@ class AgnoInstrumentor(CommonInstrumentor):
             ("agno.tools.function", "FunctionCall.execute", self._create_streaming_tool_wrapper()),
             # Metrics wrapper
             ("agno.agent", "Agent._set_session_metrics", self._create_metrics_wrapper()),
-            # Team methods
+            # Team methods - wrap all public and internal methods
+            ("agno.team.team", "Team.print_response", self._create_team_wrapper()),
             ("agno.team.team", "Team.run", self._create_team_wrapper()),
             ("agno.team.team", "Team.arun", self._create_team_async_wrapper()),
-            ("agno.team.team", "Team.print_response", self._create_team_wrapper()),
             # Team internal methods with special handling
             ("agno.team.team", "Team._run", self._create_team_internal_wrapper()),
             ("agno.team.team", "Team._arun", self._create_team_internal_async_wrapper()),
+            # Storage methods with custom wrappers for cache-aware naming
+            ("agno.workflow.workflow", "Workflow.read_from_storage", self._create_storage_read_wrapper()),
+            ("agno.workflow.workflow", "Workflow.write_to_storage", self._create_storage_write_wrapper()),
+            # Workflow init wrapper to instrument session_state
+            ("agno.workflow.workflow", "Workflow.__init__", self._create_workflow_init_wrapper()),
         ]
 
         for package, method, wrapper in streaming_methods:
@@ -1070,3 +1309,15 @@ class AgnoInstrumentor(CommonInstrumentor):
     def _create_team_internal_async_wrapper(self, args=None, kwargs=None, return_value=None):
         """Wrapper function for async team internal methods."""
         return create_team_internal_async_wrapper(self._tracer, self._streaming_context_manager)
+
+    def _create_storage_read_wrapper(self, args=None, kwargs=None, return_value=None):
+        """Wrapper function for storage read operations."""
+        return create_storage_read_wrapper(self._tracer, self._streaming_context_manager)
+
+    def _create_storage_write_wrapper(self, args=None, kwargs=None, return_value=None):
+        """Wrapper function for storage write operations."""
+        return create_storage_write_wrapper(self._tracer, self._streaming_context_manager)
+
+    def _create_workflow_init_wrapper(self, args=None, kwargs=None, return_value=None):
+        """Wrapper function for workflow initialization to instrument session_state."""
+        return create_workflow_init_wrapper(self._tracer)

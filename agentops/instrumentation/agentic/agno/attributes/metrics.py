@@ -28,7 +28,7 @@ def get_metrics_attributes(
     attributes[SpanAttributes.LLM_SYSTEM] = "agno"
     attributes[SpanAttributes.AGENTOPS_ENTITY_NAME] = "LLM"
 
-    # Initialize usage tracking variables (but don't set attributes yet)
+    # Initialize usage tracking variables
     usage_data = {}
 
     # Initialize counters for indexed messages
@@ -66,7 +66,6 @@ def get_metrics_attributes(
                 model_class = model.__class__.__name__
                 attributes["agno.model.class"] = model_class
 
-        # === EXTRACT CONVERSATION STRUCTURE ===
         if hasattr(run_messages, "messages") and run_messages.messages:
             messages = run_messages.messages
 
@@ -82,12 +81,10 @@ def get_metrics_attributes(
             for i, msg in enumerate(messages):
                 # Extract message content for prompts/completions
                 if hasattr(msg, "role") and hasattr(msg, "content"):
-                    # Only set content if it's not None/empty
+                    # Only process messages with actual content
                     if msg.content is not None and str(msg.content).strip() != "" and str(msg.content) != "None":
                         content = str(msg.content)
-                        # Truncate very long content to avoid oversized attributes
-                        if len(content) > 1000:
-                            content = content[:997] + "..."
+                        # No truncation - keep full content for observability
 
                         if msg.role == "user":
                             attributes[f"{SpanAttributes.LLM_PROMPTS}.{prompt_count}.role"] = "user"
@@ -101,17 +98,6 @@ def get_metrics_attributes(
                             attributes[f"{SpanAttributes.LLM_PROMPTS}.{prompt_count}.role"] = "system"
                             attributes[f"{SpanAttributes.LLM_PROMPTS}.{prompt_count}.content"] = content
                             prompt_count += 1
-                    else:
-                        # For messages with None content, still set the role but skip content
-                        if msg.role == "user":
-                            attributes[f"{SpanAttributes.LLM_PROMPTS}.{prompt_count}.role"] = "user"
-                            prompt_count += 1
-                        elif msg.role == "assistant":
-                            attributes[f"{SpanAttributes.LLM_COMPLETIONS}.{completion_count}.role"] = "assistant"
-                            completion_count += 1
-                        elif msg.role == "system":
-                            attributes[f"{SpanAttributes.LLM_PROMPTS}.{prompt_count}.role"] = "system"
-                            prompt_count += 1
 
                 # Extract token metrics from message
                 if hasattr(msg, "metrics") and msg.metrics:
@@ -124,7 +110,7 @@ def get_metrics_attributes(
                         total_completion_tokens += metrics.completion_tokens
                     if hasattr(metrics, "total_tokens") and metrics.total_tokens > 0:
                         total_tokens += metrics.total_tokens
-                    # For messages that only have output_tokens (like Anthropic)
+                    # For messages that only have output_tokens
                     if hasattr(metrics, "output_tokens") and metrics.output_tokens > 0:
                         total_output_tokens += metrics.output_tokens
                     if hasattr(metrics, "input_tokens") and metrics.input_tokens > 0:
@@ -132,7 +118,7 @@ def get_metrics_attributes(
                     if hasattr(metrics, "time") and metrics.time:
                         total_time += metrics.time
 
-        # === TOKEN METRICS FROM AGENT SESSION METRICS ===
+        # Token metrics from agent session metrics
         if hasattr(agent, "session_metrics") and agent.session_metrics:
             session_metrics = agent.session_metrics
 
@@ -191,7 +177,6 @@ def get_metrics_attributes(
             if hasattr(session_metrics, "reasoning_tokens") and session_metrics.reasoning_tokens > 0:
                 usage_data["reasoning_tokens"] = session_metrics.reasoning_tokens
 
-        # === FALLBACK TO MESSAGE AGGREGATION IF SESSION METRICS ARE EMPTY ===
         # If we don't have token data from session metrics, try message aggregation
         if "total_tokens" not in usage_data:
             # Set aggregated token usage from messages
@@ -207,8 +192,6 @@ def get_metrics_attributes(
             user_msg = run_messages.user_message
             if hasattr(user_msg, "content"):
                 content = str(user_msg.content)
-                if len(content) > 1000:
-                    content = content[:997] + "..."
                 attributes["agno.metrics.user_input"] = content
 
     # Set individual LLM usage attributes only for values we actually have
