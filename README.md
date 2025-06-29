@@ -23,7 +23,10 @@
   </a>
   <a href="https://opensource.org/licenses/MIT">
     <img src="https://img.shields.io/badge/License-MIT-yellow.svg?&color=3670A0" alt="License: MIT">
-  <img src="https://smithery.ai/badge/@AgentOps-AI/agentops-mcp"/>
+  </a>
+  <a href="https://smithery.ai/server/@AgentOps-AI/agentops-mcp">
+    <img src="https://smithery.ai/badge/@AgentOps-AI/agentops-mcp"/>
+  </a>
 </div>
 
 <p align="center">
