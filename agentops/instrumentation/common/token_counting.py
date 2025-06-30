@@ -23,25 +23,29 @@ class TokenUsage:
     reasoning_tokens: Optional[int] = None
 
     def to_attributes(self) -> Dict[str, int]:
-        """Convert to span attributes dictionary."""
+        """Convert to span attributes dictionary.
+
+        Only metrics greater than zero are included so that non‑LLM spans do
+        not contain empty token usage fields.
+        """
         attributes = {}
 
-        if self.prompt_tokens is not None:
+        if self.prompt_tokens:
             attributes[SpanAttributes.LLM_USAGE_PROMPT_TOKENS] = self.prompt_tokens
 
-        if self.completion_tokens is not None:
+        if self.completion_tokens:
             attributes[SpanAttributes.LLM_USAGE_COMPLETION_TOKENS] = self.completion_tokens
 
-        if self.total_tokens is not None:
+        if self.total_tokens:
             attributes[SpanAttributes.LLM_USAGE_TOTAL_TOKENS] = self.total_tokens
 
-        if self.cached_prompt_tokens is not None:
+        if self.cached_prompt_tokens:
             attributes[SpanAttributes.LLM_USAGE_CACHE_CREATION_INPUT_TOKENS] = self.cached_prompt_tokens
 
-        if self.cached_read_tokens is not None:
+        if self.cached_read_tokens:
             attributes[SpanAttributes.LLM_USAGE_CACHE_READ_INPUT_TOKENS] = self.cached_read_tokens
 
-        if self.reasoning_tokens is not None:
+        if self.reasoning_tokens:
             attributes[SpanAttributes.LLM_USAGE_REASONING_TOKENS] = self.reasoning_tokens
 
         return attributes
