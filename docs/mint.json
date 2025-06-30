@@ -178,14 +178,14 @@
         "v2/usage/dashboard-info",
         "v2/usage/sdk-reference",
         "v2/usage/typescript-sdk",
+        "v2/usage/mcp-server",
         "v2/usage/advanced-configuration",
         "v2/usage/context-managers",
         "v2/usage/tracking-llm-calls",
         "v2/usage/tracking-agents",
         "v2/usage/recording-operations",
         "v2/usage/trace-decorator",
-        "v2/usage/manual-trace-control",
-        "v2/usage/public-api"
+        "v2/usage/manual-trace-control"
       ],
       "version": "v2"
     },
