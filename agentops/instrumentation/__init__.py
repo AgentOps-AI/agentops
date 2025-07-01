@@ -125,6 +125,11 @@ AGENTIC_LIBRARIES: dict[str, InstrumentorConfig] = {
         "class_name": "SmolagentsInstrumentor",
         "min_version": "1.0.0",
     },
+    "langgraph": {
+        "module_name": "agentops.instrumentation.agentic.langgraph",
+        "class_name": "LanggraphInstrumentor",
+        "min_version": "0.2.0",
+    },
 }
 
 # Combine all target packages for monitoring
