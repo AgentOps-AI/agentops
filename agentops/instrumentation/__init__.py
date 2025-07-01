@@ -118,7 +118,7 @@ AGENTIC_LIBRARIES: dict[str, InstrumentorConfig] = {
     "agno": {
         "module_name": "agentops.instrumentation.agentic.agno",
         "class_name": "AgnoInstrumentor",
-        "min_version": "0.1.0",
+        "min_version": "1.5.8",
     },
     "smolagents": {
         "module_name": "agentops.instrumentation.agentic.smolagents",
