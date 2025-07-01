@@ -102,7 +102,8 @@ def model_to_dict(obj: Any) -> dict:
         # Try to use __dict__ as fallback
         try:
             return obj.__dict__
-        except:
+        except Exception as e:
+            logger.debug(f"Failed to convert object to dict: {e}")
             return {}
 
 

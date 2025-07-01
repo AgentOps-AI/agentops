@@ -5,6 +5,7 @@ from fastapi import FastAPI
 from fastapi.testclient import TestClient
 import agentops
 from agentops.client import Client
+import logging
 
 # Create FastAPI app
 app = FastAPI()
@@ -49,7 +50,9 @@ def setup_agentops(mock_api_key):
 
             try:
                 agentops.end_all_sessions()
-            except:
+            except Exception as e:
+                # Log the error but don't fail the test teardown
+                logging.debug(f"Error ending sessions during teardown: {e}")
                 pass
 
     # Clean up client singleton

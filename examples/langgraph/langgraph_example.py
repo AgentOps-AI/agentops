@@ -7,6 +7,8 @@ from langchain_core.messages import HumanMessage, ToolMessage
 from langchain_core.tools import tool
 import agentops
 from dotenv import load_dotenv
+import ast
+import operator
 
 load_dotenv()
 
@@ -28,9 +30,38 @@ def get_weather(location: str) -> str:
 
 @tool
 def calculate(expression: str) -> str:
-    """Evaluate a mathematical expression."""
+    """Evaluate a mathematical expression safely."""
+    # Define allowed operators
+    allowed_operators = {
+        ast.Add: operator.add,
+        ast.Sub: operator.sub,
+        ast.Mult: operator.mul,
+        ast.Div: operator.truediv,
+        ast.Pow: operator.pow,
+        ast.USub: operator.neg,
+        ast.UAdd: operator.pos,
+    }
+    
+    def evaluate_node(node):
+        if isinstance(node, ast.Constant):  # Python 3.8+
+            return node.value
+        elif isinstance(node, (ast.Num, ast.NameConstant)):  # Fallback for older Python
+            return node.n if isinstance(node, ast.Num) else node.value
+        elif isinstance(node, ast.BinOp):
+            left = evaluate_node(node.left)
+            right = evaluate_node(node.right)
+            return allowed_operators[type(node.op)](left, right)
+        elif isinstance(node, ast.UnaryOp):
+            operand = evaluate_node(node.operand)
+            return allowed_operators[type(node.op)](operand)
+        else:
+            raise ValueError(f"Unsupported operation: {type(node).__name__}")
+    
     try:
-        result = eval(expression)
+        # Parse the expression into an AST
+        tree = ast.parse(expression, mode='eval')
+        # Evaluate the AST safely
+        result = evaluate_node(tree.body)
         return f"The result is: {result}"
     except Exception as e:
         return f"Error calculating expression: {str(e)}"
