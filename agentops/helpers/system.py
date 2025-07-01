@@ -158,21 +158,20 @@ def get_disk_details():
 
 
 def get_host_env(opt_out: bool = False):
+    # When the user explicitly opts out, we must avoid collecting any host
+    # information that could be considered sensitive.  Return an empty dict in
+    # that scenario to signal that no host-level metadata was gathered.
     if opt_out:
-        return {
-            "SDK": get_sdk_details(),
-            "OS": get_os_details(),
-            "Project Working Directory": get_current_directory(),
-            "Virtual Environment": get_virtual_env(),
-        }
-    else:
-        return {
-            "SDK": get_sdk_details(),
-            "OS": get_os_details(),
-            "CPU": get_cpu_details(),
-            "RAM": get_ram_details(),
-            "Disk": get_disk_details(),
-            "Installed Packages": get_installed_packages(),
-            "Project Working Directory": get_current_directory(),
-            "Virtual Environment": get_virtual_env(),
-        }
+        return {}
+
+    # Full host environment details (default behaviour)
+    return {
+        "SDK": get_sdk_details(),
+        "OS": get_os_details(),
+        "CPU": get_cpu_details(),
+        "RAM": get_ram_details(),
+        "Disk": get_disk_details(),
+        "Installed Packages": get_installed_packages(),
+        "Project Working Directory": get_current_directory(),
+        "Virtual Environment": get_virtual_env(),
+    }

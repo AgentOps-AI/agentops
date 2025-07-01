@@ -49,4 +49,9 @@ def get_env_list(key: str, default: Optional[List[str]] = None) -> Set[str]:
     val = os.getenv(key)
     if val is None:
         return set(default or [])
-    return set(val.split(","))
+
+    # Split the string and strip whitespace from each element. This avoids
+    # accidental leading/trailing spaces in the resulting values and also
+    # filters out zero-length strings that can appear from malformed input
+    # such as "tag1, ,tag2".
+    return {item.strip() for item in val.split(',') if item.strip()}

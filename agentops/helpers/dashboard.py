@@ -41,4 +41,10 @@ def log_trace_url(span: Union[Span, ReadableSpan], title: Optional[str] = None) 
         span: The span to log the URL for.
     """
     session_url = get_trace_url(span)
-    logger.info(colored(f"\x1b[34mSession Replay for {title} trace: {session_url}\x1b[0m", "blue"))
+
+    # Provide a sensible default if no title is supplied to ensure readable
+    # log output.  Using `colored` alone is sufficient to add ANSI colour codes
+    # – pre-pending our own escape sequences resulted in duplicated formatting
+    # and garbled terminal output.
+    pretty_title = f"{title} " if title else ""
+    logger.info(colored(f"Session Replay for {pretty_title}trace: {session_url}", "blue"))
