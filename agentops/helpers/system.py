@@ -57,7 +57,8 @@ def get_sdk_details():
             "Python Version": platform.python_version(),
             "System Packages": get_sys_packages(),
         }
-    except:
+    except Exception as e:
+        logger.debug(f"Error getting SDK details: {e}")
         return {}
 
 
@@ -82,21 +83,24 @@ def get_installed_packages():
                 dist.metadata.get("Name"): dist.metadata.get("Version") for dist in importlib.metadata.distributions()
             }
         }
-    except:
+    except Exception as e:
+        logger.debug(f"Error getting installed packages: {e}")
         return {}
 
 
 def get_current_directory():
     try:
         return {"Project Working Directory": os.getcwd()}
-    except:
+    except Exception as e:
+        logger.debug(f"Error getting current directory: {e}")
         return {}
 
 
 def get_virtual_env():
     try:
         return {"Virtual Environment": os.environ.get("VIRTUAL_ENV", None)}
-    except:
+    except Exception as e:
+        logger.debug(f"Error getting virtual environment: {e}")
         return {}
 
 
@@ -108,7 +112,8 @@ def get_os_details():
             "OS Version": platform.version(),
             "OS Release": platform.release(),
         }
-    except:
+    except Exception as e:
+        logger.debug(f"Error getting OS details: {e}")
         return {}
 
 
@@ -120,7 +125,8 @@ def get_cpu_details():
             # "Max Frequency": f"{psutil.cpu_freq().max:.2f}Mhz", # Fails right now
             "CPU Usage": f"{psutil.cpu_percent()}%",
         }
-    except:
+    except Exception as e:
+        logger.debug(f"Error getting CPU details: {e}")
         return {}
 
 
@@ -133,7 +139,8 @@ def get_ram_details():
             "Used": f"{ram_info.used / (1024**3):.2f} GB",
             "Percentage": f"{ram_info.percent}%",
         }
-    except:
+    except Exception as e:
+        logger.debug(f"Error getting RAM details: {e}")
         return {}
 
 

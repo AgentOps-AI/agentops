@@ -295,15 +295,35 @@ class OpenAIAsyncStreamWrapper:
             OpenaiStreamWrapper._process_chunk(self, chunk)
             return chunk
         except StopAsyncIteration:
-            OpenaiStreamWrapper._finalize_stream(self)
+            # Ensure proper cleanup on normal completion
+            try:
+                # Finalize the span properly
+                self._span.set_status(Status(StatusCode.OK))
+                self._span.end()
+            except Exception as finalize_error:
+                logger.warning(f"Error during span finalization: {finalize_error}")
+            finally:
+                # Always detach context token to prevent leaks
+                if hasattr(self, '_token') and self._token:
+                    try:
+                        context_api.detach(self._token)
+                    except Exception:
+                        pass  # Ignore detach errors during cleanup
             raise
         except Exception as e:
             logger.error(f"[OPENAI ASYNC WRAPPER] Error in __anext__: {e}")
             # Make sure span is ended in case of error
-            self._span.record_exception(e)
-            self._span.set_status(Status(StatusCode.ERROR, str(e)))
-            self._span.end()
-            context_api.detach(self._token)
+            try:
+                self._span.record_exception(e)
+                self._span.set_status(Status(StatusCode.ERROR, str(e)))
+                self._span.end()
+            finally:
+                # Always detach context token to prevent leaks
+                if hasattr(self, '_token') and self._token:
+                    try:
+                        context_api.detach(self._token)
+                    except Exception:
+                        pass  # Ignore detach errors during cleanup
             raise
 
     async def __aenter__(self):

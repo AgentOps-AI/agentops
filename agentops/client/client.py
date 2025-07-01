@@ -1,4 +1,5 @@
 import atexit
+import threading
 from typing import Optional, Any
 
 from agentops.client.api import ApiClient
@@ -45,15 +46,20 @@ class Client:
     ] = None  # Stores the legacy Session wrapper for the auto-started trace
 
     __instance = None  # Class variable for singleton pattern
+    _lock = threading.Lock()  # Class-level lock for thread safety
 
     api: ApiClient
 
     def __new__(cls, *args: Any, **kwargs: Any) -> "Client":
+        # Double-checked locking pattern for thread-safe singleton
         if cls.__instance is None:
-            cls.__instance = super(Client, cls).__new__(cls)
-            # Initialize instance variables that should only be set once per instance
-            cls.__instance._init_trace_context = None
-            cls.__instance._legacy_session_for_init_trace = None
+            with cls._lock:
+                # Check again after acquiring lock
+                if cls.__instance is None:
+                    cls.__instance = super(Client, cls).__new__(cls)
+                    # Initialize instance variables that should only be set once per instance
+                    cls.__instance._init_trace_context = None
+                    cls.__instance._legacy_session_for_init_trace = None
         return cls.__instance
 
     def __init__(self):
