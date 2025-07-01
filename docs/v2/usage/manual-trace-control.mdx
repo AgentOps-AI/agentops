@@ -77,6 +77,176 @@ for i, item in enumerate(batch_items):
         agentops.end_trace(trace, "Error")
 ```
 
+## Updating Trace Metadata During Execution
+
+You can update metadata on running traces at any point during execution using the `update_trace_metadata` function. This is useful for adding context, tracking progress, or storing intermediate results.
+
+### Basic Metadata Updates
+
+```python
+import agentops
+
+# Initialize AgentOps
+agentops.init("your-api-key", auto_start_session=False)
+
+# Start a trace with initial tags
+trace = agentops.start_trace("ai-agent-workflow", tags=["startup", "initialization"])
+
+# Your AI agent code runs here...
+process_user_request()
+
+# Update metadata with results
+agentops.update_trace_metadata({
+    "operation_name": "AI Agent Processing Complete", 
+    "stage": "completed",
+    "response_quality": "high",
+    "tags": ["ai-agent", "completed", "success"]  # Tags show current status
+})
+
+# End the trace
+agentops.end_trace(trace, "Success")
+```
+
+### Semantic Convention Support
+
+The function automatically maps user-friendly keys to semantic conventions when possible:
+
+```python
+# These keys will be mapped to semantic conventions
+agentops.update_trace_metadata({
+    "operation_name": "AI Agent Data Processing",
+    "tags": ["production", "batch-job", "gpt-4"],  # Maps to core.tags
+    "agent_name": "DataProcessorAgent",             # Maps to agent.name
+    "workflow_name": "Intelligent ETL Pipeline",   # Maps to workflow.name
+})
+
+```
+
+### Advanced Metadata with Custom Prefix
+
+You can specify a custom prefix for your metadata attributes:
+
+```python
+# Use a custom prefix for business-specific metadata
+agentops.update_trace_metadata({
+    "customer_id": "CUST_456",
+    "order_value": 99.99,
+    "payment_method": "credit_card",
+    "agent_interaction": "customer_support"
+}, prefix="business")
+
+# Results in:
+# business.customer_id = "CUST_456"
+# business.order_value = 99.99
+# business.payment_method = "credit_card"
+```
+
+### Real-World Example: Progress Tracking
+
+Here's how to use metadata updates to track progress through a complex workflow:
+
+```python
+import agentops
+from agentops.sdk.decorators import operation
+
+agentops.init(auto_start_session=False)
+
+@operation
+def process_batch(batch_data):
+    # Simulate batch processing
+    return f"Processed {len(batch_data)} items"
+
+def run_etl_pipeline(data_batches):
+    """ETL pipeline with progress tracking via metadata"""
+    
+    trace = agentops.start_trace("etl-pipeline", tags=["data-processing"])
+    
+    total_batches = len(data_batches)
+    processed_records = 0
+    
+    # Initial metadata
+    agentops.update_trace_metadata({
+        "operation_name": "ETL Pipeline Execution",
+        "pipeline_stage": "starting",
+        "total_batches": total_batches,
+        "processed_batches": 0,
+        "processed_records": 0,
+        "estimated_completion": "calculating...",
+        "tags": ["etl", "data-processing", "async-operation"]
+    })
+    
+    try:
+        for i, batch in enumerate(data_batches):
+            # Update progress
+            agentops.update_trace_metadata({
+                "pipeline_stage": "processing",
+                "current_batch": i + 1,
+                "processed_batches": i,
+                "progress_percentage": round((i / total_batches) * 100, 2)
+            })
+            
+            # Process the batch
+            result = process_batch(batch)
+            processed_records += len(batch)
+            
+            # Update running totals
+            agentops.update_trace_metadata({
+                "processed_records": processed_records,
+                "last_batch_result": result
+            })
+        
+        # Final metadata update
+        agentops.update_trace_metadata({
+            "operation_name": "ETL Pipeline Completed",
+            "pipeline_stage": "completed",
+            "processed_batches": total_batches,
+            "progress_percentage": 100.0,
+            "completion_status": "success",
+            "total_execution_time": "calculated_automatically",
+            "tags": ["etl", "completed", "success"]
+        })
+        
+        agentops.end_trace(trace, "Success")
+        
+    except Exception as e:
+        # Error metadata
+        agentops.update_trace_metadata({
+            "operation_name": "ETL Pipeline Failed",
+            "pipeline_stage": "failed",
+            "error_message": str(e),
+            "completion_status": "error",
+            "failed_at_batch": i + 1 if 'i' in locals() else 0,
+            "tags": ["etl", "failed", "error"]
+        })
+        
+        agentops.end_trace(trace, "Error")
+        raise
+
+# Example usage
+data_batches = [
+    ["record1", "record2", "record3"],
+    ["record4", "record5"],
+    ["record6", "record7", "record8", "record9"]
+]
+
+run_etl_pipeline(data_batches)
+```
+
+### Supported Data Types
+
+The `update_trace_metadata` function supports various data types:
+
+```python
+agentops.update_trace_metadata({
+    "operation_name": "Multi-type Data Example",
+    "successful_operation": True,
+    "tags": ["example", "demo", "multi-agent"],
+    "processing_steps": ["validation", "transformation", "output"]
+})
+
+# Note: Lists are automatically converted to JSON strings for OpenTelemetry compatibility
+```
+
 ## Integration with Decorators
 
 Manual trace control works seamlessly with AgentOps decorators:
