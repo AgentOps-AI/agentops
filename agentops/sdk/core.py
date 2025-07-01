@@ -23,6 +23,7 @@ from agentops.sdk.attributes import (
     get_trace_attributes,
     get_span_attributes,
     get_session_end_attributes,
+    get_system_resource_attributes,
 )
 from agentops.semconv import SpanKind
 from agentops.helpers.dashboard import log_trace_url
@@ -354,6 +355,9 @@ class TracingCore:
 
         # Build trace attributes
         attributes = get_trace_attributes(tags=tags)
+        # Include system metadata only for the default session trace
+        if trace_name == "session":
+            attributes.update(get_system_resource_attributes())
 
         # make_span creates and starts the span, and activates it in the current context
         # It returns: span, context_object, context_token

@@ -17,7 +17,6 @@
     "anchors": {
       "from": "#D1E5F7",
       "to": "#a9bed4"
-
     }
   },
   "topbarCtaButton": {
@@ -60,25 +59,16 @@
       "url": "https://agentops.ai/contact"
     }
   ],
-  "versions": [
-    "v2",
-    "v1",
-    "v0"
-  ],
+  "versions": ["v2", "v1", "v0"],
   "navigation": [
     {
       "group": "",
-      "pages": [
-        "v1/introduction"
-      ],
+      "pages": ["v1/introduction"],
       "version": "v1"
     },
     {
       "group": "Getting Started",
-      "pages": [
-        "v1/quickstart",
-        "v1/examples/examples"
-      ],
+      "pages": ["v1/quickstart", "v1/examples/examples"],
       "version": "v1"
     },
     {
@@ -140,17 +130,12 @@
     },
     {
       "group": "",
-      "pages": [
-        "v2/introduction"
-      ],
+      "pages": ["v2/introduction"],
       "version": "v2"
     },
     {
       "group": "Getting Started",
-      "pages": [
-        "v2/quickstart",
-        "v2/examples/examples"
-      ],
+      "pages": ["v2/quickstart", "v2/examples/examples"],
       "version": "v2"
     },
     {
@@ -194,13 +179,15 @@
         "v2/usage/dashboard-info",
         "v2/usage/sdk-reference",
         "v2/usage/typescript-sdk",
+        "v2/usage/mcp-server",
         "v2/usage/advanced-configuration",
         "v2/usage/context-managers",
         "v2/usage/tracking-llm-calls",
         "v2/usage/tracking-agents",
         "v2/usage/recording-operations",
         "v2/usage/trace-decorator",
-        "v2/usage/manual-trace-control"
+        "v2/usage/manual-trace-control",
+        "v2/usage/public-api"
       ],
       "version": "v2"
     },

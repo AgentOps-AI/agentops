@@ -60,8 +60,8 @@ def get_global_resource_attributes(
     """
     Get all global resource attributes for telemetry.
 
-    Combines service metadata, system information, and imported libraries
-    into a complete resource attributes dictionary.
+    Combines service metadata and imported libraries into a complete
+    resource attributes dictionary.
 
     Args:
         service_name: Name of the service
@@ -73,7 +73,6 @@ def get_global_resource_attributes(
     # Start with service attributes
     attributes: dict[str, Any] = {
         ResourceAttributes.SERVICE_NAME: service_name,
-        **get_system_resource_attributes(),
     }
 
     if project_id:
