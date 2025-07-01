@@ -52,7 +52,8 @@ from dotenv import load_dotenv
 load_dotenv()
 
 # Initialize AgentOps - this enables automatic instrumentation
-agentops.init(os.getenv("AGENTOPS_API_KEY"))
+agentops.init(os.getenv("AGENTOPS_API_KEY"), auto_start_session=False)
+trace = agentops.start_trace("langgraph_example")
 ```
 
 ## Define Tools
@@ -243,6 +244,7 @@ The instrumentation captures the full context of your LangGraph application auto
 ```python
 print("✅ Check your AgentOps dashboard for comprehensive traces!")
 print("🔍 You'll see the graph structure, execution flow, and all LLM/tool calls.")
+agentops.end_trace(trace)
 ```
 
 
