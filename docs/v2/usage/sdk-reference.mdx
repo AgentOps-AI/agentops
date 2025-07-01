@@ -157,6 +157,51 @@ agentops.end_trace(trace, "Success")
 agentops.end_trace(end_state="Emergency_Shutdown")
 ```
 
+### `update_trace_metadata()`
+
+Updates metadata on the currently running trace. This is useful for adding context, tracking progress, or storing intermediate results during trace execution.
+
+**Parameters**:
+
+- `metadata` (Dict[str, Any]): Dictionary of key-value pairs to set as trace metadata. Values must be strings, numbers, booleans, or lists of these types. Lists are automatically converted to JSON string representation.
+- `prefix` (str, optional): Prefix for metadata attributes. Defaults to "trace.metadata". Ignored for semantic convention attributes.
+
+**Returns**:
+
+- `bool`: True if metadata was successfully updated, False otherwise.
+
+**Features**:
+
+- **Semantic Convention Support**: User-friendly keys like "tags", "agent_name", "workflow_name" are automatically mapped to OpenTelemetry semantic conventions.
+- **Custom Attributes**: Non-semantic keys are prefixed with the specified prefix (default: "trace.metadata").
+- **Type Safety**: Validates input types and converts lists to JSON strings for OpenTelemetry compatibility.
+- **Error Handling**: Returns boolean success indicator and logs warnings for invalid data.
+
+**Example**:
+
+```python
+import agentops
+from agentops import update_trace_metadata
+
+# Initialize and start trace with initial tags
+agentops.init(auto_start_session=False)
+trace = agentops.start_trace("ai-workflow", tags=["startup", "initialization"])
+
+# Your code here...
+
+# Update metadata mid-run with new tags and operation info
+update_trace_metadata({
+    "operation_name": "OpenAI GPT-4o-mini",
+    "tags": ["ai-agent", "processing", "gpt-4"],  # Updates tags
+    "status": "processing"
+})
+
+# End the trace
+agentops.end_trace(trace, "Success")
+```
+
+For detailed examples and use cases, see [Manual Trace Control](/v2/usage/manual-trace-control#updating-trace-metadata-during-execution).
+
 ## Decorators for Detailed Instrumentation
 
 For more granular control, AgentOps provides decorators that explicitly track different components of your application. **The `@trace` decorator is the recommended approach for creating custom traces**, especially in multi-threaded environments. These decorators are imported from `agentops.sdk.decorators`.

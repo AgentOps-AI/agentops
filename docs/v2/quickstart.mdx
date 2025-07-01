@@ -171,6 +171,23 @@ def my_workflow_decorated(task_to_perform):
 #     raise
 ```
 
+### Updating Trace Metadata
+
+You can also update metadata on running traces to add context or track progress:
+
+```python
+from agentops import update_trace_metadata
+
+# Update metadata during trace execution
+update_trace_metadata({
+    "operation_name": "AI Agent Processing",
+    "processing_stage": "data_validation",
+    "records_processed": 1500,
+    "user_id": "user_123",
+    "tags": ["validation", "production"]
+})
+```
+
 ## Complete Example with Decorators
 
 Here's a consolidated example showcasing how these decorators can work together:
