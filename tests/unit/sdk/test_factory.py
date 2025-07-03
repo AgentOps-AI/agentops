@@ -796,7 +796,7 @@ class TestFactoryModule:
                 self.bad_object = object()
 
         async def test_async_context():
-            async with TestClass() as instance:
+            async with TestClass():
                 return "success"
 
         result = asyncio.run(test_async_context())
@@ -853,7 +853,7 @@ class TestFactoryModule:
         @decorator
         def test_session_generator():
             # Create an object that will cause serialization to fail
-            bad_object = object()
+            _ = object()  # This will cause serialization issues
             yield 1
             yield 2
 
@@ -869,7 +869,7 @@ class TestFactoryModule:
         @decorator
         async def test_session_async_generator():
             # Create an object that will cause serialization to fail
-            bad_object = object()
+            _ = object()  # This will cause serialization issues
             yield 1
             yield 2
 
@@ -890,7 +890,6 @@ class TestFactoryModule:
 
         # Mock tracer.start_trace to return None
         with pytest.MonkeyPatch().context() as m:
-            original_start_trace = tracer.start_trace
             m.setattr(tracer, "start_trace", lambda *args, **kwargs: None)
 
             @decorator
@@ -909,7 +908,7 @@ class TestFactoryModule:
         @decorator
         async def test_session_async_function():
             # Create an object that will cause serialization to fail
-            bad_object = object()
+            _ = object()  # This will cause serialization issues
             return "success"
 
         result = asyncio.run(test_session_async_function())
@@ -966,7 +965,6 @@ class TestFactoryModule:
 
         # Mock tracer.start_trace to return None
         with pytest.MonkeyPatch().context() as m:
-            original_start_trace = tracer.start_trace
             m.setattr(tracer, "start_trace", lambda *args, **kwargs: None)
 
             @decorator
@@ -985,7 +983,7 @@ class TestFactoryModule:
         @decorator
         def test_session_sync_function():
             # Create an object that will cause serialization to fail
-            bad_object = object()
+            _ = object()  # This will cause serialization issues
             return "success"
 
         result = test_session_sync_function()
@@ -1043,7 +1041,7 @@ class TestFactoryModule:
         @decorator
         def test_generator():
             # Create an object that will cause serialization to fail
-            bad_object = object()
+            _ = object()  # This will cause serialization issues
             yield 1
             yield 2
 
@@ -1059,7 +1057,7 @@ class TestFactoryModule:
         @decorator
         async def test_async_generator():
             # Create an object that will cause serialization to fail
-            bad_object = object()
+            _ = object()  # This will cause serialization issues
             yield 1
             yield 2
 
@@ -1081,7 +1079,7 @@ class TestFactoryModule:
         @decorator
         async def test_async_function():
             # Create an object that will cause serialization to fail
-            bad_object = object()
+            _ = object()  # This will cause serialization issues
             return "success"
 
         result = asyncio.run(test_async_function())
@@ -1126,7 +1124,7 @@ class TestFactoryModule:
         @decorator
         def test_sync_function():
             # Create an object that will cause serialization to fail
-            bad_object = object()
+            _ = object()  # This will cause serialization issues
             return "success"
 
         result = test_sync_function()

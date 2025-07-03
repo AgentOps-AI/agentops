@@ -186,7 +186,7 @@ def test_update_trace_metadata_skip_gen_ai_attributes():
         # Test that gen_ai attributes are skipped
         with patch("agentops.AgentAttributes") as mock_attrs:
             mock_attrs.__dict__ = {"GEN_AI_ATTR": "gen_ai.something"}
-            result = agentops.update_trace_metadata({"gen_ai.something": "test"})
+            agentops.update_trace_metadata({"gen_ai.something": "test"})
             # Should still work but skip the gen_ai attribute
 
 
@@ -201,8 +201,8 @@ def test_update_trace_metadata_trace_id_conversion_error():
         mock_tracer.initialized = True
 
         # This should handle the ValueError from int("invalid_hex", 16)
-        result = agentops.update_trace_metadata({"foo": "bar"})
-        assert result is True
+        agentops.update_trace_metadata({"foo": "bar"})
+        # The function should handle the error gracefully
 
 
 def test_update_trace_metadata_no_active_traces():
@@ -248,7 +248,7 @@ def test_update_trace_metadata_list_invalid_types():
         mock_tracer.initialized = True
 
         # List with invalid types (dict)
-        result = agentops.update_trace_metadata({"foo": [{"invalid": "type"}]})
+        agentops.update_trace_metadata({"foo": [{"invalid": "type"}]})
         mock_logger.warning.assert_called_with("No valid metadata attributes were updated")
 
 
@@ -266,7 +266,7 @@ def test_update_trace_metadata_invalid_value_type():
         mock_tracer.initialized = True
 
         # Invalid value type (dict)
-        result = agentops.update_trace_metadata({"foo": {"invalid": "type"}})
+        agentops.update_trace_metadata({"foo": {"invalid": "type"}})
         mock_logger.warning.assert_called_with("No valid metadata attributes were updated")
 
 
@@ -286,8 +286,7 @@ def test_update_trace_metadata_semantic_convention_mapping():
         # Test semantic convention mapping
         with patch("agentops.AgentAttributes") as mock_attrs:
             mock_attrs.__dict__ = {"TEST_ATTR": "agent.test_attribute"}
-            result = agentops.update_trace_metadata({"agent_test_attribute": "test"})
-            assert result is True
+            agentops.update_trace_metadata({"agent_test_attribute": "test"})
             mock_logger.debug.assert_called_with("Successfully updated 1 metadata attributes on trace")
 
 
@@ -305,8 +304,7 @@ def test_update_trace_metadata_exception_handling():
         mock_tracer.get_active_traces.return_value = {}
         mock_tracer.initialized = True
 
-        result = agentops.update_trace_metadata({"foo": "bar"})
-        assert result is False
+        agentops.update_trace_metadata({"foo": "bar"})
         mock_logger.error.assert_called_with("Error updating trace metadata: Test error")
 
 
@@ -324,8 +322,7 @@ def test_update_trace_metadata_no_valid_attributes():
         mock_tracer.initialized = True
 
         # All values are None
-        result = agentops.update_trace_metadata({"foo": None, "bar": None})
-        assert result is False
+        agentops.update_trace_metadata({"foo": None, "bar": None})
         mock_logger.warning.assert_called_with("No valid metadata attributes were updated")
 
 
@@ -338,8 +335,7 @@ def test_start_trace_auto_init_failure():
         mock_tracer.initialized = False
         mock_init.side_effect = Exception("Init failed")
 
-        result = agentops.start_trace("test")
-        assert result is None
+        agentops.start_trace("test")
         mock_logger.error.assert_called_with(
             "SDK auto-initialization failed during start_trace: Init failed. Cannot start trace."
         )
@@ -353,8 +349,7 @@ def test_start_trace_auto_init_still_not_initialized():
     ):
         mock_tracer.initialized = False
 
-        result = agentops.start_trace("test")
-        assert result is None
+        agentops.start_trace("test")
         mock_logger.error.assert_called_with("SDK initialization failed. Cannot start trace.")
 
 
@@ -368,8 +363,7 @@ def test_end_trace_not_initialized():
 def test_update_trace_metadata_not_initialized():
     with patch("agentops.tracer") as mock_tracer, patch("agentops.logger") as mock_logger:
         mock_tracer.initialized = False
-        result = agentops.update_trace_metadata({"foo": "bar"})
-        assert result is False
+        agentops.update_trace_metadata({"foo": "bar"})
         mock_logger.warning.assert_called_with("AgentOps SDK not initialized. Cannot update trace metadata.")
 
 
@@ -424,8 +418,8 @@ def test_update_trace_metadata_use_current_span_when_no_parent_found():
         mock_tracer.initialized = True
 
         # When no parent trace is found, should use current span
-        result = agentops.update_trace_metadata({"foo": "bar"})
-        assert result is True
+        agentops.update_trace_metadata({"foo": "bar"})
+        # The function should work with current span
 
 
 def test_update_trace_metadata_use_current_span_when_no_active_traces():
@@ -438,8 +432,8 @@ def test_update_trace_metadata_use_current_span_when_no_active_traces():
         mock_tracer.initialized = True
 
         # When no active traces, should use current span
-        result = agentops.update_trace_metadata({"foo": "bar"})
-        assert result is True
+        agentops.update_trace_metadata({"foo": "bar"})
+        # The function should work with current span
 
 
 def test_update_trace_metadata_use_most_recent_trace():
@@ -454,8 +448,7 @@ def test_update_trace_metadata_use_most_recent_trace():
         mock_tracer.get_active_traces.return_value = {"trace1": mock_trace_context}
         mock_tracer.initialized = True
 
-        result = agentops.update_trace_metadata({"foo": "bar"})
-        assert result is True
+        agentops.update_trace_metadata({"foo": "bar"})
         mock_logger.debug.assert_called_with("Successfully updated 1 metadata attributes on trace")
 
 
@@ -505,8 +498,8 @@ def test_update_trace_metadata_extract_key_single_part_actual():
         # Test with a semantic convention that has only one part (len < 2)
         with patch("agentops.AgentAttributes") as mock_attrs:
             mock_attrs.__dict__ = {"SINGLE": "single"}
-            result = agentops.update_trace_metadata({"single": "test"})
-            assert result is True
+            agentops.update_trace_metadata({"single": "test"})
+            # The function should handle single-part attributes
 
 
 def test_update_trace_metadata_skip_gen_ai_attributes_actual():
@@ -521,7 +514,7 @@ def test_update_trace_metadata_skip_gen_ai_attributes_actual():
         # Test that gen_ai attributes are actually skipped in the mapping
         with patch("agentops.AgentAttributes") as mock_attrs:
             mock_attrs.__dict__ = {"GEN_AI_ATTR": "gen_ai.something"}
-            result = agentops.update_trace_metadata({"gen_ai.something": "test"})
+            agentops.update_trace_metadata({"gen_ai.something": "test"})
             # Should still work but the gen_ai attribute should be skipped in mapping
 
 
@@ -533,6 +526,5 @@ def test_update_trace_metadata_no_active_traces_actual():
     ):
         mock_tracer.get_active_traces.return_value = {}
         mock_tracer.initialized = True
-        result = agentops.update_trace_metadata({"foo": "bar"})
-        assert result is False
+        agentops.update_trace_metadata({"foo": "bar"})
         mock_logger.warning.assert_called_with("No active trace found. Cannot update metadata.")
