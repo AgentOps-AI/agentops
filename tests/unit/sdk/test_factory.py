@@ -1,4 +1,3 @@
-from typing import AsyncGenerator
 import asyncio
 import inspect
 import pytest
@@ -642,7 +641,7 @@ class TestFactoryModule:
         assert result == 5
 
         # Built-in functions may not be instrumented the same way
-        spans = instrumentation.get_finished_spans()
+        _ = instrumentation.get_finished_spans()
         # The behavior may vary depending on the implementation
 
     def test_decorator_with_coroutine_function(self, instrumentation: InstrumentationTester):

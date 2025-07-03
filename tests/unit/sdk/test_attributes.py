@@ -4,13 +4,10 @@ Tests for agentops.sdk.attributes module.
 This module tests all attribute management functions for telemetry contexts.
 """
 
-import os
 import platform
-from unittest.mock import Mock, patch, MagicMock
-from typing import Any
+from unittest.mock import Mock, patch
 
 import pytest
-import psutil
 
 from agentops.sdk.attributes import (
     get_system_resource_attributes,

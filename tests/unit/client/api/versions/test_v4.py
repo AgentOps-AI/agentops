@@ -1,10 +1,9 @@
 import pytest
-from unittest.mock import Mock, patch, MagicMock
+from unittest.mock import Mock, patch
 from requests.models import Response
 
 from agentops.client.api.versions.v4 import V4Client
 from agentops.exceptions import ApiServerException
-from agentops.client.api.types import UploadedObjectResponse
 
 
 class TestV4Client:

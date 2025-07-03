@@ -3,8 +3,7 @@ Unit tests for AuthenticatedOTLPExporter.
 """
 
 import unittest
-from unittest.mock import Mock, patch, MagicMock
-from typing import List
+from unittest.mock import Mock, patch
 
 import requests
 from opentelemetry.sdk.trace import ReadableSpan

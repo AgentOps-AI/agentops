@@ -1,5 +1,4 @@
-import pytest
-from unittest.mock import Mock, patch, MagicMock
+from unittest.mock import Mock, patch
 from importlib.metadata import PackageNotFoundError
 
 from agentops.helpers.version import get_agentops_version, check_agentops_update

@@ -344,7 +344,7 @@ def test_start_trace_auto_init_failure():
 def test_start_trace_auto_init_still_not_initialized():
     with (
         patch("agentops.tracer") as mock_tracer,
-        patch("agentops.init") as mock_init,
+        patch("agentops.init") as _,
         patch("agentops.logger") as mock_logger,
     ):
         mock_tracer.initialized = False
@@ -372,35 +372,6 @@ def test_all_exports_importable():
     from agentops import (
         init,
         configure,
-        get_client,
-        record,
-        start_trace,
-        end_trace,
-        update_trace_metadata,
-        start_session,
-        end_session,
-        track_agent,
-        track_tool,
-        end_all_sessions,
-        ToolEvent,
-        ErrorEvent,
-        ActionEvent,
-        LLMEvent,
-        Session,
-        trace,
-        session,
-        agent,
-        task,
-        workflow,
-        operation,
-        guardrail,
-        tracer,
-        tool,
-        TraceState,
-        SUCCESS,
-        ERROR,
-        UNSET,
-        StatusCode,
     )
 
     assert callable(init)

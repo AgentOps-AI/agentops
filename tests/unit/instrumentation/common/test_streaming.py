@@ -1,8 +1,5 @@
 import pytest
-from unittest.mock import Mock, patch, MagicMock
-import time
-import asyncio
-from typing import AsyncGenerator
+from unittest.mock import Mock, patch
 from types import SimpleNamespace
 
 from agentops.instrumentation.common.streaming import (
